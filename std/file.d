@@ -627,7 +627,7 @@ Params:
 Throws: $(D FileException) on error.
  */
 void remove(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         removeImpl(name, name.tempCString!FSChar());
@@ -657,7 +657,7 @@ private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
 }
 
 version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     auto namez = name.tempCString!FSChar();
 
@@ -704,7 +704,7 @@ Params:
 Throws: $(D FileException) on error (e.g., file not found).
  */
 ulong getSize(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -753,9 +753,10 @@ ulong getSize(R)(R name)
     Throws:
         $(D FileException) on error.
  +/
-void getTimes(in char[] name,
+void getTimes(R)(R name,
               out SysTime accessTime,
-              out SysTime modificationTime) @safe
+              out SysTime modificationTime)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -767,13 +768,19 @@ void getTimes(in char[] name,
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        auto namez = name.tempCString();
+
+        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
-            return stat(path.tempCString(), &buf);
+            return stat(namez, &buf);
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedStat(namez, statbuf) == 0, names, namez);
 
         accessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         modificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
@@ -852,14 +859,17 @@ unittest
     Throws:
         $(D FileException) on error.
  +/
-version(StdDdoc) void getTimesWin(in char[] name,
+version(StdDdoc) void getTimesWin(R)(R name,
                                   out SysTime fileCreationTime,
                                   out SysTime fileAccessTime,
-                                  out SysTime fileModificationTime) @safe;
-else version(Windows) void getTimesWin(in char[] name,
+                                  out SysTime fileModificationTime)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R));
+
+else version(Windows) void getTimesWin(R)(R name,
                                        out SysTime fileCreationTime,
                                        out SysTime fileAccessTime,
-                                       out SysTime fileModificationTime) @safe
+                                       out SysTime fileModificationTime)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     with (getFileAttributesWin(name))
     {
@@ -946,17 +956,19 @@ version(Windows) unittest
     Throws:
         $(D FileException) on error.
  +/
-void setTimes(in char[] name,
+void setTimes(R)(R name,
               SysTime accessTime,
               SysTime modificationTime) @safe
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
-        static auto trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+        auto namez = name.tempCString!FSChar();
+        static auto trustedCreateFileW(const(FSChar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                                        SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                                        DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
         {
-            return CreateFileW(fileName.tempCStringW(), dwDesiredAccess, dwShareMode,
+            return CreateFileW(namez, dwDesiredAccess, dwShareMode,
                                lpSecurityAttributes, dwCreationDisposition,
                                dwFlagsAndAttributes, hTemplateFile);
 
@@ -982,27 +994,36 @@ void setTimes(in char[] name,
                          FILE_ATTRIBUTE_DIRECTORY |
                          FILE_FLAG_BACKUP_SEMANTICS,
                          HANDLE.init);
-        auto h = trustedCreateFileW(name, defaults);
+        auto h = trustedCreateFileW(namez, defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(h != INVALID_HANDLE_VALUE, names, namez);
 
         scope(exit)
-            cenforce(trustedCloseHandle(h), name);
+            cenforce(trustedCloseHandle(h), names, namez);
 
-        cenforce(trustedSetFileTime(h, null, ta, tm), name);
+        cenforce(trustedSetFileTime(h, null, ta, tm), names, namez);
     }
     else version(Posix)
     {
-        static auto trustedUtimes(in char[] path, const ref timeval[2] times) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedUtimes(const(FSChar)* namez, const ref timeval[2] times) @trusted
         {
-            return utimes(path.tempCString(), times);
+            return utimes(namez, times);
         }
         timeval[2] t = void;
 
         t[0] = accessTime.toTimeVal();
         t[1] = modificationTime.toTimeVal();
 
-        cenforce(trustedUtimes(name, t) == 0, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedUtimes(namez, t) == 0, names, namez);
     }
 }
 
