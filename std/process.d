@@ -1145,6 +1145,10 @@ final class Pid
         return _processID;
     }
 
+    /** Returns the $(D Pid) of the current process.
+     */
+    static Pid getThis() { return new Pid(thisProcessID); }
+
 private:
     /*
     Pid.performWait() does the dirty work for wait() and nonBlockingWait().
