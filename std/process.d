@@ -2247,7 +2247,7 @@ version (Windows) private immutable string shellSwitch = "/C";
     Usage of this function is preferred over $(D thisProcessID) as $(D Pid) is more
     typesafe that int. For instance $(LREF kill) requires a $(D Pid) as argument.
     */
-@property Pid thisProcessPid() @trusted nothrow //TODO: @safe
+@property Pid thisPid() @trusted nothrow //TODO: @safe
 {
     return new typeof(return)(thisProcessID);
 }
@@ -3522,7 +3522,7 @@ else
  * Returns the process ID of the calling process, which is guaranteed to be
  * unique on the system. This call is always successful.
  *
- * $(RED Deprecated.  Please use $(LREF thisProcessID) or $(LREF thisProcessPid)
+ * $(RED Deprecated.  Please use $(LREF thisProcessID) or $(LREF thisPid)
  *       instead.  This function will be removed in August 2015.)
  *
  * Example:
