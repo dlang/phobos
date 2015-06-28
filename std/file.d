@@ -1059,7 +1059,8 @@ unittest
     Throws:
         $(D FileException) if the given file does not exist.
 +/
-SysTime timeLastModified(in char[] name) @safe
+SysTime timeLastModified(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -1072,13 +1073,18 @@ SysTime timeLastModified(in char[] name) @safe
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
-            return stat(path.tempCString(), &buf);
+            return stat(namez, &buf);
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedStat(namez, statbuf) == 0, names, namez);
 
         return SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -1115,11 +1121,12 @@ else
 }
 --------------------
 +/
-SysTime timeLastModified(in char[] name, SysTime returnIfMissing) @safe
+SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
-        if(!exists(name))
+        if (!exists(name))
             return returnIfMissing;
 
         SysTime dummy;
@@ -1131,13 +1138,14 @@ SysTime timeLastModified(in char[] name, SysTime returnIfMissing) @safe
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
-            return stat(path.tempCString(), &buf);
+            return stat(namez, &buf);
         }
         stat_t statbuf = void;
 
-        return trustedStat(name, statbuf) != 0 ?
+        return trustedStat(namez, statbuf) != 0 ?
                returnIfMissing :
                SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -1171,7 +1179,7 @@ unittest
  *    true if it exists
  */
 bool exists(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     return existsImpl(name.tempCString!FSChar());
 }
@@ -1243,29 +1251,40 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
 
  Throws: $(D FileException) on error.
   +/
-uint getAttributes(in char[] name) @safe
+uint getAttributes(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
-        static auto trustedGetFileAttributesW(in char[] fileName) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedGetFileAttributesW(const(FSChar)* namez) @trusted
         {
-            return GetFileAttributesW(fileName.tempCStringW());
+            return GetFileAttributesW(namez);
         }
-        immutable result = trustedGetFileAttributesW(name);
+        immutable result = trustedGetFileAttributesW(namez);
 
-        cenforce(result != INVALID_FILE_ATTRIBUTES, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(result != INVALID_FILE_ATTRIBUTES, names, namez);
 
         return result;
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
-            return stat(path.tempCString(), &buf);
+            return stat(namez, &buf);
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedStat(namez, statbuf) == 0, names, namez);
 
         return statbuf.st_mode;
     }
@@ -1285,10 +1304,14 @@ uint getAttributes(in char[] name) @safe
     Params:
         name = The file to get the symbolic link attributes of.
 
+    Returns:
+        the attributes
+
     Throws:
         $(D FileException) on error.
  +/
-uint getLinkAttributes(in char[] name) @safe
+uint getLinkAttributes(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -1296,12 +1319,17 @@ uint getLinkAttributes(in char[] name) @safe
     }
     else version(Posix)
     {
-        static auto trustedLstat(in char[] path, ref stat_t buf) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedLstat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
-            return lstat(path.tempCString(), &buf);
+            return lstat(namez, &buf);
         }
         stat_t lstatbuf = void;
-        cenforce(trustedLstat(name, lstatbuf) == 0, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedLstat(namez, lstatbuf) == 0, names, namez);
         return lstatbuf.st_mode;
     }
 }
@@ -1310,27 +1338,42 @@ uint getLinkAttributes(in char[] name) @safe
 /++
     Set the attributes of the given file.
 
+    Params:
+        name = the file name
+        attributes = the attributes to set the file to
+
     Throws:
         $(D FileException) if the given file does not exist.
  +/
-void setAttributes(in char[] name, uint attributes) @safe
+void setAttributes(R)(R name, uint attributes)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version (Windows)
     {
-        static auto trustedSetFileAttributesW(in char[] fileName, uint dwFileAttributes) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedSetFileAttributesW(const(FSChar)* namez, uint dwFileAttributes) @trusted
         {
-            return SetFileAttributesW(fileName.tempCStringW(), dwFileAttributes);
+            return SetFileAttributesW(namez, dwFileAttributes);
         }
-        cenforce(trustedSetFileAttributesW(name, attributes), name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedSetFileAttributesW(namez, attributes), names, namez);
     }
     else version (Posix)
     {
-        static auto trustedChmod(in char[] path, mode_t mode) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedChmod(const(FSChar)* namez, mode_t mode) @trusted
         {
-            return chmod(path.tempCString(), mode);
+            return chmod(namez, mode);
         }
         assert(attributes <= mode_t.max);
-        cenforce(!trustedChmod(name, cast(mode_t)attributes), name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(!trustedChmod(namez, cast(mode_t)attributes), names, namez);
     }
 }
 
