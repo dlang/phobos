@@ -237,7 +237,7 @@ Throws: $(LREF FileException) on error.
  */
 
 void[] read(R)(R name, size_t upTo = size_t.max)
-    if ((isInputRange!R && isSomeChar!(ElementEncodingType!R)) || isSomeString!R)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         return readImpl(name, name.tempCString!FSChar(), upTo);
@@ -2938,9 +2938,9 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            string search_pattern = buildPath(directory, "*.*");
+            auto search_pattern = chainPath(directory, "*.*");
             WIN32_FIND_DATAW findinfo;
-            HANDLE h = FindFirstFileW(search_pattern.tempCStringW(), &findinfo);
+            HANDLE h = FindFirstFileW(search_pattern.tempCString!FSChar(), &findinfo);
             cenforce(h != INVALID_HANDLE_VALUE, directory);
             _stack.put(DirHandle(directory, h));
             return toNext(false, &findinfo);
@@ -3047,14 +3047,23 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode mode, bool followSymlink)
+    this(R)(R pathname, SpanMode mode, bool followSymlink)
+        if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
     {
         _mode = mode;
         _followSymlink = followSymlink;
         _stack = appender(cast(DirHandle[])[]);
-        if(_mode == SpanMode.depth)
+        if (_mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
-        if(stepIn(pathname))
+
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias pathnameStr = pathname;
+        else
+        {
+            import std.array;
+            string pathnameStr = pathname.array;
+        }
+        if (stepIn(pathnameStr))
         {
             if(_mode == SpanMode.depth)
                 while(mayStepIn())
