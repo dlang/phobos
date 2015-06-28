@@ -2242,6 +2242,16 @@ version (Windows) private immutable string shellSwitch = "/C";
     else version (Posix) return core.sys.posix.unistd.getpid();
 }
 
+/** Returns the $(D Pid) of the current process.
+
+    Using this function is preferred over $(D thisProcessID) as $(D Pid) is more
+    typesafe that int.
+    */
+@property Pid thisProcessPid() @trusted nothrow //TODO: @safe
+{
+    return new typeof(return)(thisProcessID);
+}
+
 
 // Unittest support code:  TestScript takes a string that contains a
 // shell script for the current platform, and writes it to a temporary
@@ -3513,8 +3523,8 @@ else
  * Returns the process ID of the calling process, which is guaranteed to be
  * unique on the system. This call is always successful.
  *
- * $(RED Deprecated.  Please use $(LREF thisProcessID) instead.
- *       This function will be removed in August 2015.)
+ * $(RED Deprecated.  Please use $(LREF thisProcessID) or $(LREF thisProcessPid)
+ *       instead.  This function will be removed in August 2015.)
  *
  * Example:
  * ---
