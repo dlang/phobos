@@ -2264,7 +2264,7 @@ version (Windows) private immutable string shellSwitch = "/C";
     */
 @property Pid thisPid() @trusted nothrow //TODO: @safe
 {
-    return new typeof(return)(thisProcessID);
+    return Pid.getThis();
 }
 
 // Unittest support code:  TestScript takes a string that contains a
