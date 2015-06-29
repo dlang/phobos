@@ -1147,7 +1147,17 @@ final class Pid
 
     /** Returns the $(D Pid) of the current process.
      */
-    static Pid getThis() @safe nothrow { return new Pid(thisProcessID); }
+    static Pid getThis() @safe nothrow
+    {
+        version (Windows)
+        {
+            return new Pid(thisProcessID, INVALID_HANDLE_VALUE);
+        }
+        else
+        {
+            return new Pid(thisProcessID);
+        }
+    }
 
 private:
     /*
