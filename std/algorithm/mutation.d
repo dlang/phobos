@@ -295,23 +295,51 @@ See_Also:
     $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRange))
 {
-    static TargetRange genericImpl(SourceRange source, TargetRange target)
+    import std.traits : isArray, Unqual;
+    static if (isArray!SourceRange && isArray!TargetRange &&
+               is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
+    {
+        const tlen = target.length;
+        const slen = source.length;
+        assert(tlen >= slen,
+                "Cannot copy a source range into a smaller target range.");
+
+        immutable overlaps = () @trusted {
+            return source.ptr < target.ptr + tlen &&
+                   target.ptr < source.ptr + slen; }();
+
+        if (overlaps)
+        {
+            foreach (idx; 0 .. slen)
+                target[idx] = source[idx];
+            return target[slen .. tlen];
+        }
+        else
+        {
+            // Array specialization.  This uses optimized memory copying
+            // routines under the hood and is about 10-20x faster than the
+            // generic implementation.
+            target[0 .. slen] = source[];
+            return target[slen .. $];
+        }
+    }
+    else static if (isInputRange!SourceRange &&
+                    isOutputRange!(TargetRange, ElementType!SourceRange))
     {
         // Specialize for 2 random access ranges.
         // Typically 2 random access ranges are faster iterated by common
-        // index then by x.popFront(), y.popFront() pair
-        static if (isRandomAccessRange!SourceRange && hasLength!SourceRange
-            && hasSlicing!TargetRange && isRandomAccessRange!TargetRange && hasLength!TargetRange)
+        // index than by x.popFront(), y.popFront() pair
+        static if (isRandomAccessRange!SourceRange &&
+                   hasLength!SourceRange &&
+                   hasSlicing!TargetRange &&
+                   isRandomAccessRange!TargetRange &&
+                   hasLength!TargetRange)
         {
-            assert(target.length >= source.length,
-                "Cannot copy a source range into a smaller target range.");
-
             auto len = source.length;
             foreach (idx; 0 .. len)
                 target[idx] = source[idx];
-            return target[len .. target.length];
+            return target[len .. $];
         }
         else
         {
@@ -319,34 +347,10 @@ if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRa
             return target;
         }
     }
-
-    import std.traits : isArray;
-    static if (isArray!SourceRange && isArray!TargetRange &&
-               is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
-    {
-        immutable overlaps = () @trusted {
-            return source.ptr < target.ptr + target.length &&
-                   target.ptr < source.ptr + source.length; }();
-
-        if (overlaps)
-        {
-            return genericImpl(source, target);
-        }
-        else
-        {
-            // Array specialization.  This uses optimized memory copying
-            // routines under the hood and is about 10-20x faster than the
-            // generic implementation.
-            assert(target.length >= source.length,
-                "Cannot copy a source array into a smaller target array.");
-            target[0 .. source.length] = source[];
-
-            return target[source.length .. $];
-        }
-    }
     else
     {
-        return genericImpl(source, target);
+        static assert(false, "Cannot copy " ~ SourceRange.stringof ~
+                             " into " ~ TargetRange.stringof);
     }
 }
 
@@ -442,6 +446,20 @@ $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
             copy(arr1, arr2);
             return 35;
         }();
+    }
+}
+
+@safe unittest
+{
+    // Issue 13650
+    import std.typecons : TypeTuple;
+    foreach (Char; TypeTuple!(char, wchar, dchar))
+    {
+        Char[3] a1 = "123";
+        Char[6] a2 = "456789";
+        assert(copy(a1[], a2[]) is a2[3..$]);
+        assert(a1[] == "123");
+        assert(a2[] == "123789");
     }
 }
 
