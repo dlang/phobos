@@ -2248,8 +2248,9 @@ version (Windows) private immutable string shellSwitch = "/C";
 
 /** Returns the $(D Pid) of the current process.
 
-    Usage of this function is preferred over $(D thisProcessID) as $(D Pid) is more
-    typesafe that int. For instance $(LREF kill) requires a $(D Pid) as argument.
+    Usage of this function is preferred over $(D thisProcessID) as its return
+    type $(D Pid) is more typesafe than $(D int). For instance, $(LREF kill)
+    requires a $(D Pid) as argument.
     */
 @property Pid thisPid() @trusted nothrow //TODO: @safe
 {
