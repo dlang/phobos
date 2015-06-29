@@ -310,83 +310,173 @@ public:
     /++
         Returns the current time in the given time zone.
 
+        Params:
+            clockType = The $(CXREF time, ClockType) indicates which system
+                        clock to use to get the current time. Very few programs
+                        need to use anything other than the default.
+            tz = The time zone for the SysTime that's returned.
+
         Throws:
-            $(XREF exception, ErrnoException) (on Posix) or $(XREF exception, Exception) (on Windows)
-            if it fails to get the time of day.
+            $(LREF DateTimeException) if it fails to get the time.
       +/
-    static SysTime currTime(immutable TimeZone tz = LocalTime()) @safe
+    static SysTime currTime(ClockType clockType = ClockType.normal)(immutable TimeZone tz = LocalTime()) @safe
     {
-        return SysTime(currStdTime, tz);
+        return SysTime(currStdTime!clockType, tz);
     }
 
     unittest
     {
+        import std.format : format;
+        assert(currTime().timezone is LocalTime());
         assert(currTime(UTC()).timezone is UTC());
 
-        //I have no idea why, but for some reason, Windows/Wine likes to get
-        //time_t wrong when getting it with core.stdc.time.time. On one box
-        //I have (which has its local time set to UTC), it always gives time_t
-        //in the real local time (America/Los_Angeles), and after the most recent
-        //DST switch, every Windows box that I've tried it in is reporting
-        //time_t as being 1 hour off of where it's supposed to be. So, I really
-        //don't know what the deal is, but given what I'm seeing, I don't trust
-        //core.stdc.time.time on Windows, so I'm just going to disable this test
-        //on Windows.
+        // core.stdc.time.time does not always work correctly on Windows systems.
+        // In particular, sometimes it applies the local DST to time_t, even
+        // though time_t is in UTC. I'm fairly certain that it's a bug in dmc's
+        // implementation, but it needs to be investigated. Regardless, the
+        // result is that for now, we can't run this test on Windows.
         version(Posix)
         {
+            static import std.math;
             immutable unixTimeD = currTime().toUnixTime();
             immutable unixTimeC = core.stdc.time.time(null);
-            immutable diff = unixTimeC - unixTimeD;
+            assert(std.math.abs(unixTimeC - unixTimeD) <= 2);
+        }
 
-            assert(diff >= -2);
-            assert(diff <= 2);
+        auto norm1 = Clock.currTime;
+        auto norm2 = Clock.currTime(UTC());
+        assert(norm1 <= norm2, format("%s %s", norm1, norm2));
+        assert(abs(norm1 - norm2) <= seconds(2));
+
+        import std.typetuple;
+        foreach(ct; TypeTuple!(ClockType.coarse, ClockType.precise, ClockType.second))
+        {
+            scope(failure) writefln("ClockType.%s", ct);
+            auto value1 = Clock.currTime!ct;
+            auto value2 = Clock.currTime!ct(UTC());
+            assert(value1 <= value2, format("%s %s", value1, value2));
+            assert(abs(value1 - value2) <= seconds(2));
         }
     }
+
 
     /++
         Returns the number of hnsecs since midnight, January 1st, 1 A.D. for the
         current time.
 
+        Params:
+            clockType = The $(CXREF time, ClockType) indicates which system
+                        clock to use to get the current time. Very few programs
+                        need to use anything other than the default.
+
         Throws:
             $(LREF DateTimeException) if it fails to get the time.
       +/
-    static @property long currStdTime() @trusted
+    static @property long currStdTime(ClockType clockType = ClockType.normal)() @trusted
     {
+        static if(clockType != ClockType.coarse &&
+                  clockType != ClockType.normal &&
+                  clockType != ClockType.precise &&
+                  clockType != ClockType.second)
+        {
+            import std.format : format;
+            static assert(0, format("ClockType.%s is not supported by Clock.currTime or Clock.currStdTime", clockType));
+        }
+
         version(Windows)
         {
             FILETIME fileTime;
             GetSystemTimeAsFileTime(&fileTime);
-
-            return FILETIMEToStdTime(&fileTime);
+            immutable result = FILETIMEToStdTime(&fileTime);
+            static if(clockType == ClockType.second)
+            {
+                // This should probably just use core.stdc.time.time, but dmc's
+                // time function seems to apply DST to time_t, which is
+                // incorrect and thus only works with dmc's other C functions.
+                return convert!("seconds", "hnsecs")(convert!("hnsecs", "seconds")(result));
+            }
+            else
+                return result;
         }
         else version(Posix)
         {
-            enum hnsecsToUnixEpoch = 621_355_968_000_000_000L;
+            enum hnsecsToUnixEpoch = unixTimeToStdTime(0);
 
-            static if(is(typeof(clock_gettime)))
+            version(OSX)
             {
+                static if(clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    timeval tv;
+                    if(gettimeofday(&tv, null) != 0)
+                        throw new TimeException("Call to gettimeofday() failed");
+                    return convert!("seconds", "hnsecs")(tv.tv_sec) +
+                           convert!("usecs", "hnsecs")(tv.tv_usec) +
+                           hnsecsToUnixEpoch;
+                }
+            }
+            else version(linux)
+            {
+                static if(clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    import core.sys.linux.time;
+                    static if(clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME_COARSE;
+                    else static if(clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                    else static if(clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
+                    else static assert(0, "Previous static if is wrong.");
+                    timespec ts;
+                    if(clock_gettime(clockArg, &ts) != 0)
+                        throw new TimeException("Call to clock_gettime() failed");
+                    return convert!("seconds", "hnsecs")(ts.tv_sec) +
+                           ts.tv_nsec / 100 +
+                           hnsecsToUnixEpoch;
+                }
+            }
+            else version(FreeBSD)
+            {
+                import core.sys.freebsd.time;
+                static if(clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME_FAST;
+                else static if(clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                else static if(clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME_PRECISE;
+                else static if(clockType == ClockType.second)  alias clockArg = CLOCK_SECOND;
+                else static assert(0, "Previous static if is wrong.");
                 timespec ts;
-
-                if(clock_gettime(CLOCK_REALTIME, &ts) != 0)
-                    throw new TimeException("Failed in clock_gettime().");
-
+                if(clock_gettime(clockArg, &ts) != 0)
+                    throw new TimeException("Call to clock_gettime() failed");
                 return convert!("seconds", "hnsecs")(ts.tv_sec) +
                        ts.tv_nsec / 100 +
                        hnsecsToUnixEpoch;
             }
-            else
-            {
-                timeval tv;
+            else static assert(0, "Unsupported OS");
+        }
+        else static assert(0, "Unsupported OS");
+    }
 
-                if(gettimeofday(&tv, null) != 0)
-                    throw new TimeException("Failed in gettimeofday().");
+    unittest
+    {
+        import std.math : abs;
+        import std.format : format;
+        enum limit = convert!("seconds", "hnsecs")(2);
 
-                return convert!("seconds", "hnsecs")(tv.tv_sec) +
-                       convert!("usecs", "hnsecs")(tv.tv_usec) +
-                       hnsecsToUnixEpoch;
-            }
+        auto norm1 = Clock.currStdTime;
+        auto norm2 = Clock.currStdTime;
+        assert(norm1 <= norm2, format("%s %s", norm1, norm2));
+        assert(abs(norm1 - norm2) <= limit);
+
+        import std.typetuple;
+        foreach(ct; TypeTuple!(ClockType.coarse, ClockType.precise, ClockType.second))
+        {
+            scope(failure) writefln("ClockType.%s", ct);
+            auto value1 = Clock.currStdTime!ct;
+            auto value2 = Clock.currStdTime!ct;
+            assert(value1 <= value2, format("%s %s", value1, value2));
+            assert(abs(value1 - value2) <= limit);
         }
     }
+
 
     /++
         The current system tick. The number of ticks per second varies from
