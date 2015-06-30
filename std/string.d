@@ -468,9 +468,9 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     return -1;
 }
 
-ptrdiff_t indexOf(T, size_t n)(ref T[n] s, in dchar c,
+ptrdiff_t indexOf(T)(ref T s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!T)
+    if (is(T : U[n], U, size_t n) && isSomeChar!(ElementType!T))
 {
     auto r = s[];
     return indexOf(r, c, cs);
@@ -524,6 +524,7 @@ ptrdiff_t indexOf(T, size_t n)(ref T[n] s, in dchar c,
 
     char[10] fixedSizeArray = "0123456789";
     assert(indexOf(fixedSizeArray, '2') == 2);
+    assert(indexOf(fixedSizeArray[], '2') == 2);    // https://issues.dlang.org/show_bug.cgi?id=14735
     });
 }
 
