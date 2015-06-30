@@ -715,12 +715,19 @@ public:
         if (!(f.spec == 's' || f.spec == 'd' || hex))
             throw new FormatException("Format specifier not understood: %" ~ f.spec);
 
-        char[] buff =
-            f.spec == 'X' ?
-                data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.upper) :
-            f.spec == 'x' ?
-                data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.lower) :
-                data.toDecimalString(0);
+        char[] buff;
+        if (f.spec == 'X')
+        {
+            buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.upper);
+        }
+        else if (f.spec == 'x')
+        {
+            buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.lower);
+        }
+        else
+        {
+            buff = data.toDecimalString(0);
+        }
         assert(buff.length > 0);
 
         char signChar = isNegative() ? '-' : 0;
