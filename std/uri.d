@@ -63,29 +63,23 @@ private enum
 
 immutable char[16] hex2ascii = "0123456789ABCDEF";
 
-__gshared ubyte[128] uri_flags;       // indexed by character
+immutable ubyte[128] uri_flags =      // indexed by character
+    ({
+        ubyte[128] uflags;
 
-shared static this()
-{
-    // Initialize uri_flags[]
-    static void helper(immutable char[] p, uint flags)
-    {
-        for (int i = 0; i < p.length; i++)
-            uri_flags[p[i]] |= flags;
-    }
+        // Compile time initialize
+        uflags['#'] |= URI_Hash;
 
-    uri_flags['#'] |= URI_Hash;
-
-    for (int i = 'A'; i <= 'Z'; i++)
-    {
-        uri_flags[i] |= URI_Alpha;
-        uri_flags[i + 0x20] |= URI_Alpha;   // lowercase letters
-    }
-    helper("0123456789", URI_Digit);
-    helper(";/?:@&=+$,", URI_Reserved);
-    helper("-_.!~*'()",  URI_Mark);
-}
-
+        foreach (c; 'A' .. 'Z' + 1)
+        {
+            uflags[c] |= URI_Alpha;
+            uflags[c + 0x20] |= URI_Alpha;   // lowercase letters
+        }
+        foreach (c; '0' .. '9' + 1) uflags[c] |= URI_Digit;
+        foreach (c; ";/?:@&=+$,")   uflags[c] |= URI_Reserved;
+        foreach (c; "-_.!~*'()")    uflags[c] |= URI_Mark;
+        return uflags;
+    })();
 
 private string URI_Encode(dstring string, uint unescapedSet)
 {
