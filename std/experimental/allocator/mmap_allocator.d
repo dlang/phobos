@@ -51,46 +51,23 @@ struct MmapAllocator
     {
         import core.sys.windows.windows;
 
-        // kept to close the mapped memory.
-        private static shared(HANDLE) f;
-
         /// Allocator API.
         void[] allocate(size_t bytes) shared
         {
             if (!bytes) return null;
-
-            uint hiSz, loSz;
-            static if (bytes.sizeof == 8)
-            {
-                loSz = LOWORD(bytes);
-                hiSz = HIWORD(bytes);
-            }
-            else loSz = bytes;
-
-            auto fh = CreateFileMappingA(INVALID_HANDLE_VALUE,
-                LPSECURITY_ATTRIBUTES.init, PAGE_READWRITE, hiSz, loSz, null);
-            if (fh == INVALID_HANDLE_VALUE) return null;
-
-            auto p = MapViewOfFile(fh, FILE_MAP_ALL_ACCESS, 0u, 0u, bytes);
+            auto p = VirtualAlloc(null, bytes, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
             if (p == null)
-            {
-                CloseHandle(fh);
                 return null;
-            }
-
-            f = cast(typeof(f)) fh;
             return p[0 .. bytes];
         }
 
         /// Ditto
         bool deallocate(void[] b) shared
         {
-            int result = true;
+            bool result = true;
             if (b.ptr)
-                result &= UnmapViewOfFile(b.ptr);
-            if (f != INVALID_HANDLE_VALUE)
-                result &= CloseHandle(cast(HANDLE) f);
-            return result != 0;
+                result &= VirtualFree(b.ptr, 0, MEM_RELEASE) != 0;
+            return result;
         }
     }
 }
