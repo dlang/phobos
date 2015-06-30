@@ -291,8 +291,8 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
     {
         import std.stdio : File;
         conn.url = url;
-        auto f = File(saveToPath, "w");
-        conn.onReceive = (ubyte[] data) { f.write(data); return data.length; };
+        auto f = File(saveToPath, "wb");
+        conn.onReceive = (ubyte[] data) { f.rawWrite(data); return data.length; };
         conn.perform();
     }
     else
@@ -309,8 +309,11 @@ unittest
     if (!netAllowed()) return;
     // No anonymous DigitalMars FTP access as of 2015
     //download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
-    download("d-lang.appspot.com/testUrl1", buildPath(tempDir(), "downloaded-http-file"));
-    download!(HTTP)("d-lang.appspot.com/testUrl1", buildPath(tempDir(), "downloaded-http-file"));
+    auto fn = buildPath(tempDir(), "downloaded-http-file");
+    download("d-lang.appspot.com/testUrl1", fn);
+    assert(std.file.readText(fn) == "Hello world\n");
+    download!(HTTP)("d-lang.appspot.com/testUrl1", fn);
+    assert(std.file.readText(fn) == "Hello world\n");
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
