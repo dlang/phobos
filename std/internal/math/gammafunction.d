@@ -1597,8 +1597,10 @@ unittest {
 real logmdigammaInverse(real y)
 {
     import std.numeric: findRoot;
-    enum maxY = logmdigamma(real.min_normal);
-    static assert(maxY > 0 && maxY <= real.max);
+    // FIXME: should be returned back to enum.
+    // Fix requires CTFEable `log` on non-x86 targets (check both LDC and GDC).
+    immutable maxY = logmdigamma(real.min_normal);
+    assert(maxY > 0 && maxY <= real.max);
 
     if (y >= maxY)
     {
