@@ -55,7 +55,7 @@ struct MmapAllocator
         void[] allocate(size_t bytes) shared
         {
             if (!bytes) return null;
-            auto p = VirtualAlloc(null, bytes, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+            auto p = VirtualAlloc(null, bytes, MEM_COMMIT, PAGE_READWRITE);
             if (p == null)
                 return null;
             return p[0 .. bytes];
