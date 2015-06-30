@@ -370,7 +370,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Returns:
      *  The number of times the output range's $(D put) method was invoked.
      */
-    size_t encode(R1, R2)(in R1 source, ref R2 range)
+    size_t encode(R1, R2)(in R1 source, auto ref R2 range)
         if (isArray!R1 && is(ElementType!R1 : ubyte) &&
             !is(R2 == char[]) && isOutputRange!(R2, char))
     out(result)
@@ -457,7 +457,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     /**
      * ditto
      */
-    size_t encode(R1, R2)(R1 source, ref R2 range)
+    size_t encode(R1, R2)(R1 source, auto ref R2 range)
         if (!isArray!R1 && isInputRange!R1 && is(ElementType!R1 : ubyte) &&
             hasLength!R1 && !is(R2 == char[]) && isOutputRange!(R2, char))
     out(result)
@@ -1145,7 +1145,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  $(D Base64Exception) if $(D_PARAM source) contains characters outside the
      *  base alphabet of the current Base64 encoding scheme.
      */
-    size_t decode(R1, R2)(in R1 source, ref R2 range)
+    size_t decode(R1, R2)(in R1 source, auto ref R2 range)
         if (isArray!R1 && is(ElementType!R1 : dchar) &&
             !is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     out(result)
@@ -1233,7 +1233,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     /**
      * ditto
      */
-    size_t decode(R1, R2)(R1 source, ref R2 range)
+    size_t decode(R1, R2)(R1 source, auto ref R2 range)
         if (!isArray!R1 && isInputRange!R1 && is(ElementType!R1 : dchar) &&
             hasLength!R1 && !is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     out(result)
@@ -2004,6 +2004,12 @@ unittest
     OutputRange or;
     assert(Base64.encode(ir, or) == 8);
     assert(or.result == "Gis8TV1u");
+
+    // Verify that any existing workaround that uses & still works.
+    InputRange ir2;
+    OutputRange or2;
+    assert(Base64.encode(ir2, &or2) == 8);
+    assert(or2.result == "Gis8TV1u");
 }
 
 // Regression control for the output range ref bug in decode.
@@ -2028,4 +2034,10 @@ unittest
     OutputRange or;
     assert(Base64.decode(ir, or) == 6);
     assert(or.result == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
+
+    // Verify that any existing workaround that uses & still works.
+    InputRange ir2;
+    OutputRange or2;
+    assert(Base64.decode(ir2, &or2) == 6);
+    assert(or2.result == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
 }
