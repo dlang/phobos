@@ -12,12 +12,27 @@ import std.traits : isFloatingPoint, isIntegral, isUnsigned, isNumeric,
     isSigned, Unqual;
 import std.typetuple : TypeTuple;
 
-/*void main() {
-    import std.stdio : writeln;
-    //auto i = prim!(SafeIntSmall!int)();
-    auto i = prim!(SafeIntFast!int)();
-    //writeln(i);
-}*/
+version(none)
+void main()
+{
+    import std.stdio : writeln, writefln;
+    import std.datetime : StopWatch;
+    StopWatch sw2;
+    sw2.start();
+    auto i = prim!(int)();
+    sw2.stop();
+    writefln("%12s %10d %5d msecs", "int", i, sw2.peek().msecs);
+    StopWatch sw;
+    sw.start();
+    auto i3 = prim!(SafeIntFast!int)();
+    sw.stop();
+    writefln("%12s %10d %5d msecs", "SafeIntFast", i3, sw.peek().msecs);
+    StopWatch sw3;
+    sw3.start();
+    auto i2 = prim!(SafeIntSmall!int)();
+    sw3.stop();
+    writefln("%12s %10d %5d msecs", "SafeIntSmall", i3, sw3.peek().msecs);
+}
 
 @safe:
 
@@ -215,7 +230,7 @@ private bool impl(string op, bool A, bool B, T, S)(in T t, in S s)
 private alias TTest =
     TypeTuple!(byte, short, int, long, ubyte, ushort, uint, ulong);
 
-pure unittest
+pure @safe nothrow unittest
 {
     import std.conv : to;
 
@@ -260,6 +275,33 @@ pure unittest
         }
     }
 }
+
+private auto divFunc(T)(T v1, T v2, ref bool overflow)
+        if(isIntegral!T)
+{
+    if (v2 == 0)
+    {
+        overflow = true;
+        return 0;
+    }
+    else
+    {
+        overflow = false;
+        return v1 / v2;
+    }
+}
+
+private alias divu = divFunc;
+private alias divs = divFunc;
+
+private auto modFunc(T)(T v1, T v2, ref bool overflow)
+        if(isIntegral!T)
+{
+    return v1 % v2;
+}
+
+private alias modu = modFunc;
+private alias mods = modFunc;
 
 private pure auto getValue(T)(T t)
 {
@@ -364,8 +406,11 @@ pure unittest
     }
 }
 
-struct SafeIntInline(T) {
+struct SafeIntInline(T)
+{
     T value = nan;
+
+    alias value this;
 
     static if (isUnsigned!T)
     {
@@ -400,7 +445,8 @@ struct SafeIntInline(T) {
     }
 }
 
-struct SafeIntExplicit(T) {
+struct SafeIntExplicit(T)
+{
     T value;
     bool nan = true;
 
@@ -548,7 +594,6 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
                 {
                     if(greater(vVal, this.max))
                     {
-                        //this.value = this.nan;
                         this.store.setNaN();
                         return;
                     }
@@ -557,7 +602,6 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
                 {
                     if (less(vVal, this.min) || greater(vVal, this.max))
                     {
-                        //this.value = this.nan;
                         this.store.setNaN();
                         return;
                     }
@@ -647,94 +691,28 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
 
         static if (op == "+")
         {
-            static if (T.sizeof > 4 || typeof(v).sizeof > 4)
-            {
-                long function(long, long, ref bool)
-                    @safe @nogc pure nothrow sOp = &adds;
-                ulong function(ulong, ulong, ref bool)
-                    @safe @nogc pure nothrow uOp = &addu;
-            }
-            else
-            {
-                int function(int, int, ref bool)
-                    @safe @nogc pure nothrow sOp = &adds;
-                uint function(uint, uint, ref bool)
-                    @safe @nogc pure nothrow uOp = &addu;
-            }
+            enum opStrS = "adds";
+            enum opStrU = "addu";
         }
         else static if (op == "-")
         {
-            static if (T.sizeof > 4 || typeof(v).sizeof > 4)
-            {
-                long function(long, long, ref bool)
-                    @safe @nogc pure nothrow sOp = &subs;
-                ulong function(ulong, ulong, ref bool)
-                    @safe @nogc pure nothrow uOp = &subu;
-            }
-            else
-            {
-                int function(int, int, ref bool)
-                    @safe @nogc pure nothrow sOp = &subs;
-                uint function(uint, uint, ref bool)
-                    @safe @nogc pure nothrow uOp = &subu;
-            }
+            enum opStrS = "subs";
+            enum opStrU = "subu";
         }
         else static if (op == "*")
         {
-            static if (T.sizeof > 4 || typeof(v).sizeof > 4)
-            {
-                long function(long, long, ref bool)
-                    @safe @nogc pure nothrow sOp = &muls;
-                ulong function(ulong, ulong, ref bool)
-                    @safe @nogc pure nothrow uOp = &mulu;
-            }
-            else
-            {
-                int function(int, int, ref bool)
-                    @safe @nogc pure nothrow sOp = &muls;
-                uint function(uint, uint, ref bool)
-                    @safe @nogc pure nothrow uOp = &mulu;
-            }
+            enum opStrS = "muls";
+            enum opStrU = "mulu";
         }
         else static if (op == "/")
         {
-            auto sOp = function(long v1, long v2, ref bool overflow)
-                    @safe pure nothrow @nogc
-            {
-                if (notEqual(v2, 0))
-                {
-                    return v1 / cast(T) v2;
-                }
-                else
-                {
-                    overflow = true;
-                    return SafeInt!T().min;
-                }
-            };
-
-            auto uOp = function(ulong v1, ulong v2, ref bool overflow)
-                    @safe pure nothrow @nogc
-            {
-                if (notEqual(v2, 0))
-                {
-                    return cast(T) v1 / v2;
-                }
-                else
-                {
-                    overflow = true;
-                    return SafeInt!T().min;
-                }
-            };
+            enum opStrS = "divs";
+            enum opStrU = "divu";
         }
         else static if (op == "%")
         {
-            auto sOp = function(T v1, T v2, ref bool overflow)
-                    @safe pure nothrow @nogc
-            {
-                return v1 % v2;
-            };
-
-            auto uOp = sOp;
+            enum opStrS = "mods";
+            enum opStrU = "modu";
         }
         else
         {
@@ -745,12 +723,12 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
 
         static if (Signed && isSigned!(typeof(v)))
         {
-            auto ret = sOp(this.store.value, v, overflow);
+            mixin("auto ret = " ~ opStrS ~ "(this.store.value, v, overflow);");
             wasNaN = false;
         }
         else static if (!Signed && isUnsigned!(typeof(v)))
         {
-            auto ret = uOp(this.store.value, v, overflow);
+            mixin("auto ret = " ~ opStrU ~ "(this.store.value, v, overflow);");
             wasNaN = false;
         }
 
@@ -759,12 +737,14 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
             T ret;
             if (canConvertTo!SignedType(v))
             {
-                ret = cast(T) sOp(this.store.value, cast(T) v, overflow);
+                mixin("ret = cast(T)" ~ opStrS ~
+                    "(this.store.value, cast(T)v, overflow);");
                 wasNaN = false;
             }
             else if (canConvertTo!UnsignedType(this.store.value))
             {
-                auto tmp = uOp(cast(typeof(v)) this.store.value, v, overflow);
+                mixin("auto tmp = " ~ opStrU ~
+                    "(cast(typeof(v))this.store.value, v, overflow);");
                 if (canConvertTo!T(tmp))
                 {
                     ret = cast(T) tmp;
@@ -778,12 +758,14 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
             T ret;
             if (canConvertTo!UnsignedType(v))
             {
-                ret = cast(T) uOp(this.store.value, cast(T) v, overflow);
+                mixin("ret = cast(T)" ~ opStrU ~
+                    "(this.store.value, cast(T)v, overflow);");
                 wasNaN = false;
             }
             else if (canConvertTo!SignedType(this.store.value))
             {
-                auto tmp = sOp(cast(typeof(v))this.store.value, v, overflow);
+                mixin("auto tmp = " ~ opStrS ~
+                    "(cast(typeof(v))this.store.value, v, overflow);");
                 if (canConvertTo!(SafeIntType!T)(tmp))
                 {
                     ret = cast(T) tmp;
@@ -805,7 +787,6 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
         }
         else
         {
-            //retu.store.value = cast(T)ret;
             return Unqual!(typeof(this))(ret);
         }
 
@@ -897,7 +878,6 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
     {
         import std.format : formatValue;
 
-        //if (this.value == this.nan)
         if (this.store.isNaN())
         {
             sink("nan");
@@ -1146,15 +1126,37 @@ unittest
     safe = raw;
 }
 
-T prim(T)() {
-    enum upTo = 100000;
-    T ret = 2;
-    con: for(T i = 3; i < upTo; i+=2) {
-        for(T j = 3; j < i; j+=2) {
-            auto t = i % j;
-            if(t == 0) {
+private T prim(T)()
+{
+    enum upTo = 200000;
+    T ret = 5;
+    T buf[1000];
+    buf[0] = 2;
+    buf[1] = 3;
+    size_t bufIdx = 2;
+
+    con: for(T i = 3; i < upTo; i+=2)
+    {
+        for(size_t j = 0; j < bufIdx; ++j)
+        {
+            if (i % buf[j] == 0)
+            {
                 continue con;
             }
+        }
+
+        for(T j = buf[bufIdx-1]; j < i; ++j)
+        {
+            auto t = i % j;
+            if (t == 0)
+            {
+                continue con;
+            }
+        }
+
+        if (bufIdx < buf.length)
+        {
+            buf[bufIdx++] = i;
         }
 
         ret += i;
