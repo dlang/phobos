@@ -230,7 +230,7 @@ private bool impl(string op, bool A, bool B, T, S)(in T t, in S s)
 private alias TTest =
     TypeTuple!(byte, short, int, long, ubyte, ushort, uint, ulong);
 
-pure @safe nothrow unittest
+pure @safe unittest
 {
     import std.conv : to;
 
@@ -1130,7 +1130,7 @@ private T prim(T)()
 {
     enum upTo = 200000;
     T ret = 5;
-    T buf[1000];
+    T[1000] buf;
     buf[0] = 2;
     buf[1] = 3;
     size_t bufIdx = 2;
