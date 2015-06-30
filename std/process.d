@@ -1145,6 +1145,20 @@ final class Pid
         return _processID;
     }
 
+    /** Returns the $(D Pid) of the current process.
+     */
+    static Pid getThis() @safe nothrow
+    {
+        version (Windows)
+        {
+            return new Pid(thisProcessID, INVALID_HANDLE_VALUE);
+        }
+        else
+        {
+            return new Pid(thisProcessID);
+        }
+    }
+
 private:
     /*
     Pid.performWait() does the dirty work for wait() and nonBlockingWait().
@@ -2242,6 +2256,16 @@ version (Windows) private immutable string shellSwitch = "/C";
     else version (Posix) return core.sys.posix.unistd.getpid();
 }
 
+/** Returns the $(D Pid) of the current process.
+
+    Usage of this function is preferred over $(D thisProcessID) as its return
+    type $(D Pid) is more typesafe than $(D int). For instance, $(LREF kill)
+    requires a $(D Pid) as argument.
+    */
+@property Pid thisPid() @trusted nothrow //TODO: @safe
+{
+    return Pid.getThis();
+}
 
 // Unittest support code:  TestScript takes a string that contains a
 // shell script for the current platform, and writes it to a temporary
@@ -3513,8 +3537,8 @@ else
  * Returns the process ID of the calling process, which is guaranteed to be
  * unique on the system. This call is always successful.
  *
- * $(RED Deprecated.  Please use $(LREF thisProcessID) instead.
- *       This function will be removed in August 2015.)
+ * $(RED Deprecated.  Please use $(LREF thisProcessID) or $(LREF thisPid)
+ *       instead.  This function will be removed in August 2015.)
  *
  * Example:
  * ---
