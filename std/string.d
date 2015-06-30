@@ -472,7 +472,8 @@ ptrdiff_t indexOf(T, size_t n)(ref T[n] s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!T)
 {
-    return indexOf(s[], c, cs);
+    auto r = s[];
+    return indexOf(r, c, cs);
 }
 
 @safe pure unittest
