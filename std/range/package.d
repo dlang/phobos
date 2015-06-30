@@ -3380,11 +3380,18 @@ struct Zip(Ranges...)
                 }
                 return false;
             case StoppingPolicy.longest:
-                foreach (i, Unused; R)
+                static if (anySatisfy!(isInfinite, R))
                 {
-                    if (!ranges[i].empty) return false;
+                    return false;
                 }
-                return true;
+                else
+                {
+                    foreach (i, Unused; R)
+                    {
+                        if (!ranges[i].empty) return false;
+                    }
+                    return true;
+                }
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R[1 .. $])
                 {

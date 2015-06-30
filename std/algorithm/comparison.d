@@ -233,15 +233,13 @@ auto castSwitch(choices...)(Object switchObject)
     import core.exception : SwitchError;
 
     // Check to see if all handlers return void.
-    enum areAllHandlersVoidResult={
-        foreach(index, choice; choices)
+    enum areAllHandlersVoidResult = {
+        bool result = true;
+        foreach (index, choice; choices)
         {
-            if(!is(ReturnType!choice == void))
-            {
-                return false;
-            }
+            result &= is(ReturnType!choice == void);
         }
-        return true;
+        return result;
     }();
 
     if (switchObject !is null)
