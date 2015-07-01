@@ -12,7 +12,7 @@ import std.traits : isFloatingPoint, isIntegral, isUnsigned, isNumeric,
     isSigned, Unqual;
 import std.typetuple : TypeTuple;
 
-//version(none)
+version(none)
 int main()
 {
     import std.stdio : writeln, writefln;
