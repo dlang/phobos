@@ -12,8 +12,8 @@ import std.traits : isFloatingPoint, isIntegral, isUnsigned, isNumeric,
     isSigned, Unqual;
 import std.typetuple : TypeTuple;
 
-version(none)
-void main()
+//version(none)
+int main()
 {
     import std.stdio : writeln, writefln;
     import std.datetime : StopWatch;
@@ -22,16 +22,24 @@ void main()
     auto i = prim!(int)();
     sw2.stop();
     writefln("%12s %10d %5d msecs", "int", i, sw2.peek().msecs);
+
     StopWatch sw;
     sw.start();
     auto i3 = prim!(SafeIntFast!int)();
     sw.stop();
     writefln("%12s %10d %5d msecs", "SafeIntFast", i3, sw.peek().msecs);
+
     StopWatch sw3;
     sw3.start();
     auto i2 = prim!(SafeIntSmall!int)();
     sw3.stop();
     writefln("%12s %10d %5d msecs", "SafeIntSmall", i3, sw3.peek().msecs);
+
+	assert(i == i3);
+	assert(i2 == i3);
+	assert(i2 == i);
+
+	return (i + i2 + i3) % 127;
 }
 
 @safe:
@@ -297,7 +305,16 @@ private alias divs = divFunc;
 private auto modFunc(T)(T v1, T v2, ref bool overflow)
         if(isIntegral!T)
 {
-    return v1 % v2;
+	if (v2 == 0) 
+	{
+		overflow = true;
+		return 0;
+	}
+	else
+	{
+		overflow = false;
+    	return v1 % v2;
+	}
 }
 
 private alias modu = modFunc;
@@ -1128,12 +1145,12 @@ unittest
 
 private T prim(T)()
 {
-    enum upTo = 200000;
+    enum upTo = 200_000_000;
     T ret = 5;
     T[1000] buf;
     buf[0] = 2;
     buf[1] = 3;
-    size_t bufIdx = 2;
+    T bufIdx = 2;
 
     con: for(T i = 3; i < upTo; i+=2)
     {
@@ -1159,7 +1176,28 @@ private T prim(T)()
             buf[bufIdx++] = i;
         }
 
-        ret += i;
+		// Collatz sequence
+		T cnt = 0;
+		while(i != 0 && cnt < 2_100_000_000) 
+		{
+			if (i % 2 == 0)
+				i /= 2;
+			else
+				i = i * 3 + 1;
+
+			++cnt;
+		}
+
+		// Digit Sum
+		T sum = cnt + i;
+		T sumElem = 0;
+		while(sum > 0)
+		{
+			sumElem += sum % 10;
+			sum /= 10;
+		}
+
+        ret += i - sumElem;
     }
 
     return ret;
