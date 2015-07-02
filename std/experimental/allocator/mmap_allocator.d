@@ -64,10 +64,7 @@ struct MmapAllocator
         /// Ditto
         bool deallocate(void[] b) shared
         {
-            bool result = true;
-            if (b.ptr)
-                result &= VirtualFree(b.ptr, 0, MEM_RELEASE) != 0;
-            return result;
+            return b.ptr is null || VirtualFree(b.ptr, 0, MEM_RELEASE) != 0;
         }
     }
 }
