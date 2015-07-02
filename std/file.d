@@ -863,7 +863,7 @@ version(StdDdoc) void getTimesWin(R)(R name,
                                   out SysTime fileCreationTime,
                                   out SysTime fileAccessTime,
                                   out SysTime fileModificationTime)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R));
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R)) {}
 
 else version(Windows) void getTimesWin(R)(R name,
                                        out SysTime fileCreationTime,
