@@ -29,7 +29,6 @@ struct MmapAllocator
         {
             import core.sys.posix.sys.mman;
             if (!bytes) return null;
-            import core.sys.posix.sys : MAP_ANON;
             auto p = mmap(null, bytes, PROT_READ | PROT_WRITE,
                 MAP_PRIVATE | MAP_ANON, -1, 0);
             if (p is MAP_FAILED) return null;
