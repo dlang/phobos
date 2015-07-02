@@ -15,31 +15,104 @@ import std.typetuple : TypeTuple;
 version(none)
 int main()
 {
+    long sum = 0;
     import std.stdio : writeln, writefln;
     import std.datetime : StopWatch;
-    StopWatch sw2;
-    sw2.start();
-    auto i = prim!(int)();
-    sw2.stop();
-    writefln("%12s %10d %5d msecs", "int", i, sw2.peek().msecs);
+    foreach(T; TypeTuple!(int,uint,long,ulong)) {
+        StopWatch sw2;
+        sw2.start();
+        auto i = prim!(T)();
+        sw2.stop();
+        writefln("%12s!%5s %10d %5d msecs", "int", T.stringof, i,
+            sw2.peek().msecs);
 
-    StopWatch sw;
-    sw.start();
-    auto i3 = prim!(SafeIntFast!int)();
-    sw.stop();
-    writefln("%12s %10d %5d msecs", "SafeIntFast", i3, sw.peek().msecs);
+        StopWatch sw;
+        sw.start();
+        auto i3 = prim!(SafeIntFast!T)();
+        sw.stop();
+        writefln("%12s!%5s %10d %5d msecs", "SafeIntFast", T.stringof, i3,
+            sw.peek().msecs);
 
-    StopWatch sw3;
-    sw3.start();
-    auto i2 = prim!(SafeIntSmall!int)();
-    sw3.stop();
-    writefln("%12s %10d %5d msecs", "SafeIntSmall", i3, sw3.peek().msecs);
+        StopWatch sw3;
+        sw3.start();
+        auto i2 = prim!(SafeIntSmall!T)();
+        sw3.stop();
+        writefln("%12s!%5s %10d %5d msecs", "SafeIntSmall", T.stringof, i2,
+            sw3.peek().msecs);
 
-	assert(i == i3);
-	assert(i2 == i3);
-	assert(i2 == i);
+        assert(i == i3);
+        assert(i2 == i3);
+        assert(i2 == i);
+        sum = (i + i2 + i3) % 127;
 
-	return (i + i2 + i3) % 127;
+        writeln();
+    }
+
+    return sum % 127;
+}
+
+private T prim(T)()
+{
+    import std.stdio;
+    import std.algorithm : min;
+    enum upTo = 113_382;
+    T ret = 5;
+    T[min(upTo/10, 2000)] buf;
+    buf[0] = 2;
+    buf[1] = 3;
+    T bufIdx = 2;
+
+    con: for(T i = 3; i < upTo; i+=2)
+    {
+        for(size_t j = 0; j < bufIdx; ++j)
+        {
+            if (i % buf[j] == 0)
+            {
+                continue con;
+            }
+        }
+
+        for(T j = buf[bufIdx-1]; j < i; ++j)
+        {
+            immutable t = i % j;
+            if (t == 0)
+            {
+                continue con;
+            }
+        }
+
+        if (bufIdx < buf.length)
+        {
+            buf[bufIdx++] = i;
+        }
+
+        // Collatz sequence
+        T cnt = 0;
+        T iC = i;
+        while(iC != 1 && cnt < 20_000)
+        {
+            if (iC % 2 == 0)
+                iC /= 2;
+            else
+                iC = i * 3 + 1;
+
+            ++cnt;
+        }
+
+        // Digit Sum
+        T sum = cnt;
+        T sumElem = 0;
+        while(sum > 0)
+        {
+            sumElem += sum % 10;
+            sum /= 10;
+        }
+
+        //ret += i - sumElem;
+        ret += sumElem;
+    }
+
+    return ret;
 }
 
 @safe:
@@ -305,16 +378,16 @@ private alias divs = divFunc;
 private auto modFunc(T)(T v1, T v2, ref bool overflow)
         if(isIntegral!T)
 {
-	if (v2 == 0) 
-	{
-		overflow = true;
-		return 0;
-	}
-	else
-	{
-		overflow = false;
-    	return v1 % v2;
-	}
+    if (v2 == 0)
+    {
+        overflow = true;
+        return 0;
+    }
+    else
+    {
+        overflow = false;
+        return v1 % v2;
+    }
 }
 
 private alias modu = modFunc;
@@ -674,7 +747,7 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
     */
     Unqual!(typeof(this)) opBinary(string op, V)(V vIn) const pure
     {
-        auto v = getValue(vIn);
+        immutable auto v = getValue(vIn);
 
         static if (typeof(v).sizeof > 4 || typeof(this.store.value).sizeof > 4)
         {
@@ -708,28 +781,28 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
 
         static if (op == "+")
         {
-            enum opStrS = "adds";
-            enum opStrU = "addu";
+            alias opS = adds;
+            alias opU = addu;
         }
         else static if (op == "-")
         {
-            enum opStrS = "subs";
-            enum opStrU = "subu";
+            alias opS = subs;
+            alias opU = subu;
         }
         else static if (op == "*")
         {
-            enum opStrS = "muls";
-            enum opStrU = "mulu";
+            alias opS = muls;
+            alias opU = mulu;
         }
         else static if (op == "/")
         {
-            enum opStrS = "divs";
-            enum opStrU = "divu";
+            alias opS = divs;
+            alias opU = divu;
         }
         else static if (op == "%")
         {
-            enum opStrS = "mods";
-            enum opStrU = "modu";
+            alias opS = mods;
+            alias opU = modu;
         }
         else
         {
@@ -740,12 +813,12 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
 
         static if (Signed && isSigned!(typeof(v)))
         {
-            mixin("auto ret = " ~ opStrS ~ "(this.store.value, v, overflow);");
+            immutable auto ret = opS(this.store.value, v, overflow);
             wasNaN = false;
         }
         else static if (!Signed && isUnsigned!(typeof(v)))
         {
-            mixin("auto ret = " ~ opStrU ~ "(this.store.value, v, overflow);");
+            immutable auto ret = opU(this.store.value, v, overflow);
             wasNaN = false;
         }
 
@@ -754,14 +827,12 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
             T ret;
             if (canConvertTo!SignedType(v))
             {
-                mixin("ret = cast(T)" ~ opStrS ~
-                    "(this.store.value, cast(T)v, overflow);");
+                ret = opS(this.store.value, cast(T)v, overflow);
                 wasNaN = false;
             }
             else if (canConvertTo!UnsignedType(this.store.value))
             {
-                mixin("auto tmp = " ~ opStrU ~
-                    "(cast(typeof(v))this.store.value, v, overflow);");
+                immutable tmp = opU(cast(typeof(v))this.store.value, v, overflow);
                 if (canConvertTo!T(tmp))
                 {
                     ret = cast(T) tmp;
@@ -775,14 +846,13 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
             T ret;
             if (canConvertTo!UnsignedType(v))
             {
-                mixin("ret = cast(T)" ~ opStrU ~
-                    "(this.store.value, cast(T)v, overflow);");
+                ret = cast(T) opU(this.store.value, cast(T)v, overflow);
                 wasNaN = false;
             }
             else if (canConvertTo!SignedType(this.store.value))
             {
-                mixin("auto tmp = " ~ opStrS ~
-                    "(cast(typeof(v))this.store.value, v, overflow);");
+                immutable tmp = cast(T) opS(cast(typeof(v))this.store.value, v,
+                    overflow);
                 if (canConvertTo!(SafeIntType!T)(tmp))
                 {
                     ret = cast(T) tmp;
@@ -792,7 +862,6 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
         }
 
         Unqual!(typeof(this)) retu;
-
 
         if (overflow)
         {
@@ -1141,64 +1210,4 @@ unittest
     SafeInt!int safe;
     int raw = 0;
     safe = raw;
-}
-
-private T prim(T)()
-{
-    enum upTo = 200_000_000;
-    T ret = 5;
-    T[1000] buf;
-    buf[0] = 2;
-    buf[1] = 3;
-    T bufIdx = 2;
-
-    con: for(T i = 3; i < upTo; i+=2)
-    {
-        for(size_t j = 0; j < bufIdx; ++j)
-        {
-            if (i % buf[j] == 0)
-            {
-                continue con;
-            }
-        }
-
-        for(T j = buf[bufIdx-1]; j < i; ++j)
-        {
-            auto t = i % j;
-            if (t == 0)
-            {
-                continue con;
-            }
-        }
-
-        if (bufIdx < buf.length)
-        {
-            buf[bufIdx++] = i;
-        }
-
-		// Collatz sequence
-		T cnt = 0;
-		while(i != 0 && cnt < 2_100_000_000) 
-		{
-			if (i % 2 == 0)
-				i /= 2;
-			else
-				i = i * 3 + 1;
-
-			++cnt;
-		}
-
-		// Digit Sum
-		T sum = cnt + i;
-		T sumElem = 0;
-		while(sum > 0)
-		{
-			sumElem += sum % 10;
-			sum /= 10;
-		}
-
-        ret += i - sumElem;
-    }
-
-    return ret;
 }
