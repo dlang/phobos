@@ -53,13 +53,12 @@ public import std.ascii : LetterCase;
 shared static this()
 {
     CACHELIMIT = core.cpuid.datacache[0].size*1024/2;
-    FASTDIVLIMIT = 100;
 }
 
 private:
 // Limits for when to switch between algorithms.
 immutable size_t CACHELIMIT;   // Half the size of the data cache.
-immutable size_t FASTDIVLIMIT; // crossover to recursive division
+enum size_t FASTDIVLIMIT = 100; // crossover to recursive division
 
 
 // These constants are used by shift operations
@@ -2220,7 +2219,7 @@ int firstNonZeroDigit(const BigDigit [] x) pure nothrow @nogc @safe
     }
     return k;
 }
-import core.stdc.stdio;
+
 /*
     Calculate quotient and remainder of u / v using fast recursive division.
     v must be normalised, and must be at least half as long as u.
@@ -2388,13 +2387,10 @@ pure nothrow
     delete scratch;
 }
 
-version(unittest)
-{
-    import core.stdc.stdio;
-}
-
 unittest
 {
+    import core.stdc.stdio;
+
     void printBiguint(const uint [] data)
     {
         char [] buff = biguintToHex(new char[data.length*9], data, '_');
