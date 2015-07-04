@@ -75,7 +75,6 @@ License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
 module std.parallelism;
 
 import core.atomic;
-import core.cpuid;
 import core.exception;
 import core.memory;
 import core.sync.condition;
@@ -103,35 +102,10 @@ else version(FreeBSD)
 version(Windows)
 {
     // BUGS:  Only works on Windows 2000 and above.
-
-    import core.sys.windows.windows;
-
-    struct SYSTEM_INFO
-    {
-        union
-        {
-            DWORD  dwOemId;
-            struct
-            {
-                WORD wProcessorArchitecture;
-                WORD wReserved;
-            }
-        }
-        DWORD     dwPageSize;
-        LPVOID    lpMinimumApplicationAddress;
-        LPVOID    lpMaximumApplicationAddress;
-        LPVOID    dwActiveProcessorMask;
-        DWORD     dwNumberOfProcessors;
-        DWORD     dwProcessorType;
-        DWORD     dwAllocationGranularity;
-        WORD      wProcessorLevel;
-        WORD      wProcessorRevision;
-    }
-
-    private extern(Windows) void GetSystemInfo(void*);
-
     shared static this()
     {
+        import core.sys.windows.windows;
+
         SYSTEM_INFO si;
         GetSystemInfo(&si);
         totalCPUs = max(1, cast(uint) si.dwNumberOfProcessors);
@@ -184,6 +158,23 @@ else
 {
     static assert(0, "Don't know how to get N CPUs on this OS.");
 }
+
+immutable size_t cacheLineSize;
+shared static this()
+{
+    import core.cpuid : datacache;
+    size_t lineSize = 0;
+    foreach (cachelevel; datacache)
+    {
+        if (cachelevel.lineSize > lineSize && cachelevel.lineSize < uint.max)
+        {
+            lineSize = cachelevel.lineSize;
+        }
+    }
+
+    cacheLineSize = lineSize;
+}
+
 
 /* Atomics code.  These forward to core.atomic, but are written like this
    for two reasons:
@@ -2819,23 +2810,8 @@ public:
         TaskPool pool;
         size_t size;
 
-        static immutable size_t cacheLineSize;
         size_t elemSize;
         bool* stillThreadLocal;
-
-        shared static this()
-        {
-            size_t lineSize = 0;
-            foreach(cachelevel; datacache)
-            {
-                if(cachelevel.lineSize > lineSize && cachelevel.lineSize < uint.max)
-                {
-                    lineSize = cachelevel.lineSize;
-                }
-            }
-
-            cacheLineSize = lineSize;
-        }
 
         static size_t roundToLine(size_t num) pure nothrow
         {
