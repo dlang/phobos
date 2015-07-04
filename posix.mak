@@ -457,10 +457,20 @@ html_consolidated :
 	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
 
+#################### test for undesired white spaces ##########################
+CWS_MAKEFILES = posix.mak win32.mak win64.mak osmodel.mak
+NOT_MAKEFILES = $(ALL_D_FILES) $(ALL_C_FILES) index.d
+GREP = grep
+
+checkwhitespace:
+	$(GREP) -n -U -P "([ \t]$$|\r)" $(CWS_MAKEFILES) ; test "$$?" -ne 0
+	$(GREP) -n -U -P "( $$|\r\t)" $(NOT_MAKEFILES) ; test "$$?" -ne 0
+
+
 #############################
 
 .PHONY : auto-tester-build
-auto-tester-build: all
+auto-tester-build: all checkwhitespace
 
 .PHONY : auto-tester-test
 auto-tester-test: unittest
