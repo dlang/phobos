@@ -2511,37 +2511,36 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 {
     import std.uni : isGraphical;
 
+    string fmt;
     if (std.uni.isGraphical(c))
     {
         if (c == quote || c == '\\')
-        {
             put(w, '\\');
-            put(w, c);
-        }
-        else
-            put(w, c);
+        put(w, c);
+        return;
     }
     else if (c <= 0xFF)
     {
-        put(w, '\\');
-        switch (c)
+        if (c < 0x20)
         {
-        case '\0':  put(w, '0');  break;
-        case '\a':  put(w, 'a');  break;
-        case '\b':  put(w, 'b');  break;
-        case '\f':  put(w, 'f');  break;
-        case '\n':  put(w, 'n');  break;
-        case '\r':  put(w, 'r');  break;
-        case '\t':  put(w, 't');  break;
-        case '\v':  put(w, 'v');  break;
-        default:
-            formattedWrite(w, "x%02X", cast(uint)c);
+            foreach (i, k; "\n\r\t\a\b\f\v\0")
+            {
+                if (c == k)
+                {
+                    put(w, '\\');
+                    put(w, "nrtabfv0"[i]);
+                    return;
+                }
+            }
         }
+        fmt = "\\x%02X";
     }
     else if (c <= 0xFFFF)
-        formattedWrite(w, "\\u%04X", cast(uint)c);
+        fmt = "\\u%04X";
     else
-        formattedWrite(w, "\\U%08X", cast(uint)c);
+        fmt = "\\U%08X";
+
+    formattedWrite(w, fmt, cast(uint)c);
 }
 
 // undocumented because of deprecation
