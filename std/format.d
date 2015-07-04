@@ -1768,7 +1768,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     sprintfSpec[i++] = fs.spec;
     sprintfSpec[i] = 0;
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
-    char[512] buf;
+    char[512] buf = void;
 
     immutable n = ()@trusted{
         return snprintf(buf.ptr, buf.length,
