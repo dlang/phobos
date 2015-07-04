@@ -126,7 +126,7 @@ SRC_STD_3b= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\random.d \
 	std\exception.d \
 	std\compiler.d \
-	std\system.d std\concurrency.d
+	std\system.d std\concurrency.d std\concurrencybase.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
@@ -199,7 +199,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
-	std\stdiobase.d std\parallelism.d \
+	std\concurrencybase.d std\stdiobase.d std\parallelism.d \
 	std\exception.d std\ascii.d
 
 SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\parser.d \
