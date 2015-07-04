@@ -465,7 +465,7 @@ GREP = grep
 
 checkwhitespace:
 	$(GREP) -n -U -P "([ \t]$$|\r)" $(CWS_MAKEFILES) ; test "$$?" -ne 0
-	$(GREP) -n -U -P "( $$|\r\t)" $(NOT_MAKEFILES) ; test "$$?" -ne 0
+	$(GREP) -n -U -P "( $$|\r|\t)" $(NOT_MAKEFILES) ; test "$$?" -ne 0
 
 
 #############################
