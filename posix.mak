@@ -194,13 +194,14 @@ EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
 EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
   odbc/sqltypes odbc/sqlucode sqlite3 zlib) $(addprefix std/c/,fenv locale \
   math process stdarg stddef stdio stdlib string time wcharh)
+  
 ifeq (,$(findstring win,$(OS)))
 	EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_COMMON)
 else
 	EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
 endif
 
-EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
+EXTRA_MODULES_INTERNAL := $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
@@ -209,14 +210,17 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	$(addprefix std/internal/test/, dummyrange) \
 	$(addprefix std/algorithm/, internal)
 
+EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
+
 # Aggregate all D modules relevant to this build
 D_MODULES = $(STD_MODULES) $(EXTRA_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
-ALL_D_FILES = $(addsuffix .d, $(D_MODULES) $(EXTRA_MODULES_COMMON) \
+ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
   $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) \
-  $(EXTRA_MODULES_WIN32)) std/internal/windows/advapi32.d \
+  $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_INTERNAL)) \
+  std/internal/windows/advapi32.d \
   std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
   std/c/linux/tipc.d
 
