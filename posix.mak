@@ -459,14 +459,12 @@ html_consolidated :
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
 
 #################### test for undesired white spaces ##########################
-CWS_MAKEFILES = posix.mak win32.mak win64.mak osmodel.mak
-NOT_MAKEFILES = $(ALL_D_FILES) $(ALL_C_FILES) index.d
-GREP = grep
+CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
+CWS_TOCHECK += $(ALL_D_FILES) index.d
+CWS_TOCHECK += $(filter-out etc/c/zlib/ChangeLog,$(ALL_C_FILES))
 
-checkwhitespace:
-	$(GREP) -n -U -P "([ \t]$$|\r)" $(CWS_MAKEFILES) ; test "$$?" -ne 0
-	$(GREP) -n -U -P "( $$|\r|\t)" $(NOT_MAKEFILES) ; test "$$?" -ne 0
-
+checkwhitespace: 
+	$(HOST_DC) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
 
 #############################
 
