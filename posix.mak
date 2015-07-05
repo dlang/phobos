@@ -463,8 +463,8 @@ CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 CWS_TOCHECK += $(filter-out etc/c/zlib/ChangeLog,$(ALL_C_FILES))
 
-checkwhitespace: 
-	$(HOST_DC) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
+checkwhitespace: $(LIB)
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
 
 #############################
 
