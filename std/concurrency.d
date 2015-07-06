@@ -81,6 +81,7 @@ private
     import std.traits;
     import std.typecons;
     import std.typetuple;
+    import std.concurrencybase;
 
     template hasLocalAliasing(T...)
     {
@@ -955,7 +956,7 @@ private
 }
 
 
-shared static this()
+extern (C) void std_concurrency_static_this()
 {
     registryLock = new Mutex;
 }

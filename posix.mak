@@ -164,7 +164,7 @@ STD_PACKAGES = std $(addprefix std/,\
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
-  conv cstream csv datetime demangle encoding exception file format \
+  concurrencybase conv cstream csv datetime demangle encoding exception file format \
   functional getopt json math mathspecial meta metastrings mmfile numeric \
   outbuffer parallelism path process random signals socket socketstream stdint \
   stdio stdiobase stream string syserror system traits typecons typetuple uni \

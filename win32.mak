@@ -120,7 +120,7 @@ SRC_STD_3a= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\random.d \
 	std\exception.d \
 	std\compiler.d \
-	std\system.d std\concurrency.d
+	std\system.d std\concurrency.d std\concurrencybase.d
 
 SRC_STD_3b= std\datetime.d
 
@@ -178,7 +178,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
-	std\stdiobase.d std\parallelism.d \
+	std\concurrencybase.d std\stdiobase.d std\parallelism.d \
 	std\exception.d std\ascii.d
 
 SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\parser.d \
@@ -481,6 +481,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=79 -unittest -main -run std\random.d
 	$(DMD) -conf= -cov=92 -unittest -main -run std\exception.d
 	$(DMD) -conf= -cov=73 -unittest -main -run std\concurrency.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\concurrencybase.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime.d
 	$(DMD) -conf= -cov=96 -unittest -main -run std\uuid.d
 	$(DMD) -conf= -cov=100 -unittest -main -run std\digest\crc.d
