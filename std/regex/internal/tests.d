@@ -955,3 +955,12 @@ unittest
     assertThrown(regex(`^(x(\1))`));
     assertThrown(regex(`^((x)(?=\1))`));
 }
+
+// bugzilla 14529
+unittest
+{
+    auto ctPat2 = regex(r"^[CDF]$", "i");
+    foreach(v; ["C", "c", "D", "d", "F", "f"])
+        assert(matchAll(v, ctPat2).front.hit == v);
+}
+
