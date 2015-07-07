@@ -496,6 +496,33 @@ pure unittest
     }
 }
 
+/** A simple helper to turn all numeric values into a SafeInt.
+
+*/
+auto toSafeInt(T)(T t)
+{
+    static if (isFloatingPoint!T)
+        return SafeInt!long(t);
+    else static if (isIntegral!T)
+        return SafeInt!T(t);
+    else static if (isSafeInt!T)
+        return t;
+    else
+        static assert(false, "Type " ~ T.stringof ~
+            " can not convert to SafeInt");
+}
+
+unittest
+{
+    foreach(T; TTest)
+    {
+        auto b = toSafeInt(cast(T)0);
+        static assert(isSafeInt!(typeof(b)), typeof(b).stringof);
+        static assert(is(typeof(b.value) == T), typeof(b.value).stringof);
+        assert(!b.isNaN);
+    }
+}
+
 struct SafeIntInline(T)
 {
     T value = nan;
@@ -883,7 +910,10 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
     /// Ditto
     Unqual!(typeof(this)) opBinaryRight(string op, V)(V vIn) const pure
     {
-        mixin("return this " ~ op ~ " vIn;");
+        static if (op == "/" || op == "-")
+            mixin("return Unqual!(typeof(this))(vIn) " ~ op ~ " this;");
+        else
+            mixin("return this " ~ op ~ " vIn;");
     }
 
     /** Implements the assignment operation for the SafeInt type.
@@ -1019,6 +1049,14 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
 
         S s03_1 = 4 + s03;
         assert(s03_1.isNaN);
+
+        S s03_2 = 2 / SafeInt!int(2);
+        assert(!s03_2.isNaN);
+        assert(s03_2 == 1);
+
+        s03_2 = 2 - SafeInt!int(2);
+        assert(!s03_2.isNaN);
+        assert(s03_2 == 0);
     }
 }
 
