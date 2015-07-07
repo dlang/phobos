@@ -103,27 +103,37 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
         }
     }
 
-    // Assuming the element at index i perturbs the heap property in
+    // Assuming the element at "parent" perturbs the heap property in
     // store r, percolates it down the heap such that the heap
     // property is restored.
-    private void percolateDown(Store r, size_t i, size_t length)
+    private void percolate(Store r, size_t parent, immutable size_t end)
     {
+        immutable root = parent;
+        size_t child = void;
+        
+        // Sift down
         for (;;)
         {
-            auto left = i * 2 + 1, right = left + 1;
-            if (right == length)
+            child = parent * 2 + 1;
+            if (child >= end) break;
+            if (child + 1 < end && comp(r[child], r[child + 1])) child += 1;
+            
+            swap(r, parent, child);
+            parent = child;
+        }
+        
+        child = parent;
+        
+        // Sift up
+        while (child > root)
+        {
+            parent = (child - 1) / 2;
+            if (comp(r[parent], r[child]))
             {
-                if (comp(r[i], r[left])) swap(r, i, left);
-                return;
+                swap(r, parent, child);
+                child = parent;
             }
-            if (right > length) return;
-            assert(left < length && right < length);
-            auto largest = comp(r[i], r[left])
-                ? (comp(r[left], r[right]) ? right : left)
-                : (comp(r[i], r[right]) ? right : i);
-            if (largest == i) return;
-            swap(r, i, largest);
-            i = largest;
+            else break;
         }
     }
 
@@ -136,7 +146,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
         auto t2 = moveBack(store[]);
         store.front = move(t2);
         store.back = move(t1);
-        percolateDown(store, 0, store.length - 1);
+        percolate(store, 0, store.length - 1);
     }
 
     /*private*/ static void swap(Store _store, size_t i, size_t j)
@@ -188,7 +198,7 @@ the heap work incorrectly.
         if (_length < 2) return;
         for (auto i = (_length - 2) / 2; ; )
         {
-            this.percolateDown(_store, i, _length);
+            this.percolate(_store, i, _length);
             if (i-- == 0) break;
         }
         assertValid();
@@ -342,7 +352,7 @@ Removes the largest element from the heap.
             _store[_length - 1] = move(t1);
         }
         --_length;
-        percolateDown(_store, 0, _length);
+        percolate(_store, 0, _length);
     }
 
     /// ditto
@@ -368,7 +378,7 @@ Replaces the largest element in the store with $(D value).
         // must replace the top
         assert(!empty, "Cannot call replaceFront on an empty heap.");
         _store.front = value;
-        percolateDown(_store, 0, _length);
+        percolate(_store, 0, _length);
         debug(BinaryHeap) assertValid();
     }
 
@@ -392,7 +402,7 @@ must be collected.
         assert(!_store.empty, "Cannot replace front of an empty heap.");
         if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
-        percolateDown(_store, 0, _length);
+        percolate(_store, 0, _length);
         debug(BinaryHeap) assertValid();
         return true;
     }
