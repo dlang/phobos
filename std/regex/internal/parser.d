@@ -921,7 +921,7 @@ struct Parser(R)
                     op = Operator.Union;
                     goto case;
                 case ']':
-                    set |= last;
+                    addWithFlags(set, last, re_flags);
                     break L_CharTermLoop;
                 default:
                     addWithFlags(set, last, re_flags);
@@ -960,7 +960,7 @@ struct Parser(R)
                     op = Operator.Union;
                     goto case;
                 case ']':
-                    set |= last;
+                    addWithFlags(set, last, re_flags);
                     break L_CharTermLoop;
                 default:
                     addWithFlags(set, last, re_flags);
