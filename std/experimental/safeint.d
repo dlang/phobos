@@ -879,6 +879,13 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
         return retu;
     }
 
+
+    /// Ditto
+    Unqual!(typeof(this)) opBinaryRight(string op, V)(V vIn) const pure
+    {
+        mixin("return this " ~ op ~ " vIn;");
+    }
+
     /** Implements the assignment operation for the SafeInt type.
 
     Every numeric value and every SafeInt can be assigned.
@@ -1006,7 +1013,26 @@ nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
         assert(s4 == 3);
 
         assert(SafeInt!int(0) == 0.0);
+
+        S s03 = -1;
+        assert(s03.isNaN);
+
+        S s03_1 = 4 + s03;
+        assert(s03_1.isNaN);
     }
+}
+
+unittest
+{
+    SafeInt!int s;
+
+    s = int.max;
+    s = s * 2;
+    assert(s.isNaN);
+
+    s = int.max;
+    s = 2 * s;
+    assert(s.isNaN);
 }
 
 unittest
