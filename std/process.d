@@ -412,7 +412,7 @@ private Pid spawnProcessImpl(in char[][] args,
     auto stdoutFD = getFD(stdout);
     auto stderrFD = getFD(stderr);
 
-    auto id = fork();
+    auto id = vfork();
     if (id < 0)
         throw ProcessException.newFromErrno("Failed to spawn new process");
     if (id == 0)
@@ -3245,7 +3245,7 @@ deprecated("Please use spawnProcess instead")
 int _spawnvp(int mode, in char *pathname, in char **argv)
 {
     int retval = 0;
-    pid_t pid = fork();
+    pid_t pid = vfork();
 
     if(!pid)
     {   // child
@@ -3709,7 +3709,7 @@ else version (OSX)
             args[2] = null;
         }
 
-        auto childpid = fork();
+        auto childpid = vfork();
         if (childpid == 0)
         {
             core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);
@@ -3742,7 +3742,7 @@ else version (Posix)
         args[1] = url.tempCString();
         args[2] = null;
 
-        auto childpid = fork();
+        auto childpid = vfork();
         if (childpid == 0)
         {
             core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);
