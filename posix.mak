@@ -70,8 +70,8 @@ ifneq (,$(DRUNTIME))
 	CUSTOM_DRUNTIME=1
 endif
 ifeq (,$(findstring win,$(OS)))
-	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL).a
-	DRUNTIMESO = $(basename $(DRUNTIME))so.a
+	DRUNTIME = $(DRUNTIME_PATH)/generated/$(OS)/$(BUILD)/$(MODEL)/libdruntime.a
+	DRUNTIMESO = $(basename $(DRUNTIME)).so.a
 else
 	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
 endif
@@ -410,7 +410,7 @@ else
 # to always invoke druntime's make. Use FORCE instead of .PHONY to
 # avoid rebuilding phobos when $(DRUNTIME) didn't change.
 $(DRUNTIME): FORCE
-	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS)
+	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS) BUILD=$(BUILD)
 
 ifeq (,$(findstring win,$(OS)))
 $(DRUNTIMESO): $(DRUNTIME)
