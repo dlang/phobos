@@ -1185,7 +1185,7 @@ package(std) template HeapOps(alias less, Range)
         if(r.length < 2) return;
 
         // Build Heap
-        heapify(r);
+        buildHeap(r);
 
         // Sort
         size_t i = r.length - 1;
@@ -1198,7 +1198,7 @@ package(std) template HeapOps(alias less, Range)
     }
 
     //template because of @@@12410@@@
-    void heapify()(Range r)
+    void buildHeap()(Range r)
     {
         size_t i = r.length / 2;
         while(i > 0) percolate(r, --i, r.length);

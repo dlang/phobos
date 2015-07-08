@@ -62,8 +62,12 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     import std.algorithm : move, min, HeapOps, swapAt;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
-    alias percolate = HeapOps!(less, Store).percolate;
-    alias heapify = HeapOps!(less, Store).heapify;
+    static if(isRandomAccessRange!Store)
+        alias Range = Store;
+    else
+        alias Range = typeof(Store.init[]);
+    alias percolate = HeapOps!(less, Range).percolate;
+    alias buildHeap = HeapOps!(less, Range).buildHeap;
 
 // Really weird @@BUG@@: if you comment out the "private:" label below,
 // std.algorithm can't unittest anymore
@@ -115,7 +119,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
         auto t2 = moveBack(store[]);
         store.front = move(t2);
         store.back = move(t1);
-        percolate(store, 0, store.length - 1);
+        percolate(store[], 0, store.length - 1);
     }
 
 public:
@@ -143,7 +147,7 @@ the heap work incorrectly.
         _store = move(s);
         _length = min(_store.length, initialSize);
         if (_length < 2) return;
-        heapify(s);
+        buildHeap(s[]);
         assertValid();
     }
 
@@ -295,7 +299,7 @@ Removes the largest element from the heap.
             _store[_length - 1] = move(t1);
         }
         --_length;
-        percolate(_store, 0, _length);
+        percolate(_store[], 0, _length);
     }
 
     /// ditto
@@ -321,7 +325,7 @@ Replaces the largest element in the store with $(D value).
         // must replace the top
         assert(!empty, "Cannot call replaceFront on an empty heap.");
         _store.front = value;
-        percolate(_store, 0, _length);
+        percolate(_store[], 0, _length);
         debug(BinaryHeap) assertValid();
     }
 
@@ -345,7 +349,7 @@ must be collected.
         assert(!_store.empty, "Cannot replace front of an empty heap.");
         if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
-        percolate(_store, 0, _length);
+        percolate(_store[], 0, _length);
         debug(BinaryHeap) assertValid();
         return true;
     }
