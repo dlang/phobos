@@ -59,8 +59,11 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 {
     import std.functional : binaryFun;
     import std.exception : enforce;
-    import std.algorithm : move, min;
+    import std.algorithm : move, min, HeapOps, swapAt;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
+    
+    alias percolate = HeapOps!(less, Store).percolate;
+    alias heapify = HeapOps!(less, Store).heapify;
 
 // Really weird @@BUG@@: if you comment out the "private:" label below,
 // std.algorithm can't unittest anymore
@@ -103,40 +106,6 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
         }
     }
 
-    // Assuming the element at "parent" perturbs the heap property in
-    // store r, percolates it down the heap such that the heap
-    // property is restored.
-    private void percolate(Store r, size_t parent, immutable size_t end)
-    {
-        immutable root = parent;
-        size_t child = void;
-        
-        // Sift down
-        for (;;)
-        {
-            child = parent * 2 + 1;
-            if (child >= end) break;
-            if (child + 1 < end && comp(r[child], r[child + 1])) child += 1;
-            
-            swap(r, parent, child);
-            parent = child;
-        }
-        
-        child = parent;
-        
-        // Sift up
-        while (child > root)
-        {
-            parent = (child - 1) / 2;
-            if (comp(r[parent], r[child]))
-            {
-                swap(r, parent, child);
-                child = parent;
-            }
-            else break;
-        }
-    }
-
     // @@@BUG@@@: add private here, std.algorithm doesn't unittest anymore
     /*private*/ void pop(Store store)
     {
@@ -147,28 +116,6 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
         store.front = move(t2);
         store.back = move(t1);
         percolate(store, 0, store.length - 1);
-    }
-
-    /*private*/ static void swap(Store _store, size_t i, size_t j)
-    {
-        static if (is(typeof(swap(_store[i], _store[j]))))
-        {
-            swap(_store[i], _store[j]);
-        }
-        else static if (is(typeof(_store.moveAt(i))))
-        {
-            auto t1 = _store.moveAt(i);
-            auto t2 = _store.moveAt(j);
-            _store[i] = move(t2);
-            _store[j] = move(t1);
-        }
-        else // assume it's a container and access its range with []
-        {
-            auto t1 = _store[].moveAt(i);
-            auto t2 = _store[].moveAt(j);
-            _store[i] = move(t2);
-            _store[j] = move(t1);
-        }
     }
 
 public:
@@ -196,11 +143,7 @@ the heap work incorrectly.
         _store = move(s);
         _length = min(_store.length, initialSize);
         if (_length < 2) return;
-        for (auto i = (_length - 2) / 2; ; )
-        {
-            this.percolate(_store, i, _length);
-            if (i-- == 0) break;
-        }
+        heapify(s);
         assertValid();
     }
 
@@ -330,7 +273,7 @@ and $(D length == capacity), throws an exception.
             auto parentIdx = (n - 1) / 2;
             if (!comp(_store[parentIdx], _store[n])) break; // done!
             // must swap and continue
-            swap(_store, parentIdx, n);
+            swapAt(_store, parentIdx, n);
             n = parentIdx;
         }
         ++_length;
