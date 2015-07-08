@@ -625,11 +625,11 @@ class UnCompress
 
 /* ========================== unittest ========================= */
 
-private import std.stdio;
-private import std.random;
-
 unittest // by Dave
 {
+    import std.stdio;
+    import std.random.distribution : uniform;
+
     debug(zlib) writeln("std.zlib.unittest");
 
     bool CompressThenUncompress (ubyte[] src)

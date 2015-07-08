@@ -535,7 +535,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 
 @safe unittest
 {
-    import std.random : uniform;
+    import std.random.distribution : uniform;
 
     auto a = new int[](uniform(0, 100));
     foreach (ref e; a)
@@ -893,7 +893,8 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 
 @safe unittest
 {
-    import std.random : Random, uniform;
+    import std.random.distribution : uniform;
+    import std.random.engine : Random;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -1010,7 +1011,9 @@ unittest
 {
     import std.algorithm.internal : rndstuff;
     import std.algorithm : swapRanges; // FIXME
-    import std.random : Random, unpredictableSeed, uniform;
+    import std.random.device : unpredictableSeed;
+    import std.random.distribution : uniform;
+    import std.random.engine : Random;
     import std.uni : toUpper;
 
     debug(std_algorithm) scope(success)
@@ -1759,7 +1762,9 @@ private template TimSortImpl(alias pred, R)
 
 unittest
 {
-    import std.random : Random, uniform, randomShuffle;
+    import std.random.algorithm : randomShuffle;
+    import std.random.distribution : uniform;
+    import std.random.engine : Random;
 
     // Element type with two fields
     static struct E
@@ -2073,7 +2078,7 @@ void topN(alias less = "a < b",
     if (isRandomAccessRange!(Range) && hasLength!Range)
 {
     import std.algorithm : swap; // FIXME
-    import std.random : uniform;
+    import std.random.distribution : uniform;
 
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
@@ -2168,7 +2173,7 @@ void topN(alias less = "a < b",
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
-    import std.random : uniform;
+    import std.random.distribution : uniform;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2255,7 +2260,10 @@ unittest
 
 unittest
 {
-    import std.random : Random, unpredictableSeed, uniform, randomShuffle;
+    import std.random.algorithm : randomShuffle;
+    import std.random.device : unpredictableSeed;
+    import std.random.distribution : uniform;
+    import std.random.engine : Random;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");

@@ -121,9 +121,13 @@ SRC_STD_3c= std\datetime.d std\bitmanip.d std\typecons.d
 SRC_STD_3a= std\uni.d std\base64.d std\ascii.d \
 	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
 
+SRC_STD_RANDOM= std\random\algorithm.d std\random\device.d \
+	std\random\distribution.d std\random\engine.d std\random\traits.d \
+	std\random\package.d
+
 SRC_STD_3b= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\encoding.d std\xml.d \
-	std\random.d \
+	$(SRC_STD_RANDOM) \
 	std\exception.d \
 	std\compiler.d \
 	std\system.d std\concurrency.d std\concurrencybase.d
@@ -190,7 +194,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\outbuffer.d std\base64.d \
 	std\meta.d std\metastrings.d std\mmfile.d \
 	std\syserror.d \
-	std\random.d std\stream.d std\process.d \
+	std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
@@ -371,6 +375,11 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_path.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_random.html \
+	$(DOC)\std_random_algorithm.html \
+	$(DOC)\std_random_device.html \
+	$(DOC)\std_random_distribution.html \
+	$(DOC)\std_random_engine.html \
+	$(DOC)\std_random_traits.html \
 	$(DOC)\std_range.html \
 	$(DOC)\std_range_primitives.html \
 	$(DOC)\std_range_interfaces.html \
@@ -706,8 +715,23 @@ $(DOC)\std_path.html : $(STDDOC) std\path.d
 $(DOC)\std_process.html : $(STDDOC) std\process.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process.html $(STDDOC) std\process.d
 
-$(DOC)\std_random.html : $(STDDOC) std\random.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random.d
+$(DOC)\std_random.html : $(STDDOC) std\random\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random\package.d
+
+$(DOC)\std_random_algorithm.html : $(STDDOC) std\random\algorithm.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random_algorithm.html $(STDDOC) std\random\algorithm.d
+
+$(DOC)\std_random_device.html : $(STDDOC) std\random\device.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random_device.html $(STDDOC) std\random\device.d
+
+$(DOC)\std_random_distribution.html : $(STDDOC) std\random\distribution.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random_distribution.html $(STDDOC) std\random\distribution.d
+
+$(DOC)\std_random_engine.html : $(STDDOC) std\random\engine.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random_engine.html $(STDDOC) std\random\engine.d
+
+$(DOC)\std_random_traits.html : $(STDDOC) std\random\traits.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random_traits.html $(STDDOC) std\random\traits.d
 
 $(DOC)\std_range.html : $(STDDOC) std\range\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range\package.d

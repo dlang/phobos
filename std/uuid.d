@@ -1068,7 +1068,7 @@ unittest
  */
 @safe UUID randomUUID()
 {
-    import std.random : rndGen;
+    import std.random.engine : rndGen;
     return randomUUID(rndGen);
 }
 
@@ -1083,7 +1083,9 @@ unittest
 UUID randomUUID(RNG)(ref RNG randomGen)
 if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 {
-    import std.random : isUniformRNG;
+    import std.random.traits : isUniformRNG;
+    // FIXME: replace function traits checks
+    // with isUniformRNG ... ?
     static assert (isUniformRNG!RNG, "randomGen must be a uniform RNG");
 
     alias E = ElementEncodingType!RNG;
@@ -1114,7 +1116,8 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 ///
 @safe unittest
 {
-    import std.random : Xorshift192, unpredictableSeed;
+    import std.random.device : unpredictableSeed;
+    import std.random.engine : Xorshift192;
 
     //simple call
     auto uuid = randomUUID();
@@ -1134,13 +1137,14 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
  */
 @safe unittest
 {
-    import std.random : rndGen, Mt19937;
+    import std.random.engine : rndGen, Mt19937;
     static assert(is(typeof(rndGen) == Mt19937));
 }
 
 @safe unittest
 {
-    import std.random : Xorshift192, unpredictableSeed;
+    import std.random.device : unpredictableSeed;
+    import std.random.engine : Xorshift192;
     //simple call
     auto uuid = randomUUID();
 

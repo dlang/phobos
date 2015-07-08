@@ -2448,7 +2448,8 @@ unittest
             }
         }
 
-        import std.random;
+        import std.random.algorithm : randomShuffle;
+        import std.random.engine : Xorshift;
         auto rng = Xorshift(42);
         pairs[].randomShuffle(rng);
 

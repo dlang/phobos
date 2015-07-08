@@ -221,7 +221,9 @@ Elements can be swapped across ranges of different types:
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
-    import std.random : Random, unpredictableSeed, uniform;
+    import std.random.device : unpredictableSeed;
+    import std.random.distribution : uniform;
+    import std.random.engine : Random;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
