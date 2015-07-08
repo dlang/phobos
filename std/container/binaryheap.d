@@ -61,7 +61,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     import std.exception : enforce;
     import std.algorithm : move, min, HeapOps, swapAt;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
-    
+
     alias percolate = HeapOps!(less, Store).percolate;
     alias heapify = HeapOps!(less, Store).heapify;
 

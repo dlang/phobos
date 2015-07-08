@@ -1196,7 +1196,7 @@ package(std) template HeapOps(alias less, Range)
             --i;
         }
     }
-    
+
     //template because of @@@12410@@@
     void heapify()(Range r)
     {
