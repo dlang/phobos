@@ -133,7 +133,7 @@ SQLRETURN SQLGetDescFieldW
     SQLSMALLINT iRecord,
     SQLSMALLINT iField,
     SQLPOINTER  rgbValue,
-    SQLINTEGER	cbValueMax,
+    SQLINTEGER  cbValueMax,
     SQLINTEGER  *pcbValue
 );
 
