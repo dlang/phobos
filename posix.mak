@@ -189,17 +189,19 @@ EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
 EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
 		winsock) $(addprefix std/windows/, charset iunknown syserror)
-ifeq (,$(findstring win,$(OS)))
-	EXTRA_DOCUMENTABLES:=$(EXTRA_MODULES_LINUX)
-else
-	EXTRA_DOCUMENTABLES:=$(EXTRA_MODULES_WIN32)
-endif
 
 # Other D modules that aren't under std/
-EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
+EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
   odbc/sqltypes odbc/sqlucode sqlite3 zlib) $(addprefix std/c/,fenv locale \
   math process stdarg stddef stdio stdlib string time wcharh)
-EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
+
+ifeq (,$(findstring win,$(OS)))
+	EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_COMMON)
+else
+	EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
+endif
+
+EXTRA_MODULES_INTERNAL := $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
@@ -208,14 +210,17 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	$(addprefix std/internal/test/, dummyrange) \
 	$(addprefix std/algorithm/, internal)
 
+EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
+
 # Aggregate all D modules relevant to this build
 D_MODULES = $(STD_MODULES) $(EXTRA_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
-ALL_D_FILES = $(addsuffix .d, $(D_MODULES) \
+ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
   $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) \
-  $(EXTRA_MODULES_WIN32)) std/internal/windows/advapi32.d \
+  $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_INTERNAL)) \
+  std/internal/windows/advapi32.d \
   std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
   std/c/linux/tipc.d
 
@@ -457,10 +462,18 @@ html_consolidated :
 	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
 
+#################### test for undesired white spaces ##########################
+CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
+CWS_TOCHECK += $(ALL_D_FILES) index.d
+CWS_TOCHECK += $(filter-out etc/c/zlib/ChangeLog,$(ALL_C_FILES))
+
+checkwhitespace: $(LIB)
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
+
 #############################
 
 .PHONY : auto-tester-build
-auto-tester-build: all
+auto-tester-build: all checkwhitespace
 
 .PHONY : auto-tester-test
 auto-tester-test: unittest
