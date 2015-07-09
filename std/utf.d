@@ -35,7 +35,7 @@ debug (utf) import core.stdc.stdio : printf;
   +/
 class UTFException : Exception
 {
-    import std.string : format;
+    import core.internal.string;
 
     uint[4] sequence;
     size_t  len;
@@ -60,7 +60,9 @@ class UTFException : Exception
     @safe pure
     this(string msg, size_t index, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
-        super(msg ~ format(" (at index %s)", index), file, line, next);
+        UnsignedStringBuf buf = void;
+        msg ~= " (at index " ~ unsignedToTempString(index, buf, 10) ~ ")";
+        super(msg, file, line, next);
     }
 
 
@@ -72,7 +74,15 @@ class UTFException : Exception
         string result = "Invalid UTF sequence:";
 
         foreach (i; sequence[0 .. len])
-            result ~= format(" %02x", i);
+        {
+            UnsignedStringBuf buf = void;
+            result ~= ' ';
+            auto h = unsignedToTempString(i, buf, 16);
+            if (h.length == 1)
+                result ~= '0';
+            result ~= h;
+            result ~= 'x';
+        }
 
         if (super.msg.length > 0)
         {
