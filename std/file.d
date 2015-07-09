@@ -2689,34 +2689,67 @@ File attributes are preserved, if $(D preserve) equals $(D PreserveAttributes.ye
 On Windows only $(D PreserveAttributes.yes) (the default on Windows) is supported.
 If the target file exists, it is overwritten.
 
+Params:
+    from = string or range of characters representing the existing file name
+    to = string or range of characters representing the target file name
+
 Throws: $(D FileException) on error.
  */
-void copy(in char[] from, in char[] to, PreserveAttributes preserve = preserveAttributesDefault)
+void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
+    if (isInputRange!RF && isSomeChar!(ElementEncodingType!RF) &&
+        isInputRange!RT && isSomeChar!(ElementEncodingType!RT))
+{
+    // Place outside of @trusted block
+    auto fromz = from.tempCString!FSChar();
+    auto toz = to.tempCString!FSChar();
+
+    static if (isNarrowString!RF && is(Unqual!(ElementEncodingType!RF) == char))
+        alias f = from;
+    else
+        enum string f = null;
+
+    static if (isNarrowString!RT && is(Unqual!(ElementEncodingType!RT) == char))
+        alias t = to;
+    else
+        enum string t = null;
+
+    copyImpl(f, t, fromz, toz, preserve);
+}
+
+private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz,
+        PreserveAttributes preserve) @trusted
 {
     version(Windows)
     {
         assert(preserve == Yes.preserve);
-        immutable result = CopyFileW(from.tempCStringW(), to.tempCStringW(), false);
+        immutable result = CopyFileW(fromz, toz, false);
         if (!result)
-            throw new FileException(to.idup);
+        {
+            import core.stdc.wchar_ : wcslen;
+            import std.conv : to;
+
+            if (!t)
+                t = to!(typeof(t))(toz[0 .. wcslen(toz)]);
+
+            throw new FileException(t);
+        }
     }
     else version(Posix)
     {
         import core.stdc.stdio;
 
-        immutable fd = core.sys.posix.fcntl.open(from.tempCString(), O_RDONLY);
-        cenforce(fd != -1, from);
+        immutable fd = core.sys.posix.fcntl.open(fromz, O_RDONLY);
+        cenforce(fd != -1, f, fromz);
         scope(exit) core.sys.posix.unistd.close(fd);
 
         stat_t statbuf = void;
-        cenforce(fstat(fd, &statbuf) == 0, from);
-        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
+        cenforce(fstat(fd, &statbuf) == 0, f, fromz);
+        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, f, fromz);
 
-        auto tozTmp = to.tempCString();
-        immutable fdw = core.sys.posix.fcntl.open(tozTmp,
+        immutable fdw = core.sys.posix.fcntl.open(toz,
                 O_CREAT | O_WRONLY | O_TRUNC, octal!666);
-        cenforce(fdw != -1, from);
-        scope(failure) core.stdc.stdio.remove(tozTmp);
+        cenforce(fdw != -1, t, toz);
+        scope(failure) core.stdc.stdio.remove(toz);
         {
             scope(failure) core.sys.posix.unistd.close(fdw);
             auto BUFSIZ = 4096u * 16;
@@ -2725,7 +2758,11 @@ void copy(in char[] from, in char[] to, PreserveAttributes preserve = preserveAt
             {
                 BUFSIZ = 4096;
                 buf = core.stdc.stdlib.malloc(BUFSIZ);
-                buf || assert(false, "Out of memory in std.file.copy");
+                if (!buf)
+                {
+                    import core.exception : onOutOfMemoryError;
+                    onOutOfMemoryError();
+                }
             }
             scope(exit) core.stdc.stdlib.free(buf);
 
@@ -2735,21 +2772,21 @@ void copy(in char[] from, in char[] to, PreserveAttributes preserve = preserveAt
                 cenforce(
                     core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
                     && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
-                    from);
+                    f, fromz);
                 assert(size >= toxfer);
                 size -= toxfer;
             }
             if (preserve)
-                cenforce(fchmod(fdw, statbuf.st_mode) == 0, from);
+                cenforce(fchmod(fdw, statbuf.st_mode) == 0, f, fromz);
         }
 
-        cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
+        cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
 
         utimbuf utim = void;
         utim.actime = cast(time_t)statbuf.st_atime;
         utim.modtime = cast(time_t)statbuf.st_mtime;
 
-        cenforce(utime(tozTmp, &utim) != -1, from);
+        cenforce(utime(toz, &utim) != -1, f, fromz);
     }
 }
 
@@ -2763,6 +2800,10 @@ unittest
     write(t1, "2");
     copy(t1, t2);
     assert(readText(t2) == "2");
+
+    import std.utf : byChar;
+    copy(t1.byChar, t2.byChar);
+    assert(readText(t2.byChar) == "2");
 }
 
 version(Posix) unittest //issue 11434
