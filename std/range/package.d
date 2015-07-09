@@ -862,6 +862,11 @@ if (Ranges.length > 0 &&
 
             import std.typetuple : anySatisfy;
 
+            static if (anySatisfy!(isInfinite, R[0 .. $ - 1]))
+            {
+                static assert(false, "No sense in appending ranges after an infinite range in a chain.");
+            }
+
             static if (anySatisfy!(isInfinite, R))
             {
                 // Propagate infiniteness.
@@ -1110,6 +1115,16 @@ if (Ranges.length > 0 &&
                     }
                     return result;
                 }
+
+            auto opBinary(string op : "~", Range)(Range r)
+            if (isInputRange!(Unqual!Range)//  &&
+                // is(CommonType!(RvalueElementType,
+                //                ElementType!Range))
+                )
+            {
+                import std.range : chain;
+                return chain(source, r); // flatten tree
+            }
         }
         return Result(rs);
     }
@@ -1172,12 +1187,15 @@ unittest
     auto c = chain( iota(0, 10), iota(0, 10) );
 
     // Test the case where infinite ranges are present.
-    auto inf = chain([0,1,2][], cycle([4,5,6][]), [7,8,9][]); // infinite range
+    auto inf = chain([0,1,2][], cycle([4,5,6][])); // infinite range
     assert(inf[0] == 0);
     assert(inf[3] == 4);
     assert(inf[6] == 4);
     assert(inf[7] == 5);
     static assert(isInfinite!(typeof(inf)));
+
+    // Infinite ranges may only be placed at the end of a chain
+    static assert(!__traits(compiles, { auto inf = chain([0,1,2][], cycle([4,5,6][]), [7,8,9][]); }));
 
     immutable int[] immi = [ 1, 2, 3 ];
     immutable float[] immf = [ 1, 2, 3 ];
@@ -1411,6 +1429,7 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
                 else result.r2 = result.r2[begin .. end];
                 return result;
             }
+        mixin Chainable;
     }
     return Result(condition, r1, r2);
 }
@@ -1491,6 +1510,8 @@ unittest
         uint[] foo = [1,2,3,4,5];
         uint[] bar = [6,7,8,9,10];
         auto c = chooseAmong(1,foo, bar);
+        assert(equal(c ~ c, [6,7,8,9,10,
+                             6,7,8,9,10]));
         assert(c[3] == 9);
         c[3] = 42;
         assert(c[3] == 42);
@@ -1616,6 +1637,8 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 
             alias opDollar = length;
         }
+
+        mixin Chainable;
     }
 
     return Result(rs, 0);
@@ -1630,6 +1653,8 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
     int[] b = [ 10, 20, 30, 40 ];
     auto r = roundRobin(a, b);
     assert(equal(r, [ 1, 10, 2, 20, 3, 30, 40 ]));
+    assert(equal(r ~ r, [ 1, 10, 2, 20, 3, 30, 40,
+                          1, 10, 2, 20, 3, 30, 40 ]));
 }
 
 /**
@@ -1660,6 +1685,8 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
     assert(equal(radial(a), [ 3, 4, 2, 5, 1 ]));
     a = [ 1, 2, 3, 4 ];
     assert(equal(radial(a), [ 2, 3, 1, 4 ]));
+    assert(equal(radial(a) ~ radial(a), [ 2, 3, 1, 4,
+                                          2, 3, 1, 4 ]));
 }
 
 @safe unittest
@@ -1882,6 +1909,8 @@ if (isInputRange!(Unqual!Range) &&
     {
         return _maxAvailable;
     }
+
+    mixin Chainable;
 }
 
 // This template simply aliases itself to R and is useful for consistency in
@@ -1915,6 +1944,8 @@ if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &
     assert(s.length == 5);
     assert(s[4] == 5);
     assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
+    assert(equal(s ~ s, [ 1, 2, 3, 4, 5,
+                          1, 2, 3, 4, 5 ][]));
 }
 
 // take(take(r, n1), n2)
@@ -2117,6 +2148,8 @@ if (isInputRange!R)
                     return _input.front = v;
                 }
             }
+
+            mixin Chainable;
         }
 
         return Result(range, n);
@@ -2132,6 +2165,8 @@ if (isInputRange!R)
 
     auto b = takeExactly(a, 3);
     assert(equal(b, [1, 2, 3]));
+    assert(equal(b ~ b, [1, 2, 3,
+                         1, 2, 3]));
     static assert(is(typeof(b.length) == size_t));
     assert(b.length == 3);
     assert(b.front == 1);
@@ -2274,6 +2309,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
             }
             // Non-standard property
             @property R source() { return _source; }
+            mixin Chainable;
         }
 
         return Result(source, source.empty);
@@ -2283,7 +2319,10 @@ auto takeOne(R)(R source) if (isInputRange!R)
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
+
     auto s = takeOne([42, 43, 44]);
+    assert(equal(s ~ s, [42, 42]));
     static assert(isRandomAccessRange!(typeof(s)));
     assert(s.length == 1);
     assert(!s.empty);
@@ -2707,6 +2746,7 @@ public:
     private static struct DollarToken {}
     enum opDollar = DollarToken.init;
     auto opSlice(size_t, DollarToken) inout { return this; }
+    mixin Chainable;
 }
 
 /// Ditto
@@ -2717,7 +2757,9 @@ Repeat!T repeat(T)(T value) { return Repeat!T(value); }
 {
     import std.algorithm : equal;
 
-    assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
+    assert(equal(5.repeat.take(4), [ 5, 5, 5, 5 ]));
+    assert(equal((1.repeat.take(2) ~ 5.repeat).take(4), [ 1, 1,
+                                                          5, 5 ]));
 }
 
 @safe unittest

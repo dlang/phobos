@@ -212,6 +212,7 @@ same cost or side effects.
     auto r2 = r.cache().take(3);
 
     assert(equal(r1, [0, 1, 2]));
+    assert(equal(r1 ~ r1, [0, 1, 2, 0, 1, 2]));
     assert(i == 2); //The last "seen" element was 2. The data in cache has been cleared.
 
     assert(equal(r2, [0, 1, 2]));
@@ -412,6 +413,8 @@ private struct _Cache(R, bool bidir)
             }
         }
     }
+
+    mixin Chainable;
 }
 
 /**
@@ -608,6 +611,8 @@ private struct MapResult(alias fun, Range)
             return typeof(this)(_input.save);
         }
     }
+
+    mixin Chainable;
 }
 
 @safe unittest
@@ -620,7 +625,9 @@ private struct MapResult(alias fun, Range)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     alias stringize = map!(to!string);
-    assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
+    auto s = stringize([ 1, 2, 3, 4 ]);
+    assert(equal(s, [ "1", "2", "3", "4" ]));
+    assert(equal(s ~ s, [ "1", "2", "3", "4", "1", "2", "3", "4" ]));
 
     uint counter;
     alias count = map!((a) { return counter++; });
@@ -1020,6 +1027,8 @@ private struct FilterResult(alias pred, Range)
             return typeof(this)(_input.save);
         }
     }
+
+    mixin Chainable;
 }
 
 @safe unittest
@@ -1034,6 +1043,8 @@ private struct FilterResult(alias pred, Range)
     auto r = filter!("a > 3")(a);
     static assert(isForwardRange!(typeof(r)));
     assert(equal(r, [ 4 ][]));
+    assert(equal(r ~ r, [ 4, 4][]));
+    assert(equal(r ~ r ~ r, [ 4, 4, 4][]));
 
     a = [ 1, 22, 3, 42, 5 ];
     auto under10 = filter!("a < 10")(a);
@@ -1152,6 +1163,7 @@ template filterBidirectional(alias pred)
     static assert(isBidirectionalRange!(typeof(small)));
     assert(small.back == 2);
     assert(equal(small, [ 1, 2 ]));
+    assert(equal(small ~ small, [ 1, 2, 1, 2]));
     assert(equal(retro(small), [ 2, 1 ]));
     // In combination with chain() to span multiple ranges
     int[] a = [ 3, -2, 400 ];
@@ -1204,6 +1216,8 @@ private struct FilterBidiResult(alias pred, Range)
     {
         return typeof(this)(_input.save);
     }
+
+    mixin Chainable;
 }
 
 // group
@@ -2057,6 +2071,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 return copy;
             }
         }
+
+        mixin Chainable;
     }
     return Result(r, sep);
 }
@@ -2080,6 +2096,11 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
                     "Mary...has...a...little...lamb"));
     assert(equal(joiner(["abc", "def"]), "abcdef"));
+    /* TODO This fails, as
+       iteration.d(2098,18): Error: incompatible types for ((joiner(["abc", "def"])) ~ (joiner(["abc", "def"]))): 'Result' and 'Result'
+       why?:
+       assert(equal(joiner(["abc", "def"]) ~ joiner(["abc", "def"]), "abcdefabcdef"));
+    */
 }
 
 unittest
@@ -3744,6 +3765,8 @@ if (isSomeChar!C)
         {
             return this;
         }
+
+        mixin Chainable;
     }
     return Result(s);
 }
@@ -3754,6 +3777,7 @@ if (isSomeChar!C)
     import std.algorithm.comparison : equal;
     auto a = " a     bcd   ef gh ";
     assert(equal(splitter(a), ["a", "bcd", "ef", "gh"][]));
+    assert(equal(splitter(a) ~ splitter(a), ["a", "bcd", "ef", "gh", "a", "bcd", "ef", "gh"][]));
 }
 
 @safe pure unittest
@@ -4164,6 +4188,8 @@ private struct UniqResult(alias pred, Range)
             return typeof(this)(_input.save);
         }
     }
+
+    mixin Chainable;
 }
 
 @safe unittest
@@ -4179,6 +4205,7 @@ private struct UniqResult(alias pred, Range)
     static assert(isForwardRange!(typeof(r)));
 
     assert(equal(r, [ 1, 2, 3, 4, 5 ][]));
+    assert(equal(r ~ r, [ 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 ][]));
     assert(equal(retro(r), retro([ 1, 2, 3, 4, 5 ][])));
 
     foreach (DummyType; AllDummyRanges) {

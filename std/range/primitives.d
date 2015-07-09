@@ -2271,3 +2271,22 @@ if (!isNarrowString!(T[]))
     size_t i = a.length - std.utf.strideBack(a, a.length);
     return decode(a, i);
 }
+
+/**
+   This template shall be mixed in at the top-scope inside of the $(D Result)
+   struct of each $(D InputRange) in order to support lazy chaining via
+   concatenation operation as `x ~ y` instead of via $(D chain(x, y))).
+*/
+template Chainable()
+{
+    import std.traits: Unqual, CommonType;
+    import std.range: ElementType;
+    auto opBinary(string op : "~", Range)(Range r)
+    if (isInputRange!(Unqual!Range) &&
+        is(CommonType!(ElementType!(typeof(this)),
+                       ElementType!Range)))
+    {
+        import std.range : chain;
+        return chain(this, r);
+    }
+}
