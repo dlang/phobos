@@ -1384,6 +1384,9 @@ void setAttributes(R)(R name, uint attributes)
     Params:
         name = The path to the file.
 
+    Returns:
+        true if the name specifies a directory
+
     Throws:
         $(D FileException) if the given file does not exist.
 
@@ -1393,7 +1396,8 @@ assert(!"/etc/fonts/fonts.conf".isDir);
 assert("/usr/share/include".isDir);
 --------------------
   +/
-@property bool isDir(in char[] name) @safe
+@property bool isDir(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -1431,6 +1435,9 @@ assert("/usr/share/include".isDir);
 
     Params:
         attributes = The file attributes.
+
+    Returns:
+        true if attibutes specifies a directory
 
 Examples:
 --------------------
@@ -1501,6 +1508,9 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
     Params:
         name = The path to the file.
 
+    Returns:
+        true if name specifies a file
+
     Throws:
         $(D FileException) if the given file does not exist.
 
@@ -1510,7 +1520,8 @@ assert("/etc/fonts/fonts.conf".isFile);
 assert(!"/usr/share/include".isFile);
 --------------------
   +/
-@property bool isFile(in char[] name) @safe
+@property bool isFile(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
         return !name.isDir;
@@ -1555,6 +1566,9 @@ assert(!"/usr/share/include".isFile);
 
     Params:
         attributes = The file attributes.
+
+    Returns:
+        true if the given file attributes are for a file
 
 Examples:
 --------------------
@@ -1616,10 +1630,14 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
     Params:
         name = The path to the file.
 
+    Returns:
+        true if name is a symbolic link
+
     Throws:
         $(D FileException) if the given file does not exist.
   +/
-@property bool isSymlink(in char[] name) @safe
+@property bool isSymlink(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
         return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1710,6 +1728,9 @@ unittest
     Params:
         attributes = The file attributes.
 
+    Returns:
+        true if attributes are for a symbolic link
+
 Examples:
 --------------------
 core.sys.posix.unistd.symlink("/etc/fonts/fonts.conf", "/tmp/alink");
@@ -1731,24 +1752,31 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
  * Change directory to $(D pathname).
  * Throws: $(D FileException) on error.
  */
-void chdir(in char[] pathname) @safe
+void chdir(R)(R pathname)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
+    // Place outside of @trusted block
+    auto pathz = pathname.tempCString!FSChar();
+
     version(Windows)
     {
-        static auto trustedSetCurrentDirectoryW(in char[] path) @trusted
+        static auto trustedChdir(const(FSChar)* pathz) @trusted
         {
-            return SetCurrentDirectoryW(path.tempCStringW());
+            return SetCurrentDirectoryW(pathz);
         }
-        cenforce(trustedSetCurrentDirectoryW(pathname), pathname);
     }
     else version(Posix)
     {
-        static auto trustedChdir(in char[] path) @trusted
+        static auto trustedChdir(const(FSChar)* pathz) @trusted
         {
-            return core.sys.posix.unistd.chdir(path.tempCString());
+            return core.sys.posix.unistd.chdir(pathz) == 0;
         }
-        cenforce(trustedChdir(pathname) == 0, pathname);
     }
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        alias pathStr = pathname;
+    else
+        string pathStr = null;
+    cenforce(trustedChdir(pathz), pathStr, pathz);
 }
 
 /****************************************************
@@ -1757,23 +1785,35 @@ Make directory $(D pathname).
 Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
         if an error occured.
  */
-void mkdir(in char[] pathname) @safe
+void mkdir(R)(R pathname)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
+    // Place outside of @trusted block
+    auto pathz = pathname.tempCString!FSChar();
+
     version(Windows)
     {
-        static auto trustedCreateDirectoryW(in char[] path) @trusted
+        static auto trustedCreateDirectoryW(const(FSChar)* pathz) @trusted
         {
-            return CreateDirectoryW(path.tempCStringW(), null);
+            return CreateDirectoryW(pathz, null);
         }
-        wenforce(trustedCreateDirectoryW(pathname), pathname);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias pathStr = pathname;
+        else
+            string pathStr = null;
+        wenforce(trustedCreateDirectoryW(pathz), pathStr, pathz);
     }
     else version(Posix)
     {
-        static auto trustedMkdir(in char[] path, mode_t mode) @trusted
+        static auto trustedMkdir(const(FSChar)* pathz, mode_t mode) @trusted
         {
-            return core.sys.posix.sys.stat.mkdir(path.tempCString(), mode);
+            return core.sys.posix.sys.stat.mkdir(pathz, mode);
         }
-        cenforce(trustedMkdir(pathname, octal!777) == 0, pathname);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias pathStr = pathname;
+        else
+            string pathStr = null;
+        cenforce(trustedMkdir(pathz, octal!777) == 0, pathStr, pathz);
     }
 }
 
