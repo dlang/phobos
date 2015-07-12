@@ -1123,7 +1123,7 @@ private void quickSortImpl(alias less, Range)(Range r, size_t depth)
     {
         if (depth == 0)
         {
-            HeapSortImpl!(less, Range).heapSort(r);
+            HeapOps!(less, Range).heapSort(r);
             return;
         }
         depth = depth >= depth.max / 2 ? (depth / 3) * 2 : (depth * 2) / 3;
@@ -1167,8 +1167,8 @@ private void quickSortImpl(alias less, Range)(Range r, size_t depth)
     }
 }
 
-// Bottom-Up Heap-Sort Implementation
-private template HeapSortImpl(alias less, Range)
+// Heap operations for random-access ranges
+package(std) template HeapOps(alias less, Range)
 {
     import std.algorithm.mutation : swapAt;
 
@@ -1185,21 +1185,27 @@ private template HeapSortImpl(alias less, Range)
         if(r.length < 2) return;
 
         // Build Heap
-        size_t i = r.length / 2;
-        while(i > 0) sift(r, --i, r.length);
+        buildHeap(r);
 
         // Sort
-        i = r.length - 1;
+        size_t i = r.length - 1;
         while(i > 0)
         {
             swapAt(r, 0, i);
-            sift(r, 0, i);
+            percolate(r, 0, i);
             --i;
         }
     }
 
     //template because of @@@12410@@@
-    void sift()(Range r, size_t parent, immutable size_t end)
+    void buildHeap()(Range r)
+    {
+        size_t i = r.length / 2;
+        while(i > 0) percolate(r, --i, r.length);
+    }
+
+    //template because of @@@12410@@@
+    void percolate()(Range r, size_t parent, immutable size_t end)
     {
         immutable root = parent;
         size_t child = void;
