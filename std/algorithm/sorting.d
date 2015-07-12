@@ -2432,6 +2432,8 @@ do
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
+ * See_Also:
+ * $(XREF_PACK algorithm,iteration,permutations).
  */
 bool nextPermutation(alias less="a < b", BidirectionalRange)
                     (BidirectionalRange range)
