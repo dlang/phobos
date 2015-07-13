@@ -1534,6 +1534,8 @@ void main()
     writeln(words);
 }
 ---
+This is actually what $(LREF byLine) does internally, so its usage
+is recommended if you want to process a complete file.
 */
     size_t readln(C)(ref C[] buf, dchar terminator = '\n')
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
