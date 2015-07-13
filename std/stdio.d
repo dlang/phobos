@@ -1507,6 +1507,35 @@ This method can be more efficient than the one in the previous example
 because $(D stdin.readln(buf)) reuses (if possible) memory allocated
 for $(D buf), whereas $(D line = stdin.readln()) makes a new memory allocation
 for every line.
+
+For even better performance you can help $(D readln) by passing in a
+large buffer to avoid memory reallocations. This can be done by reusing the
+largest buffer returned by $(D readln):
+
+Example:
+---
+// Read lines from $(D stdin) and count words
+
+void main()
+{
+    char[] buf;
+    size_t words = 0;
+
+    while (!stdin.eof)
+    {
+        char[] line = buf;
+        stdin.readln(line);
+        if (line.length > buf.length)
+            buf = line;
+
+        words += line.split.length;
+    }
+
+    writeln(words);
+}
+---
+This is actually what $(LREF byLine) does internally, so its usage
+is recommended if you want to process a complete file.
 */
     size_t readln(C)(ref C[] buf, dchar terminator = '\n')
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
