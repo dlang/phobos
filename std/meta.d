@@ -1,11 +1,11 @@
 // Written in the D programming language.
 
 /**
- * Templates to manipulate template argument lists (also known as type lists).
+ * Templates to manipulate template argument lists (also known as alias lists).
  *
- * Some operations on alias sequences are built in to the language,
- * such as TL[$(I n)] which gets the $(I n)th type from the
- * alias sequence. TL[$(I lwr) .. $(I upr)] returns a new type
+ * Some operations on alias lists are built in to the language,
+ * such as TL[$(I n)] which gets the $(I n)th alias from the
+ * alias list. TL[$(I lwr) .. $(I upr)] returns a new alias
  * list that is a slice of the old one.
  *
  * Several templates in this module use or operate on eponymous templates that
@@ -31,19 +31,19 @@
 module std.meta;
 
 /**
- * Creates a a sequence of zero or more aliases. This is most commonly
+ * Creates a list of zero or more aliases. This is most commonly
  * used as template parameters or arguments.
  */
-template AliasSeq(TList...)
+template AliasList(TList...)
 {
-    alias AliasSeq = TList;
+    alias AliasList = TList;
 }
 
 ///
 unittest
 {
     import std.meta;
-    alias TL = AliasSeq!(int, double);
+    alias TL = AliasList!(int, double);
 
     int foo(TL td)  // same as int foo(int, double);
     {
@@ -54,15 +54,15 @@ unittest
 ///
 unittest
 {
-    alias TL = AliasSeq!(int, double);
+    alias TL = AliasList!(int, double);
 
-    alias Types = AliasSeq!(TL, char);
-    static assert(is(Types == AliasSeq!(int, double, char)));
+    alias Types = AliasList!(TL, char);
+    static assert(is(Types == AliasList!(int, double, char)));
 }
 
 /**
  * Returns the index of the first occurrence of type T in the
- * sequence of zero or more types TList.
+ * list of zero or more types TList.
  * If not found, -1 is returned.
  */
 template staticIndexOf(T, TList...)
@@ -84,7 +84,7 @@ unittest
     void foo()
     {
         writefln("The index of long is %s",
-                 staticIndexOf!(long, AliasSeq!(int, long, double)));
+                 staticIndexOf!(long, AliasList!(int, long, double)));
         // prints: The index of long is 1
     }
 }
@@ -160,9 +160,9 @@ template Erase(alias T, TList...)
 ///
 unittest
 {
-    alias Types = AliasSeq!(int, long, double, char);
+    alias Types = AliasList!(int, long, double, char);
     alias TL = Erase!(long, Types);
-    static assert(is(TL == AliasSeq!(int, double, char)));
+    static assert(is(TL == AliasList!(int, double, char)));
 }
 
 // [internal]
@@ -180,11 +180,11 @@ private template GenericErase(args...)
         static if (isSame!(e, head))
             alias result = tail;
         else
-            alias result = AliasSeq!(head, GenericErase!(e, tail).result);
+            alias result = AliasList!(head, GenericErase!(e, tail).result);
     }
     else
     {
-        alias result = AliasSeq!();
+        alias result = AliasList!();
     }
 }
 
@@ -218,10 +218,10 @@ template EraseAll(alias T, TList...)
 ///
 unittest
 {
-    alias Types = AliasSeq!(int, long, long, int);
+    alias Types = AliasList!(int, long, long, int);
 
     alias TL = EraseAll!(long, Types);
-    static assert(is(TL == AliasSeq!(int, int)));
+    static assert(is(TL == AliasList!(int, int)));
 }
 
 // [internal]
@@ -240,11 +240,11 @@ private template GenericEraseAll(args...)
         static if (isSame!(e, head))
             alias result = next;
         else
-            alias result = AliasSeq!(head, next);
+            alias result = AliasList!(head, next);
     }
     else
     {
-        alias result = AliasSeq!();
+        alias result = AliasList!();
     }
 }
 
@@ -270,16 +270,16 @@ template NoDuplicates(TList...)
         alias NoDuplicates = TList;
     else
         alias NoDuplicates =
-            AliasSeq!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
+            AliasList!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
 }
 
 ///
 unittest
 {
-    alias Types = AliasSeq!(int, long, long, int, float);
+    alias Types = AliasList!(int, long, long, int, float);
 
     alias TL = NoDuplicates!(Types);
-    static assert(is(TL == AliasSeq!(int, long, float)));
+    static assert(is(TL == AliasList!(int, long, float)));
 }
 
 unittest
@@ -321,10 +321,10 @@ template Replace(alias T, alias U, TList...)
 ///
 unittest
 {
-    alias Types = AliasSeq!(int, long, long, int, float);
+    alias Types = AliasList!(int, long, long, int, float);
 
     alias TL = Replace!(long, char, Types);
-    static assert(is(TL == AliasSeq!(int, char, long, int, float)));
+    static assert(is(TL == AliasList!(int, char, long, int, float)));
 }
 
 // [internal]
@@ -341,14 +341,14 @@ private template GenericReplace(args...)
         alias tail = tuple[1 .. $];
 
         static if (isSame!(from, head))
-            alias result = AliasSeq!(to, tail);
+            alias result = AliasList!(to, tail);
         else
-            alias result = AliasSeq!(head,
+            alias result = AliasList!(head,
                 GenericReplace!(from, to, tail).result);
     }
     else
     {
-        alias result = AliasSeq!();
+        alias result = AliasList!();
     }
  }
 
@@ -401,10 +401,10 @@ template ReplaceAll(alias T, alias U, TList...)
 ///
 unittest
 {
-    alias Types = AliasSeq!(int, long, long, int, float);
+    alias Types = AliasList!(int, long, long, int, float);
 
     alias TL = ReplaceAll!(long, char, Types);
-    static assert(is(TL == AliasSeq!(int, char, char, int, float)));
+    static assert(is(TL == AliasList!(int, char, char, int, float)));
 }
 
 // [internal]
@@ -422,13 +422,13 @@ private template GenericReplaceAll(args...)
         alias next = GenericReplaceAll!(from, to, tail).result;
 
         static if (isSame!(from, head))
-            alias result = AliasSeq!(to, next);
+            alias result = AliasList!(to, next);
         else
-            alias result = AliasSeq!(head, next);
+            alias result = AliasList!(head, next);
     }
     else
     {
-        alias result = AliasSeq!();
+        alias result = AliasList!();
     }
 }
 
@@ -463,7 +463,7 @@ template Reverse(TList...)
     else
     {
         alias Reverse =
-            AliasSeq!(
+            AliasList!(
                 Reverse!(TList[$/2 ..  $ ]),
                 Reverse!(TList[ 0  .. $/2]));
     }
@@ -472,10 +472,10 @@ template Reverse(TList...)
 ///
 unittest
 {
-    alias Types = AliasSeq!(int, long, long, int, float);
+    alias Types = AliasList!(int, long, long, int, float);
 
     alias TL = Reverse!(Types);
-    static assert(is(TL == AliasSeq!(float, int, long, long, int)));
+    static assert(is(TL == AliasList!(float, int, long, long, int)));
 }
 
 /**
@@ -498,7 +498,7 @@ unittest
     class A { }
     class B : A { }
     class C : B { }
-    alias Types = AliasSeq!(A, C, B);
+    alias Types = AliasList!(A, C, B);
 
     MostDerived!(Object, Types) x;  // x is declared as type C
     static assert(is(typeof(x) == C));
@@ -514,7 +514,7 @@ template DerivedToFront(TList...)
         alias DerivedToFront = TList;
     else
         alias DerivedToFront =
-            AliasSeq!(MostDerived!(TList[0], TList[1 .. $]),
+            AliasList!(MostDerived!(TList[0], TList[1 .. $]),
                        DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
                                 TList[0],
                                 TList[1 .. $])));
@@ -526,29 +526,29 @@ unittest
     class A { }
     class B : A { }
     class C : B { }
-    alias Types = AliasSeq!(A, C, B);
+    alias Types = AliasList!(A, C, B);
 
     alias TL = DerivedToFront!(Types);
-    static assert(is(TL == AliasSeq!(C, B, A)));
+    static assert(is(TL == AliasList!(C, B, A)));
 }
 
 /**
-Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to $(D AliasList!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
 template staticMap(alias F, T...)
 {
     static if (T.length == 0)
     {
-        alias staticMap = AliasSeq!();
+        alias staticMap = AliasList!();
     }
     else static if (T.length == 1)
     {
-        alias staticMap = AliasSeq!(F!(T[0]));
+        alias staticMap = AliasList!(F!(T[0]));
     }
     else
     {
         alias staticMap =
-            AliasSeq!(
+            AliasList!(
                 staticMap!(F, T[ 0  .. $/2]),
                 staticMap!(F, T[$/2 ..  $ ]));
     }
@@ -559,7 +559,7 @@ unittest
 {
     import std.traits : Unqual;
     alias TL = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(TL == AliasSeq!(int, int, int)));
+    static assert(is(TL == AliasList!(int, int, int)));
 }
 
 unittest
@@ -572,10 +572,10 @@ unittest
 
     // single
     alias Single = staticMap!(Unqual, const int);
-    static assert(is(Single == AliasSeq!int));
+    static assert(is(Single == AliasList!int));
 
     alias T = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(T == AliasSeq!(int, int, int)));
+    static assert(is(T == AliasList!(int, int, int)));
 }
 
 /**
@@ -648,26 +648,26 @@ unittest
 
 
 /**
- * Filters a $(D AliasSeq) using a template predicate. Returns a
- * $(D AliasSeq) of the elements which satisfy the predicate.
+ * Filters a $(D AliasList) using a template predicate. Returns a
+ * $(D AliasList) of the elements which satisfy the predicate.
  */
 template Filter(alias pred, TList...)
 {
     static if (TList.length == 0)
     {
-        alias Filter = AliasSeq!();
+        alias Filter = AliasList!();
     }
     else static if (TList.length == 1)
     {
         static if (pred!(TList[0]))
-            alias Filter = AliasSeq!(TList[0]);
+            alias Filter = AliasList!(TList[0]);
         else
-            alias Filter = AliasSeq!();
+            alias Filter = AliasList!();
     }
     else
     {
         alias Filter =
-            AliasSeq!(
+            AliasList!(
                 Filter!(pred, TList[ 0  .. $/2]),
                 Filter!(pred, TList[$/2 ..  $ ]));
     }
@@ -678,21 +678,21 @@ unittest
 {
     import std.traits : isNarrowString, isUnsigned;
 
-    alias Types1 = AliasSeq!(string, wstring, dchar[], char[], dstring, int);
+    alias Types1 = AliasList!(string, wstring, dchar[], char[], dstring, int);
     alias TL1 = Filter!(isNarrowString, Types1);
-    static assert(is(TL1 == AliasSeq!(string, wstring, char[])));
+    static assert(is(TL1 == AliasList!(string, wstring, char[])));
 
-    alias Types2 = AliasSeq!(int, byte, ubyte, dstring, dchar, uint, ulong);
+    alias Types2 = AliasList!(int, byte, ubyte, dstring, dchar, uint, ulong);
     alias TL2 = Filter!(isUnsigned, Types2);
-    static assert(is(TL2 == AliasSeq!(ubyte, uint, ulong)));
+    static assert(is(TL2 == AliasList!(ubyte, uint, ulong)));
 }
 
 unittest
 {
     import std.traits : isPointer;
 
-    static assert(is(Filter!(isPointer, int, void*, char[], int*) == AliasSeq!(void*, int*)));
-    static assert(is(Filter!isPointer == AliasSeq!()));
+    static assert(is(Filter!(isPointer, int, void*, char[], int*) == AliasList!(void*, int*)));
+    static assert(is(Filter!isPointer == AliasList!()));
 }
 
 
@@ -736,7 +736,7 @@ unittest
 
 unittest
 {
-    foreach (T; AliasSeq!(int, staticMap, 42))
+    foreach (T; AliasList!(int, staticMap, 42))
     {
         static assert(!Instantiate!(templateNot!testAlways, T));
         static assert(Instantiate!(templateNot!testNever, T));
@@ -787,7 +787,7 @@ unittest
 
 unittest
 {
-    foreach (T; AliasSeq!(int, staticMap, 42))
+    foreach (T; AliasList!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateAnd!(), T));
         static assert( Instantiate!(templateAnd!(testAlways), T));
@@ -845,7 +845,7 @@ unittest
 
 unittest
 {
-    foreach (T; AliasSeq!(int, staticMap, 42))
+    foreach (T; AliasList!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateOr!(testAlways), T));
         static assert( Instantiate!(templateOr!(testAlways, testAlways), T));
@@ -1018,7 +1018,7 @@ unittest
  * Instantiates the given template with the given list of parameters.
  *
  * Used to work around syntactic limitations of D with regard to instantiating
- * a template from a alias sequence (e.g. T[0]!(...) is not valid) or a template
+ * a template from an alias list (e.g. T[0]!(...) is not valid) or a template
  * returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
  */
 // TODO: Consider publicly exposing this, maybe even if only for better
