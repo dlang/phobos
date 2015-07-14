@@ -764,7 +764,9 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         client.onReceive = null;
 
         if (sendData !is null &&
-            (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+            (client.method == HTTP.Method.post ||
+             client.method == HTTP.Method.put ||
+             client.method == HTTP.Method.options))
         {
             client.onSend = null;
             client.handle.onSeek = null;
@@ -782,7 +784,9 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     };
 
     if (sendData !is null &&
-        (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+        (client.method == HTTP.Method.post ||
+         client.method == HTTP.Method.put ||
+         client.method == HTTP.Method.options))
     {
         client.contentLength = sendData.length;
         auto remainingData = sendData;
@@ -2787,7 +2791,9 @@ struct HTTP
         CurlOption lenOpt;
 
         // Force post if necessary
-        if (p.method != Method.put && p.method != Method.post)
+        if (p.method != Method.put &&
+            p.method != Method.post &&
+            p.method != Method.options)
             p.method = Method.post;
 
         if (p.method == Method.put)
