@@ -7035,8 +7035,9 @@ unittest
     import std.typetuple;
     foreach (T; TypeTuple!(float, double, real))
     {
-        T[] values = [-cast(T)NaN(20), -T.nan, -T.infinity, -T.max, -T.max / 2,
-                      T(-16.0), T(-1.0).nextDown, T(-1.0), T(-1.0).nextUp,
+        T[] values = [-cast(T)NaN(20), -cast(T)NaN(10), -T.nan, -T.infinity,
+                      -T.max, -T.max / 2, T(-16.0), T(-1.0).nextDown,
+                      T(-1.0), T(-1.0).nextUp,
                       T(-0.5), -T.min_normal, (-T.min_normal).nextUp,
                       -2 * T.min_normal * T.epsilon,
                       -T.min_normal * T.epsilon,
@@ -7044,10 +7045,11 @@ unittest
                       T.min_normal * T.epsilon,
                       2 * T.min_normal * T.epsilon,
                       T.min_normal.nextDown, T.min_normal, T(0.5),
-                      T(1.0).nextDown, T(1.0), T(1.0).nextUp, T(16.0),
-                      T.max / 2, T.max, T.infinity, T.nan, cast(T)NaN(20)];
+                      T(1.0).nextDown, T(1.0),
+                      T(1.0).nextUp, T(16.0), T.max / 2, T.max,
+                      T.infinity, T.nan, cast(T)NaN(10), cast(T)NaN(20)];
 
-        foreach (i, x; values[0 .. $ - 1])
+        foreach (i, x; values)
         {
             foreach (y; values[i + 1 .. $])
             {
