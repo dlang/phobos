@@ -6899,7 +6899,7 @@ int cmp(T)(T x, T y) @nogc @trusted pure nothrow
         ubyte*[2] bytes = [cast(ubyte*)&x, cast(ubyte*)&y];
 
         ulong*[2] bulk = [cast(ulong*)&x, cast(ulong*)&y];
-        RemT*[2] rem = [cast(ushort*)&x + shift, cast(ushort*)&y + shift];
+        RemT*[2] rem = [cast(RemT*)&x + shift, cast(RemT*)&y + shift];
 
         foreach (i; 0 .. 2)
             if (bytes[i][F.SIGNPOS_BYTE] & 0x80)
