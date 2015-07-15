@@ -6855,10 +6855,13 @@ real yl2xp1(real x, real y) @nogc @safe pure nothrow;       // y * log2(x + 1)
  *      $(MYREF isIdentical)
  * Standards: Conforms to IEEE 754-2008
  */
-int cmp(T)(T x, T y) @nogc @trusted pure nothrow
+int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
     if (isFloatingPoint!T)
 {
     alias F = floatTraits!T;
+
+    // mutable parameter counterparts, because they *are* mutated later in code
+    T mutX = x, mutY = y;
 
     static if (F.realFormat == RealFormat.ieeeSingle
                || F.realFormat == RealFormat.ieeeDouble)
