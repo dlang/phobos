@@ -41,9 +41,10 @@ private string convFormat(Char, Args...)(in Char[] fmt, Args args)
 class ConvException : Exception
 {
     @safe pure nothrow
-    this(string s, string fn = __FILE__, size_t ln = __LINE__)
+    this(string s, string fn = __FILE__, size_t ln = __LINE__,
+        Throwable next = null)
     {
-        super(s, fn, ln);
+        super(s, fn, ln, next);
     }
 }
 
