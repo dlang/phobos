@@ -70,8 +70,11 @@ import core.stdc.string;
 
     Throws:
         $(D AssertError) if the given $(D Throwable) is thrown.
+
+    Returns:
+        the result of `expression`.
  +/
-void assertNotThrown(T : Throwable = Exception, E)
+auto assertNotThrown(T : Throwable = Exception, E)
                     (lazy E expression,
                      string msg = null,
                      string file = __FILE__,
@@ -80,7 +83,7 @@ void assertNotThrown(T : Throwable = Exception, E)
     import core.exception : AssertError;
     try
     {
-        expression();
+        return expression();
     }
     catch (T t)
     {
@@ -126,29 +129,29 @@ unittest
     import core.exception : AssertError;
 
     void throwEx(Throwable t) { throw t; }
-    void nothrowEx() { }
+    bool nothrowEx() { return true; }
 
     try
     {
-        assertNotThrown!Exception(nothrowEx());
+        assert(assertNotThrown!Exception(nothrowEx()));
     }
     catch (AssertError) assert(0);
 
     try
     {
-        assertNotThrown!Exception(nothrowEx(), "It's a message");
+        assert(assertNotThrown!Exception(nothrowEx(), "It's a message"));
     }
     catch (AssertError) assert(0);
 
     try
     {
-        assertNotThrown!AssertError(nothrowEx());
+        assert(assertNotThrown!AssertError(nothrowEx()));
     }
     catch (AssertError) assert(0);
 
     try
     {
-        assertNotThrown!AssertError(nothrowEx(), "It's a message");
+        assert(assertNotThrown!AssertError(nothrowEx(), "It's a message"));
     }
     catch (AssertError) assert(0);
 
