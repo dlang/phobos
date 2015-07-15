@@ -6860,9 +6860,6 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
 {
     alias F = floatTraits!T;
 
-    // mutable parameter counterparts, because they *are* mutated later in code
-    T mutX = x, mutY = y;
-
     static if (F.realFormat == RealFormat.ieeeSingle
                || F.realFormat == RealFormat.ieeeDouble)
     {
@@ -6871,19 +6868,25 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
         else
             alias UInt = ulong;
 
+        union Repainter
+        {
+            T number;
+            UInt bits;
+        }
+
         enum msb = ~(UInt.max >>> 1);
 
-        UInt*[2] vars = [cast(UInt*)&x, cast(UInt*)&y];
+        Repainter[2] vars = [ { number : x }, { number : y } ];
 
-        foreach (var; vars)
-            if (*var & msb)
-                *var = ~*var;
+        foreach (ref var; vars)
+            if (var.bits & msb)
+                var.bits = ~var.bits;
             else
-                *var |= msb;
+                var.bits |= msb;
 
-        if (*vars[0] < *vars[1])
+        if (vars[0].bits < vars[1].bits)
             return -1;
-        else if (*vars[0] > *vars[1])
+        else if (vars[0].bits > vars[1].bits)
             return 1;
         else
             return 0;
@@ -6897,45 +6900,54 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
         else
             alias RemT = ushort;
 
-        enum shift = ulong.sizeof / RemT.sizeof;
+        struct Bits
+        {
+            ulong bulk;
+            RemT rem;
+        }
 
-        ubyte*[2] bytes = [cast(ubyte*)&x, cast(ubyte*)&y];
+        union Repainter
+        {
+            T number;
+            Bits bits;
+            ubyte[T.sizeof] bytes;
+        }
 
-        ulong*[2] bulk = [cast(ulong*)&x, cast(ulong*)&y];
-        RemT*[2] rem = [cast(RemT*)&x + shift, cast(RemT*)&y + shift];
+        Repainter[2] vars = [ { number : x }, { number : y }];
 
-        foreach (i; 0 .. 2)
-            if (bytes[i][F.SIGNPOS_BYTE] & 0x80)
+        foreach (ref var; vars)
+            if (var.bytes[F.SIGNPOS_BYTE] & 0x80)
             {
-                *bulk[i] = ~*bulk[i];
-                *rem[i] = ~*rem[i];
+                var.bits.bulk = ~var.bits.bulk;
+                var.bits.rem = ~var.bits.rem;
             }
             else
             {
-                bytes[i][F.SIGNPOS_BYTE] |= 0x80;
+                var.bytes[F.SIGNPOS_BYTE] |= 0x80;
             }
 
         version(LittleEndian)
-        {
-            alias major = rem;
-            alias minor = bulk;
-        }
+            if (vars[0].bits.rem < vars[1].bits.rem)
+                return -1;
+            else if (vars[0].bits.rem > vars[1].bits.rem)
+                return 1;
+            else if (vars[0].bits.bulk < vars[1].bits.bulk)
+                return -1;
+            else if (vars[0].bits.bulk > vars[1].bits.bulk)
+                return 1;
+            else
+                return 0;
         else
-        {
-            alias major = bulk;
-            alias minor = rem;
-        }
-
-        if (*major[0] < *major[1])
-            return -1;
-        else if (*major[0] > *major[1])
-            return 1;
-        else if (*minor[0] < *minor[1])
-            return -1;
-        else if (*minor[0] > *minor[1])
-            return 1;
-        else
-            return 0;
+            if (vars[0].bits.bulk < vars[1].bits.bulk)
+                return -1;
+            else if (vars[0].bits.bulk > vars[1].bits.bulk)
+                return 1;
+            else if (vars[0].bits.rem < vars[1].bits.rem)
+                return -1;
+            else if (vars[0].bits.rem > vars[1].bits.rem)
+                return 1;
+            else
+                return 0;
     }
     else
     {
