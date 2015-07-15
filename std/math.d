@@ -6933,6 +6933,7 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
             }
 
         version(LittleEndian)
+        {
             if (vars[0].bits.rem < vars[1].bits.rem)
                 return -1;
             else if (vars[0].bits.rem > vars[1].bits.rem)
@@ -6943,7 +6944,9 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
                 return 1;
             else
                 return 0;
+        }
         else
+        {
             if (vars[0].bits.bulk < vars[1].bits.bulk)
                 return -1;
             else if (vars[0].bits.bulk > vars[1].bits.bulk)
@@ -6954,6 +6957,7 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
                 return 1;
             else
                 return 0;
+        }
     }
     else
     {
