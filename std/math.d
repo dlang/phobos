@@ -6876,7 +6876,10 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
 
         enum msb = ~(UInt.max >>> 1);
 
-        Repainter[2] vars = [ { number : x }, { number : y } ];
+        import std.typecons : Tuple;
+        Tuple!(Repainter, Repainter) vars = void;
+        vars[0].number = x;
+        vars[1].number = y;
 
         foreach (ref var; vars)
             if (var.bits & msb)
@@ -6913,7 +6916,10 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
             ubyte[T.sizeof] bytes;
         }
 
-        Repainter[2] vars = [ { number : x }, { number : y }];
+        import std.typecons : Tuple;
+        Tuple!(Repainter, Repainter) vars = void;
+        vars[0].number = x;
+        vars[1].number = y;
 
         foreach (ref var; vars)
             if (var.bytes[F.SIGNPOS_BYTE] & 0x80)
