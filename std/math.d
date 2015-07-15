@@ -6848,8 +6848,8 @@ real yl2xp1(real x, real y) @nogc @safe pure nothrow;       // y * log2(x + 1)
  * )
  *
  * Returns:
- *      -1 if $(D x) precedes $(D y) in the order specified above;
- *      0 if $(D x) and $(D y) are identical, and 1 otherwise.
+ *      negative value if $(D x) precedes $(D y) in the order specified above;
+ *      0 if $(D x) and $(D y) are identical, and positive value otherwise.
  *
  * See_Also:
  *      $(MYREF isIdentical)
