@@ -207,7 +207,7 @@ version(unittest)
 
 
 
-private:
+package:
 // The following IEEE 'real' formats are currently supported.
 version(LittleEndian)
 {
