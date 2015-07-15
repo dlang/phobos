@@ -6454,7 +6454,7 @@ template isBitFlagEnum(E)
 }
 
 /**
-A typesafe structure for storing combination of enum values.
+A typesafe structure for storing combinations of enum values.
 
 This template defines a simple struct to represent bitwise OR combinations of
 enum values. It can be used if all the enum values are integral constants with
