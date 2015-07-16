@@ -1,12 +1,12 @@
 // Written in the D programming language.
 
 /**
- * Templates to manipulate template argument lists (also known as alias tuples).
+ * Templates to manipulate template argument lists (also known as type lists).
  *
- * Some operations on alias tuples are built in to the language,
- * such as TL[$(I n)] which gets the $(I n)th alias from the
- * alias tuple. TL[$(I lwr) .. $(I upr)] returns a new alias
- * tuple that is a slice of the old one.
+ * Some operations on alias sequences are built in to the language,
+ * such as TL[$(I n)] which gets the $(I n)th type from the
+ * alias sequence. TL[$(I lwr) .. $(I upr)] returns a new type
+ * list that is a slice of the old one.
  *
  * Several templates in this module use or operate on eponymous templates that
  * take a single argument and evaluate to a boolean constant. Such templates
@@ -31,19 +31,19 @@
 module std.meta;
 
 /**
- * Creates a list of zero or more aliases. This is most commonly
+ * Creates a a sequence of zero or more aliases. This is most commonly
  * used as template parameters or arguments.
  */
-template AliasTuple(TTuple...)
+template AliasSeq(TList...)
 {
-    alias AliasTuple = TTuple;
+    alias AliasSeq = TList;
 }
 
 ///
 unittest
 {
     import std.meta;
-    alias TL = AliasTuple!(int, double);
+    alias TL = AliasSeq!(int, double);
 
     int foo(TL td)  // same as int foo(int, double);
     {
@@ -54,26 +54,26 @@ unittest
 ///
 unittest
 {
-    alias TL = AliasTuple!(int, double);
+    alias TL = AliasSeq!(int, double);
 
-    alias Types = AliasTuple!(TL, char);
-    static assert(is(Types == AliasTuple!(int, double, char)));
+    alias Types = AliasSeq!(TL, char);
+    static assert(is(Types == AliasSeq!(int, double, char)));
 }
 
 /**
  * Returns the index of the first occurrence of type T in the
- * list of zero or more types TTuple.
+ * sequence of zero or more types TList.
  * If not found, -1 is returned.
  */
-template staticIndexOf(T, TTuple...)
+template staticIndexOf(T, TList...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TTuple).index;
+    enum staticIndexOf = genericIndexOf!(T, TList).index;
 }
 
 /// Ditto
-template staticIndexOf(alias T, TTuple...)
+template staticIndexOf(alias T, TList...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TTuple).index;
+    enum staticIndexOf = genericIndexOf!(T, TList).index;
 }
 
 ///
@@ -84,7 +84,7 @@ unittest
     void foo()
     {
         writefln("The index of long is %s",
-                 staticIndexOf!(long, AliasTuple!(int, long, double)));
+                 staticIndexOf!(long, AliasSeq!(int, long, double)));
         // prints: The index of long is 1
     }
 }
@@ -143,26 +143,26 @@ unittest
 alias IndexOf = staticIndexOf;
 
 /**
- * Returns a typetuple created from TTuple with the first occurrence,
+ * Returns a typetuple created from TList with the first occurrence,
  * if any, of T removed.
  */
-template Erase(T, TTuple...)
+template Erase(T, TList...)
 {
-    alias Erase = GenericErase!(T, TTuple).result;
+    alias Erase = GenericErase!(T, TList).result;
 }
 
 /// Ditto
-template Erase(alias T, TTuple...)
+template Erase(alias T, TList...)
 {
-    alias Erase = GenericErase!(T, TTuple).result;
+    alias Erase = GenericErase!(T, TList).result;
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, double, char);
+    alias Types = AliasSeq!(int, long, double, char);
     alias TL = Erase!(long, Types);
-    static assert(is(TL == AliasTuple!(int, double, char)));
+    static assert(is(TL == AliasSeq!(int, double, char)));
 }
 
 // [internal]
@@ -180,11 +180,11 @@ private template GenericErase(args...)
         static if (isSame!(e, head))
             alias result = tail;
         else
-            alias result = AliasTuple!(head, GenericErase!(e, tail).result);
+            alias result = AliasSeq!(head, GenericErase!(e, tail).result);
     }
     else
     {
-        alias result = AliasTuple!();
+        alias result = AliasSeq!();
     }
 }
 
@@ -201,27 +201,27 @@ unittest
 
 
 /**
- * Returns a typetuple created from TTuple with the all occurrences,
+ * Returns a typetuple created from TList with the all occurrences,
  * if any, of T removed.
  */
-template EraseAll(T, TTuple...)
+template EraseAll(T, TList...)
 {
-    alias EraseAll = GenericEraseAll!(T, TTuple).result;
+    alias EraseAll = GenericEraseAll!(T, TList).result;
 }
 
 /// Ditto
-template EraseAll(alias T, TTuple...)
+template EraseAll(alias T, TList...)
 {
-    alias EraseAll = GenericEraseAll!(T, TTuple).result;
+    alias EraseAll = GenericEraseAll!(T, TList).result;
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, long, int);
+    alias Types = AliasSeq!(int, long, long, int);
 
     alias TL = EraseAll!(long, Types);
-    static assert(is(TL == AliasTuple!(int, int)));
+    static assert(is(TL == AliasSeq!(int, int)));
 }
 
 // [internal]
@@ -240,11 +240,11 @@ private template GenericEraseAll(args...)
         static if (isSame!(e, head))
             alias result = next;
         else
-            alias result = AliasTuple!(head, next);
+            alias result = AliasSeq!(head, next);
     }
     else
     {
-        alias result = AliasTuple!();
+        alias result = AliasSeq!();
     }
 }
 
@@ -261,25 +261,25 @@ unittest
 
 
 /**
- * Returns a typetuple created from TTuple with the all duplicate
+ * Returns a typetuple created from TList with the all duplicate
  * types removed.
  */
-template NoDuplicates(TTuple...)
+template NoDuplicates(TList...)
 {
-    static if (TTuple.length == 0)
-        alias NoDuplicates = TTuple;
+    static if (TList.length == 0)
+        alias NoDuplicates = TList;
     else
         alias NoDuplicates =
-            AliasTuple!(TTuple[0], NoDuplicates!(EraseAll!(TTuple[0], TTuple[1 .. $])));
+            AliasSeq!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, long, int, float);
+    alias Types = AliasSeq!(int, long, long, int, float);
 
     alias TL = NoDuplicates!(Types);
-    static assert(is(TL == AliasTuple!(int, long, float)));
+    static assert(is(TL == AliasSeq!(int, long, float)));
 }
 
 unittest
@@ -292,39 +292,39 @@ unittest
 
 
 /**
- * Returns a typetuple created from TTuple with the first occurrence
+ * Returns a typetuple created from TList with the first occurrence
  * of type T, if found, replaced with type U.
  */
-template Replace(T, U, TTuple...)
+template Replace(T, U, TList...)
 {
-    alias Replace = GenericReplace!(T, U, TTuple).result;
+    alias Replace = GenericReplace!(T, U, TList).result;
 }
 
 /// Ditto
-template Replace(alias T, U, TTuple...)
+template Replace(alias T, U, TList...)
 {
-    alias Replace = GenericReplace!(T, U, TTuple).result;
+    alias Replace = GenericReplace!(T, U, TList).result;
 }
 
 /// Ditto
-template Replace(T, alias U, TTuple...)
+template Replace(T, alias U, TList...)
 {
-    alias Replace = GenericReplace!(T, U, TTuple).result;
+    alias Replace = GenericReplace!(T, U, TList).result;
 }
 
 /// Ditto
-template Replace(alias T, alias U, TTuple...)
+template Replace(alias T, alias U, TList...)
 {
-    alias Replace = GenericReplace!(T, U, TTuple).result;
+    alias Replace = GenericReplace!(T, U, TList).result;
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, long, int, float);
+    alias Types = AliasSeq!(int, long, long, int, float);
 
     alias TL = Replace!(long, char, Types);
-    static assert(is(TL == AliasTuple!(int, char, long, int, float)));
+    static assert(is(TL == AliasSeq!(int, char, long, int, float)));
 }
 
 // [internal]
@@ -341,14 +341,14 @@ private template GenericReplace(args...)
         alias tail = tuple[1 .. $];
 
         static if (isSame!(from, head))
-            alias result = AliasTuple!(to, tail);
+            alias result = AliasSeq!(to, tail);
         else
-            alias result = AliasTuple!(head,
+            alias result = AliasSeq!(head,
                 GenericReplace!(from, to, tail).result);
     }
     else
     {
-        alias result = AliasTuple!();
+        alias result = AliasSeq!();
     }
  }
 
@@ -372,39 +372,39 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TTuple with all occurrences
+ * Returns a typetuple created from TList with all occurrences
  * of type T, if found, replaced with type U.
  */
-template ReplaceAll(T, U, TTuple...)
+template ReplaceAll(T, U, TList...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TTuple).result;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
 }
 
 /// Ditto
-template ReplaceAll(alias T, U, TTuple...)
+template ReplaceAll(alias T, U, TList...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TTuple).result;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
 }
 
 /// Ditto
-template ReplaceAll(T, alias U, TTuple...)
+template ReplaceAll(T, alias U, TList...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TTuple).result;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
 }
 
 /// Ditto
-template ReplaceAll(alias T, alias U, TTuple...)
+template ReplaceAll(alias T, alias U, TList...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TTuple).result;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, long, int, float);
+    alias Types = AliasSeq!(int, long, long, int, float);
 
     alias TL = ReplaceAll!(long, char, Types);
-    static assert(is(TL == AliasTuple!(int, char, char, int, float)));
+    static assert(is(TL == AliasSeq!(int, char, char, int, float)));
 }
 
 // [internal]
@@ -422,13 +422,13 @@ private template GenericReplaceAll(args...)
         alias next = GenericReplaceAll!(from, to, tail).result;
 
         static if (isSame!(from, head))
-            alias result = AliasTuple!(to, next);
+            alias result = AliasSeq!(to, next);
         else
-            alias result = AliasTuple!(head, next);
+            alias result = AliasSeq!(head, next);
     }
     else
     {
-        alias result = AliasTuple!();
+        alias result = AliasSeq!();
     }
 }
 
@@ -452,44 +452,44 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TTuple with the order reversed.
+ * Returns a typetuple created from TList with the order reversed.
  */
-template Reverse(TTuple...)
+template Reverse(TList...)
 {
-    static if (TTuple.length <= 1)
+    static if (TList.length <= 1)
     {
-        alias Reverse = TTuple;
+        alias Reverse = TList;
     }
     else
     {
         alias Reverse =
-            AliasTuple!(
-                Reverse!(TTuple[$/2 ..  $ ]),
-                Reverse!(TTuple[ 0  .. $/2]));
+            AliasSeq!(
+                Reverse!(TList[$/2 ..  $ ]),
+                Reverse!(TList[ 0  .. $/2]));
     }
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, long, int, float);
+    alias Types = AliasSeq!(int, long, long, int, float);
 
     alias TL = Reverse!(Types);
-    static assert(is(TL == AliasTuple!(float, int, long, long, int)));
+    static assert(is(TL == AliasSeq!(float, int, long, long, int)));
 }
 
 /**
- * Returns the type from TTuple that is the most derived from type T.
+ * Returns the type from TList that is the most derived from type T.
  * If none are found, T is returned.
  */
-template MostDerived(T, TTuple...)
+template MostDerived(T, TList...)
 {
-    static if (TTuple.length == 0)
+    static if (TList.length == 0)
         alias MostDerived = T;
-    else static if (is(TTuple[0] : T))
-        alias MostDerived = MostDerived!(TTuple[0], TTuple[1 .. $]);
+    else static if (is(TList[0] : T))
+        alias MostDerived = MostDerived!(TList[0], TList[1 .. $]);
     else
-        alias MostDerived = MostDerived!(T, TTuple[1 .. $]);
+        alias MostDerived = MostDerived!(T, TList[1 .. $]);
 }
 
 ///
@@ -498,26 +498,26 @@ unittest
     class A { }
     class B : A { }
     class C : B { }
-    alias Types = AliasTuple!(A, C, B);
+    alias Types = AliasSeq!(A, C, B);
 
     MostDerived!(Object, Types) x;  // x is declared as type C
     static assert(is(typeof(x) == C));
 }
 
 /**
- * Returns the typetuple TTuple with the types sorted so that the most
+ * Returns the typetuple TList with the types sorted so that the most
  * derived types come first.
  */
-template DerivedToFront(TTuple...)
+template DerivedToFront(TList...)
 {
-    static if (TTuple.length == 0)
-        alias DerivedToFront = TTuple;
+    static if (TList.length == 0)
+        alias DerivedToFront = TList;
     else
         alias DerivedToFront =
-            AliasTuple!(MostDerived!(TTuple[0], TTuple[1 .. $]),
-                       DerivedToFront!(ReplaceAll!(MostDerived!(TTuple[0], TTuple[1 .. $]),
-                                TTuple[0],
-                                TTuple[1 .. $])));
+            AliasSeq!(MostDerived!(TList[0], TList[1 .. $]),
+                       DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
+                                TList[0],
+                                TList[1 .. $])));
 }
 
 ///
@@ -526,29 +526,29 @@ unittest
     class A { }
     class B : A { }
     class C : B { }
-    alias Types = AliasTuple!(A, C, B);
+    alias Types = AliasSeq!(A, C, B);
 
     alias TL = DerivedToFront!(Types);
-    static assert(is(TL == AliasTuple!(C, B, A)));
+    static assert(is(TL == AliasSeq!(C, B, A)));
 }
 
 /**
-Evaluates to $(D AliasTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
 template staticMap(alias F, T...)
 {
     static if (T.length == 0)
     {
-        alias staticMap = AliasTuple!();
+        alias staticMap = AliasSeq!();
     }
     else static if (T.length == 1)
     {
-        alias staticMap = AliasTuple!(F!(T[0]));
+        alias staticMap = AliasSeq!(F!(T[0]));
     }
     else
     {
         alias staticMap =
-            AliasTuple!(
+            AliasSeq!(
                 staticMap!(F, T[ 0  .. $/2]),
                 staticMap!(F, T[$/2 ..  $ ]));
     }
@@ -559,7 +559,7 @@ unittest
 {
     import std.traits : Unqual;
     alias TL = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(TL == AliasTuple!(int, int, int)));
+    static assert(is(TL == AliasSeq!(int, int, int)));
 }
 
 unittest
@@ -572,10 +572,10 @@ unittest
 
     // single
     alias Single = staticMap!(Unqual, const int);
-    static assert(is(Single == AliasTuple!int));
+    static assert(is(Single == AliasSeq!int));
 
     alias T = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(T == AliasTuple!(int, int, int)));
+    static assert(is(T == AliasSeq!(int, int, int)));
 }
 
 /**
@@ -648,28 +648,28 @@ unittest
 
 
 /**
- * Filters a $(D AliasTuple) using a template predicate. Returns a
- * $(D AliasTuple) of the elements which satisfy the predicate.
+ * Filters a $(D AliasSeq) using a template predicate. Returns a
+ * $(D AliasSeq) of the elements which satisfy the predicate.
  */
-template Filter(alias pred, TTuple...)
+template Filter(alias pred, TList...)
 {
-    static if (TTuple.length == 0)
+    static if (TList.length == 0)
     {
-        alias Filter = AliasTuple!();
+        alias Filter = AliasSeq!();
     }
-    else static if (TTuple.length == 1)
+    else static if (TList.length == 1)
     {
-        static if (pred!(TTuple[0]))
-            alias Filter = AliasTuple!(TTuple[0]);
+        static if (pred!(TList[0]))
+            alias Filter = AliasSeq!(TList[0]);
         else
-            alias Filter = AliasTuple!();
+            alias Filter = AliasSeq!();
     }
     else
     {
         alias Filter =
-            AliasTuple!(
-                Filter!(pred, TTuple[ 0  .. $/2]),
-                Filter!(pred, TTuple[$/2 ..  $ ]));
+            AliasSeq!(
+                Filter!(pred, TList[ 0  .. $/2]),
+                Filter!(pred, TList[$/2 ..  $ ]));
     }
 }
 
@@ -678,21 +678,21 @@ unittest
 {
     import std.traits : isNarrowString, isUnsigned;
 
-    alias Types1 = AliasTuple!(string, wstring, dchar[], char[], dstring, int);
+    alias Types1 = AliasSeq!(string, wstring, dchar[], char[], dstring, int);
     alias TL1 = Filter!(isNarrowString, Types1);
-    static assert(is(TL1 == AliasTuple!(string, wstring, char[])));
+    static assert(is(TL1 == AliasSeq!(string, wstring, char[])));
 
-    alias Types2 = AliasTuple!(int, byte, ubyte, dstring, dchar, uint, ulong);
+    alias Types2 = AliasSeq!(int, byte, ubyte, dstring, dchar, uint, ulong);
     alias TL2 = Filter!(isUnsigned, Types2);
-    static assert(is(TL2 == AliasTuple!(ubyte, uint, ulong)));
+    static assert(is(TL2 == AliasSeq!(ubyte, uint, ulong)));
 }
 
 unittest
 {
     import std.traits : isPointer;
 
-    static assert(is(Filter!(isPointer, int, void*, char[], int*) == AliasTuple!(void*, int*)));
-    static assert(is(Filter!isPointer == AliasTuple!()));
+    static assert(is(Filter!(isPointer, int, void*, char[], int*) == AliasSeq!(void*, int*)));
+    static assert(is(Filter!isPointer == AliasSeq!()));
 }
 
 
@@ -736,7 +736,7 @@ unittest
 
 unittest
 {
-    foreach (T; AliasTuple!(int, staticMap, 42))
+    foreach (T; AliasSeq!(int, staticMap, 42))
     {
         static assert(!Instantiate!(templateNot!testAlways, T));
         static assert(Instantiate!(templateNot!testNever, T));
@@ -787,7 +787,7 @@ unittest
 
 unittest
 {
-    foreach (T; AliasTuple!(int, staticMap, 42))
+    foreach (T; AliasSeq!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateAnd!(), T));
         static assert( Instantiate!(templateAnd!(testAlways), T));
@@ -845,7 +845,7 @@ unittest
 
 unittest
 {
-    foreach (T; AliasTuple!(int, staticMap, 42))
+    foreach (T; AliasSeq!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateOr!(testAlways), T));
         static assert( Instantiate!(templateOr!(testAlways, testAlways), T));
@@ -1018,7 +1018,7 @@ unittest
  * Instantiates the given template with the given list of parameters.
  *
  * Used to work around syntactic limitations of D with regard to instantiating
- * a template from an alias tuple (e.g. T[0]!(...) is not valid) or a template
+ * a template from a alias sequence (e.g. T[0]!(...) is not valid) or a template
  * returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
  */
 // TODO: Consider publicly exposing this, maybe even if only for better
