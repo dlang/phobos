@@ -133,6 +133,7 @@
  *           $(LREF getSymbolsByUDA)
  * ))
  * )
+ * )
  *
  * Macros:
  *  WIKI = Phobos/StdTraits
