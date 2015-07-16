@@ -3281,19 +3281,7 @@ alias Identity(alias A) = A;
    Yields $(D true) if and only if $(D T) is an aggregate that defines
    a symbol called $(D name).
  */
-template hasMember(T, string name)
-{
-    static if (is(T == struct) || is(T == class) || is(T == union) || is(T == interface))
-    {
-        enum bool hasMember =
-            staticIndexOf!(name, __traits(allMembers, T)) != -1 ||
-            __traits(compiles, { mixin("alias Sym = Identity!(T."~name~");"); });
-    }
-    else
-    {
-        enum bool hasMember = false;
-    }
-}
+enum hasMember(T, string name) = __traits(hasMember, T, name);
 
 ///
 unittest
@@ -3339,6 +3327,15 @@ unittest
     static assert(hasMember!(R2!S, "f"));
     static assert(hasMember!(R2!S, "t"));
     static assert(hasMember!(R2!S, "T"));
+}
+
+unittest
+{
+    static struct S
+    {
+        void opDispatch(string n, A)(A dummy) {}
+    }
+    static assert(hasMember!(S, "foo"));
 }
 
 /**
