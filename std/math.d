@@ -7026,7 +7026,6 @@ unittest
 unittest
 {
     assert(cmp(NaN(10), NaN(20)) < 0);
-
     assert(cmp(-NaN(20), -NaN(10)) < 0);
 }
 
