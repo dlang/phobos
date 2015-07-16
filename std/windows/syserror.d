@@ -153,6 +153,28 @@ T wenforce(T, S)(T value, lazy S msg = null,
     return value;
 }
 
+T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file = __FILE__, size_t line = __LINE__)
+{
+    if (condition)
+        return condition;
+    string names;
+    if (!name)
+    {
+        static string trustedToString(const(wchar)* stringz) @trusted
+        {
+            import std.conv : to;
+            import core.stdc.wchar_ : wcslen;
+            auto len = wcslen(stringz);
+            return to!string(stringz[0 .. len]);
+        }
+
+        names = trustedToString(namez);
+    }
+    else
+        names = to!string(name);
+    throw new WindowsException(GetLastError(), names, file, line);
+}
+
 version(Windows)
 unittest
 {
