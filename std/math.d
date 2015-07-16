@@ -6995,14 +6995,14 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
 /// Most numbers are ordered naturally.
 unittest
 {
-    assert(cmp(-double.infinity, -double.max) == -1);
-    assert(cmp(-double.max, -100.0) == -1);
-    assert(cmp(-100.0, -0.5) == -1);
-    assert(cmp(-0.5, 0.0) == -1);
-    assert(cmp(0.0, 0.5) == -1);
-    assert(cmp(0.5, 100.0) == -1);
-    assert(cmp(100.0, double.max) == -1);
-    assert(cmp(double.max, double.infinity) == -1);
+    assert(cmp(-double.infinity, -double.max) < 0);
+    assert(cmp(-double.max, -100.0) < 0);
+    assert(cmp(-100.0, -0.5) < 0);
+    assert(cmp(-0.5, 0.0) < 0);
+    assert(cmp(0.0, 0.5) < 0);
+    assert(cmp(0.5, 100.0) < 0);
+    assert(cmp(100.0, double.max) < 0);
+    assert(cmp(double.max, double.infinity) < 0);
 
     assert(cmp(1.0, 1.0) == 0);
 }
@@ -7010,24 +7010,24 @@ unittest
 /// Positive and negative zeroes are distinct.
 unittest
 {
-    assert(cmp(-0.0, +0.0) == -1);
-    assert(cmp(+0.0, -0.0) == 1);
+    assert(cmp(-0.0, +0.0) < 0);
+    assert(cmp(+0.0, -0.0) > 0);
 }
 
 /// Depending on the sign, $(NAN)s go to either end of the spectrum.
 unittest
 {
-    assert(cmp(-double.nan, -double.infinity) == -1);
-    assert(cmp(double.infinity, double.nan) == -1);
-    assert(cmp(-double.nan, double.nan) == -1);
+    assert(cmp(-double.nan, -double.infinity) < 0);
+    assert(cmp(double.infinity, double.nan) < 0);
+    assert(cmp(-double.nan, double.nan) < 0);
 }
 
 /// $(NAN)s of the same sign are ordered by the payload.
 unittest
 {
-    assert(cmp(NaN(10), NaN(20)) == -1);
+    assert(cmp(NaN(10), NaN(20)) < 0);
 
-    assert(cmp(-NaN(20), -NaN(10)) == -1);
+    assert(cmp(-NaN(20), -NaN(10)) < 0);
 }
 
 unittest
@@ -7053,8 +7053,8 @@ unittest
         {
             foreach (y; values[i + 1 .. $])
             {
-                assert(cmp(x, y) == -1);
-                assert(cmp(y, x) == 1);
+                assert(cmp(x, y) < 0);
+                assert(cmp(y, x) > 0);
             }
             assert(cmp(x, x) == 0);
         }
