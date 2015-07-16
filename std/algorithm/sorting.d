@@ -929,6 +929,7 @@ $(D less(a,c)) (transitivity), and, conversely, $(D !less(a,b) && !less(b,c)) to
 imply $(D !less(a,c)). Note that the default predicate ($(D "a < b")) does not
 always satisfy these conditions for floating point types, because the expression
 will always be $(D false) when either $(D a) or $(D b) is NaN.
+Use $(XREF math, cmp) instead.
 
 Returns: The initial range wrapped as a $(D SortedRange) with the predicate
 $(D binaryFun!less).
@@ -1004,6 +1005,21 @@ unittest
     string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
     sort!("toUpper(a) < toUpper(b)", SwapStrategy.stable)(words);
     assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
+}
+
+///
+unittest
+{
+    // Sorting floating-point numbers in presence of NaN
+    double[] numbers = [-0.0, 3.0, -2.0, double.nan, 0.0, -double.nan];
+
+    import std.math : cmp, isIdentical;
+    import std.algorithm.comparison : equal;
+
+    sort!((a, b) => cmp(a, b) < 0)(numbers);
+
+    double[] sorted = [-double.nan, -2.0, -0.0, 0.0, 3.0, double.nan];
+    assert(numbers.equal!isIdentical(sorted));
 }
 
 unittest
