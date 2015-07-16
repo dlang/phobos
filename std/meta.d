@@ -1,12 +1,12 @@
 // Written in the D programming language.
 
 /**
- * Templates to manipulate template argument lists (also known as alias tuples).
+ * Templates to manipulate template argument lists (also known as packs).
  *
- * Some operations on alias tuples are built in to the language,
- * such as TL[$(I n)] which gets the $(I n)th alias from the
- * alias tuple. TL[$(I lwr) .. $(I upr)] returns a new alias
- * tuple that is a slice of the old one.
+ * Some operations on alias packs are built in to the language,
+ * such as TP[$(I n)] which gets the $(I n)th alias from the
+ * pack. TP[$(I lwr) .. $(I upr)] returns a new
+ * pack that is a slice of the old one.
  *
  * Several templates in this module use or operate on eponymous templates that
  * take a single argument and evaluate to a boolean constant. Such templates
@@ -18,14 +18,14 @@
  *      Modern C++ Design),
  *   Andrei Alexandrescu (Addison-Wesley Professional, 2001)
  * Macros:
- *  WIKI = Phobos/StdTypeTuple
+ *  WIKI = Phobos/StdMeta
  *
  * Copyright: Copyright Digital Mars 2005 - 2015.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
- * Source:    $(PHOBOSSRC std/_typetuple.d)
+ * Source:    $(PHOBOSSRC std/_meta.d)
  */
 
 module std.meta;
@@ -34,18 +34,18 @@ module std.meta;
  * Creates a list of zero or more aliases. This is most commonly
  * used as template parameters or arguments.
  */
-template AliasTuple(TTuple...)
+template Pack(TPack...)
 {
-    alias AliasTuple = TTuple;
+    alias Pack = TPack;
 }
 
 ///
 unittest
 {
     import std.meta;
-    alias TL = AliasTuple!(int, double);
+    alias TP = Pack!(int, double);
 
-    int foo(TL td)  // same as int foo(int, double);
+    int foo(TP td)  // same as int foo(int, double);
     {
         return td[0] + cast(int)td[1];
     }
@@ -54,26 +54,26 @@ unittest
 ///
 unittest
 {
-    alias TL = AliasTuple!(int, double);
+    alias TP = Pack!(int, double);
 
-    alias Types = AliasTuple!(TL, char);
-    static assert(is(Types == AliasTuple!(int, double, char)));
+    alias Types = Pack!(TP, char);
+    static assert(is(Types == Pack!(int, double, char)));
 }
 
 /**
  * Returns the index of the first occurrence of type T in the
- * list of zero or more types TTuple.
+ * list of zero or more types TPack.
  * If not found, -1 is returned.
  */
-template staticIndexOf(T, TTuple...)
+template staticIndexOf(T, TPack...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TTuple).index;
+    enum staticIndexOf = genericIndexOf!(T, TPack).index;
 }
 
 /// Ditto
-template staticIndexOf(alias T, TTuple...)
+template staticIndexOf(alias T, TPack...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TTuple).index;
+    enum staticIndexOf = genericIndexOf!(T, TPack).index;
 }
 
 ///
@@ -84,7 +84,7 @@ unittest
     void foo()
     {
         writefln("The index of long is %s",
-                 staticIndexOf!(long, AliasTuple!(int, long, double)));
+                 staticIndexOf!(long, Pack!(int, long, double)));
         // prints: The index of long is 1
     }
 }
@@ -94,12 +94,12 @@ private template genericIndexOf(args...)
     if (args.length >= 1)
 {
     alias e     = Alias!(args[0]);
-    alias tuple = args[1 .. $];
+    alias pack = args[1 .. $];
 
-    static if (tuple.length)
+    static if (pack.length)
     {
-        alias head = Alias!(tuple[0]);
-        alias tail = tuple[1 .. $];
+        alias head = Alias!(pack[0]);
+        alias tail = pack[1 .. $];
 
         static if (isSame!(e, head))
         {
@@ -143,26 +143,26 @@ unittest
 alias IndexOf = staticIndexOf;
 
 /**
- * Returns a typetuple created from TTuple with the first occurrence,
+ * Returns a pack created from TPack with the first occurrence,
  * if any, of T removed.
  */
-template Erase(T, TTuple...)
+template Erase(T, TPack...)
 {
-    alias Erase = GenericErase!(T, TTuple).result;
+    alias Erase = GenericErase!(T, TPack).result;
 }
 
 /// Ditto
-template Erase(alias T, TTuple...)
+template Erase(alias T, TPack...)
 {
-    alias Erase = GenericErase!(T, TTuple).result;
+    alias Erase = GenericErase!(T, TPack).result;
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, double, char);
-    alias TL = Erase!(long, Types);
-    static assert(is(TL == AliasTuple!(int, double, char)));
+    alias Types = Pack!(int, long, double, char);
+    alias TP = Erase!(long, Types);
+    static assert(is(TP == Pack!(int, double, char)));
 }
 
 // [internal]
@@ -170,58 +170,58 @@ private template GenericErase(args...)
     if (args.length >= 1)
 {
     alias e     = Alias!(args[0]);
-    alias tuple = args[1 .. $] ;
+    alias pack = args[1 .. $] ;
 
-    static if (tuple.length)
+    static if (pack.length)
     {
-        alias head = Alias!(tuple[0]);
-        alias tail = tuple[1 .. $];
+        alias head = Alias!(pack[0]);
+        alias tail = pack[1 .. $];
 
         static if (isSame!(e, head))
             alias result = tail;
         else
-            alias result = AliasTuple!(head, GenericErase!(e, tail).result);
+            alias result = Pack!(head, GenericErase!(e, tail).result);
     }
     else
     {
-        alias result = AliasTuple!();
+        alias result = Pack!();
     }
 }
 
 unittest
 {
-    static assert(Pack!(Erase!(int,
+    static assert(Confine!(Erase!(int,
                 short, int, int, 4)).
         equals!(short,      int, 4));
 
-    static assert(Pack!(Erase!(1,
+    static assert(Confine!(Erase!(1,
                 real, 3, 1, 4, 1, 5, 9)).
         equals!(real, 3,    4, 1, 5, 9));
 }
 
 
 /**
- * Returns a typetuple created from TTuple with the all occurrences,
+ * Returns a pack created from TPack with the all occurrences,
  * if any, of T removed.
  */
-template EraseAll(T, TTuple...)
+template EraseAll(T, TPack...)
 {
-    alias EraseAll = GenericEraseAll!(T, TTuple).result;
+    alias EraseAll = GenericEraseAll!(T, TPack).result;
 }
 
 /// Ditto
-template EraseAll(alias T, TTuple...)
+template EraseAll(alias T, TPack...)
 {
-    alias EraseAll = GenericEraseAll!(T, TTuple).result;
+    alias EraseAll = GenericEraseAll!(T, TPack).result;
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, long, int);
+    alias Types = Pack!(int, long, long, int);
 
-    alias TL = EraseAll!(long, Types);
-    static assert(is(TL == AliasTuple!(int, int)));
+    alias TP = EraseAll!(long, Types);
+    static assert(is(TP == Pack!(int, int)));
 }
 
 // [internal]
@@ -229,102 +229,102 @@ private template GenericEraseAll(args...)
     if (args.length >= 1)
 {
     alias e     = Alias!(args[0]);
-    alias tuple = args[1 .. $];
+    alias pack = args[1 .. $];
 
-    static if (tuple.length)
+    static if (pack.length)
     {
-        alias head = Alias!(tuple[0]);
-        alias tail = tuple[1 .. $];
+        alias head = Alias!(pack[0]);
+        alias tail = pack[1 .. $];
         alias next = GenericEraseAll!(e, tail).result;
 
         static if (isSame!(e, head))
             alias result = next;
         else
-            alias result = AliasTuple!(head, next);
+            alias result = Pack!(head, next);
     }
     else
     {
-        alias result = AliasTuple!();
+        alias result = Pack!();
     }
 }
 
 unittest
 {
-    static assert(Pack!(EraseAll!(int,
+    static assert(Confine!(EraseAll!(int,
                 short, int, int, 4)).
         equals!(short,           4));
 
-    static assert(Pack!(EraseAll!(1,
+    static assert(Confine!(EraseAll!(1,
                 real, 3, 1, 4, 1, 5, 9)).
         equals!(real, 3,    4,    5, 9));
 }
 
 
 /**
- * Returns a typetuple created from TTuple with the all duplicate
+ * Returns a pack created from TPack with the all duplicate
  * types removed.
  */
-template NoDuplicates(TTuple...)
+template NoDuplicates(TPack...)
 {
-    static if (TTuple.length == 0)
-        alias NoDuplicates = TTuple;
+    static if (TPack.length == 0)
+        alias NoDuplicates = TPack;
     else
         alias NoDuplicates =
-            AliasTuple!(TTuple[0], NoDuplicates!(EraseAll!(TTuple[0], TTuple[1 .. $])));
+            Pack!(TPack[0], NoDuplicates!(EraseAll!(TPack[0], TPack[1 .. $])));
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, long, int, float);
+    alias Types = Pack!(int, long, long, int, float);
 
-    alias TL = NoDuplicates!(Types);
-    static assert(is(TL == AliasTuple!(int, long, float)));
+    alias TP = NoDuplicates!(Types);
+    static assert(is(TP == Pack!(int, long, float)));
 }
 
 unittest
 {
     static assert(
-        Pack!(
+        Confine!(
             NoDuplicates!(1, int, 1, NoDuplicates, int, NoDuplicates, real))
         .equals!(1, int,    NoDuplicates,                    real));
 }
 
 
 /**
- * Returns a typetuple created from TTuple with the first occurrence
+ * Returns a pack created from TPack with the first occurrence
  * of type T, if found, replaced with type U.
  */
-template Replace(T, U, TTuple...)
+template Replace(T, U, TPack...)
 {
-    alias Replace = GenericReplace!(T, U, TTuple).result;
+    alias Replace = GenericReplace!(T, U, TPack).result;
 }
 
 /// Ditto
-template Replace(alias T, U, TTuple...)
+template Replace(alias T, U, TPack...)
 {
-    alias Replace = GenericReplace!(T, U, TTuple).result;
+    alias Replace = GenericReplace!(T, U, TPack).result;
 }
 
 /// Ditto
-template Replace(T, alias U, TTuple...)
+template Replace(T, alias U, TPack...)
 {
-    alias Replace = GenericReplace!(T, U, TTuple).result;
+    alias Replace = GenericReplace!(T, U, TPack).result;
 }
 
 /// Ditto
-template Replace(alias T, alias U, TTuple...)
+template Replace(alias T, alias U, TPack...)
 {
-    alias Replace = GenericReplace!(T, U, TTuple).result;
+    alias Replace = GenericReplace!(T, U, TPack).result;
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, long, int, float);
+    alias Types = Pack!(int, long, long, int, float);
 
-    alias TL = Replace!(long, char, Types);
-    static assert(is(TL == AliasTuple!(int, char, long, int, float)));
+    alias TP = Replace!(long, char, Types);
+    static assert(is(TP == Pack!(int, char, long, int, float)));
 }
 
 // [internal]
@@ -333,78 +333,78 @@ private template GenericReplace(args...)
 {
     alias from  = Alias!(args[0]);
     alias to    = Alias!(args[1]);
-    alias tuple = args[2 .. $];
+    alias pack = args[2 .. $];
 
-    static if (tuple.length)
+    static if (pack.length)
     {
-        alias head = Alias!(tuple[0]);
-        alias tail = tuple[1 .. $];
+        alias head = Alias!(pack[0]);
+        alias tail = pack[1 .. $];
 
         static if (isSame!(from, head))
-            alias result = AliasTuple!(to, tail);
+            alias result = Pack!(to, tail);
         else
-            alias result = AliasTuple!(head,
+            alias result = Pack!(head,
                 GenericReplace!(from, to, tail).result);
     }
     else
     {
-        alias result = AliasTuple!();
+        alias result = Pack!();
     }
  }
 
 unittest
 {
-    static assert(Pack!(Replace!(byte, ubyte,
+    static assert(Confine!(Replace!(byte, ubyte,
                 short,  byte, byte, byte)).
         equals!(short, ubyte, byte, byte));
 
-    static assert(Pack!(Replace!(1111, byte,
+    static assert(Confine!(Replace!(1111, byte,
                 2222, 1111, 1111, 1111)).
         equals!(2222, byte, 1111, 1111));
 
-    static assert(Pack!(Replace!(byte, 1111,
+    static assert(Confine!(Replace!(byte, 1111,
                 short, byte, byte, byte)).
         equals!(short, 1111, byte, byte));
 
-    static assert(Pack!(Replace!(1111, "11",
+    static assert(Confine!(Replace!(1111, "11",
                 2222, 1111, 1111, 1111)).
         equals!(2222, "11", 1111, 1111));
 }
 
 /**
- * Returns a typetuple created from TTuple with all occurrences
+ * Returns a pack created from TPack with all occurrences
  * of type T, if found, replaced with type U.
  */
-template ReplaceAll(T, U, TTuple...)
+template ReplaceAll(T, U, TPack...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TTuple).result;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TPack).result;
 }
 
 /// Ditto
-template ReplaceAll(alias T, U, TTuple...)
+template ReplaceAll(alias T, U, TPack...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TTuple).result;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TPack).result;
 }
 
 /// Ditto
-template ReplaceAll(T, alias U, TTuple...)
+template ReplaceAll(T, alias U, TPack...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TTuple).result;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TPack).result;
 }
 
 /// Ditto
-template ReplaceAll(alias T, alias U, TTuple...)
+template ReplaceAll(alias T, alias U, TPack...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TTuple).result;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TPack).result;
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, long, int, float);
+    alias Types = Pack!(int, long, long, int, float);
 
-    alias TL = ReplaceAll!(long, char, Types);
-    static assert(is(TL == AliasTuple!(int, char, char, int, float)));
+    alias TP = ReplaceAll!(long, char, Types);
+    static assert(is(TP == Pack!(int, char, char, int, float)));
 }
 
 // [internal]
@@ -413,83 +413,83 @@ private template GenericReplaceAll(args...)
 {
     alias from  = Alias!(args[0]);
     alias to    = Alias!(args[1]);
-    alias tuple = args[2 .. $];
+    alias pack = args[2 .. $];
 
-    static if (tuple.length)
+    static if (pack.length)
     {
-        alias head = Alias!(tuple[0]);
-        alias tail = tuple[1 .. $];
+        alias head = Alias!(pack[0]);
+        alias tail = pack[1 .. $];
         alias next = GenericReplaceAll!(from, to, tail).result;
 
         static if (isSame!(from, head))
-            alias result = AliasTuple!(to, next);
+            alias result = Pack!(to, next);
         else
-            alias result = AliasTuple!(head, next);
+            alias result = Pack!(head, next);
     }
     else
     {
-        alias result = AliasTuple!();
+        alias result = Pack!();
     }
 }
 
 unittest
 {
-    static assert(Pack!(ReplaceAll!(byte, ubyte,
+    static assert(Confine!(ReplaceAll!(byte, ubyte,
                  byte, short,  byte,  byte)).
         equals!(ubyte, short, ubyte, ubyte));
 
-    static assert(Pack!(ReplaceAll!(1111, byte,
+    static assert(Confine!(ReplaceAll!(1111, byte,
                 1111, 2222, 1111, 1111)).
         equals!(byte, 2222, byte, byte));
 
-    static assert(Pack!(ReplaceAll!(byte, 1111,
+    static assert(Confine!(ReplaceAll!(byte, 1111,
                 byte, short, byte, byte)).
         equals!(1111, short, 1111, 1111));
 
-    static assert(Pack!(ReplaceAll!(1111, "11",
+    static assert(Confine!(ReplaceAll!(1111, "11",
                 1111, 2222, 1111, 1111)).
         equals!("11", 2222, "11", "11"));
 }
 
 /**
- * Returns a typetuple created from TTuple with the order reversed.
+ * Returns a pack created from TPack with the order reversed.
  */
-template Reverse(TTuple...)
+template Reverse(TPack...)
 {
-    static if (TTuple.length <= 1)
+    static if (TPack.length <= 1)
     {
-        alias Reverse = TTuple;
+        alias Reverse = TPack;
     }
     else
     {
         alias Reverse =
-            AliasTuple!(
-                Reverse!(TTuple[$/2 ..  $ ]),
-                Reverse!(TTuple[ 0  .. $/2]));
+            Pack!(
+                Reverse!(TPack[$/2 ..  $ ]),
+                Reverse!(TPack[ 0  .. $/2]));
     }
 }
 
 ///
 unittest
 {
-    alias Types = AliasTuple!(int, long, long, int, float);
+    alias Types = Pack!(int, long, long, int, float);
 
-    alias TL = Reverse!(Types);
-    static assert(is(TL == AliasTuple!(float, int, long, long, int)));
+    alias TP = Reverse!(Types);
+    static assert(is(TP == Pack!(float, int, long, long, int)));
 }
 
 /**
- * Returns the type from TTuple that is the most derived from type T.
+ * Returns the type from TPack that is the most derived from type T.
  * If none are found, T is returned.
  */
-template MostDerived(T, TTuple...)
+template MostDerived(T, TPack...)
 {
-    static if (TTuple.length == 0)
+    static if (TPack.length == 0)
         alias MostDerived = T;
-    else static if (is(TTuple[0] : T))
-        alias MostDerived = MostDerived!(TTuple[0], TTuple[1 .. $]);
+    else static if (is(TPack[0] : T))
+        alias MostDerived = MostDerived!(TPack[0], TPack[1 .. $]);
     else
-        alias MostDerived = MostDerived!(T, TTuple[1 .. $]);
+        alias MostDerived = MostDerived!(T, TPack[1 .. $]);
 }
 
 ///
@@ -498,26 +498,26 @@ unittest
     class A { }
     class B : A { }
     class C : B { }
-    alias Types = AliasTuple!(A, C, B);
+    alias Types = Pack!(A, C, B);
 
     MostDerived!(Object, Types) x;  // x is declared as type C
     static assert(is(typeof(x) == C));
 }
 
 /**
- * Returns the typetuple TTuple with the types sorted so that the most
+ * Returns the pack TPack with the types sorted so that the most
  * derived types come first.
  */
-template DerivedToFront(TTuple...)
+template DerivedToFront(TPack...)
 {
-    static if (TTuple.length == 0)
-        alias DerivedToFront = TTuple;
+    static if (TPack.length == 0)
+        alias DerivedToFront = TPack;
     else
         alias DerivedToFront =
-            AliasTuple!(MostDerived!(TTuple[0], TTuple[1 .. $]),
-                       DerivedToFront!(ReplaceAll!(MostDerived!(TTuple[0], TTuple[1 .. $]),
-                                TTuple[0],
-                                TTuple[1 .. $])));
+            Pack!(MostDerived!(TPack[0], TPack[1 .. $]),
+                       DerivedToFront!(ReplaceAll!(MostDerived!(TPack[0], TPack[1 .. $]),
+                                TPack[0],
+                                TPack[1 .. $])));
 }
 
 ///
@@ -526,29 +526,29 @@ unittest
     class A { }
     class B : A { }
     class C : B { }
-    alias Types = AliasTuple!(A, C, B);
+    alias Types = Pack!(A, C, B);
 
-    alias TL = DerivedToFront!(Types);
-    static assert(is(TL == AliasTuple!(C, B, A)));
+    alias TP = DerivedToFront!(Types);
+    static assert(is(TP == Pack!(C, B, A)));
 }
 
 /**
-Evaluates to $(D AliasTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to $(D Pack!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
 template staticMap(alias F, T...)
 {
     static if (T.length == 0)
     {
-        alias staticMap = AliasTuple!();
+        alias staticMap = Pack!();
     }
     else static if (T.length == 1)
     {
-        alias staticMap = AliasTuple!(F!(T[0]));
+        alias staticMap = Pack!(F!(T[0]));
     }
     else
     {
         alias staticMap =
-            AliasTuple!(
+            Pack!(
                 staticMap!(F, T[ 0  .. $/2]),
                 staticMap!(F, T[$/2 ..  $ ]));
     }
@@ -558,8 +558,8 @@ template staticMap(alias F, T...)
 unittest
 {
     import std.traits : Unqual;
-    alias TL = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(TL == AliasTuple!(int, int, int)));
+    alias TP = staticMap!(Unqual, int, const int, immutable int);
+    static assert(is(TP == Pack!(int, int, int)));
 }
 
 unittest
@@ -572,10 +572,10 @@ unittest
 
     // single
     alias Single = staticMap!(Unqual, const int);
-    static assert(is(Single == AliasTuple!int));
+    static assert(is(Single == Pack!int));
 
     alias T = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(T == AliasTuple!(int, int, int)));
+    static assert(is(T == Pack!(int, int, int)));
 }
 
 /**
@@ -648,28 +648,28 @@ unittest
 
 
 /**
- * Filters a $(D AliasTuple) using a template predicate. Returns a
- * $(D AliasTuple) of the elements which satisfy the predicate.
+ * Filters a $(D Pack) using a template predicate. Returns a
+ * $(D Pack) of the elements which satisfy the predicate.
  */
-template Filter(alias pred, TTuple...)
+template Filter(alias pred, TPack...)
 {
-    static if (TTuple.length == 0)
+    static if (TPack.length == 0)
     {
-        alias Filter = AliasTuple!();
+        alias Filter = Pack!();
     }
-    else static if (TTuple.length == 1)
+    else static if (TPack.length == 1)
     {
-        static if (pred!(TTuple[0]))
-            alias Filter = AliasTuple!(TTuple[0]);
+        static if (pred!(TPack[0]))
+            alias Filter = Pack!(TPack[0]);
         else
-            alias Filter = AliasTuple!();
+            alias Filter = Pack!();
     }
     else
     {
         alias Filter =
-            AliasTuple!(
-                Filter!(pred, TTuple[ 0  .. $/2]),
-                Filter!(pred, TTuple[$/2 ..  $ ]));
+            Pack!(
+                Filter!(pred, TPack[ 0  .. $/2]),
+                Filter!(pred, TPack[$/2 ..  $ ]));
     }
 }
 
@@ -678,21 +678,21 @@ unittest
 {
     import std.traits : isNarrowString, isUnsigned;
 
-    alias Types1 = AliasTuple!(string, wstring, dchar[], char[], dstring, int);
-    alias TL1 = Filter!(isNarrowString, Types1);
-    static assert(is(TL1 == AliasTuple!(string, wstring, char[])));
+    alias Types1 = Pack!(string, wstring, dchar[], char[], dstring, int);
+    alias TP1 = Filter!(isNarrowString, Types1);
+    static assert(is(TP1 == Pack!(string, wstring, char[])));
 
-    alias Types2 = AliasTuple!(int, byte, ubyte, dstring, dchar, uint, ulong);
-    alias TL2 = Filter!(isUnsigned, Types2);
-    static assert(is(TL2 == AliasTuple!(ubyte, uint, ulong)));
+    alias Types2 = Pack!(int, byte, ubyte, dstring, dchar, uint, ulong);
+    alias TP2 = Filter!(isUnsigned, Types2);
+    static assert(is(TP2 == Pack!(ubyte, uint, ulong)));
 }
 
 unittest
 {
     import std.traits : isPointer;
 
-    static assert(is(Filter!(isPointer, int, void*, char[], int*) == AliasTuple!(void*, int*)));
-    static assert(is(Filter!isPointer == AliasTuple!()));
+    static assert(is(Filter!(isPointer, int, void*, char[], int*) == Pack!(void*, int*)));
+    static assert(is(Filter!isPointer == Pack!()));
 }
 
 
@@ -736,7 +736,7 @@ unittest
 
 unittest
 {
-    foreach (T; AliasTuple!(int, staticMap, 42))
+    foreach (T; Pack!(int, staticMap, 42))
     {
         static assert(!Instantiate!(templateNot!testAlways, T));
         static assert(Instantiate!(templateNot!testNever, T));
@@ -787,7 +787,7 @@ unittest
 
 unittest
 {
-    foreach (T; AliasTuple!(int, staticMap, 42))
+    foreach (T; Pack!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateAnd!(), T));
         static assert( Instantiate!(templateAnd!(testAlways), T));
@@ -845,7 +845,7 @@ unittest
 
 unittest
 {
-    foreach (T; AliasTuple!(int, staticMap, 42))
+    foreach (T; Pack!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateOr!(testAlways), T));
         static assert( Instantiate!(templateOr!(testAlways, testAlways), T));
@@ -984,11 +984,11 @@ unittest
 }
 
 /*
- * [internal] Confines a tuple within a template.
+ * [internal] Confines a pack within a template.
  */
-private template Pack(T...)
+private template Confine(T...)
 {
-    alias tuple = T;
+    alias pack = T;
 
     // For convenience
     template equals(U...)
@@ -999,7 +999,7 @@ private template Pack(T...)
                 enum equals = true;
             else
                 enum equals = isSame!(T[0], U[0]) &&
-                    Pack!(T[1 .. $]).equals!(U[1 .. $]);
+                    Confine!(T[1 .. $]).equals!(U[1 .. $]);
         }
         else
         {
@@ -1010,15 +1010,15 @@ private template Pack(T...)
 
 unittest
 {
-    static assert( Pack!(1, int, "abc").equals!(1, int, "abc"));
-    static assert(!Pack!(1, int, "abc").equals!(1, int, "cba"));
+    static assert( Confine!(1, int, "abc").equals!(1, int, "abc"));
+    static assert(!Confine!(1, int, "abc").equals!(1, int, "cba"));
 }
 
 /*
  * Instantiates the given template with the given list of parameters.
  *
  * Used to work around syntactic limitations of D with regard to instantiating
- * a template from an alias tuple (e.g. T[0]!(...) is not valid) or a template
+ * a template from an pack (e.g. T[0]!(...) is not valid) or a template
  * returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
  */
 // TODO: Consider publicly exposing this, maybe even if only for better
