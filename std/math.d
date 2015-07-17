@@ -5087,30 +5087,26 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
         be converted to normal reals.
     */
     alias F = floatTraits!(X);
+    F.Repainter rep = { number : x };
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        uint *p = cast(uint *)&x;
-        return (*p & F.EXPMASK_INT) == 0 && *p & F.MANTISSAMASK_INT;
+        return (rep.blob & F.EXPMASK_INT) == 0 && rep.blob & F.MANTISSAMASK_INT;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        uint *p = cast(uint *)&x;
-        return (p[MANTISSA_MSB] & F.EXPMASK_INT) == 0
-            && (p[MANTISSA_LSB] || p[MANTISSA_MSB] & F.MANTISSAMASK_INT);
+        return (rep.ints[MANTISSA_MSB] & F.EXPMASK_INT) == 0
+            && (rep.ints[MANTISSA_LSB] || rep.ints[MANTISSA_MSB] & F.MANTISSAMASK_INT);
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        long*   ps = cast(long *)&x;
+        ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
         return (e == 0 &&
-          (((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) != 0));
+          (((rep.longs[MANTISSA_LSB]|(rep.longs[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) != 0));
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        ushort* pe = cast(ushort *)&x;
-        long*   ps = cast(long *)&x;
-
-        return (pe[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && *ps > 0;
+        return (rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK) == 0 &&
+            rep.blob.significand > 0;
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
