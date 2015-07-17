@@ -4890,30 +4890,28 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
+    F.Repainter rep = { number : x };
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        const uint p = *cast(uint *)&x;
-        return ((p & 0x7F80_0000) == 0x7F80_0000)
-            && p & 0x007F_FFFF; // not infinity
+        return ((rep.blob & 0x7F80_0000) == 0x7F80_0000)
+            && rep.blob & 0x007F_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        const ulong  p = *cast(ulong *)&x;
-        return ((p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-            && p & 0x000F_FFFF_FFFF_FFFF; // not infinity
+        return ((rep.blob & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
+            && rep.blob & 0x000F_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        const ulong ps = *cast(ulong *)&x;
+        const ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
         return e == F.EXPMASK &&
-            ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
+            rep.blob.significand & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        const ulong psLsb = (cast(ulong *)&x)[MANTISSA_LSB];
-        const ulong psMsb = (cast(ulong *)&x)[MANTISSA_MSB];
+        const ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
+        const ulong psLsb = rep.longs[MANTISSA_LSB];
+        const ulong psMsb = rep.longs[MANTISSA_MSB];
         return e == F.EXPMASK &&
             (psLsb | (psMsb& 0x0000_FFFF_FFFF_FFFF)) != 0;
     }
