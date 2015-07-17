@@ -387,6 +387,7 @@ template floatTraits(T)
         Unqual!T number;
         ubyte[T.sizeof] bytes;
         ushort[T.sizeof / 2] shorts;
+        uint[T.sizeof / 4] ints;
         Blob blob;
 
         static if (T.sizeof % 8 == 0)
@@ -4058,11 +4059,11 @@ long lrint(real x) @trusted pure nothrow @nogc
             // Rounding limit when casting from real(double) to ulong.
             enum real OF = 4.50359962737049600000E15L;
 
-            uint* vi = cast(uint*)(&x);
+            F.Repainter rep = { number : x };
 
             // Find the exponent and sign
-            uint msb = vi[MANTISSA_MSB];
-            uint lsb = vi[MANTISSA_LSB];
+            uint msb = rep.ints[MANTISSA_MSB];
+            uint lsb = rep.ints[MANTISSA_LSB];
             int exp = ((msb >> 20) & 0x7ff) - 0x3ff;
             int sign = msb >> 31;
             msb &= 0xfffff;
@@ -4076,9 +4077,9 @@ long lrint(real x) @trusted pure nothrow @nogc
                 {
                     // Adjust x and check result.
                     real j = sign ? -OF : OF;
-                    x = (j + x) - j;
-                    msb = vi[MANTISSA_MSB];
-                    lsb = vi[MANTISSA_LSB];
+                    rep.number = (j + rep.number) - j;
+                    msb = rep.ints[MANTISSA_MSB];
+                    lsb = rep.ints[MANTISSA_LSB];
                     exp = ((msb >> 20) & 0x7ff) - 0x3ff;
                     msb &= 0xfffff;
                     msb |= 0x100000;
@@ -4108,37 +4109,40 @@ long lrint(real x) @trusted pure nothrow @nogc
             // Rounding limit when casting from real(80-bit) to ulong.
             enum real OF = 9.22337203685477580800E18L;
 
-            ushort* vu = cast(ushort*)(&x);
-            uint* vi = cast(uint*)(&x);
+            F.Repainter rep = { number : x };
 
             // Find the exponent and sign
-            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-            int sign = (vu[F.EXPPOS_SHORT] >> 15) & 1;
+            int exp = (rep.shorts[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+            int sign = (rep.shorts[F.EXPPOS_SHORT] >> 15) & 1;
 
             if (exp < 63)
             {
                 // Adjust x and check result.
                 real j = sign ? -OF : OF;
-                x = (j + x) - j;
-                exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+                rep.number = (j + rep.number) - j;
+                exp = (rep.shorts[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
                 version (LittleEndian)
                 {
                     if (exp < 0)
                         result = 0;
                     else if (exp <= 31)
-                        result = vi[1] >> (31 - exp);
+                        result = rep.ints[1] >> (31 - exp);
                     else
-                        result = (cast(long) vi[1] << (exp - 31)) | (vi[0] >> (63 - exp));
+                        result =
+                            (cast(long) rep.ints[1] << (exp - 31)) |
+                            (rep.ints[0] >> (63 - exp));
                 }
                 else
                 {
                     if (exp < 0)
                         result = 0;
                     else if (exp <= 31)
-                        result = vi[1] >> (31 - exp);
+                        result = rep.ints[1] >> (31 - exp);
                     else
-                        result = (cast(long) vi[1] << (exp - 31)) | (vi[2] >> (63 - exp));
+                        result =
+                            (cast(long) rep.ints[1] << (exp - 31)) |
+                            (rep.ints[2] >> (63 - exp));
                 }
             }
             else
