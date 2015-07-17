@@ -5276,7 +5276,8 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 int signbit(X)(X x) @nogc @trusted pure nothrow
 {
     alias F = floatTraits!(X);
-    return ((cast(ubyte *)&x)[F.SIGNPOS_BYTE] & 0x80) != 0;
+    F.Repainter rep = { number : x };
+    return (rep.bytes[F.SIGNPOS_BYTE] & 0x80) != 0;
 }
 
 ///
