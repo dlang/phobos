@@ -2376,28 +2376,24 @@ creal expi(real y) @trusted pure nothrow @nogc
 T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
     if(isFloatingPoint!T)
 {
-    Unqual!T vf = value;
-    ushort* vu = cast(ushort*)&vf;
-    static if(is(Unqual!T == float))
-        int* vi = cast(int*)&vf;
-    else
-        long* vl = cast(long*)&vf;
     int ex;
     alias F = floatTraits!T;
 
-    ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+    F.Repainter rep = { number : value };
+
+    ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
     static if (F.realFormat == RealFormat.ieeeExtended)
     {
         if (ex)
         {   // If exponent is non-zero
             if (ex == F.EXPMASK) // infinity or NaN
             {
-                if (*vl &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
+                if (rep.blob.significand &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
                 {
-                    *vl |= 0xC000_0000_0000_0000;  // convert NaNS to NaNQ
+                    rep.blob.significand |= 0xC000_0000_0000_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
-                else if (vu[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
+                else if (rep.shorts[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
                     exp = int.min;
                 else   // positive infinity
                     exp = int.max;
@@ -2406,10 +2402,11 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
             else
             {
                 exp = ex - F.EXPBIAS;
-                vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
+                rep.shorts[F.EXPPOS_SHORT] =
+                    (0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FFE;
             }
         }
-        else if (!*vl)
+        else if (!rep.blob.significand)
         {
             // vf is +-0.0
             exp = 0;
@@ -2418,12 +2415,12 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {
             // subnormal
 
-            vf *= F.RECIP_EPSILON;
-            ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+            rep.number *= F.RECIP_EPSILON;
+            ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
+            rep.shorts[F.EXPPOS_SHORT] = (0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FFE;
         }
-        return vf;
+        return rep.number;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
@@ -2431,14 +2428,14 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)
             {   // infinity or NaN
-                if (vl[MANTISSA_LSB] |
-                    ( vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
+                if (rep.longs[MANTISSA_LSB] |
+                    (rep.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
                 {
                     // convert NaNS to NaNQ
-                    vl[MANTISSA_MSB] |= 0x0000_8000_0000_0000;
+                    rep.longs[MANTISSA_MSB] |= 0x0000_8000_0000_0000;
                     exp = int.min;
                 }
-                else if (vu[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
+                else if (rep.shorts[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
                     exp = int.min;
                 else   // positive infinity
                     exp = int.max;
@@ -2447,12 +2444,12 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
             else
             {
                 exp = ex - F.EXPBIAS;
-                vu[F.EXPPOS_SHORT] =
-                    cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+                rep.shorts[F.EXPPOS_SHORT] =
+                    cast(ushort)((0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FFE);
             }
         }
-        else if ((vl[MANTISSA_LSB]
-                       |(vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
+        else if ((rep.longs[MANTISSA_LSB]
+                       |(rep.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
         {
             // vf is +-0.0
             exp = 0;
@@ -2460,13 +2457,13 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            vf *= F.RECIP_EPSILON;
-            ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+            rep.number *= F.RECIP_EPSILON;
+            ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] =
-                cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+            rep.shorts[F.EXPPOS_SHORT] =
+                cast(ushort)((0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FFE);
         }
-        return vf;
+        return rep.number;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
@@ -2474,25 +2471,26 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if (*vl == 0x7FF0_0000_0000_0000)  // positive infinity
+                if (rep.blob == 0x7FF0_0000_0000_0000)  // positive infinity
                 {
                     exp = int.max;
                 }
-                else if (*vl == 0xFFF0_0000_0000_0000) // negative infinity
+                else if (rep.blob == 0xFFF0_0000_0000_0000) // negative infinity
                     exp = int.min;
                 else
                 { // NaN
-                    *vl |= 0x0008_0000_0000_0000;  // convert NaNS to NaNQ
+                    rep.blob |= 0x0008_0000_0000_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
             }
             else
             {
                 exp = (ex - F.EXPBIAS) >> 4;
-                vu[F.EXPPOS_SHORT] = cast(ushort)((0x800F & vu[F.EXPPOS_SHORT]) | 0x3FE0);
+                rep.shorts[F.EXPPOS_SHORT] =
+                    cast(ushort)((0x800F & rep.shorts[F.EXPPOS_SHORT]) | 0x3FE0);
             }
         }
-        else if (!(*vl & 0x7FFF_FFFF_FFFF_FFFF))
+        else if (!(rep.blob & 0x7FFF_FFFF_FFFF_FFFF))
         {
             // vf is +-0.0
             exp = 0;
@@ -2500,13 +2498,13 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            vf *= F.RECIP_EPSILON;
-            ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+            rep.number *= F.RECIP_EPSILON;
+            ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] =
-                cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
+            rep.shorts[F.EXPPOS_SHORT] =
+                cast(ushort)((0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FE0);
         }
-        return vf;
+        return rep.number;
     }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -2514,25 +2512,26 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if (*vi == 0x7F80_0000)  // positive infinity
+                if (rep.blob == 0x7F80_0000)  // positive infinity
                 {
                     exp = int.max;
                 }
-                else if (*vi == 0xFF80_0000) // negative infinity
+                else if (rep.blob == 0xFF80_0000) // negative infinity
                     exp = int.min;
                 else
                 { // NaN
-                    *vi |= 0x0040_0000;  // convert NaNS to NaNQ
+                    rep.blob |= 0x0040_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
             }
             else
             {
                 exp = (ex - F.EXPBIAS) >> 7;
-                vu[F.EXPPOS_SHORT] = cast(ushort)((0x807F & vu[F.EXPPOS_SHORT]) | 0x3F00);
+                rep.shorts[F.EXPPOS_SHORT] =
+                    cast(ushort)((0x807F & rep.shorts[F.EXPPOS_SHORT]) | 0x3F00);
             }
         }
-        else if (!(*vi & 0x7FFF_FFFF))
+        else if (!(rep.blob & 0x7FFF_FFFF))
         {
             // vf is +-0.0
             exp = 0;
@@ -2540,13 +2539,13 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            vf *= F.RECIP_EPSILON;
-            ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+            rep.number *= F.RECIP_EPSILON;
+            ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] =
-                cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3F00);
+            rep.shorts[F.EXPPOS_SHORT] =
+                cast(ushort)((0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3F00);
         }
-        return vf;
+        return rep.number;
     }
     else // static if (F.realFormat == RealFormat.ibmExtended)
     {
