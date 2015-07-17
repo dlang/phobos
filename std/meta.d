@@ -31,7 +31,7 @@
 module std.meta;
 
 /**
- * Creates a a sequence of zero or more aliases. This is most commonly
+ * Creates a sequence of zero or more aliases. This is most commonly
  * used as template parameters or arguments.
  */
 template AliasSeq(TList...)
@@ -648,7 +648,7 @@ unittest
 
 
 /**
- * Filters a $(D AliasSeq) using a template predicate. Returns a
+ * Filters an $(D AliasSeq) using a template predicate. Returns a
  * $(D AliasSeq) of the elements which satisfy the predicate.
  */
 template Filter(alias pred, TList...)
@@ -1018,7 +1018,7 @@ unittest
  * Instantiates the given template with the given list of parameters.
  *
  * Used to work around syntactic limitations of D with regard to instantiating
- * a template from a alias sequence (e.g. T[0]!(...) is not valid) or a template
+ * a template from an alias sequence (e.g. T[0]!(...) is not valid) or a template
  * returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
  */
 // TODO: Consider publicly exposing this, maybe even if only for better
