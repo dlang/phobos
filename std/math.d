@@ -5149,32 +5149,32 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
+    F.Repainter rep = { number : x };
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        return ((*cast(uint *)&x) & 0x7FFF_FFFF) == 0x7F80_0000;
+        return (rep.blob & 0x7FFF_FFFF) == 0x7F80_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
+        return (rep.blob & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF0_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        const ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
-        const ulong ps = *cast(ulong *)&x;
+        const ushort e = cast(ushort)(F.EXPMASK & rep.shorts[F.EXPPOS_SHORT]);
 
         // On Motorola 68K, infinity can have hidden bit = 1 or 0. On x86, it is always 1.
-        return e == F.EXPMASK && (ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
+        return e == F.EXPMASK && (rep.blob.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0;
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
+        return ((rep.blob[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF8_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        const long psLsb = (cast(long *)&x)[MANTISSA_LSB];
-        const long psMsb = (cast(long *)&x)[MANTISSA_MSB];
+        const long psLsb = rep.longs[MANTISSA_LSB];
+        const long psMsb = rep.longs[MANTISSA_MSB];
         return (psLsb == 0)
             && (psMsb & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
     }
