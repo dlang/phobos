@@ -267,6 +267,8 @@ template floatTraits(T)
             enum EXPPOS_SHORT = 0;
             enum SIGNPOS_BYTE = 0;
         }
+
+        alias Blob = uint;
     }
     else static if (T.mant_dig == 53)
     {
@@ -289,6 +291,8 @@ template floatTraits(T)
                 enum EXPPOS_SHORT = 0;
                 enum SIGNPOS_BYTE = 0;
             }
+
+            alias Blob = ulong;
         }
         else static if (T.sizeof == 12)
         {
@@ -307,6 +311,9 @@ template floatTraits(T)
                 enum EXPPOS_SHORT = 0;
                 enum SIGNPOS_BYTE = 0;
             }
+
+            import std.typecons : Tuple;
+            alias Blob = Tuple!(ulong, ushort);
         }
         else
             static assert(false, "No traits support for " ~ T.stringof);
@@ -328,6 +335,9 @@ template floatTraits(T)
             enum EXPPOS_SHORT = 0;
             enum SIGNPOS_BYTE = 0;
         }
+
+        import std.typecons : Tuple;
+        alias Blob = Tuple!(ulong, "significand", ushort);
     }
     else static if (T.mant_dig == 113)
     {
@@ -346,6 +356,8 @@ template floatTraits(T)
             enum EXPPOS_SHORT = 0;
             enum SIGNPOS_BYTE = 0;
         }
+
+        alias Blob = ulong[2];
     }
     else static if (T.mant_dig == 106)
     {
@@ -364,9 +376,22 @@ template floatTraits(T)
             enum EXPPOS_SHORT = 0; // [4] is also an exp short
             enum SIGNPOS_BYTE = 0;
         }
+
+        alias Blob = ulong[2];
     }
     else
         static assert(false, "No traits support for " ~ T.stringof);
+
+    union Repainter
+    {
+        Unqual!T number;
+        ubyte[T.sizeof] bytes;
+        ushort[T.sizeof / 2] shorts;
+        Blob blob;
+
+        static if (T.sizeof % 8 == 0)
+            ulong[T.sizeof / 8] longs;
+    }
 }
 
 // These apply to all floating-point types
