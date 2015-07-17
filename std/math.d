@@ -5264,25 +5264,10 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
  */
 bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 {
-    // We're doing a bitwise comparison so the endianness is irrelevant.
-    long*   pxs = cast(long *)&x;
-    long*   pys = cast(long *)&y;
     alias F = floatTraits!(real);
-    static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        return pxs[0] == pys[0];
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple
-                 || F.realFormat == RealFormat.ibmExtended)
-    {
-        return pxs[0] == pys[0] && pxs[1] == pys[1];
-    }
-    else
-    {
-        ushort* pxe = cast(ushort *)&x;
-        ushort* pye = cast(ushort *)&y;
-        return pxe[4] == pye[4] && pxs[0] == pys[0];
-    }
+    F.Repainter repX = { number : x }, repY = { number : y };
+
+    return repX.blob == repY.blob;
 }
 
 /*********************************
