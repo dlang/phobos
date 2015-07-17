@@ -11,9 +11,9 @@ module std.typetuple;
 public import std.meta;
 
 /**
- * Alternate name for $(LREF AliasTuple) for legacy compatibility.
+ * Alternate name for $(LREF AliasSeq) for legacy compatibility.
  */
-alias TypeTuple = AliasTuple;
+alias TypeTuple = AliasSeq;
 
 ///
 unittest
