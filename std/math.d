@@ -4982,8 +4982,8 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
-    ushort* pe = cast(ushort *)&x;
-    return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
+    F.Repainter rep = { number : x };
+    return (rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
 }
 
 ///
