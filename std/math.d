@@ -412,20 +412,12 @@ else
 T floorImpl(T)(const T x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(T);
-    // Take care not to trigger library calls from the compiler,
-    // while ensuring that we don't get defeated by some optimizers.
-    union floatBits
-    {
-        T rv;
-        ushort[T.sizeof/2] vu;
-    }
-    floatBits y = void;
-    y.rv = x;
+    F.Repainter y = { number : x };
 
     // Find the exponent (power of 2)
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        int exp = ((y.vu[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
+        int exp = ((y.shorts[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
 
         version (LittleEndian)
             int pos = 0;
@@ -434,7 +426,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+        int exp = ((y.shorts[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
 
         version (LittleEndian)
             int pos = 0;
@@ -443,7 +435,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+        int exp = (y.shorts[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
         version (LittleEndian)
             int pos = 0;
@@ -452,7 +444,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+        int exp = (y.shorts[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
         version (LittleEndian)
             int pos = 0;
@@ -476,20 +468,20 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     while (exp >= 16)
     {
         version (LittleEndian)
-            y.vu[pos++] = 0;
+            y.shorts[pos++] = 0;
         else
-            y.vu[pos--] = 0;
+            y.shorts[pos--] = 0;
         exp -= 16;
     }
 
     // Clear the remaining bits.
     if (exp > 0)
-        y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+        y.shorts[pos] &= 0xffff ^ ((1 << exp) - 1);
 
-    if ((x < 0.0) && (x != y.rv))
-        y.rv -= 1.0;
+    if ((x < 0.0) && (x != y.number))
+        y.number -= 1.0;
 
-    return y.rv;
+    return y.number;
 }
 
 public:
