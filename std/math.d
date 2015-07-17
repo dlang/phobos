@@ -5592,13 +5592,15 @@ debug(UnitTest)
 real nextUp(real x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(real);
+    F.Repainter rep = { number : x };
+
     static if (F.realFormat == RealFormat.ieeeDouble)
     {
         return nextUp(cast(double)x);
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+        ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
         if (e == F.EXPMASK)
         {
             // NaN or Infinity
@@ -5607,80 +5609,77 @@ real nextUp(real x) @trusted pure nothrow @nogc
             return x; // +Inf and NaN are unchanged.
         }
 
-        ulong*   ps = cast(ulong *)&e;
-        if (ps[MANTISSA_LSB] & 0x8000_0000_0000_0000)
+        if (rep.longs[MANTISSA_LSB] & 0x8000_0000_0000_0000)
         {
             // Negative number
 
-            if (ps[MANTISSA_LSB] == 0
-                && ps[MANTISSA_MSB] == 0x8000_0000_0000_0000)
+            if (rep.longs[MANTISSA_LSB] == 0
+                && rep.longs[MANTISSA_MSB] == 0x8000_0000_0000_0000)
             {
                 // it was negative zero, change to smallest subnormal
-                ps[MANTISSA_LSB] = 0x0000_0000_0000_0001;
-                ps[MANTISSA_MSB] = 0;
-                return x;
+                rep.longs[MANTISSA_LSB] = 0x0000_0000_0000_0001;
+                rep.longs[MANTISSA_MSB] = 0;
+                return rep.number;
             }
-            --*ps;
-            if (ps[MANTISSA_LSB] == 0) --ps[MANTISSA_MSB];
+            --rep.longs[0];
+            if (rep.longs[MANTISSA_LSB] == 0) --rep.longs[MANTISSA_MSB];
         }
         else
         {
             // Positive number
-            ++ps[MANTISSA_LSB];
-            if (ps[MANTISSA_LSB] == 0) ++ps[MANTISSA_MSB];
+            ++rep.longs[MANTISSA_LSB];
+            if (rep.longs[MANTISSA_LSB] == 0) ++rep.longs[MANTISSA_MSB];
         }
-        return x;
+        return rep.number;
 
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
         // For 80-bit reals, the "implied bit" is a nuisance...
-        ushort *pe = cast(ushort *)&x;
-        ulong  *ps = cast(ulong  *)&x;
 
-        if ((pe[F.EXPPOS_SHORT] & F.EXPMASK) == F.EXPMASK)
+        if ((rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK) == F.EXPMASK)
         {
             // First, deal with NANs and infinity
             if (x == -real.infinity) return -real.max;
             return x; // +Inf and NaN are unchanged.
         }
-        if (pe[F.EXPPOS_SHORT] & 0x8000)
+        if (rep.shorts[F.EXPPOS_SHORT] & 0x8000)
         {
             // Negative number -- need to decrease the significand
-            --*ps;
+            --rep.blob.significand;
             // Need to mask with 0x7FFF... so subnormals are treated correctly.
-            if ((*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_FFFF_FFFF_FFFF)
+            if ((rep.blob.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_FFFF_FFFF_FFFF)
             {
-                if (pe[F.EXPPOS_SHORT] == 0x8000)   // it was negative zero
+                if (rep.shorts[F.EXPPOS_SHORT] == 0x8000)   // it was negative zero
                 {
-                    *ps = 1;
-                    pe[F.EXPPOS_SHORT] = 0; // smallest subnormal.
-                    return x;
+                    rep.blob.significand = 1;
+                    rep.shorts[F.EXPPOS_SHORT] = 0; // smallest subnormal.
+                    return rep.number;
                 }
 
-                --pe[F.EXPPOS_SHORT];
+                --rep.shorts[F.EXPPOS_SHORT];
 
-                if (pe[F.EXPPOS_SHORT] == 0x8000)
-                    return x; // it's become a subnormal, implied bit stays low.
+                if (rep.shorts[F.EXPPOS_SHORT] == 0x8000)
+                    return rep.number; // it's become a subnormal, implied bit stays low.
 
-                *ps = 0xFFFF_FFFF_FFFF_FFFF; // set the implied bit
-                return x;
+                rep.blob.significand = 0xFFFF_FFFF_FFFF_FFFF; // set the implied bit
+                return rep.number;
             }
-            return x;
+            return rep.number;
         }
         else
         {
             // Positive number -- need to increase the significand.
             // Works automatically for positive zero.
-            ++*ps;
-            if ((*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0)
+            ++rep.blob.significand;
+            if ((rep.blob.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0)
             {
                 // change in exponent
-                ++pe[F.EXPPOS_SHORT];
-                *ps = 0x8000_0000_0000_0000; // set the high bit
+                ++rep.shorts[F.EXPPOS_SHORT];
+                rep.blob.significand = 0x8000_0000_0000_0000; // set the high bit
             }
         }
-        return x;
+        return rep.number;
     }
     else // static if (F.realFormat == RealFormat.ibmExtended)
     {
@@ -5691,58 +5690,58 @@ real nextUp(real x) @trusted pure nothrow @nogc
 /** ditto */
 double nextUp(double x) @trusted pure nothrow @nogc
 {
-    ulong *ps = cast(ulong *)&x;
+    floatTraits!double.Repainter rep = { number : x };
 
-    if ((*ps & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
+    if ((rep.blob & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
     {
         // First, deal with NANs and infinity
         if (x == -x.infinity) return -x.max;
         return x; // +INF and NAN are unchanged.
     }
-    if (*ps & 0x8000_0000_0000_0000)    // Negative number
+    if (rep.blob & 0x8000_0000_0000_0000)    // Negative number
     {
-        if (*ps == 0x8000_0000_0000_0000) // it was negative zero
+        if (rep.blob == 0x8000_0000_0000_0000) // it was negative zero
         {
-            *ps = 0x0000_0000_0000_0001; // change to smallest subnormal
-            return x;
+            rep.blob = 0x0000_0000_0000_0001; // change to smallest subnormal
+            return rep.number;
         }
-        --*ps;
+        --rep.blob;
     }
     else
     {   // Positive number
-        ++*ps;
+        ++rep.blob;
     }
-    return x;
+    return rep.number;
 }
 
 /** ditto */
 float nextUp(float x) @trusted pure nothrow @nogc
 {
-    uint *ps = cast(uint *)&x;
+    floatTraits!float.Repainter rep = { number : x };
 
-    if ((*ps & 0x7F80_0000) == 0x7F80_0000)
+    if ((rep.blob & 0x7F80_0000) == 0x7F80_0000)
     {
         // First, deal with NANs and infinity
         if (x == -x.infinity) return -x.max;
 
         return x; // +INF and NAN are unchanged.
     }
-    if (*ps & 0x8000_0000)   // Negative number
+    if (rep.blob & 0x8000_0000)   // Negative number
     {
-        if (*ps == 0x8000_0000) // it was negative zero
+        if (rep.blob == 0x8000_0000) // it was negative zero
         {
-            *ps = 0x0000_0001; // change to smallest subnormal
-            return x;
+            rep.blob = 0x0000_0001; // change to smallest subnormal
+            return rep.number;
         }
 
-        --*ps;
+        --rep.blob;
     }
     else
     {
         // Positive number
-        ++*ps;
+        ++rep.blob;
     }
-    return x;
+    return rep.number;
 }
 
 /**
