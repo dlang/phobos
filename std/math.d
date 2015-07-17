@@ -5326,14 +5326,14 @@ int signbit(X)(X x) @nogc @trusted pure nothrow
 R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
     if (isFloatingPoint!(R) && isFloatingPoint!(X))
 {
-    ubyte* pto   = cast(ubyte *)&to;
-    const ubyte* pfrom = cast(ubyte *)&from;
-
     alias T = floatTraits!(R);
     alias F = floatTraits!(X);
-    pto[T.SIGNPOS_BYTE] &= 0x7F;
-    pto[T.SIGNPOS_BYTE] |= pfrom[F.SIGNPOS_BYTE] & 0x80;
-    return to;
+    T.Repainter repTo = { number : to };
+    F.Repainter repFrom = { number : from };
+
+    repTo.bytes[T.SIGNPOS_BYTE] &= 0x7F;
+    repTo.bytes[T.SIGNPOS_BYTE] |= repFrom.bytes[F.SIGNPOS_BYTE] & 0x80;
+    return repTo.number;
 }
 
 // ditto
