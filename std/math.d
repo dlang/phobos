@@ -5043,7 +5043,8 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
     }
     else
     {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+        F.Repainter rep = { number : x };
+        ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
         return (e != F.EXPMASK && e != 0);
     }
 }
