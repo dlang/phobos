@@ -6413,12 +6413,9 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
         if (x == y)
             return X.mant_dig; // ensure diff!=0, cope with INF.
 
-        Unqual!X diff = fabs(x - y);
-
-        ushort *pa = cast(ushort *)(&x);
-        ushort *pb = cast(ushort *)(&y);
-        ushort *pd = cast(ushort *)(&diff);
-
+        F.Repainter repX = { number : x },
+                    repY = { number : y},
+                    repDiff = { number : fabs(x - y) };
 
         // The difference in abs(exponent) between x or y and abs(x-y)
         // is equal to the number of significand bits of x which are
@@ -6430,17 +6427,18 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
         // always 1 lower than we want, except that if bitsdiff==0,
         // they could have 0 or 1 bits in common.
 
-        int bitsdiff = (((  (pa[F.EXPPOS_SHORT] & F.EXPMASK)
-                          + (pb[F.EXPPOS_SHORT] & F.EXPMASK)
+        int bitsdiff = (((  (repX.shorts[F.EXPPOS_SHORT] & F.EXPMASK)
+                          + (repY.shorts[F.EXPPOS_SHORT] & F.EXPMASK)
                           - (1 << F.EXPSHIFT)) >> 1)
-                        - (pd[F.EXPPOS_SHORT] & F.EXPMASK)) >> F.EXPSHIFT;
-        if ( (pd[F.EXPPOS_SHORT] & F.EXPMASK) == 0)
+                        - (repDiff.shorts[F.EXPPOS_SHORT] & F.EXPMASK)) >> F.EXPSHIFT;
+        if ( (repDiff.shorts[F.EXPPOS_SHORT] & F.EXPMASK) == 0)
         {   // Difference is subnormal
             // For subnormals, we need to add the number of zeros that
             // lie at the start of diff's significand.
             // We do this by multiplying by 2^^real.mant_dig
-            diff *= F.RECIP_EPSILON;
-            return bitsdiff + X.mant_dig - ((pd[F.EXPPOS_SHORT] & F.EXPMASK) >> F.EXPSHIFT);
+            repDiff.number *= F.RECIP_EPSILON;
+            return bitsdiff + X.mant_dig -
+                ((repDiff.shorts[F.EXPPOS_SHORT] & F.EXPMASK) >> F.EXPSHIFT);
         }
 
         if (bitsdiff > 0)
@@ -6448,7 +6446,7 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
 
         // Avoid out-by-1 errors when factor is almost 2.
         if (bitsdiff == 0
-            && ((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT]) & F.EXPMASK) == 0)
+            && ((repX.shorts[F.EXPPOS_SHORT] ^ repY.shorts[F.EXPPOS_SHORT]) & F.EXPMASK) == 0)
         {
             return 1;
         } else return 0;
