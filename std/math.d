@@ -392,6 +392,9 @@ template floatTraits(T)
 
         static if (T.sizeof % 8 == 0)
             ulong[T.sizeof / 8] longs;
+
+        static if (realFormat == RealFormat.ibmExtended)
+            double[2] doubles;
     }
 }
 
@@ -5036,14 +5039,15 @@ int isFinite(X)(X x) @trusted pure nothrow @nogc
 bool isNormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
+    F.Repainter rep = { number : x };
+
     static if (F.realFormat == RealFormat.ibmExtended)
     {
         // doubledouble is normal if the least significant part is normal.
-        return isNormal((cast(double*)&x)[MANTISSA_LSB]);
+        return isNormal(rep.doubles[MANTISSA_LSB]);
     }
     else
     {
-        F.Repainter rep = { number : x };
         ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
         return (e != F.EXPMASK && e != 0);
     }
@@ -5110,7 +5114,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        return isSubnormal((cast(double*)&x)[MANTISSA_MSB]);
+        return isSubnormal(rep.doubles[MANTISSA_MSB]);
     }
     else
     {
@@ -6389,18 +6393,20 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
     alias F = floatTraits!(X);
+    F.Repainter repX = { number : x }, repY = { number : y };
+
     static if (F.realFormat == RealFormat.ibmExtended)
     {
-        if (cast(double*)(&x)[MANTISSA_MSB] == cast(double*)(&y)[MANTISSA_MSB])
+        if (repX.doubles[MANTISSA_MSB] == repY.doubles[MANTISSA_MSB])
         {
             return double.mant_dig
-            + feqrel(cast(double*)(&x)[MANTISSA_LSB],
-                    cast(double*)(&y)[MANTISSA_LSB]);
+            + feqrel(repX.doubles[MANTISSA_LSB],
+                    repY.doubles[MANTISSA_LSB]);
         }
         else
         {
-            return feqrel(cast(double*)(&x)[MANTISSA_MSB],
-                    cast(double*)(&y)[MANTISSA_MSB]);
+            return feqrel(repX.doubles[MANTISSA_MSB],
+                    repY.doubles[MANTISSA_MSB]);
         }
     }
     else
@@ -6413,9 +6419,7 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
         if (x == y)
             return X.mant_dig; // ensure diff!=0, cope with INF.
 
-        F.Repainter repX = { number : x },
-                    repY = { number : y},
-                    repDiff = { number : fabs(x - y) };
+        F.Repainter repDiff = { number : fabs(x - y) };
 
         // The difference in abs(exponent) between x or y and abs(x-y)
         // is equal to the number of significand bits of x which are
