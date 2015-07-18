@@ -6544,25 +6544,23 @@ body
     // average them (avoiding overflow), and cast the result back to a floating-point number.
 
     alias F = floatTraits!(T);
-    T u;
+    F.Repainter repX = { number : x },
+                repY = { number : y },
+                res;
+
     static if (F.realFormat == RealFormat.ieeeExtended)
     {
         // There's slight additional complexity because they are actually
         // 79-bit reals...
-        ushort *ue = cast(ushort *)&u;
-        ulong *ul = cast(ulong *)&u;
-        ushort *xe = cast(ushort *)&x;
-        ulong *xl = cast(ulong *)&x;
-        ushort *ye = cast(ushort *)&y;
-        ulong *yl = cast(ulong *)&y;
 
         // Ignore the useless implicit bit. (Bonus: this prevents overflows)
-        ulong m = ((*xl) & 0x7FFF_FFFF_FFFF_FFFFL) + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL);
+        ulong m = (repX.blob.significand & 0x7FFF_FFFF_FFFF_FFFFL)
+                  + (repY.blob.significand & 0x7FFF_FFFF_FFFF_FFFFL);
 
         // @@@ BUG? @@@
         // Cast shouldn't be here
-        ushort e = cast(ushort) ((xe[F.EXPPOS_SHORT] & F.EXPMASK)
-                                 + (ye[F.EXPPOS_SHORT] & F.EXPMASK));
+        ushort e = cast(ushort) ((repX.shorts[F.EXPPOS_SHORT] & F.EXPMASK)
+                                 + (repY.shorts[F.EXPPOS_SHORT] & F.EXPMASK));
         if (m & 0x8000_0000_0000_0000L)
         {
             ++e;
@@ -6575,60 +6573,50 @@ body
         if (c)
             m |= 0x4000_0000_0000_0000L; // shift carry into significand
         if (e)
-            *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
+            res.blob.significand = m | 0x8000_0000_0000_0000L; // set implicit bit...
         else
-            *ul = m; // ... unless exponent is 0 (subnormal or zero).
+            res.blob.significand = m; // ... unless exponent is 0 (subnormal or zero).
 
-        ue[4]= e | (xe[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
+        res.shorts[4]= e | (repX.shorts[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
         // This would be trivial if 'ucent' were implemented...
-        ulong *ul = cast(ulong *)&u;
-        ulong *xl = cast(ulong *)&x;
-        ulong *yl = cast(ulong *)&y;
-
         // Multi-byte add, then multi-byte right shift.
-        ulong mh = ((xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL)
-                    + (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL));
+        ulong mh = ((repX.longs[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL)
+                    + (repY.longs[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL));
 
         // Discard the lowest bit (to avoid overflow)
-        ulong ml = (xl[MANTISSA_LSB]>>>1) + (yl[MANTISSA_LSB]>>>1);
+        ulong ml = (repX.longs[MANTISSA_LSB]>>>1) + (repY.longs[MANTISSA_LSB]>>>1);
 
         // add the lowest bit back in, if necessary.
-        if (xl[MANTISSA_LSB] & yl[MANTISSA_LSB] & 1)
+        if (repX.longs[MANTISSA_LSB] & repY.longs[MANTISSA_LSB] & 1)
         {
             ++ml;
             if (ml == 0) ++mh;
         }
         mh >>>=1;
-        ul[MANTISSA_MSB] = mh | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
-        ul[MANTISSA_LSB] = ml;
+        res.longs[MANTISSA_MSB] = mh | (res.longs[MANTISSA_MSB] & 0x8000_0000_0000_0000);
+        res.longs[MANTISSA_LSB] = ml;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        ulong *ul = cast(ulong *)&u;
-        ulong *xl = cast(ulong *)&x;
-        ulong *yl = cast(ulong *)&y;
-        ulong m = (((*xl) & 0x7FFF_FFFF_FFFF_FFFFL)
-                   + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
-                   m |= ((*xl) & 0x8000_0000_0000_0000L);
-                   *ul = m;
+        ulong m = ((repX.blob & 0x7FFF_FFFF_FFFF_FFFFL)
+                   + (repY.blob & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
+        m |= (repX.blob & 0x8000_0000_0000_0000L);
+        res.blob = m;
     }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        uint *ul = cast(uint *)&u;
-        uint *xl = cast(uint *)&x;
-        uint *yl = cast(uint *)&y;
-        uint m = (((*xl) & 0x7FFF_FFFF) + ((*yl) & 0x7FFF_FFFF)) >>> 1;
-        m |= ((*xl) & 0x8000_0000);
-        *ul = m;
+        uint m = ((repX.blob & 0x7FFF_FFFF) + (repY.blob & 0x7FFF_FFFF)) >>> 1;
+        m |= (repX.blob & 0x8000_0000);
+        res.blob = m;
     }
     else
     {
         assert(0, "Not implemented");
     }
-    return u;
+    return res.number;
 }
 
 @safe pure nothrow @nogc unittest
