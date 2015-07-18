@@ -382,19 +382,21 @@ template floatTraits(T)
     else
         static assert(false, "No traits support for " ~ T.stringof);
 
+    // Intended to use for reinterpreting floating-point numbers
+    // as various integral types
     union Repainter
     {
         Unqual!T number;
         ubyte[T.sizeof] bytes;
         ushort[T.sizeof / 2] shorts;
         uint[T.sizeof / 4] ints;
-        Blob blob;
+        Blob blob; // Reinterpret into fewest integrals possible
 
         static if (T.sizeof % 8 == 0)
             ulong[T.sizeof / 8] longs;
 
         static if (realFormat == RealFormat.ibmExtended)
-            double[2] doubles;
+            double[2] doubles; // Because it *is* a pair of doubles
     }
 }
 
