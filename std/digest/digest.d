@@ -691,6 +691,11 @@ enum Order : bool
  * The additional letterCase parameter can be used to specify the case of the output data.
  * By default the output is in upper case. To change it to the lower case
  * pass LetterCase.lower as a parameter.
+ *
+ * Note:
+ * The function overloads returning a string allocate their return values
+ * using the GC. The versions returning static arrays use pass-by-value for
+ * the return value, effectively avoiding dynamic allocation.
  */
 char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase letterCase = LetterCase.upper)
 (in ubyte[num] digest)
@@ -730,7 +735,7 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase l
 }
 
 ///ditto
-auto toHexString(LetterCase letterCase, Order order = Order.increasing, size_t num)(in ubyte[num] digest)
+char[num*2] toHexString(LetterCase letterCase, Order order = Order.increasing, size_t num)(in ubyte[num] digest)
 {
     return toHexString!(order, num, letterCase)(digest);
 }
@@ -773,7 +778,7 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
 }
 
 ///ditto
-auto toHexString(LetterCase letterCase, Order order = Order.increasing)(in ubyte[] digest)
+string toHexString(LetterCase letterCase, Order order = Order.increasing)(in ubyte[] digest)
 {
     return toHexString!(order, letterCase)(digest);
 }
