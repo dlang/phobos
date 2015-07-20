@@ -5723,7 +5723,7 @@ Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
     return Transposed!RangeOfRanges(rr);
 }
 
-/// Example
+///
 @safe unittest
 {
     import std.algorithm : equal;
