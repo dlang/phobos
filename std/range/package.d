@@ -3968,17 +3968,17 @@ private string lockstepMixin(Ranges...)(bool withIndex)
 
    By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
 
-   BUGS:  If a range does not offer lvalue access, but $(D ref) is used in the
-   $(D foreach) loop, it will be silently accepted but any modifications
-   to the variable will not be propagated to the underlying range.
-
-   // Lockstep also supports iterating with an index variable:
-   Example:
+   Lockstep also supports iterating with an index variable:
    -------
-   foreach(index, a, b; lockstep(arr1, arr2)) {
+   foreach (index, a, b; lockstep(arr1, arr2))
+   {
        writefln("Index %s:  a = %s, b = %s", index, a, b);
    }
    -------
+
+   BUGS:  If a range does not offer lvalue access, but $(D ref) is used in the
+   $(D foreach) loop, it will be silently accepted but any modifications
+   to the variable will not be propagated to the underlying range.
 */
 struct Lockstep(Ranges...)
     if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
@@ -4031,7 +4031,7 @@ unittest
    auto arr1 = [1,2,3,4,5];
    auto arr2 = [6,7,8,9,10];
 
-   foreach(ref a, ref b; lockstep(arr1, arr2))
+   foreach (ref a, ref b; lockstep(arr1, arr2))
    {
        a += b;
    }
