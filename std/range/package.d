@@ -1917,6 +1917,21 @@ if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &
     assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 }
 
+/**
+ * If the range runs out before `n` elements, `take` simply returns the entire
+ * range (unlike $(LREF takeExactly), which will cause an assertion failure if
+ * the range ends prematurely):
+ */
+@safe unittest
+{
+    import std.algorithm : equal;
+
+    int[] arr2 = [ 1, 2, 3 ];
+    auto t = take(arr2, 5);
+    assert(t.length == 3);
+    assert(equal(t, [ 1, 2, 3 ]));
+}
+
 // take(take(r, n1), n2)
 Take!R take(R)(R input, size_t n)
 if (is(R T == Take!T))
@@ -2044,6 +2059,9 @@ even when $(D range) itself does not define $(D length).
 
 The result of $(D takeExactly) is identical to that of $(LREF take) in
 cases where the original range defines $(D length) or is infinite.
+
+Unlike $(LREF take), however, it is illegal to pass a range with less than
+$(D n) elements to $(D takeExactly); this will cause an assertion failure.
  */
 auto takeExactly(R)(R range, size_t n)
 if (isInputRange!R)
