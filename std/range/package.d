@@ -3986,14 +3986,10 @@ private string lockstepMixin(Ranges...)(bool withIndex)
 
    By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
 
-   BUGS:  If a range does not offer lvalue access, but $(D ref) is used in the
-   $(D foreach) loop, it will be silently accepted but any modifications
-   to the variable will not be propagated to the underlying range.
-
-   // Lockstep also supports iterating with an index variable:
-   Example:
+   Lockstep also supports iterating with an index variable:
    -------
-   foreach(index, a, b; lockstep(arr1, arr2)) {
+   foreach (index, a, b; lockstep(arr1, arr2))
+   {
        writefln("Index %s:  a = %s, b = %s", index, a, b);
    }
    -------
@@ -4049,7 +4045,7 @@ unittest
    auto arr1 = [1,2,3,4,5];
    auto arr2 = [6,7,8,9,10];
 
-   foreach(ref a, ref b; lockstep(arr1, arr2))
+   foreach (ref a, ref b; lockstep(arr1, arr2))
    {
        a += b;
    }
@@ -4141,6 +4137,37 @@ unittest
 
     // Regression 10468
     foreach (x, y; lockstep(iota(0, 10), iota(0, 10))) { }
+}
+
+unittest
+{
+    struct RvalueRange
+    {
+        int[] impl;
+        @property bool empty() { return impl.empty; }
+        @property int front() { return impl[0]; } // N.B. non-ref
+        void popFront() { impl.popFront(); }
+    }
+    auto data1 = [ 1, 2, 3, 4 ];
+    auto data2 = [ 5, 6, 7, 8 ];
+    auto r1 = RvalueRange(data1);
+    auto r2 = data2;
+    foreach (a, ref b; lockstep(r1, r2))
+    {
+        a++;
+        b++;
+    }
+    assert(data1 == [ 1, 2, 3, 4 ]); // changes to a do not propagate to data
+    assert(data2 == [ 6, 7, 8, 9 ]); // but changes to b do.
+
+    // Since r1 is by-value only, the compiler should reject attempts to
+    // foreach over it with ref.
+    static assert(!__traits(compiles, {
+        foreach (ref a, ref b; lockstep(r1, r2)) { a++; }
+    }));
+    static assert(__traits(compiles, {
+        foreach (a, ref b; lockstep(r1, r2)) { a++; }
+    }));
 }
 
 /**
