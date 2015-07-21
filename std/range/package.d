@@ -8673,10 +8673,11 @@ struct NullSink
     void put(E)(E){}
 }
 
+///
 @safe unittest
 {
     import std.algorithm : map, copy;
-    [4, 5, 6].map!(x => x * 2).copy(NullSink());
+    [4, 5, 6].map!(x => x * 2).copy(NullSink()); // data is discarded
 }
 
 
