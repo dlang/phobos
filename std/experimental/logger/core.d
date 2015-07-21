@@ -716,11 +716,8 @@ flexibility.
 */
 abstract class Logger
 {
-    /** LogEntry is a aggregation combining all information associated
-    with a log message. This aggregation will be passed to the method
-    writeLogMsg.
-    */
-    protected struct LogEntry
+    /// General information about a log message
+    protected struct LogEntryBase
     {
         /// the filename the log function was called from
         string file;
@@ -735,14 +732,39 @@ abstract class Logger
         string moduleName;
         /// the $(D LogLevel) associated with the log message
         LogLevel logLevel;
-        /// thread id of the log message
-        Tid threadId;
         /// the time the message was logged
         SysTime timestamp;
         /// the message of the log message
         string msg;
-        /// A refernce to the $(D Logger) used to create this $(D LogEntry)
+    }
+
+    /** LogEntry is an aggregation combining all information associated
+    with a log message. This aggregation will be passed to the method
+    writeLogMsg.
+    */
+    protected struct LogEntry
+    {
+        LogEntryBase base;
+        alias base this;
+
+        /// thread id of the log message
+        Tid threadId;
+        /// A reference to the $(D Logger) used to create this $(D LogEntry)
         Logger logger;
+
+        /// Default constructor
+        this(string file = string.init, int line = int.init,
+            string funcName = string.init, string prettyFuncName = string.init,
+            string moduleName = string.init, LogLevel logLevel = LogLevel.init,
+            Tid threadId = Tid.init, SysTime timestamp = SysTime.init,
+            string msg = string.init, Logger logger = Logger.init) @safe
+        {
+            this.base = LogEntryBase(file, line, funcName, prettyFuncName,
+                moduleName, logLevel, timestamp, msg);
+            this.threadId = threadId;
+            this.logger = logger;
+        }
+
     }
 
     /** This constructor takes a name of type $(D string), and a $(D LogLevel).

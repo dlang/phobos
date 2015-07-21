@@ -141,9 +141,9 @@ SRC_STD_ALGO= std\algorithm\package.d std\algorithm\comparison.d \
 
 SRC_STD_5_HEAVY= $(SRC_STD_ALGO)
 
-SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
-	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
-	std\experimental\logger\package.d
+SRC_STD_LOGGER= std\experimental\logger\asynclogger.d std\experimental\logger\core.d \
+	std\experimental\logger\filelogger.d std\experimental\logger\multilogger.d \
+	std\experimental\logger\nulllogger.d std\experimental\logger\package.d
 
 SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
@@ -375,6 +375,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_zlib.html \
 	$(DOC)\std_net_isemail.html \
 	$(DOC)\std_net_curl.html \
+	$(DOC)\std_experimental_logger_asynclogger.html \
 	$(DOC)\std_experimental_logger_core.html \
 	$(DOC)\std_experimental_logger_filelogger.html \
 	$(DOC)\std_experimental_logger_multilogger.html \
@@ -805,6 +806,9 @@ $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 
 $(DOC)\std_net_curl.html : $(STDDOC) std\net\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_curl.html $(STDDOC) std\net\curl.d
+
+$(DOC)\std_experimental_logger_asynclogger.html : $(STDDOC) std\experimental\logger\asynclogger.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_asynclogger.html $(STDDOC) std\experimental\logger\asynclogger.d
 
 $(DOC)\std_experimental_logger_core.html : $(STDDOC) std\experimental\logger\core.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_core.html $(STDDOC) std\experimental\logger\core.d
