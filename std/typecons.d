@@ -57,34 +57,35 @@ a $(D Unique) maintains sole ownership of a given resource of type $(D T) until
 ownership is transferred or the $(D Unique) falls out of scope.
 Such a transfer can be explicit, using
 $(LINK2 http://dlang.org/phobos/std_algorithm_mutation.html#.move, $(D std.algorithm.move)),
-or implicit, when returning Unique from a function that created it.
+or implicit, when returning $(D Unique) from a function that created it.
 The resource can be a polymorphic class object,
-in which case Unique behaves polymorphically too.
+in which case $(D Unique) behaves polymorphically too.
+
+Note: Nested classes and structs cannot be created at present time,
+      as there is no way to transfer the closure's frame pointer
+      into this function.
+
+Params:
+    args = Arguments to pass to $(D T)'s constructor.
 */
 struct Unique(T)
 {
-/** Represents a reference to $(D T). Resolves to $(D T*) if $(D T) is a value type. */
-static if (is(T:Object))
-    alias RefT = T;
-else
-    alias RefT = T*;
+    /// Represents a reference to $(D T).
+    /// When $(D T) is a class or interface, $(D RefT) is an alias for $(D T).
+    /// Otherwise, $(D RefT) is $(D T*) (pointer to $(D T)).
+    static if (is(T == class) || is(T == interface))
+        alias RefT = T;
+    else
+        alias RefT = T*;
 
     /**
-    Constructor that takes a $(D Unique) of a type that is convertible to our type.
+    Construct $(D Unique) from a type that is convertible to our type.
 
     Typically used to transfer a $(D Unique) rvalue of derived type to
     a $(D Unique) of base type.
-
-    Example:
-    ---
-    class C : Object { }
-
-    Unique!C uc = unique!C();
-    Unique!Object uo = move(uc);
-    ---
     */
     this(U)(Unique!U u)
-    if (is(u.RefT:RefT))
+        if (is(u.RefT : RefT))
     {
         debug(Unique) writeln("Unique constructor converting from ", U.stringof);
         _p = u._p;
@@ -93,7 +94,7 @@ else
 
     /// Transfer ownership from a $(D Unique) of a type that is convertible to our type.
     void opAssign(U)(Unique!U u)
-    if (is(u.RefT:RefT))
+        if (is(u.RefT : RefT))
     {
         debug(Unique) writeln("Unique opAssign converting from ", U.stringof);
         // first delete any resource we own
@@ -107,10 +108,13 @@ else
     {
         import core.stdc.stdlib : free;
 
-        debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
+        debug(Unique) writeln("Unique destructor of ", _p is null? null : _p);
         if (_p !is null)
         {
-            destroy(_p);
+            static if (is(T == class) || is(T == interface))
+                destroy(_p);
+            else
+                destroy(*_p);
 
             static if (hasIndirections!T)
             {
@@ -137,88 +141,65 @@ else
     }
 
     /**
-    Returns a reference to the underlying $(D RefT) for use by non-owning code.
+    Returns a reference to the underlying $(D T) for use by non-owning code.
+
+    When $(D T) is a class or interface type and this $(D Unique) reference
+    is uninitialized or invalidated by an explicit move, get returns $(D null).
+    For all other types, get is illegal on an uninitialized or invalidated
+    reference.
 
     The holder of a $(D Unique!T) is the $(I owner) of that $(D T).
     For code that does not own the resource (and therefore does not affect
     its life cycle), pass a plain old reference.
-    */
-    ref T get()() return @safe
-        if (!is(T == class))
-    {
-        import std.exception : enforce;
-        enforce(!empty, "You cannot get a struct reference from an empty Unique");
-        return *_p;
-    }
-
-    /**
-    Returns a the underlying $(D T) for use by non-owning code.
 
     Note that getting a class reference is currently unsafe
     as there is currently no way to stop it from escaping. (see DIP69)
     */
-    T get()() @system
-        if (is(T == class))
+    inout(T) get()() inout @system
+        if (is(T == class) || is(T == interface))
     {
         return _p;
     }
 
-    /// Returns true if the $(D Unique) currently owns an underlying $(D T)
+    /// Ditto
+    ref inout(T) get()() inout return @safe
+        if (!is(T == class) && !is(T == interface))
+    {
+        assert(_p !is null, "Uninitialized or invalidated Unique reference cannot be dereferenced");
+        return *_p;
+    }
+
+    /// $(D true) if the $(D Unique) currently owns an underlying $(D T).
+    deprecated("Please use cast(bool) to check for an uninitialized or invalidated reference.")
     @property bool empty() const
     {
         return _p is null;
     }
 
-    /// Allows the $(D Unique) to cast to a boolean value matching
-    /// that of $(D Unique.empty)
-    bool opCast(T : bool)() const { return !empty; }
+    /// $(D false) if this reference is uninitialized or invalidated, $(D true) otherwise.
+    /// See_Also: $(LREF isValidUnique) for an explicit way to check validity
+    bool opCast(T : bool)() const { return _p !is null; }
 
-    /// Forwards the underlying $(D RefT)
+    /// $(D Unique!T) is a subtype of $(D T).
     alias get this;
 
-    /// Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
+    /// $(D Unique) references cannot be copied.
     @disable this(this);
 
 private:
     RefT _p;
 }
 
-unittest
-{
-    // Ditto...
-    import std.algorithm;
-
-    static class C : Object { }
-
-    Unique!C uc = unique!C();
-    Unique!Object uo = move(uc);
-}
-
-
-/**
-Allows safe construction of $(D Unique). It creates the resource and
-guarantees unique ownership of it (unless $(D T) publishes aliases of
-$(D this)).
-
-Note: Nested classes and structs cannot be created at present time,
-      as there is no way to transfer the closure's frame pointer
-      into this function.
-
-Params:
-    args = Arguments to pass to $(D T)'s constructor.
-
-*/
+/// Ditto
 Unique!T unique(T, A...)(auto ref A args)
     if (__traits(compiles, new T(args)))
 {
-    debug(Unique) writeln("Unique.create for ", T.stringof);
-
     import core.memory : GC;
     import core.stdc.stdlib : malloc;
     import std.conv : emplace;
     import core.exception : onOutOfMemoryError;
 
-    debug(Unique) writeln("Unique.create for ", T.stringof);
+    debug(Unique) writeln("unique() for ", T.stringof);
     Unique!T u;
 
     // TODO: May need to fix alignment?
@@ -234,10 +215,10 @@ Unique!T unique(T, A...)(auto ref A args)
     if (!rawMemory)
         onOutOfMemoryError();
 
-    static if (is(T == class)) {
+    static if (is(T == class))
         u._p = emplace!T(rawMemory[0 .. allocSize], args);
-    }
-    else {
+    else
+    {
         u._p = cast(T*)rawMemory;
         emplace!T(u._p, args);
     }
@@ -248,12 +229,49 @@ Unique!T unique(T, A...)(auto ref A args)
     return u;
 }
 
-///
+/// Use unique to construct _unique resources:
 unittest
 {
-    struct S { }
-    auto u = unique!S();
-    assert(!u.empty());
+    struct S
+    {
+        int i;
+        this(int i) { this.i = i; }
+    }
+
+    auto u = unique!S(42);
+    assert(u);
+    assert(u.i == 42);
+}
+
+/// $(D Unique!T) supports the supertype conversions of $(D T):
+unittest
+{
+    import std.algorithm : move;
+
+    static interface I {}
+    static class Base : I {}
+    static class Derived : Base {}
+
+    Unique!Derived d = unique!Derived();
+    Unique!Base b = move(d);
+    Unique!I i = move(b);
+}
+
+/// Use $(D cast(bool)) to check if a reference is valid:
+unittest
+{
+    import std.algorithm.mutation : move;
+    Unique!Object u;
+    assert(!u); // uninitialized
+    u = unique!Object();
+    assert(u);
+    Unique!Object newOwner = move(u);
+    assert(!u); // invalidated by the move
+    assert(newOwner);
+
+    // Use `isValidUnique` when a more explicit check is desirable
+    bool isValid = newOwner.isValidUnique;
+    assert(isValid);
 }
 
 unittest
@@ -263,15 +281,19 @@ unittest
     {
         int i;
         this(int i) { this.i = i; }
+
+        static bool destroyed = false;
+        ~this() { destroyed = true; }
     }
 
     // Some quick tests around alias this
     auto u = unique!S(42);
     assert(u.i == 42);
-    assert(!u.empty);
-    u.destroy();
-    assert(u.empty);
-    assert(!u); // Since null pointers coerce to false
+    assert(u);
+    assert(!S.destroyed);
+    destroy(u);
+    assert(S.destroyed);
+    assert(!u);
 
     auto i = unique!int(25);
     assert(i.get() == 25);
@@ -339,9 +361,6 @@ unittest
 
 unittest
 {
-    // FIXME: Isn't this a bit redundant?
-    // I believe all of these bases are covered in the tests above.
-
     debug(Unique) writeln("Unique class");
     static class Bar
     {
@@ -349,7 +368,7 @@ unittest
         int val() const { return 4; }
     }
 
-    alias UBar = Unique!(Bar);
+    alias UBar = Unique!Bar;
 
     UBar g(UBar u)
     {
@@ -399,6 +418,37 @@ unittest
     assert(uf2);
 }
 
+/**
+ * Check whether a $(D Unique) reference is valid.
+ *
+ * $(D Unique!T) references are considered valid while they refer to
+ * an initialized $(D T).
+ * See_Also:
+ *    $(LREF .Unique.opCast) for use in if-statements and other
+ *    conditional contexts
+ */
+bool isValidUnique(T)(ref const Unique!T u) @property
+{
+    return u._p !is null;
+}
+
+///
+unittest
+{
+    import std.algorithm.mutation : move;
+
+    Unique!int u;
+    assert(!u.isValidUnique);
+    u = unique!int(42);
+    assert(u.isValidUnique); // `u` refers to an initialized `int`
+
+    Unique!int u2 = move(u);
+    assert(!u.isValidUnique); // `u` was destroyed by the explicit move
+
+    // `u2` is the new owner of the `int`
+    assert(u2.isValidUnique);
+    assert(u2 == 42);
+}
 
 /**
 Tuple of values, for example $(D Tuple!(int, string)) is a record that
