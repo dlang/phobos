@@ -71,7 +71,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.mutation;
 
 import std.range.primitives;
-import std.traits : isBlitAssignable, isNarrowString;
+import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
@@ -283,6 +283,10 @@ Elements can be swapped across ranges of different types:
     }
 }
 
+// Tests if types are arrays and support slice assign.
+private enum bool areCopyCompatibleArrays(T1, T2) =
+    isArray!T1 && isArray!T2 && is(typeof(T2.init[] = T1.init[]));
+
 // copy
 /**
 Copies the content of $(D source) into $(D target) and returns the
@@ -295,62 +299,57 @@ See_Also:
     $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
+    if (areCopyCompatibleArrays!(SourceRange, TargetRange))
 {
-    import std.traits : isArray, Unqual;
-    static if (isArray!SourceRange && isArray!TargetRange &&
-               is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
-    {
-        const tlen = target.length;
-        const slen = source.length;
-        assert(tlen >= slen,
-                "Cannot copy a source range into a smaller target range.");
+    const tlen = target.length;
+    const slen = source.length;
+    assert(tlen >= slen,
+            "Cannot copy a source range into a smaller target range.");
 
-        immutable overlaps = () @trusted {
-            return source.ptr < target.ptr + tlen &&
-                   target.ptr < source.ptr + slen; }();
+    immutable overlaps = () @trusted {
+        return source.ptr < target.ptr + tlen &&
+               target.ptr < source.ptr + slen; }();
 
-        if (overlaps)
-        {
-            foreach (idx; 0 .. slen)
-                target[idx] = source[idx];
-            return target[slen .. tlen];
-        }
-        else
-        {
-            // Array specialization.  This uses optimized memory copying
-            // routines under the hood and is about 10-20x faster than the
-            // generic implementation.
-            target[0 .. slen] = source[];
-            return target[slen .. $];
-        }
-    }
-    else static if (isInputRange!SourceRange &&
-                    isOutputRange!(TargetRange, ElementType!SourceRange))
+    if (overlaps)
     {
-        // Specialize for 2 random access ranges.
-        // Typically 2 random access ranges are faster iterated by common
-        // index than by x.popFront(), y.popFront() pair
-        static if (isRandomAccessRange!SourceRange &&
-                   hasLength!SourceRange &&
-                   hasSlicing!TargetRange &&
-                   isRandomAccessRange!TargetRange &&
-                   hasLength!TargetRange)
-        {
-            auto len = source.length;
-            foreach (idx; 0 .. len)
-                target[idx] = source[idx];
-            return target[len .. $];
-        }
-        else
-        {
-            put(target, source);
-            return target;
-        }
+        foreach (idx; 0 .. slen)
+            target[idx] = source[idx];
+        return target[slen .. tlen];
     }
     else
     {
-        static assert(false, "Cannot copy " ~ SourceRange.stringof ~
-                             " into " ~ TargetRange.stringof);
+        // Array specialization.  This uses optimized memory copying
+        // routines under the hood and is about 10-20x faster than the
+        // generic implementation.
+        target[0 .. slen] = source[];
+        return target[slen .. $];
+    }
+}
+
+/// ditto
+TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
+    if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
+        isInputRange!SourceRange &&
+        isOutputRange!(TargetRange, ElementType!SourceRange))
+{
+    // Specialize for 2 random access ranges.
+    // Typically 2 random access ranges are faster iterated by common
+    // index than by x.popFront(), y.popFront() pair
+    static if (isRandomAccessRange!SourceRange &&
+               hasLength!SourceRange &&
+               hasSlicing!TargetRange &&
+               isRandomAccessRange!TargetRange &&
+               hasLength!TargetRange)
+    {
+        auto len = source.length;
+        foreach (idx; 0 .. len)
+            target[idx] = source[idx];
+        return target[len .. $];
+    }
+    else
+    {
+        put(target, source);
+        return target;
     }
 }
 
