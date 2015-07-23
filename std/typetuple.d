@@ -9,3 +9,29 @@
 module std.typetuple;
 
 public import std.meta;
+
+/**
+ * Alternate name for $(LREF AliasSeq) for legacy compatibility.
+ */
+alias TypeTuple = AliasSeq;
+
+///
+unittest
+{
+    import std.typetuple;
+    alias TL = TypeTuple!(int, double);
+
+    int foo(TL td)  // same as int foo(int, double);
+    {
+        return td[0] + cast(int)td[1];
+    }
+}
+
+///
+unittest
+{
+    alias TL = TypeTuple!(int, double);
+
+    alias Types = TypeTuple!(TL, char);
+    static assert(is(Types == TypeTuple!(int, double, char)));
+}
