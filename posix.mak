@@ -214,8 +214,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix			\
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) \
-  $(addsuffix /package,$(STD_PACKAGES))
+D_MODULES = $(STD_MODULES) $(EXTRA_MODULES)
 
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
@@ -442,15 +441,15 @@ $(DOC_OUTPUT_DIR)/$(call D2HTML,$p) : $p $(STDDOC) ;\
   $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
 # For each package, define a rule e.g.:
-# ../web/phobos/std_algorithm.html : std/algorithm/package.d $(STDDOC) ; ...
+# ../web/phobos/std_algorithm.html : std/algorithm/... $(STDDOC) ; ...
 $(foreach p,$(STD_PACKAGES),$(eval \
-$(DOC_OUTPUT_DIR)/$(call P2HTML,$p) : $p/package.d $(STDDOC) ;\
+$(DOC_OUTPUT_DIR)/$(call P2HTML,$p) : $(addsuffix .d,$(call P2MODULES,$p)) $(STDDOC) ;\
   $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
 html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
 
 allmod :
-	@echo $(SRC_DOCUMENTABLES) $(addsuffix /package.d,$(STD_PACKAGES))
+	@echo $(SRC_DOCUMENTABLES)
 
 rsync-prerelease : html
 	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/

@@ -124,7 +124,7 @@ type.
 struct TypedAllocator(PrimaryAllocator, Policies...)
 {
     import std.typecons : Tuple;
-    import std.meta : Arguments;
+    import std.meta : AliasSeq;
     import std.algorithm.sorting : isSorted;
 
     static assert(isSorted([Stride2!Policies]));
@@ -133,11 +133,11 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
     {
         static if (T.length >= 2)
         {
-            alias Stride2 = Arguments!(T[0], Stride2!(T[2 .. $]));
+            alias Stride2 = AliasSeq!(T[0], Stride2!(T[2 .. $]));
         }
         else
         {
-            alias Stride2 = Arguments!(T[0 .. $]);
+            alias Stride2 = AliasSeq!(T[0 .. $]);
         }
     }
 
