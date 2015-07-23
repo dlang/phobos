@@ -28237,7 +28237,7 @@ assert(tz.dstName == "PDT");
         import std.algorithm : sort;
         import std.range : retro;
         import std.format : format;
-        import std.path : toNormalizedPath, chainPath;
+        import std.path : asNormalizedPath, chainPath;
         import std.conv : to;
 
         name = strip(name);
@@ -28245,7 +28245,7 @@ assert(tz.dstName == "PDT");
         enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
-        const file = toNormalizedPath(chainPath(tzDatabaseDir, name)).to!string;
+        const file = asNormalizedPath(chainPath(tzDatabaseDir, name)).to!string;
 
         enforce(file.exists(), new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
@@ -29334,11 +29334,11 @@ else version(Posix)
     void setTZEnvVar(string tzDatabaseName) @trusted nothrow
     {
         import std.internal.cstring : tempCString;
-        import std.path : toNormalizedPath, chainPath;
+        import std.path : asNormalizedPath, chainPath;
         import core.sys.posix.stdlib : setenv;
         import core.sys.posix.time : tzset;
 
-        auto value = toNormalizedPath(chainPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName));
+        auto value = asNormalizedPath(chainPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName));
         setenv("TZ", value.tempCString(), 1);
         tzset();
     }

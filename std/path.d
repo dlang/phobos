@@ -988,7 +988,7 @@ unittest
     ---
 
     See_Also:
-        $(LREF setExt) which does not allocate and returns a lazy range.
+        $(LREF withExtension) which does not allocate and returns a lazy range.
 */
 immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
     if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
@@ -996,7 +996,7 @@ immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
     try
     {
         import std.conv : to;
-        return setExt(path, ext).to!(typeof(return));
+        return withExtension(path, ext).to!(typeof(return));
     }
     catch (Exception e)
     {
@@ -1014,7 +1014,7 @@ immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
     try
     {
         import std.conv : to;
-        return setExt(path, ext).to!(typeof(return));
+        return withExtension(path, ext).to!(typeof(return));
     }
     catch (Exception e)
     {
@@ -1061,7 +1061,7 @@ unittest
  * See_Also:
  *      $(LREF setExtension)
  */
-auto setExt(R, C)(R path, C[] ext)
+auto withExtension(R, C)(R path, C[] ext)
     if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
          is(StringTypeOf!R)) &&
         isSomeChar!C)
@@ -1080,14 +1080,14 @@ auto setExt(R, C)(R path, C[] ext)
 unittest
 {
     import std.array;
-    assert (setExt("file", "ext").array == "file.ext");
-    assert (setExt("file"w, ".ext"w).array == "file.ext");
-    assert (setExt("file.ext"w, ".").array == "file.");
+    assert (withExtension("file", "ext").array == "file.ext");
+    assert (withExtension("file"w, ".ext"w).array == "file.ext");
+    assert (withExtension("file.ext"w, ".").array == "file.");
 
     import std.utf : byChar, byWchar;
-    assert (setExt("file".byChar, "ext").array == "file.ext");
-    assert (setExt("file"w.byWchar, ".ext"w).array == "file.ext"w);
-    assert (setExt("file.ext"w.byWchar, ".").array == "file."w);
+    assert (withExtension("file".byChar, "ext").array == "file.ext");
+    assert (withExtension("file"w.byWchar, ".ext"w).array == "file.ext"w);
+    assert (withExtension("file.ext"w.byWchar, ".").array == "file."w);
 }
 
 
@@ -1112,7 +1112,7 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     import std.conv : to;
-    return defaultExt(path, ext).to!(typeof(return));
+    return withDefaultExtension(path, ext).to!(typeof(return));
 }
 
 
@@ -1144,7 +1144,7 @@ unittest
  * Returns:
  *      range with the result
  */
-auto defaultExt(R, C)(R path, C[] ext)
+auto withDefaultExtension(R, C)(R path, C[] ext)
     if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
          is(StringTypeOf!R)) &&
         isSomeChar!C)
@@ -1173,16 +1173,16 @@ auto defaultExt(R, C)(R path, C[] ext)
 unittest
 {
     import std.array;
-    assert (defaultExt("file", "ext").array == "file.ext");
-    assert (defaultExt("file"w, ".ext").array == "file.ext"w);
-    assert (defaultExt("file.", "ext").array == "file.");
-    assert (defaultExt("file", "").array == "file.");
+    assert (withDefaultExtension("file", "ext").array == "file.ext");
+    assert (withDefaultExtension("file"w, ".ext").array == "file.ext"w);
+    assert (withDefaultExtension("file.", "ext").array == "file.");
+    assert (withDefaultExtension("file", "").array == "file.");
 
     import std.utf : byChar, byWchar;
-    assert (defaultExt("file".byChar, "ext").array == "file.ext");
-    assert (defaultExt("file"w.byWchar, ".ext").array == "file.ext"w);
-    assert (defaultExt("file.".byChar, "ext"d).array == "file.");
-    assert (defaultExt("file".byChar, "").array == "file.");
+    assert (withDefaultExtension("file".byChar, "ext").array == "file.ext");
+    assert (withDefaultExtension("file"w.byWchar, ".ext").array == "file.ext"w);
+    assert (withDefaultExtension("file.".byChar, "ext"d).array == "file.");
+    assert (withDefaultExtension("file".byChar, "").array == "file.");
 }
 
 /** Combines one or more path segments.
@@ -1484,7 +1484,7 @@ unittest
     Note that this function does not resolve symbolic links.
 
     This function always allocates memory to hold the resulting path.
-    Use $(LREF toNormalizedPath) to not allocate memory.
+    Use $(LREF asNormalizedPath) to not allocate memory.
 
     Examples:
     ---
@@ -1524,7 +1524,7 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
         else
             result = path;
     }
-    result = toNormalizedPath(result).array;
+    result = asNormalizedPath(result).array;
     return cast(typeof(return)) result;
 }
 
@@ -1640,7 +1640,7 @@ unittest
     It will return "." if the path leads to the starting directory.
     On Windows, slashes are replaced with backslashes.
 
-    Using toNormalizedPath on empty paths will always return an empty path.
+    Using asNormalizedPath on empty paths will always return an empty path.
 
     Does not resolve symbolic links.
 
@@ -1656,29 +1656,29 @@ unittest
     Examples:
     ---
     import std.array;
-    assert (toNormalizedPath("foo/..").array == ".");
+    assert (asNormalizedPath("foo/..").array == ".");
 
     version (Posix)
     {
-        assert (toNormalizedPath("/foo/./bar/..//baz/").array == "/foo/baz");
-        assert (toNormalizedPath("../foo/.").array == "../foo");
-        assert (toNormalizedPath("/foo/bar/baz/").array == "/foo/bar/baz");
-        assert (toNormalizedPath("foo/./bar/../../", "../baz").array == "../baz");
-        assert (toNormalizedPath("/foo/./bar/../../baz").array == "/baz");
+        assert (asNormalizedPath("/foo/./bar/..//baz/").array == "/foo/baz");
+        assert (asNormalizedPath("../foo/.").array == "../foo");
+        assert (asNormalizedPath("/foo/bar/baz/").array == "/foo/bar/baz");
+        assert (asNormalizedPath("foo/./bar/../../", "../baz").array == "../baz");
+        assert (asNormalizedPath("/foo/./bar/../../baz").array == "/baz");
     }
 
     version (Windows)
     {
-        assert (toNormalizedPath(`c:\foo\.\bar/..\\baz\`).array == `c:\foo\baz`);
-        assert (toNormalizedPath(`..\foo\.`).array == `..\foo`);
-        assert (toNormalizedPath(`c:\foo\bar\baz\`).array == `c:\foo\bar\baz`);
-        assert (toNormalizedPath(`c:\foo\bar/..`).array == `c:\foo`);
-        assert (toNormalizedPath(`\\server\share\foo\..\bar`).array == `\\server\share\bar`);
+        assert (asNormalizedPath(`c:\foo\.\bar/..\\baz\`).array == `c:\foo\baz`);
+        assert (asNormalizedPath(`..\foo\.`).array == `..\foo`);
+        assert (asNormalizedPath(`c:\foo\bar\baz\`).array == `c:\foo\bar\baz`);
+        assert (asNormalizedPath(`c:\foo\bar/..`).array == `c:\foo`);
+        assert (asNormalizedPath(`\\server\share\foo\..\bar`).array == `\\server\share\bar`);
     }
     ---
 */
 
-auto toNormalizedPath(R)(R path)
+auto asNormalizedPath(R)(R path)
         if (isSomeChar!(ElementEncodingType!R) &&
             (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R))
 {
@@ -1824,94 +1824,94 @@ unittest
     import std.array;
     import std.utf : byChar;
 
-    assert (toNormalizedPath("").array is null);
-    assert (toNormalizedPath("foo").array == "foo");
-    assert (toNormalizedPath(".").array == ".");
-    assert (toNormalizedPath("./.").array == ".");
-    assert (toNormalizedPath("foo/..").array == ".");
+    assert (asNormalizedPath("").array is null);
+    assert (asNormalizedPath("foo").array == "foo");
+    assert (asNormalizedPath(".").array == ".");
+    assert (asNormalizedPath("./.").array == ".");
+    assert (asNormalizedPath("foo/..").array == ".");
 
-    auto save = toNormalizedPath("fob").save;
+    auto save = asNormalizedPath("fob").save;
     save.popFront();
     assert(save.front == 'o');
 
     version (Posix)
     {
-        assert (toNormalizedPath("/foo/bar").array == "/foo/bar");
-        assert (toNormalizedPath("foo/bar/baz").array == "foo/bar/baz");
-        assert (toNormalizedPath("foo/bar/baz").array == "foo/bar/baz");
-        assert (toNormalizedPath("foo/bar//baz///").array == "foo/bar/baz");
-        assert (toNormalizedPath("/foo/bar/baz").array == "/foo/bar/baz");
-        assert (toNormalizedPath("/foo/../bar/baz").array == "/bar/baz");
-        assert (toNormalizedPath("/foo/../..//bar/baz").array == "/bar/baz");
-        assert (toNormalizedPath("/foo/bar/../baz").array == "/foo/baz");
-        assert (toNormalizedPath("/foo/bar/../../baz").array == "/baz");
-        assert (toNormalizedPath("/foo/bar/.././/baz/../wee/").array == "/foo/wee");
-        assert (toNormalizedPath("//foo/bar/baz///wee").array == "/foo/bar/baz/wee");
+        assert (asNormalizedPath("/foo/bar").array == "/foo/bar");
+        assert (asNormalizedPath("foo/bar/baz").array == "foo/bar/baz");
+        assert (asNormalizedPath("foo/bar/baz").array == "foo/bar/baz");
+        assert (asNormalizedPath("foo/bar//baz///").array == "foo/bar/baz");
+        assert (asNormalizedPath("/foo/bar/baz").array == "/foo/bar/baz");
+        assert (asNormalizedPath("/foo/../bar/baz").array == "/bar/baz");
+        assert (asNormalizedPath("/foo/../..//bar/baz").array == "/bar/baz");
+        assert (asNormalizedPath("/foo/bar/../baz").array == "/foo/baz");
+        assert (asNormalizedPath("/foo/bar/../../baz").array == "/baz");
+        assert (asNormalizedPath("/foo/bar/.././/baz/../wee/").array == "/foo/wee");
+        assert (asNormalizedPath("//foo/bar/baz///wee").array == "/foo/bar/baz/wee");
         // Examples in docs:
-        assert (toNormalizedPath("/foo/bar/baz/").array == "/foo/bar/baz");
-        assert (toNormalizedPath("foo/./bar/../..//../baz").array == "../baz");
-        assert (toNormalizedPath("/foo/./bar/../../baz").array == "/baz");
+        assert (asNormalizedPath("/foo/bar/baz/").array == "/foo/bar/baz");
+        assert (asNormalizedPath("foo/./bar/../..//../baz").array == "../baz");
+        assert (asNormalizedPath("/foo/./bar/../../baz").array == "/baz");
 
-        assert (toNormalizedPath("foo//bar").array == "foo/bar");
-        assert (toNormalizedPath("foo/bar").array == "foo/bar");
+        assert (asNormalizedPath("foo//bar").array == "foo/bar");
+        assert (asNormalizedPath("foo/bar").array == "foo/bar");
 
         //Curent dir path
-        assert (toNormalizedPath("./").array == ".");
-        assert (toNormalizedPath("././").array == ".");
-        assert (toNormalizedPath("./foo/..").array == ".");
-        assert (toNormalizedPath("foo/..").array == ".");
+        assert (asNormalizedPath("./").array == ".");
+        assert (asNormalizedPath("././").array == ".");
+        assert (asNormalizedPath("./foo/..").array == ".");
+        assert (asNormalizedPath("foo/..").array == ".");
     }
     else version (Windows)
     {
-        assert (toNormalizedPath(`\foo\bar`).array == `\foo\bar`);
-        assert (toNormalizedPath(`foo\bar\baz`).array == `foo\bar\baz`);
-        assert (toNormalizedPath(`foo\bar\baz`).array == `foo\bar\baz`);
-        assert (toNormalizedPath(`foo\bar\\baz\\\`).array == `foo\bar\baz`);
-        assert (toNormalizedPath(`\foo\bar\baz`).array == `\foo\bar\baz`);
-        assert (toNormalizedPath(`\foo\..\\bar\.\baz`).array == `\bar\baz`);
-        assert (toNormalizedPath(`\foo\..\bar\baz`).array == `\bar\baz`);
-        assert (toNormalizedPath(`\foo\..\..\\bar\baz`).array == `\bar\baz`);
+        assert (asNormalizedPath(`\foo\bar`).array == `\foo\bar`);
+        assert (asNormalizedPath(`foo\bar\baz`).array == `foo\bar\baz`);
+        assert (asNormalizedPath(`foo\bar\baz`).array == `foo\bar\baz`);
+        assert (asNormalizedPath(`foo\bar\\baz\\\`).array == `foo\bar\baz`);
+        assert (asNormalizedPath(`\foo\bar\baz`).array == `\foo\bar\baz`);
+        assert (asNormalizedPath(`\foo\..\\bar\.\baz`).array == `\bar\baz`);
+        assert (asNormalizedPath(`\foo\..\bar\baz`).array == `\bar\baz`);
+        assert (asNormalizedPath(`\foo\..\..\\bar\baz`).array == `\bar\baz`);
 
-        assert (toNormalizedPath(`\foo\bar\..\baz`).array == `\foo\baz`);
-        assert (toNormalizedPath(`\foo\bar\../../baz`).array == `\baz`);
-        assert (toNormalizedPath(`\foo\bar\..\.\/baz\..\wee\`).array == `\foo\wee`);
+        assert (asNormalizedPath(`\foo\bar\..\baz`).array == `\foo\baz`);
+        assert (asNormalizedPath(`\foo\bar\../../baz`).array == `\baz`);
+        assert (asNormalizedPath(`\foo\bar\..\.\/baz\..\wee\`).array == `\foo\wee`);
 
-        assert (toNormalizedPath(`c:\foo\bar`).array == `c:\foo\bar`);
-        assert (toNormalizedPath(`c:foo\bar\baz`).array == `c:foo\bar\baz`);
-        assert (toNormalizedPath(`c:foo\bar\baz`).array == `c:foo\bar\baz`);
-        assert (toNormalizedPath(`c:foo\bar\\baz\\\`).array == `c:foo\bar\baz`);
-        assert (toNormalizedPath(`c:\foo\bar\baz`).array == `c:\foo\bar\baz`);
+        assert (asNormalizedPath(`c:\foo\bar`).array == `c:\foo\bar`);
+        assert (asNormalizedPath(`c:foo\bar\baz`).array == `c:foo\bar\baz`);
+        assert (asNormalizedPath(`c:foo\bar\baz`).array == `c:foo\bar\baz`);
+        assert (asNormalizedPath(`c:foo\bar\\baz\\\`).array == `c:foo\bar\baz`);
+        assert (asNormalizedPath(`c:\foo\bar\baz`).array == `c:\foo\bar\baz`);
 
-        assert (toNormalizedPath(`c:\foo\..\\bar\.\baz`).array == `c:\bar\baz`);
-        assert (toNormalizedPath(`c:\foo\..\bar\baz`).array == `c:\bar\baz`);
-        assert (toNormalizedPath(`c:\foo\..\..\\bar\baz`).array == `c:\bar\baz`);
-        assert (toNormalizedPath(`c:\foo\bar\..\baz`).array == `c:\foo\baz`);
-        assert (toNormalizedPath(`c:\foo\bar\..\..\baz`).array == `c:\baz`);
-        assert (toNormalizedPath(`c:\foo\bar\..\.\\baz\..\wee\`).array == `c:\foo\wee`);
-        assert (toNormalizedPath(`\\server\share\foo\bar`).array == `\\server\share\foo\bar`);
-        assert (toNormalizedPath(`\\server\share\\foo\bar`).array == `\\server\share\foo\bar`);
-        assert (toNormalizedPath(`\\server\share\foo\bar\baz`).array == `\\server\share\foo\bar\baz`);
-        assert (toNormalizedPath(`\\server\share\foo\..\\bar\.\baz`).array == `\\server\share\bar\baz`);
-        assert (toNormalizedPath(`\\server\share\foo\..\bar\baz`).array == `\\server\share\bar\baz`);
-        assert (toNormalizedPath(`\\server\share\foo\..\..\\bar\baz`).array == `\\server\share\bar\baz`);
-        assert (toNormalizedPath(`\\server\share\foo\bar\..\baz`).array == `\\server\share\foo\baz`);
-        assert (toNormalizedPath(`\\server\share\foo\bar\..\..\baz`).array == `\\server\share\baz`);
-        assert (toNormalizedPath(`\\server\share\foo\bar\..\.\\baz\..\wee\`).array == `\\server\share\foo\wee`);
+        assert (asNormalizedPath(`c:\foo\..\\bar\.\baz`).array == `c:\bar\baz`);
+        assert (asNormalizedPath(`c:\foo\..\bar\baz`).array == `c:\bar\baz`);
+        assert (asNormalizedPath(`c:\foo\..\..\\bar\baz`).array == `c:\bar\baz`);
+        assert (asNormalizedPath(`c:\foo\bar\..\baz`).array == `c:\foo\baz`);
+        assert (asNormalizedPath(`c:\foo\bar\..\..\baz`).array == `c:\baz`);
+        assert (asNormalizedPath(`c:\foo\bar\..\.\\baz\..\wee\`).array == `c:\foo\wee`);
+        assert (asNormalizedPath(`\\server\share\foo\bar`).array == `\\server\share\foo\bar`);
+        assert (asNormalizedPath(`\\server\share\\foo\bar`).array == `\\server\share\foo\bar`);
+        assert (asNormalizedPath(`\\server\share\foo\bar\baz`).array == `\\server\share\foo\bar\baz`);
+        assert (asNormalizedPath(`\\server\share\foo\..\\bar\.\baz`).array == `\\server\share\bar\baz`);
+        assert (asNormalizedPath(`\\server\share\foo\..\bar\baz`).array == `\\server\share\bar\baz`);
+        assert (asNormalizedPath(`\\server\share\foo\..\..\\bar\baz`).array == `\\server\share\bar\baz`);
+        assert (asNormalizedPath(`\\server\share\foo\bar\..\baz`).array == `\\server\share\foo\baz`);
+        assert (asNormalizedPath(`\\server\share\foo\bar\..\..\baz`).array == `\\server\share\baz`);
+        assert (asNormalizedPath(`\\server\share\foo\bar\..\.\\baz\..\wee\`).array == `\\server\share\foo\wee`);
 
-        static assert (toNormalizedPath(`\foo\..\..\\bar\baz`).array == `\bar\baz`);
+        static assert (asNormalizedPath(`\foo\..\..\\bar\baz`).array == `\bar\baz`);
 
         // Examples in docs:
-        assert (toNormalizedPath(`c:\foo\bar\baz\`).array == `c:\foo\bar\baz`);
-        assert (toNormalizedPath(`c:\foo\bar/..`).array == `c:\foo`);
-        assert (toNormalizedPath(`\\server\share\foo\..\bar`).array == `\\server\share\bar`);
+        assert (asNormalizedPath(`c:\foo\bar\baz\`).array == `c:\foo\bar\baz`);
+        assert (asNormalizedPath(`c:\foo\bar/..`).array == `c:\foo`);
+        assert (asNormalizedPath(`\\server\share\foo\..\bar`).array == `\\server\share\bar`);
 
-        assert (toNormalizedPath("foo//bar").array == `foo\bar`);
+        assert (asNormalizedPath("foo//bar").array == `foo\bar`);
 
         //Curent dir path
-        assert (toNormalizedPath(`.\`).array == ".");
-        assert (toNormalizedPath(`.\.\`).array == ".");
-        assert (toNormalizedPath(`.\foo\..`).array == ".");
-        assert (toNormalizedPath(`foo\..`).array == ".");
+        assert (asNormalizedPath(`.\`).array == ".");
+        assert (asNormalizedPath(`.\.\`).array == ".");
+        assert (asNormalizedPath(`.\foo\..`).array == ".");
+        assert (asNormalizedPath(`foo\..`).array == ".");
     }
     else static assert (0);
 }
@@ -1923,103 +1923,103 @@ unittest
     version (Posix)
     {
         // Trivial
-        assert (toNormalizedPath("").empty);
-        assert (toNormalizedPath("foo/bar").array == "foo/bar");
+        assert (asNormalizedPath("").empty);
+        assert (asNormalizedPath("foo/bar").array == "foo/bar");
 
         // Correct handling of leading slashes
-        assert (toNormalizedPath("/").array == "/");
-        assert (toNormalizedPath("///").array == "/");
-        assert (toNormalizedPath("////").array == "/");
-        assert (toNormalizedPath("/foo/bar").array == "/foo/bar");
-        assert (toNormalizedPath("//foo/bar").array == "/foo/bar");
-        assert (toNormalizedPath("///foo/bar").array == "/foo/bar");
-        assert (toNormalizedPath("////foo/bar").array == "/foo/bar");
+        assert (asNormalizedPath("/").array == "/");
+        assert (asNormalizedPath("///").array == "/");
+        assert (asNormalizedPath("////").array == "/");
+        assert (asNormalizedPath("/foo/bar").array == "/foo/bar");
+        assert (asNormalizedPath("//foo/bar").array == "/foo/bar");
+        assert (asNormalizedPath("///foo/bar").array == "/foo/bar");
+        assert (asNormalizedPath("////foo/bar").array == "/foo/bar");
 
         // Correct handling of single-dot symbol (current directory)
-        assert (toNormalizedPath("/./foo").array == "/foo");
-        assert (toNormalizedPath("/foo/./bar").array == "/foo/bar");
+        assert (asNormalizedPath("/./foo").array == "/foo");
+        assert (asNormalizedPath("/foo/./bar").array == "/foo/bar");
 
-        assert (toNormalizedPath("./foo").array == "foo");
-        assert (toNormalizedPath("././foo").array == "foo");
-        assert (toNormalizedPath("foo/././bar").array == "foo/bar");
+        assert (asNormalizedPath("./foo").array == "foo");
+        assert (asNormalizedPath("././foo").array == "foo");
+        assert (asNormalizedPath("foo/././bar").array == "foo/bar");
 
         // Correct handling of double-dot symbol (previous directory)
-        assert (toNormalizedPath("/foo/../bar").array == "/bar");
-        assert (toNormalizedPath("/foo/../../bar").array == "/bar");
-        assert (toNormalizedPath("/../foo").array == "/foo");
-        assert (toNormalizedPath("/../../foo").array == "/foo");
-        assert (toNormalizedPath("/foo/..").array == "/");
-        assert (toNormalizedPath("/foo/../..").array == "/");
+        assert (asNormalizedPath("/foo/../bar").array == "/bar");
+        assert (asNormalizedPath("/foo/../../bar").array == "/bar");
+        assert (asNormalizedPath("/../foo").array == "/foo");
+        assert (asNormalizedPath("/../../foo").array == "/foo");
+        assert (asNormalizedPath("/foo/..").array == "/");
+        assert (asNormalizedPath("/foo/../..").array == "/");
 
-        assert (toNormalizedPath("foo/../bar").array == "bar");
-        assert (toNormalizedPath("foo/../../bar").array == "../bar");
-        assert (toNormalizedPath("../foo").array == "../foo");
-        assert (toNormalizedPath("../../foo").array == "../../foo");
-        assert (toNormalizedPath("../foo/../bar").array == "../bar");
-        assert (toNormalizedPath(".././../foo").array == "../../foo");
-        assert (toNormalizedPath("foo/bar/..").array == "foo");
-        assert (toNormalizedPath("/foo/../..").array == "/");
+        assert (asNormalizedPath("foo/../bar").array == "bar");
+        assert (asNormalizedPath("foo/../../bar").array == "../bar");
+        assert (asNormalizedPath("../foo").array == "../foo");
+        assert (asNormalizedPath("../../foo").array == "../../foo");
+        assert (asNormalizedPath("../foo/../bar").array == "../bar");
+        assert (asNormalizedPath(".././../foo").array == "../../foo");
+        assert (asNormalizedPath("foo/bar/..").array == "foo");
+        assert (asNormalizedPath("/foo/../..").array == "/");
 
         // The ultimate path
-        assert (toNormalizedPath("/foo/../bar//./../...///baz//").array == "/.../baz");
-        static assert (toNormalizedPath("/foo/../bar//./../...///baz//").array == "/.../baz");
+        assert (asNormalizedPath("/foo/../bar//./../...///baz//").array == "/.../baz");
+        static assert (asNormalizedPath("/foo/../bar//./../...///baz//").array == "/.../baz");
     }
     else version (Windows)
     {
         // Trivial
-        assert (toNormalizedPath("").empty);
-        assert (toNormalizedPath(`foo\bar`).array == `foo\bar`);
-        assert (toNormalizedPath("foo/bar").array == `foo\bar`);
+        assert (asNormalizedPath("").empty);
+        assert (asNormalizedPath(`foo\bar`).array == `foo\bar`);
+        assert (asNormalizedPath("foo/bar").array == `foo\bar`);
 
         // Correct handling of absolute paths
-        assert (toNormalizedPath("/").array == `\`);
-        assert (toNormalizedPath(`\`).array == `\`);
-        assert (toNormalizedPath(`\\\`).array == `\`);
-        assert (toNormalizedPath(`\\\\`).array == `\`);
-        assert (toNormalizedPath(`\foo\bar`).array == `\foo\bar`);
-        assert (toNormalizedPath(`\\foo`).array == `\\foo`);
-        assert (toNormalizedPath(`\\foo\\`).array == `\\foo`);
-        assert (toNormalizedPath(`\\foo/bar`).array == `\\foo\bar`);
-        assert (toNormalizedPath(`\\\foo\bar`).array == `\foo\bar`);
-        assert (toNormalizedPath(`\\\\foo\bar`).array == `\foo\bar`);
-        assert (toNormalizedPath(`c:\`).array == `c:\`);
-        assert (toNormalizedPath(`c:\foo\bar`).array == `c:\foo\bar`);
-        assert (toNormalizedPath(`c:\\foo\bar`).array == `c:\foo\bar`);
+        assert (asNormalizedPath("/").array == `\`);
+        assert (asNormalizedPath(`\`).array == `\`);
+        assert (asNormalizedPath(`\\\`).array == `\`);
+        assert (asNormalizedPath(`\\\\`).array == `\`);
+        assert (asNormalizedPath(`\foo\bar`).array == `\foo\bar`);
+        assert (asNormalizedPath(`\\foo`).array == `\\foo`);
+        assert (asNormalizedPath(`\\foo\\`).array == `\\foo`);
+        assert (asNormalizedPath(`\\foo/bar`).array == `\\foo\bar`);
+        assert (asNormalizedPath(`\\\foo\bar`).array == `\foo\bar`);
+        assert (asNormalizedPath(`\\\\foo\bar`).array == `\foo\bar`);
+        assert (asNormalizedPath(`c:\`).array == `c:\`);
+        assert (asNormalizedPath(`c:\foo\bar`).array == `c:\foo\bar`);
+        assert (asNormalizedPath(`c:\\foo\bar`).array == `c:\foo\bar`);
 
         // Correct handling of single-dot symbol (current directory)
-        assert (toNormalizedPath(`\./foo`).array == `\foo`);
-        assert (toNormalizedPath(`\foo/.\bar`).array == `\foo\bar`);
+        assert (asNormalizedPath(`\./foo`).array == `\foo`);
+        assert (asNormalizedPath(`\foo/.\bar`).array == `\foo\bar`);
 
-        assert (toNormalizedPath(`.\foo`).array == `foo`);
-        assert (toNormalizedPath(`./.\foo`).array == `foo`);
-        assert (toNormalizedPath(`foo\.\./bar`).array == `foo\bar`);
+        assert (asNormalizedPath(`.\foo`).array == `foo`);
+        assert (asNormalizedPath(`./.\foo`).array == `foo`);
+        assert (asNormalizedPath(`foo\.\./bar`).array == `foo\bar`);
 
         // Correct handling of double-dot symbol (previous directory)
-        assert (toNormalizedPath(`\foo\..\bar`).array == `\bar`);
-        assert (toNormalizedPath(`\foo\../..\bar`).array == `\bar`);
-        assert (toNormalizedPath(`\..\foo`).array == `\foo`);
-        assert (toNormalizedPath(`\..\..\foo`).array == `\foo`);
-        assert (toNormalizedPath(`\foo\..`).array == `\`);
-        assert (toNormalizedPath(`\foo\../..`).array == `\`);
+        assert (asNormalizedPath(`\foo\..\bar`).array == `\bar`);
+        assert (asNormalizedPath(`\foo\../..\bar`).array == `\bar`);
+        assert (asNormalizedPath(`\..\foo`).array == `\foo`);
+        assert (asNormalizedPath(`\..\..\foo`).array == `\foo`);
+        assert (asNormalizedPath(`\foo\..`).array == `\`);
+        assert (asNormalizedPath(`\foo\../..`).array == `\`);
 
-        assert (toNormalizedPath(`foo\..\bar`).array == `bar`);
-        assert (toNormalizedPath(`foo\..\../bar`).array == `..\bar`);
+        assert (asNormalizedPath(`foo\..\bar`).array == `bar`);
+        assert (asNormalizedPath(`foo\..\../bar`).array == `..\bar`);
 
-        assert (toNormalizedPath(`..\foo`).array == `..\foo`);
-        assert (toNormalizedPath(`..\..\foo`).array == `..\..\foo`);
-        assert (toNormalizedPath(`..\foo\..\bar`).array == `..\bar`);
-        assert (toNormalizedPath(`..\.\..\foo`).array == `..\..\foo`);
-        assert (toNormalizedPath(`foo\bar\..`).array == `foo`);
-        assert (toNormalizedPath(`\foo\..\..`).array == `\`);
-        assert (toNormalizedPath(`c:\foo\..\..`).array == `c:\`);
+        assert (asNormalizedPath(`..\foo`).array == `..\foo`);
+        assert (asNormalizedPath(`..\..\foo`).array == `..\..\foo`);
+        assert (asNormalizedPath(`..\foo\..\bar`).array == `..\bar`);
+        assert (asNormalizedPath(`..\.\..\foo`).array == `..\..\foo`);
+        assert (asNormalizedPath(`foo\bar\..`).array == `foo`);
+        assert (asNormalizedPath(`\foo\..\..`).array == `\`);
+        assert (asNormalizedPath(`c:\foo\..\..`).array == `c:\`);
 
         // Correct handling of non-root path with drive specifier
-        assert (toNormalizedPath(`c:foo`).array == `c:foo`);
-        assert (toNormalizedPath(`c:..\foo\.\..\bar`).array == `c:..\bar`);
+        assert (asNormalizedPath(`c:foo`).array == `c:foo`);
+        assert (asNormalizedPath(`c:..\foo\.\..\bar`).array == `c:..\bar`);
 
         // The ultimate path
-        assert (toNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`).array == `c:\...\baz`);
-        static assert (toNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`).array == `c:\...\baz`);
+        assert (asNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`).array == `c:\...\baz`);
+        static assert (asNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`).array == `c:\...\baz`);
     }
     else static assert (false);
 }
@@ -2456,7 +2456,7 @@ unittest
     $(D Exception) if the specified _base directory is not absolute.
 
     See_Also:
-        $(LREF toAbsolutePath) which does not allocate
+        $(LREF asAbsolutePath) which does not allocate
 */
 string absolutePath(string path, lazy string base = getcwd())
     @safe pure
@@ -2524,7 +2524,7 @@ unittest
     See_Also:
         $(LREF absolutePath) which returns an allocated string
 */
-auto toAbsolutePath(R1)(R1 path)
+auto asAbsolutePath(R1)(R1 path)
     if (isRandomAccessRange!R1 && isSomeChar!(ElementType!R1) ||
         isNarrowString!R1)
 {
@@ -2539,16 +2539,16 @@ auto toAbsolutePath(R1)(R1 path)
 unittest
 {
     import std.array;
-    assert(toAbsolutePath(cast(string)null).array == "");
+    assert(asAbsolutePath(cast(string)null).array == "");
     version (Posix)
     {
-        assert(toAbsolutePath("/foo").array == "/foo");
+        assert(asAbsolutePath("/foo").array == "/foo");
     }
     version (Windows)
     {
-        assert(toAbsolutePath("c:/foo").array == "c:/foo");
+        assert(asAbsolutePath("c:/foo").array == "c:/foo");
     }
-    toAbsolutePath("foo");
+    asAbsolutePath("foo");
 }
 
 /** Translates $(D path) into a relative _path.
@@ -2578,7 +2578,7 @@ unittest
     This function allocates memory.
 
     See_Also:
-        $(LREF toRelativePath) which does not allocate memory
+        $(LREF asRelativePath) which does not allocate memory
 
     Examples:
     ---
@@ -2616,7 +2616,7 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
         throw new Exception("Base directory must be absolute");
 
     import std.conv : to;
-    return toRelativePath!cs(path, baseVar).to!string;
+    return asRelativePath!cs(path, baseVar).to!string;
 }
 
 unittest
@@ -2674,7 +2674,7 @@ unittest
     See_Also:
         $(LREF relativePath)
 */
-auto toRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R)
+auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R)
     (R path, string base)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
@@ -2727,22 +2727,22 @@ unittest
     import std.array;
     version (Posix)
     {
-        assert (toRelativePath("foo", "/bar").array == "foo");
-        assert (toRelativePath("/foo/bar", "/foo/bar").array == ".");
-        assert (toRelativePath("/foo/bar", "/foo/baz").array == "../bar");
-        assert (toRelativePath("/foo/bar/baz", "/foo/woo/wee").array == "../../bar/baz");
-        assert (toRelativePath("/foo/bar/baz", "/foo/bar").array == "baz");
+        assert (asRelativePath("foo", "/bar").array == "foo");
+        assert (asRelativePath("/foo/bar", "/foo/bar").array == ".");
+        assert (asRelativePath("/foo/bar", "/foo/baz").array == "../bar");
+        assert (asRelativePath("/foo/bar/baz", "/foo/woo/wee").array == "../../bar/baz");
+        assert (asRelativePath("/foo/bar/baz", "/foo/bar").array == "baz");
     }
     else version (Windows)
     {
-        assert (toRelativePath("foo", `c:\bar`).array == "foo");
-        assert (toRelativePath(`c:\foo\bar`, `c:\foo\bar`).array == ".");
-        assert (toRelativePath(`c:\foo\bar`, `c:\foo\baz`).array == `..\bar`);
-        assert (toRelativePath(`c:\foo\bar\baz`, `c:\foo\woo\wee`).array == `..\..\bar\baz`);
-        assert (toRelativePath(`c:/foo/bar/baz`, `c:\foo\woo\wee`).array == `..\..\bar\baz`);
-        assert (toRelativePath(`c:\foo\bar\baz`, `c:\foo\bar`).array == "baz");
-        assert (toRelativePath(`c:\foo\bar`, `d:\foo`).array == `c:\foo\bar`);
-        assert (toRelativePath(`\\foo\bar`, `c:\foo`).array == `\\foo\bar`);
+        assert (asRelativePath("foo", `c:\bar`).array == "foo");
+        assert (asRelativePath(`c:\foo\bar`, `c:\foo\bar`).array == ".");
+        assert (asRelativePath(`c:\foo\bar`, `c:\foo\baz`).array == `..\bar`);
+        assert (asRelativePath(`c:\foo\bar\baz`, `c:\foo\woo\wee`).array == `..\..\bar\baz`);
+        assert (asRelativePath(`c:/foo/bar/baz`, `c:\foo\woo\wee`).array == `..\..\bar\baz`);
+        assert (asRelativePath(`c:\foo\bar\baz`, `c:\foo\bar`).array == "baz");
+        assert (asRelativePath(`c:\foo\bar`, `d:\foo`).array == `c:\foo\bar`);
+        assert (asRelativePath(`\\foo\bar`, `c:\foo`).array == `\\foo\bar`);
     }
     else
         static assert(0);
