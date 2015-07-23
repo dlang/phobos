@@ -113,12 +113,10 @@ endif
 # Set DOTOBJ and DOTEXE
 ifeq (,$(findstring win,$(OS)))
 	DOTOBJ:=.o
-	DOTLIB:=.a
 	DOTEXE:=
 	PATHSEP:=/
 else
 	DOTOBJ:=.obj
-	DOTLIB:=.lib
 	DOTEXE:=.exe
 	PATHSEP:=$(shell echo "\\")
 endif
@@ -150,38 +148,29 @@ LINKCURL:=$(if $(LIBCURL_STUB),-L$(LIBCURL_STUB),-L-lcurl)
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
-# Given one or more packages, returns their respective libraries
-P2LIB=$(addprefix $(ROOT)/libphobos2_,$(addsuffix $(DOTLIB),$(subst /,_,$1)))
-# Given one or more packages, returns the modules they contain
-P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
+# Packages in std. Just mention the package name here and the actual files in
+# the package in STD_MODULES.
+STD_PACKAGES = $(addprefix std/, algorithm container experimental/logger \
+	range regex)
 
-# Packages in std. Just mention the package name here. The contents of package
-# xy/zz is in variable PACKAGE_xy_zz. This allows automation in iterating
-# packages and their modules.
-STD_PACKAGES = std $(addprefix std/,\
-  algorithm container digest experimental net range regex)
-
-# Modules broken down per package
-
-PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
-  concurrencybase conv cstream csv datetime demangle encoding exception file format \
-  functional getopt json math mathspecial meta metastrings mmfile numeric \
-  outbuffer parallelism path process random signals socket socketstream stdint \
-  stdio stdiobase stream string syserror system traits typecons typetuple uni \
-  uri utf uuid variant xml zip zlib
-PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
-  sorting
-PACKAGE_std_container = array binaryheap dlist package rbtree slist util
-PACKAGE_std_digest = crc digest hmac md ripemd sha
-PACKAGE_std_experimental = $(addprefix logger/, core filelogger \
-  nulllogger multilogger package)
-PACKAGE_std_net = curl isemail
-PACKAGE_std_range = interfaces package primitives
-PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
-  backtracking kickstart tests thompson)
-
-# Modules in std (including those in packages)
-STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
+# Modules in std (including those in packages), in alphabetical order.
+STD_MODULES = $(addprefix std/, \
+  array ascii base64 bigint bitmanip compiler complex concurrency concurrencybase \
+  $(addprefix container/, array binaryheap dlist rbtree slist util) \
+  conv cstream csv datetime demangle \
+  $(addprefix digest/, digest crc hmac md ripemd sha) \
+  encoding exception \
+  $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \
+  file format functional getopt json math mathspecial \
+  meta metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
+  process random \
+  $(addprefix range/, primitives interfaces) \
+  $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
+  	kickstart tests thompson)) \
+  signals socket socketstream stdint stdio stdiobase stream \
+  string syserror system traits typecons typetuple uni uri utf uuid variant \
+  xml zip zlib $(addprefix algorithm/,comparison iteration \
+    mutation searching setops sorting))
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -213,7 +202,9 @@ EXTRA_MODULES_INTERNAL := $(addprefix			\
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = $(STD_MODULES) $(EXTRA_MODULES)
+D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) \
+  $(addsuffix /package,$(STD_PACKAGES))
+
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
@@ -281,17 +272,8 @@ $(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
 
-$(LIB): $(OBJS) $(DRUNTIME) $(call P2LIB,$(STD_PACKAGES))\
-		$(ROOT)/libphobos2_xtra$(DOTLIB)
-	$(DMD) $(DFLAGS) -lib -of$@ $^
-
-$(ROOT)/libphobos2_xtra$(DOTLIB): $(addsuffix .d,$(EXTRA_MODULES))
-	$(DMD) $(DFLAGS) -lib -of$@ $^
-
-# Each package depends on everything. We may improve that in the future.
-$(foreach P,$(STD_PACKAGES),$(eval \
-$(call P2LIB,$P): $(addsuffix .d,$(STD_MODULES)) ;\
-  $(DMD) $(DFLAGS) -lib -of$$@ $(call P2MODULES,$P)))
+$(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 	ln -sf $(notdir $(LIBSO)) $@
@@ -358,7 +340,7 @@ $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 endif
 
 # macro that returns the module name given the src path
-moduleName=$(subst /,.,$1)
+moduleName=$(subst /,.,$(1))
 
 # target for batch unittests (using shared phobos library and test_runner)
 unittest/%.run : $(ROOT)/unittest/test_runner
@@ -428,12 +410,14 @@ endif
 ###########################################################
 # html documentation
 
+# Package to html, e.g. std/algorithm -> std_algorithm.html
+P2HTML=$(addsuffix .html,$(subst /,_,$1))
 # D file to html, e.g. std/conv.d -> std_conv.html
-# However, std/algorithm/package.d -> std_algorithm.html
-D2HTML=$(subst /,_,$(subst .d,.html,$(subst /package.d,.d,$1)))
+D2HTML=$(subst /,_,$(subst .d,.html,$1))
 
 HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, \
-	$(call D2HTML, $(SRC_DOCUMENTABLES)))
+	$(call D2HTML, $(SRC_DOCUMENTABLES)) \
+	$(call P2HTML, $(STD_PACKAGES)))
 BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, \
 	$(call D2HTML, $(SRC_DOCUMENTABLES)))
 
@@ -446,10 +430,16 @@ $(foreach p,$(SRC_DOCUMENTABLES),$(eval \
 $(DOC_OUTPUT_DIR)/$(call D2HTML,$p) : $p $(STDDOC) ;\
   $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
+# For each package, define a rule e.g.:
+# ../web/phobos/std_algorithm.html : std/algorithm/package.d $(STDDOC) ; ...
+$(foreach p,$(STD_PACKAGES),$(eval \
+$(DOC_OUTPUT_DIR)/$(call P2HTML,$p) : $p/package.d $(STDDOC) ;\
+  $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
+
 html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
 
 allmod :
-	@echo $(SRC_DOCUMENTABLES)
+	@echo $(SRC_DOCUMENTABLES) $(addsuffix /package.d,$(STD_PACKAGES))
 
 rsync-prerelease : html
 	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/
