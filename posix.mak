@@ -291,7 +291,7 @@ $(ROOT)/libphobos2_xtra$(DOTLIB): $(addsuffix .d,$(EXTRA_MODULES))
 # Each package depends on everything. We may improve that in the future.
 $(foreach P,$(STD_PACKAGES),$(eval \
 $(call P2LIB,$P): $(addsuffix .d,$(STD_MODULES)) ;\
-  $(DMD) $(DFLAGS) -lib -of$$@ $(call P2MODULES,$P)))
+  $(DMD) -Hd$(ROOT)/import/$P $(DFLAGS) -lib -of$$@ $(call P2MODULES,$P)))
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 	ln -sf $(notdir $(LIBSO)) $@
