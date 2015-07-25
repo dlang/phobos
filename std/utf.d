@@ -3089,7 +3089,7 @@ enum dchar replacementDchar = '\uFFFD';
  *      input range
  */
 
-auto byCodeUnit(R)(R r) if (isNarrowString!R)
+auto byCodeUnit(R)(R r) if (isAutodecodableString!R)
 {
     /* Turn an array into an InputRange.
      */
@@ -3112,9 +3112,12 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
             r = r[0 .. $-1];
         }
 
-        auto opSlice(size_t lower, size_t upper)
+        static if (!isAggregateType!R)
         {
-            return ByCodeUnitImpl(r[lower..upper]);
+            auto opSlice(size_t lower, size_t upper)
+            {
+                return ByCodeUnitImpl(r[lower..upper]);
+            }
         }
 
         @property size_t length() const
@@ -3123,23 +3126,26 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
         }
         alias opDollar = length;
 
-        @property auto save()
+        static if (!isAggregateType!R)
         {
-            return ByCodeUnitImpl(r.save);
+            @property auto save()
+            {
+                return ByCodeUnitImpl(r.save);
+            }
         }
 
       private:
         R r;
     }
 
-    static assert(isRandomAccessRange!ByCodeUnitImpl);
+    static assert(isAggregateType!R || isRandomAccessRange!ByCodeUnitImpl);
 
     return ByCodeUnitImpl(r);
 }
 
 /// Ditto
 auto ref byCodeUnit(R)(R r)
-    if (!isNarrowString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     // byCodeUnit for ranges and dchar[] is a no-op
     return r;
@@ -3214,6 +3220,17 @@ pure nothrow @nogc unittest
         ret.popFront();
         assert(ret.front == 'μ');
     }
+    {
+        static struct Stringish
+        {
+            string s;
+            alias s this;
+        }
+
+        auto fn = Stringish("test.d");
+        auto x = fn.byCodeUnit();
+        assert(x.front == 't');
+    }
 }
 
 /****************************
@@ -3230,7 +3247,7 @@ pure nothrow @nogc unittest
  *      input range
  */
 
-auto byChar(R)(R r) if (isNarrowString!R)
+auto byChar(R)(R r) if (isAutodecodableString!R)
 {
     /* This and the following two serve as adapters to convert arrays to ranges,
      * so the following three
@@ -3249,7 +3266,7 @@ auto byChar(R)(R r) if (isNarrowString!R)
 }
 
 /// Ditto
-auto byWchar(R)(R r) if (isNarrowString!R)
+auto byWchar(R)(R r) if (isAutodecodableString!R)
 {
     alias tchar = Unqual!(ElementEncodingType!R);
 
@@ -3264,7 +3281,7 @@ auto byWchar(R)(R r) if (isNarrowString!R)
 }
 
 /// Ditto
-auto byDchar(R)(R r) if (isNarrowString!R)
+auto byDchar(R)(R r) if (isAutodecodableString!R)
 {
     alias tchar = Unqual!(ElementEncodingType!R);
 
@@ -3274,7 +3291,7 @@ auto byDchar(R)(R r) if (isNarrowString!R)
 
 /// Ditto
 auto ref byChar(R)(R r)
-    if (!isNarrowString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     alias tchar = Unqual!(ElementEncodingType!R);
 
@@ -3437,7 +3454,7 @@ pure nothrow @nogc unittest
 
 /// Ditto
 auto ref byWchar(R)(R r)
-    if (!isNarrowString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     alias tchar = Unqual!(ElementEncodingType!R);
 
@@ -3574,7 +3591,7 @@ pure nothrow @nogc unittest
 
 /// Ditto
 auto ref byDchar(R)(R r)
-    if (!isNarrowString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     alias tchar = Unqual!(ElementEncodingType!R);
 

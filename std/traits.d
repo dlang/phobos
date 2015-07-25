@@ -86,6 +86,7 @@
  *           $(LREF isFloatingPoint)
  *           $(LREF isIntegral)
  *           $(LREF isNarrowString)
+ *           $(LREF isAutodecodableString)
  *           $(LREF isNumeric)
  *           $(LREF isPointer)
  *           $(LREF isScalarType)
@@ -5238,6 +5239,38 @@ unittest
             static assert(!isNarrowString!( SubTypeOf!(Q!T) ));
         }
     }
+}
+
+
+/**
+ * Detect whether type $(D T) is a string that will be autodecoded.
+ *
+ * All arrays that use char, wchar, and their qualified versions are narrow
+ * strings. (Those include string and wstring).
+ * Aggregates that implicitly cast to narrow strings are included.
+ *
+ * Params:
+ *      T = type to be tested
+ *
+ * Returns:
+ *      true if T represents a string that is subject to autodecoding
+ *
+ * See Also:
+ *      $(LREF isNarrowString)
+ */
+enum bool isAutodecodableString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isStaticArray!T;
+
+///
+unittest
+{
+    static struct Stringish
+    {
+        string s;
+        alias s this;
+    }
+    assert(isAutodecodableString!wstring);
+    assert(isAutodecodableString!Stringish);
+    assert(!isAutodecodableString!dstring);
 }
 
 /**

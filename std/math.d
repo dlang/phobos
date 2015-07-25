@@ -1574,36 +1574,55 @@ real exp(real x) @trusted pure nothrow @nogc
     }
     else
     {
-        // Coefficients for exp(x)
-        static immutable real[3] P = [
-            9.9999999999999999991025E-1L,
-            3.0299440770744196129956E-2L,
-            1.2617719307481059087798E-4L,
-        ];
-        static immutable real[4] Q = [
-            2.0000000000000000000897E0L,
-            2.2726554820815502876593E-1L,
-            2.5244834034968410419224E-3L,
-            3.0019850513866445504159E-6L,
-        ];
-
-        // C1 + C2 = LN2.
-        enum real C1 = 6.9314575195312500000000E-1L;
-        enum real C2 = 1.428606820309417232121458176568075500134E-6L;
-
-        // Overflow and Underflow limits.
-        static if (real.mant_dig == 64) // 80-bit reals
+        alias F = floatTraits!T;
+        static if (F.realFormat == RealFormat.ieeeDouble)
         {
-            enum real OF =  1.1356523406294143949492E4L; // ln((1-2^-64) * 2^16384) ≈ 0x1.62e42fefa39efp+13
-            enum real UF = -1.1398805384308300613366E4L; // ln(2^-16445) ≈ -0x1.6436716d5406ep+13
+            // Coefficients for exp(x)
+            static immutable real[3] P = [
+                9.99999999999999999910E-1L,
+                3.02994407707441961300E-2L,
+                1.26177193074810590878E-4L,
+            ];
+            static immutable real[4] Q = [
+                2.00000000000000000009E0L,
+                2.27265548208155028766E-1L,
+                2.52448340349684104192E-3L,
+                3.00198505138664455042E-6L,
+            ];
+
+            // C1 + C2 = LN2.
+            enum real C1 = 6.93145751953125E-1;
+            enum real C2 = 1.42860682030941723212E-6;
+
+            // Overflow and Underflow limits.
+            enum real OF =  7.09782712893383996732E2;  // ln((1-2^-53) * 2^1024)
+            enum real UF = -7.451332191019412076235E2; // ln(2^-1075)
         }
-        else static if (real.mant_dig == 53) // 64-bit reals
+        else static if (F.realFormat == RealFormat.ieeeExtended)
         {
-            enum real OF =  0x1.62e42fefa39efp+9L; // ln((1-2^-53) * 2^1024) = 709.78271...
-            enum real UF = -0x1.74385446d71c3p+9L; // ln(2^-1074) = -744.44007...
+            // Coefficients for exp(x)
+            static immutable real[3] P = [
+                9.9999999999999999991025E-1L,
+                3.0299440770744196129956E-2L,
+                1.2617719307481059087798E-4L,
+            ];
+            static immutable real[4] Q = [
+                2.0000000000000000000897E0L,
+                2.2726554820815502876593E-1L,
+                2.5244834034968410419224E-3L,
+                3.0019850513866445504159E-6L,
+            ];
+
+            // C1 + C2 = LN2.
+            enum real C1 = 6.9314575195312500000000E-1L;
+            enum real C2 = 1.4286068203094172321215E-6L;
+
+            // Overflow and Underflow limits.
+            enum real OF =  1.1356523406294143949492E4L;  // ln((1-2^-64) * 2^16384)
+            enum real UF = -1.13994985314888605586758E4L; // ln(2^-16446)
         }
         else
-            static assert(0, "No over-/underflow limits for real type!");
+            static assert(0, "Not implemented for this architecture");
 
         // Special cases.
         // FIXME: set IEEE flags accordingly
@@ -2754,6 +2773,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
     else static assert(false, "Floating point type real not supported");
 }
 
+/* workaround Issue 14718, float parsing depends on platform strtold
 @safe pure nothrow @nogc unittest
 {
     assert(ldexp(1.0, -1024) == 0x1p-1024);
@@ -2775,6 +2795,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
     assert(x==-127);
     assert(ldexp(n, x)==0x1p-128f);
 }
+*/
 
 unittest
 {
