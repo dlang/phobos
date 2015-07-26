@@ -966,16 +966,19 @@ template EncoderInstance(CharType : Latin2Char)
 //          WINDOWS-1250
 //=============================================================================
 
-/** Defines a Windows1250-encoded character. */
+/// Defines a Wwindows1250-encoded character.
 enum Windows1250Char : ubyte { init }
+
 /**
-Defines an Windows1250-encoded string (as an array of $(D
-immutable(Windows1250Char))).
+ * Defines an Windows1250-encoded string (as an array of $(D
+ * immutable(Windows1250Char))).
  */
 alias Windows1250String = immutable(Windows1250Char)[];
 
 template EncoderInstance(CharType : Windows1250Char)
 {
+    import std.typecons : Tuple, tuple;
+
     alias E = Windows1250Char;
     alias EString = Windows1250String;
 
@@ -985,36 +988,86 @@ template EncoderInstance(CharType : Windows1250Char)
     }
 
     immutable wstring charMap =
-        "\u20ac\uFFFD\u201a\uFFFD\u201e\u2026\u2020\u2021"~
-        "\uFFFD\u2030\u0160\u2039\u015a\u0164\u017d\u0179"~
-        "\uFFFD\u2018\u2019\u201c\u201d\u2022\u2013\u2014"~
-        "\uFFFD\u2122\u0161\u203a\u015b\u0165\u017e\u017a"~
-        "\u00a0\u02c7\u02d8\u0141\u00a4\u0104\u00a6\u00a7"~
-        "\u00a8\u00a9\u015e\u00ab\u00ac\u00ad\u00ae\u017b"~
-        "\u00b0\u00b1\u02db\u0142\u00b4\u00b5\u00b6\u00b7"~
-        "\u00b8\u0105\u015f\u00bb\u013d\u02dd\u013e\u017c"~
-        "\u0154\u00c1\u00c2\u0102\u00c4\u0139\u0106\u00c7"~
-        "\u010c\u00c9\u0118\u00cb\u011a\u00cd\u00ce\u010e"~
-        "\u0110\u0143\u0147\u00d3\u00d4\u0150\u00d6\u00d7"~
-        "\u0158\u016e\u00da\u0170\u00dc\u00dd\u0162\u00df"~
-        "\u0155\u00e1\u00e2\u0103\u00e4\u013a\u0107\u00e7"~
-        "\u010d\u00e9\u0119\u00eb\u011b\u00ed\u00ee\u010f"~
-        "\u0111\u0144\u0148\u00f3\u00f4\u0151\u00f6\u00f7"~
-        "\u0159\u016f\u00fa\u0171\u00fc\u00fd\u0163\u02d9"
-    ;
+        "\u20AC\uFFFD\u201A\uFFFD\u201E\u2026\u2020\u2021"~
+        "\uFFFD\u2030\u0160\u2039\u015A\u0164\u017D\u0179"~
+        "\uFFFD\u2018\u2019\u201C\u201D\u2022\u2013\u2014"~
+        "\uFFFD\u2122\u0161\u203A\u015B\u0165\u017E\u017A"~
+        "\u00A0\u02C7\u02D8\u0141\u00A4\u0104\u00A6\u00A7"~
+        "\u00A8\u00A9\u015E\u00AB\u00AC\u00AD\u00AE\u017B"~
+        "\u00B0\u00B1\u02DB\u0142\u00B4\u00B5\u00B6\u00B7"~
+        "\u00B8\u0105\u015F\u00BB\u013D\u02DD\u013E\u017C"~
+        "\u0154\u00C1\u00C2\u0102\u00C4\u0139\u0106\u00C7"~
+        "\u010C\u00C9\u0118\u00CB\u011A\u00CD\u00CE\u010E"~
+        "\u0110\u0143\u0147\u00D3\u00D4\u0150\u00D6\u00D7"~
+        "\u0158\u016E\u00DA\u0170\u00DC\u00DD\u0162\u00DF"~
+        "\u0155\u00E1\u00E2\u0103\u00E4\u013A\u0107\u00E7"~
+        "\u010D\u00E9\u0119\u00EB\u011B\u00ED\u00EE\u010F"~
+        "\u0111\u0144\u0148\u00F3\u00F4\u0151\u00F6\u00F7"~
+        "\u0159\u016F\u00FA\u0171\u00FC\u00FD\u0163\u02D9";
+
+    immutable Tuple!(wchar, char)[] bstMap = [
+        tuple('\u011A','\xCC'), tuple('\u00DC','\xDC'), tuple('\u0179','\x8F'),
+        tuple('\u00B7','\xB7'), tuple('\u00FC','\xFC'), tuple('\u0158','\xD8'),
+        tuple('\u201C','\x93'), tuple('\u00AC','\xAC'), tuple('\u00CB','\xCB'),
+        tuple('\u00EB','\xEB'), tuple('\u010C','\xC8'), tuple('\u0143','\xD1'),
+        tuple('\u0162','\xDE'), tuple('\u02D9','\xFF'), tuple('\u2039','\x8B'),
+        tuple('\u00A7','\xA7'), tuple('\u00B1','\xB1'), tuple('\u00C2','\xC2'),
+        tuple('\u00D4','\xD4'), tuple('\u00E2','\xE2'), tuple('\u00F4','\xF4'),
+        tuple('\u0104','\xA5'), tuple('\u0110','\xD0'), tuple('\u013D','\xBC'),
+        tuple('\u0150','\xD5'), tuple('\u015E','\xAA'), tuple('\u016E','\xD9'),
+        tuple('\u017D','\x8E'), tuple('\u2014','\x97'), tuple('\u2021','\x87'),
+        tuple('\u20AC','\x80'), tuple('\u00A4','\xA4'), tuple('\u00A9','\xA9'),
+        tuple('\u00AE','\xAE'), tuple('\u00B5','\xB5'), tuple('\u00BB','\xBB'),
+        tuple('\u00C7','\xC7'), tuple('\u00CE','\xCE'), tuple('\u00D7','\xD7'),
+        tuple('\u00DF','\xDF'), tuple('\u00E7','\xE7'), tuple('\u00EE','\xEE'),
+        tuple('\u00F7','\xF7'), tuple('\u0102','\xC3'), tuple('\u0106','\xC6'),
+        tuple('\u010E','\xCF'), tuple('\u0118','\xCA'), tuple('\u0139','\xC5'),
+        tuple('\u0141','\xA3'), tuple('\u0147','\xD2'), tuple('\u0154','\xC0'),
+        tuple('\u015A','\x8C'), tuple('\u0160','\x8A'), tuple('\u0164','\x8D'),
+        tuple('\u0170','\xDB'), tuple('\u017B','\xAF'), tuple('\u02C7','\xA1'),
+        tuple('\u02DD','\xBD'), tuple('\u2019','\x92'), tuple('\u201E','\x84'),
+        tuple('\u2026','\x85'), tuple('\u203A','\x9B'), tuple('\u2122','\x99'),
+        tuple('\u00A0','\xA0'), tuple('\u00A6','\xA6'), tuple('\u00A8','\xA8'),
+        tuple('\u00AB','\xAB'), tuple('\u00AD','\xAD'), tuple('\u00B0','\xB0'),
+        tuple('\u00B4','\xB4'), tuple('\u00B6','\xB6'), tuple('\u00B8','\xB8'),
+        tuple('\u00C1','\xC1'), tuple('\u00C4','\xC4'), tuple('\u00C9','\xC9'),
+        tuple('\u00CD','\xCD'), tuple('\u00D3','\xD3'), tuple('\u00D6','\xD6'),
+        tuple('\u00DA','\xDA'), tuple('\u00DD','\xDD'), tuple('\u00E1','\xE1'),
+        tuple('\u00E4','\xE4'), tuple('\u00E9','\xE9'), tuple('\u00ED','\xED'),
+        tuple('\u00F3','\xF3'), tuple('\u00F6','\xF6'), tuple('\u00FA','\xFA'),
+        tuple('\u00FD','\xFD'), tuple('\u0103','\xE3'), tuple('\u0105','\xB9'),
+        tuple('\u0107','\xE6'), tuple('\u010D','\xE8'), tuple('\u010F','\xEF'),
+        tuple('\u0111','\xF0'), tuple('\u0119','\xEA'), tuple('\u011B','\xEC'),
+        tuple('\u013A','\xE5'), tuple('\u013E','\xBE'), tuple('\u0142','\xB3'),
+        tuple('\u0144','\xF1'), tuple('\u0148','\xF2'), tuple('\u0151','\xF5'),
+        tuple('\u0155','\xE0'), tuple('\u0159','\xF8'), tuple('\u015B','\x9C'),
+        tuple('\u015F','\xBA'), tuple('\u0161','\x9A'), tuple('\u0163','\xFE'),
+        tuple('\u0165','\x9D'), tuple('\u016F','\xF9'), tuple('\u0171','\xFB'),
+        tuple('\u017A','\x9F'), tuple('\u017C','\xBF'), tuple('\u017E','\x9E'),
+        tuple('\u02D8','\xA2'), tuple('\u02DB','\xB2'), tuple('\u2013','\x96'),
+        tuple('\u2018','\x91'), tuple('\u201A','\x82'), tuple('\u201D','\x94'),
+        tuple('\u2020','\x86'), tuple('\u2022','\x95'), tuple('\u2030','\x89')
+    ];
 
     bool canEncode(dchar c)
     {
         if (c < 0x80) return true;
         if (c >= 0xFFFD) return false;
-        foreach(wchar d;charMap) { if (c == d) return true; }
+
+        auto idx = 0;
+        while (idx < bstMap.length)
+        {
+            if (bstMap[idx][0] == c) return true;
+            idx = bstMap[idx][0] > c ? 2 * idx + 1 : 2 * idx + 2; // next BST index
+        }
+
         return false;
     }
 
     bool isValidCodeUnit(Windows1250Char c)
     {
         if (c < 0x80) return true;
-        return (charMap[c-0x80] != 0xFFFD);
+        return charMap[c-0x80] != 0xFFFD;
     }
 
     size_t encodedLength(dchar c)
@@ -1033,16 +1086,17 @@ template EncoderInstance(CharType : Windows1250Char)
         else if (c >= 0xFFFD) { c = '?'; }
         else
         {
-            ptrdiff_t n = -1;
-            foreach (i, wchar d; charMap)
+            auto idx = 0;
+            while (idx < bstMap.length)
             {
-                if (c == d)
+                if (bstMap[idx][0] == c)
                 {
-                    n = i;
-                    break;
+                    write(cast(Windows1250Char)bstMap[idx][1]);
+                    return;
                 }
+                idx = bstMap[idx][0] > c ? 2 * idx + 1 : 2 * idx + 2; // next BST index
             }
-            c = n == -1 ? '?' : 0x80 + cast(dchar) n;
+            c = '?';
         }
         write(cast(Windows1250Char)c);
     }
