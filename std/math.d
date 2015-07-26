@@ -5174,7 +5174,7 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        return ((rep.integral[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
+        return ((rep.longs[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF8_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
