@@ -268,7 +268,7 @@ template floatTraits(T)
             enum SIGNPOS_BYTE = 0;
         }
 
-        alias Blob = uint;
+        alias Integral = uint;
     }
     else static if (T.mant_dig == 53)
     {
@@ -292,7 +292,7 @@ template floatTraits(T)
                 enum SIGNPOS_BYTE = 0;
             }
 
-            alias Blob = ulong;
+            alias Integral = ulong;
         }
         else static if (T.sizeof == 12)
         {
@@ -313,7 +313,7 @@ template floatTraits(T)
             }
 
             import std.typecons : Tuple;
-            alias Blob = Tuple!(ulong, ushort);
+            alias Integral = Tuple!(ulong, ushort);
         }
         else
             static assert(false, "No traits support for " ~ T.stringof);
@@ -337,7 +337,7 @@ template floatTraits(T)
         }
 
         import std.typecons : Tuple;
-        alias Blob = Tuple!(ulong, "significand", ushort);
+        alias Integral = Tuple!(ulong, "significand", ushort);
     }
     else static if (T.mant_dig == 113)
     {
@@ -357,7 +357,7 @@ template floatTraits(T)
             enum SIGNPOS_BYTE = 0;
         }
 
-        alias Blob = ulong[2];
+        alias Integral = ulong[2];
     }
     else static if (T.mant_dig == 106)
     {
@@ -377,20 +377,20 @@ template floatTraits(T)
             enum SIGNPOS_BYTE = 0;
         }
 
-        alias Blob = ulong[2];
+        alias Integral = ulong[2];
     }
     else
         static assert(false, "No traits support for " ~ T.stringof);
 
     // Intended to use for reinterpreting floating-point numbers
     // as various integral types
-    union Repainter
+    union Layout
     {
         Unqual!T number;
         ubyte[T.sizeof] bytes;
         ushort[T.sizeof / 2] shorts;
         uint[T.sizeof / 4] ints;
-        Blob blob; // Reinterpret into fewest integrals possible
+        Integral integral; // Reinterpret into fewest integrals possible
 
         static if (T.sizeof % 8 == 0)
             ulong[T.sizeof / 8] longs;
@@ -418,7 +418,7 @@ else
 T floorImpl(T)(const T x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(T);
-    F.Repainter y = { number : x };
+    F.Layout y = { number : x };
 
     // Find the exponent (power of 2)
     static if (F.realFormat == RealFormat.ieeeSingle)
@@ -2385,7 +2385,7 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
     int ex;
     alias F = floatTraits!T;
 
-    F.Repainter rep = { number : value };
+    F.Layout rep = { number : value };
 
     ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
     static if (F.realFormat == RealFormat.ieeeExtended)
@@ -2394,9 +2394,9 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {   // If exponent is non-zero
             if (ex == F.EXPMASK) // infinity or NaN
             {
-                if (rep.blob.significand &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
+                if (rep.integral.significand &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
                 {
-                    rep.blob.significand |= 0xC000_0000_0000_0000;  // convert NaNS to NaNQ
+                    rep.integral.significand |= 0xC000_0000_0000_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
                 else if (rep.shorts[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
@@ -2412,7 +2412,7 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
                     (0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FFE;
             }
         }
-        else if (!rep.blob.significand)
+        else if (!rep.integral.significand)
         {
             // vf is +-0.0
             exp = 0;
@@ -2477,15 +2477,15 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if (rep.blob == 0x7FF0_0000_0000_0000)  // positive infinity
+                if (rep.integral == 0x7FF0_0000_0000_0000)  // positive infinity
                 {
                     exp = int.max;
                 }
-                else if (rep.blob == 0xFFF0_0000_0000_0000) // negative infinity
+                else if (rep.integral == 0xFFF0_0000_0000_0000) // negative infinity
                     exp = int.min;
                 else
                 { // NaN
-                    rep.blob |= 0x0008_0000_0000_0000;  // convert NaNS to NaNQ
+                    rep.integral |= 0x0008_0000_0000_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
             }
@@ -2496,7 +2496,7 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
                     cast(ushort)((0x800F & rep.shorts[F.EXPPOS_SHORT]) | 0x3FE0);
             }
         }
-        else if (!(rep.blob & 0x7FFF_FFFF_FFFF_FFFF))
+        else if (!(rep.integral & 0x7FFF_FFFF_FFFF_FFFF))
         {
             // vf is +-0.0
             exp = 0;
@@ -2518,15 +2518,15 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if (rep.blob == 0x7F80_0000)  // positive infinity
+                if (rep.integral == 0x7F80_0000)  // positive infinity
                 {
                     exp = int.max;
                 }
-                else if (rep.blob == 0xFF80_0000) // negative infinity
+                else if (rep.integral == 0xFF80_0000) // negative infinity
                     exp = int.min;
                 else
                 { // NaN
-                    rep.blob |= 0x0040_0000;  // convert NaNS to NaNQ
+                    rep.integral |= 0x0040_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
             }
@@ -2537,7 +2537,7 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
                     cast(ushort)((0x807F & rep.shorts[F.EXPPOS_SHORT]) | 0x3F00);
             }
         }
-        else if (!(rep.blob & 0x7FFF_FFFF))
+        else if (!(rep.integral & 0x7FFF_FFFF))
         {
             // vf is +-0.0
             exp = 0;
@@ -4064,7 +4064,7 @@ long lrint(real x) @trusted pure nothrow @nogc
             // Rounding limit when casting from real(double) to ulong.
             enum real OF = 4.50359962737049600000E15L;
 
-            F.Repainter rep = { number : x };
+            F.Layout rep = { number : x };
 
             // Find the exponent and sign
             uint msb = rep.ints[MANTISSA_MSB];
@@ -4114,7 +4114,7 @@ long lrint(real x) @trusted pure nothrow @nogc
             // Rounding limit when casting from real(80-bit) to ulong.
             enum real OF = 9.22337203685477580800E18L;
 
-            F.Repainter rep = { number : x };
+            F.Layout rep = { number : x };
 
             // Find the exponent and sign
             int exp = (rep.shorts[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
@@ -4895,22 +4895,22 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
-    F.Repainter rep = { number : x };
+    F.Layout rep = { number : x };
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        return ((rep.blob & 0x7F80_0000) == 0x7F80_0000)
-            && rep.blob & 0x007F_FFFF; // not infinity
+        return ((rep.integral & 0x7F80_0000) == 0x7F80_0000)
+            && rep.integral & 0x007F_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        return ((rep.blob & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-            && rep.blob & 0x000F_FFFF_FFFF_FFFF; // not infinity
+        return ((rep.integral & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
+            && rep.integral & 0x000F_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
         const ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
         return e == F.EXPMASK &&
-            rep.blob.significand & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
+            rep.integral.significand & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
@@ -4987,7 +4987,7 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
-    F.Repainter rep = { number : x };
+    F.Layout rep = { number : x };
     return (rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
 }
 
@@ -5041,7 +5041,7 @@ int isFinite(X)(X x) @trusted pure nothrow @nogc
 bool isNormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
-    F.Repainter rep = { number : x };
+    F.Layout rep = { number : x };
 
     static if (F.realFormat == RealFormat.ibmExtended)
     {
@@ -5093,10 +5093,10 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
         be converted to normal reals.
     */
     alias F = floatTraits!(X);
-    F.Repainter rep = { number : x };
+    F.Layout rep = { number : x };
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        return (rep.blob & F.EXPMASK_INT) == 0 && rep.blob & F.MANTISSAMASK_INT;
+        return (rep.integral & F.EXPMASK_INT) == 0 && rep.integral & F.MANTISSAMASK_INT;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
@@ -5112,7 +5112,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
         return (rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK) == 0 &&
-            rep.blob.significand > 0;
+            rep.integral.significand > 0;
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
@@ -5155,14 +5155,14 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
-    F.Repainter rep = { number : x };
+    F.Layout rep = { number : x };
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        return (rep.blob & 0x7FFF_FFFF) == 0x7F80_0000;
+        return (rep.integral & 0x7FFF_FFFF) == 0x7F80_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        return (rep.blob & 0x7FFF_FFFF_FFFF_FFFF)
+        return (rep.integral & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF0_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
@@ -5170,11 +5170,11 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
         const ushort e = cast(ushort)(F.EXPMASK & rep.shorts[F.EXPPOS_SHORT]);
 
         // On Motorola 68K, infinity can have hidden bit = 1 or 0. On x86, it is always 1.
-        return e == F.EXPMASK && (rep.blob.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0;
+        return e == F.EXPMASK && (rep.integral.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0;
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        return ((rep.blob[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
+        return ((rep.integral[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF8_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
@@ -5271,9 +5271,9 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
 bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(real);
-    F.Repainter repX = { number : x }, repY = { number : y };
+    F.Layout repX = { number : x }, repY = { number : y };
 
-    return repX.blob == repY.blob;
+    return repX.integral == repY.integral;
 }
 
 /*********************************
@@ -5282,7 +5282,7 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 int signbit(X)(X x) @nogc @trusted pure nothrow
 {
     alias F = floatTraits!(X);
-    F.Repainter rep = { number : x };
+    F.Layout rep = { number : x };
     return (rep.bytes[F.SIGNPOS_BYTE] & 0x80) != 0;
 }
 
@@ -5334,8 +5334,8 @@ R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
 {
     alias T = floatTraits!(R);
     alias F = floatTraits!(X);
-    T.Repainter repTo = { number : to };
-    F.Repainter repFrom = { number : from };
+    T.Layout repTo = { number : to };
+    F.Layout repFrom = { number : from };
 
     repTo.bytes[T.SIGNPOS_BYTE] &= 0x7F;
     repTo.bytes[T.SIGNPOS_BYTE] |= repFrom.bytes[F.SIGNPOS_BYTE] & 0x80;
@@ -5598,7 +5598,7 @@ debug(UnitTest)
 real nextUp(real x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(real);
-    F.Repainter rep = { number : x };
+    F.Layout rep = { number : x };
 
     static if (F.realFormat == RealFormat.ieeeDouble)
     {
@@ -5652,13 +5652,13 @@ real nextUp(real x) @trusted pure nothrow @nogc
         if (rep.shorts[F.EXPPOS_SHORT] & 0x8000)
         {
             // Negative number -- need to decrease the significand
-            --rep.blob.significand;
+            --rep.integral.significand;
             // Need to mask with 0x7FFF... so subnormals are treated correctly.
-            if ((rep.blob.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_FFFF_FFFF_FFFF)
+            if ((rep.integral.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_FFFF_FFFF_FFFF)
             {
                 if (rep.shorts[F.EXPPOS_SHORT] == 0x8000)   // it was negative zero
                 {
-                    rep.blob.significand = 1;
+                    rep.integral.significand = 1;
                     rep.shorts[F.EXPPOS_SHORT] = 0; // smallest subnormal.
                     return rep.number;
                 }
@@ -5668,7 +5668,7 @@ real nextUp(real x) @trusted pure nothrow @nogc
                 if (rep.shorts[F.EXPPOS_SHORT] == 0x8000)
                     return rep.number; // it's become a subnormal, implied bit stays low.
 
-                rep.blob.significand = 0xFFFF_FFFF_FFFF_FFFF; // set the implied bit
+                rep.integral.significand = 0xFFFF_FFFF_FFFF_FFFF; // set the implied bit
                 return rep.number;
             }
             return rep.number;
@@ -5677,12 +5677,12 @@ real nextUp(real x) @trusted pure nothrow @nogc
         {
             // Positive number -- need to increase the significand.
             // Works automatically for positive zero.
-            ++rep.blob.significand;
-            if ((rep.blob.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0)
+            ++rep.integral.significand;
+            if ((rep.integral.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0)
             {
                 // change in exponent
                 ++rep.shorts[F.EXPPOS_SHORT];
-                rep.blob.significand = 0x8000_0000_0000_0000; // set the high bit
+                rep.integral.significand = 0x8000_0000_0000_0000; // set the high bit
             }
         }
         return rep.number;
@@ -5696,26 +5696,26 @@ real nextUp(real x) @trusted pure nothrow @nogc
 /** ditto */
 double nextUp(double x) @trusted pure nothrow @nogc
 {
-    floatTraits!double.Repainter rep = { number : x };
+    floatTraits!double.Layout rep = { number : x };
 
-    if ((rep.blob & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
+    if ((rep.integral & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
     {
         // First, deal with NANs and infinity
         if (x == -x.infinity) return -x.max;
         return x; // +INF and NAN are unchanged.
     }
-    if (rep.blob & 0x8000_0000_0000_0000)    // Negative number
+    if (rep.integral & 0x8000_0000_0000_0000)    // Negative number
     {
-        if (rep.blob == 0x8000_0000_0000_0000) // it was negative zero
+        if (rep.integral == 0x8000_0000_0000_0000) // it was negative zero
         {
-            rep.blob = 0x0000_0000_0000_0001; // change to smallest subnormal
+            rep.integral = 0x0000_0000_0000_0001; // change to smallest subnormal
             return rep.number;
         }
-        --rep.blob;
+        --rep.integral;
     }
     else
     {   // Positive number
-        ++rep.blob;
+        ++rep.integral;
     }
     return rep.number;
 }
@@ -5723,29 +5723,29 @@ double nextUp(double x) @trusted pure nothrow @nogc
 /** ditto */
 float nextUp(float x) @trusted pure nothrow @nogc
 {
-    floatTraits!float.Repainter rep = { number : x };
+    floatTraits!float.Layout rep = { number : x };
 
-    if ((rep.blob & 0x7F80_0000) == 0x7F80_0000)
+    if ((rep.integral & 0x7F80_0000) == 0x7F80_0000)
     {
         // First, deal with NANs and infinity
         if (x == -x.infinity) return -x.max;
 
         return x; // +INF and NAN are unchanged.
     }
-    if (rep.blob & 0x8000_0000)   // Negative number
+    if (rep.integral & 0x8000_0000)   // Negative number
     {
-        if (rep.blob == 0x8000_0000) // it was negative zero
+        if (rep.integral == 0x8000_0000) // it was negative zero
         {
-            rep.blob = 0x0000_0001; // change to smallest subnormal
+            rep.integral = 0x0000_0001; // change to smallest subnormal
             return rep.number;
         }
 
-        --rep.blob;
+        --rep.integral;
     }
     else
     {
         // Positive number
-        ++rep.blob;
+        ++rep.integral;
     }
     return rep.number;
 }
@@ -6395,7 +6395,7 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
     alias F = floatTraits!(X);
-    F.Repainter repX = { number : x }, repY = { number : y };
+    F.Layout repX = { number : x }, repY = { number : y };
 
     static if (F.realFormat == RealFormat.ibmExtended)
     {
@@ -6421,7 +6421,7 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
         if (x == y)
             return X.mant_dig; // ensure diff!=0, cope with INF.
 
-        F.Repainter repDiff = { number : fabs(x - y) };
+        F.Layout repDiff = { number : fabs(x - y) };
 
         // The difference in abs(exponent) between x or y and abs(x-y)
         // is equal to the number of significand bits of x which are
@@ -6550,7 +6550,7 @@ body
     // average them (avoiding overflow), and cast the result back to a floating-point number.
 
     alias F = floatTraits!(T);
-    F.Repainter repX = { number : x },
+    F.Layout repX = { number : x },
                 repY = { number : y },
                 res;
 
@@ -6560,8 +6560,8 @@ body
         // 79-bit reals...
 
         // Ignore the useless implicit bit. (Bonus: this prevents overflows)
-        ulong m = (repX.blob.significand & 0x7FFF_FFFF_FFFF_FFFFL)
-                  + (repY.blob.significand & 0x7FFF_FFFF_FFFF_FFFFL);
+        ulong m = (repX.integral.significand & 0x7FFF_FFFF_FFFF_FFFFL)
+                  + (repY.integral.significand & 0x7FFF_FFFF_FFFF_FFFFL);
 
         // @@@ BUG? @@@
         // Cast shouldn't be here
@@ -6579,9 +6579,9 @@ body
         if (c)
             m |= 0x4000_0000_0000_0000L; // shift carry into significand
         if (e)
-            res.blob.significand = m | 0x8000_0000_0000_0000L; // set implicit bit...
+            res.integral.significand = m | 0x8000_0000_0000_0000L; // set implicit bit...
         else
-            res.blob.significand = m; // ... unless exponent is 0 (subnormal or zero).
+            res.integral.significand = m; // ... unless exponent is 0 (subnormal or zero).
 
         res.shorts[4]= e | (repX.shorts[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
     }
@@ -6607,16 +6607,16 @@ body
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        ulong m = ((repX.blob & 0x7FFF_FFFF_FFFF_FFFFL)
-                   + (repY.blob & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
-        m |= (repX.blob & 0x8000_0000_0000_0000L);
-        res.blob = m;
+        ulong m = ((repX.integral & 0x7FFF_FFFF_FFFF_FFFFL)
+                   + (repY.integral & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
+        m |= (repX.integral & 0x8000_0000_0000_0000L);
+        res.integral = m;
     }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        uint m = ((repX.blob & 0x7FFF_FFFF) + (repY.blob & 0x7FFF_FFFF)) >>> 1;
-        m |= (repX.blob & 0x8000_0000);
-        res.blob = m;
+        uint m = ((repX.integral & 0x7FFF_FFFF) + (repY.integral & 0x7FFF_FFFF)) >>> 1;
+        m |= (repX.integral & 0x8000_0000);
+        res.integral = m;
     }
     else
     {
