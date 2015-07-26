@@ -832,18 +832,18 @@ template EncoderInstance(CharType : Latin2Char)
     }
 
     immutable wstring charMap =
-        "\u0104\u02d8\u0141\u00a4\u013d\u015a\u00a7\u00a8"~
-        "\u0160\u015e\u0164\u0179\u00ad\u017d\u017b\u00b0"~
-        "\u0105\u02db\u0142\u00b4\u013e\u015b\u02c7\u00b8"~
-        "\u0161\u015f\u0165\u017a\u02dd\u017e\u017c\u0154"~
-        "\u00c1\u00c2\u0102\u00c4\u0139\u0106\u00c7\u010c"~
-        "\u00c9\u0118\u00cb\u011a\u00cd\u00ce\u010e\u0110"~
-        "\u0143\u0147\u00d3\u00d4\u0150\u00d6\u00d7\u0158"~
-        "\u016e\u00da\u0170\u00dc\u00dd\u0162\u00df\u0155"~
-        "\u00e1\u00e2\u0103\u00e4\u013a\u0107\u00e7\u010d"~
-        "\u00e9\u0119\u00eb\u011b\u00ed\u00ee\u010f\u0111"~
-        "\u0144\u0148\u00f3\u00f4\u0151\u00f6\u00f7\u0159"~
-        "\u016f\u00fa\u0171\u00fc\u00fd\u0163\u02d9";
+        "\u0104\u02D8\u0141\u00A4\u013D\u015A\u00A7\u00A8"~
+        "\u0160\u015E\u0164\u0179\u00AD\u017D\u017B\u00B0"~
+        "\u0105\u02DB\u0142\u00B4\u013E\u015B\u02C7\u00B8"~
+        "\u0161\u015F\u0165\u017A\u02DD\u017E\u017C\u0154"~
+        "\u00C1\u00C2\u0102\u00C4\u0139\u0106\u00C7\u010C"~
+        "\u00C9\u0118\u00CB\u011A\u00CD\u00CE\u010E\u0110"~
+        "\u0143\u0147\u00D3\u00D4\u0150\u00D6\u00D7\u0158"~
+        "\u016E\u00DA\u0170\u00DC\u00DD\u0162\u00DF\u0155"~
+        "\u00E1\u00E2\u0103\u00E4\u013A\u0107\u00E7\u010D"~
+        "\u00E9\u0119\u00EB\u011B\u00ED\u00EE\u010F\u0111"~
+        "\u0144\u0148\u00F3\u00F4\u0151\u00F6\u00F7\u0159"~
+        "\u016F\u00FA\u0171\u00FC\u00FD\u0163\u02D9";
 
     immutable Tuple!(wchar, char)[] bstMap = [
         tuple('\u0148','\xF2'), tuple('\u00F3','\xF3'), tuple('\u0165','\xBB'),
@@ -882,7 +882,7 @@ template EncoderInstance(CharType : Latin2Char)
 
     bool canEncode(dchar c)
     {
-        if (c < 0XA1) return true;
+        if (c < 0xA1) return true;
         if (c >= 0xFFFD) return false;
 
         auto idx = 0;
@@ -912,7 +912,7 @@ template EncoderInstance(CharType : Latin2Char)
 
     void encodeViaWrite()(dchar c)
     {
-        if (c < 0XA1) {}
+        if (c < 0xA1) {}
         else if (c >= 0xFFFD) { c = '?'; }
         else
         {
@@ -939,19 +939,19 @@ template EncoderInstance(CharType : Latin2Char)
     dchar decodeViaRead()()
     {
         Latin2Char c = read();
-        return (c >= 0XA1) ? charMap[c-0XA1] : c;
+        return (c >= 0xA1) ? charMap[c-0xA1] : c;
     }
 
     dchar safeDecodeViaRead()()
     {
         Latin2Char c = read();
-        return (c >= 0XA1) ? charMap[c-0XA1] : c;
+        return (c >= 0xA1) ? charMap[c-0xA1] : c;
     }
 
     dchar decodeReverseViaRead()()
     {
         Latin2Char c = read();
-        return (c >= 0XA1) ? charMap[c-0XA1] : c;
+        return (c >= 0xA1) ? charMap[c-0xA1] : c;
     }
 
     @property EString replacementSequence()
