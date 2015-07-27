@@ -3297,7 +3297,7 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
  writeln(e.name, "\t", e.size);
 }
 // Iterate over all *.d files in current directory and all its subdirectories
-auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
+auto dFiles = dirEntries(".", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
 foreach(d; dFiles)
     writeln(d.name);
 // Hook it up with std.parallelism to compile them all in parallel:
