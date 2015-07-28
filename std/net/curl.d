@@ -2266,35 +2266,45 @@ struct HTTP
     {
         p.status.reset();
 
+        CurlOption opt;
         final switch (p.method)
         {
         case Method.head:
             p.curl.set(CurlOption.nobody, 1L);
+            opt = CurlOption.nobody;
             break;
         case Method.undefined:
         case Method.get:
             p.curl.set(CurlOption.httpget, 1L);
+            opt = CurlOption.httpget;
             break;
         case Method.post:
             p.curl.set(CurlOption.post, 1L);
+            opt = CurlOption.post;
             break;
         case Method.put:
             p.curl.set(CurlOption.upload, 1L);
+            opt = CurlOption.upload;
             break;
         case Method.del:
             p.curl.set(CurlOption.customrequest, "DELETE");
+            opt = CurlOption.customrequest;
             break;
         case Method.options:
             p.curl.set(CurlOption.customrequest, "OPTIONS");
+            opt = CurlOption.customrequest;
             break;
         case Method.trace:
             p.curl.set(CurlOption.customrequest, "TRACE");
+            opt = CurlOption.customrequest;
             break;
         case Method.connect:
             p.curl.set(CurlOption.customrequest, "CONNECT");
+            opt = CurlOption.customrequest;
             break;
         }
 
+        scope (exit) p.curl.clear(opt);
         return p.curl.perform(throwOnError);
     }
 
