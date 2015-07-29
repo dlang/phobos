@@ -814,6 +814,7 @@ unittest
 
 /**
  * Tries to receive but will give up if no matches arrive within duration.
+ * Won't wait at all if provided $(CXREF time, Duration) is negative.
  *
  * Same as $(D receive) except that rather than wait forever for a message,
  * it waits until either it receives a message or the given
