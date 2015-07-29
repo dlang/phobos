@@ -148,15 +148,9 @@ Returns:
  */
 template isInputRange(R)
 {
-    enum bool isInputRange = is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;     // can define a range object
-        if (r.empty) {}   // can test for empty
-        r.popFront();     // can invoke popFront()
-        auto h = r.front; // can get the front of the range
-    }));
+    enum bool isInputRange = is(typeof(checkInputRange!R));
 }
+
 
 ///
 @safe unittest
@@ -174,6 +168,31 @@ template isInputRange(R)
     static assert( isInputRange!(char[]));
     static assert(!isInputRange!(char[4]));
     static assert( isInputRange!(inout(int)[]));
+}
+
+/**
+Helper function for $(D isInputRange), enabling its usage
+with $(D std.traits.models).
+*/
+void checkInputRange(R)(inout int = 0)
+{
+    R r = R.init;     // can define a range object
+    if (r.empty) {}   // can test for empty
+    r.popFront();     // can invoke popFront()
+    auto h = r.front; // can get the front of the range
+}
+
+///
+@safe unittest
+{
+    import std.traits;
+    @models!(Zeroes, isInputRange)
+    struct Zeroes
+    {
+        enum empty = false;
+        void popFront() {}
+        @property int front() { return 0; }
+    }
 }
 
 /+
