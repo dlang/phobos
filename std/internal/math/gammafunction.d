@@ -111,7 +111,19 @@ real gammaStirling(real x)
     }
     else {
         w = 1.0L + w * poly( w, SmallStirlingCoeffs);
-        y = pow( x, x - 0.5L ) / y;
+        static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble) {
+            // Avoid overflow in pow() for 64-bit reals
+            if (x > 143.0) {
+                real v = pow( x, 0.5 * x - 0.25 );
+                y = v * (v / y);
+            }
+            else {
+                y = pow( x, x - 0.5 ) / y;
+            }
+        }
+        else {
+            y = pow( x, x - 0.5L ) / y;
+        }
     }
     y = SQRT2PI * y * w;
     return  y;
@@ -231,7 +243,12 @@ real igammaTemmeLarge(real a, real x)
 
 public:
 /// The maximum value of x for which gamma(x) < real.infinity.
-enum real MAXGAMMA = 1755.5483429L;
+static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+    enum real MAXGAMMA = 1755.5483429L;
+else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
+    enum real MAXGAMMA = 171.6243769L;
+else
+    static assert(0, "missing MAXGAMMA for other real types");
 
 
 /*****************************************************
@@ -531,8 +548,17 @@ unittest {
 
 
 private {
-enum real MAXLOG = 0x1.62e42fefa39ef358p+13L;  // log(real.max)
-enum real MINLOG = -0x1.6436716d5406e6d8p+13L; // log(real.min*real.epsilon) = log(smallest denormal)
+static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended) {
+    enum real MAXLOG = 0x1.62e42fefa39ef358p+13L;  // log(real.max)
+    enum real MINLOG = -0x1.6436716d5406e6d8p+13L; // log(real.min_normal*real.epsilon) = log(smallest denormal)
+}
+else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble) {
+    enum real MAXLOG = 0x1.62e42fefa39efp+9L;  // log(real.max)
+    enum real MINLOG = -0x1.74385446d71c3p+9L; // log(real.min_normal*real.epsilon) = log(smallest denormal)
+}
+else
+    static assert(0, "missing MAXLOG and MINLOG for other real types");
+
 enum real BETA_BIG = 9.223372036854775808e18L;
 enum real BETA_BIGINV = 1.084202172485504434007e-19L;
 }
