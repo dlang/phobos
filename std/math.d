@@ -6694,15 +6694,23 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
             //static assert(is(T : real) && is(U : real));
             if (rhs == 0)
             {
-                return fabs(lhs) <= maxAbsDiff;
+                static if (is(IntegralTypeOf!U))
+                    return abs(lhs) <= maxAbsDiff;
+                else
+                    return fabs(lhs) <= maxAbsDiff;
             }
             static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
             {
                 if (lhs == lhs.infinity && rhs == rhs.infinity ||
                     lhs == -lhs.infinity && rhs == -rhs.infinity) return true;
             }
-            return fabs((lhs - rhs) / rhs) <= maxRelDiff
-                || maxAbsDiff != 0 && fabs(lhs - rhs) <= maxAbsDiff;
+            static if (is(IntegralTypeOf!(typeof(lhs - rhs))))
+
+                return abs((lhs - rhs) / rhs) <= maxRelDiff
+                    || maxAbsDiff != 0 && abs(lhs - rhs) <= maxAbsDiff;
+            else
+                return fabs((lhs - rhs) / rhs) <= maxRelDiff
+                    || maxAbsDiff != 0 && fabs(lhs - rhs) <= maxAbsDiff;
         }
     }
 }
@@ -6730,6 +6738,9 @@ bool approxEqual(T, U)(T lhs, U rhs)
     num = -real.infinity;
     assert(num == -real.infinity);  // Passes.
     assert(approxEqual(num, -real.infinity));  // Fails.
+
+    assert(!approxEqual(3, 0));
+    assert(approxEqual(3, 3));
 }
 
 // Included for backwards compatibility with Phobos1
