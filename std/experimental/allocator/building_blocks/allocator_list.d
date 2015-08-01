@@ -262,7 +262,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         if (expanded)
         {
-			import std.c.string : memcpy;
+            import std.c.string : memcpy;
             assert(t.length % Node.sizeof == 0);
             assert(t.ptr.alignedAt(Node.alignof));
             allocators = cast(Node[]) t;
