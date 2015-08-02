@@ -2624,7 +2624,7 @@ else
  *      $(TR $(TD $(NAN))            $(TD FP_ILOGBNAN) $(TD no))
  *      )
  */
-int ilogb(T)(const T x) @trusted nothrow @nogc
+int ilogb(T)(const T x) @trusted pure nothrow @nogc
     if(isFloatingPoint!T)
 {
     alias F = floatTraits!T;
@@ -2773,6 +2773,34 @@ int ilogb(T)(const T x) @trusted nothrow @nogc
         core.stdc.math.ilogbl(x);
     }
 }
+int ilogb(T)(const T x) @safe pure nothrow @nogc
+    if(isIntegral!T && isUnsigned!T)
+{
+    if (x == 0)
+        return FP_ILOGB0;
+    else
+    {
+        static if (T.sizeof <= size_t.sizeof) {
+            return core.bitop.bsr(x);
+        }
+        else static if (T.sizeof == ulong.sizeof)
+        {
+            return bsr_ulong(x);
+        }
+        else
+        {
+            assert (false, "integer size too large for the current ilogb implementation");
+        }
+    }
+}
+int ilogb(T)(const T x) @safe pure nothrow @nogc
+    if(isIntegral!T && isSigned!T)
+{
+    // Note: abs(x) can not be used because the return type is not Unsigned and
+    //       the return value would be wrong for x == int.min
+    Unsigned!T absx =  x>=0 ? x : -x;
+    return ilogb(absx);
+}
 
 alias FP_ILOGB0   = core.stdc.math.FP_ILOGB0;
 alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
@@ -2825,6 +2853,15 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
         assert(ilogb(nextUp(-real.min_normal)) == -1023);
         assert(ilogb(nextUp(-real(0.0))) == -1074);
     }
+
+    // test integer types
+    assert(ilogb(0) == FP_ILOGB0);
+    assert(ilogb(int.max) == 30);
+    assert(ilogb(int.min) == 31);
+    assert(ilogb(uint.max) == 31);
+    assert(ilogb(long.max) == 62);
+    assert(ilogb(long.min) == 63);
+    assert(ilogb(ulong.max) == 63);
 }
 
 /*******************************************
