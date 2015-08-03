@@ -1376,17 +1376,11 @@ unittest
     Returns:
         true if `T` is a `Tuple` type, false otherwise.
  */
-template isTuple(T)
-{
-    static if (is(Unqual!T Unused : Tuple!Specs, Specs...))
-    {
-        enum isTuple = true;
-    }
-    else
-    {
-        enum isTuple = false;
-    }
-}
+enum isTuple(T) = __traits(compiles,
+                           {
+                               void f(Specs...)(Tuple!Specs tup) {}
+                               f(T.init);
+                           } );
 
 ///
 unittest
@@ -6843,4 +6837,3 @@ unittest
         int, float, RefFun1, RefFun2,
     );
 }
-
