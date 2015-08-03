@@ -68,7 +68,7 @@ DMD=dmd
 DOCSRC = ../dlang.org
 STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc project.ddoc
 
-DOC=..\..\html\d\phobos
+DOC=..\dlang.org\phobos
 #DOC=..\doc\phobos
 
 ## Zlib library
