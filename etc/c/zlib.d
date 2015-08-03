@@ -80,7 +80,7 @@ alias void  function (void* opaque, void* address) free_func;
 
 struct z_stream
 {
-    ubyte*   next_in;  /* next input byte */
+    const(ubyte)*   next_in;  /* next input byte */
     uint     avail_in;  /* number of bytes available at next_in */
     c_ulong  total_in;  /* total nb of input bytes read so far */
 
@@ -88,7 +88,7 @@ struct z_stream
     uint     avail_out; /* remaining free space at next_out */
     c_ulong  total_out; /* total nb of bytes output so far */
 
-    char*    msg;      /* last error message, NULL if no error */
+    const(char)*    msg;      /* last error message, NULL if no error */
     void*    state;     /* not visible by applications */
 
     alloc_func zalloc;  /* used to allocate the internal state */
