@@ -6841,6 +6841,11 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
                     return false;
             }
         }
+        else static if (isIntegral!U)
+        {
+            // convert rhs to real
+            return approxEqual(lhs, real(rhs), maxRelDiff, maxAbsDiff);
+        }
         else
         {
             // lhs is range, rhs is number
@@ -6858,6 +6863,11 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
         {
             // lhs is number, rhs is array
             return approxEqual(rhs, lhs, maxRelDiff, maxAbsDiff);
+        }
+        else static if (isIntegral!T || isIntegral!U)
+        {
+            // convert both lhs and rhs to real
+            return approxEqual(real(lhs), real(rhs), maxRelDiff, maxAbsDiff);
         }
         else
         {
@@ -6901,6 +6911,14 @@ bool approxEqual(T, U)(T lhs, U rhs)
     num = -real.infinity;
     assert(num == -real.infinity);  // Passes.
     assert(approxEqual(num, -real.infinity));  // Fails.
+
+    assert(!approxEqual(3, 0));
+    assert(approxEqual(3, 3));
+    assert(approxEqual(3.0, 3));
+    assert(approxEqual([3, 3, 3], 3.0));
+    assert(approxEqual([3.0, 3.0, 3.0], 3));
+    int a = 10;
+    assert(approxEqual(10, a));
 }
 
 // Included for backwards compatibility with Phobos1
