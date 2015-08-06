@@ -1258,6 +1258,55 @@ Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
+    return moveAllImpl!move(src, tgt);
+}
+
+///
+pure @safe unittest
+{
+    int[] a = [ 1, 2, 3 ];
+    int[] b = new int[5];
+    assert(moveAll(a, b) is b[3 .. $]);
+    assert(a == b[0 .. 3]);
+    assert(a == [ 1, 2, 3 ]);
+}
+
+/**
+ * Similar to $(LREF moveAll) but assumes all elements in `target` are
+ * uninitialized. Uses $(LREF moveEmplace) to move elements from
+ * `source` over elements from `target`.
+ */
+Range2 moveEmplaceAll(Range1, Range2)(Range1 src, Range2 tgt) @system
+if (isInputRange!Range1 && isInputRange!Range2
+        && is(typeof(moveEmplace(src.front, tgt.front))))
+{
+    return moveAllImpl!moveEmplace(src, tgt);
+}
+
+///
+pure unittest
+{
+    static struct Foo
+    {
+        ~this() pure { if (_ptr) ++*_ptr; }
+        int* _ptr;
+    }
+    int[3] refs = [0, 1, 2];
+    Foo[] src = [Foo(&refs[0]), Foo(&refs[1]), Foo(&refs[2])];
+    Foo[5] dst = void;
+
+    auto tail = moveEmplaceAll(src, dst[]); // move 3 value from src over dst
+    assert(tail.length == 2); // returns remaining uninitialized values
+    initializeAll(tail);
+
+    import std.algorithm.searching : all;
+    assert(src.all!(e => e._ptr is null));
+    assert(dst[0 .. 3].all!(e => e._ptr !is null));
+}
+
+private Range2 moveAllImpl(alias moveOp, Range1, Range2)(
+    ref Range1 src, ref Range2 tgt)
+{
     import std.exception : enforce;
 
     static if (isRandomAccessRange!Range1 && hasLength!Range1 && hasLength!Range2
@@ -1266,7 +1315,7 @@ if (isInputRange!Range1 && isInputRange!Range2
         auto toMove = src.length;
         enforce(toMove <= tgt.length);  // shouldn't this be an assert?
         foreach (idx; 0 .. toMove)
-            move(src[idx], tgt[idx]);
+            moveOp(src[idx], tgt[idx]);
         return tgt[toMove .. tgt.length];
     }
     else
@@ -1274,20 +1323,10 @@ if (isInputRange!Range1 && isInputRange!Range2
         for (; !src.empty; src.popFront(), tgt.popFront())
         {
             enforce(!tgt.empty);  //ditto?
-            move(src.front, tgt.front);
+            moveOp(src.front, tgt.front);
         }
         return tgt;
     }
-}
-
-///
-unittest
-{
-    int[] a = [ 1, 2, 3 ];
-    int[] b = new int[5];
-    assert(moveAll(a, b) is b[3 .. $]);
-    assert(a == b[0 .. 3]);
-    assert(a == [ 1, 2, 3 ]);
 }
 
 // moveSome
@@ -1309,25 +1348,59 @@ Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
-    import std.exception : enforce;
-
-    for (; !src.empty && !tgt.empty; src.popFront(), tgt.popFront())
-    {
-        enforce(!tgt.empty);
-        move(src.front, tgt.front);
-    }
-    return tuple(src, tgt);
+    return moveSomeImpl!move(src, tgt);
 }
 
 ///
-unittest
+pure nothrow @safe @nogc unittest
 {
-    int[] a = [ 1, 2, 3, 4, 5 ];
-    int[] b = new int[3];
-    assert(moveSome(a, b)[0] is a[3 .. $]);
+    int[5] a = [ 1, 2, 3, 4, 5 ];
+    int[3] b;
+    assert(moveSome(a[], b[])[0] is a[3 .. $]);
     assert(a[0 .. 3] == b);
     assert(a == [ 1, 2, 3, 4, 5 ]);
 }
+
+/**
+ * Same as $(LREF moveSome) but assumes all elements in `target` are
+ * uninitialized. Uses $(LREF moveEmplace) to move elements from
+ * `source` over elements from `target`.
+ */
+Tuple!(Range1, Range2) moveEmplaceSome(Range1, Range2)(Range1 src, Range2 tgt) @system
+if (isInputRange!Range1 && isInputRange!Range2
+        && is(typeof(move(src.front, tgt.front))))
+{
+    return moveSomeImpl!moveEmplace(src, tgt);
+}
+
+///
+pure nothrow @nogc unittest
+{
+    static struct Foo
+    {
+        ~this() pure nothrow @nogc { if (_ptr) ++*_ptr; }
+        int* _ptr;
+    }
+    int[4] refs = [0, 1, 2, 3];
+    Foo[4] src = [Foo(&refs[0]), Foo(&refs[1]), Foo(&refs[2]), Foo(&refs[3])];
+    Foo[3] dst = void;
+
+    auto res = moveEmplaceSome(src[], dst[]);
+
+    import std.algorithm.searching : all;
+    assert(src[0 .. 3].all!(e => e._ptr is null));
+    assert(src[3]._ptr !is null);
+    assert(dst[].all!(e => e._ptr !is null));
+}
+
+private Tuple!(Range1, Range2) moveSomeImpl(alias moveOp, Range1, Range2)(
+    ref Range1 src, ref Range2 tgt)
+{
+    for (; !src.empty && !tgt.empty; src.popFront(), tgt.popFront())
+        moveOp(src.front, tgt.front);
+    return tuple(src, tgt);
+ }
+
 
 // SwapStrategy
 /**
