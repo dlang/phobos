@@ -856,52 +856,16 @@ Params:
 */
 void move(T)(ref T source, ref T target)
 {
-    import core.stdc.string : memcpy, memset;
-    import std.traits : hasAliasing, hasElaborateAssign,
-                        hasElaborateCopyConstructor, hasElaborateDestructor,
-                        isAssignable;
-
-    static if (!is( T == class) && hasAliasing!T) if (!__ctfe)
-    {
-        import std.exception : doesPointTo;
-        assert(!doesPointTo(source, source), "Cannot move object with internal pointer.");
-    }
+    import std.traits : hasElaborateDestructor;
 
     static if (is(T == struct))
     {
         if (&source == &target) return;
-        // Most complicated case. Destroy whatever target had in it
-        // and bitblast source over it
-        static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
-
-        static if (hasElaborateAssign!T || !isAssignable!T)
-            memcpy(&target, &source, T.sizeof);
-        else
-            target = source;
-
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-        {
-            // If T is nested struct, keep original context pointer
-            static if (__traits(isNested, T))
-                enum sz = T.sizeof - (void*).sizeof;
-            else
-                enum sz = T.sizeof;
-
-            auto init = typeid(T).init();
-            if (init.ptr is null) // null ptr means initialize to 0s
-                memset(&source, 0, sz);
-            else
-                memcpy(&source, init.ptr, sz);
-        }
+        // Destroy target before overwriting it
+        static if (hasElaborateDestructor!T) target.__xdtor();
     }
-    else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        target = source;
-    }
+    // move and emplace source into target
+    () @trusted { moveEmplace(source, target); }();
 }
 
 ///
@@ -1178,6 +1142,82 @@ unittest// Issue 8057
     Array!int.Payload x = void;
     static assert(__traits(compiles, move(x)    ));
     static assert(__traits(compiles, move(x, x) ));
+}
+
+/*
+ * Similar to $(LREF move) but assumes `target` is uninitialized. This
+ * is more efficient because `source` can be blitted over `target`
+ * without destroying or initializing it first.
+ *
+ * Params:
+ *   source = value to be moved into target
+ *   target = uninitialized value to be filled by source
+ */
+void moveEmplace(T)(ref T source, ref T target) @system
+{
+    import core.stdc.string : memcpy, memset;
+    import std.traits : hasAliasing, hasElaborateAssign,
+                        hasElaborateCopyConstructor, hasElaborateDestructor,
+                        isAssignable;
+
+    static if (!is(T == class) && hasAliasing!T) if (!__ctfe)
+    {
+        import std.exception : doesPointTo;
+        assert(!doesPointTo(source, source), "Cannot move object with internal pointer.");
+    }
+
+    static if (is(T == struct))
+    {
+        assert(&source !is &target, "source and target must not be identical");
+
+        static if (hasElaborateAssign!T || !isAssignable!T)
+            memcpy(&target, &source, T.sizeof);
+        else
+            target = source;
+
+        // If the source defines a destructor or a postblit hook, we must obliterate the
+        // object in order to avoid double freeing and undue aliasing
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+        {
+            // If T is nested struct, keep original context pointer
+            static if (__traits(isNested, T))
+                enum sz = T.sizeof - (void*).sizeof;
+            else
+                enum sz = T.sizeof;
+
+            auto init = typeid(T).init();
+            if (init.ptr is null) // null ptr means initialize to 0s
+                memset(&source, 0, sz);
+            else
+                memcpy(&source, init.ptr, sz);
+        }
+    }
+    else
+    {
+        // Primitive data (including pointers and arrays) or class -
+        // assignment works great
+        target = source;
+    }
+}
+
+///
+unittest
+{
+    static struct Foo
+    {
+        this(int* ptr) { _ptr = ptr; }
+        ~this() { if (_ptr) ++*_ptr; }
+        int* _ptr;
+    }
+
+    Foo foo1 = void; // uninitialized
+    auto foo2 = Foo(new int); // initialized
+
+    // Using `move(foo2, foo1)` has an undefined effect because it destroys the uninitialized foo1.
+    // MoveEmplace directly overwrites foo1 without destroying or initializing it first.
+    assert(foo2._ptr !is null);
+    moveEmplace(foo2, foo1);
+    assert(foo1._ptr !is null && foo2._ptr is null);
 }
 
 // moveAll
