@@ -856,16 +856,13 @@ Params:
 */
 void move(T)(ref T source, ref T target)
 {
+    // test @safe destructible
+    // static if (__traits(compiles, (T) @safe {})) // see 14878
     import std.traits : hasElaborateDestructor;
-
-    static if (is(T == struct))
-    {
-        if (&source == &target) return;
-        // Destroy target before overwriting it
-        static if (hasElaborateDestructor!T) target.__xdtor();
-    }
-    // move and emplace source into target
-    () @trusted { moveEmplace(source, target); }();
+    static if (!hasElaborateDestructor!T || __traits(compiles, () @safe {T.init.__xdtor();}))
+        trustedMoveImpl(source, target);
+    else
+        moveImpl(source, target);
 }
 
 ///
@@ -880,7 +877,7 @@ unittest
 }
 
 ///
-unittest
+pure nothrow @safe @nogc unittest
 {
     // Structs without destructors are simply copied
     struct S1
@@ -903,7 +900,7 @@ unittest
         int a = 1;
         int b = 2;
 
-        ~this() { }
+        ~this() pure nothrow @safe @nogc { }
     }
     S2 s21 = { 3, 4 };
     S2 s22;
@@ -977,49 +974,55 @@ unittest
 /// Ditto
 T move(T)(ref T source)
 {
-    import core.stdc.string : memcpy, memset;
-    import std.traits : hasAliasing, hasElaborateAssign,
-                        hasElaborateCopyConstructor, hasElaborateDestructor,
-                        isAssignable;
+    // test @safe destructible
+    // static if (__traits(compiles, (T) @safe {})) // see 14878
+    import std.traits : hasElaborateDestructor;
+    static if (!hasElaborateDestructor!T || __traits(compiles, () @safe {T.init.__xdtor();}))
+        return trustedMoveImpl(source);
+    else
+        return moveImpl(source);
+}
 
-    static if (!is(T == class) && hasAliasing!T) if (!__ctfe)
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S
     {
-        import std.exception : doesPointTo;
-        assert(!doesPointTo(source, source), "Cannot move object with internal pointer.");
+        @disable this(this);
+        ~this() pure nothrow @safe @nogc {}
     }
+    S s1;
+    S s2 = move(s1);
+}
 
-    T result = void;
+private void trustedMoveImpl(T)(ref T source, ref T target) @trusted
+{
+    moveImpl(source, target);
+}
+
+private void moveImpl(T)(ref T source, ref T target)
+{
+    import std.traits : hasElaborateDestructor;
+
     static if (is(T == struct))
     {
-        // Can avoid destructing result.
-        static if (hasElaborateAssign!T || !isAssignable!T)
-            memcpy(&result, &source, T.sizeof);
-        else
-            result = source;
-
-        // If the source defines a destructor or a postblit hook, we must obliterate the
-        // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
-        {
-            // If T is nested struct, keep original context pointer
-            static if (__traits(isNested, T))
-                enum sz = T.sizeof - (void*).sizeof;
-            else
-                enum sz = T.sizeof;
-
-            auto init = typeid(T).init();
-            if (init.ptr is null) // null ptr means initialize to 0s
-                memset(&source, 0, sz);
-            else
-                memcpy(&source, init.ptr, sz);
-        }
+        if (&source == &target) return;
+        // Destroy target before overwriting it
+        static if (hasElaborateDestructor!T) target.__xdtor();
     }
-    else
-    {
-        // Primitive data (including pointers and arrays) or class -
-        // assignment works great
-        result = source;
-    }
+    // move and emplace source into target
+    moveEmplace(source, target);
+}
+
+private T trustedMoveImpl(T)(ref T source) @trusted
+{
+    return moveImpl(source);
+}
+
+private T moveImpl(T)(ref T source)
+{
+    T result = void;
+    moveEmplace(source, result);
     return result;
 }
 
@@ -1079,6 +1082,16 @@ unittest
     S5 s51;
     static assert(__traits(compiles, s51 = move(s51)),
                   "issue 13990, cannot move opaque class reference");
+}
+
+unittest
+{
+    static struct S { ~this() @system { } }
+    S a, b;
+    static assert(!__traits(compiles, () @safe { move(a, b); }));
+    static assert(!__traits(compiles, () @safe { move(a); }));
+    static assert(__traits(compiles, () @trusted { move(a, b); }));
+    static assert(__traits(compiles, () @trusted { move(a); }));
 }
 
 unittest//Issue 6217
@@ -1201,23 +1214,25 @@ void moveEmplace(T)(ref T source, ref T target) @system
 }
 
 ///
-unittest
+pure nothrow @nogc unittest
 {
     static struct Foo
     {
+    pure nothrow @nogc:
         this(int* ptr) { _ptr = ptr; }
         ~this() { if (_ptr) ++*_ptr; }
         int* _ptr;
     }
 
+    int val;
     Foo foo1 = void; // uninitialized
-    auto foo2 = Foo(new int); // initialized
+    auto foo2 = Foo(&val); // initialized
 
     // Using `move(foo2, foo1)` has an undefined effect because it destroys the uninitialized foo1.
     // MoveEmplace directly overwrites foo1 without destroying or initializing it first.
-    assert(foo2._ptr !is null);
+    assert(foo2._ptr is &val);
     moveEmplace(foo2, foo1);
-    assert(foo1._ptr !is null && foo2._ptr is null);
+    assert(foo1._ptr is &val && foo2._ptr is null);
 }
 
 // moveAll
