@@ -6540,11 +6540,11 @@ unittest
  * Params: fmt  = Format string. For detailed specification, see $(XREF _format,formattedWrite).
  *         args = Variadic list of arguments to format into returned string.
  */
-string format(Char, Args...)(in Char[] fmt, Args args)
+S format(S, Args...)(in S fmt, Args args) if (isSomeString!S)
 {
     import std.format : formattedWrite, FormatException;
     import std.array : appender;
-    auto w = appender!string();
+    auto w = appender!S;
     auto n = formattedWrite(w, fmt, args);
     version (all)
     {
@@ -6580,6 +6580,10 @@ unittest
     assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
                   "helworldlo-138ctrue");
     });
+
+    assert(is(typeof(format("happy")) == string));
+    assert(is(typeof(format("happy"w)) == wstring));
+    assert(is(typeof(format("happy"d)) == dstring));
 }
 
 /*****************************************************
