@@ -1,0 +1,51 @@
+Ddoc
+
+$(COMMENT Pending changelog for 2.069. This will get copied to dlang.org and
+    cleared when master gets merged into stable prior to 2.069.
+)
+
+$(BUGSTITLE Library Changes,
+
+$(LI $(RELATIVE_LINK2 std-algorithm-moveEmplace, `moveEmplace` was added))
+
+)
+
+$(BUGSTITLE Library Changes,
+
+$(LI $(LNAME2 std-algorithm-moveEmplace, A combined `moveEmplace` was added.)
+
+    $(P $(XREF algorithm_mutation, MoveEmplace) efficiently combines $(XREF
+        algorithm_mutation, move) with $(XREF conv, emplace) thus avoids having
+        to initialize and destroy a value before moving into uninitialized data.
+    )
+
+    ------
+    T* moveToHeap(T)(ref T value)
+    {
+        import core.memory : GC;
+
+        auto ptr = cast(T*)GC.malloc(T.sizeof);
+        // move value and emplace it into ptr
+        moveEmplace(value, *ptr);
+        return ptr;
+    }
+    ------
+    $(P There are also $(XREF algorithm_mutation, moveEmplaceAll)
+        and $(XREF algorithm_mutation, moveEmplaceSome) as counterparts of
+        $(XREF algorithm_mutation, moveAll) and $(XREF algorithm_mutation, moveSome).
+    )
+)
+
+)
+
+Macros:
+    TITLE=Change Log
+
+    BUGSTITLE = <div class="bugsfixed">$(H4 $1) $(OL $2 )</div>
+
+    RELATIVE_LINK2=<a href="#$1">$+</a>
+    LNAME2=<a class="anchor" title="Permalink to this section" id="$1" href="#$1">$+</a>
+
+    STDMODREF = <a href="phobos/std_$1.html">$2</a>
+    XREF = <a href="phobos/std_$1.html#$2">$2</a>
+    CXREF = <a href="phobos/core_$1.html#$2">$2</a>
