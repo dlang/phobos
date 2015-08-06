@@ -1304,6 +1304,22 @@ pure unittest
     assert(dst[0 .. 3].all!(e => e._ptr !is null));
 }
 
+unittest
+{
+    struct InputRange
+    {
+        ref int front() { return data[0]; }
+        void popFront() { data.popFront; }
+        bool empty() { return data.empty; }
+        int[] data;
+    }
+    auto a = InputRange([ 1, 2, 3 ]);
+    auto b = InputRange(new int[5]);
+    moveAll(a, b);
+    assert(a.data == b.data[0 .. 3]);
+    assert(a.data == [ 1, 2, 3 ]);
+}
+
 private Range2 moveAllImpl(alias moveOp, Range1, Range2)(
     ref Range1 src, ref Range2 tgt)
 {
