@@ -857,9 +857,7 @@ Params:
 void move(T)(ref T source, ref T target)
 {
     // test @safe destructible
-    // static if (__traits(compiles, (T) @safe {})) // see 14878
-    import std.traits : hasElaborateDestructor;
-    static if (!hasElaborateDestructor!T || __traits(compiles, () @safe {T.init.__xdtor();}))
+    static if (__traits(compiles, (T t) @safe {}))
         trustedMoveImpl(source, target);
     else
         moveImpl(source, target);
@@ -975,9 +973,7 @@ unittest
 T move(T)(ref T source)
 {
     // test @safe destructible
-    // static if (__traits(compiles, (T) @safe {})) // see 14878
-    import std.traits : hasElaborateDestructor;
-    static if (!hasElaborateDestructor!T || __traits(compiles, () @safe {T.init.__xdtor();}))
+    static if (__traits(compiles, (T t) @safe {}))
         return trustedMoveImpl(source);
     else
         return moveImpl(source);
