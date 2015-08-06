@@ -27,10 +27,13 @@ import std.range.primitives;
 import std.traits;
 import std.typetuple;
 
-private string convFormat(Char, Args...)(in Char[] fmt, Args args)
+// Same as std.string.format, but "self-importing".
+// Helps reduce code and imports, particularly in static asserts.
+// Also helps with missing imports errors.
+package template convFormat()
 {
     import std.format : format;
-    return std.format.format(fmt, args);
+    alias convFormat = format;
 }
 
 /* ************* Exceptions *************** */
