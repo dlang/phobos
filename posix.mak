@@ -452,6 +452,9 @@ html_consolidated :
 	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
 
+changelog.html: changelog.dd
+	$(DMD) -Df$@ $<
+
 #################### test for undesired white spaces ##########################
 CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
