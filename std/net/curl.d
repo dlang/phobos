@@ -446,8 +446,7 @@ unittest
  * postData = data to send as the body of the request. An array
  *            of an arbitrary type is accepted and will be cast to ubyte[]
  *            before sending it.
- * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
- *        guess connection type and create a new instance for this call only.
+ * conn = HTTP connection to use
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
@@ -716,8 +715,7 @@ unittest
  *
  * Params:
  * url = resource make a connect to
- * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
- *        guess connection type and create a new instance for this call only.
+ * conn = HTTP connection to use
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
