@@ -374,7 +374,8 @@ clean :
 	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
 zip :
-	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) index.d win32.mak win64.mak osmodel.mak
+	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) index.d win32.mak win64.mak osmodel.mak \
+	$(addsuffix /package.d,$(STD_PACKAGES))
 
 install2 : all
 	$(eval lib_dir=$(if $(filter $(OS),osx), lib, lib$(MODEL)))
