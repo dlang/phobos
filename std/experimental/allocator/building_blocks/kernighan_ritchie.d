@@ -679,7 +679,7 @@ unittest
         auto result = KRRegion!MmapAllocator(max(n * 2, 1024 * 1024));
         return result;
     }) alloc;
-    void[][490] array;
+    void[][390] array;
     foreach (i; 0 .. array.length)
     {
         auto length = i * 10_000 + 1;
