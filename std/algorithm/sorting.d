@@ -967,24 +967,32 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
        Stable sorting uses TimSort, which needs to copy elements into a buffer,
        requiring assignable elements. +/
 {
-    import std.range : assumeSorted;
-    alias lessFun = binaryFun!(less);
-    alias LessRet = typeof(lessFun(r.front, r.front));    // instantiate lessFun
-    static if (is(LessRet == bool))
+    import std.range.primitives: isSortedRange;
+    static if (isSortedRange!(Range, less))
     {
-        static if (ss == SwapStrategy.unstable)
-            quickSortImpl!(lessFun)(r, r.length);
-        else //use Tim Sort for semistable & stable
-            TimSortImpl!(lessFun, Range).sort(r, null);
-
-        enum maxLen = 8;
-        assert(isSorted!lessFun(r), "Failed to sort range of type " ~ Range.stringof);
+        return r;
     }
     else
     {
-        static assert(false, "Invalid predicate passed to sort: " ~ less.stringof);
+        import std.range : assumeSorted;
+        alias lessFun = binaryFun!(less);
+        alias LessRet = typeof(lessFun(r.front, r.front));    // instantiate lessFun
+        static if (is(LessRet == bool))
+        {
+            static if (ss == SwapStrategy.unstable)
+                quickSortImpl!(lessFun)(r, r.length);
+            else //use Tim Sort for semistable & stable
+                TimSortImpl!(lessFun, Range).sort(r, null);
+
+            enum maxLen = 8;
+            assert(isSorted!lessFun(r), "Failed to sort range of type " ~ Range.stringof);
+        }
+        else
+        {
+            static assert(false, "Invalid predicate passed to sort: " ~ less.stringof);
+        }
+        return assumeSorted!less(r);
     }
-    return assumeSorted!less(r);
 }
 
 ///
@@ -2859,4 +2867,3 @@ shapes. Here's a non-trivial example:
     }
     assert(n == 60);
 }
-
