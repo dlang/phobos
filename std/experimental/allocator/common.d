@@ -280,13 +280,14 @@ unittest
 
 /**
 Advances the beginning of `b` to start at alignment `a`. The resulting buffer
-may therefore be shorter.
+may therefore be shorter. Returns the adjusted buffer, or null if obtaining a
+non-empty buffer is impossible.
 */
 package void[] roundUpToAlignment(void[] b, uint a)
 {
     auto e = b.ptr + b.length;
     auto p = cast(void*) roundUpToAlignment(cast(size_t) b.ptr, a);
-    if (e < p) return null;
+    if (e <= p) return null;
     return p[0 .. e - p];
 }
 
