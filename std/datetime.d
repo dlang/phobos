@@ -330,11 +330,10 @@ public:
         assert(currTime().timezone is LocalTime());
         assert(currTime(UTC()).timezone is UTC());
 
-        // core.stdc.time.time does not always work correctly on Windows systems.
-        // In particular, sometimes it applies the local DST to time_t, even
-        // though time_t is in UTC. I'm fairly certain that it's a bug in dmc's
-        // implementation, but it needs to be investigated. Regardless, the
-        // result is that for now, we can't run this test on Windows.
+        // core.stdc.time.time does not always use unix time on Windows systems.
+        // In particular, dmc does not use unix time. If we can guarantee that
+        // the MS runtime uses unix time, then we may be able run this test
+        // then, but for now, we're just not going to run this test on Windows.
         version(Posix)
         {
             static import std.math;
@@ -390,9 +389,11 @@ public:
             immutable result = FILETIMEToStdTime(&fileTime);
             static if(clockType == ClockType.second)
             {
-                // This should probably just use core.stdc.time.time, but dmc's
-                // time function seems to apply DST to time_t, which is
-                // incorrect and thus only works with dmc's other C functions.
+                // Ideally, this would use core.std.time.time, but the C runtime
+                // has to be using unix time for that to work, and that's not
+                // guaranteed on Windows. Digital Mars does not use unix time.
+                // MS may or may not. If it does, then this can be made to use
+                // core.stdc.time for MS, but for now, we'll leave it like this.
                 return convert!("seconds", "hnsecs")(convert!("hnsecs", "seconds")(result));
             }
             else
@@ -2433,28 +2434,61 @@ public:
 
 
     /++
-        Returns a $(D time_t) which represents the same time as this
-        $(LREF SysTime).
+        Converts this $(LREF SysTime) to unix time (i.e. seconds from midnight,
+        January 1st, 1970 in UTC).
 
-        Note that like all conversions in std.datetime, this is a truncating
-        conversion.
+        The C standard does not specify the representation of time_t, so it is
+        implementation defined. On POSIX systems, unix time is equivalent to
+        time_t, but that's not necessarily true on other systems (e.g. it is
+        not true for the Digital Mars C runtime). So, be careful when using unix
+        time with C functions on non-POSIX systems.
 
-        If $(D time_t) is 32 bits, rather than 64, and the result can't fit in a
-        32-bit value, then the closest value that can be held in 32 bits will be
-        used (so $(D time_t.max) if it goes over and $(D time_t.min) if it goes
-        under).
+        By default, the return type is time_t (which is normally an alias for
+        int on 32-bit systems and long on 64-bit systems), but if a different
+        size is required than either int or long can be passed as a template
+        argument to get the desired size.
+
+        If the return type is int, and the result can't fit in an int, then the
+        closest value that can be held in 32 bits will be used (so $(D int.max)
+        if it goes over and $(D int.min) if it goes under). However, no attempt
+        is made to deal with integer overflow if the return type is long.
+
+        Params:
+            T = The return type (int or long). It defaults to time_t, which is
+                normally 32 bits on a 32-bit system and 64 bits on a 64-bit
+                system.
+
+        Returns:
+            A signed integer representing the unix time which is equivalent to
+            this SysTime.
       +/
-    time_t toUnixTime() @safe const pure nothrow
+    T toUnixTime(T = time_t)() @safe const pure nothrow
+        if(is(T == int) || is(T == long))
     {
-        return stdTimeToUnixTime(_stdTime);
+        return stdTimeToUnixTime!T(_stdTime);
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
+
+        auto pst = new immutable SimpleTimeZone(hours(-8));
+        assert(SysTime(DateTime(1970, 1, 1), pst).toUnixTime() == 28800);
+
+        auto utc = SysTime(DateTime(2007, 12, 22, 8, 14, 45), UTC());
+        assert(utc.toUnixTime() == 1_198_311_285);
+
+        auto ca = SysTime(DateTime(2007, 12, 22, 8, 14, 45), pst);
+        assert(ca.toUnixTime() == 1_198_340_085);
     }
 
     unittest
     {
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
-        assert(SysTime(DateTime(1970, 1, 1, 0, 0, 0), hnsecs(1), UTC()).toUnixTime() == 0);
-        assert(SysTime(DateTime(1970, 1, 1, 0, 0, 0), usecs(1), UTC()).toUnixTime() == 0);
-        assert(SysTime(DateTime(1970, 1, 1, 0, 0, 0), msecs(1), UTC()).toUnixTime() == 0);
+        import std.typetuple : TypeTuple;
+        foreach(units; TypeTuple!("hnsecs", "usecs", "msecs"))
+            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 0), dur!units(1), UTC()).toUnixTime() == 0);
         assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime() == 1);
         assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_999), UTC()).toUnixTime() == 0);
         assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), usecs(999_999), UTC()).toUnixTime() == 0);
@@ -2464,23 +2498,77 @@ public:
 
 
     /++
+        Converts from unix time (i.e. seconds from midnight, January 1st, 1970
+        in UTC) to a $(LREF SysTime).
+
+        The C standard does not specify the representation of time_t, so it is
+        implementation defined. On POSIX systems, unix time is equivalent to
+        time_t, but that's not necessarily true on other systems (e.g. it is
+        not true for the Digital Mars C runtime). So, be careful when using unix
+        time with C functions on non-POSIX systems.
+
+        Params:
+            unixTime = Seconds from midnight, January 1st, 1970 in UTC.
+            tz = The time zone for the SysTime that's returned.
+      +/
+    static SysTime fromUnixTime(long unixTime, immutable TimeZone tz = LocalTime()) @safe pure nothrow
+    {
+        return SysTime(unixTimeToStdTime(unixTime), tz);
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime.fromUnixTime(0) ==
+               SysTime(DateTime(1970, 1, 1), UTC()));
+
+        auto pst = new immutable SimpleTimeZone(hours(-8));
+        assert(SysTime.fromUnixTime(28800) ==
+               SysTime(DateTime(1970, 1, 1), pst));
+
+        auto st1 = SysTime.fromUnixTime(1_198_311_285, UTC());
+        assert(st1 == SysTime(DateTime(2007, 12, 22, 8, 14, 45), UTC()));
+        assert(st1.timezone is UTC());
+        assert(st1 == SysTime(DateTime(2007, 12, 22, 0, 14, 45), pst));
+
+        auto st2 = SysTime.fromUnixTime(1_198_311_285, pst);
+        assert(st2 == SysTime(DateTime(2007, 12, 22, 8, 14, 45), UTC()));
+        assert(st2.timezone is pst);
+        assert(st2 == SysTime(DateTime(2007, 12, 22, 0, 14, 45), pst));
+    }
+
+    unittest
+    {
+        assert(SysTime.fromUnixTime(0) == SysTime(DateTime(1970, 1, 1), UTC()));
+        assert(SysTime.fromUnixTime(1) == SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()));
+        assert(SysTime.fromUnixTime(-1) == SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()));
+
+        auto st = SysTime.fromUnixTime(0);
+        auto dt = cast(DateTime)st;
+        assert(dt <= DateTime(1970, 2, 1) && dt >= DateTime(1969, 12, 31));
+        assert(st.timezone is LocalTime());
+
+        auto aest = new immutable SimpleTimeZone(hours(10));
+        assert(SysTime.fromUnixTime(-36000) == SysTime(DateTime(1970, 1, 1), aest));
+    }
+
+
+    /++
         Returns a $(D timeval) which represents this $(LREF SysTime).
 
         Note that like all conversions in std.datetime, this is a truncating
         conversion.
 
-        If $(D time_t) is 32 bits, rather than 64, and the result can't fit in a
-        32-bit value, then the closest value that can be held in 32 bits will be
-        used for $(D tv_sec). (so $(D time_t.max) if it goes over and
-        $(D time_t.min) if it goes under).
+        If $(D timeval.tv_sec) is int, and the result can't fit in an int, then
+        the closest value that can be held in 32 bits will be used for
+        $(D tv_sec). (so $(D int.max) if it goes over and $(D int.min) if it
+        goes under).
       +/
     timeval toTimeVal() @safe const pure nothrow
     {
-        immutable tv_sec = toUnixTime();
-
-        immutable fracHNSecs = removeUnitsFromHNSecs!"seconds"(_stdTime - 621355968000000000L);
-        immutable tv_usec = cast(int)convert!("hnsecs", "usecs")(fracHNSecs);
-
+        immutable tv_sec = toUnixTime!(typeof(timeval.tv_sec))();
+        immutable fracHNSecs = removeUnitsFromHNSecs!"seconds"(_stdTime - 621_355_968_000_000_000L);
+        immutable tv_usec = cast(typeof(timeval.tv_usec))convert!("hnsecs", "usecs")(fracHNSecs);
         return timeval(tv_sec, tv_usec);
     }
 
@@ -28149,7 +28237,7 @@ assert(tz.dstName == "PDT");
         import std.algorithm : sort;
         import std.range : retro;
         import std.format : format;
-        import std.path : toNormalizedPath, chainPath;
+        import std.path : asNormalizedPath, chainPath;
         import std.conv : to;
 
         name = strip(name);
@@ -28157,7 +28245,7 @@ assert(tz.dstName == "PDT");
         enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
-        const file = toNormalizedPath(chainPath(tzDatabaseDir, name)).to!string;
+        const file = asNormalizedPath(chainPath(tzDatabaseDir, name)).to!string;
 
         enforce(file.exists(), new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
@@ -29246,11 +29334,11 @@ else version(Posix)
     void setTZEnvVar(string tzDatabaseName) @trusted nothrow
     {
         import std.internal.cstring : tempCString;
-        import std.path : toNormalizedPath, chainPath;
+        import std.path : asNormalizedPath, chainPath;
         import core.sys.posix.stdlib : setenv;
         import core.sys.posix.time : tzset;
 
-        auto value = toNormalizedPath(chainPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName));
+        auto value = asNormalizedPath(chainPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName));
         setenv("TZ", value.tempCString(), 1);
         tzset();
     }
@@ -30404,80 +30492,175 @@ unittest
 }
 
 /++
-    Converts a $(D time_t) (which uses midnight, January 1st, 1970 UTC as its
-    epoch and seconds as its units) to std time (which uses midnight,
+    Converts from unix time (which uses midnight, January 1st, 1970 UTC as its
+    epoch and seconds as its units) to "std time" (which uses midnight,
     January 1st, 1 A.D. UTC and hnsecs as its units).
 
+    The C standard does not specify the representation of time_t, so it is
+    implementation defined. On POSIX systems, unix time is equivalent to
+    time_t, but that's not necessarily true on other systems (e.g. it is
+    not true for the Digital Mars C runtime). So, be careful when using unix
+    time with C functions on non-POSIX systems.
+
+    "std time"'s epoch is based on the Proleptic Gregorian Calendar per ISO
+    8601 and is what $(LREF SysTime) uses internally. However, holding the time
+    as an integer in hnescs since that epoch technically isn't actually part of
+    the standard, much as it's based on it, so the name "std time" isn't
+    particularly good, but there isn't an official name for it. C# uses "ticks"
+    for the same thing, but they aren't actually clock ticks, and the term
+    "ticks" $(I is) used for actual clock ticks for $(CXREF time, MonoTime), so
+    it didn't make sense to use the term ticks here. So, for better or worse,
+    std.datetime uses the term "std time" for this.
+
     Params:
-        unixTime = The $(D time_t) to convert.
+        unixTime = The unix time to convert.
+
+    See_Also:
+        SysTime.fromUnixTime
   +/
-long unixTimeToStdTime(time_t unixTime) @safe pure nothrow
+long unixTimeToStdTime(long unixTime) @safe pure nothrow
 {
     return 621_355_968_000_000_000L + convert!("seconds", "hnsecs")(unixTime);
+}
 
+///
+unittest
+{
+    // Midnight, January 1st, 1970
+    assert(unixTimeToStdTime(0) == 621_355_968_000_000_000L);
+    assert(SysTime(unixTimeToStdTime(0)) ==
+           SysTime(DateTime(1970, 1, 1), UTC()));
+
+    assert(unixTimeToStdTime(int.max) == 642_830_804_470_000_000L);
+    assert(SysTime(unixTimeToStdTime(int.max)) ==
+           SysTime(DateTime(2038, 1, 19, 3, 14, 07), UTC()));
+
+    assert(unixTimeToStdTime(-127_127) == 621_354_696_730_000_000L);
+    assert(SysTime(unixTimeToStdTime(-127_127)) ==
+           SysTime(DateTime(1969, 12, 30, 12, 41, 13), UTC()));
 }
 
 unittest
 {
-    assert(unixTimeToStdTime(0) == 621_355_968_000_000_000L);  //Midnight, January 1st, 1970
-    assert(unixTimeToStdTime(86_400) == 621_355_968_000_000_000L + 864_000_000_000L);  //Midnight, January 2nd, 1970
-    assert(unixTimeToStdTime(-86_400) == 621_355_968_000_000_000L - 864_000_000_000L);  //Midnight, December 31st, 1969
+    // Midnight, January 2nd, 1970
+    assert(unixTimeToStdTime(86_400) == 621_355_968_000_000_000L + 864_000_000_000L);
+    // Midnight, December 31st, 1969
+    assert(unixTimeToStdTime(-86_400) == 621_355_968_000_000_000L - 864_000_000_000L);
 
     assert(unixTimeToStdTime(0) == (Date(1970, 1, 1) - Date(1, 1, 1)).total!"hnsecs");
     assert(unixTimeToStdTime(0) == (DateTime(1970, 1, 1) - DateTime(1, 1, 1)).total!"hnsecs");
+
+    foreach(dt; [DateTime(2010, 11, 1, 19, 5, 22), DateTime(1952, 7, 6, 2, 17, 9)])
+        assert(unixTimeToStdTime((dt - DateTime(1970, 1, 1)).total!"seconds") == (dt - DateTime.init).total!"hnsecs");
 }
 
 
 /++
     Converts std time (which uses midnight, January 1st, 1 A.D. UTC as its epoch
-    and hnsecs as its units) to $(D time_t) (which uses midnight, January 1st,
-    1970 UTC as its epoch and seconds as its units). If $(D time_t) is 32 bits,
-    rather than 64, and the result can't fit in a 32-bit value, then the closest
-    value that can be held in 32 bits will be used (so $(D time_t.max) if it
-    goes over and $(D time_t.min) if it goes under).
+    and hnsecs as its units) to unix time (which uses midnight, January 1st,
+    1970 UTC as its epoch and seconds as its units).
 
-    Note:
-        While Windows systems require that $(D time_t) be non-negative (in spite
-        of $(D time_t) being signed), this function still returns negative
-        numbers on Windows, since it's more flexible to allow negative time_t
-        for those who need it. If on Windows and using the
-        standard C functions or Win32 API functions which take a $(D time_t),
-        check whether the return value of
-        $(D stdTimeToUnixTime) is non-negative.
+    The C standard does not specify the representation of time_t, so it is
+    implementation defined. On POSIX systems, unix time is equivalent to
+    time_t, but that's not necessarily true on other systems (e.g. it is
+    not true for the Digital Mars C runtime). So, be careful when using unix
+    time with C functions on non-POSIX systems.
+
+    "std time"'s epoch is based on the Proleptic Gregorian Calendar per ISO
+    8601 and is what $(LREF SysTime) uses internally. However, holding the time
+    as an integer in hnescs since that epoch technically isn't actually part of
+    the standard, much as it's based on it, so the name "std time" isn't
+    particularly good, but there isn't an official name for it. C# uses "ticks"
+    for the same thing, but they aren't actually clock ticks, and the term
+    "ticks" $(I is) used for actual clock ticks for $(CXREF time, MonoTime), so
+    it didn't make sense to use the term ticks here. So, for better or worse,
+    std.datetime uses the term "std time" for this.
+
+    By default, the return type is time_t (which is normally an alias for
+    int on 32-bit systems and long on 64-bit systems), but if a different
+    size is required than either int or long can be passed as a template
+    argument to get the desired size.
+
+    If the return type is int, and the result can't fit in an int, then the
+    closest value that can be held in 32 bits will be used (so $(D int.max)
+    if it goes over and $(D int.min) if it goes under). However, no attempt
+    is made to deal with integer overflow if the return type is long.
 
     Params:
+        T = The return type (int or long). It defaults to time_t, which is
+            normally 32 bits on a 32-bit system and 64 bits on a 64-bit
+            system.
         stdTime = The std time to convert.
+
+    Returns:
+        A signed integer representing the unix time which is equivalent to
+        the given std time.
+
+    See_Also:
+        SysTime.toUnixTime
   +/
-time_t stdTimeToUnixTime(long stdTime) @safe pure nothrow
+T stdTimeToUnixTime(T = time_t)(long stdTime) @safe pure nothrow
+    if(is(T == int) || is(T == long))
 {
     immutable unixTime = convert!("hnsecs", "seconds")(stdTime - 621_355_968_000_000_000L);
 
-    static if(time_t.sizeof >= long.sizeof)
-        return cast(time_t)unixTime;
-    else
+    static assert(is(time_t == int) || is(time_t == long),
+                  "Currently, std.datetime only supports systems where time_t is int or long");
+
+    static if(is(T == long))
+        return unixTime;
+    else static if(is(T == int))
     {
-        if(unixTime > 0)
-        {
-            if(unixTime > time_t.max)
-                return time_t.max;
-            return cast(time_t)unixTime;
-        }
-
-        if(unixTime < time_t.min)
-            return time_t.min;
-
-        return cast(time_t)unixTime;
+        if(unixTime > int.max)
+            return int.max;
+        return unixTime < int.min ? int.min : cast(int)unixTime;
     }
+    else static assert(0, "Bug in template constraint. Only int and long allowed.");
+}
+
+///
+unittest
+{
+    // Midnight, January 1st, 1970 UTC
+    assert(stdTimeToUnixTime(621_355_968_000_000_000L) == 0);
+
+    // 2038-01-19 03:14:07 UTC
+    assert(stdTimeToUnixTime(642_830_804_470_000_000L) == int.max);
 }
 
 unittest
 {
-    assert(stdTimeToUnixTime(621_355_968_000_000_000L) == 0);  //Midnight, January 1st, 1970
-    assert(stdTimeToUnixTime(621_355_968_000_000_000L + 864_000_000_000L) == 86_400);  //Midnight, January 2nd, 1970
-    assert(stdTimeToUnixTime(621_355_968_000_000_000L - 864_000_000_000L) == -86_400);  //Midnight, December 31st, 1969
+    enum unixEpochAsStdTime = (Date(1970, 1, 1) - Date.init).total!"hnsecs";
+
+    assert(stdTimeToUnixTime(unixEpochAsStdTime) == 0);  //Midnight, January 1st, 1970
+    assert(stdTimeToUnixTime(unixEpochAsStdTime + 864_000_000_000L) == 86_400);  //Midnight, January 2nd, 1970
+    assert(stdTimeToUnixTime(unixEpochAsStdTime - 864_000_000_000L) == -86_400);  //Midnight, December 31st, 1969
 
     assert(stdTimeToUnixTime((Date(1970, 1, 1) - Date(1, 1, 1)).total!"hnsecs") == 0);
     assert(stdTimeToUnixTime((DateTime(1970, 1, 1) - DateTime(1, 1, 1)).total!"hnsecs") == 0);
+
+    foreach(dt; [DateTime(2010, 11, 1, 19, 5, 22), DateTime(1952, 7, 6, 2, 17, 9)])
+        assert(stdTimeToUnixTime((dt - DateTime.init).total!"hnsecs") == (dt - DateTime(1970, 1, 1)).total!"seconds");
+
+    enum max = convert!("seconds", "hnsecs")(int.max);
+    enum min = convert!("seconds", "hnsecs")(int.min);
+    enum one = convert!("seconds", "hnsecs")(1);
+
+    assert(stdTimeToUnixTime!long(unixEpochAsStdTime + max) == int.max);
+    assert(stdTimeToUnixTime!int(unixEpochAsStdTime + max) == int.max);
+
+    assert(stdTimeToUnixTime!long(unixEpochAsStdTime + max + one) == int.max + 1L);
+    assert(stdTimeToUnixTime!int(unixEpochAsStdTime + max + one) == int.max);
+    assert(stdTimeToUnixTime!long(unixEpochAsStdTime + max + 9_999_999) == int.max);
+    assert(stdTimeToUnixTime!int(unixEpochAsStdTime + max + 9_999_999) == int.max);
+
+    assert(stdTimeToUnixTime!long(unixEpochAsStdTime + min) == int.min);
+    assert(stdTimeToUnixTime!int(unixEpochAsStdTime + min) == int.min);
+
+    assert(stdTimeToUnixTime!long(unixEpochAsStdTime + min - one) == int.min - 1L);
+    assert(stdTimeToUnixTime!int(unixEpochAsStdTime + min - one) == int.min);
+    assert(stdTimeToUnixTime!long(unixEpochAsStdTime + min - 9_999_999) == int.min);
+    assert(stdTimeToUnixTime!int(unixEpochAsStdTime + min - 9_999_999) == int.min);
 }
 
 

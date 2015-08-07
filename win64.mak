@@ -492,6 +492,9 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 
 html : $(DOCS)
 
+changelog.html: changelog.dd
+	$(DMD) -Dfchangelog.html changelog.dd
+
 ################### Win32 COFF support #########################
 
 # default to 32-bit compiler relative to the location of the 64-bit compiler,

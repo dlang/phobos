@@ -531,6 +531,9 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 
 html : $(DOCS)
 
+changelog.html: changelog.dd
+	$(DMD) -Dfchangelog.html changelog.dd
+
 ######################################################
 
 $(ZLIB): $(SRC_ZLIB)

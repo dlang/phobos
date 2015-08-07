@@ -1904,20 +1904,36 @@ unittest
 /****************************************************
 Remove directory $(D pathname).
 
+Params:
+    pathname = Range or string specifying the directory name
+
 Throws: $(D FileException) on error.
  */
-void rmdir(in char[] pathname)
+void rmdir(R)(R pathname)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
+    // Place outside of @trusted block
+    auto pathz = pathname.tempCString!FSChar();
+
     version(Windows)
     {
-        cenforce(RemoveDirectoryW(pathname.tempCStringW()),
-                pathname);
+        static auto trustedRmdir(const(FSChar)* pathz) @trusted
+        {
+            return RemoveDirectoryW(pathz);
+        }
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.unistd.rmdir(pathname.tempCString()) == 0,
-                pathname);
+        static auto trustedRmdir(const(FSChar)* pathz) @trusted
+        {
+            return core.sys.posix.unistd.rmdir(pathz) == 0;
+        }
     }
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        alias pathStr = pathname;
+    else
+        string pathStr = null;
+    cenforce(trustedRmdir(pathz), pathStr, pathz);
 }
 
 /++
@@ -3297,7 +3313,7 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
  writeln(e.name, "\t", e.size);
 }
 // Iterate over all *.d files in current directory and all its subdirectories
-auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
+auto dFiles = dirEntries(".", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
 foreach(d; dFiles)
     writeln(d.name);
 // Hook it up with std.parallelism to compile them all in parallel:
