@@ -7702,14 +7702,15 @@ unittest
 
     alias R = int[];
     enum pred = "a < b";
+    alias fun = binaryFun!pred;
 
     alias SR = SortedRange!(R, pred);
     static assert(isSortedRange!(SR, pred));
-    static assert(isSortedRange!(SR, binaryFun!pred));
+    static assert(isSortedRange!(SR, fun));
 
     alias SR2 = SortedRange!(R, binaryFun!pred);
     static assert(isSortedRange!(SR2, pred));
-    static assert(isSortedRange!(SR2, binaryFun!pred));
+    static assert(isSortedRange!(SR2, fun));
 }
 
 /**
