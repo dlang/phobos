@@ -973,8 +973,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
        swaps using assignment.
        Stable sorting uses TimSort, which needs to copy elements into a buffer,
        requiring assignable elements. +/
-{
-    import std.range.primitives: isSortedRange;
+    {
     static if (isSortedRange!(Range, less))
     {
         return r;               // already sorted, so just return $(D r) as is
