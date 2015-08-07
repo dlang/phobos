@@ -954,7 +954,7 @@ See_Also:
 */
 SortedRange!(Range, less)
 sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
-        Range)(Range r)
+     Range)(Range r)
     if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
                                           hasAssignableElements!Range)) ||
          (ss != SwapStrategy.unstable && hasAssignableElements!Range)) &&
@@ -970,7 +970,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     import std.range.primitives: isSortedRange;
     static if (isSortedRange!(Range, less))
     {
-        return r;
+        return r;               // already sorted, so just return $(D r) as is
     }
     else
     {
