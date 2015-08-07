@@ -7656,64 +7656,6 @@ unittest
 }
 
 /**
-   Returns true if $(D T) is an instance of the template $(D T) with template
-   parameters $(D Ps).
-*/
-template isSortedRange(T, alias pred = "a < b")
-{
-    import std.traits : TemplateArgsOf;
-
-    static if (TemplateArgsOf!T.length == 2)
-    {
-        import std.functional : binaryFun;
-
-        alias predArg = TemplateArgsOf!T[1];
-        static if (isSomeString!(typeof(pred)))
-        {
-            alias predFun = binaryFun!pred;
-        }
-        else
-        {
-            alias predFun = pred;
-        }
-
-        static if (isSomeString!(typeof(predArg)))
-        {
-            alias predArgFun = binaryFun!predArg;
-        }
-        else
-        {
-            alias predArgFun = predArg;
-        }
-
-        enum isSortedRange = (is(T == SortedRange!Args, Args...) &&
-                              is(typeof(predFun) == typeof(predArgFun)));
-    }
-    else
-    {
-        enum isSortedRange = false;
-    }
-}
-
-///
-unittest
-{
-    import std.functional : binaryFun;
-
-    alias R = int[];
-    enum pred = "a < b";
-    alias fun = binaryFun!pred;
-
-    alias SR = SortedRange!(R, pred);
-    static assert(isSortedRange!(SR, pred));
-    static assert(isSortedRange!(SR, fun));
-
-    alias SR2 = SortedRange!(R, binaryFun!pred);
-    static assert(isSortedRange!(SR2, pred));
-    static assert(isSortedRange!(SR2, fun));
-}
-
-/**
 $(D SortedRange) could accept ranges weaker than random-access, but it
 is unable to provide interesting functionality for them. Therefore,
 $(D SortedRange) is currently restricted to random-access ranges.

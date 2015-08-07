@@ -31,6 +31,10 @@ $(BOOKTABLE ,
         bidirectional _range that also supports the array subscripting
         operation via the primitive $(D opIndex).
     ))
+    $(TR $(TD $(D $(LREF isSortedRange)))
+        $(TD Tests if something is a $(I sorted _range) sorted on a specific
+        predicate function $(D pred).
+    ))
 )
 
 It also provides number of templates that test for various _range capabilities:
@@ -991,6 +995,68 @@ unittest
     static assert( isRandomAccessRange!(E));
     static assert( isRandomAccessRange!(int[]));
     static assert( isRandomAccessRange!(inout(int)[]));
+}
+
+/**
+   Returns true if $(D T) is a Range Sorted on predicate $(D pred).
+
+   Currently checks if $(D T) is an instance of $(D SortedRange).
+*/
+template isSortedRange(T, alias pred = "a < b")
+{
+    import std.traits : TemplateArgsOf;
+
+    static if (TemplateArgsOf!T.length == 2)
+    {
+        import std.functional : binaryFun;
+
+        alias predArg = TemplateArgsOf!T[1];
+        static if (isSomeString!(typeof(pred)))
+        {
+            alias predFun = binaryFun!pred;
+        }
+        else
+        {
+            alias predFun = pred;
+        }
+
+        static if (isSomeString!(typeof(predArg)))
+        {
+            alias predArgFun = binaryFun!predArg;
+        }
+        else
+        {
+            alias predArgFun = predArg;
+        }
+
+        import std.range: SortedRange;
+        enum isSortedRange = (is(T == SortedRange!Args, Args...) &&
+                              is(typeof(predFun) == typeof(predArgFun)));
+    }
+    else
+    {
+        enum isSortedRange = false;
+    }
+}
+
+///
+unittest
+{
+    import std.functional : binaryFun;
+
+    alias R = int[];
+    enum pred = "a < b";
+    alias fun = binaryFun!pred;
+
+    import std.range: SortedRange;
+
+    alias SR = SortedRange!(R, pred);
+    static assert(isSortedRange!(SR, pred));
+    static assert(isSortedRange!(SR, fun));
+
+    alias SR2 = SortedRange!(R, binaryFun!pred);
+    static assert(isSortedRange!(SR2, pred));
+    static assert(isSortedRange!(SR2, fun));
 }
 
 @safe unittest
