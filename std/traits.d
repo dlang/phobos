@@ -5544,7 +5544,7 @@ unittest
 }
 
 /**
- * Returns true if T is an instance of the template S.
+ Returns true if $(D T) is an instance of the template $(D T).
  */
 enum bool isInstanceOf(alias S, T) = is(T == S!Args, Args...);
 
