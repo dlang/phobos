@@ -1005,8 +1005,10 @@ unittest
 template isSortedRange(T, alias pred = "a < b")
 {
     import std.traits : TemplateArgsOf;
+    import std.range: SortedRange;
 
-    static if (TemplateArgsOf!T.length == 2)
+    static if (is(T == SortedRange!Args, Args...) &&
+               TemplateArgsOf!T.length == 2)
     {
         import std.functional : binaryFun;
 
@@ -1029,9 +1031,7 @@ template isSortedRange(T, alias pred = "a < b")
             alias predArgFun = predArg;
         }
 
-        import std.range: SortedRange;
-        enum isSortedRange = (is(T == SortedRange!Args, Args...) &&
-                              is(typeof(predFun) == typeof(predArgFun)));
+        enum isSortedRange = is(typeof(predFun) == typeof(predArgFun));
     }
     else
     {
@@ -1057,6 +1057,10 @@ unittest
     alias SR2 = SortedRange!(R, binaryFun!pred);
     static assert(isSortedRange!(SR2, pred));
     static assert(isSortedRange!(SR2, fun));
+
+    alias IR = int[];
+    static assert(!isSortedRange!(IR, pred));
+    static assert(!isSortedRange!(IR, fun));
 }
 
 @safe unittest
