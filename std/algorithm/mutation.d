@@ -1238,8 +1238,8 @@ tgt) in lockstep in increasing order, calls $(D move(a, b)).
 
 Preconditions:
 $(D walkLength(src) <= walkLength(tgt)).
-An exception will be thrown if this condition does not hold, i.e., there is not
-enough room in $(D tgt) to accommodate all of $(D src).
+This precondition will be asserted. If you cannot ensure there is enough room in
+`tgt` to accommodate all of `src` use $(LREF moveSome) instead.
 
 Params:
     src = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
@@ -1258,13 +1258,14 @@ if (isInputRange!Range1 && isInputRange!Range2
 }
 
 ///
-pure @safe unittest
+pure nothrow @safe @nogc unittest
 {
-    int[] a = [ 1, 2, 3 ];
-    int[] b = new int[5];
-    assert(moveAll(a, b) is b[3 .. $]);
-    assert(a == b[0 .. 3]);
-    assert(a == [ 1, 2, 3 ]);
+    int[3] a = [ 1, 2, 3 ];
+    int[5] b;
+    assert(moveAll(a[], b[]) is b[3 .. $]);
+    assert(a[] == b[0 .. 3]);
+    int[3] cmp = [ 1, 2, 3 ];
+    assert(a[] == cmp[]);
 }
 
 /**
@@ -1280,23 +1281,23 @@ if (isInputRange!Range1 && isInputRange!Range2
 }
 
 ///
-pure unittest
+pure nothrow @nogc unittest
 {
     static struct Foo
     {
-        ~this() pure { if (_ptr) ++*_ptr; }
+        ~this() pure nothrow @nogc { if (_ptr) ++*_ptr; }
         int* _ptr;
     }
     int[3] refs = [0, 1, 2];
-    Foo[] src = [Foo(&refs[0]), Foo(&refs[1]), Foo(&refs[2])];
+    Foo[3] src = [Foo(&refs[0]), Foo(&refs[1]), Foo(&refs[2])];
     Foo[5] dst = void;
 
-    auto tail = moveEmplaceAll(src, dst[]); // move 3 value from src over dst
+    auto tail = moveEmplaceAll(src[], dst[]); // move 3 value from src over dst
     assert(tail.length == 2); // returns remaining uninitialized values
     initializeAll(tail);
 
     import std.algorithm.searching : all;
-    assert(src.all!(e => e._ptr is null));
+    assert(src[].all!(e => e._ptr is null));
     assert(dst[0 .. 3].all!(e => e._ptr !is null));
 }
 
@@ -1325,7 +1326,7 @@ private Range2 moveAllImpl(alias moveOp, Range1, Range2)(
          && hasSlicing!Range2 && isRandomAccessRange!Range2)
     {
         auto toMove = src.length;
-        enforce(toMove <= tgt.length);  // shouldn't this be an assert?
+        assert(toMove <= tgt.length);
         foreach (idx; 0 .. toMove)
             moveOp(src[idx], tgt[idx]);
         return tgt[toMove .. tgt.length];
@@ -1334,7 +1335,7 @@ private Range2 moveAllImpl(alias moveOp, Range1, Range2)(
     {
         for (; !src.empty; src.popFront(), tgt.popFront())
         {
-            enforce(!tgt.empty);  //ditto?
+            assert(!tgt.empty);
             moveOp(src.front, tgt.front);
         }
         return tgt;
