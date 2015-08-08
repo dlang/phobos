@@ -2777,23 +2777,30 @@ smallest element and with the same ending as $(D range). The function
 can actually be used for finding the maximum or any other ordering
 predicate (that's why $(D maxPos) is not provided).
  */
-Range minPos(alias pred = "a < b", Range)(Range range)
+auto minPos(alias pred = "a < b", Range)(Range range)
     if (isForwardRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
     if (range.empty) return range;
-    auto result = range.save;
-
-    for (range.popFront(); !range.empty; range.popFront())
+    static if (isSortedRange!(Range, pred))
     {
-        //Note: Unlike minCount, we do not care to find equivalence, so a single pred call is enough
-        if (binaryFun!pred(range.front, result.front))
-        {
-            // change the min
-            result = range.save;
-        }
+        return range;
     }
-    return result;
+    else
+    {
+        auto result = range.save;
+
+        for (range.popFront(); !range.empty; range.popFront())
+        {
+            //Note: Unlike minCount, we do not care to find equivalence, so a single pred call is enough
+            if (binaryFun!pred(range.front, result.front))
+            {
+                // change the min
+                result = range.save;
+            }
+        }
+        return result;
+    }
 }
 
 ///
@@ -2804,6 +2811,11 @@ Range minPos(alias pred = "a < b", Range)(Range range)
     assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
     // Maximum is 4 and first occurs in position 2
     assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
+
+    // Test SortedRange as input
+    import std.algorithm.sorting : sort;
+    import std.algorithm : equal;
+    assert(equal(minPos(a.sort()), [ 1, 1, 1, 2, 2, 2, 3, 4, 4 ]));
 }
 
 @safe unittest
@@ -3494,4 +3506,3 @@ unittest // Issue 13124
     auto s = "hello how\nare you";
     s.until!(c => c.among!('\n', '\r'));
 }
-
