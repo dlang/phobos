@@ -2864,6 +2864,76 @@ unittest
     assert(minPos!("a[0] < b[0]")(b) == [ [2, 4], [4], [4] ]);
 }
 
+import std.algorithm.comparison : min, max;
+
+/** Returns: Minimum Element in $(D range) or $(D unit) if $(D range) is empty.
+*/
+auto minElement(alias F = min, R)(R range,
+                                  ElementType!R unit = ElementType!R.max)
+    if (isInputRange!R)
+{
+    import std.range.primitives : isSortedRange;
+    static if (isSortedRange!(R, "a < b"))
+    {
+        import std.range.primitives : front;
+        return range.empty ? unit : range.front;
+    }
+    else static if (isSortedRange!(R, "a > b") &&
+                    isBidirectionalRange!R)
+    {
+        import std.range.primitives : back;
+        return range.empty ? unit : range.back;
+    }
+    else
+    {
+        import std.algorithm.iteration : reduce;
+        return reduce!F(unit, range);
+    }
+}
+
+@safe pure nothrow unittest
+{
+    import std.algorithm.sorting : sort, assumeSorted;
+    auto x = [2, 4, 1, 3];
+    assert(x.minElement == 1);
+    assert(x.sort!"a < b".minElement == 1);
+    assert(x.sort!"a > b".minElement == 1);
+}
+
+/** Returns: Maximum Element in $(D range) or $(D unit) if $(D range) is empty.
+ */
+auto maxElement(alias F = max, R)(R range,
+                                  ElementType!R unit = ElementType!R.min)
+    if (isInputRange!R)
+{
+    import std.range.primitives : isSortedRange;
+    static if (isSortedRange!(R, "a > b"))
+    {
+        import std.range.primitives : front;
+        return range.empty ? unit : range.front;
+    }
+    else static if (isSortedRange!(R, "a < b") &&
+                    isBidirectionalRange!R)
+    {
+        import std.range.primitives : back;
+        return range.empty ? unit : range.back;
+    }
+    else
+    {
+        import std.algorithm.iteration : reduce;
+        return reduce!F(unit, range);
+    }
+}
+
+@safe pure nothrow unittest
+{
+    import std.algorithm.sorting : sort, assumeSorted;
+    auto x = [2, 4, 1, 3];
+    assert(x.maxElement == 4);
+    assert(x.sort!"a < b".maxElement == 4);
+    assert(x.sort!"a > b".maxElement == 4);
+}
+
 /**
 Skip over the initial portion of the first given range that matches the second
 range, or do nothing if there is no match.
