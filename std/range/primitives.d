@@ -1005,7 +1005,7 @@ unittest
 template isSortedRange(T, alias pred = "a < b")
 {
     import std.traits : TemplateArgsOf;
-    import std.range: SortedRange;
+    import std.range : SortedRange;
 
     static if (is(T == SortedRange!Args, Args...) &&
                TemplateArgsOf!T.length == 2)
@@ -1013,25 +1013,39 @@ template isSortedRange(T, alias pred = "a < b")
         import std.functional : binaryFun;
 
         alias predArg = TemplateArgsOf!T[1];
-        static if (isSomeString!(typeof(pred)))
+
+        static if (isSomeString!(typeof(pred)) &&
+                   isSomeString!(typeof(predArg)))
         {
-            alias predFun = binaryFun!pred;
+            /*
+              TODO Remove this when we find a way to
+              - distinguish binaryFun!"a < b" from binaryFun!"a > b"
+              - equate binaryFun!"a < b" from binaryFun!"a<b"
+             */
+            enum isSortedRange = pred == predArg;
         }
         else
         {
-            alias predFun = pred;
-        }
+            static if (isSomeString!(typeof(pred)))
+            {
+                alias predFun = binaryFun!pred;
+            }
+            else
+            {
+                alias predFun = pred;
+            }
 
-        static if (isSomeString!(typeof(predArg)))
-        {
-            alias predArgFun = binaryFun!predArg;
-        }
-        else
-        {
-            alias predArgFun = predArg;
-        }
+            static if (isSomeString!(typeof(predArg)))
+            {
+                alias predArgFun = binaryFun!predArg;
+            }
+            else
+            {
+                alias predArgFun = predArg;
+            }
 
-        enum isSortedRange = is(typeof(predFun) == typeof(predArgFun));
+            enum isSortedRange = is(typeof(predFun) == typeof(predArgFun));
+        }
     }
     else
     {
@@ -1045,10 +1059,14 @@ unittest
     import std.functional : binaryFun;
 
     alias R = int[];
+
     enum pred = "a < b";
     alias fun = binaryFun!pred;
 
-    import std.range: SortedRange;
+    enum rpred = "a > b";
+    alias rfun = binaryFun!pred;
+
+    import std.range : SortedRange;
 
     alias SR = SortedRange!(R, pred);
     static assert(isSortedRange!(SR, pred));
@@ -1057,6 +1075,10 @@ unittest
     alias SR2 = SortedRange!(R, binaryFun!pred);
     static assert(isSortedRange!(SR2, pred));
     static assert(isSortedRange!(SR2, fun));
+
+    alias SR_ = SortedRange!(R, pred);
+    static assert(!isSortedRange!(SR_, rpred));
+    // static assert(!isSortedRange!(SR_, rfun));
 
     alias IR = int[];
     static assert(!isSortedRange!(IR, pred));
