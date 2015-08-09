@@ -6,11 +6,55 @@ $(COMMENT Pending changelog for 2.069. This will get copied to dlang.org and
 
 $(BUGSTITLE Library Changes,
 
+$(LI $(RELATIVE_LINK2 more-rangified-functions, More phobos functions were rangified.))
 $(LI $(RELATIVE_LINK2 std-algorithm-moveEmplace, `moveEmplace` was added))
 
 )
 
 $(BUGSTITLE Library Changes,
+
+$(LI $(LNAME2 more-rangified-functions, More phobos functions were rangified.)
+
+    $(P Following the work released with $(RELATIVE_LINK2 rangified-functions,
+        2.068.0) more phobos functions were rangified.
+    )
+
+    $(BOOKTABLE Rangified Functions:,
+        $(TR $(TH Module) $(TH Functions)
+        )
+        $(TR $(TD $(STDMODREF stdio, std.stdio))
+            $(TD
+                <a href="phobos/std_file.html#.File.this">File.this</a>
+            )
+        )
+        $(TR $(TD $(STDMODREF file, std.file))
+            $(TD
+                $(XREF file, append)
+                $(XREF file, chdir)
+                $(XREF file, copy)
+                $(XREF file, exists)
+                $(XREF file, getAttributes)
+                $(XREF file, getLinkAttributes)
+                $(XREF file, getSize)
+                $(XREF file, getTimes)
+                $(XREF file, getTimesWin)
+                $(XREF file, isDir)
+                $(XREF file, isFile)
+                $(XREF file, isSymlink)
+                $(XREF file, mkdir)
+                $(XREF file, read)
+                $(XREF file, readText)
+                $(XREF file, remove)
+                $(XREF file, rename)
+                $(XREF file, rmdir)
+                $(XREF file, setAttributes)
+                $(XREF file, setTimes)
+                $(XREF file, timeLastModified)
+                $(XREF file, write)
+            )
+        )
+    )
+)
 
 $(LI $(LNAME2 std-algorithm-moveEmplace, A combined `moveEmplace` was added.)
 
@@ -49,3 +93,5 @@ Macros:
     STDMODREF = <a href="phobos/std_$1.html">$2</a>
     XREF = <a href="phobos/std_$1.html#$2">$2</a>
     CXREF = <a href="phobos/core_$1.html#$2">$2</a>
+
+    BOOKTABLE = <table><caption>$1</caption>$+</table>
