@@ -1907,7 +1907,6 @@ private
             {
                 alias Ops = TypeTuple!(T[1 .. $]);
                 alias ops = vals[1 .. $];
-                assert( vals[0] >= msecs(0) );
                 enum timedWait = true;
                 Duration period = vals[0];
             }
