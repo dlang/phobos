@@ -6403,10 +6403,15 @@ unittest
 
     r = format("abc"c);
     assert(r == "abc");
-    r = format("def"w);
-    assert(r == "def");
-    r = format("ghi"d);
-    assert(r == "ghi");
+
+    //format() returns the same type as inputted.
+    wstring wr;
+    wr = format("def"w);
+    assert(wr == "def"w);
+
+    dstring dr;
+    dr = format("ghi"d);
+    assert(dr == "ghi"d);
 
     void* p = cast(void*)0xDEADBEEF;
     r = format("%s", p);
