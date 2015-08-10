@@ -106,9 +106,16 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
         if (length == 0)
             return null;
 
+        // We cannot make more than size_t.max elements, so if length
+        // is larger integer than size_t, we must cast. Check at runtime
+        // whether the cast will truncate.
+        static if(length.sizeof > size_t.sizeof)
+        {
+            if(length > size_t.max) throw new Exception("Range length exceeds maximum array size");
+        }
         import std.conv : emplaceRef;
 
-        auto result = (() @trusted => uninitializedArray!(Unqual!E[])(length))();
+        auto result = (() @trusted => uninitializedArray!(Unqual!E[])(cast(size_t)length))();
 
         // Every element of the uninitialized array must be initialized
         size_t i;
@@ -180,6 +187,14 @@ unittest
     import std.range;
     static struct S{int* p;}
     auto a = array(immutable(S).init.repeat(5));
+}
+
+unittest
+{
+    // Issue 14832
+    import std.range : iota;
+    auto a = array(iota(10UL));
+    assert(a == [0UL, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 }
 
 /**
