@@ -89,6 +89,7 @@ $(BOOKTABLE ,
         $(TD
             Cyclic Redundancy Check (32-bit) implementation$(BR)
             Compute digests such as md5, sha1 and crc32$(BR)
+            Compute HMAC of arbitrary data using a user-specified hash algorithm$(BR)
             Compute MD5 hash of arbitrary data$(BR)
             Compute RIPEMD-160 hash of arbitrary data$(BR)
             Compute SHA1 and SHA2 hashes of arbitrary data

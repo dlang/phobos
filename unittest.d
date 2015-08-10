@@ -59,6 +59,7 @@ public import std.digest.digest;
 public import std.digest.crc;
 public import std.digest.sha;
 public import std.digest.md;
+public import std.digest.hmac;
 
 int main(string[] args)
 {
