@@ -27,7 +27,7 @@ import std.range.primitives;
 import std.traits;
 import std.typetuple;
 
-private S convFormat(S, Args...)(in S fmt, Args args)
+private S convFormat(S, Args...)(in S fmt, Args args) if (isSomeString!S)
 {
     import std.format : format;
     return std.format.format(fmt, args);
