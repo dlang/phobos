@@ -44,8 +44,8 @@ $(T2 findAmong,
         among $(D "qcx").)
 $(T2 findSkip,
         If $(D a = "abcde"), then $(D findSkip(a, "x")) returns $(D false) and
-        leaves $(D a) unchanged, whereas $(D findSkip(a, 'c')) advances $(D a)
-        to $(D "cde") and returns $(D true).)
+        leaves $(D a) unchanged, whereas $(D findSkip(a, "c")) advances $(D a)
+        to $(D "de") and returns $(D true).)
 $(T2 findSplit,
         $(D findSplit("abcdefg", "de")) returns the three ranges $(D "abc"),
         $(D "de"), and $(D "fg").)
