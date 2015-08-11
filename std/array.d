@@ -85,6 +85,8 @@ public import std.range.primitives : save, empty, popFront, popBack, front, back
  *      r = range (or aggregate with $(D opApply) function) whose elements are copied into the allocated array
  * Returns:
  *      allocated and initialized array
+ * Throws:
+ *      Exception if Range has a length field, and Range.length is greater than size_t.max (only on 32-bit systems)
  */
 ForeachType!Range[] array(Range)(Range r)
 if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
