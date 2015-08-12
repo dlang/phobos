@@ -3602,7 +3602,8 @@ template byUTF(C) if (isSomeChar!C)
                     if (pos == fill)
                     {
                         pos = 0;
-                        fill = cast(ushort)encode!(UseReplacementDchar.yes)(buf, _decode(r));
+                        fill = cast(ushort)encode!(UseReplacementDchar.yes)(
+                            buf, decodeFront!(UseReplacementDchar.yes)(r));
                     }
                     return buf[pos];
                 }
@@ -3645,108 +3646,4 @@ template byUTF(C) if (isSomeChar!C)
         assert(c == 'h');
     foreach (c; "h".byUTF!dchar())
         assert(c == 'h');
-}
-
-private dchar _decode(R)(ref R r)
-    if (!isAutodecodableString!R)
-{
-    alias C = Unqual!(ElementEncodingType!R);
-
-    static if (is(C == char))
-    {
-        dchar c = r.front;
-        r.popFront();
-        if (c < 0x80)
-        {
-            return c;
-        }
-        else
-        {
-            uint fst = c; // upper control bits are masked out later
-
-            /* Dchar bitmask for different numbers of UTF-8 code units.
-             */
-            alias bitMask = TypeTuple!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
-
-            foreach (i; TypeTuple!(1, 2, 3))
-            {
-                if (r.empty)
-                    break;
-
-                ubyte tmp = r.front;
-                r.popFront();
-
-                if ((tmp & 0xC0) != 0x80)
-                    break;
-
-                c = (c << 6) | (tmp & 0x3F);
-
-                if (!(fst & (0x40 >> i)))  // if no more bytes
-                {
-                    c &= bitMask[i]; // mask out control bits
-
-                    // overlong, could have been encoded with i bytes
-                    if ((c & ~bitMask[i - 1]) == 0)
-                        break;
-
-                    // check for surrogates only needed for 3 bytes
-                    static if (i == 2)
-                    {
-                        if (c >= 0xD800 && c < 0xE000)
-                            break;
-                    }
-
-                    // check for out of range only needed for 4 bytes
-                    static if (i == 3)
-                    {
-                        if (c > 0x10FFFF)
-                            break;
-                    }
-
-                    return c;
-                }
-            }
-            return replacementDchar;
-        }
-    }
-    else static if (is(C == wchar))
-    {
-        dchar c = r.front;
-        r.popFront();
-        if (c < 0xD800)
-        {
-            return c;
-        }
-        else if (c <= 0xDBFF)
-        {
-            if (r.empty)
-                return replacementDchar;
-            else
-            {
-                dchar c2 = r.front;
-                r.popFront();
-                if (c2 < 0xDC00 || c2 > 0xDFFF)
-                    return replacementDchar;
-                else
-                    return ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
-            }
-        }
-        else if (c <= 0xDFFF)
-            return replacementDchar;
-        else
-            return c;
-    }
-    else static if (is(C == dchar))
-    {
-        dchar c = r.front;
-        r.popFront();
-        return c;
-    }
-}
-
-unittest
-{
-    auto rng = "\uE000"w.byCodeUnit;
-    assert(_decode(rng) == '\uE000');
-    assert(rng.empty);
 }
