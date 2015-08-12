@@ -2243,7 +2243,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
 
     foreach(idx, T; AllowedTypes)
     {
-        if (T* ptr = variant.peek!T)
+        if (auto ptr = variant.peek!T)
         {
             enum dgIdx = HandlerOverloadMap.indices[idx];
 
@@ -2267,6 +2267,22 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
     }
 
     assert(false);
+}
+
+unittest
+{
+    // validate that visit can be called with a const type
+    struct Foo { int depth; }
+    struct Bar { int depth; }
+    alias FooBar = Algebraic!(Foo, Bar);
+
+    int depth(in FooBar fb) {
+        return fb.visit!((Foo foo) => foo.depth,
+                         (Bar bar) => bar.depth);
+    }
+
+    FooBar fb = Foo(3);
+    assert(depth(fb) == 3);
 }
 
 unittest
