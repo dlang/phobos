@@ -3662,6 +3662,13 @@ private dchar _decode(R)(ref R r)
     }
 }
 
+unittest
+{
+    auto rng = "\uE000"w.byCodeUnit;
+    assert(_decode(rng) == '\uE000');
+    assert(rng.empty);
+}
+
 private uint _encode(C, size_t n)(ref C[n] buf, dchar c)
     if (buf.sizeof == 4)
 {
