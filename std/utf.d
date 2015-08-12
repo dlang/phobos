@@ -1041,6 +1041,9 @@ unittest
 
 /* =================== Decode ======================= */
 
+/// Whether or not to replace invalid UTF with replacementDchar
+alias UseReplacementDchar = Flag!"useReplacementDchar";
+
 /++
     Decodes and returns the code point starting at $(D str[index]). $(D index)
     is advanced to one past the decoded code point. If the code point is not
@@ -1063,7 +1066,7 @@ unittest
         $(LREF UTFException) if $(D str[index]) is not the start of a valid UTF
         sequence and useReplacementDchar is UseReplacementDchar.no
   +/
-dchar decode(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
+dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
     if (!isSomeString!S &&
         isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
 in
@@ -1082,7 +1085,7 @@ body
         return decodeImpl!(true, useReplacementDchar)(str, index);
 }
 
-dchar decode(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index) @trusted pure
+dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index) @trusted pure
     if (isSomeString!S)
 in
 {
@@ -1123,7 +1126,7 @@ body
         type of range being used and how many code units had to be popped off
         before the code point was determined to be invalid.
   +/
-dchar decodeFront(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(ref S str, out size_t numCodeUnits)
+dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(ref S str, out size_t numCodeUnits)
     if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
 in
 {
@@ -1159,7 +1162,7 @@ body
     }
 }
 
-dchar decodeFront(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(ref S str, out size_t numCodeUnits) @trusted pure
+dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(ref S str, out size_t numCodeUnits) @trusted pure
     if (isSomeString!S)
 in
 {
@@ -1187,7 +1190,7 @@ body
 }
 
 /++ Ditto +/
-dchar decodeFront(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(ref S str)
+dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(ref S str)
     if (isInputRange!S && isSomeChar!(ElementType!S))
 {
     size_t numCodeUnits;
@@ -1223,7 +1226,7 @@ private template codeUnitLimit(S)
  * Returns:
  *      decoded character
  */
-private dchar decodeImpl(bool canIndex, Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
     if (is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
     /* The following encodings are valid, except for the 5 and 6 byte
@@ -1452,7 +1455,7 @@ unittest
     }
 }
 
-private dchar decodeImpl(bool canIndex, Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
     if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
     static if (is(S : const wchar[]))
@@ -1570,7 +1573,7 @@ unittest
     }
 }
 
-private dchar decodeImpl(bool canIndex, Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
     if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
     static if (is(S : const dchar[]))
