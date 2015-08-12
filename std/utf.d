@@ -3235,174 +3235,19 @@ pure nothrow @nogc unittest
 
 /****************************
  * Iterate an input range of characters by char, wchar, or dchar.
+ * These aliases simply forward to $(LREF byUTF) with the
+ * corresponding C argument.
  *
- * UTF sequences that cannot be converted to UTF-8 are replaced by U+FFFD
- * per "5.22 Best Practice for U+FFFD Substitution" of the Unicode Standard 6.2.
- * Hence, byChar, byWchar, and byDchar are not symmetric.
- * This algorithm is lazy, and does not allocate memory.
- * Purity, nothrow, and safety are inferred from the r parameter.
  * Params:
  *      r = input range of characters, or array of characters
- * Returns:
- *      input range
  */
-
-auto byChar(R)(R r) if (isAutodecodableString!R)
-{
-    /* This and the following two serve as adapters to convert arrays to ranges,
-     * so the following three
-     * won't get auto-decoded by std.array.front().
-     */
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    static if (is(tchar == char))
-    {
-        return r.byCodeUnit();
-    }
-    else
-    {
-        return r.byCodeUnit().byChar();
-    }
-}
+alias byChar = byUTF!char;
 
 /// Ditto
-auto byWchar(R)(R r) if (isAutodecodableString!R)
-{
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    static if (is(tchar == wchar))
-    {
-        return r.byCodeUnit();
-    }
-    else
-    {
-        return r.byCodeUnit().byWchar();
-    }
-}
+alias byWchar = byUTF!wchar;
 
 /// Ditto
-auto byDchar(R)(R r) if (isAutodecodableString!R)
-{
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    return r.byCodeUnit().byDchar();
-}
-
-
-/// Ditto
-auto ref byChar(R)(R r)
-    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
-{
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    /* Defeat the auto-decoding of std.array.put() by handling arrays of chars
-     * explicitly.
-     */
-    static if (is(tchar == char))
-    {
-        return r;
-    }
-    else
-    {
-        static if (is(tchar == wchar))
-        {
-            // Convert wchar => dchar => char
-            auto r2 = r.byDchar();
-        }
-        else static if (is(tchar == dchar))
-        {
-            alias r2 = r;
-        }
-        else
-            static assert(0);
-
-        static struct byCharImpl
-        {
-            this(ref typeof(r2) r)
-            {
-                this.r = r;
-            }
-
-            @property bool empty()
-            {
-                return !nLeft && r.empty;
-            }
-
-            @property auto front()
-            {
-                static assert(replacementDchar > 0x7FF && replacementDchar <= 0xFFFF);
-                if (!nLeft)
-                {
-                    dchar c = r.front;
-
-                    if (c <= 0x7F)
-                    {
-                        buf[0] = cast(char)c;
-                        nLeft = 1;
-                    }
-                    else if (c <= 0x7FF)
-                    {
-                        buf[1] = cast(char)(0xC0 | (c >> 6));
-                        buf[0] = cast(char)(0x80 | (c & 0x3F));
-                        nLeft = 2;
-                    }
-                    else if (c <= 0xFFFF)
-                    {
-                        if (0xD800 <= c && c <= 0xDFFF)
-                            c = replacementDchar;
-
-                        buf[2] = cast(char)(0xE0 | (c >> 12));
-                        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-                        buf[0] = cast(char)(0x80 | (c & 0x3F));
-                        nLeft = 3;
-                    }
-                    else if (c <= 0x10FFFF)
-                    {
-                        buf[3] = cast(char)(0xF0 | (c >> 18));
-                        buf[2] = cast(char)(0x80 | ((c >> 12) & 0x3F));
-                        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-                        buf[0] = cast(char)(0x80 | (c & 0x3F));
-                        nLeft = 4;
-                    }
-                    else
-                    {
-                        buf[2] = cast(char)(0xE0 | (replacementDchar >> 12));
-                        buf[1] = cast(char)(0x80 | ((replacementDchar >> 6) & 0x3F));
-                        buf[0] = cast(char)(0x80 | (replacementDchar & 0x3F));
-                        nLeft = 3;
-                    }
-                }
-                return buf[nLeft - 1];
-            }
-
-            void popFront()
-            {
-                if (!nLeft)
-                    front;
-                --nLeft;
-                if (!nLeft)
-                    r.popFront();
-            }
-
-            static if (isForwardRange!(typeof(r2)))
-            {
-                @property auto save()
-                {
-                    auto ret = this;
-                    ret.r = r.save;
-                    return ret;
-                }
-            }
-
-          private:
-            typeof(r2) r;
-            char[4] buf = void;
-            uint nLeft;
-        }
-
-        return byCharImpl(r2);
-    }
-}
+alias byDchar = byUTF!dchar;
 
 pure nothrow @nogc unittest
 {
@@ -3451,101 +3296,6 @@ pure nothrow @nogc unittest
   }
 }
 
-
-/// Ditto
-auto ref byWchar(R)(R r)
-    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
-{
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    static if (is(tchar == wchar))
-    {
-        return r;
-    }
-    else
-    {
-        static if (is(tchar == char))
-        {
-            auto r2 = r.byDchar();
-        }
-        else static if (is(tchar == dchar))
-        {
-            alias r2 = r;
-        }
-        else
-            static assert(0);
-
-        static struct byWcharImpl
-        {
-            this(ref typeof(r2) r)
-            {
-                this.r = r;
-            }
-
-            @property bool empty()
-            {
-                return !nLeft && r.empty;
-            }
-
-            @property auto front()
-            {
-                static assert(replacementDchar > 0x7FF && replacementDchar <= 0xFFFF);
-                if (!nLeft)
-                {
-                    dchar c = r.front;
-
-                    if (c <= 0xFFFF)
-                    {
-                        if (0xD800 <= c && c <= 0xDFFF)
-                            c = replacementDchar;
-
-                        buf[0] = cast(wchar)c;
-                        nLeft = 1;
-                    }
-                    else if (c <= 0x10FFFF)
-                    {
-                        buf[1] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
-                        buf[0] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
-                        nLeft = 2;
-                    }
-                    else
-                    {
-                        buf[0] = replacementDchar;
-                        nLeft = 1;
-                    }
-                }
-                return buf[nLeft - 1];
-            }
-
-            void popFront()
-            {
-                if (!nLeft)
-                    front;
-                --nLeft;
-                if (!nLeft)
-                    r.popFront();
-            }
-
-            static if (isForwardRange!(typeof(r2)))
-            {
-                @property auto save()
-                {
-                    auto ret = this;
-                    ret.r = r.save;
-                    return ret;
-                }
-            }
-
-          private:
-            typeof(r2) r;
-            wchar[2] buf = void;
-            uint nLeft;
-        }
-
-        return byWcharImpl(r2);
-    }
-}
-
 pure nothrow @nogc unittest
 {
   {
@@ -3588,192 +3338,6 @@ pure nothrow @nogc unittest
   }
 }
 
-
-/// Ditto
-auto ref byDchar(R)(R r)
-    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
-{
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    static if (is(tchar == char))
-    {
-        static struct byDcharImpl
-        {
-            this(ref R r)
-            {
-                this.r = r;
-            }
-
-            @property bool empty()
-            {
-                return !haveData && r.empty;
-            }
-
-            @property dchar front()
-            {
-                if (haveData)
-                    return frontChar;
-                dchar c = r.front;
-                if (c < 0x80)
-                {
-                }
-                else
-                {
-                    uint fst = c; // upper control bits are masked out later
-
-                    /* Dchar bitmask for different numbers of UTF-8 code units.
-                     */
-                    alias bitMask = TypeTuple!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
-
-                    foreach (i; TypeTuple!(1, 2, 3))
-                    {
-
-                        r.popFront();
-                        if (r.empty)
-                            break;
-
-                        ubyte tmp = r.front;
-
-                        if ((tmp & 0xC0) != 0x80)
-                            break;
-
-                        c = (c << 6) | (tmp & 0x3F);
-
-                        if (!(fst & (0x40 >> i)))  // if no more bytes
-                        {
-                            c &= bitMask[i]; // mask out control bits
-
-                            // overlong, could have been encoded with i bytes
-                            if ((c & ~bitMask[i - 1]) == 0)
-                                break;
-
-                            // check for surrogates only needed for 3 bytes
-                            static if (i == 2)
-                            {
-                                if (c >= 0xD800 && c < 0xE000)
-                                    break;
-                            }
-
-                            // check for out of range only needed for 4 bytes
-                            static if (i == 3)
-                            {
-                                if (c > 0x10FFFF)
-                                    break;
-                            }
-
-                            frontChar = c;
-                            haveData = true;
-                            return c;
-                        }
-                    }
-                    c = replacementDchar;
-                }
-                frontChar = c;
-                haveData = true;
-                return c;
-            }
-
-            void popFront()
-            {
-                if (!haveData)
-                    front;
-                r.popFront();
-                haveData = false;
-            }
-
-            static if (isForwardRange!R)
-            {
-                @property auto save()
-                {
-                    auto ret = this;
-                    ret.r = r.save;
-                    return ret;
-                }
-            }
-
-          private:
-            R r;
-            dchar frontChar;
-            bool haveData;
-        }
-        return byDcharImpl(r);
-    }
-    else static if (is(tchar == wchar))
-    {
-        static struct byDcharImpl
-        {
-            this(ref R r)
-            {
-                this.r = r;
-            }
-
-            @property bool empty()
-            {
-                return !haveData && r.empty;
-            }
-
-            @property dchar front()
-            {
-                if (haveData)
-                    return frontChar;
-                dchar c = r.front;
-                if (c < 0xD800)
-                {
-                }
-                else if (c <= 0xDBFF)
-                {
-                    r.popFront();
-                    if (r.empty)
-                        c = replacementDchar;
-                    else
-                    {
-                        dchar c2 = r.front;
-                        if (c2 < 0xDC00 || c2 > 0xDFFF)
-                            c = replacementDchar;
-                        else
-                            c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
-                    }
-                }
-                else if (c <= 0xDFFF)
-                    c = replacementDchar;
-                frontChar = c;
-                haveData = true;
-                return c;
-            }
-
-            void popFront()
-            {
-                if (!haveData)
-                    front;
-                r.popFront();
-                haveData = false;
-            }
-
-            static if (isForwardRange!R)
-            {
-                @property auto save()
-                {
-                    auto ret = this;
-                    ret.r = r.save;
-                    return ret;
-                }
-            }
-
-          private:
-            R r;
-            dchar frontChar;
-            bool haveData;
-        }
-        return byDcharImpl(r);
-    }
-    else static if (is(tchar == dchar))
-    {
-        return r;
-    }
-    else
-        static assert(0);
-}
-
 pure nothrow @nogc unittest
 {
   {
@@ -3782,7 +3346,6 @@ pure nothrow @nogc unittest
     string a = "hello\u07FF\uD7FF\U00010000\U0010FFFF"; // 1,2,3,4 byte sequences
     foreach (c; a.byDchar())
     {
-        //writefln("[%d] '%c' x%x", i, c, c);
         s[i++] = c;
     }
     assert(s == "hello\u07FF\uD7FF\U00010000\U0010FFFF"d);
@@ -3905,26 +3468,92 @@ int impureVariable;
     }
 }
 
-/***************************************
- * Select byChar, byWchar, or byDchar based on the type C.
+/****************************
+ * Iterate an input range of characters by char type C.
+ *
+ * UTF sequences that cannot be converted to UTF-8 are replaced by U+FFFD
+ * per "5.22 Best Practice for U+FFFD Substitution" of the Unicode Standard 6.2.
+ * Hence byUTF is not symmetric.
+ * This algorithm is lazy, and does not allocate memory.
+ * Purity, nothrow, and safety are inferred from the r parameter.
  *
  * Params:
- *    C = char, wchar, or dchar
- *
+ *      C = char, wchar, or dchar
+ *      r = input range of characters, or array of characters
  * Returns:
- *    corresponding alias to $(LREF byChar), $(LREF byWchar), or $(LREF byDchar)
+ *      input range of type C
  */
-
 template byUTF(C) if (isSomeChar!C)
 {
-    static if (is(C : const(char)))
-        alias byUTF = byChar;
-    else static if (is(C : const(wchar)))
-        alias byUTF = byWchar;
-    else static if (is(C : const(dchar)))
-        alias byUTF = byDchar;
-    else
-        static assert(0);
+    static if (!is(Unqual!C == C))
+        alias byUTF = byUTF!(Unqual!C);
+    else:
+
+    auto ref byUTF(R)(R r)
+        if (isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    {
+        return byUTF(r.byCodeUnit());
+    }
+
+    auto ref byUTF(R)(R r)
+        if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    {
+        alias RC = Unqual!(ElementEncodingType!R);
+
+        static if (is(RC == C))
+        {
+            return r.byCodeUnit();
+        }
+        else
+        {
+            static struct Result
+            {
+                this(ref R r)
+                {
+                    this.r = r;
+                }
+
+                @property bool empty()
+                {
+                    return !nLeft && r.empty;
+                }
+
+                @property auto front()
+                {
+                    if (!nLeft)
+                        nLeft = _encode(buf, _decode(r));
+                    return buf[nLeft - 1];
+                }
+
+                void popFront()
+                {
+                    if (!nLeft)
+                        front;
+                    --nLeft;
+                    if (!nLeft)
+                        r.popFront();
+                }
+
+                static if (isForwardRange!R)
+                {
+                    @property auto save()
+                    {
+                        auto ret = this;
+                        ret.r = r.save;
+                        return ret;
+                    }
+                }
+
+            private:
+
+                R r;
+                C[4 / C.sizeof] buf = void;
+                uint nLeft;
+            }
+
+            return Result(r);
+        }
+    }
 }
 
 ///
@@ -3936,4 +3565,168 @@ template byUTF(C) if (isSomeChar!C)
         assert(c == 'h');
     foreach (c; "h".byUTF!dchar())
         assert(c == 'h');
+}
+
+private dchar _decode(R)(ref R r)
+    if (!isAutodecodableString!R)
+{
+    alias C = Unqual!(ElementEncodingType!R);
+
+    static if (is(C == char))
+    {
+        dchar c = r.front;
+        if (c < 0x80)
+        {
+            return c;
+        }
+        else
+        {
+            uint fst = c; // upper control bits are masked out later
+
+            /* Dchar bitmask for different numbers of UTF-8 code units.
+             */
+            alias bitMask = TypeTuple!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
+
+            foreach (i; TypeTuple!(1, 2, 3))
+            {
+                r.popFront();
+                if (r.empty)
+                    break;
+
+                ubyte tmp = r.front;
+
+                if ((tmp & 0xC0) != 0x80)
+                    break;
+
+                c = (c << 6) | (tmp & 0x3F);
+
+                if (!(fst & (0x40 >> i)))  // if no more bytes
+                {
+                    c &= bitMask[i]; // mask out control bits
+
+                    // overlong, could have been encoded with i bytes
+                    if ((c & ~bitMask[i - 1]) == 0)
+                        break;
+
+                    // check for surrogates only needed for 3 bytes
+                    static if (i == 2)
+                    {
+                        if (c >= 0xD800 && c < 0xE000)
+                            break;
+                    }
+
+                    // check for out of range only needed for 4 bytes
+                    static if (i == 3)
+                    {
+                        if (c > 0x10FFFF)
+                            break;
+                    }
+
+                    return c;
+                }
+            }
+            return replacementDchar;
+        }
+    }
+    else static if (is(C == wchar))
+    {
+        dchar c = r.front;
+        if (c < 0xD800)
+        {
+            return c;
+        }
+        else if (c <= 0xDBFF)
+        {
+            r.popFront();
+            if (r.empty)
+                return replacementDchar;
+            else
+            {
+                dchar c2 = r.front;
+                if (c2 < 0xDC00 || c2 > 0xDFFF)
+                    return replacementDchar;
+                else
+                    return ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
+            }
+        }
+        else if (c <= 0xDFFF)
+            return replacementDchar;
+        else
+            return c;
+    }
+    else static if (is(C == dchar))
+    {
+        return r.front;
+    }
+}
+
+private uint _encode(C, size_t n)(ref C[n] buf, dchar c)
+    if (buf.sizeof == 4)
+{
+    static if (is(C == char))
+    {
+        if (c <= 0x7F)
+        {
+            buf[0] = cast(char)c;
+            return 1;
+        }
+        else if (c <= 0x7FF)
+        {
+            buf[1] = cast(char)(0xC0 | (c >> 6));
+            buf[0] = cast(char)(0x80 | (c & 0x3F));
+            return 2;
+        }
+        else if (c <= 0xFFFF)
+        {
+            if (0xD800 <= c && c <= 0xDFFF)
+                c = replacementDchar;
+
+            buf[2] = cast(char)(0xE0 | (c >> 12));
+            buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+            buf[0] = cast(char)(0x80 | (c & 0x3F));
+            return 3;
+        }
+        else if (c <= 0x10FFFF)
+        {
+            buf[3] = cast(char)(0xF0 | (c >> 18));
+            buf[2] = cast(char)(0x80 | ((c >> 12) & 0x3F));
+            buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+            buf[0] = cast(char)(0x80 | (c & 0x3F));
+            return 4;
+        }
+        else
+        {
+            buf[2] = cast(char)(0xE0 | (replacementDchar >> 12));
+            buf[1] = cast(char)(0x80 | ((replacementDchar >> 6) & 0x3F));
+            buf[0] = cast(char)(0x80 | (replacementDchar & 0x3F));
+            return 3;
+        }
+    }
+    else static if (is(C == wchar))
+    {
+        if (c <= 0xFFFF)
+        {
+            if (0xD800 <= c && c <= 0xDFFF)
+                c = replacementDchar;
+
+            buf[0] = cast(wchar)c;
+            return 1;
+        }
+        else if (c <= 0x10FFFF)
+        {
+            buf[1] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+            buf[0] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
+            return 2;
+        }
+        else
+        {
+            buf[0] = replacementDchar;
+            return 1;
+        }
+    }
+    else static if (is(C == dchar))
+    {
+        buf[0] = c;
+        return 1;
+    }
 }
