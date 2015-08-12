@@ -3594,21 +3594,24 @@ template byUTF(C) if (isSomeChar!C)
 
                 @property bool empty()
                 {
-                    return !nLeft && r.empty;
+                    return pos == fill && r.empty;
                 }
 
                 @property auto front()
                 {
-                    if (!nLeft)
-                        nLeft = _encode(buf, _decode(r));
-                    return buf[nLeft - 1];
+                    if (pos == fill)
+                    {
+                        pos = 0;
+                        fill = cast(ushort)encode!(UseReplacementDchar.yes)(buf, _decode(r));
+                    }
+                    return buf[pos];
                 }
 
                 void popFront()
                 {
-                    if (!nLeft)
+                    if (pos == fill)
                         front;
-                    --nLeft;
+                    ++pos;
                 }
 
                 static if (isForwardRange!R)
@@ -3625,7 +3628,7 @@ template byUTF(C) if (isSomeChar!C)
 
                 R r;
                 C[4 / C.sizeof] buf = void;
-                uint nLeft;
+                ushort pos, fill;
             }
 
             return Result(r);
@@ -3746,75 +3749,4 @@ unittest
     auto rng = "\uE000"w.byCodeUnit;
     assert(_decode(rng) == '\uE000');
     assert(rng.empty);
-}
-
-private uint _encode(C, size_t n)(ref C[n] buf, dchar c)
-    if (buf.sizeof == 4)
-{
-    static if (is(C == char))
-    {
-        if (c <= 0x7F)
-        {
-            buf[0] = cast(char)c;
-            return 1;
-        }
-        else if (c <= 0x7FF)
-        {
-            buf[1] = cast(char)(0xC0 | (c >> 6));
-            buf[0] = cast(char)(0x80 | (c & 0x3F));
-            return 2;
-        }
-        else if (c <= 0xFFFF)
-        {
-            if (0xD800 <= c && c <= 0xDFFF)
-                c = replacementDchar;
-
-            buf[2] = cast(char)(0xE0 | (c >> 12));
-            buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-            buf[0] = cast(char)(0x80 | (c & 0x3F));
-            return 3;
-        }
-        else if (c <= 0x10FFFF)
-        {
-            buf[3] = cast(char)(0xF0 | (c >> 18));
-            buf[2] = cast(char)(0x80 | ((c >> 12) & 0x3F));
-            buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-            buf[0] = cast(char)(0x80 | (c & 0x3F));
-            return 4;
-        }
-        else
-        {
-            buf[2] = cast(char)(0xE0 | (replacementDchar >> 12));
-            buf[1] = cast(char)(0x80 | ((replacementDchar >> 6) & 0x3F));
-            buf[0] = cast(char)(0x80 | (replacementDchar & 0x3F));
-            return 3;
-        }
-    }
-    else static if (is(C == wchar))
-    {
-        if (c <= 0xFFFF)
-        {
-            if (0xD800 <= c && c <= 0xDFFF)
-                c = replacementDchar;
-
-            buf[0] = cast(wchar)c;
-            return 1;
-        }
-        else if (c <= 0x10FFFF)
-        {
-            buf[1] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
-            buf[0] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
-            return 2;
-        }
-        else
-        {
-            buf[0] = replacementDchar;
-            return 1;
-        }
-    }
-    else static if (is(C == dchar))
-    {
-        buf[0] = c;
-        return 1;
-    }
 }
