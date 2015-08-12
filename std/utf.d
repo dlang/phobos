@@ -3530,8 +3530,6 @@ template byUTF(C) if (isSomeChar!C)
                     if (!nLeft)
                         front;
                     --nLeft;
-                    if (!nLeft)
-                        r.popFront();
                 }
 
                 static if (isForwardRange!R)
@@ -3575,6 +3573,7 @@ private dchar _decode(R)(ref R r)
     static if (is(C == char))
     {
         dchar c = r.front;
+        r.popFront();
         if (c < 0x80)
         {
             return c;
@@ -3589,11 +3588,11 @@ private dchar _decode(R)(ref R r)
 
             foreach (i; TypeTuple!(1, 2, 3))
             {
-                r.popFront();
                 if (r.empty)
                     break;
 
                 ubyte tmp = r.front;
+                r.popFront();
 
                 if ((tmp & 0xC0) != 0x80)
                     break;
@@ -3631,18 +3630,19 @@ private dchar _decode(R)(ref R r)
     else static if (is(C == wchar))
     {
         dchar c = r.front;
+        r.popFront();
         if (c < 0xD800)
         {
             return c;
         }
         else if (c <= 0xDBFF)
         {
-            r.popFront();
             if (r.empty)
                 return replacementDchar;
             else
             {
                 dchar c2 = r.front;
+                r.popFront();
                 if (c2 < 0xDC00 || c2 > 0xDFFF)
                     return replacementDchar;
                 else
@@ -3656,7 +3656,9 @@ private dchar _decode(R)(ref R r)
     }
     else static if (is(C == dchar))
     {
-        return r.front;
+        dchar c = r.front;
+        r.popFront();
+        return c;
     }
 }
 
