@@ -2651,7 +2651,7 @@ unittest
         $(LI If `path` is a relative directory, return it unaltered.)
         $(LI Find a common root between `path` and `base`.
             If there is no common root, return `path` unaltered.)
-        $(LI Prepare a string with as many `../`) or `..\` as
+        $(LI Prepare a string with as many `../` or `..\` as
             necessary to reach the common root from base path.)
         $(LI Append the remaining segments of `path` to the string
             and return.)
