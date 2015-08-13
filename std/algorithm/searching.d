@@ -2867,7 +2867,7 @@ unittest
 import std.algorithm.comparison : min, max;
 
 /** Returns: Minimum Element in $(D range) or $(D unit) if $(D range) is empty.
-*/
+ */
 auto minElement(alias F = min, R)(R range,
                                   ElementType!R unit = ElementType!R.max)
     if (isInputRange!R)
