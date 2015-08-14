@@ -138,16 +138,18 @@ SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
 
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
-SRC_STD_ALGO= std\algorithm\package.d std\algorithm\comparison.d \
-	std\algorithm\iteration.d std\algorithm\mutation.d \
-	std\algorithm\searching.d std\algorithm\setops.d \
+SRC_STD_ALGO_1=std\algorithm\package.d std\algorithm\comparison.d \
+	std\algorithm\iteration.d std\algorithm\mutation.d
+SRC_STD_ALGO_2=std\algorithm\searching.d std\algorithm\setops.d \
 	std\algorithm\sorting.d std\algorithm\internal.d
+SRC_STD_ALGO=$(SRC_STD_ALGO_1) $(SRC_STD_ALGO_2)
 
 SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
 	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
-SRC_STD_5_HEAVY= $(SRC_STD_ALGO)
+SRC_STD_5a=$(SRC_STD_ALGO_1)
+SRC_STD_5b=$(SRC_STD_ALGO_2)
 
 SRC_STD_6a=std\variant.d
 SRC_STD_6b=std\syserror.d
@@ -438,7 +440,8 @@ UNITTEST_OBJS= \
 		unittest3b.obj \
 		unittest3c.obj \
 		unittest4.obj \
-		unittest5.obj \
+		unittest5a.obj \
+		unittest5b.obj \
 		unittest6a.obj \
 		unittest6b.obj \
 		unittest6c.obj \
@@ -462,7 +465,8 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3c.obj $(SRC_STD_3c)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5a.obj $(SRC_STD_5a)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_5b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6b.obj $(SRC_STD_6b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
