@@ -1015,12 +1015,12 @@ unittest
     }
 
     Tid[] tids;
-    foreach (i; 0 .. 1000)
+    foreach (i; 0 .. 100)
     {
         tids ~= spawn(&fun, thisTid, i);
     }
 
-    foreach (i; 0 .. 1000)
+    foreach (i; 0 .. 100)
     {
         assert(receiveOnly!bool);
     }
