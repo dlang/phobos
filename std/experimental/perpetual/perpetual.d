@@ -11,6 +11,8 @@ private import core.stdc.stdio;
 private import core.stdc.stdlib;
 private import core.stdc.errno;
 private import std.path;
+private import std.traits;
+private import std.range;
 private import std.string;
 import std.conv, std.exception, std.stdio;
 version (Windows) {
@@ -47,9 +49,13 @@ class Persistent(T)
  */
 	this(string path) {
 		auto owner=map(path);
-       _ref=cast(T*)(_map);
-	   if(owner)
-	   	*_ref=T.init;
+		static if(is(T == U[],U)) {
+			
+		} else {
+    	   _ref=cast(T*)(_map);
+		   if(owner)
+			*_ref=T.init;
+		}
  	}
 
 
@@ -71,7 +77,7 @@ class Persistent(T)
 		version (Windows) {
 			FlushViewOfFile(data.ptr, data.length);
 		} else version (Posix) {
-			int x=msync(_ref, T.sizeof, MS_SYNC);
+			int x=msync(_map, T.sizeof, MS_SYNC);
 			errnoEnforce(!x, _tag~": sync failed");
 		} else
 			static assert(0);
@@ -81,15 +87,17 @@ class Persistent(T)
 /**
  * Return string representation for wrapped object instead of self.
  */
-	override string toString() { return to!string(*_ref); }
+	override string toString() { return to!string(Ref); }
 	
 /**
  * Get reference to wrapped object.
  */
-	@property ref T Ref() {	return *_ref; }
-/**
- * Silently convert to reference to wrapped object.
- */
+	static if(is(T == U[],U)) {
+		@property T Ref() { return cast(T) _map[0.._size]; }
+	} else {
+		static assert(!hasIndirections!T, T.stringof~" is reference type");
+		@property ref T Ref() {	return *_ref; }
+	}
 	alias Ref this;
 
 	
@@ -108,9 +116,14 @@ class Persistent(T)
 					errnoEnforce(_fd >= 0, _tag~"("~path~")");
 			}
 
-			if(fileSize(path) < T.sizeof) {
-				fileExpand(path);
-				owner=true;
+			static if(is(T == U[],U)) {
+				_size=fileSize(path)/U.sizeof;
+//writeln("file: ", fileSize(path), ", ", U.stringof, ": ", U.sizeof, ", length: ", _size);
+			} else {
+				if(fileSize(path) < T.sizeof) {
+					fileExpand(path);
+					owner=true;
+				}
 			}
 
 			_map=mmap(null, T.sizeof, PROT_READ|PROT_WRITE, MAP_SHARED, _fd, 0);
@@ -175,9 +188,14 @@ private:
 		int _fd;
 		void* _map=null;
 		enum _tag="Persistent!("~T.stringof~")";
-		T* _ref=null;
 	} else
 		static assert(0);
+
+	static if(is(T == Uu[],Uu)) {
+		size_t _size=0;
+	} else {
+		T* _ref;
+	}
 }
 
 
