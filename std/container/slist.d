@@ -430,6 +430,7 @@ assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
 
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
+        initialize();
         if (!_first)
         {
             enforce(!r._head);
@@ -760,4 +761,12 @@ unittest
     auto r = s[];
     r.front = 1; //test frontAssign
     assert(r.front == 1);
+}
+
+unittest
+{
+    // issue 14920
+    SList!int s;
+    s.insertAfter(s[], 1);
+    assert(s.front == 1);
 }
