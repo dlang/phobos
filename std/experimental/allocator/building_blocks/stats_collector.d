@@ -666,7 +666,13 @@ unittest
 
     import std.stdio : File;
     import std.range : walkLength;
-    auto f = "/tmp/dlang.std.experimental.allocator.stats_collector.txt";
+    version(Posix)
+        auto f = "/tmp/dlang.std.experimental.allocator.stats_collector.txt";
+    version(Windows)
+    {
+        import std.process: environment;
+        auto f = environment.get("temp") ~ r"\dlang.std.experimental.allocator.stats_collector.txt";
+    }
     Allocator.reportPerCallStatistics(File(f, "w"));
     alloc.reportStatistics(File(f, "a"));
     assert(File(f).byLine.walkLength == 22);
