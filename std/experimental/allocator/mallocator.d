@@ -101,7 +101,7 @@ version (Windows)
 {
     // DMD Win 32 bit, DigitalMars C standard library misses the _aligned_xxx
     // functions family (snn.lib)
-    version(DigitalMars)
+    version(CRuntime_DigitalMars)
     {
         // Helper to cast the infos written before the aligned pointer
         // this header keeps track of the size (required to realloc) and of
