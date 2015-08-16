@@ -385,7 +385,7 @@ string encodeComponent(Char)(in Char[] uriComponent) if (isSomeChar!Char)
  *  len  it does, and s[0..len] is the slice of s[] that is that URL
  */
 
-size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
+ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
 {
     /* Must start with one of:
      *  http://
@@ -394,7 +394,7 @@ size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
      */
     import std.uni : icmp;
 
-    size_t i;
+    ptrdiff_t i;
 
     if (s.length <= 4)
         return -1;
@@ -412,7 +412,7 @@ size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
     //    if (icmp(s[0 .. 4], "www.") == 0)
     //  i = 4;
 
-    size_t lastdot;
+    ptrdiff_t lastdot;
     for (; i < s.length; i++)
     {
         auto c = s[i];
@@ -444,6 +444,7 @@ unittest
     assert (uriLength(s1) == 49);
     string s2 = "no uri here";
     assert (uriLength(s2) == -1);
+    assert (uriLength("issue 14924") < 0);
 }
 
 
@@ -455,9 +456,9 @@ unittest
  * References:
  *  RFC2822
  */
-size_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
+ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
 {
-    size_t i;
+    ptrdiff_t i;
 
     if (!isAlpha(s[0]))
         return -1;
@@ -479,7 +480,7 @@ size_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
 
     /* Now do the part past the '@'
      */
-    size_t lastdot;
+    ptrdiff_t lastdot;
     for (; i < s.length; i++)
     {
         auto c = s[i];
@@ -507,6 +508,7 @@ unittest
     assert (emailLength(s1) == 32);
     string s2 = "no email address here";
     assert (emailLength(s2) == -1);
+    assert (emailLength("issue 14924") < 0);
 }
 
 
