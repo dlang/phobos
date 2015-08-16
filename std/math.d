@@ -6339,15 +6339,31 @@ unittest {
     static assert(poly(3.0, [1.0, 2.0, 3.0]) == 34);
 }
 
-private Unqual!(CommonType!(T1, T2)) polyImplBase(T1, T2)(T1 x, in T2[] A) @trusted pure nothrow @nogc
+private Unqual!(CommonType!(T1, T2)) polyImplBase(T1, T2)(in T1 x, in T2[] A) @trusted pure nothrow @nogc
     if (isFloatingPoint!T1 && isFloatingPoint!T2)
 {
     ptrdiff_t i = A.length - 1;
     typeof(return) r = A[i];
     while (--i >= 0)
     {
-        r *= x;
-        r += A[i];
+        version(LDC)
+        {
+            alias F = floatTraits!(typeof(return));
+            static if(F.realFormat == RealFormat.ieeeSingle || RealFormat.ieeeDouble)
+            {
+                r = llvm_fmuladd(r, x, A[i]);
+            }
+            else
+            {
+                r *= x;
+                r += A[i];
+            }
+        }
+        else
+        {
+            r *= x;
+            r += A[i];
+        }
     }
     return r;
 }
