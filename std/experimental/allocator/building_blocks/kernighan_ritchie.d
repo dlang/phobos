@@ -647,7 +647,7 @@ unittest
     void[][50] array;
     foreach (i; 0 .. array.length)
     {
-        auto length = i * 100_000 + 1;
+        auto length = i * 10_000 + 1;
         array[i] = alloc.allocate(length);
         assert(array[i].ptr);
         assert(array[i].length == length);
