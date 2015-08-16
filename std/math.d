@@ -6344,26 +6344,38 @@ private Unqual!(CommonType!(T1, T2)) polyImplBase(T1, T2)(in T1 x, in T2[] A) @t
 {
     ptrdiff_t i = A.length - 1;
     typeof(return) r = A[i];
-    while (--i >= 0)
+    if(__ctfe)
     {
-        version(LDC)
+        while (--i >= 0)
         {
-            alias F = floatTraits!(typeof(return));
-            static if(F.realFormat == RealFormat.ieeeSingle || RealFormat.ieeeDouble)
+            r *= x;
+            r += A[i];
+        }
+    }
+    else
+    {
+        while (--i >= 0)
+        {
+            version(all)
             {
-                r = llvm_fmuladd(r, x, A[i]);
+                alias F = floatTraits!(typeof(return));
+                static if(F.realFormat == RealFormat.ieeeSingle || RealFormat.ieeeDouble)
+                {
+                    auto llvm_fmuladd(A, B, C)(A a, B b, C c){return a*b+c;}
+                    r = llvm_fmuladd(r, x, A[i]);
+                }
+                else
+                {
+                    r *= x;
+                    r += A[i];
+                }
             }
             else
             {
                 r *= x;
                 r += A[i];
             }
-        }
-        else
-        {
-            r *= x;
-            r += A[i];
-        }
+        }        
     }
     return r;
 }
