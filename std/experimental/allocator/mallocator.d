@@ -165,7 +165,7 @@ version (Windows)
             return alignedPtr;
         }
 
-        void _aligned_free(void *ptr)
+        private void _aligned_free(void *ptr)
         {
             import std.c.stdlib: free;
             if (!ptr) return;
