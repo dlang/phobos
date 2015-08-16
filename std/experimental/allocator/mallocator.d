@@ -99,9 +99,88 @@ unittest
 version (Posix) private extern(C) int posix_memalign(void**, size_t, size_t);
 version (Windows)
 {
-    private extern(C) void* _aligned_malloc(size_t, size_t);
-    private extern(C) void _aligned_free(void *memblock);
-    private extern(C) void* _aligned_realloc(void *, size_t, size_t);
+    // DMD Win 32 bit, DigitalMars C standard library misses the _aligned_xxx
+    // functions family (snn.lib)
+    version(DigitalMars)
+    {
+        // Helper to cast the infos written before the aligned pointer
+        // this header keeps track of the size (required to realloc) and of
+        // the base ptr (required to free).
+        private struct AlignInfo
+        {
+            void* basePtr;
+            size_t size;
+            static AlignInfo* opCall(void* ptr)
+            {
+                return cast(AlignInfo*) (ptr - AlignInfo.sizeof);
+            }
+        }
+
+        private void* _aligned_malloc(size_t size, size_t alignment)
+        {
+            import std.c.stdlib: malloc;
+            size_t offset = alignment + size_t.sizeof * 2 - 1;
+
+            // unaligned chunk
+            void* basePtr = malloc(size + offset);
+            if (!basePtr) return null;
+
+            // get aligned location within the chunk
+            void* alignedPtr = cast(void**)((cast(size_t)(basePtr) + offset) & ~(alignment - 1));
+
+            // write the header before the aligned pointer
+            AlignInfo* head = AlignInfo(alignedPtr);
+            head.basePtr = basePtr;
+            head.size = size;
+
+            return alignedPtr;
+        }
+
+        private void* _aligned_realloc(void* ptr, size_t size, size_t alignment)
+        {
+            import std.c.stdlib: malloc, free;
+            import std.c.string: memcpy;
+
+            if(!ptr) return _aligned_malloc(size, alignment);
+
+            // gets the header from the exising pointer
+            AlignInfo* head = AlignInfo(ptr);
+
+            // backups exising data
+            void* oldData = malloc(head.size);
+            memcpy(oldData, ptr, head.size);
+
+            // gets a new aligned pointer and restores the backup
+            void* alignedPtr = _aligned_malloc(size, alignment);
+            if (!alignedPtr)
+            {
+                free(oldData);
+                return null;
+            }
+            memcpy(alignedPtr, oldData, head.size);
+            free(oldData);
+
+            // frees the old non-aligned chunk
+            free(head.basePtr);
+            return alignedPtr;
+        }
+
+        void _aligned_free(void *ptr)
+        {
+            import std.c.stdlib: free;
+            if (!ptr) return;
+            AlignInfo* head = AlignInfo(ptr);
+            free(head.basePtr);
+        }
+
+    }
+    // DMD Win 64 bit, uses microsoft standard C library which implements them
+    else
+    {
+        private extern(C) void* _aligned_malloc(size_t, size_t);
+        private extern(C) void _aligned_free(void *memblock);
+        private extern(C) void* _aligned_realloc(void *, size_t, size_t);
+    }
 }
 
 /**
