@@ -444,6 +444,7 @@ unittest
     assert (uriLength(s1) == 49);
     string s2 = "no uri here";
     assert (uriLength(s2) == -1);
+    assert (uriLength("issue 14924") < 0);
 }
 
 
@@ -507,6 +508,7 @@ unittest
     assert (emailLength(s1) == 32);
     string s2 = "no email address here";
     assert (emailLength(s2) == -1);
+    assert (emailLength("issue 14924") < 0);
 }
 
 
