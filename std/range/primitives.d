@@ -1004,47 +1004,53 @@ unittest
 */
 template isSortedRange(T, alias pred = "a < b")
 {
-    import std.traits : TemplateArgsOf;
     import std.range : SortedRange;
-
-    static if (is(T == SortedRange!Args, Args...) &&
-               TemplateArgsOf!T.length == 2)
+    static if (is(T == SortedRange!Args, Args...))
     {
-        import std.functional : binaryFun;
-
-        alias predArg = TemplateArgsOf!T[1];
-
-        static if (isSomeString!(typeof(pred)) &&
-                   isSomeString!(typeof(predArg)))
+        import std.traits : TemplateArgsOf;
+        alias TArgs = TemplateArgsOf!T;
+        static if (TArgs.length == 2)
         {
-            /*
-              TODO Remove this when we find a way to
-              - distinguish binaryFun!"a < b" from binaryFun!"a > b"
-              - equate binaryFun!"a < b" from binaryFun!"a<b"
-             */
-            enum isSortedRange = pred == predArg;
+            alias predArg = TArgs[1];
+
+            static if (isSomeString!(typeof(pred)) &&
+                       isSomeString!(typeof(predArg)))
+            {
+                /*
+                  TODO Remove this when we find a way to
+                  - distinguish binaryFun!"a < b" from binaryFun!"a > b"
+                  - equate binaryFun!"a < b" from binaryFun!"a<b"
+                */
+                enum isSortedRange = pred == predArg;
+            }
+            else
+            {
+                import std.functional : binaryFun;
+
+                static if (isSomeString!(typeof(pred)))
+                {
+                    alias predFun = binaryFun!pred;
+                }
+                else
+                {
+                    alias predFun = pred;
+                }
+
+                static if (isSomeString!(typeof(predArg)))
+                {
+                    alias predArgFun = binaryFun!predArg;
+                }
+                else
+                {
+                    alias predArgFun = predArg;
+                }
+
+                enum isSortedRange = is(typeof(predFun) == typeof(predArgFun));
+            }
         }
         else
         {
-            static if (isSomeString!(typeof(pred)))
-            {
-                alias predFun = binaryFun!pred;
-            }
-            else
-            {
-                alias predFun = pred;
-            }
-
-            static if (isSomeString!(typeof(predArg)))
-            {
-                alias predArgFun = binaryFun!predArg;
-            }
-            else
-            {
-                alias predArgFun = predArg;
-            }
-
-            enum isSortedRange = is(typeof(predFun) == typeof(predArgFun));
+            enum isSortedRange = false;
         }
     }
     else
