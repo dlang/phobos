@@ -2,28 +2,26 @@
  * Map variable, static array or POD structure to file
  *   to make it shared and persistent between program invocations.
  * Macros:
-  * Source:    $(PHOBOSSRC std/persistent.d)
+  * Source:    $(PHOBOSSRC std/perpetual.d)
  */
-module std.persistent;
+module std.perpetual;
+//import std.stdio;
 
 private import std.file;
 private import core.stdc.stdio;
-private import core.stdc.stdlib;
-private import core.stdc.errno;
-private import std.path;
 private import std.traits;
-private import std.range;
 private import std.string;
-import std.conv, std.exception, std.stdio;
+private import std.conv;
+private import std.exception;
 version (Windows) {
-	private import core.sys.windows.windows;
-	private import std.utf;
-	private import std.windows.syserror;
+private import core.sys.windows.windows;
+private import std.utf;
+private import std.windows.syserror;
 } else version (Posix) {
-	private import core.sys.posix.fcntl;
-	private import core.sys.posix.unistd;
-	private import core.sys.posix.sys.mman;
-	private import core.sys.posix.sys.stat;
+private import core.sys.posix.fcntl;
+private import core.sys.posix.unistd;
+private import core.sys.posix.sys.mman;
+private import core.sys.posix.sys.stat;
 } else {
 	static assert(0);
 }
@@ -33,14 +31,46 @@ version (Windows) {
 /**
  * Persistent maps value type object to file
  */
-class Persistent(T)
+class perpetual(T)
 {
 	version (Windows) {
 
 	} else version (Posix) {
-
+		private int _fd;
+		private void* _map;
 	} else
 		static assert(0);
+
+	enum _tag="perpetual!("~T.stringof~")";
+
+	static if(is(T == Element[],Element)) {
+	// dynamic array 
+		private size_t _size=0;
+		enum bool dynamic=true;
+		static assert(!hasIndirections!Element, Element.stringof~" is reference type");
+		@property T Ref() const { return cast(T) _map[0.._size]; }
+
+	} else {
+	// value type
+		enum bool dynamic=false;
+		static assert(!hasIndirections!T, T.stringof~" is reference type");
+		@property ref T Ref() const {	return *cast(T*)(_map); }
+	}
+
+/**
+ * Get reference to wrapped object.
+ */
+	alias Ref this;
+
+	private bool _owner=true;
+	@property auto master() { return _owner; }
+
+/**
+ * Return string representation for wrapped object instead of self.
+ */
+	override string toString() const { return to!string(Ref); }
+
+
 
 /**
  * Open file and assosiate object with it.
@@ -48,13 +78,12 @@ class Persistent(T)
  *   with T.init if created or extended.
  */
 	this(string path) {
-		auto owner=map(path);
-		static if(is(T == U[],U)) {
-			
-		} else {
-    	   _ref=cast(T*)(_map);
-		   if(owner)
-			*_ref=T.init;
+		map(path);
+		static if(dynamic) {
+			// we don't need initialization here, the file already exists
+			//   so, is to be initialized
+		} else if(owner) {
+			*cast(T*)(_map)=T.init;
 		}
  	}
 
@@ -75,7 +104,7 @@ class Persistent(T)
  */
 	void sync() {
 		version (Windows) {
-			FlushViewOfFile(data.ptr, data.length);
+
 		} else version (Posix) {
 			int x=msync(_map, T.sizeof, MS_SYNC);
 			errnoEnforce(!x, _tag~": sync failed");
@@ -84,45 +113,30 @@ class Persistent(T)
 	}
 	
 	
-/**
- * Return string representation for wrapped object instead of self.
- */
-	override string toString() { return to!string(Ref); }
 	
-/**
- * Get reference to wrapped object.
- */
-	static if(is(T == U[],U)) {
-		@property T Ref() { return cast(T) _map[0.._size]; }
-	} else {
-		static assert(!hasIndirections!T, T.stringof~" is reference type");
-		@property ref T Ref() {	return *_ref; }
-	}
-	alias Ref this;
-
 	
 	
 	
 	private bool map(string path) {
-		bool owner=true;
 		version (Windows) {
 
 		} else version (Posix) {
 			_fd=open(path.toStringz(), O_RDWR|O_CREAT|O_EXCL, S_IRUSR|S_IWUSR);
 			if(_fd < 0) {
-				owner=false;
+				_owner=false;
 				_fd=open(path.toStringz(), O_RDWR, S_IRUSR|S_IWUSR);
 				if(_fd < 0)
 					errnoEnforce(_fd >= 0, _tag~"("~path~")");
 			}
 
-			static if(is(T == U[],U)) {
-				_size=fileSize(path)/U.sizeof;
-//writeln("file: ", fileSize(path), ", ", U.stringof, ": ", U.sizeof, ", length: ", _size);
+			static if(dynamic) {
+				//_size=fileSize(path)/Element.sizeof;
+				_size=fileSize(path);
+
 			} else {
 				if(fileSize(path) < T.sizeof) {
 					fileExpand(path);
-					owner=true;
+					_owner=true;
 				}
 			}
 
@@ -132,7 +146,7 @@ class Persistent(T)
 				errnoEnforce(false, _tag~"("~path~")");
 			}
 
-			return owner;
+			return _owner;
 
 		} else
 			static assert(0);
@@ -140,7 +154,6 @@ class Persistent(T)
 
 
 	private void unmap() {
-		bool owner=true;
 		version (Windows) {
 
 		} else version (Posix) {
@@ -179,23 +192,6 @@ class Persistent(T)
 			static assert(0);
 	}
 
-private:
-	version (Windows) {
-		HANDLE hFile = INVALID_HANDLE_VALUE;
-		HANDLE hFileMap = null;
-		uint dwDesiredAccess;
-	} else version (Posix) {
-		int _fd;
-		void* _map=null;
-		enum _tag="Persistent!("~T.stringof~")";
-	} else
-		static assert(0);
-
-	static if(is(T == Uu[],Uu)) {
-		size_t _size=0;
-	} else {
-		T* _ref;
-	}
 }
 
 
@@ -206,38 +202,38 @@ unittest
 	import std.conv;
 	import std.string;
 	import std.getopt;
-	import std.persistent;
+	import std.perpetual;
 
 	struct A { int x; };
 	enum Color { black, red, green, blue, white };
 
 	// Usage: test
 	// Output:
-	//	Persistent!int          : 0
-	//	Persistent!double       : nan
-	//	Persistent!(A)          : A(0)
-	//	Persistent!(int[5])     : [0, 0, 0, 0, 0]
-	//	Persistent!(Color)      : black
+	//	perpetual!int          : 0
+	//	perpetual!double       : nan
+	//	perpetual!(A)          : A(0)
+	//	perpetual!(int[5])     : [0, 0, 0, 0, 0]
+	//	perpetual!(Color)      : black
 	//
 	// Usage: test --int=12 --real=3.14159 --struct=5 --array=1,2 --color=red
 	// Output:
-	// Persistent!int          : 12
-	// Persistent!double       : 3.14159
-	// Persistent!(A)          : A(5)
-	// Persistent!(int[5])     : [1, 2, 0, 0, 0]
-	// Persistent!(Color)      : red
+	// perpetual!int          : 12
+	// perpetual!double       : 3.14159
+	// perpetual!(A)          : A(5)
+	// perpetual!(int[5])     : [1, 2, 0, 0, 0]
+	// perpetual!(Color)      : red
 	void main(string[] argv)
 	{
 		// persistent int
-		auto p0=new Persistent!int("Q1");
+		auto p0=new perpetual!int("Q1");
 		// persistent double
-		auto p1=new Persistent!double("Q2");
+		auto p1=new perpetual!double("Q2");
 		// persistent struct
-		auto p2=new Persistent!A("Q3");
+		auto p2=new perpetual!A("Q3");
 		// persistent static array of 5 ints
-		auto p3=new Persistent!(int[5])("Q4");
+		auto p3=new perpetual!(int[5])("Q4");
 		// persistent enum
-		auto p4=new Persistent!Color("Q5");
+		auto p4=new perpetual!Color("Q5");
 
 		getopt(arg
 			 , "int", delegate(string key, string val){ p0=to!int(val); }
