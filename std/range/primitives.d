@@ -1001,6 +1001,8 @@ unittest
    Returns true if $(D T) is a Range Sorted on predicate $(D pred).
 
    Currently checks if $(D T) is an instance of $(D SortedRange).
+
+   See also: http://forum.dlang.org/post/mqskge$2968$1@digitalmars.com
 */
 template isSortedRange(T, alias pred = "a < b")
 {
@@ -1045,7 +1047,7 @@ template isSortedRange(T, alias pred = "a < b")
                     alias predArgFun = predArg;
                 }
 
-                enum isSortedRange = is(typeof(predFun) == typeof(predArgFun));
+                enum isSortedRange = __traits(isSame, predFun, predArgFun);
             }
         }
         else
