@@ -1072,7 +1072,7 @@ unittest
     alias fun = binaryFun!pred;
 
     enum rpred = "a > b";
-    alias rfun = binaryFun!pred;
+    alias rfun = binaryFun!rpred;
 
     import std.range : SortedRange;
 
@@ -1086,7 +1086,7 @@ unittest
 
     alias SR_ = SortedRange!(R, pred);
     static assert(!isSortedRange!(SR_, rpred));
-    // static assert(!isSortedRange!(SR_, rfun));
+    static assert(!isSortedRange!(SR_, rfun));
 
     alias IR = int[];
     static assert(!isSortedRange!(IR, pred));
