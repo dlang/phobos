@@ -1652,6 +1652,15 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
     assert(equal(radial(a), [ 3, 4, 2, 5, 1 ]));
     a = [ 1, 2, 3, 4 ];
     assert(equal(radial(a), [ 2, 3, 1, 4 ]));
+
+    // If the left end is reached first, the remaining elements on the right
+    // are concatenated in order:
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(equal(radial(a, 1), [ 1, 2, 0, 3, 4, 5 ]));
+
+    // If the right end is reached first, the remaining elements on the left
+    // are concatenated in reverse order:
+    assert(equal(radial(a, 4), [ 4, 5, 3, 2, 1, 0 ]));
 }
 
 @safe unittest

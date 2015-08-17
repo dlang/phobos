@@ -134,6 +134,7 @@
  *           $(LREF getSymbolsByUDA)
  * ))
  * )
+ * )
  *
  * Macros:
  *  WIKI = Phobos/StdTraits
@@ -1382,8 +1383,8 @@ unittest
     static assert(functionAttributes!(S.sharedF) == (FA.shared_ | FA.system));
     static assert(functionAttributes!(typeof(S.sharedF)) == (FA.shared_ | FA.system));
 
-    static assert(functionAttributes!(S.refF) == (FA.ref_ | FA.system));
-    static assert(functionAttributes!(typeof(S.refF)) == (FA.ref_ | FA.system));
+    static assert(functionAttributes!(S.refF) == (FA.ref_ | FA.system | FA.return_));
+    static assert(functionAttributes!(typeof(S.refF)) == (FA.ref_ | FA.system | FA.return_));
 
     static assert(functionAttributes!(S.propertyF) == (FA.property | FA.system));
     static assert(functionAttributes!(typeof(&S.propertyF)) == (FA.property | FA.system));

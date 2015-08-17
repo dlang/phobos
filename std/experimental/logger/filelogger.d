@@ -131,11 +131,11 @@ class FileLogger : Logger
 
 unittest
 {
-    import std.file : remove;
+    import std.file : deleteme, remove;
     import std.array : empty;
     import std.string : indexOf;
 
-    string filename = __FUNCTION__ ~ ".tempLogFile";
+    string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";
     auto l = new FileLogger(filename);
 
     scope(exit)
@@ -160,11 +160,11 @@ unittest
 
 unittest
 {
-    import std.file : remove;
+    import std.file : deleteme, remove;
     import std.array : empty;
     import std.string : indexOf;
 
-    string filename = __FUNCTION__ ~ ".tempLogFile";
+    string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";
     auto file = File(filename, "w");
     auto l = new FileLogger(file);
 

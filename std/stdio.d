@@ -4557,9 +4557,10 @@ version(linux)
     }
 }
 
-version(unittest) string testFilename(string file = __FILE__, size_t line = __LINE__) @safe pure
+version(unittest) string testFilename(string file = __FILE__, size_t line = __LINE__) @safe
 {
     import std.conv : text;
+    import std.file : deleteme;
     import std.path : baseName;
 
     // Non-ASCII characters can't be used because of snn.lib @@@BUG8643@@@
@@ -4568,5 +4569,5 @@ version(unittest) string testFilename(string file = __FILE__, size_t line = __LI
     else
 
         // filename intentionally contains non-ASCII (Russian) characters
-        return text("deleteme-детка.", baseName(file), ".", line);
+        return text(deleteme, "-детка.", baseName(file), ".", line);
 }

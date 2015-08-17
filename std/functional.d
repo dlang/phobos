@@ -776,14 +776,8 @@ unittest
     assert(funThreeArgs1(2, 3) == 6);
     static assert(!is(typeof(funThreeArgs1(1))));
 
-    // @@ dmd BUG 6600 @@
-    // breaks completely unrelated unittest for toDelegate
-    // static assert(is(typeof(dg_pure_nothrow) == int delegate() pure nothrow));
-    version (none)
-    {
-        auto dg2 = &funOneArg1!();
-        assert(dg2() == 1);
-    }
+    auto dg2 = &funOneArg1!();
+    assert(dg2() == 1);
 }
 
 /**
@@ -879,45 +873,6 @@ unittest
     enum Tuple!(IS, IS, IS, IS) ret2 = adjoin!(bar, bar, bar, bar)();
 }
 
-// /*private*/ template NaryFun(string fun, string letter, V...)
-// {
-//     static if (V.length == 0)
-//     {
-//         enum args = "";
-//     }
-//     else
-//     {
-//         enum args = V[0].stringof~" "~letter~"; "
-//             ~NaryFun!(fun, [letter[0] + 1], V[1..$]).args;
-//         enum code = args ~ "return "~fun~";";
-//     }
-//     alias Result = void;
-// }
-
-// unittest
-// {
-//     writeln(NaryFun!("a * b * 2", "a", int, double).code);
-// }
-
-// /**
-// naryFun
-//  */
-// template naryFun(string fun)
-// {
-//     //NaryFun!(fun, "a", V).Result
-//     int naryFun(V...)(V values)
-//     {
-//         enum string code = NaryFun!(fun, "a", V).code;
-//         mixin(code);
-//     }
-// }
-
-// unittest
-// {
-//     alias test = naryFun!("a + b");
-//     test(1, 2);
-// }
-
 /**
    Composes passed-in functions $(D fun[0], fun[1], ...) returning a
    function $(D f(x)) that in turn returns $(D
@@ -925,14 +880,12 @@ unittest
    functions, a delegate, or a string.
 
    Example:
-
 ----
 // First split a string in whitespace-separated tokens and then
 // convert each token into an integer
 assert(compose!(map!(to!(int)), split)("1 2 3") == [1, 2, 3]);
 ----
 */
-
 template compose(fun...)
 {
     static if (fun.length == 1)
@@ -989,8 +942,7 @@ unittest
 
     assert(compose!(baz, bar)("1") == 2.5);
 
-    // @@@BUG@@@
-    //assert(compose!(`a + 0.5`, `to!(int)(a) + 1`, foo)(1) == 2.5);
+    assert(compose!(`a + 0.5`, `to!(int)(a) + 1`, foo)(1) == 2.5);
 }
 
 /**
