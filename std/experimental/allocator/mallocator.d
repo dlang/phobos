@@ -126,7 +126,8 @@ version (Windows)
             if (!basePtr) return null;
 
             // get aligned location within the chunk
-            void* alignedPtr = cast(void**)((cast(size_t)(basePtr) + offset) & ~(alignment - 1));
+            void* alignedPtr = cast(void**)((cast(size_t)(basePtr) + offset)
+                & ~(alignment - 1));
 
             // write the header before the aligned pointer
             AlignInfo* head = AlignInfo(alignedPtr);
@@ -138,7 +139,7 @@ version (Windows)
 
         private void* _aligned_realloc(void* ptr, size_t size, size_t alignment)
         {
-            import std.c.stdlib: malloc, free;
+            import std.c.stdlib: free;
             import std.c.string: memcpy;
 
             if(!ptr) return _aligned_malloc(size, alignment);
@@ -146,22 +147,19 @@ version (Windows)
             // gets the header from the exising pointer
             AlignInfo* head = AlignInfo(ptr);
 
-            // backups exising data
-            void* oldData = malloc(head.size);
-            memcpy(oldData, ptr, head.size);
-
-            // gets a new aligned pointer and restores the backup
+            // gets a new aligned pointer
             void* alignedPtr = _aligned_malloc(size, alignment);
             if (!alignedPtr)
             {
-                free(oldData);
+                //to https://msdn.microsoft.com/en-us/library/ms235462.aspx
+                //see Return value: in this case the original block is unchanged
                 return null;
             }
-            memcpy(alignedPtr, oldData, head.size);
-            free(oldData);
 
-            // frees the old non-aligned chunk
+            // copy exising data
+            memcpy(alignedPtr, ptr, head.size);
             free(head.basePtr);
+
             return alignedPtr;
         }
 
@@ -302,4 +300,45 @@ unittest
         128);
     scope(exit) AlignedMallocator.instance.deallocate(buffer);
     //...
+}
+
+version(unittest) version(CRuntime_DigitalMars)
+    size_t addr(ref void* ptr){return cast(size_t) ptr;}
+version(CRuntime_DigitalMars) unittest
+{
+    void* m;
+
+    m = _aligned_malloc(16,0x10);
+    if(m){
+        assert((m.addr & 0xF) == 0);
+        _aligned_free(m);
+    }
+
+    m = _aligned_malloc(16,0x100);
+    if(m){
+        assert((m.addr & 0xFF) == 0);
+        _aligned_free(m);
+    }
+
+    m = _aligned_malloc(16,0x1000);
+    if(m){
+        assert((m.addr & 0xFFF) == 0);
+        _aligned_free(m);
+    }
+
+    m = _aligned_malloc(16,0x10);
+    if(m){
+        assert((cast(size_t)m & 0xF) == 0);
+        m = _aligned_realloc(m,32,0x10000);
+        assert((m.addr & 0xFFFF) == 0);
+        _aligned_free(m);
+    }
+
+    m = _aligned_malloc(8,0x10);
+    if(m){
+        *cast(ulong*) m = 0X01234567_89ABCDEF;
+        m = _aligned_realloc(m,0x800,0x1000);
+        assert(*cast(ulong*) m == 0X01234567_89ABCDEF);
+        _aligned_free(m);
+    }
 }
