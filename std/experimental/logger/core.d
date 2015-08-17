@@ -1797,11 +1797,14 @@ functions.
 /// Ditto
 unittest
 {
+    import std.file : deleteme, remove;
     Logger l = stdThreadLocalLog;
-    stdThreadLocalLog = new FileLogger("someFile.log");
-    scope(exit) remove("someFile.log");
+    stdThreadLocalLog = new FileLogger(deleteme ~ "-someFile.log");
+    scope(exit) remove(deleteme ~ "-someFile.log");
 
+    auto tempLog = stdThreadLocalLog;
     stdThreadLocalLog = l;
+    destroy(tempLog);
 }
 
 @safe unittest
@@ -2072,9 +2075,9 @@ version(unittest) private void testFuncNames(Logger logger) @safe
 
 unittest // default logger
 {
-    import std.file : exists, remove;
+    import std.file : deleteme, exists, remove;
 
-    string filename = __FUNCTION__ ~ ".tempLogFile";
+    string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";
     FileLogger l = new FileLogger(filename);
     auto oldunspecificLogger = sharedLog;
     sharedLog = l;
@@ -2110,9 +2113,9 @@ unittest // default logger
 
 unittest
 {
-    import std.file : remove;
+    import std.file : deleteme, remove;
     import core.memory : destroy;
-    string filename = __FUNCTION__ ~ ".tempLogFile";
+    string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";
     auto oldunspecificLogger = sharedLog;
 
     scope(exit)

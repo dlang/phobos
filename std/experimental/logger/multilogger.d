@@ -141,9 +141,10 @@ class MultiLogger : Logger
 // Issue #16
 unittest
 {
+    import std.file : deleteme;
     import std.stdio : File;
     import std.string : indexOf;
-    string logName = __FUNCTION__ ~ ".log";
+    string logName = deleteme ~ __FUNCTION__ ~ ".log";
     auto logFileOutput = File(logName, "w");
     scope(exit)
     {
