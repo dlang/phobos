@@ -1,5 +1,5 @@
 /**
- * Map variable, static array or POD structure to file
+ * Map variable, POD structure or array to file
  *   to make it shared and persistent between program invocations.
  * Macros:
   * Source:    $(PHOBOSSRC std/perpetual.d)
@@ -29,7 +29,7 @@ private import core.sys.posix.sys.stat;
 
 
 /**
- * Persistent maps value type object to file
+ * Persistently maps value type object to file
  */
 class perpetual(T)
 {
@@ -82,7 +82,7 @@ class perpetual(T)
 		static if(dynamic) {
 			// we don't need initialization here, the file already exists
 			//   so, is to be initialized
-		} else if(owner) {
+		} else if(master) {
 			*cast(T*)(_map)=T.init;
 		}
  	}
@@ -205,54 +205,107 @@ unittest
 	import std.perpetual;
 
 	struct A { int x; };
+	class B {};
 	enum Color { black, red, green, blue, white };
+
 
 	// Usage: test
 	// Output:
-	//	perpetual!int          : 0
-	//	perpetual!double       : nan
-	//	perpetual!(A)          : A(0)
-	//	perpetual!(int[5])     : [0, 0, 0, 0, 0]
-	//	perpetual!(Color)      : black
+	// perpetual!int                   : 0
+	// perpetual!double                : nan
+	// perpetual!(A)                   : A(0)
+	// perpetual!(int[5])              : [0, 0, 0, 0, 0]
+	// perpetual!(immutable(short[]))  : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	// perpetual!(Color)               : black
+	// perpetual!(char[])              : ________________________________
+	// perpetual!string                : ________________________________
+	// perpetual!(char[3][5])          : ["one", "...", "two", "...", "..."]
+	// perpetual!(const(char[]))       : one...two......
+	// perpetual!(char[3][])           : ["one", "...", "two", "...", "..."]
 	//
-	// Usage: test --int=12 --real=3.14159 --struct=5 --array=1,2 --color=red
+	// Usage: test --int=3 --real=3.14159 --struct=11 --array=1,3,5,7 --color=green --string=ABCDE 
 	// Output:
-	// perpetual!int          : 12
-	// perpetual!double       : 3.14159
-	// perpetual!(A)          : A(5)
-	// perpetual!(int[5])     : [1, 2, 0, 0, 0]
-	// perpetual!(Color)      : red
-	void main(string[] argv)
+	// perpetual!int                   : 3
+	// perpetual!double                : 3.14159
+	// perpetual!(A)                   : A(11)
+	// perpetual!(int[5])              : [1, 3, 5, 7, 0]
+	// perpetual!(immutable(short[]))  : [1, 0, 3, 0, 5, 0, 7, 0, 0, 0]
+	// perpetual!(Color)               : green
+	// perpetual!(char[])              : ABCDE___________________________
+	// perpetual!string                : ABCDE___________________________
+	// perpetual!(char[3][5])          : ["one", "...", "two", "...", "..."]
+	// perpetual!(const(char[]))       : one...two......
+	// perpetual!(char[3][])           : ["one", "...", "two", "...", "..."]
+
+
+	void main(string[] arg)
 	{
-		// persistent int
+
+		// simple built-in values
 		auto p0=new perpetual!int("Q1");
-		// persistent double
 		auto p1=new perpetual!double("Q2");
-		// persistent struct
+
+		// struct
 		auto p2=new perpetual!A("Q3");
-		// persistent static array of 5 ints
+		// static array of integers
+
 		auto p3=new perpetual!(int[5])("Q4");
-		// persistent enum
-		auto p4=new perpetual!Color("Q5");
+		// view only, map above as array of shorts
+		auto p4=new perpetual!(immutable(short[]))("Q4");
+
+		// enum
+		auto p5=new perpetual!Color("Q5");
+
+		// character string, reinitialize if new file created
+		auto p6=new perpetual!(char[])("Q6");
+		if(p6.length == 0) {
+		// the file wasn't initialized, do with static array
+			new perpetual!(char[32])("Q6")='_';
+			p6=new perpetual!(char[])("Q6");
+		}
+		// view only variant of above
+		auto p7=new perpetual!string("Q6");
+
+		// double static array with initailization
+		auto p8=new perpetual!(char[3][5])("Q7");
+		if(p8.master) { foreach(ref x; p8) x="..."; p8[0]="one"; p8[2]="two"; }
+		// map of above as plain array
+		auto p9=new perpetual!(const(char[]))("Q7");
+		// map again as dynamic array
+		auto pA=new perpetual!(char[3][])("Q7");
+
+		//auto pX=new perpetual!(char*)("Q?"); //ERROR: "char* is reference type"
+		//auto pX=new perpetual!B("Q?"); //ERROR: "B is reference type"
+		//auto pX=new perpetual!(char*[])("Q?"); //ERROR: "char* is reference type"
+		//auto pX=new perpetual!(char*[12])("Q?"); //ERROR: "char*[12] is reference type"
+		//auto pX=new perpetual!(char[string])("Q?"); //ERROR: "char[string] is reference type"
+		//auto pX=new perpetual!(char[][])("Q?"); //ERROR: "char[] is reference type"
+		//auto pX=new perpetual!(char[][3])("Q?"); //ERROR: "char[][3] is reference type"
+
 
 		getopt(arg
-			 , "int", delegate(string key, string val){ p0=to!int(val); }
-			 , "real", delegate(string key, string val){ p1=to!double(val); }
-			 , "struct", delegate(string key, string val){ p2.x=to!int(val); }
-			 , "array", delegate(string key, string val){
-		 			auto lst=split(val,",");
-					p3[0..lst.length]=to!(int[])(lst);
-				}
-			 , "color", delegate(string key, string val){ p4=to!Color(val); } 
+			, "int", delegate(string key, string val){ p0=to!int(val); }
+			, "real", delegate(string key, string val){ p1=to!double(val); }
+			, "struct", delegate(string key, string val){ p2.x=to!int(val); }
+			, "array", delegate(string key, string val){
+		 		auto lst=split(val,",");
+				p3[0..lst.length]=to!(int[])(lst);
+			}
+			, "color", delegate(string key, string val){ p5=to!Color(val); }
+			, "string", delegate(string key, string val){ p6[0..val.length]=val; }
 			);
 
-
-		writefln("%-24s: %s", typeof(p0).stringof, p0);
-		writefln("%-24s: %s", typeof(p1).stringof, p1);
-		writefln("%-24s: %s", typeof(p2).stringof, p2);
-		writefln("%-24s: %s", typeof(p3).stringof, p3);
-		writefln("%-24s: %s", typeof(p4).stringof, p4);
+		writefln("%-32s: %s", typeof(p0).stringof, p0);
+		writefln("%-32s: %s", typeof(p1).stringof, p1);
+		writefln("%-32s: %s", typeof(p2).stringof, p2);
+		writefln("%-32s: %s", typeof(p3).stringof, p3);
+		writefln("%-32s: %s", typeof(p4).stringof, p4);
+		writefln("%-32s: %s", typeof(p5).stringof, p5);
+		writefln("%-32s: %s", typeof(p6).stringof, p6);
+		writefln("%-32s: %s", typeof(p7).stringof, p7);
+		writefln("%-32s: %s", typeof(p8).stringof, p8);
+		writefln("%-32s: %s", typeof(p9).stringof, p9);
+		writefln("%-32s: %s", typeof(pA).stringof, pA);
 	}
+
 }
-
-
