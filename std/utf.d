@@ -1908,6 +1908,14 @@ unittest
 }
 /* =================== Encode ======================= */
 
+private dchar _utfException(UseReplacementDchar useReplacementDchar)(string msg, dchar c)
+{
+    static if (useReplacementDchar)
+        return replacementDchar;
+    else
+        throw new UTFException(msg).setSequence(c);
+}
+
 /++
     Encodes $(D c) into the static array, $(D buf), and returns the actual
     length of the encoded character (a number between $(D 1) and $(D 4) for
@@ -1917,7 +1925,8 @@ unittest
     Throws:
         $(D UTFException) if $(D c) is not a valid UTF code point.
   +/
-size_t encode(ref char[4] buf, dchar c) @safe pure
+size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref char[4] buf, dchar c) @safe pure
 {
     if (c <= 0x7F)
     {
@@ -1935,9 +1944,10 @@ size_t encode(ref char[4] buf, dchar c) @safe pure
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UTFException("Encoding a surrogate code point in UTF-8").setSequence(c);
+            c = _utfException!useReplacementDchar("Encoding a surrogate code point in UTF-8", c);
 
         assert(isValidDchar(c));
+    L3:
         buf[0] = cast(char)(0xE0 | (c >> 12));
         buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
         buf[2] = cast(char)(0x80 | (c & 0x3F));
@@ -1954,7 +1964,8 @@ size_t encode(ref char[4] buf, dchar c) @safe pure
     }
 
     assert(!isValidDchar(c));
-    throw new UTFException("Encoding an invalid code point in UTF-8").setSequence(c);
+    c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-8", c);
+    goto L3;
 }
 
 unittest
@@ -1981,19 +1992,24 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(buf.front == replacementDchar);
     });
 }
 
 
 /// Ditto
-size_t encode(ref wchar[2] buf, dchar c) @safe pure
+size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref wchar[2] buf, dchar c) @safe pure
 {
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UTFException("Encoding an isolated surrogate code point in UTF-16").setSequence(c);
+            c = _utfException!useReplacementDchar("Encoding an isolated surrogate code point in UTF-16", c);
 
         assert(isValidDchar(c));
+    L1:
         buf[0] = cast(wchar)c;
         return 1;
     }
@@ -2005,8 +2021,8 @@ size_t encode(ref wchar[2] buf, dchar c) @safe pure
         return 2;
     }
 
-    assert(!isValidDchar(c));
-    throw new UTFException("Encoding an invalid code point in UTF-16").setSequence(c);
+    c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-16", c);
+    goto L1;
 }
 
 unittest
@@ -2029,6 +2045,47 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(buf.front == replacementDchar);
+    });
+}
+
+
+/// Ditto
+size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref dchar[1] buf, dchar c) @safe pure
+{
+    if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
+        c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-32", c);
+    else
+        assert(isValidDchar(c));
+    buf[0] = c;
+    return 1;
+}
+
+unittest
+{
+    import std.exception;
+    assertCTFEable!(
+    {
+    dchar[1] buf;
+
+    encode(buf, '\u0000'); assert(buf[0] == '\u0000');
+    encode(buf, '\uD7FF'); assert(buf[0] == '\uD7FF');
+    encode(buf, '\uE000'); assert(buf[0] == '\uE000');
+    encode(buf, 0xFFFE ); assert(buf[0] == 0xFFFE);
+    encode(buf, 0xFFFF ); assert(buf[0] == 0xFFFF);
+    encode(buf, '\U0010FFFF'); assert(buf[0] == '\U0010FFFF');
+
+    assertThrown!UTFException(encode(buf, cast(dchar)0xD800));
+    assertThrown!UTFException(encode(buf, cast(dchar)0xDBFF));
+    assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
+    assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
+    assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(buf.front == replacementDchar);
     });
 }
 
@@ -2039,7 +2096,8 @@ unittest
     Throws:
         $(D UTFException) if $(D c) is not a valid UTF code point.
   +/
-void encode(ref char[] str, dchar c) @safe pure
+void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref char[] str, dchar c) @safe pure
 {
     char[] r = str;
 
@@ -2063,9 +2121,10 @@ void encode(ref char[] str, dchar c) @safe pure
         else if (c <= 0xFFFF)
         {
             if (0xD800 <= c && c <= 0xDFFF)
-                throw new UTFException("Encoding a surrogate code point in UTF-8").setSequence(c);
+                c = _utfException!useReplacementDchar("Encoding a surrogate code point in UTF-8", c);
 
             assert(isValidDchar(c));
+        L3:
             buf[0] = cast(char)(0xE0 | (c >> 12));
             buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
             buf[2] = cast(char)(0x80 | (c & 0x3F));
@@ -2083,7 +2142,8 @@ void encode(ref char[] str, dchar c) @safe pure
         else
         {
             assert(!isValidDchar(c));
-            throw new UTFException("Encoding an invalid code point in UTF-8").setSequence(c);
+            c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-8", c);
+            goto L3;
         }
         r ~= buf[0 .. L];
     }
@@ -2137,20 +2197,26 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(buf.back != replacementDchar);
+    encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000);
+    assert(buf.back == replacementDchar);
     });
 }
 
 /// ditto
-void encode(ref wchar[] str, dchar c) @safe pure
+void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref wchar[] str, dchar c) @safe pure
 {
     wchar[] r = str;
 
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UTFException("Encoding an isolated surrogate code point in UTF-16").setSequence(c);
+            c = _utfException!useReplacementDchar("Encoding an isolated surrogate code point in UTF-16", c);
 
         assert(isValidDchar(c));
+    L1:
         r ~= cast(wchar)c;
     }
     else if (c <= 0x10FFFF)
@@ -2165,7 +2231,8 @@ void encode(ref wchar[] str, dchar c) @safe pure
     else
     {
         assert(!isValidDchar(c));
-        throw new UTFException("Encoding an invalid code point in UTF-16").setSequence(c);
+        c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-16", c);
+        goto L1;
     }
 
     str = r;
@@ -2191,16 +2258,21 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(buf.back != replacementDchar);
+    encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000);
+    assert(buf.back == replacementDchar);
     });
 }
 
 /// ditto
-void encode(ref dchar[] str, dchar c) @safe pure
+void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref dchar[] str, dchar c) @safe pure
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
-        throw new UTFException("Encoding an invalid code point in UTF-32").setSequence(c);
-
-    assert(isValidDchar(c));
+        c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-32", c);
+    else
+        assert(isValidDchar(c));
     str ~= c;
 }
 
@@ -2223,6 +2295,10 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(buf.back != replacementDchar);
+    encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000);
+    assert(buf.back == replacementDchar);
     });
 }
 
