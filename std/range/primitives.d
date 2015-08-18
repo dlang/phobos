@@ -1004,12 +1004,12 @@ auto standardizePredicatePrefix(S)(S s) if (isSomeString!S)
         if (s[0] != 'a')
             return s;
 
-        size_t wsCount = 0;
-        while (1 + wsCount < s.length &&
-               s[1 + wsCount] == ' ')
-            ++wsCount;
+        size_t n = 0; // whitespace count
+        while (1 + n < s.length &&
+               s[1 + n] == ' ')
+            ++n;
 
-        return 'a' ~ s[1 + wsCount .. $];
+        return 'a' ~ s[1 + n .. $];
     }
     return s;
 }
@@ -1021,12 +1021,12 @@ auto standardizePredicateSuffix(S)(S s) if (isSomeString!S)
         if (s[$ - 1] != 'b')
             return s;
 
-        size_t wsCount = 0;
-        while (1 + wsCount < s.length &&
-               s[$ - 2 - wsCount] == ' ')
-            ++wsCount;
+        size_t n = 0; // whitespace count
+        while (1 + n < s.length &&
+               s[$ - 2 - n] == ' ')
+            ++n;
 
-        return s[0 .. $ - 1 - wsCount] ~ 'b';
+        return s[0 .. $ - 1 - n] ~ 'b';
     }
     return s;
 }
