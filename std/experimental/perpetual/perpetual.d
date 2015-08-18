@@ -12,6 +12,7 @@ private import core.stdc.stdio;
 private import std.traits;
 private import std.string;
 private import std.conv;
+private import std.algorithm;
 private import std.exception;
 version (Windows) {
 private import core.sys.windows.windows;
@@ -31,7 +32,7 @@ private import core.sys.posix.sys.stat;
 /**
  * Persistently maps value type object to file
  */
-class perpetual(T)
+class Perpetual(T)
 {
 	version (Windows) {
 
@@ -41,7 +42,7 @@ class perpetual(T)
 	} else
 		static assert(0);
 
-	enum _tag="perpetual!("~T.stringof~")";
+	enum _tag="Perpetual!("~T.stringof~")";
 
 	static if(is(T == Element[],Element)) {
 	// dynamic array 
@@ -195,6 +196,51 @@ class perpetual(T)
 }
 
 
+/**
+ * Convenience helper, equivalent to new Persistent!T
+ */
+auto perpetual(T)(string path)
+{
+	return new Perpetual!T(path);
+}
+
+
+/**
+ * Single argument helper,
+ *  uses copy ctor/assignment for initialization
+ */
+auto perpetual(T, U)(string path, U seed)
+{
+	auto p=new Perpetual!T(path);
+	if(p.master) {
+		static if(isArray!T) {
+			static if(isArray!U) {
+				auto l=min(T.length, seed.length);
+				p[0..l]=seed[0..l];
+			} else {
+				p[]=seed;
+			}
+		} else {
+			p=seed;
+		}
+	}
+	return p;
+}
+
+
+/**
+ * Multi-argument helper,
+ *  forwards arguments to ctor
+ */
+auto perpetual(T, Args...)(string path, Args args)
+{
+	auto p=new Perpetual!T(path);
+	if(p.master)
+		p=T(args);
+	return p;
+}
+
+
 ///
 unittest
 {
@@ -204,95 +250,90 @@ unittest
 	import std.getopt;
 	import std.perpetual;
 
-	struct A { int x; };
+	struct A {
+		int x, y;
+		this(int x, int y) { this.x=x; this.y=y; }
+	}
 	class B {};
 	enum Color { black, red, green, blue, white };
 
-
-	// Usage: test
-	// Output:
-	// perpetual!int                   : 0
-	// perpetual!double                : nan
-	// perpetual!(A)                   : A(0)
-	// perpetual!(int[5])              : [0, 0, 0, 0, 0]
-	// perpetual!(immutable(short[]))  : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-	// perpetual!(Color)               : black
-	// perpetual!(char[])              : ________________________________
-	// perpetual!string                : ________________________________
-	// perpetual!(char[3][5])          : ["one", "...", "two", "...", "..."]
-	// perpetual!(const(char[]))       : one...two......
-	// perpetual!(char[3][])           : ["one", "...", "two", "...", "..."]
+	// Perpetual!int                   : 0
+	// Perpetual!double                : nan
+	// Perpetual!(A)                   : A(1, 2)
+	// Perpetual!(int[5])              : [7, 5, 3, 1, 0]
+	// Perpetual!(immutable(short[]))  : [7, 0, 5, 0, 3, 0, 1, 0, 0, 0]
+	// Perpetual!(Color)               : white
+	// Perpetual!(char[])              : ________________________________
+	// Perpetual!string                : ________________________________
+	// Perpetual!(char[3][5])          : ["one", "...", "two", "...", "..."]
+	// Perpetual!(const(char[]))       : one...two......
+	// Perpetual!(char[3][])           : ["one", "...", "two", "...", "..."]
 	//
 	// Usage: test --int=3 --real=3.14159 --struct=11 --array=1,3,5,7 --color=green --string=ABCDE 
 	// Output:
-	// perpetual!int                   : 3
-	// perpetual!double                : 3.14159
-	// perpetual!(A)                   : A(11)
-	// perpetual!(int[5])              : [1, 3, 5, 7, 0]
-	// perpetual!(immutable(short[]))  : [1, 0, 3, 0, 5, 0, 7, 0, 0, 0]
-	// perpetual!(Color)               : green
-	// perpetual!(char[])              : ABCDE___________________________
-	// perpetual!string                : ABCDE___________________________
-	// perpetual!(char[3][5])          : ["one", "...", "two", "...", "..."]
-	// perpetual!(const(char[]))       : one...two......
-	// perpetual!(char[3][])           : ["one", "...", "two", "...", "..."]
+	// Perpetual!int                   : 3
+	// Perpetual!double                : 3.14159
+	// Perpetual!(A)                   : A(11, 2)
+	// Perpetual!(int[5])              : [1, 3, 5, 7, 0]
+	// Perpetual!(immutable(short[]))  : [1, 0, 3, 0, 5, 0, 7, 0, 0, 0]
+	// Perpetual!(Color)               : green
+	// Perpetual!(char[])              : ABCDE___________________________
+	// Perpetual!string                : ABCDE___________________________
+	// Perpetual!(char[3][5])          : ["one", "...", "two", "...", "..."]
+	// Perpetual!(const(char[]))       : one...two......
+	// Perpetual!(char[3][])           : ["one", "...", "two", "...", "..."]
 
 
 	void main(string[] arg)
 	{
 
 		// simple built-in values
-		auto p0=new perpetual!int("Q1");
-		auto p1=new perpetual!double("Q2");
-
+		auto p0=perpetual!int("Q1");
+		auto p1=perpetual!double("Q2");
 		// struct
-		auto p2=new perpetual!A("Q3");
+		auto p2=perpetual!A("Q3", 1, 2);
 		// static array of integers
-
-		auto p3=new perpetual!(int[5])("Q4");
+		auto p3=perpetual!(int[5])("Q4", [7,5,3,1]);
 		// view only, map above as array of shorts
-		auto p4=new perpetual!(immutable(short[]))("Q4");
-
+		auto p4=perpetual!(immutable(short[]))("Q4");
 		// enum
-		auto p5=new perpetual!Color("Q5");
-
+		auto p5=perpetual!Color("Q5", Color.white);
 		// character string, reinitialize if new file created
-		auto p6=new perpetual!(char[])("Q6");
-		if(p6.length == 0) {
+		auto p6=perpetual!(char[])("Q6");
+		if(p6.length ==0) {
 		// the file wasn't initialized, do with static array
-			new perpetual!(char[32])("Q6")='_';
-			p6=new perpetual!(char[])("Q6");
+			perpetual!(char[32])("Q6", '_');
+			p6=perpetual!(char[])("Q6");
 		}
 		// view only variant of above
-		auto p7=new perpetual!string("Q6");
-
+		auto p7=perpetual!string("Q6");
 		// double static array with initailization
-		auto p8=new perpetual!(char[3][5])("Q7");
+ 		auto p8=perpetual!(char[3][5])("Q7");
 		if(p8.master) { foreach(ref x; p8) x="..."; p8[0]="one"; p8[2]="two"; }
 		// map of above as plain array
-		auto p9=new perpetual!(const(char[]))("Q7");
+		auto p9=perpetual!(const(char[]))("Q7");
 		// map again as dynamic array
-		auto pA=new perpetual!(char[3][])("Q7");
+		auto pA=perpetual!(char[3][])("Q7");
 
-		//auto pX=new perpetual!(char*)("Q?"); //ERROR: "char* is reference type"
-		//auto pX=new perpetual!B("Q?"); //ERROR: "B is reference type"
-		//auto pX=new perpetual!(char*[])("Q?"); //ERROR: "char* is reference type"
-		//auto pX=new perpetual!(char*[12])("Q?"); //ERROR: "char*[12] is reference type"
-		//auto pX=new perpetual!(char[string])("Q?"); //ERROR: "char[string] is reference type"
-		//auto pX=new perpetual!(char[][])("Q?"); //ERROR: "char[] is reference type"
-		//auto pX=new perpetual!(char[][3])("Q?"); //ERROR: "char[][3] is reference type"
+		//auto pX=new Perpetual!(char*)("Q?"); //ERROR: "char* is reference type"
+		//auto pX=new Perpetual!B("Q?"); //ERROR: "B is reference type"
+		//auto pX=new Perpetual!(char*[])("Q?"); //ERROR: "char* is reference type"
+		//auto pX=new Perpetual!(char*[12])("Q?"); //ERROR: "char*[12] is reference type"
+		//auto pX=new Perpetual!(char[string])("Q?"); //ERROR: "char[string] is reference type"
+		//auto pX=new Perpetual!(char[][])("Q?"); //ERROR: "char[] is reference type"
+		//auto pX=new Perpetual!(char[][3])("Q?"); //ERROR: "char[][3] is reference type"
 
 
 		getopt(arg
-			, "int", delegate(string key, string val){ p0=to!int(val); }
-			, "real", delegate(string key, string val){ p1=to!double(val); }
-			, "struct", delegate(string key, string val){ p2.x=to!int(val); }
-			, "array", delegate(string key, string val){
-		 		auto lst=split(val,",");
-				p3[0..lst.length]=to!(int[])(lst);
-			}
-			, "color", delegate(string key, string val){ p5=to!Color(val); }
-			, "string", delegate(string key, string val){ p6[0..val.length]=val; }
+			 , "int", delegate(string key, string val){ p0=to!int(val); }
+			 , "real", delegate(string key, string val){ p1=to!double(val); }
+			 , "struct", delegate(string key, string val){ p2.x=to!int(val); }
+			 , "array", delegate(string key, string val){
+		 			auto lst=split(val,",");
+					p3[0..lst.length]=to!(int[])(lst);
+				}
+			 , "color", delegate(string key, string val){ p5=to!Color(val); }
+			 , "string", delegate(string key, string val){ p6[0..val.length]=val; }
 			);
 
 		writefln("%-32s: %s", typeof(p0).stringof, p0);
