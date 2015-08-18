@@ -1001,10 +1001,15 @@ auto standardizePredicatePrefix(S)(S s) if (isSomeString!S)
 {
     if (s.length >= 2)
     {
-        if (s[0 .. 2] == "a ")
-        {
-            return "a" ~ s[2 .. $];
-        }
+        if (s[0] != 'a')
+            return s;
+
+        size_t wsCount = 0;
+        while (1 + wsCount < s.length &&
+               s[1 + wsCount] == ' ')
+            ++wsCount;
+
+        return 'a' ~ s[1 + wsCount .. $];
     }
     return s;
 }
@@ -1013,10 +1018,15 @@ auto standardizePredicateSuffix(S)(S s) if (isSomeString!S)
 {
     if (s.length >= 2)
     {
-        if (s[2 .. $] == " b")
-        {
-            return s[0 .. $ - 2] ~ "b";
-        }
+        if (s[$ - 1] != 'b')
+            return s;
+
+        size_t wsCount = 0;
+        while (1 + wsCount < s.length &&
+               s[$ - 2 - wsCount] == ' ')
+            ++wsCount;
+
+        return s[0 .. $ - 1 - wsCount] ~ 'b';
     }
     return s;
 }
@@ -1029,6 +1039,8 @@ auto standardizePredicate(S)(S s) if (isSomeString!S)
 unittest
 {
     static assert(standardizePredicate("a < b") == "a<b");
+    static assert(standardizePredicate("a  < b") == "a<b");
+    static assert(standardizePredicate("a    <=    b") == "a<=b");
     static assert(standardizePredicate("a > b") == "a>b");
 }
 
@@ -1066,7 +1078,7 @@ template isSortedRange(T, alias pred = "a < b")
             }
             else
             {
-                alias predString = binaryFunString!(pred);
+                alias predString = binaryFunString!pred;
             }
 
             static if (isSomeString!(typeof(predArg)))
@@ -1075,7 +1087,7 @@ template isSortedRange(T, alias pred = "a < b")
             }
             else
             {
-                alias predArgString = binaryFunString!(predArg);
+                alias predArgString = binaryFunString!predArg;
             }
 
             enum isSortedRange = (standardizePredicate(predString) ==
