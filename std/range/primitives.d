@@ -997,6 +997,52 @@ unittest
     static assert( isRandomAccessRange!(inout(int)[]));
 }
 
+auto standardizePredicatePrefix(S)(S s) if (isSomeString!S)
+{
+    if (s.length >= 2)
+    {
+        if (s[0 .. 2] == "a ")
+        {
+            return "a" ~ s[2 .. $];
+        }
+    }
+    return s;
+}
+
+auto standardizePredicateSuffix(S)(S s) if (isSomeString!S)
+{
+    if (s.length >= 2)
+    {
+        if (s[2 .. $] == " b")
+        {
+            return s[0 .. $ - 2] ~ "b";
+        }
+    }
+    return s;
+}
+
+auto standardizePredicate(S)(S s) if (isSomeString!S)
+{
+    return standardizePredicateSuffix(standardizePredicatePrefix(s));
+}
+
+unittest
+{
+    static assert(standardizePredicate("a < b") == "a<b");
+    static assert(standardizePredicate("a > b") == "a>b");
+}
+
+import std.functional : binaryFun;
+
+enum binaryFunString(alias pred : binaryFun!T, T ...) = T[0];
+
+unittest
+{
+    enum pred = "a+b";
+    alias x = binaryFun!pred;
+    static assert(binaryFunString!x == pred);
+}
+
 /**
    Returns true if $(D T) is a Range Sorted on predicate $(D pred).
 
@@ -1014,41 +1060,26 @@ template isSortedRange(T, alias pred = "a < b")
         static if (TArgs.length == 2)
         {
             alias predArg = TArgs[1];
-
-            static if (isSomeString!(typeof(pred)) &&
-                       isSomeString!(typeof(predArg)))
+            static if (isSomeString!(typeof(pred)))
             {
-                /*
-                  TODO Remove this when we find a way to
-                  - distinguish binaryFun!"a < b" from binaryFun!"a > b"
-                  - equate binaryFun!"a < b" from binaryFun!"a<b"
-                */
-                enum isSortedRange = pred == predArg;
+                alias predString = pred;
             }
             else
             {
-                import std.functional : binaryFun;
-
-                static if (isSomeString!(typeof(pred)))
-                {
-                    alias predFun = binaryFun!pred;
-                }
-                else
-                {
-                    alias predFun = pred;
-                }
-
-                static if (isSomeString!(typeof(predArg)))
-                {
-                    alias predArgFun = binaryFun!predArg;
-                }
-                else
-                {
-                    alias predArgFun = predArg;
-                }
-
-                enum isSortedRange = __traits(isSame, predFun, predArgFun);
+                alias predString = binaryFunString!(pred);
             }
+
+            static if (isSomeString!(typeof(predArg)))
+            {
+                alias predArgString = predArg;
+            }
+            else
+            {
+                alias predArgString = binaryFunString!(predArg);
+            }
+
+            enum isSortedRange = (standardizePredicate(predString) ==
+                                  standardizePredicate(predArgString));
         }
         else
         {
@@ -1069,10 +1100,10 @@ unittest
     alias R = int[];
 
     enum pred = "a < b";
-    alias fun = binaryFun!pred;
+    alias fun = binaryFun!"a<b";
 
-    enum rpred = "a > b";
-    alias rfun = binaryFun!rpred;
+    enum rpred = "a>b";
+    alias rfun = binaryFun!"a > b";
 
     import std.range : SortedRange;
 
