@@ -308,37 +308,42 @@ version(CRuntime_DigitalMars) unittest
 {
     void* m;
 
-    m = _aligned_malloc(16,0x10);
-    if(m){
+    m = _aligned_malloc(16, 0x10);
+    if (m)
+    {
         assert((m.addr & 0xF) == 0);
         _aligned_free(m);
     }
 
-    m = _aligned_malloc(16,0x100);
-    if(m){
+    m = _aligned_malloc(16, 0x100);
+    if (m)
+    {
         assert((m.addr & 0xFF) == 0);
         _aligned_free(m);
     }
 
-    m = _aligned_malloc(16,0x1000);
-    if(m){
+    m = _aligned_malloc(16, 0x1000);
+    if (m)
+    {
         assert((m.addr & 0xFFF) == 0);
         _aligned_free(m);
     }
 
-    m = _aligned_malloc(16,0x10);
-    if(m){
+    m = _aligned_malloc(16, 0x10);
+    if (m)
+    {
         assert((cast(size_t)m & 0xF) == 0);
-        m = _aligned_realloc(m,32,0x10000);
-        assert((m.addr & 0xFFFF) == 0);
+        m = _aligned_realloc(m, 32, 0x10000);
+        if (m) assert((m.addr & 0xFFFF) == 0);
         _aligned_free(m);
     }
 
-    m = _aligned_malloc(8,0x10);
-    if(m){
+    m = _aligned_malloc(8, 0x10);
+    if (m)
+    {
         *cast(ulong*) m = 0X01234567_89ABCDEF;
-        m = _aligned_realloc(m,0x800,0x1000);
-        assert(*cast(ulong*) m == 0X01234567_89ABCDEF);
+        m = _aligned_realloc(m, 0x800, 0x1000);
+        if (m) assert(*cast(ulong*) m == 0X01234567_89ABCDEF);
         _aligned_free(m);
     }
 }
