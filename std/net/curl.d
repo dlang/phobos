@@ -58,18 +58,18 @@ upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");)
 uploads file from file system to URL.)
 )
 $(TR $(TDNW $(LREF get)) $(TD $(D
-get("dlang.org")) returns a string containing the dlang.org web page.)
+get("dlang.org")) returns a char[] containing the dlang.org web page.)
 )
 $(TR $(TDNW $(LREF put)) $(TD $(D
-put("dlang.org", "Hi")) returns a string containing
+put("dlang.org", "Hi")) returns a char[] containing
 the dlang.org web page. after a HTTP PUT of "hi")
 )
 $(TR $(TDNW $(LREF post)) $(TD $(D
-post("dlang.org", "Hi")) returns a string containing
+post("dlang.org", "Hi")) returns a char[] containing
 the dlang.org web page. after a HTTP POST of "hi")
 )
 $(TR $(TDNW $(LREF byLine)) $(TD $(D
-byLine("dlang.org")) returns a range of strings containing the
+byLine("dlang.org")) returns a range of char[] containing the
 dlang.org web page.)
 )
 $(TR $(TDNW $(LREF byChunk)) $(TD $(D
@@ -77,7 +77,7 @@ byChunk("dlang.org", 10)) returns a range of ubyte[10] containing the
 dlang.org web page.)
 )
 $(TR $(TDNW $(LREF byLineAsync)) $(TD $(D
-byLineAsync("dlang.org")) returns a range of strings containing the dlang.org web
+byLineAsync("dlang.org")) returns a range of char[] containing the dlang.org web
  page asynchronously.)
 )
 $(TR $(TDNW $(LREF byChunkAsync)) $(TD $(D
@@ -96,14 +96,14 @@ Example:
 ---
 import std.net.curl, std.stdio;
 
-// Return a string containing the content specified by an URL
-string content = get("dlang.org");
+// Return a char[] containing the content specified by an URL
+auto content = get("dlang.org");
 
-// Post data and return a string containing the content specified by an URL
-string content = post("mydomain.com/here.cgi", "post data");
+// Post data and return a char[] containing the content specified by an URL
+auto content = post("mydomain.com/here.cgi", "post data");
 
 // Get content of file from ftp server
-string content = get("ftp.digitalmars.com/sieve.ds");
+auto content = get("ftp.digitalmars.com/sieve.ds");
 
 // Post and print out content line by line. The request is done in another thread.
 foreach (line; byLineAsync("dlang.org", "Post data"))
@@ -390,7 +390,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = get("d-lang.appspot.com/testUrl2");
+ * auto content = get("d-lang.appspot.com/testUrl2");
  * ----
  *
  * Returns:
@@ -459,7 +459,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
+ * auto content = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
  * ----
  *
  * Returns:
@@ -522,7 +522,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = put("d-lang.appspot.com/testUrl2",
+ * auto content = put("d-lang.appspot.com/testUrl2",
  *                      "Putting this data");
  * ----
  *
@@ -2548,7 +2548,7 @@ struct HTTP
      * import std.net.curl;
      * auto client = HTTP();
      * client.addRequestHeader("X-Custom-ABC", "This is the custom value");
-     * string content = get("dlang.org", client);
+     * auto content = get("dlang.org", client);
      * ---
      */
     void addRequestHeader(const(char)[] name, const(char)[] value)
