@@ -2380,6 +2380,11 @@ unittest
         foreach(U; allChars)
             testStringReplaceInPlace!(T, U)();
 
+    void testInout(inout(int)[] a)
+    {
+        // will be transferred to the 'replace' function
+        replaceInPlace(a, 1, 2, [1,2,3]);
+    }
 }
 
 unittest
