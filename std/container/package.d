@@ -234,7 +234,7 @@ $(TR $(TDNW $(D x ~ c)) $(TDNW $(D n$(SUBSCRIPT c) + n$(SUBSCRIPT x))) $(TD
 Returns the concatenation of $(D x) and $(D c).  $(D x) may be a
 single element or an input range type.))
 
-$(LEADINGROW Iteration)
+$(LEADINGROWN 3, Iteration)
 
 $(TR  $(TD $(D c.Range)) $(TD) $(TD The primary range
 type associated with the _container.))
@@ -245,7 +245,7 @@ iterating over the entire _container, in a _container-defined order.))
 $(TR $(TDNW $(D c[a .. b])) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Fetches a
 portion of the _container from key $(D a) to key $(D b).))
 
-$(LEADINGROW Capacity)
+$(LEADINGROWN 3, Capacity)
 
 $(TR $(TD $(D c.empty)) $(TD $(D 1)) $(TD Returns $(D true) if the
 _container has no elements, $(D false) otherwise.))
@@ -265,7 +265,7 @@ without triggering a reallocation.))
 $(TR $(TD $(D c.reserve(x))) $(TD $(D n$(SUBSCRIPT c))) $(TD Forces $(D
 capacity) to at least $(D x) without reducing it.))
 
-$(LEADINGROW Access)
+$(LEADINGROWN 3, Access)
 
 $(TR $(TDNW $(D c.front)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns the
 first element of the _container, in a _container-defined order.))
@@ -308,7 +308,7 @@ $(TR  $(TDNW $(D c[x] $(I op)= v)) $(TDNW $(D log n$(SUBSCRIPT c)))
 $(TD Performs read-modify-write operation at specified index into the
 _container.))
 
-$(LEADINGROW Operations)
+$(LEADINGROWN 3, Operations)
 
 $(TR $(TDNW $(D e in c)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
 Returns nonzero if e is found in $(D c).))
@@ -322,7 +322,7 @@ Returns a range of all elements strictly greater than $(D v).))
 $(TR  $(TDNW $(D c.equalRange(v))) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
 Returns a range of all elements in $(D c) that are equal to $(D v).))
 
-$(LEADINGROW Modifiers)
+$(LEADINGROWN 3, Modifiers)
 
 $(TR $(TDNW $(D c ~= x)) $(TDNW $(D n$(SUBSCRIPT c) + n$(SUBSCRIPT x)))
 $(TD Appends $(D x) to $(D c). $(D x) may be a single element or an
