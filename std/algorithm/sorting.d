@@ -19,6 +19,10 @@ $(T2 isPartitioned,
         afterwards.)
 $(T2 isSorted,
         $(D isSorted([1, 1, 2, 3])) returns $(D true).)
+$(T2 ordered,
+        $(D ordered(1, 1, 2, 3)) returns $(D true).)
+$(T2 strictlyOrdered,
+        $(D strictlyOrdered(1, 1, 2, 3)) returns $(D false).)
 $(T2 makeIndex,
         Creates a separate index for a range.)
 $(T2 multiSort,
