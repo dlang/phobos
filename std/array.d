@@ -2281,8 +2281,6 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
 {
     static if(isDynamicArray!Range &&
               is(Unqual!(ElementEncodingType!Range) == T) &&
-              !is(T == const T) &&
-              !is(T == immutable T) &&
               !isNarrowString!(T[]))
     {
         // optimized for homogeneous arrays that can be overwritten.
