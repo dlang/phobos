@@ -768,6 +768,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         {
             client.onSend = null;
             client.handle.onSeek = null;
+            client.contentLength = 0;
         }
     }
     client.url = url;
@@ -844,6 +845,24 @@ unittest
     if (!netAllowed()) return;
     auto e = collectException!CurlException(get(testUrl1 ~ "nonexisting"));
     assert(e.msg == "HTTP request returned status code 404 (Not Found)");
+}
+
+// Bugzilla 14760 - content length must be reset after post
+unittest
+{
+    //if (!netAllowed()) return;
+    auto http = HTTP();
+    {
+        string data = "Hello world";
+        auto res = post(testUrl2, data, http);
+        assert(res == data,
+               "post!HTTP() returns unexpected content " ~ res);
+    }
+    {
+        auto res = trace(testUrl1, http);
+        assert(res == "Hello world\n",
+               "trace!HTTP() returns unexpected content " ~ res);
+    }
 }
 
 /*
