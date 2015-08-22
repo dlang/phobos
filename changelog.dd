@@ -8,6 +8,7 @@ $(BUGSTITLE Library Changes,
 
 $(LI $(RELATIVE_LINK2 more-rangified-functions, More phobos functions were rangified.))
 $(LI $(RELATIVE_LINK2 std-algorithm-moveEmplace, `moveEmplace` was added))
+$(LI $(RELATIVE_LINK2 curl-dynamic-loading, libcurl is now loaded dynamically))
 
 )
 
@@ -77,6 +78,26 @@ $(LI $(LNAME2 std-algorithm-moveEmplace, A combined `moveEmplace` was added.)
     $(P There are also $(XREF algorithm_mutation, moveEmplaceAll)
         and $(XREF algorithm_mutation, moveEmplaceSome) as counterparts of
         $(XREF algorithm_mutation, moveAll) and $(XREF algorithm_mutation, moveSome).
+    )
+)
+
+$(LI $(RELATIVE_LINK2 curl-dynamic-loading, libcurl is now loaded dynamically)
+
+    $(P $(STDMODREF net_curl, std.net.curl) was changed to load curl as shared
+        library at runtime.  This simplifies the usage as it's no longer
+        necessary to link against libcurl or to install any development
+        libraries.
+    )
+
+    $(P The implementation will also try to get the needed curl symbols from the
+        executable itself. So it remains possible to link with a specific
+        version of libcurl or with a static libcurl library.
+    )
+
+    $(P To make this work you have to link with $(I --export-dynamic) respectively
+        use a $(I .DEF) file on Windows (see $(LINK2
+        http://wiki.dlang.org/Curl_on_Windows#Using_the_static_lib, wiki) for
+        more info on the latter).
     )
 )
 
