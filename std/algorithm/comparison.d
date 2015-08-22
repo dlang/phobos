@@ -20,6 +20,10 @@ $(T2 cmp,
 $(T2 equal,
         Compares ranges for element-by-element equality, e.g.
         $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns $(D true).)
+$(T2 isPermutation,
+        $(D isPermutation([1, 2], [2, 1])) returns $(D true).)
+$(T2 isSameLength,
+        $(D isSameLength([1, 2, 3], [4, 5, 6])) returns $(D true).)
 $(T2 levenshteinDistance,
         $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
         the $(LUCKY Levenshtein distance _algorithm).)
@@ -52,10 +56,10 @@ module std.algorithm.comparison;
 
 // FIXME
 import std.functional; // : unaryFun, binaryFun;
-import std.range.primitives;
+import std.range;
 import std.traits;
 // FIXME
-import std.typecons; // : tuple, Tuple;
+import std.typecons; // : tuple, Tuple, Flag;
 
 /**
 Find $(D value) _among $(D values), returning the 1-based index
@@ -1564,4 +1568,341 @@ unittest
                 1, {}(), //A void return expression that doesn't throw
                 2, "two",
                 ));
+}
+
+/**
+Checks if the two ranges have the same number of elements. This function is
+optimized to always take advantage of the $(D length) member of either range
+if it exists.
+
+If both ranges have a length member, this function is $(BIGOH 1). Otherwise,
+this function is $(BIGOH min(r1.length, r2.length)).
+
+Params:
+    r1 = a finite input range
+    r2 = a finite input range
+
+Returns:
+    $(D true) if both ranges have the same length, $(D false) otherwise.
+*/
+bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
+    if (isInputRange!Range1 &&
+        isInputRange!Range2 &&
+        !isInfinite!Range1 &&
+        !isInfinite!Range2)
+{
+    static if (hasLength!(Range1) && hasLength!(Range2))
+    {
+        return r1.length == r2.length;
+    }
+    else static if (hasLength!(Range1) && !hasLength!(Range2))
+    {
+        size_t length;
+
+        while (!r2.empty)
+        {
+            r2.popFront;
+
+            if (++length > r1.length)
+            {
+                return false;
+            }
+        }
+
+        return !(length < r1.length);
+    }
+    else static if (!hasLength!(Range1) && hasLength!(Range2))
+    {
+        size_t length;
+
+        while (!r1.empty)
+        {
+            r1.popFront;
+
+            if (++length > r2.length)
+            {
+                return false;
+            }
+        }
+
+        return !(length < r2.length);
+    }
+    else
+    {
+        while (!r1.empty)
+        {
+           if (r2.empty)
+           {
+              return false;
+           }
+
+           r1.popFront;
+           r2.popFront;
+        }
+
+        return r2.empty;
+    }
+}
+
+///
+@safe nothrow pure unittest
+{
+    assert(isSameLength([1, 2, 3], [4, 5, 6]));
+    assert(isSameLength([0.3, 90.4, 23.7, 119.2], [42.6, 23.6, 95.5, 6.3]));
+    assert(isSameLength("abc", "xyz"));
+
+    int[] a;
+    int[] b;
+    assert(isSameLength(a, b));
+
+    assert(!isSameLength([1, 2, 3], [4, 5]));
+    assert(!isSameLength([0.3, 90.4, 23.7], [42.6, 23.6, 95.5, 6.3]));
+    assert(!isSameLength("abcd", "xyz"));
+}
+
+// Test CTFE
+@safe pure unittest
+{
+    enum result1 = isSameLength([1, 2, 3], [4, 5, 6]);
+    static assert(result1);
+
+    enum result2 = isSameLength([0.3, 90.4, 23.7], [42.6, 23.6, 95.5, 6.3]);
+    static assert(!result2);
+}
+
+@safe nothrow pure unittest
+{
+    import std.internal.test.dummyrange;
+
+    auto r1 = new ReferenceInputRange!int([1, 2, 3]);
+    auto r2 = new ReferenceInputRange!int([4, 5, 6]);
+    assert(isSameLength(r1, r2));
+
+    auto r3 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input) r4;
+    assert(isSameLength(r3, r4));
+
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input) r5;
+    auto r6 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    assert(isSameLength(r5, r6));
+
+    auto r7 = new ReferenceInputRange!int([1, 2]);
+    auto r8 = new ReferenceInputRange!int([4, 5, 6]);
+    assert(!isSameLength(r7, r8));
+
+    auto r9 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6, 7, 8]);
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input) r10;
+    assert(!isSameLength(r9, r10));
+
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input) r11;
+    auto r12 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6, 7, 8]);
+    assert(!isSameLength(r11, r12));
+}
+
+/// For convenience
+alias AllocateGC = Flag!"AllocateGC";
+
+/**
+Checks if both ranges are permutations of each other.
+
+This function can allocate if the $(D AllocateGC.yes) flag is passed. This has
+the benefit of have better complexity than the $(D AllocateGC.no) option. However,
+this option is only available for ranges whose equality can be determined via each
+element's $(D toHash) method. If customized equality is needed, then the $(D pred)
+template parameter can be passed, and the function will automatically switch to
+the non-allocating algorithm. See $(XREF functional,binaryFun) for more details on
+how to define $(D pred).
+
+Non-allocating forward range option: $(BIGOH n^2)
+Non-allocating forward range option with custom $(D pred): $(BIGOH n^2)
+Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.length)
+
+Params:
+    pred = an optional parameter to change how equality is defined
+    allocate_gc = A $(D std.typecons.Flag!"AllocateGC") instance
+    r1 = A finite forward range
+    r2 = A finite forward range
+
+Returns:
+    $(D true) if all of the elements in $(D r1) appear the same number of times in $(D r2).
+    Otherwise, returns $(D false).
+*/
+
+bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
+(Range1 r1, Range2 r2)
+    if (allocate_gc == AllocateGC.yes &&
+        isForwardRange!Range1 &&
+        isForwardRange!Range2 &&
+        !isInfinite!Range1 &&
+        !isInfinite!Range2)
+{
+    alias E1 = Unqual!(ElementType!Range1);
+    alias E2 = Unqual!(ElementType!Range2);
+
+    if (!isSameLength(r1.save, r2.save))
+    {
+        return false;
+    }
+
+    // Skip the elements at the beginning where r1.front == r2.front,
+    // they are in the same order and don't need to be counted.
+    while (!r1.empty && !r2.empty && r1.front == r2.front)
+    {
+        r1.popFront();
+        r2.popFront();
+    }
+
+    if (r1.empty && r2.empty)
+    {
+        return true;
+    }
+
+    int[CommonType!(E1, E2)] counts;
+
+    foreach (item; r1)
+    {
+        ++counts[item];
+    }
+
+    foreach (item; r2)
+    {
+        if (--counts[item] < 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/// ditto
+bool isPermutation(alias pred = "a == b", Range1, Range2)
+(Range1 r1, Range2 r2)
+    if (is(typeof(binaryFun!(pred))) &&
+        isForwardRange!Range1 &&
+        isForwardRange!Range2 &&
+        !isInfinite!Range1 &&
+        !isInfinite!Range2)
+{
+    import std.algorithm.searching : count;
+
+    alias predEquals = binaryFun!(pred);
+    alias E1 = Unqual!(ElementType!Range1);
+    alias E2 = Unqual!(ElementType!Range2);
+
+    if (!isSameLength(r1.save, r2.save))
+    {
+        return false;
+    }
+
+    // Skip the elements at the beginning where r1.front == r2.front,
+    // they are in the same order and don't need to be counted.
+    while (!r1.empty && !r2.empty && predEquals(r1.front, r2.front))
+    {
+        r1.popFront();
+        r2.popFront();
+    }
+
+    if (r1.empty && r2.empty)
+    {
+        return true;
+    }
+
+    size_t r1_count;
+    size_t r2_count;
+
+    // At each element item, when computing the count of item, scan it while
+    // also keeping track of the scanning index. If the first occurrence
+    // of item in the scanning loop has an index smaller than the current index,
+    // then you know that the element has been seen before
+    outloop: foreach (index, item; r1.save.enumerate)
+    {
+        r1_count = 0;
+        r2_count = 0;
+
+        foreach (i, e; r1.save.enumerate)
+        {
+            if (predEquals(e, item) && i < index)
+            {
+                 continue outloop;
+            }
+            else if (predEquals(e, item))
+            {
+                ++r1_count;
+            }
+        }
+
+        r2_count = r2.save.count!pred(item);
+
+        if (r1_count != r2_count)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+///
+@safe pure unittest
+{
+    assert(isPermutation([1, 2, 3], [3, 2, 1]));
+    assert(isPermutation([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
+    assert(isPermutation("abc", "bca"));
+
+    assert(!isPermutation([1, 2], [3, 4]));
+    assert(!isPermutation([1, 1, 2, 3], [1, 2, 2, 3]));
+    assert(!isPermutation([1, 1], [1, 1, 1]));
+
+    // Faster, but allocates GC handled memory
+    assert(isPermutation!(AllocateGC.yes)([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
+    assert(!isPermutation!(AllocateGC.yes)([1, 2], [3, 4]));
+}
+
+// Test @nogc inference
+@safe @nogc pure unittest
+{
+    static immutable arr1 = [1, 2, 3];
+    static immutable arr2 = [3, 2, 1];
+    assert(isPermutation(arr1, arr2));
+
+    static immutable arr3 = [1, 1, 2, 3];
+    static immutable arr4 = [1, 2, 2, 3];
+    assert(!isPermutation(arr3, arr4));
+}
+
+@safe pure unittest
+{
+    import std.internal.test.dummyrange;
+
+    auto r1 = new ReferenceForwardRange!int([1, 2, 3, 4]);
+    auto r2 = new ReferenceForwardRange!int([1, 2, 4, 3]);
+    assert(isPermutation(r1, r2));
+
+    auto r3 = new ReferenceForwardRange!int([1, 2, 3, 4]);
+    auto r4 = new ReferenceForwardRange!int([4, 2, 1, 3]);
+    assert(isPermutation!(AllocateGC.yes)(r3, r4));
+
+    auto r5 = new ReferenceForwardRange!int([1, 2, 3]);
+    auto r6 = new ReferenceForwardRange!int([4, 2, 1, 3]);
+    assert(!isPermutation(r5, r6));
+
+    auto r7 = new ReferenceForwardRange!int([4, 2, 1, 3]);
+    auto r8 = new ReferenceForwardRange!int([1, 2, 3]);
+    assert(!isPermutation!(AllocateGC.yes)(r7, r8));
+
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r9;
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r10;
+    assert(isPermutation(r9, r10));
+
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r11;
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r12;
+    assert(isPermutation!(AllocateGC.yes)(r11, r12));
+
+    alias mytuple = Tuple!(int, int);
+
+    assert(isPermutation!"a[0] == b[0]"(
+        [mytuple(1, 4), mytuple(2, 5)],
+        [mytuple(2, 3), mytuple(1, 2)]
+    ));
 }
