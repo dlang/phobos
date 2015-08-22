@@ -758,14 +758,17 @@ unittest
  */
 private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP client)
 {
+    immutable doSend = sendData !is null &&
+        (client.method == HTTP.Method.post ||
+         client.method == HTTP.Method.put);
+
     scope (exit)
     {
         client.onReceiveHeader = null;
         client.onReceiveStatusLine = null;
         client.onReceive = null;
 
-        if (sendData !is null &&
-            (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+        if (doSend)
         {
             client.onSend = null;
             client.handle.onSeek = null;
@@ -782,8 +785,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         return data.length;
     };
 
-    if (sendData !is null &&
-        (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+    if (doSend)
     {
         client.contentLength = sendData.length;
         auto remainingData = sendData;
