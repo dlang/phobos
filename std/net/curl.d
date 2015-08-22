@@ -624,22 +624,17 @@ unittest
  *
  * Params:
  * url = resource make a option call to
- * optionsData = options data to send as the body of the request. An array
- *               of an arbitrary type is accepted and will be cast to ubyte[]
- *               before sending it.
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
- * Currently the HTTP RFC does not specify any usage of the optionsData and
- * for this reason the example below does not send optionsData to the server.
  *
  * Example:
  * ----
  * import std.net.curl;
  * auto http = HTTP();
- * options("d-lang.appspot.com/testUrl2", null, http);
+ * options("d-lang.appspot.com/testUrl2", http);
  * writeln("Allow set to " ~ http.responseHeaders["Allow"]);
  * ----
  *
@@ -648,19 +643,26 @@ unittest
  *
  * See_Also: $(LREF HTTP.Method)
  */
+T[] options(T = char)(const(char)[] url, HTTP conn = HTTP())
+    if (is(T == char) || is(T == ubyte))
+{
+    conn.method = HTTP.Method.options;
+    return _basicHTTP!(T)(url, null, conn);
+}
+
+deprecated("options does not send any data")
 T[] options(T = char, OptionsUnit)(const(char)[] url,
                                    const(OptionsUnit)[] optionsData = null,
                                    HTTP conn = HTTP())
-if (is(T == char) || is(T == ubyte))
+    if (is(T == char) || is(T == ubyte))
 {
-    conn.method = HTTP.Method.options;
-    return _basicHTTP!(T)(url, optionsData, conn);
+    return options!T(url, conn);
 }
 
 unittest
 {
     if (!netAllowed()) return;
-    auto res = options(testUrl2, "Hello world");
+    auto res = options(testUrl2);
     assert(res == "Hello world",
            "options!HTTP() returns unexpected content " ~ res);
 }
@@ -668,7 +670,7 @@ unittest
 unittest
 {
     if (!netAllowed()) return;
-    auto res = options(testUrl1, []);
+    auto res = options(testUrl1);
     assert(res == "Hello world\n",
            "options!HTTP() returns unexpected content " ~ res);
 }
