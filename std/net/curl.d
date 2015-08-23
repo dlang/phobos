@@ -446,8 +446,7 @@ unittest
  * postData = data to send as the body of the request. An array
  *            of an arbitrary type is accepted and will be cast to ubyte[]
  *            before sending it.
- * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
- *        guess connection type and create a new instance for this call only.
+ * conn = HTTP connection to use
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
@@ -716,8 +715,7 @@ unittest
  *
  * Params:
  * url = resource make a connect to
- * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
- *        guess connection type and create a new instance for this call only.
+ * conn = HTTP connection to use
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
@@ -750,6 +748,49 @@ unittest
 }
 
 
+/** HTTP patch content.
+ *
+ * Params:
+ * url = resource to patch
+ * patchData = data to send as the body of the request. An array
+ *           of an arbitrary type is accepted and will be cast to ubyte[]
+ *           before sending it.
+ * conn = HTTP connection to use
+ *
+ * The template parameter $(D T) specifies the type to return. Possible values
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ *
+ * Example:
+ * ----
+ * auto http = HTTP();
+ * http.addRequestHeader("Content-Type", "application/json");
+ * auto content = patch("d-lang.appspot.com/testUrl2", `{"title": "Patched Title"}`, http);
+ * ----
+ *
+ * Returns:
+ * A T[] range containing the content of the resource pointed to by the URL.
+ *
+ * See_Also: $(LREF HTTP.Method)
+ */
+T[] patch(T = char, PatchUnit)(const(char)[] url, const(PatchUnit)[] patchData,
+                               HTTP conn = HTTP())
+    if (is(T == char) || is(T == ubyte))
+{
+    conn.method = HTTP.Method.patch;
+    return _basicHTTP!(T)(url, patchData, conn);
+}
+
+unittest
+{
+    // google appspot does not allow patchmethod.
+    // if (!netAllowed()) return;
+    //
+    // auto http = HTTP();
+    // http.addRequestHeader("Content-Type", "application/json");
+    // auto content = patch("d-lang.appspot.com/testUrl2", `{"title": "Patched Title"}`, http);
+}
+
+
 /*
  * Helper function for the high level interface.
  *
@@ -758,14 +799,18 @@ unittest
  */
 private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP client)
 {
+    immutable doSend = sendData !is null &&
+        (client.method == HTTP.Method.post ||
+         client.method == HTTP.Method.put ||
+         client.method == HTTP.Method.patch);
+
     scope (exit)
     {
         client.onReceiveHeader = null;
         client.onReceiveStatusLine = null;
         client.onReceive = null;
 
-        if (sendData !is null &&
-            (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+        if (doSend)
         {
             client.onSend = null;
             client.handle.onSeek = null;
@@ -782,8 +827,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         return data.length;
     };
 
-    if (sendData !is null &&
-        (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+    if (doSend)
     {
         client.contentLength = sendData.length;
         auto remainingData = sendData;
@@ -2317,6 +2361,10 @@ struct HTTP
             p.curl.set(CurlOption.customrequest, "CONNECT");
             opt = CurlOption.customrequest;
             break;
+        case Method.patch:
+            p.curl.set(CurlOption.customrequest, "PATCH");
+            opt = CurlOption.customrequest;
+            break;
         }
 
         scope (exit) p.curl.clear(opt);
@@ -2819,14 +2867,14 @@ struct HTTP
         CurlOption lenOpt;
 
         // Force post if necessary
-        if (p.method != Method.put && p.method != Method.post)
+        if (p.method != Method.put && p.method != Method.post &&
+            p.method != Method.patch)
             p.method = Method.post;
 
-        if (p.method == Method.put)
-            lenOpt = CurlOption.infilesize_large;
-        else
-            // post
+        if (p.method == Method.post)
             lenOpt = CurlOption.postfieldsize_large;
+        else
+            lenOpt = CurlOption.infilesize_large;
 
         if (len == size_t.max)
         {
@@ -2879,7 +2927,8 @@ struct HTTP
         del,  ///
         options, ///
         trace,   ///
-        connect  ///
+        connect,  ///
+        patch, ///
     }
 
     /**
