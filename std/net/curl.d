@@ -2428,7 +2428,6 @@ struct HTTP
         setUserAgent(HTTP.defaultUserAgent);
         dataTimeout = _defaultDataTimeout;
         onReceiveHeader = null;
-        version (unittest) verbose = true;
         verifyPeer = true;
         verifyHost = true;
     }
@@ -3164,7 +3163,6 @@ struct FTP
         p.curl.initialize();
         p.encoding = "ISO-8859-1";
         dataTimeout = _defaultDataTimeout;
-        version (unittest) verbose = true;
     }
 
     /**
