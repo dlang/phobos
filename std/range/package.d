@@ -2850,6 +2850,15 @@ public:
     assert(equal(generate(infiniteIota(1, 4)).take(10), [1, 2, 3, 1, 2, 3, 1, 2, 3, 1]));
 }
 
+///
+unittest
+{
+    import std.format, std.random;
+
+    auto r = generate!(() => uniform(0, 6)).take(10);
+    format("%(%s %)", r);
+}
+
 @safe unittest
 {
     import std.algorithm : equal;
