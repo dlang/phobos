@@ -2990,9 +2990,9 @@ struct HTTP
     /**
        The content length in bytes when using request that has content
        e.g. POST/PUT and not using chunked transfer. Is set as the
-       "Content-Length" header.  Set to size_t.max to reset to chunked transfer.
+       "Content-Length" header.  Set to ulong.max to reset to chunked transfer.
     */
-    @property void contentLength(size_t len)
+    @property void contentLength(ulong len)
     {
         CurlOption lenOpt;
 
@@ -3006,7 +3006,10 @@ struct HTTP
         else
             lenOpt = CurlOption.infilesize_large;
 
-        if (len == size_t.max)
+        if (size_t.max != ulong.max && len == size_t.max)
+            len = ulong.max; // check size_t.max for backwards compat, turn into error
+
+        if (len == ulong.max)
         {
             // HTTP 1.1 supports requests with no length header set.
             addRequestHeader("Transfer-Encoding", "chunked");
@@ -3014,7 +3017,7 @@ struct HTTP
         }
         else
         {
-            p.curl.set(lenOpt, len);
+            p.curl.set(lenOpt, to!curl_off_t(len));
         }
     }
 
@@ -3404,9 +3407,9 @@ struct FTP
     /**
        The content length in bytes of the ftp data.
     */
-    @property void contentLength(size_t len)
+    @property void contentLength(ulong len)
     {
-        p.curl.set(CurlOption.infilesize_large, len);
+        p.curl.set(CurlOption.infilesize_large, to!curl_off_t(len));
     }
 }
 
