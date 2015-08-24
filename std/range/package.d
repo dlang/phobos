@@ -2795,34 +2795,11 @@ auto generate(Fun)(Fun fun)
     return Generator!(Fun)(fun);
 }
 
-///
+/// ditto
 auto generate(alias fun)()
     if (isCallable!fun)
 {
     return Generator!(fun)();
-}
-
-//private struct Generator(bool onPopFront, bool runtime, Fun...)
-private struct Generator(Fun...)
-{
-    static assert(Fun.length == 1);
-    static assert(isInputRange!Generator);
-
-private:
-    static if (is(Fun[0]))
-        Fun[0] fun;
-    else
-        alias fun = Fun[0];
-
-public:
-    enum empty = false;
-
-    auto ref front() @property
-    {
-        return fun();
-    }
-
-    void popFront() { }
 }
 
 ///
@@ -2848,6 +2825,38 @@ public:
     }
     //adapted as a range.
     assert(equal(generate(infiniteIota(1, 4)).take(10), [1, 2, 3, 1, 2, 3, 1, 2, 3, 1]));
+}
+
+///
+unittest
+{
+    import std.format, std.random;
+
+    auto r = generate!(() => uniform(0, 6)).take(10);
+    format("%(%s %)", r);
+}
+
+//private struct Generator(bool onPopFront, bool runtime, Fun...)
+private struct Generator(Fun...)
+{
+    static assert(Fun.length == 1);
+    static assert(isInputRange!Generator);
+
+private:
+    static if (is(Fun[0]))
+        Fun[0] fun;
+    else
+        alias fun = Fun[0];
+
+public:
+    enum empty = false;
+
+    auto ref front() @property
+    {
+        return fun();
+    }
+
+    void popFront() { }
 }
 
 @safe unittest
