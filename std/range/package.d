@@ -4581,7 +4581,7 @@ body
 
         inout(Value) opIndex(ulong n) inout
         {
-            assert(n < this.length);
+            assert(n < this.rawLength);
 
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
@@ -4590,13 +4590,13 @@ body
         inout(Result) opSlice() inout { return this; }
         inout(Result) opSlice(ulong lower, ulong upper) inout
         {
-            assert(upper >= lower && upper <= this.length);
+            assert(upper >= lower && upper <= this.rawLength);
 
             return cast(inout Result)Result(cast(Value)(current + lower * step),
-                                            cast(Value)(pastLast - (length - upper) * step),
+                                            cast(Value)(pastLast - (rawLength - upper) * step),
                                             step);
         }
-        @property IndexType length() const
+        @property IndexType rawLength() const
         {
             if (step > 0)
             {
@@ -4608,7 +4608,17 @@ body
             }
         }
 
-        alias opDollar = length;
+        @property size_t length() const
+        {
+            import std.exception : enforce;
+
+            auto len = this.rawLength;
+            enforce(len <= size_t.max, "Length of iota cannot be expressed "~
+                                       "as size_t");
+            return cast(size_t) len;
+        }
+
+        alias opDollar = rawLength;
     }
 
     return Result(begin, end, step);
@@ -4659,7 +4669,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
         inout(Value) opIndex(ulong n) inout
         {
-            assert(n < this.length);
+            assert(n < this.rawLength);
 
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
@@ -4668,17 +4678,25 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         inout(Result) opSlice() inout { return this; }
         inout(Result) opSlice(ulong lower, ulong upper) inout
         {
-            assert(upper >= lower && upper <= this.length);
+            assert(upper >= lower && upper <= this.rawLength);
 
             return cast(inout Result)Result(cast(Value)(current + lower),
-                                            cast(Value)(pastLast - (length - upper)));
+                                            cast(Value)(pastLast - (rawLength - upper)));
         }
-        @property IndexType length() const
+        @property IndexType rawLength() const
         {
             return unsigned(pastLast - current);
         }
+        @property size_t length() const
+        {
+            import std.exception : enforce;
 
-        alias opDollar = length;
+            auto len = this.rawLength;
+            enforce(len <= size_t.max, "Length of iota exceeds size_t");
+            return cast(size_t) len;
+        }
+
+        alias opDollar = rawLength;
     }
 
     return Result(begin, end);
@@ -4991,6 +5009,25 @@ unittest
         const s2 = cRange[0 .. 3];
         const l = cRange.length;
     }
+}
+
+unittest
+{
+    // Issue 14832: iota(10UL).array should work on 32-bit platforms.
+    import std.array : array;
+    auto r1 = iota(10UL).array;
+    assert(r1 == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+    // Also test 3-argument overload for the same case
+    auto r2 = iota(0UL, 10UL, 2UL).array;
+    assert(r2 == [0, 2, 4, 6, 8]);
+
+    // Make sure we didn't break opDollar
+    auto r1b = iota(ulong.max);
+    assert(r1b[$-1] == ulong.max - 1);
+
+    auto r2b = iota(0, ulong.max-1, 2);
+    assert(r2b[$-1] == ulong.max - 3);
 }
 
 /* Generic overload that handles arbitrary types that support arithmetic
