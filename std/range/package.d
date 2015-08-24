@@ -4610,11 +4610,12 @@ body
 
         @property size_t length() const
         {
-            auto l = this.rawLength;
-            if (l > size_t.max)
-                throw new Exception("Length of iota cannot be expressed as "~
-                                    "size_t");
-            return cast(size_t)l;
+            import std.exception : enforce;
+
+            auto len = this.rawLength;
+            enforce(len <= size_t.max, "Length of iota cannot be expressed "~
+                                       "as size_t");
+            return cast(size_t) len;
         }
 
         alias opDollar = rawLength;
@@ -4688,9 +4689,10 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         }
         @property size_t length() const
         {
+            import std.exception : enforce;
+
             auto len = this.rawLength;
-            if (len > size_t.max)
-                throw new Exception("Length of iota exceeds size_t");
+            enforce(len <= size_t.max, "Length of iota exceeds size_t");
             return cast(size_t) len;
         }
 
