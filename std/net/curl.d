@@ -4113,10 +4113,8 @@ struct Curl
     {
         throwOnStopped();
         auto rval = curl.easy_setopt(this.handle, option, null);
-        if (rval != CurlError.unknown_telnet_option)
-        {
+        if (rval != CurlError.unknown_option && rval != CurlError.not_built_in)
             _check(rval);
-        }
     }
 
     /**
