@@ -2674,10 +2674,12 @@ unittest
     See_Also:
         $(LREF relativePath)
 */
-auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R)
-    (R path, string base)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
+    (R1 path, R2 base)
+    if ((isNarrowString!R1 ||
+         (isRandomAccessRange!R1 && hasSlicing!R1 && isSomeChar!(ElementType!R1))) &&
+        (isNarrowString!R2 ||
+         (isRandomAccessRange!R2 && hasSlicing!R2 && isSomeChar!(ElementType!R2))))
 {
     bool choosePath = !isAbsolute(path);
 
@@ -2714,7 +2716,7 @@ auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R)
         .joiner(dirSeparator.byChar);
 
     auto r2 = pathPS
-        .joiner(dirSeparator)
+        .joiner(dirSeparator.byChar)
         .byChar;
 
     // Return (r1 ~ sep ~ r2)
@@ -2746,8 +2748,24 @@ unittest
     }
     else
         static assert(0);
- }
+}
 
+unittest
+{
+    import std.array, std.utf : bCU=byCodeUnit;
+    version (Posix)
+    {
+        assert (asRelativePath("/foo/bar/baz".bCU, "/foo/bar".bCU).array == "baz");
+        assert (asRelativePath("/foo/bar/baz"w.bCU, "/foo/bar"w.bCU).array == "baz"w);
+        assert (asRelativePath("/foo/bar/baz"d.bCU, "/foo/bar"d.bCU).array == "baz"d);
+    }
+    else version (Windows)
+    {
+        assert (asRelativePath(`\\foo\bar`.bCU, `c:\foo`.bCU).array == `\\foo\bar`);
+        assert (asRelativePath(`\\foo\bar`w.bCU, `c:\foo`w.bCU).array == `\\foo\bar`w);
+        assert (asRelativePath(`\\foo\bar`d.bCU, `c:\foo`d.bCU).array == `\\foo\bar`d);
+    }
+}
 
 /** Compares filename characters and return $(D < 0) if $(D a < b), $(D 0) if
     $(D a == b) and $(D > 0) if $(D a > b).
@@ -3794,4 +3812,3 @@ private template BaseOf(R)
     else
         alias BaseOf = StringTypeOf!R;
 }
-
