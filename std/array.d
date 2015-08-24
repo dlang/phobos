@@ -49,6 +49,14 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(D $(LREF replicate)))
         $(TD Creates a new _array out of several copies of an input _array or range.
     ))
+    $(TR $(TD $(D $(LREF sameHead)))
+        $(TD Checks if the initial segments of two arrays refer to the same
+        place in memory.
+    ))
+    $(TR $(TD $(D $(LREF sameTail)))
+        $(TD Checks if the final segments of two arrays refer to the same place
+        in memory.
+    ))
     $(TR $(TD $(D $(LREF split)))
         $(TD Eagerly split a range or string into an _array.
     ))
