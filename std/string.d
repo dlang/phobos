@@ -134,7 +134,7 @@ See_Also:
 
 Macros: WIKI = Phobos/StdString
         SHORTXREF=$(XREF2 $1, $2, $(TT $2))
-        SHORTXREF_PACK=$(XREF_PACK_NAMED  $2, $(TT $3),$1, $3)
+        SHORTXREF_PACK=$(XREF_PACK_NAMED $1,$2,$3, $(TT $3))
 
 Copyright: Copyright Digital Mars 2007-.
 
