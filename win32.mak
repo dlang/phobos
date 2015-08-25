@@ -328,6 +328,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_digest_sha.html \
 	$(DOC)\std_digest_md.html \
 	$(DOC)\std_digest_ripemd.html \
+	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_digest_digest.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_csv.html \
