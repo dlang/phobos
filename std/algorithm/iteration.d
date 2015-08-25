@@ -2530,8 +2530,10 @@ template reduce(fun...) if (fun.length >= 1)
         foreach (/+auto ref+/ E e; r) // @@@4707@@@
         {
             foreach (i, f; binfuns)
-                static assert(is(typeof(args[i] = f(args[i], e))),
+            {
+                static assert(!is(typeof(f(args[i], e))) || is(typeof(args[i] = f(args[i], e))),
                     algoFormat("Incompatible function/seed/element: %s/%s/%s", fullyQualifiedName!f, Args[i].stringof, E.stringof));
+            }
 
             static if (mustInitialize) if (initialized == false)
             {
