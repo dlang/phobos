@@ -50,12 +50,10 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.comparison;
 
-// FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
-// FIXME
-import std.typecons; // : tuple, Tuple;
+import std.typecons : tuple, Tuple;
 
 /**
 Find $(D value) _among $(D values), returning the 1-based index

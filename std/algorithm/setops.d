@@ -42,12 +42,9 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.setops;
 
 import std.range.primitives;
-
-// FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.traits;
-// FIXME
-import std.typetuple; // : TypeTuple, staticMap, allSatisfy, anySatisfy;
+import std.typetuple : TypeTuple, staticMap, allSatisfy, anySatisfy;
 
 // cartesianProduct
 /**
