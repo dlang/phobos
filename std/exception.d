@@ -796,6 +796,11 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * Typically, $(D assumeUnique) is used to return arrays from
  * functions that have allocated and built them.
  *
+ * Params:
+ *  array = The array to cast to immutable.
+ *
+ * Returns: The immutable array.
+ *
  * Example:
  *
  * ----
@@ -919,6 +924,16 @@ version(none) unittest
  * subclass $(D Exception) may be thrown even from $(D nothrow) functions,
  * since they are considered to be serious runtime problems that cannot be
  * recovered from.)
+ *
+ * Params:
+ *  expr = The expression asserted not to throw.
+ *  msg = The message to include in the `AssertError` if the assumption turns
+ *      out to be false.
+ *  file = The source file name of the caller.
+ *  line = The line number of the caller.
+ *
+ * Returns:
+ *  The value of `expr`, if any.
  */
 T assumeWontThrow(T)(lazy T expr,
                      string msg = null,
