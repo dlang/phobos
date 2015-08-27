@@ -72,8 +72,7 @@ module std.algorithm.mutation;
 
 import std.range.primitives;
 import std.traits : isBlitAssignable, isNarrowString;
-// FIXME
-import std.typecons; // : tuple, Tuple;
+import std.typecons : tuple, Tuple;
 
 // FIXME: somehow deleting this breaks the bringToFront() unittests.
 import std.range;
