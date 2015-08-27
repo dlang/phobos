@@ -330,7 +330,16 @@ unittest
 
 
 /++
-    If $(D !!value) is true, $(D value) is returned. Otherwise,
+    Enforces that the given value is true.
+
+    Params:
+        value = The value to test.
+        E = Exception type to throw if the value evalues to false.
+        msg = The error message to put in the exception if it is thrown.
+        file = The source file of the caller.
+        line = The line number of the caller.
+
+    Returns: $(D value), if $(D !!value) is true. Otherwise,
     $(D new Exception(msg)) is thrown.
 
     Note:
@@ -371,10 +380,19 @@ T enforce(T, string file, size_t line = __LINE__)
 }
 
 /++
-    If $(D !!value) is true, $(D value) is returned. Otherwise, the given
-    delegate is called.
+    Enforces that the given value is true.
 
-    The whole safety and purity are inferred from $(D Dg)'s safety and purity.
+    Params:
+        value = The value to test.
+        dg = The delegate to be called if the value evaluates to false.
+        file = The source file of the caller.
+        line = The line number of the caller.
+
+    Returns: $(D value) if $(D !!value) is true. Otherwise, the given delegate
+    is called.
+
+    The safety and purity of this function are inferred from $(D Dg)'s safety
+    and purity.
  +/
 T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
@@ -524,7 +542,13 @@ unittest
 }
 
 /++
-    If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
+    Enforces that the given value is true.
+
+    Params:
+        value = The value to test.
+        ex = The exception to throw if the value evaluates to false.
+
+    Returns: $(D value) if $(D !!value) is true. Otherwise, $(D ex) is thrown.
 
     Example:
     --------------------
@@ -546,9 +570,16 @@ unittest
 }
 
 /++
-    If $(D !!value) is true, $(D value) is returned. Otherwise,
-    $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that the
-    last operation set $(D errno) to an error code.
+    Enforces that the given value is true, throwing an `ErrnoException` if it
+    is not.
+
+    Params:
+        value = The value to test.
+        msg = The message to include in the `ErrnoException` if it is thrown.
+
+    Returns: $(D value) if $(D !!value) is true. Otherwise,
+    $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that
+    the last operation set $(D errno) to an error code.
 
     Example:
     --------------------
