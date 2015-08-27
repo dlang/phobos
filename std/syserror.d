@@ -5,6 +5,9 @@
 /**
  Convert Win32 error code to string
 
+ $(RED This module has been deprecated. Please see
+    $(LINK2 std_windows_syserror.html, std.windows._syserror) instead).
+
  Source:    $(PHOBOSSRC std/_syserror.d)
 */
 
