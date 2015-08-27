@@ -142,9 +142,6 @@ else
 	LIB:=$(ROOT)/phobos.lib
 endif
 
-LIBCURL_STUB:=$(if $(findstring $(OS),linux),$(ROOT)/libcurl_stub.so,)
-LINKCURL:=$(if $(LIBCURL_STUB),-L$(LIBCURL_STUB),-L-lcurl)
-
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
@@ -166,7 +163,7 @@ STD_MODULES = $(addprefix std/, \
   process random \
   $(addprefix range/, primitives interfaces) \
   $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
-  	kickstart tests thompson)) \
+	kickstart tests thompson)) \
   signals socket socketstream stdint stdio stdiobase stream \
   string syserror system traits typecons typetuple uni uri utf uuid variant \
   xml zip zlib $(addprefix algorithm/,comparison iteration \
@@ -282,13 +279,8 @@ $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): override PIC:=-fPIC
-$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO) $(LIBCURL_STUB)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) $(D_FILES) $(OBJS)
-
-# stub library with soname of the real libcurl.so (Bugzilla 10710)
-$(LIBCURL_STUB):
-	@echo "void curl_global_init() {}" > $(ROOT)/libcurl_stub.c
-	$(CC) -shared $(CFLAGS) $(ROOT)/libcurl_stub.c -o $@ -Wl,-soname=libcurl.so.4
+$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
@@ -322,7 +314,7 @@ ifneq (linux,$(OS))
 $(UT_D_OBJS): $(DRUNTIME)
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKCURL) -defaultlib= -debuglib=
+	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) -defaultlib= -debuglib=
 
 else
 
@@ -331,8 +323,8 @@ UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 $(UT_D_OBJS): $(DRUNTIMESO)
 
 $(UT_LIBSO): override PIC:=-fPIC
-$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LIBCURL_STUB)
-	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) -defaultlib= -debuglib=
+$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
+	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
@@ -351,7 +343,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # The mktemp business is needed so .o files don't clash in concurrent unittesting.
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` && \
-	  $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= -L-lcurl -cov -run $< && \
+	  $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< && \
 	  rm -rf $$T
 
 # Target for quickly unittesting all modules and packages within a package,

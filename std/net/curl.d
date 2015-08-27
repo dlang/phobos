@@ -199,7 +199,6 @@ version(unittest)
 }
 version(StdDdoc) import std.stdio;
 
-version (Windows) pragma(lib, "curl");
 extern (C) void exit(int);
 
 // Default data timeout for Protocols
@@ -447,8 +446,7 @@ unittest
  * postData = data to send as the body of the request. An array
  *            of an arbitrary type is accepted and will be cast to ubyte[]
  *            before sending it.
- * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
- *        guess connection type and create a new instance for this call only.
+ * conn = HTTP connection to use
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
@@ -624,22 +622,17 @@ unittest
  *
  * Params:
  * url = resource make a option call to
- * optionsData = options data to send as the body of the request. An array
- *               of an arbitrary type is accepted and will be cast to ubyte[]
- *               before sending it.
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
- * Currently the HTTP RFC does not specify any usage of the optionsData and
- * for this reason the example below does not send optionsData to the server.
  *
  * Example:
  * ----
  * import std.net.curl;
  * auto http = HTTP();
- * options("d-lang.appspot.com/testUrl2", null, http);
+ * options("d-lang.appspot.com/testUrl2", http);
  * writeln("Allow set to " ~ http.responseHeaders["Allow"]);
  * ----
  *
@@ -648,19 +641,26 @@ unittest
  *
  * See_Also: $(LREF HTTP.Method)
  */
+T[] options(T = char)(const(char)[] url, HTTP conn = HTTP())
+    if (is(T == char) || is(T == ubyte))
+{
+    conn.method = HTTP.Method.options;
+    return _basicHTTP!(T)(url, null, conn);
+}
+
+deprecated("options does not send any data")
 T[] options(T = char, OptionsUnit)(const(char)[] url,
                                    const(OptionsUnit)[] optionsData = null,
                                    HTTP conn = HTTP())
-if (is(T == char) || is(T == ubyte))
+    if (is(T == char) || is(T == ubyte))
 {
-    conn.method = HTTP.Method.options;
-    return _basicHTTP!(T)(url, optionsData, conn);
+    return options!T(url, conn);
 }
 
 unittest
 {
     if (!netAllowed()) return;
-    auto res = options(testUrl2, "Hello world");
+    auto res = options(testUrl2);
     assert(res == "Hello world",
            "options!HTTP() returns unexpected content " ~ res);
 }
@@ -668,7 +668,7 @@ unittest
 unittest
 {
     if (!netAllowed()) return;
-    auto res = options(testUrl1, []);
+    auto res = options(testUrl1);
     assert(res == "Hello world\n",
            "options!HTTP() returns unexpected content " ~ res);
 }
@@ -715,8 +715,7 @@ unittest
  *
  * Params:
  * url = resource make a connect to
- * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
- *        guess connection type and create a new instance for this call only.
+ * conn = HTTP connection to use
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
@@ -2112,7 +2111,7 @@ struct HTTP
         ~this()
         {
             if (headersOut !is null)
-                curl_slist_free_all(headersOut);
+                Curl.curl.slist_free_all(headersOut);
             if (curl.handle !is null) // work around RefCounted/emplace bug
                 curl.shutdown();
         }
@@ -2227,7 +2226,7 @@ struct HTTP
         curl_slist* newlist = null;
         while (cur)
         {
-            newlist = curl_slist_append(newlist, cur.data);
+            newlist = Curl.curl.slist_append(newlist, cur.data);
             cur = cur.next;
         }
         copy.p.headersOut = newlist;
@@ -2537,7 +2536,7 @@ struct HTTP
     void clearRequestHeaders()
     {
         if (p.headersOut !is null)
-            curl_slist_free_all(p.headersOut);
+            Curl.curl.slist_free_all(p.headersOut);
         p.headersOut = null;
         p.curl.clear(CurlOption.httpheader);
     }
@@ -2560,8 +2559,8 @@ struct HTTP
         if (icmp(name, "User-Agent") == 0)
             return setUserAgent(value);
         string nv = format("%s: %s", name, value);
-        p.headersOut = curl_slist_append(p.headersOut,
-                                         nv.tempCString().buffPtr);
+        p.headersOut = Curl.curl.slist_append(p.headersOut,
+                                              nv.tempCString().buffPtr);
         p.curl.set(CurlOption.httpheader, p.headersOut);
     }
 
@@ -2569,9 +2568,7 @@ struct HTTP
      * The default "User-Agent" value send with a request.
      * It has the form "Phobos-std.net.curl/$(I PHOBOS_VERSION) (libcurl/$(I CURL_VERSION))"
      */
-    static immutable string defaultUserAgent;
-
-    shared static this()
+    static string defaultUserAgent() @property
     {
         import std.compiler : version_major, version_minor;
 
@@ -2579,12 +2576,17 @@ struct HTTP
         enum fmt = "Phobos-std.net.curl/%d.%03d (libcurl/%d.%d.%d)";
         enum maxLen = fmt.length - "%d%03d%d%d%d".length + 10 + 10 + 3 + 3 + 3;
 
-        __gshared char[maxLen] buf = void;
+        static char[maxLen] buf = void;
+        static string userAgent;
 
-        auto curlVer = curl_version_info(CURLVERSION_NOW).version_num;
-        defaultUserAgent = cast(immutable)sformat(
-            buf, fmt, version_major, version_minor,
-            curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
+        if (!userAgent.length)
+        {
+            auto curlVer = Curl.curl.version_info(CURLVERSION_NOW).version_num;
+            userAgent = cast(immutable)sformat(
+                buf, fmt, version_major, version_minor,
+                curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
+        }
+        return userAgent;
     }
 
     /** Set the value of the user agent request header field.
@@ -2942,7 +2944,7 @@ struct FTP
         ~this()
         {
             if (commands !is null)
-                curl_slist_free_all(commands);
+                Curl.curl.slist_free_all(commands);
             if (curl.handle !is null) // work around RefCounted/emplace bug
                 curl.shutdown();
         }
@@ -2981,7 +2983,7 @@ struct FTP
         curl_slist* newlist = null;
         while (cur)
         {
-            newlist = curl_slist_append(newlist, cur.data);
+            newlist = Curl.curl.slist_append(newlist, cur.data);
             cur = cur.next;
         }
         copy.p.commands = newlist;
@@ -3197,7 +3199,7 @@ struct FTP
     void clearCommands()
     {
         if (p.commands !is null)
-            curl_slist_free_all(p.commands);
+            Curl.curl.slist_free_all(p.commands);
         p.commands = null;
         p.curl.clear(CurlOption.postquote);
     }
@@ -3218,8 +3220,8 @@ struct FTP
      */
     void addCommand(const(char)[] command)
     {
-        p.commands = curl_slist_append(p.commands,
-                                       command.tempCString().buffPtr);
+        p.commands = Curl.curl.slist_append(p.commands,
+                                            command.tempCString().buffPtr);
         p.curl.set(CurlOption.postquote, p.commands);
     }
 
@@ -3324,7 +3326,7 @@ struct SMTP
         curl_slist* newlist = null;
         while (cur)
         {
-            newlist = curl_slist_append(newlist, cur.data);
+            newlist = Curl.curl.slist_append(newlist, cur.data);
             cur = cur.next;
         }
         copy.p.commands = newlist;
@@ -3558,7 +3560,7 @@ struct SMTP
         foreach(recipient; recipients)
         {
             recipients_list =
-                curl_slist_append(recipients_list,
+                Curl.curl.slist_append(recipients_list,
                                   recipient.tempCString().buffPtr);
         }
         p.curl.set(CurlOption.mail_rcpt, recipients_list);
@@ -3625,6 +3627,119 @@ import std.typecons : Flag;
 /// Flag to specify whether or not an exception is thrown on error.
 alias ThrowOnError = Flag!"throwOnError";
 
+private struct CurlAPI
+{
+    static struct API
+    {
+    extern(C):
+        import core.stdc.config : c_long;
+        CURLcode function(c_long flags) global_init;
+        void function() global_cleanup;
+        curl_version_info_data * function(CURLversion) version_info;
+        CURL* function() easy_init;
+        CURLcode function(CURL *curl, CURLoption option,...) easy_setopt;
+        CURLcode function(CURL *curl) easy_perform;
+        CURL* function(CURL *curl) easy_duphandle;
+        char* function(CURLcode) easy_strerror;
+        CURLcode function(CURL *handle, int bitmask) easy_pause;
+        void function(CURL *curl) easy_cleanup;
+        curl_slist* function(curl_slist *, char *) slist_append;
+        void function(curl_slist *) slist_free_all;
+    }
+    __gshared API _api;
+    __gshared void* _handle;
+
+    static ref API instance() @property
+    {
+        import std.concurrency;
+        initOnce!_handle(loadAPI());
+        return _api;
+    }
+
+    static void* loadAPI()
+    {
+        version (Posix)
+        {
+            import core.sys.posix.dlfcn;
+            alias loadSym = dlsym;
+        }
+        else version (Windows)
+        {
+            import core.sys.windows.windows;
+            alias loadSym = GetProcAddress;
+        }
+        else
+            static assert(0, "unimplemented");
+
+        void* handle;
+        version (Posix)
+            handle = dlopen(null, RTLD_LAZY);
+        else version (Windows)
+            handle = GetModuleHandleA(null);
+        assert(handle !is null);
+
+        // try to load curl from the executable to allow static linking
+        if (loadSym(handle, "curl_global_init") is null)
+        {
+            version (Posix)
+                dlclose(handle);
+
+            version (OSX)
+                static immutable names = ["libcurl.4.dylib"];
+            else version (Posix)
+                static immutable names = ["libcurl.so", "libcurl.so.4", "libcurl-gnutls.so.4", "libcurl-nss.so.4", "libcurl.so.3"];
+            else version (Windows)
+                static immutable names = ["libcurl.dll", "curl.dll"];
+
+            foreach (name; names)
+            {
+                version (Posix)
+                    handle = dlopen(name.ptr, RTLD_LAZY);
+                else version (Windows)
+                    handle = LoadLibraryA(name.ptr);
+                if (handle !is null) break;
+            }
+
+            enforce!CurlException(handle !is null, "Failed to load curl, tried %(%s, %).".format(names));
+        }
+
+        foreach (mem; __traits(allMembers, API))
+        {
+            void* p = loadSym(handle, "curl_"~mem);
+
+            __traits(getMember, _api, mem) = cast(typeof(__traits(getMember, _api, mem)))
+                enforce!CurlException(p, "Couldn't load curl_"~mem~" from libcurl.");
+        }
+
+        enforce!CurlException(!_api.global_init(CurlGlobal.all),
+                              "Failed to initialize libcurl");
+
+        return handle;
+    }
+
+    shared static ~this()
+    {
+        if (_handle is null) return;
+
+        _api.global_cleanup();
+        version (Posix)
+        {
+            import core.sys.posix.dlfcn;
+            dlclose(_handle);
+        }
+        else version (Windows)
+        {
+            import core.sys.windows.windows;
+            FreeLibrary(_handle);
+        }
+        else
+            static assert(0, "unimplemented");
+
+        _api = API.init;
+        _handle = null;
+    }
+}
+
 /**
   Wrapper to provide a better interface to libcurl than using the plain C API.
   It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
@@ -3637,21 +3752,11 @@ alias ThrowOnError = Flag!"throwOnError";
 */
 struct Curl
 {
-    shared static this()
-    {
-        // initialize early to prevent thread races
-        enforce!CurlException(!curl_global_init(CurlGlobal.all),
-                                "Couldn't initialize libcurl");
-    }
-
-    shared static ~this()
-    {
-        curl_global_cleanup();
-    }
-
     alias OutData = void[];
     alias InData = ubyte[];
     bool stopped;
+
+    private static auto ref curl() @property { return CurlAPI.instance(); }
 
     // A handle should not be used by two threads simultaneously
     private CURL* handle;
@@ -3674,7 +3779,7 @@ struct Curl
     void initialize()
     {
         enforce!CurlException(!handle, "Curl instance already initialized");
-        handle = curl_easy_init();
+        handle = curl.easy_init();
         enforce!CurlException(handle, "Curl instance couldn't be initialized");
         stopped = false;
         set(CurlOption.nosignal, 1);
@@ -3691,7 +3796,7 @@ struct Curl
     Curl dup()
     {
         Curl copy;
-        copy.handle = curl_easy_duphandle(handle);
+        copy.handle = curl.easy_duphandle(handle);
         copy.stopped = false;
 
         with (CurlOption) {
@@ -3756,7 +3861,7 @@ struct Curl
     {
         import core.stdc.string : strlen;
 
-        auto msgZ = curl_easy_strerror(code);
+        auto msgZ = curl.easy_strerror(code);
         // doing the following (instead of just using std.conv.to!string) avoids 1 allocation
         return format("%s on handle %s", msgZ[0 .. core.stdc.string.strlen(msgZ)], handle);
     }
@@ -3776,7 +3881,7 @@ struct Curl
     {
         throwOnStopped();
         stopped = true;
-        curl_easy_cleanup(this.handle);
+        curl.easy_cleanup(this.handle);
         this.handle = null;
     }
 
@@ -3786,7 +3891,7 @@ struct Curl
     void pause(bool sendingPaused, bool receivingPaused)
     {
         throwOnStopped();
-        _check(curl_easy_pause(this.handle,
+        _check(curl.easy_pause(this.handle,
                                (sendingPaused ? CurlPause.send_cont : CurlPause.send) |
                                (receivingPaused ? CurlPause.recv_cont : CurlPause.recv)));
     }
@@ -3800,7 +3905,7 @@ struct Curl
     void set(CurlOption option, const(char)[] value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, value.tempCString().buffPtr));
+        _check(curl.easy_setopt(this.handle, option, value.tempCString().buffPtr));
     }
 
     /**
@@ -3812,7 +3917,7 @@ struct Curl
     void set(CurlOption option, long value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, value));
+        _check(curl.easy_setopt(this.handle, option, value));
     }
 
     /**
@@ -3824,7 +3929,7 @@ struct Curl
     void set(CurlOption option, void* value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, value));
+        _check(curl.easy_setopt(this.handle, option, value));
     }
 
     /**
@@ -3835,7 +3940,7 @@ struct Curl
     void clear(CurlOption option)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, null));
+        _check(curl.easy_setopt(this.handle, option, null));
     }
 
     /**
@@ -3847,7 +3952,7 @@ struct Curl
     void clearIfSupported(CurlOption option)
     {
         throwOnStopped();
-        auto rval = curl_easy_setopt(this.handle, option, null);
+        auto rval = curl.easy_setopt(this.handle, option, null);
         if (rval != CurlError.unknown_telnet_option)
         {
             _check(rval);
@@ -3864,7 +3969,7 @@ struct Curl
     CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         throwOnStopped();
-        CurlCode code = curl_easy_perform(this.handle);
+        CurlCode code = curl.easy_perform(this.handle);
         if (throwOnError)
             _check(code);
         return code;

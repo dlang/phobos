@@ -2447,7 +2447,7 @@ $(D Range) that locks the file and allows fast writing to it.
             import core.stdc.wchar_ : fwide;
             import std.exception : enforce;
 
-            enforce(f._p && f._p.handle);
+            enforce(f._p && f._p.handle, "Attempting to write to closed File");
             fps_ = f._p.handle;
             orientation_ = fwide(fps_, 0);
             FLOCK(fps_);
@@ -2795,6 +2795,13 @@ unittest
         writer.put(repeat('#', 12)); // BUG 11945
     }
     assert(File(deleteme).readln() == "日本語日本語日本語日本語############");
+}
+
+@safe unittest
+{
+    import std.exception: collectException;
+    auto e = collectException({ File f; f.writeln("Hello!"); }());
+    assert(e && e.msg == "Attempting to write to closed File");
 }
 
 /// Used to specify the lock type for $(D File.lock) and $(D File.tryLock).
