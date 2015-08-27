@@ -3638,6 +3638,12 @@ unittest
     assert(app3.data == [1, 2, 3]);
 }
 
+unittest // issue 14605
+{
+    static assert(isOutputRange!(Appender!(int[]), int));
+    static assert(isOutputRange!(RefAppender!(int[]), int));
+}
+
 unittest
 {
     Appender!(int[]) app;
