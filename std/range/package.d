@@ -35,7 +35,10 @@ $(BOOKTABLE ,
         $(TD Concatenates several ranges into a single _range.
     ))
     $(TR $(TD $(D $(LREF choose)))
-        $(TD choose one of several ranges.
+        $(TD Chooses one of two ranges at runtime based on a boolean condition.
+    ))
+    $(TR $(TD $(D $(LREF chooseAmong)))
+        $(TD Chooses one of several ranges at runtime based on an index.
     ))
     $(TR $(TD $(D $(LREF chunks)))
         $(TD Creates a _range that returns fixed-size chunks of the original

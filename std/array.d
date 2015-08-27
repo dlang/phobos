@@ -49,6 +49,14 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(D $(LREF replicate)))
         $(TD Creates a new _array out of several copies of an input _array or range.
     ))
+    $(TR $(TD $(D $(LREF sameHead)))
+        $(TD Checks if the initial segments of two arrays refer to the same
+        place in memory.
+    ))
+    $(TR $(TD $(D $(LREF sameTail)))
+        $(TD Checks if the final segments of two arrays refer to the same place
+        in memory.
+    ))
     $(TR $(TD $(D $(LREF split)))
         $(TD Eagerly split a range or string into an _array.
     ))
@@ -2277,46 +2285,43 @@ unittest
     shrinks the array as needed.
  +/
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
-    if(isDynamicArray!Range &&
-       is(ElementEncodingType!Range : T) &&
-       !is(T == const T) &&
-       !is(T == immutable T))
+    if(is(typeof(replace(array, from, to, stuff))))
 {
-    import std.algorithm : remove;
-    import std.typecons : tuple;
+    static if(isDynamicArray!Range &&
+              is(Unqual!(ElementEncodingType!Range) == T) &&
+              !isNarrowString!(T[]))
+    {
+        // optimized for homogeneous arrays that can be overwritten.
+        import std.algorithm : remove;
+        import std.typecons : tuple;
 
-    if (overlap(array, stuff).length)
-    {
-        // use slower/conservative method
-        array = array[0 .. from] ~ stuff ~ array[to .. $];
-    }
-    else if (stuff.length <= to - from)
-    {
-        // replacement reduces length
-        immutable stuffEnd = from + stuff.length;
-        array[from .. stuffEnd] = stuff[];
-        if (stuffEnd < to)
-            array = remove(array, tuple(stuffEnd, to));
+        if (overlap(array, stuff).length)
+        {
+            // use slower/conservative method
+            array = array[0 .. from] ~ stuff ~ array[to .. $];
+        }
+        else if (stuff.length <= to - from)
+        {
+            // replacement reduces length
+            immutable stuffEnd = from + stuff.length;
+            array[from .. stuffEnd] = stuff[];
+            if (stuffEnd < to)
+                array = remove(array, tuple(stuffEnd, to));
+        }
+        else
+        {
+            // replacement increases length
+            // @@@TODO@@@: optimize this
+            immutable replaceLen = to - from;
+            array[from .. to] = stuff[0 .. replaceLen];
+            insertInPlace(array, to, stuff[replaceLen .. $]);
+        }
     }
     else
     {
-        // replacement increases length
-        // @@@TODO@@@: optimize this
-        immutable replaceLen = to - from;
-        array[from .. to] = stuff[0 .. replaceLen];
-        insertInPlace(array, to, stuff[replaceLen .. $]);
+        // default implementation, just do what replace does.
+        array = replace(array, from, to, stuff);
     }
-}
-
-/// Ditto
-void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
-    if(isInputRange!Range &&
-       ((!isDynamicArray!Range && is(ElementType!Range : T)) ||
-        (isDynamicArray!Range && is(ElementType!Range : T) &&
-             (is(T == const T) || is(T == immutable T))) ||
-        isSomeString!(T[]) && is(ElementType!Range : dchar)))
-{
-    array = replace(array, from, to, stuff);
 }
 
 ///
@@ -2338,6 +2343,66 @@ unittest
     int[1][] stuff = [[0], [1]];
     replaceInPlace(arr, 4, 6, stuff);
     assert(arr == [[0], [1], [2], [3], [0], [1], [6]]);
+}
+
+unittest
+{
+    // Bug# 14925
+    char[] a = "mon texte 1".dup;
+    char[] b = "abc".dup;
+    replaceInPlace(a, 4, 9, b);
+    assert(a == "mon abc 1");
+
+    // ensure we can replace in place with different encodings
+    string unicoded = "\U00010437";
+    string unicodedLong = "\U00010437aaaaa";
+    string base = "abcXXXxyz";
+    string result = "abc\U00010437xyz";
+    string resultLong = "abc\U00010437aaaaaxyz";
+    size_t repstart = 3;
+    size_t repend = 3 + 3;
+
+    void testStringReplaceInPlace(T, U)()
+    {
+        import std.conv;
+        import std.algorithm : equal;
+        auto a = unicoded.to!(U[]);
+        auto b = unicodedLong.to!(U[]);
+
+        auto test = base.to!(T[]);
+
+        test.replaceInPlace(repstart, repend, a);
+        assert(equal(test, result), "Failed for types " ~ T.stringof ~ " and " ~ U.stringof);
+
+        test = base.to!(T[]);
+
+        test.replaceInPlace(repstart, repend, b);
+        assert(equal(test, resultLong), "Failed for types " ~ T.stringof ~ " and " ~ U.stringof);
+    }
+
+    import std.meta : AliasSeq;
+    alias allChars = AliasSeq!(char, immutable(char), const(char),
+                         wchar, immutable(wchar), const(wchar),
+                         dchar, immutable(dchar), const(dchar));
+    foreach(T; allChars)
+        foreach(U; allChars)
+            testStringReplaceInPlace!(T, U)();
+
+    void testInout(inout(int)[] a)
+    {
+        // will be transferred to the 'replace' function
+        replaceInPlace(a, 1, 2, [1,2,3]);
+    }
+}
+
+unittest
+{
+    // the constraint for the first overload used to match this, which wouldn't compile.
+    import std.algorithm : equal;
+    long[] a = [1L, 2, 3];
+    int[] b = [4, 5, 6];
+    a.replaceInPlace(1, 2, b);
+    assert(equal(a, [1L, 4, 5, 6, 3]));
 }
 
 unittest
@@ -3571,6 +3636,12 @@ unittest
     const app3 = app2;
     assert(app3.capacity >= 3);
     assert(app3.data == [1, 2, 3]);
+}
+
+unittest // issue 14605
+{
+    static assert(isOutputRange!(Appender!(int[]), int));
+    static assert(isOutputRange!(RefAppender!(int[]), int));
 }
 
 unittest
