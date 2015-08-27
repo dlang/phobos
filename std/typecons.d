@@ -769,7 +769,7 @@ template Tuple(Specs...)
             on all fields of the `Tuple`. The format must be compatible to all
             of them.
         */
-        void toString(DG)(scope DG sink, std.format.FormatSpec!char fmt = "%s")
+        void toString(DG)(scope DG sink, std.format.FormatSpec!char fmt = "%s") const
         {
             if (fmt.nested)
             {
@@ -795,13 +795,12 @@ template Tuple(Specs...)
                 }
                 else
                 {
-                    sink(format(fmt.nested, this.expand()));
+                    sink(format(fmt.nested, this.expand));
                 }
             }
-            else
+            else if (fmt.spec == 's')
             {
-                /+ ORIGINAL +/
-                enum header = typeof(this).stringof ~ "(",
+                enum header = Unqual!(typeof(this)).stringof ~ "(",
                      footer = ")",
                      separator = ", ";
                 sink(header);
@@ -819,14 +818,21 @@ template Tuple(Specs...)
                     else
                     {
                         import std.format : FormatSpec, formatElement;
+                        // FormatSpec!Char
                         FormatSpec!char f;
                         formatElement(sink, field[i], f);
                     }
                 }
                 sink(footer);
             }
+            else
+            {
+                import std.format : FormatException;
+                throw new FormatException(
+                    "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~ Unqual!(typeof(this)).stringof ~ "'");
+            }
         }
-
+        
         /**
          * Converts to string.
          *
@@ -841,16 +847,25 @@ template Tuple(Specs...)
         
         unittest
         {
-            // Doesn't test the shared path
-            import std.format   : format;
-            import std.typecons : Tuple, tuple;
-            alias t = tuple;
-            auto if_list = [ t(1, 1.0), t(2, 4.0), t(3, 9.0) ];
+            import std.format       : format, FormatException;
+            import std.typecons     : Tuple, tuple;
+            import std.exception    : assertThrown;
+            auto if_list = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
+
+            assert(format("%s", tuple("a", 1))                          == `Tuple!(string, int)("a", 1)`);
+            assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))    == `0x1 v 1.0000 w 0xa`);
+            assert(format("%(q%sq%| x %)", tuple("abc", 1, 2.3, [4,5])) == `qabcq x q1q x q2.3q x q[4, 5]q`);
+            assert(format("%(%(%d^2 = %.1f%);  %)", if_list)            == `1^2 = 1.0;  2^2 = 4.0;  3^2 = 9.0`);
             
-            assert(format("%s", t("a", 1))                          == `Tuple!(string, int)("a", 1)`);
-            assert(format("%(%#x v %.4f w %#x%)", t(1, 1.0, 10))    == `0x1 v 1.0000 w 0xa`);
-            assert(format("%(q%sq%| x %)", t("abc", 1, 2.3, [4,5])) == `qabcq x q1q x q2.3q x q[4, 5]q`);
-            assert(format("%(%(%d^2 = %.1f%);  %)", if_list)        == `1^2 = 1.0;  2^2 = 4.0;  3^2 = 9.0`);
+            assertThrown!FormatException(
+                format("%d, %f", tuple(1, 2.0)) == `1, 2.0` // error: %( %) missing
+            );
+            assertThrown!FormatException(
+                format("%d", tuple(1, 2.0)) == `1, 2.0` // error: %( %| %) missing
+            );
+            assertThrown!FormatException(
+                format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0` // error: %d inadequate for double
+            );
         }
     }
 }
