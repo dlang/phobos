@@ -339,7 +339,7 @@ unittest
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value), if $(D !!value) is true. Otherwise,
+    Returns: $(D value), if $(D !value) is false. Otherwise,
     $(D new Exception(msg)) is thrown.
 
     Note:
@@ -388,7 +388,7 @@ T enforce(T, string file, size_t line = __LINE__)
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value) if $(D !!value) is true. Otherwise, the given delegate
+    Returns: $(D value) if $(D !value) is false. Otherwise, the given delegate
     is called.
 
     The safety and purity of this function are inferred from $(D Dg)'s safety
@@ -548,7 +548,7 @@ unittest
         value = The value to test.
         ex = The exception to throw if the value evaluates to false.
 
-    Returns: $(D value) if $(D !!value) is true. Otherwise, $(D ex) is thrown.
+    Returns: $(D value) if $(D !value) is false. Otherwise, $(D ex) is thrown.
 
     Example:
     --------------------
@@ -577,7 +577,7 @@ unittest
         value = The value to test.
         msg = The message to include in the `ErrnoException` if it is thrown.
 
-    Returns: $(D value) if $(D !!value) is true. Otherwise,
+    Returns: $(D value) if $(D !value) is false. Otherwise,
     $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that
     the last operation set $(D errno) to an error code.
 
@@ -597,7 +597,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
 
 
 /++
-    If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
+    If $(D !value) is $(D false), $(D value) is returned. Otherwise,
     $(D new E(msg, file, line)) is thrown. Or if $(D E) doesn't take a message
     and can be constructed with $(D new E(file, line)), then
     $(D new E(file, line)) will be thrown.
