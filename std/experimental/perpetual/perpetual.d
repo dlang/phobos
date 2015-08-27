@@ -32,7 +32,7 @@ private import core.sys.posix.sys.stat;
 /**
  * Persistently maps value type object to file
  */
-class Perpetual(T)
+struct Perpetual(T)
 {
 	version (Windows) {
 
@@ -47,13 +47,13 @@ class Perpetual(T)
 	static if(is(T == Element[],Element)) {
 	// dynamic array 
 		private size_t _size=0;
-		enum bool dynamic=true;
+		private enum dynamic=true;
 		static assert(!hasIndirections!Element, Element.stringof~" is reference type");
-		@property T Ref() const { return cast(T) _map[0.._size]; }
+		@property ref T Ref() const { return cast(T) _map[0.._size]; }
 
 	} else {
 	// value type
-		enum bool dynamic=false;
+		private enum dynamic=false;
 		static assert(!hasIndirections!T, T.stringof~" is reference type");
 		@property ref T Ref() const {	return *cast(T*)(_map); }
 	}
@@ -65,11 +65,12 @@ class Perpetual(T)
 
 	private bool _owner=true;
 	@property auto master() { return _owner; }
+	void opAssign(T x) { Ref=x; }
 
 /**
  * Return string representation for wrapped object instead of self.
  */
-	override string toString() const { return to!string(Ref); }
+	string toString() { return to!string(Ref); }
 
 
 
@@ -201,8 +202,9 @@ class Perpetual(T)
  */
 auto perpetual(T)(string path)
 {
-	return new Perpetual!T(path);
+	return Perpetual!T(path);
 }
+
 
 
 /**
@@ -211,7 +213,7 @@ auto perpetual(T)(string path)
  */
 auto perpetual(T, U)(string path, U seed)
 {
-	auto p=new Perpetual!T(path);
+	Perpetual!T p=path;
 	if(p.master) {
 		static if(isArray!T) {
 			static if(isArray!U) {
@@ -234,12 +236,28 @@ auto perpetual(T, U)(string path, U seed)
  */
 auto perpetual(T, Args...)(string path, Args args)
 {
-	auto p=new Perpetual!T(path);
+	Perpetual!T p(path);
 	if(p.master)
 		p=T(args);
 	return p;
 }
 
+
+package @property string deleteme() @safe
+{
+    import std.process : thisProcessID;
+    import std.path : buildPath;
+    static _deleteme = "perpetual.unittest.";
+    static _first = true;
+
+    if(_first)
+    {
+        _deleteme=buildPath(tempDir(), _deleteme)~to!string(thisProcessID)~".";
+        _first=false;
+    }
+
+    return _deleteme;
+}
 
 ///
 unittest
@@ -247,106 +265,94 @@ unittest
 	import std.stdio;
 	import std.conv;
 	import std.string;
-	import std.getopt;
+	import std.math : isNaN;
 	import std.perpetual;
 
-	struct A {
-		int x, y;
-		this(int x, int y) { this.x=x; this.y=y; }
-	}
+	struct A { int x; }
 	class B {};
 	enum Color { black, red, green, blue, white };
+	
+	//, deleteme~""
+	auto mapped=[deleteme~"0", deleteme~"1", deleteme~"2", deleteme~"3"];
+    scope(exit) foreach(file; mapped) { assert(file.exists); remove(file.toStringz); }
 
-	// Perpetual!int                   : 0
-	// Perpetual!double                : nan
-	// Perpetual!(A)                   : A(1, 2)
-	// Perpetual!(int[5])              : [7, 5, 3, 1, 0]
-	// Perpetual!(immutable(short[]))  : [7, 0, 5, 0, 3, 0, 1, 0, 0, 0]
-	// Perpetual!(Color)               : white
-	// Perpetual!(char[])              : ________________________________
-	// Perpetual!string                : ________________________________
-	// Perpetual!(char[3][5])          : ["one", "...", "two", "...", "..."]
-	// Perpetual!(const(char[]))       : one...two......
-	// Perpetual!(char[3][])           : ["one", "...", "two", "...", "..."]
-	//
-	// Usage: test --int=3 --real=3.14159 --struct=11 --array=1,3,5,7 --color=green --string=ABCDE 
-	// Output:
-	// Perpetual!int                   : 3
-	// Perpetual!double                : 3.14159
-	// Perpetual!(A)                   : A(11, 2)
-	// Perpetual!(int[5])              : [1, 3, 5, 7, 0]
-	// Perpetual!(immutable(short[]))  : [1, 0, 3, 0, 5, 0, 7, 0, 0, 0]
-	// Perpetual!(Color)               : green
-	// Perpetual!(char[])              : ABCDE___________________________
-	// Perpetual!string                : ABCDE___________________________
-	// Perpetual!(char[3][5])          : ["one", "...", "two", "...", "..."]
-	// Perpetual!(const(char[]))       : one...two......
-	// Perpetual!(char[3][])           : ["one", "...", "two", "...", "..."]
+	// simple built-in values
+	auto p0=perpetual!int(mapped[0]);
+	assert(p0 == int.init);
+	p0=24;
+	assert(p0 == 24);
+	assert(p0 < 25);
 
+	auto p1=perpetual!double(mapped[1]);
+	assert(isNaN(cast(double) p1));
+	p1=3.14159;
+	assert(p1 == 3.14159);
 
-	void main(string[] arg)
-	{
+	// struct
+	auto p2=perpetual!A(mapped[2]);
+	assert(p2 == A.init);
+	p2=A(7);
+	assert(p2.x == 7);
 
-		// simple built-in values
-		auto p0=perpetual!int("Q1");
-		auto p1=perpetual!double("Q2");
-		// struct
-		auto p2=perpetual!A("Q3", 1, 2);
-		// static array of integers
-		auto p3=perpetual!(int[5])("Q4", [7,5,3,1]);
-		// view only, map above as array of shorts
-		auto p4=perpetual!(immutable(short[]))("Q4");
-		// enum
-		auto p5=perpetual!Color("Q5", Color.white);
-		// character string, reinitialize if new file created
-		auto p6=perpetual!(char[])("Q6");
-		if(p6.length ==0) {
-		// the file wasn't initialized, do with static array
-			perpetual!(char[32])("Q6", '_');
-			p6=perpetual!(char[])("Q6");
-		}
-		// view only variant of above
-		auto p7=perpetual!string("Q6");
-		// double static array with initailization
- 		auto p8=perpetual!(char[3][5])("Q7");
-		if(p8.master) { foreach(ref x; p8) x="..."; p8[0]="one"; p8[2]="two"; }
-		// map of above as plain array
-		auto p9=perpetual!(const(char[]))("Q7");
-		// map again as dynamic array
-		auto pA=perpetual!(char[3][])("Q7");
+	// static array of integers
+	auto p3=perpetual!(int[5])(mapped[3], [7,5,3,1]);
+	// view only, map above as array of shorts
+	auto p4=perpetual!(immutable(short[]))(mapped[3]);
+	
 
-		//auto pX=new Perpetual!(char*)("Q?"); //ERROR: "char* is reference type"
-		//auto pX=new Perpetual!B("Q?"); //ERROR: "B is reference type"
-		//auto pX=new Perpetual!(char*[])("Q?"); //ERROR: "char* is reference type"
-		//auto pX=new Perpetual!(char*[12])("Q?"); //ERROR: "char*[12] is reference type"
-		//auto pX=new Perpetual!(char[string])("Q?"); //ERROR: "char[string] is reference type"
-		//auto pX=new Perpetual!(char[][])("Q?"); //ERROR: "char[] is reference type"
-		//auto pX=new Perpetual!(char[][3])("Q?"); //ERROR: "char[][3] is reference type"
-
-
-		getopt(arg
-			 , "int", delegate(string key, string val){ p0=to!int(val); }
-			 , "real", delegate(string key, string val){ p1=to!double(val); }
-			 , "struct", delegate(string key, string val){ p2.x=to!int(val); }
-			 , "array", delegate(string key, string val){
-		 			auto lst=split(val,",");
-					p3[0..lst.length]=to!(int[])(lst);
-				}
-			 , "color", delegate(string key, string val){ p5=to!Color(val); }
-			 , "string", delegate(string key, string val){ p6[0..val.length]=val; }
-			);
-
-		writefln("%-32s: %s", typeof(p0).stringof, p0);
-		writefln("%-32s: %s", typeof(p1).stringof, p1);
-		writefln("%-32s: %s", typeof(p2).stringof, p2);
-		writefln("%-32s: %s", typeof(p3).stringof, p3);
-		writefln("%-32s: %s", typeof(p4).stringof, p4);
-		writefln("%-32s: %s", typeof(p5).stringof, p5);
-		writefln("%-32s: %s", typeof(p6).stringof, p6);
-		writefln("%-32s: %s", typeof(p7).stringof, p7);
-		writefln("%-32s: %s", typeof(p8).stringof, p8);
-		writefln("%-32s: %s", typeof(p9).stringof, p9);
-		writefln("%-32s: %s", typeof(pA).stringof, pA);
+/*
+	// view only, map above as array of shorts
+	auto p4=perpetual!(immutable(short[]))("Q4");
+	// enum
+	auto p5=perpetual!Color("Q5", Color.white);
+	// character string, reinitialize if new file created
+	auto p6=perpetual!(char[])("Q6");
+	if(p6.length ==0) {
+	// the file wasn't initialized, do with static array
+		perpetual!(char[32])("Q6", '_');
+		p6=perpetual!(char[])("Q6");
 	}
+	// view only variant of above
+	auto p7=perpetual!string("Q6");
+	// double static array with initailization
+ 	auto p8=perpetual!(char[3][5])("Q7");
+	if(p8.master) { foreach(ref x; p8) x="..."; p8[0]="one"; p8[2]="two"; }
+	// map of above as plain array
+	auto p9=perpetual!(const(char[]))("Q7");
+	// map again as dynamic array
+	auto pA=perpetual!(char[3][])("Q7");
 
+	//auto pX=new Perpetual!(char*)("Q?"); //ERROR: "char* is reference type"
+	//auto pX=new Perpetual!B("Q?"); //ERROR: "B is reference type"
+	//auto pX=new Perpetual!(char*[])("Q?"); //ERROR: "char* is reference type"
+	//auto pX=new Perpetual!(char*[12])("Q?"); //ERROR: "char*[12] is reference type"
+	//auto pX=new Perpetual!(char[string])("Q?"); //ERROR: "char[string] is reference type"
+	//auto pX=new Perpetual!(char[][])("Q?"); //ERROR: "char[] is reference type"
+	//auto pX=new Perpetual!(char[][3])("Q?"); //ERROR: "char[][3] is reference type"
+
+
+	getopt(arg
+		 , "int", delegate(string key, string val){ p0=to!int(val); }
+		 , "real", delegate(string key, string val){ p1=to!double(val); }
+		 , "struct", delegate(string key, string val){ p2.x=to!int(val); }
+		 , "array", delegate(string key, string val){
+		 		auto lst=split(val,",");
+				p3[0..lst.length]=to!(int[])(lst);
+			}
+		 , "color", delegate(string key, string val){ p5=to!Color(val); }
+		 , "string", delegate(string key, string val){ p6[0..val.length]=val; }
+		);
+
+	writefln("%-32s: %s", typeof(p0).stringof, p0);
+	writefln("%-32s: %s", typeof(p1).stringof, p1);
+	writefln("%-32s: %s", typeof(p2).stringof, p2);
+	writefln("%-32s: %s", typeof(p3).stringof, p3);
+	writefln("%-32s: %s", typeof(p4).stringof, p4);
+	writefln("%-32s: %s", typeof(p5).stringof, p5);
+	writefln("%-32s: %s", typeof(p6).stringof, p6);
+	writefln("%-32s: %s", typeof(p7).stringof, p7);
+	writefln("%-32s: %s", typeof(p8).stringof, p8);
+	writefln("%-32s: %s", typeof(p9).stringof, p9);
+	writefln("%-32s: %s", typeof(pA).stringof, pA);
+*/
 }
