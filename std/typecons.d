@@ -758,32 +758,73 @@ template Tuple(Specs...)
                 h += typeid(T).getHash(cast(const void*)&field[i]);
             return h;
         }
-
-        void toString(DG)(scope DG sink)
+        
+        /**
+            Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
+            
+            `%s` is the original format.
+            `%(inner%)` where `inner` is the format applied the expanded `Tuple`, 
+            so `inner` may contain as many formats as the `Tuple` has fields.
+            `%(inner%|sep%)`, where `inner` is one format, that is applied
+            on all fields of the `Tuple`. The format must be compatible to all
+            of them.
+        */
+        void toString(DG)(scope DG sink, std.format.FormatSpec!char fmt = "%s")
         {
-            enum header = typeof(this).stringof ~ "(",
-                 footer = ")",
-                 separator = ", ";
-            sink(header);
-            foreach (i, Type; Types)
+            if (fmt.nested)
             {
-                static if (i > 0)
+                import std.format : format;
+                if (fmt.sep)
                 {
-                    sink(separator);
-                }
-                // TODO: Change this once toString() works for shared objects.
-                static if (is(Type == class) && is(typeof(Type.init) == shared))
-                {
-                    sink(Type.stringof);
+                    foreach (i, Type; Types)
+                    {
+                        static if (i > 0)
+                        {
+                            sink(fmt.sep);
+                        }
+                        // TODO: Change this once toString() works for shared objects.
+                        static if (is(Type == class) && is(typeof(Type.init) == shared))
+                        {
+                            sink(Type.stringof);
+                        }
+                        else
+                        {
+                            sink(format(fmt.nested, this.field[i]));
+                        }
+                    }
                 }
                 else
                 {
-                    import std.format : FormatSpec, formatElement;
-                    FormatSpec!char f;
-                    formatElement(sink, field[i], f);
+                    sink(format(fmt.nested, this.expand()));
                 }
             }
-            sink(footer);
+            else
+            {
+                /+ ORIGINAL +/
+                enum header = typeof(this).stringof ~ "(",
+                     footer = ")",
+                     separator = ", ";
+                sink(header);
+                foreach (i, Type; Types)
+                {
+                    static if (i > 0)
+                    {
+                        sink(separator);
+                    }
+                    // TODO: Change this once toString() works for shared objects.
+                    static if (is(Type == class) && is(typeof(Type.init) == shared))
+                    {
+                        sink(Type.stringof);
+                    }
+                    else
+                    {
+                        import std.format : FormatSpec, formatElement;
+                        FormatSpec!char f;
+                        formatElement(sink, field[i], f);
+                    }
+                }
+                sink(footer);
+            }
         }
 
         /**
@@ -796,6 +837,20 @@ template Tuple(Specs...)
         {
             import std.conv : to;
             return this.to!string;
+        }
+        
+        unittest
+        {
+            // Doesn't test the shared path
+            import std.format   : format;
+            import std.typecons : Tuple, tuple;
+            alias t = tuple;
+            auto if_list = [ t(1, 1.0), t(2, 4.0), t(3, 9.0) ];
+            
+            assert(format("%s", t("a", 1))                          == `Tuple!(string, int)("a", 1)`);
+            assert(format("%(%#x v %.4f w %#x%)", t(1, 1.0, 10))    == `0x1 v 1.0000 w 0xa`);
+            assert(format("%(q%sq%| x %)", t("abc", 1, 2.3, [4,5])) == `qabcq x q1q x q2.3q x q[4, 5]q`);
+            assert(format("%(%(%d^2 = %.1f%);  %)", if_list)        == `1^2 = 1.0;  2^2 = 4.0;  3^2 = 9.0`);
         }
     }
 }
