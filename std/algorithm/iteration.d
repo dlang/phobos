@@ -35,8 +35,14 @@ $(T2 joiner,
 $(T2 map,
         $(D map!"2 * a"([1, 2, 3])) lazily returns a range with the numbers
         $(D 2), $(D 4), $(D 6).)
+$(T2 mean,
+        Computes the mean of a range)
+$(T2 median,
+        Computes the median of a range)
 $(T2 permutations,
         Lazily computes all permutations using Heap's algorithm.)
+$(T2 quantile,
+        Computes the quantile of a range)
 $(T2 reduce,
         $(D reduce!"a + b"([1, 2, 3, 4])) returns $(D 10).)
 $(T2 splitter,
@@ -62,7 +68,7 @@ module std.algorithm.iteration;
 
 // FIXME
 import std.functional; // : unaryFun, binaryFun;
-import std.range.primitives;
+import std.range;  // : SortedRange, drop;
 import std.traits;
 
 template aggregate(fun...) if (fun.length >= 1)
@@ -4279,4 +4285,221 @@ unittest
          [0, 2, 1],
          [1, 2, 0],
          [2, 1, 0]]));
+}
+
+/**
+Finds the mean (colloquially known as the average) of a range. If $(D r) does
+not provide the $(D length) member, then this function will do element by
+element summation, rather than the more accurate methods provided by $(D sum).
+This function will return $(D real.nan) if the range is empty. This function is
+$(BIGOH r.length).
+
+Params:
+    r = an input range
+
+Returns:
+    the mean of r
+*/
+real mean(R)(R r)
+    if (isInputRange!R &&
+        !isInfinite!R &&
+        is(ElementType!R : real))
+{
+    if (r.empty)
+    {
+        return real.nan;
+    }
+
+    static if (hasLength!R)
+    {
+        if (r.length == 1)
+        {
+            return r.front;
+        }
+
+        return sum(r) / real(r.length);
+    }
+    else
+    {
+        import std.typecons : tuple;
+
+        auto pair = reduce!((a, b) => tuple(a[0] + 1, a[1] + b))
+            (tuple(size_t(0), 0.0), r);
+
+        return pair[1] / pair[0];
+    }
+}
+
+///
+@safe @nogc pure nothrow unittest
+{
+    import std.math : approxEqual, isNaN;
+
+    static immutable arr1 = [1, 2, 3];
+    static immutable arr2 = [1.5, 2.5, 12.5];
+
+    assert(mean(arr1) == 2);
+    assert(approxEqual(mean(arr2), 5.5));
+
+    assert(arr1[0 .. 0].mean.isNaN);
+}
+
+@safe pure nothrow unittest
+{
+    import std.internal.test.dummyrange : ReferenceInputRange;
+    import std.math : approxEqual;
+
+    auto r1 = new ReferenceInputRange!int([1, 2, 3]);
+    assert(r1.mean == 2);
+
+    auto r2 = new ReferenceInputRange!double([1.5, 2.5, 12.5]);
+    assert(approxEqual(r2.mean, 5.5));
+}
+
+/**
+Function to compute the quantile of a $(D SortedRange) given $(D q), which
+is a number between 0 and 1. The range MUST be a $(D SortedRange) that is sorted
+in ascending order. Otherwise this function will give incorrect results. If the
+range is empty, this function will return $(D real.nan). Is
+$(BIGOH r.length * q) for forward ranges and $(BIGOH 1) for random access ranges.
+
+Params:
+    r = a forward range with length or a random access range
+    q = where to calculate the quantile, must be $(D q > 0 && q < 1)
+
+Returns:
+    the quantile of r given q
+*/
+real quantile(R)(R r, real q)
+    if (isInstanceOf!(SortedRange, R) &&
+        is(ElementType!R : real) &&
+        isForwardRange!R &&
+        hasLength!R &&
+        !isInfinite!R)
+in
+{
+    assert(q > 0 && q < 1);
+}
+body
+{
+    import std.math : modf, approxEqual;
+
+    if (r.length == 0)
+    {
+        return real.nan;
+    }
+    else if (r.length == 1)
+    {
+        return r.front;
+    }
+
+    real x = r.length * q;
+    real j;
+    real g = modf(x, j);
+    uint j_int = cast(uint) j;
+
+    static if (isRandomAccessRange!R)
+    {
+        if (g.approxEqual(0))
+        {
+            return (r[j_int - 1] + r[j_int]) / 2.0;
+        }
+        else
+        {
+            return r[j_int];
+        }
+    }
+    else
+    {
+        if (g.approxEqual(0))
+        {
+            ElementType!R prev_item;
+
+            r = r.drop(j_int - 1);
+            prev_item = r.front;
+            r.popFront;
+            return (r.front + prev_item) / 2.0;
+        }
+        else
+        {
+            return r.drop(j_int).front;
+        }
+    }
+
+    assert(0);
+}
+
+///
+@safe nothrow unittest
+{
+    import std.algorithm.sorting : sort;
+    import std.range : assumeSorted;
+    import std.math : isNaN;
+
+    assert([1, 2, 3, 4].assumeSorted.quantile(0.25) == 1.5);
+    assert([1, 2, 3, 4].assumeSorted.quantile(0.5) == 2.5);
+    assert([1, 2, 3, 4].assumeSorted.quantile(0.75) == 3.5);
+
+    assert(sort([48, 31, 1, 37, 89, 83, 71]).quantile(0.5) == 48);
+
+    assert([1, 2][0 .. 0].assumeSorted.quantile(0.25).isNaN);
+    assert([1].assumeSorted.quantile(0.25) == 1);
+}
+
+@safe nothrow unittest
+{
+    import std.internal.test.dummyrange;
+    import std.range : assumeSorted;
+    import std.math : approxEqual;
+
+    DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward) r;
+    assert(r.assumeSorted.quantile(0.25) == 3);
+    assert(r.assumeSorted.quantile(0.5).approxEqual(5.5));
+    assert(r.assumeSorted.quantile(0.75) == 8);
+}
+
+/**
+Convince function that wraps a call to the $(D quantile) function with 0.5 as
+the q parameter. For algorithmic complexity, refer to the docs of
+$(D quantile).
+
+Params:
+    r = a forward range with length or a random access range
+
+Returns:
+    the median of r
+*/
+real median(R)(R r)
+{
+    return quantile(r, 0.5);
+}
+
+///
+@safe nothrow unittest
+{
+    import std.algorithm.sorting : sort;
+    import std.range : assumeSorted;
+    import std.math : approxEqual, isNaN;
+
+    assert(sort([48, 31, 1, 37, 89, 83, 71]).median == 48);
+
+    assert([3, 5, 12].assumeSorted.median == 5);
+    assert([3, 5, 7, 13, 21, 23, 23, 39].assumeSorted.median == 17);
+    assert([2.9, 6.2, 6.5, 20.5].assumeSorted.median.approxEqual(6.35));
+    assert([2.9, 5.8, 6.2, 6.5, 20.5].assumeSorted.median.approxEqual(6.2));
+
+    assert([1, 2][0 .. 0].assumeSorted.median.isNaN);
+}
+
+@safe nothrow unittest
+{
+    import std.internal.test.dummyrange;
+    import std.range : assumeSorted;
+    import std.math : approxEqual;
+
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward) r1;
+    assert(r1.assumeSorted.median.approxEqual(5.5));
+
+    DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward) r2;
+    assert(r2.assumeSorted.median.approxEqual(5.5));
 }
