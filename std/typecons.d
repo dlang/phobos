@@ -758,10 +758,10 @@ template Tuple(Specs...)
                 h += typeid(T).getHash(cast(const void*)&field[i]);
             return h;
         }
-        
+
         /**
             Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
-            
+
             `%s` is the original format.
             `%(inner%)` where `inner` is the format applied the expanded `Tuple`, 
             so `inner` may contain as many formats as the `Tuple` has fields.
@@ -769,11 +769,12 @@ template Tuple(Specs...)
             on all fields of the `Tuple`. The format must be compatible to all
             of them.
         */
+        //void toString(DG, Char)(scope DG sink, std.format.FormatSpec!Char fmt = "%s") const
         void toString(DG)(scope DG sink, std.format.FormatSpec!char fmt = "%s") const
         {
             if (fmt.nested)
             {
-                import std.format : format;
+                import std.format : formattedWrite;
                 if (fmt.sep)
                 {
                     foreach (i, Type; Types)
@@ -783,19 +784,19 @@ template Tuple(Specs...)
                             sink(fmt.sep);
                         }
                         // TODO: Change this once toString() works for shared objects.
-                        static if (is(Type == class) && is(typeof(Type.init) == shared))
+                        static if (is(Type == class) && is(Type == shared))
                         {
                             sink(Type.stringof);
                         }
                         else
                         {
-                            sink(format(fmt.nested, this.field[i]));
+                            formattedWrite(sink, fmt.nested, this.field[i]);
                         }
                     }
                 }
                 else
                 {
-                    sink(format(fmt.nested, this.expand));
+                    formattedWrite(sink, fmt.nested, this.expand);
                 }
             }
             else if (fmt.spec == 's')
@@ -811,7 +812,7 @@ template Tuple(Specs...)
                         sink(separator);
                     }
                     // TODO: Change this once toString() works for shared objects.
-                    static if (is(Type == class) && is(typeof(Type.init) == shared))
+                    static if (is(Type == class) && is(Type == shared))
                     {
                         sink(Type.stringof);
                     }
@@ -832,7 +833,7 @@ template Tuple(Specs...)
                     "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~ Unqual!(typeof(this)).stringof ~ "'");
             }
         }
-        
+
         /**
          * Converts to string.
          *
@@ -844,7 +845,7 @@ template Tuple(Specs...)
             import std.conv : to;
             return this.to!string;
         }
-        
+
         unittest
         {
             import std.format       : format, FormatException;
@@ -856,7 +857,7 @@ template Tuple(Specs...)
             assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))    == `0x1 v 1.0000 w 0xa`);
             assert(format("%(q%sq%| x %)", tuple("abc", 1, 2.3, [4,5])) == `qabcq x q1q x q2.3q x q[4, 5]q`);
             assert(format("%(%(%d^2 = %.1f%);  %)", if_list)            == `1^2 = 1.0;  2^2 = 4.0;  3^2 = 9.0`);
-            
+
             assertThrown!FormatException(
                 format("%d, %f", tuple(1, 2.0)) == `1, 2.0` // error: %( %) missing
             );
