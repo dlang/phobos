@@ -2494,7 +2494,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
             if (iStart == _unComputed)
             {
                 assert(!empty);
-                front();
+                front;
             }
             iStart = _unComputed;
         }
@@ -3866,7 +3866,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
         void popFront()
         {
             if (!index)
-                front();
+                front;
             if (nspaces)
                 --nspaces;
             if (!nspaces)
@@ -4060,12 +4060,12 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
 
         @property C front()
         {
-            //writefln("   front(): ntabs = %s nspaces = %s index = %s front = '%s'", ntabs, nspaces, index, getFront());
+            //writefln("   front(): ntabs = %s nspaces = %s index = %s front = '%s'", ntabs, nspaces, index, getFront);
             if (ntabs)
                 return '\t';
             if (nspaces)
                 return ' ';
-            C c = getFront();
+            C c = getFront;
             if (index)
                 return c;
             dchar dc;
@@ -4179,9 +4179,9 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
 
         void popFront()
         {
-            //writefln("popFront(): ntabs = %s nspaces = %s index = %s front = '%s'", ntabs, nspaces, index, getFront());
+            //writefln("popFront(): ntabs = %s nspaces = %s index = %s front = '%s'", ntabs, nspaces, index, getFront);
             if (!index)
-                front();
+                front;
             if (ntabs)
                 --ntabs;
             else if (nspaces)

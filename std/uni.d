@@ -8269,7 +8269,7 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str
         void popFront()
         {
             if (!nLeft)
-                front();
+                front;
             assert(nLeft);
             --nLeft;
             if (!nLeft)
@@ -8450,7 +8450,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
             else
             {
                 if (!nLeft)
-                    front();
+                    front;
                 assert(nLeft);
                 --nLeft;
                 if (!nLeft)
