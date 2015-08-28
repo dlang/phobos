@@ -1027,9 +1027,14 @@ unittest
 }
 
 /**
-The "pointsTo" functions, $(D doesPointTo) and $(D mayPointTo).
+Checks whether a given source object contains pointers or references to a given
+target object.
 
-Returns $(D true) if $(D source)'s representation embeds a pointer
+Params:
+    source = The source object
+    target = The target object
+
+Returns: $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
 it.
 
@@ -1094,6 +1099,14 @@ bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target)
     }
 }
 
+// for shared objects
+/// ditto
+bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
+{
+    return doesPointTo!(shared S, shared T, void)(source, target);
+}
+
+/// ditto
 bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
     if (__traits(isRef, source) || isDynamicArray!S ||
         isPointer!S || is(S == class))
@@ -1129,10 +1142,7 @@ bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) 
 }
 
 // for shared objects
-bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
-{
-    return doesPointTo!(shared S, shared T, void)(source, target);
-}
+/// ditto
 bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
 {
     return mayPointTo!(shared S, shared T, void)(source, target);
