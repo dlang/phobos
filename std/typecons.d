@@ -763,7 +763,7 @@ template Tuple(Specs...)
             Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
 
             `%s` is the original format.
-            `%(inner%)` where `inner` is the format applied the expanded `Tuple`, 
+            `%(inner%)` where `inner` is the format applied the expanded `Tuple`,
             so `inner` may contain as many formats as the `Tuple` has fields.
             `%(inner%|sep%)`, where `inner` is one format, that is applied
             on all fields of the `Tuple`. The format must be compatible to all
