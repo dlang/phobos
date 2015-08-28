@@ -1059,7 +1059,7 @@ $(D source) does not point to $(D target). It may produce false positives, but n
 false negatives. This function should be prefered for defensively choosing a
 code path.
 
-Note: Evaluating $(D pointsTo(x, x)) checks whether $(D x) has
+Note: Evaluating $(D doesPointTo(x, x)) checks whether $(D x) has
 internal pointers. This should only be done as an assertive test,
 as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
