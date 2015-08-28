@@ -6545,11 +6545,11 @@ unittest
  * Params: fmt  = Format string. For detailed specification, see $(XREF _format,formattedWrite).
  *         args = Variadic list of arguments to format into returned string.
  */
-Char[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar!Char)
+immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar!Char)
 {
     import std.format : formattedWrite, FormatException;
     import std.array : appender;
-    auto w = appender!(Char[]);
+    auto w = appender!(immutable(Char)[]);
     auto n = formattedWrite(w, fmt, args);
     version (all)
     {
