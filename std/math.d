@@ -6279,12 +6279,16 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
         {
             // Result is real only if y is an integer
             // Check for a non-zero fractional part
-            if (y > -1.0 / real.epsilon && y < 1.0 / real.epsilon)
+            enum real maxPrecise = ulong.max;
+            enum real minPrecise = -maxPrecise;
+            if (y >= minPrecise && y <= maxPrecise)
             {
-                long w = cast(long)y;
-                if (w != y)
+                real absY = fabs(y);
+                ulong w = cast(ulong)absY;
+                if (w != absY)
                     return sqrt(x); // Complex result -- create a NaN
-                if (w & 1) sign = -1.0;
+                if (w & 1)
+                    sign = -1.0;
             }
             x = -x;
         }
@@ -6359,6 +6363,10 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
     assert(isIdentical(pow(-0.0, 5.0), -0.0));
     assert(isIdentical(pow(0.0, 6.0), 0.0));
     assert(isIdentical(pow(-0.0, 6.0), 0.0));
+
+    // Issue #14786 fixed
+    assert(pow(-1.0L, cast(real) ((1UL << 63) + 1UL)) == -1.0L);
+    assert(pow(-1.0L, cast(real) (~0UL)) == -1.0L);
 
     // Now, actual numbers.
     assert(approxEqual(pow(two, three), 8.0));
