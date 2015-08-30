@@ -3644,6 +3644,16 @@ unittest
     Center $(D s) in a field $(D width) characters wide. $(D fillChar)
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
+
+    Params:
+        s = The string to center
+        width = Width of the field to center `s` in
+        fillChar = The character to use for filling excess space in the field
+
+    Returns:
+        The resulting _center-justified string. The returned string is
+        GC-allocated. To avoid GC allocation, use $(LREF centerJustifier)
+        instead.
   +/
 S center(S)(S s, size_t width, dchar fillChar = ' ')
     if (isSomeString!S)
