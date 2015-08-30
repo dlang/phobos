@@ -2409,8 +2409,10 @@ unittest
         result ~= c;
     }
 
+    import std.conv : to;
     assert(equal(result, "abc12def34"d),
-        "Unexpected result: '%s'"d.algoFormat(result));
+        //Convert to string for assert's message
+        to!string("Unexpected result: '%s'"d.algoFormat(result)));
 }
 
 // Issue 8061

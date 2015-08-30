@@ -6403,10 +6403,15 @@ unittest
 
     r = format("abc"c);
     assert(r == "abc");
-    r = format("def"w);
-    assert(r == "def");
-    r = format("ghi"d);
-    assert(r == "ghi");
+
+    //format() returns the same type as inputted.
+    wstring wr;
+    wr = format("def"w);
+    assert(wr == "def"w);
+
+    dstring dr;
+    dr = format("ghi"d);
+    assert(dr == "ghi"d);
 
     void* p = cast(void*)0xDEADBEEF;
     r = format("%s", p);
@@ -6540,11 +6545,11 @@ unittest
  * Params: fmt  = Format string. For detailed specification, see $(XREF _format,formattedWrite).
  *         args = Variadic list of arguments to format into returned string.
  */
-string format(Char, Args...)(in Char[] fmt, Args args)
+immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar!Char)
 {
     import std.format : formattedWrite, FormatException;
     import std.array : appender;
-    auto w = appender!string();
+    auto w = appender!(immutable(Char)[]);
     auto n = formattedWrite(w, fmt, args);
     version (all)
     {
@@ -6580,6 +6585,10 @@ unittest
     assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
                   "helworldlo-138ctrue");
     });
+
+    assert(is(typeof(format("happy")) == string));
+    assert(is(typeof(format("happy"w)) == wstring));
+    assert(is(typeof(format("happy"d)) == dstring));
 }
 
 /*****************************************************
