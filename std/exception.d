@@ -339,7 +339,7 @@ unittest
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value), if $(D !value) is false. Otherwise,
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
     $(D new Exception(msg)) is thrown.
 
     Note:
@@ -383,8 +383,8 @@ T enforce(T, string file, size_t line = __LINE__)
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value) if $(D !value) is false. Otherwise, the given delegate
-    is called.
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise, the given
+    delegate is called.
 
     The safety and purity of this function are inferred from $(D Dg)'s safety
     and purity.
@@ -543,7 +543,8 @@ unittest
         value = The value to test.
         ex = The exception to throw if the value evaluates to false.
 
-    Returns: $(D value) if $(D !value) is false. Otherwise, $(D ex) is thrown.
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise, $(D ex) is
+    thrown.
 
     Example:
     --------------------
@@ -572,9 +573,10 @@ unittest
         value = The value to test.
         msg = The message to include in the `ErrnoException` if it is thrown.
 
-    Returns: $(D value) if $(D !value) is false. Otherwise,
-    $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that
-    the last operation set $(D errno) to an error code.
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
+    $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
+    operation set $(D errno) to an error code corresponding with the failed
+    condition.
 
     Example:
     --------------------
