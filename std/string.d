@@ -789,7 +789,13 @@ unittest
 }
 
 /++
-    Returns the index of the first occurrence of $(D sub) in $(D s) with
+    Params:
+        s = string or ForwardRange of characters to search in correct UTF format
+        sub = substring to search for
+        startIdx = the index into s to start searching from
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns: The index of the first occurrence of $(D sub) in $(D s) with
     respect to the start index $(D startIdx). If $(D sub) is not found, then
     $(D -1) is returned. If $(D sub) is found the value of the returned index
     is at least $(D startIdx). $(D startIdx) represents a codeunit index in
