@@ -168,16 +168,17 @@ private string parentOf(string mod)
 /* This function formates a $(D SysTime) into an $(D OutputRange).
 
 The $(D SysTime) is formatted similar to
-$(LREF std.datatime.DateTime.toISOExtString) expect the fractional second part.
-The sub second part is the upper three digest of the microsecond.
+$(LREF std.datatime.DateTime.toISOExtString) except the fractional second part.
+The fractional second part is in milliseconds and is always 3 digits.
 */
 void systimeToISOString(OutputRange)(OutputRange o, const ref SysTime time)
     if (isOutputRange!(OutputRange,string))
 {
-    auto fsec = time.fracSec.usecs / 1000;
+    const auto dt = cast(DateTime)time;
+    const auto fsec = time.fracSecs.total!"msecs";
 
     formattedWrite(o, "%04d-%02d-%02dT%02d:%02d:%02d.%03d",
-        time.year, time.month, time.day, time.hour, time.minute, time.second,
+        dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second,
         fsec);
 }
 
