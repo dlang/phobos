@@ -195,8 +195,11 @@ class StringException : Exception
 
 
 /++
-    Returns a D-style array of $(D char) given a zero-terminated C-style string.
-    The returned array will retain the same type qualifiers as the input.
+    Params:
+        cString = A null-terminated c-style string.
+
+    Returns: A D-style array of $(D char) referencing the same string.  The
+    returned array will retain the same type qualifiers as the input.
 
     $(RED Important Note:) The returned array is a slice of the original buffer.
     The original data is not changed and not copied.
@@ -215,15 +218,19 @@ inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
 }
 
 /++
-    Returns a C-style zero-terminated string equivalent to $(D s). $(D s)
-    must not contain embedded $(D '\0')'s as any C function will treat the first
-    $(D '\0') that it sees as the end of the string. If $(D s.empty) is
+    Params:
+        s = A D-style string.
+
+    Returns: A C-style null-terminated string equivalent to $(D s). $(D s)
+    must not contain embedded $(D '\0')'s as any C function will treat the
+    first $(D '\0') that it sees as the end of the string. If $(D s.empty) is
     $(D true), then a string containing only $(D '\0') is returned.
 
     $(RED Important Note:) When passing a $(D char*) to a C function, and the C
-    function keeps it around for any reason, make sure that you keep a reference
-    to it in your D code. Otherwise, it may go away during a garbage collection
-    cycle and cause a nasty bug when the C code tries to use it.
+    function keeps it around for any reason, make sure that you keep a
+    reference to it in your D code. Otherwise, it may become invalid during a
+    garbage collection cycle and cause a nasty bug when the C code tries to use
+    it.
   +/
 immutable(char)* toStringz(const(char)[] s) @trusted pure nothrow
 in
