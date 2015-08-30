@@ -364,12 +364,7 @@ T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null, 
     return value;
 }
 
-/++
-   $(RED Deprecated. If passing the file or line number explicitly, please use
-         the overload of enforce which takes them as function arguments. Taking
-         them as template arguments causes unnecessary template bloat. This
-         overload will be removed in June 2015.)
- +/
+// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
 deprecated("Use the overload of enforce that takes file and line as function arguments.")
 T enforce(T, string file, size_t line = __LINE__)
     (T value, lazy const(char)[] msg = null)

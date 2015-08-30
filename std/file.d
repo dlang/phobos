@@ -3450,14 +3450,6 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     return filter!f(DirIterator(path, mode, followSymlink));
 }
 
-// Explicitly undocumented. It will be removed in July 2015.
-deprecated("Please use DirEntry constructor directly instead.")
-DirEntry dirEntry(in char[] name)
-{
-    return DirEntry(name.idup);
-}
-
-
 unittest
 {
     import std.stdio : writefln;
