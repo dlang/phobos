@@ -237,17 +237,52 @@ version(unittest)
         return initOnce!server(startServer());
     }
 
-    private immutable(T)[] recvAll(T=char)(Socket s)
+    private struct Request(T)
     {
-        ubyte[1024] buf=void;
-        ubyte[] res;
+        string hdrs;
+        immutable(T)[] bdy;
+    }
+
+    private Request!T recvReq(T=char)(Socket s)
+    {
+        ubyte[1024] tmp=void;
+        ubyte[] buf;
+
         while (true)
         {
-            auto nbytes = s.receive(buf[]);
+            auto nbytes = s.receive(tmp[]);
             assert(nbytes >= 0);
-            res ~= buf[0 .. nbytes];
-            if (nbytes < buf.length)
-                return cast(typeof(return))res;
+
+            immutable beg = buf.length > 3 ? buf.length - 3 : 0;
+            buf ~= tmp[0 .. nbytes];
+            auto bdy = buf[beg .. $].find(cast(ubyte[])"\r\n\r\n");
+            if (bdy.empty)
+                continue;
+
+            auto hdrs = cast(string)buf[0 .. $ - bdy.length];
+            bdy.popFrontN(4);
+            // no support for chunked transfer-encoding
+            if (auto m = hdrs.matchFirst(ctRegex!(`Content-Length: ([0-9]+)`, "i")))
+            {
+                import std.uni : asUpperCase;
+                if (hdrs.asUpperCase.canFind("EXPECT: 100-CONTINUE"))
+                    s.send(httpContinue);
+
+                size_t remain = m.captures[1].to!size_t - bdy.length;
+                while (remain)
+                {
+                    nbytes = s.receive(tmp[0 .. min(remain, $)]);
+                    assert(nbytes >= 0);
+                    buf ~= tmp[0 .. nbytes];
+                    remain -= nbytes;
+                }
+            }
+            else
+            {
+                assert(bdy.empty);
+            }
+            bdy = buf[hdrs.length + 4 .. $];
+            return typeof(return)(hdrs, cast(immutable(T)[])bdy);
         }
     }
 
@@ -387,7 +422,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            assert(s.recvAll.canFind("GET /"));
+            assert(s.recvReq.hdrs.canFind("GET /"));
             s.send(httpOK("Hello world"));
         });
         auto fn = buildPath(tempDir(), "downloaded-http-file");
@@ -452,12 +487,9 @@ unittest
         scope (exit) std.file.remove(fn);
         std.file.write(fn, "upload data\n");
         testServer.handle((s) {
-            auto req = s.recvAll;
-            assert(req.canFind("PUT /path"));
-            if (req.canFind("100-continue")) s.send(httpContinue);
-            req = req.find("\r\n\r\n")[4 .. $];
-            if (req.empty) req = s.recvAll;
-            assert(req.canFind("upload data"));
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("PUT /path"));
+            assert(req.bdy.canFind("upload data"));
             s.send(httpOK());
         });
         upload(fn, host ~ "/path");
@@ -519,7 +551,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            assert(s.recvAll.canFind("GET /path"));
+            assert(s.recvReq.hdrs.canFind("GET /path"));
             s.send(httpOK("GETRESPONSE"));
         });
         auto res = get(host ~ "/path");
@@ -566,11 +598,9 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
-            assert(req.canFind("POST /path"));
-            req = req.find("\r\n\r\n")[4 .. $];
-            if (req.empty) req = s.recvAll;
-            assert(req.canFind("POSTBODY"));
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("POST /path"));
+            assert(req.bdy.canFind("POSTBODY"));
             s.send(httpOK("POSTRESPONSE"));
         });
         auto res = post(host ~ "/path", "POSTBODY");
@@ -585,11 +615,9 @@ unittest
         ub = cast(ubyte)i;
 
     testServer.handle((s) {
-        auto header = s.recvAll;
-        header = header.find("\r\n\r\n")[4 .. $];
-        auto req = header.empty ? s.recvAll!ubyte : cast(ubyte[])header;
-        assert(req.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
-        assert(req.canFind(cast(ubyte[])[253, 254, 255]));
+        auto req = s.recvReq!ubyte;
+        assert(req.bdy.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
+        assert(req.bdy.canFind(cast(ubyte[])[253, 254, 255]));
         s.send(httpOK(cast(ubyte[])[17, 27, 35, 41]));
     });
     auto res = post!ubyte(testServer.addr, data);
@@ -652,12 +680,9 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
-            assert(req.canFind("PUT /path"));
-            if (req.canFind("100-continue")) s.send(httpContinue);
-            req = req.find("\r\n\r\n")[4 .. $];
-            if (req.empty) req = s.recvAll;
-            assert(req.canFind("PUTBODY"));
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("PUT /path"));
+            assert(req.bdy.canFind("PUTBODY"));
             s.send(httpOK("PUTRESPONSE"));
         });
         auto res = put(host ~ "/path", "PUTBODY");
@@ -717,8 +742,8 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
-            assert(req.canFind("DELETE /path"));
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("DELETE /path"));
             s.send(httpOK());
         });
         del(host ~ "/path");
@@ -768,8 +793,8 @@ T[] options(T = char, OptionsUnit)(const(char)[] url,
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("OPTIONS /path"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("OPTIONS /path"));
         s.send(httpOK("OPTIONSRESPONSE"));
     });
     auto res = options(testServer.addr ~ "/path");
@@ -808,8 +833,8 @@ T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("TRACE /path"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("TRACE /path"));
         s.send(httpOK("TRACERESPONSE"));
     });
     auto res = trace(testServer.addr ~ "/path");
@@ -847,8 +872,8 @@ T[] connect(T = char)(const(char)[] url, HTTP conn = HTTP())
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("CONNECT /path"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("CONNECT /path"));
         s.send(httpOK("CONNECTRESPONSE"));
     });
     auto res = connect(testServer.addr ~ "/path");
@@ -891,12 +916,9 @@ T[] patch(T = char, PatchUnit)(const(char)[] url, const(PatchUnit)[] patchData,
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("PATCH /path"));
-        if (req.canFind("100-continue")) s.send(httpContinue);
-        req = req.find("\r\n\r\n")[4 .. $];
-        if (req.empty) req = s.recvAll;
-        assert(req.canFind("PATCHBODY"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("PATCH /path"));
+        assert(req.bdy.canFind("PATCHBODY"));
         s.send(httpOK("PATCHRESPONSE"));
     });
     auto res = patch(testServer.addr ~ "/path", "PATCHBODY");
@@ -1001,8 +1023,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("GET /path"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("GET /path"));
         s.send(httpNotFound());
     });
     auto e = collectException!CurlException(get(testServer.addr ~ "/path"));
@@ -1013,17 +1035,14 @@ unittest
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("POST /"));
-        req = req.find("\r\n\r\n")[4 .. $];
-        if (req.empty) req = s.recvAll;
-        assert(req.canFind("POSTBODY"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("POST /"));
+        assert(req.bdy.canFind("POSTBODY"));
         s.send(httpOK("POSTRESPONSE"));
 
-        req = s.recvAll;
-        assert(req.canFind("TRACE /"));
-        req = req.find("\r\n\r\n")[4 .. $];
-        assert(req.empty);
+        req = s.recvReq;
+        assert(req.hdrs.canFind("TRACE /"));
+        assert(req.bdy.empty);
         s.blocking = false;
         ubyte[6] buf = void;
         assert(s.receive(buf[]) < 0);
@@ -1240,7 +1259,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
+            auto req = s.recvReq;
             s.send(httpOK("Line1\nLine2\nLine3"));
         });
         assert(byLine(host).equal(["Line1", "Line2", "Line3"]));
@@ -1312,7 +1331,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
+            auto req = s.recvReq;
             s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
         });
         assert(byChunk(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
@@ -1604,7 +1623,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
+            auto req = s.recvReq;
             s.send(httpOK("Line1\nLine2\nLine3"));
         });
         assert(byLineAsync(host).equal(["Line1", "Line2", "Line3"]));
@@ -1753,7 +1772,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
+            auto req = s.recvReq;
             s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
         });
         assert(byChunkAsync(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
@@ -2014,9 +2033,9 @@ private mixin template Protocol()
     unittest
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
-            assert(req.canFind("GET /"));
-            assert(req.canFind("Basic dXNlcjpwYXNz"));
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("GET /"));
+            assert(req.hdrs.canFind("Basic dXNlcjpwYXNz"));
             s.send(httpOK());
         });
 
@@ -2932,12 +2951,10 @@ struct HTTP
     unittest
     {
         testServer.handle((s) {
-            auto header = s.recvAll;
-            assert(header.canFind("POST /path"));
-            header = header.find("\r\n\r\n")[4 .. $];
-            auto req = header.empty ? s.recvAll!ubyte : cast(ubyte[])header;
-            assert(req.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
-            assert(req.canFind(cast(ubyte[])[253, 254, 255]));
+            auto req = s.recvReq!ubyte;
+            assert(req.hdrs.canFind("POST /path"));
+            assert(req.bdy.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
+            assert(req.bdy.canFind(cast(ubyte[])[253, 254, 255]));
             s.send(httpOK(cast(ubyte[])[17, 27, 35, 41]));
         });
         auto data = new ubyte[](256);
@@ -3000,7 +3017,7 @@ struct HTTP
             p.method != Method.patch)
             p.method = Method.post;
 
-        if (p.method == Method.post)
+        if (p.method == Method.post || p.method == Method.patch)
             lenOpt = CurlOption.postfieldsize_large;
         else
             lenOpt = CurlOption.infilesize_large;
