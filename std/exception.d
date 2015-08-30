@@ -1504,6 +1504,10 @@ class ErrnoException : Exception
         expression   = The expression to run and return its result.
         errorHandler = The handler to run if the expression throwed.
 
+    Returns:
+        expression, if it does not throw. Otherwise, returns the result of
+        errorHandler.
+
     Examples:
     --------------------
     //Revert to a default value upon an error:
