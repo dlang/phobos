@@ -127,6 +127,7 @@ version (Win64)
         version = Win64_DMD_InlineAsm;
 }
 
+import core.math;
 import core.stdc.math;
 import std.traits;
 
@@ -627,13 +628,19 @@ auto conj(Num)(Num y) @safe pure nothrow @nogc
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real cos(real x) @safe pure nothrow @nogc;       /* intrinsic */
+real cos(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
 //FIXME
 ///ditto
 double cos(double x) @safe pure nothrow @nogc { return cos(cast(real)x); }
 //FIXME
 ///ditto
 float cos(float x) @safe pure nothrow @nogc { return cos(cast(real)x); }
+
+unittest
+{
+    real function(real) pcos = &cos;
+    assert(pcos != null);
+}
 
 /***********************************
  * Returns $(WEB en.wikipedia.org/wiki/Sine, sine) of x. x is in $(WEB en.wikipedia.org/wiki/Radian, radians).
@@ -655,7 +662,7 @@ float cos(float x) @safe pure nothrow @nogc { return cos(cast(real)x); }
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real sin(real x) @safe pure nothrow @nogc;       /* intrinsic */
+real sin(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
 //FIXME
 ///ditto
 double sin(double x) @safe pure nothrow @nogc { return sin(cast(real)x); }
@@ -675,6 +682,12 @@ unittest
       auto result = sin(x * (PI / 180)); // convert degrees to radians
       writefln("The sine of %s degrees is %s", x, result);
     }
+}
+
+unittest
+{
+    real function(real) psin = &sin;
+    assert(psin != null);
 }
 
 /***********************************
@@ -1458,7 +1471,7 @@ unittest
  * greater than long.max, the result is
  * indeterminate.
  */
-long rndtol(real x) @nogc @safe pure nothrow;    /* intrinsic */
+long rndtol(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.rndtol(x); }
 //FIXME
 ///ditto
 long rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
@@ -1466,6 +1479,11 @@ long rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
 ///ditto
 long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
 
+unittest
+{
+    long function(real) prndtol = &rndtol;
+    assert(prndtol != null);
+}
 
 /*****************************************
  * Returns x rounded to a long value using the FE_TONEAREST rounding mode.
@@ -1485,13 +1503,13 @@ extern (C) real rndtonl(real x);
  *      $(TR $(TD +$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *      )
  */
-float sqrt(float x) @nogc @safe pure nothrow;    /* intrinsic */
+float sqrt(float x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
 
 /// ditto
-double sqrt(double x) @nogc @safe pure nothrow;  /* intrinsic */
+double sqrt(double x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
 
 /// ditto
-real sqrt(real x) @nogc @safe pure nothrow;      /* intrinsic */
+real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
 
 @safe pure nothrow @nogc unittest
 {
@@ -1503,6 +1521,16 @@ real sqrt(real x) @nogc @safe pure nothrow;      /* intrinsic */
     assert(isNaN(sqrt(-1.0f)));
     assert(isNaN(sqrt(-1.0)));
     assert(isNaN(sqrt(-1.0L)));
+}
+
+unittest
+{
+    float function(float) psqrtf = &sqrt;
+    assert(psqrtf != null);
+    double function(double) psqrtd = &sqrt;
+    assert(psqrtd != null);
+    real function(real) psqrtr = &sqrt;
+    assert(psqrtr != null);
 }
 
 creal sqrt(creal z) @nogc @safe pure nothrow
@@ -2869,7 +2897,7 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
  * References: frexp
  */
 
-real ldexp(real n, int exp) @nogc @safe pure nothrow;    /* intrinsic */
+real ldexp(real n, int exp) @nogc @safe pure nothrow { pragma(inline, true); return core.math.ldexp(n, exp); }
 //FIXME
 ///ditto
 double ldexp(double n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)n, exp); }
@@ -2971,6 +2999,9 @@ unittest
 
         assert(equalsDigit(z, l, 7));
     }
+
+    real function(real, int) pldexp = &ldexp;
+    assert(pldexp != null);
 }
 
 /**************************************
@@ -3562,7 +3593,7 @@ real cbrt(real x) @trusted nothrow @nogc
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
  *      )
  */
-real fabs(real x) @safe pure nothrow @nogc;      /* intrinsic */
+real fabs(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.fabs(x); }
 //FIXME
 ///ditto
 double fabs(double x) @safe pure nothrow @nogc { return fabs(cast(real)x); }
@@ -3570,6 +3601,11 @@ double fabs(double x) @safe pure nothrow @nogc { return fabs(cast(real)x); }
 ///ditto
 float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real)x); }
 
+unittest
+{
+    real function(real) pfabs = &fabs;
+    assert(pfabs != null);
+}
 
 /***********************************************************************
  * Calculates the length of the
@@ -3945,13 +3981,19 @@ real nearbyint(real x) @trusted nothrow @nogc
  * $(B nearbyint) performs
  * the same operation, but does not set the FE_INEXACT exception.
  */
-real rint(real x) @safe pure nothrow @nogc;      /* intrinsic */
+real rint(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.rint(x); }
 //FIXME
 ///ditto
 double rint(double x) @safe pure nothrow @nogc { return rint(cast(real)x); }
 //FIXME
 ///ditto
 float rint(float x) @safe pure nothrow @nogc { return rint(cast(real)x); }
+
+unittest
+{
+    real function(real) print = &rint;
+    assert(print != null);
+}
 
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding
