@@ -876,14 +876,19 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 
         static if (hasAssignableElements!Range)
         {
-            auto temp = r[i];
+            for (; j < maxJ && pred(r[j + 1], r[i]); ++j) {}
 
-            for (; j < maxJ && pred(r[j + 1], temp); ++j)
+            if (i != j)
             {
-                r[j] = r[j + 1];
-            }
+                auto temp = r[i];
 
-            r[j] = temp;
+                for (size_t k = i; k < j; ++k)
+                {
+                    r[k] = r[k + 1];
+                }
+
+                r[j] = temp;
+            }
         }
         else
         {
@@ -910,6 +915,19 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 
     optimisticInsertionSort!(binaryFun!("a < b"), int[])(a);
     assert(isSorted(a));
+}
+
+// Issue 14340
+@safe unittest
+{
+    import std.algorithm.searching : count;
+
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    int[] a = [0, 2, 1, 0];
+    optimisticInsertionSort!((x, y) => a.count(x) < a.count(y), int[])(a);
+    assert(isSorted!((x, y) => a.count(x) < a.count(y), int[])(a));
 }
 
 // sort
