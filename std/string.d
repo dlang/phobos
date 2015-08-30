@@ -790,7 +790,7 @@ unittest
 
 /++
     Params:
-        s = string or ForwardRange of characters to search in correct UTF format
+        s = string to search
         sub = substring to search for
         startIdx = the index into s to start searching from
         cs = CaseSensitive.yes or CaseSensitive.no
@@ -879,7 +879,12 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 }
 
 /++
-    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c)
+    Params:
+        s = string to search
+        c = character to search for
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns: The index of the last occurrence of $(D c) in $(D s). If $(D c)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -987,7 +992,13 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
 }
 
 /++
-    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c) is
+    Params:
+        s = string to search
+        c = character to search for
+        startIdx = the index into s to start searching from
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns: The index of the last occurrence of $(D c) in $(D s). If $(D c) is
     not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
     the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
     codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
@@ -1043,7 +1054,12 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 }
 
 /++
-    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
+    Params:
+        s = string to search
+        sub = substring to search for
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns: the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -1204,7 +1220,13 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 }
 
 /++
-    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
+    Params:
+        s = string to search
+        sub = substring to search for
+        startIdx = the index into s to start searching from
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns: the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
     the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
     codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
