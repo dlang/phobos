@@ -145,7 +145,14 @@ auto tempCString(To = char, From)(From str)
     size_t i;
 
     static if (isSomeString!From)
+    {
         auto r = cast(const(CF)[])str;
+        if (r is null)  // Bugzilla 14980
+        {
+            res._ptr = null;
+            return res;
+        }
+    }
     else
         alias r = str;
     foreach (const c; byUTF!(Unqual!To)(r))
@@ -218,8 +225,14 @@ nothrow @nogc unittest
     assert(tempCString(abc[].byWchar).buffPtr.asArray == abc);
 }
 
+// Bugzilla 14980
+nothrow @nogc unittest
+{
+    const(char[]) str = null;
+    auto res = tempCString(str);
+    const char* ptr = res;
+    assert(ptr is null);
+}
 
 version(Windows)
     alias tempCStringW = tempCString!(wchar, const(char)[]);
-
-
