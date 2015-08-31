@@ -292,6 +292,11 @@ $(BOOKTABLE ,
         $(TDNW $(LINK2 std_uri.html, std.uri))
         $(TD Encode and decode Uniform Resource Identifiers (URIs).)
     )
+    $(TR
+        $(TDNW $(LINK2 std_uuid.html, std.uuid))
+        $(TD Universally-unique identifiers for resources in distributed
+        systems.)
+    )
     $(LEADINGROW Numeric)
     $(TR
         $(TDNW $(LINK2 std_bigint.html, std.bigint))
