@@ -132,16 +132,6 @@ final class ArchiveMember
     @property ushort extractVersion()     { return _extractVersion; }    /// Read Only
     @property uint crc32()         { return _crc32; }    /// Read Only: cyclic redundancy check (CRC) value
 
-    // Explicitly undocumented. It will be removed in January 2015.
-    deprecated("Please use fileAttributes instead.")
-    @property ref inout(ushort) madeVersion() inout @safe pure nothrow
-    { return _madeVersion; }
-
-    // Explicitly undocumented. It will be removed in January 2015.
-    deprecated("Please use fileAttributes instead.")
-    @property ref inout(uint) externalAttributes() inout @safe pure nothrow
-    { return _externalAttributes; }
-
     /// Read Only: size of data of member in compressed form.
     @property uint compressedSize()     { return _compressedSize; }
 
@@ -248,13 +238,6 @@ final class ArchiveMember
      *     CompressionMethod
      **/
     @property CompressionMethod compressionMethod() { return _compressionMethod; }
-
-    // Explicitly undocumented. It will be removed in January 2015.
-    deprecated("Please use the enum CompressionMethod to set this property instead.")
-    @property void compressionMethod(ushort cm)
-    {
-        compressionMethod = cast(CompressionMethod)(cm);
-    }
 
     /**
      * Write compression method used for this member
