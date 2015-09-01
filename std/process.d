@@ -3200,7 +3200,8 @@ private void toAStringz(in string[] a, const(char)**az)
 //{
 //    int spawnvp(int mode, string pathname, string[] argv)
 //    {
-//      char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+//      char** argv_ = cast(char**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+//      scope(exit) core.stdc.stdlib.free(argv_);
 //
 //      toAStringz(argv, argv_);
 //
@@ -3218,7 +3219,8 @@ alias P_NOWAIT = _P_NOWAIT;
 deprecated("Please use spawnProcess instead")
 int spawnvp(int mode, string pathname, string[] argv)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
 
@@ -3422,7 +3424,8 @@ extern(C)
 
 private int execv_(in string pathname, in string[] argv)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
 
@@ -3431,8 +3434,10 @@ private int execv_(in string pathname, in string[] argv)
 
 private int execve_(in string pathname, in string[] argv, in string[] envp)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
-    auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
+    auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
+    scope(exit) core.stdc.stdlib.free(envp_);
 
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
@@ -3442,7 +3447,8 @@ private int execve_(in string pathname, in string[] argv, in string[] envp)
 
 private int execvp_(in string pathname, in string[] argv)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
 
@@ -3487,8 +3493,10 @@ version(Posix)
 }
 else version(Windows)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
-    auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
+    auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
+    scope(exit) core.stdc.stdlib.free(envp_);
 
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
