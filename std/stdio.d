@@ -314,7 +314,7 @@ automatically closed.
 Example:
 ----
 // test.d
-void main(string args[])
+void main(string[] args)
 {
     auto f = File("test.txt", "w"); // open for writing
     f.write("Hello");
