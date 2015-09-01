@@ -186,16 +186,95 @@ version(unittest)
     import std.file : tempDir;
     import std.path : buildPath;
 
-    // Source code for the test service is available at
-    // https://github.com/jcd/d-lang-testservice
-    enum testService = "d-lang.appspot.com";
+    import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
 
-    enum testUrl1 = "http://"~testService~"/testUrl1";
-    enum testUrl2 = "http://"~testService~"/testUrl2";
-    // No anonymous DigitalMars FTP access as of 2015
-    //enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
-    enum testUrl4 = testService~"/testUrl1";
-    enum testUrl5 = "http://"~testService~"/testUrl3";
+    private struct TestServer
+    {
+        string addr() { return _addr; }
+
+        void handle(void function(Socket s) dg)
+        {
+            tid.send(dg);
+        }
+
+    private:
+        string _addr;
+        Tid tid;
+
+        static void loop(shared TcpSocket listener)
+        {
+            try while (true)
+            {
+                void function(Socket) handler = void;
+                try
+                    handler = receiveOnly!(typeof(handler));
+                catch (OwnerTerminated)
+                    return;
+                handler((cast()listener).accept);
+            }
+            catch (Throwable e)
+            {
+                import core.stdc.stdlib : exit, EXIT_FAILURE;
+                stderr.writeln(e);
+                exit(EXIT_FAILURE); // Bugzilla 7018
+            }
+        }
+    }
+
+    private TestServer startServer()
+    {
+        auto sock = new TcpSocket;
+        sock.bind(new InternetAddress(INADDR_LOOPBACK, InternetAddress.PORT_ANY));
+        sock.listen(1);
+        auto addr = sock.localAddress.toString();
+        auto tid = spawn(&TestServer.loop, cast(shared)sock);
+        return TestServer(addr, tid);
+    }
+
+    private ref TestServer testServer()
+    {
+        __gshared TestServer server;
+        return initOnce!server(startServer());
+    }
+
+    private immutable(T)[] recvAll(T=char)(Socket s)
+    {
+        ubyte[1024] buf=void;
+        ubyte[] res;
+        while (true)
+        {
+            auto nbytes = s.receive(buf[]);
+            assert(nbytes >= 0);
+            res ~= buf[0 .. nbytes];
+            if (nbytes < buf.length)
+                return cast(typeof(return))res;
+        }
+    }
+
+    private string httpOK(string msg)
+    {
+        return "HTTP/1.1 200 OK\r\n"~
+            "Content-Type: text/plain\r\n"~
+            "Content-Length: "~msg.length.to!string~"\r\n"
+            "\r\n"~
+            msg;
+    }
+
+    private string httpOK()
+    {
+        return "HTTP/1.1 200 OK\r\n"~
+            "Content-Length: 0\r\n"~
+            "\r\n";
+    }
+
+    private string httpNotFound()
+    {
+        return "HTTP/1.1 404 Not Found\r\n"~
+            "Content-Length: 0\r\n"~
+            "\r\n";
+    }
+
+    private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
 }
 version(StdDdoc) import std.stdio;
 
@@ -305,14 +384,17 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 
 unittest
 {
-    if (!netAllowed()) return;
-    // No anonymous DigitalMars FTP access as of 2015
-    //download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
-    auto fn = buildPath(tempDir(), "downloaded-http-file");
-    download("d-lang.appspot.com/testUrl1", fn);
-    assert(std.file.readText(fn) == "Hello world\n");
-    download!(HTTP)("d-lang.appspot.com/testUrl1", fn);
-    assert(std.file.readText(fn) == "Hello world\n");
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            assert(s.recvAll.canFind("GET /"));
+            s.send(httpOK("Hello world"));
+        });
+        auto fn = buildPath(tempDir(), "downloaded-http-file");
+        scope (exit) std.file.remove(fn);
+        download(host, fn);
+        assert(std.file.readText(fn) == "Hello world");
+    }
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
@@ -353,24 +435,33 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
-        static import std.file;
-        void[] f;
-
-        conn.onSend = (void[] data)
-        {
-            f = std.file.read(loadFromPath);
-            return f.length;
-        };
-        conn.contentLength = f.length;
+        auto f = File(loadFromPath, "rb");
+        conn.onSend = buf => f.rawRead(buf).length;
+        auto sz = f.size;
+        if (sz != ulong.max)
+            conn.contentLength = sz;
         conn.perform();
     }
 }
 
 unittest
 {
-    if (!netAllowed()) return;
-    //    upload(buildPath(tempDir(), "downloaded-ftp-file"), "ftp.digitalmars.com/sieve.ds");
-    upload(buildPath(tempDir(), "downloaded-http-file"), "d-lang.appspot.com/testUrl2");
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        auto fn = buildPath(tempDir(), "downloaded-http-file");
+        scope (exit) std.file.remove(fn);
+        std.file.write(fn, "upload data\n");
+        testServer.handle((s) {
+            auto req = s.recvAll;
+            assert(req.canFind("PUT /path"));
+            if (req.canFind("100-continue")) s.send(httpContinue);
+            req = req.find("\r\n\r\n")[4 .. $];
+            if (req.empty) req = s.recvAll;
+            assert(req.canFind("upload data"));
+            s.send(httpOK());
+        });
+        upload(fn, host ~ "/path");
+    }
 }
 
 /** HTTP/FTP get content.
@@ -425,17 +516,15 @@ T[] get(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = get(testUrl1);
-    assert(res == "Hello world\n",
-           "get!HTTP() returns unexpected content " ~ res);
-    res = get(testUrl4);
-    assert(res == "Hello world\n",
-           "get!HTTP() returns unexpected content: " ~ res);
-    // No anonymous DigitalMars FTP access as of 2015
-    //res = get(testUrl3);
-    //assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
-    //       "get!FTP() returns unexpected content");
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            assert(s.recvAll.canFind("GET /path"));
+            s.send(httpOK("GETRESPONSE"));
+        });
+        auto res = get(host ~ "/path");
+        assert(res == "GETRESPONSE");
+    }
 }
 
 
@@ -474,30 +563,37 @@ if (is(T == char) || is(T == ubyte))
 
 unittest
 {
-    if (!netAllowed()) return;
-
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        string data = "Hello world";
-        auto res = post(testUrl2, data);
-        assert(res == data,
-               "post!HTTP() returns unexpected content " ~ res);
+        testServer.handle((s) {
+            auto req = s.recvAll;
+            assert(req.canFind("POST /path"));
+            req = req.find("\r\n\r\n")[4 .. $];
+            if (req.empty) req = s.recvAll;
+            assert(req.canFind("POSTBODY"));
+            s.send(httpOK("POSTRESPONSE"));
+        });
+        auto res = post(host ~ "/path", "POSTBODY");
+        assert(res == "POSTRESPONSE");
     }
+}
 
-    {
-        ubyte[] data;
-        foreach (n; 0..256)
-            data ~= cast(ubyte)n;
-        auto res = post!ubyte(testUrl2, data);
-        assert(res == data,
-               "post!HTTP() with binary data returns unexpected content (" ~ text(res.length) ~ " bytes)");
-    }
+unittest
+{
+    auto data = new ubyte[](256);
+    foreach (i, ref ub; data)
+        ub = cast(ubyte)i;
 
-    {
-        string data = "Hello world";
-        auto res = post(testUrl5, data);
-        assert(res == data,
-               "post!HTTP() returns unexpected content after redirect " ~ res);
-    }
+    testServer.handle((s) {
+        auto header = s.recvAll;
+        header = header.find("\r\n\r\n")[4 .. $];
+        auto req = header.empty ? s.recvAll!ubyte : cast(ubyte[])header;
+        assert(req.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
+        assert(req.canFind(cast(ubyte[])[253, 254, 255]));
+        s.send(httpOK(cast(ubyte[])[17, 27, 35, 41]));
+    });
+    auto res = post!ubyte(testServer.addr, data);
+    assert(res == cast(ubyte[])[17, 27, 35, 41]);
 }
 
 
@@ -553,15 +649,20 @@ T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = put(testUrl2, "Hello world");
-    assert(res == "Hello world",
-           "put!HTTP() returns unexpected content " ~ res);
-
-    // TODO: need ftp server to test with
-    //    res = get(testUrl3);
-    //    assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
-    //       "get!FTP() returns unexpected content");
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvAll;
+            assert(req.canFind("PUT /path"));
+            if (req.canFind("100-continue")) s.send(httpContinue);
+            req = req.find("\r\n\r\n")[4 .. $];
+            if (req.empty) req = s.recvAll;
+            assert(req.canFind("PUTBODY"));
+            s.send(httpOK("PUTRESPONSE"));
+        });
+        auto res = put(host ~ "/path", "PUTBODY");
+        assert(res == "PUTRESPONSE");
+    }
 }
 
 
@@ -613,8 +714,15 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
 
 unittest
 {
-    if (!netAllowed()) return;
-    del(testUrl1);
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvAll;
+            assert(req.canFind("DELETE /path"));
+            s.send(httpOK());
+        });
+        del(host ~ "/path");
+    }
 }
 
 
@@ -659,18 +767,13 @@ T[] options(T = char, OptionsUnit)(const(char)[] url,
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = options(testUrl2);
-    assert(res == "Hello world",
-           "options!HTTP() returns unexpected content " ~ res);
-}
-
-unittest
-{
-    if (!netAllowed()) return;
-    auto res = options(testUrl1);
-    assert(res == "Hello world\n",
-           "options!HTTP() returns unexpected content " ~ res);
+    testServer.handle((s) {
+        auto req = s.recvAll;
+        assert(req.canFind("OPTIONS /path"));
+        s.send(httpOK("OPTIONSRESPONSE"));
+    });
+    auto res = options(testServer.addr ~ "/path");
+    assert(res == "OPTIONSRESPONSE");
 }
 
 
@@ -704,10 +807,13 @@ T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = trace(testUrl1);
-    assert(res == "Hello world\n",
-           "trace!HTTP() returns unexpected content " ~ res);
+    testServer.handle((s) {
+        auto req = s.recvAll;
+        assert(req.canFind("TRACE /path"));
+        s.send(httpOK("TRACERESPONSE"));
+    });
+    auto res = trace(testServer.addr ~ "/path");
+    assert(res == "TRACERESPONSE");
 }
 
 
@@ -740,11 +846,13 @@ T[] connect(T = char)(const(char)[] url, HTTP conn = HTTP())
 
 unittest
 {
-    // google appspot does not allow connect method.
-    //    if (!netAllowed()) return;
-    //    auto res = connect(testUrl1);
-    //    assert(res == "Hello world\n",
-    //           "connect!HTTP() returns unexpected content " ~ res);
+    testServer.handle((s) {
+        auto req = s.recvAll;
+        assert(req.canFind("CONNECT /path"));
+        s.send(httpOK("CONNECTRESPONSE"));
+    });
+    auto res = connect(testServer.addr ~ "/path");
+    assert(res == "CONNECTRESPONSE");
 }
 
 
@@ -782,12 +890,17 @@ T[] patch(T = char, PatchUnit)(const(char)[] url, const(PatchUnit)[] patchData,
 
 unittest
 {
-    // google appspot does not allow patchmethod.
-    // if (!netAllowed()) return;
-    //
-    // auto http = HTTP();
-    // http.addRequestHeader("Content-Type", "application/json");
-    // auto content = patch("d-lang.appspot.com/testUrl2", `{"title": "Patched Title"}`, http);
+    testServer.handle((s) {
+        auto req = s.recvAll;
+        assert(req.canFind("PATCH /path"));
+        if (req.canFind("100-continue")) s.send(httpContinue);
+        req = req.find("\r\n\r\n")[4 .. $];
+        if (req.empty) req = s.recvAll;
+        assert(req.canFind("PATCHBODY"));
+        s.send(httpOK("PATCHRESPONSE"));
+    });
+    auto res = patch(testServer.addr ~ "/path", "PATCHBODY");
+    assert(res == "PATCHRESPONSE");
 }
 
 
@@ -887,27 +1000,40 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto e = collectException!CurlException(get(testUrl1 ~ "nonexisting"));
+    testServer.handle((s) {
+        auto req = s.recvAll;
+        assert(req.canFind("GET /path"));
+        s.send(httpNotFound());
+    });
+    auto e = collectException!CurlException(get(testServer.addr ~ "/path"));
     assert(e.msg == "HTTP request returned status code 404 (Not Found)");
 }
 
 // Bugzilla 14760 - content length must be reset after post
 unittest
 {
-    //if (!netAllowed()) return;
+    testServer.handle((s) {
+        auto req = s.recvAll;
+        assert(req.canFind("POST /"));
+        req = req.find("\r\n\r\n")[4 .. $];
+        if (req.empty) req = s.recvAll;
+        assert(req.canFind("POSTBODY"));
+        s.send(httpOK("POSTRESPONSE"));
+
+        req = s.recvAll;
+        assert(req.canFind("TRACE /"));
+        req = req.find("\r\n\r\n")[4 .. $];
+        assert(req.empty);
+        s.blocking = false;
+        ubyte[6] buf = void;
+        assert(s.receive(buf[]) < 0);
+        s.send(httpOK("TRACERESPONSE"));
+    });
     auto http = HTTP();
-    {
-        string data = "Hello world";
-        auto res = post(testUrl2, data, http);
-        assert(res == data,
-               "post!HTTP() returns unexpected content " ~ res);
-    }
-    {
-        auto res = trace(testUrl1, http);
-        assert(res == "Hello world\n",
-               "trace!HTTP() returns unexpected content " ~ res);
-    }
+    auto res = post(testServer.addr, "POSTBODY", http);
+    assert(res == "POSTRESPONSE");
+    res = trace(testServer.addr, http);
+    assert(res == "TRACERESPONSE");
 }
 
 /*
@@ -1111,16 +1237,14 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = byLine(testUrl1);
-    auto line = res.front;
-    assert(line == "Hello world",
-           "byLine!HTTP() returns unexpected content: " ~ line);
-
-    auto res2 = byLine(testUrl1, KeepTerminator.no, '\n', HTTP());
-    line = res2.front;
-    assert(line == "Hello world",
-           "byLine!HTTP() returns unexpected content: " ~ line);
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvAll;
+            s.send(httpOK("Line1\nLine2\nLine3"));
+        });
+        assert(byLine(host).equal(["Line1", "Line2", "Line3"]));
+    }
 }
 
 /** HTTP/FTP fetch content as a range of chunks.
@@ -1185,17 +1309,14 @@ auto byChunk(Conn = AutoProtocol)
 
 unittest
 {
-    if (!netAllowed()) return;
-
-    auto res = byChunk(testUrl1);
-    auto line = res.front;
-    assert(line == cast(ubyte[])"Hello world\n",
-           "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
-
-    auto res2 = byChunk(testUrl1, 1024, HTTP());
-    line = res2.front;
-    assert(line == cast(ubyte[])"Hello world\n",
-           "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvAll;
+            s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
+        });
+        assert(byChunk(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
+    }
 }
 
 private T[] _getForRange(T,Conn)(const(char)[] url, Conn conn)
@@ -1480,15 +1601,14 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = byLineAsync(testUrl2, "Hello world");
-    auto line = res.front;
-    assert(line == "Hello world",
-           "byLineAsync!HTTP() returns unexpected content " ~ line);
-    res = byLineAsync(testUrl1);
-    line = res.front;
-    assert(line == "Hello world",
-           "byLineAsync!HTTP() returns unexpected content: " ~ line);
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvAll;
+            s.send(httpOK("Line1\nLine2\nLine3"));
+        });
+        assert(byLineAsync(host).equal(["Line1", "Line2", "Line3"]));
+    }
 }
 
 
@@ -1630,15 +1750,14 @@ auto byChunkAsync(Conn = AutoProtocol)
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = byChunkAsync(testUrl2, "Hello world");
-    auto line = res.front;
-    assert(line == cast(ubyte[])"Hello world",
-           "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
-    res = byChunkAsync(testUrl1);
-    line = res.front;
-    assert(line == cast(ubyte[])"Hello world\n",
-           "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvAll;
+            s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
+        });
+        assert(byChunkAsync(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
+    }
 }
 
 
@@ -1894,13 +2013,16 @@ private mixin template Protocol()
 
     unittest
     {
-        if (!netAllowed()) return;
-        auto http = HTTP("http://www.protected.com");
-        http.onReceiveHeader =
-            (in char[] key,
-             in char[] value) { /* writeln(key ~ ": " ~ value); */ };
+        testServer.handle((s) {
+            auto req = s.recvAll;
+            assert(req.canFind("GET /"));
+            assert(req.canFind("Basic dXNlcjpwYXNz"));
+            s.send(httpOK());
+        });
+
+        auto http = HTTP(testServer.addr);
         http.onReceive = (ubyte[] data) { return data.length; };
-        http.setAuthentication("myuser", "mypassword");
+        http.setAuthentication("user", "pass");
         http.perform();
     }
 
@@ -2306,7 +2428,6 @@ struct HTTP
         setUserAgent(HTTP.defaultUserAgent);
         dataTimeout = _defaultDataTimeout;
         onReceiveHeader = null;
-        version (unittest) verbose = true;
         verifyPeer = true;
         verifyHost = true;
     }
@@ -2810,17 +2931,25 @@ struct HTTP
 
     unittest
     {
-        if (!netAllowed()) return;
-        ubyte[] data;
-        foreach (n; 0..256)
-            data ~= cast(ubyte)n;
-        auto http = HTTP(testUrl2);
+        testServer.handle((s) {
+            auto header = s.recvAll;
+            assert(header.canFind("POST /path"));
+            header = header.find("\r\n\r\n")[4 .. $];
+            auto req = header.empty ? s.recvAll!ubyte : cast(ubyte[])header;
+            assert(req.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
+            assert(req.canFind(cast(ubyte[])[253, 254, 255]));
+            s.send(httpOK(cast(ubyte[])[17, 27, 35, 41]));
+        });
+        auto data = new ubyte[](256);
+        foreach (i, ref ub; data)
+            ub = cast(ubyte)i;
+
+        auto http = HTTP(testServer.addr~"/path");
         http.postData = data;
-        ubyte[] result;
-        http.onReceive = (ubyte[] data) { result ~= data; return data.length; };
+        ubyte[] res;
+        http.onReceive = (data) { res ~= data; return data.length; };
         http.perform();
-        assert(data == result,
-               "HTTP POST with binary data returns unexpected content (" ~ text(result.length) ~ " bytes)");
+        assert(res == cast(ubyte[])[17, 27, 35, 41]);
     }
 
     /**
@@ -2860,9 +2989,9 @@ struct HTTP
     /**
        The content length in bytes when using request that has content
        e.g. POST/PUT and not using chunked transfer. Is set as the
-       "Content-Length" header.  Set to size_t.max to reset to chunked transfer.
+       "Content-Length" header.  Set to ulong.max to reset to chunked transfer.
     */
-    @property void contentLength(size_t len)
+    @property void contentLength(ulong len)
     {
         CurlOption lenOpt;
 
@@ -2876,7 +3005,10 @@ struct HTTP
         else
             lenOpt = CurlOption.infilesize_large;
 
-        if (len == size_t.max)
+        if (size_t.max != ulong.max && len == size_t.max)
+            len = ulong.max; // check size_t.max for backwards compat, turn into error
+
+        if (len == ulong.max)
         {
             // HTTP 1.1 supports requests with no length header set.
             addRequestHeader("Transfer-Encoding", "chunked");
@@ -2884,7 +3016,7 @@ struct HTTP
         }
         else
         {
-            p.curl.set(lenOpt, len);
+            p.curl.set(lenOpt, to!curl_off_t(len));
         }
     }
 
@@ -3031,7 +3163,6 @@ struct FTP
         p.curl.initialize();
         p.encoding = "ISO-8859-1";
         dataTimeout = _defaultDataTimeout;
-        version (unittest) verbose = true;
     }
 
     /**
@@ -3274,9 +3405,9 @@ struct FTP
     /**
        The content length in bytes of the ftp data.
     */
-    @property void contentLength(size_t len)
+    @property void contentLength(ulong len)
     {
-        p.curl.set(CurlOption.infilesize_large, len);
+        p.curl.set(CurlOption.infilesize_large, to!curl_off_t(len));
     }
 }
 
@@ -3835,18 +3966,13 @@ struct Curl
 
         with (CurlOption) {
             auto tt = TypeTuple!(file, writefunction, writeheader,
-                                 headerfunction, infile,
-                                 readfunction, ioctldata, ioctlfunction,
-                                 seekdata, seekfunction, sockoptdata,
-                                 sockoptfunction, opensocketdata,
-                                 opensocketfunction, noprogress,
-                                 progressdata, progressfunction,
-                                 debugdata, debugfunction,
-                                 interleavedata,
-                                 interleavefunction, chunk_data,
-                                 chunk_bgn_function, chunk_end_function,
-                                 fnmatch_data, fnmatch_function,
-                                 cookiejar, postfields);
+                headerfunction, infile, readfunction, ioctldata, ioctlfunction,
+                seekdata, seekfunction, sockoptdata, sockoptfunction,
+                opensocketdata, opensocketfunction, progressdata,
+                progressfunction, debugdata, debugfunction, interleavedata,
+                interleavefunction, chunk_data, chunk_bgn_function,
+                chunk_end_function, fnmatch_data, fnmatch_function, cookiejar, postfields);
+
             foreach(option; tt)
                 copy.clear(option);
         }
@@ -3987,10 +4113,8 @@ struct Curl
     {
         throwOnStopped();
         auto rval = curl.easy_setopt(this.handle, option, null);
-        if (rval != CurlError.unknown_telnet_option)
-        {
+        if (rval != CurlError.unknown_option && rval != CurlError.not_built_in)
             _check(rval);
-        }
     }
 
     /**
@@ -4645,9 +4769,4 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
         _finalizeAsyncLines(bufferValid, buffer, fromTid);
 
     fromTid.send(thisTid, curlMessage(true)); // signal done
-}
-
-version (unittest) private auto netAllowed()
-{
-    return environment.get("PHOBOS_TEST_ALLOW_NET") != null;
 }

@@ -96,7 +96,7 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
         $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones,
               List of Time Zones)<br>
 
-    Copyright: Copyright 2010 - 2011
+    Copyright: Copyright 2010 - 2015
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
     Source:    $(PHOBOSSRC std/_datetime.d)
@@ -685,10 +685,11 @@ public:
         assertThrown!DateTimeException(SysTime(DateTime.init, seconds(1), UTC()));
     }
 
+    // @@@DEPRECATED_2016-08@@@
     /++
-        $(RED Scheduled for deprecation. Please use the overload which takes a
+        $(RED Deprecated. Please use the overload which takes a
               $(CXREF time, Duration) for the fractional seconds. This overload
-              will be deprecated in 2.068).
+              will be removed in August 2016).
 
         Params:
             dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
@@ -702,7 +703,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D fracSec) is negative.
       +/
-    //deprecated("Please use the overload which takes a Duration instead of a FracSec.")
+    deprecated("Please use the overload which takes a Duration instead of a FracSec.")
     this(in DateTime dateTime, in FracSec fracSec, immutable TimeZone tz = null) @safe
     {
         immutable fracHNSecs = fracSec.hnsecs;
@@ -723,7 +724,7 @@ public:
             assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
     }
 
-    /+deprecated+/ unittest
+    deprecated unittest
     {
         import std.format : format;
 
@@ -2107,15 +2108,16 @@ public:
     }
 
 
+    // @@@DEPRECATED_2016-08@@@
     /++
-        $(RED Scheduled for deprecation. Please use $(LREF fracSecs) instead of
-              fracSec. It uses a $(CXREF time, Duration) to represent the
-              fractional seconds instead of a $(CXREF time, FracSec). This
-              overload will be deprecated in 2.068).
+        $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
+              uses a $(CXREF time, Duration) to represent the fractional seconds
+              instead of a $(CXREF time, FracSec). This overload will be removed
+              in August 2016).
 
         Fractional seconds past the second.
      +/
-    //deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It returns a Duration instead of a FracSec, as FracSec is being deprecated.")
+    deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It returns a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property FracSec fracSec() @safe const nothrow
     {
         try
@@ -2133,7 +2135,7 @@ public:
             assert(0, "FracSec.from!\"hnsecs\"() threw.");
     }
 
-    /+deprecated+/ unittest
+    deprecated unittest
     {
         import std.range;
         import std.format : format;
@@ -2179,11 +2181,12 @@ public:
     }
 
 
+    // @@@DEPRECATED_2016-08@@@
     /++
-        $(RED Scheduled for deprecation. Please use $(LREF fracSecs) instead of
-              fracSec. It uses a $(CXREF time, Duration) to represent the
-              fractional seconds instead of a $(CXREF time, FracSec). This
-              overload will be deprecated in 2.068).
+        $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
+              uses a $(CXREF time, Duration) to represent the fractional seconds
+              instead of a $(CXREF time, FracSec). This overload will be removed
+              in August 2016).
 
         Fractional seconds past the second.
 
@@ -2194,7 +2197,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D fracSec) is negative.
      +/
-    //deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It takes a Duration instead of a FracSec, as FracSec is being deprecated.")
+    deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It takes a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property void fracSec(FracSec fracSec) @safe
     {
         immutable fracHNSecs = fracSec.hnsecs;
@@ -2223,7 +2226,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    /+deprecated+/ unittest
+    deprecated unittest
     {
         import std.range;
         import std.format : format;
@@ -27766,15 +27769,7 @@ public:
         this._utcOffset = utcOffset;
     }
 
-    /++
-        $(RED Deprecated. Please use the overload which takes a Duration. This
-              overload will be removed in December 2014).
-
-        Params:
-            utcOffset = This time zone's offset from UTC in minutes with west of
-                        negative (it is added to UTC to get the adjusted time).
-            stdName   = The $(D stdName) for this time zone.
-      +/
+    // Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
     deprecated("Please use the overload which takes a Duration.")
     this(int utcOffset, string stdName = "") @safe immutable pure
     {
