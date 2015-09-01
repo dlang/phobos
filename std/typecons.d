@@ -830,7 +830,7 @@ template Tuple(Specs...)
             {
                 import std.format : FormatException;
                 throw new FormatException(
-                    "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~ Unqual!(typeof(this)).stringof ~ "'");
+                    "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~ Unqual!(typeof(this)).stringof ~ "', not '%" ~ [ fmt.spec ] ~ "'.");
             }
         }
 
@@ -846,11 +846,11 @@ template Tuple(Specs...)
             return this.to!string;
         }
 
+        ///
         unittest
         {
-            import std.format       : format, FormatException;
-            import std.typecons     : Tuple, tuple;
-            import std.exception    : assertThrown;
+            import std.format    : format, FormatException;
+            import std.exception : assertThrown;
             auto if_list = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
 
             assert(format("%s", tuple("a", 1))                          == `Tuple!(string, int)("a", 1)`);
