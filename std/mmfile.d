@@ -340,7 +340,7 @@ class MmFile
             if (p == MAP_FAILED) {
                 if (fd != -1)
                     .close(fd);
-                errnoEnforce(fd != -1, "Could not map file "~filename);
+                errnoEnforce(false, "Could not map file "~filename);
             }
 
             data = p[0 .. initial_map];
