@@ -4,7 +4,7 @@
 Processing of command line options.
 
 The getopt module implements a $(D getopt) function, which adheres to
-the POSIX syntax for command line options. GNU extensions are
+the POSIX syntax for command line options. GNU extensions are"
 supported in the form of long options introduced by a double dash
 ("--"). Support for bundling of command line options, as was the case
 with the more traditional single-letter approach, is provided but not
@@ -88,7 +88,7 @@ void main(string[] args)
  The $(D getopt) function takes a reference to the command line
  (as received by $(D main)) as its first argument, and an
  unbounded number of pairs of strings and pointers. Each string is an
- option meant to "fill" the value pointed to by the pointer to its
+ option meant to "fill" the value referenced by the pointer to its
  right (the "bound" pointer). The option string in the call to
  $(D getopt) should not start with a dash.
 
