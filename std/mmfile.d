@@ -78,6 +78,8 @@ class MmFile
     version(linux) this(File file, Mode mode = Mode.read, ulong size = 0,
             void* address = null, size_t window = 0)
     {
+        // Save a copy of the File to make sure the fd stays open.
+        this.file = file;
         this(file.fileno, mode, size, address, window);
     }
 
@@ -356,6 +358,7 @@ class MmFile
     {
         debug (MMFILE) printf("MmFile.~this()\n");
         unmap();
+        data = null;
         version (Windows)
         {
             wenforce(hFileMap == null || CloseHandle(hFileMap) == TRUE,
@@ -369,6 +372,15 @@ class MmFile
         }
         else version (Posix)
         {
+            version (linux)
+            {
+                if (file !is File.init)
+                {
+                    // The File destructor will close the file,
+                    // if it is the only remaining reference.
+                    return;
+                }
+            }
             errnoEnforce(fd == -1 || fd <= 2
                     || .close(fd) != -1,
                     "Could not close handle");
@@ -378,7 +390,6 @@ class MmFile
         {
             static assert(0);
         }
-        data = null;
     }
 
     /* Flush any pending output.
@@ -550,6 +561,7 @@ private:
     ulong  size;
     Mode   mMode;
     void*  address;
+    version (linux) File file;
 
     version (Windows)
     {
@@ -623,4 +635,28 @@ unittest
     std.file.remove(test_file);
     // Create anonymous mapping
     auto test = new MmFile(null, MmFile.Mode.readWriteNew, 1024*1024, null);
+}
+
+version(linux)
+unittest // Issue 14868
+{
+    import std.typecons : scoped;
+    import std.file : deleteme;
+
+    // Test retaining ownership of File/fd
+
+    auto fn = std.file.deleteme ~ "-testing.txt";
+    scope(exit) std.file.remove(fn);
+    File(fn, "wb").writeln("Testing!");
+    scoped!MmFile(File(fn));
+
+    // Test that unique ownership of File actually leads to the fd being closed
+
+    auto f = File(fn);
+    auto fd = f.fileno;
+    {
+        auto mf = scoped!MmFile(f);
+        f = File.init;
+    }
+    assert(.close(fd) == -1);
 }
