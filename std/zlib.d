@@ -145,9 +145,9 @@ unittest
  *
  * Params:
  *     srcbuf = buffer containing the data to compress
- *     level = compression level. Legal values are 1..9, with 1 being the
- *             least compression and 9 being the most. The default value
- *             is 6.
+ *     level = compression level. Legal values are -1..9, with -1 indicating
+ *             the default level (6), 0 indicating no compression, 1 being the
+ *             least compression and 9 being the most.
  *
  * Returns:
  *     the compressed data
