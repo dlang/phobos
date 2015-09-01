@@ -1052,7 +1052,7 @@ public:
         Throws:
             If a value corresponding to the requested name is not found,
             $(D RegistryException) is thrown.
-            
+        
         Example:
             You need to use a REGSAM value (e.g. KEY_ALL_ACCESS) to open the key with write access, see
             http://forum.dlang.org/post/bkdvcwzaaknaxwvepbqf@forum.dlang.org
@@ -1068,9 +1068,8 @@ public:
                 .getKey("Run", REGSAM.KEY_ALL_ACCESS);
                 
                 regKey.setValue("Calculator", "calc.exe");
-                }
+            }
         ----
-        
      */
     void setValue(string name, string value)
     {
