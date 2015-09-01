@@ -691,11 +691,11 @@ int sqlite3_errcode(sqlite3 *db);
 /// Ditto
 int sqlite3_extended_errcode(sqlite3 *db);
 /// Ditto
-immutable(char)* sqlite3_errmsg(sqlite3*);
+const(char)* sqlite3_errmsg(sqlite3*);
 /// Ditto
-immutable(void)* sqlite3_errmsg16(sqlite3*);
+const(void)* sqlite3_errmsg16(sqlite3*);
 /// Ditto
-immutable(char)* sqlite3_errstr(int);
+const(char)* sqlite3_errstr(int);
 
 /**
 ** CAPI3REF: SQL Statement Object
