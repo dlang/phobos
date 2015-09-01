@@ -297,6 +297,7 @@ $(BOOKTABLE ,
             $(LINK2 std_getopt.html, std.getopt)$(BR)
             $(LINK2 std_compiler.html, std.compiler)$(BR)
             $(LINK2 std_system.html, std.system)$(BR)
+            $(LINK2 std_uuid.html, std.uuid)$(BR)
             $(LINK2 core_cpuid.html, core.cpuid)$(BR)
             $(LINK2 core_memory.html, core.memory)$(BR)
             $(LINK2 core_runtime.html, core.runtime)$(BR)
@@ -306,6 +307,7 @@ $(BOOKTABLE ,
             Parsing of command-line arguments.$(BR)
             Host compiler vendor string and language version.$(BR)
             Runtime environment, such as OS type and endianness.$(BR)
+            Generate and parse UUIDs (universally unique identifiers).$(BR)
             Capabilities of the CPU the program is running on.$(BR)
             Control the built-in garbage collector.$(BR)
             Control and configure the D runtime.$(BR)
@@ -435,6 +437,19 @@ $(COMMENT
         )
         $(TD
              Experimental modules.
+        )
+    )
+    $(TR
+        $(TDNW
+            $(LINK2 std_algorithm_comparison.html, std.algorithm.comparison)$(BR)
+            $(LINK2 std_algorithm_iteration.html, std.algorithm.iteration)$(BR)
+            $(LINK2 std_algorithm_mutation.html, std.algorithm.mutation)$(BR)
+            $(LINK2 std_algorithm_searching.html, std.algorithm.searching)$(BR)
+            $(LINK2 std_algorithm_setops.html, std.algorithm.setops)$(BR)
+            $(LINK2 std_algorithm_sorting.html, std.algorithm.sorting)$(BR)
+        )
+        $(TD
+             Submodules.
         )
     )
 )
