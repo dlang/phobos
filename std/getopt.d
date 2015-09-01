@@ -4,7 +4,7 @@
 Processing of command line options.
 
 The getopt module implements a $(D getopt) function, which adheres to
-the POSIX syntax for command line options. GNU extensions are"
+the POSIX syntax for command line options. GNU extensions are
 supported in the form of long options introduced by a double dash
 ("--"). Support for bundling of command line options, as was the case
 with the more traditional single-letter approach, is provided but not
