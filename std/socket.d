@@ -1061,6 +1061,12 @@ unittest
             assert(results.length && results[0].family == AddressFamily.INET6);
         }
     });
+
+    if (getaddrinfoPointer)
+    {
+        auto results = getAddressInfo(null, "1234", AddressInfoFlags.PASSIVE, SocketType.STREAM, ProtocolType.TCP, AddressFamily.INET);
+        assert(results.length == 1 && results[0].address.toString() == "0.0.0.0:1234");
+    }
 }
 
 
