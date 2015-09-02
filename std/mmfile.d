@@ -236,13 +236,25 @@ class MmFile
             }
             else
                 hFile = INVALID_HANDLE_VALUE;
-            scope(failure) if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
+
+            scope(failure)
+            {
+                if (hFile != INVALID_HANDLE_VALUE)
+                {
+                    CloseHandle(hFile);
+                    hFile = INVALID_HANDLE_VALUE;
+                }
+            }
 
             int hi = cast(int)(size>>32);
             hFileMap = CreateFileMappingW(hFile, null, flProtect,
                     hi, cast(uint)size, null);
             wenforce(hFileMap, "CreateFileMapping");
-            scope(failure) CloseHandle(hFileMap);
+            scope(failure)
+            {
+                CloseHandle(hFileMap);
+                hFileMap = null;
+            }
 
             if (size == 0 && filename != null)
             {
@@ -314,6 +326,7 @@ class MmFile
                 {
                     //printf("\tfstat error, errno = %d\n", errno);
                     .close(fd);
+                    fd = -1;
                     errnoEnforce(false, "Could not stat file "~filename);
                 }
 
@@ -337,9 +350,13 @@ class MmFile
             size_t initial_map = (window && 2*window<size)
                 ? 2*window : cast(size_t)size;
             p = mmap(address, initial_map, prot, flags, fd, 0);
-            if (p == MAP_FAILED) {
+            if (p == MAP_FAILED)
+            {
                 if (fd != -1)
+                {
                     .close(fd);
+                    fd = -1;
+                }
                 errnoEnforce(false, "Could not map file "~filename);
             }
 
@@ -659,4 +676,20 @@ unittest // Issue 14868
         f = File.init;
     }
     assert(.close(fd) == -1);
+}
+
+unittest // Issue 14994, 14995
+{
+    import std.file : deleteme;
+    import std.typecons : scoped;
+
+    // Zero-length map may or may not be valid on OSX
+    version (OSX)
+        import std.exception : verifyThrown = collectException;
+    else
+        import std.exception : verifyThrown = assertThrown;
+
+    auto fn = std.file.deleteme ~ "-testing.txt";
+    scope(exit) std.file.remove(fn);
+    verifyThrown(scoped!MmFile(fn, MmFile.Mode.readWrite, 0, null));
 }
