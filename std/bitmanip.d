@@ -4178,12 +4178,12 @@ static bool enumFitsInSet(E, S)() if (is(E==enum) && isSetSuitable!S)
  */
 struct EnumSet(E, S) if (enumFitsInSet!(E, S))
 {
-        
+
     alias SetType = S;
     alias EnumSetType = typeof(this);
-    
-    //static if (S.sizeof > size_t.sizeof) pragma(msg, 
-    //    "warning, '" ~ SetType.stringof ~ "' does not support built-in AA");    
+
+    //static if (S.sizeof > size_t.sizeof) pragma(msg,
+    //    "warning, '" ~ SetType.stringof ~ "' does not support built-in AA");
 
 private:
 
@@ -4191,7 +4191,7 @@ private:
     static immutable SetType _max;
     static immutable EnumRankInfo!E _infs;
     static immutable SetType _1 = cast(SetType) 1;
-    
+
     struct Range
     {
         private SetType frontIndex;
@@ -4278,11 +4278,11 @@ private:
         {
             return Range(set._container);
         }
-    }    
+    }
 
 public:
 
-    
+
 
 // constructors ---------------------------------------------------------------+
 
@@ -4359,8 +4359,8 @@ public:
     /**
      * Defines the set with a string representation.
      * Params:
-     * str = a string representing one or several E members. It must have the 
-     * form that's similar to an array litteral. Binary litterals are not handled 
+     * str = a string representing one or several E members. It must have the
+     * form that's similar to an array litteral. Binary litterals are not handled
      * by this function.
      */
     @trusted void fromString(string str)
@@ -4446,7 +4446,7 @@ public:
     /**
      * Support for "+" and "-" operators.
      * Params:
-     * rhs = either an E member, an E array or another EnumSet (or its container) 
+     * rhs = either an E member, an E array or another EnumSet (or its container)
      * with the same type.
      */
     nothrow @safe EnumSetType opBinary(string op)(E rhs)
@@ -4508,7 +4508,7 @@ public:
         }
         else static assert(0, "opBinary not implemented for " ~ op);
     }
-    
+
     /// ditto
     nothrow @safe @nogc EnumSetType opBinary(string op)(SetType rhs)
     {
@@ -4532,7 +4532,7 @@ public:
             return intersection(EnumSetType(rhs));
         }
         else static assert(0, "opBinary not implemented for " ~ op);
-    }    
+    }
 
     /**
      * Support for "+=" and "-=" operators.
@@ -4594,7 +4594,7 @@ public:
         return (rhs._container == _container);
     }
 
-    /** 
+    /**
      * Support for the in operator.
      *
      * Indicates if the right hand side is included in the set.
@@ -4631,7 +4631,7 @@ public:
             s = _container ^ rhs;
         return EnumSetType(s);
     }
-    
+
     /**
      * Returns a set representing the intersection between this set and the argument.
      * Params:
@@ -4652,7 +4652,7 @@ public:
 
     /**
      * Includes someMembers in the set.
-     * This is the primitive used for to the operator "+".     
+     * This is the primitive used for to the operator "+".
      * Params:
      * someMembers = a list of E members or an array of E members
      */
@@ -4694,7 +4694,7 @@ public:
 
     /**
      * Returns true if aMember is in the set.
-     * This is the primitive used for to the operator "in".     
+     * This is the primitive used for to the operator "in".
      * Params:
      * aMember = an  E member.
      */
@@ -5010,10 +5010,10 @@ version(unittest)
         set1 = 0b1010_1010;
         assert(set1.intersection(cast(ubyte)0b0000_1010) == 0b0000_1010);
         assert(set1.difference(cast(ubyte)0b0000_1010) == 0b1010_0000);
-        
+
         set1 = Set([a8.a0, a8.a1]);
-        assert((set1 & cast(Set8)0b1110) == Set(a8.a1));  
-        assert((set1 ^ cast(Set8)0b1010) == Set([a8.a0,a8.a3]));       
+        assert((set1 & cast(Set8)0b1110) == Set(a8.a1));
+        assert((set1 ^ cast(Set8)0b1010) == Set([a8.a0,a8.a3]));
     }
 
     unittest
