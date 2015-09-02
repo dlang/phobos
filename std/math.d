@@ -2680,18 +2680,9 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!T;
 
-    union floatBits
-    {
-        T rv;
-        ushort[T.sizeof/2] vu;
-        uint[T.sizeof/4] vui;
-        static if(T.sizeof >= 8)
-            long[T.sizeof/8] vl;
-    }
-    floatBits y = void;
-    y.rv = x;
+    F.Layout y = { number : x };
 
-    int ex = y.vu[F.EXPPOS_SHORT] & F.EXPMASK;
+    int ex = y.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
     static if (F.realFormat == RealFormat.ieeeExtended)
     {
         if (ex)
@@ -2699,7 +2690,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
             // If exponent is non-zero
             if (ex == F.EXPMASK) // infinity or NaN
             {
-                if (y.vl[0] &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
+                if (y.integral.significand &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
                     return FP_ILOGBNAN;
                 else // +-infinity
                     return int.max;
@@ -2709,7 +2700,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ex - F.EXPBIAS - 1;
             }
         }
-        else if (!y.vl[0])
+        else if (!y.integral.significand)
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2717,8 +2708,8 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            uint msb = y.vui[MANTISSA_MSB];
-            uint lsb = y.vui[MANTISSA_LSB];
+            uint msb = y.ints[MANTISSA_MSB];
+            uint lsb = y.ints[MANTISSA_LSB];
             if (msb)
                 return ex - F.EXPBIAS - T.mant_dig + 1 + 32 + core.bitop.bsr(msb);
             else
@@ -2732,7 +2723,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
             if (ex == F.EXPMASK)
             {
                 // infinity or NaN
-                if (y.vl[MANTISSA_LSB] | ( y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
+                if (y.longs[MANTISSA_LSB] | ( y.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
                     return FP_ILOGBNAN;
                 else // +- infinity
                     return int.max;
@@ -2742,7 +2733,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ex - F.EXPBIAS - 1;
             }
         }
-        else if ((y.vl[MANTISSA_LSB] | (y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
+        else if ((y.longs[MANTISSA_LSB] | (y.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2750,8 +2741,8 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            ulong msb = y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF;
-            ulong lsb = y.vl[MANTISSA_LSB];
+            ulong msb = y.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF;
+            ulong lsb = y.longs[MANTISSA_LSB];
             if (msb)
                 return ex - F.EXPBIAS - T.mant_dig + 1 + bsr_ulong(msb) + 64;
             else
@@ -2764,7 +2755,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if ((y.vl[0] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FF0_0000_0000_0000)  // +- infinity
+                if ((y.integral & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FF0_0000_0000_0000)  // +- infinity
                     return int.max;
                 else // NaN
                     return FP_ILOGBNAN;
@@ -2774,7 +2765,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ((ex - F.EXPBIAS) >> 4) - 1;
             }
         }
-        else if (!(y.vl[0] & 0x7FFF_FFFF_FFFF_FFFF))
+        else if (!(y.integral & 0x7FFF_FFFF_FFFF_FFFF))
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2782,8 +2773,8 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            uint msb = y.vui[MANTISSA_MSB] & F.MANTISSAMASK_INT;
-            uint lsb = y.vui[MANTISSA_LSB];
+            uint msb = y.ints[MANTISSA_MSB] & F.MANTISSAMASK_INT;
+            uint lsb = y.ints[MANTISSA_LSB];
             if (msb)
                 return ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1 + core.bitop.bsr(msb) + 32;
             else
@@ -2797,7 +2788,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if ((y.vui[0] & 0x7FFF_FFFF) == 0x7F80_0000)  // +- infinity
+                if ((y.integral & 0x7FFF_FFFF) == 0x7F80_0000)  // +- infinity
                     return int.max;
                 else // NaN
                     return FP_ILOGBNAN;
@@ -2807,7 +2798,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ((ex - F.EXPBIAS) >> 7) - 1;
             }
         }
-        else if (!(y.vui[0] & 0x7FFF_FFFF))
+        else if (!(y.integral & 0x7FFF_FFFF))
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2815,7 +2806,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            uint mantissa = y.vui[0] & F.MANTISSAMASK_INT;
+            uint mantissa = y.integral & F.MANTISSAMASK_INT;
             return ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1 + core.bitop.bsr(mantissa);
         }
     }
