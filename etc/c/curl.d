@@ -413,7 +413,8 @@ enum CurlError
     unsupported_protocol,        /** 1 */
     failed_init,                 /** 2 */
     url_malformat,               /** 3 */
-    obsolete4,                   /** 4 - NOT USED */
+    not_built_in,                /** 4 - [was obsoleted in August 2007 for
+                                    7.17.0, reused in April 2011 for 7.21.5] */
     couldnt_resolve_proxy,       /** 5 */
     couldnt_resolve_host,        /** 6 */
     couldnt_connect,             /** 7 */
@@ -463,7 +464,7 @@ enum CurlError
     interface_failed,            /** 45 - CURLOPT_INTERFACE failed */
     obsolete46,                  /** 46 - NOT USED */
     too_many_redirects,          /** 47 - catch endless re-direct loops */
-    unknown_telnet_option,       /** 48 - User specified an unknown option */
+    unknown_option,              /** 48 - User specified an unknown option */
     telnet_option_syntax,        /** 49 - Malformed telnet option */
     obsolete50,                  /** 50 - NOT USED */
     peer_failed_verification,    /** 51 - peer's certificate or fingerprint

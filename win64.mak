@@ -353,6 +353,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_digest_ripemd.html \
 	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_digest_digest.html \
+	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
@@ -818,6 +819,9 @@ $(DOC)\std_digest_ripemd.html : $(STDDOC) std\digest\ripemd.d
 
 $(DOC)\std_digest_digest.html : $(STDDOC) std\digest\digest.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_digest.html $(STDDOC) std\digest\digest.d
+
+$(DOC)\std_digest_hmac.html : $(STDDOC) std\digest\hmac.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_hmac.html $(STDDOC) std\digest\hmac.d
 
 $(DOC)\std_windows_charset.html : $(STDDOC) std\windows\charset.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_windows_charset.html $(STDDOC) std\windows\charset.d
