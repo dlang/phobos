@@ -15,7 +15,7 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
            Alex Rønne Petersen,
            Damian Ziemba,
            Amaury SECHET,
-		   Basile Burg
+           Basile Burg
 Source: $(PHOBOSSRC std/_bitmanip.d)
 */
 /*
