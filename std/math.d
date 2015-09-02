@@ -7074,36 +7074,25 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
 {
     alias F = floatTraits!T;
 
+    import std.typecons : Tuple;
+    Tuple!(F.Layout, F.Layout) vars = void;
+    vars[0].number = x;
+    vars[1].number = y;
+
     static if (F.realFormat == RealFormat.ieeeSingle
                || F.realFormat == RealFormat.ieeeDouble)
     {
-        static if (T.sizeof == 4)
-            alias UInt = uint;
-        else
-            alias UInt = ulong;
-
-        union Repainter
-        {
-            T number;
-            UInt bits;
-        }
-
-        enum msb = ~(UInt.max >>> 1);
-
-        import std.typecons : Tuple;
-        Tuple!(Repainter, Repainter) vars = void;
-        vars[0].number = x;
-        vars[1].number = y;
+        enum msb = ~(F.Integral.max >>> 1);
 
         foreach (ref var; vars)
-            if (var.bits & msb)
-                var.bits = ~var.bits;
+            if (var.integral & msb)
+                var.integral = ~var.integral;
             else
-                var.bits |= msb;
+                var.integral |= msb;
 
-        if (vars[0].bits < vars[1].bits)
+        if (vars[0].integral < vars[1].integral)
             return -1;
-        else if (vars[0].bits > vars[1].bits)
+        else if (vars[0].integral > vars[1].integral)
             return 1;
         else
             return 0;
@@ -7112,66 +7101,27 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
                     || F.realFormat == RealFormat.ieeeExtended
                     || F.realFormat == RealFormat.ieeeQuadruple)
     {
-        static if (F.realFormat == RealFormat.ieeeQuadruple)
-            alias RemT = ulong;
-        else
-            alias RemT = ushort;
-
-        struct Bits
-        {
-            ulong bulk;
-            RemT rem;
-        }
-
-        union Repainter
-        {
-            T number;
-            Bits bits;
-            ubyte[T.sizeof] bytes;
-        }
-
-        import std.typecons : Tuple;
-        Tuple!(Repainter, Repainter) vars = void;
-        vars[0].number = x;
-        vars[1].number = y;
-
         foreach (ref var; vars)
             if (var.bytes[F.SIGNPOS_BYTE] & 0x80)
             {
-                var.bits.bulk = ~var.bits.bulk;
-                var.bits.rem = ~var.bits.rem;
+                var.integral[0] = ~var.integral[0];
+                var.integral[1] = ~var.integral[1];
             }
             else
             {
                 var.bytes[F.SIGNPOS_BYTE] |= 0x80;
             }
 
-        version(LittleEndian)
-        {
-            if (vars[0].bits.rem < vars[1].bits.rem)
-                return -1;
-            else if (vars[0].bits.rem > vars[1].bits.rem)
-                return 1;
-            else if (vars[0].bits.bulk < vars[1].bits.bulk)
-                return -1;
-            else if (vars[0].bits.bulk > vars[1].bits.bulk)
-                return 1;
-            else
-                return 0;
-        }
+        if (vars[0].integral[MANTISSA_MSB] < vars[1].integral[MANTISSA_MSB])
+            return -1;
+        else if (vars[0].integral[MANTISSA_MSB] > vars[1].integral[MANTISSA_MSB])
+            return 1;
+        else if (vars[0].integral[MANTISSA_LSB] < vars[1].integral[MANTISSA_LSB])
+            return -1;
+        else if (vars[0].integral[MANTISSA_LSB] > vars[1].integral[MANTISSA_LSB])
+            return 1;
         else
-        {
-            if (vars[0].bits.bulk < vars[1].bits.bulk)
-                return -1;
-            else if (vars[0].bits.bulk > vars[1].bits.bulk)
-                return 1;
-            else if (vars[0].bits.rem < vars[1].bits.rem)
-                return -1;
-            else if (vars[0].bits.rem > vars[1].bits.rem)
-                return 1;
-            else
-                return 0;
-        }
+            return 0;
     }
     else
     {
