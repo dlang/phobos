@@ -3041,3 +3041,14 @@ unittest
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
 }
+
+// Issue 14940
+@safe unittest
+{
+    import std.typecons : Nullable;
+
+    Nullable!int a = 1;
+    auto l = new TestLogger();
+    l.infof("log: %s", a);
+    assert(l.msg == "log: 1");
+}
