@@ -93,12 +93,11 @@ import std.stdio;
 import std.conv;
 import std.string;
 import std.file : remove;
+import std.file : deleteme;
 
 struct A { int x; };
 class B {};
 enum Color { black, red, green, blue, white };
-
-string deleteme="utest.";
 
 	string[] file;
 	foreach(i; 1..8) file~=deleteme~to!string(i);
