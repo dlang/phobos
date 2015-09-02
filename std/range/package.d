@@ -4710,12 +4710,10 @@ body
 
         this(Value start, Value end, Value step)
         {
-            import std.conv : to;
-
             this.start = start;
             this.step = step;
             immutable fcount = (end - start) / step;
-            count = to!size_t(fcount);
+            count = cast(size_t) fcount;
             auto pastEnd = start + count * step;
             if (step > 0)
             {
@@ -4779,7 +4777,7 @@ body
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.algorithm : equal;
     import std.math : approxEqual;
@@ -4793,7 +4791,7 @@ body
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 }
 
-nothrow @nogc unittest
+@safe @nogc pure nothrow unittest
 {
     auto t0 = iota(0, 10);
     auto t1 = iota(0, 10, 2);
@@ -4811,7 +4809,7 @@ debug unittest
     assertThrown!AssertError(iota(0f,1f,-0.1f));
 }
 
-unittest
+pure nothrow unittest
 {
     int[] a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
@@ -4819,7 +4817,7 @@ unittest
     assert(r1.back == a.ptr + a.length - 1);
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.math : approxEqual, nextUp, nextDown;
     import std.algorithm : count, equal;
@@ -4939,14 +4937,14 @@ unittest
     }
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.algorithm : copy;
     auto idx = new size_t[100];
     copy(iota(0, idx.length), idx);
 }
 
-@safe unittest
+@safe @nogc pure nothrow unittest
 {
     foreach(range; TypeTuple!(iota(2, 27, 4),
                               iota(3, 9),
@@ -4964,7 +4962,7 @@ unittest
     }
 }
 
-unittest
+pure nothrow unittest
 {
     //The ptr stuff can't be done at compile time, so we unfortunately end
     //up with some code duplication here.
@@ -5033,7 +5031,7 @@ User-defined types such as $(XREF bigint, BigInt) are also supported, as long
 as they can be incremented with $(D ++) and compared with $(D <) or $(D ==).
 */
 // Issue 6447
-unittest
+pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.bigint;
@@ -5048,7 +5046,7 @@ unittest
     ]));
 }
 
-unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
