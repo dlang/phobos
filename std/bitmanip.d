@@ -7,14 +7,15 @@ Macros:
 
 WIKI = StdBitarray
 
-Copyright: Copyright Digital Mars 2007 - 2011.
+Copyright: Copyright Digital Mars 2007 - 2015.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
            Jonathan M Davis,
            Alex Rønne Petersen,
-           Damian Ziemba
-           Amaury SECHET
+           Damian Ziemba,
+           Amaury SECHET,
+		   Basile Burg
 Source: $(PHOBOSSRC std/_bitmanip.d)
 */
 /*
