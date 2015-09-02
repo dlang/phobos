@@ -284,8 +284,14 @@ else static assert (0);
 
 
 
-/** Returns the name of a file, without any leading directory
-    and with an optional suffix chopped off.
+/**
+    Params:
+        cs = Whether or not suffix matching is case-sensitive.
+        path = A path name. It can be a string, or any random-access range of
+            characters.
+        suffix = An optional suffix to be removed from the file name.
+    Returns: The name of the file in the path name, without any leading
+        directory and with an optional suffix chopped off.
 
     If $(D suffix) is specified, it will be compared to $(D path)
     using $(D filenameCmp!cs),
@@ -432,10 +438,10 @@ unittest
     includes the drive letter if present.
 
     Params:
-        path = filespec
+        path = A path name.
 
     Returns:
-        slice of $(D path) or "."
+        A slice of $(D path) or ".".
 
     Examples:
     ---
@@ -591,10 +597,10 @@ unittest
     path is not rooted.
 
     Params:
-        path = filespec
+        path = A path name.
 
     Returns:
-        slice of $(D path)
+        A slice of $(D path).
 
     Examples:
     ---
@@ -760,6 +766,11 @@ unittest
 /** Strips the drive from a Windows path.  On POSIX, the path is returned
     unaltered.
 
+    Params:
+        path = A pathname
+
+    Returns: A slice of path without the drive component.
+
     Example:
     ---
     version (Windows)
@@ -863,7 +874,9 @@ unittest
 }
 
 
-/** Returns the _extension part of a file name, including the dot.
+/**
+    Params: path = A path name.
+    Returns: The _extension part of a file name, including the dot.
 
     If there is no _extension, $(D null) is returned.
 
@@ -964,7 +977,11 @@ unittest
 
 
 
-/** Returns a string containing the _path given by $(D path), but where
+/** Params:
+        path = A path name
+        ext = The new extension
+
+    Returns: A string containing the _path given by $(D path), but where
     the extension has been set to $(D ext).
 
     If the filename already has an extension, it is replaced.   If not, the
@@ -1055,6 +1072,7 @@ unittest
  *
  * Params:
  *      path = string or random access range representing a filespec
+ *      ext = the new extension
  * Returns:
  *      Range with $(D path)'s extension (if any) replaced with $(D ext).
  *      The element encoding type of the returned range will be the same as $(D path)'s.
@@ -1091,8 +1109,12 @@ unittest
 }
 
 
-/** Returns the _path given by $(D path), with the extension given by
-    $(D ext) appended if the path doesn't already have one.
+/** Params:
+        path = A path name.
+        ext = The default extension to use.
+
+    Returns: The _path given by $(D path), with the extension given by $(D ext)
+    appended if the path doesn't already have one.
 
     Including the dot in the extension is optional.
 
@@ -1202,6 +1224,10 @@ unittest
     The variadic overload is guaranteed to only perform a single
     allocation, as is the range version if $(D paths) is a forward
     range.
+
+    Params:
+        segments = An input range of segments to assemble the path from.
+    Returns: The assembled path.
 */
 immutable(ElementEncodingType!(ElementType!Range))[]
     buildPath(Range)(Range segments)
@@ -1485,6 +1511,11 @@ unittest
 
     This function always allocates memory to hold the resulting path.
     Use $(LREF asNormalizedPath) to not allocate memory.
+
+    Params:
+        paths = An array of paths to assemble.
+
+    Returns: The assembled path.
 
     Examples:
     ---
@@ -2280,6 +2311,9 @@ unittest
 
 /** Determines whether a path starts at a root directory.
 
+    Params: path = A path name.
+    Returns: Whether a path starts at a root directory.
+
     On POSIX, this function returns true if and only if the path starts
     with a slash (/).
     ---
@@ -2345,6 +2379,10 @@ unittest
 
 
 /** Determines whether a path is absolute or not.
+
+    Params: path = A path name.
+
+    Returns: Whether a path is absolute or not.
 
     Examples:
     On POSIX, an absolute path starts at the root directory.
@@ -2448,6 +2486,7 @@ unittest
 
     Params:
         path = the relative path to transform
+        base = the base directory of the relative path
 
     Returns:
         string of transformed path
@@ -2576,6 +2615,14 @@ unittest
     $(LREF filenameCmp) documentation for details.
 
     This function allocates memory.
+
+    Params:
+        cs = Whether matching path name components against the base path should
+            be case-sensitive or not.
+        path = A path name.
+        base = The base path to construct the relative path from.
+
+    Returns: The relative path.
 
     See_Also:
         $(LREF asRelativePath) which does not allocate memory
@@ -2767,16 +2814,24 @@ unittest
     }
 }
 
-/** Compares filename characters and return $(D < 0) if $(D a < b), $(D 0) if
-    $(D a == b) and $(D > 0) if $(D a > b).
+/** Compares filename characters.
 
     This function can perform a case-sensitive or a case-insensitive
     comparison.  This is controlled through the $(D cs) template parameter
-    which, if not specified, is given by
-    $(LREF CaseSensitive)$(D .osDefault).
+    which, if not specified, is given by $(LREF CaseSensitive)$(D .osDefault).
 
     On Windows, the backslash and slash characters ($(D `\`) and $(D `/`))
     are considered equal.
+
+    Params:
+        cs = Case-sensitivity of the comparison.
+        a = A filename character.
+        b = A filename character.
+
+    Returns:
+        $(D < 0) if $(D a < b),
+        $(D 0) if $(D a == b), and
+        $(D > 0) if $(D a > b).
 
     Examples:
     ---
@@ -2976,6 +3031,11 @@ unittest
     Note that directory
     separators and dots don't stop a meta-character from matching
     further portions of the path.
+
+    Params:
+        cs = Whether the matching should be case-sensitive
+        path = The path to be matched against
+        pattern = The glob pattern
 
     Returns:
     $(D true) if pattern matches path, $(D false) otherwise.
@@ -3539,6 +3599,9 @@ unittest
     not enough memory to perform the query.
 
     This function performs several memory allocations.
+
+    Params:
+        inputPath = The path name to expand.
 
     Returns:
     $(D inputPath) with the tilde expanded, or just $(D inputPath)
