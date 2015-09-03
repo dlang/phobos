@@ -2777,7 +2777,7 @@ smallest element and with the same ending as $(D range). The function
 can actually be used for finding the maximum or any other ordering
 predicate (that's why $(D maxPos) is not provided).
  */
-auto minPos(alias pred = "a < b", Range)(Range range)
+Range minPos(alias pred = "a < b", Range)(Range range)
     if (isForwardRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
