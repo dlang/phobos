@@ -1689,6 +1689,20 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
     }
 }
 
+unittest // Issue 10895
+{
+    class A
+    {
+        string name;
+        alias name this;
+        this(string name) { this.name = name; }
+    }
+    auto a = [new A(`foo`)];
+    assert(a[0].length == 3);
+    auto temp = join(a, " ");
+    assert(a[0].length == 3);
+}
+
 unittest // Issue 14230
 {
    string[] ary = ["","aa","bb","cc"];
