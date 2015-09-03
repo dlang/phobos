@@ -20,6 +20,7 @@ Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
 module std.container.rbtree;
 
 import std.functional : binaryFun;
+import std.format;
 
 public import std.container.util;
 
@@ -1670,6 +1671,16 @@ assert(equal(rbt[], [5]));
     }
 
     /**
+    Formats the RedBlackTree into a sink function. For more info see
+    $(D std.format.formatValue)
+    */
+    void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) const {
+        sink("RedBlackTree(");
+        sink.formatValue(this[], fmt);
+        sink(")");
+    }
+
+    /**
      * Constructor. Pass in an array of elements, or individual elements to
      * initialize the tree with.
      */
@@ -1825,6 +1836,7 @@ pure unittest
 pure unittest
 {
     import std.array : array;
+
     auto rt1 = redBlackTree(5, 4, 3, 2, 1);
     assert(rt1.length == 5);
     assert(array(rt1[]) == [1, 2, 3, 4, 5]);
@@ -1840,6 +1852,19 @@ pure unittest
     auto rt4 = redBlackTree!string("hello", "hello");
     assert(rt4.length == 1);
     assert(array(rt4[]) == ["hello"]);
+}
+
+unittest {
+    import std.conv : to;
+
+    auto rt1 = redBlackTree!string();
+    assert(rt1.to!string == "RedBlackTree([])");
+
+    auto rt2 = redBlackTree!string("hello");
+    assert(rt2.to!string == "RedBlackTree([\"hello\"])");
+
+    auto rt3 = redBlackTree!string("hello", "world", "!");
+    assert(rt3.to!string == "RedBlackTree([\"!\", \"hello\", \"world\"])");
 }
 
 //constness checks
