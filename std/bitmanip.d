@@ -4015,7 +4015,7 @@ else
  * Params:
  * S = a enumset container type.
  */
-static bool isSetSuitable(S)()
+bool isSetSuitable(S)()
 {
     static if (isSigned!S) return false;
     else static if (is(S==Set8)) return true;
@@ -4031,7 +4031,7 @@ static bool isSetSuitable(S)()
  * Params:
  * E = an enum.
  */
-static ulong enumMemberCount(E)() if (is(E==enum))
+ulong enumMemberCount(E)() if (is(E==enum))
 {
     ulong result;
     foreach(member; EnumMembers!E) result++;
@@ -4125,7 +4125,7 @@ public:
  * E = an enum.
  * S = a container, either a Set8, a Set16, a Set32 or Set64.
  */
-static bool enumFitsInSet(E, S)() if (is(E==enum) && isSetSuitable!S)
+bool enumFitsInSet(E, S)() if (is(E==enum) && isSetSuitable!S)
 {
     S top = S.max;
     ulong max;
@@ -4784,7 +4784,7 @@ if (enumFitsInSet!(E, BigestSet))
  * E = an enum
  * a = the parameters passed to the EnumSet constructor.
  */
-static auto enumSet(E, A...)(A a) @property @safe
+auto enumSet(E, A...)(A a) @property @safe
 if (enumFitsInSet!(E, BigestSet))
 {
     return EnumSet!(E, SmallestSet!E)(a);
