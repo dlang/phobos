@@ -715,9 +715,19 @@ public:
         if (!(f.spec == 's' || f.spec == 'd' || hex))
             throw new FormatException("Format specifier not understood: %" ~ f.spec);
 
-        char[] buff =
-            hex ? data.toHexString(0, '_', 0, f.flZero ? '0' : ' ')
-                : data.toDecimalString(0);
+        char[] buff;
+        if (f.spec == 'X')
+        {
+            buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.upper);
+        }
+        else if (f.spec == 'x')
+        {
+            buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.lower);
+        }
+        else
+        {
+            buff = data.toDecimalString(0);
+        }
         assert(buff.length > 0);
 
         char signChar = isNegative() ? '-' : 0;
@@ -770,6 +780,7 @@ public:
         x *= 12345;
 
         assert(format("%d", x) == "12345000000");
+        assert(format("%x", x) == "2_dfd1c040");
         assert(format("%X", x) == "2_DFD1C040");
     }
 
@@ -883,14 +894,14 @@ Params:
 
 Returns:
     A $(D string) that represents the $(D BigInt) as a hexadecimal (base 16)
-    number.
+    number in upper case.
 
 */
 string toHex(const(BigInt) x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
-    x.toString(&sink, "%x");
+    x.toString(&sink, "%X");
     return outbuff;
 }
 
@@ -1121,6 +1132,57 @@ unittest
         assert(w1.data == entry[2]);
         w1.clear();
         w2.clear();
+    }
+}
+
+unittest
+{
+    import std.array;
+    import std.format;
+
+    immutable string[][] table = [
+    /*  fmt,        +10     -10 */
+        ["%x",      "a",    "-a"],
+        ["%+x",     "a",    "-a"],
+        ["%-x",     "a",    "-a"],
+        ["%+-x",    "a",    "-a"],
+
+        ["%4x",     "   a", "  -a"],
+        ["%+4x",    "   a", "  -a"],
+        ["%-4x",    "a   ", "-a  "],
+        ["%+-4x",   "a   ", "-a  "],
+
+        ["%04x",    "000a", "-00a"],
+        ["%+04x",   "000a", "-00a"],
+        ["%-04x",   "a   ", "-a  "],
+        ["%+-04x",  "a   ", "-a  "],
+
+        ["% 04x",   "000a", "-00a"],
+        ["%+ 04x",  "000a", "-00a"],
+        ["%- 04x",  "a   ", "-a  "],
+        ["%+- 04x", "a   ", "-a  "],
+    ];
+
+    auto w1 = appender!(char[])();
+    auto w2 = appender!(char[])();
+
+    foreach (entry; table)
+    {
+        immutable fmt = entry[0];
+
+        formattedWrite(w1, fmt, BigInt(10));
+        formattedWrite(w2, fmt, 10);
+        assert(w1.data == w2.data);     // Equal only positive BigInt
+        assert(w1.data == entry[1]);
+        w1.clear();
+        w2.clear();
+
+        formattedWrite(w1, fmt, BigInt(-10));
+        //formattedWrite(w2, fmt, -10);
+        //assert(w1.data == w2.data);
+        assert(w1.data == entry[2]);
+        w1.clear();
+        //w2.clear();
     }
 }
 

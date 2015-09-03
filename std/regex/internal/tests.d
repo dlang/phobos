@@ -249,6 +249,10 @@ unittest
         TestVectors(  "[0-9a-f~~0-5a-z]{2}",         "g0a58x",    "y",   "$&",     "8x"),
         TestVectors(  "[abc[pq]xyz[rs]]{4}",         "cqxr",      "y",   "$&",     "cqxr"),
         TestVectors(  "[abcdf--[ab&&[bcd]][acd]]",   "abcdefgh",  "y",   "$&",     "f"),
+        TestVectors(  "[a-c||d-f]+",    "abcdef", "y", "$&", "abcdef"),
+        TestVectors(  "[a-f--a-c]+",    "abcdef", "y", "$&", "def"),
+        TestVectors(  "[a-c&&b-f]+",    "abcdef", "y", "$&", "bc"),
+        TestVectors(  "[a-c~~b-f]+",    "abcdef", "y", "$&", "a"),
 //unicode blocks & properties:
         TestVectors(  `\P{Inlatin1suppl ement}`, "\u00c2!", "y", "$&", "!"),
         TestVectors(  `\p{InLatin-1 Supplement}\p{in-mathematical-operators}\P{Inlatin1suppl ement}`, "\u00c2\u2200\u00c3\u2203.", "y", "$&", "\u00c3\u2203."),
@@ -955,3 +959,12 @@ unittest
     assertThrown(regex(`^(x(\1))`));
     assertThrown(regex(`^((x)(?=\1))`));
 }
+
+// bugzilla 14529
+unittest
+{
+    auto ctPat2 = regex(r"^[CDF]$", "i");
+    foreach(v; ["C", "c", "D", "d", "F", "f"])
+        assert(matchAll(v, ctPat2).front.hit == v);
+}
+

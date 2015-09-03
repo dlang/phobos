@@ -8,9 +8,11 @@ GNUmakefile
 .DS_Store
 .*.sw*
 Makefile
+*.lst
 
 # Rules for Xamarin Studio project data/build output
 *.dproj
 bin/
 obj/
+
 *.html

@@ -70,8 +70,8 @@ ifneq (,$(DRUNTIME))
 	CUSTOM_DRUNTIME=1
 endif
 ifeq (,$(findstring win,$(OS)))
-	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL).a
-	DRUNTIMESO = $(basename $(DRUNTIME))so.a
+	DRUNTIME = $(DRUNTIME_PATH)/generated/$(OS)/$(BUILD)/$(MODEL)/libdruntime.a
+	DRUNTIMESO = $(basename $(DRUNTIME)).so.a
 else
 	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
 endif
@@ -94,7 +94,7 @@ endif
 # Set CFLAGS
 CFLAGS=
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
-	CFLAGS += $(MODEL_FLAG) -fPIC
+	CFLAGS += $(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -142,9 +142,6 @@ else
 	LIB:=$(ROOT)/phobos.lib
 endif
 
-LIBCURL_STUB:=$(if $(findstring $(OS),linux),$(ROOT)/libcurl_stub.so,)
-LINKCURL:=$(if $(LIBCURL_STUB),-L$(LIBCURL_STUB),-L-lcurl)
-
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
@@ -155,10 +152,10 @@ STD_PACKAGES = $(addprefix std/, algorithm container experimental/logger \
 
 # Modules in std (including those in packages), in alphabetical order.
 STD_MODULES = $(addprefix std/, \
-  array ascii base64 bigint bitmanip compiler complex concurrency \
+  array ascii base64 bigint bitmanip compiler complex concurrency concurrencybase \
   $(addprefix container/, array binaryheap dlist rbtree slist util) \
   conv cstream csv datetime demangle \
-  $(addprefix digest/, digest crc md ripemd sha) \
+  $(addprefix digest/, digest crc hmac md ripemd sha) \
   encoding exception \
   $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \
   file format functional getopt json math mathspecial \
@@ -166,7 +163,7 @@ STD_MODULES = $(addprefix std/, \
   process random \
   $(addprefix range/, primitives interfaces) \
   $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
-  	kickstart tests thompson)) \
+	kickstart tests thompson)) \
   signals socket socketstream stdint stdio stdiobase stream \
   string syserror system traits typecons typetuple uni uri utf uuid variant \
   xml zip zlib $(addprefix algorithm/,comparison iteration \
@@ -178,17 +175,19 @@ EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
 EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
 		winsock) $(addprefix std/windows/, charset iunknown syserror)
-ifeq (,$(findstring win,$(OS)))
-	EXTRA_DOCUMENTABLES:=$(EXTRA_MODULES_LINUX)
-else
-	EXTRA_DOCUMENTABLES:=$(EXTRA_MODULES_WIN32)
-endif
 
 # Other D modules that aren't under std/
-EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl sqlite3 zlib) $(addprefix	\
-std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
-time wcharh)
-EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
+EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
+  odbc/sqltypes odbc/sqlucode sqlite3 zlib) $(addprefix std/c/,fenv locale \
+  math process stdarg stddef stdio stdlib string time wcharh)
+
+ifeq (,$(findstring win,$(OS)))
+	EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_COMMON)
+else
+	EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
+endif
+
+EXTRA_MODULES_INTERNAL := $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
@@ -197,6 +196,8 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	$(addprefix std/internal/test/, dummyrange) \
 	$(addprefix std/algorithm/, internal)
 
+EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
+
 # Aggregate all D modules relevant to this build
 D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) \
   $(addsuffix /package,$(STD_PACKAGES))
@@ -204,9 +205,10 @@ D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) \
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
-ALL_D_FILES = $(addsuffix .d, $(D_MODULES) \
+ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
   $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) \
-  $(EXTRA_MODULES_WIN32)) std/internal/windows/advapi32.d \
+  $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_INTERNAL)) \
+  std/internal/windows/advapi32.d \
   std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
   std/c/linux/tipc.d
 
@@ -277,13 +279,8 @@ $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): override PIC:=-fPIC
-$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO) $(LIBCURL_STUB)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) $(D_FILES) $(OBJS)
-
-# stub library with soname of the real libcurl.so (Bugzilla 10710)
-$(LIBCURL_STUB):
-	@echo "void curl_global_init() {}" > $(ROOT)/libcurl_stub.c
-	$(CC) -shared $(CFLAGS) $(ROOT)/libcurl_stub.c -o $@ -Wl,-soname=libcurl.so.4
+$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
@@ -317,7 +314,7 @@ ifneq (linux,$(OS))
 $(UT_D_OBJS): $(DRUNTIME)
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKCURL) -defaultlib= -debuglib=
+	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) -defaultlib= -debuglib=
 
 else
 
@@ -326,8 +323,8 @@ UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 $(UT_D_OBJS): $(DRUNTIMESO)
 
 $(UT_LIBSO): override PIC:=-fPIC
-$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LIBCURL_STUB)
-	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) -defaultlib= -debuglib=
+$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
+	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
@@ -343,8 +340,11 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 
 # Target for quickly running a single unittest (using static phobos library).
 # For example: "make std/algorithm/mutation.test"
+# The mktemp business is needed so .o files don't clash in concurrent unittesting.
 %.test : %.d $(LIB)
-	$(DMD) $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= -L-lcurl -cov -run $<
+	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` && \
+	  $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< && \
+	  rm -rf $$T
 
 # Target for quickly unittesting all modules and packages within a package,
 # transitively. For example: "make std/algorithm.test"
@@ -366,7 +366,8 @@ clean :
 	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
 zip :
-	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) index.d win32.mak win64.mak osmodel.mak
+	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) index.d win32.mak win64.mak osmodel.mak \
+	$(addsuffix /package.d,$(STD_PACKAGES))
 
 install2 : all
 	$(eval lib_dir=$(if $(filter $(OS),osx), lib, lib$(MODEL)))
@@ -389,7 +390,7 @@ else
 # to always invoke druntime's make. Use FORCE instead of .PHONY to
 # avoid rebuilding phobos when $(DRUNTIME) didn't change.
 $(DRUNTIME): FORCE
-	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS)
+	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS) BUILD=$(BUILD)
 
 ifeq (,$(findstring win,$(OS)))
 $(DRUNTIMESO): $(DRUNTIME)
@@ -444,4 +445,23 @@ html_consolidated :
 	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
 
+changelog.html: changelog.dd
+	$(DMD) -Df$@ $<
+
+#################### test for undesired white spaces ##########################
+CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
+CWS_TOCHECK += $(ALL_D_FILES) index.d
+CWS_TOCHECK += $(filter-out etc/c/zlib/ChangeLog,$(ALL_C_FILES))
+
+checkwhitespace: $(LIB)
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
+
 #############################
+
+.PHONY : auto-tester-build
+auto-tester-build: all checkwhitespace
+
+.PHONY : auto-tester-test
+auto-tester-test: unittest
+
+.DELETE_ON_ERROR: # GNU Make directive (delete output files on error)

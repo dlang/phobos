@@ -18,18 +18,14 @@ Submodules:
 
 This module has two submodules:
 
-$(LIST
-$(DIV ,
 The $(LINK2 std_range_primitives.html, $(D std._range.primitives)) submodule
 provides basic _range functionality. It defines several templates for testing
 whether a given object is a _range, what kind of _range it is, and provides
 some common _range operations.
-),
-$(DIV ,
+
 The $(LINK2 std_range_interfaces.html, $(D std._range.interfaces)) submodule
 provides object-based interfaces for working with ranges via runtime
 polymorphism.
-))
 
 The remainder of this module provides a rich set of _range creation and
 composition templates that let you construct new ranges out of existing ranges:
@@ -39,7 +35,10 @@ $(BOOKTABLE ,
         $(TD Concatenates several ranges into a single _range.
     ))
     $(TR $(TD $(D $(LREF choose)))
-        $(TD choose one of several ranges.
+        $(TD Chooses one of two ranges at runtime based on a boolean condition.
+    ))
+    $(TR $(TD $(D $(LREF chooseAmong)))
+        $(TD Chooses one of several ranges at runtime based on an index.
     ))
     $(TR $(TD $(D $(LREF chunks)))
         $(TD Creates a _range that returns fixed-size chunks of the original
@@ -1243,6 +1242,9 @@ Params:
 
 Returns:
     A range type dependent on $(D R1) and $(D R2).
+
+Bugs:
+    $(BUGZILLA 14660)
  */
 auto choose(R1, R2)(bool condition, R1 r1, R2 r2)
 if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
@@ -1653,6 +1655,15 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
     assert(equal(radial(a), [ 3, 4, 2, 5, 1 ]));
     a = [ 1, 2, 3, 4 ];
     assert(equal(radial(a), [ 2, 3, 1, 4 ]));
+
+    // If the left end is reached first, the remaining elements on the right
+    // are concatenated in order:
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(equal(radial(a, 1), [ 1, 2, 0, 3, 4, 5 ]));
+
+    // If the right end is reached first, the remaining elements on the left
+    // are concatenated in reverse order:
+    assert(equal(radial(a, 4), [ 4, 5, 3, 2, 1, 0 ]));
 }
 
 @safe unittest
@@ -1910,6 +1921,21 @@ if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &
     assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 }
 
+/**
+ * If the range runs out before `n` elements, `take` simply returns the entire
+ * range (unlike $(LREF takeExactly), which will cause an assertion failure if
+ * the range ends prematurely):
+ */
+@safe unittest
+{
+    import std.algorithm : equal;
+
+    int[] arr2 = [ 1, 2, 3 ];
+    auto t = take(arr2, 5);
+    assert(t.length == 3);
+    assert(equal(t, [ 1, 2, 3 ]));
+}
+
 // take(take(r, n1), n2)
 Take!R take(R)(R input, size_t n)
 if (is(R T == Take!T))
@@ -2037,6 +2063,9 @@ even when $(D range) itself does not define $(D length).
 
 The result of $(D takeExactly) is identical to that of $(LREF take) in
 cases where the original range defines $(D length) or is infinite.
+
+Unlike $(LREF take), however, it is illegal to pass a range with less than
+$(D n) elements to $(D takeExactly); this will cause an assertion failure.
  */
 auto takeExactly(R)(R range, size_t n)
 if (isInputRange!R)
@@ -2691,8 +2720,7 @@ public:
     auto opSlice(size_t i, size_t j)
     in
     {
-        import core.exception : RangeError;
-        if (i > j) throw new RangeError();
+        assert(i <= j);
     }
     body
     {
@@ -2774,12 +2802,14 @@ an entire $(D front)/$(D popFront)/$(D empty) structure.
 $(D fun) maybe be passed either a template alias parameter (existing
 function, delegate, struct type defining static $(D opCall)... ) or
 a run-time value argument (delegate, function object... ).
-The result range models an InputRange ($(XREF range, isInputRange)).
+The result range models an InputRange
+($(XREF_PACK range,primitives,isInputRange)).
 The resulting range will call $(D fun()) on every call to $(D front),
 and only when $(D front) is called, regardless of how the range is
 iterated.
-It is advised to compose generate with either $(XREF algorithm,cache)
-or $(XREF array,array), or to use it in a foreach loop.
+It is advised to compose generate with either
+$(XREF_PACK algorithm,iteration,cache) or $(XREF array,array), or to use it in a
+foreach loop.
 A by-value foreach loop means that the loop value is not $(D ref).
 
 Params:
@@ -2965,8 +2995,7 @@ struct Cycle(R)
         auto opSlice(size_t i, size_t j)
         in
         {
-            import core.exception : RangeError;
-            if (i > j) throw new RangeError();
+            assert(i <= j);
         }
         body
         {
@@ -3088,8 +3117,7 @@ nothrow:
     auto opSlice(size_t i, size_t j) @safe
     in
     {
-        import core.exception : RangeError;
-        if (i > j) throw new RangeError();
+        assert(i <= j);
     }
     body
     {
@@ -3186,9 +3214,6 @@ Cycle!R cycle(R)(ref R input, size_t index = 0) @system
 
                 static if (isRandomAccessRange!DummyType)
                 {
-                    import core.exception : RangeError;
-                    import std.exception : assertThrown;
-
                     {
                         cy[10] = 66;
                         scope(exit) cy[10] = 1;
@@ -3377,11 +3402,18 @@ struct Zip(Ranges...)
                 }
                 return false;
             case StoppingPolicy.longest:
-                foreach (i, Unused; R)
+                static if (anySatisfy!(isInfinite, R))
                 {
-                    if (!ranges[i].empty) return false;
+                    return false;
                 }
-                return true;
+                else
+                {
+                    foreach (i, Unused; R)
+                    {
+                        if (!ranges[i].empty) return false;
+                    }
+                    return true;
+                }
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R[1 .. $])
                 {
@@ -3958,14 +3990,10 @@ private string lockstepMixin(Ranges...)(bool withIndex)
 
    By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
 
-   BUGS:  If a range does not offer lvalue access, but $(D ref) is used in the
-   $(D foreach) loop, it will be silently accepted but any modifications
-   to the variable will not be propagated to the underlying range.
-
-   // Lockstep also supports iterating with an index variable:
-   Example:
+   Lockstep also supports iterating with an index variable:
    -------
-   foreach(index, a, b; lockstep(arr1, arr2)) {
+   foreach (index, a, b; lockstep(arr1, arr2))
+   {
        writefln("Index %s:  a = %s, b = %s", index, a, b);
    }
    -------
@@ -4021,7 +4049,7 @@ unittest
    auto arr1 = [1,2,3,4,5];
    auto arr2 = [6,7,8,9,10];
 
-   foreach(ref a, ref b; lockstep(arr1, arr2))
+   foreach (ref a, ref b; lockstep(arr1, arr2))
    {
        a += b;
    }
@@ -4113,6 +4141,37 @@ unittest
 
     // Regression 10468
     foreach (x, y; lockstep(iota(0, 10), iota(0, 10))) { }
+}
+
+unittest
+{
+    struct RvalueRange
+    {
+        int[] impl;
+        @property bool empty() { return impl.empty; }
+        @property int front() { return impl[0]; } // N.B. non-ref
+        void popFront() { impl.popFront(); }
+    }
+    auto data1 = [ 1, 2, 3, 4 ];
+    auto data2 = [ 5, 6, 7, 8 ];
+    auto r1 = RvalueRange(data1);
+    auto r2 = data2;
+    foreach (a, ref b; lockstep(r1, r2))
+    {
+        a++;
+        b++;
+    }
+    assert(data1 == [ 1, 2, 3, 4 ]); // changes to a do not propagate to data
+    assert(data2 == [ 6, 7, 8, 9 ]); // but changes to b do.
+
+    // Since r1 is by-value only, the compiler should reject attempts to
+    // foreach over it with ref.
+    static assert(!__traits(compiles, {
+        foreach (ref a, ref b; lockstep(r1, r2)) { a++; }
+    }));
+    static assert(__traits(compiles, {
+        foreach (a, ref b; lockstep(r1, r2)) { a++; }
+    }));
 }
 
 /**
@@ -5713,7 +5772,7 @@ Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
     return Transposed!RangeOfRanges(rr);
 }
 
-/// Example
+///
 @safe unittest
 {
     import std.algorithm : equal;
@@ -6365,15 +6424,9 @@ private struct OnlyResult(T, size_t arity)
 
     T opIndex(size_t idx)
     {
-        // data[i + idx] will not throw a RangeError
         // when i + idx points to elements popped
         // with popBack
-        version(assert)
-        {
-            import core.exception  : RangeError;
-            if (idx >= length)
-                throw new RangeError;
-        }
+        assert(idx < length);
         return data[frontIndex + idx];
     }
 
@@ -6387,13 +6440,7 @@ private struct OnlyResult(T, size_t arity)
         OnlyResult result = this;
         result.frontIndex += from;
         result.backIndex = this.frontIndex + to;
-
-        version(assert)
-        {
-            import core.exception : RangeError;
-            if (to < from || to > length)
-                throw new RangeError;
-        }
+        assert(from <= to && to <= length);
         return result;
     }
 
@@ -6432,12 +6479,7 @@ private struct OnlyResult(T, size_t arity : 1)
 
     T opIndex(size_t i)
     {
-        version (assert)
-        {
-            import core.exception : RangeError;
-            if (_empty || i != 0)
-                throw new RangeError;
-        }
+        assert(!_empty && i == 0);
         return _value;
     }
 
@@ -6448,12 +6490,7 @@ private struct OnlyResult(T, size_t arity : 1)
 
     OnlyResult opSlice(size_t from, size_t to)
     {
-        version (assert)
-        {
-            import core.exception : RangeError;
-            if (from > to || to > length)
-                throw new RangeError;
-        }
+        assert(from <= to && to <= length);
         OnlyResult copy = this;
         copy._empty = _empty || from == to;
         return copy;
@@ -6479,11 +6516,6 @@ private struct OnlyResult(T, size_t arity : 0)
 
     EmptyElementType opIndex(size_t i)
     {
-        version(assert)
-        {
-            import core.exception : RangeError;
-            throw new RangeError;
-        }
         assert(false);
     }
 
@@ -6491,12 +6523,7 @@ private struct OnlyResult(T, size_t arity : 0)
 
     OnlyResult opSlice(size_t from, size_t to)
     {
-        version(assert)
-        {
-            import core.exception : RangeError;
-            if (from != 0 || to != 0)
-                throw new RangeError;
-        }
+        assert(from == 0 && to == 0);
         return this;
     }
 }
@@ -6745,7 +6772,6 @@ in
         // TODO: core.checkedint supports mixed signedness yet?
         import core.checkedint : adds, addu;
         import std.conv : ConvException, to;
-        import core.exception : RangeError;
 
         alias LengthType = typeof(range.length);
         bool overflow;
@@ -6769,8 +6795,7 @@ in
             auto result = addu(start, range.length, overflow);
         }
 
-        if (overflow || result > Enumerator.max)
-            throw new RangeError("overflow in `start + range.length`");
+        assert(!overflow && result <= Enumerator.max);
     }
 }
 body
@@ -7024,8 +7049,8 @@ version(none) // @@@BUG@@@ 10939
     // Re-enable (or remove) if 10939 is resolved.
     /+pure+/ unittest // Impure because of std.conv.to
     {
-        import core.exception : RangeError;
         import std.exception : assertNotThrown, assertThrown;
+        import core.exception : RangeError;
 
         static immutable values = [42];
 
@@ -7148,10 +7173,10 @@ enum SearchPolicy
 Represents a sorted range. In addition to the regular range
 primitives, supports additional operations that take advantage of the
 ordering, such as merge and binary search. To obtain a $(D
-SortedRange) from an unsorted range $(D r), use $(XREF algorithm,
-sort) which sorts $(D r) in place and returns the corresponding $(D
-SortedRange). To construct a $(D SortedRange) from a range $(D r) that
-is known to be already sorted, use $(LREF assumeSorted) described
+SortedRange) from an unsorted range $(D r), use
+$(XREF_PACK algorithm,sorting,sort) which sorts $(D r) in place and returns the
+corresponding $(D SortedRange). To construct a $(D SortedRange) from a range
+$(D r) that is known to be already sorted, use $(LREF assumeSorted) described
 below.
 */
 struct SortedRange(Range, alias pred = "a < b")
@@ -7780,7 +7805,7 @@ effect on the complexity of subsequent operations specific to sorted
 ranges (such as binary search). The probability of an arbitrary
 unsorted range failing the test is very high (however, an
 almost-sorted range is likely to pass it). To check for sortedness at
-cost $(BIGOH n), use $(XREF algorithm,isSorted).
+cost $(BIGOH n), use $(XREF_PACK algorithm,sorting,isSorted).
  */
 auto assumeSorted(alias pred = "a < b", R)(R r)
 if (isInputRange!(Unqual!R))
@@ -8652,30 +8677,49 @@ struct NullSink
     void put(E)(E){}
 }
 
+///
 @safe unittest
 {
     import std.algorithm : map, copy;
-    [4, 5, 6].map!(x => x * 2).copy(NullSink());
+    [4, 5, 6].map!(x => x * 2).copy(NullSink()); // data is discarded
 }
 
 
 /++
-  Implements a "tee" style pipe, wrapping an input range so that elements
-  of the range can be passed to a provided function or $(LREF OutputRange)
-  as they are iterated over. This is useful for printing out intermediate
-  values in a long chain of range code, performing some operation with
-  side-effects on each call to $(D front) or $(D popFront), or diverting
-  the elements of a range into an auxiliary $(LREF OutputRange).
+
+  Implements a "tee" style pipe, wrapping an input range so that elements of the
+  range can be passed to a provided function or $(LREF OutputRange) as they are
+  iterated over. This is useful for printing out intermediate values in a long
+  chain of range code, performing some operation with side-effects on each call
+  to $(D front) or $(D popFront), or diverting the elements of a range into an
+  auxiliary $(LREF OutputRange).
 
   It is important to note that as the resultant range is evaluated lazily,
   in the case of the version of $(D tee) that takes a function, the function
   will not actually be executed until the range is "walked" using functions
   that evaluate ranges, such as $(XREF array,array) or
-  $(XREF algorithm,reduce).
+  $(XREF_PACK algorithm,iteration,reduce).
 
-  See_Also: $(XREF algorithm, each)
+  Params:
+  pipeOnPop = If `Yes.pipeOnPop`, simply iterating the range without ever
+  calling `front` is enough to have `tee` mirror elements to `outputRange` (or,
+  respectively, `fun`). If `No.pipeOnPop`, only elements for which `front` does
+  get called will be also sent to `outputRange`/`fun`.
+  inputRange = The input range beeing passed through.
+  outputRange = This range will receive elements of `inputRange` progressively
+  as iteration proceeds.
+  fun = This function will be called with elements of `inputRange`
+  progressively as iteration proceeds.
+
+  Returns:
+  An input range that offers the elements of `inputRange`. Regardless of
+  whether `inputRange` is a more powerful range (forward, bidirectional etc),
+  the result is always an input range. Reading this causes `inputRange` to be
+  iterated and returns its elements in turn. In addition, the same elements
+  will be passed to `outputRange` or `fun` as well.
+
+  See_Also: $(XREF_PACK algorithm,iteration,each)
 +/
-
 auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
 if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
 {
@@ -8736,9 +8780,7 @@ if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
     return Result(inputRange, outputRange);
 }
 
-/++
-  Overload for taking a function or template lambda as an $(LREF OutputRange)
-+/
+/// Ditto
 auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1)(R1 inputRange)
 if (is(typeof(fun) == void) || isSomeFunction!fun)
 {
@@ -8764,17 +8806,19 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     }
 }
 
-//
+///
 @safe unittest
 {
     import std.algorithm : equal, filter, map;
 
-    // Pass-through
+    // Sum values while copying
     int[] values = [1, 4, 9, 16, 25];
-
-    auto newValues = values.tee!(a => a + 1).array;
+    int sum = 0;
+    auto newValues = values.tee!(a => sum += a).array;
     assert(equal(newValues, values));
+    assert(sum == 1 + 4 + 9 + 16 + 25);
 
+    // Count values that pass the first filter
     int count = 0;
     auto newValues4 = values.filter!(a => a < 10)
                             .tee!(a => count++)

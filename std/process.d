@@ -562,8 +562,9 @@ private Pid spawnProcessImpl(in char[] commandLine,
     DWORD dwCreationFlags =
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
+    auto pworkDir = workDir.tempCStringW();     // workaround until Bugzilla 14696 is fixed
     if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr, null, null, true, dwCreationFlags,
-                        envz, workDir.length ? workDir.tempCStringW() : null, &startinfo, &pi))
+                        envz, workDir.length ? pworkDir : null, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
     // figure out if we should close any of the streams
@@ -3143,25 +3144,7 @@ version (unittest)
 
 
 
-/**
-   Execute $(D command) in a _command shell.
-
-   $(RED Deprecated. Please use $(LREF spawnShell) or $(LREF executeShell)
-         instead. This function will be removed in August 2015.)
-
-   Returns: If $(D command) is null, returns nonzero if the _command
-   interpreter is found, and zero otherwise. If $(D command) is not
-   null, returns -1 on error, or the exit status of command (which may
-   in turn signal an error in command's execution).
-
-   Note: On Unix systems, the homonym C function (which is accessible
-   to D programs as $(LINK2 core_stdc_stdlib.html, core.stdc.stdlib._system))
-   returns a code in the same format as $(LUCKY waitpid, waitpid),
-   meaning that C programs must use the $(D WEXITSTATUS) macro to
-   extract the actual exit code from the $(D system) call. D's $(D
-   system) automatically extracts the exit status.
-
-*/
+// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
 deprecated("Please use wait(spawnShell(command)) or executeShell(command) instead")
 int system(string command)
 {
@@ -3199,7 +3182,8 @@ private void toAStringz(in string[] a, const(char)**az)
 //{
 //    int spawnvp(int mode, string pathname, string[] argv)
 //    {
-//      char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+//      char** argv_ = cast(char**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+//      scope(exit) core.stdc.stdlib.free(argv_);
 //
 //      toAStringz(argv, argv_);
 //
@@ -3214,10 +3198,12 @@ version(Windows) extern(C) int spawnvp(int, in char *, in char **);
 alias P_WAIT = _P_WAIT;
 alias P_NOWAIT = _P_NOWAIT;
 
+// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
 deprecated("Please use spawnProcess instead")
 int spawnvp(int mode, string pathname, string[] argv)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
 
@@ -3238,6 +3224,7 @@ version (Posix)
 private import core.sys.posix.unistd;
 private import core.sys.posix.sys.wait;
 
+// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
 deprecated("Please use spawnProcess instead")
 int _spawnvp(int mode, in char *pathname, in char **argv)
 {
@@ -3307,11 +3294,7 @@ version (StdDdoc)
     Replaces the current process by executing a command, $(D pathname), with
     the arguments in $(D argv).
 
-    $(RED Deprecated on Windows.  From August 2015, these functions will
-    only be available on POSIX platforms. The reason is that they never
-    did what the documentation claimed they did, nor is it technically
-    possible to implement such behaviour on Windows. See below for more
-    information.)
+    $(BLUE This functions is Posix-Only.)
 
     Typically, the first element of $(D argv) is
     the command being executed, i.e. $(D argv[0] == pathname). The 'p'
@@ -3402,6 +3385,7 @@ else
     }
     else version (Windows)
     {
+        // Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
         private enum execvDeprecationMsg =
             "Please consult the API documentation for more information: "
             ~"http://dlang.org/phobos/std_process.html#.execv";
@@ -3421,7 +3405,8 @@ extern(C)
 
 private int execv_(in string pathname, in string[] argv)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
 
@@ -3430,8 +3415,10 @@ private int execv_(in string pathname, in string[] argv)
 
 private int execve_(in string pathname, in string[] argv, in string[] envp)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
-    auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
+    auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
+    scope(exit) core.stdc.stdlib.free(envp_);
 
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
@@ -3441,7 +3428,8 @@ private int execve_(in string pathname, in string[] argv, in string[] envp)
 
 private int execvp_(in string pathname, in string[] argv)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
 
@@ -3486,8 +3474,10 @@ version(Posix)
 }
 else version(Windows)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
-    auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
+    auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
+    scope(exit) core.stdc.stdlib.free(envp_);
 
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
@@ -3500,42 +3490,11 @@ else
 } // version
 }
 
-/**
- * Returns the process ID of the calling process, which is guaranteed to be
- * unique on the system. This call is always successful.
- *
- * $(RED Deprecated.  Please use $(LREF thisProcessID) instead.
- *       This function will be removed in August 2015.)
- *
- * Example:
- * ---
- * writefln("Current process id: %s", getpid());
- * ---
- */
+// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
 deprecated("Please use thisProcessID instead")
 alias getpid = core.thread.getpid;
 
-/**
-   Runs $(D_PARAM cmd) in a shell and returns its standard output. If
-   the process could not be started or exits with an error code,
-   throws ErrnoException.
-
-   $(RED Deprecated.  Please use $(LREF executeShell) instead.
-         This function will be removed in August 2015.)
-
-   Example:
-
-   ----
-   auto tempFilename = chomp(shell("mcookie"));
-   auto f = enforce(fopen(tempFilename), "w");
-   scope(exit)
-   {
-       fclose(f) == 0 || assert(false);
-       system(escapeShellCommand("rm", tempFilename));
-   }
-   ... use f ...
-   ----
-*/
+// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
 deprecated("Please use executeShell instead")
 string shell(string cmd)
 {
@@ -3589,16 +3548,7 @@ deprecated unittest
     assertThrown!ErrnoException(shell(cmd));
 }
 
-/**
-Gets the value of environment variable $(D name) as a string. Calls
-$(LINK2 core_stdc_stdlib.html#_getenv, core.stdc.stdlib._getenv)
-internally.
-
-$(RED Deprecated. Please use $(LREF environment.opIndex) or
-      $(LREF environment.get) instead.  This function will be
-      removed in August 2015.)
-*/
-
+// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
 deprecated("Please use environment.opIndex or environment.get instead")
 string getenv(in char[] name) nothrow
 {
@@ -3611,16 +3561,7 @@ string getenv(in char[] name) nothrow
     return lastResult = value.idup;
 }
 
-/**
-Sets the value of environment variable $(D name) to $(D value). If the
-value was written, or the variable was already present and $(D
-overwrite) is false, returns normally. Otherwise, it throws an
-exception. Calls $(LINK2 core_sys_posix_stdlib.html#_setenv,
-core.sys.posix.stdlib._setenv) internally.
-
-$(RED Deprecated. Please use $(LREF environment.opIndexAssign) instead.
-      This function will be removed in August 2015.)
-*/
+// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
 version(StdDdoc) deprecated void setenv(in char[] name, in char[] value, bool overwrite);
 else version(Posix)
     deprecated("Please use environment.opIndexAssign instead.")
@@ -3630,13 +3571,7 @@ else version(Posix)
         core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), overwrite) == 0);
 }
 
-/**
-Removes variable $(D name) from the environment. Calls $(LINK2
-core_sys_posix_stdlib.html#_unsetenv, core.sys.posix.stdlib._unsetenv) internally.
-
-$(RED Deprecated. Please use $(LREF environment.remove) instead.
-      This function will be removed in August 2015.)
-*/
+// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
 version(StdDdoc) deprecated void unsetenv(in char[] name);
 else version(Posix)
     deprecated("Please use environment.remove instead")
@@ -3685,17 +3620,18 @@ else version (OSX)
     {
         const(char)*[5] args;
 
+        auto curl = url.tempCString();
         const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
         if (browser)
         {   browser = strdup(browser);
             args[0] = browser;
-            args[1] = url.tempCString();
+            args[1] = curl;
             args[2] = null;
         }
         else
         {
             args[0] = "open".ptr;
-            args[1] = url.tempCString();
+            args[1] = curl;
             args[2] = null;
         }
 

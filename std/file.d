@@ -42,33 +42,42 @@ else version (Posix)
 else
     static assert(false, "Module " ~ .stringof ~ " not implemented for this OS.");
 
-version (unittest)
+// Character type used for operating system filesystem APIs
+version (Windows)
 {
-    @property string deleteme() @safe
+    private alias FSChar = wchar;
+}
+else version (Posix)
+{
+    private alias FSChar = char;
+}
+else
+    static assert(0);
+
+package @property string deleteme() @safe
+{
+    import std.process : thisProcessID;
+    static _deleteme = "deleteme.dmd.unittest.pid";
+    static _first = true;
+
+    if(_first)
     {
-        import std.process : thisProcessID;
-        static _deleteme = "deleteme.dmd.unittest.pid";
-        static _first = true;
-
-        if(_first)
-        {
-            _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(thisProcessID);
-            _first = false;
-        }
-
-        return _deleteme;
+        _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(thisProcessID);
+        _first = false;
     }
 
-    version(Android)
-    {
-        enum system_directory = "/system/etc";
-        enum system_file      = "/system/etc/hosts";
-    }
-    else version(Posix)
-    {
-        enum system_directory = "/usr/include";
-        enum system_file      = "/usr/include/assert.h";
-    }
+    return _deleteme;
+}
+
+version(Android)
+{
+    package enum system_directory = "/system/etc";
+    package enum system_file      = "/system/etc/hosts";
+}
+else version(Posix)
+{
+    package enum system_directory = "/usr/include";
+    package enum system_file      = "/usr/include/assert.h";
 }
 
 
@@ -152,18 +161,49 @@ class FileException : Exception
 
 private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE__, size_t line = __LINE__)
 {
-    if (!condition)
+    if (condition)
+        return condition;
+    version (Windows)
     {
-      version (Windows)
-      {
         throw new FileException(name, .GetLastError(), file, line);
-      }
-      else version (Posix)
-      {
-        throw new FileException(name, .errno, file, line);
-      }
     }
-    return condition;
+    else version (Posix)
+    {
+        throw new FileException(name, .errno, file, line);
+    }
+}
+
+version (Windows)
+@trusted
+private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, string file = __FILE__, size_t line = __LINE__)
+{
+    if (condition)
+        return condition;
+    if (!name)
+    {
+        import core.stdc.wchar_ : wcslen;
+        import std.conv : to;
+
+        auto len = wcslen(namez);
+        name = to!string(namez[0 .. len]);
+    }
+    throw new FileException(name, .GetLastError(), file, line);
+}
+
+version (Posix)
+@trusted
+private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, string file = __FILE__, size_t line = __LINE__)
+{
+    if (condition)
+        return condition;
+    if (!name)
+    {
+        import core.stdc.string : strlen;
+
+        auto len = strlen(namez);
+        name = namez[0 .. len].idup;
+    }
+    throw new FileException(name, .errno, file, line);
 }
 
 /* **********************************
@@ -187,11 +227,25 @@ void main()
 }
 ----
 
+Params:
+    name = string or range of characters representing the file _name
+    upTo = if present, the maximum number of bytes to read
+
 Returns: Untyped array of bytes _read.
 
-Throws: $(D FileException) on error.
+Throws: $(LREF FileException) on error.
  */
-version (Posix) void[] read(in char[] name, size_t upTo = size_t.max) @trusted
+
+void[] read(R)(R name, size_t upTo = size_t.max)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+{
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        return readImpl(name, name.tempCString!FSChar(), upTo);
+    else
+        return readImpl(null, name.tempCString!FSChar(), upTo);
+}
+
+version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @trusted
 {
     import std.algorithm : min;
     import std.array : uninitializedArray;
@@ -205,13 +259,13 @@ version (Posix) void[] read(in char[] name, size_t upTo = size_t.max) @trusted
         maxSlackMemoryAllowed = 1024;
     // }
 
-    immutable fd = core.sys.posix.fcntl.open(name.tempCString,
+    immutable fd = core.sys.posix.fcntl.open(namez,
             core.sys.posix.fcntl.O_RDONLY);
     cenforce(fd != -1, name);
     scope(exit) core.sys.posix.unistd.close(fd);
 
     stat_t statbuf = void;
-    cenforce(fstat(fd, &statbuf) == 0, name);
+    cenforce(fstat(fd, &statbuf) == 0, name, namez);
 
     immutable initialAlloc = to!size_t(statbuf.st_size
         ? min(statbuf.st_size + 1, maxInitialAlloc)
@@ -224,7 +278,7 @@ version (Posix) void[] read(in char[] name, size_t upTo = size_t.max) @trusted
     {
         immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
                 min(result.length, upTo) - size);
-        cenforce(actual != -1, name);
+        cenforce(actual != -1, name, namez);
         if (actual == 0) break;
         size += actual;
         if (size < result.length) continue;
@@ -237,15 +291,16 @@ version (Posix) void[] read(in char[] name, size_t upTo = size_t.max) @trusted
         : result[0 .. size];
 }
 
-version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
+
+version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @safe
 {
     import std.algorithm : min;
     import std.array : uninitializedArray;
-    static trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+    static trustedCreateFileW(const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
     {
-        return CreateFileW(fileName.tempCStringW(), dwDesiredAccess, dwShareMode,
+        return CreateFileW(namez, dwDesiredAccess, dwShareMode,
                            lpSecurityAttributes, dwCreationDisposition,
                            dwFlagsAndAttributes, hTemplateFile);
 
@@ -284,17 +339,17 @@ version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
             FILE_SHARE_READ | FILE_SHARE_WRITE, (SECURITY_ATTRIBUTES*).init,
             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
             HANDLE.init);
-    auto h = trustedCreateFileW(name, defaults);
+    auto h = trustedCreateFileW(namez, defaults);
 
-    cenforce(h != INVALID_HANDLE_VALUE, name);
-    scope(exit) cenforce(trustedCloseHandle(h), name);
+    cenforce(h != INVALID_HANDLE_VALUE, name, namez);
+    scope(exit) cenforce(trustedCloseHandle(h), name, namez);
     ulong fileSize = void;
-    cenforce(trustedGetFileSize(h, fileSize), name);
+    cenforce(trustedGetFileSize(h, fileSize), name, namez);
     size_t size = min(upTo, fileSize);
     auto buf = uninitializedArray!(ubyte[])(size);
     scope(failure) delete buf;
 
-    cenforce(trustedReadFile(h, buf.ptr, size), name);
+    cenforce(trustedReadFile(h, buf.ptr, size), name, namez);
     return buf[0 .. size];
 }
 
@@ -303,7 +358,8 @@ version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
     write(deleteme, "1234");
     scope(exit) { assert(exists(deleteme)); remove(deleteme); }
     assert(read(deleteme, 2) == "12");
-    assert(read(deleteme) == "1234");
+    import std.utf : byChar;
+    assert(read(deleteme.byChar) == "1234");
 }
 
 version (linux) @safe unittest
@@ -330,6 +386,9 @@ width conversion is performed; if the width of the characters in file
 $(D name) is different from the width of elements of $(D S),
 validation will fail.
 
+Params:
+    name = string or range of characters representing the file _name
+
 Returns: Array of characters read.
 
 Throws: $(D FileException) on file error, $(D UTFException) on UTF
@@ -344,7 +403,9 @@ enforce(chomp(readText("deleteme")) == "abc");
 ----
  */
 
-S readText(S = string)(in char[] name) @safe if (isSomeString!S)
+S readText(S = string, R)(R name)
+    if (isSomeString!S &&
+        (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R))
 {
     import std.utf : validate;
     static auto trustedCast(void[] buf) @trusted { return cast(S)buf; }
@@ -363,6 +424,11 @@ S readText(S = string)(in char[] name) @safe if (isSomeString!S)
 
 /*********************************************
 Write $(D buffer) to file $(D name).
+
+Params:
+    name = string or range of characters representing the file _name
+    buffer = data to be written to file
+
 Throws: $(D FileException) on error.
 
 Example:
@@ -377,29 +443,22 @@ void main()
 }
 ----
  */
-void write(in char[] name, const void[] buffer) @trusted
+void write(R)(R name, const void[] buffer)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
 {
-    version(Windows)
-    {
-        alias defaults =
-            TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                HANDLE.init);
-        auto h = CreateFileW(name.tempCStringW(), defaults);
-
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
-        DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
-                && buffer.length == numwritten,
-                name);
-    }
-    else version(Posix)
-        return writeImpl(name, buffer, O_CREAT | O_WRONLY | O_TRUNC);
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        writeImpl(name, name.tempCString!FSChar(), buffer, false);
+    else
+        writeImpl(null, name.tempCString!FSChar(), buffer, false);
 }
 
 /*********************************************
 Appends $(D buffer) to file $(D name).
+
+Params:
+    name = string or range of characters representing the file _name
+    buffer = data to be appended to file
+
 Throws: $(D FileException) on error.
 
 Example:
@@ -416,104 +475,215 @@ void main()
 }
 ----
  */
-void append(in char[] name, in void[] buffer) @trusted
+void append(R)(R name, const void[] buffer)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
 {
-    version(Windows)
-    {
-        alias defaults =
-            TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init);
-
-        auto h = CreateFileW(name.tempCStringW(), defaults);
-
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
-        DWORD numwritten;
-        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
-                && buffer.length == numwritten,
-                name);
-    }
-    else version(Posix)
-        return writeImpl(name, buffer, O_APPEND | O_WRONLY | O_CREAT);
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        writeImpl(name, name.tempCString!FSChar(), buffer, true);
+    else
+        writeImpl(null, name.tempCString!FSChar(), buffer, true);
 }
 
 // Posix implementation helper for write and append
 
-version(Posix) private void writeImpl(in char[] name,
-        in void[] buffer, in uint mode) @trusted
+version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
+        in void[] buffer, bool append) @trusted
 {
-    immutable fd = core.sys.posix.fcntl.open(name.tempCString(),
-            mode, octal!666);
-    cenforce(fd != -1, name);
+    // append or write
+    auto mode = append ? O_CREAT | O_WRONLY | O_APPEND
+                       : O_CREAT | O_WRONLY | O_TRUNC;
+
+    immutable fd = core.sys.posix.fcntl.open(namez, mode, octal!666);
+    cenforce(fd != -1, name, namez);
     {
         scope(failure) core.sys.posix.unistd.close(fd);
         immutable size = buffer.length;
         cenforce(
             core.sys.posix.unistd.write(fd, buffer.ptr, size) == size,
-            name);
+            name, namez);
     }
-    cenforce(core.sys.posix.unistd.close(fd) == 0, name);
+    cenforce(core.sys.posix.unistd.close(fd) == 0, name, namez);
+}
+
+// Windows implementation helper for write and append
+
+version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez,
+        in void[] buffer, bool append) @trusted
+{
+    if (append)
+    {
+        alias defaults =
+            TypeTuple!(GENERIC_WRITE, 0, null, OPEN_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                HANDLE.init);
+
+        auto h = CreateFileW(namez, defaults);
+
+        cenforce(h != INVALID_HANDLE_VALUE, name, namez);
+        scope(exit) cenforce(CloseHandle(h), name, namez);
+        DWORD numwritten;
+        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
+                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
+                && buffer.length == numwritten,
+                name, namez);
+    }
+    else // write
+    {
+        alias defaults =
+            TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                HANDLE.init);
+
+        auto h = CreateFileW(namez, defaults);
+
+        cenforce(h != INVALID_HANDLE_VALUE, name, namez);
+        scope(exit) cenforce(CloseHandle(h), name, namez);
+        DWORD numwritten;
+        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
+                && buffer.length == numwritten,
+                name, namez);
+    }
 }
 
 /***************************************************
  * Rename file $(D from) to $(D to).
  * If the target file exists, it is overwritten.
+ * Params:
+ *    from = string or range of characters representing the existing file name
+ *    to = string or range of characters representing the target file name
  * Throws: $(D FileException) on error.
  */
-void rename(in char[] from, in char[] to) @trusted
+void rename(RF, RT)(RF from, RT to)
+    if ((isInputRange!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF) &&
+        (isInputRange!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT))
+{
+    // Place outside of @trusted block
+    auto fromz = from.tempCString!FSChar();
+    auto toz = to.tempCString!FSChar();
+
+    static if (isNarrowString!RF && is(Unqual!(ElementEncodingType!RF) == char))
+        alias f = from;
+    else
+        enum string f = null;
+
+    static if (isNarrowString!RT && is(Unqual!(ElementEncodingType!RT) == char))
+        alias t = to;
+    else
+        enum string t = null;
+
+    renameImpl(f, t, fromz, toz);
+}
+
+private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz) @trusted
 {
     version(Windows)
     {
-        enforce(MoveFileExW(from.tempCStringW(), to.tempCStringW(), MOVEFILE_REPLACE_EXISTING),
+        auto result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
+        if (!result)
+        {
+            import core.stdc.wchar_ : wcslen;
+            import std.conv : to;
+
+            if (!f)
+                f = to!(typeof(f))(fromz[0 .. wcslen(fromz)]);
+
+            if (!t)
+                t = to!(typeof(t))(toz[0 .. wcslen(toz)]);
+
+            enforce(false,
                 new FileException(
-                    text("Attempting to rename file ", from, " to ",
-                            to)));
+                    text("Attempting to rename file ", f, " to ", t)));
+        }
     }
     else version(Posix)
     {
         import core.stdc.stdio;
 
-        cenforce(core.stdc.stdio.rename(from.tempCString(), to.tempCString()) == 0, to);
+        cenforce(core.stdc.stdio.rename(fromz, toz) == 0, t, toz);
     }
 }
 
 @safe unittest
 {
+    import std.utf : byWchar;
+
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
     write(t1, "1");
     rename(t1, t2);
     assert(readText(t2) == "1");
     write(t1, "2");
-    rename(t1, t2);
+    rename(t1, t2.byWchar);
     assert(readText(t2) == "2");
 }
 
 
 /***************************************************
 Delete file $(D name).
+
+Params:
+    name = string or range of characters representing the file name
+
 Throws: $(D FileException) on error.
  */
-void remove(in char[] name) @trusted
+void remove(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+{
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        removeImpl(name, name.tempCString!FSChar());
+    else
+        removeImpl(null, name.tempCString!FSChar());
+}
+
+private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
 {
     version(Windows)
     {
-        cenforce(DeleteFileW(name.tempCStringW()), name);
+        cenforce(DeleteFileW(namez), name, namez);
     }
     else version(Posix)
     {
         import core.stdc.stdio;
 
-        cenforce(core.stdc.stdio.remove(name.tempCString()) == 0,
+        if (!name)
+        {
+            import core.stdc.string : strlen;
+            auto len = strlen(namez);
+            name = namez[0 .. len];
+        }
+        cenforce(core.stdc.stdio.remove(namez) == 0,
             "Failed to remove file " ~ name);
     }
 }
 
-version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name) @trusted
+version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
-    WIN32_FILE_ATTRIBUTE_DATA fad;
-    enforce(GetFileAttributesExW(name.tempCStringW(), GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad), new FileException(name.idup));
+    auto namez = name.tempCString!FSChar();
+
+    WIN32_FILE_ATTRIBUTE_DATA fad = void;
+
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+    {
+        static void getFA(const(char)[] name, const(FSChar)* namez, out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
+        {
+            enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
+                new FileException(name.idup));
+        }
+        getFA(name, namez, fad);
+    }
+    else
+    {
+        static void getFA(const(FSChar)* namez, out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
+        {
+            import core.stdc.wchar_ : wcslen;
+            import std.conv : to;
+
+            enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
+                new FileException(namez[0 .. wcslen(namez)].to!string));
+        }
+        getFA(namez, fad);
+    }
     return fad;
 }
 
@@ -528,9 +698,13 @@ version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure n
 /***************************************************
 Get size of file $(D name) in bytes.
 
+Params:
+    name = string or range of characters representing the file name
+
 Throws: $(D FileException) on error (e.g., file not found).
  */
-ulong getSize(in char[] name) @safe
+ulong getSize(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -539,16 +713,18 @@ ulong getSize(in char[] name) @safe
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, stat_t* buf) @trusted
+        auto namez = name.tempCString();
+
+        static trustedStat(const(FSChar)* namez, out stat_t buf) @trusted
         {
-            return stat(path.tempCString(), buf);
+            return stat(namez, &buf);
         }
-        static stat_t* ptrOfLocalVariable(return ref stat_t buf) @trusted
-        {
-            return &buf;
-        }
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
         stat_t statbuf = void;
-        cenforce(trustedStat(name, ptrOfLocalVariable(statbuf)) == 0, name);
+        cenforce(trustedStat(namez, statbuf) == 0, names, namez);
         return statbuf.st_size;
     }
 }
@@ -561,7 +737,8 @@ ulong getSize(in char[] name) @safe
     assert(getSize(deleteme) == 1);
     // create a file of size 3
     write(deleteme, "abc");
-    assert(getSize(deleteme) == 3);
+    import std.utf : byChar;
+    assert(getSize(deleteme.byChar) == 3);
 }
 
 
@@ -576,9 +753,10 @@ ulong getSize(in char[] name) @safe
     Throws:
         $(D FileException) on error.
  +/
-void getTimes(in char[] name,
+void getTimes(R)(R name,
               out SysTime accessTime,
-              out SysTime modificationTime) @safe
+              out SysTime modificationTime)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -590,13 +768,19 @@ void getTimes(in char[] name,
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        auto namez = name.tempCString();
+
+        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
-            return stat(path.tempCString(), &buf);
+            return stat(namez, &buf);
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedStat(namez, statbuf) == 0, names, namez);
 
         accessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         modificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
@@ -675,14 +859,17 @@ unittest
     Throws:
         $(D FileException) on error.
  +/
-version(StdDdoc) void getTimesWin(in char[] name,
+version(StdDdoc) void getTimesWin(R)(R name,
                                   out SysTime fileCreationTime,
                                   out SysTime fileAccessTime,
-                                  out SysTime fileModificationTime) @safe;
-else version(Windows) void getTimesWin(in char[] name,
+                                  out SysTime fileModificationTime)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R)) {}
+
+else version(Windows) void getTimesWin(R)(R name,
                                        out SysTime fileCreationTime,
                                        out SysTime fileAccessTime,
-                                       out SysTime fileModificationTime) @safe
+                                       out SysTime fileModificationTime)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     with (getFileAttributesWin(name))
     {
@@ -769,17 +956,19 @@ version(Windows) unittest
     Throws:
         $(D FileException) on error.
  +/
-void setTimes(in char[] name,
+void setTimes(R)(R name,
               SysTime accessTime,
               SysTime modificationTime) @safe
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
-        static auto trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+        auto namez = name.tempCString!FSChar();
+        static auto trustedCreateFileW(const(FSChar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                                        SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                                        DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
         {
-            return CreateFileW(fileName.tempCStringW(), dwDesiredAccess, dwShareMode,
+            return CreateFileW(namez, dwDesiredAccess, dwShareMode,
                                lpSecurityAttributes, dwCreationDisposition,
                                dwFlagsAndAttributes, hTemplateFile);
 
@@ -805,27 +994,36 @@ void setTimes(in char[] name,
                          FILE_ATTRIBUTE_DIRECTORY |
                          FILE_FLAG_BACKUP_SEMANTICS,
                          HANDLE.init);
-        auto h = trustedCreateFileW(name, defaults);
+        auto h = trustedCreateFileW(namez, defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(h != INVALID_HANDLE_VALUE, names, namez);
 
         scope(exit)
-            cenforce(trustedCloseHandle(h), name);
+            cenforce(trustedCloseHandle(h), names, namez);
 
-        cenforce(trustedSetFileTime(h, null, ta, tm), name);
+        cenforce(trustedSetFileTime(h, null, ta, tm), names, namez);
     }
     else version(Posix)
     {
-        static auto trustedUtimes(in char[] path, const ref timeval[2] times) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedUtimes(const(FSChar)* namez, const ref timeval[2] times) @trusted
         {
-            return utimes(path.tempCString(), times);
+            return utimes(namez, times);
         }
         timeval[2] t = void;
 
         t[0] = accessTime.toTimeVal();
         t[1] = modificationTime.toTimeVal();
 
-        cenforce(trustedUtimes(name, t) == 0, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedUtimes(namez, t) == 0, names, namez);
     }
 }
 
@@ -861,7 +1059,8 @@ unittest
     Throws:
         $(D FileException) if the given file does not exist.
 +/
-SysTime timeLastModified(in char[] name) @safe
+SysTime timeLastModified(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -874,13 +1073,18 @@ SysTime timeLastModified(in char[] name) @safe
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
-            return stat(path.tempCString(), &buf);
+            return stat(namez, &buf);
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedStat(namez, statbuf) == 0, names, namez);
 
         return SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -917,11 +1121,12 @@ else
 }
 --------------------
 +/
-SysTime timeLastModified(in char[] name, SysTime returnIfMissing) @safe
+SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
-        if(!exists(name))
+        if (!exists(name))
             return returnIfMissing;
 
         SysTime dummy;
@@ -933,13 +1138,14 @@ SysTime timeLastModified(in char[] name, SysTime returnIfMissing) @safe
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
-            return stat(path.tempCString(), &buf);
+            return stat(namez, &buf);
         }
         stat_t statbuf = void;
 
-        return trustedStat(name, statbuf) != 0 ?
+        return trustedStat(namez, statbuf) != 0 ?
                returnIfMissing :
                SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -965,16 +1171,26 @@ unittest
 }
 
 
-/++
-    Returns whether the given file (or directory) exists.
- +/
-bool exists(in char[] name) @trusted nothrow @nogc
+/**
+ * Determine whether the given file (or directory) exists.
+ * Params:
+ *    name = string or range of characters representing the file name
+ * Returns:
+ *    true if it exists
+ */
+bool exists(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+{
+    return existsImpl(name.tempCString!FSChar());
+}
+
+private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
 {
     version(Windows)
     {
-// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/
-// fileio/base/getfileattributes.asp
-        return GetFileAttributesW(name.tempCStringW()) != 0xFFFFFFFF;
+        // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/
+        // fileio/base/getfileattributes.asp
+        return GetFileAttributesW(namez) != 0xFFFFFFFF;
     }
     else version(Posix)
     {
@@ -999,8 +1215,10 @@ bool exists(in char[] name) @trusted nothrow @nogc
         */
 
         stat_t statbuf = void;
-        return lstat(name.tempCString(), &statbuf) == 0;
+        return lstat(namez, &statbuf) == 0;
     }
+    else
+        static assert(0);
 }
 
 @safe unittest
@@ -1033,29 +1251,40 @@ bool exists(in char[] name) @trusted nothrow @nogc
 
  Throws: $(D FileException) on error.
   +/
-uint getAttributes(in char[] name) @safe
+uint getAttributes(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
-        static auto trustedGetFileAttributesW(in char[] fileName) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedGetFileAttributesW(const(FSChar)* namez) @trusted
         {
-            return GetFileAttributesW(fileName.tempCStringW());
+            return GetFileAttributesW(namez);
         }
-        immutable result = trustedGetFileAttributesW(name);
+        immutable result = trustedGetFileAttributesW(namez);
 
-        cenforce(result != INVALID_FILE_ATTRIBUTES, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(result != INVALID_FILE_ATTRIBUTES, names, namez);
 
         return result;
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
-            return stat(path.tempCString(), &buf);
+            return stat(namez, &buf);
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedStat(namez, statbuf) == 0, names, namez);
 
         return statbuf.st_mode;
     }
@@ -1075,10 +1304,14 @@ uint getAttributes(in char[] name) @safe
     Params:
         name = The file to get the symbolic link attributes of.
 
+    Returns:
+        the attributes
+
     Throws:
         $(D FileException) on error.
  +/
-uint getLinkAttributes(in char[] name) @safe
+uint getLinkAttributes(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -1086,12 +1319,17 @@ uint getLinkAttributes(in char[] name) @safe
     }
     else version(Posix)
     {
-        static auto trustedLstat(in char[] path, ref stat_t buf) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedLstat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
-            return lstat(path.tempCString(), &buf);
+            return lstat(namez, &buf);
         }
         stat_t lstatbuf = void;
-        cenforce(trustedLstat(name, lstatbuf) == 0, name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedLstat(namez, lstatbuf) == 0, names, namez);
         return lstatbuf.st_mode;
     }
 }
@@ -1100,27 +1338,42 @@ uint getLinkAttributes(in char[] name) @safe
 /++
     Set the attributes of the given file.
 
+    Params:
+        name = the file name
+        attributes = the attributes to set the file to
+
     Throws:
         $(D FileException) if the given file does not exist.
  +/
-void setAttributes(in char[] name, uint attributes) @safe
+void setAttributes(R)(R name, uint attributes)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version (Windows)
     {
-        static auto trustedSetFileAttributesW(in char[] fileName, uint dwFileAttributes) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedSetFileAttributesW(const(FSChar)* namez, uint dwFileAttributes) @trusted
         {
-            return SetFileAttributesW(fileName.tempCStringW(), dwFileAttributes);
+            return SetFileAttributesW(namez, dwFileAttributes);
         }
-        cenforce(trustedSetFileAttributesW(name, attributes), name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(trustedSetFileAttributesW(namez, attributes), names, namez);
     }
     else version (Posix)
     {
-        static auto trustedChmod(in char[] path, mode_t mode) @trusted
+        auto namez = name.tempCString!FSChar();
+        static auto trustedChmod(const(FSChar)* namez, mode_t mode) @trusted
         {
-            return chmod(path.tempCString(), mode);
+            return chmod(namez, mode);
         }
         assert(attributes <= mode_t.max);
-        cenforce(!trustedChmod(name, cast(mode_t)attributes), name);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
+        cenforce(!trustedChmod(namez, cast(mode_t)attributes), names, namez);
     }
 }
 
@@ -1131,6 +1384,9 @@ void setAttributes(in char[] name, uint attributes) @safe
     Params:
         name = The path to the file.
 
+    Returns:
+        true if the name specifies a directory
+
     Throws:
         $(D FileException) if the given file does not exist.
 
@@ -1140,7 +1396,8 @@ assert(!"/etc/fonts/fonts.conf".isDir);
 assert("/usr/share/include".isDir);
 --------------------
   +/
-@property bool isDir(in char[] name) @safe
+@property bool isDir(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -1178,6 +1435,9 @@ assert("/usr/share/include".isDir);
 
     Params:
         attributes = The file attributes.
+
+    Returns:
+        true if attibutes specifies a directory
 
 Examples:
 --------------------
@@ -1248,6 +1508,9 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
     Params:
         name = The path to the file.
 
+    Returns:
+        true if name specifies a file
+
     Throws:
         $(D FileException) if the given file does not exist.
 
@@ -1257,7 +1520,8 @@ assert("/etc/fonts/fonts.conf".isFile);
 assert(!"/usr/share/include".isFile);
 --------------------
   +/
-@property bool isFile(in char[] name) @safe
+@property bool isFile(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
         return !name.isDir;
@@ -1302,6 +1566,9 @@ assert(!"/usr/share/include".isFile);
 
     Params:
         attributes = The file attributes.
+
+    Returns:
+        true if the given file attributes are for a file
 
 Examples:
 --------------------
@@ -1363,10 +1630,14 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
     Params:
         name = The path to the file.
 
+    Returns:
+        true if name is a symbolic link
+
     Throws:
         $(D FileException) if the given file does not exist.
   +/
-@property bool isSymlink(in char[] name) @safe
+@property bool isSymlink(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
         return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1457,6 +1728,9 @@ unittest
     Params:
         attributes = The file attributes.
 
+    Returns:
+        true if attributes are for a symbolic link
+
 Examples:
 --------------------
 core.sys.posix.unistd.symlink("/etc/fonts/fonts.conf", "/tmp/alink");
@@ -1478,24 +1752,31 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
  * Change directory to $(D pathname).
  * Throws: $(D FileException) on error.
  */
-void chdir(in char[] pathname) @safe
+void chdir(R)(R pathname)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
+    // Place outside of @trusted block
+    auto pathz = pathname.tempCString!FSChar();
+
     version(Windows)
     {
-        static auto trustedSetCurrentDirectoryW(in char[] path) @trusted
+        static auto trustedChdir(const(FSChar)* pathz) @trusted
         {
-            return SetCurrentDirectoryW(path.tempCStringW());
+            return SetCurrentDirectoryW(pathz);
         }
-        cenforce(trustedSetCurrentDirectoryW(pathname), pathname);
     }
     else version(Posix)
     {
-        static auto trustedChdir(in char[] path) @trusted
+        static auto trustedChdir(const(FSChar)* pathz) @trusted
         {
-            return core.sys.posix.unistd.chdir(path.tempCString());
+            return core.sys.posix.unistd.chdir(pathz) == 0;
         }
-        cenforce(trustedChdir(pathname) == 0, pathname);
     }
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        alias pathStr = pathname;
+    else
+        string pathStr = null;
+    cenforce(trustedChdir(pathz), pathStr, pathz);
 }
 
 /****************************************************
@@ -1504,23 +1785,35 @@ Make directory $(D pathname).
 Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
         if an error occured.
  */
-void mkdir(in char[] pathname) @safe
+void mkdir(R)(R pathname)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
+    // Place outside of @trusted block
+    auto pathz = pathname.tempCString!FSChar();
+
     version(Windows)
     {
-        static auto trustedCreateDirectoryW(in char[] path) @trusted
+        static auto trustedCreateDirectoryW(const(FSChar)* pathz) @trusted
         {
-            return CreateDirectoryW(path.tempCStringW(), null);
+            return CreateDirectoryW(pathz, null);
         }
-        wenforce(trustedCreateDirectoryW(pathname), pathname);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias pathStr = pathname;
+        else
+            string pathStr = null;
+        wenforce(trustedCreateDirectoryW(pathz), pathStr, pathz);
     }
     else version(Posix)
     {
-        static auto trustedMkdir(in char[] path, mode_t mode) @trusted
+        static auto trustedMkdir(const(FSChar)* pathz, mode_t mode) @trusted
         {
-            return core.sys.posix.sys.stat.mkdir(path.tempCString(), mode);
+            return core.sys.posix.sys.stat.mkdir(pathz, mode);
         }
-        cenforce(trustedMkdir(pathname, octal!777) == 0, pathname);
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias pathStr = pathname;
+        else
+            string pathStr = null;
+        cenforce(trustedMkdir(pathz, octal!777) == 0, pathStr, pathz);
     }
 }
 
@@ -1539,7 +1832,7 @@ private bool ensureDirExists(in char[] pathname)
     {
         if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
             return true;
-        cenforce(errno == EEXIST, pathname);
+        cenforce(errno == EEXIST || errno == EISDIR, pathname);
     }
     enforce(pathname.isDir, new FileException(pathname.idup));
     return false;
@@ -1611,20 +1904,36 @@ unittest
 /****************************************************
 Remove directory $(D pathname).
 
+Params:
+    pathname = Range or string specifying the directory name
+
 Throws: $(D FileException) on error.
  */
-void rmdir(in char[] pathname)
+void rmdir(R)(R pathname)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
+    // Place outside of @trusted block
+    auto pathz = pathname.tempCString!FSChar();
+
     version(Windows)
     {
-        cenforce(RemoveDirectoryW(pathname.tempCStringW()),
-                pathname);
+        static auto trustedRmdir(const(FSChar)* pathz) @trusted
+        {
+            return RemoveDirectoryW(pathz);
+        }
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.unistd.rmdir(pathname.tempCString()) == 0,
-                pathname);
+        static auto trustedRmdir(const(FSChar)* pathz) @trusted
+        {
+            return core.sys.posix.unistd.rmdir(pathz) == 0;
+        }
     }
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        alias pathStr = pathname;
+    else
+        string pathStr = null;
+    cenforce(trustedRmdir(pathz), pathStr, pathz);
 }
 
 /++
@@ -2479,34 +2788,67 @@ File attributes are preserved, if $(D preserve) equals $(D PreserveAttributes.ye
 On Windows only $(D PreserveAttributes.yes) (the default on Windows) is supported.
 If the target file exists, it is overwritten.
 
+Params:
+    from = string or range of characters representing the existing file name
+    to = string or range of characters representing the target file name
+
 Throws: $(D FileException) on error.
  */
-void copy(in char[] from, in char[] to, PreserveAttributes preserve = preserveAttributesDefault)
+void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
+    if (isInputRange!RF && isSomeChar!(ElementEncodingType!RF) &&
+        isInputRange!RT && isSomeChar!(ElementEncodingType!RT))
+{
+    // Place outside of @trusted block
+    auto fromz = from.tempCString!FSChar();
+    auto toz = to.tempCString!FSChar();
+
+    static if (isNarrowString!RF && is(Unqual!(ElementEncodingType!RF) == char))
+        alias f = from;
+    else
+        enum string f = null;
+
+    static if (isNarrowString!RT && is(Unqual!(ElementEncodingType!RT) == char))
+        alias t = to;
+    else
+        enum string t = null;
+
+    copyImpl(f, t, fromz, toz, preserve);
+}
+
+private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz,
+        PreserveAttributes preserve) @trusted
 {
     version(Windows)
     {
         assert(preserve == Yes.preserve);
-        immutable result = CopyFileW(from.tempCStringW(), to.tempCStringW(), false);
+        immutable result = CopyFileW(fromz, toz, false);
         if (!result)
-            throw new FileException(to.idup);
+        {
+            import core.stdc.wchar_ : wcslen;
+            import std.conv : to;
+
+            if (!t)
+                t = to!(typeof(t))(toz[0 .. wcslen(toz)]);
+
+            throw new FileException(t);
+        }
     }
     else version(Posix)
     {
         import core.stdc.stdio;
 
-        immutable fd = core.sys.posix.fcntl.open(from.tempCString(), O_RDONLY);
-        cenforce(fd != -1, from);
+        immutable fd = core.sys.posix.fcntl.open(fromz, O_RDONLY);
+        cenforce(fd != -1, f, fromz);
         scope(exit) core.sys.posix.unistd.close(fd);
 
         stat_t statbuf = void;
-        cenforce(fstat(fd, &statbuf) == 0, from);
-        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
+        cenforce(fstat(fd, &statbuf) == 0, f, fromz);
+        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, f, fromz);
 
-        auto tozTmp = to.tempCString();
-        immutable fdw = core.sys.posix.fcntl.open(tozTmp,
+        immutable fdw = core.sys.posix.fcntl.open(toz,
                 O_CREAT | O_WRONLY | O_TRUNC, octal!666);
-        cenforce(fdw != -1, from);
-        scope(failure) core.stdc.stdio.remove(tozTmp);
+        cenforce(fdw != -1, t, toz);
+        scope(failure) core.stdc.stdio.remove(toz);
         {
             scope(failure) core.sys.posix.unistd.close(fdw);
             auto BUFSIZ = 4096u * 16;
@@ -2515,7 +2857,11 @@ void copy(in char[] from, in char[] to, PreserveAttributes preserve = preserveAt
             {
                 BUFSIZ = 4096;
                 buf = core.stdc.stdlib.malloc(BUFSIZ);
-                buf || assert(false, "Out of memory in std.file.copy");
+                if (!buf)
+                {
+                    import core.exception : onOutOfMemoryError;
+                    onOutOfMemoryError();
+                }
             }
             scope(exit) core.stdc.stdlib.free(buf);
 
@@ -2525,21 +2871,21 @@ void copy(in char[] from, in char[] to, PreserveAttributes preserve = preserveAt
                 cenforce(
                     core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
                     && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
-                    from);
+                    f, fromz);
                 assert(size >= toxfer);
                 size -= toxfer;
             }
             if (preserve)
-                cenforce(fchmod(fdw, statbuf.st_mode) == 0, from);
+                cenforce(fchmod(fdw, statbuf.st_mode) == 0, f, fromz);
         }
 
-        cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
+        cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
 
         utimbuf utim = void;
         utim.actime = cast(time_t)statbuf.st_atime;
         utim.modtime = cast(time_t)statbuf.st_mtime;
 
-        cenforce(utime(tozTmp, &utim) != -1, from);
+        cenforce(utime(toz, &utim) != -1, f, fromz);
     }
 }
 
@@ -2553,6 +2899,10 @@ unittest
     write(t1, "2");
     copy(t1, t2);
     assert(readText(t2) == "2");
+
+    import std.utf : byChar;
+    copy(t1.byChar, t2.byChar);
+    assert(readText(t2.byChar) == "2");
 }
 
 version(Posix) unittest //issue 11434
@@ -2728,9 +3078,9 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            string search_pattern = buildPath(directory, "*.*");
+            auto search_pattern = chainPath(directory, "*.*");
             WIN32_FIND_DATAW findinfo;
-            HANDLE h = FindFirstFileW(search_pattern.tempCStringW(), &findinfo);
+            HANDLE h = FindFirstFileW(search_pattern.tempCString!FSChar(), &findinfo);
             cenforce(h != INVALID_HANDLE_VALUE, directory);
             _stack.put(DirHandle(directory, h));
             return toNext(false, &findinfo);
@@ -2837,14 +3187,23 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode mode, bool followSymlink)
+    this(R)(R pathname, SpanMode mode, bool followSymlink)
+        if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
     {
         _mode = mode;
         _followSymlink = followSymlink;
         _stack = appender(cast(DirHandle[])[]);
-        if(_mode == SpanMode.depth)
+        if (_mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
-        if(stepIn(pathname))
+
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias pathnameStr = pathname;
+        else
+        {
+            import std.array;
+            string pathnameStr = pathname.array;
+        }
+        if (stepIn(pathnameStr))
         {
             if(_mode == SpanMode.depth)
                 while(mayStepIn())
@@ -2954,7 +3313,7 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
  writeln(e.name, "\t", e.size);
 }
 // Iterate over all *.d files in current directory and all its subdirectories
-auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
+auto dFiles = dirEntries(".", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
 foreach(d; dFiles)
     writeln(d.name);
 // Hook it up with std.parallelism to compile them all in parallel:
@@ -3091,14 +3450,6 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     return filter!f(DirIterator(path, mode, followSymlink));
 }
 
-// Explicitly undocumented. It will be removed in July 2015.
-deprecated("Please use DirEntry constructor directly instead.")
-DirEntry dirEntry(in char[] name)
-{
-    return DirEntry(name.idup);
-}
-
-
 unittest
 {
     import std.stdio : writefln;
@@ -3185,13 +3536,6 @@ Example:
 // double.
 auto a = slurp!(int, double)("filename", "%s, %s");
 ----
-
-Bugs:
-$(D slurp) expects file names to be encoded in $(B CP_ACP) on $(I Windows)
-instead of UTF-8 (as it internally uses $(XREF stdio, File),
-see $(BUGZILLA 7648)) thus must not be used in $(I Windows)
-or cross-platform applications other than with an immediate ASCII string as
-a file name to prevent accidental changes to result in incorrect behavior.
  */
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)

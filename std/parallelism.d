@@ -75,7 +75,6 @@ License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
 module std.parallelism;
 
 import core.atomic;
-import core.cpuid;
 import core.exception;
 import core.memory;
 import core.sync.condition;
@@ -103,35 +102,10 @@ else version(FreeBSD)
 version(Windows)
 {
     // BUGS:  Only works on Windows 2000 and above.
-
-    import core.sys.windows.windows;
-
-    struct SYSTEM_INFO
-    {
-        union
-        {
-            DWORD  dwOemId;
-            struct
-            {
-                WORD wProcessorArchitecture;
-                WORD wReserved;
-            }
-        }
-        DWORD     dwPageSize;
-        LPVOID    lpMinimumApplicationAddress;
-        LPVOID    lpMaximumApplicationAddress;
-        LPVOID    dwActiveProcessorMask;
-        DWORD     dwNumberOfProcessors;
-        DWORD     dwProcessorType;
-        DWORD     dwAllocationGranularity;
-        WORD      wProcessorLevel;
-        WORD      wProcessorRevision;
-    }
-
-    private extern(Windows) void GetSystemInfo(void*);
-
     shared static this()
     {
+        import core.sys.windows.windows;
+
         SYSTEM_INFO si;
         GetSystemInfo(&si);
         totalCPUs = max(1, cast(uint) si.dwNumberOfProcessors);
@@ -184,6 +158,23 @@ else
 {
     static assert(0, "Don't know how to get N CPUs on this OS.");
 }
+
+immutable size_t cacheLineSize;
+shared static this()
+{
+    import core.cpuid : datacache;
+    size_t lineSize = 0;
+    foreach (cachelevel; datacache)
+    {
+        if (cachelevel.lineSize > lineSize && cachelevel.lineSize < uint.max)
+        {
+            lineSize = cachelevel.lineSize;
+        }
+    }
+
+    cacheLineSize = lineSize;
+}
+
 
 /* Atomics code.  These forward to core.atomic, but are written like this
    for two reasons:
@@ -1563,13 +1554,15 @@ public:
         Eager parallel map.  The eagerness of this function means it has less
         overhead than the lazily evaluated $(D TaskPool.map) and should be
         preferred where the memory requirements of eagerness are acceptable.
-        $(D functions) are the functions to be evaluated, passed as template alias
-        parameters in a style similar to $(XREF algorithm, map).  The first
-        argument must be a random access range. For performance reasons, amap
-        will assume the range elements have not yet been initialized. Elements will
-        be overwritten without calling a destructor nor doing an assignment. As such,
-        the range must not contain meaningful data: either un-initialized objects, or
-        objects in their $(D .init) state.
+        $(D functions) are the functions to be evaluated, passed as template
+        alias parameters in a style similar to
+        $(XREF_PACK algorithm,iteration,map).
+        The first argument must be a random access range. For performance
+        reasons, amap will assume the range elements have not yet been
+        initialized. Elements will be overwritten without calling a destructor
+        nor doing an assignment. As such, the range must not contain meaningful
+        data: either un-initialized objects, or objects in their $(D .init)
+        state.
 
         ---
         auto numbers = iota(100_000_000.0);
@@ -2345,15 +2338,16 @@ public:
     template reduce(functions...)
     {
         /**
-        Parallel reduce on a random access range.  Except as otherwise noted, usage
-        is similar to $(XREF algorithm, _reduce).  This function works by splitting
-        the range to be reduced into work units, which are slices to be reduced in
-        parallel.  Once the results from all work units are computed, a final serial
-        reduction is performed on these results to compute the final answer.
-        Therefore, care must be taken to choose the seed value appropriately.
+        Parallel reduce on a random access range.  Except as otherwise noted,
+        usage is similar to $(XREF_PACK algorithm,iteration,_reduce).  This
+        function works by splitting the range to be reduced into work units,
+        which are slices to be reduced in parallel.  Once the results from all
+        work units are computed, a final serial reduction is performed on these
+        results to compute the final answer. Therefore, care must be taken to
+        choose the seed value appropriately.
 
-        Because the reduction is being performed in parallel,
-        $(D functions) must be associative.  For notational simplicity, let # be an
+        Because the reduction is being performed in parallel, $(D functions)
+        must be associative.  For notational simplicity, let # be an
         infix operator representing $(D functions).  Then, (a # b) # c must equal
         a # (b # c).  Floating point addition is not associative
         even though addition in exact arithmetic is.  Summing floating
@@ -2361,20 +2355,21 @@ public:
         serially.  However, for many practical purposes floating point addition
         can be treated as associative.
 
-        Note that, since $(D functions) are assumed to be associative, additional
-        optimizations are made to the serial portion of the reduction algorithm.
-        These take advantage of the instruction level parallelism of modern CPUs,
-        in addition to the thread-level parallelism that the rest of this
-        module exploits.  This can lead to better than linear speedups relative
-        to $(XREF algorithm, _reduce), especially for fine-grained benchmarks
-        like dot products.
+        Note that, since $(D functions) are assumed to be associative,
+        additional optimizations are made to the serial portion of the reduction
+        algorithm. These take advantage of the instruction level parallelism of
+        modern CPUs, in addition to the thread-level parallelism that the rest
+        of this module exploits.  This can lead to better than linear speedups
+        relative to $(XREF_PACK algorithm,iteration,_reduce), especially for
+        fine-grained benchmarks like dot products.
 
         An explicit seed may be provided as the first argument.  If
         provided, it is used as the seed for all work units and for the final
         reduction of results from all work units.  Therefore, if it is not the
-        identity value for the operation being performed, results may differ from
-        those generated by $(XREF algorithm, _reduce) or depending on how many work
-        units are used.  The next argument must be the range to be reduced.
+        identity value for the operation being performed, results may differ
+        from those generated by $(XREF_PACK algorithm,iteration,_reduce) or
+        depending on how many work units are used.  The next argument must be
+        the range to be reduced.
         ---
         // Find the sum of squares of a range in parallel, using
         // an explicit seed.
@@ -2629,7 +2624,8 @@ public:
                 }
             }
 
-            tasks[] = RTask.init;
+            foreach (ref t; tasks[])
+                emplaceRef(t, RTask());
 
             // Hack to take the address of a nested function w/o
             // making a closure.
@@ -2815,23 +2811,8 @@ public:
         TaskPool pool;
         size_t size;
 
-        static immutable size_t cacheLineSize;
         size_t elemSize;
         bool* stillThreadLocal;
-
-        shared static this()
-        {
-            size_t lineSize = 0;
-            foreach(cachelevel; datacache)
-            {
-                if(cachelevel.lineSize > lineSize && cachelevel.lineSize < uint.max)
-                {
-                    lineSize = cachelevel.lineSize;
-                }
-            }
-
-            cacheLineSize = lineSize;
-        }
 
         static size_t roundToLine(size_t num) pure nothrow
         {
@@ -3269,24 +3250,13 @@ terminating the main thread.
 */
 @property TaskPool taskPool() @trusted
 {
-    static bool initialized;
-    __gshared static TaskPool pool;
-
-    if(!initialized)
-    {
-        synchronized(typeid(TaskPool))
-        {
-            if(!pool)
-            {
-                pool = new TaskPool(defaultPoolThreads);
-                pool.isDaemon = true;
-            }
-        }
-
-        initialized = true;
-    }
-
-    return pool;
+    import std.concurrency : initOnce;
+    __gshared TaskPool pool;
+    return initOnce!pool({
+        auto p = new TaskPool(defaultPoolThreads);
+        p.isDaemon = true;
+        return p;
+    }());
 }
 
 private shared uint _defaultPoolThreads;

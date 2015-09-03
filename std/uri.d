@@ -63,29 +63,23 @@ private enum
 
 immutable char[16] hex2ascii = "0123456789ABCDEF";
 
-__gshared ubyte[128] uri_flags;       // indexed by character
+immutable ubyte[128] uri_flags =      // indexed by character
+    ({
+        ubyte[128] uflags;
 
-shared static this()
-{
-    // Initialize uri_flags[]
-    static void helper(immutable char[] p, uint flags)
-    {
-        for (int i = 0; i < p.length; i++)
-            uri_flags[p[i]] |= flags;
-    }
+        // Compile time initialize
+        uflags['#'] |= URI_Hash;
 
-    uri_flags['#'] |= URI_Hash;
-
-    for (int i = 'A'; i <= 'Z'; i++)
-    {
-        uri_flags[i] |= URI_Alpha;
-        uri_flags[i + 0x20] |= URI_Alpha;   // lowercase letters
-    }
-    helper("0123456789", URI_Digit);
-    helper(";/?:@&=+$,", URI_Reserved);
-    helper("-_.!~*'()",  URI_Mark);
-}
-
+        foreach (c; 'A' .. 'Z' + 1)
+        {
+            uflags[c] |= URI_Alpha;
+            uflags[c + 0x20] |= URI_Alpha;   // lowercase letters
+        }
+        foreach (c; '0' .. '9' + 1) uflags[c] |= URI_Digit;
+        foreach (c; ";/?:@&=+$,")   uflags[c] |= URI_Reserved;
+        foreach (c; "-_.!~*'()")    uflags[c] |= URI_Mark;
+        return uflags;
+    })();
 
 private string URI_Encode(dstring string, uint unescapedSet)
 {
@@ -391,7 +385,7 @@ string encodeComponent(Char)(in Char[] uriComponent) if (isSomeChar!Char)
  *  len  it does, and s[0..len] is the slice of s[] that is that URL
  */
 
-size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
+ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
 {
     /* Must start with one of:
      *  http://
@@ -400,7 +394,7 @@ size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
      */
     import std.uni : icmp;
 
-    size_t i;
+    ptrdiff_t i;
 
     if (s.length <= 4)
         return -1;
@@ -418,7 +412,7 @@ size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
     //    if (icmp(s[0 .. 4], "www.") == 0)
     //  i = 4;
 
-    size_t lastdot;
+    ptrdiff_t lastdot;
     for (; i < s.length; i++)
     {
         auto c = s[i];
@@ -450,6 +444,7 @@ unittest
     assert (uriLength(s1) == 49);
     string s2 = "no uri here";
     assert (uriLength(s2) == -1);
+    assert (uriLength("issue 14924") < 0);
 }
 
 
@@ -461,9 +456,9 @@ unittest
  * References:
  *  RFC2822
  */
-size_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
+ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
 {
-    size_t i;
+    ptrdiff_t i;
 
     if (!isAlpha(s[0]))
         return -1;
@@ -485,7 +480,7 @@ size_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
 
     /* Now do the part past the '@'
      */
-    size_t lastdot;
+    ptrdiff_t lastdot;
     for (; i < s.length; i++)
     {
         auto c = s[i];
@@ -513,6 +508,7 @@ unittest
     assert (emailLength(s1) == 32);
     string s2 = "no email address here";
     assert (emailLength(s2) == -1);
+    assert (emailLength("issue 14924") < 0);
 }
 
 

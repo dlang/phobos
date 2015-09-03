@@ -11,8 +11,8 @@ $(T2 cache,
         Eagerly evaluates and caches another range's $(D front).)
 $(T2 cacheBidirectional,
         As above, but also provides $(D back) and $(D popBack).)
-$(T2 chunkyBy,
-        $(D chunkyBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
+$(T2 chunkBy,
+        $(D chunkBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
         returns a range containing 3 subranges: the first with just
         $(D [1, 1]); the second with the elements $(D [1, 2]) and $(D [2, 2]);
         and the third with just $(D [2, 1]).)
@@ -35,6 +35,8 @@ $(T2 joiner,
 $(T2 map,
         $(D map!"2 * a"([1, 2, 3])) lazily returns a range with the numbers
         $(D 2), $(D 4), $(D 6).)
+$(T2 permutations,
+        Lazily computes all permutations using Heap's algorithm.)
 $(T2 reduce,
         $(D reduce!"a + b"([1, 2, 3, 4])) returns $(D 10).)
 $(T2 splitter,
@@ -129,7 +131,7 @@ $(D cache) does not provide random access primitives,
 as $(D cache) would be unable to cache the random accesses.
 If $(D Range) provides slicing primitives,
 then $(D cache) will provide the same slicing primitives,
-but $(D hasSlicing!Cache) will not yield true (as the $(XREF range,hasSlicing)
+but $(D hasSlicing!Cache) will not yield true (as the $(XREF_PACK _range,primitives,hasSlicing)
 trait also checks for random access).
 +/
 auto cache(Range)(Range range)
@@ -1295,7 +1297,8 @@ defaults to $(D "a == b").
 
 Params:
     pred = Binary predicate for determining equivalence of two elements.
-    r = The $(XREF2 range, isInputRange, input range) to iterate over.
+    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to
+        iterate over.
 
 Returns: A range of elements of type $(D Tuple!(ElementType!R, uint)),
 representing each consecutively unique element and its respective number of
@@ -1680,8 +1683,8 @@ unittest
  * they appear in the original range.
  *
  * See_also:
- * $(XREF algorithm,group), which collapses adjacent equivalent elements into a
- * single element.
+ * $(LREF group), which collapses adjacent equivalent elements into a single
+ * element.
  */
 auto chunkBy(alias pred, Range)(Range r)
     if (isInputRange!Range)
@@ -1891,10 +1894,10 @@ is a range. If you do not provide a separator, then the ranges are
 joined directly without anything in between them.
 
 Params:
-    r = An $(XREF2 range, isInputRange, input range) of input ranges to be
-        joined.
-    sep = A $(XREF2 range, isForwardRange, forward range) of element(s) to
-        serve as separators in the joined range.
+    r = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of input
+        ranges to be joined.
+    sep = A $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) of
+        element(s) to serve as separators in the joined range.
 
 Returns:
 An input range of elements in the joined range. This will be a forward range if
@@ -2406,8 +2409,10 @@ unittest
         result ~= c;
     }
 
+    import std.conv : to;
     assert(equal(result, "abc12def34"d),
-        "Unexpected result: '%s'"d.algoFormat(result));
+        //Convert to string for assert's message
+        to!string("Unexpected result: '%s'"d.algoFormat(result)));
 }
 
 // Issue 8061
@@ -2853,8 +2858,8 @@ below).
 Params:
     pred = The predicate for comparing each element with the separator,
         defaulting to $(D "a == b").
-    r = The $(XREF2 range, isInputRange, input range) to be split. Must support
-        slicing and $(D .length).
+    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to be
+        split. Must support slicing and $(D .length).
     s = The element to be treated as the separator between range segments to be
         split.
 
@@ -3134,9 +3139,10 @@ empty elements.
 Params:
     pred = The predicate for comparing each element with the separator,
         defaulting to $(D "a == b").
-    r = The $(XREF2 range, isInputRange, input range) to be split.
-    s = The $(XREF2 range, isForwardRange, forward range) to be treated as the
-        separator between segments of $(D r) to be split.
+    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to be
+        split.
+    s = The $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to
+        be treated as the separator between segments of $(D r) to be split.
 
 Constraints:
     The predicate $(D pred) needs to accept an element of $(D r) and an
@@ -3442,7 +3448,8 @@ empty elements.
 
 Params:
     isTerminator = The predicate for deciding where to split the range.
-    input = The $(XREF2 range, isInputRange, input range) to be split.
+    input = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to
+        be split.
 
 Constraints:
     The predicate $(D isTerminator) needs to accept an element of $(D input).
@@ -3688,8 +3695,8 @@ Params:
     s = The string to be split.
 
 Returns:
-    An $(XREF2 range, isInputRange, input range) of slices of the original
-    string split by whitespace.
+    An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of slices of
+    the original string split by whitespace.
  +/
 auto splitter(C)(C[] s)
 if (isSomeChar!C)
@@ -3870,14 +3877,17 @@ if (isSomeChar!C)
 
 // sum
 /**
-Sums elements of $(D r), which must be a finite $(XREF2 range, isInputRange, input range). Although
+Sums elements of $(D r), which must be a finite
+$(XREF_PACK_NAMED range,primitives,isInputRange,input range). Although
 conceptually $(D sum(r)) is equivalent to $(LREF reduce)!((a, b) => a +
 b)(0, r), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
-$(LI If $(D $(XREF range, ElementType)!R) is a floating-point type and $(D R) is a
-$(XREF2 range, isRandomAccessRange, random-access range) with length and slicing, then $(D sum) uses the
+$(LI If $(D $(XREF_PACK range,primitives,ElementType)!R) is a floating-point
+type and $(D R) is a
+$(XREF_PACK_NAMED range,primitives,isRandomAccessRange,random-access range) with
+length and slicing, then $(D sum) uses the
 $(WEB en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
 algorithm.)
 $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
@@ -4070,12 +4080,13 @@ bidirectional, $(D uniq) also yields a bidirectional range.
 
 Params:
     pred = Predicate for determining equivalence between range elements.
-    r = An $(XREF2 range, isInputRange, input range) of elements to filter.
+    r = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of
+        elements to filter.
 
 Returns:
-    An $(XREF2 range, isInputRange, input range) of consecutively unique
-    elements in the original range. If $(D r) is also a forward range or
-    bidirectional range, the returned range will be likewise.
+    An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of
+    consecutively unique elements in the original range. If $(D r) is also a
+    forward range or bidirectional range, the returned range will be likewise.
 */
 auto uniq(alias pred = "a == b", Range)(Range r)
 if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
@@ -4185,4 +4196,89 @@ private struct UniqResult(alias pred, Range)
             assert(equal(retro(u), [10,9,8,7,6,5,4,3,2,1]));
         }
     }
+}
+
+// permutations
+struct Permutations(Range)
+    if (isRandomAccessRange!Range && hasLength!Range)
+{
+    size_t[] indices, state;
+    Range r;
+
+    this(Range r)
+    {
+        import std.range : iota;
+        import std.array : array;
+
+        this.r = r;
+        state = r.length ? new size_t[r.length-1] : null;
+        indices = iota(size_t(r.length)).array;
+        empty = r.length == 0;
+    }
+
+    bool empty;
+
+    @property auto front()
+    {
+        import std.range : indexed;
+        return r.indexed(indices);
+    }
+
+    void popFront()
+    {
+        void next(int n)
+        {
+            import std.algorithm.mutation : swap;
+
+            if (n > indices.length)
+            {
+                empty = true;
+                return;
+            }
+
+            if (n % 2 == 1)
+                swap(indices[0], indices[n-1]);
+            else
+                swap(indices[state[n-2]], indices[n-1]);
+
+            if (++state[n-2] == n)
+            {
+                state[n-2] = 0;
+                next(n+1);
+            }
+        }
+
+        next(2);
+    }
+}
+
+/**
+Lazily computes all _permutations of $(D r) using $(WEB
+en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
+
+Returns:
+A forward range the elements of which are an $(XREF range,
+indexed) view into $(D r).
+
+See_Also:
+$(XREF_PACK algorithm,sorting,nextPermutation).
+*/
+Permutations!Range permutations(Range)(Range r)
+    if (isRandomAccessRange!Range && hasLength!Range)
+{
+    return typeof(return)(r);
+}
+
+///
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
+    assert(equal!equal(iota(3).permutations,
+        [[0, 1, 2],
+         [1, 0, 2],
+         [2, 0, 1],
+         [0, 2, 1],
+         [1, 2, 0],
+         [2, 1, 0]]));
 }

@@ -369,9 +369,8 @@ class MmFile
         }
         else version (Posix)
         {
-            errnoEnforce(fd == -1 || fd <= 2
-                    || .close(fd) != -1,
-                    "Could not close handle");
+            // enforce shouldn't be here and close() is safe anyway
+            .close(fd);
             fd = -1;
         }
         else

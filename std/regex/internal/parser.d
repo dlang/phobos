@@ -921,9 +921,10 @@ struct Parser(R)
                     op = Operator.Union;
                     goto case;
                 case ']':
-                    set |= last;
+                    addWithFlags(set, last, re_flags);
                     break L_CharTermLoop;
                 default:
+                    state = State.Char;
                     addWithFlags(set, last, re_flags);
                     last = current;
                 }
@@ -937,39 +938,7 @@ struct Parser(R)
                     next();//skip second twin char
                     break L_CharTermLoop;
                 }
-                //~~~WORKAROUND~~~
-                //It's a copy of State.Char, should be goto case but see @@@BUG12603
-                switch(current)
-                {
-                case '|':
-                case '~':
-                case '&':
-                    // then last is treated as normal char and added as implicit union
-                    state = State.PotentialTwinSymbolOperator;
-                    addWithFlags(set, last, re_flags);
-                    last = current;
-                    break;
-                case '-': // still need more info
-                    state = State.CharDash;
-                    break;
-                case '\\':
-                    set |= last;
-                    state = State.Escape;
-                    break;
-                case '[':
-                    op = Operator.Union;
-                    goto case;
-                case ']':
-                    set |= last;
-                    break L_CharTermLoop;
-                default:
-                    addWithFlags(set, last, re_flags);
-                    state = State.Char;
-                    last = current;
-                }
-                break;
-                //~~~END OF WORKAROUND~~~
-                //goto case State.Char;// it's not a twin lets re-run normal logic
+                goto case State.Char;
             case State.Escape:
                 // xxx \ current xxx
                 switch(current)

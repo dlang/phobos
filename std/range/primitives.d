@@ -759,7 +759,8 @@ The following code should compile for any forward range.
 ----
 static assert(isInputRange!R);
 R r1;
-static assert (is(typeof(r1.save) == R));
+auto s1 = r1.save;
+static assert (is(typeof(s1) == R));
 ----
 
 Saving a range is not duplicating it; in the example above, $(D r1)
@@ -777,7 +778,11 @@ template isForwardRange(R)
     (inout int = 0)
     {
         R r1 = R.init;
-        static assert (is(typeof(r1.save) == R));
+        // NOTE: we cannot check typeof(r1.save) directly
+        // because typeof may not check the right type there, and
+        // because we want to ensure the range can be copied.
+        auto s1 = r1.save;
+        static assert (is(typeof(s1) == R));
     }));
 }
 
@@ -787,6 +792,17 @@ template isForwardRange(R)
     static assert(!isForwardRange!(int));
     static assert( isForwardRange!(int[]));
     static assert( isForwardRange!(inout(int)[]));
+
+    // BUG 14544
+    struct R14544
+    {
+        int front() { return 0;}
+        void popFront() {}
+        bool empty() { return false; }
+        R14544 save() {return this;}
+    }
+
+    static assert( isForwardRange!R14544 );
 }
 
 /**
@@ -882,16 +898,17 @@ template isRandomAccessRange(R)
                       isForwardRange!R && isInfinite!R);
         R r = R.init;
         auto e = r[1];
-        static assert(is(typeof(e) == typeof(r.front)));
+        auto f = r.front;
+        static assert(is(typeof(e) == typeof(f)));
         static assert(!isNarrowString!R);
         static assert(hasLength!R || isInfinite!R);
 
         static if(is(typeof(r[$])))
         {
-            static assert(is(typeof(r.front) == typeof(r[$])));
+            static assert(is(typeof(f) == typeof(r[$])));
 
             static if(!isInfinite!R)
-                static assert(is(typeof(r.front) == typeof(r[$ - 1])));
+                static assert(is(typeof(f) == typeof(r[$ - 1])));
         }
     }));
 }
@@ -907,19 +924,20 @@ unittest
 
     R r = [0,1];
     auto e = r[1]; // can index
-    static assert(is(typeof(e) == typeof(r.front))); // same type for indexed and front
+    auto f = r.front;
+    static assert(is(typeof(e) == typeof(f))); // same type for indexed and front
     static assert(!isNarrowString!R); // narrow strings cannot be indexed as ranges
     static assert(hasLength!R || isInfinite!R); // must have length or be infinite
 
     // $ must work as it does with arrays if opIndex works with $
     static if(is(typeof(r[$])))
     {
-        static assert(is(typeof(r.front) == typeof(r[$])));
+        static assert(is(typeof(f) == typeof(r[$])));
 
         // $ - 1 doesn't make sense with infinite ranges but needs to work
         // with finite ones.
         static if(!isInfinite!R)
-            static assert(is(typeof(r.front) == typeof(r[$ - 1])));
+            static assert(is(typeof(f) == typeof(r[$ - 1])));
     }
 }
 
@@ -953,10 +971,24 @@ unittest
         alias opDollar = length;
         //int opSlice(uint, uint);
     }
+    struct E
+    {
+        bool empty();
+        E save();
+        int front();
+        void popFront();
+        int back();
+        void popBack();
+        ref int opIndex(uint);
+        size_t length();
+        alias opDollar = length;
+        //int opSlice(uint, uint);
+    }
     static assert(!isRandomAccessRange!(A));
     static assert(!isRandomAccessRange!(B));
     static assert(!isRandomAccessRange!(C));
     static assert( isRandomAccessRange!(D));
+    static assert( isRandomAccessRange!(E));
     static assert( isRandomAccessRange!(int[]));
     static assert( isRandomAccessRange!(inout(int)[]));
 }
@@ -1354,7 +1386,7 @@ template hasLength(R)
     (inout int = 0)
     {
         R r = R.init;
-        static assert(is(typeof(r.length) : ulong));
+        ulong l = r.length;
     }));
 }
 
@@ -1369,7 +1401,7 @@ template hasLength(R)
     struct B { size_t length() { return 0; } }
     struct C { @property size_t length() { return 0; } }
     static assert( hasLength!(A));
-    static assert(!hasLength!(B));
+    static assert( hasLength!(B));
     static assert( hasLength!(C));
 }
 

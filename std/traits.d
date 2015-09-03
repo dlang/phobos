@@ -54,6 +54,8 @@
  * $(TR $(TD Type Conversion) $(TD
  *           $(LREF CommonType)
  *           $(LREF ImplicitConversionTargets)
+ *           $(LREF CopyTypeQualifiers)
+ *           $(LREF CopyConstness)
  *           $(LREF isAssignable)
  *           $(LREF isCovariantWith)
  *           $(LREF isImplicitlyConvertible)
@@ -84,6 +86,7 @@
  *           $(LREF isFloatingPoint)
  *           $(LREF isIntegral)
  *           $(LREF isNarrowString)
+ *           $(LREF isAutodecodableString)
  *           $(LREF isNumeric)
  *           $(LREF isPointer)
  *           $(LREF isScalarType)
@@ -124,7 +127,11 @@
  *           $(LREF mangledName)
  *           $(LREF Select)
  *           $(LREF select)
+ * ))
+ * $(TR $(TD User-Defined Attributes) $(TD
  *           $(LREF hasUDA)
+ *           $(LREF getUDAs)
+ *           $(LREF getSymbolsByUDA)
  * ))
  * )
  * )
@@ -257,50 +264,58 @@ private
     alias NumericTypeList       = TypeTuple!(IntegralTypeList, FloatingPointTypeList);
     alias CharTypeList          = TypeTuple!(char, wchar, dchar);
 }
+
 package
 {
-    // Add specific qualifier to the given type T
+    /// Add specific qualifier to the given type T.
     template MutableOf(T)     { alias MutableOf     =              T  ; }
-    template InoutOf(T)       { alias InoutOf       =        inout(T) ; }
-    template ConstOf(T)       { alias ConstOf       =        const(T) ; }
-    template SharedOf(T)      { alias SharedOf      =       shared(T) ; }
-    template SharedInoutOf(T) { alias SharedInoutOf = shared(inout(T)); }
-    template SharedConstOf(T) { alias SharedConstOf = shared(const(T)); }
-    template ImmutableOf(T)   { alias ImmutableOf   =    immutable(T) ; }
+}
 
-    unittest
-    {
-        static assert(is(    MutableOf!int ==              int));
-        static assert(is(      InoutOf!int ==        inout int));
-        static assert(is(      ConstOf!int ==        const int));
-        static assert(is(     SharedOf!int == shared       int));
-        static assert(is(SharedInoutOf!int == shared inout int));
-        static assert(is(SharedConstOf!int == shared const int));
-        static assert(is(  ImmutableOf!int ==    immutable int));
-    }
+/// Add specific qualifier to the given type T.
+template InoutOf(T)       { alias InoutOf       =        inout(T) ; }
+/// ditto.
+template ConstOf(T)       { alias ConstOf       =        const(T) ; }
+/// ditto.
+template SharedOf(T)      { alias SharedOf      =       shared(T) ; }
+/// ditto.
+template SharedInoutOf(T) { alias SharedInoutOf = shared(inout(T)); }
+/// ditto.
+template SharedConstOf(T) { alias SharedConstOf = shared(const(T)); }
+/// ditto.
+template ImmutableOf(T)   { alias ImmutableOf   =    immutable(T) ; }
 
-    // Get qualifier template from the given type T
-    template QualifierOf(T)
-    {
-             static if (is(T == shared(const U), U)) alias QualifierOf = SharedConstOf;
-        else static if (is(T ==        const U , U)) alias QualifierOf = ConstOf;
-        else static if (is(T == shared(inout U), U)) alias QualifierOf = SharedInoutOf;
-        else static if (is(T ==        inout U , U)) alias QualifierOf = InoutOf;
-        else static if (is(T ==    immutable U , U)) alias QualifierOf = ImmutableOf;
-        else static if (is(T ==       shared U , U)) alias QualifierOf = SharedOf;
-        else                                         alias QualifierOf = MutableOf;
-    }
+unittest
+{
+    static assert(is(    MutableOf!int ==              int));
+    static assert(is(      InoutOf!int ==        inout int));
+    static assert(is(      ConstOf!int ==        const int));
+    static assert(is(     SharedOf!int == shared       int));
+    static assert(is(SharedInoutOf!int == shared inout int));
+    static assert(is(SharedConstOf!int == shared const int));
+    static assert(is(  ImmutableOf!int ==    immutable int));
+}
 
-    unittest
-    {
-        alias Qual1 = QualifierOf!(             int);   static assert(is(Qual1!long ==              long));
-        alias Qual2 = QualifierOf!(       inout int);   static assert(is(Qual2!long ==        inout long));
-        alias Qual3 = QualifierOf!(       const int);   static assert(is(Qual3!long ==        const long));
-        alias Qual4 = QualifierOf!(shared       int);   static assert(is(Qual4!long == shared       long));
-        alias Qual5 = QualifierOf!(shared inout int);   static assert(is(Qual5!long == shared inout long));
-        alias Qual6 = QualifierOf!(shared const int);   static assert(is(Qual6!long == shared const long));
-        alias Qual7 = QualifierOf!(   immutable int);   static assert(is(Qual7!long ==    immutable long));
-    }
+// Get qualifier template from the given type T
+template QualifierOf(T)
+{
+         static if (is(T == shared(const U), U)) alias QualifierOf = SharedConstOf;
+    else static if (is(T ==        const U , U)) alias QualifierOf = ConstOf;
+    else static if (is(T == shared(inout U), U)) alias QualifierOf = SharedInoutOf;
+    else static if (is(T ==        inout U , U)) alias QualifierOf = InoutOf;
+    else static if (is(T ==    immutable U , U)) alias QualifierOf = ImmutableOf;
+    else static if (is(T ==       shared U , U)) alias QualifierOf = SharedOf;
+    else                                         alias QualifierOf = MutableOf;
+}
+
+unittest
+{
+    alias Qual1 = QualifierOf!(             int);   static assert(is(Qual1!long ==              long));
+    alias Qual2 = QualifierOf!(       inout int);   static assert(is(Qual2!long ==        inout long));
+    alias Qual3 = QualifierOf!(       const int);   static assert(is(Qual3!long ==        const long));
+    alias Qual4 = QualifierOf!(shared       int);   static assert(is(Qual4!long == shared       long));
+    alias Qual5 = QualifierOf!(shared inout int);   static assert(is(Qual5!long == shared inout long));
+    alias Qual6 = QualifierOf!(shared const int);   static assert(is(Qual6!long == shared const long));
+    alias Qual7 = QualifierOf!(   immutable int);   static assert(is(Qual7!long ==    immutable long));
 }
 
 version(unittest)
@@ -1368,8 +1383,8 @@ unittest
     static assert(functionAttributes!(S.sharedF) == (FA.shared_ | FA.system));
     static assert(functionAttributes!(typeof(S.sharedF)) == (FA.shared_ | FA.system));
 
-    static assert(functionAttributes!(S.refF) == (FA.ref_ | FA.system));
-    static assert(functionAttributes!(typeof(S.refF)) == (FA.ref_ | FA.system));
+    static assert(functionAttributes!(S.refF) == (FA.ref_ | FA.system | FA.return_));
+    static assert(functionAttributes!(typeof(S.refF)) == (FA.ref_ | FA.system | FA.return_));
 
     static assert(functionAttributes!(S.propertyF) == (FA.property | FA.system));
     static assert(functionAttributes!(typeof(&S.propertyF)) == (FA.property | FA.system));
@@ -3266,19 +3281,7 @@ alias Identity(alias A) = A;
    Yields $(D true) if and only if $(D T) is an aggregate that defines
    a symbol called $(D name).
  */
-template hasMember(T, string name)
-{
-    static if (is(T == struct) || is(T == class) || is(T == union) || is(T == interface))
-    {
-        enum bool hasMember =
-            staticIndexOf!(name, __traits(allMembers, T)) != -1 ||
-            __traits(compiles, { mixin("alias Sym = Identity!(T."~name~");"); });
-    }
-    else
-    {
-        enum bool hasMember = false;
-    }
-}
+enum hasMember(T, string name) = __traits(hasMember, T, name);
 
 ///
 unittest
@@ -3324,6 +3327,15 @@ unittest
     static assert(hasMember!(R2!S, "f"));
     static assert(hasMember!(R2!S, "t"));
     static assert(hasMember!(R2!S, "T"));
+}
+
+unittest
+{
+    static struct S
+    {
+        void opDispatch(string n, A)(A dummy) {}
+    }
+    static assert(hasMember!(S, "foo"));
 }
 
 /**
@@ -4305,8 +4317,8 @@ private template isStorageClassImplicitlyConvertible(From, To)
     alias Pointify(T) = void*;
 
     enum isStorageClassImplicitlyConvertible = isImplicitlyConvertible!(
-            ModifyTypePreservingSTC!(Pointify, From),
-            ModifyTypePreservingSTC!(Pointify,   To) );
+            ModifyTypePreservingTQ!(Pointify, From),
+            ModifyTypePreservingTQ!(Pointify,   To) );
 }
 
 unittest
@@ -5227,6 +5239,38 @@ unittest
     }
 }
 
+
+/**
+ * Detect whether type $(D T) is a string that will be autodecoded.
+ *
+ * All arrays that use char, wchar, and their qualified versions are narrow
+ * strings. (Those include string and wstring).
+ * Aggregates that implicitly cast to narrow strings are included.
+ *
+ * Params:
+ *      T = type to be tested
+ *
+ * Returns:
+ *      true if T represents a string that is subject to autodecoding
+ *
+ * See Also:
+ *      $(LREF isNarrowString)
+ */
+enum bool isAutodecodableString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isStaticArray!T;
+
+///
+unittest
+{
+    static struct Stringish
+    {
+        string s;
+        alias s this;
+    }
+    assert(isAutodecodableString!wstring);
+    assert(isAutodecodableString!Stringish);
+    assert(!isAutodecodableString!dstring);
+}
+
 /**
  * Detect whether type $(D T) is a static array.
  */
@@ -5944,31 +5988,138 @@ unittest
 }
 
 // [For internal use]
-package template ModifyTypePreservingSTC(alias Modifier, T)
+package template ModifyTypePreservingTQ(alias Modifier, T)
 {
-         static if (is(T U ==          immutable U)) alias ModifyTypePreservingSTC =          immutable Modifier!U;
-    else static if (is(T U == shared inout const U)) alias ModifyTypePreservingSTC = shared inout const Modifier!U;
-    else static if (is(T U == shared inout       U)) alias ModifyTypePreservingSTC = shared inout       Modifier!U;
-    else static if (is(T U == shared       const U)) alias ModifyTypePreservingSTC = shared       const Modifier!U;
-    else static if (is(T U == shared             U)) alias ModifyTypePreservingSTC = shared             Modifier!U;
-    else static if (is(T U ==        inout const U)) alias ModifyTypePreservingSTC =        inout const Modifier!U;
-    else static if (is(T U ==        inout       U)) alias ModifyTypePreservingSTC =              inout Modifier!U;
-    else static if (is(T U ==              const U)) alias ModifyTypePreservingSTC =              const Modifier!U;
-    else                                             alias ModifyTypePreservingSTC =                    Modifier!T;
+         static if (is(T U ==          immutable U)) alias ModifyTypePreservingTQ =          immutable Modifier!U;
+    else static if (is(T U == shared inout const U)) alias ModifyTypePreservingTQ = shared inout const Modifier!U;
+    else static if (is(T U == shared inout       U)) alias ModifyTypePreservingTQ = shared inout       Modifier!U;
+    else static if (is(T U == shared       const U)) alias ModifyTypePreservingTQ = shared       const Modifier!U;
+    else static if (is(T U == shared             U)) alias ModifyTypePreservingTQ = shared             Modifier!U;
+    else static if (is(T U ==        inout const U)) alias ModifyTypePreservingTQ =        inout const Modifier!U;
+    else static if (is(T U ==        inout       U)) alias ModifyTypePreservingTQ =              inout Modifier!U;
+    else static if (is(T U ==              const U)) alias ModifyTypePreservingTQ =              const Modifier!U;
+    else                                             alias ModifyTypePreservingTQ =                    Modifier!T;
 }
 
 unittest
 {
     alias Intify(T) = int;
-    static assert(is(ModifyTypePreservingSTC!(Intify,                    real) ==                    int));
-    static assert(is(ModifyTypePreservingSTC!(Intify,              const real) ==              const int));
-    static assert(is(ModifyTypePreservingSTC!(Intify,        inout       real) ==        inout       int));
-    static assert(is(ModifyTypePreservingSTC!(Intify,        inout const real) ==        inout const int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, shared             real) == shared             int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, shared       const real) == shared       const int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, shared inout       real) == shared inout       int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, shared inout const real) == shared inout const int));
-    static assert(is(ModifyTypePreservingSTC!(Intify,          immutable real) ==          immutable int));
+    static assert(is(ModifyTypePreservingTQ!(Intify,                    real) ==                    int));
+    static assert(is(ModifyTypePreservingTQ!(Intify,              const real) ==              const int));
+    static assert(is(ModifyTypePreservingTQ!(Intify,        inout       real) ==        inout       int));
+    static assert(is(ModifyTypePreservingTQ!(Intify,        inout const real) ==        inout const int));
+    static assert(is(ModifyTypePreservingTQ!(Intify, shared             real) == shared             int));
+    static assert(is(ModifyTypePreservingTQ!(Intify, shared       const real) == shared       const int));
+    static assert(is(ModifyTypePreservingTQ!(Intify, shared inout       real) == shared inout       int));
+    static assert(is(ModifyTypePreservingTQ!(Intify, shared inout const real) == shared inout const int));
+    static assert(is(ModifyTypePreservingTQ!(Intify,          immutable real) ==          immutable int));
+}
+
+/**
+ * Copies type qualifiers from $(D FromType) to $(D ToType).
+ *
+ * Supported type qualifiers:
+ * $(UL
+ *     $(LI $(D const))
+ *     $(LI $(D inout))
+ *     $(LI $(D immutable))
+ *     $(LI $(D shared))
+ * )
+ * Examples:
+ * ---
+ * static assert(is(CopyTypeQualifiers!(inout const real, int) == inout const int));
+ * ---
+ */
+template CopyTypeQualifiers(FromType, ToType)
+{
+    alias T(U) = ToType;
+    alias CopyTypeQualifiers = ModifyTypePreservingTQ!(T, FromType);
+}
+
+unittest
+{
+    static assert(is(CopyTypeQualifiers!(                   real, int) ==                    int));
+    static assert(is(CopyTypeQualifiers!(             const real, int) ==              const int));
+    static assert(is(CopyTypeQualifiers!(       inout       real, int) ==        inout       int));
+    static assert(is(CopyTypeQualifiers!(       inout const real, int) ==        inout const int));
+    static assert(is(CopyTypeQualifiers!(shared             real, int) == shared             int));
+    static assert(is(CopyTypeQualifiers!(shared       const real, int) == shared       const int));
+    static assert(is(CopyTypeQualifiers!(shared inout       real, int) == shared inout       int));
+    static assert(is(CopyTypeQualifiers!(shared inout const real, int) == shared inout const int));
+    static assert(is(CopyTypeQualifiers!(         immutable real, int) ==          immutable int));
+}
+
+/**
+Returns the type of `Target` with the "constness" of `Source`. A type's $(BOLD constness)
+refers to whether it is `const`, `immutable`, or `inout`. If `source` has no constness, the
+returned type will be the same as `Target`.
+*/
+template CopyConstness(FromType, ToType)
+{
+    alias Unshared(T) = T;
+    alias Unshared(T: shared U, U) = U;
+
+    alias CopyConstness = Unshared!(CopyTypeQualifiers!(FromType, ToType));
+}
+
+///
+unittest
+{
+    const(int) i;
+    CopyConstness!(typeof(i), float) f;
+    assert( is(typeof(f) == const float));
+
+    CopyConstness!(char, uint) u;
+    assert( is(typeof(u) == uint));
+
+    //The 'shared' qualifier will not be copied
+    assert(!is(CopyConstness!(shared bool, int) == shared int));
+
+    //But the constness will be
+    assert( is(CopyConstness!(shared const real, double) == const double));
+
+    //Careful, const(int)[] is a mutable array of const(int)
+    alias MutT = CopyConstness!(const(int)[], int);
+    assert(!is(MutT == const(int)));
+
+    //Okay, const(int[]) applies to array and contained ints
+    alias CstT = CopyConstness!(const(int[]), int);
+    assert( is(CstT == const(int)));
+}
+
+unittest
+{
+    struct Test
+    {
+        void method1() {}
+        void method2() const {}
+        void method3() immutable {}
+    }
+
+    assert(is(CopyConstness!(typeof(Test.method1), real) == real));
+
+    assert(is(CopyConstness!(typeof(Test.method2), byte) == const(byte)));
+
+    assert(is(CopyConstness!(typeof(Test.method3), string) == immutable(string)));
+}
+
+unittest
+{
+    assert(is(CopyConstness!(inout(int)[], int[]) == int[]));
+    assert(is(CopyConstness!(inout(int[]), int[]) == inout(int[])));
+}
+
+unittest
+{
+    static assert(is(CopyConstness!(                   int, real) ==             real));
+    static assert(is(CopyConstness!(const              int, real) ==       const real));
+    static assert(is(CopyConstness!(inout              int, real) ==       inout real));
+    static assert(is(CopyConstness!(inout const        int, real) == inout const real));
+    static assert(is(CopyConstness!(shared             int, real) ==             real));
+    static assert(is(CopyConstness!(shared const       int, real) ==       const real));
+    static assert(is(CopyConstness!(shared inout       int, real) == inout       real));
+    static assert(is(CopyConstness!(shared inout const int, real) == inout const real));
+    static assert(is(CopyConstness!(immutable          int, real) ==   immutable real));
 }
 
 /**
@@ -6012,7 +6163,7 @@ template OriginalType(T)
         else                        alias Impl =              T;
     }
 
-    alias OriginalType = ModifyTypePreservingSTC!(Impl, T);
+    alias OriginalType = ModifyTypePreservingTQ!(Impl, T);
 }
 
 ///
@@ -6083,7 +6234,7 @@ template Unsigned(T)
                                  " does not have an Unsigned counterpart");
     }
 
-    alias Unsigned = ModifyTypePreservingSTC!(Impl, OriginalType!T);
+    alias Unsigned = ModifyTypePreservingTQ!(Impl, OriginalType!T);
 }
 
 unittest
@@ -6179,7 +6330,7 @@ template Signed(T)
                                  " does not have an Signed counterpart");
     }
 
-    alias Signed = ModifyTypePreservingSTC!(Impl, OriginalType!T);
+    alias Signed = ModifyTypePreservingTQ!(Impl, OriginalType!T);
 }
 
 ///
@@ -6411,7 +6562,6 @@ unittest
 template hasUDA(alias symbol, alias attribute)
 {
     import std.typetuple : staticIndexOf;
-    import std.traits : staticMap;
 
     static if (is(attribute == struct) || is(attribute == class))
     {
@@ -6471,4 +6621,112 @@ unittest
 
     @Named("abc") int h;
     static assert(hasUDA!(h, Named));
+}
+
+/**
+ * Gets the $(LINK2 ../attribute.html#uda, user-defined attributes) of the given
+ * type from the given symbol.
+ */
+template getUDAs(alias symbol, alias attribute)
+{
+    import std.typetuple : Filter;
+
+    enum isDesiredUDA(alias S) = is(typeof(S) == attribute);
+    alias getUDAs = Filter!(isDesiredUDA, __traits(getAttributes, symbol));
+}
+
+///
+unittest
+{
+    struct Attr
+    {
+        string name;
+        int value;
+    }
+
+    @Attr("Answer", 42) int a;
+    static assert(getUDAs!(a, Attr)[0].name == "Answer");
+    static assert(getUDAs!(a, Attr)[0].value == 42);
+
+    @(Attr("Answer", 42), "string", 9999) int b;
+    static assert(getUDAs!(b, Attr)[0].name == "Answer");
+    static assert(getUDAs!(b, Attr)[0].value == 42);
+
+    @Attr("Answer", 42) @Attr("Pi", 3) int c;
+    static assert(getUDAs!(c, Attr)[0].name == "Answer");
+    static assert(getUDAs!(c, Attr)[0].value == 42);
+    static assert(getUDAs!(c, Attr)[1].name == "Pi");
+    static assert(getUDAs!(c, Attr)[1].value == 3);
+}
+
+/**
+ * Gets all symbols within `symbol` that have the given user-defined attribute.
+ * This is not recursive; it will not search for symbols within symbols such as
+ * nested structs or unions.
+ */
+template getSymbolsByUDA(alias symbol, alias attribute)
+{
+    import std.typetuple : Filter, staticMap, TypeTuple;
+
+    static enum hasSpecificUDA(alias S) = hasUDA!(S, attribute);
+    alias StringToSymbol(alias Name) = Identity!(__traits(getMember, symbol, Name));
+    alias getSymbolsByUDA = Filter!(hasSpecificUDA, TypeTuple!(symbol,
+        staticMap!(StringToSymbol, __traits(allMembers, symbol))));
+}
+
+///
+unittest
+{
+    enum Attr;
+
+    static struct A
+    {
+        @Attr int a;
+        int b;
+        @Attr void doStuff() {}
+        void doOtherStuff() {}
+        static struct Inner
+        {
+            // Not found by getSymbolsByUDA
+            @Attr int c;
+        }
+    }
+
+    // Finds both variables and functions with the attribute, but
+    // doesn't include the variables and functions without it.
+    static assert(getSymbolsByUDA!(A, Attr).length == 2);
+    // Can access attributes on the symbols returned by getSymbolsByUDA.
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[1], Attr));
+
+    static struct UDA { string name; }
+
+    static struct B
+    {
+        @UDA("X")
+        int x;
+        @UDA("Y")
+        int y;
+        @(100)
+        int z;
+    }
+
+    // Finds both UDA attributes.
+    static assert(getSymbolsByUDA!(B, UDA).length == 2);
+    // Finds one `100` attribute.
+    static assert(getSymbolsByUDA!(B, 100).length == 1);
+    // Can get the value of the UDA from the return value
+    static assert(getUDAs!(getSymbolsByUDA!(B, UDA)[0], UDA)[0].name == "X");
+
+    @UDA("A")
+    static struct C
+    {
+        @UDA("B")
+        int d;
+    }
+
+    // Also checks the symbol itself
+    static assert(getSymbolsByUDA!(C, UDA).length == 2);
+    static assert(getSymbolsByUDA!(C, UDA)[0].stringof == "C");
+    static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
 }

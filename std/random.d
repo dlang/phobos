@@ -623,17 +623,20 @@ Parameters for the generator.
     void seed(T)(T range) if(isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
     {
         size_t j;
-        for(j = 0; j < n && !range.empty; ++j, range.popFront())
+        for (j = 0; j < n && !range.empty; ++j, range.popFront())
         {
             mt[j] = range.front;
         }
 
         mti = n;
-        if(range.empty && j < n)
+        if (range.empty && j < n)
         {
-            import std.format : format;
-            throw new Exception(format("MersenneTwisterEngine.seed: Input range didn't provide enough"~
-                " elements: Need %s elemnets.", n));
+            import core.internal.string;
+
+            UnsignedStringBuf buf = void;
+            string s = "MersenneTwisterEngine.seed: Input range didn't provide enough elements: Need ";
+            s ~= unsignedToTempString(n, buf, 10) ~ " elements.";
+            throw new Exception(s);
         }
 
         popFront();

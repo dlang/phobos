@@ -1,6 +1,7 @@
 /**
- * This module describes the digest APIs used in Phobos. All digests follow these APIs.
- * Additionally, this module contains useful helper methods which can be used with every _digest type.
+ * This module describes the _digest APIs used in Phobos. All digests follow
+ * these APIs. Additionally, this module contains useful helper methods which
+ * can be used with every _digest type.
  *
 $(SCRIPT inhibitQuickIndex = 1;)
 
@@ -9,6 +10,7 @@ $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
 $(TR $(TDNW Template API) $(TD $(MYREF isDigest) $(MYREF DigestType) $(MYREF hasPeek)
+  $(MYREF hasBlockSize)
   $(MYREF ExampleDigest) $(MYREF _digest) $(MYREF hexDigest) $(MYREF makeDigest)
 )
 )
@@ -202,9 +204,10 @@ version(ExampleDigest)
         public:
             /**
              * Use this to feed the digest with data.
-             * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-             * $(D const(ubyte)[]).
-             * The following usages of $(D put) must work for any type which passes $(LREF isDigest):
+             * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+             * interface for $(D ubyte) and $(D const(ubyte)[]).
+             * The following usages of $(D put) must work for any type which
+             * passes $(LREF isDigest):
              * Examples:
              * ----
              * ExampleDigest dig;
@@ -383,7 +386,26 @@ unittest
     myFunction!CRC32();
 }
 
-private template isDigestibleRange(Range)
+/**
+ * Checks whether the digest has a $(D blockSize) member, which contains the
+ * digest's internal block size in bits. It is primarily used by $(XREF digest.hmac, HMAC).
+ */
+
+template hasBlockSize(T)
+if (isDigest!T)
+{
+    enum bool hasBlockSize = __traits(compiles, { size_t blockSize = T.blockSize; });
+}
+
+///
+unittest
+{
+    import std.digest.md, std.digest.hmac;
+    static assert(hasBlockSize!MD5        && MD5.blockSize      == 512);
+    static assert(hasBlockSize!(HMAC!MD5) && HMAC!MD5.blockSize == 512);
+}
+
+package template isDigestibleRange(Range)
 {
     import std.digest.md;
     import std.range : isInputRange, ElementType;
@@ -540,8 +562,8 @@ interface Digest
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Examples:
          * ----
@@ -669,6 +691,11 @@ enum Order : bool
  * The additional letterCase parameter can be used to specify the case of the output data.
  * By default the output is in upper case. To change it to the lower case
  * pass LetterCase.lower as a parameter.
+ *
+ * Note:
+ * The function overloads returning a string allocate their return values
+ * using the GC. The versions returning static arrays use pass-by-value for
+ * the return value, effectively avoiding dynamic allocation.
  */
 char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase letterCase = LetterCase.upper)
 (in ubyte[num] digest)
@@ -708,7 +735,7 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase l
 }
 
 ///ditto
-auto toHexString(LetterCase letterCase, Order order = Order.increasing, size_t num)(in ubyte[num] digest)
+char[num*2] toHexString(LetterCase letterCase, Order order = Order.increasing, size_t num)(in ubyte[num] digest)
 {
     return toHexString!(order, num, letterCase)(digest);
 }
@@ -751,7 +778,7 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
 }
 
 ///ditto
-auto toHexString(LetterCase letterCase, Order order = Order.increasing)(in ubyte[] digest)
+string toHexString(LetterCase letterCase, Order order = Order.increasing)(in ubyte[] digest)
 {
     return toHexString!(order, letterCase)(digest);
 }
@@ -837,8 +864,8 @@ class WrapperDigest(T) if(isDigest!T) : Digest
 
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         @trusted nothrow void put(scope const(ubyte)[] data...)
         {

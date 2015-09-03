@@ -48,17 +48,17 @@ alias multibyteSub = multibyteAddSub!('-');
 
 private import core.cpuid;
 private import std.traits : Unqual;
+public import std.ascii : LetterCase;
 
 shared static this()
 {
     CACHELIMIT = core.cpuid.datacache[0].size*1024/2;
-    FASTDIVLIMIT = 100;
 }
 
 private:
 // Limits for when to switch between algorithms.
 immutable size_t CACHELIMIT;   // Half the size of the data cache.
-immutable size_t FASTDIVLIMIT; // crossover to recursive division
+enum size_t FASTDIVLIMIT = 100; // crossover to recursive division
 
 
 // These constants are used by shift operations
@@ -282,7 +282,8 @@ public:
      *  Separator characters do not contribute to the minPadding.
      */
     char [] toHexString(int frontExtraBytes, char separator = 0,
-            int minPadding=0, char padChar = '0') const pure nothrow @safe
+            int minPadding=0, char padChar = '0',
+            LetterCase letterCase = LetterCase.upper) const pure nothrow @safe
     {
         // Calculate number of extra padding bytes
         size_t extraPad = (minPadding > data.length * 2 * BigDigit.sizeof)
@@ -296,7 +297,7 @@ public:
         size_t totalSeparatorBytes = separator ? ((extraPad + lenBytes + 7) / 8) - 1: 0;
 
         char [] buff = new char[lenBytes + extraPad + totalSeparatorBytes + frontExtraBytes];
-        biguintToHex(buff[$ - lenBytes - mainSeparatorBytes .. $], data, separator);
+        biguintToHex(buff[$ - lenBytes - mainSeparatorBytes .. $], data, separator, letterCase);
         if (extraPad > 0)
         {
             if (separator)
@@ -1002,7 +1003,28 @@ pure unittest
     assert(r.toHexString(0, '_', 7, ' ') == "      0");
     assert(r.toHexString(0, '#', 9) == "0#00000000");
     assert(r.toHexString(0, 0, 9) == "000000000");
+}
 
+//
+@safe pure unittest
+{
+    BigUint r;
+    r.fromHexString("1_E1178E81_00000000");
+    assert(r.toHexString(0, '_', 0, '0', LetterCase.lower) == "1_e1178e81_00000000");
+    assert(r.toHexString(0, '_', 20, '0', LetterCase.lower) == "0001_e1178e81_00000000");
+    assert(r.toHexString(0, '_', 16+8, '0', LetterCase.lower) == "00000001_e1178e81_00000000");
+    assert(r.toHexString(0, '_', 16+9, '0', LetterCase.lower) == "0_00000001_e1178e81_00000000");
+    assert(r.toHexString(0, '_', 16+8+8, '0', LetterCase.lower) ==   "00000000_00000001_e1178e81_00000000");
+    assert(r.toHexString(0, '_', 16+8+8+1, '0', LetterCase.lower) == "0_00000000_00000001_e1178e81_00000000");
+    assert(r.toHexString(0, '_', 16+8+8+1, ' ', LetterCase.lower) == "                  1_e1178e81_00000000");
+    assert(r.toHexString(0, 0, 16+8+8+1, '0', LetterCase.lower) == "00000000000000001e1178e8100000000");
+    r = 0UL;
+    assert(r.toHexString(0, '_', 0, '0', LetterCase.lower) == "0");
+    assert(r.toHexString(0, '_', 7, '0', LetterCase.lower) == "0000000");
+    assert(r.toHexString(0, '_', 7, ' ', LetterCase.lower) == "      0");
+    assert(r.toHexString(0, '#', 9, '0', LetterCase.lower) == "0#00000000");
+    assert(r.toHexString(0, 'Z', 9, '0', LetterCase.lower) == "0Z00000000");
+    assert(r.toHexString(0, 0, 9, '0', LetterCase.lower) == "000000000");
 }
 
 
@@ -1510,13 +1532,13 @@ private:
 // every 8 digits.
 // buff.length must be data.length*8 if separator is zero,
 // or data.length*9 if separator is non-zero. It will be completely filled.
-char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0)
-    pure nothrow @safe
+char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0,
+        LetterCase letterCase = LetterCase.upper) pure nothrow @safe
 {
     int x=0;
     for (ptrdiff_t i=data.length - 1; i>=0; --i)
     {
-        toHexZeroPadded(buff[x..x+8], data[i]);
+        toHexZeroPadded(buff[x..x+8], data[i], letterCase);
         x+=8;
         if (separator)
         {
@@ -2150,13 +2172,22 @@ void itoaZeroPadded(char[] output, uint value, int radix = 10)
     }
 }
 
-void toHexZeroPadded(char[] output, uint value) pure nothrow @safe
+void toHexZeroPadded(char[] output, uint value,
+        LetterCase letterCase = LetterCase.upper) pure nothrow @safe
 {
     ptrdiff_t x = output.length - 1;
-    static immutable string hexDigits = "0123456789ABCDEF";
+    static immutable string upperHexDigits = "0123456789ABCDEF";
+    static immutable string lowerHexDigits = "0123456789abcdef";
     for( ; x>=0; --x)
     {
-        output[x] = hexDigits[value & 0xF];
+        if (letterCase == LetterCase.upper)
+        {
+            output[x] = upperHexDigits[value & 0xF];
+        }
+        else
+        {
+            output[x] = lowerHexDigits[value & 0xF];
+        }
         value >>= 4;
     }
 }
@@ -2188,7 +2219,7 @@ int firstNonZeroDigit(const BigDigit [] x) pure nothrow @nogc @safe
     }
     return k;
 }
-import core.stdc.stdio;
+
 /*
     Calculate quotient and remainder of u / v using fast recursive division.
     v must be normalised, and must be at least half as long as u.
@@ -2356,13 +2387,10 @@ pure nothrow
     delete scratch;
 }
 
-version(unittest)
-{
-    import core.stdc.stdio;
-}
-
 unittest
 {
+    import core.stdc.stdio;
+
     void printBiguint(const uint [] data)
     {
         char [] buff = biguintToHex(new char[data.length*9], data, '_');

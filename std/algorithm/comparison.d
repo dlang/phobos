@@ -73,7 +73,7 @@ Returns:
     found value plus one is returned.
 
 See_Also:
-$(LREF find) and $(LREF canFind) for finding a value in a
+$(XREF_PACK_NAMED algorithm,searching,find,find) and $(XREF_PACK_NAMED algorithm,searching,canFind, canFind) for finding a value in a
 range.
 */
 uint among(alias pred = (a, b) => a == b, Value, Values...)
@@ -233,15 +233,13 @@ auto castSwitch(choices...)(Object switchObject)
     import core.exception : SwitchError;
 
     // Check to see if all handlers return void.
-    enum areAllHandlersVoidResult={
-        foreach(index, choice; choices)
+    enum areAllHandlersVoidResult = {
+        bool result = true;
+        foreach (index, choice; choices)
         {
-            if(!is(ReturnType!choice == void))
-            {
-                return false;
-            }
+            result &= is(ReturnType!choice == void);
         }
-        return true;
+        return result;
     }();
 
     if (switchObject !is null)
