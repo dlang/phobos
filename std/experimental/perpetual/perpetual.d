@@ -21,7 +21,8 @@ struct Perpetual(T)
 	// dynamic array 
 		private Element[] _value;
 		enum bool dynamic=true;
-		static assert(!hasIndirections!Element, Element.stringof~" is reference type");
+		static assert(!hasIndirections!Element
+		    , Element.stringof~" is reference type");
 		@property Element[] Ref() { return _value; }
 		string toString() { return to!string(_value); }
 
@@ -31,7 +32,8 @@ struct Perpetual(T)
 	// value type
 		private T *_value;
 		enum bool dynamic=false;
-		static assert(!hasIndirections!T, T.stringof~" is reference type");
+		static assert(!hasIndirections!T
+		    , T.stringof~" is reference type");
 		@property ref T Ref() {	return *_value; }
 		string toString() { return to!string(*_value); }
 	}
@@ -51,7 +53,8 @@ struct Perpetual(T)
 	{
 		static if(dynamic)
 		{
-			enforce(exists(path), _tag~": dynamic array of zero length");
+			enforce(exists(path)
+			    , _tag~": dynamic array of zero length");
 			size_t size=0;
 		}
 		else
