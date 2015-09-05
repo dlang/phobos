@@ -1117,6 +1117,16 @@ ranges must have a common type.
 If both arguments are ranges of L-values of the same type then
 $(D SetSymmetricDifference) will also be a range of L-values of
 that type.
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    r1 = The first range.
+    r2 = The second range.
+
+Returns:
+    A range of the symmetric difference between `r1` and `r2`.
+
+See_also: $(LREF setDifference)
  */
 struct SetSymmetricDifference(alias less = "a < b", R1, R2)
     if (isInputRange!(R1) && isInputRange!(R2))
