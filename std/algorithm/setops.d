@@ -1245,6 +1245,13 @@ are assumed to be sorted by $(D less). Elements in the output are not
 unique; the length of the output is the sum of the lengths of the
 inputs. (The $(D length) member is offered if all ranges also have
 length.) The element types of all ranges must have a common type.
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    rs = The ranges to compute the union for.
+
+Returns:
+    A range containing the union of the given ranges.
  */
 struct SetUnion(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))
 {
