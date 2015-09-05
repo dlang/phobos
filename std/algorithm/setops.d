@@ -761,6 +761,13 @@ NWayUnion) is $(BIGOH n * ror.length * log(ror.length)), i.e., $(D
 log(ror.length)) times worse than just spanning all ranges in
 turn. The output comes sorted (unstably) by $(D less).
 
+Params:
+    less = Predicate the given ranges are sorted by.
+    ror = A range of ranges sorted by `less` to compute the union for.
+
+Returns:
+    A range of the union of the ranges in `ror`.
+
 Warning: Because $(D NWayUnion) does not allocate extra memory, it
 will leave $(D ror) modified. Namely, $(D NWayUnion) assumes ownership
 of $(D ror) and discretionarily swaps and advances elements of it. If
