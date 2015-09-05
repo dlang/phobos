@@ -551,6 +551,12 @@ the elements that are common to most ranges, along with their number
 of occurrences. All ranges in $(D ror) are assumed to be sorted by $(D
 less). Only the most frequent $(D tgt.length) elements are returned.
 
+Params:
+    less = The predicate the ranges are sorted by.
+    ror = A range of forward ranges sorted by `less`.
+    tgt = The target range to copy common elements to.
+    sorted = Whether the elements copied should be in sorted order.
+
 Example:
 ----
 // Figure which number can be found in most arrays of the set of
@@ -611,6 +617,13 @@ import std.algorithm.sorting : SortOutput; // FIXME
 /**
 Similar to $(D largestPartialIntersection), but associates a weight
 with each distinct element in the intersection.
+
+Params:
+    less = The predicate the ranges are sorted by.
+    ror = A range of forward ranges sorted by `less`.
+    tgt = The target range to copy common elements to.
+    weights = An associative array mapping elements to weights.
+    sorted = Whether the elements copied should be in sorted order.
 
 Example:
 ----
