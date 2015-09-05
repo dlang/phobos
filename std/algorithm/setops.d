@@ -856,6 +856,16 @@ unittest
 Lazily computes the difference of $(D r1) and $(D r2). The two ranges
 are assumed to be sorted by $(D less). The element types of the two
 ranges must have a common type.
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    r1 = The first range.
+    r2 = The range to subtract from `r1`.
+
+Returns:
+    A range of the difference of `r1` and `r2`.
+
+See_also: $(LREF setSymmetricDifference)
  */
 struct SetDifference(alias less = "a < b", R1, R2)
     if (isInputRange!(R1) && isInputRange!(R2))
