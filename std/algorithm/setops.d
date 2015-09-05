@@ -66,6 +66,16 @@ If both ranges are infinite, then both must be forward ranges.
 
 When there are more than two ranges, the above conditions apply to each
 adjacent pair of ranges.
+
+Params:
+    range1 = The first range
+    range2 = The second range
+    ranges = Two or more non-infinite forward ranges
+    otherRanges = Zero or more non-infinite forward ranges
+
+Returns:
+    A forward range of $(XREF typecons,Tuple) representing elements of the
+    cartesian product of the given ranges.
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
     if (!allSatisfy!(isForwardRange, R1, R2) ||
