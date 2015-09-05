@@ -961,6 +961,13 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 Lazily computes the intersection of two or more input ranges $(D
 ranges). The ranges are assumed to be sorted by $(D less). The element
 types of the ranges must have a common type.
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    ranges = The ranges to compute the intersection for.
+
+Returns:
+    A range containing the intersection of the given ranges.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
     if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
