@@ -4573,11 +4573,11 @@ if (!is(T == class) && !(is(T == interface)))
             import core.stdc.stdlib : malloc;
             import std.conv : emplace;
 
-            _store = cast(Impl*)malloc(Impl.sizeof);
+            _store = (() @trusted => cast(Impl*)malloc(Impl.sizeof))();
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
-                GC.addRange(&_store._payload, T.sizeof);
+                (() @trusted { GC.addRange(&_store._payload, T.sizeof); })();
             emplace(&_store._payload, args);
             _store._count = 1;
         }
@@ -4589,11 +4589,11 @@ if (!is(T == class) && !(is(T == interface)))
             import core.stdc.stdlib : malloc;
             import core.stdc.string : memcpy, memset;
 
-            _store = cast(Impl*)malloc(Impl.sizeof);
+            _store = (() @trusted => cast(Impl*)malloc(Impl.sizeof))();
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
-                GC.addRange(&_store._payload, T.sizeof);
+                (() @trusted { GC.addRange(&_store._payload, T.sizeof); })();
 
             // Can't use std.algorithm.move(source, _store._payload)
             // here because it requires the target to be initialized.
@@ -4601,7 +4601,7 @@ if (!is(T == class) && !(is(T == interface)))
 
             // Can avoid destructing result.
             static if (hasElaborateAssign!T || !isAssignable!T)
-                memcpy(&_store._payload, &source, T.sizeof);
+                (() @trusted { memcpy(&_store._payload, &source, T.sizeof); })();
             else
                 _store._payload = source;
 
@@ -4617,9 +4617,9 @@ if (!is(T == class) && !(is(T == interface)))
 
                 auto init = typeid(T).init();
                 if (init.ptr is null) // null ptr means initialize to 0s
-                    memset(&source, 0, sz);
+                    (() @trusted { memset(&source, 0, sz); })();
                 else
-                    memcpy(&source, init.ptr, sz);
+                    (() @trusted { memcpy(&source, init.ptr, sz); })();
             }
 
             _store._count = 1;
@@ -4707,10 +4707,10 @@ to deallocate the corresponding resource.
         static if (hasIndirections!T)
         {
             import core.memory : GC;
-            GC.removeRange(&_refCounted._store._payload);
+            (() @trusted { GC.removeRange(&_refCounted._store._payload); })();
         }
         import core.stdc.stdlib : free;
-        free(_refCounted._store);
+        (() @trusted { free(_refCounted._store); })();
         _refCounted._store = null;
     }
 
@@ -4795,7 +4795,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 ///
-unittest
+@safe nothrow @nogc unittest
 {
     // A pair of an $(D int) and a $(D size_t) - the latter being the
     // reference count - will be dynamically allocated
@@ -4848,7 +4848,7 @@ unittest
     assert(a.x._refCounted._store._count == 2, "BUG 4356 still unfixed");
 }
 
-unittest
+@safe nothrow @nogc unittest
 {
     import std.algorithm : swap;
 
@@ -4857,7 +4857,7 @@ unittest
 }
 
 // 6606
-unittest
+@safe pure nothrow @nogc unittest
 {
     union U {
        size_t i;
@@ -4872,7 +4872,7 @@ unittest
 }
 
 // 6436
-unittest
+@safe unittest
 {
     struct S { this(ref int val) { assert(val == 3); ++val; } }
 
@@ -4881,7 +4881,7 @@ unittest
     assert(val == 4);
 }
 
-unittest
+@safe nothrow @nogc unittest
 {
     RefCounted!int a;
     a = 5; //This should not assert
