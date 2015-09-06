@@ -4435,7 +4435,7 @@ public:
      * Params:
      * index = either an unsigned integer or an E member.
      */
-    nothrow @safe @nogc bool opIndex(I)(I index)
+    nothrow @safe bool opIndex(I)(I index)
     {
         static if (isSigned!I || is(I == SetType))
             return (_container == (_container | _1 << index));
