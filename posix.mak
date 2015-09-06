@@ -92,14 +92,11 @@ else
 endif
 
 # Set CFLAGS
-CFLAGS=
-ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
-	CFLAGS += $(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
-	ifeq ($(BUILD),debug)
-		CFLAGS += -g
-	else
-		CFLAGS += -O3
-	endif
+CFLAGS=$(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
+ifeq ($(BUILD),debug)
+	CFLAGS += -g
+else
+	CFLAGS += -O3
 endif
 
 # Set DFLAGS
