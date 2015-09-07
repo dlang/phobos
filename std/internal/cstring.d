@@ -90,7 +90,7 @@ auto tempCString(To = char, From)(From str)
 
     alias CF = Unqual!(ElementEncodingType!From);
 
-    enum To* useStack = null;
+    enum To* useStack = () @trusted { return cast(To*)size_t.max; }();
 
     static struct Res
     {
