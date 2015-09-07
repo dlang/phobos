@@ -195,8 +195,11 @@ class StringException : Exception
 
 
 /++
-    Returns a D-style array of $(D char) given a zero-terminated C-style string.
-    The returned array will retain the same type qualifiers as the input.
+    Params:
+        cString = A null-terminated c-style string.
+
+    Returns: A D-style array of $(D char) referencing the same string.  The
+    returned array will retain the same type qualifiers as the input.
 
     $(RED Important Note:) The returned array is a slice of the original buffer.
     The original data is not changed and not copied.
@@ -215,15 +218,19 @@ inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
 }
 
 /++
-    Returns a C-style zero-terminated string equivalent to $(D s). $(D s)
-    must not contain embedded $(D '\0')'s as any C function will treat the first
-    $(D '\0') that it sees as the end of the string. If $(D s.empty) is
+    Params:
+        s = A D-style string.
+
+    Returns: A C-style null-terminated string equivalent to $(D s). $(D s)
+    must not contain embedded $(D '\0')'s as any C function will treat the
+    first $(D '\0') that it sees as the end of the string. If $(D s.empty) is
     $(D true), then a string containing only $(D '\0') is returned.
 
     $(RED Important Note:) When passing a $(D char*) to a C function, and the C
-    function keeps it around for any reason, make sure that you keep a reference
-    to it in your D code. Otherwise, it may go away during a garbage collection
-    cycle and cause a nasty bug when the C code tries to use it.
+    function keeps it around for any reason, make sure that you keep a
+    reference to it in your D code. Otherwise, it may become invalid during a
+    garbage collection cycle and cause a nasty bug when the C code tries to use
+    it.
   +/
 immutable(char)* toStringz(const(char)[] s) @trusted pure nothrow
 in
@@ -782,7 +789,13 @@ unittest
 }
 
 /++
-    Returns the index of the first occurrence of $(D sub) in $(D s) with
+    Params:
+        s = string to search
+        sub = substring to search for
+        startIdx = the index into s to start searching from
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns: The index of the first occurrence of $(D sub) in $(D s) with
     respect to the start index $(D startIdx). If $(D sub) is not found, then
     $(D -1) is returned. If $(D sub) is found the value of the returned index
     is at least $(D startIdx). $(D startIdx) represents a codeunit index in
@@ -866,7 +879,12 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 }
 
 /++
-    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c)
+    Params:
+        s = string to search
+        c = character to search for
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns: The index of the last occurrence of $(D c) in $(D s). If $(D c)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -974,7 +992,13 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
 }
 
 /++
-    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c) is
+    Params:
+        s = string to search
+        c = character to search for
+        startIdx = the index into s to start searching from
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns: The index of the last occurrence of $(D c) in $(D s). If $(D c) is
     not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
     the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
     codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
@@ -1030,7 +1054,12 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 }
 
 /++
-    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
+    Params:
+        s = string to search
+        sub = substring to search for
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns: the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned.
 
     $(D cs) indicates whether the comparisons are case sensitive.
@@ -1191,7 +1220,13 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 }
 
 /++
-    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
+    Params:
+        s = string to search
+        sub = substring to search for
+        startIdx = the index into s to start searching from
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns: the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
     is not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
     the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
     codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
@@ -3609,6 +3644,16 @@ unittest
     Center $(D s) in a field $(D width) characters wide. $(D fillChar)
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
+
+    Params:
+        s = The string to center
+        width = Width of the field to center `s` in
+        fillChar = The character to use for filling excess space in the field
+
+    Returns:
+        The resulting _center-justified string. The returned string is
+        GC-allocated. To avoid GC allocation, use $(LREF centerJustifier)
+        instead.
   +/
 S center(S)(S s, size_t width, dchar fillChar = ' ')
     if (isSomeString!S)
