@@ -2,8 +2,7 @@
 
 /**
  * $(RED Warning: This module is considered out-dated and not up to Phobos'
- *       current standards. It will remain until we have a suitable replacement,
- *       but be aware that it will not remain long term.)
+ *       current standards. It will be removed by phobos version 2.070.)
  *
  * Source:    $(PHOBOSSRC std/_stream.d)
  * Macros:
@@ -27,7 +26,7 @@
  * "as is" without express or implied warranty.
  */
 
-module std.stream;
+deprecated("Will be removed by phobos version 2.070") module std.stream;
 
 
 import std.internal.cstring;
