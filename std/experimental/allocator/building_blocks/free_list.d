@@ -926,12 +926,12 @@ struct SharedFreeList(ParentAllocator,
         assert(bytes < size_t.max / 2);
         if (!freeListEligible(bytes)) return parent.allocate(bytes);
         if (maxSize != unbounded) bytes = max;
-        if (!_root) return allocateFresh(bytes);
         // Pop off the freelist
         shared Node* oldRoot = void, next = void;
         do
         {
             oldRoot = _root; // atomic load
+            if (!oldRoot) return allocateFresh(bytes);
             next = oldRoot.next; // atomic load
         }
         while (!cas(&_root, oldRoot, next));
