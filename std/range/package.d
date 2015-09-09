@@ -4625,9 +4625,9 @@ body
 
 /// Ditto
 auto iota(B, E)(B begin, E end)
-if (isFloatingPoint!(CommonType!(B, E)))
+    if (isFloatingPoint!(CommonType!(B, E)))
 {
-    return iota(begin, end, 1.0);
+    return iota(begin, end, CommonType!(B, E)(1));
 }
 
 /// Ditto
@@ -4832,6 +4832,8 @@ unittest
 {
     import std.math : approxEqual, nextUp, nextDown;
     import std.algorithm : count, equal;
+
+    static assert(is(ElementType!(typeof(iota(0f))) == float));
 
     static assert(hasLength!(typeof(iota(0, 2))));
     auto r = iota(0, 10, 1);
