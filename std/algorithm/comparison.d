@@ -1324,7 +1324,11 @@ private template MinType(T...)
 
 // min
 /**
-Returns the minimum of the passed-in values.
+Iterates the passed arguments and returns the minimum value.
+
+Params: args = The values to select the minimum from. At least two arguments
+    must be passed, and they must be comparable with `<`.
+Returns: The minimum of the passed-in values.
 */
 MinType!T min(T...)(T args)
     if (T.length >= 2)
