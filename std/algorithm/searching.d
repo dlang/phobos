@@ -2397,6 +2397,14 @@ If $(D haystack) is a random-access range, all three components of the
 tuple have the same type as $(D haystack). Otherwise, $(D haystack)
 must be a forward range and the type of $(D result[0]) and $(D
 result[1]) is the same as $(XREF range,takeExactly).
+
+Params:
+    pred = Predicate to use for comparing needle against haystack.
+    haystack = The range to search.
+    needle = What to look for.
+
+Returns:
+    A tuple of the split portions of `haystack` (see above for details).
  */
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2)
