@@ -200,6 +200,16 @@ of $(D lPar) are closed by corresponding instances of $(D rPar). The
 parameter $(D maxNestingLevel) controls the nesting level allowed. The
 most common uses are the default or $(D 0). In the latter case, no
 nesting is allowed.
+
+Params:
+    r = The range to check.
+    lPar = The element corresponding with a left (opening) parenthesis.
+    rPar = The element corresponding with a right (closing) parenthesis.
+    maxNestingLevel = The maximum allowed nesting level.
+
+Returns:
+    true if the given range has balanced parenthesis within the given maximum
+    nesting level; false otherwise.
 */
 bool balancedParens(Range, E)(Range r, E lPar, E rPar,
         size_t maxNestingLevel = size_t.max)
@@ -558,6 +568,14 @@ true). Performs $(BIGOH haystack.length) evaluations of $(D pred).
 
 Note: Regardless of the overload, $(D count) will not accept
 infinite ranges for $(D haystack).
+
+Params:
+    pred = The predicate to evaluate.
+    haystack = The range to _count.
+    needle = The element or sub-range to _count in the `haystack`.
+
+Returns:
+    The number of positions in the `haystack` for which `pred` returned true.
 */
 size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
     if (isInputRange!Range && !isInfinite!Range &&
@@ -2379,6 +2397,14 @@ If $(D haystack) is a random-access range, all three components of the
 tuple have the same type as $(D haystack). Otherwise, $(D haystack)
 must be a forward range and the type of $(D result[0]) and $(D
 result[1]) is the same as $(XREF range,takeExactly).
+
+Params:
+    pred = Predicate to use for comparing needle against haystack.
+    haystack = The range to search.
+    needle = What to look for.
+
+Returns:
+    A tuple of the split portions of `haystack` (see above for details).
  */
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2)
