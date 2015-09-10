@@ -568,6 +568,14 @@ true). Performs $(BIGOH haystack.length) evaluations of $(D pred).
 
 Note: Regardless of the overload, $(D count) will not accept
 infinite ranges for $(D haystack).
+
+Params:
+    pred = The predicate to evaluate.
+    haystack = The range to _count.
+    needle = The element or sub-range to _count in the `haystack`.
+
+Returns:
+    The number of positions in the `haystack` for which `pred` returned true.
 */
 size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
     if (isInputRange!Range && !isInfinite!Range &&
