@@ -3566,7 +3566,6 @@ unittest
     static assert(is(BaseClassesTuple!C1 == TypeTuple!(Object)));
     static assert(is(BaseClassesTuple!C2 == TypeTuple!(C1, Object)));
     static assert(is(BaseClassesTuple!C3 == TypeTuple!(C2, C1, Object)));
-    static assert(!BaseClassesTuple!Object.length);
 }
 
 unittest
