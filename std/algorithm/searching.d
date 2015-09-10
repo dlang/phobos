@@ -200,6 +200,16 @@ of $(D lPar) are closed by corresponding instances of $(D rPar). The
 parameter $(D maxNestingLevel) controls the nesting level allowed. The
 most common uses are the default or $(D 0). In the latter case, no
 nesting is allowed.
+
+Params:
+    r = The range to check.
+    lPar = The element corresponding with a left (opening) parenthesis.
+    rPar = The element corresponding with a right (closing) parenthesis.
+    maxNestingLevel = The maximum allowed nesting level.
+
+Returns:
+    true if the given range has balanced parenthesis within the given maximum
+    nesting level; false otherwise.
 */
 bool balancedParens(Range, E)(Range r, E lPar, E rPar,
         size_t maxNestingLevel = size_t.max)
