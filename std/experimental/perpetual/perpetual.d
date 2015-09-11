@@ -4,7 +4,7 @@ private import std.mmfile;
 private import std.exception;
 private import std.conv : to;
 private import std.file : exists;
-private import std.traits : hasIndirections;
+private import std.traits : hasIndirections, isCallable, isAssignable;
 
 
 
@@ -56,35 +56,36 @@ struct Perpetual(T)
 			enforce(exists(path)
 			    , _tag~": dynamic array of zero length");
 			size_t size=0;
+			if(isAssignable!Element)			
+				_heap=new MmFile(path, MmFile.Mode.readWrite, 0, null, 0);
+			else
+				_heap=new MmFile(path, MmFile.Mode.read, 0, null, 0);
+			enforce(_heap.length >= Element.sizeof, _tag~": file is too small");
+			_value=cast(Element[]) _heap[0.._heap.length];
 		}
 		else
 		{
 			size_t size=T.sizeof;
-		}
-		_heap=new MmFile(path, MmFile.Mode.readWrite, size, null, 0);
-		static if(dynamic) // at least one element
-			size=Element.sizeof;
-		enforce(_heap.length >= size, _tag~": file is too small");
-
-		static if(dynamic)
-			_value=cast(Element[]) _heap[0.._heap.length];
-		else
+			if(isAssignable!T)			
+				_heap=new MmFile(path, MmFile.Mode.readWrite, T.sizeof, null, 0);
+			else
+				_heap=new MmFile(path, MmFile.Mode.read, T.sizeof, null, 0);
+			enforce(_heap.length >= size, _tag~": file is too small");
 			_value=cast(T*) _heap[].ptr;
+		}
  	}
 
-	this(size_t len, string path) {
-		static if(dynamic) {
+	this(size_t len, string path)
+	{
+		static if(dynamic)
+		{
 			size_t size=len*Element.sizeof;
-		} else {
-			size_t size=len*T.sizeof;
-		}
-		_heap=new MmFile(path, MmFile.Mode.readWrite, size, null, 0);
-		enforce(_heap.length >= size, _tag~": file is too small");
-
-		static if(dynamic) {
+			_heap=new MmFile(path, MmFile.Mode.readWrite, size, null, 0);
+			enforce(_heap.length >= size, _tag~": file is too small");
+			
 			_value=cast(Element[]) _heap[0.._heap.length];
 		} else {
-			_value=cast(T*) _heap[].ptr;
+			enforce(0, "<size, file> ctor");
 		}
  	}
 }
@@ -92,15 +93,15 @@ struct Perpetual(T)
 
 ///
 unittest {
-import std.stdio;
-import std.conv;
-import std.string;
-import std.file : remove;
-import std.file : deleteme;
+	import std.stdio;
+	import std.conv;
+	import std.string;
+	import std.file : remove;
+	import std.file : deleteme;
 
-struct A { int x; };
-class B {};
-enum Color { black, red, green, blue, white };
+	struct A { int x; };
+	class B {};
+	enum Color { black, red, green, blue, white };
 
 	string[] file;
 	foreach(i; 1..8) file~=deleteme~to!string(i);
@@ -138,7 +139,7 @@ enum Color { black, red, green, blue, white };
 		// double static array with initailization
 		auto p8=Perpetual!(char[3][5])(file[6]);
 		foreach(ref x; p8) x="..."; p8[0]="one"; p8[2]="two";
-
+		
 		//auto pX=Perpetual!(char*)("?");     //ERROR: "char* is reference type"
 		//auto pX=Perpetual!B("?");           //ERROR: "B is reference type"
 		//auto pX=Perpetual!(char*[])("?");   //ERROR: "char* is reference type"
