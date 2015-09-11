@@ -6964,13 +6964,6 @@ bool approxEqual(T, U)(T lhs, U rhs)
     assert(approxEqual(10, a));
 }
 
-// Included for backwards compatibility with Phobos1
-deprecated("Phobos1 math functions are deprecated, use isNaN") alias isnan = isNaN;
-deprecated("Phobos1 math functions are deprecated, use isFinite ") alias isfinite = isFinite;
-deprecated("Phobos1 math functions are deprecated, use isNormal ") alias isnormal = isNormal;
-deprecated("Phobos1 math functions are deprecated, use isSubnormal ") alias issubnormal = isSubnormal;
-deprecated("Phobos1 math functions are deprecated, use isInfinity ") alias isinf = isInfinity;
-
 /* **********************************
  * Building block functions, they
  * translate to a single x87 instruction.
