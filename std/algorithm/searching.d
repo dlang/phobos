@@ -2607,7 +2607,11 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 /**
-Returns the minimum element of a range together with the number of
+Params:
+    pred = The ordering predicate to use to determine the minimal element.
+    range = The input range to count.
+
+Returns: The minimum element of a range together with the number of
 occurrences. The function can actually be used for counting the
 maximum or any other ordering predicate (that's why $(D maxCount) is
 not provided).
