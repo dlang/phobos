@@ -59,6 +59,7 @@
  *           $(LREF isAssignable)
  *           $(LREF isCovariantWith)
  *           $(LREF isImplicitlyConvertible)
+ *           $(LREF isImplicitlyConvertibleToStringType)
  * ))
  * <!--$(TR $(TD SomethingTypeOf) $(TD
  *           $(LREF BooleanTypeOf)
@@ -4115,6 +4116,31 @@ unittest
     // from std.conv.implicitlyConverts
     assert(!isImplicitlyConvertible!(const(char)[], string));
     assert( isImplicitlyConvertible!(string, const(char)[]));
+}
+
+/** Returns $(D true) if the passed type can be implicity converted to a
+$(D string) type. For instance, if a custom type has an $(D alias this) to a
+member that returns a string.
+*/
+template isImplicitlyConvertibleToStringType(From)
+{
+    enum bool isImplicitlyConvertibleToStringType =
+        isImplicitlyConvertible!(From, const(char)[]) ||
+        isImplicitlyConvertible!(From, const(wchar)[]) ||
+        isImplicitlyConvertible!(From, const(dchar)[]) ||
+        isImplicitlyConvertible!(From, immutable(char)[]) ||
+        isImplicitlyConvertible!(From, immutable(wchar)[]) ||
+        isImplicitlyConvertible!(From, immutable(dchar)[]);
+}
+
+///
+unittest
+{
+    import std.file : DirEntry;
+    static assert(isImplicitlyConvertibleToStringType!DirEntry);
+    static assert(isImplicitlyConvertibleToStringType!string);
+    static assert(isImplicitlyConvertibleToStringType!wstring);
+    static assert(isImplicitlyConvertibleToStringType!dstring);
 }
 
 /**
