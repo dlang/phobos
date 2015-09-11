@@ -2801,11 +2801,15 @@ unittest
 
 // minPos
 /**
-Returns the position of the minimum element of forward range $(D
-range), i.e. a subrange of $(D range) starting at the position of its
-smallest element and with the same ending as $(D range). The function
-can actually be used for finding the maximum or any other ordering
-predicate (that's why $(D maxPos) is not provided).
+Params:
+    pred = The ordering predicate to use to determine the minimal element.
+    range = The input range to search.
+
+Returns: The position of the minimum element of forward range $(D range), i.e.
+a subrange of $(D range) starting at the position of its smallest element and
+with the same ending as $(D range). The function can actually be used for
+finding the maximum or any other ordering predicate (that's why $(D maxPos) is
+not provided).
  */
 Range minPos(alias pred = "a < b", Range)(Range range)
     if (isForwardRange!Range && !isInfinite!Range &&
