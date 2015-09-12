@@ -2968,12 +2968,12 @@ class EncodingSchemeWindows1250 : EncodingScheme
 
         override size_t encodedLength(dchar c)
         {
-                return std.encoding.encodedLength!(Windows1250Char)(c);
+            return std.encoding.encodedLength!(Windows1250Char)(c);
         }
 
         override size_t encode(dchar c, ubyte[] buffer)
         {
-                auto r = cast(Windows1250Char[])buffer;
+            auto r = cast(Windows1250Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
