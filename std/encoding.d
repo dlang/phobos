@@ -976,7 +976,7 @@ private template EncoderInstance(CharType : Latin2Char)
 //          WINDOWS-1250
 //=============================================================================
 
-/// Defines a Wwindows1250-encoded character.
+/// Defines a Windows1250-encoded character.
 enum Windows1250Char : ubyte { init }
 
 /**
@@ -1069,16 +1069,19 @@ private template EncoderInstance(CharType : Windows1250Char)
 //          WINDOWS-1252
 //=============================================================================
 
-/** Defines a Windows1252-encoded character. */
+/// Defines a Windows1252-encoded character.
 enum Windows1252Char : ubyte { init }
+
 /**
-Defines an Windows1252-encoded string (as an array of $(D
-immutable(Windows1252Char))).
+ * Defines an Windows1252-encoded string (as an array of $(D
+ * immutable(Windows1252Char))).
  */
 alias Windows1252String = immutable(Windows1252Char)[];
 
 template EncoderInstance(CharType : Windows1252Char)
 {
+    import std.typecons : Tuple, tuple;
+
     alias E = Windows1252Char;
     alias EString = Windows1252String;
 
@@ -1087,87 +1090,28 @@ template EncoderInstance(CharType : Windows1252Char)
         return "windows-1252";
     }
 
-    immutable wstring charMap =
+    private dchar m_charMapStart = 0x80;
+    private dchar m_charMapEnd = 0x9f;
+
+    private immutable wstring charMap =
         "\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"~
         "\u02C6\u2030\u0160\u2039\u0152\uFFFD\u017D\uFFFD"~
         "\uFFFD\u2018\u2019\u201C\u201D\u2022\u2013\u2014"~
-        "\u02DC\u2122\u0161\u203A\u0153\uFFFD\u017E\u0178"
-    ;
+        "\u02DC\u2122\u0161\u203A\u0153\uFFFD\u017E\u0178";
 
-    bool canEncode(dchar c)
-    {
-        if (c < 0x80 || (c >= 0xA0 && c < 0x100)) return true;
-        if (c >= 0xFFFD) return false;
-        foreach(wchar d;charMap) { if (c == d) return true; }
-        return false;
-    }
+    private immutable Tuple!(wchar, char)[] bstMap = [
+        tuple('\u201C','\x93'), tuple('\u0192','\x83'), tuple('\u2039','\x8B'),
+        tuple('\u0161','\x9A'), tuple('\u2014','\x97'), tuple('\u2021','\x87'),
+        tuple('\u20AC','\x80'), tuple('\u0153','\x9C'), tuple('\u017D','\x8E'),
+        tuple('\u02DC','\x98'), tuple('\u2019','\x92'), tuple('\u201E','\x84'),
+        tuple('\u2026','\x85'), tuple('\u203A','\x9B'), tuple('\u2122','\x99'),
+        tuple('\u0152','\x8C'), tuple('\u0160','\x8A'), tuple('\u0178','\x9F'),
+        tuple('\u017E','\x9E'), tuple('\u02C6','\x88'), tuple('\u2013','\x96'),
+        tuple('\u2018','\x91'), tuple('\u201A','\x82'), tuple('\u201D','\x94'),
+        tuple('\u2020','\x86'), tuple('\u2022','\x95'), tuple('\u2030','\x89')
+    ];
 
-    bool isValidCodeUnit(Windows1252Char c)
-    {
-        if (c < 0x80 || c >= 0xA0) return true;
-        return (charMap[c-0x80] != 0xFFFD);
-    }
-
-    size_t encodedLength(dchar c)
-    in
-    {
-        assert(canEncode(c));
-    }
-    body
-    {
-        return 1;
-    }
-
-    void encodeViaWrite()(dchar c)
-    {
-        if (c < 0x80 || (c >= 0xA0 && c < 0x100)) {}
-        else if (c >= 0xFFFD) { c = '?'; }
-        else
-        {
-            ptrdiff_t n = -1;
-            foreach (i, wchar d; charMap)
-            {
-                if (c == d)
-                {
-                    n = i;
-                    break;
-                }
-            }
-            c = n == -1 ? '?' : 0x80 + cast(dchar) n;
-        }
-        write(cast(Windows1252Char)c);
-    }
-
-    void skipViaRead()()
-    {
-        read();
-    }
-
-    dchar decodeViaRead()()
-    {
-        Windows1252Char c = read();
-        return (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
-    }
-
-    dchar safeDecodeViaRead()()
-    {
-        Windows1252Char c = read();
-        dchar d = (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
-        return d == 0xFFFD ? INVALID_SEQUENCE : d;
-    }
-
-    dchar decodeReverseViaRead()()
-    {
-        Windows1252Char c = read();
-        return (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
-    }
-
-    @property EString replacementSequence()
-    {
-        return cast(EString)("?");
-    }
-
-    mixin EncoderFunctions;
+    mixin GenericEncoder!();
 }
 
 //=============================================================================
