@@ -4594,12 +4594,12 @@ public:
     {
         return (rhs._container == _container);
     }
-    
+
     /// see range()
     nothrow @safe Range opSlice()
     {
         return Range(_container);
-    }    
+    }
 
     /**
      * Support for the in operator.
