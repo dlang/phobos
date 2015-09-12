@@ -21,8 +21,8 @@
 */
 
 /**************
- * $(RED Warning: This module is considered out-dated and not up to Phobos'
- *       current standards. It will be removed by phobos version 2.070.)
+ * $(RED Deprecated: This module is considered out-dated and not up to Phobos'
+ *       current standards. It will be remove in October 2016.)
  *
  * $(D SocketStream) is a stream for a blocking,
  * connected $(D Socket).
@@ -35,8 +35,8 @@
  * Source:    $(PHOBOSSRC std/_socketstream.d)
  * Macros: WIKI=Phobos/StdSocketstream
  */
-
-deprecated("Will be removed by phobos version 2.070") module std.socketstream;
+deprecated("It will be removed from Phobos in October 2016. If you still need it, go to https://github.com/DigitalMars/undeaD") module std.socketstream;
+// @@@DEPRECATED_2016-10@@@
 
 private import std.stream;
 private import std.socket;
