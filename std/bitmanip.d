@@ -4594,6 +4594,12 @@ public:
     {
         return (rhs._container == _container);
     }
+    
+    /// see range()
+    nothrow @safe Range opSlice()
+    {
+        return Range(_container);
+    }    
 
     /**
      * Support for the in operator.
@@ -4981,7 +4987,7 @@ version(unittest)
         with (a17) set = [a8, a16, a13];
         assert(startsWith(set.range, a17.a8));
         with (a17) set += [a2, a4];
-        assert(startsWith(set.range, a17.a2));
+        assert(startsWith(set[], a17.a2));
 
         auto set1 = set;
         set1 = 0;
