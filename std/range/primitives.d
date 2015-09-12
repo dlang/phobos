@@ -792,7 +792,10 @@ template isForwardRange(R)
     static assert(!isForwardRange!(int));
     static assert( isForwardRange!(int[]));
     static assert( isForwardRange!(inout(int)[]));
+}
 
+@safe unittest
+{
     // BUG 14544
     struct R14544
     {
