@@ -652,11 +652,9 @@ template EncoderInstance(E)
 
 private template GenericEncoder()
 {
-    private dchar m_charMapStart = (0x100-charMap.length);
-
     bool canEncode(dchar c)
     {
-        if (c < m_charMapStart) return true;
+        if (c < m_charMapStart || (c > m_charMapEnd && c < 0x100)) return true;
         if (c >= 0xFFFD) return false;
 
         auto idx = 0;
@@ -671,7 +669,7 @@ private template GenericEncoder()
 
     bool isValidCodeUnit(E c)
     {
-        if (c < m_charMapStart) return true;
+        if (c < m_charMapStart || c > m_charMapEnd) return true;
         return charMap[c-m_charMapStart] != 0xFFFD;
     }
 
@@ -687,7 +685,7 @@ private template GenericEncoder()
 
     void encodeViaWrite()(dchar c)
     {
-        if (c < m_charMapStart) {}
+        if (c < m_charMapStart || (c > m_charMapEnd && c < 0x100)) {}
         else if (c >= 0xFFFD) { c = '?'; }
         else
         {
@@ -714,19 +712,20 @@ private template GenericEncoder()
     dchar decodeViaRead()()
     {
         E c = read();
-        return (c >= m_charMapStart) ? charMap[c-m_charMapStart] : c;
+        return (c >= m_charMapStart && c <= m_charMapEnd) ? charMap[c-m_charMapStart] : c;
     }
 
     dchar safeDecodeViaRead()()
     {
         E c = read();
-        return (c >= m_charMapStart) ? charMap[c-m_charMapStart] : c;
+        dchar d = (c >= m_charMapStart && c <= m_charMapEnd) ? charMap[c-m_charMapStart] : c;
+        return d == 0xFFFD ? INVALID_SEQUENCE : d;
     }
 
     dchar decodeReverseViaRead()()
     {
         E c = read();
-        return (c >= m_charMapStart) ? charMap[c-m_charMapStart] : c;
+        return (c >= m_charMapStart && c <= m_charMapEnd) ? charMap[c-m_charMapStart] : c;
     }
 
     @property EString replacementSequence()
@@ -918,7 +917,10 @@ private template EncoderInstance(CharType : Latin2Char)
         return "ISO-8859-2";
     }
 
-    immutable wstring charMap =
+    private dchar m_charMapStart = 0xa1;
+    private dchar m_charMapEnd = 0xff;
+
+    private immutable wstring charMap =
         "\u0104\u02D8\u0141\u00A4\u013D\u015A\u00A7\u00A8"~
         "\u0160\u015E\u0164\u0179\u00AD\u017D\u017B\u00B0"~
         "\u0105\u02DB\u0142\u00B4\u013E\u015B\u02C7\u00B8"~
@@ -932,7 +934,7 @@ private template EncoderInstance(CharType : Latin2Char)
         "\u0144\u0148\u00F3\u00F4\u0151\u00F6\u00F7\u0159"~
         "\u016F\u00FA\u0171\u00FC\u00FD\u0163\u02D9";
 
-    immutable Tuple!(wchar, char)[] bstMap = [
+    private immutable Tuple!(wchar, char)[] bstMap = [
         tuple('\u0148','\xF2'), tuple('\u00F3','\xF3'), tuple('\u0165','\xBB'),
         tuple('\u00D3','\xD3'), tuple('\u010F','\xEF'), tuple('\u015B','\xB6'),
         tuple('\u017C','\xBF'), tuple('\u00C1','\xC1'), tuple('\u00E1','\xE1'),
@@ -995,7 +997,10 @@ private template EncoderInstance(CharType : Windows1250Char)
         return "windows-1250";
     }
 
-    immutable wstring charMap =
+    private dchar m_charMapStart = 0x80;
+    private dchar m_charMapEnd = 0xff;
+
+    private immutable wstring charMap =
         "\u20AC\uFFFD\u201A\uFFFD\u201E\u2026\u2020\u2021"~
         "\uFFFD\u2030\u0160\u2039\u015A\u0164\u017D\u0179"~
         "\uFFFD\u2018\u2019\u201C\u201D\u2022\u2013\u2014"~
@@ -1013,7 +1018,7 @@ private template EncoderInstance(CharType : Windows1250Char)
         "\u0111\u0144\u0148\u00F3\u00F4\u0151\u00F6\u00F7"~
         "\u0159\u016F\u00FA\u0171\u00FC\u00FD\u0163\u02D9";
 
-    immutable Tuple!(wchar, char)[] bstMap = [
+    private immutable Tuple!(wchar, char)[] bstMap = [
         tuple('\u011A','\xCC'), tuple('\u00DC','\xDC'), tuple('\u0179','\x8F'),
         tuple('\u00B7','\xB7'), tuple('\u00FC','\xFC'), tuple('\u0158','\xD8'),
         tuple('\u201C','\x93'), tuple('\u00AC','\xAC'), tuple('\u00CB','\xCB'),
