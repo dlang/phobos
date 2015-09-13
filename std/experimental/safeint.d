@@ -11,6 +11,7 @@ module std.experimental.safeint;
 import std.traits : isFloatingPoint, isIntegral, isUnsigned, isNumeric,
     isSigned, Unqual;
 import std.typetuple : TypeTuple;
+import std.math : isNaN;
 
 version(none)
 int main()
@@ -480,8 +481,6 @@ template isSafeInt(T)
 ///
 pure unittest
 {
-    //static assert( isSafeInt!(SafeIntInline!int));
-    //static assert( isSafeInt!(SafeIntExplicit!int));
     static assert( isSafeInt!(SafeInt!int));
     static assert(!isSafeInt!int);
 }
@@ -1274,4 +1273,78 @@ unittest
     SafeInt!int safe;
     int raw = 0;
     safe = raw;
+
+    safe = safe % 0;
+    assert(safe.isNaN);
+}
+
+private bool sfEqual(F,S)(F f, S s) if (isFloatingPoint!F && isSafeInt!S) {
+    import std.math : abs;
+
+    const bool nn = f.isNaN || s.isNaN;
+    if(nn) {
+        return false;
+    } else {
+        return abs(cast(float)s.value - f) < 0.0001;
+    }
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(byte,short,int,long))
+    {
+        foreach (S; TypeTuple!(SafeIntExplicit!T, SafeIntInline!T))
+        {
+            SafeIntImpl!(T,S) s;
+            float f;
+
+            assert(s.isNaN == f.isNaN);
+            assert(s != s);
+
+            s = 0;
+            f = 0;
+            assert(s == s);
+            assert(sfEqual(f, s));
+
+            s = s + 1;
+            f = f + 1;
+            assert(sfEqual(f, s));
+
+            s = 1 + s;
+            f = 1 + f;
+            assert(sfEqual(f, s));
+
+            s = s * 2;
+            f = f * 2;
+            assert(sfEqual(f, s));
+
+            s = 3 * s;
+            f = 3 * f;
+            assert(sfEqual(f, s));
+
+            s = s / 4;
+            f = f / 4;
+            assert(sfEqual(f, s));
+
+            s = s - 4;
+            f = f - 4;
+            assert(sfEqual(f, s));
+
+            s += s;
+            f += f;
+            assert(sfEqual(f, s));
+
+            s -= s;
+            f -= f;
+            assert(sfEqual(f, s));
+
+            s *= s;
+            f *= f;
+            assert(sfEqual(f, s));
+
+            s = s % 2;
+            f = s % 2;
+            assert(sfEqual(f, s));
+        }
+    }
 }
