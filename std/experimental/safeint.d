@@ -1079,9 +1079,57 @@ unittest
     assert(f == 1);
 }
 
+/// Convenience Aliases
 alias SafeIntFast(T) = SafeIntImpl!(T, SafeIntExplicit!T);
+/// ditto
 alias SafeIntSmall(T) = SafeIntImpl!(T, SafeIntInline!T);
+/// ditto
 alias SafeInt(T) = SafeIntSmall!(T);
+/// ditto
+alias Sbyte = SafeInt!byte;
+/// ditto
+alias Subyte = SafeInt!ubyte;
+/// ditto
+alias SFbyte = SafeIntFast!byte;
+/// ditto
+alias SFubyte = SafeIntFast!ubyte;
+/// ditto
+alias Sshort = SafeInt!short;
+/// ditto
+alias Sushort = SafeInt!ushort;
+/// ditto
+alias SFshort = SafeIntFast!short;
+/// ditto
+alias SFushort = SafeIntFast!ushort;
+/// ditto
+alias Sint = SafeInt!int;
+/// ditto
+alias Suint = SafeInt!uint;
+/// ditto
+alias SFint = SafeIntFast!int;
+/// ditto
+alias SFuint = SafeIntFast!uint;
+/// ditto
+alias Slong = SafeInt!long;
+/// ditto
+alias Sulong = SafeInt!ulong;
+/// ditto
+alias SFlong = SafeIntFast!long;
+/// ditto
+alias SFulong = SafeIntFast!ulong;
+
+///
+unittest
+{
+    foreach(T; TypeTuple!(
+                Sbyte, Sshort, Sint, Slong, Subyte, Subyte, Sushort, Suint,
+                Sulong, SFbyte, SFshort, SFint, SFlong, SFubyte, SFubyte,
+                SFushort, SFuint, SFulong))
+    {
+        T t = 1;
+        assert(t == 1);
+    }
+}
 
 @safe:
 
