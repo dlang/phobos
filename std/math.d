@@ -4125,9 +4125,7 @@ long lrint(real x) @trusted pure nothrow @nogc
                     else if (exp <= 31)
                         result = rep.ints[1] >> (31 - exp);
                     else
-                        result =
-                            (cast(long) rep.ints[1] << (exp - 31)) |
-                            (rep.ints[0] >> (63 - exp));
+                        result = (cast(long) rep.ints[1] << (exp - 31)) | (rep.ints[0] >> (63 - exp));
                 }
                 else
                 {
@@ -4136,9 +4134,7 @@ long lrint(real x) @trusted pure nothrow @nogc
                     else if (exp <= 31)
                         result = rep.ints[1] >> (31 - exp);
                     else
-                        result =
-                            (cast(long) rep.ints[1] << (exp - 31)) |
-                            (rep.ints[2] >> (63 - exp));
+                        result = (cast(long) rep.ints[1] << (exp - 31)) | (rep.ints[2] >> (63 - exp));
                 }
             }
             else
