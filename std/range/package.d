@@ -1461,6 +1461,7 @@ if (Ranges.length > 2
     return choose(index == 0, rs[0], chooseAmong(index - 1, rs[1 .. $]));
 }
 
+/// ditto
 auto chooseAmong(Ranges...)(size_t index, Ranges rs)
 if (Ranges.length == 2 && is(typeof(choose(true, rs[0], rs[1]))))
 {
