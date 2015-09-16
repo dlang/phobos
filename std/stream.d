@@ -1,9 +1,8 @@
 // Written in the D programming language
 
 /**
- * $(RED Warning: This module is considered out-dated and not up to Phobos'
- *       current standards. It will remain until we have a suitable replacement,
- *       but be aware that it will not remain long term.)
+ * $(RED Deprecated: This module is considered out-dated and not up to Phobos'
+ *       current standards. It will be remove in October 2016.)
  *
  * Source:    $(PHOBOSSRC std/_stream.d)
  * Macros:
@@ -26,8 +25,8 @@
  * the suitability of this software for any purpose. It is provided
  * "as is" without express or implied warranty.
  */
-
-module std.stream;
+deprecated("It will be removed from Phobos in October 2016. If you still need it, go to https://github.com/DigitalMars/undeaD") module std.stream;
+// @@@DEPRECATED_2016-10@@@
 
 
 import std.internal.cstring;

@@ -2824,34 +2824,11 @@ auto generate(Fun)(Fun fun)
     return Generator!(Fun)(fun);
 }
 
-///
+/// ditto
 auto generate(alias fun)()
     if (isCallable!fun)
 {
     return Generator!(fun)();
-}
-
-//private struct Generator(bool onPopFront, bool runtime, Fun...)
-private struct Generator(Fun...)
-{
-    static assert(Fun.length == 1);
-    static assert(isInputRange!Generator);
-
-private:
-    static if (is(Fun[0]))
-        Fun[0] fun;
-    else
-        alias fun = Fun[0];
-
-public:
-    enum empty = false;
-
-    auto ref front() @property
-    {
-        return fun();
-    }
-
-    void popFront() { }
 }
 
 ///
@@ -2877,6 +2854,38 @@ public:
     }
     //adapted as a range.
     assert(equal(generate(infiniteIota(1, 4)).take(10), [1, 2, 3, 1, 2, 3, 1, 2, 3, 1]));
+}
+
+///
+unittest
+{
+    import std.format, std.random;
+
+    auto r = generate!(() => uniform(0, 6)).take(10);
+    format("%(%s %)", r);
+}
+
+//private struct Generator(bool onPopFront, bool runtime, Fun...)
+private struct Generator(Fun...)
+{
+    static assert(Fun.length == 1);
+    static assert(isInputRange!Generator);
+
+private:
+    static if (is(Fun[0]))
+        Fun[0] fun;
+    else
+        alias fun = Fun[0];
+
+public:
+    enum empty = false;
+
+    auto ref front() @property
+    {
+        return fun();
+    }
+
+    void popFront() { }
 }
 
 @safe unittest
@@ -4616,9 +4625,9 @@ body
 
 /// Ditto
 auto iota(B, E)(B begin, E end)
-if (isFloatingPoint!(CommonType!(B, E)))
+    if (isFloatingPoint!(CommonType!(B, E)))
 {
-    return iota(begin, end, 1.0);
+    return iota(begin, end, CommonType!(B, E)(1));
 }
 
 /// Ditto
@@ -4823,6 +4832,8 @@ unittest
 {
     import std.math : approxEqual, nextUp, nextDown;
     import std.algorithm : count, equal;
+
+    static assert(is(ElementType!(typeof(iota(0f))) == float));
 
     static assert(hasLength!(typeof(iota(0, 2))));
     auto r = iota(0, 10, 1);

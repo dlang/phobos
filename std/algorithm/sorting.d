@@ -93,6 +93,13 @@ exact strategy chosen depends on the relative sizes of $(D lhs) and
 $(D rhs).  Performs $(BIGOH lhs.length + rhs.length * log(rhs.length))
 (best case) to $(BIGOH (lhs.length + rhs.length) * log(lhs.length +
 rhs.length)) (worst-case) evaluations of $(D swap).
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    lhs = The sorted, left-hand side of the random access range to be sorted.
+    rhs = The unsorted, right-hand side of the random access range to be
+        sorted.
 */
 void completeSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(SortedRange!(Range1, less) lhs, Range2 rhs)
@@ -128,6 +135,12 @@ unittest
 Checks whether a forward range is sorted according to the comparison
 operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
 less).
+
+Params:
+    less = Predicate the range should be sorted by.
+    r = Forward range to check for sortedness.
+
+Returns: true if the range is sorted, false otherwise.
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
@@ -275,11 +288,10 @@ unittest
 
 // partition
 /**
-Partitions a range in two using $(D pred) as a
-predicate. Specifically, reorders the range $(D r = [left,
-right$(RPAREN)) using $(D swap) such that all elements $(D i) for
-which $(D pred(i)) is $(D true) come before all elements $(D j) for
-which $(D pred(j)) returns $(D false).
+Partitions a range in two using the given $(D predicate).
+Specifically, reorders the range $(D r = [left, right$(RPAREN)) using $(D swap)
+such that all elements $(D i) for which $(D predicate(i)) is $(D true) come
+before all elements $(D j) for which $(D predicate(j)) returns $(D false).
 
 Performs $(BIGOH r.length) (if unstable or semistable) or $(BIGOH
 r.length * log(r.length)) (if stable) evaluations of $(D less) and $(D
@@ -287,15 +299,20 @@ swap). The unstable version computes the minimum possible evaluations
 of $(D swap) (roughly half of those performed by the semistable
 version).
 
+Params:
+    predicate = The predicate to partition by.
+    ss = The swapping strategy to employ.
+    r = The random-access range to partition.
+
 Returns:
 
 The right part of $(D r) after partitioning.
 
-If $(D ss == SwapStrategy.stable), $(D partition) preserves the
-relative ordering of all elements $(D a), $(D b) in $(D r) for which
-$(D pred(a) == pred(b)). If $(D ss == SwapStrategy.semistable), $(D
-partition) preserves the relative ordering of all elements $(D a), $(D
-b) in the left part of $(D r) for which $(D pred(a) == pred(b)).
+If $(D ss == SwapStrategy.stable), $(D partition) preserves the relative
+ordering of all elements $(D a), $(D b) in $(D r) for which $(D predicate(a) ==
+predicate(b)). If $(D ss == SwapStrategy.semistable), $(D partition) preserves
+the relative ordering of all elements $(D a), $(D b) in the left part of $(D r)
+for which $(D predicate(a) == predicate(b)).
 
 See_Also:
     STL's $(WEB sgi.com/tech/stl/_partition.html, _partition)$(BR)
@@ -435,8 +452,10 @@ Range partition(alias predicate,
 }
 
 /**
-Returns $(D true) if $(D r) is partitioned according to predicate $(D
-pred).
+Params:
+    pred = The predicate that the range should be partitioned by.
+    r = The range to check.
+Returns: $(D true) if $(D r) is partitioned according to predicate $(D pred).
  */
 bool isPartitioned(alias pred, Range)(Range r)
     if (isForwardRange!(Range))
@@ -469,6 +488,16 @@ elements in $(D r) that are equal to $(D pivot). Finally, the third
 and rightmost range only contains elements in $(D r) that are greater
 than $(D pivot). The less-than test is defined by the binary function
 $(D less).
+
+Params:
+    less = The predicate to use for the rearrangement.
+    ss = The swapping strategy to use.
+    r = The random-access range to rearrange.
+    pivot = The pivot element.
+
+Returns:
+    A $(XREF typecons,Tuple) of the three resulting ranges. These ranges are
+    slices of the original range.
 
 BUGS: stable $(D partition3) has not been implemented yet.
  */
@@ -583,6 +612,12 @@ latter requires it to be a random-access range.
 
 $(D makeIndex) overwrites its second argument with the result, but
 never reallocates it.
+
+Params:
+    less = The comparison to use.
+    ss = The swapping strategy.
+    r = The range to index.
+    index = The resulting index.
 
 Returns: The pointer-based version returns a $(D SortedRange) wrapper
 over index, of type $(D SortedRange!(RangeIndex, (a, b) =>
@@ -934,6 +969,11 @@ imply $(D !less(a,c)). Note that the default predicate ($(D "a < b")) does not
 always satisfy these conditions for floating point types, because the expression
 will always be $(D false) when either $(D a) or $(D b) is NaN.
 Use $(XREF math, cmp) instead.
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r = The range to sort.
 
 Returns: The initial range wrapped as a $(D SortedRange) with the predicate
 $(D binaryFun!less).
@@ -1920,6 +1960,12 @@ Schwartz sorting, a function $(D schwartzIsSorted) is not provided
 because the effect can be achieved by calling $(D
 isSorted!less(map!transform(r))).
 
+Params:
+    transform = The transformation to apply.
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r = The range to sort.
+
 Returns: The initial range wrapped as a $(D SortedRange) with the
 predicate $(D (a, b) => binaryFun!less(transform(a),
 transform(b))).
@@ -2054,6 +2100,12 @@ the range $(D r[mid .. r.length]) in no particular order. Performs
 $(BIGOH r.length * log(mid)) evaluations of $(D pred). The
 implementation simply calls $(D topN!(less, ss)(r, n)) and then $(D
 sort!(less, ss)(r[0 .. n])).
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r = The random-access range to reorder.
+    n = The length of the initial segment of `r` to sort.
 */
 void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     Range)(Range r, size_t n)
@@ -2084,6 +2136,13 @@ $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
 (if stable) evaluations of $(D less) and $(D swap).
 
 If $(D n >= r.length), the algorithm has no effect.
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r = The random-access range to reorder.
+    nth = The index of the element that should be in sorted position after the
+        function is done.
 
 See_Also:
     $(LREF topNIndex),
@@ -2217,6 +2276,12 @@ void topN(alias less = "a < b",
 
 /**
 Stores the smallest elements of the two ranges in the left-hand range.
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r1 = The first range.
+    r2 = The second range.
  */
 void topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
@@ -2251,6 +2316,14 @@ random-access range $(D target), where $(D n =
 target.length). Elements of $(D source) are not touched. If $(D
 sorted) is $(D true), the target is sorted. Otherwise, the target
 respects the $(WEB en.wikipedia.org/wiki/Binary_heap, heap property).
+
+Params:
+    less = The predicate to sort by.
+    source = The source range.
+    target = The target range.
+    sorted = Whether to sort the elements copied into `target`.
+
+Returns: The slice of `target` containing the copied elements.
  */
 TRange topNCopy(alias less = "a < b", SRange, TRange)
     (SRange source, TRange target, SortOutput sorted = SortOutput.no)
@@ -2455,6 +2528,11 @@ do
     // proceed to the next permutation of the array.
 } while (nextPermutation(a));
 ----
+ * Params:
+ *  less = The ordering to be used to determine lexicographical ordering of the
+ *      permutations.
+ *  range = The range to permute.
+ *
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
@@ -2706,6 +2784,11 @@ do
  * duplicate elements under the specified ordering. If this is not _true, some
  * permutations may fail to be generated. When the range has non-unique
  * elements, you should use $(MYREF nextPermutation) instead.
+ *
+ * Params:
+ *  less = The ordering to be used to determine lexicographical ordering of the
+ *      permutations.
+ *  range = The range to permute.
  *
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest

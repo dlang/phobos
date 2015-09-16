@@ -1324,7 +1324,11 @@ private template MinType(T...)
 
 // min
 /**
-Returns the minimum of the passed-in values.
+Iterates the passed arguments and returns the minimum value.
+
+Params: args = The values to select the minimum from. At least two arguments
+    must be passed, and they must be comparable with `<`.
+Returns: The minimum of the passed-in values.
 */
 MinType!T min(T...)(T args)
     if (T.length >= 2)
@@ -1353,10 +1357,9 @@ MinType!T min(T...)(T args)
     return cast(typeof(return)) (chooseA ? a : b);
 }
 
+///
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int a = 5;
     short b = 6;
     double c = 2;
@@ -1366,13 +1369,15 @@ MinType!T min(T...)(T args)
     auto e = min(a, b, c);
     static assert(is(typeof(e) == double));
     assert(e == 2);
-    // mixed signedness test
+
+    // With arguments of mixed signedness, the return type is the one that can
+    // store the lowest values.
     a = -10;
     uint f = 10;
     static assert(is(typeof(min(a, f)) == int));
     assert(min(a, f) == -10);
 
-    //Test user-defined types
+    // User-defined types that support comparison with < are supported.
     import std.datetime;
     assert(min(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(1982, 1, 4));
     assert(min(Date(1982, 1, 4), Date(2012, 12, 21)) == Date(1982, 1, 4));
