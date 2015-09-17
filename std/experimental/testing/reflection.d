@@ -23,7 +23,7 @@ struct TestData
     TestFunction testFunction;
     bool hidden;
     bool shouldFail;
-    bool singleThreaded;
+    bool serial;
 }
 
 /**
@@ -95,7 +95,7 @@ TestData[] moduleTestData(alias module_)() @safe pure nothrow
     {
         testData ~= TestData(unittestName!(test, index), &test,
             hasUDA!(test, hiddenTest), hasUDA!(test, shouldFail),
-            hasUDA!(test, singleThreaded),);
+            hasUDA!(test, serial),);
     }
     return testData;
 }

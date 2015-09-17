@@ -88,7 +88,7 @@ unittest
 __gshared int i;
 
 @name("sideEffect1")
-@singleThreaded //all @singleThreaded tests in a module run in the same thread
+@serial //all @serial tests in a module run in the same thread
 unittest
 {
     i++;
@@ -96,7 +96,7 @@ unittest
 }
 
 @name("sideEffect2")
-@singleThreaded //all @singleThreaded tests in a module run in the same thread
+@serial //all @serial tests in a module run in the same thread
 unittest
 {
     i++;

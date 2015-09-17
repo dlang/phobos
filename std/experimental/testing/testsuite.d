@@ -220,11 +220,11 @@ private TestCase createTestCase(in TestData testData) @safe
 {
     auto testCase = new FunctionTestCase(testData);
 
-    if (testData.singleThreaded)
+    if (testData.serial)
     {
-        // @singleThreaded tests in the same module run sequentially.
+        // @serial tests in the same module run sequentially.
         // A CompositeTestCase is created for each module with at least
-        // one @singleThreaded test and subsequent @singleThreaded tests
+        // one @serial test and subsequent @serial tests
         // appended to it
         static CompositeTestCase[string] composites;
 

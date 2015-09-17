@@ -12,7 +12,12 @@ struct name
     string value;
 }
 
-enum singleThreaded; ///run all unittests in the module in one thread
+/**
+ * Run all unittests from the same module with this UDA in series.
+ * This means they always execute in the same thread and always
+ * in the order of declaration.
+ */
+enum serial;
 
 /**
  * The suite fails if the test passes.
