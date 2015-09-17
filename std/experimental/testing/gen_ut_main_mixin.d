@@ -63,14 +63,7 @@ mixin template genUtMain() {
     {
         try
         {
-            const options = getOptions(args);
-
-            if (options.help || options.showVersion)
-            {
-                return 0;
-            }
-
-            writeFile(options, findModuleNames(options.dirs));
+            writeUtMainFile(getGenUtOptions(args));
             return 0;
         }
         catch(Exception ex)
@@ -87,9 +80,14 @@ mixin template genUtMain() {
         string[] dirs;
         bool help;
         bool showVersion;
+
+        bool earlyReturn() @safe pure nothrow const
+        {
+            return help || showVersion;
+        }
     }
 
-    private Options getOptions(string[] args)
+    Options getGenUtOptions(string[] args)
     {
         import std.getopt;
 
@@ -110,7 +108,7 @@ mixin template genUtMain() {
 
         if (options.showVersion)
         {
-            writeln("gen_ut_main version v0.2.5");
+            writeln("gen_ut_main version v0.0.1");
             return options;
         }
 
@@ -155,16 +153,33 @@ mixin template genUtMain() {
             array;
     }
 
-    private auto writeFile(in Options options, in string[] modules)
-    {
-        if(!haveToUpdate(options, modules))
+    private void writeUtMainFile(in Options options) {
+        if (options.earlyReturn)
         {
-            writeln("Not writing to ", options.fileName, ": no changes detected");
             return;
         }
 
-        writeln("Writing to unit test main file ", options.fileName);
-        writeln("Do not forget to use -unittest when executing ", options.fileName);
+        writeUtMainFile(options, findModuleNames(options.dirs));
+    }
+
+    private void writeUtMainFile(in Options options, in string[] modules)
+    {
+        void printUsage()
+        {
+            writeln("Run with: rdmd -unittest ", options.fileName, ". Use -h for help.");
+        }
+
+        if(!haveToUpdate(options, modules))
+        {
+            writeln("Not writing to ", options.fileName, ": no changes detected");
+            printUsage();
+            return;
+        }
+        else
+        {
+            writeln("Writing to unit test main file ", options.fileName);
+            printUsage();
+        }
 
         auto wfile = File(options.fileName, "w");
         wfile.write(modulesDbList(modules));
