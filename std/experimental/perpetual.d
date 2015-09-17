@@ -1,4 +1,4 @@
-module std.perpetual;
+module std.experimental.perpetual;
 
 private import std.mmfile;
 private import std.exception;
