@@ -18825,37 +18825,6 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
 
             Of course, none of the functions in this module have this problem,
             so it's only relevant if when creating a custom delegate.
-
-        Examples:
---------------------
-auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-auto func = (in Date date) //For iterating over even-numbered days.
-            {
-                if((date.day & 1) == 0)
-                    return date + dur!"days"(2);
-
-                return date + dur!"days"(1);
-            };
-auto range = interval.fwdRange(func);
-
- //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
-assert(range.front == Date(2010, 9, 1));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 2));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 4));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 6));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 8));
-
-range.popFront();
-assert(range.empty);
---------------------
       +/
     IntervalRange!(TP, Direction.fwd) fwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
     {
@@ -18869,6 +18838,37 @@ assert(range.empty);
         return range;
     }
 
+    ///
+    unittest
+    {
+        auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
+        auto func = delegate(in Date date) @safe pure //For iterating over even-numbered days.
+                    {
+                        if((date.day & 1) == 0)
+                            return date + dur!"days"(2);
+
+                        return date + dur!"days"(1);
+                    };
+        auto range = interval.fwdRange(func);
+
+         //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+        assert(range.front == Date(2010, 9, 1));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 2));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 4));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 6));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 8));
+
+        range.popFront();
+        assert(range.empty);
+    }
 
     /++
         Returns a range which iterates backwards over the interval, starting
@@ -18918,37 +18918,6 @@ assert(range.empty);
 
             Of course, none of the functions in this module have this problem,
             so it's only relevant for custom delegates.
-
-        Examples:
---------------------
-auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-auto func = (in Date date) //For iterating over even-numbered days.
-            {
-                if((date.day & 1) == 0)
-                    return date - dur!"days"(2);
-
-                return date - dur!"days"(1);
-            };
-auto range = interval.bwdRange(func);
-
-//An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
-assert(range.front == Date(2010, 9, 9));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 8));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 6));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 4));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 2));
-
-range.popFront();
-assert(range.empty);
---------------------
       +/
     IntervalRange!(TP, Direction.bwd) bwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
     {
@@ -18962,6 +18931,37 @@ assert(range.empty);
         return range;
     }
 
+    ///
+    unittest
+    {
+        auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
+        auto func = delegate(in Date date) //For iterating over even-numbered days.
+                    {
+                        if((date.day & 1) == 0)
+                            return date - dur!"days"(2);
+
+                        return date - dur!"days"(1);
+                    };
+        auto range = interval.bwdRange(func);
+
+        //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+        assert(range.front == Date(2010, 9, 9));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 8));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 6));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 4));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 2));
+
+        range.popFront();
+        assert(range.empty);
+    }
 
     /+
         Converts this interval to a string.
@@ -19070,9 +19070,6 @@ unittest
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     static assert(__traits(compiles, cInterval.begin));
     static assert(__traits(compiles, iInterval.begin));
-
-    //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin == Date(1996, 1, 2));
 }
 
 //Test Interval's end.
@@ -19086,9 +19083,6 @@ unittest
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     static assert(__traits(compiles, cInterval.end));
     static assert(__traits(compiles, iInterval.end));
-
-    //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end == Date(2012, 3, 1));
 }
 
 //Test Interval's length.
@@ -19104,9 +19098,6 @@ unittest
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     static assert(__traits(compiles, cInterval.length));
     static assert(__traits(compiles, iInterval.length));
-
-    //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length == dur!"days"(5903));
 }
 
 //Test Interval's empty.
@@ -19122,10 +19113,6 @@ unittest
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     static assert(__traits(compiles, cInterval.empty));
     static assert(__traits(compiles, iInterval.empty));
-
-    //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(1996, 1, 2)).empty);
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).empty);
 }
 
 //Test Interval's contains(time point).
@@ -19719,10 +19706,6 @@ unittest
     static assert(__traits(compiles, iInterval.intersection(cNegInfInterval)));
     static assert(__traits(compiles, iInterval.intersection(iNegInfInterval)));
 
-    //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) == Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
-
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1990, 7, 6))) == Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1999, 1, 12))) == Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
 
@@ -20096,10 +20079,6 @@ unittest
     static assert(__traits(compiles, iInterval.span(cNegInfInterval)));
     static assert(__traits(compiles, iInterval.span(iNegInfInterval)));
 
-    //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(Interval!Date(Date(1990, 7, 6), Date(1991, 1, 8))) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) == Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
-
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1990, 7 , 6)));
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(PosInfInterval!Date(Date(2050, 1, 1))) == PosInfInterval!Date(Date(1996, 1 , 2)));
 
@@ -20132,16 +20111,6 @@ unittest
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     static assert(!__traits(compiles, cInterval.shift(dur!"days"(5))));
     static assert(!__traits(compiles, iInterval.shift(dur!"days"(5))));
-
-    //Verify Examples.
-    auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 4, 5));
-    auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 4, 5));
-
-    interval1.shift(dur!"days"(50));
-    assert(interval1 == Interval!Date(Date(1996, 2, 21), Date(2012, 5, 25)));
-
-    interval2.shift(dur!"days"(-50));
-    assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
 }
 
 //Test Interval's shift(int, int, AllowDayOverflow).
@@ -20341,36 +20310,6 @@ unittest
                     Date(2010, 9, 17));
     }
 
-    //Verify Examples.
-    {
-        auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-        auto func = delegate (in Date date)
-                    {
-                        if((date.day & 1) == 0)
-                            return date + dur!"days"(2);
-
-                        return date + dur!"days"(1);
-                    };
-        auto range = interval.fwdRange(func);
-
-        assert(range.front == Date(2010, 9, 1)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
-
-        range.popFront();
-        assert(range.front == Date(2010, 9, 2));
-
-        range.popFront();
-        assert(range.front == Date(2010, 9, 4));
-
-        range.popFront();
-        assert(range.front == Date(2010, 9, 6));
-
-        range.popFront();
-        assert(range.front == Date(2010, 9, 8));
-
-        range.popFront();
-        assert(range.empty);
-    }
-
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     static assert(__traits(compiles, cInterval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri))));
@@ -20407,36 +20346,6 @@ unittest
                     Date(2010, 9, 24));
     }
 
-    //Verify Examples.
-    {
-        auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-        auto func = delegate (in Date date)
-                    {
-                        if((date.day & 1) == 0)
-                            return date - dur!"days"(2);
-
-                        return date - dur!"days"(1);
-                    };
-        auto range = interval.bwdRange(func);
-
-        assert(range.front == Date(2010, 9, 9)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
-
-        range.popFront();
-        assert(range.front == Date(2010, 9, 8));
-
-        range.popFront();
-        assert(range.front == Date(2010, 9, 6));
-
-        range.popFront();
-        assert(range.front == Date(2010, 9, 4));
-
-        range.popFront();
-        assert(range.front == Date(2010, 9, 2));
-
-        range.popFront();
-        assert(range.empty);
-    }
-
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     static assert(__traits(compiles, cInterval.bwdRange(everyDayOfWeek!Date(DayOfWeek.fri))));
@@ -20469,17 +20378,17 @@ public:
     /++
         Params:
             begin = The time point which begins the interval.
-
-        Examples:
---------------------
-auto interval = PosInfInterval!Date(Date(1996, 1, 2));
---------------------
       +/
     this(in TP begin) pure nothrow
     {
         _begin = cast(TP)begin;
     }
 
+    ///
+    unittest
+    {
+        auto interval = PosInfInterval!Date(Date(1996, 1, 2));
+    }
 
     /++
         Params:
@@ -20505,17 +20414,17 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 
     /++
         The starting point of the interval. It is included in the interval.
-
-        Examples:
---------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
---------------------
       +/
     @property TP begin() const pure nothrow
     {
         return cast(TP)_begin;
     }
 
+    ///
+    unittest
+    {
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
+    }
 
     /++
         The starting point of the interval. It is included in the interval.
@@ -20531,35 +20440,35 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
 
     /++
         Whether the interval's length is 0. Always returns false.
-
-        Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).empty);
---------------------
       +/
     @property bool empty() const pure nothrow
     {
         return false;
     }
 
+    ///
+    unittest
+    {
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).empty);
+    }
 
     /++
         Whether the given time point is within this interval.
 
         Params:
             timePoint = The time point to check for inclusion in this interval.
-
-        Examples:
---------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(1994, 12, 24)));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(2000, 1, 5)));
---------------------
       +/
     bool contains(TP timePoint) const pure nothrow
     {
         return timePoint >= _begin;
     }
 
+    ///
+    unittest
+    {
+        assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(1994, 12, 24)));
+        assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(2000, 1, 5)));
+    }
 
     /++
         Whether the given interval is completely within this interval.
