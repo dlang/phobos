@@ -1253,14 +1253,12 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     static struct Result
     {
         import std.algorithm : max;
-        // state {}
         private union
         {
             void[max(R1.sizeof, R2.sizeof)] buffer = void;
             void* forAlignmentOnly = void;
         }
         private bool condition;
-        // }
         private @property ref R1 r1()
         {
             assert(condition);
@@ -1410,6 +1408,37 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     return Result(condition, r1, r2);
 }
 
+///
+unittest
+{
+    import std.algorithm.iteration : filter, map;
+    import std.algorithm.comparison : equal;
+
+    auto data1 = [ 1, 2, 3, 4 ].filter!(a => a != 3);
+    auto data2 = [ 5, 6, 7, 8 ].map!(a => a + 1);
+
+    // choose() is primarily useful when you need to select one of two ranges
+    // with different types at runtime.
+    static assert(!is(typeof(data1) == typeof(data2)));
+
+    auto chooseRange(bool pickFirst)
+    {
+        // The returned range is a common wrapper type that can be used for
+        // returning or storing either range without running into a type error.
+        return choose(pickFirst, data1, data2);
+
+        // Simply returning the chosen range without using choose() does not
+        // work, because map() and filter() return different types.
+        //return pickFirst ? data1 : data2; // does not compile
+    }
+
+    auto result = chooseRange(true);
+    assert(result.equal([ 1, 2, 4 ]));
+
+    result = chooseRange(false);
+    assert(result.equal([ 6, 7, 8, 9 ]));
+}
+
 /**
 Choose one of multiple ranges at runtime.
 
@@ -1432,6 +1461,7 @@ if (Ranges.length > 2
     return choose(index == 0, rs[0], chooseAmong(index - 1, rs[1 .. $]));
 }
 
+/// ditto
 auto chooseAmong(Ranges...)(size_t index, Ranges rs)
 if (Ranges.length == 2 && is(typeof(choose(true, rs[0], rs[1]))))
 {
