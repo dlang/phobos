@@ -26540,11 +26540,6 @@ public:
 
         Throws:
             $(LREF DateTimeException) if the given time zone could not be found.
-
-        Examples:
---------------------
-auto tz = TimeZone.getTimeZone("America/Los_Angeles");
---------------------
       +/
     static immutable(TimeZone) getTimeZone(string name) @safe
     {
@@ -26569,6 +26564,12 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             else
                 throw new DateTimeException(format("%s does not have an equivalent Windows time zone.", name));
         }
+    }
+
+    ///
+    unittest
+    {
+        auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
 
     // The purpose of this is to handle the case where a Windows time zone is
@@ -28215,15 +28216,6 @@ public:
         Throws:
             $(LREF DateTimeException) if the given time zone could not be found or
             $(D FileException) if the TZ Database file could not be opened.
-
-        Examples:
---------------------
-auto tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
-
-assert(tz.name == "America/Los_Angeles");
-assert(tz.stdName == "PST");
-assert(tz.dstName == "PDT");
---------------------
       +/
     //TODO make it possible for tzDatabaseDir to be gzipped tar file rather than an uncompressed
     //     directory.
@@ -28529,6 +28521,19 @@ assert(tz.dstName == "PDT");
             throw dte;
         catch(Exception e)
             throw new DateTimeException("Not a valid TZ data file", __FILE__, __LINE__, e);
+    }
+
+    ///
+    unittest
+    {
+        version(Posix)
+        {
+            auto tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
+
+            assert(tz.name == "America/Los_Angeles");
+            assert(tz.stdName == "PST");
+            assert(tz.dstName == "PDT");
+        }
     }
 
     /++
@@ -29980,70 +29985,10 @@ version(Windows) unittest
    of the system clock varies from system to system, and other system-dependent
    and situation-dependent stuff (such as the overhead of a context switch
    between threads) can also affect $(D StopWatch)'s accuracy.
-
-   Examples:
---------------------
-void foo()
-{
-    StopWatch sw;
-    enum n = 100;
-    TickDuration[n] times;
-    TickDuration last = TickDuration.from!"seconds"(0);
-    foreach(i; 0..n)
-    {
-       sw.start(); //start/resume mesuring.
-       foreach(unused; 0..1_000_000)
-           bar();
-       sw.stop();  //stop/pause measuring.
-       //Return value of peek() after having stopped are the always same.
-       writeln((i + 1) * 1_000_000, " times done, lap time: ",
-               sw.peek().msecs, "[ms]");
-       times[i] = sw.peek() - last;
-       last = sw.peek();
-    }
-    real sum = 0;
-    // To know the number of seconds,
-    // use properties of TickDuration.
-    // (seconds, msecs, usecs, hnsecs)
-    foreach(t; times)
-       sum += t.hnsecs;
-    writeln("Average time: ", sum/n, " hnsecs");
-}
---------------------
   +/
 @safe struct StopWatch
 {
 public:
-    //Verify Example
-    @safe unittest
-    {
-        void writeln(S...)(S args){}
-        static void bar() {}
-
-        StopWatch sw;
-        enum n = 100;
-        TickDuration[n] times;
-        TickDuration last = TickDuration.from!"seconds"(0);
-        foreach(i; 0..n)
-        {
-           sw.start(); //start/resume mesuring.
-           foreach(unused; 0..1_000_000)
-               bar();
-           sw.stop();  //stop/pause measuring.
-           //Return value of peek() after having stopped are the always same.
-           writeln((i + 1) * 1_000_000, " times done, lap time: ",
-                   sw.peek().msecs, "[ms]");
-           times[i] = sw.peek() - last;
-           last = sw.peek();
-        }
-        real sum = 0;
-        // To get the number of seconds,
-        // use properties of TickDuration.
-        // (seconds, msecs, usecs, hnsecs)
-        foreach(t; times)
-           sum += t.hnsecs;
-        writeln("Average time: ", sum/n, " hnsecs");
-    }
 
     /++
        Auto start with constructor.
@@ -30094,6 +30039,7 @@ public:
         _timeMeasured.length = 0;
     }
 
+    ///
     @safe unittest
     {
         StopWatch sw;
@@ -30241,6 +30187,37 @@ private:
     TickDuration _timeMeasured;
 }
 
+///
+@safe unittest
+{
+    void writeln(S...)(S args){}
+    static void bar() {}
+
+    StopWatch sw;
+    enum n = 100;
+    TickDuration[n] times;
+    TickDuration last = TickDuration.from!"seconds"(0);
+    foreach(i; 0..n)
+    {
+       sw.start(); //start/resume mesuring.
+       foreach(unused; 0..1_000_000)
+           bar();
+       sw.stop();  //stop/pause measuring.
+       //Return value of peek() after having stopped are the always same.
+       writeln((i + 1) * 1_000_000, " times done, lap time: ",
+               sw.peek().msecs, "[ms]");
+       times[i] = sw.peek() - last;
+       last = sw.peek();
+    }
+    real sum = 0;
+    // To get the number of seconds,
+    // use properties of TickDuration.
+    // (seconds, msecs, usecs, hnsecs)
+    foreach(t; times)
+       sum += t.hnsecs;
+    writeln("Average time: ", sum/n, " hnsecs");
+}
+
 
 /++
     Benchmarks code for speed assessment and comparison.
@@ -30359,21 +30336,6 @@ private:
        baseFunc   = The function to become the base of the speed.
        targetFunc = The function that wants to measure speed.
        times      = The number of times each function is to be executed.
-
-   Examples:
---------------------
-void f1() {
-   // ...
-}
-void f2() {
-   // ...
-}
-
-void main() {
-   auto b = comparingBenchmark!(f1, f2, 0x80);
-   writeln(b.point);
-}
---------------------
   +/
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
                                             alias targetFunc,
@@ -30383,6 +30345,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
     return ComparingBenchmarkResult(t[0], t[1]);
 }
 
+///
 @safe unittest
 {
     void f1x() {}
@@ -30390,17 +30353,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
     @safe void f1o() {}
     @safe void f2o() {}
     auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
-    //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
-}
-
-unittest
-{
-    void f1x() {}
-    void f2x() {}
-    @safe void f1o() {}
-    @safe void f2o() {}
-    auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
-    auto b2 = comparingBenchmark!(f1x, f2x, 1)(); // OK
+    //writeln(b1.point);
 }
 
 //Bug# 8450
