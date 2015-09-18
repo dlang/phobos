@@ -23438,6 +23438,19 @@ assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
         _end += duration;
     }
 
+    ///
+    unittest
+    {
+        auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+        auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+
+        interval1.expand(dur!"days"(2));
+        assert(interval1 == NegInfInterval!Date(Date(2012, 3, 3)));
+
+        interval2.expand(dur!"days"(-2));
+        assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
+    }
+
 
     static if(__traits(compiles, end.add!"months"(1)) &&
               __traits(compiles, end.add!"years"(1)))
@@ -23527,18 +23540,6 @@ assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
             Throws:
                 $(LREF DateTimeException) if empty is true or if the resulting
                 interval would be invalid.
-
-            Examples:
---------------------
-auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
-auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
-
-interval1.expand(2);
-assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
-
-interval2.expand(-2);
-assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
---------------------
           +/
         void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
             if(isIntegral!T)
@@ -23552,8 +23553,20 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 
             return;
         }
-    }
 
+        ///
+        unittest
+        {
+            auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+            auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+
+            interval1.expand(2);
+            assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
+
+            interval2.expand(-2);
+            assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
+        }
+    }
 
     /++
         Returns a range which iterates backwards over the interval, starting
@@ -23601,36 +23614,6 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 
             Of course, none of the functions in this module have this problem,
             so it's only relevant for custom delegates.
-
-        Examples:
---------------------
-auto interval = NegInfInterval!Date(Date(2010, 9, 9));
-auto func = (in Date date) //For iterating over even-numbered days.
-            {
-                if((date.day & 1) == 0)
-                    return date - dur!"days"(2);
-
-                return date - dur!"days"(1);
-            };
-auto range = interval.bwdRange(func);
-
-assert(range.front == Date(2010, 9, 9)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
-
-range.popFront();
-assert(range.front == Date(2010, 9, 8));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 6));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 4));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 2));
-
-range.popFront();
-assert(!range.empty);
---------------------
       +/
     NegInfIntervalRange!(TP) bwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
     {
@@ -23642,6 +23625,37 @@ assert(!range.empty);
         return range;
     }
 
+    ///
+    unittest
+    {
+        auto interval = NegInfInterval!Date(Date(2010, 9, 9));
+        auto func = delegate(in Date date) //For iterating over even-numbered days.
+            {
+                if((date.day & 1) == 0)
+                    return date - dur!"days"(2);
+
+                return date - dur!"days"(1);
+            };
+        auto range = interval.bwdRange(func);
+
+        //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+        assert(range.front == Date(2010, 9, 9));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 8));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 6));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 4));
+
+        range.popFront();
+        assert(range.front == Date(2010, 9, 2));
+
+        range.popFront();
+        assert(!range.empty);
+    }
 
     /+
         Converts this interval to a string.
@@ -23705,9 +23719,6 @@ unittest
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     static assert(__traits(compiles, cNegInfInterval.end));
     static assert(__traits(compiles, iNegInfInterval.end));
-
-    //Verify Examples.
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
 }
 
 //Test NegInfInterval's empty.
@@ -23722,9 +23733,6 @@ unittest
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     static assert(__traits(compiles, cNegInfInterval.empty));
     static assert(__traits(compiles, iNegInfInterval.empty));
-
-    //Verify Examples.
-    assert(!NegInfInterval!Date(Date(1996, 1, 2)).empty);
 }
 
 //Test NegInfInterval's contains(time point).
@@ -23748,11 +23756,6 @@ unittest
     static assert(__traits(compiles, negInfInterval.contains(cdate)));
     static assert(__traits(compiles, cNegInfInterval.contains(cdate)));
     static assert(__traits(compiles, iNegInfInterval.contains(cdate)));
-
-    //Verify Examples.
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(1994, 12, 24)));
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2000, 1, 5)));
-    assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
 }
 
 //Test NegInfInterval's contains(Interval).
@@ -23870,11 +23873,6 @@ unittest
     static assert(__traits(compiles, negInfInterval.isBefore(cdate)));
     static assert(__traits(compiles, cNegInfInterval.isBefore(cdate)));
     static assert(__traits(compiles, iNegInfInterval.isBefore(cdate)));
-
-    //Verify Examples.
-    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(1994, 12, 24)));
-    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2000, 1, 5)));
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
 }
 
 //Test NegInfInterval's isBefore(Interval).
@@ -24659,16 +24657,6 @@ unittest
     immutable iInterval = NegInfInterval!Date(Date(2012, 1, 7));
     static assert(!__traits(compiles, cInterval.shift(dur!"days"(5))));
     static assert(!__traits(compiles, iInterval.shift(dur!"days"(5))));
-
-    //Verify Examples.
-    auto interval1 = NegInfInterval!Date(Date(2012, 4, 5));
-    auto interval2 = NegInfInterval!Date(Date(2012, 4, 5));
-
-    interval1.shift(dur!"days"(50));
-    assert(interval1 == NegInfInterval!Date(Date(2012, 5, 25)));
-
-    interval2.shift(dur!"days"(-50));
-    assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
 }
 
 //Test NegInfInterval's shift(int, int, AllowDayOverflow).
@@ -24708,16 +24696,6 @@ unittest
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     static assert(!__traits(compiles, cNegInfInterval.shift(1)));
     static assert(!__traits(compiles, iNegInfInterval.shift(1)));
-
-    //Verify Examples.
-    auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
-    auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
-
-    interval1.shift(2);
-    assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
-
-    interval2.shift(-2);
-    assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 }
 
 //Test NegInfInterval's expand().
@@ -24738,16 +24716,6 @@ unittest
     immutable iInterval = NegInfInterval!Date(Date(2012, 1, 7));
     static assert(!__traits(compiles, cInterval.expand(dur!"days"(5))));
     static assert(!__traits(compiles, iInterval.expand(dur!"days"(5))));
-
-    //Verify Examples.
-    auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
-    auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
-
-    interval1.expand(dur!"days"(2));
-    assert(interval1 == NegInfInterval!Date(Date(2012, 3, 3)));
-
-    interval2.expand(dur!"days"(-2));
-    assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
 }
 
 //Test NegInfInterval's expand(int, int, AllowDayOverflow).
@@ -24782,16 +24750,6 @@ unittest
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     static assert(!__traits(compiles, cNegInfInterval.expand(1)));
     static assert(!__traits(compiles, iNegInfInterval.expand(1)));
-
-    //Verify Examples.
-    auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
-    auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
-
-    interval1.expand(2);
-    assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
-
-    interval2.expand(-2);
-    assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 }
 
 //Test NegInfInterval's bwdRange().
@@ -24811,35 +24769,6 @@ unittest
 
     assert(NegInfInterval!Date(Date(2010, 10, 1)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri), PopFirst.yes).front ==
                 Date(2010, 9, 24));
-
-    //Verify Examples.
-    auto interval = NegInfInterval!Date(Date(2010, 9, 9));
-    auto func = delegate (in Date date)
-                {
-                    if((date.day & 1) == 0)
-                        return date - dur!"days"(2);
-
-                    return date - dur!"days"(1);
-                };
-    auto range = interval.bwdRange(func);
-
-    //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
-    assert(range.front == Date(2010, 9, 9));
-
-    range.popFront();
-    assert(range.front == Date(2010, 9, 8));
-
-    range.popFront();
-    assert(range.front == Date(2010, 9, 6));
-
-    range.popFront();
-    assert(range.front == Date(2010, 9, 4));
-
-    range.popFront();
-    assert(range.front == Date(2010, 9, 2));
-
-    range.popFront();
-    assert(!range.empty);
 
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -26540,11 +26469,6 @@ public:
 
         Throws:
             $(LREF DateTimeException) if the given time zone could not be found.
-
-        Examples:
---------------------
-auto tz = TimeZone.getTimeZone("America/Los_Angeles");
---------------------
       +/
     static immutable(TimeZone) getTimeZone(string name) @safe
     {
@@ -26569,6 +26493,12 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             else
                 throw new DateTimeException(format("%s does not have an equivalent Windows time zone.", name));
         }
+    }
+
+    ///
+    unittest
+    {
+        auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
 
     // The purpose of this is to handle the case where a Windows time zone is
@@ -28215,15 +28145,6 @@ public:
         Throws:
             $(LREF DateTimeException) if the given time zone could not be found or
             $(D FileException) if the TZ Database file could not be opened.
-
-        Examples:
---------------------
-auto tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
-
-assert(tz.name == "America/Los_Angeles");
-assert(tz.stdName == "PST");
-assert(tz.dstName == "PDT");
---------------------
       +/
     //TODO make it possible for tzDatabaseDir to be gzipped tar file rather than an uncompressed
     //     directory.
@@ -28529,6 +28450,19 @@ assert(tz.dstName == "PDT");
             throw dte;
         catch(Exception e)
             throw new DateTimeException("Not a valid TZ data file", __FILE__, __LINE__, e);
+    }
+
+    ///
+    unittest
+    {
+        version(Posix)
+        {
+            auto tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
+
+            assert(tz.name == "America/Los_Angeles");
+            assert(tz.stdName == "PST");
+            assert(tz.dstName == "PDT");
+        }
     }
 
     /++
@@ -29980,70 +29914,10 @@ version(Windows) unittest
    of the system clock varies from system to system, and other system-dependent
    and situation-dependent stuff (such as the overhead of a context switch
    between threads) can also affect $(D StopWatch)'s accuracy.
-
-   Examples:
---------------------
-void foo()
-{
-    StopWatch sw;
-    enum n = 100;
-    TickDuration[n] times;
-    TickDuration last = TickDuration.from!"seconds"(0);
-    foreach(i; 0..n)
-    {
-       sw.start(); //start/resume mesuring.
-       foreach(unused; 0..1_000_000)
-           bar();
-       sw.stop();  //stop/pause measuring.
-       //Return value of peek() after having stopped are the always same.
-       writeln((i + 1) * 1_000_000, " times done, lap time: ",
-               sw.peek().msecs, "[ms]");
-       times[i] = sw.peek() - last;
-       last = sw.peek();
-    }
-    real sum = 0;
-    // To know the number of seconds,
-    // use properties of TickDuration.
-    // (seconds, msecs, usecs, hnsecs)
-    foreach(t; times)
-       sum += t.hnsecs;
-    writeln("Average time: ", sum/n, " hnsecs");
-}
---------------------
   +/
 @safe struct StopWatch
 {
 public:
-    //Verify Example
-    @safe unittest
-    {
-        void writeln(S...)(S args){}
-        static void bar() {}
-
-        StopWatch sw;
-        enum n = 100;
-        TickDuration[n] times;
-        TickDuration last = TickDuration.from!"seconds"(0);
-        foreach(i; 0..n)
-        {
-           sw.start(); //start/resume mesuring.
-           foreach(unused; 0..1_000_000)
-               bar();
-           sw.stop();  //stop/pause measuring.
-           //Return value of peek() after having stopped are the always same.
-           writeln((i + 1) * 1_000_000, " times done, lap time: ",
-                   sw.peek().msecs, "[ms]");
-           times[i] = sw.peek() - last;
-           last = sw.peek();
-        }
-        real sum = 0;
-        // To get the number of seconds,
-        // use properties of TickDuration.
-        // (seconds, msecs, usecs, hnsecs)
-        foreach(t; times)
-           sum += t.hnsecs;
-        writeln("Average time: ", sum/n, " hnsecs");
-    }
 
     /++
        Auto start with constructor.
@@ -30241,6 +30115,37 @@ private:
     TickDuration _timeMeasured;
 }
 
+///
+@safe unittest
+{
+    void writeln(S...)(S args){}
+    static void bar() {}
+
+    StopWatch sw;
+    enum n = 100;
+    TickDuration[n] times;
+    TickDuration last = TickDuration.from!"seconds"(0);
+    foreach(i; 0..n)
+    {
+       sw.start(); //start/resume mesuring.
+       foreach(unused; 0..1_000_000)
+           bar();
+       sw.stop();  //stop/pause measuring.
+       //Return value of peek() after having stopped are the always same.
+       writeln((i + 1) * 1_000_000, " times done, lap time: ",
+               sw.peek().msecs, "[ms]");
+       times[i] = sw.peek() - last;
+       last = sw.peek();
+    }
+    real sum = 0;
+    // To get the number of seconds,
+    // use properties of TickDuration.
+    // (seconds, msecs, usecs, hnsecs)
+    foreach(t; times)
+       sum += t.hnsecs;
+    writeln("Average time: ", sum/n, " hnsecs");
+}
+
 
 /++
     Benchmarks code for speed assessment and comparison.
@@ -30359,21 +30264,6 @@ private:
        baseFunc   = The function to become the base of the speed.
        targetFunc = The function that wants to measure speed.
        times      = The number of times each function is to be executed.
-
-   Examples:
---------------------
-void f1() {
-   // ...
-}
-void f2() {
-   // ...
-}
-
-void main() {
-   auto b = comparingBenchmark!(f1, f2, 0x80);
-   writeln(b.point);
-}
---------------------
   +/
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
                                             alias targetFunc,
@@ -30383,6 +30273,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
     return ComparingBenchmarkResult(t[0], t[1]);
 }
 
+///
 @safe unittest
 {
     void f1x() {}
@@ -30390,17 +30281,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
     @safe void f1o() {}
     @safe void f2o() {}
     auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
-    //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
-}
-
-unittest
-{
-    void f1x() {}
-    void f2x() {}
-    @safe void f1o() {}
-    @safe void f2o() {}
-    auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
-    auto b2 = comparingBenchmark!(f1x, f2x, 1)(); // OK
+    //writeln(b1.point);
 }
 
 //Bug# 8450
