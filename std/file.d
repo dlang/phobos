@@ -2887,6 +2887,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
 
 unittest
 {
+    import std.algorithm, std.file; // issue 14817
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
     write(t1, "1");
