@@ -1,4 +1,8 @@
 module std.experimental.perpetual;
+/** TODO: remove shmem switch to read-only
+ *  	try to impl uniform static/dynamic heap type (T* vs T[])
+ *  	uniform this(size, type) ctor
+ */
 
 private import std.mmfile;
 private import std.experimental.shmem;
