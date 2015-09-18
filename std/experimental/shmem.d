@@ -1,9 +1,10 @@
-module std.experimental.shmem.d;
+module std.experimental.shmem;
 private import std.exception;
 private import std.string;
 private import core.stdc.stdio;
 private import core.stdc.stdlib;
 private import std.stdio;
+private import std.conv;
 
 
 
@@ -62,6 +63,20 @@ class ShMem
 	}
 
 
+	this(string path, Mode mode =Mode.readWrite)
+	{
+		fileOpen(path, mode);
+		scope(failure) { close(_fd); _fd=-1; }
+
+		auto len=fileSize(path);
+		enforce(len > 0, path~": zero size file");
+		_index=len;
+		_master=false;
+
+		map(path, len);
+	}
+
+
 	~this()
 	{
 		if(_fd >= 0)
@@ -78,6 +93,15 @@ class ShMem
         return _data[0..$];
     }
 
+    void[] opSlice(size_t i, size_t k)
+    {
+        return _data[i..k];
+    }
+
+    void opSlice(size_t i)
+    {
+        return _data[i];
+    }
 
     @property auto length() const { return _data.length; }
 
@@ -200,7 +224,7 @@ class ShMem
 				heap=mmap(null, size, PROT_READ|PROT_WRITE, MAP_SHARED, _fd, 0);
 			else
 				heap=mmap(null, size, PROT_READ, MAP_SHARED, _fd, 0);
-			errnoEnforce(heap != MAP_FAILED, path);
+			errnoEnforce(heap != MAP_FAILED, path~" : "~to!string(size));
 			_data=heap[0..size];
 
 		}
@@ -232,6 +256,16 @@ ShMem shMem(string path, size_t len, ShMem.Mode mode=ShMem.Mode.readWrite)
 {
 	return new ShMem(path, len, mode);
 }
+
+
+ShMem shMem(string path, ShMem.Mode mode=ShMem.Mode.readWrite)
+{
+	return new ShMem(path, mode);
+}
+
+
+
+
 
 
 unittest
@@ -280,6 +314,13 @@ unittest
 		int[] i=cast(int[]) s3[];
 		enforce(i.length == 1);
 		enforce(i[0] == 12);
+	}
+	{
+		auto s4=shMem(file);
+		enforce(!s4.master);
+		enforce(s4.writeable);
+		enforce(s4.unplowed == 12);
+		enforce(s4.length == 12);
 	}
 	{
 		assertThrown(shMem(file, 24, ShMem.Mode.readOnly));

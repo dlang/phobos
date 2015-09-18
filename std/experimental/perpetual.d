@@ -1,6 +1,7 @@
 module std.experimental.perpetual;
 
 private import std.mmfile;
+private import std.experimental.shmem;
 private import std.exception;
 private import std.conv : to;
 private import std.file : exists;
@@ -15,7 +16,8 @@ private import std.traits : hasIndirections, isCallable, isAssignable;
  */
 struct Perpetual(T)
 {
-	private MmFile _heap;
+	//private MmFile _heap;
+	private ShMem _heap;
 	private enum _tag="Perpetual!("~T.stringof~")";
 
 	static if(is(T == Element[],Element))
@@ -54,20 +56,34 @@ struct Perpetual(T)
 			enforce(exists(path)
 			    , _tag~": dynamic array of zero length");
 			size_t size=0;
-			if(isAssignable!Element)			
-				_heap=new MmFile(path, MmFile.Mode.readWrite, 0, null, 0);
+			static if(isAssignable!Element)
+			{		
+				//_heap=new MmFile(path, MmFile.Mode.readWrite, 0, null, 0);
+				_heap=shMem(path);
+				enforce(_heap.writeable, _tag~": file is not writeable");
+			}
 			else
-				_heap=new MmFile(path, MmFile.Mode.read, 0, null, 0);
+			{
+				//_heap=new MmFile(path, MmFile.Mode.read, 0, null, 0);
+				_heap=shMem(path, ShMem.Mode.readOnly);
+			}
 			enforce(_heap.length >= Element.sizeof, _tag~": file is too small");
 			_value=cast(Element[]) _heap[0.._heap.length];
 		}
 		else
 		{
 			size_t size=T.sizeof;
-			if(isAssignable!T)			
-				_heap=new MmFile(path, MmFile.Mode.readWrite, T.sizeof, null, 0);
+			if(isAssignable!T)
+			{			
+				//_heap=new MmFile(path, MmFile.Mode.readWrite, T.sizeof, null, 0);
+				_heap=shMem(path, T.sizeof, ShMem.Mode.readWrite);
+				enforce(_heap.writeable, _tag~": file is not writeable");
+			}
 			else
-				_heap=new MmFile(path, MmFile.Mode.read, T.sizeof, null, 0);
+			{
+				//_heap=new MmFile(path, MmFile.Mode.read, T.sizeof, null, 0);
+				_heap=shMem(path, T.sizeof, ShMem.Mode.readOnly);
+			}
 			enforce(_heap.length >= size, _tag~": file is too small");
 			_value=cast(T*) _heap[].ptr;
 		}
@@ -79,21 +95,32 @@ struct Perpetual(T)
  */
 	this(size_t len, string path)
 	{
+	static if(dynamic)
+	{
 		static if(dynamic)
 		{
 			size_t size=len*Element.sizeof;
-			if(isAssignable!Element)			
-				_heap=new MmFile(path, MmFile.Mode.readWrite, len*Element.sizeof, null, 0);
-			else
-				_heap=new MmFile(path, MmFile.Mode.read, len*Element.sizeof, null, 0);
-			enforce(_heap.length >= len*Element.sizeof, _tag~": file is too small");
-			_value=cast(Element[]) _heap[0..len];
-
 		} else {
-			// assert(0);
-			this(path);
+			alias Element=T;
+			size_t size=len*Element.sizeof;
 		}
- 	}
+		
+		if(isAssignable!Element)
+		{			
+			//_heap=new MmFile(path, MmFile.Mode.readWrite, len*Element.sizeof, null, 0);
+			_heap=shMem(path, len*Element.sizeof, ShMem.Mode.readWrite);
+			enforce(_heap.writeable, _tag~": file is not writeable");
+		}
+		else
+		{
+			//_heap=new MmFile(path, MmFile.Mode.read, len*Element.sizeof, null, 0);
+			_heap=shMem(path, len*Element.sizeof, ShMem.Mode.readOnly);
+		}
+		enforce(_heap.length >= len*Element.sizeof, _tag~": file is too small");
+		_value=cast(Element[]) _heap[0..len];
+	}
+}
+ 	
 
 /**
  * Get reference to wrapped object.
