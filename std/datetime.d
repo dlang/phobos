@@ -23167,29 +23167,40 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
         return Interval!TP(interval._begin, _end);
     }
 
+    ///
+    unittest
+    {
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                PosInfInterval!Date(Date(1990, 7, 6))) ==
+            Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                PosInfInterval!Date(Date(1999, 1, 12))) ==
+            Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+    }
 
     /++
         Returns the intersection of two intervals
 
         Params:
             interval = The interval to intersect with this interval.
-
-        Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            NegInfInterval!Date(Date(1999, 7, 6))) ==
-       NegInfInterval!Date(Date(1999, 7 , 6)));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            NegInfInterval!Date(Date(2013, 1, 12))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
---------------------
       +/
     NegInfInterval intersection(in NegInfInterval interval) const nothrow
     {
         return NegInfInterval(_end < interval._end ? _end : interval._end);
     }
 
+    ///
+    unittest
+    {
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                NegInfInterval!Date(Date(1999, 7, 6))) ==
+            NegInfInterval!Date(Date(1999, 7 , 6)));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                NegInfInterval!Date(Date(2013, 1, 12))) ==
+            NegInfInterval!Date(Date(2012, 3 , 1)));
+    }
 
     /++
         Whether the given interval is adjacent to this interval.
@@ -23200,21 +23211,6 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
 
         Throws:
             $(LREF DateTimeException) if the given interval is empty.
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1))));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(2012, 3, 1), Date(2019, 2, 2))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
---------------------
       +/
     bool isAdjacent(in Interval!TP interval) const pure
     {
@@ -23223,6 +23219,21 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
         return interval._begin == _end;
     }
 
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1))));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(2012, 3, 1), Date(2019, 2, 2))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+    }
 
     /++
         Whether the given interval is adjacent to this interval.
@@ -23230,21 +23241,21 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
         Params:
             interval = The interval to check whether its adjecent to this
                        interval.
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            PosInfInterval!Date(Date(1999, 5, 4))));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            PosInfInterval!Date(Date(2012, 3, 1))));
---------------------
       +/
     bool isAdjacent(in PosInfInterval!TP interval) const pure nothrow
     {
         return interval._begin == _end;
     }
 
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            PosInfInterval!Date(Date(2012, 3, 1))));
+    }
 
     /++
         Whether the given interval is adjacent to this interval.
@@ -23255,21 +23266,21 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
         Params:
             interval = The interval to check whether its adjecent to this
                        interval.
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            NegInfInterval!Date(Date(1996, 5, 4))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
-            NegInfInterval!Date(Date(2012, 3, 1))));
---------------------
       +/
     bool isAdjacent(in NegInfInterval interval) const pure nothrow
     {
         return false;
     }
 
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            NegInfInterval!Date(Date(2012, 3, 1))));
+    }
 
     /++
         Returns the union of two intervals
@@ -23286,17 +23297,6 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
             $(D PosInfInterval), because an interval
             going from negative infinity to positive infinity
             is not possible.
-
-        Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
-            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
-       NegInfInterval!Date(Date(2015, 9 , 2)));
---------------------
       +/
     NegInfInterval merge(in Interval!TP interval) const
     {
@@ -23308,6 +23308,17 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
         return NegInfInterval(_end > interval._end ? _end : interval._end);
     }
 
+    ///
+    unittest
+    {
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+                Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+            NegInfInterval!Date(Date(2012, 3 , 1)));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+                Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+            NegInfInterval!Date(Date(2015, 9 , 2)));
+    }
 
     /++
         Returns the union of two intervals
@@ -23320,23 +23331,23 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
             $(D PosInfInterval), because an interval
             going from negative infinity to positive infinity
             is not possible.
-
-        Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
-            NegInfInterval!Date(Date(1999, 7, 6))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
-            NegInfInterval!Date(Date(2013, 1, 12))) ==
-       NegInfInterval!Date(Date(2013, 1 , 12)));
---------------------
       +/
     NegInfInterval merge(in NegInfInterval interval) const pure nothrow
     {
         return NegInfInterval(_end > interval._end ? _end : interval._end);
     }
 
+    ///
+    unittest
+    {
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+                NegInfInterval!Date(Date(1999, 7, 6))) ==
+            NegInfInterval!Date(Date(2012, 3 , 1)));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+                NegInfInterval!Date(Date(2013, 1, 12))) ==
+            NegInfInterval!Date(Date(2013, 1 , 12)));
+    }
 
     /++
         Returns an interval that covers from the earliest time point of two
@@ -23355,21 +23366,6 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
             $(D PosInfInterval), because an interval
             going from negative infinity to positive infinity
             is not possible.
-
-        Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
-            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
-       NegInfInterval!Date(Date(2015, 9 , 2)));
-
-assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
-            Interval!Date(Date(2012, 3, 11), Date(2017, 7, 1))) ==
-       NegInfInterval!Date(Date(2017, 7 , 1)));
---------------------
       +/
     NegInfInterval span(in Interval!TP interval) const pure
     {
@@ -23378,6 +23374,21 @@ assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
         return NegInfInterval(_end > interval._end ? _end : interval._end);
     }
 
+    ///
+    unittest
+    {
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+                Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+            NegInfInterval!Date(Date(2012, 3 , 1)));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+                Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+            NegInfInterval!Date(Date(2015, 9 , 2)));
+
+        assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
+                Interval!Date(Date(2012, 3, 11), Date(2017, 7, 1))) ==
+            NegInfInterval!Date(Date(2017, 7 , 1)));
+    }
 
     /++
         Returns an interval that covers from the earliest time point of two
@@ -23393,23 +23404,23 @@ assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
             $(D PosInfInterval), because an interval
             going from negative infinity to positive infinity
             is not possible.
-
-        Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
-            NegInfInterval!Date(Date(1999, 7, 6))) ==
-       NegInfInterval!Date(Date(2012, 3 , 1)));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
-            NegInfInterval!Date(Date(2013, 1, 12))) ==
-       NegInfInterval!Date(Date(2013, 1 , 12)));
---------------------
       +/
     NegInfInterval span(in NegInfInterval interval) const pure nothrow
     {
         return NegInfInterval(_end > interval._end ? _end : interval._end);
     }
 
+    ///
+    unittest
+    {
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+                NegInfInterval!Date(Date(1999, 7, 6))) ==
+            NegInfInterval!Date(Date(2012, 3 , 1)));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+                NegInfInterval!Date(Date(2013, 1, 12))) ==
+            NegInfInterval!Date(Date(2013, 1 , 12)));
+    }
 
     /++
         Shifts the $(D end) of this interval forward or backwards in time by the
@@ -23419,23 +23430,24 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
 
         Params:
             duration = The duration to shift the interval by.
-
-        Examples:
---------------------
-auto interval1 = NegInfInterval!Date(Date(2012, 4, 5));
-auto interval2 = NegInfInterval!Date(Date(2012, 4, 5));
-
-interval1.shift(dur!"days"(50));
-assert(interval1 == NegInfInterval!Date(Date(2012, 5, 25)));
-
-interval2.shift(dur!"days"(-50));
-assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
---------------------
       +/
     void shift(D)(D duration) pure nothrow
         if(__traits(compiles, end + duration))
     {
         _end += duration;
+    }
+
+    ///
+    unittest
+    {
+        auto interval1 = NegInfInterval!Date(Date(2012, 4, 5));
+        auto interval2 = NegInfInterval!Date(Date(2012, 4, 5));
+
+        interval1.shift(dur!"days"(50));
+        assert(interval1 == NegInfInterval!Date(Date(2012, 5, 25)));
+
+        interval2.shift(dur!"days"(-50));
+        assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
     }
 
 
@@ -23459,18 +23471,6 @@ assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
             Throws:
                 $(LREF DateTimeException) if empty is true or if the resulting
                 interval would be invalid.
-
-            Examples:
---------------------
-auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
-auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
-
-interval1.shift(2);
-assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
-
-interval2.shift(-2);
-assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
---------------------
           +/
         void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
             if(isIntegral!T)
@@ -23482,6 +23482,19 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 
             _end = end;
         }
+
+        ///
+        unittest
+        {
+            auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+            auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+
+            interval1.shift(2);
+            assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
+
+            interval2.shift(-2);
+            assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
+        }
     }
 
 
@@ -23491,18 +23504,6 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 
         Params:
             duration = The duration to expand the interval by.
-
-        Examples:
---------------------
-auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
-auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
-
-interval1.expand(dur!"days"(2));
-assert(interval1 == NegInfInterval!Date(Date(2012, 3, 3)));
-
-interval2.expand(dur!"days"(-2));
-assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
---------------------
       +/
     void expand(D)(D duration) pure nothrow
         if(__traits(compiles, end + duration))
