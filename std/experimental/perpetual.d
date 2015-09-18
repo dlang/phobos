@@ -126,76 +126,85 @@ unittest {
 	foreach(i; 0..8) file~=deleteme~to!string(i);
 	scope(exit) foreach(f; file[]) remove(f);
 
-	// create mapped variables
+	/// Part 1: create mapped variables
 	{
+		// single int value, default initializer, test assignable
 		auto p0=Perpetual!int(file[0]);
-		assert(p0 == 0);
+		assert(p0 == int.init);
 		p0=7;
 
+		// single double value initialized in ctor
 		auto p1=Perpetual!double(file[1], 2.71828);
 		assert(p1 == 2.71828);
 		p1=3.14159;
 
-		// struct
+		// struct, initialized in ctor
 		auto p2=Perpetual!A(file[2], 22);
 		assert(p2.x == 22);
 		
-		// static array of integers
+		// static array of integers, assignable
 		auto p3=Perpetual!(int[5])(file[3]);
-		assert(p3[0] == 0);
+		assert(p3[0] == int.init);
 		p3=[1,3,5,7,9];
+		assert(p3[0] == 1);
 
-		// enum
+		// enum, initialized in ctor
 		auto p4=Perpetual!Color(file[4], Color.red);
 		assert(p4 == Color.red);
 		
 
-		// character string, reinitialize if new file created
+		// character string
 		auto p5=Perpetual!(char[32])(file[5]);
 		p5="hello world";
 
-		// double static array with initailization
+		// double static array
 		auto p8=Perpetual!(char[3][5])(file[6]);
 		foreach(ref x; p8) x="..."; p8[0]="one"; p8[2]="two";
 
-		//auto pX=Perpetual!(char*)("?");     //ERROR: "char* is reference type"
-		//auto pX=Perpetual!B("?");           //ERROR: "B is reference type"
-		//auto pX=Perpetual!(char*[])("?");   //ERROR: "char* is reference type"
-		//auto pX=Perpetual!(char*[12])("?");  //ERROR: "char*[12] is reference type"
-		//auto pX=Perpetual!(char[string])("?"); //ERROR: "char[string] is reference type"
-		//auto pX=Perpetual!(char[][])("?");    //ERROR: "char[] is reference type"
-		//auto pX=Perpetual!(char[][3])("?");   //ERROR: "char[][3] is reference type"
+
+		/// Compile time errors
+		// Perpetual!(char*)("?");        //ERROR: "char* is reference type"
+		// Perpetual!B("?");              //ERROR: "B is reference type"
+		// Perpetual!(char*[])("?");      //ERROR: "char* is reference type"
+		// Perpetual!(char*[12])("?");    //ERROR: "char*[12] is reference type"
+		// Perpetual!(char[string])("?"); //ERROR: "char[string] is reference type"
+		// Perpetual!(char[][])("?");     //ERROR: "char[] is reference type"
+		// Perpetual!(char[][3])("?");    //ERROR: "char[][3] is reference type"
 	}
-	// destroy everything and unmap files
+	/// destroy everything and unmap files
 	
+
 	
-	// map again and check the values are preserved
+	/// Part 2: map again and check the values are preserved
 	{
+		// Was previosly mapped as int and assigned 7
 		auto p0=Perpetual!int(file[0]);
 		assert(p0 == 7);
 
+		// Was previousli mapped as double and assigned 3.14159
 		auto p1=Perpetual!double(file[1]);
 		assert(p1 == 3.14159);
 
-		// struct
+		// struct with int member initialized with 22
 		auto p2=Perpetual!A(file[2]);
 		assert(p2 == A(22));
 		
-		// map int[] as view only of array shorts
+		// Was mapped as int[5], remap as view only of array shorts
 		auto p3=Perpetual!(immutable(short[]))(file[3]);
 		// Assuming LSB
+		assert(p3.length == 10);
 		assert(p3[0] == 1 && p3[2] == 3 && p3[4] == 5);
-		//p3[1]=111; //ERROR: cannot modify immutable expression p3.Ref()[1]
+		//p3[1]=111; //ERROR: cannot modify immutable expression
 
-		// enum
+		// enum, was set to Color.red
 		auto p4=Perpetual!Color(file[4]);
 		assert(p4 == Color.red);
 
 		// view only variant of char[4]
 		auto p5=Perpetual!string(4, file[5]);
 		assert(p5 == "hell");
-		//p5[0]='A'; //ERROR: cannot modify immutable expression p5.Ref()[0]
-		//p5[]="1234"; //ERROR: slice p5.Ref()[] is not mutable
+		//p5[0]='A'; //ERROR: cannot modify immutable expression
+		//p5[]="1234"; //ERROR: slice is not mutable
 
 
 		// map of double array as plain array
