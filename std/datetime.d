@@ -22831,17 +22831,18 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
         Params:
             timePoint = The time point to check whether this interval is
                         before it.
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(1994, 12, 24)));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2000, 1, 5)));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
---------------------
       +/
     bool isBefore(in TP timePoint) const pure nothrow
     {
         return timePoint >= _end;
+    }
+
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(1994, 12, 24)));
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2000, 1, 5)));
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
     }
 
 
@@ -22854,24 +22855,25 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
 
         Throws:
             $(LREF DateTimeException) if the given interval is empty
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
---------------------
       +/
     bool isBefore(in Interval!TP interval) const pure
     {
         interval._enforceNotEmpty();
 
         return _end <= interval._begin;
+    }
+
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
     }
 
 
@@ -22881,21 +22883,21 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
 
         Params:
             interval = The interval to check for against this interval.
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            PosInfInterval!Date(Date(1999, 5, 4))));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            PosInfInterval!Date(Date(2012, 3, 1))));
---------------------
       +/
     bool isBefore(in PosInfInterval!TP interval) const pure nothrow
     {
         return _end <= interval._begin;
     }
 
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            PosInfInterval!Date(Date(2012, 3, 1))));
+    }
 
     /++
         Whether this interval is before the given interval and does not
@@ -22907,21 +22909,21 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
 
         Params:
             interval = The interval to check for against this interval.
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            NegInfInterval!Date(Date(1996, 5, 4))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
-            NegInfInterval!Date(Date(2013, 7, 9))));
---------------------
       +/
     bool isBefore(in NegInfInterval interval) const pure nothrow
     {
         return false;
     }
 
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            NegInfInterval!Date(Date(2013, 7, 9))));
+    }
 
     /++
         Whether this interval is after the given time point.
@@ -22932,19 +22934,19 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
         Params:
             timePoint = The time point to check whether this interval is after
                         it.
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(1994, 12, 24)));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2000, 1, 5)));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
---------------------
       +/
     bool isAfter(in TP timePoint) const pure nothrow
     {
         return false;
     }
 
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(1994, 12, 24)));
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2000, 1, 5)));
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
+    }
 
     /++
         Whether this interval is after the given interval and does not
@@ -22959,18 +22961,6 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
 
         Throws:
             $(LREF DateTimeException) if the given interval is empty.
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
---------------------
       +/
     bool isAfter(in Interval!TP interval) const pure
     {
@@ -22979,6 +22969,18 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
         return false;
     }
 
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+    }
 
     /++
         Whether this interval is after the given interval and does not intersect
@@ -22989,21 +22991,21 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
 
         Params:
             interval = The interval to check against this interval.
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            PosInfInterval!Date(Date(1999, 5, 4))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            PosInfInterval!Date(Date(2012, 3, 1))));
---------------------
       +/
     bool isAfter(in PosInfInterval!TP interval) const pure nothrow
     {
         return false;
     }
 
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            PosInfInterval!Date(Date(2012, 3, 1))));
+    }
 
     /++
         Whether this interval is after the given interval and does not intersect
@@ -23014,21 +23016,21 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
 
         Params:
             interval = The interval to check against this interval.
-
-        Examples:
---------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            NegInfInterval!Date(Date(1996, 5, 4))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
-            NegInfInterval!Date(Date(2013, 7, 9))));
---------------------
       +/
     bool isAfter(in NegInfInterval interval) const pure nothrow
     {
         return false;
     }
 
+    ///
+    unittest
+    {
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            NegInfInterval!Date(Date(2013, 7, 9))));
+    }
 
     /++
         Whether the given interval overlaps this interval.
@@ -23038,18 +23040,6 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
 
         Throws:
             $(LREF DateTimeException) if the given interval is empty.
-
-        Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
---------------------
       +/
     bool intersects(in Interval!TP interval) const pure
     {
@@ -23058,6 +23048,18 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
         return interval._begin < _end;
     }
 
+    ///
+    unittest
+    {
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+    }
 
     /++
         Whether the given interval overlaps this interval.
@@ -23065,21 +23067,21 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
         Params:
             interval = The interval to check for intersection with this
                        interval.
-
-        Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            PosInfInterval!Date(Date(1999, 5, 4))));
-
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            PosInfInterval!Date(Date(2012, 3, 1))));
---------------------
       +/
     bool intersects(in PosInfInterval!TP interval) const pure nothrow
     {
         return interval._begin < _end;
     }
 
+    ///
+    unittest
+    {
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+        assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            PosInfInterval!Date(Date(2012, 3, 1))));
+    }
 
     /++
         Whether the given interval overlaps this interval.
@@ -23089,21 +23091,21 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
 
         Params:
             interval = The interval to check for intersection with this interval.
-
-        Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            NegInfInterval!Date(Date(1996, 5, 4))));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
-            NegInfInterval!Date(Date(2013, 7, 9))));
---------------------
       +/
     bool intersects(in NegInfInterval!TP interval) const pure nothrow
     {
         return true;
     }
 
+    ///
+    unittest
+    {
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            NegInfInterval!Date(Date(2013, 7, 9))));
+    }
 
     /++
         Returns the intersection of two intervals
@@ -23114,17 +23116,6 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
         Throws:
             $(LREF DateTimeException) if the two intervals do not intersect or if
             the given interval is empty.
-
-        Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
-       Interval!Date(Date(1990, 7 , 6), Date(2000, 8, 2)));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
-       Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
---------------------
       +/
     Interval!TP intersection(in Interval!TP interval) const
     {
@@ -23137,6 +23128,17 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
         return Interval!TP(interval._begin, end);
     }
 
+    ///
+    unittest
+    {
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+            Interval!Date(Date(1990, 7 , 6), Date(2000, 8, 2)));
+
+        assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+                Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+            Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+    }
 
     /++
         Returns the intersection of two intervals
@@ -23146,17 +23148,6 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
 
         Throws:
             $(LREF DateTimeException) if the two intervals do not intersect.
-
-        Examples:
---------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            PosInfInterval!Date(Date(1990, 7, 6))) ==
-       Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
-
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
-            PosInfInterval!Date(Date(1999, 1, 12))) ==
-       Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
---------------------
       +/
     Interval!TP intersection(in PosInfInterval!TP interval) const
     {
