@@ -1,108 +1,171 @@
 module std.experimental.perpetual;
 /** TODO: 
- *		redesignn this(size, type) ctor (move to factory???)
  *		documentation
+ *		version(Windows) impl
  */
 
 private import std.exception;
 private import std.conv : to, emplace;
 private import std.file : exists;
 private import std.traits : hasIndirections, isCallable, isAssignable, isArray;
-import std.stdio;
 
 /**
- * Maps value type object to file.
- *  The value is persistent and may be reused later, as well as
- *   shared with another process/thread. 
- */
+ * Creates an object mapped to a file. The object is persistent 
+ *   and outlives the parent application. The file may be reopened
+ *   and the object reused, it's value persists. This might be viewed
+ *   as kind of binary serialization with the difference that access
+ *   to the variable is almost as fast as any regular memory. The 
+ *   structure might be also used as memory shared between processes/threads,
+ *   however, no built-in synchronization is provided.
+ *
+ * If the template parameter T is immutable, the created object is also
+ *   immutable. Note: shared memory is then created in read-only
+ *   mode, so even cast to mutable and attempt to modify it will cause
+ *   segmentation fault.
+ *
+ * The Perpetual(T) exists in two forms. When T is regular value type
+ *   (including static arrays), Persistent(T) behaves like reference to
+ *   the object. In the second form, Persistent(T[]), the class behaves
+ *   as proxy to dynamic array providing slicing interface. Note, even
+ *   in this case, elements of the array must be value type, no pointers
+ *   nor references to process's memory allowed.
+ *
+ * The values created are initialized with std.conv.emplace using
+ *  additional arguments if any. The object remains in valid state
+ *  until the file is deleted or modified.
+ **/
 struct Perpetual(T)
 {
+	// underlying shared memory allocator
 	private ShMem _heap;
 	private enum _tag="Perpetual!("~T.stringof~")";
 
+	//dynamic array
 	static if(is(T == Element[],Element))
 	{
-	/// dynamic array 
 		private Element[] _value;
 		private enum bool dynamic=true;
 		static assert(!hasIndirections!Element
 		    , Element.stringof~" is reference type");
 
+		/** Proxy to underlying dynamic array type.
+		 *  Forwards calls to opSlice(), length() etc
+		 */
 		@property Element[] Ref() { return _value; }
 
-		string toString() { return to!string(_value); }
+		/// Convert to string the value, not the class itself
+		@property toString() { return to!string(_value); }
 
+		/// Index of uninitialized part of the array
+		@property initIndex() const { return _heap.unplowed/Element.sizeof; }
 	}
+	// scalar value or static array
 	else
 	{
-	/// value type
 		alias Element=T;
-		private Element[] _value;
+		private Element* _value;
 		private enum bool dynamic=false;
 		static assert(!hasIndirections!T
 		    , T.stringof~" is reference type");
 
-		@property ref T Ref() {	return _value[0]; }
+		/** Reference to underlying scalar value
+		 */
+		@property ref Element Ref() {	return *_value; }
 
-		static if(!isArray!Element)
-			ref Element opIndex(size_t i) { return _value[i]; }
-
-		string toString() { return to!string(_value[0]); }
+		/// Convert to string
+		@property toString() { return to!string(*_value); }
 	}
+
+	/** If whole or part of the file was created and 
+	 *  was initialized in constructor, return true. 
+	 *	For scalar types this means, the entire object was constructed.
+	 *  For dynamic arrays initIndex() shows first initialized
+	 *  elsement.
+	 */
+	@property master() const { return _heap.master; }
 
 	static if(isAssignable!Element)
 		enum mode=ShMem.Mode.readWrite;
 	else
 		enum mode=ShMem.Mode.readOnly;
 
-	@property length() const { return _value.length; }
-
-	@property initIndex() const { return _heap.unplowed/Element.sizeof; }
-
 
 
 /**
- * Open file and assosiate object with it.
- * The file is extended if smaller than requred. Initialized
- *   with T.init if created or extended.
+ * Universal constructor, for both scalar and array types.
+ * Opens file and assosiates object with it.
+ * The file is extended if required.
+ * The object is initialized if file was created or extended.
  */
 	this(Arg...)(string path, Arg arg)
 	{
+		// dynamic array
 		static if(dynamic)
-			_heap=shMem(path, mode);
-		else
-			_heap=shMem(path, Element.sizeof, mode);
-		enforce(_heap.length >= Element.sizeof, _tag~": file is too small");
-
-		_value=cast(Element[]) _heap[0.._heap.length];
-		static if(isAssignable!Element)
 		{
-			foreach(i, ref x; _value[initIndex..$])
-				emplace(&x, arg);
+			_heap=shMem(path, mode);
+			enforce(_heap.length >= Element.sizeof, _tag~": file is too small");
+			_value=cast(Element[]) _heap[0.._heap.length];
+			// initialization
+			static if(isAssignable!Element)
+			{
+				if(master)
+					foreach(i, ref x; _value[initIndex..$])
+						emplace(&x, arg);
+			}
+			else
+			{
+				static assert(arg.length == 0
+					, _tag~": attempt to initialize immutable memory");
+			}
+		}
+		// scalar value
+		else
+		{
+			_heap=shMem(path, Element.sizeof, mode);
+			enforce(_heap.length >= Element.sizeof, _tag~": file is too small");
+			_value=cast(Element*) _heap[].ptr;
+
+			// initialization
+			static if(isAssignable!Element)
+			{
+				if(master)
+					emplace(_value, arg);
+			}
+			else
+			{
+				static assert(arg.length == 0
+					, _tag~": attempt to initialize immutable object");
+			}
 		}
 	}
 
 /**
- * Open file and assosiate object with it.
- * Version for dynamic arrays, creates array of requsted length
+ * Open file and map dynamic array to it.
+ * Creates array of requested length, file is extended if necessary
  */
 	this(Arg...)(size_t len, string path, Arg arg)
+	if(dynamic)
 	{
 		immutable size_t size=len*Element.sizeof;
 		
-		_heap=shMem(path, size, ShMem.Mode.readWrite);
+		_heap=shMem(path, size, mode);
 		_value=cast(Element[]) _heap[0..size];
+		// initialization
 		static if(isAssignable!Element)
 		{
-			foreach(x; _value[initIndex..$])
-				emplace(&x, arg);
+			if(master)
+				foreach(ref x; _value[initIndex..$])
+					emplace(&x, arg);
+		}
+		else
+		{
+			static assert(arg.length == 0
+				, _tag~": attempt to initialize immutable array");
 		}
 	}
  	
 
-/**
- * Get reference to wrapped object.
- */
+ // get reference to wrapped object.
 	alias Ref this;
 
 }
@@ -113,27 +176,29 @@ unittest {
 	import std.stdio;
 	import std.conv;
 	import std.string;
-	import std.file : remove;
+	import std.file : remove, exists;
 	import core.sys.posix.sys.stat;
-	//import std.file : deleteme;
-	string deleteme="test.";
+	import std.file : deleteme;
 
+	// custom data examples
 	struct A { int x; };
 	class B {};
 	enum Color { black, red, green, blue, white };
 
 	string[] file;
 	foreach(i; 0..8) file~=deleteme~to!string(i);
-	scope(exit) foreach(f; file[]) remove(f);
+	scope(exit) foreach(f; file[]) if(exists(f)) remove(f);
 
 	/// Part 1: create mapped variables
 	{
-		// single int value, default initializer, test assignable
+		// simle int variable initialized with default value
 		auto p0=Perpetual!int(file[0]);
 		assert(p0 == int.init);
 		p0=7;
+		assert(p0 == 7);
 
 		// single double value initialized in ctor
+		// , would throw if the file did exist.
 		auto p1=Perpetual!double(file[1], 2.71828);
 		assert(p1 == 2.71828);
 		p1=3.14159;
@@ -157,9 +222,9 @@ unittest {
 		auto p5=Perpetual!(char[32])(file[5]);
 		p5="hello world";
 
-		// double static array
+		// second order static array
 		auto p8=Perpetual!(char[3][5])(file[6]);
-		foreach(ref x; p8) x="..."; p8[0]="one"; p8[2]="two";
+		p8[]="..."; p8[1]="one"; p8[2]="two";
 
 
 		/// Compile time errors
@@ -180,66 +245,70 @@ unittest {
 		// Was previosly mapped as int and assigned 7
 		auto p0=Perpetual!int(file[0]);
 		assert(p0 == 7);
+		// ERROR: int cannot be emplaced from a double
+		// Perpetual!int(file[0], 1.0);
+		/// ERROR: attempt to initialize immutable array
+		// Perpetual!(immutable(int)[])(3,file[0], 34);
+		/// ERROR: The file was only 4 bytes long
+		///   and immutable storage can't be extended
+		// Perpetual!(immutable(int)[])(3,file[0]);
+
+		/// This works, extend the storage and 
+		///  init appended tail, but not existing part
+		auto p1=Perpetual!(int[])(3,file[0],123);
+		assert(p1[0] == 7);
+		assert(p1[1] == 123);
+		assert(p1.length == 3);
+		//p1[3];	// RangeError: Range violation
 
 		// Was previousli mapped as double and assigned 3.14159
-		auto p1=Perpetual!double(file[1]);
-		assert(p1 == 3.14159);
+		auto p2=Perpetual!double(file[1]);
+		assert(p2 == 3.14159);
 
 		// struct with int member initialized with 22
-		auto p2=Perpetual!A(file[2]);
-		assert(p2 == A(22));
+		auto p3=Perpetual!A(file[2]);
+		assert(p3 == A(22));
 		
-		// Was mapped as int[5], remap as view only of array shorts
-		auto p3=Perpetual!(immutable(short[]))(file[3]);
+		// Was mapped as int[5], remap as view only array of shorts
+		auto p4=Perpetual!(immutable(short[]))(file[3]);
+		assert(p4.length == 10);
 		// Assuming LSB
-		assert(p3.length == 10);
-		assert(p3[0] == 1 && p3[2] == 3 && p3[4] == 5);
-		//p3[1]=111; //ERROR: cannot modify immutable expression
+		assert(p4[0] == 1 && p4[2] == 3 && p4[4] == 5);
+		// ERROR: cannot modify immutable expression
+		//p4[1]=111;
 
 		// enum, was set to Color.red
-		auto p4=Perpetual!Color(file[4]);
-		assert(p4 == Color.red);
+		auto p5=Perpetual!Color(file[4]);
+		assert(p5 == Color.red);
 
 		// view only variant of char[4]
-		auto p5=Perpetual!string(4, file[5]);
-		assert(p5 == "hell");
+		auto p6=Perpetual!string(4, file[5]);
+		assert(p6 == "hell");
 		//p5[0]='A'; //ERROR: cannot modify immutable expression
 		//p5[]="1234"; //ERROR: slice is not mutable
 
 
-		// map of double array as plain array
-		auto p6=Perpetual!(const(char[]))(file[6]);
-		assert(p6[0..5] == "one..");
+		// remap second order array as plain array
+		auto p7=Perpetual!(const(char[]))(file[6]);
+		assert(p7.length == 15);
+		assert(p7[0..5] == "...on");
 		// map again as dynamic array
-		auto p7=Perpetual!(char[3][])(file[6]);
-		assert(p7.length == 5);
-		assert(p7[2] == "two");
-		//p7[0]="null"; //ERROR: Array lengths don't match for copy: 4 != 3
-		p7[0]="nil";
-
-		// ctor with size parameter 
-		//assertThrown(Perpetual!(char)(45, deleteme));
+		auto p8=Perpetual!(char[3][])(file[6]);
+		assert(p8.length == 5);
+		assert(p8[2] == "two");
+		// ERROR: Array lengths don't match for copy: 4 != 3
+		//p8[0]="null";
 
 
+		// let's create write-protected file
 		{ File(file[7],"w").write("12345678"); }
 		chmod(file[7].toStringz, octal!444);
 		// mutable array can't be mapped on read-only file 
 		assertThrown(Perpetual!(int[])(file[7]));
 		// immutable array can be mapped
-		auto p8=Perpetual!(immutable(int)[])(file[7]);
-		assert(p8.length == 2);
+		auto p9=Perpetual!(immutable(int)[])(file[7]);
+		assert(p9.length == 2);
 
-		auto p9=Perpetual!int(3,file[0]);
-		assert(p9 == 7);
-		assert(p9[0] == 7);
-		assert(p9[1] == 0);
-		assert(p9.length == 3);
-		//p9[3];	// RangeError: Range violation
-
-
-		auto pA=Perpetual!(char[4])(4,file[5]);
-		assert(pA.length == 4);
-		assert(pA == "hell");
 	}
 
 }
@@ -516,13 +585,13 @@ ShMem shMem(string path, ShMem.Mode mode=ShMem.Mode.readWrite)
 
 
 
-
+/// Using of package scoped shared memory allocator
 unittest
 {
 	import std.conv : octal;
 	import std.file : remove;
 	//import std.file : deleteme;
-	string deleteme="test.";
+	string deleteme="test.shm.";
 	
 
 	string file=deleteme~"1";
