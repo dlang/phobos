@@ -5692,7 +5692,7 @@ real nextUp(real x) @trusted pure nothrow @nogc
 /** ditto */
 double nextUp(double x) @trusted pure nothrow @nogc
 {
-    floatTraits!double.Layout rep = { number : x };
+    floatTraits!(double).Layout rep = { number : x };
 
     if ((rep.integral & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
     {
@@ -5719,7 +5719,7 @@ double nextUp(double x) @trusted pure nothrow @nogc
 /** ditto */
 float nextUp(float x) @trusted pure nothrow @nogc
 {
-    floatTraits!float.Layout rep = { number : x };
+    floatTraits!(float).Layout rep = { number : x };
 
     if ((rep.integral & 0x7F80_0000) == 0x7F80_0000)
     {
@@ -6546,9 +6546,9 @@ body
     // average them (avoiding overflow), and cast the result back to a floating-point number.
 
     alias F = floatTraits!(T);
-    F.Layout repX = { number : x },
-                repY = { number : y },
-                res;
+    F.Layout repX = { number : x };
+    F.Layout repY = { number : y };
+    F.Layout res;
 
     static if (F.realFormat == RealFormat.ieeeExtended)
     {
@@ -6579,7 +6579,7 @@ body
         else
             res.integral.significand = m; // ... unless exponent is 0 (subnormal or zero).
 
-        res.shorts[4]= e | (repX.shorts[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
+        res.shorts[4] = e | (repX.shorts[F.EXPPOS_SHORT] & 0x8000); // restore sign bit
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
