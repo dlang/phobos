@@ -5257,10 +5257,19 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
  */
 bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 {
+    // We're doing a bitwise comparison so the endianness is irrelevant.
     alias F = floatTraits!(real);
     F.Layout repX = { number : x }, repY = { number : y };
 
-    return repX.integral == repY.integral;
+    static if (F.realFormat == RealFormat.ieeeDouble)
+    {
+        return repX.integral == repY.integral;
+    }
+    else
+    {
+        return repX.integral[0] == repY.integral[0]
+            && repX.integral[1] == repY.integral[1];
+    }
 }
 
 /*********************************
