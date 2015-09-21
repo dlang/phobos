@@ -1610,8 +1610,8 @@ is recommended if you want to process a complete file.
 
     /**
      * Read data from the file according to the specified
-     * $(LINK2 std_format.html#format-string, format specifier) using
-     * $(XREF format,formattedRead).
+     * $(LINK2 std_format.html#_format-string, format specifier) using
+     * $(XREF _format,formattedRead).
      */
     uint readf(Data...)(in char[] format, Data data)
     {
