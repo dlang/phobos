@@ -41,8 +41,6 @@ $(T2 median,
         Computes the median of a range)
 $(T2 permutations,
         Lazily computes all permutations using Heap's algorithm.)
-$(T2 quantile,
-        Computes the quantile of a range)
 $(T2 reduce,
         $(D reduce!"a + b"([1, 2, 3, 4])) returns $(D 10).)
 $(T2 splitter,
@@ -4291,23 +4289,44 @@ unittest
 Finds the mean (colloquially known as the average) of a range. If $(D r) does
 not provide the $(D length) member, then this function will do element by
 element summation, rather than the more accurate methods provided by $(D sum).
+
+An optional parameter $(D seed) may be passed to initially populate the summation.
+
 This function will return $(D real.nan) if the range is empty. This function is
 $(BIGOH r.length).
 
 Params:
     r = an input range
+    seed = an initial value to start the summation
 
 Returns:
     the mean of r
 */
 real mean(R)(R r)
     if (isInputRange!R &&
-        !isInfinite!R &&
-        is(ElementType!R : real))
+        is(ElementType!R : real) &&
+        !isInfinite!R)
 {
     if (r.empty)
     {
         return real.nan;
+    }
+
+    return mean(r, real(0.0));
+}
+
+/// ditto
+auto mean(R, T)(R r, T seed)
+    if (isInputRange!R &&
+        is(typeof(seed + r.front)) &&
+        is(typeof(r.front / size_t(1))) &&
+        !isInfinite!R)
+{
+    alias ET = Unqual!(ElementType!R);
+
+    if (r.empty)
+    {
+        return ET.init;
     }
 
     static if (hasLength!R)
@@ -4317,17 +4336,19 @@ real mean(R)(R r)
             return r.front;
         }
 
-        return sum(r) / real(r.length);
+        return sum(r, seed) / r.length;
     }
     else
     {
         import std.typecons : tuple;
 
         auto pair = reduce!((a, b) => tuple(a[0] + 1, a[1] + b))
-            (tuple(size_t(0), 0.0), r);
+            (tuple(size_t(0), seed), r);
 
         return pair[1] / pair[0];
     }
+
+    assert(0);
 }
 
 ///
@@ -4338,8 +4359,8 @@ real mean(R)(R r)
     static immutable arr1 = [1, 2, 3];
     static immutable arr2 = [1.5, 2.5, 12.5];
 
-    assert(mean(arr1) == 2);
-    assert(approxEqual(mean(arr2), 5.5));
+    assert(arr1.mean == 2);
+    assert(arr2.mean.approxEqual(5.5));
 
     assert(arr1[0 .. 0].mean.isNaN);
 }
@@ -4353,129 +4374,168 @@ real mean(R)(R r)
     assert(r1.mean == 2);
 
     auto r2 = new ReferenceInputRange!double([1.5, 2.5, 12.5]);
-    assert(approxEqual(r2.mean, 5.5));
+    assert(r2.mean.approxEqual(5.5));
+}
+
+// Test user defined types
+pure unittest
+{
+    import std.bigint : BigInt;
+    import std.internal.test.dummyrange : ReferenceInputRange;
+
+    auto bigint_arr = [BigInt("1"), BigInt("2"), BigInt("3"), BigInt("6")];
+    auto bigint_arr2 = new ReferenceInputRange!BigInt([
+        BigInt("1"), BigInt("2"), BigInt("3"), BigInt("6")
+    ]);
+    assert(bigint_arr.mean(BigInt(0)) == BigInt("3"));
+    assert(bigint_arr2.mean(BigInt(0)) == BigInt("3"));
 }
 
 /**
-Function to compute the quantile of a $(D SortedRange) given $(D q), which
-is a number between 0 and 1. The range MUST be a $(D SortedRange) that is sorted
-in ascending order. Otherwise this function will give incorrect results. If the
-range is empty, this function will return $(D real.nan). Is
-$(BIGOH r.length * q) for forward ranges and $(BIGOH 1) for random access ranges.
+Function to compute the mean of a range, which must be an instance of
+$(D SortedRange). The range MUST be sorted in ascending order. Otherwise this
+function will give incorrect results. The elements of the range can be any type
+that can be implicitly converted to $(D real), or any user defined type that
+supports addition and division. If the element type of the range cannot be
+implicitly converted to $(D real), the $(D divisor) option must be specified
+which must be equivalent to 2 in order to correctly determine medians for even
+length ranges. If the range is empty, this function will return $(D real.nan)
+or the $(D init) value of the user type. Is $(BIGOH r.length) for forward ranges
+and $(BIGOH 1) for random access ranges.
 
 Params:
-    r = a forward range with length or a random access range
-    q = where to calculate the quantile, must be $(D q > 0 && q < 1)
+    r = an input range with length or a forward froward range
+    divisor = value equivalent of 2
 
 Returns:
-    the quantile of r given q
+    the median of r
 */
-real quantile(R)(R r, real q)
+real median(R)(R r)
     if (isInstanceOf!(SortedRange, R) &&
         is(ElementType!R : real) &&
-        isForwardRange!R &&
+        isInputRange!R &&
         hasLength!R &&
         !isInfinite!R)
-in
 {
-    assert(q > 0 && q < 1);
-}
-body
-{
-    import std.math : modf, approxEqual;
-
-    if (r.length == 0)
+    if (r.empty)
     {
         return real.nan;
     }
-    else if (r.length == 1)
+
+    return median(r, real(2.0));
+}
+
+/// ditto
+real median(R)(R r)
+    if (isInstanceOf!(SortedRange, R) &&
+        is(ElementType!R : real) &&
+        isForwardRange!R &&
+        !hasLength!R &&
+        !isInfinite!R)
+{
+    if (r.empty)
+    {
+        return real.nan;
+    }
+
+    return median(r, real(2.0));
+}
+
+/// ditto
+auto median(R, T)(R r, T divisor)
+    if (isInstanceOf!(SortedRange, R) &&
+        isInputRange!R &&
+        hasLength!R &&
+        is(typeof(r.front + r.front)) &&
+        is(typeof(r.front / divisor)) &&
+        !isInfinite!R)
+{
+    alias ET = Unqual!(ElementType!R);
+
+    if (r.empty)
+    {
+        return ET.init;
+    }
+
+    if (r.length == 0)
     {
         return r.front;
     }
 
-    real x = r.length * q;
-    real j;
-    real g = modf(x, j);
-    uint j_int = cast(uint) j;
-
     static if (isRandomAccessRange!R)
     {
-        if (g.approxEqual(0))
+        if (r.length % 2 == 0)
         {
-            return (r[j_int - 1] + r[j_int]) / 2.0;
+            return (r[(r.length / 2) - 1] + r[(r.length / 2)]) / divisor;
         }
         else
         {
-            return r[j_int];
+            return r[(r.length - 1) / 2];
         }
     }
     else
     {
-        if (g.approxEqual(0))
+        if (r.length % 2 == 0)
         {
-            ElementType!R prev_item;
-
-            r = r.drop(j_int - 1);
-            prev_item = r.front;
+            r = r.drop((r.length / 2) - 1);
+            ET prev_item = r.front;
             r.popFront;
-            return (r.front + prev_item) / 2.0;
+
+            return (r.front + prev_item) / divisor;
         }
         else
         {
-            return r.drop(j_int).front;
+            r.drop((r.length - 1) / 2);
+
+            return r.front;
         }
     }
 
     assert(0);
 }
 
-///
-@safe nothrow unittest
+/// ditto
+auto median(R, T)(R r, T divisor)
+    if (isInstanceOf!(SortedRange, R) &&
+        isForwardRange!R &&
+        is(typeof(r.front + r.front)) &&
+        is(typeof(r.front / r.front)) &&
+        !hasLength!R &&
+        !isInfinite!R)
 {
-    import std.algorithm.sorting : sort;
-    import std.range : assumeSorted;
-    import std.math : isNaN;
+    alias ET = Unqual!(ElementType!R);
 
-    assert([1, 2, 3, 4].assumeSorted.quantile(0.25) == 1.5);
-    assert([1, 2, 3, 4].assumeSorted.quantile(0.5) == 2.5);
-    assert([1, 2, 3, 4].assumeSorted.quantile(0.75) == 3.5);
+    if (r.empty)
+    {
+        return ET.init;
+    }
 
-    assert(sort([48, 31, 1, 37, 89, 83, 71]).quantile(0.5) == 48);
+    size_t length = r.save.walkLength;
 
-    assert([1, 2][0 .. 0].assumeSorted.quantile(0.25).isNaN);
-    assert([1].assumeSorted.quantile(0.25) == 1);
-}
+    if (length == 0)
+    {
+        return r.front;
+    }
 
-@safe nothrow unittest
-{
-    import std.internal.test.dummyrange;
-    import std.range : assumeSorted;
-    import std.math : approxEqual;
+    if (length % 2 == 0)
+    {
+        r.drop((length / 2) - 1);
+        Unqual!(ElementType!R) prev_item = r.front;
+        r.popFront;
+        return (r.front + prev_item) / divisor;
+    }
+    else
+    {
+        r.drop((length - 1) / 2);
 
-    DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward) r;
-    assert(r.assumeSorted.quantile(0.25) == 3);
-    assert(r.assumeSorted.quantile(0.5).approxEqual(5.5));
-    assert(r.assumeSorted.quantile(0.75) == 8);
-}
+        return r.front;
+    }
 
-/**
-Convince function that wraps a call to the $(D quantile) function with 0.5 as
-the q parameter. For algorithmic complexity, refer to the docs of
-$(D quantile).
-
-Params:
-    r = a forward range with length or a random access range
-
-Returns:
-    the median of r
-*/
-real median(R)(R r)
-{
-    return quantile(r, 0.5);
+    assert(0);
 }
 
 ///
-@safe nothrow unittest
+@safe nothrow pure unittest
 {
     import std.algorithm.sorting : sort;
     import std.range : assumeSorted;
@@ -4491,15 +4551,94 @@ real median(R)(R r)
     assert([1, 2][0 .. 0].assumeSorted.median.isNaN);
 }
 
-@safe nothrow unittest
+@safe nothrow pure unittest
 {
     import std.internal.test.dummyrange;
     import std.range : assumeSorted;
-    import std.math : approxEqual;
+    import std.math : approxEqual, isNaN;
 
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward) r1;
     assert(r1.assumeSorted.median.approxEqual(5.5));
 
     DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward) r2;
     assert(r2.assumeSorted.median.approxEqual(5.5));
+
+    auto r3 = new ReferenceForwardRange!int([3, 5, 12]);
+    assert(r3.assumeSorted.median == 5);
+
+    auto r4 = new ReferenceForwardRange!double([2.9, 6.2, 6.5, 20.5]);
+    assert(r4.assumeSorted.median.approxEqual(6.35));
+
+    double[] empty;
+    auto r5 = new ReferenceForwardRange!double(empty);
+    assert(r5.assumeSorted.median.isNaN);
+}
+
+// Test if it works with user defined types
+unittest
+{
+    import std.bigint : BigInt;
+    import std.internal.test.dummyrange;
+
+    auto bigint_arr = [BigInt("1"), BigInt("2"), BigInt("3"), BigInt("4")];
+    auto bigint_arr2 = [BigInt("1"), BigInt("2"), BigInt("3"), BigInt("4"), BigInt("5")];
+    auto bigint_arr3 = new ReferenceForwardRange!BigInt([
+        BigInt("3"), BigInt("5"), BigInt("12")
+    ]);
+    auto bigint_arr4 = new ReferenceForwardRange!BigInt([
+        BigInt("3"), BigInt("5"), BigInt("12"), BigInt("30")
+    ]);
+    assert(bigint_arr.assumeSorted.median(BigInt("2")) == BigInt("2"));
+    assert(bigint_arr2.assumeSorted.median(BigInt("2")) == BigInt("3"));
+    assert(bigint_arr3.assumeSorted.median(BigInt("2")) == BigInt("5"));
+    assert(bigint_arr4.assumeSorted.median(BigInt("2")) == BigInt("8"));
+
+    struct A
+    {
+        double a = 0.0;
+
+        A opBinary(string op)(in A value) if (op == "+")
+        {
+            return A(this.a + value.a);
+        }
+
+        A opBinary(string op)(in A value) if (op == "/")
+        {
+            return A(this.a / value.a);
+        }
+
+        bool opEquals()(auto ref const A rhs) const
+        {
+            return this.a == rhs.a;
+        }
+
+        int opCmp()(auto ref const A rhs) const
+        {
+            if (this.a < rhs.a)
+            {
+                return -1;
+            }
+            else if (this.a == rhs.a)
+            {
+                return 0;
+            }
+            else
+            {
+                return 1;
+            }
+        }
+    }
+
+    auto a_arr = [A(10.0), A(25.0), A(30.0), A(44.0), A(57.0)];
+    auto a_arr2 = [A(10.0), A(25.0), A(44.0), A(57.0)];
+    auto a_arr3 = new ReferenceForwardRange!A([
+        A(3), A(5), A(12)
+    ]);
+    auto a_arr4 = new ReferenceForwardRange!A([
+        A(3.0), A(5.0), A(12.0), A(30.0)
+    ]);
+    assert(a_arr.assumeSorted.median(A(2)) == A(30.0));
+    assert(a_arr2.assumeSorted.median(A(2)) == A(34.5));
+    assert(a_arr3.assumeSorted.median(A(2)) == A(5));
+    assert(a_arr4.assumeSorted.median(A(2)) == A(8.5));
 }
