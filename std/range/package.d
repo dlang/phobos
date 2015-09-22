@@ -7255,29 +7255,20 @@ if (isInputRange!Range)
         if(!__ctfe)
         debug
         {
-            import core.bitop : bsr;
-            import std.conv : text;
-            import std.random : MinstdRand, uniform;
-
             static if (isRandomAccessRange!Range)
             {
+                import core.bitop : bsr;
                 import std.algorithm : isSorted;
+
                 // Check the sortedness of the input
                 if (this._input.length < 2) return;
+
                 immutable size_t msb = bsr(this._input.length) + 1;
                 assert(msb > 0 && msb <= this._input.length);
                 immutable step = this._input.length / msb;
-                static MinstdRand gen;
-                immutable start = uniform(0, step, gen);
                 auto st = stride(this._input, step);
-                static if (is(typeof(text(st))))
-                {
-                    assert(isSorted!pred(st), text(st));
-                }
-                else
-                {
-                    assert(isSorted!pred(st));
-                }
+
+                assert(isSorted!pred(st), "Range is not sorted");
             }
         }
     }
@@ -7934,6 +7925,12 @@ unittest
     assert(ok);
 }
 
+// issue 15003
+@nogc unittest
+{
+    static immutable a = [1, 2, 3, 4];
+    auto r = a.assumeSorted;
+}
 
 /++
     Wrapper which effectively makes it possible to pass a range by reference.
