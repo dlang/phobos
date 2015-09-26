@@ -2852,9 +2852,10 @@ unittest
 //Tests for the double implementation
 unittest
 {
-    import core.stdc.stdlib, std.math;
     static if(real.mant_dig == 53)
     {
+        import core.stdc.stdlib, std.exception, std.math;
+
         //Should be parsed exactly: 53 bit mantissa
         string s = "0x1A_BCDE_F012_3456p10";
         auto x = parse!real(s);
