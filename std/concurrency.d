@@ -1193,7 +1193,7 @@ interface Scheduler
     @property ref ThreadInfo thisInfo() nothrow;
 
     /**
-     * Creates a Condition varialbe analog for signaling.
+     * Creates a Condition variable analog for signaling.
      *
      * Creates a new Condition variable analog which is used to check for and
      * to signal the addition of messages to a thread's message queue.  Like

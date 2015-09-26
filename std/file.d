@@ -215,18 +215,6 @@ Read entire contents of file $(D name) and returns it as an untyped
 array. If the file size is larger than $(D upTo), only $(D upTo)
 bytes are read.
 
-Example:
-
-----
-import std.file, std.stdio;
-void main()
-{
-   auto bytes = cast(ubyte[]) read("filename", 5);
-   if (bytes.length == 5)
-       writefln("The fifth byte of the file is 0x%x", bytes[4]);
-}
-----
-
 Params:
     name = string or range of characters representing the file _name
     upTo = if present, the maximum number of bytes to read
@@ -243,6 +231,22 @@ void[] read(R)(R name, size_t upTo = size_t.max)
         return readImpl(name, name.tempCString!FSChar(), upTo);
     else
         return readImpl(null, name.tempCString!FSChar(), upTo);
+}
+
+///
+@safe unittest
+{
+    import std.utf : byChar;
+    scope(exit)
+    {
+        assert(exists("someUniqueFilename"));
+        remove("someUniqueFilename");
+    }
+
+    write("someUniqueFilename", "1234");
+    assert(read("someUniqueFilename", 2) == "12");
+    assert(read("someUniqueFilename".byChar) == "1234");
+    assert((cast(ubyte[])read("someUniqueFilename")).length == 4);
 }
 
 version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @trusted
@@ -353,15 +357,6 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     return buf[0 .. size];
 }
 
-@safe unittest
-{
-    write(deleteme, "1234");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-    assert(read(deleteme, 2) == "12");
-    import std.utf : byChar;
-    assert(read(deleteme.byChar) == "1234");
-}
-
 version (linux) @safe unittest
 {
     // A file with "zero" length that doesn't have 0 length at all
@@ -393,14 +388,6 @@ Returns: Array of characters read.
 
 Throws: $(D FileException) on file error, $(D UTFException) on UTF
 decoding error.
-
-Example:
-
-----
-enforce(system("echo abc>deleteme") == 0);
-scope(exit) remove("deleteme");
-enforce(chomp(readText("deleteme")) == "abc");
-----
  */
 
 S readText(S = string, R)(R name)
@@ -414,12 +401,17 @@ S readText(S = string, R)(R name)
     return result;
 }
 
+///
 @safe unittest
 {
     import std.string;
-    write(deleteme, "abc\n");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-    enforce(chomp(readText(deleteme)) == "abc");
+    write("someUniqueFilename", "abc\n");
+    scope(exit)
+    {
+        assert(exists("someUniqueFilename"));
+        remove("someUniqueFilename");
+    }
+    enforce(chomp(readText("someUniqueFilename")) == "abc");
 }
 
 /*********************************************
@@ -430,18 +422,6 @@ Params:
     buffer = data to be written to file
 
 Throws: $(D FileException) on error.
-
-Example:
-
-----
-import std.file;
-void main()
-{
-   int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
-   write("filename", a);
-   assert(cast(int[]) read("filename") == a);
-}
-----
  */
 void write(R)(R name, const void[] buffer)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
@@ -452,6 +432,20 @@ void write(R)(R name, const void[] buffer)
         writeImpl(null, name.tempCString!FSChar(), buffer, false);
 }
 
+///
+unittest
+{
+   scope(exit)
+   {
+       assert(exists("someUniqueFilename"));
+       remove("someUniqueFilename");
+   }
+
+   int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
+   write("someUniqueFilename", a);
+   assert(cast(int[]) read("someUniqueFilename") == a);
+}
+
 /*********************************************
 Appends $(D buffer) to file $(D name).
 
@@ -460,20 +454,6 @@ Params:
     buffer = data to be appended to file
 
 Throws: $(D FileException) on error.
-
-Example:
-
-----
-import std.file;
-void main()
-{
-   int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
-   write("filename", a);
-   int[] b = [ 13, 21 ];
-   append("filename", b);
-   assert(cast(int[]) read("filename") == a ~ b);
-}
-----
  */
 void append(R)(R name, const void[] buffer)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
@@ -482,6 +462,22 @@ void append(R)(R name, const void[] buffer)
         writeImpl(name, name.tempCString!FSChar(), buffer, true);
     else
         writeImpl(null, name.tempCString!FSChar(), buffer, true);
+}
+
+///
+unittest
+{
+   scope(exit)
+   {
+       assert(exists("someUniqueFilename"));
+       remove("someUniqueFilename");
+   }
+
+   int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
+   write("someUniqueFilename", a);
+   int[] b = [ 13, 21 ];
+   append("someUniqueFilename", b);
+   assert(cast(int[]) read("someUniqueFilename") == a ~ b);
 }
 
 // Posix implementation helper for write and append
@@ -2891,6 +2887,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
 
 unittest
 {
+    import std.algorithm, std.file; // issue 14817
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
     write(t1, "1");
@@ -3529,13 +3526,6 @@ unittest
 
 /**
 Reads an entire file into an array.
-
-Example:
-----
-// Load file; each line is an int followed by comma, whitespace and a
-// double.
-auto a = slurp!(int, double)("filename", "%s, %s");
-----
  */
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
@@ -3559,13 +3549,20 @@ slurp(Types...)(string filename, in char[] format)
     return app.data;
 }
 
+///
 unittest
 {
-    // Tuple!(int, double)[] x;
-    // auto app = appender(&x);
-    write(deleteme, "12 12.25\n345 1.125");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-    auto a = slurp!(int, double)(deleteme, "%s %s");
+    scope(exit)
+    {
+        assert(exists("someUniqueFilename"));
+        remove("someUniqueFilename");
+    }
+
+    write("someUniqueFilename", "12 12.25\n345 1.125");
+
+    // Load file; each line is an int followed by comma, whitespace and a
+    // double.
+    auto a = slurp!(int, double)("someUniqueFilename", "%s %s");
     assert(a.length == 2);
     assert(a[0] == tuple(12, 12.25));
     assert(a[1] == tuple(345, 1.125));

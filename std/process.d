@@ -936,8 +936,8 @@ the current user's preferred _command interpreter (aka. shell).
 The string $(D command) is passed verbatim to the shell, and is therefore
 subject to its rules about _command structure, argument/filename quoting
 and escaping of special characters.
-The path to the shell executable is determined by the $(LREF userShell)
-function.
+The path to the shell executable is always $(CODE /bin/sh) on POSIX, and
+determined by the $(LREF userShell) function on Windows.
 
 In all other respects this function works just like $(D spawnProcess).
 Please refer to the $(LREF spawnProcess) documentation for descriptions
@@ -975,7 +975,7 @@ Pid spawnShell(in char[] command,
     else version (Posix)
     {
         const(char)[][3] args;
-        args[0] = userShell;
+        args[0] = "/bin/sh";
         args[1] = shellSwitch;
         args[2] = command;
     }
@@ -2224,8 +2224,8 @@ $(D "/bin/sh").
 @property string userShell() @safe
 {
     version (Windows)      return environment.get("COMSPEC", "cmd.exe");
-    else version (Android) return "/system/bin/sh";
-    else version (Posix)   return "/bin/sh";
+    else version (Android) return environment.get("SHELL", "/system/bin/sh");
+    else version (Posix)   return environment.get("SHELL", "/bin/sh");
 }
 
 

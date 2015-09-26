@@ -66,6 +66,16 @@ If both ranges are infinite, then both must be forward ranges.
 
 When there are more than two ranges, the above conditions apply to each
 adjacent pair of ranges.
+
+Params:
+    range1 = The first range
+    range2 = The second range
+    ranges = Two or more non-infinite forward ranges
+    otherRanges = Zero or more non-infinite forward ranges
+
+Returns:
+    A forward range of $(XREF typecons,Tuple) representing elements of the
+    cartesian product of the given ranges.
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
     if (!allSatisfy!(isForwardRange, R1, R2) ||
@@ -541,6 +551,12 @@ the elements that are common to most ranges, along with their number
 of occurrences. All ranges in $(D ror) are assumed to be sorted by $(D
 less). Only the most frequent $(D tgt.length) elements are returned.
 
+Params:
+    less = The predicate the ranges are sorted by.
+    ror = A range of forward ranges sorted by `less`.
+    tgt = The target range to copy common elements to.
+    sorted = Whether the elements copied should be in sorted order.
+
 Example:
 ----
 // Figure which number can be found in most arrays of the set of
@@ -601,6 +617,13 @@ import std.algorithm.sorting : SortOutput; // FIXME
 /**
 Similar to $(D largestPartialIntersection), but associates a weight
 with each distinct element in the intersection.
+
+Params:
+    less = The predicate the ranges are sorted by.
+    ror = A range of forward ranges sorted by `less`.
+    tgt = The target range to copy common elements to.
+    weights = An associative array mapping elements to weights.
+    sorted = Whether the elements copied should be in sorted order.
 
 Example:
 ----
@@ -738,6 +761,13 @@ NWayUnion) is $(BIGOH n * ror.length * log(ror.length)), i.e., $(D
 log(ror.length)) times worse than just spanning all ranges in
 turn. The output comes sorted (unstably) by $(D less).
 
+Params:
+    less = Predicate the given ranges are sorted by.
+    ror = A range of ranges sorted by `less` to compute the union for.
+
+Returns:
+    A range of the union of the ranges in `ror`.
+
 Warning: Because $(D NWayUnion) does not allocate extra memory, it
 will leave $(D ror) modified. Namely, $(D NWayUnion) assumes ownership
 of $(D ror) and discretionarily swaps and advances elements of it. If
@@ -826,6 +856,16 @@ unittest
 Lazily computes the difference of $(D r1) and $(D r2). The two ranges
 are assumed to be sorted by $(D less). The element types of the two
 ranges must have a common type.
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    r1 = The first range.
+    r2 = The range to subtract from `r1`.
+
+Returns:
+    A range of the difference of `r1` and `r2`.
+
+See_also: $(LREF setSymmetricDifference)
  */
 struct SetDifference(alias less = "a < b", R1, R2)
     if (isInputRange!(R1) && isInputRange!(R2))
@@ -921,6 +961,13 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 Lazily computes the intersection of two or more input ranges $(D
 ranges). The ranges are assumed to be sorted by $(D less). The element
 types of the ranges must have a common type.
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    ranges = The ranges to compute the intersection for.
+
+Returns:
+    A range containing the intersection of the given ranges.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
     if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
@@ -1070,6 +1117,16 @@ ranges must have a common type.
 If both arguments are ranges of L-values of the same type then
 $(D SetSymmetricDifference) will also be a range of L-values of
 that type.
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    r1 = The first range.
+    r2 = The second range.
+
+Returns:
+    A range of the symmetric difference between `r1` and `r2`.
+
+See_also: $(LREF setDifference)
  */
 struct SetSymmetricDifference(alias less = "a < b", R1, R2)
     if (isInputRange!(R1) && isInputRange!(R2))
@@ -1188,6 +1245,13 @@ are assumed to be sorted by $(D less). Elements in the output are not
 unique; the length of the output is the sum of the lengths of the
 inputs. (The $(D length) member is offered if all ranges also have
 length.) The element types of all ranges must have a common type.
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    rs = The ranges to compute the union for.
+
+Returns:
+    A range containing the union of the given ranges.
  */
 struct SetUnion(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))
 {

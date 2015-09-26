@@ -1253,14 +1253,12 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     static struct Result
     {
         import std.algorithm : max;
-        // state {}
         private union
         {
             void[max(R1.sizeof, R2.sizeof)] buffer = void;
             void* forAlignmentOnly = void;
         }
         private bool condition;
-        // }
         private @property ref R1 r1()
         {
             assert(condition);
@@ -1410,6 +1408,37 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     return Result(condition, r1, r2);
 }
 
+///
+unittest
+{
+    import std.algorithm.iteration : filter, map;
+    import std.algorithm.comparison : equal;
+
+    auto data1 = [ 1, 2, 3, 4 ].filter!(a => a != 3);
+    auto data2 = [ 5, 6, 7, 8 ].map!(a => a + 1);
+
+    // choose() is primarily useful when you need to select one of two ranges
+    // with different types at runtime.
+    static assert(!is(typeof(data1) == typeof(data2)));
+
+    auto chooseRange(bool pickFirst)
+    {
+        // The returned range is a common wrapper type that can be used for
+        // returning or storing either range without running into a type error.
+        return choose(pickFirst, data1, data2);
+
+        // Simply returning the chosen range without using choose() does not
+        // work, because map() and filter() return different types.
+        //return pickFirst ? data1 : data2; // does not compile
+    }
+
+    auto result = chooseRange(true);
+    assert(result.equal([ 1, 2, 4 ]));
+
+    result = chooseRange(false);
+    assert(result.equal([ 6, 7, 8, 9 ]));
+}
+
 /**
 Choose one of multiple ranges at runtime.
 
@@ -1432,6 +1461,7 @@ if (Ranges.length > 2
     return choose(index == 0, rs[0], chooseAmong(index - 1, rs[1 .. $]));
 }
 
+/// ditto
 auto chooseAmong(Ranges...)(size_t index, Ranges rs)
 if (Ranges.length == 2 && is(typeof(choose(true, rs[0], rs[1]))))
 {
@@ -2824,34 +2854,11 @@ auto generate(Fun)(Fun fun)
     return Generator!(Fun)(fun);
 }
 
-///
+/// ditto
 auto generate(alias fun)()
     if (isCallable!fun)
 {
     return Generator!(fun)();
-}
-
-//private struct Generator(bool onPopFront, bool runtime, Fun...)
-private struct Generator(Fun...)
-{
-    static assert(Fun.length == 1);
-    static assert(isInputRange!Generator);
-
-private:
-    static if (is(Fun[0]))
-        Fun[0] fun;
-    else
-        alias fun = Fun[0];
-
-public:
-    enum empty = false;
-
-    auto ref front() @property
-    {
-        return fun();
-    }
-
-    void popFront() { }
 }
 
 ///
@@ -2877,6 +2884,38 @@ public:
     }
     //adapted as a range.
     assert(equal(generate(infiniteIota(1, 4)).take(10), [1, 2, 3, 1, 2, 3, 1, 2, 3, 1]));
+}
+
+///
+unittest
+{
+    import std.format, std.random;
+
+    auto r = generate!(() => uniform(0, 6)).take(10);
+    format("%(%s %)", r);
+}
+
+//private struct Generator(bool onPopFront, bool runtime, Fun...)
+private struct Generator(Fun...)
+{
+    static assert(Fun.length == 1);
+    static assert(isInputRange!Generator);
+
+private:
+    static if (is(Fun[0]))
+        Fun[0] fun;
+    else
+        alias fun = Fun[0];
+
+public:
+    enum empty = false;
+
+    auto ref front() @property
+    {
+        return fun();
+    }
+
+    void popFront() { }
 }
 
 @safe unittest
@@ -4616,9 +4655,9 @@ body
 
 /// Ditto
 auto iota(B, E)(B begin, E end)
-if (isFloatingPoint!(CommonType!(B, E)))
+    if (isFloatingPoint!(CommonType!(B, E)))
 {
-    return iota(begin, end, 1.0);
+    return iota(begin, end, CommonType!(B, E)(1));
 }
 
 /// Ditto
@@ -4823,6 +4862,8 @@ unittest
 {
     import std.math : approxEqual, nextUp, nextDown;
     import std.algorithm : count, equal;
+
+    static assert(is(ElementType!(typeof(iota(0f))) == float));
 
     static assert(hasLength!(typeof(iota(0, 2))));
     auto r = iota(0, 10, 1);
@@ -7214,29 +7255,20 @@ if (isInputRange!Range)
         if(!__ctfe)
         debug
         {
-            import core.bitop : bsr;
-            import std.conv : text;
-            import std.random : MinstdRand, uniform;
-
             static if (isRandomAccessRange!Range)
             {
+                import core.bitop : bsr;
                 import std.algorithm : isSorted;
+
                 // Check the sortedness of the input
                 if (this._input.length < 2) return;
+
                 immutable size_t msb = bsr(this._input.length) + 1;
                 assert(msb > 0 && msb <= this._input.length);
                 immutable step = this._input.length / msb;
-                static MinstdRand gen;
-                immutable start = uniform(0, step, gen);
                 auto st = stride(this._input, step);
-                static if (is(typeof(text(st))))
-                {
-                    assert(isSorted!pred(st), text(st));
-                }
-                else
-                {
-                    assert(isSorted!pred(st));
-                }
+
+                assert(isSorted!pred(st), "Range is not sorted");
             }
         }
     }
@@ -7893,6 +7925,12 @@ unittest
     assert(ok);
 }
 
+// issue 15003
+@nogc unittest
+{
+    static immutable a = [1, 2, 3, 4];
+    auto r = a.assumeSorted;
+}
 
 /++
     Wrapper which effectively makes it possible to pass a range by reference.
