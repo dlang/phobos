@@ -1603,7 +1603,7 @@ real exp(real x) @trusted pure nothrow @nogc
     }
     else
     {
-        alias F = floatTraits!T;
+        alias F = floatTraits!real;
         static if (F.realFormat == RealFormat.ieeeDouble)
         {
             // Coefficients for exp(x)
