@@ -1,5 +1,6 @@
 /**
- * This module was renamed to disambiguate the term tuple, use $(DDLINK std_meta, std.meta, std.meta) instead.
+ * This module was renamed to disambiguate the term tuple, use
+ * $(LINK2 std_meta.html, std.meta) instead.
  *
  * Copyright: Copyright Digital Mars 2005 - 2015.
  * License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -11,7 +12,7 @@ module std.typetuple;
 public import std.meta;
 
 /**
- * Alternate name for $(LREF AliasSeq) for legacy compatibility.
+ * Alternate name for $(XREF meta,AliasSeq) for legacy compatibility.
  */
 alias TypeTuple = AliasSeq;
 
