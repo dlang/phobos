@@ -2235,11 +2235,64 @@ version (Posix)   private immutable string shellSwitch = "-c";
 version (Windows) private immutable string shellSwitch = "/C";
 
 
-/// Returns the process ID number of the current process.
+/**
+ * Returns the process ID of the current process,
+ * which is guaranteed to be unique on the system.
+ *
+ * Example:
+ * ---
+ * writefln("Current process ID: %d", thisProcessID);
+ * ---
+ */
 @property int thisProcessID() @trusted nothrow //TODO: @safe
 {
     version (Windows)    return GetCurrentProcessId();
     else version (Posix) return core.sys.posix.unistd.getpid();
+}
+
+
+/**
+ * Returns the process ID of the current thread,
+ * which is guaranteed to be unique within the current process.
+ *
+ * Returns:
+ * A $(CXREF thread, ThreadID) value for the calling thread.
+ *
+ * Example:
+ * ---
+ * writefln("Current thread ID: %s", thisThreadID);
+ * ---
+ */
+@property ThreadID thisThreadID() @trusted nothrow //TODO: @safe
+{
+    version (Windows)
+        return GetCurrentThreadId();
+    else
+    version (Posix)
+    {
+        import core.sys.posix.pthread;
+        return pthread_self();
+    }
+}
+
+
+unittest
+{
+    int pidA, pidB;
+    ThreadID tidA, tidB;
+    pidA = thisProcessID();
+    tidA = thisThreadID();
+
+    import core.thread;
+    auto t = new Thread({
+        pidB = thisProcessID();
+        tidB = thisThreadID();
+    });
+    t.start();
+    t.join();
+
+    assert(pidA == pidB);
+    assert(tidA != tidB);
 }
 
 
