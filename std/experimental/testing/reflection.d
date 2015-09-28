@@ -19,11 +19,11 @@ alias TestFunction = void function();
  */
 struct TestData
 {
-    string name;
-    TestFunction testFunction;
-    bool hidden;
-    bool shouldFail;
-    bool serial;
+    string name; /// The name of the unit test
+    TestFunction testFunction; /// The test function to call
+    bool hidden; /// If the test is hidden (i.e. will not run by default)
+    bool shouldFail; /// If the test is expected to fail
+    bool serial; /// If the test must be run serially
 }
 
 /**
