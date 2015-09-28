@@ -22,7 +22,7 @@ public import std.experimental.testing.attrs;
 class UnitTestException : Exception
 {
     this(in string[] msgLines, string file = __FILE__,
-         size_t line = __LINE__, Throwable next = null)
+         size_t line = __LINE__, Throwable next = null) pure
     {
         super(msgLines.join("\n"), next, file, line);
         this.msgLines = msgLines;
@@ -492,12 +492,12 @@ unittest
     throwRangeError.shouldThrow!RangeError;
 }
 
-package void utFail(in string output, in string file, in size_t line)
+package void utFail(in string output, in string file, in size_t line) pure
 {
     fail(output, file, line);
 }
 
-private void fail(in string output, in string file, in size_t line)
+private void fail(in string output, in string file, in size_t line) pure
 {
     throw new UnitTestException([output], file, line);
 }
