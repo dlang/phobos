@@ -35,6 +35,8 @@ $(T2 joiner,
 $(T2 map,
         $(D map!"2 * a"([1, 2, 3])) lazily returns a range with the numbers
         $(D 2), $(D 4), $(D 6).)
+$(T2 mean,
+        Computes the mean of a range)
 $(T2 permutations,
         Lazily computes all permutations using Heap's algorithm.)
 $(T2 reduce,
@@ -4283,4 +4285,113 @@ unittest
          [0, 2, 1],
          [1, 2, 0],
          [2, 1, 0]]));
+}
+
+/**
+Finds the mean (colloquially known as the average) of a range. If $(D r) does
+not provide the $(D length) member, then this function will do element by
+element summation, rather than the more accurate methods provided by $(D sum).
+
+An optional parameter $(D seed) may be passed to initially populate the summation.
+
+This function will return $(D real.nan) if the element type of $(D r) is a built-in
+numerical type, or the initial value of the seed type if it is defined, and if
+the range is empty.
+
+This function is $(BIGOH r.length).
+
+Params:
+    r = an input range
+    seed = an initial value to start the summation
+
+Returns:
+    the mean of r
+*/
+real mean(R)(R r)
+    if (isInputRange!R &&
+        is(ElementType!R : real) &&
+        !isInfinite!R)
+{
+    if (r.empty)
+    {
+        return real.nan;
+    }
+
+    return mean(r, real(0.0));
+}
+
+/// ditto
+auto mean(R, T)(R r, T seed)
+    if (isInputRange!R &&
+        is(typeof(seed + r.front)) &&
+        is(typeof(r.front / size_t(1))) &&
+        !isInfinite!R)
+{
+    alias ET = Unqual!(ElementType!R);
+
+    if (r.empty)
+    {
+        return ET.init;
+    }
+
+    static if (hasLength!R)
+    {
+        if (r.length == 1)
+        {
+            return r.front;
+        }
+
+        return sum(r, seed) / r.length;
+    }
+    else
+    {
+        import std.typecons : tuple;
+
+        auto pair = reduce!((a, b) => tuple(a[0] + 1, a[1] + b))
+            (tuple(size_t(0), seed), r);
+
+        return pair[1] / pair[0];
+    }
+
+    assert(0);
+}
+
+///
+@safe @nogc pure nothrow unittest
+{
+    import std.math : approxEqual, isNaN;
+
+    static immutable arr1 = [1, 2, 3];
+    static immutable arr2 = [1.5, 2.5, 12.5];
+
+    assert(arr1.mean == 2);
+    assert(arr2.mean.approxEqual(5.5));
+
+    assert(arr1[0 .. 0].mean.isNaN);
+}
+
+@safe pure nothrow unittest
+{
+    import std.internal.test.dummyrange : ReferenceInputRange;
+    import std.math : approxEqual;
+
+    auto r1 = new ReferenceInputRange!int([1, 2, 3]);
+    assert(r1.mean == 2);
+
+    auto r2 = new ReferenceInputRange!double([1.5, 2.5, 12.5]);
+    assert(r2.mean.approxEqual(5.5));
+}
+
+// Test user defined types
+pure unittest
+{
+    import std.bigint : BigInt;
+    import std.internal.test.dummyrange : ReferenceInputRange;
+
+    auto bigint_arr = [BigInt("1"), BigInt("2"), BigInt("3"), BigInt("6")];
+    auto bigint_arr2 = new ReferenceInputRange!BigInt([
+        BigInt("1"), BigInt("2"), BigInt("3"), BigInt("6")
+    ]);
+    assert(bigint_arr.mean(BigInt(0)) == BigInt("3"));
+    assert(bigint_arr2.mean(BigInt(0)) == BigInt("3"));
 }
