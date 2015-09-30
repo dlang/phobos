@@ -29,6 +29,7 @@ import std.math;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
+import std.range;
 
 version(unittest)
 {
@@ -2961,6 +2962,218 @@ unittest
 C swapRealImag(C)(C input)
 {
     return C(input.im, input.re);
+}
+
+/**
+Function to compute the median of a range, which must be an instance of
+$(D SortedRange).
+
+If the element type of the range is a user defined type, then the range must be
+sorted using the same value that is used during addition and subtraction, or
+this function will return incorrect results.
+
+The elements of the range can be any type that can be implicitly converted to
+$(D real), or any user defined type that supports addition and division. If the
+element type of the range cannot be implicitly converted to $(D real), the
+$(D divisor) option must be specified which must be equivalent to 2 in order to
+correctly determine medians for even length ranges. If the range is empty, this
+function will return $(D real.nan) or the $(D init) value of the user type.
+
+Is $(BIGOH r.length) for forward ranges and $(BIGOH 1) for random access ranges.
+
+Params:
+    r = an input range with length or a forward froward range
+    divisor = optional parameter which is a value equivalent of 2
+
+Returns:
+    the median of r
+*/
+real median(R)(R r)
+    if (isInstanceOf!(SortedRange, R) &&
+        is(ElementType!R : real) &&
+        isInputRange!R &&
+        hasLength!R &&
+        !isInfinite!R)
+{
+    if (r.empty)
+    {
+        return real.nan;
+    }
+
+    return median(r, real(2.0));
+}
+
+/// ditto
+real median(R)(R r)
+    if (isInstanceOf!(SortedRange, R) &&
+        is(ElementType!R : real) &&
+        isForwardRange!R &&
+        !hasLength!R &&
+        !isInfinite!R)
+{
+    if (r.empty)
+    {
+        return real.nan;
+    }
+
+    return median(r, real(2.0));
+}
+
+/// ditto
+auto median(R, T)(R r, T divisor)
+    if (isInstanceOf!(SortedRange, R) &&
+        isInputRange!R &&
+        hasLength!R &&
+        is(typeof(r.front + r.front)) &&
+        is(typeof(r.front / divisor)) &&
+        !isInfinite!R)
+{
+    alias ET = Unqual!(ElementType!R);
+
+    if (r.empty)
+    {
+        return ET.init;
+    }
+
+    if (r.length == 1)
+    {
+        return r.front;
+    }
+
+    static if (isRandomAccessRange!R)
+    {
+        if (r.length % 2 == 0)
+        {
+            return (r[(r.length / 2) - 1] + r[(r.length / 2)]) / divisor;
+        }
+        else
+        {
+            return r[r.length / 2];
+        }
+    }
+    else
+    {
+        if (r.length % 2 == 0)
+        {
+            r = r.drop((r.length / 2) - 1);
+            ET prev_item = r.front;
+            r.popFront;
+
+            return (r.front + prev_item) / divisor;
+        }
+        else
+        {
+            r.drop((r.length - 1) / 2);
+
+            return r.front;
+        }
+    }
+}
+
+/// ditto
+auto median(R, T)(R r, T divisor)
+    if (isInstanceOf!(SortedRange, R) &&
+        isForwardRange!R &&
+        is(typeof(r.front + r.front)) &&
+        is(typeof(r.front / r.front)) &&
+        !hasLength!R &&
+        !isInfinite!R)
+{
+    if (r.empty)
+    {
+        return Unqual!(ElementType!R).init;
+    }
+
+    size_t length = r.save.walkLength;
+
+    if (length == 1)
+    {
+        return r.front;
+    }
+
+    if (length % 2 == 0)
+    {
+        r.drop((length / 2) - 1);
+        Unqual!(ElementType!R) prev_item = r.front;
+        r.popFront;
+        return (r.front + prev_item) / divisor;
+    }
+    else
+    {
+        r.drop(length / 2);
+
+        return r.front;
+    }
+}
+
+///
+@safe nothrow pure unittest
+{
+    import std.algorithm.sorting : sort;
+    import std.range : assumeSorted;
+    import std.math : approxEqual, isNaN;
+
+    assert(sort([48, 31, 1, 37, 89, 83, 71]).median == 48);
+
+    assert([3, 5, 12].assumeSorted.median == 5);
+    assert([3, 5, 7, 13, 21, 23, 23, 39].assumeSorted.median == 17);
+    assert([2.9, 6.2, 6.5, 20.5].assumeSorted.median.approxEqual(6.35));
+    assert([2.9, 5.8, 6.2, 6.5, 20.5].assumeSorted.median.approxEqual(6.2));
+
+    assert([1, 2][0 .. 0].assumeSorted.median.isNaN);
+}
+
+@safe nothrow pure unittest
+{
+    import std.internal.test.dummyrange;
+    import std.range : assumeSorted;
+    import std.math : approxEqual, isNaN;
+
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward) r1;
+    assert(r1.assumeSorted.median.approxEqual(5.5));
+
+    DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward) r2;
+    assert(r2.assumeSorted.median.approxEqual(5.5));
+
+    auto r3 = new ReferenceForwardRange!int([3, 5, 12]);
+    assert(r3.assumeSorted.median == 5);
+
+    auto r4 = new ReferenceForwardRange!double([2.9, 6.2, 6.5, 20.5]);
+    assert(r4.assumeSorted.median.approxEqual(6.35));
+
+    double[] empty;
+    auto r5 = new ReferenceForwardRange!double(empty);
+    assert(r5.assumeSorted.median.isNaN);
+}
+
+/// Works with user defined types
+unittest
+{
+    import std.bigint : BigInt;
+    import std.range : assumeSorted;
+    import std.math : approxEqual, isNaN;
+
+    auto bigint_arr = [BigInt("1"), BigInt("2"), BigInt("3"), BigInt("4")];
+    auto bigint_arr2 = [BigInt("1"), BigInt("2"), BigInt("3"),
+        BigInt("4"), BigInt("5")];
+
+    assert(bigint_arr.assumeSorted.median(BigInt("2")) == BigInt("2"));
+    assert(bigint_arr2.assumeSorted.median(BigInt("2")) == BigInt("3"));
+}
+
+unittest
+{
+    import std.bigint : BigInt;
+    import std.internal.test.dummyrange;
+
+    auto bigint_arr1 = new ReferenceForwardRange!BigInt([
+        BigInt("3"), BigInt("5"), BigInt("12")
+    ]);
+    auto bigint_arr2 = new ReferenceForwardRange!BigInt([
+        BigInt("3"), BigInt("5"), BigInt("12"), BigInt("30")
+    ]);
+    assert(bigint_arr1.assumeSorted.median(BigInt("2")) == BigInt("5"));
+    assert(bigint_arr2.assumeSorted.median(BigInt("2")) == BigInt("8"));
 }
 
 private:
