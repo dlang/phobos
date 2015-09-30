@@ -7250,7 +7250,7 @@ if (isInputRange!Range)
     }
 
     // Assertion only.
-    private void dbgVerifySorted()
+    private auto dbgVerifySorted()
     {
         if(!__ctfe)
         debug
@@ -7824,6 +7824,16 @@ unittest
     auto r1 = r.upperBound!(SearchPolicy.linear)("def");
     assert(r1.front == "ghi", r1.front);
     f.close();
+}
+
+// issue 14981
+nothrow unittest
+{
+    import std.algorithm.sorting : sort;
+    import std.container : Array;
+
+    Array!string letters = ["b","a","c"];
+    sort(letters[]);
 }
 
 /**
