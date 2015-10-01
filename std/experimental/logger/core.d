@@ -759,8 +759,8 @@ abstract class Logger
         this.fatalHandler_ = delegate() {
             throw new Error("A fatal log message was logged");
         };
-        // TODO: remove lambda hack after relevant druntime PR gets merged
-        this.mutex = () @trusted { return new Mutex(); } ();
+
+        this.mutex = new Mutex();
     }
 
     /** A custom logger must implement this method in order to work in a
@@ -897,17 +897,11 @@ abstract class Logger
     */
     void forwardMsg(ref LogEntry payload) @trusted
     {
-        //writeln(payload);
         static if (isLoggingActive) synchronized (mutex)
         {
-            //writeln(__LINE__, " ",payload, this.logLevel_, " ", globalLogLevel);
-            //writeln(isLoggingEnabled(payload.logLevel, this.logLevel_,
-            //    globalLogLevel), payload.logLevel >= this.logLevel_,
-            //    payload.logLevel >= globalLogLevel);
             if (isLoggingEnabled(payload.logLevel, this.logLevel_,
                 globalLogLevel))
             {
-                //writeln(__LINE__, " ",payload);
                 this.writeLogMsg(payload);
 
                 if (payload.logLevel == LogLevel.fatal)
@@ -1545,11 +1539,9 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            //writeln(msg, args, " ", line);
             if (isLoggingEnabled(this.logLevel_, this.logLevel_, globalLogLevel,
                 condition))
             {
-                //writeln(msg, args, " ", line);
                 this.beginLogMsg(file, line, funcName, prettyFuncName,
                     moduleName, this.logLevel_, thisTid, Clock.currTime, this);
 
