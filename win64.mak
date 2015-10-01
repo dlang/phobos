@@ -126,7 +126,8 @@ SRC_STD_3b= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\random.d \
 	std\exception.d \
 	std\compiler.d \
-	std\system.d std\concurrency.d std\concurrencybase.d
+	std\system.d std\concurrency.d std\concurrencybase.d \
+	std\experimental\safeint.d	
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
@@ -400,6 +401,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_zlib.html \
 	$(DOC)\std_net_isemail.html \
 	$(DOC)\std_net_curl.html \
+	$(DOC)\std_experimental_safeint.html \
 	$(DOC)\std_experimental_logger_core.html \
 	$(DOC)\std_experimental_logger_filelogger.html \
 	$(DOC)\std_experimental_logger_multilogger.html \
@@ -789,6 +791,9 @@ $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 
 $(DOC)\std_net_curl.html : $(STDDOC) std\net\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_curl.html $(STDDOC) std\net\curl.d
+
+$(DOC)\std_experimental_safeint.html : $(STDDOC) std\experimental\safeint.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_safeint.html $(STDDOC) std\experimental\safeint.d
 
 $(DOC)\std_experimental_logger_core.html : $(STDDOC) std\experimental\logger\core.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_core.html $(STDDOC) std\experimental\logger\core.d

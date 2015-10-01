@@ -158,6 +158,7 @@ STD_MODULES = $(addprefix std/, \
   file format functional getopt json math mathspecial \
   meta metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
   process random \
+  $(addprefix experimental/, safeint) \
   $(addprefix range/, primitives interfaces) \
   $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
 	kickstart tests thompson)) \

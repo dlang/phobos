@@ -179,7 +179,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\functional.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\concurrencybase.d std\stdiobase.d std\parallelism.d \
-	std\exception.d std\ascii.d
+	std\exception.d std\ascii.d std\experimental\safeint.d
 
 SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\parser.d \
 	std\regex\internal\tests.d std\regex\internal\backtracking.d \
@@ -382,6 +382,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_experimental_logger_multilogger.html \
 	$(DOC)\std_experimental_logger_nulllogger.html \
 	$(DOC)\std_experimental_logger.html \
+	$(DOC)\std_experimental_safeint.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -670,6 +671,9 @@ $(DOC)\std_container_util.html : $(STDDOC) std\container\util.d
 
 $(DOC)\std_container.html : $(STDDOC) std\container\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container.html $(STDDOC) std\container\package.d
+
+$(DOC)\std_experimental_safeint.html : $(STDDOC) std\experimental\safeint.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_safeint.html $(STDDOC) std\experimental\safeint.d
 
 $(DOC)\std_range.html : $(STDDOC) std\range\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range\package.d
