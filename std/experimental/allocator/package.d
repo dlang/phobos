@@ -1056,7 +1056,7 @@ void dispose(A, T)(auto ref A alloc, T* p)
     {
         destroy(*p);
     }
-    alloc.deallocate(p[0 .. T.sizeof]);
+    alloc.deallocate((cast(void*) p)[0 .. T.sizeof]);
 }
 
 /// Ditto
