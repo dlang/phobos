@@ -46,7 +46,7 @@ $(UL
 class GetOptException : Exception
 {
     @safe pure nothrow
-    this(string msg, Exception next, string file = __FILE__,
+    this(string msg, Throwable next = null, string file = __FILE__,
         size_t line = __LINE__)
     {
         super(msg, file, line, next);
@@ -621,6 +621,23 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     }
 }
 
+private void handleConversion(R)(string option, string value, R* receiver,
+        size_t idx, string file = __FILE__, size_t line = __LINE__)
+{
+    import std.conv : to, ConvException;
+    import std.format : format;
+    try
+    {
+        *receiver = to!(typeof(*receiver))(value);
+    }
+    catch(ConvException e)
+    {
+        throw new GetOptException(format("Argument '%s' at position '%u' could "
+            ~ "not be converted to type '%s' as required by option '%s'.",
+            value, idx, R.stringof, option), e, file, line);
+    }
+}
+
 private bool handleOption(R)(string option, R receiver, ref string[] args,
         ref configuration cfg, bool incremental)
 {
@@ -677,7 +694,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
             // parse '--b=true/false'
             if (val.length)
             {
-                *receiver = to!(typeof(*receiver))(val);
+                handleConversion(option, val, receiver, i);
                 break;
             }
 
@@ -702,20 +719,18 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
             }
-            static if (is(typeof(*receiver) == enum))
+            static if (is(typeof(*receiver) == enum) ||
+                is(typeof(*receiver) == string))
             {
-                *receiver = to!(typeof(*receiver))(val);
+                handleConversion(option, val, receiver, i);
             }
             else static if (is(typeof(*receiver) : real))
             {
                 // numeric receiver
-                if (incremental) ++*receiver;
-                else *receiver = to!(typeof(*receiver))(val);
-            }
-            else static if (is(typeof(*receiver) == string))
-            {
-                // string receiver
-                *receiver = to!(typeof(*receiver))(val);
+                if (incremental)
+                    ++*receiver;
+                else
+                    handleConversion(option, val, receiver, i);
             }
             else static if (is(typeof(receiver) == delegate) ||
                             is(typeof(*receiver) == function))
@@ -746,12 +761,18 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
 
                 if (arraySep == "")
                 {
-                    *receiver ~= to!E(val);
+                    E tmp;
+                    handleConversion(option, val, &tmp, i);
+                    *receiver ~= tmp;
                 }
                 else
                 {
-                    foreach (elem; val.splitter(arraySep).map!(a => to!E(a))())
-                        *receiver ~= elem;
+                    foreach (elem; val.splitter(arraySep))
+                    {
+                        E tmp;
+                        handleConversion(option, elem, &tmp, i);
+                        *receiver ~= tmp;
+                    }
                 }
             }
             else static if (isAssociativeArray!(typeof(*receiver)))
@@ -769,7 +790,14 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                     auto j = indexOf(input, assignChar);
                     auto key = input[0 .. j];
                     auto value = input[j + 1 .. $];
-                    return tuple(to!K(key), to!V(value));
+
+                    K k;
+                    handleConversion("", key, &k, 0);
+
+                    V v;
+                    handleConversion("", value, &v, 0);
+
+                    return tuple(k,v);
                 }
 
                 static void setHash(Range)(R receiver, Range range)
@@ -1230,7 +1258,7 @@ unittest // 5228
     assertThrown!GetOptException(getopt(args, "abc", &abc));
 
     args = ["prog", "--abc=string"];
-    assertThrown!ConvException(getopt(args, "abc", &abc));
+    assertThrown!GetOptException(getopt(args, "abc", &abc));
 }
 
 unittest // From bugzilla 7693
@@ -1506,4 +1534,31 @@ unittest // Issue 14724
     }
 
     assert(rslt.helpWanted);
+}
+
+unittest
+{
+    import std.string : indexOf;
+
+    enum UniqueIdentifer {
+        a,
+        b
+    }
+
+    UniqueIdentifer a;
+
+    auto args = ["prog", "--foo", "HELLO"];
+    try
+    {
+        auto t = getopt(args, "foo|f", &a);
+        assert(false, "Must not be reached, as \"HELLO\" cannot be converted"
+            ~ " to enum A.");
+    }
+    catch(GetOptException e)
+    {
+        auto str = e.toString();
+        assert(str.indexOf("HELLO") != -1);
+        assert(str.indexOf("UniqueIdentifer") != -1);
+        assert(str.indexOf("foo") != -1);
+    }
 }
