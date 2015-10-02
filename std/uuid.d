@@ -215,25 +215,31 @@ public struct UUID
             nameBasedSHA1 = 5
         }
 
-        /**
-         * It is sometimes useful to get or set the 16 bytes of a UUID
-         * directly.
-         *
-         * Note:
-         * UUID uses a 16-ubyte representation for the UUID data.
-         * RFC 4122 defines a UUID as a special structure in big-endian
-         * format. These 16-ubytes always equal the big-endian structure
-         * defined in RFC 4122.
-         *
-         * Examples:
-         * -----------------------------------------------
-         * auto rawData = uuid.data; //get data
-         * rawData[0] = 1; //modify
-         * uuid.data = rawData; //set data
-         * uuid.data[1] = 2; //modify directly
-         * -----------------------------------------------
-         */
-        ubyte[16] data;
+        union
+        {
+            /**
+             * It is sometimes useful to get or set the 16 bytes of a UUID
+             * directly.
+             *
+             * Note:
+             * UUID uses a 16-ubyte representation for the UUID data.
+             * RFC 4122 defines a UUID as a special structure in big-endian
+             * format. These 16-ubytes always equal the big-endian structure
+             * defined in RFC 4122.
+             *
+             * Examples:
+             * -----------------------------------------------
+             * auto rawData = uuid.data; //get data
+             * rawData[0] = 1; //modify
+             * uuid.data = rawData; //set data
+             * uuid.data[1] = 2; //modify directly
+             * -----------------------------------------------
+             */
+            ubyte[16] data;
+            private ulong[2] ulongs;
+            static if(size_t.sizeof == 4)
+                private uint[4] uints;
+        }
 
         /*
          * We could use a union here to also provide access to the
@@ -679,7 +685,7 @@ public struct UUID
          */
         @safe pure nothrow @nogc bool opEquals(in UUID s) const
         {
-            return s.data == this.data;
+            return ulongs[0] == s.ulongs[0] && ulongs[1] == s.ulongs[1];
         }
 
         ///
@@ -708,7 +714,7 @@ public struct UUID
          */
         @safe pure nothrow @nogc bool opEquals(ref in UUID s) const
         {
-            return s.data == this.data;
+            return ulongs[0] == s.ulongs[0] && ulongs[1] == s.ulongs[1];
         }
 
         /**
@@ -732,15 +738,95 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow @nogc size_t toHash() const
+       @safe pure nothrow @nogc UUID opAssign(in UUID s)
         {
-            size_t seed = 0;
-            foreach(entry; this.data)
-               seed ^= cast(size_t)entry + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-
-            return seed;
+            ulongs[0] = s.ulongs[0];
+            ulongs[1] = s.ulongs[1];
+            return this;
         }
 
+        /**
+         * ditto
+         */
+        @safe pure nothrow @nogc UUID opAssign(ref in UUID s)
+        {
+            ulongs[0] = s.ulongs[0];
+            ulongs[1] = s.ulongs[1];
+            return this;
+        }
+
+        /**
+         * ditto
+         */
+        //MurmurHash2
+        @safe pure nothrow @nogc size_t toHash() const
+        {
+            static if(size_t.sizeof == 4)
+            {
+                enum uint m = 0x5bd1e995;
+                enum uint n = 16;
+                enum uint r = 24;
+
+                uint h = n;
+
+                uint k = uints[0];
+                k *= m;
+                k ^= k >> r;
+                k *= m;
+
+                h ^= k;
+                h *= m;
+
+                k = uints[1];
+                k *= m;
+                k ^= k >> r;
+                k *= m;
+
+                h ^= k;
+                h *= m;
+
+                k = uints[2];
+                k *= m;
+                k ^= k >> r;
+                k *= m;
+
+                h ^= k;
+                h *= m;
+
+                k = uints[3];
+                k *= m;
+                k ^= k >> r;
+                k *= m;
+
+                h ^= k;
+                h *= m;
+            }
+            else
+            {
+                enum ulong m = 0xc6a4a7935bd1e995UL;
+                enum ulong n = m * 16;
+                enum uint r = 47;
+
+                ulong h = n;
+
+                ulong k = ulongs[0];
+                k *= m;
+                k ^= k >> r;
+                k *= m;
+
+                h ^= k;
+                h *= m;
+
+                k = ulongs[1];
+                k *= m;
+                k ^= k >> r;
+                k *= m;
+
+                h ^= k;
+                h *= m;
+            }
+            return h;
+        }
         unittest
         {
             assert(UUID("00000000-0000-0000-0000-000000000000") == UUID.init);
