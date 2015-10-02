@@ -6501,7 +6501,8 @@ unittest
     import std.demangle;
     int foo;
     auto foo_demangled = demangle(mangledName!foo);
-    assert(foo_demangled[0 .. 4] == "int " && foo_demangled[$-3 .. $] == "foo");
+    assert(foo_demangled[0 .. 4] == "int " && foo_demangled[$-3 .. $] == "foo",
+        foo_demangled);
 
     void bar(){}
     auto bar_demangled = demangle(mangledName!bar);

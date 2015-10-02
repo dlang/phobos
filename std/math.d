@@ -2953,6 +2953,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 }
 
 /* workaround Issue 14718, float parsing depends on platform strtold
+typed_allocator.d
 @safe pure nothrow @nogc unittest
 {
     assert(ldexp(1.0, -1024) == 0x1p-1024);

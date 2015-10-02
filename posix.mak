@@ -142,29 +142,47 @@ endif
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
-# Packages in std. Just mention the package name here and the actual files in
-# the package in STD_MODULES.
-STD_PACKAGES = $(addprefix std/, algorithm container experimental/logger \
-	range regex)
+# Given one or more packages, returns their respective libraries
+P2LIB=$(addprefix $(ROOT)/libphobos2_,$(addsuffix $(DOTLIB),$(subst /,_,$1)))
+# Given one or more packages, returns the modules they contain
+P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 
-# Modules in std (including those in packages), in alphabetical order.
-STD_MODULES = $(addprefix std/, \
-  array ascii base64 bigint bitmanip compiler complex concurrency concurrencybase \
-  $(addprefix container/, array binaryheap dlist rbtree slist util) \
-  conv cstream csv datetime demangle \
-  $(addprefix digest/, digest crc hmac md ripemd sha) \
-  encoding exception \
-  $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \
-  file format functional getopt json math mathspecial \
-  meta metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
-  process random \
-  $(addprefix range/, primitives interfaces) \
-  $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
-	kickstart tests thompson)) \
-  signals socket socketstream stdint stdio stdiobase stream \
-  string syserror system traits typecons typetuple uni uri utf uuid variant \
-  xml zip zlib $(addprefix algorithm/,comparison iteration \
-    mutation searching setops sorting))
+# Packages in std. Just mention the package name here. The contents of package
+# xy/zz is in variable PACKAGE_xy_zz. This allows automation in iterating
+# packages and their modules.
+STD_PACKAGES = std $(addprefix std/,\
+  algorithm container digest experimental/allocator \
+  experimental/allocator/building_blocks experimental/logger net \
+  range regex)
+
+# Modules broken down per package
+
+PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
+  concurrencybase conv cstream csv datetime demangle encoding exception file format \
+  functional getopt json math mathspecial meta metastrings mmfile numeric \
+  outbuffer parallelism path process random signals socket socketstream stdint \
+  stdio stdiobase stream string syserror system traits typecons typetuple uni \
+  uri utf uuid variant xml zip zlib
+PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
+  sorting
+PACKAGE_std_container = array binaryheap dlist package rbtree slist util
+PACKAGE_std_digest = crc digest hmac md ripemd sha
+PACKAGE_std_experimental_logger = core filelogger \
+  nulllogger multilogger package
+PACKAGE_std_experimental_allocator = \
+  common gc_allocator mallocator mmap_allocator package showcase typed
+PACKAGE_std_experimental_allocator_building_blocks = \
+  affix_allocator allocator_list bucketizer \
+  fallback_allocator free_list free_tree bitmapped_block \
+  kernighan_ritchie null_allocator package quantizer \
+  region scoped_allocator segregator stats_collector
+PACKAGE_std_net = curl isemail
+PACKAGE_std_range = interfaces package primitives
+PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
+  backtracking kickstart tests thompson)
+
+# Modules in std (including those in packages)
+STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -196,8 +214,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix			\
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) \
-  $(addsuffix /package,$(STD_PACKAGES))
+D_MODULES = $(STD_MODULES) $(EXTRA_MODULES)
 
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
@@ -424,15 +441,15 @@ $(DOC_OUTPUT_DIR)/$(call D2HTML,$p) : $p $(STDDOC) ;\
   $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
 # For each package, define a rule e.g.:
-# ../web/phobos/std_algorithm.html : std/algorithm/package.d $(STDDOC) ; ...
+# ../web/phobos/std_algorithm.html : std/algorithm/... $(STDDOC) ; ...
 $(foreach p,$(STD_PACKAGES),$(eval \
-$(DOC_OUTPUT_DIR)/$(call P2HTML,$p) : $p/package.d $(STDDOC) ;\
+$(DOC_OUTPUT_DIR)/$(call P2HTML,$p) : $(addsuffix .d,$(call P2MODULES,$p)) $(STDDOC) ;\
   $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
 html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
 
 allmod :
-	@echo $(SRC_DOCUMENTABLES) $(addsuffix /package.d,$(STD_PACKAGES))
+	@echo $(SRC_DOCUMENTABLES)
 
 rsync-prerelease : html
 	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/
