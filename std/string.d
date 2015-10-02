@@ -350,14 +350,21 @@ alias CaseSensitive = Flag!"caseSensitive";
         If the parameters are not valid UTF, the result will still
         be in the range [-1 .. s.length], but will not be reliable otherwise.
   +/
-ptrdiff_t indexOf(Range)(Range s, in dchar c,
+ptrdiff_t indexOf(Range)(Range sIn, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if ( (isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
+        __traits(compiles, StringTypeOf!Range)
+    )
 {
     import std.ascii : toLower, isASCII;
     import std.uni : toLower;
     import std.utf : byDchar, byCodeUnit, UTFException, codeLength;
     alias Char = Unqual!(ElementEncodingType!Range);
+
+    static if (__traits(compiles, StringTypeOf!Range))
+        StringTypeOf!Range s = sIn;
+    else
+        alias s = sIn;
 
     if (cs == CaseSensitive.yes)
     {
@@ -483,6 +490,15 @@ ptrdiff_t indexOf(T, size_t n)(ref T[n] s, in dchar c,
     return indexOf(r, c, cs);
 }
 
+unittest
+{
+    import std.file : DirEntry;
+
+    auto de = DirEntry("std/string.d");
+    auto i = de.indexOf('/');
+    assert(i == 3);
+}
+
 @safe pure unittest
 {
     import std.conv : to;
@@ -549,11 +565,19 @@ ptrdiff_t indexOf(T, size_t n)(ref T[n] s, in dchar c,
         If the parameters are not valid UTF, the result will still
         be in the range [-1 .. s.length], but will not be reliable otherwise.
   +/
-ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
+ptrdiff_t indexOf(Range)(Range sIn, in dchar c, in size_t startIdx,
         in CaseSensitive cs = CaseSensitive.yes)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if ((isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
+        __traits(compiles, StringTypeOf!Range)
+    )
 {
-    static if (isSomeString!Range || (hasSlicing!Range && hasLength!Range))
+    static if (__traits(compiles, StringTypeOf!Range))
+        StringTypeOf!Range s = sIn;
+    else
+        alias s = sIn;
+
+    static if (isSomeString!(typeof(s)) ||
+                (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
     {
         if (startIdx < s.length)
         {
@@ -579,6 +603,15 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
         }
     }
     return -1;
+}
+
+unittest
+{
+    import std.file : DirEntry;
+
+    auto de = DirEntry("std/string.d");
+    auto i = de.indexOf('/', 3);
+    assert(i == 3);
 }
 
 @safe pure unittest
@@ -645,12 +678,19 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
         Does not work with case insensitive strings where the mapping of
         tolower and toupper is not 1:1.
   +/
-ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
+ptrdiff_t indexOf(Range, Char)(Range sIn, const(Char)[] sub,
         in CaseSensitive cs = CaseSensitive.yes)
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) && isSomeChar!Char)
+    if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)
+            && isSomeChar!Char)
+        || __traits(compiles, StringTypeOf!Range))
 {
     import std.uni : toLower;
     alias Char1 = Unqual!(ElementEncodingType!Range);
+
+    static if (__traits(compiles, StringTypeOf!Range))
+        StringTypeOf!Range s = sIn;
+    else
+        alias s = sIn;
 
     static if (isSomeString!Range)
     {
@@ -716,6 +756,15 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
         }
         return -1;
     }
+}
+
+unittest
+{
+    import std.file : DirEntry;
+
+    auto de = DirEntry("std/string.d");
+    auto i = de.indexOf("string");
+    assert(i == 4);
 }
 
 @safe pure unittest
