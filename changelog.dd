@@ -9,6 +9,7 @@ $(BUGSTITLE Library Changes,
 $(LI $(RELATIVE_LINK2 more-rangified-functions, More phobos functions were rangified.))
 $(LI $(RELATIVE_LINK2 std-algorithm-moveEmplace, `moveEmplace` was added))
 $(LI $(RELATIVE_LINK2 curl-dynamic-loading, libcurl is now loaded dynamically))
+$(LI FreeBSD now also ships with a shared libphobos2.so library ($(LINK2 http://dlang.org/dll-linux.html, usage info)).)
 
 )
 
