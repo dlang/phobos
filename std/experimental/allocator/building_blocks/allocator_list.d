@@ -88,7 +88,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
 
         // Is this node unused?
         void setUnused() { next = &this; }
-        bool unused() const { return next == &this; }
+        bool unused() const { return next is &this; }
 
         // Just forward everything to the allocator
         alias a this;
@@ -167,7 +167,6 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         {
             auto result = n.allocate(s);
             if (result.length != s) continue;
-            assert(owns(result) == Ternary.yes);
             // Bring to front if not already
             if (root != n)
             {
@@ -304,7 +303,11 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     private Node* addAllocator(size_t atLeastBytes)
     {
         void[] t = allocators;
-        if (bkalloc.expand(t, Node.sizeof))
+        static if (hasMember!(BookkeepingAllocator, "expand"))
+            immutable bool expanded = bkalloc.expand(t, Node.sizeof);
+        else
+            immutable bool expanded = false;
+        if (expanded)
         {
             assert(t.length % Node.sizeof == 0);
             assert(t.ptr.alignedAt(Node.alignof));
@@ -325,7 +328,11 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
         emplace(&newAlloc);
         // Creation succeeded, insert as root
-        allocators[$ - 1].next = root;
+        if (allocators.length == 1)
+            allocators[$ - 1].next = null;
+        else
+            allocators[$ - 1].next = root;
+        assert(allocators[$ - 1].a.bytesUsed == 0);
         root = &allocators[$ - 1];
         return root;
     }
