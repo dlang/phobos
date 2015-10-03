@@ -127,43 +127,24 @@ import std.traits;
 public struct UUID
 {
     import std.typetuple : allSatisfy;
-    import std.traits : isIntegral;
+    import std.meta : AliasSeq;
 
     private:
-        @safe pure nothrow char toChar(size_t i) const
+        alias skipSeq = AliasSeq!(8, 13, 18, 23);
+        alias byteSeq = AliasSeq!(0,2,4,6,/++/9,11,/++/14,16,/++/19,21,/++/24,26,28,30,32,34);
+
+        @safe pure nothrow @nogc Char toChar(Char)(size_t i) const
         {
             if(i <= 9)
-                return cast(char)('0' + i);
+                return cast(Char)('0' + i);
             else
-                return cast(char)('a' + (i-10));
+                return cast(Char)('a' + (i-10));
         }
 
-        @safe pure nothrow char[36] _toString() const
-        {
-            char[36] result;
-
-            size_t i=0;
-            foreach(entry; this.data)
-            {
-                const size_t hi = (entry >> 4) & 0x0F;
-                result[i++] = toChar(hi);
-
-                const size_t lo = (entry) & 0x0F;
-                result[i++] = toChar(lo);
-
-                if (i == 8 || i == 13 || i == 18 || i == 23)
-                {
-                    result[i++] = '-';
-                }
-            }
-
-            return result;
-        }
-
-        @safe pure unittest
+        @safe pure nothrow unittest
         {
             assert(UUID(cast(ubyte[16])[138, 179, 6, 14, 44, 186, 79, 35, 183, 76, 181, 45,
-                179, 189, 251, 70])._toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
+                179, 189, 251, 70]).toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
         }
 
         // Reinterpret the UUID as an array of some other primitive.
@@ -375,59 +356,56 @@ public struct UUID
                 throw new UUIDParsingException(to!string(uuid), 35, UUIDParsingException.Reason.tooMuch,
                     "Input is too long, need exactly 36 characters");
             }
+            enum skipInd = [skipSeq];
+            foreach(pos; skipInd)
+                if(uuid[pos] != '-')
+                    throw new UUIDParsingException(to!string(uuid), pos,
+                        UUIDParsingException.Reason.invalidChar, "Expected '-'");
 
             ubyte[16] data2; //ctfe bug
-            size_t element = 0, pairStart = -1;
+            uint pos = void;
 
-            foreach(pos, dchar character; uuid)
+            foreach(i, p; byteSeq)
             {
-                if(pos == 8 || pos == 13 || pos == 18 || pos == 23)
+                enum uint s = 'a'-10-'0';
+                uint h = uuid[p];
+                uint l = uuid[p+1];
+                pos = p;
+                if(h < '0') goto Lerr;
+                if(l < '0') goto Lerr;
+                if (h > '9')
                 {
-                    if(character != '-')
-                    {
-                        throw new UUIDParsingException(to!string(uuid), pos,
-                            UUIDParsingException.Reason.invalidChar, "Expected '-'");
-                    }
+                    h |= 0x20; //poorman's tolower
+                    if (h < 'a') goto Lerr;
+                    if (h > 'f') goto Lerr;
+                    h -= s;
                 }
-                else
+                if (l > '9')
                 {
-                    if(pairStart == -1)
-                        pairStart = pos;
-                    else
-                    {
-                        try
-                        {
-                            auto part = uuid[pairStart .. pos+1];
-                            data2[element++] = parse!ubyte(part, 16);
-                            pairStart = -1;
-                        }
-                        catch(Exception e)
-                        {
-                            throw new UUIDParsingException(to!string(uuid), pos,
-                                UUIDParsingException.Reason.invalidChar, "Couldn't parse ubyte", e);
-                        }
-                    }
+                    l |= 0x20; //poorman's tolower
+                    if (l < 'a') goto Lerr;
+                    if (l > 'f') goto Lerr;
+                    l -= s;
                 }
+                h -= '0';
+                l -= '0';
+
+                data2[i] = cast(ubyte)((h << 4) ^ l);
             }
-
-            assert(element <= 16);
-
-            if(element < 16)
-            {
-                throw new UUIDParsingException(to!string(uuid), 0,
-                    UUIDParsingException.Reason.tooLittle, "Insufficient Input");
-            }
-
             this.data = data2;
+            return;
+
+        Lerr: throw new UUIDParsingException(to!string(uuid), pos,
+                UUIDParsingException.Reason.invalidChar, "Couldn't parse ubyte");
         }
 
         @safe pure unittest
         {
             import std.exception;
-            import std.typetuple;
+            import std.meta;
             import std.conv : to;
 
-            foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+            foreach(S; AliasSeq!(char[], const(char)[], immutable(char)[],
                                   wchar[], const(wchar)[], immutable(wchar)[],
                                   dchar[], const(dchar)[], immutable(dchar)[],
                                   immutable(char[]), immutable(wchar[]), immutable(dchar[])))
@@ -880,17 +858,47 @@ public struct UUID
         }
 
         /**
-         * Return the UUID as a string in the canonical form.
+         * Write the UUID into `result` as an ASCII string in the canonical form.
+         */
+        @safe pure nothrow @nogc void toString(Range)(Range result) const
+            if (isRandomAccessRange!Range && hasAssignableElements!Range && hasLength!Range && (isSomeChar!(typeof(Range.init[0])) || isUnsigned!(typeof(Range.init[0])))
+                || isSomeString!Range && isMutable!(typeof(Range.init[0])))
+        in {
+            assert(result.length >= 36, "Result's length for UUID.toString must be greater or equal 36.");
+        }
+        body {
+            alias Char = typeof(Range.init[0]);
+            foreach(pos; skipSeq)
+                result[pos] = cast(Char)('-');
+            foreach(i, pos; byteSeq)
+            {
+                const uint entry = this.data[i];
+                const uint hi = entry >> 4;
+                result[pos  ] = toChar!Char(hi);
+                const uint lo = (entry) & 0x0F;
+                result[pos+1] = toChar!Char(lo);
+            }
+        }
+
+        /**
+         * Call a delegate with a string in the canonical form.
          */
         void toString(scope void delegate(const(char)[]) sink) const
         {
-            sink(_toString());
+            char[36] result = void;
+            toString(result[]);
+            sink(result[]);
         }
 
-        ///ditto
-        @safe pure nothrow string toString() const
+        /**
+         * Return the UUID as a string in the canonical form.
+         */
+        @trusted pure nothrow string toString() const
         {
-            return _toString().idup;
+            import std.exception: assumeUnique;
+            auto result = new char[36];
+            toString(result);
+            return result.assumeUnique;
         }
 
         ///
@@ -899,6 +907,40 @@ public struct UUID
             immutable str = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
             auto id = UUID(str);
             assert(id.toString() == str);
+        }
+
+        @safe pure nothrow @nogc unittest
+        {
+            import std.meta: AliasSeq;
+            foreach(Char; AliasSeq!(char, wchar, dchar))
+            {
+                alias String = immutable(Char)[];
+                //CTFE
+                enum String s = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
+                enum id = UUID(s);
+                static if(is(Char == char))
+                {
+                    enum p = id.toString();
+                    static assert(s == p);
+                }
+                //nogc
+                Char[36] str;
+                id.toString(str[]);
+                assert(str == s);
+            }
+        }
+
+        pure nothrow @nogc unittest
+        {
+            import std.encoding: Char = AsciiChar;
+            enum  utfstr = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
+            alias String = immutable(Char)[];
+            enum String s = cast(String)utfstr;
+            enum id = UUID(utfstr);
+            //nogc
+            Char[36] str;
+            id.toString(str[]);
+            assert(str == s);
         }
 
         unittest
@@ -1441,7 +1483,7 @@ unittest
 @safe pure unittest
 {
     import std.exception;
-    import std.typetuple;
+    import std.meta;
     import std.conv : to;
 
     struct TestRange(bool forward)
@@ -1492,7 +1534,7 @@ unittest
             return parseUUID(to!T(input));
     }
 
-    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+    foreach(S; AliasSeq!(char[], const(char)[], immutable(char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[],
                           immutable(char[]), immutable(wchar[]), immutable(dchar[]),
