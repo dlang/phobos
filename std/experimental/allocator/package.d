@@ -107,7 +107,7 @@ void fun(size_t n)
 To experiment with alternative allocators, set $(LREF theAllocator) for the
 current thread. For example, consider an application that allocates many 8-byte
 objects. These are not well supported by the default _allocator, so a $(A
-$(JOIN_LINE std,experimental,_allocator,building_blocks,free_list).html, free
+$(MY_JOIN_LINE std,experimental,_allocator,building_blocks,free_list).html, free
 list _allocator) would be recommended. To install one in `main`, the
 application would use:
 
@@ -192,11 +192,11 @@ TDC2 = <td nowrap>$(D $(MYREF $1,$+))</td>
 TDC3 = <td nowrap>$(D $(MYREF2 $1,$+))</td>
 RES = $(I result)
 POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))
-JOIN_LINE = $1$(JOIN_LINE_TAIL $+)
-JOIN_LINE_TAIL = _$1$(JOIN_LINE_TAIL $+)
+MY_JOIN_LINE = $1$(MY_JOIN_LINE_TAIL $+)
+MY_JOIN_LINE_TAIL = _$1$(MY_JOIN_LINE_TAIL $+)
 JOIN_DOT = $1$(JOIN_DOT_TAIL $+)
 JOIN_DOT_TAIL = .$1$(JOIN_DOT_TAIL $+)
-XREF2 = $(A $(JOIN_LINE $1,$+).html,$(D $(JOIN_DOT $1,$+)))
+XREF2 = $(A $(MY_JOIN_LINE $1,$+).html,$(D $(JOIN_DOT $1,$+)))
 
 Copyright: Andrei Alexandrescu 2013-.
 
@@ -1937,4 +1937,3 @@ unittest
     b = alloc.allocate(101);
     assert(alloc.deallocate(b) == Ternary.yes);
 }
-
