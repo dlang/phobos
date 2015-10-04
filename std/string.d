@@ -2460,7 +2460,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
  */
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
 if ((hasSlicing!Range && hasLength!Range) ||
-    isSomeString!Range)
+    isSomeString!Range || __traits(compiles, StringTypeOf!Range))
 {
     import std.uni : lineSep, paraSep;
     import std.conv : unsigned;
@@ -2468,7 +2468,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
     static struct Result
     {
     private:
-        Range _input;
+        StringTypeOf!Range _input;
         alias IndexType = typeof(unsigned(_input.length));
         enum IndexType _unComputed = IndexType.max;
         IndexType iStart = _unComputed;
@@ -2493,7 +2493,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
             }
         }
 
-        @property Range front()
+        @property StringTypeOf!Range front()
         {
             if (iStart == _unComputed)
             {
@@ -2676,6 +2676,19 @@ if ((hasSlicing!Range && hasLength!Range) ||
         assert(line == witness[i++]);
     }
     assert(i == witness.length);
+}
+
+unittest
+{
+    import std.file : DirEntry;
+    import std.algorithm.comparison : equal;
+
+    auto s = "std/string.d";
+    auto de = DirEntry(s);
+    auto i = de.lineSplitter();
+    auto j = s.lineSplitter();
+
+    assert(equal(i, j));
 }
 
 /++
