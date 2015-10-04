@@ -912,7 +912,7 @@ struct MultiArray(Types...)
     }
 
 private:
-    @property auto raw_ptr(size_t n)()inout
+    @property auto raw_ptr(size_t n)()inout pure nothrow @nogc
     {
         static if(n == 0)
             return storage.ptr;
@@ -2029,20 +2029,6 @@ public:
 
     /**
         Construct a set from plain values of code point intervals.
-        Example:
-        ---
-        import std.algorithm;
-        auto set = CodepointSet('a', 'z'+1, 'а', 'я'+1);
-        foreach(v; 'a'..'z'+1)
-            assert(set[v]);
-        // Cyrillic lowercase interval
-        foreach(v; 'а'..'я'+1)
-            assert(set[v]);
-        //specific order is not required, intervals may interesect
-        auto set2 = CodepointSet('а', 'я'+1, 'a', 'd', 'b', 'z'+1);
-        //the same end result
-        assert(set2.byInterval.equal(set.byInterval));
-        ---
     */
     this()(uint[] intervals...)
     in
@@ -2061,15 +2047,35 @@ public:
         sanitize(); //enforce invariant: sort intervals etc.
     }
 
+    ///
+    unittest
+    {
+        import std.algorithm.comparison : equal;
+
+        auto set = CodepointSet('a', 'z'+1, 'а', 'я'+1);
+        foreach(v; 'a'..'z'+1)
+            assert(set[v]);
+        // Cyrillic lowercase interval
+        foreach(v; 'а'..'я'+1)
+            assert(set[v]);
+        //specific order is not required, intervals may interesect
+        auto set2 = CodepointSet('а', 'я'+1, 'a', 'd', 'b', 'z'+1);
+        //the same end result
+        assert(set2.byInterval.equal(set.byInterval));
+    }
+
     /**
         Get range that spans all of the $(CODEPOINT) intervals in this $(LREF InversionList).
 
         Example:
-        ---
-        import std.algorithm, std.typecons;
+        -----------
+        import std.algorithm.comparison : equal;
+        import std.typecons : tuple;
+
         auto set = CodepointSet('A', 'D'+1, 'a', 'd'+1);
-        set.byInterval.equal([tuple('A', 'E'), tuple('a', 'e')]);
-        ---
+
+        assert(set.byInterval.equal([tuple('A','E'), tuple('a','e')]));
+        -----------
     */
     @property auto byInterval()
     {
@@ -2078,21 +2084,22 @@ public:
 
     /**
         Tests the presence of code point $(D val) in this set.
-
-        Example:
-        ---
-        auto gothic = unicode.Gothic;
-        // Gothic letter ahsa
-        assert(gothic['\U00010330']);
-        // no ascii in Gothic obviously
-        assert(!gothic['$']);
-        ---
     */
     bool opIndex(uint val) const
     {
         // the <= ensures that searching in  interval of [a, b) for 'a' you get .length == 1
         // return assumeSorted!((a,b) => a<=b)(data[]).lowerBound(val).length & 1;
         return sharSwitchLowerBound!"a<=b"(data[], val) & 1;
+    }
+
+    ///
+    unittest
+    {
+        auto gothic = unicode.Gothic;
+        // Gothic letter ahsa
+        assert(gothic['\U00010330']);
+        // no ascii in Gothic obviously
+        assert(!gothic['$']);
     }
 
     // Linear scan for $(D ch). Useful only for small sets.
@@ -2132,29 +2139,6 @@ public:
             $(TR $(TD -) $(TD a ∖ b) $(TD subtraction) )
             $(TR $(TD ~) $(TD a ~ b) $(TD symmetric set difference i.e. (a ∪ b) \ (a ∩ b)) )
         )
-
-        Example:
-        ---
-        auto lower = unicode.LowerCase;
-        auto upper = unicode.UpperCase;
-        auto ascii = unicode.ASCII;
-
-        assert((lower & upper).empty); // no intersection
-        auto lowerASCII = lower & ascii;
-        assert(lowerASCII.byCodepoint.equal(iota('a', 'z'+1)));
-        // throw away all of the lowercase ASCII
-        assert((ascii - lower).length == 128 - 26);
-
-        auto onlyOneOf = lower ~ ascii;
-        assert(!onlyOneOf['Δ']); // not ASCII and not lowercase
-        assert(onlyOneOf['$']); // ASCII and not lowercase
-        assert(!onlyOneOf['a']); // ASCII and lowercase
-        assert(onlyOneOf['я']); // not ASCII but lowercase
-
-        // throw away all cased letters from ASCII
-        auto noLetters = ascii - (lower | upper);
-        assert(noLetters.length == 128 - 26*2);
-        ---
     */
     This opBinary(string op, U)(U rhs)
         if(isCodepointSet!U || is(U:dchar))
@@ -2191,6 +2175,33 @@ public:
         }
         else
             static assert(0, "no operator "~op~" defined for Set");
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm.comparison : equal;
+        import std.range : iota;
+
+        auto lower = unicode.LowerCase;
+        auto upper = unicode.UpperCase;
+        auto ascii = unicode.ASCII;
+
+        assert((lower & upper).empty); // no intersection
+        auto lowerASCII = lower & ascii;
+        assert(lowerASCII.byCodepoint.equal(iota('a', 'z'+1)));
+        // throw away all of the lowercase ASCII
+        assert((ascii - lower).length == 128 - 26);
+
+        auto onlyOneOf = lower ~ ascii;
+        assert(!onlyOneOf['Δ']); // not ASCII and not lowercase
+        assert(onlyOneOf['$']); // ASCII and not lowercase
+        assert(!onlyOneOf['a']); // ASCII and lowercase
+        assert(onlyOneOf['я']); // not ASCII but lowercase
+
+        // throw away all cased letters from ASCII
+        auto noLetters = ascii - (lower | upper);
+        assert(noLetters.length == 128 - 26*2);
     }
 
     /// The 'op=' versions of the above overloaded operators.
@@ -2253,13 +2264,6 @@ public:
 
     /**
         A range that spans each $(CODEPOINT) in this set.
-
-        Example:
-        ---
-        import std.algorithm;
-        auto set = unicode.ASCII;
-        set.byCodepoint.equal(iota(0, 0x80));
-        ---
     */
     @property auto byCodepoint()
     {
@@ -2299,6 +2303,16 @@ public:
         }
 
         return CodepointRange(this);
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm.comparison : equal;
+        import std.range : iota;
+
+        auto set = unicode.ASCII;
+        set.byCodepoint.equal(iota(0, 0x80));
     }
 
     /**
@@ -2380,9 +2394,16 @@ public:
 
     /**
         Add an interval [a, b$(RPAREN) to this set.
+    */
+    ref add()(uint a, uint b)
+    {
+        addInterval(a, b);
+        return this;
+    }
 
-        Example:
-        ---
+    ///
+    unittest
+    {
         CodepointSet someSet;
         someSet.add('0', '5').add('A','Z'+1);
         someSet.add('5', '9'+1);
@@ -2390,12 +2411,6 @@ public:
         assert(someSet['5']);
         assert(someSet['9']);
         assert(someSet['Z']);
-        ---
-    */
-    ref add()(uint a, uint b)
-    {
-        addInterval(a, b);
-        return this;
     }
 
 private:
@@ -2468,15 +2483,6 @@ public:
         Obtains a set that is the inversion of this set.
 
         See the '!' $(LREF opUnary) for the same but using operators.
-
-        Example:
-        ---
-        set = unicode.ASCII;
-        // union with the inverse gets all of the code points in the Unicode
-        assert((set | set.inverted).length == 0x110000);
-        // no intersection with the inverse
-        assert((set & set.inverted).empty);
-        ---
     */
     @property auto inverted()
     {
@@ -2498,6 +2504,16 @@ public:
                 inversion.data.length-1, inversion.data.length, cast(uint[])null);
 
         return inversion;
+    }
+
+    ///
+    unittest
+    {
+        auto set = unicode.ASCII;
+        // union with the inverse gets all of the code points in the Unicode
+        assert((set | set.inverted).length == 0x110000);
+        // no intersection with the inverse
+        assert((set & set.inverted).empty);
     }
 
     /**
@@ -2639,16 +2655,18 @@ public:
 
     /**
         True if this set doesn't contain any $(CODEPOINTS).
-        Example:
-        ---
-        CodepointSet emptySet;
-        assert(emptySet.length == 0);
-        assert(emptySet.empty);
-        ---
     */
     @property bool empty() const
     {
         return data.length == 0;
+    }
+
+    ///
+    unittest
+    {
+        CodepointSet emptySet;
+        assert(emptySet.length == 0);
+        assert(emptySet.empty);
     }
 
 private:
@@ -2986,63 +3004,6 @@ private:
 
 @system unittest
 {
-    // test examples
-    import std.algorithm, std.typecons;
-    import std.range : iota;
-    auto set = CodepointSet('A', 'D'+1, 'a', 'd'+1);
-    set.byInterval.equalS([tuple('A', 'E'), tuple('a', 'e')]);
-    set = unicode.ASCII;
-    assert(set.byCodepoint.equalS(iota(0, 0x80)));
-    set = CodepointSet('a', 'z'+1, 'а', 'я'+1);
-    foreach(v; 'a'..'z'+1)
-        assert(set[v]);
-    // Cyrillic lowercase interval
-    foreach(v; 'а'..'я'+1)
-        assert(set[v]);
-    //specific order is not required, intervals may interesect
-    auto set2 = CodepointSet('а', 'я'+1, 'a', 'd', 'b', 'z'+1);
-    assert(set2.byInterval.equal(set.byInterval));
-
-    auto gothic = unicode.Gothic;
-    // Gothic letter ahsa
-    assert(gothic['\U00010330']);
-    // no ascii in Gothic obviously
-    assert(!gothic['$']);
-
-    CodepointSet emptySet;
-    assert(emptySet.length == 0);
-    assert(emptySet.empty);
-
-    set = unicode.ASCII;
-    // union with the inverse gets all of code points in the Unicode
-    assert((set | set.inverted).length == 0x110000);
-    // no intersection with inverse
-    assert((set & set.inverted).empty);
-
-    CodepointSet someSet;
-    someSet.add('0', '5').add('A','Z'+1);
-    someSet.add('5', '9'+1);
-    assert(someSet['0']);
-    assert(someSet['5']);
-    assert(someSet['9']);
-    assert(someSet['Z']);
-
-    auto lower = unicode.LowerCase;
-    auto upper = unicode.UpperCase;
-    auto ascii = unicode.ASCII;
-    assert((lower & upper).empty); // no intersection
-    auto lowerASCII = lower & ascii;
-    assert(lowerASCII.byCodepoint.equalS(iota('a', 'z'+1)));
-    // throw away all of the lowercase ASCII
-    assert((ascii - lower).length == 128 - 26);
-    auto onlyOneOf = lower ~ ascii;
-    assert(!onlyOneOf['Δ']); // not ASCII and not lowercase
-    assert(onlyOneOf['$']); // ASCII and not lowercase
-    assert(!onlyOneOf['a']); // ASCII and lowercase
-    assert(onlyOneOf['я']); // not ASCII but lowercase
-
-    auto noLetters = ascii - (lower | upper);
-    assert(noLetters.length == 128 - 26*2);
     import std.conv;
     assert(unicode.ASCII.to!string() == "[0..128)");
 }
@@ -4219,54 +4180,6 @@ public template CodepointSetTrie(sizes...)
 
     Note: Overload taking $(D CodepointSet)s will naturally convert
     only to bool mapping $(D Trie)s.
-
-    Example:
-    ---
-    // pick characters from the Greek script
-    auto set = unicode.Greek;
-
-    // a user-defined property (or an expensive function)
-    // that we want to look up
-    static uint luckFactor(dchar ch)
-    {
-        // here we consider a character lucky
-        // if its code point has a lot of identical hex-digits
-        // e.g. arabic letter DDAL (\u0688) has a "luck factor" of 2
-        ubyte[6] nibbles; // 6 4-bit chunks of code point
-        uint value = ch;
-        foreach(i; 0..6)
-        {
-            nibbles[i] = value & 0xF;
-            value >>= 4;
-        }
-        uint luck;
-        foreach(n; nibbles)
-            luck = cast(uint)max(luck, count(nibbles[], n));
-        return luck;
-    }
-
-    // only unsigned built-ins are supported at the moment
-    alias LuckFactor = BitPacked!(uint, 3);
-
-    // create a temporary associative array (AA)
-    LuckFactor[dchar] map;
-    foreach(ch; set.byCodepoint)
-        map[ch] = luckFactor(ch);
-
-    // bits per stage are chosen randomly, fell free to optimize
-    auto trie = codepointTrie!(LuckFactor, 8, 5, 8)(map);
-
-    // from now on the AA is not needed
-    foreach(ch; set.byCodepoint)
-        assert(trie[ch] == luckFactor(ch)); // verify
-    // CJK is not Greek, thus it has the default value
-    assert(trie['\u4444'] == 0);
-    // and here is a couple of quite lucky Greek characters:
-    // Greek small letter epsilon with dasia
-    assert(trie['\u1F11'] == 3);
-    // Ancient Greek metretes sign
-    assert(trie['\U00010181'] == 3);
-    ---
 */
 public template codepointTrie(T, sizes...)
     if(sumOfIntegerTuple!sizes == 21)
@@ -4299,9 +4212,12 @@ public template codepointTrie(T, sizes...)
     }
 }
 
-pure unittest // codepointTrie example
+///
+pure unittest
 {
-    import std.algorithm;
+    import std.algorithm.comparison : max;
+    import std.algorithm.searching : count;
+
     // pick characters from the Greek script
     auto set = unicode.Greek;
 
@@ -6092,9 +6008,19 @@ template SetSearcher(alias table, string kind)
 
         See_Also: $(LREF block), $(LREF script)
         and (not included in this search) $(LREF hangulSyllableType).
+    */
 
-        Example:
-        ---
+    static @property auto opDispatch(string name)() pure
+    {
+        static if(findAny(name))
+            return loadAny(name);
+        else
+            static assert(false, "No unicode set by name "~name~" was found.");
+    }
+
+    ///
+    unittest
+    {
         auto ascii = unicode.ASCII;
         assert(ascii['A']);
         assert(ascii['~']);
@@ -6111,15 +6037,6 @@ template SetSearcher(alias table, string kind)
         import std.exception;
         // run-time look up throws if no such set is found
         assert(collectException(unicode("InCyrilliac")));
-        ---
-    */
-
-    static @property auto opDispatch(string name)() pure
-    {
-        static if(findAny(name))
-            return loadAny(name);
-        else
-            static assert(false, "No unicode set by name "~name~" was found.");
     }
 
     /**
@@ -6146,13 +6063,6 @@ template SetSearcher(alias table, string kind)
         and thus to search use simply $(D unicode.block.BlockName) notation.
 
         See $(S_LINK Unicode properties, table of properties) for available sets.
-
-        Example:
-        ---
-        // use .block for explicitness
-        assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
-        ---
-
         See_Also: $(S_LINK Unicode properties, table of properties).
     */
     struct block
@@ -6160,14 +6070,27 @@ template SetSearcher(alias table, string kind)
         mixin SetSearcher!(blocks.tab, "block");
     }
 
+    ///
+    unittest
+    {
+        // use .block for explicitness
+        assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
+    }
+
     /**
         Narrows down the search for sets of $(CODEPOINTS) to all Unicode scripts.
 
         See the $(S_LINK Unicode properties, table of properties) for available
         sets.
+    */
+    struct script
+    {
+        mixin SetSearcher!(scripts.tab, "script");
+    }
 
-        Example:
-        ---
+    ///
+    unittest
+    {
         auto arabicScript = unicode.script.arabic;
         auto arabicBlock = unicode.block.arabic;
         // there is an intersection between script and block
@@ -6177,11 +6100,6 @@ template SetSearcher(alias table, string kind)
         assert(arabicBlock != arabicScript);
         assert(arabicBlock == unicode.inArabic);
         assert(arabicScript == unicode.arabic);
-        ---
-    */
-    struct script
-    {
-        mixin SetSearcher!(scripts.tab, "script");
     }
 
     /**
@@ -6194,20 +6112,21 @@ template SetSearcher(alias table, string kind)
 
         See the $(S_LINK Unicode properties, table of properties) for available
         sets.
+    */
+    struct hangulSyllableType
+    {
+        mixin SetSearcher!(hangul.tab, "hangul syllable type");
+    }
 
-        Example:
-        ---
+    ///
+    unittest
+    {
         // L here is syllable type not Letter as in unicode.L short-cut
         auto leadingVowel = unicode.hangulSyllableType("L");
         // check that some leading vowels are present
         foreach(vowel; '\u1110'..'\u115F')
             assert(leadingVowel[vowel]);
         assert(leadingVowel == unicode.hangulSyllableType.L);
-        ---
-    */
-    struct hangulSyllableType
-    {
-        mixin SetSearcher!(hangul.tab, "hangul syllable type");
     }
 
 private:
@@ -6235,47 +6154,6 @@ private:
     // FIXME: re-disable once the compiler is fixed
     // Disabled to prevent the mistake of creating instances of this pseudo-struct.
     //@disable ~this();
-}
-
-unittest
-{
-    import std.exception : collectException;
-    auto ascii = unicode.ASCII;
-    assert(ascii['A']);
-    assert(ascii['~']);
-    assert(!ascii['\u00e0']);
-    // matching is case-insensitive
-    assert(ascii == unicode.ascII);
-    assert(!ascii['à']);
-    // underscores, '-' and whitespace in names are ignored too
-    auto latin = unicode.Inlatin1_Supplement;
-    assert(latin['à']);
-    assert(!latin['$']);
-    // BTW Latin 1 Supplement is a block, hence "In" prefix
-    assert(latin == unicode("In Latin 1 Supplement"));
-    import std.exception;
-    // R-T look up throws if no such set is found
-    assert(collectException(unicode("InCyrilliac")));
-    assert(collectException(unicode("X")));
-
-    assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
-
-    // L here is explicitly syllable type not "Letter" as in unicode.L
-    auto leadingVowel = unicode.hangulSyllableType("L");
-    // check that some leading vowels are present
-    foreach(vowel; '\u1110'..'\u115F'+1)
-        assert(leadingVowel[vowel]);
-    assert(leadingVowel == unicode.hangulSyllableType.L);
-
-    auto arabicScript = unicode.script.arabic;
-    auto arabicBlock = unicode.block.arabic;
-    // there is an intersection between script and block
-    assert(arabicBlock['؁']);
-    assert(arabicScript['؁']);
-    // but they are different
-    assert(arabicBlock != arabicScript);
-    assert(arabicBlock == unicode.inArabic);
-    assert(arabicScript == unicode.arabic);
 }
 
 unittest
@@ -6436,18 +6314,6 @@ public: // Public API continues
 
     Returns:
         length of grapheme cluster
-
-    Example:
-    ---
-    // ASCII as usual is 1 code unit, 1 code point etc.
-    assert(graphemeStride("  ", 1) == 1);
-    // A + combing ring above
-    string city = "A\u030Arhus";
-    size_t first = graphemeStride(city, 0);
-    assert(first == 3); //\u030A has 2 UTF-8 code units
-    assert(city[0..first] == "A\u030A");
-    assert(city[first..$] == "rhus");
-    ---
 +/
 size_t graphemeStride(C)(in C[] input, size_t index)
     if(is(C : dchar))
@@ -6458,7 +6324,7 @@ size_t graphemeStride(C)(in C[] input, size_t index)
     return n - src.length;
 }
 
-// for now tested separately see test_grapheme.d
+///
 @safe unittest
 {
     assert(graphemeStride("  ", 1) == 1);
@@ -6710,24 +6576,6 @@ unittest
     long clusters.
     )
 
-    Example:
-    ---
-    import std.algorithm;
-    string bold = "ku\u0308hn";
-
-    // note that decodeGrapheme takes parameter by ref
-    // slicing a grapheme yields a range of dchar
-    assert(decodeGrapheme(bold)[].equal("k"));
-
-    // the next grapheme is 2 characters long
-    auto wideOne = decodeGrapheme(bold);
-    assert(wideOne.length == 2);
-    assert(wideOne[].equal("u\u0308"));
-
-    // the usual range manipulation is possible
-    assert(wideOne[].filter!isMark.equal("\u0308"));
-    ---
-
     See_Also: $(LREF decodeGrapheme), $(LREF graphemeStride)
 +/
 @trusted struct Grapheme
@@ -6761,21 +6609,22 @@ public:
         Warning:
         Use of this facility may invalidate grapheme cluster,
         see also $(LREF Grapheme.valid).
+    +/
+    void opIndexAssign(dchar ch, size_t index) pure nothrow @nogc
+    {
+        assert(index < length);
+        write24(isBig ? ptr_ : small_.ptr, ch, index);
+    }
 
-        Example:
-        ---
+    ///
+    unittest
+    {
         auto g = Grapheme("A\u0302");
         assert(g[0] == 'A');
         assert(g.valid);
         g[1] = '~'; // ASCII tilda is not a combining mark
         assert(g[1] == '~');
         assert(!g.valid);
-        ---
-    +/
-    void opIndexAssign(dchar ch, size_t index) pure nothrow @nogc
-    {
-        assert(index < length);
-        write24(isBig ? ptr_ : small_.ptr, ch, index);
     }
 
     /++
@@ -6807,19 +6656,6 @@ public:
         Use of this facility may invalidate grapheme cluster,
         see also $(D valid).
 
-        Example:
-        ---
-        auto g = Grapheme("A");
-        assert(g.valid);
-        g ~= '\u0301';
-        assert(g[].equal("A\u0301"));
-        assert(g.valid);
-        g ~= "B";
-        // not a valid grapheme cluster anymore
-        assert(!g.valid);
-        // still could be useful though
-        assert(g[].equal("A\u0301B"));
-        ---
         See_Also: $(LREF Grapheme.valid)
     +/
     ref opOpAssign(string op)(dchar ch)
@@ -6849,6 +6685,22 @@ public:
         }
         else
             static assert(false, "No operation "~op~" defined for Grapheme");
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm.comparison : equal;
+        auto g = Grapheme("A");
+        assert(g.valid);
+        g ~= '\u0301';
+        assert(g[].equal("A\u0301"));
+        assert(g.valid);
+        g ~= "B";
+        // not a valid grapheme cluster anymore
+        assert(!g.valid);
+        // still could be useful though
+        assert(g[].equal("A\u0301B"));
     }
 
     /// Append all $(CHARACTERS) from the input range $(D inp) to this Grapheme.
@@ -6953,10 +6805,10 @@ private:
 
 static assert(Grapheme.sizeof == size_t.sizeof*4);
 
-// verify the example
+///
 unittest
 {
-    import std.algorithm;
+    import std.algorithm : filter;
     string bold = "ku\u0308hn";
 
     // note that decodeGrapheme takes parameter by ref
@@ -7064,20 +6916,6 @@ unittest
     and thus is not sufficient for certain alphabets
     like German, Greek and few others.
 
-    Example:
-    ---
-    assert(sicmp("Август", "авгусТ") == 0);
-    // Greek also works as long as there is no 1:M mapping in sight
-    assert(sicmp("ΌΎ", "όύ") == 0);
-    // things like the following won't get matched as equal
-    // Greek small letter iota with dialytika and tonos
-    assert(sicmp("ΐ", "\u03B9\u0308\u0301") != 0);
-
-    // while icmp has no problem with that
-    assert(icmp("ΐ", "\u03B9\u0308\u0301") == 0);
-    assert(icmp("ΌΎ", "όύ") == 0);
-    ---
-
     See_Also:
         $(LREF icmp)
         $(XREF_PACK algorithm,comparison,cmp)
@@ -7125,6 +6963,21 @@ int sicmp(S1, S2)(S1 str1, S2 str2)
     }
     return ridx == str2.length ? 0 : -1;
 }
+
+///
+unittest{
+    assert(sicmp("Август", "авгусТ") == 0);
+    // Greek also works as long as there is no 1:M mapping in sight
+    assert(sicmp("ΌΎ", "όύ") == 0);
+    // things like the following won't get matched as equal
+    // Greek small letter iota with dialytika and tonos
+    assert(sicmp("ΐ", "\u03B9\u0308\u0301") != 0);
+
+    // while icmp has no problem with that
+    assert(icmp("ΐ", "\u03B9\u0308\u0301") == 0);
+    assert(icmp("ΌΎ", "όύ") == 0);
+}
+
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
 {
@@ -7181,12 +7034,6 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     The cost of $(D icmp) being pedantically correct is
     slightly worse performance.
     )
-
-    Example:
-    ---
-    assert(icmp("Rußland", "Russland") == 0);
-    assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
-    ---
 +/
 int icmp(S1, S2)(S1 str1, S2 str2)
     if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
@@ -7219,6 +7066,13 @@ int icmp(S1, S2)(S1 str1, S2 str2)
         return diff;
     }
 }
+
+///
+unittest{
+    assert(icmp("Rußland", "Russland") == 0);
+    assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
+}
+
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
 {
@@ -7370,9 +7224,14 @@ unittest
 
 /++
     $(P Returns the $(S_LINK Combining class, combining class) of $(D ch).)
++/
+ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
+{
+    return combiningClassTrie[ch];
+}
 
-    Example:
-    ---
+///
+unittest{
     // shorten the code
     alias CC = combiningClass;
 
@@ -7382,11 +7241,6 @@ unittest
     assert(CC('\u0325') == 220);
     // the simple consequence is that  "tilda" should be
     // placed after a "ring below" in a sequence
-    ---
-+/
-ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
-{
-    return combiningClassTrie[ch];
 }
 
 @safe pure nothrow @nogc unittest
@@ -7429,16 +7283,6 @@ enum {
 
     Note: Hangul syllables are not covered by this function.
     See $(D composeJamo) below.
-
-    Example:
-    ---
-    assert(compose('A','\u0308') == '\u00C4');
-    assert(compose('A', 'B') == dchar.init);
-    assert(compose('C', '\u0301') == '\u0106');
-    // note that the starter is the first one
-    // thus the following doesn't compose
-    assert(compose('\u0308', 'A') == dchar.init);
-    ---
 +/
 public dchar compose(dchar first, dchar second) pure nothrow
 {
@@ -7461,6 +7305,16 @@ public dchar compose(dchar first, dchar second) pure nothrow
     return entry.composed;
 }
 
+///
+unittest{
+    assert(compose('A','\u0308') == '\u00C4');
+    assert(compose('A', 'B') == dchar.init);
+    assert(compose('C', '\u0301') == '\u0106');
+    // note that the starter is the first one
+    // thus the following doesn't compose
+    assert(compose('\u0308', 'A') == dchar.init);
+}
+
 /++
     Returns a full $(S_LINK Canonical decomposition, Canonical)
     (by default) or $(S_LINK Compatibility decomposition, Compatibility)
@@ -7475,15 +7329,6 @@ public dchar compose(dchar first, dchar second) pure nothrow
     See_Also: $(LREF decomposeHangul) for a restricted version
     that takes into account only hangul syllables  but
     no other decompositions.
-
-    Example:
-    ---
-    import std.algorithm;
-    assert(decompose('Ĉ')[].equal("C\u0302"));
-    assert(decompose('D')[].equal("D"));
-    assert(decompose('\uD4DC')[].equal("\u1111\u1171\u11B7"));
-    assert(decompose!Compatibility('¹').equal("1"));
-    ---
 +/
 public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 {
@@ -7506,9 +7351,9 @@ public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
     return Grapheme(decomp);
 }
 
+///
 unittest
 {
-    // verify examples
     assert(compose('A','\u0308') == '\u00C4');
     assert(compose('A', 'B') == dchar.init);
     assert(compose('C', '\u0301') == '\u0106');
@@ -7516,7 +7361,6 @@ unittest
     // thus the following doesn't compose
     assert(compose('\u0308', 'A') == dchar.init);
 
-    import std.algorithm;
     assert(decompose('Ĉ')[].equalS("C\u0302"));
     assert(decompose('D')[].equalS("D"));
     assert(decompose('\uD4DC')[].equalS("\u1111\u1171\u11B7"));
@@ -8348,7 +8192,7 @@ auto asUpperCase(Range)(Range str)
 ///
 @safe pure unittest
 {
-    import std.algorithm: equal;
+    import std.algorithm.comparison : equal;
 
     assert("hEllo".asUpperCase.equal("HELLO"));
 }
@@ -8382,7 +8226,7 @@ unittest
     {
     }
 
-    import std.algorithm : equal;
+    import std.algorithm.comparison  : equal;
 
     "HELLo"w.asLowerCase.equal("hello"d);
     "HELLo"w.asUpperCase.equal("HELLO"d);
@@ -8393,7 +8237,6 @@ unittest
     assert(toLower("\u1Fe2") == asLowerCase("\u1Fe2").byChar.array);
 }
 
-import std.stdio;
 // generic capitalizer on whole range, returns range
 private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUpper,
                            Range)(Range str)
@@ -8523,7 +8366,7 @@ auto asCapitalized(Range)(Range str)
 ///
 @safe pure unittest
 {
-    import std.algorithm: equal;
+    import std.algorithm.comparison : equal;
 
     assert("hEllo".asCapitalized.equal("Hello"));
 }
@@ -8571,7 +8414,7 @@ unittest
     {
     }
 
-    import std.algorithm : equal;
+    import std.algorithm.comparison  : equal;
 
     "HELLo"w.asCapitalized.equal("Hello"d);
     "hElLO"w.asCapitalized.equal("Hello"d);

@@ -35,7 +35,7 @@ debug (utf) import core.stdc.stdio : printf;
   +/
 class UTFException : Exception
 {
-    import std.string : format;
+    import core.internal.string;
 
     uint[4] sequence;
     size_t  len;
@@ -60,7 +60,9 @@ class UTFException : Exception
     @safe pure
     this(string msg, size_t index, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
-        super(msg ~ format(" (at index %s)", index), file, line, next);
+        UnsignedStringBuf buf = void;
+        msg ~= " (at index " ~ unsignedToTempString(index, buf, 10) ~ ")";
+        super(msg, file, line, next);
     }
 
 
@@ -72,7 +74,15 @@ class UTFException : Exception
         string result = "Invalid UTF sequence:";
 
         foreach (i; sequence[0 .. len])
-            result ~= format(" %02x", i);
+        {
+            UnsignedStringBuf buf = void;
+            result ~= ' ';
+            auto h = unsignedToTempString(i, buf, 16);
+            if (h.length == 1)
+                result ~= '0';
+            result ~= h;
+            result ~= 'x';
+        }
 
         if (super.msg.length > 0)
         {
@@ -1031,6 +1041,9 @@ unittest
 
 /* =================== Decode ======================= */
 
+/// Whether or not to replace invalid UTF with replacementDchar
+alias UseReplacementDchar = Flag!"useReplacementDchar";
+
 /++
     Decodes and returns the code point starting at $(D str[index]). $(D index)
     is advanced to one past the decoded code point. If the code point is not
@@ -1053,7 +1066,7 @@ unittest
         $(LREF UTFException) if $(D str[index]) is not the start of a valid UTF
         sequence and useReplacementDchar is UseReplacementDchar.no
   +/
-dchar decode(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
+dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
     if (!isSomeString!S &&
         isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
 in
@@ -1072,7 +1085,7 @@ body
         return decodeImpl!(true, useReplacementDchar)(str, index);
 }
 
-dchar decode(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index) @trusted pure
+dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index) @trusted pure
     if (isSomeString!S)
 in
 {
@@ -1113,7 +1126,7 @@ body
         type of range being used and how many code units had to be popped off
         before the code point was determined to be invalid.
   +/
-dchar decodeFront(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(ref S str, out size_t numCodeUnits)
+dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(ref S str, out size_t numCodeUnits)
     if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
 in
 {
@@ -1149,7 +1162,7 @@ body
     }
 }
 
-dchar decodeFront(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(ref S str, out size_t numCodeUnits) @trusted pure
+dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(ref S str, out size_t numCodeUnits) @trusted pure
     if (isSomeString!S)
 in
 {
@@ -1177,7 +1190,7 @@ body
 }
 
 /++ Ditto +/
-dchar decodeFront(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(ref S str)
+dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(ref S str)
     if (isInputRange!S && isSomeChar!(ElementType!S))
 {
     size_t numCodeUnits;
@@ -1213,7 +1226,7 @@ private template codeUnitLimit(S)
  * Returns:
  *      decoded character
  */
-private dchar decodeImpl(bool canIndex, Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
     if (is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
     /* The following encodings are valid, except for the 5 and 6 byte
@@ -1442,7 +1455,7 @@ unittest
     }
 }
 
-private dchar decodeImpl(bool canIndex, Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
     if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
     static if (is(S : const wchar[]))
@@ -1560,7 +1573,7 @@ unittest
     }
 }
 
-private dchar decodeImpl(bool canIndex, Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
     if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
     static if (is(S : const dchar[]))
@@ -1895,6 +1908,14 @@ unittest
 }
 /* =================== Encode ======================= */
 
+private dchar _utfException(UseReplacementDchar useReplacementDchar)(string msg, dchar c)
+{
+    static if (useReplacementDchar)
+        return replacementDchar;
+    else
+        throw new UTFException(msg).setSequence(c);
+}
+
 /++
     Encodes $(D c) into the static array, $(D buf), and returns the actual
     length of the encoded character (a number between $(D 1) and $(D 4) for
@@ -1904,7 +1925,8 @@ unittest
     Throws:
         $(D UTFException) if $(D c) is not a valid UTF code point.
   +/
-size_t encode(ref char[4] buf, dchar c) @safe pure
+size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref char[4] buf, dchar c) @safe pure
 {
     if (c <= 0x7F)
     {
@@ -1922,9 +1944,10 @@ size_t encode(ref char[4] buf, dchar c) @safe pure
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UTFException("Encoding a surrogate code point in UTF-8").setSequence(c);
+            c = _utfException!useReplacementDchar("Encoding a surrogate code point in UTF-8", c);
 
         assert(isValidDchar(c));
+    L3:
         buf[0] = cast(char)(0xE0 | (c >> 12));
         buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
         buf[2] = cast(char)(0x80 | (c & 0x3F));
@@ -1941,7 +1964,8 @@ size_t encode(ref char[4] buf, dchar c) @safe pure
     }
 
     assert(!isValidDchar(c));
-    throw new UTFException("Encoding an invalid code point in UTF-8").setSequence(c);
+    c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-8", c);
+    goto L3;
 }
 
 unittest
@@ -1968,19 +1992,24 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(buf.front == replacementDchar);
     });
 }
 
 
 /// Ditto
-size_t encode(ref wchar[2] buf, dchar c) @safe pure
+size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref wchar[2] buf, dchar c) @safe pure
 {
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UTFException("Encoding an isolated surrogate code point in UTF-16").setSequence(c);
+            c = _utfException!useReplacementDchar("Encoding an isolated surrogate code point in UTF-16", c);
 
         assert(isValidDchar(c));
+    L1:
         buf[0] = cast(wchar)c;
         return 1;
     }
@@ -1992,8 +2021,8 @@ size_t encode(ref wchar[2] buf, dchar c) @safe pure
         return 2;
     }
 
-    assert(!isValidDchar(c));
-    throw new UTFException("Encoding an invalid code point in UTF-16").setSequence(c);
+    c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-16", c);
+    goto L1;
 }
 
 unittest
@@ -2016,6 +2045,47 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(buf.front == replacementDchar);
+    });
+}
+
+
+/// Ditto
+size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref dchar[1] buf, dchar c) @safe pure
+{
+    if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
+        c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-32", c);
+    else
+        assert(isValidDchar(c));
+    buf[0] = c;
+    return 1;
+}
+
+unittest
+{
+    import std.exception;
+    assertCTFEable!(
+    {
+    dchar[1] buf;
+
+    encode(buf, '\u0000'); assert(buf[0] == '\u0000');
+    encode(buf, '\uD7FF'); assert(buf[0] == '\uD7FF');
+    encode(buf, '\uE000'); assert(buf[0] == '\uE000');
+    encode(buf, 0xFFFE ); assert(buf[0] == 0xFFFE);
+    encode(buf, 0xFFFF ); assert(buf[0] == 0xFFFF);
+    encode(buf, '\U0010FFFF'); assert(buf[0] == '\U0010FFFF');
+
+    assertThrown!UTFException(encode(buf, cast(dchar)0xD800));
+    assertThrown!UTFException(encode(buf, cast(dchar)0xDBFF));
+    assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
+    assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
+    assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(buf.front == replacementDchar);
     });
 }
 
@@ -2026,7 +2096,8 @@ unittest
     Throws:
         $(D UTFException) if $(D c) is not a valid UTF code point.
   +/
-void encode(ref char[] str, dchar c) @safe pure
+void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref char[] str, dchar c) @safe pure
 {
     char[] r = str;
 
@@ -2050,9 +2121,10 @@ void encode(ref char[] str, dchar c) @safe pure
         else if (c <= 0xFFFF)
         {
             if (0xD800 <= c && c <= 0xDFFF)
-                throw new UTFException("Encoding a surrogate code point in UTF-8").setSequence(c);
+                c = _utfException!useReplacementDchar("Encoding a surrogate code point in UTF-8", c);
 
             assert(isValidDchar(c));
+        L3:
             buf[0] = cast(char)(0xE0 | (c >> 12));
             buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
             buf[2] = cast(char)(0x80 | (c & 0x3F));
@@ -2070,7 +2142,8 @@ void encode(ref char[] str, dchar c) @safe pure
         else
         {
             assert(!isValidDchar(c));
-            throw new UTFException("Encoding an invalid code point in UTF-8").setSequence(c);
+            c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-8", c);
+            goto L3;
         }
         r ~= buf[0 .. L];
     }
@@ -2124,20 +2197,26 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(buf.back != replacementDchar);
+    encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000);
+    assert(buf.back == replacementDchar);
     });
 }
 
 /// ditto
-void encode(ref wchar[] str, dchar c) @safe pure
+void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref wchar[] str, dchar c) @safe pure
 {
     wchar[] r = str;
 
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UTFException("Encoding an isolated surrogate code point in UTF-16").setSequence(c);
+            c = _utfException!useReplacementDchar("Encoding an isolated surrogate code point in UTF-16", c);
 
         assert(isValidDchar(c));
+    L1:
         r ~= cast(wchar)c;
     }
     else if (c <= 0x10FFFF)
@@ -2152,7 +2231,8 @@ void encode(ref wchar[] str, dchar c) @safe pure
     else
     {
         assert(!isValidDchar(c));
-        throw new UTFException("Encoding an invalid code point in UTF-16").setSequence(c);
+        c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-16", c);
+        goto L1;
     }
 
     str = r;
@@ -2178,16 +2258,21 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(buf.back != replacementDchar);
+    encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000);
+    assert(buf.back == replacementDchar);
     });
 }
 
 /// ditto
-void encode(ref dchar[] str, dchar c) @safe pure
+void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+    ref dchar[] str, dchar c) @safe pure
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
-        throw new UTFException("Encoding an invalid code point in UTF-32").setSequence(c);
-
-    assert(isValidDchar(c));
+        c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-32", c);
+    else
+        assert(isValidDchar(c));
     str ~= c;
 }
 
@@ -2210,6 +2295,10 @@ unittest
     assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+
+    assert(buf.back != replacementDchar);
+    encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000);
+    assert(buf.back == replacementDchar);
     });
 }
 
@@ -3225,174 +3314,19 @@ pure nothrow @nogc unittest
 
 /****************************
  * Iterate an input range of characters by char, wchar, or dchar.
+ * These aliases simply forward to $(LREF byUTF) with the
+ * corresponding C argument.
  *
- * UTF sequences that cannot be converted to UTF-8 are replaced by U+FFFD
- * per "5.22 Best Practice for U+FFFD Substitution" of the Unicode Standard 6.2.
- * Hence, byChar, byWchar, and byDchar are not symmetric.
- * This algorithm is lazy, and does not allocate memory.
- * Purity, nothrow, and safety are inferred from the r parameter.
  * Params:
  *      r = input range of characters, or array of characters
- * Returns:
- *      input range
  */
-
-auto byChar(R)(R r) if (isAutodecodableString!R)
-{
-    /* This and the following two serve as adapters to convert arrays to ranges,
-     * so the following three
-     * won't get auto-decoded by std.array.front().
-     */
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    static if (is(tchar == char))
-    {
-        return r.byCodeUnit();
-    }
-    else
-    {
-        return r.byCodeUnit().byChar();
-    }
-}
+alias byChar = byUTF!char;
 
 /// Ditto
-auto byWchar(R)(R r) if (isAutodecodableString!R)
-{
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    static if (is(tchar == wchar))
-    {
-        return r.byCodeUnit();
-    }
-    else
-    {
-        return r.byCodeUnit().byWchar();
-    }
-}
+alias byWchar = byUTF!wchar;
 
 /// Ditto
-auto byDchar(R)(R r) if (isAutodecodableString!R)
-{
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    return r.byCodeUnit().byDchar();
-}
-
-
-/// Ditto
-auto ref byChar(R)(R r)
-    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
-{
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    /* Defeat the auto-decoding of std.array.put() by handling arrays of chars
-     * explicitly.
-     */
-    static if (is(tchar == char))
-    {
-        return r;
-    }
-    else
-    {
-        static if (is(tchar == wchar))
-        {
-            // Convert wchar => dchar => char
-            auto r2 = r.byDchar();
-        }
-        else static if (is(tchar == dchar))
-        {
-            alias r2 = r;
-        }
-        else
-            static assert(0);
-
-        static struct byCharImpl
-        {
-            this(ref typeof(r2) r)
-            {
-                this.r = r;
-            }
-
-            @property bool empty()
-            {
-                return !nLeft && r.empty;
-            }
-
-            @property auto front()
-            {
-                static assert(replacementDchar > 0x7FF && replacementDchar <= 0xFFFF);
-                if (!nLeft)
-                {
-                    dchar c = r.front;
-
-                    if (c <= 0x7F)
-                    {
-                        buf[0] = cast(char)c;
-                        nLeft = 1;
-                    }
-                    else if (c <= 0x7FF)
-                    {
-                        buf[1] = cast(char)(0xC0 | (c >> 6));
-                        buf[0] = cast(char)(0x80 | (c & 0x3F));
-                        nLeft = 2;
-                    }
-                    else if (c <= 0xFFFF)
-                    {
-                        if (0xD800 <= c && c <= 0xDFFF)
-                            c = replacementDchar;
-
-                        buf[2] = cast(char)(0xE0 | (c >> 12));
-                        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-                        buf[0] = cast(char)(0x80 | (c & 0x3F));
-                        nLeft = 3;
-                    }
-                    else if (c <= 0x10FFFF)
-                    {
-                        buf[3] = cast(char)(0xF0 | (c >> 18));
-                        buf[2] = cast(char)(0x80 | ((c >> 12) & 0x3F));
-                        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-                        buf[0] = cast(char)(0x80 | (c & 0x3F));
-                        nLeft = 4;
-                    }
-                    else
-                    {
-                        buf[2] = cast(char)(0xE0 | (replacementDchar >> 12));
-                        buf[1] = cast(char)(0x80 | ((replacementDchar >> 6) & 0x3F));
-                        buf[0] = cast(char)(0x80 | (replacementDchar & 0x3F));
-                        nLeft = 3;
-                    }
-                }
-                return buf[nLeft - 1];
-            }
-
-            void popFront()
-            {
-                if (!nLeft)
-                    front;
-                --nLeft;
-                if (!nLeft)
-                    r.popFront();
-            }
-
-            static if (isForwardRange!(typeof(r2)))
-            {
-                @property auto save()
-                {
-                    auto ret = this;
-                    ret.r = r.save;
-                    return ret;
-                }
-            }
-
-          private:
-            typeof(r2) r;
-            char[4] buf = void;
-            uint nLeft;
-        }
-
-        return byCharImpl(r2);
-    }
-}
+alias byDchar = byUTF!dchar;
 
 pure nothrow @nogc unittest
 {
@@ -3441,101 +3375,6 @@ pure nothrow @nogc unittest
   }
 }
 
-
-/// Ditto
-auto ref byWchar(R)(R r)
-    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
-{
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    static if (is(tchar == wchar))
-    {
-        return r;
-    }
-    else
-    {
-        static if (is(tchar == char))
-        {
-            auto r2 = r.byDchar();
-        }
-        else static if (is(tchar == dchar))
-        {
-            alias r2 = r;
-        }
-        else
-            static assert(0);
-
-        static struct byWcharImpl
-        {
-            this(ref typeof(r2) r)
-            {
-                this.r = r;
-            }
-
-            @property bool empty()
-            {
-                return !nLeft && r.empty;
-            }
-
-            @property auto front()
-            {
-                static assert(replacementDchar > 0x7FF && replacementDchar <= 0xFFFF);
-                if (!nLeft)
-                {
-                    dchar c = r.front;
-
-                    if (c <= 0xFFFF)
-                    {
-                        if (0xD800 <= c && c <= 0xDFFF)
-                            c = replacementDchar;
-
-                        buf[0] = cast(wchar)c;
-                        nLeft = 1;
-                    }
-                    else if (c <= 0x10FFFF)
-                    {
-                        buf[1] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
-                        buf[0] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
-                        nLeft = 2;
-                    }
-                    else
-                    {
-                        buf[0] = replacementDchar;
-                        nLeft = 1;
-                    }
-                }
-                return buf[nLeft - 1];
-            }
-
-            void popFront()
-            {
-                if (!nLeft)
-                    front;
-                --nLeft;
-                if (!nLeft)
-                    r.popFront();
-            }
-
-            static if (isForwardRange!(typeof(r2)))
-            {
-                @property auto save()
-                {
-                    auto ret = this;
-                    ret.r = r.save;
-                    return ret;
-                }
-            }
-
-          private:
-            typeof(r2) r;
-            wchar[2] buf = void;
-            uint nLeft;
-        }
-
-        return byWcharImpl(r2);
-    }
-}
-
 pure nothrow @nogc unittest
 {
   {
@@ -3578,192 +3417,6 @@ pure nothrow @nogc unittest
   }
 }
 
-
-/// Ditto
-auto ref byDchar(R)(R r)
-    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
-{
-    alias tchar = Unqual!(ElementEncodingType!R);
-
-    static if (is(tchar == char))
-    {
-        static struct byDcharImpl
-        {
-            this(ref R r)
-            {
-                this.r = r;
-            }
-
-            @property bool empty()
-            {
-                return !haveData && r.empty;
-            }
-
-            @property dchar front()
-            {
-                if (haveData)
-                    return frontChar;
-                dchar c = r.front;
-                if (c < 0x80)
-                {
-                }
-                else
-                {
-                    uint fst = c; // upper control bits are masked out later
-
-                    /* Dchar bitmask for different numbers of UTF-8 code units.
-                     */
-                    alias bitMask = TypeTuple!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
-
-                    foreach (i; TypeTuple!(1, 2, 3))
-                    {
-
-                        r.popFront();
-                        if (r.empty)
-                            break;
-
-                        ubyte tmp = r.front;
-
-                        if ((tmp & 0xC0) != 0x80)
-                            break;
-
-                        c = (c << 6) | (tmp & 0x3F);
-
-                        if (!(fst & (0x40 >> i)))  // if no more bytes
-                        {
-                            c &= bitMask[i]; // mask out control bits
-
-                            // overlong, could have been encoded with i bytes
-                            if ((c & ~bitMask[i - 1]) == 0)
-                                break;
-
-                            // check for surrogates only needed for 3 bytes
-                            static if (i == 2)
-                            {
-                                if (c >= 0xD800 && c < 0xE000)
-                                    break;
-                            }
-
-                            // check for out of range only needed for 4 bytes
-                            static if (i == 3)
-                            {
-                                if (c > 0x10FFFF)
-                                    break;
-                            }
-
-                            frontChar = c;
-                            haveData = true;
-                            return c;
-                        }
-                    }
-                    c = replacementDchar;
-                }
-                frontChar = c;
-                haveData = true;
-                return c;
-            }
-
-            void popFront()
-            {
-                if (!haveData)
-                    front;
-                r.popFront();
-                haveData = false;
-            }
-
-            static if (isForwardRange!R)
-            {
-                @property auto save()
-                {
-                    auto ret = this;
-                    ret.r = r.save;
-                    return ret;
-                }
-            }
-
-          private:
-            R r;
-            dchar frontChar;
-            bool haveData;
-        }
-        return byDcharImpl(r);
-    }
-    else static if (is(tchar == wchar))
-    {
-        static struct byDcharImpl
-        {
-            this(ref R r)
-            {
-                this.r = r;
-            }
-
-            @property bool empty()
-            {
-                return !haveData && r.empty;
-            }
-
-            @property dchar front()
-            {
-                if (haveData)
-                    return frontChar;
-                dchar c = r.front;
-                if (c < 0xD800)
-                {
-                }
-                else if (c <= 0xDBFF)
-                {
-                    r.popFront();
-                    if (r.empty)
-                        c = replacementDchar;
-                    else
-                    {
-                        dchar c2 = r.front;
-                        if (c2 < 0xDC00 || c2 > 0xDFFF)
-                            c = replacementDchar;
-                        else
-                            c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
-                    }
-                }
-                else if (c <= 0xDFFF)
-                    c = replacementDchar;
-                frontChar = c;
-                haveData = true;
-                return c;
-            }
-
-            void popFront()
-            {
-                if (!haveData)
-                    front;
-                r.popFront();
-                haveData = false;
-            }
-
-            static if (isForwardRange!R)
-            {
-                @property auto save()
-                {
-                    auto ret = this;
-                    ret.r = r.save;
-                    return ret;
-                }
-            }
-
-          private:
-            R r;
-            dchar frontChar;
-            bool haveData;
-        }
-        return byDcharImpl(r);
-    }
-    else static if (is(tchar == dchar))
-    {
-        return r;
-    }
-    else
-        static assert(0);
-}
-
 pure nothrow @nogc unittest
 {
   {
@@ -3772,7 +3425,6 @@ pure nothrow @nogc unittest
     string a = "hello\u07FF\uD7FF\U00010000\U0010FFFF"; // 1,2,3,4 byte sequences
     foreach (c; a.byDchar())
     {
-        //writefln("[%d] '%c' x%x", i, c, c);
         s[i++] = c;
     }
     assert(s == "hello\u07FF\uD7FF\U00010000\U0010FFFF"d);
@@ -3895,26 +3547,94 @@ int impureVariable;
     }
 }
 
-/***************************************
- * Select byChar, byWchar, or byDchar based on the type C.
+/****************************
+ * Iterate an input range of characters by char type C.
+ *
+ * UTF sequences that cannot be converted to UTF-8 are replaced by U+FFFD
+ * per "5.22 Best Practice for U+FFFD Substitution" of the Unicode Standard 6.2.
+ * Hence byUTF is not symmetric.
+ * This algorithm is lazy, and does not allocate memory.
+ * Purity, nothrow, and safety are inferred from the r parameter.
  *
  * Params:
- *    C = char, wchar, or dchar
- *
+ *      C = char, wchar, or dchar
+ *      r = input range of characters, or array of characters
  * Returns:
- *    corresponding alias to $(LREF byChar), $(LREF byWchar), or $(LREF byDchar)
+ *      input range of type C
  */
-
 template byUTF(C) if (isSomeChar!C)
 {
-    static if (is(C : const(char)))
-        alias byUTF = byChar;
-    else static if (is(C : const(wchar)))
-        alias byUTF = byWchar;
-    else static if (is(C : const(dchar)))
-        alias byUTF = byDchar;
-    else
-        static assert(0);
+    static if (!is(Unqual!C == C))
+        alias byUTF = byUTF!(Unqual!C);
+    else:
+
+    auto ref byUTF(R)(R r)
+        if (isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    {
+        return byUTF(r.byCodeUnit());
+    }
+
+    auto ref byUTF(R)(R r)
+        if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    {
+        alias RC = Unqual!(ElementEncodingType!R);
+
+        static if (is(RC == C))
+        {
+            return r.byCodeUnit();
+        }
+        else
+        {
+            static struct Result
+            {
+                this(ref R r)
+                {
+                    this.r = r;
+                }
+
+                @property bool empty()
+                {
+                    return pos == fill && r.empty;
+                }
+
+                @property auto front()
+                {
+                    if (pos == fill)
+                    {
+                        pos = 0;
+                        fill = cast(ushort)encode!(UseReplacementDchar.yes)(
+                            buf, decodeFront!(UseReplacementDchar.yes)(r));
+                    }
+                    return buf[pos];
+                }
+
+                void popFront()
+                {
+                    if (pos == fill)
+                        front;
+                    ++pos;
+                }
+
+                static if (isForwardRange!R)
+                {
+                    @property auto save()
+                    {
+                        auto ret = this;
+                        ret.r = r.save;
+                        return ret;
+                    }
+                }
+
+            private:
+
+                R r;
+                C[4 / C.sizeof] buf = void;
+                ushort pos, fill;
+            }
+
+            return Result(r);
+        }
+    }
 }
 
 ///

@@ -75,13 +75,13 @@ private
     import core.sync.mutex;
     import core.sync.condition;
     import std.algorithm;
-    import std.datetime;
     import std.exception;
     import std.range;
     import std.string;
     import std.traits;
     import std.typecons;
     import std.typetuple;
+    import std.concurrencybase;
 
     template hasLocalAliasing(T...)
     {
@@ -814,6 +814,7 @@ unittest
 
 /**
  * Tries to receive but will give up if no matches arrive within duration.
+ * Won't wait at all if provided $(CXREF time, Duration) is negative.
  *
  * Same as $(D receive) except that rather than wait forever for a message,
  * it waits until either it receives a message or the given
@@ -956,7 +957,7 @@ private
 }
 
 
-shared static this()
+extern (C) void std_concurrency_static_this()
 {
     registryLock = new Mutex;
 }
@@ -1192,7 +1193,7 @@ interface Scheduler
     @property ref ThreadInfo thisInfo() nothrow;
 
     /**
-     * Creates a Condition varialbe analog for signaling.
+     * Creates a Condition variable analog for signaling.
      *
      * Creates a new Condition variable analog which is used to check for and
      * to signal the addition of messages to a thread's message queue.  Like
@@ -1373,11 +1374,12 @@ private:
 
         override bool wait( Duration period ) nothrow
         {
+            import core.time;
             scope(exit) notified = false;
 
-            for( auto limit = Clock.currSystemTick + period;
+            for( auto limit = TickDuration.currSystemTick + period;
                  !notified && !period.isNegative;
-                 period = limit - Clock.currSystemTick )
+                 period = limit - TickDuration.currSystemTick )
             {
                 yield();
             }
@@ -2047,7 +2049,8 @@ private
 
             static if( timedWait )
             {
-                auto limit = Clock.currSystemTick + period;
+                import core.time;
+                auto limit = TickDuration.currSystemTick + period;
             }
 
             while( true )
@@ -2095,7 +2098,7 @@ private
                     {
                         static if( timedWait )
                         {
-                            period = limit - Clock.currSystemTick;
+                            period = limit - TickDuration.currSystemTick;
                         }
                         continue;
                     }

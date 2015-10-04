@@ -152,7 +152,7 @@ struct SQL_INTERVAL_STRUCT
 };
 
 // * internal representation of numeric data type *
-const int SQL_MAX_NUMERIC_LEN =	16;
+const int SQL_MAX_NUMERIC_LEN = 16;
 struct SQL_NUMERIC_STRUCT
 {
     SQLCHAR  precision;

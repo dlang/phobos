@@ -1489,9 +1489,8 @@ unittest
     assert(w.data == "1337");
 }
 
-private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatSpec!Char f, uint base, ulong mask)
+private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, const ref FormatSpec!Char fs, uint base, ulong mask)
 {
-    FormatSpec!Char fs = f; // fs is copy for change its values.
     T arg = val;
 
     bool negative = (base == 10 && arg < 0);
@@ -1507,105 +1506,93 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatS
         formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
 }
 
-private void formatUnsigned(Writer, T, Char)(Writer w, T arg, ref FormatSpec!Char fs, uint base, bool negative)
+private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSpec!Char fs, uint base, bool negative)
 {
-    if (fs.precision == fs.UNSPECIFIED)
-    {
-        // default precision for integrals is 1
-        fs.precision = 1;
-    }
-    else
-    {
-        // if a precision is specified, the '0' flag is ignored.
-        fs.flZero = false;
-    }
+    /* Write string:
+     *    leftpad prefix1 prefix2 zerofill digits rightpad
+     */
 
-    char leftPad = void;
-    if (!fs.flDash && !fs.flZero)
-        leftPad = ' ';
-    else if (!fs.flDash && fs.flZero)
-        leftPad = '0';
-    else
-        leftPad = 0;
-
-    // figure out sign and continue in unsigned mode
-    char forcedPrefix = void;
-    if (fs.flPlus) forcedPrefix = '+';
-    else if (fs.flSpace) forcedPrefix = ' ';
-    else forcedPrefix = 0;
-    if (base != 10)
-    {
-        // non-10 bases are always unsigned
-        forcedPrefix = 0;
-    }
-    else if (negative)
-    {
-        // argument is signed
-        forcedPrefix = '-';
-    }
-    // fill the digits
-    char[64] buffer; // 64 bits in base 2 at most
+    /* Convert arg to digits[].
+     * Note that 0 becomes an empty digits[]
+     */
+    char[64] buffer = void; // 64 bits in base 2 at most
     char[] digits;
     {
-        uint i = buffer.length;
-        auto n = arg;
-        do
+        size_t i = buffer.length;
+        while (arg)
         {
             --i;
-            buffer[i] = cast(char) (n % base);
-            n /= base;
-            if (buffer[i] < 10) buffer[i] += '0';
-            else buffer[i] += (fs.spec == 'x' ? 'a' : 'A') - 10;
-        } while (n);
+            char c = cast(char) (arg % base);
+            arg /= base;
+            if (c < 10)
+                buffer[i] = cast(char)(c + '0');
+            else
+                buffer[i] = cast(char)(c + (fs.spec == 'x' ? 'a' - 10 : 'A' - 10));
+        }
         digits = buffer[i .. $]; // got the digits without the sign
     }
-    // adjust precision to print a '0' for octal if alternate format is on
-    if (base == 8 && fs.flHash
-        && (fs.precision <= digits.length)) // too low precision
+
+
+    int precision = (fs.precision == fs.UNSPECIFIED) ? 1 : fs.precision;
+
+    char padChar = 0;
+    if (!fs.flDash)
     {
-        //fs.precision = digits.length + (arg != 0);
-        forcedPrefix = '0';
+        padChar = (fs.flZero && fs.precision == fs.UNSPECIFIED) ? '0' : ' ';
     }
-    // write left pad; write sign; write 0x or 0X; write digits;
-    //   write right pad
-    // Writing left pad
-    ptrdiff_t spacesToPrint =
-        fs.width // start with the minimum width
-        - digits.length  // take away digits to print
-        - (forcedPrefix != 0) // take away the sign if any
-        - (base == 16 && fs.flHash && arg ? 2 : 0); // 0x or 0X
-    const ptrdiff_t delta = fs.precision - digits.length;
-    if (delta > 0) spacesToPrint -= delta;
+
+    // Compute prefix1 and prefix2
+    char prefix1 = 0;
+    char prefix2 = 0;
+    if (base == 10)
+    {
+        if (negative)
+            prefix1 = '-';
+        else if (fs.flPlus)
+            prefix1 = '+';
+        else if (fs.flSpace)
+            prefix1 = ' ';
+    }
+    else if (base == 16 && fs.flHash && digits.length)
+    {
+        prefix1 = '0';
+        prefix2 = fs.spec == 'x' ? 'x' : 'X';
+    }
+    // adjust precision to print a '0' for octal if alternate format is on
+    else if (base == 8 && fs.flHash &&
+             (precision <= 1 || precision <= digits.length)) // too low precision
+        prefix1 = '0';
+
+    size_t zerofill = precision > digits.length ? precision - digits.length : 0;
+    size_t leftpad = 0;
+    size_t rightpad = 0;
+
+    ptrdiff_t spacesToPrint = fs.width - ((prefix1 != 0) + (prefix2 != 0) + zerofill + digits.length);
     if (spacesToPrint > 0) // need to do some padding
     {
-        if (leftPad == '0')
-        {
-            // pad with zeros
+        if (padChar == '0')
+            zerofill += spacesToPrint;
+        else if (padChar)
+            leftpad = spacesToPrint;
+        else
+            rightpad = spacesToPrint;
+    }
 
-            fs.precision =
-                cast(typeof(fs.precision)) (spacesToPrint + digits.length);
-                //to!(typeof(fs.precision))(spacesToPrint + digits.length);
-        }
-        else if (leftPad) foreach (i ; 0 .. spacesToPrint) put(w, ' ');
-    }
-    // write sign
-    if (forcedPrefix) put(w, forcedPrefix);
-    // write 0x or 0X
-    if (base == 16 && fs.flHash && arg) {
-        // @@@ overcome bug in dmd;
-        //w.write(fs.spec == 'x' ? "0x" : "0X"); //crashes the compiler
+    /**** Print ****/
+
+    foreach (i ; 0 .. leftpad)
+        put(w, ' ');
+
+    if (prefix1) put(w, prefix1);
+    if (prefix2) put(w, prefix2);
+
+    foreach (i ; 0 .. zerofill)
         put(w, '0');
-        put(w, fs.spec == 'x' ? 'x' : 'X'); // x or X
-    }
-    // write the digits
-    if (arg || fs.precision)
-    {
-        ptrdiff_t zerosToPrint = fs.precision - digits.length;
-        foreach (i ; 0 .. zerosToPrint) put(w, '0');
-        put(w, digits);
-    }
-    // write the spaces to the right if left-align
-    if (!leftPad) foreach (i ; 0 .. spacesToPrint) put(w, ' ');
+
+    put(w, digits);
+
+    foreach (i ; 0 .. rightpad)
+        put(w, ' ');
 }
 
 @safe pure unittest
@@ -1768,7 +1755,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     sprintfSpec[i++] = fs.spec;
     sprintfSpec[i] = 0;
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
-    char[512] buf;
+    char[512] buf = void;
 
     immutable n = ()@trusted{
         return snprintf(buf.ptr, buf.length,
@@ -2511,37 +2498,36 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 {
     import std.uni : isGraphical;
 
+    string fmt;
     if (std.uni.isGraphical(c))
     {
         if (c == quote || c == '\\')
-        {
             put(w, '\\');
-            put(w, c);
-        }
-        else
-            put(w, c);
+        put(w, c);
+        return;
     }
     else if (c <= 0xFF)
     {
-        put(w, '\\');
-        switch (c)
+        if (c < 0x20)
         {
-        case '\0':  put(w, '0');  break;
-        case '\a':  put(w, 'a');  break;
-        case '\b':  put(w, 'b');  break;
-        case '\f':  put(w, 'f');  break;
-        case '\n':  put(w, 'n');  break;
-        case '\r':  put(w, 'r');  break;
-        case '\t':  put(w, 't');  break;
-        case '\v':  put(w, 'v');  break;
-        default:
-            formattedWrite(w, "x%02X", cast(uint)c);
+            foreach (i, k; "\n\r\t\a\b\f\v\0")
+            {
+                if (c == k)
+                {
+                    put(w, '\\');
+                    put(w, "nrtabfv0"[i]);
+                    return;
+                }
+            }
         }
+        fmt = "\\x%02X";
     }
     else if (c <= 0xFFFF)
-        formattedWrite(w, "\\u%04X", cast(uint)c);
+        fmt = "\\u%04X";
     else
-        formattedWrite(w, "\\U%08X", cast(uint)c);
+        fmt = "\\U%08X";
+
+    formattedWrite(w, fmt, cast(uint)c);
 }
 
 // undocumented because of deprecation
@@ -6417,10 +6403,15 @@ unittest
 
     r = format("abc"c);
     assert(r == "abc");
-    r = format("def"w);
-    assert(r == "def");
-    r = format("ghi"d);
-    assert(r == "ghi");
+
+    //format() returns the same type as inputted.
+    wstring wr;
+    wr = format("def"w);
+    assert(wr == "def"w);
+
+    dstring dr;
+    dr = format("ghi"d);
+    assert(dr == "ghi"d);
 
     void* p = cast(void*)0xDEADBEEF;
     r = format("%s", p);
@@ -6554,11 +6545,11 @@ unittest
  * Params: fmt  = Format string. For detailed specification, see $(XREF _format,formattedWrite).
  *         args = Variadic list of arguments to format into returned string.
  */
-string format(Char, Args...)(in Char[] fmt, Args args)
+immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar!Char)
 {
     import std.format : formattedWrite, FormatException;
     import std.array : appender;
-    auto w = appender!string();
+    auto w = appender!(immutable(Char)[]);
     auto n = formattedWrite(w, fmt, args);
     version (all)
     {
@@ -6594,6 +6585,10 @@ unittest
     assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
                   "helworldlo-138ctrue");
     });
+
+    assert(is(typeof(format("happy")) == string));
+    assert(is(typeof(format("happy"w)) == wstring));
+    assert(is(typeof(format("happy"d)) == dstring));
 }
 
 /*****************************************************

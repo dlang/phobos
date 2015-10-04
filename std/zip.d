@@ -132,16 +132,6 @@ final class ArchiveMember
     @property ushort extractVersion()     { return _extractVersion; }    /// Read Only
     @property uint crc32()         { return _crc32; }    /// Read Only: cyclic redundancy check (CRC) value
 
-    // Explicitly undocumented. It will be removed in January 2015.
-    deprecated("Please use fileAttributes instead.")
-    @property ref inout(ushort) madeVersion() inout @safe pure nothrow
-    { return _madeVersion; }
-
-    // Explicitly undocumented. It will be removed in January 2015.
-    deprecated("Please use fileAttributes instead.")
-    @property ref inout(uint) externalAttributes() inout @safe pure nothrow
-    { return _externalAttributes; }
-
     /// Read Only: size of data of member in compressed form.
     @property uint compressedSize()     { return _compressedSize; }
 
@@ -248,13 +238,6 @@ final class ArchiveMember
      *     CompressionMethod
      **/
     @property CompressionMethod compressionMethod() { return _compressionMethod; }
-
-    // Explicitly undocumented. It will be removed in January 2015.
-    deprecated("Please use the enum CompressionMethod to set this property instead.")
-    @property void compressionMethod(ushort cm)
-    {
-        compressionMethod = cast(CompressionMethod)(cm);
-    }
 
     /**
      * Write compression method used for this member
@@ -889,4 +872,64 @@ unittest
             assert(am.expandedData == am2.expandedData);
         }
     }
+}
+
+unittest
+{
+    import std.zlib;
+
+    ubyte[] src = cast(ubyte[])
+"the quick brown fox jumps over the lazy dog\r
+the quick brown fox jumps over the lazy dog\r
+";
+    auto dst = cast(ubyte[])compress(cast(void[])src);
+    auto after = cast(ubyte[])uncompress(cast(void[])dst);
+    assert(src == after);
+}
+
+unittest
+{
+    import std.datetime;
+    ubyte[] buf = [1, 2, 3, 4, 5, 0, 7, 8, 9];
+
+    auto ar = new ZipArchive;
+    auto am = new ArchiveMember;  // 10
+    am.name = "buf";
+    am.expandedData = buf;
+    am.compressionMethod = CompressionMethod.deflate;
+    am.time = SysTimeToDosFileTime(Clock.currTime());
+    ar.addMember(am);            // 15
+
+    auto zip1 = ar.build();
+    auto arAfter = new ZipArchive(zip1);
+    assert(arAfter.directory.length == 1);
+    auto amAfter = arAfter.directory["buf"];
+    arAfter.expand(amAfter);
+    assert(amAfter.name == am.name);
+    assert(amAfter.expandedData == am.expandedData);
+    assert(amAfter.time == am.time);
+}
+
+// Posix-only, because we can't rely on the unzip command being available on Windows
+version(Posix) unittest
+{
+    import std.datetime, std.file, std.format, std.path, std.process, std.stdio;
+
+    auto zr = new ZipArchive();
+    auto am = new ArchiveMember();
+    am.compressionMethod = CompressionMethod.deflate;
+    am.name = "foo.bar";
+    am.time = SysTimeToDosFileTime(Clock.currTime());
+    am.expandedData = cast(ubyte[])"We all live in a yellow submarine, a yellow submarine";
+    zr.addMember(am);
+    auto data2 = zr.build();
+
+    mkdirRecurse(deleteme);
+    scope(exit) rmdirRecurse(deleteme);
+    string zipFile = buildPath(deleteme, "foo.zip");
+    std.file.write(zipFile, cast(byte[])data2);
+
+    auto result = executeShell(format("unzip -l %s", zipFile));
+    scope(failure) writeln(result.output);
+    assert(result.status == 0);
 }

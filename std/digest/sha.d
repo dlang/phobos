@@ -121,8 +121,6 @@ else version(D_InlineAsm_X86_64)
 }
 
 version(LittleEndian) import core.bitop : bswap;
-version(USE_SSSE3) import core.cpuid : hasSSSE3Support = ssse3;
-version(USE_SSSE3) import std.internal.digest.sha_SSSE3 : transformSSSE3;
 
 
 version(unittest)
@@ -196,14 +194,16 @@ private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
  * Template API SHA1/SHA2 implementation. Supports: SHA-1, SHA-224, SHA-256,
  * SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
  *
- * The blockSize and digestSize are in bits. However, it's likely easier to
+ * The hashBlockSize and digestSize are in bits. However, it's likely easier to
  * simply use the convenience aliases: SHA1, SHA224, SHA256, SHA384, SHA512,
  * SHA512_224 and SHA512_256.
  *
  * See $(D std.digest.digest) for differences between template and OOP API.
  */
-struct SHA(int blockSize, int digestSize)
+struct SHA(uint hashBlockSize, uint digestSize)
 {
+    enum blockSize = hashBlockSize;
+
     static assert(blockSize == 512 || blockSize == 1024,
         "Invalid SHA blockSize, must be 512 or 1024");
     static assert(digestSize == 160 || digestSize == 224 || digestSize == 256 || digestSize == 384 || digestSize == 512,
@@ -217,11 +217,12 @@ struct SHA(int blockSize, int digestSize)
     {
         version(USE_SSSE3)
         {
-            private __gshared immutable pure nothrow @nogc void function(uint[5]* state, const(ubyte[64])* block) transform;
+            import core.cpuid : ssse3;
+            import std.internal.digest.sha_SSSE3 : transformSSSE3;
 
-            shared static this()
+            static void transform(uint[5]* state, const(ubyte[64])* block) pure nothrow @nogc
             {
-                transform = hasSSSE3Support ? &transformSSSE3 : &transformX86;
+               return ssse3 ? transformSSSE3(state, block) : transformX86(state, block);
             }
         }
         else

@@ -49,6 +49,14 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(D $(LREF replicate)))
         $(TD Creates a new _array out of several copies of an input _array or range.
     ))
+    $(TR $(TD $(D $(LREF sameHead)))
+        $(TD Checks if the initial segments of two arrays refer to the same
+        place in memory.
+    ))
+    $(TR $(TD $(D $(LREF sameTail)))
+        $(TD Checks if the final segments of two arrays refer to the same place
+        in memory.
+    ))
     $(TR $(TD $(D $(LREF split)))
         $(TD Eagerly split a range or string into an _array.
     ))
@@ -777,121 +785,6 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
     static assert(isBidirectionalRange!Wrapper);
     static assert(isRandomAccessRange!Wrapper);
 }
-
-/+
-Commented out until the insert which has been deprecated has been removed.
-I'd love to just remove it in favor of insertInPlace, but then code would then
-use this version of insert and silently break. So, it's here so that it can
-be used once insert has not only been deprecated but removed, but until then,
-it's commented out.
-
-/++
-    Creates a new array which is a copy of $(D array) with $(D stuff) (which
-    must be an input range or a single item) inserted at position $(D pos).
-
-    Examples:
-    --------------------
-    int[] a = [ 1, 2, 3, 4 ];
-    auto b = a.insert(2, [ 1, 2 ]);
-    assert(a == [ 1, 2, 3, 4 ]);
-    assert(b == [ 1, 2, 1, 2, 3, 4 ]);
-    --------------------
- +/
-T[] insert(T, Range)(T[] array, size_t pos, Range stuff)
-    if(isInputRange!Range &&
-       (is(ElementType!Range : T) ||
-        isSomeString!(T[]) && is(ElementType!Range : dchar)))
-{
-    static if(hasLength!Range && is(ElementEncodingType!Range : T))
-    {
-        import std.algorithm : copy;
-        auto retval = new Unqual!(T)[](array.length + stuff.length);
-        retval[0 .. pos] = array[0 .. pos];
-        copy(stuff, retval[pos .. pos + stuff.length]);
-        retval[pos + stuff.length .. $] = array[pos .. $];
-        return cast(T[])retval;
-    }
-    else
-    {
-        auto app = appender!(T[])();
-        app.put(array[0 .. pos]);
-        app.put(stuff);
-        app.put(array[pos .. $]);
-        return app.data;
-    }
-}
-
-/++ Ditto +/
-T[] insert(T)(T[] array, size_t pos, T stuff)
-{
-    auto retval = new T[](array.length + 1);
-    retval[0 .. pos] = array[0 .. pos];
-    retval[pos] = stuff;
-    retval[pos + 1 .. $] = array[pos .. $];
-    return retval;
-}
-
-//Verify Example.
-unittest
-{
-    int[] a = [ 1, 2, 3, 4 ];
-    auto b = a.insert(2, [ 1, 2 ]);
-    assert(a == [ 1, 2, 3, 4 ]);
-    assert(b == [ 1, 2, 1, 2, 3, 4 ]);
-}
-
-unittest
-{
-    import core.exception;
-    import std.conv : to;
-    import std.exception;
-    import std.algorithm;
-
-    auto a = [1, 2, 3, 4];
-    assert(a.insert(0, [6, 7]) == [6, 7, 1, 2, 3, 4]);
-    assert(a.insert(2, [6, 7]) == [1, 2, 6, 7, 3, 4]);
-    assert(a.insert(a.length, [6, 7]) == [1, 2, 3, 4, 6, 7]);
-
-    assert(a.insert(0, filter!"true"([6, 7])) == [6, 7, 1, 2, 3, 4]);
-    assert(a.insert(2, filter!"true"([6, 7])) == [1, 2, 6, 7, 3, 4]);
-    assert(a.insert(a.length, filter!"true"([6, 7])) == [1, 2, 3, 4, 6, 7]);
-
-    assert(a.insert(0, 22) == [22, 1, 2, 3, 4]);
-    assert(a.insert(2, 22) == [1, 2, 22, 3, 4]);
-    assert(a.insert(a.length, 22) == [1, 2, 3, 4, 22]);
-    assert(a == [1, 2, 3, 4]);
-
-    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
-    {
-
-        auto l = to!T("hello");
-        auto r = to!U(" world");
-
-        enforce(insert(l, 0, r) == " worldhello",
-                new AssertError("testStr failure 1", file, line));
-        enforce(insert(l, 3, r) == "hel worldlo",
-                new AssertError("testStr failure 2", file, line));
-        enforce(insert(l, l.length, r) == "hello world",
-                new AssertError("testStr failure 3", file, line));
-        enforce(insert(l, 0, filter!"true"(r)) == " worldhello",
-                new AssertError("testStr failure 4", file, line));
-        enforce(insert(l, 3, filter!"true"(r)) == "hel worldlo",
-                new AssertError("testStr failure 5", file, line));
-        enforce(insert(l, l.length, filter!"true"(r)) == "hello world",
-                new AssertError("testStr failure 6", file, line));
-    }
-
-    testStr!(string, string)();
-    testStr!(string, wstring)();
-    testStr!(string, dstring)();
-    testStr!(wstring, string)();
-    testStr!(wstring, wstring)();
-    testStr!(wstring, dstring)();
-    testStr!(dstring, string)();
-    testStr!(dstring, wstring)();
-    testStr!(dstring, dstring)();
-}
-+/
 
 private void copyBackwards(T)(T[] src, T[] dest)
 {
@@ -1796,6 +1689,20 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
     }
 }
 
+unittest // Issue 10895
+{
+    class A
+    {
+        string name;
+        alias name this;
+        this(string name) { this.name = name; }
+    }
+    auto a = [new A(`foo`)];
+    assert(a[0].length == 3);
+    auto temp = join(a, " ");
+    assert(a[0].length == 3);
+}
+
 unittest // Issue 14230
 {
    string[] ary = ["","aa","bb","cc"];
@@ -2277,46 +2184,43 @@ unittest
     shrinks the array as needed.
  +/
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
-    if(isDynamicArray!Range &&
-       is(ElementEncodingType!Range : T) &&
-       !is(T == const T) &&
-       !is(T == immutable T))
+    if(is(typeof(replace(array, from, to, stuff))))
 {
-    import std.algorithm : remove;
-    import std.typecons : tuple;
+    static if(isDynamicArray!Range &&
+              is(Unqual!(ElementEncodingType!Range) == T) &&
+              !isNarrowString!(T[]))
+    {
+        // optimized for homogeneous arrays that can be overwritten.
+        import std.algorithm : remove;
+        import std.typecons : tuple;
 
-    if (overlap(array, stuff).length)
-    {
-        // use slower/conservative method
-        array = array[0 .. from] ~ stuff ~ array[to .. $];
-    }
-    else if (stuff.length <= to - from)
-    {
-        // replacement reduces length
-        immutable stuffEnd = from + stuff.length;
-        array[from .. stuffEnd] = stuff[];
-        if (stuffEnd < to)
-            array = remove(array, tuple(stuffEnd, to));
+        if (overlap(array, stuff).length)
+        {
+            // use slower/conservative method
+            array = array[0 .. from] ~ stuff ~ array[to .. $];
+        }
+        else if (stuff.length <= to - from)
+        {
+            // replacement reduces length
+            immutable stuffEnd = from + stuff.length;
+            array[from .. stuffEnd] = stuff[];
+            if (stuffEnd < to)
+                array = remove(array, tuple(stuffEnd, to));
+        }
+        else
+        {
+            // replacement increases length
+            // @@@TODO@@@: optimize this
+            immutable replaceLen = to - from;
+            array[from .. to] = stuff[0 .. replaceLen];
+            insertInPlace(array, to, stuff[replaceLen .. $]);
+        }
     }
     else
     {
-        // replacement increases length
-        // @@@TODO@@@: optimize this
-        immutable replaceLen = to - from;
-        array[from .. to] = stuff[0 .. replaceLen];
-        insertInPlace(array, to, stuff[replaceLen .. $]);
+        // default implementation, just do what replace does.
+        array = replace(array, from, to, stuff);
     }
-}
-
-/// Ditto
-void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
-    if(isInputRange!Range &&
-       ((!isDynamicArray!Range && is(ElementType!Range : T)) ||
-        (isDynamicArray!Range && is(ElementType!Range : T) &&
-             (is(T == const T) || is(T == immutable T))) ||
-        isSomeString!(T[]) && is(ElementType!Range : dchar)))
-{
-    array = replace(array, from, to, stuff);
 }
 
 ///
@@ -2338,6 +2242,66 @@ unittest
     int[1][] stuff = [[0], [1]];
     replaceInPlace(arr, 4, 6, stuff);
     assert(arr == [[0], [1], [2], [3], [0], [1], [6]]);
+}
+
+unittest
+{
+    // Bug# 14925
+    char[] a = "mon texte 1".dup;
+    char[] b = "abc".dup;
+    replaceInPlace(a, 4, 9, b);
+    assert(a == "mon abc 1");
+
+    // ensure we can replace in place with different encodings
+    string unicoded = "\U00010437";
+    string unicodedLong = "\U00010437aaaaa";
+    string base = "abcXXXxyz";
+    string result = "abc\U00010437xyz";
+    string resultLong = "abc\U00010437aaaaaxyz";
+    size_t repstart = 3;
+    size_t repend = 3 + 3;
+
+    void testStringReplaceInPlace(T, U)()
+    {
+        import std.conv;
+        import std.algorithm : equal;
+        auto a = unicoded.to!(U[]);
+        auto b = unicodedLong.to!(U[]);
+
+        auto test = base.to!(T[]);
+
+        test.replaceInPlace(repstart, repend, a);
+        assert(equal(test, result), "Failed for types " ~ T.stringof ~ " and " ~ U.stringof);
+
+        test = base.to!(T[]);
+
+        test.replaceInPlace(repstart, repend, b);
+        assert(equal(test, resultLong), "Failed for types " ~ T.stringof ~ " and " ~ U.stringof);
+    }
+
+    import std.meta : AliasSeq;
+    alias allChars = AliasSeq!(char, immutable(char), const(char),
+                         wchar, immutable(wchar), const(wchar),
+                         dchar, immutable(dchar), const(dchar));
+    foreach(T; allChars)
+        foreach(U; allChars)
+            testStringReplaceInPlace!(T, U)();
+
+    void testInout(inout(int)[] a)
+    {
+        // will be transferred to the 'replace' function
+        replaceInPlace(a, 1, 2, [1,2,3]);
+    }
+}
+
+unittest
+{
+    // the constraint for the first overload used to match this, which wouldn't compile.
+    import std.algorithm : equal;
+    long[] a = [1L, 2, 3];
+    int[] b = [4, 5, 6];
+    a.replaceInPlace(1, 2, b);
+    assert(equal(a, [1L, 4, 5, 6, 3]));
 }
 
 unittest
@@ -3571,6 +3535,12 @@ unittest
     const app3 = app2;
     assert(app3.capacity >= 3);
     assert(app3.data == [1, 2, 3]);
+}
+
+unittest // issue 14605
+{
+    static assert(isOutputRange!(Appender!(int[]), int));
+    static assert(isOutputRange!(RefAppender!(int[]), int));
 }
 
 unittest

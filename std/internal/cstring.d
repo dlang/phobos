@@ -41,7 +41,7 @@ import std.traits;
 import std.range;
 
 version(unittest)
-@property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc
+@property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc @trusted
 if(isSomeChar!C)
 in { assert(cstr); }
 body
@@ -84,17 +84,17 @@ See $(RED WARNING) in $(B Examples) section.
 */
 
 auto tempCString(To = char, From)(From str)
-    if (isSomeChar!To && (isInputRange!From || isSomeString!From))
+    if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
+        isSomeChar!(ElementEncodingType!From))
 {
-    import core.exception : onOutOfMemoryError;
-    import core.stdc.string : memcpy;
-
-    enum useStack = cast(To*) size_t.max;
 
     alias CF = Unqual!(ElementEncodingType!From);
 
+    enum To* useStack = () @trusted { return cast(To*)size_t.max; }();
+
     static struct Res
     {
+    @trusted:
     nothrow @nogc:
 
         @disable this();
@@ -132,21 +132,58 @@ auto tempCString(To = char, From)(From str)
         }
 
         To[256 / To.sizeof] _buff;  // the 'small string optimization'
+
+        static Res trustedVoidInit() { Res res = void; return res; }
     }
 
-    Res res = void;     // expensive to fill _buff[]
+    Res res = Res.trustedVoidInit();     // expensive to fill _buff[]
 
     // Note: res._ptr can't point to res._buff as structs are movable.
 
-    import std.utf : byUTF;
-
-    To* p      = res._buff.ptr;
-    size_t len = res.buffLength;
+    To[] p = res._buff[0 .. Res.buffLength];
     size_t i;
 
+    static To[] trustedRealloc(To[] buf, size_t i, To* resptr, size_t strLength)
+        @trusted @nogc nothrow
+    {
+        pragma(inline, false);  // because it's rarely called
+
+        import core.exception   : onOutOfMemoryError;
+        import core.stdc.string : memcpy;
+        import core.stdc.stdlib : malloc, realloc;
+
+        auto ptr = buf.ptr;
+        auto len = buf.length;
+        if (len >= size_t.max / (2 * To.sizeof))
+            onOutOfMemoryError();
+        size_t newlen = len * 3 / 2;
+        if (ptr == resptr)
+        {
+            if (newlen <= strLength)
+                newlen = strLength + 1; // +1 for terminating 0
+            ptr = cast(To*)malloc(newlen * To.sizeof);
+            if (!ptr)
+                onOutOfMemoryError();
+            memcpy(ptr, resptr, i * To.sizeof);
+        }
+        else
+        {
+            ptr = cast(To*)realloc(ptr, newlen * To.sizeof);
+            if (!ptr)
+                onOutOfMemoryError();
+        }
+        return ptr[0 .. newlen];
+    }
+
+    size_t strLength;
+    static if (hasLength!From)
+    {
+        strLength = str.length;
+    }
+    import std.utf : byUTF;
     static if (isSomeString!From)
     {
-        auto r = cast(const(CF)[])str;
+        auto r = cast(const(CF)[])str;  // because inout(CF) causes problems with byUTF
         if (r is null)  // Bugzilla 14980
         {
             res._ptr = null;
@@ -157,37 +194,14 @@ auto tempCString(To = char, From)(From str)
         alias r = str;
     foreach (const c; byUTF!(Unqual!To)(r))
     {
-        if (i + 1 == len)
+        if (i + 1 == p.length)
         {
-            import core.stdc.stdlib : malloc, realloc;
-
-            if (len >= size_t.max / (2 * To.sizeof))
-                onOutOfMemoryError();
-            size_t newlen = len * 3 / 2;
-            if (p == res._buff.ptr)
-            {
-                static if (hasLength!From)
-                {
-                    if (newlen <= str.length)
-                        newlen = str.length + 1; // +1 for terminating 0
-                }
-                p = cast(To*)malloc(newlen * To.sizeof);
-                if (!p)
-                    onOutOfMemoryError();
-                memcpy(p, res._buff.ptr, i * To.sizeof);
-            }
-            else
-            {
-                p = cast(To*)realloc(p, newlen * To.sizeof);
-                if (!p)
-                    onOutOfMemoryError();
-            }
-            len = newlen;
+            p = trustedRealloc(p, i, res._buff.ptr, strLength);
         }
         p[i++] = c;
     }
     p[i] = 0;
-    res._ptr = (p == res._buff.ptr) ? useStack : p;
+    res._ptr = (p.ptr == res._buff.ptr) ? useStack : p.ptr;
     return res;
 }
 
@@ -213,7 +227,7 @@ nothrow @nogc unittest
     // both primary expressions are ended.
 }
 
-nothrow @nogc unittest
+@safe nothrow @nogc unittest
 {
     assert("abc".tempCString().asArray == "abc");
     assert("abc"d.tempCString().ptr.asArray == "abc");

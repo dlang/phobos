@@ -126,11 +126,11 @@ SRC_STD_3b= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\random.d \
 	std\exception.d \
 	std\compiler.d \
-	std\system.d std\concurrency.d
+	std\system.d std\concurrency.d std\concurrencybase.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
-	std\digest\ripemd.d std\digest\digest.d
+	std\digest\ripemd.d std\digest\digest.d std\digest\hmac.d
 
 SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
 	std\container\dlist.d std\container\rbtree.d std\container\slist.d \
@@ -138,16 +138,18 @@ SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
 
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
-SRC_STD_ALGO= std\algorithm\package.d std\algorithm\comparison.d \
-	std\algorithm\iteration.d std\algorithm\mutation.d \
-	std\algorithm\searching.d std\algorithm\setops.d \
+SRC_STD_ALGO_1=std\algorithm\package.d std\algorithm\comparison.d \
+	std\algorithm\iteration.d std\algorithm\mutation.d
+SRC_STD_ALGO_2=std\algorithm\searching.d std\algorithm\setops.d \
 	std\algorithm\sorting.d std\algorithm\internal.d
+SRC_STD_ALGO=$(SRC_STD_ALGO_1) $(SRC_STD_ALGO_2)
 
 SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
 	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
-SRC_STD_5_HEAVY= $(SRC_STD_ALGO)
+SRC_STD_5a=$(SRC_STD_ALGO_1)
+SRC_STD_5b=$(SRC_STD_ALGO_2)
 
 SRC_STD_6a=std\variant.d
 SRC_STD_6b=std\syserror.d
@@ -199,7 +201,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
-	std\stdiobase.d std\parallelism.d \
+	std\concurrencybase.d std\stdiobase.d std\parallelism.d \
 	std\exception.d std\ascii.d
 
 SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\parser.d \
@@ -349,7 +351,9 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_digest_sha.html \
 	$(DOC)\std_digest_md.html \
 	$(DOC)\std_digest_ripemd.html \
+	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_digest_digest.html \
+	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
@@ -438,7 +442,8 @@ UNITTEST_OBJS= \
 		unittest3b.obj \
 		unittest3c.obj \
 		unittest4.obj \
-		unittest5.obj \
+		unittest5a.obj \
+		unittest5b.obj \
 		unittest6a.obj \
 		unittest6b.obj \
 		unittest6c.obj \
@@ -462,7 +467,8 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3c.obj $(SRC_STD_3c)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5a.obj $(SRC_STD_5a)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_5b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6b.obj $(SRC_STD_6b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
@@ -491,6 +497,9 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	cov
 
 html : $(DOCS)
+
+changelog.html: changelog.dd
+	$(DMD) -Dfchangelog.html changelog.dd
 
 ################### Win32 COFF support #########################
 
@@ -811,6 +820,9 @@ $(DOC)\std_digest_ripemd.html : $(STDDOC) std\digest\ripemd.d
 $(DOC)\std_digest_digest.html : $(STDDOC) std\digest\digest.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_digest.html $(STDDOC) std\digest\digest.d
 
+$(DOC)\std_digest_hmac.html : $(STDDOC) std\digest\hmac.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_hmac.html $(STDDOC) std\digest\hmac.d
+
 $(DOC)\std_windows_charset.html : $(STDDOC) std\windows\charset.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_windows_charset.html $(STDDOC) std\windows\charset.d
 
@@ -867,6 +879,9 @@ $(DOC)\etc_c_odbc_sqlext.html : $(STDDOC) etc\c\odbc\sqlext.d
 
 $(DOC)\etc_c_odbc_sqltypes.html : $(STDDOC) etc\c\odbc\sqltypes.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sqltypes.html $(STDDOC) etc\c\odbc\sqltypes.d
+
+$(DOC)\etc_c_odbc_sqlucode.html : $(STDDOC) etc\c\odbc\sqlucode.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sqlucode.html $(STDDOC) etc\c\odbc\sqlucode.d
 
 $(DOC)\etc_c_odbc_sql.html : $(STDDOC) etc\c\odbc\sql.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sql.html $(STDDOC) etc\c\odbc\sql.d

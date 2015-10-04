@@ -11,8 +11,8 @@ $(T2 cache,
         Eagerly evaluates and caches another range's $(D front).)
 $(T2 cacheBidirectional,
         As above, but also provides $(D back) and $(D popBack).)
-$(T2 chunkyBy,
-        $(D chunkyBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
+$(T2 chunkBy,
+        $(D chunkBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
         returns a range containing 3 subranges: the first with just
         $(D [1, 1]); the second with the elements $(D [1, 2]) and $(D [2, 2]);
         and the third with just $(D [2, 1]).)
@@ -35,6 +35,8 @@ $(T2 joiner,
 $(T2 map,
         $(D map!"2 * a"([1, 2, 3])) lazily returns a range with the numbers
         $(D 2), $(D 4), $(D 6).)
+$(T2 permutations,
+        Lazily computes all permutations using Heap's algorithm.)
 $(T2 reduce,
         $(D reduce!"a + b"([1, 2, 3, 4])) returns $(D 10).)
 $(T2 splitter,
@@ -2407,8 +2409,10 @@ unittest
         result ~= c;
     }
 
+    import std.conv : to;
     assert(equal(result, "abc12def34"d),
-        "Unexpected result: '%s'"d.algoFormat(result));
+        //Convert to string for assert's message
+        to!string("Unexpected result: '%s'"d.algoFormat(result)));
 }
 
 // Issue 8061
@@ -4194,4 +4198,89 @@ private struct UniqResult(alias pred, Range)
             assert(equal(retro(u), [10,9,8,7,6,5,4,3,2,1]));
         }
     }
+}
+
+// permutations
+struct Permutations(Range)
+    if (isRandomAccessRange!Range && hasLength!Range)
+{
+    size_t[] indices, state;
+    Range r;
+
+    this(Range r)
+    {
+        import std.range : iota;
+        import std.array : array;
+
+        this.r = r;
+        state = r.length ? new size_t[r.length-1] : null;
+        indices = iota(size_t(r.length)).array;
+        empty = r.length == 0;
+    }
+
+    bool empty;
+
+    @property auto front()
+    {
+        import std.range : indexed;
+        return r.indexed(indices);
+    }
+
+    void popFront()
+    {
+        void next(int n)
+        {
+            import std.algorithm.mutation : swap;
+
+            if (n > indices.length)
+            {
+                empty = true;
+                return;
+            }
+
+            if (n % 2 == 1)
+                swap(indices[0], indices[n-1]);
+            else
+                swap(indices[state[n-2]], indices[n-1]);
+
+            if (++state[n-2] == n)
+            {
+                state[n-2] = 0;
+                next(n+1);
+            }
+        }
+
+        next(2);
+    }
+}
+
+/**
+Lazily computes all _permutations of $(D r) using $(WEB
+en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
+
+Returns:
+A forward range the elements of which are an $(XREF range,
+indexed) view into $(D r).
+
+See_Also:
+$(XREF_PACK algorithm,sorting,nextPermutation).
+*/
+Permutations!Range permutations(Range)(Range r)
+    if (isRandomAccessRange!Range && hasLength!Range)
+{
+    return typeof(return)(r);
+}
+
+///
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
+    assert(equal!equal(iota(3).permutations,
+        [[0, 1, 2],
+         [1, 0, 2],
+         [2, 0, 1],
+         [0, 2, 1],
+         [1, 2, 0],
+         [2, 1, 0]]));
 }

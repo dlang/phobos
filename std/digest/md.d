@@ -284,6 +284,8 @@ struct MD5
         }
 
     public:
+        enum blockSize = 512;
+
         /**
          * Use this to feed the digest with data.
          * Also implements the $(XREF_PACK range,primitives,isOutputRange)

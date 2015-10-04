@@ -30,7 +30,9 @@ private
  * OutBuffer's byte order is the format native to the computer.
  * To control the byte order (endianness), use a class derived
  * from OutBuffer.
- * OutBuffer's internal buffer is allocated with the GC.
+ * OutBuffer's internal buffer is allocated with the GC. Pointers
+ * stored into the buffer are scanned by the GC, but you have to
+ * ensure proper alignment, e.g. by using alignSize((void*).sizeof).
  */
 
 class OutBuffer
@@ -80,8 +82,9 @@ class OutBuffer
             //c.stdio.printf("OutBuffer.reserve: length = %d, offset = %d, nbytes = %d\n", data.length, offset, nbytes);
             if (data.length < offset + nbytes)
             {
-                data.length = (offset + nbytes) * 2;
-                GC.clrAttr(data.ptr, GC.BlkAttr.NO_SCAN);
+                void[] vdata = data;
+                vdata.length = (offset + nbytes + 7) * 2; // allocates as void[] to not set BlkAttr.NO_SCAN
+                data = cast(ubyte[])vdata;
             }
         }
 

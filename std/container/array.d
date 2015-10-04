@@ -637,9 +637,7 @@ stuff)
     {
         // TODO: optimize
         Array result;
-        // @@@BUG@@ result ~= this[] doesn't work
-        auto r = this[];
-        result ~= r;
+        result ~= this[];
         assert(result.length == length);
         result ~= stuff[];
         return result;
@@ -1003,9 +1001,9 @@ unittest
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(11, 12, 13);
     auto c = a ~ b;
-    //foreach (e; c) writeln(e);
     assert(c == Array!int(1, 2, 3, 11, 12, 13));
-    //assert(a ~ b[] == Array!int(1, 2, 3, 11, 12, 13));
+    assert(a ~ b[] == Array!int(1, 2, 3, 11, 12, 13));
+    assert(a ~ [4,5] == Array!int(1,2,3,4,5));
 }
 
 unittest

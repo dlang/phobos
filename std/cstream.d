@@ -1,9 +1,8 @@
 // Written in the D programming language.
 
 /**
- * $(RED Warning: This module is considered out-dated and not up to Phobos'
- *       current standards. It will remain until we have a suitable replacement,
- *       but be aware that it will not remain long term.)
+ * $(RED Deprecated: This module is considered out-dated and not up to Phobos'
+ *       current standards. It will be remove in October 2016.)
  *
  * The std.cstream module bridges core.stdc.stdio (or std.stdio) and std.stream.
  * Both core.stdc.stdio and std.stream are publicly imported by std.cstream.
@@ -21,7 +20,8 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module std.cstream;
+deprecated("It will be removed from Phobos in October 2016. If you still need it, go to https://github.com/DigitalMars/undeaD") module std.cstream;
+// @@@DEPRECATED_2016-10@@@
 
 public import core.stdc.stdio;
 public import std.stream;

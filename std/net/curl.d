@@ -58,18 +58,18 @@ upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");)
 uploads file from file system to URL.)
 )
 $(TR $(TDNW $(LREF get)) $(TD $(D
-get("dlang.org")) returns a string containing the dlang.org web page.)
+get("dlang.org")) returns a char[] containing the dlang.org web page.)
 )
 $(TR $(TDNW $(LREF put)) $(TD $(D
-put("dlang.org", "Hi")) returns a string containing
+put("dlang.org", "Hi")) returns a char[] containing
 the dlang.org web page. after a HTTP PUT of "hi")
 )
 $(TR $(TDNW $(LREF post)) $(TD $(D
-post("dlang.org", "Hi")) returns a string containing
+post("dlang.org", "Hi")) returns a char[] containing
 the dlang.org web page. after a HTTP POST of "hi")
 )
 $(TR $(TDNW $(LREF byLine)) $(TD $(D
-byLine("dlang.org")) returns a range of strings containing the
+byLine("dlang.org")) returns a range of char[] containing the
 dlang.org web page.)
 )
 $(TR $(TDNW $(LREF byChunk)) $(TD $(D
@@ -77,7 +77,7 @@ byChunk("dlang.org", 10)) returns a range of ubyte[10] containing the
 dlang.org web page.)
 )
 $(TR $(TDNW $(LREF byLineAsync)) $(TD $(D
-byLineAsync("dlang.org")) returns a range of strings containing the dlang.org web
+byLineAsync("dlang.org")) returns a range of char[] containing the dlang.org web
  page asynchronously.)
 )
 $(TR $(TDNW $(LREF byChunkAsync)) $(TD $(D
@@ -96,14 +96,14 @@ Example:
 ---
 import std.net.curl, std.stdio;
 
-// Return a string containing the content specified by an URL
-string content = get("dlang.org");
+// Return a char[] containing the content specified by an URL
+auto content = get("dlang.org");
 
-// Post data and return a string containing the content specified by an URL
-string content = post("mydomain.com/here.cgi", "post data");
+// Post data and return a char[] containing the content specified by an URL
+auto content = post("mydomain.com/here.cgi", "post data");
 
 // Get content of file from ftp server
-string content = get("ftp.digitalmars.com/sieve.ds");
+auto content = get("ftp.digitalmars.com/sieve.ds");
 
 // Post and print out content line by line. The request is done in another thread.
 foreach (line; byLineAsync("dlang.org", "Post data"))
@@ -186,20 +186,133 @@ version(unittest)
     import std.file : tempDir;
     import std.path : buildPath;
 
-    // Source code for the test service is available at
-    // https://github.com/jcd/d-lang-testservice
-    enum testService = "d-lang.appspot.com";
+    import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
 
-    enum testUrl1 = "http://"~testService~"/testUrl1";
-    enum testUrl2 = "http://"~testService~"/testUrl2";
-    // No anonymous DigitalMars FTP access as of 2015
-    //enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
-    enum testUrl4 = testService~"/testUrl1";
-    enum testUrl5 = "http://"~testService~"/testUrl3";
+    private struct TestServer
+    {
+        string addr() { return _addr; }
+
+        void handle(void function(Socket s) dg)
+        {
+            tid.send(dg);
+        }
+
+    private:
+        string _addr;
+        Tid tid;
+
+        static void loop(shared TcpSocket listener)
+        {
+            try while (true)
+            {
+                void function(Socket) handler = void;
+                try
+                    handler = receiveOnly!(typeof(handler));
+                catch (OwnerTerminated)
+                    return;
+                handler((cast()listener).accept);
+            }
+            catch (Throwable e)
+            {
+                import core.stdc.stdlib : exit, EXIT_FAILURE;
+                stderr.writeln(e);
+                exit(EXIT_FAILURE); // Bugzilla 7018
+            }
+        }
+    }
+
+    private TestServer startServer()
+    {
+        auto sock = new TcpSocket;
+        sock.bind(new InternetAddress(INADDR_LOOPBACK, InternetAddress.PORT_ANY));
+        sock.listen(1);
+        auto addr = sock.localAddress.toString();
+        auto tid = spawn(&TestServer.loop, cast(shared)sock);
+        return TestServer(addr, tid);
+    }
+
+    private ref TestServer testServer()
+    {
+        __gshared TestServer server;
+        return initOnce!server(startServer());
+    }
+
+    private struct Request(T)
+    {
+        string hdrs;
+        immutable(T)[] bdy;
+    }
+
+    private Request!T recvReq(T=char)(Socket s)
+    {
+        ubyte[1024] tmp=void;
+        ubyte[] buf;
+
+        while (true)
+        {
+            auto nbytes = s.receive(tmp[]);
+            assert(nbytes >= 0);
+
+            immutable beg = buf.length > 3 ? buf.length - 3 : 0;
+            buf ~= tmp[0 .. nbytes];
+            auto bdy = buf[beg .. $].find(cast(ubyte[])"\r\n\r\n");
+            if (bdy.empty)
+                continue;
+
+            auto hdrs = cast(string)buf[0 .. $ - bdy.length];
+            bdy.popFrontN(4);
+            // no support for chunked transfer-encoding
+            if (auto m = hdrs.matchFirst(ctRegex!(`Content-Length: ([0-9]+)`, "i")))
+            {
+                import std.uni : asUpperCase;
+                if (hdrs.asUpperCase.canFind("EXPECT: 100-CONTINUE"))
+                    s.send(httpContinue);
+
+                size_t remain = m.captures[1].to!size_t - bdy.length;
+                while (remain)
+                {
+                    nbytes = s.receive(tmp[0 .. min(remain, $)]);
+                    assert(nbytes >= 0);
+                    buf ~= tmp[0 .. nbytes];
+                    remain -= nbytes;
+                }
+            }
+            else
+            {
+                assert(bdy.empty);
+            }
+            bdy = buf[hdrs.length + 4 .. $];
+            return typeof(return)(hdrs, cast(immutable(T)[])bdy);
+        }
+    }
+
+    private string httpOK(string msg)
+    {
+        return "HTTP/1.1 200 OK\r\n"~
+            "Content-Type: text/plain\r\n"~
+            "Content-Length: "~msg.length.to!string~"\r\n"
+            "\r\n"~
+            msg;
+    }
+
+    private string httpOK()
+    {
+        return "HTTP/1.1 200 OK\r\n"~
+            "Content-Length: 0\r\n"~
+            "\r\n";
+    }
+
+    private string httpNotFound()
+    {
+        return "HTTP/1.1 404 Not Found\r\n"~
+            "Content-Length: 0\r\n"~
+            "\r\n";
+    }
+
+    private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
 }
 version(StdDdoc) import std.stdio;
 
-version (Windows) pragma(lib, "curl");
 extern (C) void exit(int);
 
 // Default data timeout for Protocols
@@ -306,14 +419,17 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 
 unittest
 {
-    if (!netAllowed()) return;
-    // No anonymous DigitalMars FTP access as of 2015
-    //download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
-    auto fn = buildPath(tempDir(), "downloaded-http-file");
-    download("d-lang.appspot.com/testUrl1", fn);
-    assert(std.file.readText(fn) == "Hello world\n");
-    download!(HTTP)("d-lang.appspot.com/testUrl1", fn);
-    assert(std.file.readText(fn) == "Hello world\n");
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            assert(s.recvReq.hdrs.canFind("GET /"));
+            s.send(httpOK("Hello world"));
+        });
+        auto fn = buildPath(tempDir(), "downloaded-http-file");
+        scope (exit) std.file.remove(fn);
+        download(host, fn);
+        assert(std.file.readText(fn) == "Hello world");
+    }
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
@@ -354,24 +470,30 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
-        static import std.file;
-        void[] f;
-
-        conn.onSend = (void[] data)
-        {
-            f = std.file.read(loadFromPath);
-            return f.length;
-        };
-        conn.contentLength = f.length;
+        auto f = File(loadFromPath, "rb");
+        conn.onSend = buf => f.rawRead(buf).length;
+        auto sz = f.size;
+        if (sz != ulong.max)
+            conn.contentLength = sz;
         conn.perform();
     }
 }
 
 unittest
 {
-    if (!netAllowed()) return;
-    //    upload(buildPath(tempDir(), "downloaded-ftp-file"), "ftp.digitalmars.com/sieve.ds");
-    upload(buildPath(tempDir(), "downloaded-http-file"), "d-lang.appspot.com/testUrl2");
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        auto fn = buildPath(tempDir(), "downloaded-http-file");
+        scope (exit) std.file.remove(fn);
+        std.file.write(fn, "upload data\n");
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("PUT /path"));
+            assert(req.bdy.canFind("upload data"));
+            s.send(httpOK());
+        });
+        upload(fn, host ~ "/path");
+    }
 }
 
 /** HTTP/FTP get content.
@@ -390,7 +512,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = get("d-lang.appspot.com/testUrl2");
+ * auto content = get("d-lang.appspot.com/testUrl2");
  * ----
  *
  * Returns:
@@ -426,17 +548,15 @@ T[] get(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = get(testUrl1);
-    assert(res == "Hello world\n",
-           "get!HTTP() returns unexpected content " ~ res);
-    res = get(testUrl4);
-    assert(res == "Hello world\n",
-           "get!HTTP() returns unexpected content: " ~ res);
-    // No anonymous DigitalMars FTP access as of 2015
-    //res = get(testUrl3);
-    //assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
-    //       "get!FTP() returns unexpected content");
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            assert(s.recvReq.hdrs.canFind("GET /path"));
+            s.send(httpOK("GETRESPONSE"));
+        });
+        auto res = get(host ~ "/path");
+        assert(res == "GETRESPONSE");
+    }
 }
 
 
@@ -447,8 +567,7 @@ unittest
  * postData = data to send as the body of the request. An array
  *            of an arbitrary type is accepted and will be cast to ubyte[]
  *            before sending it.
- * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
- *        guess connection type and create a new instance for this call only.
+ * conn = HTTP connection to use
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
@@ -459,7 +578,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
+ * auto content = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
  * ----
  *
  * Returns:
@@ -476,30 +595,33 @@ if (is(T == char) || is(T == ubyte))
 
 unittest
 {
-    if (!netAllowed()) return;
-
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        string data = "Hello world";
-        auto res = post(testUrl2, data);
-        assert(res == data,
-               "post!HTTP() returns unexpected content " ~ res);
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("POST /path"));
+            assert(req.bdy.canFind("POSTBODY"));
+            s.send(httpOK("POSTRESPONSE"));
+        });
+        auto res = post(host ~ "/path", "POSTBODY");
+        assert(res == "POSTRESPONSE");
     }
+}
 
-    {
-        ubyte[] data;
-        foreach (n; 0..256)
-            data ~= cast(ubyte)n;
-        auto res = post!ubyte(testUrl2, data);
-        assert(res == data,
-               "post!HTTP() with binary data returns unexpected content (" ~ text(res.length) ~ " bytes)");
-    }
+unittest
+{
+    auto data = new ubyte[](256);
+    foreach (i, ref ub; data)
+        ub = cast(ubyte)i;
 
-    {
-        string data = "Hello world";
-        auto res = post(testUrl5, data);
-        assert(res == data,
-               "post!HTTP() returns unexpected content after redirect " ~ res);
-    }
+    testServer.handle((s) {
+        auto req = s.recvReq!ubyte;
+        assert(req.bdy.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
+        assert(req.bdy.canFind(cast(ubyte[])[253, 254, 255]));
+        s.send(httpOK(cast(ubyte[])[17, 27, 35, 41]));
+    });
+    auto res = post!ubyte(testServer.addr, data);
+    assert(res == cast(ubyte[])[17, 27, 35, 41]);
 }
 
 
@@ -522,7 +644,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = put("d-lang.appspot.com/testUrl2",
+ * auto content = put("d-lang.appspot.com/testUrl2",
  *                      "Putting this data");
  * ----
  *
@@ -555,15 +677,17 @@ T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = put(testUrl2, "Hello world");
-    assert(res == "Hello world",
-           "put!HTTP() returns unexpected content " ~ res);
-
-    // TODO: need ftp server to test with
-    //    res = get(testUrl3);
-    //    assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
-    //       "get!FTP() returns unexpected content");
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("PUT /path"));
+            assert(req.bdy.canFind("PUTBODY"));
+            s.send(httpOK("PUTRESPONSE"));
+        });
+        auto res = put(host ~ "/path", "PUTBODY");
+        assert(res == "PUTRESPONSE");
+    }
 }
 
 
@@ -615,8 +739,15 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
 
 unittest
 {
-    if (!netAllowed()) return;
-    del(testUrl1);
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("DELETE /path"));
+            s.send(httpOK());
+        });
+        del(host ~ "/path");
+    }
 }
 
 
@@ -624,22 +755,17 @@ unittest
  *
  * Params:
  * url = resource make a option call to
- * optionsData = options data to send as the body of the request. An array
- *               of an arbitrary type is accepted and will be cast to ubyte[]
- *               before sending it.
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
- * Currently the HTTP RFC does not specify any usage of the optionsData and
- * for this reason the example below does not send optionsData to the server.
  *
  * Example:
  * ----
  * import std.net.curl;
  * auto http = HTTP();
- * options("d-lang.appspot.com/testUrl2", null, http);
+ * options("d-lang.appspot.com/testUrl2", http);
  * writeln("Allow set to " ~ http.responseHeaders["Allow"]);
  * ----
  *
@@ -648,29 +774,31 @@ unittest
  *
  * See_Also: $(LREF HTTP.Method)
  */
+T[] options(T = char)(const(char)[] url, HTTP conn = HTTP())
+    if (is(T == char) || is(T == ubyte))
+{
+    conn.method = HTTP.Method.options;
+    return _basicHTTP!(T)(url, null, conn);
+}
+
+deprecated("options does not send any data")
 T[] options(T = char, OptionsUnit)(const(char)[] url,
                                    const(OptionsUnit)[] optionsData = null,
                                    HTTP conn = HTTP())
-if (is(T == char) || is(T == ubyte))
+    if (is(T == char) || is(T == ubyte))
 {
-    conn.method = HTTP.Method.options;
-    return _basicHTTP!(T)(url, optionsData, conn);
+    return options!T(url, conn);
 }
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = options(testUrl2, "Hello world");
-    assert(res == "Hello world",
-           "options!HTTP() returns unexpected content " ~ res);
-}
-
-unittest
-{
-    if (!netAllowed()) return;
-    auto res = options(testUrl1, []);
-    assert(res == "Hello world\n",
-           "options!HTTP() returns unexpected content " ~ res);
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("OPTIONS /path"));
+        s.send(httpOK("OPTIONSRESPONSE"));
+    });
+    auto res = options(testServer.addr ~ "/path");
+    assert(res == "OPTIONSRESPONSE");
 }
 
 
@@ -704,10 +832,13 @@ T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = trace(testUrl1);
-    assert(res == "Hello world\n",
-           "trace!HTTP() returns unexpected content " ~ res);
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("TRACE /path"));
+        s.send(httpOK("TRACERESPONSE"));
+    });
+    auto res = trace(testServer.addr ~ "/path");
+    assert(res == "TRACERESPONSE");
 }
 
 
@@ -715,8 +846,7 @@ unittest
  *
  * Params:
  * url = resource make a connect to
- * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
- *        guess connection type and create a new instance for this call only.
+ * conn = HTTP connection to use
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
@@ -741,11 +871,58 @@ T[] connect(T = char)(const(char)[] url, HTTP conn = HTTP())
 
 unittest
 {
-    // google appspot does not allow connect method.
-    //    if (!netAllowed()) return;
-    //    auto res = connect(testUrl1);
-    //    assert(res == "Hello world\n",
-    //           "connect!HTTP() returns unexpected content " ~ res);
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("CONNECT /path"));
+        s.send(httpOK("CONNECTRESPONSE"));
+    });
+    auto res = connect(testServer.addr ~ "/path");
+    assert(res == "CONNECTRESPONSE");
+}
+
+
+/** HTTP patch content.
+ *
+ * Params:
+ * url = resource to patch
+ * patchData = data to send as the body of the request. An array
+ *           of an arbitrary type is accepted and will be cast to ubyte[]
+ *           before sending it.
+ * conn = HTTP connection to use
+ *
+ * The template parameter $(D T) specifies the type to return. Possible values
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ *
+ * Example:
+ * ----
+ * auto http = HTTP();
+ * http.addRequestHeader("Content-Type", "application/json");
+ * auto content = patch("d-lang.appspot.com/testUrl2", `{"title": "Patched Title"}`, http);
+ * ----
+ *
+ * Returns:
+ * A T[] range containing the content of the resource pointed to by the URL.
+ *
+ * See_Also: $(LREF HTTP.Method)
+ */
+T[] patch(T = char, PatchUnit)(const(char)[] url, const(PatchUnit)[] patchData,
+                               HTTP conn = HTTP())
+    if (is(T == char) || is(T == ubyte))
+{
+    conn.method = HTTP.Method.patch;
+    return _basicHTTP!(T)(url, patchData, conn);
+}
+
+unittest
+{
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("PATCH /path"));
+        assert(req.bdy.canFind("PATCHBODY"));
+        s.send(httpOK("PATCHRESPONSE"));
+    });
+    auto res = patch(testServer.addr ~ "/path", "PATCHBODY");
+    assert(res == "PATCHRESPONSE");
 }
 
 
@@ -757,17 +934,22 @@ unittest
  */
 private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP client)
 {
+    immutable doSend = sendData !is null &&
+        (client.method == HTTP.Method.post ||
+         client.method == HTTP.Method.put ||
+         client.method == HTTP.Method.patch);
+
     scope (exit)
     {
         client.onReceiveHeader = null;
         client.onReceiveStatusLine = null;
         client.onReceive = null;
 
-        if (sendData !is null &&
-            (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+        if (doSend)
         {
             client.onSend = null;
             client.handle.onSeek = null;
+            client.contentLength = 0;
         }
     }
     client.url = url;
@@ -780,8 +962,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         return data.length;
     };
 
-    if (sendData !is null &&
-        (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+    if (doSend)
     {
         client.contentLength = sendData.length;
         auto remainingData = sendData;
@@ -841,9 +1022,37 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto e = collectException!CurlException(get(testUrl1 ~ "nonexisting"));
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("GET /path"));
+        s.send(httpNotFound());
+    });
+    auto e = collectException!CurlException(get(testServer.addr ~ "/path"));
     assert(e.msg == "HTTP request returned status code 404 (Not Found)");
+}
+
+// Bugzilla 14760 - content length must be reset after post
+unittest
+{
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("POST /"));
+        assert(req.bdy.canFind("POSTBODY"));
+        s.send(httpOK("POSTRESPONSE"));
+
+        req = s.recvReq;
+        assert(req.hdrs.canFind("TRACE /"));
+        assert(req.bdy.empty);
+        s.blocking = false;
+        ubyte[6] buf = void;
+        assert(s.receive(buf[]) < 0);
+        s.send(httpOK("TRACERESPONSE"));
+    });
+    auto http = HTTP();
+    auto res = post(testServer.addr, "POSTBODY", http);
+    assert(res == "POSTRESPONSE");
+    res = trace(testServer.addr, http);
+    assert(res == "TRACERESPONSE");
 }
 
 /*
@@ -1047,16 +1256,14 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = byLine(testUrl1);
-    auto line = res.front;
-    assert(line == "Hello world",
-           "byLine!HTTP() returns unexpected content: " ~ line);
-
-    auto res2 = byLine(testUrl1, KeepTerminator.no, '\n', HTTP());
-    line = res2.front;
-    assert(line == "Hello world",
-           "byLine!HTTP() returns unexpected content: " ~ line);
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            s.send(httpOK("Line1\nLine2\nLine3"));
+        });
+        assert(byLine(host).equal(["Line1", "Line2", "Line3"]));
+    }
 }
 
 /** HTTP/FTP fetch content as a range of chunks.
@@ -1121,17 +1328,14 @@ auto byChunk(Conn = AutoProtocol)
 
 unittest
 {
-    if (!netAllowed()) return;
-
-    auto res = byChunk(testUrl1);
-    auto line = res.front;
-    assert(line == cast(ubyte[])"Hello world\n",
-           "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
-
-    auto res2 = byChunk(testUrl1, 1024, HTTP());
-    line = res2.front;
-    assert(line == cast(ubyte[])"Hello world\n",
-           "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
+        });
+        assert(byChunk(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
+    }
 }
 
 private T[] _getForRange(T,Conn)(const(char)[] url, Conn conn)
@@ -1416,15 +1620,14 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = byLineAsync(testUrl2, "Hello world");
-    auto line = res.front;
-    assert(line == "Hello world",
-           "byLineAsync!HTTP() returns unexpected content " ~ line);
-    res = byLineAsync(testUrl1);
-    line = res.front;
-    assert(line == "Hello world",
-           "byLineAsync!HTTP() returns unexpected content: " ~ line);
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            s.send(httpOK("Line1\nLine2\nLine3"));
+        });
+        assert(byLineAsync(host).equal(["Line1", "Line2", "Line3"]));
+    }
 }
 
 
@@ -1566,15 +1769,14 @@ auto byChunkAsync(Conn = AutoProtocol)
 
 unittest
 {
-    if (!netAllowed()) return;
-    auto res = byChunkAsync(testUrl2, "Hello world");
-    auto line = res.front;
-    assert(line == cast(ubyte[])"Hello world",
-           "byLineAsync!HTTP() returns unexpected content " ~ to!string(line));
-    res = byChunkAsync(testUrl1);
-    line = res.front;
-    assert(line == cast(ubyte[])"Hello world\n",
-           "byLineAsync!HTTP() returns unexpected content: " ~ to!string(line));
+    foreach (host; [testServer.addr, "http://"~testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
+        });
+        assert(byChunkAsync(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
+    }
 }
 
 
@@ -1830,13 +2032,16 @@ private mixin template Protocol()
 
     unittest
     {
-        if (!netAllowed()) return;
-        auto http = HTTP("http://www.protected.com");
-        http.onReceiveHeader =
-            (in char[] key,
-             in char[] value) { /* writeln(key ~ ": " ~ value); */ };
+        testServer.handle((s) {
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("GET /"));
+            assert(req.hdrs.canFind("Basic dXNlcjpwYXNz"));
+            s.send(httpOK());
+        });
+
+        auto http = HTTP(testServer.addr);
         http.onReceive = (ubyte[] data) { return data.length; };
-        http.setAuthentication("myuser", "mypassword");
+        http.setAuthentication("user", "pass");
         http.perform();
     }
 
@@ -2107,7 +2312,7 @@ struct HTTP
         ~this()
         {
             if (headersOut !is null)
-                curl_slist_free_all(headersOut);
+                Curl.curl.slist_free_all(headersOut);
             if (curl.handle !is null) // work around RefCounted/emplace bug
                 curl.shutdown();
         }
@@ -2222,7 +2427,7 @@ struct HTTP
         curl_slist* newlist = null;
         while (cur)
         {
-            newlist = curl_slist_append(newlist, cur.data);
+            newlist = Curl.curl.slist_append(newlist, cur.data);
             cur = cur.next;
         }
         copy.p.headersOut = newlist;
@@ -2242,7 +2447,6 @@ struct HTTP
         setUserAgent(HTTP.defaultUserAgent);
         dataTimeout = _defaultDataTimeout;
         onReceiveHeader = null;
-        version (unittest) verbose = true;
         verifyPeer = true;
         verifyHost = true;
     }
@@ -2261,35 +2465,49 @@ struct HTTP
     {
         p.status.reset();
 
+        CurlOption opt;
         final switch (p.method)
         {
         case Method.head:
             p.curl.set(CurlOption.nobody, 1L);
+            opt = CurlOption.nobody;
             break;
         case Method.undefined:
         case Method.get:
             p.curl.set(CurlOption.httpget, 1L);
+            opt = CurlOption.httpget;
             break;
         case Method.post:
             p.curl.set(CurlOption.post, 1L);
+            opt = CurlOption.post;
             break;
         case Method.put:
             p.curl.set(CurlOption.upload, 1L);
+            opt = CurlOption.upload;
             break;
         case Method.del:
             p.curl.set(CurlOption.customrequest, "DELETE");
+            opt = CurlOption.customrequest;
             break;
         case Method.options:
             p.curl.set(CurlOption.customrequest, "OPTIONS");
+            opt = CurlOption.customrequest;
             break;
         case Method.trace:
             p.curl.set(CurlOption.customrequest, "TRACE");
+            opt = CurlOption.customrequest;
             break;
         case Method.connect:
             p.curl.set(CurlOption.customrequest, "CONNECT");
+            opt = CurlOption.customrequest;
+            break;
+        case Method.patch:
+            p.curl.set(CurlOption.customrequest, "PATCH");
+            opt = CurlOption.customrequest;
             break;
         }
 
+        scope (exit) p.curl.clear(opt);
         return p.curl.perform(throwOnError);
     }
 
@@ -2522,7 +2740,7 @@ struct HTTP
     void clearRequestHeaders()
     {
         if (p.headersOut !is null)
-            curl_slist_free_all(p.headersOut);
+            Curl.curl.slist_free_all(p.headersOut);
         p.headersOut = null;
         p.curl.clear(CurlOption.httpheader);
     }
@@ -2537,7 +2755,7 @@ struct HTTP
      * import std.net.curl;
      * auto client = HTTP();
      * client.addRequestHeader("X-Custom-ABC", "This is the custom value");
-     * string content = get("dlang.org", client);
+     * auto content = get("dlang.org", client);
      * ---
      */
     void addRequestHeader(const(char)[] name, const(char)[] value)
@@ -2545,8 +2763,8 @@ struct HTTP
         if (icmp(name, "User-Agent") == 0)
             return setUserAgent(value);
         string nv = format("%s: %s", name, value);
-        p.headersOut = curl_slist_append(p.headersOut,
-                                         nv.tempCString().buffPtr);
+        p.headersOut = Curl.curl.slist_append(p.headersOut,
+                                              nv.tempCString().buffPtr);
         p.curl.set(CurlOption.httpheader, p.headersOut);
     }
 
@@ -2554,9 +2772,7 @@ struct HTTP
      * The default "User-Agent" value send with a request.
      * It has the form "Phobos-std.net.curl/$(I PHOBOS_VERSION) (libcurl/$(I CURL_VERSION))"
      */
-    static immutable string defaultUserAgent;
-
-    shared static this()
+    static string defaultUserAgent() @property
     {
         import std.compiler : version_major, version_minor;
 
@@ -2564,12 +2780,17 @@ struct HTTP
         enum fmt = "Phobos-std.net.curl/%d.%03d (libcurl/%d.%d.%d)";
         enum maxLen = fmt.length - "%d%03d%d%d%d".length + 10 + 10 + 3 + 3 + 3;
 
-        __gshared char[maxLen] buf = void;
+        static char[maxLen] buf = void;
+        static string userAgent;
 
-        auto curlVer = curl_version_info(CURLVERSION_NOW).version_num;
-        defaultUserAgent = cast(immutable)sformat(
-            buf, fmt, version_major, version_minor,
-            curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
+        if (!userAgent.length)
+        {
+            auto curlVer = Curl.curl.version_info(CURLVERSION_NOW).version_num;
+            userAgent = cast(immutable)sformat(
+                buf, fmt, version_major, version_minor,
+                curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
+        }
+        return userAgent;
     }
 
     /** Set the value of the user agent request header field.
@@ -2729,17 +2950,23 @@ struct HTTP
 
     unittest
     {
-        if (!netAllowed()) return;
-        ubyte[] data;
-        foreach (n; 0..256)
-            data ~= cast(ubyte)n;
-        auto http = HTTP(testUrl2);
+        testServer.handle((s) {
+            auto req = s.recvReq!ubyte;
+            assert(req.hdrs.canFind("POST /path"));
+            assert(req.bdy.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
+            assert(req.bdy.canFind(cast(ubyte[])[253, 254, 255]));
+            s.send(httpOK(cast(ubyte[])[17, 27, 35, 41]));
+        });
+        auto data = new ubyte[](256);
+        foreach (i, ref ub; data)
+            ub = cast(ubyte)i;
+
+        auto http = HTTP(testServer.addr~"/path");
         http.postData = data;
-        ubyte[] result;
-        http.onReceive = (ubyte[] data) { result ~= data; return data.length; };
+        ubyte[] res;
+        http.onReceive = (data) { res ~= data; return data.length; };
         http.perform();
-        assert(data == result,
-               "HTTP POST with binary data returns unexpected content (" ~ text(result.length) ~ " bytes)");
+        assert(res == cast(ubyte[])[17, 27, 35, 41]);
     }
 
     /**
@@ -2779,23 +3006,26 @@ struct HTTP
     /**
        The content length in bytes when using request that has content
        e.g. POST/PUT and not using chunked transfer. Is set as the
-       "Content-Length" header.  Set to size_t.max to reset to chunked transfer.
+       "Content-Length" header.  Set to ulong.max to reset to chunked transfer.
     */
-    @property void contentLength(size_t len)
+    @property void contentLength(ulong len)
     {
         CurlOption lenOpt;
 
         // Force post if necessary
-        if (p.method != Method.put && p.method != Method.post)
+        if (p.method != Method.put && p.method != Method.post &&
+            p.method != Method.patch)
             p.method = Method.post;
 
-        if (p.method == Method.put)
-            lenOpt = CurlOption.infilesize_large;
-        else
-            // post
+        if (p.method == Method.post || p.method == Method.patch)
             lenOpt = CurlOption.postfieldsize_large;
+        else
+            lenOpt = CurlOption.infilesize_large;
 
-        if (len == size_t.max)
+        if (size_t.max != ulong.max && len == size_t.max)
+            len = ulong.max; // check size_t.max for backwards compat, turn into error
+
+        if (len == ulong.max)
         {
             // HTTP 1.1 supports requests with no length header set.
             addRequestHeader("Transfer-Encoding", "chunked");
@@ -2803,7 +3033,7 @@ struct HTTP
         }
         else
         {
-            p.curl.set(lenOpt, len);
+            p.curl.set(lenOpt, to!curl_off_t(len));
         }
     }
 
@@ -2846,7 +3076,8 @@ struct HTTP
         del,  ///
         options, ///
         trace,   ///
-        connect  ///
+        connect,  ///
+        patch, ///
     }
 
     /**
@@ -2896,7 +3127,7 @@ struct FTP
         ~this()
         {
             if (commands !is null)
-                curl_slist_free_all(commands);
+                Curl.curl.slist_free_all(commands);
             if (curl.handle !is null) // work around RefCounted/emplace bug
                 curl.shutdown();
         }
@@ -2935,7 +3166,7 @@ struct FTP
         curl_slist* newlist = null;
         while (cur)
         {
-            newlist = curl_slist_append(newlist, cur.data);
+            newlist = Curl.curl.slist_append(newlist, cur.data);
             cur = cur.next;
         }
         copy.p.commands = newlist;
@@ -2949,7 +3180,6 @@ struct FTP
         p.curl.initialize();
         p.encoding = "ISO-8859-1";
         dataTimeout = _defaultDataTimeout;
-        version (unittest) verbose = true;
     }
 
     /**
@@ -3151,7 +3381,7 @@ struct FTP
     void clearCommands()
     {
         if (p.commands !is null)
-            curl_slist_free_all(p.commands);
+            Curl.curl.slist_free_all(p.commands);
         p.commands = null;
         p.curl.clear(CurlOption.postquote);
     }
@@ -3172,8 +3402,8 @@ struct FTP
      */
     void addCommand(const(char)[] command)
     {
-        p.commands = curl_slist_append(p.commands,
-                                       command.tempCString().buffPtr);
+        p.commands = Curl.curl.slist_append(p.commands,
+                                            command.tempCString().buffPtr);
         p.curl.set(CurlOption.postquote, p.commands);
     }
 
@@ -3192,9 +3422,9 @@ struct FTP
     /**
        The content length in bytes of the ftp data.
     */
-    @property void contentLength(size_t len)
+    @property void contentLength(ulong len)
     {
-        p.curl.set(CurlOption.infilesize_large, len);
+        p.curl.set(CurlOption.infilesize_large, to!curl_off_t(len));
     }
 }
 
@@ -3278,7 +3508,7 @@ struct SMTP
         curl_slist* newlist = null;
         while (cur)
         {
-            newlist = curl_slist_append(newlist, cur.data);
+            newlist = Curl.curl.slist_append(newlist, cur.data);
             cur = cur.next;
         }
         copy.p.commands = newlist;
@@ -3512,7 +3742,7 @@ struct SMTP
         foreach(recipient; recipients)
         {
             recipients_list =
-                curl_slist_append(recipients_list,
+                Curl.curl.slist_append(recipients_list,
                                   recipient.tempCString().buffPtr);
         }
         p.curl.set(CurlOption.mail_rcpt, recipients_list);
@@ -3579,6 +3809,119 @@ import std.typecons : Flag;
 /// Flag to specify whether or not an exception is thrown on error.
 alias ThrowOnError = Flag!"throwOnError";
 
+private struct CurlAPI
+{
+    static struct API
+    {
+    extern(C):
+        import core.stdc.config : c_long;
+        CURLcode function(c_long flags) global_init;
+        void function() global_cleanup;
+        curl_version_info_data * function(CURLversion) version_info;
+        CURL* function() easy_init;
+        CURLcode function(CURL *curl, CURLoption option,...) easy_setopt;
+        CURLcode function(CURL *curl) easy_perform;
+        CURL* function(CURL *curl) easy_duphandle;
+        char* function(CURLcode) easy_strerror;
+        CURLcode function(CURL *handle, int bitmask) easy_pause;
+        void function(CURL *curl) easy_cleanup;
+        curl_slist* function(curl_slist *, char *) slist_append;
+        void function(curl_slist *) slist_free_all;
+    }
+    __gshared API _api;
+    __gshared void* _handle;
+
+    static ref API instance() @property
+    {
+        import std.concurrency;
+        initOnce!_handle(loadAPI());
+        return _api;
+    }
+
+    static void* loadAPI()
+    {
+        version (Posix)
+        {
+            import core.sys.posix.dlfcn;
+            alias loadSym = dlsym;
+        }
+        else version (Windows)
+        {
+            import core.sys.windows.windows;
+            alias loadSym = GetProcAddress;
+        }
+        else
+            static assert(0, "unimplemented");
+
+        void* handle;
+        version (Posix)
+            handle = dlopen(null, RTLD_LAZY);
+        else version (Windows)
+            handle = GetModuleHandleA(null);
+        assert(handle !is null);
+
+        // try to load curl from the executable to allow static linking
+        if (loadSym(handle, "curl_global_init") is null)
+        {
+            version (Posix)
+                dlclose(handle);
+
+            version (OSX)
+                static immutable names = ["libcurl.4.dylib"];
+            else version (Posix)
+                static immutable names = ["libcurl.so", "libcurl.so.4", "libcurl-gnutls.so.4", "libcurl-nss.so.4", "libcurl.so.3"];
+            else version (Windows)
+                static immutable names = ["libcurl.dll", "curl.dll"];
+
+            foreach (name; names)
+            {
+                version (Posix)
+                    handle = dlopen(name.ptr, RTLD_LAZY);
+                else version (Windows)
+                    handle = LoadLibraryA(name.ptr);
+                if (handle !is null) break;
+            }
+
+            enforce!CurlException(handle !is null, "Failed to load curl, tried %(%s, %).".format(names));
+        }
+
+        foreach (mem; __traits(allMembers, API))
+        {
+            void* p = loadSym(handle, "curl_"~mem);
+
+            __traits(getMember, _api, mem) = cast(typeof(__traits(getMember, _api, mem)))
+                enforce!CurlException(p, "Couldn't load curl_"~mem~" from libcurl.");
+        }
+
+        enforce!CurlException(!_api.global_init(CurlGlobal.all),
+                              "Failed to initialize libcurl");
+
+        return handle;
+    }
+
+    shared static ~this()
+    {
+        if (_handle is null) return;
+
+        _api.global_cleanup();
+        version (Posix)
+        {
+            import core.sys.posix.dlfcn;
+            dlclose(_handle);
+        }
+        else version (Windows)
+        {
+            import core.sys.windows.windows;
+            FreeLibrary(_handle);
+        }
+        else
+            static assert(0, "unimplemented");
+
+        _api = API.init;
+        _handle = null;
+    }
+}
+
 /**
   Wrapper to provide a better interface to libcurl than using the plain C API.
   It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
@@ -3591,21 +3934,11 @@ alias ThrowOnError = Flag!"throwOnError";
 */
 struct Curl
 {
-    shared static this()
-    {
-        // initialize early to prevent thread races
-        enforce!CurlException(!curl_global_init(CurlGlobal.all),
-                                "Couldn't initialize libcurl");
-    }
-
-    shared static ~this()
-    {
-        curl_global_cleanup();
-    }
-
     alias OutData = void[];
     alias InData = ubyte[];
     bool stopped;
+
+    private static auto ref curl() @property { return CurlAPI.instance(); }
 
     // A handle should not be used by two threads simultaneously
     private CURL* handle;
@@ -3628,7 +3961,7 @@ struct Curl
     void initialize()
     {
         enforce!CurlException(!handle, "Curl instance already initialized");
-        handle = curl_easy_init();
+        handle = curl.easy_init();
         enforce!CurlException(handle, "Curl instance couldn't be initialized");
         stopped = false;
         set(CurlOption.nosignal, 1);
@@ -3645,23 +3978,18 @@ struct Curl
     Curl dup()
     {
         Curl copy;
-        copy.handle = curl_easy_duphandle(handle);
+        copy.handle = curl.easy_duphandle(handle);
         copy.stopped = false;
 
         with (CurlOption) {
             auto tt = TypeTuple!(file, writefunction, writeheader,
-                                 headerfunction, infile,
-                                 readfunction, ioctldata, ioctlfunction,
-                                 seekdata, seekfunction, sockoptdata,
-                                 sockoptfunction, opensocketdata,
-                                 opensocketfunction, noprogress,
-                                 progressdata, progressfunction,
-                                 debugdata, debugfunction,
-                                 interleavedata,
-                                 interleavefunction, chunk_data,
-                                 chunk_bgn_function, chunk_end_function,
-                                 fnmatch_data, fnmatch_function,
-                                 cookiejar, postfields);
+                headerfunction, infile, readfunction, ioctldata, ioctlfunction,
+                seekdata, seekfunction, sockoptdata, sockoptfunction,
+                opensocketdata, opensocketfunction, progressdata,
+                progressfunction, debugdata, debugfunction, interleavedata,
+                interleavefunction, chunk_data, chunk_bgn_function,
+                chunk_end_function, fnmatch_data, fnmatch_function, cookiejar, postfields);
+
             foreach(option; tt)
                 copy.clear(option);
         }
@@ -3710,7 +4038,7 @@ struct Curl
     {
         import core.stdc.string : strlen;
 
-        auto msgZ = curl_easy_strerror(code);
+        auto msgZ = curl.easy_strerror(code);
         // doing the following (instead of just using std.conv.to!string) avoids 1 allocation
         return format("%s on handle %s", msgZ[0 .. core.stdc.string.strlen(msgZ)], handle);
     }
@@ -3730,7 +4058,7 @@ struct Curl
     {
         throwOnStopped();
         stopped = true;
-        curl_easy_cleanup(this.handle);
+        curl.easy_cleanup(this.handle);
         this.handle = null;
     }
 
@@ -3740,7 +4068,7 @@ struct Curl
     void pause(bool sendingPaused, bool receivingPaused)
     {
         throwOnStopped();
-        _check(curl_easy_pause(this.handle,
+        _check(curl.easy_pause(this.handle,
                                (sendingPaused ? CurlPause.send_cont : CurlPause.send) |
                                (receivingPaused ? CurlPause.recv_cont : CurlPause.recv)));
     }
@@ -3754,7 +4082,7 @@ struct Curl
     void set(CurlOption option, const(char)[] value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, value.tempCString().buffPtr));
+        _check(curl.easy_setopt(this.handle, option, value.tempCString().buffPtr));
     }
 
     /**
@@ -3766,7 +4094,7 @@ struct Curl
     void set(CurlOption option, long value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, value));
+        _check(curl.easy_setopt(this.handle, option, value));
     }
 
     /**
@@ -3778,7 +4106,7 @@ struct Curl
     void set(CurlOption option, void* value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, value));
+        _check(curl.easy_setopt(this.handle, option, value));
     }
 
     /**
@@ -3789,7 +4117,7 @@ struct Curl
     void clear(CurlOption option)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, null));
+        _check(curl.easy_setopt(this.handle, option, null));
     }
 
     /**
@@ -3801,11 +4129,9 @@ struct Curl
     void clearIfSupported(CurlOption option)
     {
         throwOnStopped();
-        auto rval = curl_easy_setopt(this.handle, option, null);
-        if (rval != CurlError.unknown_telnet_option)
-        {
+        auto rval = curl.easy_setopt(this.handle, option, null);
+        if (rval != CurlError.unknown_option && rval != CurlError.not_built_in)
             _check(rval);
-        }
     }
 
     /**
@@ -3818,7 +4144,7 @@ struct Curl
     CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         throwOnStopped();
-        CurlCode code = curl_easy_perform(this.handle);
+        CurlCode code = curl.easy_perform(this.handle);
         if (throwOnError)
             _check(code);
         return code;
@@ -4460,9 +4786,4 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
         _finalizeAsyncLines(bufferValid, buffer, fromTid);
 
     fromTid.send(thisTid, curlMessage(true)); // signal done
-}
-
-version (unittest) private auto netAllowed()
-{
-    return environment.get("PHOBOS_TEST_ALLOW_NET") != null;
 }

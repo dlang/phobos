@@ -196,13 +196,13 @@ private void doPut(R, E)(ref R r, auto ref E e)
     static if (usingPut)
     {
         static assert(is(typeof(r.put(e))),
-            "Cannot nativaly put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+            "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
         r.put(e);
     }
     else static if (isInputRange!R)
     {
         static assert(is(typeof(r.front = e)),
-            "Cannot nativaly put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+            "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
         r.front = e;
         r.popFront();
     }
@@ -213,7 +213,7 @@ private void doPut(R, E)(ref R r, auto ref E e)
     else
     {
         static assert (false,
-            "Cannot nativaly put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+            "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
@@ -792,7 +792,10 @@ template isForwardRange(R)
     static assert(!isForwardRange!(int));
     static assert( isForwardRange!(int[]));
     static assert( isForwardRange!(inout(int)[]));
+}
 
+@safe unittest
+{
     // BUG 14544
     struct R14544
     {

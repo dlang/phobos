@@ -1,466 +1,120 @@
-$(VERSION 061, ddd mm, 2012, =================================================,
-    $(WHATSNEW
-        $(LI std.string: $(RED The implementations of std.string.format and string.sformat have
-             been replaced with improved implementations which conform to writef. In some,
-             rare cases, this will break code. Please see the documentation for std.string.format
-             and std.string.sformat for details.))
-        $(LI std.string.format now works in CTFE.)
-        $(LI std.range.hasSlicing has been made stricter in an effort to make it more reliable.
-             opSlice for infinite ranges must now return the result of std.range.take, and any
-             range with slicing which supports $(D $) must now support it with the same semantics
-             as arrays (including supporting subtraction for finite ranges).)
-        $(LI std.range.isRandomAccessRange now requires hasLength for finite ranges, as it makes no
-             sense for such ranges not to define length and many random-access algorithms rely
-             on length.)
-        $(LI std.digest: Added new package for digests. This replaces std.md5 and the internal crc32
-             implementation.)
-        $(LI std.digest.sha: Added SHA1 digest implementation, including a fast SSSE3 version.)
-        $(LI std.digest.ripemd: Added RIPEMD-160 digest implementation.)
-        $(LI std.uuid: Support SHA1 UUIDs.)
-        $(LI std.uuid: md5UUID and sha1UUID can now be used in pure code.)
-        $(LI std.net.curl: Added operationTimeout.)
-        $(LI std.md5 has been scheduled for deprecation (Use std.digest.md instead).)
-        $(LI crc32 has been scheduled for deprecation (Use std.digest.crc instead).)
-        $(LI std.string.xformat and std.string.xsformat have been scheduled for deprecation. Please
-             use std.string.format and std.string.xsformat instead (which now use the same
-             implementation as xformat and xsformat).)
+Ddoc
+
+$(COMMENT Pending changelog for 2.069. This will get copied to dlang.org and
+    cleared when master gets merged into stable prior to 2.069.
+)
+
+$(BUGSTITLE Library Changes,
+
+$(LI $(RELATIVE_LINK2 more-rangified-functions, More phobos functions were rangified.))
+$(LI $(RELATIVE_LINK2 std-algorithm-moveEmplace, `moveEmplace` was added))
+$(LI $(RELATIVE_LINK2 curl-dynamic-loading, libcurl is now loaded dynamically))
+$(LI FreeBSD now also ships with a shared libphobos2.so library ($(LINK2 http://dlang.org/dll-linux.html, usage info)).)
+$(LI The package $(STDMODREF experimental_allocator, std.experimental.allocator) was added.)
+
+)
+
+$(BUGSTITLE Library Changes,
+
+$(LI $(LNAME2 more-rangified-functions, More phobos functions were rangified.)
+
+    $(P Following the work released with $(RELATIVE_LINK2 rangified-functions,
+        2.068.0) more phobos functions were rangified.
     )
 
-    $(LIBBUGSFIXED
-        $(LI Unlisted Bug: std.net.curl dataTimeout fixed. (Used to set operation timeout
-             instead of inactivity timeout))
+    $(BOOKTABLE Rangified Functions:,
+        $(TR $(TH Module) $(TH Functions)
+        )
+        $(TR $(TD $(STDMODREF stdio, std.stdio))
+            $(TD
+                <a href="phobos/std_file.html#.File.this">File.this</a>
+            )
+        )
+        $(TR $(TD $(STDMODREF file, std.file))
+            $(TD
+                $(XREF file, append)
+                $(XREF file, chdir)
+                $(XREF file, copy)
+                $(XREF file, exists)
+                $(XREF file, getAttributes)
+                $(XREF file, getLinkAttributes)
+                $(XREF file, getSize)
+                $(XREF file, getTimes)
+                $(XREF file, getTimesWin)
+                $(XREF file, isDir)
+                $(XREF file, isFile)
+                $(XREF file, isSymlink)
+                $(XREF file, mkdir)
+                $(XREF file, read)
+                $(XREF file, readText)
+                $(XREF file, remove)
+                $(XREF file, rename)
+                $(XREF file, rmdir)
+                $(XREF file, setAttributes)
+                $(XREF file, setTimes)
+                $(XREF file, timeLastModified)
+                $(XREF file, write)
+            )
+        )
     )
 )
 
-$(VERSION 060, ddd mm, 2012, =================================================,
+$(LI $(LNAME2 std-algorithm-moveEmplace, A combined `moveEmplace` was added.)
 
-    $(WHATSNEW
-        $(LI std.string: $(RED The current implementations of std.string.format and string.sformat are
-             scheduled to be replaced in November 2012 with improved implementations
-             which conform to writef. In some, rare cases, this will break code.
-             Please see the documentation for std.string.format and std.string.sformat for details.))
-        $(LI std.bitmanip: Added peek, read, write, and append for converting
-             ranges of bytes to and from integral types.)
-        $(LI std.container: Added DList, which is an implementation of a doubly-linked list.)
-        $(LI Added std.file.tempDir which returns the path to a directory
-             where a program can put temporary files.)
-        $(LI std.process: Added escapeShellCommand, escapeShellFileName, and
-             escapeWindowsArgument. Documented browse function.)
-        $(LI std.range: Added RefRange, which effectively makes it possible to
-             pass a range by reference.)
-        $(LI std.traits: Added KeyType, ValueType, isScalarType, isBasicType, and
-             SetFunctionAttributes templates.)
-        $(LI std.traits: areAllSafe has been scheduled for deprecation. Please use
-             allSatisfy(isSafe, ...) instead.)
-        $(LI std.utf: Added overload of codeLength which operates on a string.)
-        $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
-             scheduled for deprecation.)
-        $(LI std.algorithm.indexOf - which was scheduled for deprecation - has been deprecated (it was
-             easily confused with std.string.indexOf). Please use countUntil instead.)
-        $(LI std.cpuid - which was scheduled for deprecation - has been deprecated.
-             Please use core.cpuid instead.)
-        $(LI std.conv.ConvError and ConvOverflowException - which were scheduled for deprecation - have
-             been deprecated. Please catch ConvException and ConvOverflowException instead.)
-        $(LI The overloads of std.conv.to which were scheduled for deprecation
-             because formattedWrite replaced them have now been deprecated.
-             Please use std.format.formattedWrite instead.)
-        $(LI The overload of std.exception.enforce which takes the file and line number as template
-             arguments has been scheduled for deprecation (as it causes unnecessary template bloat).
-             Please use the overload which takes them as function arguments instead. This will have no
-             effect on any calls to enforce which do not explicitly pass the file or line number.)
-        $(LI std.format.FormatError - which was scheduled for deprecation - has been deprecated.
-             Please catch FormatException instead.)
-        $(LI std.file.listDir has been deprecated. Please use std.file.dirEntries instead.)
-        $(LI std.range.replicate - which was scheduled for deprecation - has been deprecated.
-             Please use repeat instead.)
-        $(LI std.range.SortedRange.canFind - which was scheduled for deprecation - has been deprecated.
-             Please use SortedRange.contains instead.)
-        $(LI std.socket: timeval and linger - which were scheduled for deprecation - have been deprecated.
-             Please use TimeVal and Linger.)
-        $(LI std.stdio.isStreamingDevice has been scheduled for deprecation. Please use
-             isFileHandle instead.)
-        $(LI The deprecated std.typecons.defineEnum has been removed.)
-        $(LI UtfException - which was scheduled for deprecation - has been deprecated.
-             Please use UTFException instead.)
-        $(LI The deprecated overloads of std.array.insert and std.array.replace
-             have been removed. Please use insertInPlace and replaceInPlace instead.)
-        $(LI The deprecated toISOExtendedString and fromISOExtendedString
-             functions in std.datetime have been removed. Please use
-             toISOExtString and fromISOExtString instead.)
-        $(LI The deprecated std.file.getTimesPosix has been removed.
-             Please use std.file.getTimes instead.)
-        $(LI The deprecated overloads of isFile, isDir, and isSymLink in
-             std.file which took uint have been removed. Please use
-             attrIsFile, attrIsDir, and attrIsSymlink instead.)
-        $(LI The deprecated std.file.DirEntry.timeStatusChanged has been removed.
-             Please use std.file.DirEntry.attributes to get at that information
-             if you need it.)
-        $(LI The deprecated std.contracts module has been removed. Please use
-             std.exception instead.)
-        $(LI The deprecated std.arg, std.bind, and std.loader modules have been
-             removed.)
+    $(P $(XREF algorithm_mutation, MoveEmplace) efficiently combines $(XREF
+        algorithm_mutation, move) with $(XREF conv, emplace) thus avoids having
+        to initialize and destroy a value before moving into uninitialized data.
     )
 
-    $(LIBBUGSFIXED
-        $(LI $(BUGZILLA 2328): setTypeInfo in gc.d backwards.)
-        $(LI $(BUGZILLA 2588): std.signals should not use 'length' stealth keyword in indexing)
-        $(LI $(BUGZILLA 4405): all function - returns whether predicate is true for all elements in a range)
-        $(LI $(BUGZILLA 4603): array(iota(1, 0))  error)
-        $(LI $(BUGZILLA 4605): Wrong print of an int[string] aa)
-        $(LI $(BUGZILLA 4629): BufferedFile.printf() wants char[] as first argument)
-        $(LI $(BUGZILLA 4695): std.range.zip is broken)
-        $(LI $(BUGZILLA 4744): std.conv: string-&gt;enum doesn't look for longer match)
-        $(LI $(BUGZILLA 4822): Problem with std.stdio.File.writef(&quot;%c&quot;))
-        $(LI $(BUGZILLA 5011): std.container: SList linearRemove produces wrong results)
-        $(LI $(BUGZILLA 5089): feqrel does not compile for floats)
-        $(LI $(BUGZILLA 5260): std.math.feqrel() returns negative number)
-        $(LI $(BUGZILLA 5346): instantiation of std.conv.toImpl and std.format.formatValue fails for unions)
-        $(LI $(BUGZILLA 5354): formatValue: range templates introduce 3 bugs related to class &amp; struct cases)
-        $(LI $(BUGZILLA 5786): std.algorithm.sort does not work with std.container.Array: Range violation)
-        $(LI $(BUGZILLA 5843): Unable to convert a struct with an alias-this to long/ulong to int, using std.conv.to!int.)
-        $(LI $(BUGZILLA 5970): fix BigInt.toString)
-        $(LI $(BUGZILLA 6027): bigint to!string conversion and its implications)
-        $(LI $(BUGZILLA 6175): String corruption when passing static char arrays to std.conv)
-        $(LI $(BUGZILLA 6191): removechars doesn't accept a const string)
-        $(LI $(BUGZILLA 6197): std.traits.isImplicitlyConvertible returns some wrong results.)
-        $(LI $(BUGZILLA 6222): A problem with iota() using size_t)
-        $(LI $(BUGZILLA 6231): [patch] std.conv.to/std.format.: Structs with toString and isInputRange match multiple templates.)
-        $(LI $(BUGZILLA 6273): Tuple [] operator in pure function)
-        $(LI $(BUGZILLA 6379): std.container.SList fails to compile)
-        $(LI $(BUGZILLA 6437): Refcounted calls dtor before ctor, never calls dtor for globals)
-        $(LI $(BUGZILLA 6547): Call to std.algorithm.remove causes compile error)
-        $(LI $(BUGZILLA 6580): scoped classes are aligned incorrectly)
-        $(LI $(BUGZILLA 6597): to!SomeString should use std.format.formatValue)
-        $(LI $(BUGZILLA 6642): SysTime should not be hasUnsharedAliasing)
-        $(LI $(BUGZILLA 6892): Formatted write with specified length of enum member)
-        $(LI $(BUGZILLA 6926): std.process.system return wrong exit code)
-        $(LI $(BUGZILLA 7022): File.byLine doesn't release file handle)
-        $(LI $(BUGZILLA 7138): Can't call array() on dirEntries)
-        $(LI $(BUGZILLA 7317): writeln cannot handle alias this of array type)
-        $(LI $(BUGZILLA 7326): write interprets enum with byte backing type as a character)
-        $(LI $(BUGZILLA 7348): to!string(null) matches more than one template declaration)
-        $(LI $(BUGZILLA 7356): Implement KeyType, ValueType for hashes in std.traits)
-        $(LI $(BUGZILLA 7360): Predicate templates in std.traits should consider alias this)
-        $(LI $(BUGZILLA 7515): The new std.string.translate is slow for ASCII text)
-        $(LI $(BUGZILLA 7537): `File.tmpfile` requires administrator rights on Windows)
-        $(LI $(BUGZILLA 7561): std.net.curl broken)
-        $(LI $(BUGZILLA 7660): toImpl conflict in std.conv)
-        $(LI $(BUGZILLA 7796): std.typecons.Unique is using writeln without importing std.stdio)
-        $(LI $(BUGZILLA 7824): isInputRange fails to recognize inout(T)[])
-        $(LI $(BUGZILLA 7831): Unlisted @@@BUG in File.detach causes FILE* leaks when reopening)
-        $(LI $(BUGZILLA 7878): A problem with purity and general templated algorithms)
-        $(LI $(BUGZILLA 7898): [CTFE] std.algorithm:copy fails when used with two arrays)
-        $(LI $(BUGZILLA 7909): to!(enum)(string) and to!(string)(enum) break when enum is integral)
-        $(LI $(BUGZILLA 7919): Sample code works on GDC but fails with DMD)
-        $(LI $(BUGZILLA 7936): std.random.randomSample always returns the same first value when passed a random number generator)
-        $(LI $(BUGZILLA 7937): Range iota.Result should be const where possible)
-        $(LI $(BUGZILLA 7944): std.range.iota.popFront() cycles when the range is empty)
-        $(LI $(BUGZILLA 7948): std.range.zip broken with requireSameLength)
-        $(LI $(BUGZILLA 7962): std.regex: Captures.length() returns incorrect value)
-        $(LI $(BUGZILLA 7973): BigInt %= long/ulong gives wrong value)
-        $(LI $(BUGZILLA 7975): Incorrect quotes escaping in std.format)
-        $(LI $(BUGZILLA 7982): iota broken when start and end are unsigned and step is negative.)
-        $(LI $(BUGZILLA 7993): BigInt divide-by-1 error)
-        $(LI $(BUGZILLA 8003): Phobos uses deprecated std.path sep symbol)
-        $(LI $(BUGZILLA 8011): BigInt ++ and -- do wrong thing on negative numbers)
-        $(LI $(BUGZILLA 8015): std.typecons.Tuple does not support struct with alias method this)
-        $(LI $(BUGZILLA 8022): BigInt division bug (2))
-        $(LI $(BUGZILLA 8026): Fix or disallow randomShuffle() on fixed-sized arrays)
-        $(LI $(BUGZILLA 8031): If a class have some signals it's impossible for a derived class to have any signals)
-        $(LI $(BUGZILLA 8037): hasElaborateDestructor is false for non-zero-length static array of structs with elaborate destructor)
-        $(LI $(BUGZILLA 8039): `scoped` doesn't call any elaborate destructors for struct fields)
-        $(LI $(BUGZILLA 8040): writeln(null) too)
-        $(LI $(BUGZILLA 8055): [Regression 2.059] std.algorithm.move corrupts moved object field)
-        $(LI $(BUGZILLA 8057): std.algorithm.move cannot use for nested struct)
-        $(LI $(BUGZILLA 8080): 'alias this' causes toString to be shadowed by aliased object)
-        $(LI $(BUGZILLA 8112): std.algorithm.fill must accept InputRange)
-        $(LI $(BUGZILLA 8158): std.algorithm.min fails to compile with user-defined types)
-        $(LI $(BUGZILLA 8164): BigInt from char[] too)
-        $(LI $(BUGZILLA 8165): BigInt opAssign return value)
-        $(LI $(BUGZILLA 8171): [Regression 2.060head] Broken std.algorithm.move for nested struct has no member)
-        $(LI $(BUGZILLA 8186): Formatting class object has an alias this to int* field is broken.)
-        $(LI $(BUGZILLA 8187): replaceFirst doesn't work for string[] haystack)
-        $(LI $(BUGZILLA 8191): cstream.printf is completely unusable on x86_64)
-        $(LI $(BUGZILLA 8195): Segfault when comparing a VariantN to a non-variant type which it holds)
-        $(LI $(BUGZILLA 8203): Use of std.regex.match() generates &quot;not enough preallocated memory&quot; error)
-        $(LI $(BUGZILLA 8214): blocking option for TaskPool.finish())
-        $(LI $(BUGZILLA 8233): std.array.array fails to compile with ranges of immutable elements which have a length property)
-        $(LI $(BUGZILLA 8240): std.algorithm.joiner and empty inputRangeObject)
-        $(LI $(BUGZILLA 8264): [std.conv.to] constructing conversion doesn't work with alias this)
-        $(LI $(BUGZILLA 8310): writeln of Range of fixed size array)
-        $(LI $(BUGZILLA 8323): std.string.chompPrefix does not handle differing string types properly)
-        $(LI $(BUGZILLA 8362): std.traits.isSafe doesn't work with unsafe lamdba functions)
-        $(LI $(BUGZILLA 8386): writeln stopped working with wstring)
-        $(LI $(BUGZILLA 8398): enforceEx cannot be used with OutOfMemoryError)
-        $(LI $(BUGZILLA 8450): measureTime doesn't work with unsafe template functions)
-        $(LI $(BUGZILLA 8459): std.traits.isSafe behavior silently changed)
+    ------
+    T* moveToHeap(T)(ref T value)
+    {
+        import core.memory : GC;
+
+        auto ptr = cast(T*)GC.malloc(T.sizeof);
+        // move value and emplace it into ptr
+        moveEmplace(value, *ptr);
+        return ptr;
+    }
+    ------
+    $(P There are also $(XREF algorithm_mutation, moveEmplaceAll)
+        and $(XREF algorithm_mutation, moveEmplaceSome) as counterparts of
+        $(XREF algorithm_mutation, moveAll) and $(XREF algorithm_mutation, moveSome).
     )
- )
-
-$(VERSION 059, ddd mm, 2012, =================================================,
-    $(WHATSNEW
-        $(LI std.array: replaceInto, an alternative for replace that outputs result directly
-        to an output range, avoiding extra allocation.)
-        $(LI The deprecated std.date, std.dateparse, and std.gregorian modules
-             have been removed. Please use std.datetime instead.)
-        $(LI Several deprecated functions in std.file have been removed.)
-        $(LI The old functions in std.path which were scheduled for deprecation
-             have now been deprecated. Please use the new ones which were
-             introduced in 2.055. However, note that curdir and pardir do not
-             have replacements, because they're "." and ".." respectively on all
-             OSes so variables for them were seen as unnecessary. Also, one major
-             change to note about the new std.path functions is that when operating
-             on extensions, they expect "." to be part of the extension whereas the
-             old ones did not (e.g. "file.txt".extension == ".txt" whereas
-             "file.txt".getExt() == "txt").)
-        $(LI The version of std.exception.enforceEx which was scheduled for
-             deprecation has been deprecated. Please use the version which
-             takes exceptions which can be constructed with new E(msg, file, line)
-             (rather than just new E(msg) as the old version did). That way,
-             exceptions constructed with enforceEx will give the file and line
-             number where enforceEx was called.)
-        $(LI Get rid of Win9x support.)
-        $(LI std.typecons: Added Proxy mixin template.)
-        $(LI std.format: Added documentation about compound format specifier.)
-    )
-
-    $(LIBBUGSFIXED
-        $(LI $(BUGZILLA 4604): A stack overflow with writeln)
-        $(LI $(BUGZILLA 5523): std.regex handles "\s" and "\W" (etc.) inside square brackets improperly)
-        $(LI $(BUGZILLA 5652): Add \p and \P unicode properties to std.regex)
-        $(LI $(BUGZILLA 5674): AssertError in std.regex)
-        $(LI $(BUGZILLA 5964): std.stdio.readln can throw a UnicodeException)
-        $(LI $(BUGZILLA 6217): [GSOC] result of std.algorithm.map is not movable)
-        $(LI $(BUGZILLA 6403): Upgrade std.regex to Unicode UTS #18 Level 1 support)
-        $(LI $(BUGZILLA 6892): Formatted write with specified length of enum member)
-        $(LI $(BUGZILLA 7111): New regex engine cannot match beginning of empty string)
-        $(LI $(BUGZILLA 7138): Can't call array() on dirEntries)
-        $(LI $(BUGZILLA 7264): Can't iterate result from 4-arg dirEntries as string)
-        $(LI $(BUGZILLA 7299): std.uni missing doc comments)
-        $(LI $(BUGZILLA 7300): std.regex.ShiftOr!dchar.search is broken)
-        $(LI $(BUGZILLA 7374): stdin.byLine() throws AssertError on empty input)
-        $(LI $(BUGZILLA 7460): std.windows.registry reports a false exception message)
-        $(LI $(BUGZILLA 7476): Write(ln) functions no longer accept retro range)
-        $(LI $(BUGZILLA 7628): std.format formatValue incorrect overload)
-        $(LI $(BUGZILLA 7674): regex replace requires escaped format)
-        $(LI $(BUGZILLA 7679): std.regex.split and splitter don't work w/ ctRegex)
-        $(LI $(BUGZILLA 7718): regex and ctRegex produce different results)
-        $(LI $(BUGZILLA 6116): May not join spawn()'ed threads)
-     )
- )
-
-$(VERSION 058, ddd mm, 2012, =================================================,
-
-    $(WHATSNEW
-       $(LI Added std.csv for reading CSV files.)
-       $(LI Added std.net.curl as D-ified wrapper over etc.c.curl and libcurl.)
-       $(LI Added templates PackageName, ModuleName and FullyQualifiedName into std.traits.)
-       $(LI The overload of std.concurrency.receiveTimeout which takes a long has
-            been deprecated. Please use the overload which takes a core.time.Duration.)
-       $(LI Moved std.datetime.abs to core.time.)
-       $(LI The overload of std.conv.to which used a member function named to on the
-            type being converted has been deprecated. Please define opCast on the type
-            instead, and std.conv.to will use that.)
-       $(LI std.datetime's endOfMonthDay functions have been deprecated. Please use
-            daysInMonth instead.)
-       $(LI std.ctype has been deprecated. Please use std.ascii instead.)
-       $(LI std.string's hexdigits, digits, octdigits, lowercase, letters, uppercase,
-            whitespace, and newline have been deprecated. Please use the
-            corresponding symbols in std.ascii instead.)
-       $(LI std.string's LS and PS have been deprecated. Please use the corresponding
-            symbols in std.uni instead.)
-       $(LI std.string's iswhite has been deprecated. Please use either
-            std.ascii.isWhite or std.uni.isWhite instead.)
-       $(LI std.string's tolower, tolowerInPlace, toupper, toupperInPlace, splitlines,
-            stripl, stripr, ljustify, rjustify, and expandtabs have been deprecated.
-            Please use the new versions of these functions with properly camelcased names.)
-       $(LI std.string's zfill has been deprecated. Please use rightJustify instead.)
-       $(LI std.string's capwords has been deprecated.)
-       $(LI The overloads of std.string's isNumeric which takes anything and
-            which takes a va_list have been deprecated. The other overloads remain.)
-       $(LI std.uni's isUniLower, isUniUpper, toUniLower, toUniUpper, and isUniAlpha
-            have been deprecated. Please use the versions of these functions which do
-            not have Uni in their name.)
-       $(LI Get rid of Windows 3.x and Windows 9x support. Affected modules: std.file,
-            std.mmfile, std.stream, and std.windows.registry.)
-     )
-
-    $(LIBBUGSFIXED
-       $(LI $(BUGZILLA 4295): IID_IUnknown symbol undefined in phobos.lib)
-       $(LI $(BUGZILLA 5614): version(Win32) vs version(Windows) in Phobos)
-       $(LI $(BUGZILLA 5718): Can't demangle symbol defined inside unittest block)
-       $(LI $(BUGZILLA 6255): Add support for different base conversions in std.conv)
-       $(LI $(BUGZILLA 6472): RedBlackTree.removeKey)
-       $(LI $(BUGZILLA 6642): SysTime should not be hasUnsharedAliasing)
-       $(LI $(BUGZILLA 6874): heap corruption caused by std.array.insertInPlaceImpl or gc.gcx)
-       $(LI $(BUGZILLA 6944): stdio.File.byLine can't handle an empty file)
-       $(LI $(BUGZILLA 7092): std.concurrency.receive does not accept free functions)
-       $(LI $(BUGZILLA 7141): std.regex - escaped characters can form operators in character classes)
-       $(LI $(BUGZILLA 7230): Crash during printing anonymous union with writeln family functions.)
-       $(LI $(BUGZILLA 7241): std.format can't read into array of dchar)
-       $(LI $(BUGZILLA 7302): std.conv.parse with radix doesn't work on ranges)
-       $(LI $(BUGZILLA 7397): [Regression] std.path.buildPath can't be used with string[])
-       $(LI $(BUGZILLA 7480): Unhelpful formatting specifier mismatch exception message for pointers)
-       $(LI $(BUGZILLA 7484): std.algorithm.copy overlapping array copy)
-     )
- )
-
-$(VERSION 057, ddd mm, 2011, =================================================,
-
-    $(WHATSNEW
-      $(LI Major overhaul of std.regex module's implementation.
-        $(RED Breaking change) in std.regex.replace with delegate,
-        use Captures!string instead of RegexMatch!string as delegate parameter.)
-      $(LI As typedef has been deprecated, overloads of std.conv.to which use
-           typedef have now been deprecated.)
-      $(LI std.array.insert has been deprecated. Please use std.array.insertInPlace instead.)
-      $(LI The overload of std.array.replace which replaces in place has been deprecated.
-           Please use std.array.replaceInPlace instead.)
-      $(LI The toISOExtendedString and fromISOExtendedString functions on SysTime, Date,
-           TimeOfDay, and DateTime in std.datetime have been deprecated. Please use
-           toISOExtString and fromISOExtString instead.)
-      $(LI std.file.getTimesPosix has been deprecated. Please use std.file.getTimes instead.)
-      $(LI The overloads for isDir, isFile, and isSymlink in std.file which take a uint
-           have been deprecated. Please use attrIsDir, attrIsFile, and attrIsSymlink instead.)
-     )
-
-    $(LIBBUGSFIXED
-        $(LI Unlisted bug: std.conv: Fix to!float("-0"))
-        $(LI Unlisted bug: std.file broken on OS X x86_64 due to wrong stat64 declaration.)
-        $(LI $(BUGZILLA 2936): std.regex.match() short string optimization)
-        $(LI $(BUGZILLA 4765): std.math.modf always returns 0)
-        $(LI $(BUGZILLA 5193): SList cannot have struct elements that have immutable members.)
-        $(LI $(BUGZILLA 5620): Implicit conversion of RegexMatch to bool.)
-        $(LI $(BUGZILLA 5712): [patch] std.regex.replace disallows w/dstring)
-        $(LI $(BUGZILLA 6204): emplace() for classes accepts larger chunk but fails in array assignment)
-        $(LI $(BUGZILLA 6887): Regression of getopt)
-        $(LI $(BUGZILLA 6888): std.getopt.getopt: one-letter hash option causes range violation)
-        $(LI $(BUGZILLA 6935): struct with @disable this cannot make range)
-        $(LI $(BUGZILLA 6973): static assert(isOutputRange!(OutputRange!int, int)) is false)
-        $(LI $(BUGZILLA 6976): GetLastError called as property)
-        $(LI $(BUGZILLA 6977): getErrno called as property in std.stdio)
-        $(LI $(BUGZILLA 6979): hasUnsharedAliasing cannot accept plural parameters)
-        $(LI $(BUGZILLA 6990): std.string.splitlines deprecation doc missing a word)
-        $(LI $(BUGZILLA 7000): missing import of std.stdio in std.regex?)
-        $(LI $(BUGZILLA 7039): Posix 2.057 Makefile error breaking 64bit build)
-        $(LI $(BUGZILLA 7040): Phobos must use "version/else version" blocks for proper
-                               documentation generation.)
-        $(LI $(BUGZILLA 7045): AssertError in std.regex on line 1573)
-        $(LI $(BUGZILLA 7055): to!float("INF2") == 2)
-     )
- )
-
-$(VERSION 056, ddd mm, 2011, =================================================,
-
-    $(WHATSNEW
-      $(LI std.exception: enforce/enforceEx now can use in @safe pure function.)
-      $(LI Added optional KeepTerminator param to std.string.splitLines.)
-      $(LI Added std.string.outdent.)
-      $(LI std.utf: More @safe and pure.)
-      $(LI std.windows.registry now use *W functions in order to deal properly with Unicode.)
-     )
-
-    $(LIBBUGSFIXED
-        $(LI $(BUGZILLA 5522): std.range.zip fails on arrays of Object.)
-        $(LI $(BUGZILLA 6009): std/container disabled on freebsd/64)
-        $(LI $(BUGZILLA 6160): std.conv.to: Ignore _ to match the rest of D)
-        $(LI $(BUGZILLA 6181): assert fails in datetime.d while runining Phobos unittest)
-        $(LI $(BUGZILLA 6258): std.conv.to!real("-") fetches the front of an empty array.)
-        $(LI $(BUGZILLA 6275): Const values in tuples)
-        $(LI $(BUGZILLA 6288): std.conv.to removes const/immutable when converting a class)
-        $(LI $(BUGZILLA 6609): std.conv.parse!Integer should consider sign when radix == 10)
-        $(LI $(BUGZILLA 6634): std.path.globMatch throws wrong assertion)
-        $(LI $(BUGZILLA 6640): More formatting consistency between string and range of char)
-        $(LI $(BUGZILLA 6761): Strange behavior of RedBlackTree causing a dangling pointer)
-     )
- )
-
-$(VERSION 055, ddd mm, 2011, =================================================,
-
-    $(WHATSNEW
-      $(LI std.algorithm.copy now specializes on arrays for 10-80x improved
-           performance.)
-      $(LI std.path has been rewritten from scratch and has a completely new API.)
-      $(LI std.utf.toUTFz allows you to get a zero-terminated string of any
-           character type and of any type of mutability.)
-      $(LI Added symlink and readLink to std.file for Posix systems.)
-      $(LI Values for GDC and LDC were added to std.compiler.Vendor.)
-      $(LI Added functions to std.bitswap for generically handling swapping
-           endianness.)
-      $(LI Added std.parallelism.TaskPool.workerIndex.)
-      $(LI Added buffer recycling overload of std.parallelism.asyncBuf)
-      $(LI std.math.tgamma, lgamma, erf, and erfc are now deprecated. The
-           equivalent functions in std.mathspecial should be used instead.)
-      $(LI The names of the values of std.mmfile.Mode, std.system.Endian,
-           std.traits.FunctionAttributes, std.traits.ParameterStorageClass,
-           and std.traits.Variadic were changed to match Phobos' naming conventions.)
-      $(LI std.range:  Added indexed and chunks)
-      $(LI std.string.translate has been updated to work with unicode. As a
-           result, its signature has been changed. The old version and
-           std.string.maketrans have been scheduled for deprecation.)
-      $(LI std.string.tr has been updated so that it works with any string type.)
-      $(LI std.conv.parse works for associative array and static array)
-      $(LI std.format: Improvement of formatValue and unformatValue.
-           They now works for associative array, consider element escaping,
-           and treat range format spec more properly.)
-     )
-
-    $(LIBBUGSFIXED
-        $(LI Unlisted bug:  std.range.transversal should have length)
-        $(LI $(BUGZILLA 3890): Bad writeln of a nested struct)
-        $(LI $(BUGZILLA 4977): cannot use nothrow or pure with Rebindable)
-        $(LI $(BUGZILLA 5237): writefln doesn't respect Complex.toString)
-        $(LI $(BUGZILLA 5645): std.range.drop())
-        $(LI $(BUGZILLA 5825): write is calling a deprecated function)
-        $(LI $(BUGZILLA 6064): std.array.join is unnecssarily slow for strings)
-        $(LI $(BUGZILLA 6194): [GSoC] Destructor gets called on object before it is copied when calling writeln())
-        $(LI $(BUGZILLA 6261): [2.054 beta regression] Regex cannot take a char[])
-        $(LI $(BUGZILLA 6377): std.conv.to should check range when changing signedness)
-        $(LI $(BUGZILLA 6587): std.parallelism's Task cannot handle immutable values)
-        $(LI $(BUGZILLA 6606): RefCounted doesn't work with unions due to use of format)
-        $(LI $(BUGZILLA 6608): Tuple field is not escaped)
-     )
- )
-
-$(VERSION 054, ddd mm, 2011, =================================================,
-
-    $(WHATSNEW
-        $(LI std.array.insertInPlace supports inserting of multiple ranges/elements in one go)
-        $(LI Added std.array.uninitializedArray and std.array.minimallyInitializedArray)
-        $(LI Various functions in std.string were renamed to match Phobos'
-             naming conventions and be properly camelcased. The old names
-             are still there but have been scheduled for deprecation.)
-        $(LI The deprecated std.string.toString and std.string.atoi functions
-             were removed. If you were still using them for any reason,
-             replace them with calls to std.conv.to.)
-        $(LI Various functions in std.uni were renamed so that they don't have
-             "Uni" in their name, since it was decided that it was not desirable to
-             repeat a module's name in its functions' names. The old names
-             are still there but have been scheduled for deprecation.)
-        $(LI std.ctype has been scheduled for deprecation. std.ascii has been
-             added to replace it.)
-        $(LI Major performance improvements for std.algorithm.sort)
-     )
-
-    $(LIBBUGSFIXED
-        $(LI $(BUGZILLA 876): std.intrinsic.bswap overloads)
-        $(LI $(BUGZILLA 2108): regexp.d: The greedy dotstar isn't so greedy)
-        $(LI $(BUGZILLA 2117): Please add more byteswapping support)
-        $(LI $(BUGZILLA 3136): Incorrect and strange behavior of std.regexp.RegExp if using a pattern with optional prefix and suffix longer than 1 char)
-        $(LI $(BUGZILLA 3457): rdmd fails silently in a particular setup where the compiler is not the expected)
-        $(LI $(BUGZILLA 3479): writef/writefln: positional precision not working)
-        $(LI $(BUGZILLA 3564): Rdmd failing to link external C libraries)
-        $(LI $(BUGZILLA 3752): File.byLine fetches lines in a confusing manner)
-        $(LI $(BUGZILLA 4367): std.regex: Captures is not a random access range)
-        $(LI $(BUGZILLA 4574): std.regex: breaks with empy string regex)
-        $(LI $(BUGZILLA 4608): std.string.chomp documentation mismatch implementation)
-        $(LI $(BUGZILLA 5019): In std.regex, empty capture at end of string causes error)
-        $(LI $(BUGZILLA 5511): std.regex optional capture with no-match cause error)
-        $(LI $(BUGZILLA 5673): Add lookahead and forgetful matching support std.regex)
-        $(LI $(BUGZILLA 5857): std.regex (...){n,m} is bogus when (...) contains repetitions)
-        $(LI $(BUGZILLA 6076): regression, std.regex: "c.*|d" matches "mm")
-        $(LI $(BUGZILLA 6113): singletons in std.datetime are not created early enough)
-        $(LI $(BUGZILLA 5705): Swapping identical struct with hasElaborateAssign causes "overlapping array copy" exception)
-        $(LI $(BUGZILLA 6193): Appender.clear() functionality or documentation)
-     )
 )
+
+$(LI $(RELATIVE_LINK2 curl-dynamic-loading, libcurl is now loaded dynamically)
+
+    $(P $(STDMODREF net_curl, std.net.curl) was changed to load curl as shared
+        library at runtime.  This simplifies the usage as it's no longer
+        necessary to link against libcurl or to install any development
+        libraries.
+    )
+
+    $(P The implementation will also try to get the needed curl symbols from the
+        executable itself. So it remains possible to link with a specific
+        version of libcurl or with a static libcurl library.
+    )
+
+    $(P To make this work you have to link with $(I --export-dynamic) respectively
+        use a $(I .DEF) file on Windows (see $(LINK2
+        http://wiki.dlang.org/Curl_on_Windows#Using_the_static_lib, wiki) for
+        more info on the latter).
+    )
+)
+
+)
+
+Macros:
+    TITLE=Change Log
+
+    BUGSTITLE = <div class="bugsfixed">$(H4 $1) $(OL $2 )</div>
+
+    RELATIVE_LINK2=<a href="#$1">$+</a>
+    LNAME2=<a class="anchor" title="Permalink to this section" id="$1" href="#$1">$+</a>
+
+    STDMODREF = <a href="phobos/std_$1.html">$2</a>
+    XREF = <a href="phobos/std_$1.html#$2">$2</a>
+    CXREF = <a href="phobos/core_$1.html#$2">$2</a>
+
+    BOOKTABLE = <table><caption>$1</caption>$+</table>

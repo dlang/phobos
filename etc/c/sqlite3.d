@@ -168,6 +168,10 @@ enum
     SQLITE_IOERR_SHMOPEN           = (SQLITE_IOERR | (18<<8)),
     SQLITE_IOERR_SHMSIZE           = (SQLITE_IOERR | (19<<8)),
     SQLITE_IOERR_SHMLOCK           = (SQLITE_IOERR | (20<<8)),
+    SQLITE_IOERR_SHMMAP            = (SQLITE_IOERR | (21<<8)),
+    SQLITE_IOERR_SEEK              = (SQLITE_IOERR | (22<<8)),
+    SQLITE_IOERR_DELETE_NOENT      = (SQLITE_IOERR | (23<<8)),
+    SQLITE_IOERR_MMAP              = (SQLITE_IOERR | (24<<8)),
     SQLITE_LOCKED_SHAREDCACHE      = (SQLITE_LOCKED |  (1<<8)),
     SQLITE_BUSY_RECOVERY           = (SQLITE_BUSY   |  (1<<8)),
     SQLITE_CANTOPEN_NOTEMPDIR      = (SQLITE_CANTOPEN | (1<<8)),
@@ -209,6 +213,8 @@ enum
     SQLITE_OPEN_DELETEONCLOSE    = 0x00000008,  /** VFS only */
     SQLITE_OPEN_EXCLUSIVE        = 0x00000010,  /** VFS only */
     SQLITE_OPEN_AUTOPROXY        = 0x00000020,  /** VFS only */
+    SQLITE_OPEN_URI              = 0x00000040,  /** Ok for sqlite3_open_v2() */
+    SQLITE_OPEN_MEMORY           = 0x00000080,  /** Ok for sqlite3_open_v2() */
     SQLITE_OPEN_MAIN_DB          = 0x00000100,  /** VFS only */
     SQLITE_OPEN_TEMP_DB          = 0x00000200,  /** VFS only */
     SQLITE_OPEN_TRANSIENT_DB     = 0x00000400,  /** VFS only */
@@ -315,7 +321,7 @@ enum
     SQLITE_FCNTL_CHUNK_SIZE          = 6,
     SQLITE_FCNTL_FILE_POINTER        = 7,
     SQLITE_FCNTL_SYNC_OMITTED        = 8,
-    SQLITE_FCNTL_WIN_AV_RETRY        = 32,
+    SQLITE_FCNTL_WIN32_AV_RETRY      = 9,
     SQLITE_FCNTL_PERSIST_WAL         = 10,
     SQLITE_FCNTL_OVERWRITE           = 11,
     SQLITE_FCNTL_VFSNAME             = 12,
@@ -328,7 +334,7 @@ enum
     SQLITE_FCNTL_HAS_MOVED           = 20,
     SQLITE_FCNTL_SYNC                = 21,
     SQLITE_FCNTL_COMMIT_PHASETWO     = 22,
-    SQLITE_FCNTL_WIN_SET_HANDLE      = 32
+    SQLITE_FCNTL_WIN32_SET_HANDLE    = 23,
 }
 
 /**
@@ -472,9 +478,9 @@ enum
     SQLITE_CONFIG_URI                  = 17,
     SQLITE_CONFIG_PCACHE2              = 18,
     SQLITE_CONFIG_GETPCACHE2           = 19,
-    SQLITE_CONFIG_COVERING_INDEX_SCAN2 = 20,
-    SQLITE_CONFIG_SQLLOG2              = 21,
-    SQLITE_CONFIG_MMAP_SIZE2           = 22,
+    SQLITE_CONFIG_COVERING_INDEX_SCAN  = 20,
+    SQLITE_CONFIG_SQLLOG               = 21,
+    SQLITE_CONFIG_MMAP_SIZE            = 22,
     SQLITE_CONFIG_WIN32_HEAPSIZE       = 23
 }
 
@@ -685,9 +691,11 @@ int sqlite3_errcode(sqlite3 *db);
 /// Ditto
 int sqlite3_extended_errcode(sqlite3 *db);
 /// Ditto
-immutable(char)* sqlite3_errmsg(sqlite3*);
+const(char)* sqlite3_errmsg(sqlite3*);
 /// Ditto
-immutable(void)* sqlite3_errmsg16(sqlite3*);
+const(void)* sqlite3_errmsg16(sqlite3*);
+/// Ditto
+const(char)* sqlite3_errstr(int);
 
 /**
 ** CAPI3REF: SQL Statement Object
@@ -758,9 +766,10 @@ int sqlite3_prepare16_v2(
 const(char)* sqlite3_sql(sqlite3_stmt *pStmt);
 
 /**
-** CAPI3REF: Determine If An SQL Statement Writes The Database
+** CAPI3REF: Determine If A Prepared Statement Has Been Reset
 */
-int sqlite3_stmt_readonly(sqlite3_stmt *pStmt);
+int sqlite3_stmt_busy(sqlite3_stmt*);
+
 
 /**
 ** CAPI3REF: Dynamically Typed Value Object
@@ -1169,6 +1178,11 @@ int sqlite3_sleep(int);
 ** CAPI3REF: Name Of The Folder Holding Temporary Files
 */
 extern char *sqlite3_temp_directory;
+
+/**
+** CAPI3REF: Name Of The Folder Holding Database Files
+*/
+extern char *sqlite3_data_directory;
 
 /**
 ** CAPI3REF: Test For Auto-Commit Mode
@@ -1583,14 +1597,14 @@ enum
     SQLITE_TESTCTRL_RESERVE                 = 14,
     SQLITE_TESTCTRL_OPTIMIZATIONS           = 15,
     SQLITE_TESTCTRL_ISKEYWORD               = 16,
-    SQLITE_TESTCTRL_PGHDRSZ                 = 17,
-    SQLITE_TESTCTRL_SCRATCHMALLOC           = 18,
+    SQLITE_TESTCTRL_SCRATCHMALLOC           = 17,
+    SQLITE_TESTCTRL_LOCALTIME_FAULT         = 18,
     SQLITE_TESTCTRL_EXPLAIN_STMT            = 19,
     SQLITE_TESTCTRL_NEVER_CORRUPT           = 20,
     SQLITE_TESTCTRL_VDBE_COVERAGE           = 21,
     SQLITE_TESTCTRL_BYTEORDER               = 22,
     SQLITE_TESTCTRL_ISINIT                  = 23,
-    SQLITE_TESTCTRL_LAST                    = 23
+    SQLITE_TESTCTRL_LAST                    = 23,
 }
 
 /**
@@ -1799,6 +1813,11 @@ enum
 ** CAPI3REF: Virtual Table Interface Configuration
 */
 int sqlite3_vtab_config(sqlite3*, int op, ...);
+
+/**
+** CAPI3REF: Virtual Table Configuration Options
+*/
+enum SQLITE_VTAB_CONSTRAINT_SUPPORT = 1;
 
 }  /* End of the 'extern (C) block */
 

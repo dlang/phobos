@@ -46,9 +46,10 @@ $(UL
 class GetOptException : Exception
 {
     @safe pure nothrow
-    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    this(string msg, Exception next, string file = __FILE__,
+        size_t line = __LINE__)
     {
-        super(msg, file, line);
+        super(msg, file, line, next);
     }
 }
 
@@ -432,7 +433,13 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
     configuration cfg;
     GetoptResult rslt;
 
-    getoptImpl(args, cfg, rslt, opts);
+    GetOptException excep;
+    getoptImpl(args, cfg, rslt, excep, opts);
+
+    if (!rslt.helpWanted && excep !is null)
+    {
+        throw excep;
+    }
 
     return rslt;
 }
@@ -520,7 +527,7 @@ private pure Option splitAndGet(string opt) @trusted nothrow
 }
 
 private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
-        ref GetoptResult rslt, T opts)
+        ref GetoptResult rslt, ref GetOptException excep, T opts)
 {
     import std.algorithm : remove;
     import std.conv : to;
@@ -530,7 +537,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
         {
             // it's a configuration flag, act on it
             setConfig(cfg, opts[0]);
-            return getoptImpl(args, cfg, rslt, opts[1 .. $]);
+            return getoptImpl(args, cfg, rslt, excep, opts[1 .. $]);
         }
         else
         {
@@ -565,12 +572,12 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 
             if (cfg.required && !optWasHandled)
             {
-                throw new GetOptException("Required option " ~ option ~
-                    " was not supplied");
+                excep = new GetOptException("Required option "
+                    ~ option ~ " was not supplied", excep);
             }
             cfg.required = false;
 
-            return getoptImpl(args, cfg, rslt, opts[lowSliceIdx .. $]);
+            getoptImpl(args, cfg, rslt, excep, opts[lowSliceIdx .. $]);
         }
     }
     else
@@ -601,7 +608,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             }
             if (!cfg.passThrough)
             {
-                throw new GetOptException("Unrecognized option "~a);
+                throw new GetOptException("Unrecognized option "~a, excep);
             }
             ++i;
         }
@@ -1481,4 +1488,22 @@ unittest
     string wanted = "Some Text\n-f  --foo Required: Help\n-h --help "
         ~ "          This help information.\n";
     assert(wanted == helpMsg, helpMsg ~ wanted);
+}
+
+unittest // Issue 14724
+{
+    bool a;
+    auto args = ["prog", "--help"];
+    GetoptResult rslt;
+    try
+    {
+        rslt = getopt(args, config.required, "foo|f", "bool a", &a);
+    }
+    catch(Exception e)
+    {
+        assert(false, "If the request for help was passed required options"
+                "must not be set.");
+    }
+
+    assert(rslt.helpWanted);
 }

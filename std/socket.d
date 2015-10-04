@@ -1665,17 +1665,22 @@ public:
      * Compares with another InternetAddress of same type for equality
      * Returns: true if the InternetAddresses share the same address and
      * port number.
-     * Examples:
-     * --------------
-     * InternetAddress addr1,addr2;
-     * if (addr1 == addr2) { }
-     * --------------
      */
     override bool opEquals(Object o) const
     {
         auto other = cast(InternetAddress)o;
         return other && this.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr &&
             this.sin.sin_port == other.sin.sin_port;
+    }
+
+    ///
+    @system unittest
+    {
+        auto addr1 = new InternetAddress("127.0.0.1", 80);
+        auto addr2 = new InternetAddress("127.0.0.2", 80);
+
+        assert(addr1 == addr1);
+        assert(addr1 != addr2);
     }
 
     /**
@@ -3431,16 +3436,6 @@ public:
             throw new SocketOSException("Socket select error");
 
         return result;
-    }
-
-    // Explicitly undocumented. It will be removed in December 2014.
-    deprecated("Please use the overload of select which takes a Duration instead.")
-    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, long microseconds) @trusted
-    {
-        TimeVal tv;
-        tv.seconds      = to!(tv.tv_sec_t )(microseconds / 1_000_000);
-        tv.microseconds = to!(tv.tv_usec_t)(microseconds % 1_000_000);
-        return select(checkRead, checkWrite, checkError, &tv);
     }
 
 

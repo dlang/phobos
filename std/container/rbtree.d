@@ -20,6 +20,7 @@ Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
 module std.container.rbtree;
 
 import std.functional : binaryFun;
+import std.format;
 
 public import std.container.util;
 
@@ -610,6 +611,73 @@ unittest
     static assert(is(typeof(n.prev)));
 }
 
+private struct RBRange(N)
+{
+    alias Node = N;
+    alias Elem = typeof(Node.value);
+
+    private Node _begin;
+    private Node _end;
+
+    private this(Node b, Node e)
+    {
+        _begin = b;
+        _end = e;
+    }
+
+    /**
+     * Returns $(D true) if the range is _empty
+     */
+    @property bool empty() const
+    {
+        return _begin is _end;
+    }
+
+    /**
+     * Returns the first element in the range
+     */
+    @property Elem front()
+    {
+        return _begin.value;
+    }
+
+    /**
+     * Returns the last element in the range
+     */
+    @property Elem back()
+    {
+        return _end.prev.value;
+    }
+
+    /**
+     * pop the front element from the range
+     *
+     * complexity: amortized $(BIGOH 1)
+     */
+    void popFront()
+    {
+        _begin = _begin.next;
+    }
+
+    /**
+     * pop the back element from the range
+     *
+     * complexity: amortized $(BIGOH 1)
+     */
+    void popBack()
+    {
+        _end = _end.prev;
+    }
+
+    /**
+     * Trivial _save implementation, needed for $(D isForwardRange).
+     */
+    @property RBRange save()
+    {
+        return this;
+    }
+}
+
 /**
  * Implementation of a $(LUCKY red-black tree) container.
  *
@@ -701,71 +769,11 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     /**
-     * The range type for $(D RedBlackTree)
+     * The range types for $(D RedBlackTree)
      */
-    struct Range
-    {
-        private Node _begin;
-        private Node _end;
-
-        private this(Node b, Node e)
-        {
-            _begin = b;
-            _end = e;
-        }
-
-        /**
-         * Returns $(D true) if the range is _empty
-         */
-        @property bool empty() const
-        {
-            return _begin is _end;
-        }
-
-        /**
-         * Returns the first element in the range
-         */
-        @property Elem front()
-        {
-            return _begin.value;
-        }
-
-        /**
-         * Returns the last element in the range
-         */
-        @property Elem back()
-        {
-            return _end.prev.value;
-        }
-
-        /**
-         * pop the front element from the range
-         *
-         * complexity: amortized $(BIGOH 1)
-         */
-        void popFront()
-        {
-            _begin = _begin.next;
-        }
-
-        /**
-         * pop the back element from the range
-         *
-         * complexity: amortized $(BIGOH 1)
-         */
-        void popBack()
-        {
-            _end = _end.prev;
-        }
-
-        /**
-         * Trivial _save implementation, needed for $(D isForwardRange).
-         */
-        @property Range save()
-        {
-            return this;
-        }
-    }
+    alias Range = RBRange!(RBNode*);
+    alias ConstRange = RBRange!(const(RBNode)*); /// Ditto
+    alias ImmutableRange = RBRange!(immutable(RBNode)*); /// Ditto
 
     static if(doUnittest) unittest
     {
@@ -963,6 +971,18 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     Range opSlice()
     {
         return Range(_begin, _end);
+    }
+
+    /// Ditto
+    ConstRange opSlice() const
+    {
+        return ConstRange(_begin, _end);
+    }
+
+    /// Ditto
+    ImmutableRange opSlice() immutable
+    {
+        return ImmutableRange(_begin, _end);
     }
 
     /**
@@ -1434,11 +1454,11 @@ assert(equal(rbt[], [5]));
     }
 
     // find the first node where the value is > e
-    private Node _firstGreater(Elem e)
+    private inout(RBNode)* _firstGreater(Elem e) inout
     {
         // can't use _find, because we cannot return null
         auto cur = _end.left;
-        auto result = _end;
+        inout(RBNode)* result = _end;
         while(cur)
         {
             if(_less(e, cur.value))
@@ -1453,11 +1473,11 @@ assert(equal(rbt[], [5]));
     }
 
     // find the first node where the value is >= e
-    private Node _firstGreaterEqual(Elem e)
+    private inout(RBNode)* _firstGreaterEqual(Elem e) inout
     {
         // can't use _find, because we cannot return null.
         auto cur = _end.left;
-        auto result = _end;
+        inout(RBNode)* result = _end;
         while(cur)
         {
             if(_less(cur.value, e))
@@ -1483,6 +1503,18 @@ assert(equal(rbt[], [5]));
         return Range(_firstGreater(e), _end);
     }
 
+    /// Ditto
+    ConstRange upperBound(Elem e) const
+    {
+        return ConstRange(_firstGreater(e), _end);
+    }
+
+    /// Ditto
+    ImmutableRange upperBound(Elem e) immutable
+    {
+        return ImmutableRange(_firstGreater(e), _end);
+    }
+
     /**
      * Get a range from the container with all elements that are < e according
      * to the less comparator
@@ -1494,27 +1526,40 @@ assert(equal(rbt[], [5]));
         return Range(_begin, _firstGreaterEqual(e));
     }
 
+    /// Ditto
+    ConstRange lowerBound(Elem e) const
+    {
+        return ConstRange(_begin, _firstGreaterEqual(e));
+    }
+
+    /// Ditto
+    ImmutableRange lowerBound(Elem e) immutable
+    {
+        return ImmutableRange(_begin, _firstGreaterEqual(e));
+    }
+
     /**
      * Get a range from the container with all elements that are == e according
      * to the less comparator
      *
      * Complexity: $(BIGOH log(n))
      */
-    Range equalRange(Elem e)
+    auto equalRange(this This)(Elem e)
     {
         auto beg = _firstGreaterEqual(e);
+        alias RangeType = RBRange!(typeof(beg));
         if(beg is _end || _less(e, beg.value))
             // no values are equal
-            return Range(beg, beg);
+            return RangeType(beg, beg);
         static if(allowDuplicates)
         {
-            return Range(beg, _firstGreater(e));
+            return RangeType(beg, _firstGreater(e));
         }
         else
         {
             // no sense in doing a full search, no duplicates are allowed,
             // so we just get the next node.
-            return Range(beg, beg.next);
+            return RangeType(beg, beg.next);
         }
     }
 
@@ -1623,6 +1668,16 @@ assert(equal(rbt[], [5]));
                 throw e;
             }
         }
+    }
+
+    /**
+    Formats the RedBlackTree into a sink function. For more info see
+    $(D std.format.formatValue)
+    */
+    void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) const {
+        sink("RedBlackTree(");
+        sink.formatValue(this[], fmt);
+        sink(")");
     }
 
     /**
@@ -1781,6 +1836,7 @@ pure unittest
 pure unittest
 {
     import std.array : array;
+
     auto rt1 = redBlackTree(5, 4, 3, 2, 1);
     assert(rt1.length == 5);
     assert(array(rt1[]) == [1, 2, 3, 4, 5]);
@@ -1798,10 +1854,41 @@ pure unittest
     assert(array(rt4[]) == ["hello"]);
 }
 
+unittest {
+    import std.conv : to;
+
+    auto rt1 = redBlackTree!string();
+    assert(rt1.to!string == "RedBlackTree([])");
+
+    auto rt2 = redBlackTree!string("hello");
+    assert(rt2.to!string == "RedBlackTree([\"hello\"])");
+
+    auto rt3 = redBlackTree!string("hello", "world", "!");
+    assert(rt3.to!string == "RedBlackTree([\"!\", \"hello\", \"world\"])");
+}
+
 //constness checks
 unittest
 {
     const rt1 = redBlackTree(5,4,3,2,1);
     static assert(is(typeof(rt1.length)));
     static assert(is(typeof(5 in rt1)));
+
+    static assert(is(typeof(rt1.upperBound(3).front()) == const(int)));
+    import std.algorithm : equal;
+    assert(rt1.upperBound(3).equal([4, 5]));
+    assert(rt1.lowerBound(3).equal([1, 2]));
+    assert(rt1.equalRange(3).equal([3]));
+    assert(rt1[].equal([1, 2, 3, 4, 5]));
+}
+
+//immutable checks
+unittest
+{
+    immutable rt1 = redBlackTree(5,4,3,2,1);
+    static assert(is(typeof(rt1.length)));
+
+    static assert(is(typeof(rt1.upperBound(3).front()) == immutable(int)));
+    import std.algorithm : equal;
+    assert(rt1.upperBound(2).equal([3, 4, 5]));
 }

@@ -27,10 +27,13 @@ import std.range.primitives;
 import std.traits;
 import std.typetuple;
 
-private string convFormat(Char, Args...)(in Char[] fmt, Args args)
+// Same as std.string.format, but "self-importing".
+// Helps reduce code and imports, particularly in static asserts.
+// Also helps with missing imports errors.
+package template convFormat()
 {
     import std.format : format;
-    return std.format.format(fmt, args);
+    alias convFormat = format;
 }
 
 /* ************* Exceptions *************** */
@@ -1227,12 +1230,9 @@ body
 {
     alias EEType = Unqual!(ElementEncodingType!T);
 
-    T toStringRadixConvert(size_t bufLen, uint radix = 0, bool neg = false)(uint runtimeRadix = 0)
+    T toStringRadixConvert(size_t bufLen)(uint runtimeRadix = 0)
     {
-        static if (neg)
-            ulong div = void, mValue = unsigned(-value);
-        else
-            Unsigned!(Unqual!S) div = void, mValue = unsigned(value);
+        Unsigned!(Unqual!S) div = void, mValue = unsigned(value);
 
         size_t index = bufLen;
         EEType[bufLen] buffer = void;
@@ -1241,49 +1241,35 @@ body
 
         do
         {
-            static if (radix == 0)
-            {
-                div = cast(S)(mValue / runtimeRadix );
-                mod = cast(ubyte)(mValue % runtimeRadix);
-                mod += mod < 10 ? '0' : baseChar - 10;
-            }
-            else static if (radix > 10)
-            {
-                div = cast(S)(mValue / radix );
-                mod = cast(ubyte)(mValue % radix);
-                mod += mod < 10 ? '0' : baseChar - 10;
-            }
-            else
-            {
-                div = cast(S)(mValue / radix);
-                mod = mValue % radix + '0';
-            }
+            div = cast(S)(mValue / runtimeRadix );
+            mod = cast(ubyte)(mValue % runtimeRadix);
+            mod += mod < 10 ? '0' : baseChar - 10;
             buffer[--index] = cast(char)mod;
             mValue = div;
         } while (mValue);
 
-        static if (neg)
-        {
-            buffer[--index] = '-';
-        }
         return cast(T)buffer[index .. $].dup;
     }
 
+    import std.array;
     switch(radix)
     {
         case 10:
-            if (value < 0)
-                return toStringRadixConvert!(S.sizeof * 3 + 1, 10, true)();
-            else
-                return toStringRadixConvert!(S.sizeof * 3, 10)();
+            // The (value+0) is so integral promotions happen to the type
+            return toChars!(10, EEType)(value + 0).array;
         case 16:
-            return toStringRadixConvert!(S.sizeof * 2, 16)();
+            // The unsigned(unsigned(value)+0) is so unsigned integral promotions happen to the type
+            if (letterCase == letterCase.upper)
+                return toChars!(16, EEType, LetterCase.upper)(unsigned(unsigned(value) + 0)).array;
+            else
+                return toChars!(16, EEType, LetterCase.lower)(unsigned(unsigned(value) + 0)).array;
         case 2:
-            return toStringRadixConvert!(S.sizeof * 8, 2)();
+            return toChars!(2, EEType)(unsigned(unsigned(value) + 0)).array;
         case 8:
-            return toStringRadixConvert!(S.sizeof * 3, 8)();
+            return toChars!(8, EEType)(unsigned(unsigned(value) + 0)).array;
+
         default:
-           return toStringRadixConvert!(S.sizeof * 6)(radix);
+            return toStringRadixConvert!(S.sizeof * 6)(radix);
     }
 }
 
@@ -1308,7 +1294,6 @@ body
     assert(to!string(long.min) == "-9223372036854775808");
     assert(to!string(long.max) == "9223372036854775807");
 }
-
 
 /**
 Narrowing numeric-numeric conversions throw when the value does not
@@ -2867,9 +2852,10 @@ unittest
 //Tests for the double implementation
 unittest
 {
-    import core.stdc.stdlib, std.math;
     static if(real.mant_dig == 53)
     {
+        import core.stdc.stdlib, std.exception, std.math;
+
         //Should be parsed exactly: 53 bit mantissa
         string s = "0x1A_BCDE_F012_3456p10";
         auto x = parse!real(s);
@@ -5593,4 +5579,239 @@ unittest
     assert(hexString!"46 47 48 49 4A 4B" == "FGHIJK");
     assert(hexString!"30\r\n\t\f\v31 32 33 32 31 30" == "0123210");
     assert(hexString!"ab cd" == hexString!"ABCD");
+}
+
+
+/**
+ * Convert integer to a range of characters.
+ * Intended to be lightweight and fast.
+ *
+ * Params:
+ *      Radix = 2, 8, 10, 16
+ *      Char = character type for output
+ *      letterCase = lower for deadbeef, upper for DEADBEEF
+ *      value = integer to convert. Can be uint or ulong. If Radix is 10, can also be
+ *              int or long.
+ * Returns:
+ *      Random access range with slicing and everything
+ */
+
+auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.lower, T)(T value)
+    pure nothrow @nogc @safe
+    if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
+        (is(Unqual!T == uint) || is(Unqual!T == ulong) ||
+         radix == 10 && (is(Unqual!T == int) || is(Unqual!T == long))))
+{
+    alias UT = Unqual!T;
+
+    static if (radix == 10)
+    {
+        /* uint.max  is 42_9496_7295
+         *  int.max  is 21_4748_3647
+         * ulong.max is 1844_6744_0737_0955_1615
+         *  long.max is  922_3372_0368_5477_5807
+         */
+        struct Result
+        {
+            this(UT value)
+            {
+                bool neg = false;
+                if (value < 0)
+                {
+                    value = -value;
+                    neg = true;
+                }
+                size_t i = buf.length;
+                do
+                {
+                    buf[--i] = cast(ubyte)('0' + cast(Unsigned!UT)value % 10);
+                    value = cast(Unsigned!UT)value / 10;
+                } while (value);
+                if (neg)
+                    buf[--i] = '-';
+                lwr = cast(ubyte)i;
+                upr = cast(ubyte)buf.length;
+            }
+
+            @property size_t length() { return upr - lwr; }
+
+            @property bool empty() { return upr == lwr; }
+
+            @property Char front() { return buf[lwr]; }
+
+            void popFront() { ++lwr; }
+
+            @property Char back() { return buf[upr - 1]; }
+
+            void popBack() { --upr; }
+
+            @property Result save() { return this; }
+
+            Char opIndex(size_t i) { return buf[lwr + i]; }
+
+            Result opSlice(size_t lwr, size_t upr)
+            {
+                Result result = void;
+                result.buf = buf;
+                result.lwr = cast(ubyte)(this.lwr + lwr);
+                result.upr = cast(ubyte)(this.lwr + upr);
+                return result;
+            }
+
+          private:
+            char[(UT.sizeof == 4) ? 10 + isSigned!T : 20] buf;
+            ubyte lwr, upr;
+        }
+
+        return Result(value);
+    }
+    else
+    {
+        static if (radix == 2)
+            enum SHIFT = 1;
+        else static if (radix == 8)
+            enum SHIFT = 3;
+        else static if (radix == 16)
+            enum SHIFT = 4;
+        else
+            static assert(0);
+        struct Result
+        {
+            this(UT value)
+            {
+                this.value = value;
+
+                ubyte len = 1;
+                while (value >>>= SHIFT)
+                   ++len;
+                this.len = len;
+            }
+
+            @property size_t length() { return len; }
+
+            @property bool empty() { return len == 0; }
+
+            @property Char front() { return opIndex(0); }
+
+            void popFront() { --len; }
+
+            @property Char back() { return opIndex(len - 1); }
+
+            void popBack()
+            {
+                value >>>= SHIFT;
+                --len;
+            }
+
+            @property Result save() { return this; }
+
+            Char opIndex(size_t i)
+            {
+                Char c = (value >>> ((len - i - 1) * SHIFT)) & ((1 << SHIFT) - 1);
+                return cast(Char)((radix < 10 || c < 10) ? c + '0'
+                                                         : (letterCase == LetterCase.upper ? c + 'A' - 10
+                                                                                           : c + 'a' - 10));
+            }
+
+            Result opSlice(size_t lwr, size_t upr)
+            {
+                Result result = void;
+                result.value = value >>> ((len - upr - 1) * SHIFT);
+                result.len = cast(ubyte)(upr - lwr);
+                return result;
+            }
+
+          private:
+            UT value;
+            ubyte len;
+        }
+
+        return Result(value);
+    }
+}
+
+
+unittest
+{
+    import std.array;
+    import std.range;
+
+    {
+        assert(toChars!2(0u).array == "0");
+        assert(toChars!2(0Lu).array == "0");
+        assert(toChars!2(1u).array == "1");
+        assert(toChars!2(1Lu).array == "1");
+
+        auto r = toChars!2(2u);
+        assert(r.length == 2);
+        assert(r[0] == '1');
+        assert(r[1..2].array == "0");
+        auto s = r.save;
+        assert(r.array == "10");
+        assert(s.retro.array == "01");
+    }
+    {
+        assert(toChars!8(0u).array == "0");
+        assert(toChars!8(0Lu).array == "0");
+        assert(toChars!8(1u).array == "1");
+        assert(toChars!8(1234567Lu).array == "4553207");
+
+        auto r = toChars!8(8u);
+        assert(r.length == 2);
+        assert(r[0] == '1');
+        assert(r[1..2].array == "0");
+        auto s = r.save;
+        assert(r.array == "10");
+        assert(s.retro.array == "01");
+    }
+    {
+        assert(toChars!10(0u).array == "0");
+        assert(toChars!10(0Lu).array == "0");
+        assert(toChars!10(1u).array == "1");
+        assert(toChars!10(1234567Lu).array == "1234567");
+        assert(toChars!10(uint.max).array == "4294967295");
+        assert(toChars!10(ulong.max).array == "18446744073709551615");
+
+        auto r = toChars(10u);
+        assert(r.length == 2);
+        assert(r[0] == '1');
+        assert(r[1..2].array == "0");
+        auto s = r.save;
+        assert(r.array == "10");
+        assert(s.retro.array == "01");
+    }
+    {
+        assert(toChars!10(0).array == "0");
+        assert(toChars!10(0L).array == "0");
+        assert(toChars!10(1).array == "1");
+        assert(toChars!10(1234567L).array == "1234567");
+        assert(toChars!10(int.max).array == "2147483647");
+        assert(toChars!10(long.max).array == "9223372036854775807");
+        assert(toChars!10(-int.max).array == "-2147483647");
+        assert(toChars!10(-long.max).array == "-9223372036854775807");
+        assert(toChars!10(int.min).array == "-2147483648");
+        assert(toChars!10(long.min).array == "-9223372036854775808");
+
+        auto r = toChars!10(10);
+        assert(r.length == 2);
+        assert(r[0] == '1');
+        assert(r[1..2].array == "0");
+        auto s = r.save;
+        assert(r.array == "10");
+        assert(s.retro.array == "01");
+    }
+    {
+        assert(toChars!(16)(0u).array == "0");
+        assert(toChars!(16)(0Lu).array == "0");
+        assert(toChars!(16)(10u).array == "a");
+        assert(toChars!(16, char, LetterCase.upper)(0x12AF34567Lu).array == "12AF34567");
+
+        auto r = toChars!(16)(16u);
+        assert(r.length == 2);
+        assert(r[0] == '1');
+        assert(r[1..2].array == "0");
+        auto s = r.save;
+        assert(r.array == "10");
+        assert(s.retro.array == "01");
+    }
 }

@@ -48,6 +48,8 @@ $(TR $(TDNW Comparison)
         $(SUBREF comparison, clamp)
         $(SUBREF comparison, cmp)
         $(SUBREF comparison, equal)
+        $(SUBREF comparison, isPermutation)
+        $(SUBREF comparison, isSameLength)
         $(SUBREF comparison, levenshteinDistance)
         $(SUBREF comparison, levenshteinDistanceAndPath)
         $(SUBREF comparison, max)
@@ -68,6 +70,7 @@ $(TR $(TDNW Iteration)
         $(SUBREF iteration, group)
         $(SUBREF iteration, joiner)
         $(SUBREF iteration, map)
+        $(SUBREF iteration, permutations)
         $(SUBREF iteration, reduce)
         $(SUBREF iteration, splitter)
         $(SUBREF iteration, sum)
@@ -129,9 +132,9 @@ $(TR $(TDNW Mutation)
 )
 ))
 
-Many functions in this package are parameterized with a function or a
-$(GLOSSARY predicate). The predicate may be passed either as a
-function name, a delegate name, a $(GLOSSARY functor) name, or a
+Many functions in this package are parameterized with a $(GLOSSARY predicate).
+The predicate may be any suitable callable type
+(a function, a delegate, a $(GLOSSARY functor), or a lambda), or a
 compile-time string. The string may consist of $(B any) legal D
 expression that uses the symbol $(D a) (for unary functions) or the
 symbols $(D a) and $(D b) (for binary functions). These names will NOT
@@ -148,10 +151,11 @@ static bool greater(int a, int b)
 {
     return a > b;
 }
-sort!(greater)(a);  // predicate as alias
-sort!("a > b")(a);  // predicate as string
-                    // (no ambiguity with array name)
-sort(a);            // no predicate, "a < b" is implicit
+sort!(greater)(a);         // predicate as alias
+sort!((a, b) => a > b)(a); // predicate as a lambda.
+sort!("a > b")(a);         // predicate as string
+                           // (no ambiguity with array name)
+sort(a);                   // no predicate, "a < b" is implicit
 ----
 
 Macros:

@@ -445,21 +445,21 @@ wikipedia.org/wiki/Park%E2%80%93Miller_random_number_generator,
 generator) that uses 16807 for the multiplier. $(D MinstdRand)
 implements a variant that has slightly better spectral behavior by
 using the multiplier 48271. Both generators are rather simplistic.
-
-Example:
-
-----
-// seed with a constant
-auto rnd0 = MinstdRand0(1);
-auto n = rnd0.front; // same for each run
-// Seed with an unpredictable value
-rnd0.seed(unpredictableSeed);
-n = rnd0.front; // different across runs
-----
  */
 alias MinstdRand0 = LinearCongruentialEngine!(uint, 16807, 0, 2147483647);
 /// ditto
 alias MinstdRand = LinearCongruentialEngine!(uint, 48271, 0, 2147483647);
+
+///
+unittest
+{
+    // seed with a constant
+    auto rnd0 = MinstdRand0(1);
+    auto n = rnd0.front; // same for each run
+    // Seed with an unpredictable value
+    rnd0.seed(unpredictableSeed);
+    n = rnd0.front; // different across runs
+}
 
 unittest
 {
@@ -613,30 +613,37 @@ Parameters for the generator.
    Throws:
    $(D Exception) if the InputRange didn't provide enough elements to seed the generator.
    The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
-
-   Examples:
-   ----------------
-   Mt19937 gen;
-   gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
-   ----------------
  */
     void seed(T)(T range) if(isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
     {
         size_t j;
-        for(j = 0; j < n && !range.empty; ++j, range.popFront())
+        for (j = 0; j < n && !range.empty; ++j, range.popFront())
         {
             mt[j] = range.front;
         }
 
         mti = n;
-        if(range.empty && j < n)
+        if (range.empty && j < n)
         {
-            import std.format : format;
-            throw new Exception(format("MersenneTwisterEngine.seed: Input range didn't provide enough"~
-                " elements: Need %s elemnets.", n));
+            import core.internal.string;
+
+            UnsignedStringBuf buf = void;
+            string s = "MersenneTwisterEngine.seed: Input range didn't provide enough elements: Need ";
+            s ~= unsignedToTempString(n, buf, 10) ~ " elements.";
+            throw new Exception(s);
         }
 
         popFront();
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm.iteration : map;
+        import std.range : repeat;
+
+        Mt19937 gen;
+        gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
     }
 
 /**
@@ -722,22 +729,22 @@ MT19937), generating uniformly-distributed 32-bit numbers with a
 period of 2 to the power of 19937. Recommended for random number
 generation unless memory is severely restricted, in which case a $(D
 LinearCongruentialEngine) would be the generator of choice.
-
-Example:
-
-----
-// seed with a constant
-Mt19937 gen;
-auto n = gen.front; // same for each run
-// Seed with an unpredictable value
-gen.seed(unpredictableSeed);
-n = gen.front; // different across runs
-----
  */
 alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
                                        0x9908b0df, 11, 7,
                                        0x9d2c5680, 15,
                                        0xefc60000, 18);
+
+///
+unittest
+{
+    // seed with a constant
+    Mt19937 gen;
+    auto n = gen.front; // same for each run
+    // Seed with an unpredictable value
+    gen.seed(unpredictableSeed);
+    n = gen.front; // different across runs
+}
 
 nothrow unittest
 {
@@ -1021,17 +1028,6 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 /**
  * Define $(D XorshiftEngine) generators with well-chosen parameters. See each bits examples of "Xorshift RNGs".
  * $(D Xorshift) is a Xorshift128's alias because 128bits implementation is mostly used.
- *
- * Example:
- * -----
- * // Seed with a constant
- * auto rnd = Xorshift(1);
- * auto num = rnd.front;  // same for each run
- *
- * // Seed with an unpredictable value
- * rnd.seed(unpredictableSeed());
- * num = rnd.front; // different across runs
- * -----
  */
 alias Xorshift32  = XorshiftEngine!(uint, 32,  13, 17, 15) ;
 alias Xorshift64  = XorshiftEngine!(uint, 64,  10, 13, 10); /// ditto
@@ -1041,6 +1037,17 @@ alias Xorshift160 = XorshiftEngine!(uint, 160, 2,  1,  4);  /// ditto
 alias Xorshift192 = XorshiftEngine!(uint, 192, 2,  1,  4);  /// ditto
 alias Xorshift    = Xorshift128;                            /// ditto
 
+///
+unittest
+{
+    // Seed with a constant
+    auto rnd = Xorshift(1);
+    auto num = rnd.front;  // same for each run
+
+    // Seed with an unpredictable value
+    rnd.seed(unpredictableSeed());
+    num = rnd.front; // different across rnd
+}
 
 unittest
 {
@@ -1091,24 +1098,13 @@ unittest
  * std.random.  This can be used to confirm that a given function or
  * object is compatible with all the pseudo-random number generators
  * available.  It is enabled only in unittest mode.
- *
- * Example:
- *
- * ----
- * foreach(Rng; PseudoRngTypes)
- * {
- *     static assert(isUniformRng!Rng);
- *     auto rng = Rng(unpredictableSeed);
- *     foo(rng);
- * }
- * ----
  */
-
 unittest
 {
     foreach(Rng; PseudoRngTypes)
     {
         static assert(isUniformRNG!Rng);
+        auto rng = Rng(unpredictableSeed);
     }
 }
 
@@ -1120,16 +1116,7 @@ random number sequences every run.
 
 Returns:
 A single unsigned integer seed value, different on each successive call
-
-Example:
-
-----
-auto rnd = Random(unpredictableSeed);
-auto n = rnd.front;
-...
-----
 */
-
 @property uint unpredictableSeed() @trusted
 {
     import core.thread : Thread, getpid, TickDuration;
@@ -1145,11 +1132,12 @@ auto n = rnd.front;
     return cast(uint) (TickDuration.currSystemTick.length ^ rand.front);
 }
 
+///
 @safe unittest
 {
-    // not much to test here
-    auto a = unpredictableSeed;
-    static assert(is(typeof(a) == uint));
+    auto rnd = Random(unpredictableSeed);
+    auto n = rnd.front;
+    static assert(is(typeof(n) == uint));
 }
 
 /**
@@ -1214,21 +1202,21 @@ Returns:
     A single random variate drawn from the _uniform distribution
     between $(D a) and $(D b), whose type is the common type of
     these parameters
-
-Example:
-
-----
-auto gen = Random(unpredictableSeed);
-// Generate an integer in [0, 1023]
-auto a = uniform(0, 1024, gen);
-// Generate a float in [0, 1$(RPAREN)
-auto a = uniform(0.0f, 1.0f, gen);
-----
  */
 auto uniform(string boundaries = "[)", T1, T2)
 (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void))
 {
     return uniform!(boundaries, T1, T2, Random)(a, b, rndGen);
+}
+
+///
+unittest
+{
+    auto gen = Random(unpredictableSeed);
+    // Generate an integer in [0, 1023]
+    auto a = uniform(0, 1024, gen);
+    // Generate a float in [0, 1)
+    auto b = uniform(0.0f, 1.0f, gen);
 }
 
 @safe unittest
@@ -1956,15 +1944,6 @@ Returns:
     [0, ... $(D proportions.length) - 1], with the probability
     of getting an individual index value $(D i) being proportional to
     $(D proportions[i]).
-
-Example:
-
-----
-auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
-auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
-auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 20% of the time,
-                           // and 2 10% of the time
-----
 */
 size_t dice(Rng, Num)(ref Rng rnd, Num[] proportions...)
 if (isNumeric!Num && isForwardRange!Rng)
@@ -1991,6 +1970,15 @@ size_t dice(Num)(Num[] proportions...)
 if (isNumeric!Num)
 {
     return diceImpl(rndGen, proportions);
+}
+
+///
+unittest
+{
+    auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
+    auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
+    auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 20% of the time,
+                               // and 2 10% of the time
 }
 
 private size_t diceImpl(Rng, Range)(ref Rng rng, Range proportions)

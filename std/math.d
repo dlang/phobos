@@ -41,6 +41,7 @@ $(TR $(TDNW Floating-point operations) $(TD
     $(MYREF approxEqual) $(MYREF feqrel) $(MYREF fdim) $(MYREF fmax)
     $(MYREF fmin) $(MYREF fma) $(MYREF nextDown) $(MYREF nextUp)
     $(MYREF nextafter) $(MYREF NaN) $(MYREF getNaNPayload)
+    $(MYREF cmp)
 ))
 $(TR $(TDNW Introspection) $(TD
     $(MYREF isFinite) $(MYREF isIdentical) $(MYREF isInfinity) $(MYREF isNaN)
@@ -127,6 +128,7 @@ version (Win64)
         version = Win64_DMD_InlineAsm;
 }
 
+import core.math;
 import core.stdc.math;
 import std.traits;
 
@@ -207,7 +209,7 @@ version(unittest)
 
 
 
-private:
+package:
 // The following IEEE 'real' formats are currently supported.
 version(LittleEndian)
 {
@@ -627,13 +629,19 @@ auto conj(Num)(Num y) @safe pure nothrow @nogc
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real cos(real x) @safe pure nothrow @nogc;       /* intrinsic */
+real cos(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.cos(x); }
 //FIXME
 ///ditto
 double cos(double x) @safe pure nothrow @nogc { return cos(cast(real)x); }
 //FIXME
 ///ditto
 float cos(float x) @safe pure nothrow @nogc { return cos(cast(real)x); }
+
+unittest
+{
+    real function(real) pcos = &cos;
+    assert(pcos != null);
+}
 
 /***********************************
  * Returns $(WEB en.wikipedia.org/wiki/Sine, sine) of x. x is in $(WEB en.wikipedia.org/wiki/Radian, radians).
@@ -655,7 +663,7 @@ float cos(float x) @safe pure nothrow @nogc { return cos(cast(real)x); }
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real sin(real x) @safe pure nothrow @nogc;       /* intrinsic */
+real sin(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.sin(x); }
 //FIXME
 ///ditto
 double sin(double x) @safe pure nothrow @nogc { return sin(cast(real)x); }
@@ -675,6 +683,12 @@ unittest
       auto result = sin(x * (PI / 180)); // convert degrees to radians
       writefln("The sine of %s degrees is %s", x, result);
     }
+}
+
+unittest
+{
+    real function(real) psin = &sin;
+    assert(psin != null);
 }
 
 /***********************************
@@ -1458,7 +1472,7 @@ unittest
  * greater than long.max, the result is
  * indeterminate.
  */
-long rndtol(real x) @nogc @safe pure nothrow;    /* intrinsic */
+long rndtol(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.rndtol(x); }
 //FIXME
 ///ditto
 long rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
@@ -1466,6 +1480,11 @@ long rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
 ///ditto
 long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
 
+unittest
+{
+    long function(real) prndtol = &rndtol;
+    assert(prndtol != null);
+}
 
 /*****************************************
  * Returns x rounded to a long value using the FE_TONEAREST rounding mode.
@@ -1485,13 +1504,13 @@ extern (C) real rndtonl(real x);
  *      $(TR $(TD +$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *      )
  */
-float sqrt(float x) @nogc @safe pure nothrow;    /* intrinsic */
+float sqrt(float x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
 
 /// ditto
-double sqrt(double x) @nogc @safe pure nothrow;  /* intrinsic */
+double sqrt(double x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
 
 /// ditto
-real sqrt(real x) @nogc @safe pure nothrow;      /* intrinsic */
+real sqrt(real x) @nogc @safe pure nothrow { pragma(inline, true); return core.math.sqrt(x); }
 
 @safe pure nothrow @nogc unittest
 {
@@ -1503,6 +1522,16 @@ real sqrt(real x) @nogc @safe pure nothrow;      /* intrinsic */
     assert(isNaN(sqrt(-1.0f)));
     assert(isNaN(sqrt(-1.0)));
     assert(isNaN(sqrt(-1.0L)));
+}
+
+unittest
+{
+    float function(float) psqrtf = &sqrt;
+    assert(psqrtf != null);
+    double function(double) psqrtd = &sqrt;
+    assert(psqrtd != null);
+    real function(real) psqrtr = &sqrt;
+    assert(psqrtr != null);
 }
 
 creal sqrt(creal z) @nogc @safe pure nothrow
@@ -1574,7 +1603,7 @@ real exp(real x) @trusted pure nothrow @nogc
     }
     else
     {
-        alias F = floatTraits!T;
+        alias F = floatTraits!real;
         static if (F.realFormat == RealFormat.ieeeDouble)
         {
             // Coefficients for exp(x)
@@ -2595,6 +2624,22 @@ unittest
     }
 }
 
+static import core.bitop;
+static if (size_t.sizeof == 4)
+{
+    private int bsr_ulong(ulong x) @trusted pure nothrow @nogc
+    {
+        size_t msb = x >> 32;
+        size_t lsb = cast(size_t) x;
+        if (msb)
+            return core.bitop.bsr(msb) + 32;
+        else
+            return core.bitop.bsr(lsb);
+    }
+}
+else
+    private alias bsr_ulong = core.bitop.bsr;
+
 /******************************************
  * Extracts the exponent of x as a signed integral value.
  *
@@ -2608,74 +2653,182 @@ unittest
  *      $(TR $(TD $(NAN))            $(TD FP_ILOGBNAN) $(TD no))
  *      )
  */
-int ilogb(real x)  @trusted nothrow @nogc
+int ilogb(T)(const T x) @trusted pure nothrow @nogc
+    if(isFloatingPoint!T)
 {
-    version (Win64_DMD_InlineAsm)
+    alias F = floatTraits!T;
+
+    union floatBits
     {
-        asm pure nothrow @nogc
+        T rv;
+        ushort[T.sizeof/2] vu;
+        uint[T.sizeof/4] vui;
+        static if(T.sizeof >= 8)
+            long[T.sizeof/8] vl;
+    }
+    floatBits y = void;
+    y.rv = x;
+
+    int ex = y.vu[F.EXPPOS_SHORT] & F.EXPMASK;
+    static if (F.realFormat == RealFormat.ieeeExtended)
+    {
+        if (ex)
         {
-            naked                       ;
-            fld     real ptr [RCX]      ;
-            fxam                        ;
-            fstsw   AX                  ;
-            and     AH,0x45             ;
-            cmp     AH,0x40             ;
-            jz      Lzeronan            ;
-            cmp     AH,5                ;
-            jz      Linfinity           ;
-            cmp     AH,1                ;
-            jz      Lzeronan            ;
-            fxtract                     ;
-            fstp    ST(0)               ;
-            fistp   dword ptr 8[RSP]    ;
-            mov     EAX,8[RSP]          ;
-            ret                         ;
-
-        Lzeronan:
-            mov     EAX,0x80000000      ;
-            fstp    ST(0)               ;
-            ret                         ;
-
-        Linfinity:
-            mov     EAX,0x7FFFFFFF      ;
-            fstp    ST(0)               ;
-            ret                         ;
+            // If exponent is non-zero
+            if (ex == F.EXPMASK) // infinity or NaN
+            {
+                if (y.vl[0] &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
+                    return FP_ILOGBNAN;
+                else // +-infinity
+                    return int.max;
+            }
+            else
+            {
+                return ex - F.EXPBIAS - 1;
+            }
+        }
+        else if (!y.vl[0])
+        {
+            // vf is +-0.0
+            return FP_ILOGB0;
+        }
+        else
+        {
+            // subnormal
+            uint msb = y.vui[MANTISSA_MSB];
+            uint lsb = y.vui[MANTISSA_LSB];
+            if (msb)
+                return ex - F.EXPBIAS - T.mant_dig + 1 + 32 + core.bitop.bsr(msb);
+            else
+                return ex - F.EXPBIAS - T.mant_dig + 1 + core.bitop.bsr(lsb);
         }
     }
-    else version (CRuntime_Microsoft)
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        int res;
-        asm pure nothrow @nogc
+        if (ex)     // If exponent is non-zero
         {
-            fld     real ptr [x]        ;
-            fxam                        ;
-            fstsw   AX                  ;
-            and     AH,0x45             ;
-            cmp     AH,0x40             ;
-            jz      Lzeronan            ;
-            cmp     AH,5                ;
-            jz      Linfinity           ;
-            cmp     AH,1                ;
-            jz      Lzeronan            ;
-            fxtract                     ;
-            fstp    ST(0)               ;
-            fistp   res                 ;
-            mov     EAX,res             ;
-            jmp     Ldone               ;
-
-        Lzeronan:
-            mov     EAX,0x80000000      ;
-            fstp    ST(0)               ;
-            jmp     Ldone               ;
-
-        Linfinity:
-            mov     EAX,0x7FFFFFFF      ;
-            fstp    ST(0)               ;
-        Ldone: ;
+            if (ex == F.EXPMASK)
+            {
+                // infinity or NaN
+                if (y.vl[MANTISSA_LSB] | ( y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
+                    return FP_ILOGBNAN;
+                else // +- infinity
+                    return int.max;
+            }
+            else
+            {
+                return ex - F.EXPBIAS - 1;
+            }
+        }
+        else if ((y.vl[MANTISSA_LSB] | (y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
+        {
+            // vf is +-0.0
+            return FP_ILOGB0;
+        }
+        else
+        {
+            // subnormal
+            ulong msb = y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF;
+            ulong lsb = y.vl[MANTISSA_LSB];
+            if (msb)
+                return ex - F.EXPBIAS - T.mant_dig + 1 + bsr_ulong(msb) + 64;
+            else
+                return ex - F.EXPBIAS - T.mant_dig + 1 + bsr_ulong(lsb);
         }
     }
+    else static if (F.realFormat == RealFormat.ieeeDouble)
+    {
+        if (ex) // If exponent is non-zero
+        {
+            if (ex == F.EXPMASK)   // infinity or NaN
+            {
+                if ((y.vl[0] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FF0_0000_0000_0000)  // +- infinity
+                    return int.max;
+                else // NaN
+                    return FP_ILOGBNAN;
+            }
+            else
+            {
+                return ((ex - F.EXPBIAS) >> 4) - 1;
+            }
+        }
+        else if (!(y.vl[0] & 0x7FFF_FFFF_FFFF_FFFF))
+        {
+            // vf is +-0.0
+            return FP_ILOGB0;
+        }
+        else
+        {
+            // subnormal
+            uint msb = y.vui[MANTISSA_MSB] & F.MANTISSAMASK_INT;
+            uint lsb = y.vui[MANTISSA_LSB];
+            if (msb)
+                return ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1 + core.bitop.bsr(msb) + 32;
+            else
+                return ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1 + core.bitop.bsr(lsb);
+
+        }
+    }
+    else static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        if (ex) // If exponent is non-zero
+        {
+            if (ex == F.EXPMASK)   // infinity or NaN
+            {
+                if ((y.vui[0] & 0x7FFF_FFFF) == 0x7F80_0000)  // +- infinity
+                    return int.max;
+                else // NaN
+                    return FP_ILOGBNAN;
+            }
+            else
+            {
+                return ((ex - F.EXPBIAS) >> 7) - 1;
+            }
+        }
+        else if (!(y.vui[0] & 0x7FFF_FFFF))
+        {
+            // vf is +-0.0
+            return FP_ILOGB0;
+        }
+        else
+        {
+            // subnormal
+            uint mantissa = y.vui[0] & F.MANTISSAMASK_INT;
+            return ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1 + core.bitop.bsr(mantissa);
+        }
+    }
+    else // static if (F.realFormat == RealFormat.ibmExtended)
+    {
+        core.stdc.math.ilogbl(x);
+    }
+}
+int ilogb(T)(const T x) @safe pure nothrow @nogc
+    if(isIntegral!T && isUnsigned!T)
+{
+    if (x == 0)
+        return FP_ILOGB0;
     else
-        return core.stdc.math.ilogbl(x);
+    {
+        static if (T.sizeof <= size_t.sizeof) {
+            return core.bitop.bsr(x);
+        }
+        else static if (T.sizeof == ulong.sizeof)
+        {
+            return bsr_ulong(x);
+        }
+        else
+        {
+            assert (false, "integer size too large for the current ilogb implementation");
+        }
+    }
+}
+int ilogb(T)(const T x) @safe pure nothrow @nogc
+    if(isIntegral!T && isSigned!T)
+{
+    // Note: abs(x) can not be used because the return type is not Unsigned and
+    //       the return value would be wrong for x == int.min
+    Unsigned!T absx =  x>=0 ? x : -x;
+    return ilogb(absx);
 }
 
 alias FP_ILOGB0   = core.stdc.math.FP_ILOGB0;
@@ -2683,35 +2836,61 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
 
 @trusted nothrow @nogc unittest
 {
-    assert(ilogb(real.nan) == FP_ILOGBNAN);
-    assert(ilogb(-real.nan) == FP_ILOGBNAN);
-    assert(ilogb(0.0) == FP_ILOGB0);
-    assert(ilogb(-0.0) == FP_ILOGB0);
-    assert(ilogb(real.infinity) == int.max);
-    assert(ilogb(-real.infinity) == int.max);
-    assert(ilogb(2.0) == 1);
-    assert(ilogb(2.0001) == 1);
-    assert(ilogb(1.9999) == 0);
-    assert(ilogb(0.5) == -1);
-    assert(ilogb(123.123) == 6);
-    assert(ilogb(-123.123) == 6);
-    assert(ilogb(0.123) == -4);
-    assert(ilogb(-double.min_normal) == -1022);
+    import std.typetuple, std.typecons;
+    foreach (F; TypeTuple!(float, double, real))
+    {
+        alias T = Tuple!(F, int);
+        T[13] vals =   // x, ilogb(x)
+        [
+            T(  F.nan     , FP_ILOGBNAN ),
+            T( -F.nan     , FP_ILOGBNAN ),
+            T(  F.infinity, int.max     ),
+            T( -F.infinity, int.max     ),
+            T(  0.0       , FP_ILOGB0   ),
+            T( -0.0       , FP_ILOGB0   ),
+            T(  2.0       , 1           ),
+            T(  2.0001    , 1           ),
+            T(  1.9999    , 0           ),
+            T(  0.5       , -1          ),
+            T(  123.123   , 6           ),
+            T( -123.123   , 6           ),
+            T(  0.123     , -4          ),
+        ];
+
+        foreach(elem; vals)
+        {
+            assert(ilogb(elem[0]) == elem[1]);
+        }
+    }
+
+    // min_normal and subnormals
     assert(ilogb(-float.min_normal) == -126);
-    // subnormals
-    assert(ilogb(nextUp(-double.min_normal)) == -1023);
-    assert(ilogb(nextUp(-0.0)) == -1074);
     assert(ilogb(nextUp(-float.min_normal)) == -127);
-    assert(ilogb(nextUp(-0.0F)) == -149);
-    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended) {
+    assert(ilogb(nextUp(-float(0.0))) == -149);
+    assert(ilogb(-double.min_normal) == -1022);
+    assert(ilogb(nextUp(-double.min_normal)) == -1023);
+    assert(ilogb(nextUp(-double(0.0))) == -1074);
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+    {
         assert(ilogb(-real.min_normal) == -16382);
         assert(ilogb(nextUp(-real.min_normal)) == -16383);
-        assert(ilogb(nextUp(-0.0L)) == -16445);
-    } else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble) {
+        assert(ilogb(nextUp(-real(0.0))) == -16445);
+    }
+    else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
+    {
         assert(ilogb(-real.min_normal) == -1022);
         assert(ilogb(nextUp(-real.min_normal)) == -1023);
-        assert(ilogb(nextUp(-0.0L)) == -1074);
+        assert(ilogb(nextUp(-real(0.0))) == -1074);
     }
+
+    // test integer types
+    assert(ilogb(0) == FP_ILOGB0);
+    assert(ilogb(int.max) == 30);
+    assert(ilogb(int.min) == 31);
+    assert(ilogb(uint.max) == 31);
+    assert(ilogb(long.max) == 62);
+    assert(ilogb(long.min) == 63);
+    assert(ilogb(ulong.max) == 63);
 }
 
 /*******************************************
@@ -2719,7 +2898,7 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
  * References: frexp
  */
 
-real ldexp(real n, int exp) @nogc @safe pure nothrow;    /* intrinsic */
+real ldexp(real n, int exp) @nogc @safe pure nothrow { pragma(inline, true); return core.math.ldexp(n, exp); }
 //FIXME
 ///ditto
 double ldexp(double n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)n, exp); }
@@ -2774,6 +2953,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 }
 
 /* workaround Issue 14718, float parsing depends on platform strtold
+typed_allocator.d
 @safe pure nothrow @nogc unittest
 {
     assert(ldexp(1.0, -1024) == 0x1p-1024);
@@ -2821,6 +3001,9 @@ unittest
 
         assert(equalsDigit(z, l, 7));
     }
+
+    real function(real, int) pldexp = &ldexp;
+    assert(pldexp != null);
 }
 
 /**************************************
@@ -3412,7 +3595,7 @@ real cbrt(real x) @trusted nothrow @nogc
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
  *      )
  */
-real fabs(real x) @safe pure nothrow @nogc;      /* intrinsic */
+real fabs(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.fabs(x); }
 //FIXME
 ///ditto
 double fabs(double x) @safe pure nothrow @nogc { return fabs(cast(real)x); }
@@ -3420,6 +3603,11 @@ double fabs(double x) @safe pure nothrow @nogc { return fabs(cast(real)x); }
 ///ditto
 float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real)x); }
 
+unittest
+{
+    real function(real) pfabs = &fabs;
+    assert(pfabs != null);
+}
 
 /***********************************************************************
  * Calculates the length of the
@@ -3795,13 +3983,19 @@ real nearbyint(real x) @trusted nothrow @nogc
  * $(B nearbyint) performs
  * the same operation, but does not set the FE_INEXACT exception.
  */
-real rint(real x) @safe pure nothrow @nogc;      /* intrinsic */
+real rint(real x) @safe pure nothrow @nogc { pragma(inline, true); return core.math.rint(x); }
 //FIXME
 ///ditto
 double rint(double x) @safe pure nothrow @nogc { return rint(cast(real)x); }
 //FIXME
 ///ditto
 float rint(float x) @safe pure nothrow @nogc { return rint(cast(real)x); }
+
+unittest
+{
+    real function(real) print = &rint;
+    assert(print != null);
+}
 
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -6868,4 +7062,232 @@ real yl2xp1(real x, real y) @nogc @safe pure nothrow;       // y * log2(x + 1)
     // issue 6381: floor/ceil should be usable in pure function.
     auto x = floor(1.2);
     auto y = ceil(1.2);
+}
+
+/***********************************
+ * Defines a total order on all floating-point numbers.
+ *
+ * The order is defined as follows:
+ * $(UL
+ *      $(LI All numbers in [-$(INFIN), +$(INFIN)] are ordered
+ *          the same way as by built-in comparison, with the exception of
+ *          -0.0, which is less than +0.0;)
+ *      $(LI If the sign bit is set (that is, it's 'negative'), $(NAN) is less
+ *          than any number; if the sign bit is not set (it is 'positive'),
+ *          $(NAN) is greater than any number;)
+ *      $(LI $(NAN)s of the same sign are ordered by the payload ('negative'
+ *          ones - in reverse order).)
+ * )
+ *
+ * Returns:
+ *      negative value if $(D x) precedes $(D y) in the order specified above;
+ *      0 if $(D x) and $(D y) are identical, and positive value otherwise.
+ *
+ * See_Also:
+ *      $(MYREF isIdentical)
+ * Standards: Conforms to IEEE 754-2008
+ */
+int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
+    if (isFloatingPoint!T)
+{
+    alias F = floatTraits!T;
+
+    static if (F.realFormat == RealFormat.ieeeSingle
+               || F.realFormat == RealFormat.ieeeDouble)
+    {
+        static if (T.sizeof == 4)
+            alias UInt = uint;
+        else
+            alias UInt = ulong;
+
+        union Repainter
+        {
+            T number;
+            UInt bits;
+        }
+
+        enum msb = ~(UInt.max >>> 1);
+
+        import std.typecons : Tuple;
+        Tuple!(Repainter, Repainter) vars = void;
+        vars[0].number = x;
+        vars[1].number = y;
+
+        foreach (ref var; vars)
+            if (var.bits & msb)
+                var.bits = ~var.bits;
+            else
+                var.bits |= msb;
+
+        if (vars[0].bits < vars[1].bits)
+            return -1;
+        else if (vars[0].bits > vars[1].bits)
+            return 1;
+        else
+            return 0;
+    }
+    else static if (F.realFormat == RealFormat.ieeeExtended53
+                    || F.realFormat == RealFormat.ieeeExtended
+                    || F.realFormat == RealFormat.ieeeQuadruple)
+    {
+        static if (F.realFormat == RealFormat.ieeeQuadruple)
+            alias RemT = ulong;
+        else
+            alias RemT = ushort;
+
+        struct Bits
+        {
+            ulong bulk;
+            RemT rem;
+        }
+
+        union Repainter
+        {
+            T number;
+            Bits bits;
+            ubyte[T.sizeof] bytes;
+        }
+
+        import std.typecons : Tuple;
+        Tuple!(Repainter, Repainter) vars = void;
+        vars[0].number = x;
+        vars[1].number = y;
+
+        foreach (ref var; vars)
+            if (var.bytes[F.SIGNPOS_BYTE] & 0x80)
+            {
+                var.bits.bulk = ~var.bits.bulk;
+                var.bits.rem = ~var.bits.rem;
+            }
+            else
+            {
+                var.bytes[F.SIGNPOS_BYTE] |= 0x80;
+            }
+
+        version(LittleEndian)
+        {
+            if (vars[0].bits.rem < vars[1].bits.rem)
+                return -1;
+            else if (vars[0].bits.rem > vars[1].bits.rem)
+                return 1;
+            else if (vars[0].bits.bulk < vars[1].bits.bulk)
+                return -1;
+            else if (vars[0].bits.bulk > vars[1].bits.bulk)
+                return 1;
+            else
+                return 0;
+        }
+        else
+        {
+            if (vars[0].bits.bulk < vars[1].bits.bulk)
+                return -1;
+            else if (vars[0].bits.bulk > vars[1].bits.bulk)
+                return 1;
+            else if (vars[0].bits.rem < vars[1].bits.rem)
+                return -1;
+            else if (vars[0].bits.rem > vars[1].bits.rem)
+                return 1;
+            else
+                return 0;
+        }
+    }
+    else
+    {
+        // IBM Extended doubledouble does not follow the general
+        // sign-exponent-significand layout, so has to be handled generically
+
+        int xSign = signbit(x),
+            ySign = signbit(y);
+
+        if (xSign == 1 && ySign == 1)
+            return cmp(-y, -x);
+        else if (xSign == 1)
+            return -1;
+        else if (ySign == 1)
+            return 1;
+        else if (x < y)
+            return -1;
+        else if (x == y)
+            return 0;
+        else if (x > y)
+            return 1;
+        else if (isNaN(x) && !isNaN(y))
+            return 1;
+        else if (isNaN(y) && !isNaN(x))
+            return -1;
+        else if (getNaNPayload(x) < getNaNPayload(y))
+            return -1;
+        else if (getNaNPayload(x) > getNaNPayload(y))
+            return 1;
+        else
+            return 0;
+    }
+}
+
+/// Most numbers are ordered naturally.
+unittest
+{
+    assert(cmp(-double.infinity, -double.max) < 0);
+    assert(cmp(-double.max, -100.0) < 0);
+    assert(cmp(-100.0, -0.5) < 0);
+    assert(cmp(-0.5, 0.0) < 0);
+    assert(cmp(0.0, 0.5) < 0);
+    assert(cmp(0.5, 100.0) < 0);
+    assert(cmp(100.0, double.max) < 0);
+    assert(cmp(double.max, double.infinity) < 0);
+
+    assert(cmp(1.0, 1.0) == 0);
+}
+
+/// Positive and negative zeroes are distinct.
+unittest
+{
+    assert(cmp(-0.0, +0.0) < 0);
+    assert(cmp(+0.0, -0.0) > 0);
+}
+
+/// Depending on the sign, $(NAN)s go to either end of the spectrum.
+unittest
+{
+    assert(cmp(-double.nan, -double.infinity) < 0);
+    assert(cmp(double.infinity, double.nan) < 0);
+    assert(cmp(-double.nan, double.nan) < 0);
+}
+
+/// $(NAN)s of the same sign are ordered by the payload.
+unittest
+{
+    assert(cmp(NaN(10), NaN(20)) < 0);
+    assert(cmp(-NaN(20), -NaN(10)) < 0);
+}
+
+unittest
+{
+    import std.typetuple;
+    foreach (T; TypeTuple!(float, double, real))
+    {
+        T[] values = [-cast(T)NaN(20), -cast(T)NaN(10), -T.nan, -T.infinity,
+                      -T.max, -T.max / 2, T(-16.0), T(-1.0).nextDown,
+                      T(-1.0), T(-1.0).nextUp,
+                      T(-0.5), -T.min_normal, (-T.min_normal).nextUp,
+                      -2 * T.min_normal * T.epsilon,
+                      -T.min_normal * T.epsilon,
+                      T(-0.0), T(0.0),
+                      T.min_normal * T.epsilon,
+                      2 * T.min_normal * T.epsilon,
+                      T.min_normal.nextDown, T.min_normal, T(0.5),
+                      T(1.0).nextDown, T(1.0),
+                      T(1.0).nextUp, T(16.0), T.max / 2, T.max,
+                      T.infinity, T.nan, cast(T)NaN(10), cast(T)NaN(20)];
+
+        foreach (i, x; values)
+        {
+            foreach (y; values[i + 1 .. $])
+            {
+                assert(cmp(x, y) < 0);
+                assert(cmp(y, x) > 0);
+            }
+            assert(cmp(x, x) == 0);
+        }
+    }
 }

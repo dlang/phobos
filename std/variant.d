@@ -1431,14 +1431,6 @@ function in the $(D std.boxer) module can achieve it like this:
 */
 unittest
 {
-    /* old
-    Box[] fun(...)
-    {
-        // ...
-        return boxArray(_arguments, _argptr);
-    }
-    */
-    // new
     Variant[] fun(T...)(T args)
     {
         // ...
@@ -1612,8 +1604,7 @@ unittest
     assert( v.get!(long) == 42L );
     assert( v.get!(ulong) == 42uL );
 
-    // should be string... @@@BUG IN COMPILER
-    v = "Hello, World!"c;
+    v = "Hello, World!";
     assert( v.peek!(string) );
 
     assert( v.get!(string) == "Hello, World!" );
@@ -1627,10 +1618,9 @@ unittest
     assert( v.get!(int[4]) == [1,2,3,4] );
 
     {
-        // @@@BUG@@@: array literals should have type T[], not T[5] (I guess)
-        // v = [1,2,3,4,5];
-        // assert( v.peek!(int[]) );
-        // assert( v.get!(int[]) == [1,2,3,4,5] );
+         v = [1,2,3,4,5];
+         assert( v.peek!(int[]) );
+         assert( v.get!(int[]) == [1,2,3,4,5] );
     }
 
     v = 3.1413;
@@ -1709,9 +1699,7 @@ unittest
         assert( hash[v2] == 1 );
         assert( hash[v3] == 2 );
     }
-    /+
-    // @@@BUG@@@
-    // dmd: mtype.c:3886: StructDeclaration* TypeAArray::getImpl(): Assertion `impl' failed.
+
     {
         int[char[]] hash;
         hash["a"] = 1;
@@ -1723,7 +1711,6 @@ unittest
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );
     }
-    +/
 }
 
 unittest
@@ -2256,7 +2243,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
 
     foreach(idx, T; AllowedTypes)
     {
-        if (T* ptr = variant.peek!T)
+        if (auto ptr = variant.peek!T)
         {
             enum dgIdx = HandlerOverloadMap.indices[idx];
 
@@ -2280,6 +2267,22 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
     }
 
     assert(false);
+}
+
+unittest
+{
+    // validate that visit can be called with a const type
+    struct Foo { int depth; }
+    struct Bar { int depth; }
+    alias FooBar = Algebraic!(Foo, Bar);
+
+    int depth(in FooBar fb) {
+        return fb.visit!((Foo foo) => foo.depth,
+                         (Bar bar) => bar.depth);
+    }
+
+    FooBar fb = Foo(3);
+    assert(depth(fb) == 3);
 }
 
 unittest

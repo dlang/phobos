@@ -850,8 +850,7 @@ public:
      */
     this(Range input, Separator delimiter, Separator quote)
     {
-        _input = new Input!(Range, ErrorLevel);
-        _input.range = input;
+        _input = new Input!(Range, ErrorLevel)(input);
         _separator = delimiter;
         _quote = quote;
 
@@ -880,8 +879,7 @@ public:
      */
     this(Range input, Header colHeaders, Separator delimiter, Separator quote)
     {
-        _input = new Input!(Range, ErrorLevel);
-        _input.range = input;
+        _input = new Input!(Range, ErrorLevel)(input);
         _separator = delimiter;
         _quote = quote;
 

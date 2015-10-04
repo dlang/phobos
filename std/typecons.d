@@ -1412,7 +1412,7 @@ unittest
 
 // used by both Rebindable and UnqualRef
 private mixin template RebindableCommon(T, U, alias This)
-    if (is(T == class) || is(T == interface))
+    if (is(T == class) || is(T == interface) || isAssociativeArray!T)
 {
     private union
     {
@@ -1459,8 +1459,7 @@ private mixin template RebindableCommon(T, U, alias This)
 $(D Rebindable!(T)) is a simple, efficient wrapper that behaves just
 like an object of type $(D T), except that you can reassign it to
 refer to another object. For completeness, $(D Rebindable!(T)) aliases
-itself away to $(D T) if $(D T) is a non-const object type. However,
-$(D Rebindable!(T)) does not compile if $(D T) is a non-class type.
+itself away to $(D T) if $(D T) is a non-const object type.
 
 You may want to use $(D Rebindable) when you want to have mutable
 storage referring to $(D const) objects, for example an array of
@@ -1469,9 +1468,10 @@ break the soundness of D's type system and does not incur any of the
 risks usually associated with $(D cast).
 
 Params:
-    T = An object, interface, or array slice type.
+    T = An object, interface, array slice type, or associative array type.
  */
-template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArray!T)
+template Rebindable(T)
+    if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
 {
     static if (is(T == const U, U) || is(T == immutable U, U))
     {
@@ -1528,14 +1528,14 @@ Convenience function for creating a $(D Rebindable) using automatic type
 inference.
 
 Params:
-    obj = A reference to an object or interface, or an array slice
+    obj = A reference to an object, interface, associative array, or an array slice
           to initialize the `Rebindable` with.
 
 Returns:
     A newly constructed `Rebindable` initialized with the given reference.
 */
 Rebindable!T rebindable(T)(T obj)
-if (is(T == class) || is(T == interface) || isDynamicArray!T)
+    if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
 {
     typeof(return) ret;
     ret = obj;
@@ -1639,6 +1639,14 @@ unittest
     // Issue 12046
     static assert(!__traits(compiles, Rebindable!(int[1])));
     static assert(!__traits(compiles, Rebindable!(const int[1])));
+
+    // Pull request 3341
+    Rebindable!(immutable int[int]) pr3341 = [123:345];
+    assert(pr3341[123] == 345);
+    immutable int[int] pr3341_aa = [321:543];
+    pr3341 = pr3341_aa;
+    assert(pr3341[321] == 543);
+    assert(rebindable(pr3341_aa)[321] == 543);
 }
 
 /**
@@ -1806,6 +1814,19 @@ Params:
                 sink.formatValue(_value, fmt);
             }
         }
+
+        // Issue 14940
+        void toString()(scope void delegate(const(char)[]) @safe sink, FormatSpec!char fmt)
+        {
+            if (isNull)
+            {
+                sink.formatValue("Nullable.null", fmt);
+            }
+            else
+            {
+                sink.formatValue(_value, fmt);
+            }
+        }
     }
 
 /**
@@ -1827,6 +1848,18 @@ unittest
 
     ni = 0;
     assert(!ni.isNull);
+}
+
+// Issue 14940
+@safe unittest
+{
+    import std.array : appender;
+    import std.format : formattedWrite;
+
+    auto app = appender!string();
+    Nullable!int a = 1;
+    formattedWrite(app, "%s", a);
+    assert(app.data == "1");
 }
 
 /**
@@ -3352,7 +3385,8 @@ unittest
 version(unittest)
 {
     // Issue 10647
-    private string generateDoNothing(C, alias fun)() @property
+    // Add prefix "issue10647_" as a workaround for issue 1238
+    private string issue10647_generateDoNothing(C, alias fun)() @property
     {
         string stmt;
 
@@ -3366,25 +3400,25 @@ version(unittest)
         return stmt;
     }
 
-    private template isAlwaysTrue(alias fun)
+    private template issue10647_isAlwaysTrue(alias fun)
     {
-        enum isAlwaysTrue = true;
+        enum issue10647_isAlwaysTrue = true;
     }
 
     // Do nothing template
-    private template DoNothing(Base)
+    private template issue10647_DoNothing(Base)
     {
-        alias DoNothing = AutoImplement!(Base, generateDoNothing, isAlwaysTrue);
+        alias issue10647_DoNothing = AutoImplement!(Base, issue10647_generateDoNothing, issue10647_isAlwaysTrue);
     }
 
     // A class to be overridden
-    private class Foo{
+    private class issue10647_Foo{
         void bar(int a) { }
     }
 }
 unittest
 {
-    auto foo = new DoNothing!Foo();
+    auto foo = new issue10647_DoNothing!issue10647_Foo();
     foo.bar(13);
 }
 
@@ -6362,7 +6396,7 @@ template isBitFlagEnum(E)
 }
 
 /**
-A typesafe structure for storing combination of enum values.
+A typesafe structure for storing combinations of enum values.
 
 This template defines a simple struct to represent bitwise OR combinations of
 enum values. It can be used if all the enum values are integral constants with
