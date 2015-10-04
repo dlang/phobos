@@ -360,7 +360,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # The mktemp business is needed so .o files don't clash in concurrent unittesting.
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` && \
-	  $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< && \
+	  $(DMD) -od$$T $(DFLAGS) -main -debug -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< && \
 	  rm -rf $$T
 
 # Target for quickly unittesting all modules and packages within a package,
