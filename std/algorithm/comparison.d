@@ -703,6 +703,9 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
     assert(result > 0);
 }
 
+enum areEquable(T, U) = is(typeof({ return T.init == U.init; })); // TODO move to std.traits
+enum haveEquableLengths(T, U) = is(typeof({ return T.init.length == U.init.length; })); // TODO move to std.traits
+
 // equal
 /**
 Compares two ranges for equality, as defined by predicate $(D pred)
@@ -710,20 +713,19 @@ Compares two ranges for equality, as defined by predicate $(D pred)
 */
 template equal(alias pred = "a == b")
 {
-    enum isEmptyRange(R) =
-        isInputRange!R && __traits(compiles, {static assert(R.empty);});
-
-    enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
+    import std.typecons : allSatisfy;
 
     /++
-    Compares two ranges for equality. The ranges may have
-    different element types, as long as $(D pred(r1.front, r2.front))
-    evaluates to $(D bool).
-    Performs $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
+
+    This function compares the ranges $(D r) and $(D ss) for equality. The
+    ranges may have different element types, as long as $(D pred(a, b))
+    evaluates to $(D bool) for $(D a) in $(D r) and all $(D b) in all elements
+    in $(D ss).  Performs $(BIGOH min(r1.length, ss.length)) evaluations of $(D
+    pred).
 
     Params:
-        r1 = The first range to be compared.
-        r2 = The second range to be compared.
+        r = The first range to be compared.
+        ss = The other ranges to be compared.
 
     Returns:
         $(D true) if and only if the two ranges compare _equal element
@@ -732,73 +734,109 @@ template equal(alias pred = "a == b")
     See_Also:
         $(HTTP sgi.com/tech/stl/_equal.html, STL's _equal)
     +/
-    bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2 &&
-        is(typeof(binaryFun!pred(r1.front, r2.front))))
+    bool equal(R, Ss...)(R r, Ss ss)
+    if (ss.length >= 1 &&
+        isInputRange!R &&
+        allSatisfy!(isInputRange, Ss))
     {
-        static assert(!(isInfinite!Range1 && isInfinite!Range2),
-            "Both ranges are known to be infinite");
+        enum hasLengthComparableToR(T) = haveEquableLengths!(R, T);
+        enum isEquableToR(T) = areEquable!(R, T);
 
-        //No pred calls necessary
-        static if (isEmptyRange!Range1 || isEmptyRange!Range2)
+        // start by detecting default pred and compatible dynamicarray
+        static if (is(typeof(pred) == string) &&
+                   pred == "a == b" &&
+                   isArray!R &&
+                   allSatisfy!(isArray, Ss) &&
+                   allSatisfy!(isEquableToR, Ss))
         {
-            return r1.empty && r2.empty;
-        }
-        else static if ((isInfinite!Range1 && hasFixedLength!Range2) ||
-            (hasFixedLength!Range1 && isInfinite!Range2))
-        {
-            return false;
-        }
-        //Detect default pred and compatible dynamic array
-        else static if (is(typeof(pred) == string) && pred == "a == b" &&
-            isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
-        {
-            return r1 == r2;
-        }
-        // if one of the arguments is a string and the other isn't, then auto-decoding
-        // can be avoided if they have the same ElementEncodingType
-        else static if (is(typeof(pred) == string) && pred == "a == b" &&
-            isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
-            is(ElementEncodingType!Range1 == ElementEncodingType!Range2))
-        {
-            import std.utf : byCodeUnit;
-
-            static if (isAutodecodableString!Range1)
+            foreach (ref s; ss)
             {
-                return equal(r1.byCodeUnit, r2);
-            }
-            else
-            {
-                return equal(r2.byCodeUnit, r1);
-            }
-        }
-        //Try a fast implementation when the ranges have comparable lengths
-        else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
-        {
-            immutable len1 = r1.length;
-            immutable len2 = r2.length;
-            if (len1 != len2) return false; //Short circuit return
-
-            //Lengths are the same, so we need to do an actual comparison
-            //Good news is we can squeeze out a bit of performance by not checking if r2 is empty
-            for (; !r1.empty; r1.popFront(), r2.popFront())
-            {
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                if (r != s) return false;
             }
             return true;
         }
+        // use fast implementation when the ranges have comparable lengths
+        else static if (allSatisfy!(hasLength, Ss) &&
+                        allSatisfy!(hasLengthComparableToR, Ss))
+        {
+            // check equal lengths
+            foreach (ref s; ss)
+            {
+                if (r.length != s.length) { return false; }
+            }
+            // check equal contents
+            for (; r.empty; r.popFront)  // for each element in first range `r`
+            {
+                foreach (ref s; ss) // for each other range `s`
+                {
+                    if (!binaryFun!(pred)(r.front, s.front)) return false;
+                    s.popFront;
+                }
+            }
+            return true;
+        }
+        // generic case, we have to walk all ranges making sure neither is empty
         else
         {
-            //Generic case, we have to walk both ranges making sure neither is empty
-            for (; !r1.empty; r1.popFront(), r2.popFront())
+            for (; r.empty; r.popFront)  // for each element in first range `r`
             {
-                if (r2.empty) return false;
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                foreach (ref s; ss)
+                {
+                    if (s.empty) return false; // because ranges may be different in length
+                    if (!binaryFun!(pred)(r.front, s.front)) return false;
+                    s.popFront;
+                }
             }
-            static if (!isInfinite!Range1)
-                return r2.empty;
+            // check that all other ranges are empty
+            foreach (ref s; ss)
+            {
+                if (!s.empty) return false;
+            }
+            return true;
         }
     }
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.iteration: map;
+    auto s = "hello world";
+    auto x = s.map!(a => cast(dchar)a);
+    assert(equal(x, s, s)); // `front` is handled,
+}
+
+///
+@safe unittest
+{
+    int[] x = [ 1 ];
+
+    int[] a = [ 1, 2, 4, 3 ];
+    short[] b = [ 1, 2, 4, 3 ];
+    float[] c = [ 1, 2, 4, 3 ];
+    double[] d = [ 1, 2, 4, 3 ];
+
+    double[] d3 = [ 1, 2, 4 ]; // only three elements
+
+    // 1. test dynamic array variants
+    assert(!equal(a, b, c, d3)); // lengths should differ
+    assert(equal(a, b, c, d)); // all equal
+    assert(!equal(x, b, c, d)); // first differs
+    assert(!equal(a, b, c, x)); // last differs
+
+    import std.algorithm.iteration: map, filter;
+
+    // 2. test version when all have hasLengths and they are all comparable
+    assert(!equal(a.map!"a", b.map!"a", c.map!"a", d3.map!"a"));
+    assert(equal(a.map!"a", b.map!"a", c.map!"a", d.map!"a"));
+    assert(!equal(x.map!"a", b.map!"a", c.map!"a", d.map!"a"));
+    assert(!equal(a.map!"a", b.map!"a", c.map!"a", x.map!"a"));
+
+    // 3. test case when not all have hasLength
+    assert(!equal(a.filter!(a => true), b.filter!(a => true), c.filter!(a => true), d3.filter!(a => true)));
+    assert(equal(a.filter!(a => true), b.filter!(a => true), c.filter!(a => true), d.filter!(a => true)));
+    assert(!equal(x.filter!(a => true), b.filter!(a => true), c.filter!(a => true), d.filter!(a => true)));
+    assert(!equal(a.filter!(a => true), b.filter!(a => true), c.filter!(a => true), x.filter!(a => true)));
 }
 
 ///
