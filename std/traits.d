@@ -6730,3 +6730,44 @@ unittest
     static assert(getSymbolsByUDA!(C, UDA)[0].stringof == "C");
     static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
 }
+
+/**
+   Returns: $(D true) iff all types $(D T) are the same.
+*/
+template allSameType(T...)
+{
+    static if (T.length <= 1)
+    {
+        enum bool allSameType = true;
+    }
+    else
+    {
+        enum bool allSameType = is(T[0] == T[1]) && allSameType!(T[1..$]);
+    }
+}
+
+///
+unittest
+{
+    static assert(allSameType!(int, int));
+    static assert(allSameType!(int, int, int));
+    static assert(allSameType!(float, float, float));
+    static assert(!allSameType!(int, double));
+    static assert(!allSameType!(int, float, double));
+    static assert(!allSameType!(int, float, double, real));
+    static assert(!allSameType!(short, int, float, double, real));
+}
+
+/**
+   Returns: $(D true) iff the type $(D T) can be tested in an $(D
+   if)-expression, that is if $(D if (pred(T.init)) {}) is compilable.
+*/
+enum ifTestable(T, alias pred = a => a) = __traits(compiles, { if (pred(T.init)) {} });
+
+unittest
+{
+    import std.meta : AliasSeq;
+    static assert(allSatisfy!(ifTestable, AliasSeq!(bool, int, float, double, string)));
+    struct BoolWrapper { bool value; }
+    static assert(!ifTestable!(bool, a => BoolWrapper(a)));
+}
