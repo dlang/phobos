@@ -2815,7 +2815,7 @@ enum LockType
 struct LockingTextReader
 {
     private File _f;
-    private dchar _front;
+    private char _front;
 
     this(File f)
     {
@@ -2848,7 +2848,7 @@ struct LockingTextReader
         return !_f.isOpen || _f.eof;
     }
 
-    @property dchar front()
+    @property char front()
     {
         version(assert)
         {
@@ -2859,55 +2859,25 @@ struct LockingTextReader
         return _front;
     }
 
-    /* Read a utf8 sequence from the file, removing the chars from the stream.
-    Returns an empty result when at EOF. */
-    private char[] takeFront(return ref char[4] buf)
-    {
-        import std.utf : stride, UTFException;
-        {
-            immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
-            if (c == EOF)
-                return buf[0 .. 0];
-            buf[0] = cast(char) c;
-        }
-        immutable seqLen = stride(buf[]);
-        foreach(ref u; buf[1 .. seqLen])
-        {
-            immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
-            if (c == EOF) // incomplete sequence
-                throw new UTFException("Invalid UTF-8 sequence");
-            u = cast(char) c;
-        }
-        return buf[0 .. seqLen];
-    }
-
-    /* Read a utf8 sequence from the file into _front, putting the chars back so
-    that they can be read again.
+    /* Read a char from the file into _front, putting the char back so that it
+    can be read again.
     Destroys/closes the file when at EOF. */
     private void readFront()
     {
         import std.exception : enforce;
         import std.utf : decodeFront;
 
-        char[4] buf;
-        auto chars = takeFront(buf);
+        immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
 
-        if (chars.empty)
+        if (c == EOF)
         {
             .destroy(_f);
             assert(empty);
             return;
         }
 
-        auto s = chars;
-        _front = decodeFront(s);
-
-        // Put everything back.
-        foreach(immutable i; 0 .. chars.length)
-        {
-            immutable c = chars[$ - 1 - i];
-            enforce(ungetc(c, cast(FILE*) _f._p.handle) == c);
-        }
+        _front = cast(char) c;
+        enforce(ungetc(c, cast(FILE*) _f._p.handle) == c);
     }
 
     void popFront()
@@ -2919,18 +2889,9 @@ struct LockingTextReader
                 throw new RangeError();
         }
 
-        // Pop the current front.
-        char[4] buf;
-        takeFront(buf);
-
-        // Read the next front, leaving the chars on the stream.
-        readFront();
+        FGETC(cast(_iobuf*) _f._p.handle); // Pop the current front.
+        readFront(); // Read the next front, leaving the char on the stream.
     }
-
-    // void unget(dchar c)
-    // {
-    //     ungetc(c, cast(FILE*) _f._p.handle);
-    // }
 }
 
 unittest
@@ -2957,6 +2918,7 @@ unittest // bugzilla 13686
 {
     static import std.file;
     import std.algorithm : equal;
+    import std.utf : byDchar;
 
     auto deleteme = testFilename();
     std.file.write(deleteme, "Тест");
@@ -2967,7 +2929,7 @@ unittest // bugzilla 13686
     assert(s == "Тест");
 
     auto ltr = LockingTextReader(File(deleteme));
-    assert(equal(ltr, "Тест"));
+    assert(equal(ltr.byDchar, "Тест"));
 }
 
 unittest // bugzilla 12320
@@ -2982,6 +2944,30 @@ unittest // bugzilla 12320
     assert(ltr.front == 'b');
     ltr.popFront();
     assert(ltr.empty);
+}
+
+unittest // bugzilla 14861
+{
+    import std.array: replicate;
+    import std.utf : byDchar;
+
+    auto deleteme = testFilename();
+    File fw = File(deleteme, "w");
+    fw.rawWrite("a".replicate(16383) ~ "\xD1\x91\xD1\x82");
+        /* \xD1\x91 = U+0451 CYRILLIC SMALL LETTER IO */
+        /* \xD1\x82 = U+0442 CYRILLIC SMALL LETTER TE */
+    fw.close();
+    scope(exit) std.file.remove(deleteme);
+
+    File fr = File(deleteme, "r");
+    fr.rawRead(new char[16383]);
+
+    auto ltrd = LockingTextReader(fr).byDchar;
+    assert(ltrd.front == '\u0451'); /* passes */
+    ltrd.popFront(); /* "Invalid UTF-8 sequence" */
+    assert(ltrd.front == '\u0442');
+    ltrd.popFront();
+    assert(ltrd.empty);
 }
 
 /**
