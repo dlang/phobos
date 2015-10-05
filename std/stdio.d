@@ -2881,14 +2881,15 @@ struct LockingTextReader
         return buf[0 .. seqLen];
     }
 
-    /* Read a utf8 sequence from the file into _front, putting the chars back so
-    that they can be read again.
+    /* Read a utf8 sequence from the file into _front, then rewind to the
+    beginning of the sequence so that it can be read again.
     Destroys/closes the file when at EOF. */
     private void readFront()
     {
         import std.exception : enforce;
         import std.utf : decodeFront;
 
+        immutable start = _f.tell();
         char[4] buf;
         auto chars = takeFront(buf);
 
@@ -2902,12 +2903,7 @@ struct LockingTextReader
         auto s = chars;
         _front = decodeFront(s);
 
-        // Put everything back.
-        foreach(immutable i; 0 .. chars.length)
-        {
-            immutable c = chars[$ - 1 - i];
-            enforce(ungetc(c, cast(FILE*) _f._p.handle) == c);
-        }
+        _f.seek(start); // rewind
     }
 
     void popFront()
@@ -2980,6 +2976,28 @@ unittest // bugzilla 12320
     assert(ltr.front == 'a');
     ltr.popFront();
     assert(ltr.front == 'b');
+    ltr.popFront();
+    assert(ltr.empty);
+}
+
+unittest // bugzilla 14861
+{
+    import std.array: replicate;
+    auto deleteme = testFilename();
+    File fw = File(deleteme, "w");
+    fw.rawWrite("a".replicate(16383) ~ "\xD1\x91\xD1\x82");
+        /* \xD1\x91 = U+0451 CYRILLIC SMALL LETTER IO */
+        /* \xD1\x82 = U+0442 CYRILLIC SMALL LETTER TE */
+    fw.close();
+    scope(exit) std.file.remove(deleteme);
+
+    File fr = File(deleteme, "r");
+    fr.rawRead(new char[16383]);
+
+    auto ltr = LockingTextReader(fr);
+    assert(ltr.front == '\u0451'); /* passes */
+    ltr.popFront(); /* "Invalid UTF-8 sequence" */
+    assert(ltr.front == '\u0442');
     ltr.popFront();
     assert(ltr.empty);
 }
