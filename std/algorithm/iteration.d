@@ -133,6 +133,12 @@ If $(D Range) provides slicing primitives,
 then $(D cache) will provide the same slicing primitives,
 but $(D hasSlicing!Cache) will not yield true (as the $(XREF_PACK _range,primitives,hasSlicing)
 trait also checks for random access).
+
+Params:
+    range = an input range
+
+Returns:
+    an input range with the cached values of range
 +/
 auto cache(Range)(Range range)
 if (isInputRange!Range)
@@ -424,6 +430,14 @@ in many languages of functional flavor. The call $(D map!(fun)(range))
 returns a range of which elements are obtained by applying $(D fun(a))
 left to right for all elements $(D a) in $(D range). The original ranges are
 not changed. Evaluation is done lazily.
+
+Params:
+    fun = one or more functions
+    r = an input range
+
+Returns:
+    a range with each fun applied to all the elements. If there is more than one
+    fun, the element type will be $(D Tuple) containing one element for each fun.
 
 See_Also:
     $(WEB en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
@@ -784,28 +798,6 @@ unittest
 /**
 Eagerly iterates over $(D r) and calls $(D pred) over _each element.
 
-Params:
-    pred = predicate to apply to each element of the range
-    r = range or iterable over which each iterates
-
-Example:
----
-void deleteOldBackups()
-{
-    import std.algorithm, std.datetime, std.file;
-    auto cutoff = Clock.currTime() - 7.days;
-    dirEntries("", "*~", SpanMode.depth)
-        .filter!(de => de.timeLastModified < cutoff)
-        .each!remove();
-}
----
-
-If the range supports it, the value can be mutated in place. Examples:
----
-arr.each!((ref a) => a++);
-arr.each!"a++";
----
-
 If no predicate is specified, $(D each) will default to doing nothing
 but consuming the entire range. $(D .front) will be evaluated, but this
 can be avoided by explicitly specifying a predicate lambda with a
@@ -813,6 +805,10 @@ $(D lazy) parameter.
 
 $(D each) also supports $(D opApply)-based iterators, so it will work
 with e.g. $(XREF parallelism, parallel).
+
+Params:
+    pred = predicate to apply to each element of the range
+    r = range or iterable over which each iterates
 
 See_Also: $(XREF range,tee)
 
@@ -889,35 +885,36 @@ template each(alias pred = "a")
     }
 }
 
+///
 unittest
 {
     import std.range : iota;
 
     long[] arr;
-    // Note: each over arrays should resolve to the
-    // foreach variant, but as this is a performance
-    // improvement it is not unit-testable.
     iota(5).each!(n => arr ~= n);
     assert(arr == [0, 1, 2, 3, 4]);
 
-    // in-place mutation
+    // If the range supports it, the value can be mutated in place
     arr.each!((ref n) => n++);
     assert(arr == [1, 2, 3, 4, 5]);
 
-    // by-ref lambdas should not be allowed for non-ref ranges
+    arr.each!"a++";
+    assert(arr == [2, 3, 4, 5, 6]);
+
+    // by-ref lambdas are not allowed for non-ref ranges
     static assert(!is(typeof(arr.map!(n => n).each!((ref n) => n++))));
 
-    // default predicate (walk / consume)
+    // The default predicate consumes the range
     auto m = arr.map!(n => n);
     (&m).each();
     assert(m.empty);
 
-    // in-place mutation with index
+    // Indexes are also available for in-place mutations
     arr[] = 0;
     arr.each!"a=i"();
     assert(arr == [0, 1, 2, 3, 4]);
 
-    // opApply iterators
+    // opApply iterators work as well
     static assert(is(typeof({
         import std.parallelism;
         arr.parallel.each!"a++";
@@ -1134,6 +1131,9 @@ private struct FilterResult(alias pred, Range)
  * Params:
  *     pred = Function to apply to each element of range
  *     r = Bidirectional range of elements
+ *
+ * Returns:
+ *     a new range containing only the elements in r for which pred returns $(D true).
  */
 template filterBidirectional(alias pred)
 {
@@ -2468,6 +2468,13 @@ template reduce(fun...) if (fun.length >= 1)
     must both be legal.
 
     If $(D r) is empty, an $(D Exception) is thrown.
+
+    Params:
+        fun = one or more functions
+        r = an iterable value as defined by $(D isIterable)
+
+    Returns:
+        the final result of the accumulator applied to the iterable
     +/
     auto reduce(R)(R r)
     if (isIterable!R)
@@ -2498,6 +2505,14 @@ template reduce(fun...) if (fun.length >= 1)
     For convenience, if the seed is const, or has qualified fields, then
     $(D reduce) will operate on an unqualified copy. If this happens
     then the returned type will not perfectly match $(D S).
+
+    Params:
+        fun = one or more functions
+        seed = the initial value of the accumulator
+        r = an iterable value as defined by $(D isIterable)
+
+    Returns:
+        the final result of the accumulator applied to the iterable
     +/
     auto reduce(S, R)(S seed, R r)
     if (isIterable!R)
@@ -2557,23 +2572,6 @@ template reduce(fun...) if (fun.length >= 1)
             return args[0];
         else
             return tuple(args);
-    }
-}
-
-//Helper for Reduce
-private template ReduceSeedType(E)
-{
-    static template ReduceSeedType(alias fun)
-    {
-        import std.algorithm.internal : algoFormat;
-
-        E e = E.init;
-        static alias ReduceSeedType = Unqual!(typeof(fun(e, e)));
-
-        //Check the Seed type is useable.
-        ReduceSeedType s = ReduceSeedType.init;
-        static assert(is(typeof({ReduceSeedType s = e;})) && is(typeof(s = fun(s, e))),
-            algoFormat("Unable to deduce an acceptable seed type for %s with element type %s.", fullyQualifiedName!fun, E.stringof));
     }
 }
 
@@ -2837,6 +2835,23 @@ unittest
 {
     int[] data;
     static assert(is(typeof(reduce!((a, b)=>a+b)(data))));
+}
+
+//Helper for Reduce
+private template ReduceSeedType(E)
+{
+    static template ReduceSeedType(alias fun)
+    {
+        import std.algorithm.internal : algoFormat;
+
+        E e = E.init;
+        static alias ReduceSeedType = Unqual!(typeof(fun(e, e)));
+
+        //Check the Seed type is useable.
+        ReduceSeedType s = ReduceSeedType.init;
+        static assert(is(typeof({ReduceSeedType s = e;})) && is(typeof(s = fun(s, e))),
+            algoFormat("Unable to deduce an acceptable seed type for %s with element type %s.", fullyQualifiedName!fun, E.stringof));
+    }
 }
 
 // splitter
@@ -3909,12 +3924,16 @@ type from the elements themselves (for example, in case of $(LINK2 ../type.html#
 
 A seed may be passed to $(D sum). Not only will this seed be used as an initial
 value, but its type will override all the above, and determine the algorithm
-and precision used for sumation.
+and precision used for summation.
 
 Note that these specialized summing algorithms execute more primitive operations
 than vanilla summation. Therefore, if in certain cases maximum speed is required
 at expense of precision, one can use $(D reduce!((a, b) => a + b)(0, r)), which
 is not specialized for summation.
+
+Params:
+    seed = the initial value of the summation
+    r = a finite input range
 
 Returns:
     The sum of all the elements in the range r.

@@ -101,10 +101,12 @@ Either $(D front) and $(D back) are disjoint, or $(D back) is
 reachable from $(D front) and $(D front) is not reachable from $(D
 back).
 
-Returns:
+Params:
+    front = an input range
+    back = a forward range
 
-The number of elements brought to the front, i.e., the length of $(D
-back).
+Returns:
+    The number of elements brought to the front, i.e., the length of $(D back).
 
 See_Also:
     $(WEB sgi.com/tech/stl/_rotate.html, STL's rotate)
@@ -292,8 +294,15 @@ private enum bool areCopyCompatibleArrays(T1, T2) =
 Copies the content of $(D source) into $(D target) and returns the
 remaining (unfilled) part of $(D target).
 
-Preconditions: $(D target) shall have enough room to accomodate
+Preconditions: $(D target) shall have enough room to accommodate
 the entirety of $(D source).
+
+Params:
+    source = an input range
+    target = an output range
+
+Returns:
+    The unfilled part of target
 
 See_Also:
     $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
@@ -708,14 +717,6 @@ Params:
 See_Also:
         $(LREF fill)
         $(LREF uninitializeFill)
-
-Example:
-----
-struct S { ... }
-S[] s = (cast(S*) malloc(5 * S.sizeof))[0 .. 5];
-initializeAll(s);
-assert(s == [ 0, 0, 0, 0, 0 ]);
-----
  */
 void initializeAll(Range)(Range range)
     if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
@@ -746,12 +747,29 @@ void initializeAll(Range)(Range range)
         fill(range, T.init);
 }
 
-// ditto
+/// ditto
 void initializeAll(Range)(Range range)
     if (is(Range == char[]) || is(Range == wchar[]))
 {
     alias T = ElementEncodingType!Range;
     range[] = T.init;
+}
+
+///
+unittest
+{
+    import core.stdc.stdlib: malloc, free;
+
+    struct S
+    {
+        int a = 10;
+    }
+
+    auto s = (cast(S*) malloc(5 * S.sizeof))[0 .. 5];
+    initializeAll(s);
+    assert(s == [S(10), S(10), S(10), S(10), S(10)]);
+
+    scope(exit) free(s.ptr);
 }
 
 unittest
@@ -1538,6 +1556,14 @@ calls to $(D range.popFront).)  $(LI Otherwise, elements are moved
 incrementally towards the front of $(D range); a given element is never
 moved several times, but more elements are moved than in the previous
 cases.))
+
+Params:
+    s = a SwapStrategy to determine if the original order needs to be preserved
+    range = a bidirectional range with a length member
+    offset = which element(s) to remove
+
+Returns:
+    a range containing all of the elements of range with offset removed
  */
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset...)
@@ -1759,6 +1785,13 @@ elements are moved from the right end of the range over the elements
 to eliminate. If $(D s = SwapStrategy.stable) (the default),
 elements are moved progressively to front such that their relative
 order is preserved. Returns the filtered range.
+
+Params:
+    range = a bidirectional ranges with lvalue elements
+
+Returns:
+    the range with all of the elements where $(D pred) is $(D true)
+    removed
 */
 Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
 (Range range)
@@ -1837,6 +1870,9 @@ if (isBidirectionalRange!Range
 Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
 swap).
 
+Params:
+    r = a bidirectional range with swappable elements or a random access range with a length member
+
 See_Also:
     $(WEB sgi.com/tech/stl/_reverse.html, STL's _reverse)
 */
@@ -1895,6 +1931,15 @@ if (isRandomAccessRange!Range && hasLength!Range)
 Reverses $(D r) in-place, where $(D r) is a narrow string (having
 elements of type $(D char) or $(D wchar)). UTF sequences consisting of
 multiple code units are preserved properly.
+
+Params:
+    s = a narrow string
+
+Bugs:
+    When passing a sting with unicode modifiers on characters, such as $(D \u0301),
+    this function will not properly keep the position of the modifier. For example,
+    reversing $(D ba\u0301d) ("bád") will result in d\u0301ab ("d́ab") instead of
+    $(D da\u0301b) ("dáb").
 */
 void reverse(Char)(Char[] s)
 if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
@@ -1979,6 +2024,13 @@ void swapAt(R)(R r, size_t i1, size_t i2)
     where the range will be stripped as long as this element can be found.
     The other takes a lambda predicate, where the range will be stripped as
     long as the predicate returns true.
+
+    Params:
+        range = a bidirectional or input range
+        element = the elements to remove
+
+    Returns:
+        a Range with all of range except element at the start and end
 */
 Range strip(Range, E)(Range range, E element)
     if (isBidirectionalRange!Range && is(typeof(range.front == element) : bool))
@@ -2349,6 +2401,15 @@ Returns a tuple containing the remainder portions of $(D r1) and $(D
 r2) that were not swapped (one of them will be empty). The ranges may
 be of different types but must have the same element type and support
 swapping.
+
+Params:
+    r1 = an $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+         with swappable elements
+    r2 = an $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+         with swappable elements
+
+Returns:
+    Tuple containing the remainder portions of r1 and r2 that were not swapped
 */
 Tuple!(Range1, Range2)
 swapRanges(Range1, Range2)(Range1 r1, Range2 r2)
@@ -2391,14 +2452,6 @@ Params:
 See_Also:
         $(LREF fill)
         $(LREF initializeAll)
-
-Example:
-----
-struct S { ... }
-S[] s = (cast(S*) malloc(5 * S.sizeof))[0 .. 5];
-uninitializedFill(s, 42);
-assert(s == [ 42, 42, 42, 42, 42 ]);
-----
  */
 void uninitializedFill(Range, Value)(Range range, Value value)
     if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = value)))
@@ -2417,4 +2470,16 @@ void uninitializedFill(Range, Value)(Range range, Value value)
     else
         // Doesn't matter whether fill is initialized or not
         return fill(range, value);
+}
+
+///
+nothrow unittest
+{
+    import core.stdc.stdlib : malloc, free;
+
+    auto s = (cast(int*) malloc(5 * int.sizeof))[0 .. 5];
+    uninitializedFill(s, 42);
+    assert(s == [ 42, 42, 42, 42, 42 ]);
+
+    scope(exit) free(s.ptr);
 }
