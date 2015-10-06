@@ -46,12 +46,21 @@ $(UL
 class GetOptException : Exception
 {
     @safe pure nothrow
+    this(string msg, string file = __FILE__,
+        size_t line = __LINE__)
+    {
+        super(msg, file, line);
+    }
+    @safe pure nothrow
     this(string msg, Exception next, string file = __FILE__,
         size_t line = __LINE__)
     {
         super(msg, file, line, next);
     }
 }
+
+static assert(is(typeof(new GetOptException("message"))));
+static assert(is(typeof(new GetOptException("message", Exception.init))));
 
 /**
    Parse and remove command line options from an string array.
