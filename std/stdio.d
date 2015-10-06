@@ -1,4 +1,4 @@
-// Written in the D programming language.
+﻿// Written in the D programming language.
 
 /**
 Standard I/O functions that extend $(B core.stdc.stdio).  $(B core.stdc.stdio)
@@ -2815,7 +2815,8 @@ enum LockType
 struct LockingTextReader
 {
     private File _f;
-    private dchar _front;
+    private char _front;
+    private bool _hasChar;
 
     this(File f)
     {
@@ -2823,7 +2824,6 @@ struct LockingTextReader
         enforce(f.isOpen, "LockingTextReader: File must be open");
         _f = f;
         FLOCK(_f._p.handle);
-        readFront();
     }
 
     this(this)
@@ -2833,6 +2833,9 @@ struct LockingTextReader
 
     ~this()
     {
+        if (_hasChar)
+            ungetc(_front, cast(FILE*)_f._p.handle);
+
         // File locking has its own reference count
         if (_f.isOpen) FUNLOCK(_f._p.handle);
     }
@@ -2845,92 +2848,46 @@ struct LockingTextReader
 
     @property bool empty()
     {
-        return !_f.isOpen || _f.eof;
+        if (!_hasChar)
+        {
+            if (!_f.isOpen || _f.eof)
+                return true;
+            immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
+            if (c == EOF)
+            {
+                .destroy(_f);
+                return true;
+            }
+            _front = cast(char)c;
+            _hasChar = true;
+        }
+        return false;
     }
 
-    @property dchar front()
+    @property char front()
     {
-        version(assert)
+        if (!_hasChar)
         {
-            import core.exception : RangeError;
-            if (empty)
-                throw new RangeError();
+            version(assert)
+            {
+                import core.exception : RangeError;
+                if (empty)
+                    throw new RangeError();
+            }
+            else
+            {
+                empty;
+            }
         }
         return _front;
     }
 
-    /* Read a utf8 sequence from the file, removing the chars from the stream.
-    Returns an empty result when at EOF. */
-    private char[] takeFront(return ref char[4] buf)
-    {
-        import std.utf : stride, UTFException;
-        {
-            immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
-            if (c == EOF)
-                return buf[0 .. 0];
-            buf[0] = cast(char) c;
-        }
-        immutable seqLen = stride(buf[]);
-        foreach(ref u; buf[1 .. seqLen])
-        {
-            immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
-            if (c == EOF) // incomplete sequence
-                throw new UTFException("Invalid UTF-8 sequence");
-            u = cast(char) c;
-        }
-        return buf[0 .. seqLen];
-    }
-
-    /* Read a utf8 sequence from the file into _front, putting the chars back so
-    that they can be read again.
-    Destroys/closes the file when at EOF. */
-    private void readFront()
-    {
-        import std.exception : enforce;
-        import std.utf : decodeFront;
-
-        char[4] buf;
-        auto chars = takeFront(buf);
-
-        if (chars.empty)
-        {
-            .destroy(_f);
-            assert(empty);
-            return;
-        }
-
-        auto s = chars;
-        _front = decodeFront(s);
-
-        // Put everything back.
-        foreach(immutable i; 0 .. chars.length)
-        {
-            immutable c = chars[$ - 1 - i];
-            enforce(ungetc(c, cast(FILE*) _f._p.handle) == c, "ungetc failed");
-        }
-    }
-
     void popFront()
     {
-        version(assert)
-        {
-            import core.exception : RangeError;
-            if (empty)
-                throw new RangeError();
-        }
-
-        // Pop the current front.
-        char[4] buf;
-        takeFront(buf);
-
-        // Read the next front, leaving the chars on the stream.
-        readFront();
+        if (!_hasChar)
+            empty;
+        _hasChar = false;
     }
-
-    // void unget(dchar c)
-    // {
-    //     ungetc(c, cast(FILE*) _f._p.handle);
-    // }
 }
 
 unittest
@@ -2966,8 +2923,9 @@ unittest // bugzilla 13686
     File(deleteme).readf("%s", &s);
     assert(s == "Тест");
 
-    auto ltr = LockingTextReader(File(deleteme));
-    assert(equal(ltr, "Тест"));
+    import std.utf;
+    auto ltr = LockingTextReader(File(deleteme)).byDchar;
+    assert(equal(ltr, "Тест".byDchar));
 }
 
 unittest // bugzilla 12320
@@ -2982,6 +2940,24 @@ unittest // bugzilla 12320
     assert(ltr.front == 'b');
     ltr.popFront();
     assert(ltr.empty);
+}
+
+unittest // bugzilla 14861
+{
+    static import std.file;
+    auto deleteme = testFilename();
+    File fw = File(deleteme, "w");
+    for(int i; i != 5000; i++)
+        fw.writeln(i, ";", "Иванов;Пётр;Петрович");
+    fw.close();
+    scope(exit) std.file.remove(deleteme);
+    // Test read
+    File fr = File(deleteme, "r");
+    scope (exit) fr.close();
+    int nom; string fam, nam, ot;
+    // Error format read
+    while(!fr.eof)
+        fr.readf("%s;%s;%s;%s\n", &nom, &fam, &nam, &ot);
 }
 
 /**
