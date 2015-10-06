@@ -25,6 +25,9 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(D $(LREF join)))
         $(TD Concatenates a range of ranges into one _array.
     ))
+    $(TR $(TD $(D $(LREF linearBuffer)))
+        $(TD Returns a new LinearBuffer initialized with a given _array.
+    ))
     $(TR $(TD $(D $(LREF minimallyInitializedArray)))
         $(TD Returns a new _array of type $(D T).
     ))
@@ -76,6 +79,7 @@ Source: $(PHOBOSSRC std/_array.d)
 module std.array;
 
 import std.traits;
+import std.typecons : Flag, No, Yes;
 import std.typetuple;
 import std.functional;
 static import std.algorithm; // FIXME, remove with alias of splitter
@@ -2622,12 +2626,38 @@ unittest
 }
 
 /**
-Implements an output range that appends data to an array. This is
-recommended over $(D a ~= data) when appending many elements because it is more
-efficient.
+ * Implements an output range that appends data to an array. This is
+ * recommended over $(D a ~= data) when appending many elements because it is more
+ * efficient.
  */
-struct Appender(A)
-if (isDynamicArray!A)
+alias Appender(A) = LinearBuffer!(A, No.hasPopFront);
+
+///
+unittest{
+    auto app = appender!string();
+    string b = "abcdefg";
+    foreach (char c; b)
+        app.put(c);
+    assert(app.data == "abcdefg");
+
+    int[] a = [ 1, 2 ];
+    auto app2 = appender(a);
+    app2.put(3);
+    app2.put([ 4, 5, 6 ]);
+    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+}
+
+/**
+ * Implements a dynamic linear buffer with efficient append and pop front
+ * operations. If the appended data does not accommodate the free capacity at
+ * the back, then it either moves the existing data to front, if there is
+ * enough free space there, or it reallocates. Typically if the append
+ * operations are paired with pop front operations, then after a couple of
+ * iterations, the capacity stabilizes and the reallocations are no longer
+ * needed.
+ */
+struct LinearBuffer(A, Flag!"hasPopFront" hasPopFront = Yes.hasPopFront)
+if (isDynamicArray!A && (isMutable!(ElementEncodingType!A) || !hasPopFront))
 {
     import core.memory;
 
@@ -2637,14 +2667,24 @@ if (isDynamicArray!A)
         size_t capacity;
         Unqual!T[] arr;
         bool canExtend = false;
+
+        static if (hasPopFront)
+        {
+            size_t frontPopped = 0;
+
+            bool canRecycleFrontPopped() const @safe pure nothrow
+            {
+                return frontPopped >= capacity / 4;
+            }
+        }
     }
 
     private Data* _data;
 
     /**
-     * Construct an appender with a given array.  Note that this does not copy the
+     * Construct a buffer with a given array.  Note that this does not copy the
      * data.  If the array has a larger capacity as determined by arr.capacity,
-     * it will be used by the appender.  After initializing an appender on an array,
+     * it will be used by the buffer.  After initializing a buffer on an array,
      * appending to the original array will reallocate.
      */
     this(T[] arr) @trusted pure nothrow
@@ -2673,7 +2713,7 @@ if (isDynamicArray!A)
     //Broken function. To be removed.
     static if (is(T == immutable))
     {
-        deprecated ("Using this constructor will break the type system. Please fix your code to use `Appender!(T[]).this(T[] arr)' directly.")
+        deprecated ("Using this constructor will break the type system. Please fix your code to use `LinearBuffer!(T[]).this(T[] arr)' directly.")
         this(Unqual!T[] arr) pure nothrow
         {
             this(cast(T[]) arr);
@@ -2693,15 +2733,8 @@ if (isDynamicArray!A)
      */
     void reserve(size_t newCapacity) @safe pure nothrow
     {
-        if (_data)
-        {
-            if (newCapacity > _data.capacity)
-                ensureAddable(newCapacity - _data.arr.length);
-        }
-        else
-        {
-            ensureAddable(newCapacity);
-        }
+        if (newCapacity > capacity)
+            ensureAddable(newCapacity - data.length);
     }
 
     /**
@@ -2711,7 +2744,21 @@ if (isDynamicArray!A)
      */
     @property size_t capacity() const @safe pure nothrow
     {
-        return _data ? _data.capacity : 0;
+        static if (hasPopFront)
+        {
+            if (!_data)
+                return 0;
+
+            // reuse frontPopped only when it is larger than one-fourth of the capacity
+            if (_data.canRecycleFrontPopped)
+                return _data.capacity;
+            else
+                return _data.capacity - _data.frontPopped;
+        }
+        else
+        {
+            return _data ? _data.capacity : 0;
+        }
     }
 
     /**
@@ -2722,7 +2769,14 @@ if (isDynamicArray!A)
         /* @trusted operation:
          * casting Unqual!T[] to inout(T)[]
          */
-        return cast(typeof(return))(_data ? _data.arr : null);
+        static if (hasPopFront)
+        {
+            return cast(typeof(return))(_data ? _data.arr[_data.frontPopped .. $] : null);
+        }
+        else
+        {
+            return cast(typeof(return))(_data ? _data.arr : null);
+        }
     }
 
     // ensure we can add nelems elements, resizing as necessary
@@ -2735,6 +2789,19 @@ if (isDynamicArray!A)
 
         if (_data.capacity >= reqlen)
             return;
+
+        static if (hasPopFront)
+        {
+            import std.algorithm : bringToFront;
+
+            if (_data.canRecycleFrontPopped && _data.capacity >= reqlen - _data.frontPopped)
+            {
+                bringToFront(_data.arr, _data.arr[_data.frontPopped .. $]);
+                _data.arr.length -= _data.frontPopped;
+                _data.frontPopped = 0;
+                return;
+            }
+        }
 
         // need to increase capacity
         if (__ctfe)
@@ -2758,7 +2825,7 @@ if (isDynamicArray!A)
             // Time to reallocate.
             // We need to almost duplicate what's in druntime, except we
             // have better access to the capacity field.
-            auto newlen = appenderNewCapacity!(T.sizeof)(_data.capacity, reqlen);
+            auto newlen = bufferNewCapacity!(T.sizeof)(_data.capacity, reqlen);
             // first, try extending the current block
             if (_data.canExtend)
             {
@@ -2775,9 +2842,15 @@ if (isDynamicArray!A)
             auto bi = GC.qalloc(newlen * T.sizeof, blockAttribute!T);
             _data.capacity = bi.size / T.sizeof;
             import core.stdc.string : memcpy;
-            if (len)
-                memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-            _data.arr = (cast(Unqual!T*)bi.base)[0 .. len];
+            static if (hasPopFront)
+            {
+                _data.arr = _data.arr[_data.frontPopped .. $];
+                _data.frontPopped = 0;
+            }
+
+            if (_data.arr.length)
+                memcpy(bi.base, _data.arr.ptr, _data.arr.length * T.sizeof);
+            _data.arr = (cast(Unqual!T*)bi.base)[0 .. _data.arr.length];
             _data.canExtend = true;
             // leave the old data, for safety reasons
         }
@@ -2799,7 +2872,7 @@ if (isDynamicArray!A)
     {
         enum bool canPutRange =
             isInputRange!Range &&
-            is(typeof(Appender.init.put(Range.init.front)));
+            is(typeof(typeof(this).init.put(Range.init.front)));
     }
 
     /**
@@ -2905,6 +2978,30 @@ if (isDynamicArray!A)
     }
 
     /**
+     * Appends items from a delegate.
+     *
+     * The delegate should folow the read/recv rules: it reads up to buf length items
+     * and returns the number of read items or negative value on error.
+     *
+     * Returns: The result of the delegate.
+     */
+    ptrdiff_t putFrom(ptrdiff_t delegate(Unqual!T[] buf) dg, size_t minBufSize = 0) @trusted
+    {
+        if (minBufSize == 0)
+            minBufSize = std.algorithm.max(8, _data ? _data.capacity / 8 : 0);
+
+        ensureAddable(minBufSize);
+
+        ptrdiff_t result = dg(_data.arr.ptr[_data.arr.length .. _data.capacity]);
+        assert(result <= minBufSize, "dg returns more elements as expected");
+
+        if (result > 0)
+            _data.arr = _data.arr.ptr[0 .. _data.arr.length + result];
+
+        return result;
+    }
+
+    /**
      * Appends one item to the managed array.
      */
     void opOpAssign(string op : "~", U)(U item) if (canPutItem!U)
@@ -2934,13 +3031,17 @@ if (isDynamicArray!A)
          * for appending.
          *
          * Note that clear is disabled for immutable or const element types, due to the
-         * possibility that $(D Appender) might overwrite immutable data.
+         * possibility that $(D LinearBuffer) might overwrite immutable data.
          */
         void clear() @trusted pure nothrow
         {
             if (_data)
             {
                 _data.arr = _data.arr.ptr[0 .. 0];
+                static if (hasPopFront)
+                {
+                    _data.frontPopped = 0;
+                }
             }
         }
 
@@ -2952,13 +3053,57 @@ if (isDynamicArray!A)
         void shrinkTo(size_t newlength) @trusted pure
         {
             import std.exception : enforce;
+            import std.algorithm : bringToFront;
             if (_data)
             {
                 enforce(newlength <= _data.arr.length);
-                _data.arr = _data.arr.ptr[0 .. newlength];
+                static if (hasPopFront)
+                {
+                    bringToFront(_data.arr, _data.arr[_data.frontPopped .. _data.frontPopped + newlength]);
+                    _data.arr.length = newlength;
+                    _data.frontPopped = 0;
+                }
+                else
+                {
+                    _data.arr = _data.arr.ptr[0 .. newlength];
+                }
             }
             else
                 enforce(newlength == 0);
+        }
+    }
+
+    static if (hasPopFront)
+    {
+        /**
+         * Removes n elements at the front.
+         *
+         * Returns: How many elements were actually removed, which may be less than n if the array
+         *          did not have at least n elements.
+         */
+        size_t popFrontN(size_t n) @safe pure nothrow
+        out
+        {
+            assert(_data.frontPopped <= _data.arr.length);
+        }
+        body
+        {
+            import std.algorithm : min;
+
+            if (!_data)
+                return 0;
+
+            n = min(_data.arr.length - _data.frontPopped, n);
+
+            _data.frontPopped += n;
+
+            if (_data.frontPopped == _data.arr.length)
+            {
+                _data.arr = _data.arr[0 .. 0];
+                _data.frontPopped = 0;
+            }
+
+            return n;
         }
     }
 
@@ -2971,17 +3116,31 @@ if (isDynamicArray!A)
 
 ///
 unittest{
-    auto app = appender!string();
-    string b = "abcdefg";
-    foreach (char c; b)
-        app.put(c);
-    assert(app.data == "abcdefg");
-
     int[] a = [ 1, 2 ];
-    auto app2 = appender(a);
-    app2.put(3);
-    app2.put([ 4, 5, 6 ]);
-    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+    auto buf = linearBuffer(a);
+
+    buf.put(3);
+    buf.put([ 4, 5, 6 ]);
+    assert(buf.data == [ 1, 2, 3, 4, 5, 6 ]);
+
+    auto capacity = buf.capacity;
+
+    assert(buf.popFrontN(4) == 4);
+    assert(buf.data == [ 5, 6 ]);
+    assert(buf.popFrontN(4) == 2);
+    assert(buf.capacity == capacity);
+
+    ptrdiff_t readDelegate(int[] buf)
+    {
+        assert(buf.length >= 3);
+        buf[0 .. 3] = [ 10, 11, 12 ];
+        return 3;
+    }
+
+    buf.putFrom(&readDelegate);
+    assert(buf.data == [ 10, 11, 12 ]);
+    buf.putFrom(&readDelegate);
+    assert(buf.data == [ 10, 11, 12, 10, 11, 12 ]);
 }
 
 unittest
@@ -2991,7 +3150,7 @@ unittest
     app.put(1);
     app.put(2);
     app.put(3);
-    assert("%s".format(app) == "Appender!(int[])(%s)".format([1,2,3]));
+    assert("%s".format(app) == "LinearBuffer!(int[], cast(Flag)false)(%s)".format([1,2,3]));
 }
 
 //Calculates an efficient growth scheme based on the old capacity
@@ -2999,12 +3158,12 @@ unittest
 //arg curLen: The current length
 //arg reqLen: The length as requested by the user
 //ret sugLen: A suggested growth.
-private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
+private size_t bufferNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
 {
     import core.bitop : bsr;
     import std.algorithm : max;
     if(curLen == 0)
-        return max(reqLen,8);
+        return max(reqLen, 8);
     ulong mult = 100 + (1000UL) / (bsr(curLen * TSizeOf) + 1);
     // limit to doubling the length, we don't want to grow too much
     if(mult > 200)
@@ -3113,6 +3272,24 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
         "Cannot create Appender from an rvalue static array");
 
     return Appender!(E[])(array);
+}
+
+/++
+    Convenience function that returns an $(D LinearBuffer!A) object initialized
+    with $(D array).
+ +/
+LinearBuffer!A linearBuffer(A)()
+if (isDynamicArray!A && isMutable!(ElementEncodingType!A))
+{
+    return LinearBuffer!A(null);
+}
+/// ditto
+LinearBuffer!(E[]) linearBuffer(A : E[], E)(auto ref A array)
+{
+    static assert (!isStaticArray!A || __traits(isRef, array),
+        "Cannot create LinearBuffer from an rvalue static array");
+
+    return LinearBuffer!(E[])(array);
 }
 
 @safe pure nothrow unittest
@@ -3563,4 +3740,39 @@ unittest
     a ~= 'a'; //Clobbers here?
     assert(appS.data == "hellow");
     assert(appA.data == "hellow");
+}
+
+unittest
+{
+    LinearBuffer!(int[]) buf;
+    int[] arr = [1, 2, 3];
+
+    buf.put([1, 2, 3]);
+    buf.popFrontN(2);
+    assert(buf.data == [3]);
+    buf.put(arr);
+    buf.popFrontN(2);
+    assert(buf.data == [2, 3]);
+    assert(buf.popFrontN(4) == 2);
+    assert(buf.data == []);
+
+    buf.put(arr);
+    buf.put(arr);
+    buf.shrinkTo(4);
+    assert(buf.data == [1, 2, 3, 1]);
+    buf.put(arr);
+    buf.popFrontN(2);
+    assert(buf.data == [3, 1, 1, 2, 3]);
+    buf.clear;
+    assert(buf.data == []);
+
+    buf = linearBuffer([1, 2, 3]);
+    assert(buf.data == [1, 2, 3]);
+    buf.popFrontN(1);
+    assert(buf.data == [2, 3]);
+
+    auto stringbuf = linearBuffer!(dchar[]);
+    stringbuf.put("abcef");
+    stringbuf.popFrontN(3);
+    assert(stringbuf.data == "ef");
 }
