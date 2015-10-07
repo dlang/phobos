@@ -9,6 +9,12 @@ $(BUGSTITLE Library Changes,
 $(LI $(RELATIVE_LINK2 more-rangified-functions, More phobos functions were rangified.))
 $(LI $(RELATIVE_LINK2 std-algorithm-moveEmplace, `moveEmplace` was added))
 $(LI $(RELATIVE_LINK2 curl-dynamic-loading, libcurl is now loaded dynamically))
+$(LI $(XREF traits, getUDAs) was added to help get
+	user-defined attributes of specific types from symbols.)
+$(LI $(XREF traits, getSymbolsByUDA) was
+	added to find symbols with specific user-defined attributes.)
+$(LI $(XREF math, cmp) was added, defining total ordering on
+	floating-point numbers, including NaN.)
 $(LI FreeBSD now also ships with a shared libphobos2.so library ($(LINK2 http://dlang.org/dll-linux.html, usage info)).)
 $(LI The package $(STDMODREF experimental_allocator, std.experimental.allocator) was added.)
 
