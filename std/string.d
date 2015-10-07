@@ -2776,18 +2776,25 @@ unittest
     Strips trailing whitespace (as defined by $(XREF uni, isWhite)).
 
     Params:
-        str = string or random access range of characters
+        input = string or random access range of characters
 
     Returns:
-        slice of $(D str) stripped of trailing whitespace.
+        slice of $(D input) stripped of trailing whitespace.
   +/
-auto stripRight(Range)(Range str)
+auto stripRight(Range)(Range input)
     if (isSomeString!Range ||
-        isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-        isSomeChar!(ElementEncodingType!Range))
+        (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+            isSomeChar!(ElementEncodingType!Range))
+        || __traits(compiles, StringTypeOf!Range))
 {
-    alias C = Unqual!(ElementEncodingType!Range);
-    static if (isSomeString!Range)
+    static if (__traits(compiles, StringTypeOf!Range))
+        StringTypeOf!Range str = input;
+    else
+        alias str = input;
+
+    alias C = Unqual!(ElementEncodingType!(typeof(str)));
+
+    static if (isSomeString!(typeof(str)))
     {
         import std.utf : codeLength;
         foreach_reverse (i, dchar c; str)
@@ -2888,6 +2895,17 @@ unittest
            [lineSep] ~ "hello world");
     assert(stripRight([paraSep] ~ "hello world" ~ paraSep) ==
            [paraSep] ~ "hello world");
+}
+
+unittest
+{
+    static struct ToString
+    {
+        string s;
+        alias s this;
+    }
+
+    assert(stripRight(ToString("hello   ")) == "hello");
 }
 
 unittest
