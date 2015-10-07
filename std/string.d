@@ -2700,19 +2700,25 @@ unittest
     Strips leading whitespace (as defined by $(XREF uni, isWhite)).
 
     Params:
-        str = string or ForwardRange of characters
+        input = string or ForwardRange of characters
 
-    Returns: $(D str) stripped of leading whitespace.
+    Returns: $(D input) stripped of leading whitespace.
 
-    Postconditions: $(D str) and the returned value
+    Postconditions: $(D input) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
   +/
-Range stripLeft(Range)(Range str)
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+auto stripLeft(Range)(Range input)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+        __traits(compiles, StringTypeOf!Range))
 {
     import std.ascii : isASCII, isWhite;
     import std.uni : isWhite;
     import std.utf : decodeFront;
+
+    static if (__traits(compiles, StringTypeOf!Range))
+        StringTypeOf!Range str = input;
+    else
+        alias str = input;
 
     while (!str.empty)
     {
@@ -2755,6 +2761,16 @@ Range stripLeft(Range)(Range str)
            "hello world     ");
 }
 
+unittest
+{
+    static struct ToString
+    {
+        string s;
+        alias s this;
+    }
+
+    assert(stripLeft(ToString("  hello")) == "hello");
+}
 
 /++
     Strips trailing whitespace (as defined by $(XREF uni, isWhite)).
