@@ -2460,7 +2460,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
  */
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
 if ((hasSlicing!Range && hasLength!Range) ||
-    isSomeString!Range)
+    __traits(compiles, StringTypeOf!Range))
 {
     import std.uni : lineSep, paraSep;
     import std.conv : unsigned;
@@ -2468,7 +2468,11 @@ if ((hasSlicing!Range && hasLength!Range) ||
     static struct Result
     {
     private:
-        Range _input;
+        static if (__traits(compiles, StringTypeOf!Range))
+            StringTypeOf!Range _input;
+        else
+            Range _input;
+
         alias IndexType = typeof(unsigned(_input.length));
         enum IndexType _unComputed = IndexType.max;
         IndexType iStart = _unComputed;
@@ -2493,7 +2497,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
             }
         }
 
-        @property Range front()
+        @property typeof(_input) front()
         {
             if (iStart == _unComputed)
             {
@@ -2613,6 +2617,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\n" ~
             "sunday\nmon\u2030day\nschadenfreude\vkindergarten\f\vcookies\u0085"
         );
+
         auto lines = lineSplitter(s).array;
         assert(lines.length == 14);
         assert(lines[0] == "");
@@ -2676,6 +2681,19 @@ if ((hasSlicing!Range && hasLength!Range) ||
         assert(line == witness[i++]);
     }
     assert(i == witness.length);
+}
+
+unittest
+{
+    import std.file : DirEntry;
+    import std.algorithm.comparison : equal;
+
+    auto s = "std/string.d";
+    auto de = DirEntry(s);
+    auto i = de.lineSplitter();
+    auto j = s.lineSplitter();
+
+    assert(equal(i, j));
 }
 
 /++
