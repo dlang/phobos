@@ -2801,7 +2801,7 @@ unittest
     import std.algorithm.comparison : max, min;
     import std.typecons : tuple, Tuple;
 
-    //http://forum.dlang.org/thread/oghtttkopzjshsuflelk@forum.dlang.org
+    //http://forum.dlang.org/post/oghtttkopzjshsuflelk@forum.dlang.org
     //Seed is tuple of const.
     static auto minmaxElement(alias F = min, alias G = max, R)(in R range)
         @safe pure nothrow if (isInputRange!R)

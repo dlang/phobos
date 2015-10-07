@@ -4806,7 +4806,7 @@ unittest //@@@9559@@@
     auto asArray = std.array.array(ints);
 }
 
-unittest //http://forum.dlang.org/thread/nxbdgtdlmwscocbiypjs@forum.dlang.org
+unittest //http://forum.dlang.org/post/nxbdgtdlmwscocbiypjs@forum.dlang.org
 {
     import std.array : array;
     import std.datetime : SysTime, UTC;
