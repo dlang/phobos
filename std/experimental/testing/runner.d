@@ -20,7 +20,7 @@ import std.algorithm : map, filter, count;
  * runtime unittest runner. This mixin should be used instead of
  * $(D runTests) if Phobos is linked as a shared library.
  */
-mixin template runTestsMixin(MODULES...)
+mixin template runTestsMixin(Modules...)
 {
 
     shared static this()
@@ -32,7 +32,7 @@ mixin template runTestsMixin(MODULES...)
 
     int main(string[] args)
     {
-        return runTests!MODULES(args);
+        return runTests!Modules(args);
     }
 }
 
@@ -45,9 +45,9 @@ mixin template runTestsMixin(MODULES...)
  *   args = Arguments passed to main.
  * Returns: An integer suitable for the program's return code.
  */
-int runTests(MODULES...)(string[] args)
+int runTests(Modules...)(string[] args)
 {
-    return runTests(args, allTestData!MODULES);
+    return runTests(args, allTestData!Modules);
 }
 
 /**

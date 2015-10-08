@@ -35,11 +35,11 @@ struct TestData
  * auto testData = allTestData!(my.test.module, "other.test.module");
  * -----
  */
-TestData[] allTestData(MODULES...)() @safe pure nothrow
+TestData[] allTestData(Modules...)() @safe pure nothrow
 {
     TestData[] testData;
 
-    foreach (module_; MODULES)
+    foreach (module_; Modules)
     {
         static if (is(typeof(module_)) && isSomeString!(typeof(module_)))
         {
