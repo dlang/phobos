@@ -3857,16 +3857,50 @@ unittest
     Returns:
         GC allocated string with tabs replaced with spaces
   +/
-S detab(S)(S s, size_t tabSize = 8) pure
-    if (isSomeString!S)
+auto detab(Range)(auto ref Range s, size_t tabSize = 8) pure
+    if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+        || __traits(compiles, StringTypeOf!Range))
 {
     import std.array;
     return detabber(s, tabSize).array;
 }
 
+///
+@trusted pure unittest
+{
+    import std.array;
+
+    assert(detab(" \n\tx", 9) == " \n         x");
+}
+
+unittest
+{
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    static struct TestStruct2
+    {
+        string s;
+        alias s this;
+        @disable this(this);
+    }
+
+    string s = " \n\tx";
+    string cmp = " \n         x";
+    auto t = TestStruct(s);
+    assert(detab(t, 9) == cmp);
+    assert(detab(TestStruct(s), 9) == cmp);
+    assert(detab(TestStruct(s), 9) == detab(TestStruct(s), 9));
+    assert(detab(TestStruct2(s), 9) == detab(TestStruct2(s), 9));
+    assert(detab(TestStruct2(s), 9) == cmp);
+}
+
 /++
-    Replace each tab character in $(D r) with the number of spaces necessary
-    to align the following character at the next tab stop.
+    Replace each tab character in $(D r) with the number of spaces
+    necessary to align the following character at the next tab stop.
 
     Params:
         r = string or forward range
@@ -3882,7 +3916,8 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
     import std.utf : codeUnitLimit, decodeFront;
 
     assert(tabSize > 0);
-    alias C = Unqual!(ElementEncodingType!Range);
+
+    alias C = Unqual!(ElementEncodingType!(Range));
 
     static struct Result
     {
@@ -3901,7 +3936,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
             _tabSize = tabSize;
         }
 
-        static if (isInfinite!Range)
+        static if (isInfinite!(Range))
         {
             enum bool empty = false;
         }
@@ -3917,7 +3952,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
         {
             if (nspaces)
                 return ' ';
-            static if (isSomeString!Range)
+            static if (isSomeString!(Range))
                 C c = _input[0];
             else
                 C c = _input.front;
@@ -3965,7 +4000,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
                 --nspaces;
             if (!nspaces)
             {
-                static if (isSomeString!Range)
+                static if (isSomeString!(Range))
                    _input = _input[1 .. $];
                 else
                     _input.popFront();
@@ -3985,11 +4020,46 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
 }
 
 ///
+auto detabber(Range)(auto ref Range s, size_t tabSize = 8) pure
+    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+        && is(StringTypeOf!Range))
+{
+    return detabber(cast(StringTypeOf!Range)s, tabSize);
+}
+
+///
 @trusted pure unittest
 {
     import std.array;
 
     assert(detabber(" \n\tx", 9).array == " \n         x");
+}
+
+unittest
+{
+    import std.array : array;
+
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    static struct TestStruct2
+    {
+        string s;
+        alias s this;
+        @disable this(this);
+    }
+
+    string s = " \n\tx";
+    string cmp = " \n         x";
+    auto t = TestStruct(s);
+    assert(detabber(t, 9).array == cmp);
+    assert(detabber(TestStruct(s), 9).array == cmp);
+    assert(detabber(TestStruct(s), 9).array == detab(TestStruct(s), 9));
+    assert(detabber(TestStruct2(s), 9).array == detab(TestStruct2(s), 9));
+    assert(detabber(TestStruct2(s), 9).array == cmp);
 }
 
 @trusted pure unittest
