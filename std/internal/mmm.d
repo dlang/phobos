@@ -30,13 +30,13 @@ private void[] checkedMallocArray(size_t n) nothrow @system @nogc
 T* checkedMalloc(T)() @system
     if (hasIndirections!T)
 {
-    return (cast(T[])checkedMallocArray(T.sizeof)).ptr;
+    return cast(T*)checkedMallocArray(T.sizeof).ptr;
 }
 
 T* checkedMalloc(T)() @trusted
     if (!hasIndirections!T)
 {
-    return (cast(T[])checkedMallocArray(T.sizeof)).ptr;
+    return cast(T*)checkedMallocArray(T.sizeof).ptr;
 }
 
 T* checkedMalloc(T, Args...)(auto ref Args args) // safety inferred
