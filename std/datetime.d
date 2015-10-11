@@ -29975,6 +29975,9 @@ version(Windows) unittest
 //==============================================================================
 
 /++
+    $(RED Note: This will be deprecated in 2.071. Please use
+          $(XREF benchmark, StopWatch) instead.)
+
    $(D StopWatch) measures time as precisely as possible.
 
    This class uses a high-performance counter. On Windows systems, it uses
@@ -30221,6 +30224,9 @@ private:
 
 
 /++
+    $(RED Note: This will be deprecated in 2.071. Please use
+          $(XREF benchmark, benchmark) instead.)
+
     Benchmarks code for speed assessment and comparison.
 
     Params:
@@ -30283,6 +30289,10 @@ unittest
 
 
 /++
+    $(RED Note: This will be deprecated in 2.071. $(LXREF comparingBenchmark)
+          is a simple wrapper around $(LXREF benchmark). Please use
+          $(XREF benchmark, benchmark) instead.)
+
    Return value of benchmark with two functions comparing.
   +/
 @safe struct ComparingBenchmarkResult
@@ -30331,6 +30341,10 @@ private:
 
 
 /++
+    $(RED Note: This will be deprecated in 2.071. comparingBenchmark is a simple
+          wrapper around $(LXREF benchmark). Please use
+          $(XREF benchmark, benchmark) instead.)
+
    Benchmark with two functions comparing.
 
    Params:
@@ -32173,6 +32187,10 @@ unittest
 version(StdDdoc)
 {
     /++
+        $(RED Note: This will be deprecated in 2.071. Please use either
+              $(XREF benchmark, StopWatch) instead or use
+              $(CXREF time, MonoTime) directly.)
+
         Function for starting to a stop watch time when the function is called
         and stopping it when its return value goes out of scope and is destroyed.
 
