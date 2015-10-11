@@ -2,11 +2,15 @@
 This module provides OOM-checked and memory safe interfaces to C's $(D malloc)
 and $(D calloc) functions.
 
-Copyright: Jakob Ovrum 2015
+Acronyms:
+$(B OOM:) $(I Out Of Memory), the condition in which an allocator has no more
+memory space to offer.
+
+Copyright: Jakob Øvrum 2015
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: Jakob Ovrum
+Authors: Jakob Øvrum
 */
 module std.internal.mmm;
 
@@ -27,18 +31,55 @@ private void[] checkedMallocArray(size_t n) nothrow @system @nogc
     }
 }
 
+/**
+ * Allocate space for one or more objects on the C heap with $(D malloc).
+ *
+ * The new objects are uninitialized;
+ * initialize them with $(XREF conv, emplace) before use.
+ * $(D @safe) only when T has no indirections.
+ *
+ * Params:
+ *    T = type of object(s)
+ *    n = number of objects to allocate space for
+ * Throws:
+ *   $(D OutOfMemoryError) on OOM
+ */
 T* checkedMalloc(T)() @system
     if (hasIndirections!T)
 {
     return cast(T*)checkedMallocArray(T.sizeof).ptr;
 }
 
+/// Ditto
 T* checkedMalloc(T)() @trusted
     if (!hasIndirections!T)
 {
     return cast(T*)checkedMallocArray(T.sizeof).ptr;
 }
 
+/// Ditto
+T[] checkedMallocArray(T)(size_t n) @system
+    if (hasIndirections!T)
+{
+    return cast(T[])checkedMallocArray(T.sizeof * n);
+}
+
+/// Ditto
+T[] checkedMallocArray(T)(size_t n) @trusted
+    if (!hasIndirections!T)
+{
+    return cast(T[])checkedMallocArray(T.sizeof * n);
+}
+
+/**
+ * Construct a new T on the C heap with newly allocated space from $(D malloc).
+ *
+ * Params:
+ *    T = type to construct
+ *    args = construction arguments for T
+ * Throws:
+ *    $(D OutOfMemoryError) on OOM
+ */
 T* checkedMalloc(T, Args...)(auto ref Args args) // safety inferred
 {
     import core.stdc.stdlib : free;
@@ -51,18 +92,15 @@ T* checkedMalloc(T, Args...)(auto ref Args args) // safety inferred
     return p;
 }
 
-T[] checkedMallocArray(T)(size_t n) @system
-    if (hasIndirections!T)
-{
-    return cast(T[])checkedMallocArray(T.sizeof * n);
-}
-
-T[] checkedMallocArray(T)(size_t n) @trusted
-    if (!hasIndirections!T)
-{
-    return cast(T[])checkedMallocArray(T.sizeof * n);
-}
-
+/**
+ * Copy the elements of range into a new array allocated with $(D malloc).
+ *
+ * Params:
+ *    T = element type of the new array; defaults to $(D ElementType!Range).
+ *    range = _range of elements to copy into the new array
+ * Throws:
+ *    $(D OutOfMemoryError) on OOM
+ */
 T[] checkedMallocArray(T, Range)(Range range) // safety inferred
     if (isInputRange!Range && hasLength!Range && is(ElementType!Range : T))
 {
@@ -103,12 +141,25 @@ T[] checkedMallocArray(T, Range)(Range range) // safety inferred
     return arr;
 }
 
+/// Ditto
 ElementType!Range[] checkedMallocArray(Range)(Range range)
     if (isInputRange!Range && hasLength!Range)
 {
     return checkedMallocArray!(ElementType!Range, Range)(range);
 }
 
+/**
+ * Allocate space for one or more objects on the C heap with $(D calloc).
+ *
+ * The new objects are zero-initialized but not default-constructed;
+ * construct them with $(XREF conv, emplace) before use.
+ *
+ * Params:
+ *    T = type of object(s)
+ *    n = number of objects to allocate space for
+ * Throws:
+ *   $(D OutOfMemoryError) on OOM
+ */
 T* checkedCalloc(T)() @trusted
 {
     import core.exception : onOutOfMemoryError;
@@ -122,6 +173,7 @@ T* checkedCalloc(T)() @trusted
     }
 }
 
+/// Ditto
 T[] checkedCallocArray(T)(size_t n) @trusted
 {
     import core.exception : onOutOfMemoryError;
@@ -135,7 +187,14 @@ T[] checkedCallocArray(T)(size_t n) @trusted
     }
 }
 
-void[] destroyArray(T)(ref T[] array)
+/**
+ * Destroy the elements of array then $(D null) the _array reference.
+ * Any exception thrown from a destructor is silently ignored.
+ *
+ * Returns:
+ *    The _array as $(D void[]), useful for passing to a deallocation function
+ */
+void[] destroyArray(T)(ref T[] array) nothrow
     if(hasElaborateDestructor!T)
 {
     foreach_reverse(ref e; array)
@@ -150,7 +209,8 @@ void[] destroyArray(T)(ref T[] array)
     return ret;
 }
 
-void[] destroyArray(T)(ref T[] array)
+/// Ditto
+void[] destroyArray(T)(ref T[] array) nothrow pure @safe @nogc
     if(!hasElaborateDestructor!T)
 {
     return array;
