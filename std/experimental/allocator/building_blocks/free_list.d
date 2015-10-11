@@ -962,8 +962,8 @@ struct SharedFreeList(ParentAllocator,
             incNodes();
             return true;
         }
-        static if (is(typeof(parent.deallocate(block))))
-            return parent.deallocate(block);
+        static if (hasMember!(ParentAllocator, "deallocate"))
+            return parent.deallocate(b);
         else
             return false;
     }
