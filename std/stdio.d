@@ -799,6 +799,28 @@ Throws: $(D Exception) if $(D buffer) is empty.
         $(D ErrnoException) if the file is not opened or the call to $(D fread) fails.
 
 $(D rawRead) always reads in binary mode on Windows.
+
+---
+import std.exception;
+import std.stdio;
+
+void main(string[] args)
+{
+    try
+    {
+        byte[] buffer;
+        buffer.length = 1024;
+
+        auto file = File("test.txt", "r");
+
+        auto data = file.rawRead(buffer);
+    }
+    catch (ErrnoException ex)
+    {
+        // Handle errors
+    }
+}
+---
  */
     T[] rawRead(T)(T[] buffer)
     {
@@ -858,6 +880,27 @@ error is thrown if the buffer could not be written in its entirety.
 $(D rawWrite) always writes in binary mode on Windows.
 
 Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwrite) fails.
+
+---
+import std.exception;
+import std.stdio;
+
+void main(string[] args)
+{
+    try
+    {
+        byte[] data = [0x68, 0x65, 0x6c, 0x6c, 0x6f];
+
+        auto file = File("test.txt", "w");
+
+        file.rawWrite(data);
+    }
+    catch (ErrnoException ex)
+    {
+        // Handle errors
+    }
+}
+---
  */
     void rawWrite(T)(in T[] buffer)
     {
@@ -908,6 +951,37 @@ for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $(D fseek) fails.
+---
+import std.exception;
+import std.stdio;
+
+void main(string[] args)
+{
+    try
+    {
+        auto file = File("test.txt", "r");
+
+        // Seek 10 bytes from the begining of the file.
+        file.seek(10, SEEK_SET);
+
+        // Seek 2 bytes back from the current position.
+        file.seek(-2, SEEK_CUR);
+
+        // Seek 4 bytes back from the end of the file.
+        file.seek(-4, SEEK_END);
+
+        // Get the current position of the offset.
+        auto pos = file.tell();
+
+        // Rewind back to the start of the file.
+        file.rewind();
+    }
+    catch (ErrnoException ex)
+    {
+        // Handle error
+    }
+}
+---
  */
     void seek(long offset, int origin = SEEK_SET) @trusted
     {
