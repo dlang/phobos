@@ -26,6 +26,7 @@ public import std.ascii : LetterCase;
 import std.range.primitives;
 import std.traits;
 import std.typetuple;
+import std.typecons : Flag;
 
 // Same as std.string.format, but "self-importing".
 // Helps reduce code and imports, particularly in static asserts.
@@ -304,6 +305,15 @@ template to(T)
     {
         return toImpl!T(arg);
     }
+}
+
+unittest
+{
+    string including = "5_000",
+           excluding = "5000";
+
+    assert( excluding.to!int == 5000 );
+    assert( including.to!int(AllowUnderscores.yes) == 5000 );
 }
 
 // Tests for issue 6175
@@ -1724,9 +1734,9 @@ T toImpl(T, S)(S value)
 }
 
 /// ditto
-T toImpl(T, S)(S value, uint radix)
+T toImpl(T, S)(S value, AllowUnderscores uscores)
     if ( isExactSomeString!S && isDynamicArray!S &&
-        !isExactSomeString!T && is(typeof(parse!T(value, radix))))
+        !isExactSomeString!T && is(typeof(parse!T(value, uscores))))
 {
     scope(success)
     {
@@ -1735,7 +1745,31 @@ T toImpl(T, S)(S value, uint radix)
             throw convError!(S, T)(value);
         }
     }
-    return parse!T(value, radix);
+    return parse!T(value, uscores);
+}
+
+/// ditto
+T toImpl(T, S)(S value, uint radix, AllowUnderscores uscores = AllowUnderscores.no)
+    if ( isExactSomeString!S && isDynamicArray!S &&
+        !isExactSomeString!T && is(typeof(parse!T(value, radix, uscores))))
+{
+    scope(success)
+    {
+        if (value.length)
+        {
+            throw convError!(S, T)(value);
+        }
+    }
+    return parse!T(value, radix, uscores);
+}
+
+unittest
+{
+    string included = "FF_FF",
+           excluded = "FFFF";
+
+    assert( to!int(excluded, 16) == 0xFFFF );
+    assert( to!int(included, 16, AllowUnderscores.yes) == 0xFFFF );
 }
 
 @safe pure unittest
@@ -1920,7 +1954,23 @@ unittest
     }
 }
 
-Target parse(Target, Source)(ref Source s)
+/// Used to indicate whether $(D parse) should accept underscores in
+/// numeric strings.
+alias AllowUnderscores = Flag!"AllowUnderscores";
+
+/// Parses a numeric value from a string.
+/// 
+/// Params:
+///     s       =   The string to parse the value from.
+///     uscores =   Whether underscores should be accepted in numeric strings.
+///                 
+/// Throws:
+///     ConvOverflowException when a conversion from a string to a numeric
+///         value causes an overflow.
+///     ConvException when the first character in the provided string is not
+///         a valid digit for the specified base/radix.
+Target parse(Target, Source)(ref Source s, 
+                             AllowUnderscores uscores = AllowUnderscores.no)
     if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 {
@@ -1947,6 +1997,8 @@ Target parse(Target, Source)(ref Source s)
 
         if (s.empty)
             goto Lerr;
+
+        enum underscore = cast(typeof(c)) ('_' - '0');
 
         c = s.front;
         s.popFront();
@@ -1975,6 +2027,13 @@ Target parse(Target, Source)(ref Source s)
             while (!s.empty)
             {
                 c = cast(typeof(c)) (s.front - '0');
+
+                if (uscores == AllowUnderscores.yes && c == underscore)
+                {
+                    s.popFront();
+                    continue;
+                }
+
                 if (c > 9)
                     break;
 
@@ -2003,6 +2062,14 @@ Lerr:
 {
     string s = "123";
     auto a = parse!int(s);
+}
+
+@safe pure unittest
+{
+    string us0 = "12_3";
+    string us1 = "12_3";
+    assert( parse!uint(us0, AllowUnderscores.yes) == 123 );
+    assert( parse!uint(us1, AllowUnderscores.no)  == 12  );
 }
 
 @safe pure unittest
@@ -2207,8 +2274,22 @@ Lerr:
     assert(parse!int(input) == 777);
 }
 
-/// ditto
-Target parse(Target, Source)(ref Source s, uint radix)
+/// Parses a numeric value in a specific base from a string.
+/// 
+/// Params:
+///     s       =   The string to parse the value from.
+///     radix   =   The base/radix the numeric value is represented in
+///                 in the string (for example, $(D 2) for binary and $(D 10)
+///                 for decimal).
+///     uscores =   Whether underscores should be accepted in numeric strings.
+///                 
+/// Throws:
+///     ConvOverflowException when a conversion from a string to a numeric
+///         value causes an overflow.
+///     ConvException when the first character in the provided string is not
+///         a valid digit for the specified base/radix.
+Target parse(Target, Source)(ref Source s, uint radix,
+                             AllowUnderscores uscores = AllowUnderscores.no)
     if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 in
@@ -2219,7 +2300,7 @@ body
 {
     import core.checkedint : mulu, addu;
     if (radix == 10)
-        return parse!Target(s);
+        return parse!Target(s, uscores);
 
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
@@ -2229,6 +2310,8 @@ body
     for (; !s.empty; s.popFront())
     {
         uint c = s.front;
+        if (uscores == AllowUnderscores.yes && c == '_' && !atStart)
+            continue;
         if (c < '0')
             break;
         if (radix < 10)
@@ -2263,6 +2346,23 @@ Loverflow:
     throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
     throw convError!(Source, Target)(s, radix);
+}
+///
+unittest
+{
+    auto hex = "FF",
+         dec = "255",
+         oct = "377";
+
+    assert( parse!int(hex, 16) == 0xFF      );
+    assert( parse!int(dec, 10) == 255       );
+    assert( parse!int(oct, 8)  == octal!377 );
+}
+///
+@safe pure unittest
+{
+    string us = "FF_FF";
+    assert( parse!uint(us, 16, AllowUnderscores.yes) == 0xFFFF );
 }
 
 @safe pure unittest
