@@ -69,7 +69,7 @@ $(LI $(LNAME2 more-rangified-functions, More phobos functions were rangified.)
 
 $(LI $(LNAME2 std-algorithm-moveEmplace, A combined `moveEmplace` was added.)
 
-    $(P $(XREF algorithm_mutation, MoveEmplace) efficiently combines $(XREF
+    $(P $(XREF algorithm_mutation, moveEmplace) efficiently combines $(XREF
         algorithm_mutation, move) with $(XREF conv, emplace) thus avoids having
         to initialize and destroy a value before moving into uninitialized data.
     )
