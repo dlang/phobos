@@ -63,6 +63,10 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF enumerate)))
         $(TD Iterates a _range with an attached index variable.
     ))
+    $(TR $(TD $(D $(LREF evenChunks)))
+        $(TD Creates a _range that returns a number of chunks of
+        approximately equal length from the original _range.
+    ))
     $(TR $(TD $(D $(LREF frontTransversal)))
         $(TD Creates a _range that iterates over the first elements of the
         given ranges.
@@ -6413,6 +6417,201 @@ unittest
     assert(equal!`equal(a, b)`(oddsByPairs[3 .. 5],         [[13, 15], [17, 19]]));
     assert(equal!`equal(a, b)`(oddsByPairs[3 .. $].take(2), [[13, 15], [17, 19]]));
 }
+
+
+
+/**
+This range splits a $(D source) range into $(D chunkCount) chunks of
+approximately equal length. $(D Source) must be a forward range with
+known length.
+
+Unlike $(LREF chunks), $(D evenChunks) takes a chunk count (not size),
+and each returned chunk will have either $(D source.length / chunkCount)
+or $(D source.length / chunkCount + 1) elements. If $(D source.length <
+chunkCount), some chunks will be empty.
+
+$(D chunkCount) must not be zero, unless $(D source) is also empty.
+*/
+struct EvenChunks(Source)
+    if (isForwardRange!Source && hasLength!Source)
+{
+    /// Standard constructor
+    this(Source source, size_t chunkCount)
+    {
+        assert(chunkCount != 0 || source.empty, "Cannot create EvenChunks with a zero chunkCount");
+        _source = source;
+        _chunkCount = chunkCount;
+    }
+
+    /// Forward range primitives. Always present.
+    @property auto front()
+    {
+        assert(!empty);
+        return _source.save.take(_chunkPos(1));
+    }
+
+    /// Ditto
+    void popFront()
+    {
+        assert(!empty);
+        _source.popFrontN(_chunkPos(1));
+        _chunkCount--;
+    }
+
+    /// Ditto
+    @property bool empty()
+    {
+        return _source.empty;
+    }
+
+    /// Ditto
+    @property typeof(this) save()
+    {
+        return typeof(this)(_source.save, _chunkCount);
+    }
+
+    /// Length
+    @property size_t length()
+    {
+        return _chunkCount;
+    }
+    //Note: No point in defining opDollar here without slicing.
+    //opDollar is defined below in the hasSlicing!Source section
+
+    static if (hasSlicing!Source)
+    {
+        /**
+        Indexing, slicing and bidirectional operations and range primitives.
+        Provided only if $(D hasSlicing!Source) is $(D true).
+         */
+        auto opIndex(size_t index)
+        {
+            assert(index < _chunkCount, "evenChunks index out of bounds");
+            return _source[_chunkPos(index) .. _chunkPos(index+1)];
+        }
+
+        /// Ditto
+        typeof(this) opSlice(size_t lower, size_t upper)
+        {
+            assert(lower <= upper && upper <= length, "evenChunks slicing index out of bounds");
+            return evenChunks(_source[_chunkPos(lower) .. _chunkPos(upper)], upper - lower);
+        }
+
+        /// Ditto
+        @property auto back()
+        {
+            assert(!empty, "back called on empty evenChunks");
+            return _source[_chunkPos(_chunkCount - 1) .. $];
+        }
+
+        /// Ditto
+        void popBack()
+        {
+            assert(!empty, "popBack() called on empty evenChunks");
+            _source = _source[0 .. _chunkPos(_chunkCount - 1)];
+            _chunkCount--;
+        }
+    }
+
+private:
+    Source _source;
+    size_t _chunkCount;
+
+    size_t _chunkPos(size_t i)
+    {
+        /*
+            _chunkCount = 5, _source.length = 13:
+
+               chunk0
+                 |   chunk3
+                 |     |
+                 v     v
+                +-+-+-+-+-+   ^
+                |0|3|.| | |   |
+                +-+-+-+-+-+   | div
+                |1|4|.| | |   |
+                +-+-+-+-+-+   v
+                |2|5|.|
+                +-+-+-+
+
+                <----->
+                  mod
+
+                <--------->
+                _chunkCount
+
+            One column is one chunk.
+            popFront and popBack pop the left-most
+            and right-most column, respectively.
+        */
+
+        auto div = _source.length / _chunkCount;
+        auto mod = _source.length % _chunkCount;
+        auto pos = i <= mod
+            ? i   * (div+1)
+            : mod * (div+1) + (i-mod) * div
+        ;
+        //auto len = i < mod
+        //    ? div+1
+        //    : div
+        //;
+        return pos;
+    }
+}
+
+/// Ditto
+EvenChunks!Source evenChunks(Source)(Source source, size_t chunkCount)
+if (isForwardRange!Source && hasLength!Source)
+{
+    return typeof(return)(source, chunkCount);
+}
+
+///
+@safe unittest
+{
+    import std.algorithm : equal;
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    auto chunks = evenChunks(source, 3);
+    assert(chunks[0] == [1, 2, 3, 4]);
+    assert(chunks[1] == [5, 6, 7]);
+    assert(chunks[2] == [8, 9, 10]);
+}
+
+@safe unittest
+{
+    import std.algorithm : equal;
+
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    auto chunks = evenChunks(source, 3);
+    assert(chunks.back == chunks[2]);
+    assert(chunks.front == chunks[0]);
+    assert(chunks.length == 3);
+    assert(equal(retro(array(chunks)), array(retro(chunks))));
+
+    auto chunks2 = chunks.save;
+    chunks.popFront();
+    assert(chunks[0] == [5, 6, 7]);
+    assert(chunks[1] == [8, 9, 10]);
+    chunks2.popBack();
+    assert(chunks2[1] == [5, 6, 7]);
+    assert(chunks2.length == 2);
+
+    static assert(isRandomAccessRange!(typeof(chunks)));
+}
+
+@safe unittest
+{
+    import std.algorithm : equal;
+
+    int[] source = [];
+    auto chunks = source.evenChunks(0);
+    assert(chunks.length == 0);
+    chunks = source.evenChunks(3);
+    assert(equal(chunks, [[], [], []]));
+    chunks = [1, 2, 3].evenChunks(5);
+    assert(equal(chunks, [[1], [2], [3], [], []]));
+}
+
 
 private struct OnlyResult(T, size_t arity)
 {
