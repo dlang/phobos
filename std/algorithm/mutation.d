@@ -460,8 +460,8 @@ $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 @safe unittest
 {
     // Issue 13650
-    import std.typecons : TypeTuple;
-    foreach (Char; TypeTuple!(char, wchar, dchar))
+    import std.meta : AliasSeq;
+    foreach (Char; AliasSeq!(char, wchar, dchar))
     {
         Char[3] a1 = "123";
         Char[6] a2 = "456789";
@@ -775,8 +775,8 @@ unittest
 unittest
 {
     import std.algorithm.iteration : filter;
+    import std.meta : AliasSeq;
     import std.traits : hasElaborateAssign;
-    import std.typetuple : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -827,7 +827,7 @@ unittest
     assert (!typeid(S3).init().ptr);
     assert ( typeid(S4).init().ptr);
 
-    foreach(S; TypeTuple!(S1, S2, S3, S4))
+    foreach(S; AliasSeq!(S1, S2, S3, S4))
     {
         //initializeAll
         {

@@ -23,11 +23,11 @@ import core.stdc.stdlib, core.stdc.string, core.stdc.errno;
 import std.conv;
 import std.datetime;
 import std.exception;
+import std.meta;
 import std.path;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
-import std.typetuple;
 import std.internal.cstring;
 
 version (Windows)
@@ -339,7 +339,7 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     }
 
     alias defaults =
-        TypeTuple!(GENERIC_READ,
+        AliasSeq!(GENERIC_READ,
             FILE_SHARE_READ | FILE_SHARE_WRITE, (SECURITY_ATTRIBUTES*).init,
             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
             HANDLE.init);
@@ -509,7 +509,7 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
     if (append)
     {
         alias defaults =
-            TypeTuple!(GENERIC_WRITE, 0, null, OPEN_ALWAYS,
+            AliasSeq!(GENERIC_WRITE, 0, null, OPEN_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
 
@@ -526,7 +526,7 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
     else // write
     {
         alias defaults =
-            TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
+            AliasSeq!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
 
@@ -982,14 +982,14 @@ void setTimes(R)(R name,
         const ta = SysTimeToFILETIME(accessTime);
         const tm = SysTimeToFILETIME(modificationTime);
         alias defaults =
-            TypeTuple!(GENERIC_WRITE,
-                         0,
-                         null,
-                         OPEN_EXISTING,
-                         FILE_ATTRIBUTE_NORMAL |
-                         FILE_ATTRIBUTE_DIRECTORY |
-                         FILE_FLAG_BACKUP_SEMANTICS,
-                         HANDLE.init);
+            AliasSeq!(GENERIC_WRITE,
+                      0,
+                      null,
+                      OPEN_EXISTING,
+                      FILE_ATTRIBUTE_NORMAL |
+                      FILE_ATTRIBUTE_DIRECTORY |
+                      FILE_FLAG_BACKUP_SEMANTICS,
+                      HANDLE.init);
         auto h = trustedCreateFileW(namez, defaults);
 
         static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))

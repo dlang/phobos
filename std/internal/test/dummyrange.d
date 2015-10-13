@@ -4,8 +4,8 @@ Used with the dummy ranges for testing higher order ranges.
 */
 module std.internal.test.dummyrange;
 
+import std.meta;
 import std.typecons;
-import std.typetuple;
 import std.range.primitives;
 
 enum RangeType
@@ -157,7 +157,7 @@ struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
 
 enum dummyLength = 10;
 
-alias AllDummyRanges = TypeTuple!(
+alias AllDummyRanges = AliasSeq!(
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),

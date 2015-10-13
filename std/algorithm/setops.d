@@ -47,7 +47,7 @@ import std.range.primitives;
 import std.functional; // : unaryFun, binaryFun;
 import std.traits;
 // FIXME
-import std.typetuple; // : TypeTuple, staticMap, allSatisfy, anySatisfy;
+import std.meta; // : AliasSeq, staticMap, allSatisfy, anySatisfy;
 
 // cartesianProduct
 /**

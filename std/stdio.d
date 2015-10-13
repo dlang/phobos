@@ -1413,12 +1413,12 @@ void main()
     {
         static import std.file;
         import std.algorithm : equal;
-        import std.typetuple : TypeTuple;
+        import std.meta : AliasSeq;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
         scope(exit) std.file.remove(deleteme);
-        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
+        foreach (String; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
         {
             auto witness = [ "hello\n", "world\n" ];
             auto f = File(deleteme);
@@ -1903,8 +1903,8 @@ the contents may well have changed).
         std.file.write(deleteme, "hi");
         scope(success) std.file.remove(deleteme);
 
-        import std.typetuple;
-        foreach (T; TypeTuple!(char, wchar, dchar))
+        import std.meta : AliasSeq;
+        foreach (T; AliasSeq!(char, wchar, dchar))
         {
             auto blc = File(deleteme).byLine!(T, T);
             assert(blc.front == "hi");
@@ -2503,12 +2503,12 @@ $(D Range) that locks the file and allows fast writing to it.
         /// ditto
         void put(C)(C c) @safe if (is(C : const(dchar)))
         {
-            import std.traits : ParameterTypeTuple;
+            import std.traits : Parameters;
             static auto trustedFPUTC(int ch, _iobuf* h) @trusted
             {
                 return FPUTC(ch, h);
             }
-            static auto trustedFPUTWC(ParameterTypeTuple!FPUTWC[0] ch, _iobuf* h) @trusted
+            static auto trustedFPUTWC(Parameters!FPUTWC[0] ch, _iobuf* h) @trusted
             {
                 return FPUTWC(ch, h);
             }
@@ -3292,7 +3292,7 @@ unittest
     // stdout.open(file, "w");
     // assert(stdout.isOpen);
     // writefln("Hello, %s world number %s!", "nice", 42);
-    // foreach (F ; TypeTuple!(ifloat, idouble, ireal))
+    // foreach (F ; AliasSeq!(ifloat, idouble, ireal))
     // {
     //     F a = 5i;
     //     F b = a % 2;
@@ -3406,7 +3406,7 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
 
 unittest
 {
-    import std.typetuple : TypeTuple;
+    import std.meta : AliasSeq;
 
     //we can't actually test readln, so at the very least,
     //we test compilability
@@ -3414,12 +3414,12 @@ unittest
     {
         readln();
         readln('\t');
-        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
+        foreach (String; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
         {
             readln!String();
             readln!String('\t');
         }
-        foreach (String; TypeTuple!(char[], wchar[], dchar[]))
+        foreach (String; AliasSeq!(char[], wchar[], dchar[]))
         {
             String buf;
             readln(buf);
@@ -3588,8 +3588,8 @@ struct lines
 //             if (fileName.length && fclose(f))
 //                 StdioException("Could not close file `"~fileName~"'");
 //         }
-        import std.traits : ParameterTypeTuple;
-        alias Parms = ParameterTypeTuple!(dg);
+        import std.traits : Parameters;
+        alias Parms = Parameters!(dg);
         static if (isSomeString!(Parms[$ - 1]))
         {
             enum bool duplicate = is(Parms[$ - 1] == string)
@@ -3634,9 +3634,9 @@ struct lines
     {
         import std.exception : assumeUnique;
         import std.conv : to;
-        import std.traits : ParameterTypeTuple;
+        import std.traits : Parameters;
 
-        alias Parms = ParameterTypeTuple!(dg);
+        alias Parms = Parameters!(dg);
         enum duplicate = is(Parms[$ - 1] : immutable(ubyte)[]);
         int result = 1;
         int c = void;
@@ -3680,7 +3680,7 @@ struct lines
 unittest
 {
     static import std.file;
-    import std.typetuple : TypeTuple;
+    import std.meta : AliasSeq;
 
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
@@ -3689,8 +3689,8 @@ unittest
     scope(exit) { std.file.remove(deleteme); }
 
     alias TestedWith =
-          TypeTuple!(string, wstring, dstring,
-                     char[], wchar[], dchar[]);
+          AliasSeq!(string, wstring, dstring,
+                    char[], wchar[], dchar[]);
     foreach (T; TestedWith) {
         // test looping with an empty file
         std.file.write(deleteme, "");
@@ -3732,8 +3732,8 @@ unittest
 
     // test with ubyte[] inputs
     //@@@BUG 2612@@@
-    //alias TestedWith2 = TypeTuple!(immutable(ubyte)[], ubyte[]);
-    alias TestedWith2 = TypeTuple!(immutable(ubyte)[], ubyte[]);
+    //alias TestedWith2 = AliasSeq!(immutable(ubyte)[], ubyte[]);
+    alias TestedWith2 = AliasSeq!(immutable(ubyte)[], ubyte[]);
     foreach (T; TestedWith2) {
         // test looping with an empty file
         std.file.write(deleteme, "");
@@ -3775,7 +3775,7 @@ unittest
 
     }
 
-    foreach (T; TypeTuple!(ubyte[]))
+    foreach (T; AliasSeq!(ubyte[]))
     {
         // test looping with a file with three lines, last without a newline
         // using a counter too this time
