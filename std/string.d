@@ -4125,11 +4125,12 @@ unittest
     See_Also:
         $(LREF entabber)
  +/
-S entab(S)(S s, size_t tabSize = 8) @trusted
-    if (isSomeString!S)
+auto entab(Range)(auto ref Range s, size_t tabSize = 8) pure
+    if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+        || __traits(compiles, StringTypeOf!Range))
 {
-    import std.array;
-    return cast(S)(entabber(s, tabSize).array);
+    import std.array : array;
+    return entabber(s, tabSize).array;
 }
 
 ///
@@ -4153,7 +4154,7 @@ unittest
         $(LREF entab)
   +/
 auto entabber(Range)(Range r, size_t tabSize = 8)
-    if (isForwardRange!Range)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     import std.uni : lineSep, paraSep, nelSep;
     import std.utf : codeUnitLimit, decodeFront;
@@ -4372,10 +4373,45 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
 }
 
 ///
+auto entabber(Range)(auto ref Range s, size_t tabSize = 8) pure
+    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+        && is(StringTypeOf!Range))
+{
+    return entabber(cast(StringTypeOf!Range)s, tabSize);
+}
+
+///
 unittest
 {
     import std.array;
     assert(entabber("        x \n").array == "\tx\n");
+}
+
+@safe pure unittest
+{
+    import std.array : array;
+
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    static struct TestStruct2
+    {
+        string s;
+        alias s this;
+        @disable this(this);
+    }
+
+    auto s = "         x \n";
+    string cmp = "\tx\n";
+    auto t = TestStruct(s);
+    assert(entabber(t, 9).array == cmp);
+    assert(entabber(TestStruct(s), 9).array == cmp);
+    assert(entabber(TestStruct(s), 9).array == entab(TestStruct(s), 9));
+    assert(entabber(TestStruct2(s), 9).array == entab(TestStruct2(s), 9));
+    assert(entabber(TestStruct2(s), 9).array == cmp);
 }
 
 @safe pure
