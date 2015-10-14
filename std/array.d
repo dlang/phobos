@@ -625,7 +625,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         {
             import core.stdc.string : memset;
             import core.memory;
-            auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E);
+            auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E, typeid(T));
             static if (minimallyInitialized && hasIndirections!E)
                 memset(ptr, 0, size * E.sizeof);
             ret = ptr[0 .. size];
@@ -2762,7 +2762,7 @@ if (isDynamicArray!A)
             // first, try extending the current block
             if (_data.canExtend)
             {
-                auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
+                auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof, typeid(A));
                 if (u)
                 {
                     // extend worked, update the capacity
@@ -2772,7 +2772,7 @@ if (isDynamicArray!A)
             }
 
             // didn't work, must reallocate
-            auto bi = GC.qalloc(newlen * T.sizeof, blockAttribute!T);
+            auto bi = GC.qalloc(newlen * T.sizeof, blockAttribute!T, typeid(A));
             _data.capacity = bi.size / T.sizeof;
             import core.stdc.string : memcpy;
             if (len)
