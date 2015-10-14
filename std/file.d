@@ -81,24 +81,6 @@ else version(Posix)
 }
 
 
-// @@@@ TEMPORARY - THIS SHOULD BE IN THE CORE @@@
-// {{{
-version (Windows)
-{
-    enum FILE_ATTRIBUTE_REPARSE_POINT = 0x400;
-
-    // Required by tempPath():
-    private extern(Windows) DWORD GetTempPathW(DWORD nBufferLength,
-                                               LPWSTR lpBuffer);
-    // Required by rename():
-    enum MOVEFILE_REPLACE_EXISTING = 1;
-    private extern(Windows) DWORD MoveFileExW(LPCWSTR lpExistingFileName,
-                                              LPCWSTR lpNewFileName,
-                                              DWORD dwFlags);
-}
-// }}}
-
-
 /++
     Exception thrown for file I/O errors.
  +/

@@ -2587,12 +2587,11 @@ private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
 
 version(Windows) version(unittest)
 {
+    import core.sys.windows.shellapi : CommandLineToArgvW;
     import core.sys.windows.windows;
     import core.stdc.stddef;
+    import core.stdc.wchar_ : wcslen;
     import std.array;
-
-    extern (Windows) wchar_t**  CommandLineToArgvW(wchar_t*, int*);
-    extern (C) size_t wcslen(in wchar *);
 
     string[] parseCommandLine(string line)
     {
