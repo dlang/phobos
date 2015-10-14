@@ -93,7 +93,7 @@ enum LIBCURL_TIMESTAMP = "Thu Feb 17 12:19:40 UTC 2011";
 /** Data type definition of curl_off_t.
  *
  * jdrewsen - Always 64bit signed and that is what long is in D.
- * 
+ *
  * Comment below is from curlbuild.h:
  * 
  * NOTE 2:
