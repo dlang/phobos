@@ -2460,7 +2460,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
  */
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
 if ((hasSlicing!Range && hasLength!Range) ||
-    isSomeString!Range)
+    __traits(compiles, StringTypeOf!Range))
 {
     import std.uni : lineSep, paraSep;
     import std.conv : unsigned;
@@ -2468,7 +2468,11 @@ if ((hasSlicing!Range && hasLength!Range) ||
     static struct Result
     {
     private:
-        Range _input;
+        static if (__traits(compiles, StringTypeOf!Range))
+            StringTypeOf!Range _input;
+        else
+            Range _input;
+
         alias IndexType = typeof(unsigned(_input.length));
         enum IndexType _unComputed = IndexType.max;
         IndexType iStart = _unComputed;
@@ -2493,7 +2497,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
             }
         }
 
-        @property Range front()
+        @property typeof(_input) front()
         {
             if (iStart == _unComputed)
             {
@@ -2613,6 +2617,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\n" ~
             "sunday\nmon\u2030day\nschadenfreude\vkindergarten\f\vcookies\u0085"
         );
+
         auto lines = lineSplitter(s).array;
         assert(lines.length == 14);
         assert(lines[0] == "");
@@ -2678,23 +2683,42 @@ if ((hasSlicing!Range && hasLength!Range) ||
     assert(i == witness.length);
 }
 
+unittest
+{
+    import std.file : DirEntry;
+    import std.algorithm.comparison : equal;
+
+    auto s = "std/string.d";
+    auto de = DirEntry(s);
+    auto i = de.lineSplitter();
+    auto j = s.lineSplitter();
+
+    assert(equal(i, j));
+}
+
 /++
     Strips leading whitespace (as defined by $(XREF uni, isWhite)).
 
     Params:
-        str = string or ForwardRange of characters
+        input = string or ForwardRange of characters
 
-    Returns: $(D str) stripped of leading whitespace.
+    Returns: $(D input) stripped of leading whitespace.
 
-    Postconditions: $(D str) and the returned value
+    Postconditions: $(D input) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
   +/
-Range stripLeft(Range)(Range str)
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+auto stripLeft(Range)(Range input)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+        __traits(compiles, StringTypeOf!Range))
 {
     import std.ascii : isASCII, isWhite;
     import std.uni : isWhite;
     import std.utf : decodeFront;
+
+    static if (__traits(compiles, StringTypeOf!Range))
+        StringTypeOf!Range str = input;
+    else
+        alias str = input;
 
     while (!str.empty)
     {
@@ -2737,23 +2761,40 @@ Range stripLeft(Range)(Range str)
            "hello world     ");
 }
 
+unittest
+{
+    static struct ToString
+    {
+        string s;
+        alias s this;
+    }
+
+    assert(stripLeft(ToString("  hello")) == "hello");
+}
 
 /++
     Strips trailing whitespace (as defined by $(XREF uni, isWhite)).
 
     Params:
-        str = string or random access range of characters
+        input = string or random access range of characters
 
     Returns:
-        slice of $(D str) stripped of trailing whitespace.
+        slice of $(D input) stripped of trailing whitespace.
   +/
-auto stripRight(Range)(Range str)
+auto stripRight(Range)(Range input)
     if (isSomeString!Range ||
-        isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-        isSomeChar!(ElementEncodingType!Range))
+        (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+            isSomeChar!(ElementEncodingType!Range))
+        || __traits(compiles, StringTypeOf!Range))
 {
-    alias C = Unqual!(ElementEncodingType!Range);
-    static if (isSomeString!Range)
+    static if (__traits(compiles, StringTypeOf!Range))
+        StringTypeOf!Range str = input;
+    else
+        alias str = input;
+
+    alias C = Unqual!(ElementEncodingType!(typeof(str)));
+
+    static if (isSomeString!(typeof(str)))
     {
         import std.utf : codeLength;
         foreach_reverse (i, dchar c; str)
@@ -2854,6 +2895,17 @@ unittest
            [lineSep] ~ "hello world");
     assert(stripRight([paraSep] ~ "hello world" ~ paraSep) ==
            [paraSep] ~ "hello world");
+}
+
+unittest
+{
+    static struct ToString
+    {
+        string s;
+        alias s this;
+    }
+
+    assert(stripRight(ToString("hello   ")) == "hello");
 }
 
 unittest
