@@ -3142,7 +3142,8 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            auto h = cenforce(opendir(directory.tempCString()), directory);
+            auto h = directory.length ? opendir(directory.tempCString()) : opendir(".");
+            cenforce(h, directory);
             _stack.put(DirHandle(directory, h));
             return next();
         }
@@ -3410,6 +3411,9 @@ unittest
     // issue 11392
     auto dFiles = dirEntries(testdir, SpanMode.shallow);
     foreach(d; dFiles){}
+
+    // issue 15146
+    dirEntries("", SpanMode.shallow).walkLength();
 }
 
 /++
