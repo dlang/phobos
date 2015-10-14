@@ -55,6 +55,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         import std.algorithm : max;
         auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
             max(theAlignment, cast(uint) size_t.sizeof));
+        scope(exit) AlignedMallocator.instance.deallocate(m);
         testAllocator!(() => BitmappedBlock(m));
     }
     static assert(theBlockSize > 0 && theAlignment.isGoodStaticAlignment);
@@ -888,6 +889,7 @@ struct BitmappedBlockWithInternalPointers(
         import std.experimental.allocator.mallocator : AlignedMallocator;
         auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
             theAlignment);
+        scope(exit) AlignedMallocator.instance.deallocate(m);
         testAllocator!(() => BitmappedBlockWithInternalPointers(m));
     }
 
