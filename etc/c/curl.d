@@ -1410,7 +1410,7 @@ extern (C) struct curl_forms
  * Returns code for curl_formadd()
  *
  * Returns:
- * 
+ *
  * $(UL
  * $(LI CURL_FORMADD_OK             on success )
  * $(LI CURL_FORMADD_MEMORY         if the FormInfo allocation fails )
