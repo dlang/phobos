@@ -450,9 +450,11 @@ struct JSONValue
         assert( j["language"].str == "D" );
     }
 
-    /// Operator sets $(D value) for element of JSON object by $(D key)
+    /// Operator sets $(D value) for element of JSON object by $(D key).
+    ///
     /// If JSON value is null, then operator initializes it with object and then
     /// sets $(D value) for it.
+    ///
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT)
     /// or $(D JSON_TYPE.NULL).
     void opIndexAssign(T)(auto ref T value, string key) pure
@@ -613,6 +615,7 @@ struct JSONValue
     }
 
     /// Implicitly calls $(D toJSON) on this JSONValue.
+    ///
     /// $(I options) can be used to tweak the conversion behavior.
     string toString(in JSONOptions options = JSONOptions.none) const
     {
@@ -621,6 +624,7 @@ struct JSONValue
 
     /// Implicitly calls $(D toJSON) on this JSONValue, like $(D toString), but
     /// also passes $(I true) as $(I pretty) argument.
+    ///
     /// $(I options) can be used to tweak the conversion behavior
     string toPrettyString(in JSONOptions options = JSONOptions.none) const
     {

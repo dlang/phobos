@@ -2160,8 +2160,8 @@ struct TimeVal
 /**
  * A collection of sockets for use with $(D Socket.select).
  *
- * $(D SocketSet) wraps the platform $(D fd_set) type. However, unlike
  * $(D fd_set), $(D SocketSet) is not statically limited to $(D FD_SETSIZE)
+ * $(D SocketSet) wraps the platform $(D fd_set) type. However, unlike
  * or any other limit, and grows as needed.
  */
 class SocketSet
@@ -2380,6 +2380,7 @@ public:
 
     /// Return the current capacity of this $(D SocketSet). The exact
     /// meaning of the return value varies from platform to platform.
+    ///
     /// Note that since D 2.065, this value does not indicate a
     /// restriction, and $(D SocketSet) will grow its capacity as
     /// needed automatically.
