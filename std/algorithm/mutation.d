@@ -1170,7 +1170,7 @@ unittest// Issue 8057
     static assert(__traits(compiles, move(x, x) ));
 }
 
-/*
+/**
  * Similar to $(LREF move) but assumes `target` is uninitialized. This
  * is more efficient because `source` can be blitted over `target`
  * without destroying or initializing it first.
