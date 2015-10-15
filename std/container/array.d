@@ -1986,7 +1986,7 @@ if (is(Unqual!T == bool))
             _store._backend.length = _store._backend.length - 1;
         }
     }
-    ///ditto
+    /// ditto
     alias stableRemoveBack = removeBack;
 
     /**

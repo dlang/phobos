@@ -2160,8 +2160,8 @@ struct TimeVal
 /**
  * A collection of sockets for use with $(D Socket.select).
  *
- * $(D fd_set), $(D SocketSet) is not statically limited to $(D FD_SETSIZE)
  * $(D SocketSet) wraps the platform $(D fd_set) type. However, unlike
+ * $(D fd_set), $(D SocketSet) is not statically limited to $(D FD_SETSIZE)
  * or any other limit, and grows as needed.
  */
 class SocketSet

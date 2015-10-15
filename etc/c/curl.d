@@ -822,7 +822,7 @@ enum CurlOption {
   /** Time to use with the above condition. Specified in number of seconds
      since 1 Jan 1970 */
   timevalue,
-  /** 35 = OBSOLETE */
+  /* 35 = OBSOLETE */
 
   /** Custom request, for customizing the get command like
      HTTP: DELETE, TRACE and others
@@ -831,7 +831,7 @@ enum CurlOption {
   customrequest = 10036,
   /** HTTP request, for odd commands like DELETE, TRACE and others */
   stderr,
-  /** 38 is not used */
+  /* 38 is not used */
 
   /** send linked-list of post-transfer QUOTE commands */
   postquote = 10039,
@@ -853,7 +853,7 @@ enum CurlOption {
   followlocation, /** use Location: Luke! */
   transfertext,  /** transfer data in text/ASCII format */
   put,           /** HTTP PUT */
-  /** 55 = OBSOLETE */
+  /* 55 = OBSOLETE */
 
   /** Function that will be called instead of the internal progress display
    * function. This function should be defined as the curl_progress_callback
@@ -881,10 +881,8 @@ enum CurlOption {
   /** The CApath or CAfile used to validate the peer certificate
      this option is used only if SSL_VERIFYPEER is true */
   cainfo = 10065,
-  /** $(UL
-  $(LI 66 = OBSOLETE )
-  $(LI 67 = OBSOLETE )
-  ) */
+  /* 66 = OBSOLETE */
+  /* 67 = OBSOLETE */
 
   /** Maximum number of http redirects to follow */
   maxredirs = 68,
@@ -898,7 +896,7 @@ enum CurlOption {
   /** What policy to use when closing connections when the cache is filled
      up */
   closepolicy,
-  /** 73 = OBSOLETE */
+  /* 73 = OBSOLETE */
 
   /** Set to explicitly use a new connection for the upcoming transfer.
      Do not use this unless you're absolutely sure of this, as it makes the
@@ -1055,15 +1053,13 @@ enum CurlOption {
   postfieldsize_large = 30120,
   /** Enable/disable the TCP Nagle algorithm */
   tcp_nodelay = 121,
-  /** $(UL
-  $(LI 122 OBSOLETE, used in 7.12.3. Gone in 7.13.0 )
-  $(LI 123 OBSOLETE. Gone in 7.16.0 )
-  $(LI 124 OBSOLETE, used in 7.12.3. Gone in 7.13.0 )
-  $(LI 125 OBSOLETE, used in 7.12.3. Gone in 7.13.0 )
-  $(LI 126 OBSOLETE, used in 7.12.3. Gone in 7.13.0 )
-  $(LI 127 OBSOLETE. Gone in 7.16.0 )
-  $(LI 128 OBSOLETE. Gone in 7.16.0 )
-  ) */
+  /* 122 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
+  /* 123 OBSOLETE. Gone in 7.16.0 */
+  /* 124 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
+  /* 125 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
+  /* 126 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
+  /* 127 OBSOLETE. Gone in 7.16.0 */
+  /* 128 OBSOLETE. Gone in 7.16.0 */
 
   /** When FTP over SSL/TLS is selected (with CURLOPT_USE_SSL), this option
      can be used to change libcurl's default action which is to first try
@@ -1078,10 +1074,8 @@ enum CurlOption {
   ftpsslauth = 129,
   ioctlfunction = 20130,        ///
   ioctldata = 10131,            ///
-  /** $(UL
-  $(LI 132 OBSOLETE. Gone in 7.16.0 )
-  $(LI 133 OBSOLETE. Gone in 7.16.0 )
-  ) */
+  /* 132 OBSOLETE. Gone in 7.16.0 */
+  /* 133 OBSOLETE. Gone in 7.16.0 */
 
   /** zero terminated string for pass on to the FTP server when asked for
      "account" info */
