@@ -2478,7 +2478,7 @@ template reduce(fun...) if (fun.length >= 1)
 
         static if (isInputRange!R)
         {
-            enforce(!r.empty);
+            enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
             Args result = r.front;
             r.popFront();
             return reduceImpl!false(r, result);
