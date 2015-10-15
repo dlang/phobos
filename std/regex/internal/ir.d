@@ -17,37 +17,24 @@ alias BasicElementOf(Range) = Unqual!(ElementEncodingType!Range);
 // heuristic value determines maximum CodepointSet length suitable for linear search
 enum maxCharsetUsed = 6;
 
-// another variable to tweak behavior of caching generated Tries for character classes
-enum maxCachedTries = 8;
-
-alias Trie = CodepointSetTrie!(13, 8);
-alias makeTrie = codepointSetTrie!(13, 8);
-
-Trie[CodepointSet] trieCache;
-
-//accessor with caching
-@trusted Trie getTrie(CodepointSet set)
-{// @@@BUG@@@ 6357 almost all properties of AA are not @safe
-    if(__ctfe || maxCachedTries == 0)
-        return makeTrie(set);
-    else
-    {
-        auto p = set in trieCache;
-        if(p)
-            return *p;
-        if(trieCache.length == maxCachedTries)
-        {
-            // flush entries in trieCache
-            trieCache = null;
-        }
-        return (trieCache[set] = makeTrie(set));
-    }
-}
-
-@trusted auto memoizeExpr(string expr)()
+@property @trusted auto memoizeExpr(string expr)()
 {
     if(__ctfe)
         return mixin(expr);
+    alias T = typeof(mixin(expr));
+    static T slot;
+    static bool initialized;
+    if(!initialized)
+    {
+        slot =  mixin(expr);
+        initialized = true;
+    }
+    return slot;
+}
+
+// cannot return ref /non-ref based on __ctfe variable (sadly)
+@property @trusted ref memoizeExprRef(string expr)()
+{
     alias T = typeof(mixin(expr));
     static T slot;
     static bool initialized;
@@ -64,11 +51,6 @@ Trie[CodepointSet] trieCache;
 {
     return memoizeExpr!("unicode.Alphabetic | unicode.Mn | unicode.Mc
         | unicode.Me | unicode.Nd | unicode.Pc")();
-}
-
-@property Trie wordTrie()
-{
-    return memoizeExpr!("makeTrie(wordCharacter)")();
 }
 
 // some special Unicode white space characters
@@ -435,7 +417,7 @@ struct Group(DataIndex)
     This is an intended form for caching and storage of frequently
     used regular expressions.
 +/
-struct Regex(Char)
+public struct Regex(Char)
 {
     //temporary workaround for identifier lookup
     CodepointSet[] charsets; //
@@ -497,7 +479,7 @@ package(std.regex):
     uint hotspotTableSize; //number of entries in merge table
     uint threadCount;
     uint flags;         //global regex flags
-    public const(Trie)[]  tries; //
+    public UtfMatcher!Char[] matchers; //
     uint[] backrefed; //bit array of backreferenced submatches
     Kickstart!Char kickstart;
 
@@ -577,7 +559,8 @@ struct Input(Char)
     alias String = const(Char)[];
     String _origin;
     size_t _index;
-
+    pure nothrow
+    {
     //constructs Input object out of plain string
     this(String input, size_t idx = 0)
     {
@@ -585,32 +568,42 @@ struct Input(Char)
         _index = idx;
     }
 
-    //codepoint at current stream position
-    bool nextChar(ref dchar res, ref size_t pos)
-    {
-        pos = _index;
-        if(_index == _origin.length)
-            return false;
-        res = std.utf.decode(_origin, _index);
-        return true;
+        //make it range of Char
+        @property bool empty(){ return _index == _origin.length; }
+        @property auto front(){ return _origin[_index]; }
+        void popFront(){  _index++; }
+        void popFrontN(size_t n){  _index += n; }
+        //back direction is not really used - it's just to qualify as RA
+        @property auto back(){ return _origin[$-1]; }
+        void popBack(){ _origin = _origin[0..$-1]; }
+        @property auto save(){ return this; }
+        ref opIndex(size_t ofs){ return _origin[_index+ofs]; }
+        //hackish
+        auto opSlice(size_t s, size_t e){ return Input(_origin[0..$], _index+s); }
+        @property size_t length(){ return _origin.length - _index; }
+        alias opDollar = length;
     }
-    @property bool atEnd(){
+
+    void skipChar()
+    {
+        _index += std.utf.stride(_origin, _index);
+    }
+
+    @property bool atEnd()
+    {
         return _index == _origin.length;
-    }
-    bool search(Kickstart)(ref Kickstart kick, ref dchar res, ref size_t pos)
-    {
-        size_t idx = kick.search(_origin, _index);
-        _index = idx;
-        return nextChar(res, pos);
     }
 
     //index of at End position
     @property size_t lastIndex(){   return _origin.length; }
 
+    auto stride() { return std.utf.stride(_origin, _index); }
+
     //support for backtracker engine, might not be present
     void reset(size_t index){   _index = index;  }
 
-    String opSlice(size_t start, size_t end){   return _origin[start..end]; }
+    //slice using global offsets
+    String slice(size_t start, size_t end){   return _origin[start..end]; }
 
     struct BackLooper
     {
@@ -618,36 +611,184 @@ struct Input(Char)
         enum { isLoopback = true };
         String _origin;
         size_t _index;
+        pure nothrow
+        {
         this(Input input, size_t index)
         {
             _origin = input._origin;
             _index = index;
         }
-        @trusted bool nextChar(ref dchar res,ref size_t pos)
-        {
-            pos = _index;
-            if(_index == 0)
-                return false;
-
-            res = _origin[0.._index].back;
-            _index -= std.utf.strideBack(_origin, _index);
-
-            return true;
+            this(String input, size_t index)
+            {
+                _origin = input;
+                _index = index;
+            }
+            //make it range of Char
+            @property bool empty(){ return _index == 0; }
+            @property auto front(){ return _origin[_index-1]; }
+            void popFront(){  _index--; }
+            void popFrontN(size_t n){  _index -= n; }
+            //back direction is not really used - it's just to qualify as RA
+            @property auto back(){ return _origin[0]; }
+            void popBack(){ _origin = _origin[1..$]; }
+            @property auto save(){ return this; }
+            ref opIndex(size_t ofs){ return _origin[_index-1-ofs]; }
+            //hackish
+            auto opSlice(size_t s, size_t e){ return BackLooper(_origin, _index-s); }
+            @property size_t length(){ return _index; }
+            alias opDollar = length;
         }
-        @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
+
+        auto stride() { return std.utf.strideBack(_origin, _index); }
+
+        void skipChar()
+        {
+            _index -= std.utf.strideBack(_origin, _index);
+        }
+
+        @property atEnd(){ return _index == 0; }
         auto loopBack(size_t index){   return Input(_origin, index); }
 
         //support for backtracker engine, might not be present
-        //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
         void reset(size_t index){   _index = index;  }
 
-        String opSlice(size_t start, size_t end){   return _origin[end..start]; }
+        //slice using global offsets
+        String slice(size_t start, size_t end){  return _origin[start..end]; }
+
         //index of at End position
         @property size_t lastIndex(){   return 0; }
     }
     auto loopBack(size_t index){   return BackLooper(this, index); }
 }
 
+
+unittest
+{
+    import std.range;
+    static assert(isRandomAccessRange!(Input!char));
+    static assert(isRandomAccessRange!(Input!char.BackLooper));
+}
+
+bool matchDChar(Stream)(ref Stream s, dchar ch)
+{
+    alias Char = Unqual!(typeof(s.front));
+    static if(is(Char == dchar))
+    {
+        if(ch == s.front)
+        {
+            s.popFront();
+            return true;
+        }
+        return false;
+    }
+    else
+    {
+        if(ch <= 0x7F)
+        {
+            if(s.front == ch)
+            {
+                s.popFront();
+                return true;
+            }
+            return false;
+        }
+        Char[dchar.sizeof/Char.sizeof] buf;
+        size_t cnt = std.utf.encode(buf, ch);
+        if(s.length < cnt)
+            return false;
+        static if(Stream.isLoopback) // look at UTF array backwards
+            for(size_t i=0; i<cnt; i++)
+            {
+                if(s[i] != buf[cnt-1-i])
+                    return false;
+            }
+        else
+            for(size_t i=0; i<cnt; i++)
+            {
+                if(s[i] != buf[i])
+                    return false;
+            }
+        s.popFrontN(cnt);
+        return true;
+    }
+}
+
+bool testDChar(Stream)(ref Stream s, dchar ch)
+{
+    alias Char = Unqual!(typeof(s.front));
+    static if(is(Char == dchar))
+        return ch == s.front;
+    else
+        return ch <= 0x7F ? s.front == ch : slowTestDChar(s, ch);
+}
+
+bool slowTestDChar(Stream)(ref Stream s, dchar ch)
+{
+    alias Char = Unqual!(typeof(s.front));
+    Char[dchar.sizeof/Char.sizeof] buf=void;
+    size_t cnt = std.utf.encode(buf, ch);
+    if(s.length < cnt)
+        return false;
+     static if(Stream.isLoopback) // look at UTF array backwards
+            for(size_t i=0; i<cnt; i++)
+            {
+                if(s[i] != buf[cnt-1-i])
+                    return false;
+            }
+        else
+            for(size_t i=0; i<cnt; i++)
+            {
+                if(s[i] != buf[i])
+                    return false;
+            }
+    return true;
+}
+
+bool matchClass(Stream, Matcher)(ref Stream s, ref Matcher m)
+{
+    static if(!Stream.isLoopback)
+    {
+        return m.skip(s);
+    }
+    else
+    {
+        //TODO: backward matchers ?
+        alias C = typeof(s.front);
+        Unqual!C[dchar.sizeof/C.sizeof] buf=void;
+        uint step = s.stride;
+        foreach(i; 0..step)
+            buf[step-1-i] = s[i];
+        s.popFrontN(step);
+        C[] r = buf[0..step];
+        return m.test(r);
+    }
+}
+
+bool testClass(Stream, Matcher)(ref Stream s, ref Matcher m)
+{
+    static if(!Stream.isLoopback)
+    {
+        return m.test(s);
+    }
+    else
+    {
+        //TODO: backward matchers ?
+        alias C = typeof(s.front);
+        Unqual!C[dchar.sizeof/C.sizeof] buf=void;
+        uint step = s.stride;
+        foreach(i; 0..step)
+            buf[step-1-i] = s[i];
+        C[] r = buf[0..step];
+        return m.test(r);
+    }
+}
+
+bool testWordClass(Stream)(auto ref Stream s)
+{
+    alias Char = BasicElementOf!Stream;
+    alias matcher = memoizeExprRef!("utfMatcher!"~Char.stringof~"(wordCharacter)");
+    return s.testClass(matcher);
+}
 
 //both helpers below are internal, on its own are quite "explosive"
 //unsafe, no initialization of elements
@@ -665,71 +806,128 @@ struct Input(Char)
     return ret;
 }
 
+//ditto, class instance
+@system T allocateInChunk(T, Args...)(ref void[] chunk, Args args)
+    if(is(T == class))
+{
+    import std.conv: emplace;
+    enum len = __traits(classInstanceSize, T);
+    auto ret = emplace!T(chunk, args);
+    chunk = chunk[len .. $];
+    return ret;
+}
+
+//ditto, structs
+@system T* allocateInChunk(T, Args...)(ref void[] chunk, Args args)
+        if(is(T == struct))
+{
+    import std.conv: emplace;
+    enum len = T.sizeof;
+    auto ret = emplace!T(chunk, args);
+    chunk = chunk[len .. $];
+    return ret;
+}
+
 //
 @trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
-    import std.conv;
-    import std.algorithm : map, equal;
-
+    import std.conv, std.algorithm.iteration, std.algorithm.comparison;
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
     enforce(fnd < dict.length && equal(dict[fnd].name, name),
         text("no submatch named ", name));
     return dict[fnd].group;
 }
 
-//whether ch is one of unicode newline sequences
-//0-arg template due to @@@BUG@@@ 10985
-bool endOfLine()(dchar front, bool seenCr)
+
+// match extended new line characters > 0x80
+bool matchExtNl(Stream)(Stream s)
 {
-    return ((front == '\n') ^ seenCr) || front == '\r'
-    || front == NEL || front == LS || front == PS;
+    immutable c = s.front;
+    static if(is(ElementType!Stream : char))
+    {
+        static if(Stream.isLoopback)
+        {
+            if(c == 133) // NEL
+                return s.length > 1 && s[1] == 194;
+            else if(c == 168) // LS
+                return s.length > 2 && s[1] == 128 && s[2] == 226;
+            else if(c == 169) // PS
+                return s.length > 2 && s[1] == 128 && s[2] == 226;
+        }
+        else
+        {
+            if(c == 194) // NEL
+                return s.length > 1 && s[1] == 133;
+            else if(c == 226) // LS and PS
+            {
+                if(s.length > 2 && s[1] == 128)
+                    return s[2] == 168 || s[2] == 169;
+            }
+        }
+        return false;
+    }
+    else // fits in UTF-16/UTF-32
+        return c == NEL || c == LS || c == PS;
 }
 
-//
+//whether stream s is at one of unicode newline sequences
+// ('s' is looking forward, seenCr - have we just skipped '\r')
 //0-arg template due to @@@BUG@@@ 10985
-bool startOfLine()(dchar back, bool seenNl)
+bool endOfLine(Stream)(Stream s, bool seenCr)
 {
-    return ((back == '\r') ^ seenNl) || back == '\n'
-    || back == NEL || back == LS || back == PS;
+    immutable c = s.front;
+    if(((c == '\n') ^ seenCr) || c == '\r')
+        return true;
+    else
+        return matchExtNl(s);
+}
+
+//whether stream is at start of new line
+// ('s' is looking back, seenNl is - do we see '\n' at current position)
+//0-arg template due to @@@BUG@@@ 10985
+bool startOfLine(Stream)(Stream s, bool seenNl)
+{
+    immutable c = s.front;
+    if(((c == '\r') ^ seenNl) || c == '\n')
+        return true;
+    else
+        return matchExtNl(s);
 }
 
 //Test if bytecode starting at pc in program 're' can match given codepoint
 //Returns: 0 - can't tell, -1 if doesn't match
-int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
+int quickTestNonDec(RegEx, Stream)(uint pc, ref Stream s, const ref RegEx re)
 {
-    static assert(IRL!(IR.OrChar) == 1);//used in code processing IR.OrChar
     for(;;)
         switch(re.ir[pc].code)
         {
         case IR.OrChar:
+            if(s.atEnd)
+                return -1;
             uint len = re.ir[pc].sequence;
             uint end = pc + len;
-            if(re.ir[pc].data != front && re.ir[pc+1].data != front)
+            if(!s.testDChar(re.ir[pc].data) && !s.testDChar(re.ir[pc+1].data))
             {
                 for(pc = pc+2; pc < end; pc++)
-                    if(re.ir[pc].data == front)
+                    if(s.testDChar(re.ir[pc].data))
                         break;
                 if(pc == end)
                     return -1;
             }
             return 0;
         case IR.Char:
-            if(front == re.ir[pc].data)
+            if(!s.atEnd && s.testDChar(re.ir[pc].data))
                 return 0;
             else
                 return -1;
         case IR.Any:
-            return 0;
-        case IR.CodepointSet:
-            if(re.charsets[re.ir[pc].data].scanFor(front))
-                return 0;
-            else
-                return -1;
+            return s.atEnd ? -1 : 0;
         case IR.GroupStart, IR.GroupEnd:
             pc += IRL!(IR.GroupStart);
             break;
+        case IR.CodepointSet:
         case IR.Trie:
-            if(re.tries[re.ir[pc].data][front])
+            if(!s.atEnd && s.testClass(re.matchers[re.ir[pc].data]))
                 return 0;
             else
                 return -1;

@@ -20,17 +20,16 @@ auto makeRegex(S)(Parser!S p)
         maxCounterDepth = p.counterDepth;
         flags = p.re_flags;
         charsets = p.charsets;
-        tries = p.tries;
+        matchers = p.matchers;
         backrefed = p.backrefed;
         re.lightPostprocess();
         debug(std_regex_parser)
         {
             print();
         }
-        //@@@BUG@@@ (not reduced)
-        //somehow just using validate _collides_ with std.utf.validate (!)
-        version(assert) re.validateRe();
+
     }
+    version(assert) validate(re); //@@BUG@@ UFCS re.validate() won't work
     return re;
 }
 
@@ -73,6 +72,11 @@ unittest
     assert(nc.equal(cp[1 .. $ - 1]));
 }
 
+unittest
+{
+    auto r = makeRegex("[0-9]/[0-9]/[0-9]");
+    assert(r.charsets.length == 1); //reuse slots
+}
 
 @trusted void reverseBytecode()(Bytecode[] code)
 {
@@ -200,31 +204,9 @@ dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
 //heuristic value determines maximum CodepointSet length suitable for linear search
 enum maxCharsetUsed = 6;
 
-enum maxCachedTries = 8;
-
 alias Trie = CodepointSetTrie!(13, 8);
 alias makeTrie = codepointSetTrie!(13, 8);
 
-Trie[CodepointSet] trieCache;
-
-//accessor with caching
-@trusted Trie getTrie(CodepointSet set)
-{// @@@BUG@@@ 6357 almost all properties of AA are not @safe
-    if(__ctfe || maxCachedTries == 0)
-        return makeTrie(set);
-    else
-    {
-        auto p = set in trieCache;
-        if(p)
-            return *p;
-        if(trieCache.length == maxCachedTries)
-        {
-            // flush entries in trieCache
-            trieCache = null;
-        }
-        return (trieCache[set] = makeTrie(set));
-    }
-}
 
 
 auto caseEnclose(CodepointSet set)
@@ -290,6 +272,7 @@ enum maxCumulativeRepetitionLength = 2^^20;
 struct Parser(R)
     if (isForwardRange!R && is(ElementType!R : dchar))
 {
+    alias Char = BasicElementOf!R;
     enum infinite = ~0u;
     dchar _current;
     bool empty;
@@ -304,7 +287,7 @@ struct Parser(R)
     uint lookaroundNest = 0;
     uint counterDepth = 0; //current depth of nested counted repetitions
     CodepointSet[] charsets;  //
-    const(Trie)[] tries; //
+    UtfMatcher!Char[] matchers;
     uint[] backrefed; //bitarray for groups
 
     @trusted this(S)(R pattern, S flags)
@@ -1235,32 +1218,18 @@ struct Parser(R)
         else
         {
             import std.algorithm : countUntil;
-            auto ivals = set.byInterval;
             auto n = charsets.countUntil(set);
             if(n >= 0)
-            {
-                if(ivals.length*2 > maxCharsetUsed)
                     put(Bytecode(IR.Trie, cast(uint)n));
                 else
-                    put(Bytecode(IR.CodepointSet, cast(uint)n));
-                return;
-            }
-            if(ivals.length*2 > maxCharsetUsed)
             {
-                auto t  = getTrie(set);
-                put(Bytecode(IR.Trie, cast(uint)tries.length));
-                tries ~= t;
-                debug(std_regex_allocation) writeln("Trie generated");
+                    put(Bytecode(IR.Trie, cast(uint)matchers.length));
+                matchers ~= utfMatcher!Char(set);
+                charsets ~= set;
+                assert(charsets.length == matchers.length);
             }
-            else
-            {
-                put(Bytecode(IR.CodepointSet, cast(uint)charsets.length));
-                tries ~= Trie.init;
             }
-            charsets ~= set;
-            assert(charsets.length == tries.length);
         }
-    }
 
     //parse and generate IR for escape stand alone escape sequence
     @trusted void parseEscape()
@@ -1392,8 +1361,6 @@ struct Parser(R)
         throw new RegexException(app.data);
     }
 
-    alias Char = BasicElementOf!R;
-
     @property program()
     {
         return makeRegex(this);
@@ -1472,7 +1439,7 @@ struct Parser(R)
 }
 
 //IR code validator - proper nesting, illegal instructions, etc.
-@trusted void validateRe(Char)(ref Regex!Char zis)
+@trusted void validate(Char)(ref Regex!Char zis)
 {//@@@BUG@@@ text is @system
     import std.conv;
     with(zis)

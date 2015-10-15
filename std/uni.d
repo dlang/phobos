@@ -4649,7 +4649,7 @@ template Utf8Matcher()
         import std.algorithm : map;
         auto ascii = set & unicode.ASCII;
         auto utf8_2 = set & CodepointSet(0x80, 0x800);
-        auto utf8_3 = set & CodepointSet(0x800, 0x1_0000);
+        auto utf8_3 = set & (CodepointSet(0x800, 0x1_0000) - CodepointSet(0xD800, 0xDFFF+1));
         auto utf8_4 = set & CodepointSet(0x1_0000, lastDchar+1);
         auto asciiT = ascii.byCodepoint.map!(x=>cast(char)x).buildTrie!(AsciiSpec);
         auto utf8_2T = utf8_2.byCodepoint.map!(x=>encode!2(x)).buildTrie!(Utf8Spec2);
@@ -4747,19 +4747,19 @@ template Utf8Matcher()
                 mixin(dispatch);
         }
 
-        bool match(C)(ref C[] str) const pure @trusted
+        public bool match(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"match"(str);
         }
 
-        bool skip(C)(ref C[] str) const pure @trusted
+        public bool skip(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"skip"(str);
         }
 
-        bool test(C)(ref C[] str) const pure @trusted
+        public bool test(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"test"(str);
@@ -4900,9 +4900,9 @@ template Utf16Matcher()
     {
         import std.algorithm : map;
         auto ascii = set & unicode.ASCII;
-        auto bmp = (set & CodepointSet.fromIntervals(0x80, 0xFFFF+1))
-            - CodepointSet.fromIntervals(0xD800, 0xDFFF+1);
-        auto other = set - (bmp | ascii);
+        auto bmp = (set & CodepointSet(0x80, 0xFFFF+1))
+            - CodepointSet(0xD800, 0xDFFF+1);
+        auto other = set - CodepointSet(0x0, 0xFFFF+1);
         auto asciiT = ascii.byCodepoint.map!(x=>cast(char)x).buildTrie!(AsciiSpec);
         auto bmpT = bmp.byCodepoint.map!(x=>cast(wchar)x).buildTrie!(BmpSpec);
         auto otherT = other.byCodepoint.map!(x=>encode2(x)).buildTrie!(UniSpec);
@@ -4973,19 +4973,19 @@ template Utf16Matcher()
                 return lookupUni!mode(inp);
         }
 
-        bool match(C)(ref C[] str) const pure @trusted
+        public bool match(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"match"(str);
         }
 
-        bool skip(C)(ref C[] str) const pure @trusted
+        public bool skip(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"skip"(str);
         }
 
-        bool test(C)(ref C[] str) const pure @trusted
+        public bool test(C)(ref C[] str) const pure @trusted
             if(isSomeChar!C)
         {
             return fwdStr!"test"(str);
@@ -5104,6 +5104,54 @@ template Utf16Matcher()
     }
 }
 
+template Utf32Matcher()
+{
+    struct Matcher
+    {
+        import std.utf;
+        CodepointSetTrie!(13, 8) trie;
+
+        public bool match(Range)(ref Range inp) const pure @trusted
+            if(isRandomAccessRange!Range && is(ElementType!Range : dchar))
+        {
+            assert(!inp.empty);
+            size_t idx = 0;
+            auto ch = decode(inp, idx);
+            if(trie[ch])
+            {
+                inp.popFrontN(idx);
+                return true;
+            }
+            else
+                return false;
+        }
+
+        public bool skip(Range)(ref Range inp) const pure @trusted
+            if(isRandomAccessRange!Range && is(ElementType!Range : dchar))
+        {
+            assert(!inp.empty);
+            size_t idx = 0;
+            auto ch = decode(inp, idx);
+            inp.popFrontN(idx);
+            return trie[ch];
+        }
+
+        public bool test(Range)(ref Range inp) const pure @trusted
+            if(isRandomAccessRange!Range && is(ElementType!Range : dchar))
+        {
+            assert(!inp.empty);
+            size_t idx = 0;
+            auto ch = decode(inp, idx);
+            return trie[ch];
+        }
+    }
+
+    auto build(Set)(Set set)
+    {
+        return Matcher(codepointSetTrie!(13, 8)(set));
+    }
+}
+
 private auto utf8Matcher(Set)(Set set) @trusted
 {
     return Utf8Matcher!().build(set);
@@ -5112,6 +5160,11 @@ private auto utf8Matcher(Set)(Set set) @trusted
 private auto utf16Matcher(Set)(Set set) @trusted
 {
     return Utf16Matcher!().build(set);
+}
+
+private auto utf32Matcher(Set)(Set set) @trusted
+{
+    return Utf32Matcher!().build(set);
 }
 
 /**
@@ -5129,16 +5182,18 @@ public auto utfMatcher(Char, Set)(Set set) @trusted
     else static if(is(Char : wchar))
         return utf16Matcher(set);
     else static if(is(Char : dchar))
-        static assert(false, "UTF-32 needs no decoding,
-            and thus not supported by utfMatcher");
+        return utf32Matcher(set);
     else
         static assert(false, "Only character types 'char' and 'wchar' are allowed");
 }
 
+/// Type of matcher object returned by $(LREF utfMatcher) function.
+public alias UtfMatcher(Char) = typeof(utfMatcher!Char(CodepointSet.init));
+
 
 //a range of code units, packed with index to speed up forward iteration
 package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
-    if(is(C : wchar) || is(C : char))
+    if(is(C : dchar))
 {
     static struct Decoder
     {
@@ -5167,7 +5222,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
     range of $(S_LINK Code unit, code units).
 */
 package auto units(C)(C[] s) @safe pure nothrow @nogc
-    if(is(C : wchar) || is(C : char))
+    if(is(C : dchar))
 {
     static struct Units
     {
@@ -5264,6 +5319,7 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
         }
         return t;
     }
+    auto utf32 = utfMatcher!dchar(unicode.L);
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto bmp = utf16.subMatcher!1;
     auto nonBmp = utf16.subMatcher!1;
@@ -5277,10 +5333,15 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
         import std.utf : encode;
         char[4] buf;
         wchar[2] buf16;
+        dchar[1] buf32;
         auto len = std.utf.encode(buf, ch);
         auto len16 = std.utf.encode(buf16, ch);
+        buf32[0] = ch;
         auto c8 = buf[0..len].decoder;
         auto c16 = buf16[0..len16].decoder;
+        auto c32 = buf32[].decoder;
+        assert(testAll(utf32, c32));
+
         assert(testAll(utf16, c16));
         assert(testAll(bmp, c16) || len16 != 1);
         assert(testAll(nonBmp, c16) || len16 != 2);
