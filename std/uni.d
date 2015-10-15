@@ -6842,7 +6842,8 @@ public:
             if(len_ + 1 > cap_)
             {
                 cap_ += grow;
-                ptr_ = cast(ubyte*)enforce(realloc(ptr_, 3*(cap_+1)));
+                ptr_ = cast(ubyte*)enforce(realloc(ptr_, 3*(cap_+1)),
+                    "realloc failed");
             }
             write24(ptr_, ch, len_++);
             return this;
@@ -6886,7 +6887,7 @@ public:
         if(isBig)
         {// dup it
             auto raw_cap = 3*(cap_+1);
-            auto p = cast(ubyte*)enforce(malloc(raw_cap));
+            auto p = cast(ubyte*)enforce(malloc(raw_cap), "malloc failed");
             p[0..raw_cap] = ptr_[0..raw_cap];
             ptr_ = p;
         }
@@ -6928,7 +6929,7 @@ private:
     void convertToBig()
     {
         size_t k = smallLength;
-        ubyte* p = cast(ubyte*)enforce(malloc(3*(grow+1)));
+        ubyte* p = cast(ubyte*)enforce(malloc(3*(grow+1)), "malloc failed");
         for(int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data

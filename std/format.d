@@ -591,7 +591,7 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
     static if (!S.length)
     {
         spec.readUpToNextSpec(r);
-        enforce(spec.trailing.empty);
+        enforce(spec.trailing.empty, "Trailing characters in formattedRead format string");
         return 0;
     }
     else
@@ -4496,7 +4496,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     enforce(find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
-    enforce(spec.width == 0);   // TODO
+    enforce(spec.width == 0, "Parsing integers with a width specification is not implemented");   // TODO
 
     uint base =
         spec.spec == 'x' || spec.spec == 'X' ? 16 :
@@ -4519,7 +4519,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     {
         // raw read
         //enforce(input.length >= T.sizeof);
-        enforce(isSomeString!Range || ElementType!(Range).sizeof == 1);
+        enforce(isSomeString!Range || ElementType!(Range).sizeof == 1, "Cannot parse input of type %s".format(Range.stringof));
         union X
         {
             ubyte[T.sizeof] raw;
@@ -4878,7 +4878,7 @@ body
         {
             auto fmt = FormatSpec!Char(spec.nested);
             fmt.readUpToNextSpec(input);
-            enforce(!input.empty);
+            enforce(!input.empty, "Unexpected end of input when parsing range");
 
             debug (unformatRange) printf("\t) spec = %c, front = %c ", fmt.spec, input.front);
             static if (isStaticArray!T)
@@ -4904,7 +4904,7 @@ body
             static if (isStaticArray!T)
             {
                 debug (unformatRange) printf("i = %u < %u\n", i, T.length);
-                enforce(i <= T.length);
+                enforce(i <= T.length, "Too many format specifiers for static array of length %d".format(T.length));
             }
 
             if (spec.sep != null)
@@ -4923,8 +4923,8 @@ body
             {
                 while (!sep.empty)
                 {
-                    enforce(!input.empty);
-                    enforce(input.front == sep.front);
+                    enforce(!input.empty, "Unexpected end of input when parsing range separator");
+                    enforce(input.front == sep.front, "Unexpected character when parsing range separator");
                     input.popFront();
                     sep.popFront();
                 }
@@ -4934,7 +4934,7 @@ body
     }
     static if (isStaticArray!T)
     {
-        enforce(i == T.length);
+        enforce(i == T.length, "Too few (%d) format specifiers for static array of length %d".format(i, T.length));
     }
     return result;
 }

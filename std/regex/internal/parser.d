@@ -1360,7 +1360,7 @@ struct Parser(R)
         enum MAX_PROPERTY = 128;
         char[MAX_PROPERTY] result;
         uint k = 0;
-        enforce(next());
+        enforce(next(), "eof parsing unicode property spec");
         if(current == '{')
         {
             while(k < MAX_PROPERTY && next() && current !='}' && current !=':')

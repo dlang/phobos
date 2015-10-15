@@ -275,7 +275,7 @@ public:
         import std.format : formattedRead;
         import std.string : chomp;
 
-        enforce(file.isOpen);
+        enforce(file.isOpen, "ByRecord: File must be open");
         file.readln(line);
         if (!line.length)
         {
@@ -2820,7 +2820,7 @@ struct LockingTextReader
     this(File f)
     {
         import std.exception : enforce;
-        enforce(f.isOpen);
+        enforce(f.isOpen, "LockingTextReader: File must be open");
         _f = f;
         FLOCK(_f._p.handle);
         readFront();
@@ -2906,7 +2906,7 @@ struct LockingTextReader
         foreach(immutable i; 0 .. chars.length)
         {
             immutable c = chars[$ - 1 - i];
-            enforce(ungetc(c, cast(FILE*) _f._p.handle) == c);
+            enforce(ungetc(c, cast(FILE*) _f._p.handle) == c, "ungetc failed");
         }
     }
 
@@ -3062,7 +3062,7 @@ void writeln(T...)(T args)
     {
         import std.exception : enforce;
 
-        enforce(fputc('\n', .trustedStdout._p.handle) == '\n');
+        enforce(fputc('\n', .trustedStdout._p.handle) == '\n', "fputc failed");
     }
     else static if (T.length == 1 &&
                     is(typeof(args[0]) : const(char)[]) &&
