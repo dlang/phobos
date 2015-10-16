@@ -562,7 +562,7 @@ private:
     {
         _input = input;
         immutable size = EngineType.initialMemory(prog)+size_t.sizeof;
-        _memory = (enforce(malloc(size))[0..size]);
+        _memory = (enforce(malloc(size), "malloc failed")[0..size]);
         scope(failure) free(_memory.ptr);
         *cast(size_t*)_memory.ptr = 1;
         _engine = EngineType(prog, Input!Char(input), _memory[size_t.sizeof..$]);
@@ -638,7 +638,7 @@ public:
         {//do cow magic first
             counter--;//we abandon this reference
             immutable size = EngineType.initialMemory(_engine.re)+size_t.sizeof;
-            _memory = (enforce(malloc(size))[0..size]);
+            _memory = (enforce(malloc(size), "malloc failed")[0..size]);
             _engine = _engine.dupTo(_memory[size_t.sizeof..size]);
             counter = 1;//points to new chunk
         }
@@ -668,7 +668,7 @@ private @trusted auto matchOnce(alias Engine, RegEx, R)(R input, RegEx re)
     alias EngineType = Engine!Char;
 
     size_t size = EngineType.initialMemory(re);
-    void[] memory = enforce(malloc(size))[0..size];
+    void[] memory = enforce(malloc(size), "malloc failed")[0..size];
     scope(exit) free(memory.ptr);
     auto captures = Captures!(R, EngineType.DataIndex)(input, re.ngroup, re.dict);
     auto engine = EngineType(re, Input!Char(input), memory);

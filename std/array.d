@@ -2954,11 +2954,11 @@ if (isDynamicArray!A)
             import std.exception : enforce;
             if (_data)
             {
-                enforce(newlength <= _data.arr.length);
+                enforce(newlength <= _data.arr.length, "Attempting to shrink Appender with newlength > length");
                 _data.arr = _data.arr.ptr[0 .. newlength];
             }
             else
-                enforce(newlength == 0);
+                enforce(newlength == 0, "Attempting to shrink empty Appender with non-zero newlength");
         }
     }
 

@@ -2246,19 +2246,19 @@ private
 
             @property ref T front()
             {
-                enforce( m_prev.next );
+                enforce( m_prev.next, "invalid list node" );
                 return m_prev.next.val;
             }
 
             @property void front( T val )
             {
-                enforce( m_prev.next );
+                enforce( m_prev.next, "invalid list node" );
                 m_prev.next.val = val;
             }
 
             void popFront()
             {
-                enforce( m_prev.next );
+                enforce( m_prev.next, "invalid list node" );
                 m_prev = m_prev.next;
             }
 
@@ -2322,7 +2322,7 @@ private
         {
             assert( m_count );
             Node* n = r.m_prev;
-            enforce( n && n.next );
+            enforce( n && n.next, "attempting to remove invalid list node" );
 
             if( m_last is m_first )
                 m_last = null;
