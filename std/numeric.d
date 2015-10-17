@@ -114,9 +114,9 @@ private template CustomFloatParams(uint bits)
 
 private template CustomFloatParams(uint precision, uint exponentWidth, CustomFloatFlags flags)
 {
-    import std.typetuple : TypeTuple;
+    import std.meta : AliasSeq;
     alias CustomFloatParams =
-        TypeTuple!(
+        AliasSeq!(
             precision,
             exponentWidth,
             flags,
@@ -175,7 +175,7 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
         precision + exponentWidth > 0)
 {
     import std.bitmanip;
-    import std.typetuple;
+    import std.meta;
 private:
     // get the correct unsigned bitfield type to support > 32 bits
     template uType(uint bits)
@@ -631,9 +631,9 @@ public:
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     alias FPTypes =
-        TypeTuple!(
+        AliasSeq!(
             CustomFloat!(5, 10),
             CustomFloat!(5, 11, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
             CustomFloat!(1, 15, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
@@ -1448,8 +1448,8 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    import std.meta : AliasSeq;
+    foreach(T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1538,8 +1538,8 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    import std.meta : AliasSeq;
+    foreach(T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1582,8 +1582,8 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    import std.meta : AliasSeq;
+    foreach(T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 3.0, ];
@@ -1732,8 +1732,8 @@ if (isInputRange!Range &&
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    import std.meta : AliasSeq;
+    foreach(T; AliasSeq!(double, const double, immutable double))
     {
         T[] p = [ 0.0, 0, 0, 1 ];
         assert(entropy(p) == 0);

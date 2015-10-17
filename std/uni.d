@@ -649,7 +649,7 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 module std.uni;
 
 import core.stdc.stdlib;
-import std.traits, std.typetuple;
+import std.meta, std.traits;
 import std.range.primitives;
 
 
@@ -796,7 +796,7 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
     import std.range : iota;
     size_t m = 0b111;
     size_t m2 = 0b01;
-    foreach(i; TypeTuple!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+    foreach(i; AliasSeq!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
     {
         assert(replicateBits!(i, 3)(m)+1 == (1<<(3*i)));
         assert(replicateBits!(i, 2)(m2) == iota(0, i).map!"2^^(2*a)"().sum());
@@ -3330,7 +3330,7 @@ private:
         assert(u24 != u24_2);
     }
 
-    foreach(Policy; TypeTuple!(GcPolicy, ReallocPolicy))
+    foreach(Policy; AliasSeq!(GcPolicy, ReallocPolicy))
     {
         alias Range = typeof(CowArray!Policy.init[]);
         alias U24A = CowArray!Policy;
@@ -3368,7 +3368,7 @@ private:
 
 version(unittest)
 {
-    private alias AllSets = TypeTuple!(InversionList!GcPolicy, InversionList!ReallocPolicy);
+    private alias AllSets = AliasSeq!(InversionList!GcPolicy, InversionList!ReallocPolicy);
 }
 
 @safe unittest// core set primitives test
@@ -3607,7 +3607,7 @@ version(unittest)
 {
     import std.conv;
     import std.typecons;
-    foreach(CodeList; TypeTuple!(InversionList!(ReallocPolicy)))
+    foreach(CodeList; AliasSeq!(InversionList!(ReallocPolicy)))
     {
         auto arr = "ABCDEFGHIJKLMabcdefghijklm"d;
         auto a = CodeList('A','N','a', 'n');
@@ -4069,10 +4069,10 @@ template GetBitSlicing(size_t top, sizes...)
 {
     static if(sizes.length > 0)
         alias GetBitSlicing =
-            TypeTuple!(sliceBits!(top - sizes[0], top),
-                       GetBitSlicing!(top - sizes[0], sizes[1..$]));
+            AliasSeq!(sliceBits!(top - sizes[0], top),
+                      GetBitSlicing!(top - sizes[0], sizes[1..$]));
     else
-        alias GetBitSlicing = TypeTuple!();
+        alias GetBitSlicing = AliasSeq!();
 }
 
 template callableWith(T)
@@ -4313,9 +4313,9 @@ public template buildTrie(Value, Key, Args...)
     {
         static if(n > 0)
             alias GetComparators =
-                TypeTuple!(GetComparators!(n-1), cmpK0!(Prefix[n-1]));
+                AliasSeq!(GetComparators!(n-1), cmpK0!(Prefix[n-1]));
         else
-            alias GetComparators = TypeTuple!();
+            alias GetComparators = AliasSeq!();
     }
 
     /*
@@ -4590,22 +4590,22 @@ template Utf8Matcher()
     }
 
     //for 1-stage ASCII
-    alias AsciiSpec = TypeTuple!(bool, char, clamp!7);
+    alias AsciiSpec = AliasSeq!(bool, char, clamp!7);
     //for 2-stage lookup of 2 byte UTF-8 sequences
-    alias Utf8Spec2 = TypeTuple!(bool, char[2],
+    alias Utf8Spec2 = AliasSeq!(bool, char[2],
         clampIdx!(0, 5), clampIdx!(1, 6));
     //ditto for 3 byte
-    alias Utf8Spec3 = TypeTuple!(bool, char[3],
+    alias Utf8Spec3 = AliasSeq!(bool, char[3],
         clampIdx!(0, 4),
         clampIdx!(1, 6),
         clampIdx!(2, 6)
     );
     //ditto for 4 byte
-    alias Utf8Spec4 = TypeTuple!(bool, char[4],
+    alias Utf8Spec4 = AliasSeq!(bool, char[4],
         clampIdx!(0, 3), clampIdx!(1, 6),
         clampIdx!(2, 6), clampIdx!(3, 6)
     );
-    alias Tables = TypeTuple!(
+    alias Tables = AliasSeq!(
         typeof(TrieBuilder!(AsciiSpec)(false).build()),
         typeof(TrieBuilder!(Utf8Spec2)(false).build()),
         typeof(TrieBuilder!(Utf8Spec3)(false).build()),
@@ -4869,15 +4869,14 @@ template Utf16Matcher()
         throw new UTFException("Invalid UTF-16 sequence");
     }
 
-    alias Seq = TypeTuple;
     // 1-stage ASCII
-    alias AsciiSpec = Seq!(bool, wchar, clamp!7);
+    alias AsciiSpec = AliasSeq!(bool, wchar, clamp!7);
     //2-stage BMP
-    alias BmpSpec = Seq!(bool, wchar, sliceBits!(7, 16), sliceBits!(0, 7));
+    alias BmpSpec = AliasSeq!(bool, wchar, sliceBits!(7, 16), sliceBits!(0, 7));
     //4-stage - full Unicode
     //assume that 0xD800 & 0xDC00 bits are cleared
     //thus leaving 10 bit per wchar to worry about
-    alias UniSpec = Seq!(bool, wchar[2],
+    alias UniSpec = AliasSeq!(bool, wchar[2],
         assumeSize!(x=>x[0]>>4, 6), assumeSize!(x=>x[0]&0xf, 4),
         assumeSize!(x=>x[1]>>6, 4), assumeSize!(x=>x[1]&0x3f, 6),
     );
@@ -5304,7 +5303,7 @@ unittest
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto utf8 = utfMatcher!char(unicode.L);
     //decode failure cases UTF-8
-    alias fails8 = TypeTuple!("\xC1", "\x80\x00","\xC0\x00", "\xCF\x79",
+    alias fails8 = AliasSeq!("\xC1", "\x80\x00","\xC0\x00", "\xCF\x79",
         "\xFF\x00\0x00\0x00\x00", "\xC0\0x80\0x80\x80", "\x80\0x00\0x00\x00",
         "\xCF\x00\0x00\0x00\x00");
     foreach(msg; fails8){
@@ -5317,7 +5316,7 @@ unittest
         }()), format("%( %2x %)", cast(ubyte[])msg));
     }
     //decode failure cases UTF-16
-    alias fails16 = TypeTuple!([0xD811], [0xDC02]);
+    alias fails16 = AliasSeq!([0xD811], [0xDC02]);
     foreach(msg; fails16){
         assert(collectException((){
             auto s = msg.map!(x => cast(wchar)x);
@@ -5499,9 +5498,9 @@ static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
 template Sequence(size_t start, size_t end)
 {
     static if(start < end)
-        alias Sequence = TypeTuple!(start, Sequence!(start+1, end));
+        alias Sequence = AliasSeq!(start, Sequence!(start+1, end));
     else
-        alias Sequence = TypeTuple!();
+        alias Sequence = AliasSeq!();
 }
 
 //---- TRIE TESTS ----
@@ -5631,7 +5630,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 {
     static if(Prefix.length == 1)
     {// the last level is value level, so no index once reduced to 1-level
-        alias idxTypes = TypeTuple!();
+        alias idxTypes = AliasSeq!();
     }
     else
     {
@@ -5641,7 +5640,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
         // thus it's size in pages is full_bit_width - size_of_last_prefix
         // Recourse on this notion
         alias idxTypes =
-            TypeTuple!(
+            AliasSeq!(
                 idxTypes!(Key, fullBits - bitSizeOf!(Prefix[$-1]), Prefix[0..$-1]),
                 BitPacked!(typeof(Prefix[$-2](Key.init)), fullBits - bitSizeOf!(Prefix[$-1]))
             );
@@ -6454,7 +6453,7 @@ unittest
     auto gReverse = reverse.byGrapheme;
     assert(gReverse.walkLength == 4);
 
-    foreach(text; TypeTuple!("noe\u0308l"c, "noe\u0308l"w, "noe\u0308l"d))
+    foreach(text; AliasSeq!("noe\u0308l"c, "noe\u0308l"w, "noe\u0308l"d))
     {
         assert(text.walkLength == 5);
         static assert(isForwardRange!(typeof(text)));
@@ -7092,10 +7091,10 @@ unittest
     import std.algorithm;
     assertCTFEable!(
     {
-    foreach(cfunc; TypeTuple!(icmp, sicmp))
+    foreach(cfunc; AliasSeq!(icmp, sicmp))
     {
-        foreach(S1; TypeTuple!(string, wstring, dstring))
-        foreach(S2; TypeTuple!(string, wstring, dstring))
+        foreach(S1; AliasSeq!(string, wstring, dstring))
+        foreach(S2; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(cfunc("".to!S1(), "".to!S2()) == 0);
             assert(cfunc("A".to!S1(), "".to!S2()) > 0);
@@ -8012,8 +8011,8 @@ private dchar toTitlecase(dchar c)
     return c;
 }
 
-private alias UpperTriple = TypeTuple!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
-private alias LowerTriple = TypeTuple!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
+private alias UpperTriple = AliasSeq!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
+private alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
 
 // generic toUpper/toLower on whole string, creates new or returns as is
 private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pure
@@ -8946,7 +8945,7 @@ unittest
         assert(upInp == trueUp,
             format(diff, cast(ubyte[])s, cast(ubyte[])upInp, cast(ubyte[])trueUp));
     }
-    foreach(S; TypeTuple!(dstring, wstring, string))
+    foreach(S; AliasSeq!(dstring, wstring, string))
     {
 
         S easy = "123";
@@ -8957,7 +8956,7 @@ unittest
         S[] lower = ["123", "abcфеж", "\u0131\u023f\u03c9", "i\u0307\u1Fe2"];
         S[] upper = ["123", "ABCФЕЖ", "I\u2c7e\u2126", "\u0130\u03A5\u0308\u0300"];
 
-        foreach(val; TypeTuple!(easy, good))
+        foreach(val; AliasSeq!(easy, good))
         {
             auto e = val.dup;
             auto g = e;

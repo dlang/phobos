@@ -347,8 +347,8 @@ public:
         assert(norm1 <= norm2, format("%s %s", norm1, norm2));
         assert(abs(norm1 - norm2) <= seconds(2));
 
-        import std.typetuple;
-        foreach(ct; TypeTuple!(ClockType.coarse, ClockType.precise, ClockType.second))
+        import std.meta : AliasSeq;
+        foreach(ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {
             scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currTime!ct;
@@ -467,8 +467,8 @@ public:
         assert(norm1 <= norm2, format("%s %s", norm1, norm2));
         assert(abs(norm1 - norm2) <= limit);
 
-        import std.typetuple;
-        foreach(ct; TypeTuple!(ClockType.coarse, ClockType.precise, ClockType.second))
+        import std.meta : AliasSeq;
+        foreach(ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {
             scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currStdTime!ct;
@@ -2489,8 +2489,8 @@ public:
     unittest
     {
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
-        import std.typetuple : TypeTuple;
-        foreach(units; TypeTuple!("hnsecs", "usecs", "msecs"))
+        import std.meta : AliasSeq;
+        foreach(units; AliasSeq!("hnsecs", "usecs", "msecs"))
             assert(SysTime(DateTime(1970, 1, 1, 0, 0, 0), dur!units(1), UTC()).toUnixTime() == 0);
         assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime() == 1);
         assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_999), UTC()).toUnixTime() == 0);
@@ -31276,10 +31276,10 @@ unittest
     import std.algorithm;
     import std.ascii;
     import std.format : format;
+    import std.meta;
     import std.range;
     import std.string;
     import std.typecons;
-    import std.typetuple;
 
     static struct Rand3Letters
     {
@@ -31294,10 +31294,10 @@ unittest
         static auto start() { Rand3Letters retval; retval.popFront(); return retval; }
     }
 
-    foreach(cr; TypeTuple!(function(string a){return cast(char[])a;},
-                           function(string a){return cast(ubyte[])a;},
-                           function(string a){return a;},
-                           function(string a){return map!(b => cast(char)b)(a.representation);}))
+    foreach(cr; AliasSeq!(function(string a){return cast(char[])a;},
+                          function(string a){return cast(ubyte[])a;},
+                          function(string a){return a;},
+                          function(string a){return map!(b => cast(char)b)(a.representation);}))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
@@ -31545,10 +31545,10 @@ unittest
     import std.algorithm;
     import std.ascii;
     import std.format : format;
+    import std.meta;
     import std.range;
     import std.string;
     import std.typecons;
-    import std.typetuple;
 
     auto std1 = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
     auto std2 = SysTime(DateTime(2012, 12, 21, 13, 14, 0), UTC());
@@ -31559,10 +31559,10 @@ unittest
     auto tooLate1 = SysTime(Date(10_000, 1, 1), UTC());
     auto tooLate2 = SysTime(DateTime(12_007, 12, 31, 12, 22, 19), UTC());
 
-    foreach(cr; TypeTuple!(function(string a){return cast(char[])a;},
-                           function(string a){return cast(ubyte[])a;},
-                           function(string a){return a;},
-                           function(string a){return map!(b => cast(char)b)(a.representation);}))
+    foreach(cr; AliasSeq!(function(string a){return cast(char[])a;},
+                          function(string a){return cast(ubyte[])a;},
+                          function(string a){return a;},
+                          function(string a){return map!(b => cast(char)b)(a.representation);}))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
@@ -31872,9 +31872,9 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
 unittest
 {
     import std.format : format;
+    import std.meta;
     import std.string;
     import std.typecons;
-    import std.typetuple;
 
     static string genTest(size_t index)
     {
@@ -31891,7 +31891,7 @@ unittest
     }
 
     static assert(timeStrings.length == 10);
-    foreach(n; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+    foreach(n; AliasSeq!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
         mixin(genTest(n));
 }
 
@@ -33000,12 +33000,12 @@ R _stripCFWS(R)(R range)
 unittest
 {
     import std.algorithm;
+    import std.meta;
     import std.string;
     import std.typecons;
-    import std.typetuple;
 
-    foreach(cr; TypeTuple!(function(string a){return cast(ubyte[])a;},
-                           function(string a){return map!(b => cast(char)b)(a.representation);}))
+    foreach(cr; AliasSeq!(function(string a){return cast(ubyte[])a;},
+                          function(string a){return map!(b => cast(char)b)(a.representation);}))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
 

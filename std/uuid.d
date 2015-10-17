@@ -126,8 +126,7 @@ import std.traits;
  */
 public struct UUID
 {
-    import std.typetuple : allSatisfy;
-    import std.meta : AliasSeq;
+    import std.meta : AliasSeq, allSatisfy;
 
     private:
         alias skipSeq = AliasSeq!(8, 13, 18, 23);

@@ -20,7 +20,7 @@ Source: $(PHOBOSSRC std/digest/_hmac.d)
 module std.digest.hmac;
 
 import std.digest.digest : isDigest, hasBlockSize, isDigestibleRange, DigestType;
-import std.typetuple : allSatisfy;
+import std.meta : allSatisfy;
 
 /**
  * Template API HMAC implementation.

@@ -884,7 +884,7 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
     import std.conv : to;
     import std.algorithm : map, equal;
 
-    foreach(String; TypeTuple!(string, wstring, const(dchar)[]))
+    foreach(String; AliasSeq!(string, wstring, const(dchar)[]))
     {
         auto str1 = "blah-bleh".to!String();
         auto pat1 = "bl[ae]h".to!String();
@@ -1267,7 +1267,7 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
 {
     import std.conv;
     // try and check first/all simple substitution
-    foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach(S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s1 = "curt trial".to!S();
         S s2 = "round dome".to!S();

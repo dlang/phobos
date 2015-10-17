@@ -18,14 +18,14 @@
  *      Modern C++ Design),
  *   Andrei Alexandrescu (Addison-Wesley Professional, 2001)
  * Macros:
- *  WIKI = Phobos/StdTypeTuple
+ *  WIKI = Phobos/StdMeta
  *
  * Copyright: Copyright Digital Mars 2005 - 2015.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
- * Source:    $(PHOBOSSRC std/_typetuple.d)
+ * Source:    $(PHOBOSSRC std/_meta.d)
  */
 
 module std.meta;

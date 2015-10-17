@@ -68,9 +68,9 @@ to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
 */
 module std.range.interfaces;
 
+import std.meta;
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
 
 /**These interfaces are intended to provide virtual function-based wrappers
  * around input ranges with element type E.  This is useful where a well-defined

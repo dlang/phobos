@@ -62,9 +62,9 @@ module std.format;
 
 import core.vararg;
 import std.exception;
+import std.meta;
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
 
 version(CRuntime_DigitalMars)
 {
@@ -1785,7 +1785,7 @@ unittest
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
-    foreach (T; TypeTuple!(float, double, real))
+    foreach (T; AliasSeq!(float, double, real))
     {
         formatTest( to!(          T)(5.5), "5.5" );
         formatTest( to!(    const T)(5.5), "5.5" );
@@ -1839,13 +1839,13 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
-    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    foreach (T; AliasSeq!(cfloat, cdouble, creal))
     {
         formatTest( to!(          T)(1 + 1i), "1+1i" );
         formatTest( to!(    const T)(1 + 1i), "1+1i" );
         formatTest( to!(immutable T)(1 + 1i), "1+1i" );
     }
-    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    foreach (T; AliasSeq!(cfloat, cdouble, creal))
     {
         formatTest( to!(          T)(0 - 3i), "0-3i" );
         formatTest( to!(    const T)(0 - 3i), "0-3i" );
@@ -1890,7 +1890,7 @@ if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
-    foreach (T; TypeTuple!(ifloat, idouble, ireal))
+    foreach (T; AliasSeq!(ifloat, idouble, ireal))
     {
         formatTest( to!(          T)(1i), "1i" );
         formatTest( to!(    const T)(1i), "1i" );
@@ -1936,7 +1936,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     else
     {
-        alias U = TypeTuple!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
+        alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
         formatValue(w, cast(U) val, f);
     }
 }
@@ -2262,7 +2262,7 @@ unittest
 unittest
 {
     // string literal from valid UTF sequence is encoding free.
-    foreach (StrType; TypeTuple!(string, wstring, dstring))
+    foreach (StrType; AliasSeq!(string, wstring, dstring))
     {
         // Valid and printable (ASCII)
         formatTest( [cast(StrType)"hello"],
@@ -4172,8 +4172,8 @@ unittest
 
     auto stream = appender!(char[])();
     alias AllNumerics =
-        TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
-                   float, double, real);
+        AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                  float, double, real);
     foreach (T; AllNumerics)
     {
         T value = 1;

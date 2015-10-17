@@ -165,12 +165,12 @@ import std.conv;
 import std.datetime;
 import std.encoding;
 import std.exception;
+import std.meta;
 import std.regex;
 import std.socket : InternetAddress;
 import std.string;
 import std.traits;
 import std.typecons;
-import std.typetuple;
 
 import std.internal.cstring;
 
@@ -3982,7 +3982,7 @@ struct Curl
         copy.stopped = false;
 
         with (CurlOption) {
-            auto tt = TypeTuple!(file, writefunction, writeheader,
+            auto tt = AliasSeq!(file, writefunction, writeheader,
                 headerfunction, infile, readfunction, ioctldata, ioctlfunction,
                 seekdata, seekfunction, sockoptdata, sockoptfunction,
                 opensocketdata, opensocketfunction, progressdata,

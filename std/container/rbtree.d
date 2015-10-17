@@ -701,9 +701,9 @@ private struct RBRange(N)
 final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     if(is(typeof(binaryFun!less(T.init, T.init))))
 {
+    import std.meta : allSatisfy;
     import std.range.primitives;
     import std.range : Take;
-    import std.typetuple : allSatisfy;
     import std.traits;
 
     alias _less = binaryFun!less;

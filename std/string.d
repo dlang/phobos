@@ -162,9 +162,9 @@ public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 public import std.format : format, sformat;
 import std.typecons : Flag;
 
+import std.meta;
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
 
 //public imports for backward compatibility
 public import std.algorithm : startsWith, endsWith, cmp, count;
@@ -504,7 +504,7 @@ unittest
     import std.utf : byChar, byWchar, byDchar;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(indexOf(cast(S)null, cast(dchar)'a') == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a') == -1);
@@ -624,7 +624,7 @@ unittest
     assert("hello".byWchar.indexOf(cast(dchar)'l', 1) == 2);
     assert("hello".byWchar.indexOf(cast(dchar)'l', 6) == -1);
 
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(indexOf(cast(S)null, cast(dchar)'a', 1) == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a', 1) == -1);
@@ -780,9 +780,9 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOf(cast(S)null, to!T("a")) == -1);
             assert(indexOf(to!S("def"), to!T("a")) == -1);
@@ -878,9 +878,9 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     import std.conv : to;
     debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach(T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOf(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOf(to!S("def"), to!T("a"), 0) == -1);
@@ -1013,7 +1013,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
@@ -1079,7 +1079,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
@@ -1204,9 +1204,9 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -1259,9 +1259,9 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 @safe pure unittest // issue13529
 {
     import std.conv : to;
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         {
             enum typeStr = S.stringof ~ " " ~ T.stringof;
             auto idx = lastIndexOf(to!T("Hällö Wörldö ö"),to!S("ö ö"));
@@ -1307,9 +1307,9 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach(T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -1504,9 +1504,9 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfAny(cast(S)null, to!T("a")) == -1);
             assert(indexOfAny(to!S("def"), to!T("rsa")) == -1);
@@ -1587,9 +1587,9 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 
     debug(string) trustedPrintf("string.indexOfAny(startIdx).unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach(T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfAny(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOfAny(to!S("def"), to!T("AaF"), 0) == -1);
@@ -1665,9 +1665,9 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfAny(cast(S)null, to!T("a")) == -1);
             assert(lastIndexOfAny(to!S("def"), to!T("rsa")) == -1);
@@ -1761,9 +1761,9 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -1841,9 +1841,9 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfNeither(cast(S)null, to!T("a")) == -1);
             assert(indexOfNeither("abba", "a") == 1);
@@ -1926,9 +1926,9 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfNeither(cast(S)null, to!T("a"), 1) == -1);
             assert(indexOfNeither(to!S("def"), to!T("a"), 1) == 1,
@@ -1996,9 +1996,9 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfNeither(cast(S)null, to!T("a")) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("rsa")) == 2);
@@ -2077,9 +2077,9 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfNeither(cast(S)null, to!T("a"), 1337) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("f")) == 1);
@@ -2129,7 +2129,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     if (isSomeChar!Char)
 {
-    alias ToRepType(T) = TypeTuple!(ubyte, ushort, uint)[T.sizeof / 2];
+    alias ToRepType(T) = AliasSeq!(ubyte, ushort, uint)[T.sizeof / 2];
     return cast(ModifyTypePreservingTQ!(ToRepType, Char)[])s;
 }
 
@@ -2155,12 +2155,12 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
         assert(representation(str) is cast(T[]) str);
     }
 
-    foreach (Type; TypeTuple!(Tuple!(char , ubyte ),
-                              Tuple!(wchar, ushort),
-                              Tuple!(dchar, uint  )))
+    foreach (Type; AliasSeq!(Tuple!(char , ubyte ),
+                             Tuple!(wchar, ushort),
+                             Tuple!(dchar, uint  )))
     {
-        alias Char = FieldTypeTuple!Type[0];
-        alias Int  = FieldTypeTuple!Type[1];
+        alias Char = Fields!Type[0];
+        alias Int  = Fields!Type[1];
         enum immutable(Char)[] hello = "hello";
 
         test!(   immutable Char,    immutable Int)(hello);
@@ -2232,7 +2232,7 @@ S capitalize(S)(S s) @trusted pure
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s1 = to!S("FoL");
         S s2;
@@ -2381,7 +2381,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         auto s = to!S(
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n" ~
@@ -2616,7 +2616,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         auto s = to!S(
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\n" ~
@@ -2924,7 +2924,7 @@ unittest
     assert(stripRight("\u2028hello world\u2020\u2028".byChar).array == "\u2028hello world\u2020");
     assert(stripRight("hello world\U00010001"w.byWchar).array == "hello world\U00010001"w);
 
-    foreach (C; TypeTuple!(char, wchar, dchar))
+    foreach (C; AliasSeq!(char, wchar, dchar))
     {
         foreach (s; invalidUTFstrings!C())
         {
@@ -2982,9 +2982,9 @@ auto strip(Range)(Range str)
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const  char[],  string,
-                           wchar[], const wchar[], wstring,
-                           dchar[], const dchar[], dstring))
+    foreach (S; AliasSeq!( char[], const  char[],  string,
+                          wchar[], const wchar[], wstring,
+                          dchar[], const dchar[], dstring))
     {
         assert(equal(stripLeft(to!S("  foo\t ")), "foo\t "));
         assert(equal(stripLeft(to!S("\u2008  foo\t \u2007")), "foo\t \u2007"));
@@ -3168,7 +3168,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         // @@@ BUG IN COMPILER, MUST INSERT CAST
         assert(chomp(cast(S)null) is null);
@@ -3188,7 +3188,7 @@ unittest
         assert(chomp(to!S("hello\u2029\u2129")) == "hello\u2029\u2129");
         assert(chomp(to!S("hello\u2029\u0185")) == "hello\u2029\u0185");
 
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             // @@@ BUG IN COMPILER, MUST INSERT CAST
             assert(chomp(cast(S)null, cast(T)null) is null);
@@ -3283,9 +3283,9 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(equal(chompPrefix(to!S("abcdefgh"), to!T("abcde")), "fgh"));
             assert(equal(chompPrefix(to!S("abcde"), to!T("abcdefgh")), "abcde"));
@@ -3435,7 +3435,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(chop(cast(S) null) is null);
         assert(equal(chop(to!S("hello")), "hell"));
@@ -3778,7 +3778,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         S s = to!S("hello");
 
@@ -4129,7 +4129,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         S s = to!S("This \tis\t a fofof\tof list");
         assert(cmp(detab(s), "This    is       a fofof        of list") == 0);
@@ -4596,9 +4596,9 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
-                           wchar[], const(wchar)[], immutable(wchar)[],
-                           dchar[], const(dchar)[], immutable(dchar)[]))
+    foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
     {
         assert(translate(to!S("hello world"), cast(dchar[dchar])['h' : 'q', 'l' : '5']) ==
                to!S("qe55o wor5d"));
@@ -4610,11 +4610,11 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
                to!S("hell0 o w0rld"));
         assert(translate(to!S("hello world"), cast(dchar[dchar])null) == to!S("hello world"));
 
-        foreach (T; TypeTuple!( char[], const( char)[], immutable( char)[],
-                               wchar[], const(wchar)[], immutable(wchar)[],
-                               dchar[], const(dchar)[], immutable(dchar)[]))
+        foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            foreach(R; TypeTuple!(dchar[dchar], const dchar[dchar],
+            foreach(R; AliasSeq!(dchar[dchar], const dchar[dchar],
                         immutable dchar[dchar]))
             {
                 R tt = ['h' : 'q', 'l' : '5'];
@@ -4653,9 +4653,9 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
-                           wchar[], const(wchar)[], immutable(wchar)[],
-                           dchar[], const(dchar)[], immutable(dchar)[]))
+    foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
     {
         assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"]) ==
                to!S("yellowe4242o wor42d"));
@@ -4671,12 +4671,12 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
                to!S("hello  world"));
         assert(translate(to!S("hello world"), cast(string[dchar])null) == to!S("hello world"));
 
-        foreach (T; TypeTuple!( char[], const( char)[], immutable( char)[],
-                               wchar[], const(wchar)[], immutable(wchar)[],
-                               dchar[], const(dchar)[], immutable(dchar)[]))
+        foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
 
-            foreach(R; TypeTuple!(string[dchar], const string[dchar],
+            foreach(R; AliasSeq!(string[dchar], const string[dchar],
                         immutable string[dchar]))
             {
                 R tt = ['h' : "yellow", 'l' : "42"];
@@ -4916,7 +4916,7 @@ body
     import std.exception;
     assertCTFEable!(
     {
-    foreach (C; TypeTuple!(char, const char, immutable char))
+    foreach (C; AliasSeq!(char, const char, immutable char))
     {
         assert(translate!C("hello world", makeTransTable("hl", "q5")) == to!(C[])("qe55o wor5d"));
 
@@ -4925,7 +4925,7 @@ body
         static assert(is(typeof(s) == typeof(translate!C(s, transTable))));
     }
 
-    foreach (S; TypeTuple!(char[], const(char)[], immutable(char)[]))
+    foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[]))
     {
         assert(translate(to!S("hello world"), makeTransTable("hl", "q5")) == to!S("qe55o wor5d"));
         assert(translate(to!S("hello \U00010143 world"), makeTransTable("hl", "q5")) ==
@@ -4936,7 +4936,7 @@ body
         assert(translate(to!S("hello \U00010143 world"), makeTransTable("12345", "67890")) ==
                to!S("hello \U00010143 world"));
 
-        foreach (T; TypeTuple!(char[], const(char)[], immutable(char)[]))
+        foreach (T; AliasSeq!(char[], const(char)[], immutable(char)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(translate(to!S("hello world"), makeTransTable("hl", "q5"), to!T("r")) ==
                    to!S("qe55o wo5d"));
@@ -5539,13 +5539,13 @@ unittest
     import std.algorithm : equal;
 
     // Complete list of test types; too slow to test'em all
-    // alias TestTypes = TypeTuple!(
+    // alias TestTypes = AliasSeq!(
     //          char[], const( char)[], immutable( char)[],
     //         wchar[], const(wchar)[], immutable(wchar)[],
     //         dchar[], const(dchar)[], immutable(dchar)[]);
 
     // Reduced list of test types
-    alias TestTypes = TypeTuple!(char[], const(wchar)[], immutable(dchar)[]);
+    alias TestTypes = AliasSeq!(char[], const(wchar)[], immutable(dchar)[]);
 
     import std.exception;
     assertCTFEable!(
@@ -6472,7 +6472,7 @@ S[] outdent(S)(S[] lines) @safe pure if(isSomeString!S)
     assertCTFEable!(
     {
 
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         enum S blank = "";
         assert(blank.outdent() == blank);
@@ -6551,7 +6551,7 @@ auto assumeUTF(T)(T[] arr) pure
     if(staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 {
     import std.utf : validate;
-    alias ToUTFType(U) = TypeTuple!(char, wchar, dchar)[U.sizeof / 2];
+    alias ToUTFType(U) = AliasSeq!(char, wchar, dchar)[U.sizeof / 2];
     auto asUTF = cast(ModifyTypePreservingTQ!(ToUTFType, T)[])arr;
     debug validate(asUTF);
     return asUTF;
@@ -6570,7 +6570,7 @@ auto assumeUTF(T)(T[] arr) pure
 pure unittest
 {
     import std.algorithm : equal;
-    foreach(T; TypeTuple!(char[], wchar[], dchar[]))
+    foreach(T; AliasSeq!(char[], wchar[], dchar[]))
     {
         immutable T jti = "Hello World";
         T jt = jti.dup;
