@@ -30380,31 +30380,87 @@ unittest
 /++
     Whether the given type defines all of the necessary functions for it to
     function as a time point.
+
+    1. $(D T) must define a static property named $(D min) which is the smallest
+       value of $(D T) as $(Unqual!T).
+
+    2. $(D T) must define a static property named $(D max) which is the largest
+       value of $(D T) as $(Unqual!T).
+
+    3. $(D T) must define an $(D opBinary) for addition and subtraction that
+       accepts $(CXREF time, Duration) and returns $(D Unqual!T).
+
+    4. $(D T) must define an $(D opOpAssign) for addition and subtraction that
+       accepts $(CXREF time, Duration) and returns $(D ref Unqual!T).
+
+    5. $(D T) must define a $(D opBinary) for subtraction which accepts $(D T)
+       and returns returns $(CXREF time, Duration).
   +/
 template isTimePoint(T)
 {
-    enum isTimePoint = hasMin!T &&
-                       hasMax!T &&
-                       hasOverloadedOpBinaryWithDuration!T &&
-                       hasOverloadedOpAssignWithDuration!T &&
-                       hasOverloadedOpBinaryWithSelf!T;
+    enum isTimePoint = hasMin &&
+                       hasMax &&
+                       hasOverloadedOpBinaryWithDuration &&
+                       hasOverloadedOpAssignWithDuration &&
+                       hasOverloadedOpBinaryWithSelf &&
+                       !is(U == Duration);
+
+private:
+
+    alias U = Unqual!T;
+
+    enum hasMin = __traits(hasMember, T, "min") &&
+                  is(typeof(T.min) == U) &&
+                  is(typeof({static assert(__traits(isStaticFunction, T.min));}));
+
+    enum hasMax = __traits(hasMember, T, "max") &&
+                  is(typeof(T.max) == U) &&
+                  is(typeof({static assert(__traits(isStaticFunction, T.max));}));
+
+    enum hasOverloadedOpBinaryWithDuration = is(typeof(T.init + Duration.init) == U) &&
+                                             is(typeof(T.init - Duration.init) == U);
+
+    enum hasOverloadedOpAssignWithDuration = is(typeof(U.init += Duration.init) == U) &&
+                                             is(typeof(U.init -= Duration.init) == U) &&
+                                             is(typeof(
+                                             {
+                                                 alias add = U.opOpAssign!("+", Duration);
+                                                 alias sub = U.opOpAssign!("-", Duration);
+                                                 alias FA = FunctionAttribute;
+                                                 static assert((functionAttributes!add & FA.ref_) != 0);
+                                                 static assert((functionAttributes!sub & FA.ref_) != 0);
+                                             }));
+
+    enum hasOverloadedOpBinaryWithSelf = is(typeof(T.init - T.init) == Duration);
+}
+
+///
+unittest
+{
+    static assert(isTimePoint!Date);
+    static assert(isTimePoint!DateTime);
+    static assert(isTimePoint!SysTime);
+    static assert(isTimePoint!TimeOfDay);
+
+    static assert(!isTimePoint!int);
+    static assert(!isTimePoint!Duration);
+    static assert(!isTimePoint!(Interval!SysTime));
 }
 
 unittest
 {
-    static assert(isTimePoint!(Date));
-    static assert(isTimePoint!(DateTime));
-    static assert(isTimePoint!(TimeOfDay));
-    static assert(isTimePoint!(SysTime));
-    static assert(isTimePoint!(const Date));
-    static assert(isTimePoint!(const DateTime));
-    static assert(isTimePoint!(const TimeOfDay));
-    static assert(isTimePoint!(const SysTime));
-    static assert(isTimePoint!(immutable Date));
-    static assert(isTimePoint!(immutable DateTime));
-    static assert(isTimePoint!(immutable TimeOfDay));
-    static assert(isTimePoint!(immutable SysTime));
+    import std.meta : AliasSeq;
+
+    foreach(TP; AliasSeq!(Date, DateTime, SysTime, TimeOfDay))
+    {
+        static assert(isTimePoint!(const TP), TP.stringof);
+        static assert(isTimePoint!(immutable TP), TP.stringof);
+    }
+
+    foreach(T; AliasSeq!(float, string, Duration, Interval!Date, PosInfInterval!Date, NegInfInterval!Date))
+        static assert(!isTimePoint!T, T.stringof);
 }
+
 
 /++
     Whether the given Gregorian Year is a leap year.
@@ -33132,170 +33188,6 @@ unittest
         scope(failure) writeln(str);
         assert(_convDigits!int(str) == -1);
     }
-}
-
-
-/+
-    Whether the given type defines the static property min which returns the
-    minimum value for the type.
-  +/
-template hasMin(T)
-{
-    enum hasMin = __traits(hasMember, T, "min") &&
-                  __traits(isStaticFunction, T.min) &&
-                  is(typeof(T.min) == Unqual!T);
-}
-
-unittest
-{
-    static assert(hasMin!(Date));
-    static assert(hasMin!(TimeOfDay));
-    static assert(hasMin!(DateTime));
-    static assert(hasMin!(SysTime));
-    static assert(hasMin!(const Date));
-    static assert(hasMin!(const TimeOfDay));
-    static assert(hasMin!(const DateTime));
-    static assert(hasMin!(const SysTime));
-    static assert(hasMin!(immutable Date));
-    static assert(hasMin!(immutable TimeOfDay));
-    static assert(hasMin!(immutable SysTime));
-}
-
-
-/+
-    Whether the given type defines the static property max which returns the
-    maximum value for the type.
-  +/
-template hasMax(T)
-{
-    enum hasMax = __traits(hasMember, T, "max") &&
-                  __traits(isStaticFunction, T.max) &&
-                  is(typeof(T.max) == Unqual!T);
-}
-
-unittest
-{
-    static assert(hasMax!(Date));
-    static assert(hasMax!(TimeOfDay));
-    static assert(hasMax!(DateTime));
-    static assert(hasMax!(SysTime));
-    static assert(hasMax!(const Date));
-    static assert(hasMax!(const TimeOfDay));
-    static assert(hasMax!(const DateTime));
-    static assert(hasMax!(const SysTime));
-    static assert(hasMax!(immutable Date));
-    static assert(hasMax!(immutable TimeOfDay));
-    static assert(hasMax!(immutable DateTime));
-    static assert(hasMax!(immutable SysTime));
-}
-
-
-/+
-    Whether the given type defines the overloaded opBinary operators that a time
-    point is supposed to define which work with time durations. Namely:
-
-    $(BOOKTABLE,
-    $(TR $(TD TimePoint opBinary"+"(duration)))
-    $(TR $(TD TimePoint opBinary"-"(duration)))
-    )
-  +/
-template hasOverloadedOpBinaryWithDuration(T)
-{
-    enum hasOverloadedOpBinaryWithDuration = __traits(compiles, T.init + dur!"days"(5)) &&
-                                             is(typeof(T.init + dur!"days"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init - dur!"days"(5)) &&
-                                             is(typeof(T.init - dur!"days"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init + TickDuration.from!"hnsecs"(5)) &&
-                                             is(typeof(T.init + TickDuration.from!"hnsecs"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init - TickDuration.from!"hnsecs"(5)) &&
-                                             is(typeof(T.init - TickDuration.from!"hnsecs"(5)) == Unqual!T);
-}
-
-unittest
-{
-    static assert(hasOverloadedOpBinaryWithDuration!(Date));
-    static assert(hasOverloadedOpBinaryWithDuration!(TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithDuration!(DateTime));
-    static assert(hasOverloadedOpBinaryWithDuration!(SysTime));
-    static assert(hasOverloadedOpBinaryWithDuration!(const Date));
-    static assert(hasOverloadedOpBinaryWithDuration!(const TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithDuration!(const DateTime));
-    static assert(hasOverloadedOpBinaryWithDuration!(const SysTime));
-    static assert(hasOverloadedOpBinaryWithDuration!(immutable Date));
-    static assert(hasOverloadedOpBinaryWithDuration!(immutable TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithDuration!(immutable DateTime));
-    static assert(hasOverloadedOpBinaryWithDuration!(immutable SysTime));
-}
-
-
-/+
-    Whether the given type defines the overloaded opOpAssign operators that a time point is supposed
-    to define. Namely:
-
-    $(BOOKTABLE,
-    $(TR $(TD TimePoint opOpAssign"+"(duration)))
-    $(TR $(TD TimePoint opOpAssign"-"(duration)))
-    )
-  +/
-template hasOverloadedOpAssignWithDuration(T)
-{
-    enum hasOverloadedOpAssignWithDuration = is(typeof(
-    {
-        auto  d = dur!"days"(5);
-        auto td = TickDuration.from!"hnsecs"(5);
-        alias U = Unqual!T;
-        static assert(is(typeof(U.init +=  d) == U));
-        static assert(is(typeof(U.init -=  d) == U));
-        static assert(is(typeof(U.init += td) == U));
-        static assert(is(typeof(U.init -= td) == U));
-    }));
-}
-
-unittest
-{
-    static assert(hasOverloadedOpAssignWithDuration!(Date));
-    static assert(hasOverloadedOpAssignWithDuration!(TimeOfDay));
-    static assert(hasOverloadedOpAssignWithDuration!(DateTime));
-    static assert(hasOverloadedOpAssignWithDuration!(SysTime));
-    static assert(hasOverloadedOpAssignWithDuration!(const Date));
-    static assert(hasOverloadedOpAssignWithDuration!(const TimeOfDay));
-    static assert(hasOverloadedOpAssignWithDuration!(const DateTime));
-    static assert(hasOverloadedOpAssignWithDuration!(const SysTime));
-    static assert(hasOverloadedOpAssignWithDuration!(immutable Date));
-    static assert(hasOverloadedOpAssignWithDuration!(immutable TimeOfDay));
-    static assert(hasOverloadedOpAssignWithDuration!(immutable DateTime));
-    static assert(hasOverloadedOpAssignWithDuration!(immutable SysTime));
-}
-
-
-/+
-    Whether the given type defines the overloaded opBinary operator that a time point is supposed
-    to define which works with itself. Namely:
-
-    $(BOOKTABLE,
-    $(TR $(TD duration opBinary"-"(Date)))
-    )
-  +/
-template hasOverloadedOpBinaryWithSelf(T)
-{
-    enum hasOverloadedOpBinaryWithSelf = __traits(compiles, T.init - T.init) &&
-                                         is(Unqual!(typeof(T.init - T.init)) == Duration);
-}
-
-unittest
-{
-    static assert(hasOverloadedOpBinaryWithSelf!(Date));
-    static assert(hasOverloadedOpBinaryWithSelf!(TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithSelf!(DateTime));
-    static assert(hasOverloadedOpBinaryWithSelf!(SysTime));
-    static assert(hasOverloadedOpBinaryWithSelf!(const Date));
-    static assert(hasOverloadedOpBinaryWithSelf!(const TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithSelf!(const DateTime));
-    static assert(hasOverloadedOpBinaryWithSelf!(const SysTime));
-    static assert(hasOverloadedOpBinaryWithSelf!(immutable Date));
-    static assert(hasOverloadedOpBinaryWithSelf!(immutable TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithSelf!(immutable DateTime));
-    static assert(hasOverloadedOpBinaryWithSelf!(immutable SysTime));
 }
 
 
