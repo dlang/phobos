@@ -2380,6 +2380,7 @@ public:
 
     /// Return the current capacity of this $(D SocketSet). The exact
     /// meaning of the return value varies from platform to platform.
+    ///
     /// Note that since D 2.065, this value does not indicate a
     /// restriction, and $(D SocketSet) will grow its capacity as
     /// needed automatically.
