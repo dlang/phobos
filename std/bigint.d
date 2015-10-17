@@ -566,6 +566,87 @@ public:
     }
 
     /**
+        Implements casting to integer types.
+
+        Throws: $(XREF conv,ConvOverflowException) if the number exceeds
+        the target type's range.
+     */
+    T opCast(T:ulong)() /*pure*/ const
+    {
+        if (isUnsigned!T && sign)
+            { /* throw */ }
+        else
+        if (data.ulongLength == 1)
+        {
+            ulong l = data.peekUlong(0);
+            if (isUnsigned!T || !sign)
+            {
+                if (l <= T.max)
+                    return cast(T)l;
+            }
+            else
+            {
+                if (l <= ulong(T.max)+1)
+                    return cast(T)-long(l); // -long.min==long.min
+            }
+        }
+
+        import std.conv : ConvOverflowException;
+        import std.string : format;
+        throw new ConvOverflowException(
+            "BigInt(%d) cannot be represented as a %s"
+            .format(this, T.stringof));
+    }
+
+    ///
+    unittest
+    {
+        import std.conv : to, ConvOverflowException;
+        import std.exception : assertThrown;
+
+        assert(BigInt("0").to!int == 0);
+
+        assert(BigInt("0").to!ubyte == 0);
+        assert(BigInt("255").to!ubyte == 255);
+        assertThrown!ConvOverflowException(BigInt("256").to!ubyte);
+        assertThrown!ConvOverflowException(BigInt("-1").to!ubyte);
+    }
+
+    unittest
+    {
+        import std.conv : to, ConvOverflowException;
+        import std.exception : assertThrown;
+
+        assert(BigInt("-1").to!byte == -1);
+        assert(BigInt("-128").to!byte == -128);
+        assert(BigInt("127").to!byte == 127);
+        assertThrown!ConvOverflowException(BigInt("-129").to!byte);
+        assertThrown!ConvOverflowException(BigInt("128").to!byte);
+
+        assert(BigInt("0").to!uint == 0);
+        assert(BigInt("4294967295").to!uint == uint.max);
+        assertThrown!ConvOverflowException(BigInt("4294967296").to!uint);
+        assertThrown!ConvOverflowException(BigInt("-1").to!uint);
+
+        assert(BigInt("-1").to!int == -1);
+        assert(BigInt("-2147483648").to!int == int.min);
+        assert(BigInt("2147483647").to!int == int.max);
+        assertThrown!ConvOverflowException(BigInt("-2147483649").to!int);
+        assertThrown!ConvOverflowException(BigInt("2147483648").to!int);
+
+        assert(BigInt("0").to!ulong == 0);
+        assert(BigInt("18446744073709551615").to!ulong == ulong.max);
+        assertThrown!ConvOverflowException(BigInt("18446744073709551616").to!ulong);
+        assertThrown!ConvOverflowException(BigInt("-1").to!ulong);
+
+        assert(BigInt("-1").to!long == -1);
+        assert(BigInt("-9223372036854775808").to!long == long.min);
+        assert(BigInt("9223372036854775807").to!long == long.max);
+        assertThrown!ConvOverflowException(BigInt("-9223372036854775809").to!long);
+        assertThrown!ConvOverflowException(BigInt("9223372036854775808").to!long);
+    }
+
+    /**
         Implements casting to/from qualified BigInt's.
 
         Warning: Casting to/from $(D const) or $(D immutable) may break type
