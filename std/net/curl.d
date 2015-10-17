@@ -183,7 +183,7 @@ version(unittest)
     import std.stdio;
     import std.range;
     import std.process : environment;
-    import std.file : tempDir;
+    import std.file : deleteme;
     import std.path : buildPath;
 
     import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
@@ -425,7 +425,7 @@ unittest
             assert(s.recvReq.hdrs.canFind("GET /"));
             s.send(httpOK("Hello world"));
         });
-        auto fn = buildPath(tempDir(), "downloaded-http-file");
+        auto fn = deleteme;
         scope (exit) std.file.remove(fn);
         download(host, fn);
         assert(std.file.readText(fn) == "Hello world");
@@ -483,7 +483,7 @@ unittest
 {
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        auto fn = buildPath(tempDir(), "downloaded-http-file");
+        auto fn = deleteme;
         scope (exit) std.file.remove(fn);
         std.file.write(fn, "upload data\n");
         testServer.handle((s) {
