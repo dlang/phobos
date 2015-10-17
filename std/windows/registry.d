@@ -53,7 +53,7 @@ debug(winreg) import std.stdio;
 
 private
 {
-    extern (Windows) int lstrlenW(LPCWSTR lpString);
+    import core.sys.windows.winbase : lstrlenW;
 
     void enforceSucc(LONG res, lazy string message, string fn = __FILE__, size_t ln = __LINE__)
     {
@@ -224,27 +224,26 @@ enum REG_VALUE_TYPE : DWORD
 
 /* ************* private *************** */
 
-private
-{
-    enum DWORD DELETE                   =   0x00010000L;
-    enum DWORD READ_CONTROL             =   0x00020000L;
-    enum DWORD WRITE_DAC                =   0x00040000L;
-    enum DWORD WRITE_OWNER              =   0x00080000L;
-    enum DWORD SYNCHRONIZE              =   0x00100000L;
+private import core.sys.windows.winnt :
+    DELETE                  ,
+    READ_CONTROL            ,
+    WRITE_DAC               ,
+    WRITE_OWNER             ,
+    SYNCHRONIZE             ,
 
-    enum DWORD STANDARD_RIGHTS_REQUIRED =   0x000F0000L;
+    STANDARD_RIGHTS_REQUIRED,
 
-    enum DWORD STANDARD_RIGHTS_READ     =   0x00020000L/* READ_CONTROL */;
-    enum DWORD STANDARD_RIGHTS_WRITE    =   0x00020000L/* READ_CONTROL */;
-    enum DWORD STANDARD_RIGHTS_EXECUTE  =   0x00020000L/* READ_CONTROL */;
+    STANDARD_RIGHTS_READ    ,
+    STANDARD_RIGHTS_WRITE   ,
+    STANDARD_RIGHTS_EXECUTE ,
 
-    enum DWORD STANDARD_RIGHTS_ALL      =   0x001F0000L;
+    STANDARD_RIGHTS_ALL     ,
 
-    enum DWORD SPECIFIC_RIGHTS_ALL      =   0x0000FFFFL;
+    SPECIFIC_RIGHTS_ALL     ;
 
-    enum DWORD REG_CREATED_NEW_KEY      =   0x00000001;
-    enum DWORD REG_OPENED_EXISTING_KEY  =   0x00000002;
-}
+private import core.sys.windows.winreg :
+    REG_CREATED_NEW_KEY     ,
+    REG_OPENED_EXISTING_KEY ;
 
 // Returns samDesired but without WoW64 flags if not in WoW64 mode
 // for compatibility with Windows 2000
