@@ -657,6 +657,8 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                 // e.g. -j100 to work as "pass argument 100 to option -j".
                 if (!isAlpha(c))
                 {
+                    if (c == '=')
+                        j++;
                     expanded ~= a[j + 1 .. $];
                     break;
                 }
@@ -930,6 +932,13 @@ private bool optMatch(string arg, string optPattern, ref string value,
     }
     else
     {
+        if (!isLong && eqPos==1)
+        {
+            // argument looks like -o=value
+            value = arg[2 .. $];
+            arg = arg[0 .. 1];
+        }
+        else
         if (!isLong && !cfg.bundling)
         {
             // argument looks like -ovalue and there's no bundling
@@ -1213,6 +1222,7 @@ unittest
     getopt(args, "t", &foo, "d", &bar);
     assert(foo == "hello");
     assert(bar == "bar=baz");
+
     // From bugzilla 5762
     string a;
     args = ["prog", "-a-0x12"];
@@ -1221,11 +1231,23 @@ unittest
     args = ["prog", "--addr=-0x12"];
     getopt(args, config.bundling, "a|addr", &a);
     assert(a == "-0x12");
+
     // From https://d.puremagic.com/issues/show_bug.cgi?id=11764
     args = ["main", "-test"];
     bool opt;
     args.getopt(config.passThrough, "opt", &opt);
     assert(args == ["main", "-test"]);
+
+    // From https://issues.dlang.org/show_bug.cgi?id=15220
+    args = ["main", "-o=str"];
+    string o;
+    args.getopt("o", &o);
+    assert(o == "str");
+
+    args = ["main", "-o=str"];
+    o = null;
+    args.getopt(config.bundling, "o", &o);
+    assert(o == "str");
 }
 
 unittest // 5228
