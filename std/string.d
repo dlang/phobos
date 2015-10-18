@@ -4107,17 +4107,37 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
     See_Also:
         $(LREF entabber)
  +/
-S entab(S)(S s, size_t tabSize = 8) @trusted
-    if (isSomeString!S)
+auto entab(Range)(auto ref Range s, size_t tabSize = 8)
+    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
+        is(StringTypeOf!Range))
 {
-    import std.array;
-    return cast(S)(entabber(s, tabSize).array);
+    return entab(cast(StringTypeOf!Range)s, tabSize);
+}
+
+/// Ditto
+auto entab(Range)(Range s, size_t tabSize = 8)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    import std.array : array;
+    return entabber(s, tabSize).array;
 }
 
 ///
 unittest
 {
     assert(entab("        x \n") == "\tx\n");
+}
+
+unittest
+{
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    auto s = "        x \n";
+    assert(entab(s) == entab(TestStruct(s)));
 }
 
 /++
