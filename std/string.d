@@ -6007,6 +6007,15 @@ string[string] abbrev(string[] values) @safe pure
  *    column number
  */
 
+size_t column(Range)(auto ref Range str, in size_t tabsize = 8)
+    if (!(isSomeString!Range || isInputRange!Range &&
+                isSomeChar!(Unqual!(ElementEncodingType!Range)))
+        && is(StringTypeOf!Range))
+{
+    return column(cast(StringTypeOf!Range)str, tabsize);
+}
+
+/// Ditto
 size_t column(Range)(Range str, in size_t tabsize = 8)
     if (isSomeString!Range ||
         isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)))
@@ -6084,6 +6093,18 @@ unittest
     assert(column("abc\u20291") == 1);
     assert(column("abc\u00851") == 1);
     assert(column("abc\u00861") == 5);
+}
+
+unittest
+{
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    string s = "abc\u00861";
+    assert(column(s) == column(TestStruct(s)));
 }
 
 @safe @nogc unittest
