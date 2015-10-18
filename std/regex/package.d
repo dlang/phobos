@@ -1161,9 +1161,9 @@ public @trusted void replaceFirstInto(alias fun, Sink, R, RegEx)
 
     Example:
     ---
-    // Comify a number
-    auto com = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
-    assert(replaceAll("12000 + 42100 = 54100", com, ",") == "12,000 + 42,100 = 54,100");
+    // insert comma as thousands delimiter
+    auto re = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
+    assert(replaceAll("12000 + 42100 = 54100", re, ",") == "12,000 + 42,100 = 54,100");
     ---
 +/
 public @trusted R replaceAll(R, C, RegEx)(R input, RegEx re, const(C)[] format)
@@ -1217,19 +1217,6 @@ public @trusted R replaceAll(alias fun, R, RegEx)(R input, RegEx re)
 
     As with $(LREF replaceAll) there are 2 overloads - one with a format string,
     the other one with a user defined functor.
-
-    Example:
-    ---
-    //swap all 3 letter words and bring it back
-    string text = "How are you doing?";
-    auto sink = appender!(char[])();
-    replaceAllInto!(cap => retro(cap[0]))(sink, text, regex(`\b\w{3}\b`));
-    auto swapped = sink.data.dup; // make a copy explicitly
-    assert(swapped == "woH era uoy doing?");
-    sink.clear();
-    replaceAllInto!(cap => retro(cap[0]))(sink, swapped, regex(`\b\w{3}\b`));
-    assert(sink.data == text);
-    ---
 +/
 public @trusted void replaceAllInto(Sink, R, C, RegEx)
         (Sink sink, R input, RegEx re, const(C)[] format)
@@ -1248,18 +1235,21 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
     replaceMatchesInto!fun(sink, input, matchAll(input, re));
 }
 
-// a bit of examples
+///
 @system unittest
 {
-    //swap all 3 letter words and bring it back
-    string text = "How are you doing?";
-    auto sink = appender!(char[])();
-    replaceAllInto!(cap => retro(cap[0]))(sink, text, regex(`\b\w{3}\b`));
-    auto swapped = sink.data.dup; // make a copy explicitly
-    assert(swapped == "woH era uoy doing?");
-    sink.clear();
-    replaceAllInto!(cap => retro(cap[0]))(sink, swapped, regex(`\b\w{3}\b`));
-    assert(sink.data == text);
+    // insert comma as thousands delimiter in fifty randomly produced big numbers
+    import std.array, std.random, std.conv, std.range;
+    static re = regex(`(?<=\d)(?=(\d\d\d)+\b)`, "g");
+    auto sink = appender!(char [])();
+    enum ulong min = 10UL ^^ 10, max = 10UL ^^ 19;
+    foreach (i; 0 .. 50)
+    {
+        sink.clear();
+        replaceAllInto(sink, text(uniform(min, max)), re, ",");
+        foreach (pos; iota(sink.data.length - 4, 0, -4))
+            assert(sink.data[pos] == ',');
+    }
 }
 
 // exercise all of the replace APIs
