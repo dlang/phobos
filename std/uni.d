@@ -1913,7 +1913,8 @@ pure:
 //@@@BUG another forward reference workaround
 @trusted bool equalS(R1, R2)(R1 lhs, R2 rhs)
 {
-    for(;;){
+    for(;;)
+    {
         if(lhs.empty)
             return rhs.empty;
         if(rhs.empty)
@@ -4541,12 +4542,12 @@ public struct MatcherConcept
     }
 
     ///
-    @safe unittest
+    unittest
     {
         auto m = utfMatcher!char(unicode.Number);
         string square = "2²";
         // about sub-matchers
-        assert(!m.subMatcher!(2,3,4).test(square)); // ASCII no covered
+        assert(!m.subMatcher!(2,3,4).test(square)); // ASCII not covered
         assert(m.subMatcher!1.match(square)); // ASCII-only, works
         assert(!m.subMatcher!1.test(square)); // unicode '²'
         assert(m.subMatcher!(2,3,4).match(square));  //
@@ -4560,24 +4561,6 @@ public struct MatcherConcept
     }
 }
 
-/**
-    Test if $(D M) is an UTF Matcher for ranges of $(D Char).
-*/
-public enum isUtfMatcher(M, C) = __traits(compiles, (){
-    C[] s;
-    auto d = s.decoder;
-    M m;
-    assert(is(typeof(m.match(d)) == bool));
-    assert(is(typeof(m.test(d)) == bool));
-    static if(is(typeof(m.skip(d))))
-    {
-        assert(is(typeof(m.skip(d)) == bool));
-        assert(is(typeof(m.skip(s)) == bool));
-    }
-    assert(is(typeof(m.match(s)) == bool));
-    assert(is(typeof(m.test(s)) == bool));
-});
-
 unittest
 {
     alias CharMatcher = typeof(utfMatcher!char(CodepointSet.init));
@@ -4588,29 +4571,13 @@ unittest
     static assert(isUtfMatcher!(WcharMatcher, immutable(wchar)));
 }
 
-enum Mode {
-    alwaysSkip,
-    neverSkip,
-    skipOnMatch
-}
-
-mixin template ForwardStrings()
-{
-    private bool fwdStr(string fn, C)(ref C[] str) const pure
-    {
-        alias type = typeof(units(str));
-        return mixin(fn~"(*cast(type*)&str)");
-    }
-}
-
 template Utf8Matcher()
 {
     enum validSize(int sz) = sz >= 1 && sz <=4;
 
-    void badEncoding() pure @safe
+    UtfLookup badEncoding() pure @safe nothrow
     {
-        import std.utf;
-        throw new UTFException("Invalid UTF-8 sequence");
+        return UtfLookup(1 | UtfLookup.BROKEN);
     }
 
     //for 1-stage ASCII
@@ -4644,15 +4611,10 @@ template Utf8Matcher()
     {
         ch -= 0x80;
         if (ch < 0x40)
-        {
             return ch;
-        }
         else
-        {
-            badEncoding();
-            return cast(char)0;
+            return 0xFF;
         }
-    }
 
     static auto encode(size_t sz)(dchar ch)
         if(sz > 1)
@@ -4683,115 +4645,6 @@ template Utf8Matcher()
         return Ret(asciiT, utf8_2T, utf8_3T, utf8_4T);
     }
 
-    // Bootstrap UTF-8 static matcher interface
-    // from 3 primitives: tab!(size), lookup and Sizes
-    mixin template DefMatcher()
-    {
-        import std.format : format;
-        enum hasASCII = staticIndexOf!(1, Sizes) >= 0;
-        alias UniSizes = Erase!(1, Sizes);
-
-        //generate dispatch code sequence for unicode parts
-        static auto genDispatch()
-        {
-            string code;
-            foreach(size; UniSizes)
-                code ~= format(q{
-                    if ((ch & ~leadMask!%d) == encMask!(%d))
-                        return lookup!(%d, mode)(inp);
-                    else
-                }, size, size, size);
-            static if (Sizes.length == 4) //covers all code unit cases
-                code ~= "{ badEncoding(); return false; }";
-            else
-                code ~= "return false;"; //may be just fine but not covered
-            return code;
-        }
-        enum dispatch = genDispatch();
-
-        public bool match(Range)(ref Range inp) const pure @trusted
-            if(isRandomAccessRange!Range && is(ElementType!Range : char))
-        {
-            enum mode = Mode.skipOnMatch;
-            assert(!inp.empty);
-            auto ch = inp[0];
-            static if(hasASCII)
-            {
-                if (ch < 0x80)
-                {
-                    bool r = tab!1[ch];
-                    if(r)
-                        inp.popFront();
-                    return r;
-                }
-                else
-                    mixin(dispatch);
-            }
-            else
-                mixin(dispatch);
-        }
-
-        static if(Sizes.length == 4) // can skip iff can detect all encodings
-        {
-            public bool skip(Range)(ref Range inp) const pure @trusted
-                if(isRandomAccessRange!Range && is(ElementType!Range : char))
-            {
-                enum mode = Mode.alwaysSkip;
-                assert(!inp.empty);
-                auto ch = inp[0];
-                static if(hasASCII)
-                {
-                    if (ch < 0x80)
-                    {
-                        inp.popFront();
-                        return tab!1[ch];
-                    }
-                    else
-                        mixin(dispatch);
-                }
-                else
-                    mixin(dispatch);
-            }
-        }
-
-        public bool test(Range)(ref Range inp) const pure @trusted
-            if(isRandomAccessRange!Range && is(ElementType!Range : char))
-        {
-            enum mode = Mode.neverSkip;
-            assert(!inp.empty);
-            auto ch = inp[0];
-            static if(hasASCII)
-            {
-                if (ch < 0x80)
-                    return tab!1[ch];
-                else
-                    mixin(dispatch);
-            }
-            else
-                mixin(dispatch);
-        }
-
-        bool match(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
-        {
-            return fwdStr!"match"(str);
-        }
-
-        bool skip(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
-        {
-            return fwdStr!"skip"(str);
-        }
-
-        bool test(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
-        {
-            return fwdStr!"test"(str);
-        }
-
-        mixin ForwardStrings;
-    }
-
     struct Impl(Sizes...)
     {
         static assert(allSatisfy!(validSize, Sizes),
@@ -4800,28 +4653,29 @@ template Utf8Matcher()
         //pick tables for chosen sizes
         alias OurTabs = staticMap!(Table, Sizes);
         OurTabs tables;
-        mixin DefMatcher;
         //static disptach helper UTF size ==> table
         alias tab(int i) = tables[i - 1];
+
+        this(Tables...)(auto ref Tables tbl)
+        {
+            tables = tbl;
+        }
 
         package @property auto subMatcher(SizesToPick...)() @trusted
         {
             return CherryPick!(Impl, SizesToPick)(&this);
         }
 
-        bool lookup(int size, Mode mode, Range)(ref Range inp) const pure @trusted
+        UtfLookup lookup(size_t size, Range)(Range inp) const pure nothrow @trusted
         {
-            import std.typecons;
-            if(inp.length < size)
-            {
-                badEncoding();
-                return false;
-            }
+            if(inp.length < size) return badEncoding();
             char[size] needle = void;
             needle[0] = leadMask!size & inp[0];
-            foreach(i; staticIota!(1, size))
+            foreach(i; Sequence!(1, size))
             {
                 needle[i] = truncate(inp[i]);
+                if(needle[i] == 0xFF)
+                    return badEncoding();
             }
             //overlong encoding checks
             static if(size == 2)
@@ -4829,42 +4683,66 @@ template Utf8Matcher()
                 //0x80-0x7FF
                 //got 6 bits in needle[1], must use at least 8 bits
                 //must use at least 2 bits in needle[1]
-                if(needle[0] < 2) badEncoding();
+                if(needle[0] < 2) return badEncoding();
             }
             else static if(size == 3)
             {
                 //0x800-0xFFFF
                 //got 6 bits in needle[2], must use at least 12bits
                 //must use 6 bits in needle[1] or anything in needle[0]
-                if(needle[0] == 0 && needle[1] < 0x20) badEncoding();
+                if(needle[0] == 0 && needle[1] < 0x20) return badEncoding();
             }
             else static if(size == 4)
             {
                 //0x800-0xFFFF
                 //got 2x6=12 bits in needle[2..3] must use at least 17bits
                 //must use 5 bits (or above) in needle[1] or anything in needle[0]
-                if(needle[0] == 0 && needle[1] < 0x10) badEncoding();
+                if(needle[0] == 0 && needle[1] < 0x10) return badEncoding();
             }
-            static if(mode == Mode.alwaysSkip)
-            {
-                inp.popFrontN(size);
-                return tab!size[needle];
+            return UtfLookup(size | (tab!size[needle]<<UtfLookup.MATCH_BIT));
             }
-            else static if(mode == Mode.neverSkip)
+
+        //generate dispatch code sequence for unicode parts
+        static auto genDispatch(Picked...)()
             {
-                return tab!size[needle];
+            import std.format : format;
+            string code;
+            foreach(size; Erase!(1, Picked))
+                code ~= format(q{
+                    if ((ch & ~leadMask!%d) == encMask!(%d))
+                        return lookup!(%d)(inp);
+                    else
+                }, size, size, size);
+            code ~= "{ return badEncoding(); }"; // report bad encoding
+            // bad encoding is also reported for code points not covered in Picked sizes
+            return code;
             }
-            else
+
+        template lookupAll(Picked...)
             {
-                static assert(mode == Mode.skipOnMatch);
-                if (tab!size[needle])
+            UtfLookup lookupAll(Range)(Range inp) const pure nothrow @trusted
                 {
-                    inp.popFrontN(size);
-                    return true;
+                enum hasASCII = staticIndexOf!(1, Picked) >= 0;
+                enum dispatch = genDispatch!(Picked);
+                immutable ch = inp[0];
+                static if(hasASCII)
+                {
+                    if (ch < 0x80)
+                    {
+                        return UtfLookup(1  | (tab!1[ch]<<UtfLookup.MATCH_BIT));
                 }
                 else
-                    return false;
+                        mixin(dispatch);
             }
+                else{
+                    mixin(dispatch);
+        }
+    }
+        }
+
+        public UtfLookup opCall(Range)(Range inp) const pure nothrow @trusted
+        {
+            return lookupAll!Sizes(inp);
         }
     }
 
@@ -4874,23 +4752,25 @@ template Utf8Matcher()
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
         I* m;
-        @property ref tab(int i)() const pure { return m.tables[i - 1]; }
-        bool lookup(int size, Mode mode, Range)(ref Range inp) const pure
+        this(I* ptr)  // to sidetrack opCall
         {
-            return m.lookup!(size, mode)(inp);
+            m = ptr;
         }
-        mixin DefMatcher;
+
+        UtfLookup opCall(Range)(Range inp) const pure nothrow @trusted
+        {
+            return m.lookupAll!Sizes(inp);
     }
+}
 }
 
 template Utf16Matcher()
 {
     enum validSize(int sz) = sz >= 1 && sz <=2;
 
-    void badEncoding() pure
+    UtfLookup badEncoding() pure nothrow
     {
-        import std.utf;
-        throw new UTFException("Invalid UTF-16 sequence");
+        return UtfLookup(1 | UtfLookup.BROKEN);
     }
     // 1-stage ASCII
     alias AsciiSpec = AliasSeq!(bool, wchar, clamp!7);
@@ -4932,100 +4812,21 @@ template Utf16Matcher()
         return Ret(asciiT, bmpT, otherT);
     }
 
-    //bootstrap full UTF-16 matcher interace from
-    //sizeFlags, lookupUni and ascii
-    mixin template DefMatcher()
-    {
-        public bool match(Range)(ref Range inp) const pure @trusted
-            if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
-        {
-            enum mode = Mode.skipOnMatch;
-            assert(!inp.empty);
-            auto ch = inp[0];
-            static if(sizeFlags & 1)
-            {
-                if (ch < 0x80)
-                {
-                  if (ascii[ch])
-                  {
-                      inp.popFront();
-                      return true;
-                  }
-                  else
-                      return false;
-                }
-                return lookupUni!mode(inp);
-            }
-            else
-                return lookupUni!mode(inp);
-        }
-
-        static if(Sizes.length == 2)
-        {
-            public bool skip(Range)(ref Range inp) const pure @trusted
-                if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
-            {
-                enum mode = Mode.alwaysSkip;
-                assert(!inp.empty);
-                auto ch = inp[0];
-                static if(sizeFlags & 1)
-                {
-                    if (ch < 0x80)
-                    {
-                        inp.popFront();
-                        return ascii[ch];
-                    }
-                    else
-                        return lookupUni!mode(inp);
-                }
-                else
-                    return lookupUni!mode(inp);
-            }
-        }
-
-        public bool test(Range)(ref Range inp) const pure @trusted
-            if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
-        {
-            enum mode = Mode.neverSkip;
-            assert(!inp.empty);
-            auto ch = inp[0];
-            static if(sizeFlags & 1)
-                return ch < 0x80 ? ascii[ch] : lookupUni!mode(inp);
-            else
-                return lookupUni!mode(inp);
-        }
-
-        bool match(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
-        {
-            return fwdStr!"match"(str);
-        }
-
-        bool skip(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
-        {
-            return fwdStr!"skip"(str);
-        }
-
-        bool test(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
-        {
-            return fwdStr!"test"(str);
-        }
-
-        mixin ForwardStrings; //dispatch strings to range versions
-    }
-
     struct Impl(Sizes...)
         if(Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
         static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
-        static if(Sizes.length > 1)
-            enum sizeFlags = Sizes[0] | Sizes[1];
+
+        template bitOrAll(T...)
+        {
+            static if(T.length > 0)
+                enum bitOrAll = T[0] | bitOrAll!(T[1..$]);
         else
-            enum sizeFlags = Sizes[0];
+                enum bitOrAll = 0;
+        }
+        enum sizeFlags = bitOrAll!Sizes;
 
         static if(sizeFlags & 1)
         {
@@ -5036,71 +4837,74 @@ template Utf16Matcher()
         {
             Uni uni;
         }
-        mixin DefMatcher;
 
         package @property auto subMatcher(SizesToPick...)() @trusted
         {
             return CherryPick!(Impl, SizesToPick)(&this);
         }
 
-        bool lookupUni(Mode mode, Range)(ref Range inp) const pure
+        this(T...)(T tables)
         {
-            wchar x = cast(wchar)(inp[0] - 0xD800);
-            //not a high surrogate
-            if(x > 0x3FF)
-            {
-                //low surrogate
-                if(x <= 0x7FF) badEncoding();
                 static if(sizeFlags & 1)
                 {
-                    auto ch = inp[0];
-                    static if(mode == Mode.alwaysSkip)
-                        inp.popFront();
-                    static if(mode == Mode.skipOnMatch)
+                ascii = tables[0];
+                bmp = tables[1];
+                static if(sizeFlags & 2)
                     {
-                        if (bmp[ch])
-                        {
-                            inp.popFront();
-                            return true;
+                    uni = tables[2];
                         }
+            }
                         else
-                            return false;
+            {
+                uni = tables[0];
                     }
+        }
+
+        // lookup using any subset of tables specified as picked
+        template lookupAll(Picked...)
+        {
+            public UtfLookup lookupAll(Range)(Range inp) const pure nothrow @trusted
+            {
+                enum pickedFlags = bitOrAll!(Picked);
+                immutable ch = inp[0];
+                wchar x = cast(wchar)(ch - 0xD800);
+                // use wrap-around to our advantage
+                if(x > 0x3FF) // not high surrogate
+                {
+                    // low surrogate?
+                    if(x <= 0x7FF) return badEncoding();
+                    static if(pickedFlags & 1)
+                    {
+                        if(ch < 0x80)
+                            return UtfLookup(1 | (ascii[ch] << UtfLookup.MATCH_BIT));
                     else
-                        return bmp[ch];
+                            return UtfLookup(1 | (bmp[ch] << UtfLookup.MATCH_BIT));
                 }
-                else //skip is not available for sub-matchers, so just false
-                    return false;
+                    else // not available size, report as bad encoding
+                        return badEncoding();
             }
             else
             {
-                static if(sizeFlags & 2)
+                    static if(pickedFlags & 2)
                 {
                     if(inp.length < 2)
-                        badEncoding();
+                            return badEncoding();
                     wchar y = cast(wchar)(inp[1] - 0xDC00);
                     //not a low surrogate
                     if(y > 0x3FF)
-                        badEncoding();
-                    wchar[2] needle = [inp[0] & 0x3ff, inp[1] & 0x3ff];
-                    static if(mode == Mode.alwaysSkip)
-                        inp.popFrontN(2);
-                    static if(mode == Mode.skipOnMatch)
-                    {
-                        if (uni[needle])
-                        {
-                            inp.popFrontN(2);
-                            return true;
+                            return badEncoding();
+                        wchar[2] needle = [ x, y ];
+                        return UtfLookup(2 | (uni[needle] << UtfLookup.MATCH_BIT));
                         }
-                        else
-                            return false;
+                    else // ditto - no such size picked
+                        return badEncoding();
                     }
-                    else
-                        return uni[needle];
                 }
-                else //ditto
-                    return false;
             }
+
+        public UtfLookup opCall(Range)(Range inp) const pure nothrow @trusted
+        {
+            return lookupAll!(Sizes)(inp);
         }
     }
 
@@ -5111,19 +4915,77 @@ template Utf16Matcher()
         I* m;
         enum sizeFlags = I.sizeFlags;
 
-        static if(sizeFlags & 1)
+        this(I* ptr) // to sidetrack opCall
         {
-            @property ref ascii()() const pure{ return m.ascii; }
+            m = ptr;
         }
 
-        bool lookupUni(Mode mode, Range)(ref Range inp) const pure
+        public UtfLookup opCall(Range)(Range inp) const pure nothrow
         {
-            return m.lookupUni!mode(inp);
+            return (*m)(inp);
         }
-        mixin DefMatcher;
+
         static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
     }
+}
+
+/// Check that $(D Matcher) is a functor taking a range of $(D Char) code units and returning $(LREF UtfLookup).
+public enum isUtfMatcher(Matcher, Char) = is(typeof(Matcher.init(Char[].init)) == UtfLookup);
+
+///
+unittest
+{
+    auto fn = (char[]){ return UtfLookup.init; };
+    static assert(isUtfMatcher!(typeof(fn), char));
+}
+
+/+
+    Use UFCS to provide match, skip and test interface for any UTF Matcher.
+    This includes any callable returning UtfLookup
++/
+
+/++
+    Test a codepoint at front of UTF range $(R r) with matcher $(D m)
+    and consume it on successful match.
+
+    See also: $(LREF skip), $(LREF test).
++/
+public bool match(Matcher, Range)(auto ref Matcher m, ref Range r)
+    if(isUtfMatcher!(Matcher, ElementEncodingType!Range))
+{
+    auto ret = m(r);
+    if(ret)
+        r = r[ret.stride..$]; // defeat auto-decoding
+    return cast(bool)ret; // BUG? - we have opCast, should convert to bool implicitly?
+}
+
+/++
+    Test a codepoint at front of UTF range $(R r) with matcher $(D m).
+    $(D r) is kept intact regardless of the result of the test.
+
+    See also: $(LREF match), $(LREF skip).
++/
+public bool test(Matcher, Range)(auto ref Matcher m, Range r)
+    if(isUtfMatcher!(Matcher, ElementEncodingType!Range))
+{
+    auto ret = m(r);
+    return cast(bool)ret;
+}
+
+/++
+    Consume a codepoint in front of UTF range $(D r)
+    and return the result of a test against this matcher.
+    Unlike $(LREF match) this always consumes one codepoint.
+
+    See also: $(LREF match), $(LREF test).
++/
+public bool skip(Matcher, Range)(auto ref Matcher m, ref Range r)
+    if(isUtfMatcher!(Matcher, ElementEncodingType!Range))
+{
+    auto ret = m(r);
+    r = r[ret.stride .. $]; // defeat auto-decoding
+    return cast(bool)ret;
 }
 
 private auto utf8Matcher(Set)(Set set) @trusted
@@ -6063,24 +5925,18 @@ unittest
     alias fails8 = AliasSeq!("\xC1", "\xC0\xC0", "\x80\x00","\xC0\x00", "\xCF\x79",
         "\xFF\x00\0x00\0x00\x00", "\xC0\0x80\0x80\x80", "\x80\0x00\0x00\x00",
         "\xCF\x00\0x00\0x00\x00");
-    foreach(msg; fails8){
+    foreach(msg; fails8)
+    {
         assert(tbst8(msg).broken, format("%( %2x %)", cast(ubyte[])msg));
-        assert(collectException((){
-            auto s = msg;
-            import std.utf;
-            size_t idx = 0;
-            //decode(s, idx);
-            utf8.test(s);
-        }()), format("%( %2x %)", cast(ubyte[])msg));
+        assert(utf8(msg).broken, format("%( %2x %)", cast(ubyte[])msg));
     }
     //decode failure cases UTF-16
     alias fails16 = AliasSeq!([0xD811], [0xDC02]);
-    foreach(msg; fails16){
-        assert(tbst16(msg.map!(x=>cast(wchar)x)).broken, format("%( %2x %)", cast(ushort[])msg));
-        assert(collectException((){
-            auto s = msg.map!(x => cast(wchar)x);
-            utf16.test(s);
-        }()));
+    foreach(msg; fails16)
+    {
+        auto s = msg.map!(x => cast(wchar)x);
+        assert(tbst16(s).broken, format("%( %2x %)", cast(ushort[])msg));
+        assert(utf16(s).broken);
     }
 }
 
@@ -6274,7 +6130,7 @@ unittest
         {
             import std.stdio;
             writeln("---TRIE FOOTPRINT STATS---");
-            foreach(i; staticIota!(0, t.table.dim) )
+            foreach(i; Sequence!(0, t.table.dim) )
             {
                 writefln("lvl%s = %s bytes;  %s pages"
                          , i, t.bytes!i, t.pages!i);
@@ -6283,7 +6139,7 @@ unittest
             version(none)
             {
                 writeln("INDEX (excluding value level):");
-                foreach(i; staticIota!(0, t.table.dim-1) )
+                foreach(i; Sequence!(0, t.table.dim-1) )
                     writeln(t.table.slice!(i)[0..t.table.length!i]);
             }
             writeln("---------------------------");
@@ -6340,7 +6196,8 @@ unittest
     auto trie4 = buildTrie!(bool, size_t, max4,
             sliceBits!(13, 16), sliceBits!(9, 13), sliceBits!(6, 9) , sliceBits!(0, 6)
         )(redundant4.byInterval);
-    foreach(i; 0..max4){
+    foreach(i; 0..max4)
+    {
         if(i in redundant4)
             assert(trie4[i], text(cast(uint)i));
     }
@@ -6653,7 +6510,8 @@ else
         target |= asSet(uniProps.So);
         target |= asSet(uniProps.Po);
     }
-    else if(ucmp(name, "graphical") == 0){
+    else if(ucmp(name, "graphical") == 0)
+    {
         target = asSet(uniProps.Alphabetic);
 
         target |= asSet(uniProps.Mn);
