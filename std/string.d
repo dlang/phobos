@@ -2776,21 +2776,26 @@ unittest
     Strips trailing whitespace (as defined by $(XREF uni, isWhite)).
 
     Params:
-        input = string or random access range of characters
+        str = string or random access range of characters
 
     Returns:
-        slice of $(D input) stripped of trailing whitespace.
+        slice of $(D str) stripped of trailing whitespace.
   +/
-auto stripRight(Range)(Range input)
+auto stripRight(Range)(auto ref Range str)
+    if (!(isSomeString!Range ||
+        (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+            isSomeChar!(ElementEncodingType!Range)))
+        && is(StringTypeOf!Range))
+{
+    return stripRight(cast(StringTypeOf!Range)str);
+}
+
+/// Ditto
+auto stripRight(Range)(Range str)
     if (isSomeString!Range ||
         (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-            isSomeChar!(ElementEncodingType!Range))
-        || __traits(compiles, StringTypeOf!Range))
+            isSomeChar!(ElementEncodingType!Range)))
 {
-    static if (__traits(compiles, StringTypeOf!Range))
-        StringTypeOf!Range str = input;
-    else
-        alias str = input;
 
     alias C = Unqual!(ElementEncodingType!(typeof(str)));
 
