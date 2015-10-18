@@ -2702,23 +2702,25 @@ unittest
     Params:
         input = string or ForwardRange of characters
 
-    Returns: $(D input) stripped of leading whitespace.
+    Returns: $(D str) stripped of leading whitespace.
 
-    Postconditions: $(D input) and the returned value
+    Postconditions: $(D str) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
   +/
-auto stripLeft(Range)(Range input)
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
-        __traits(compiles, StringTypeOf!Range))
+auto stripLeft(Range)(auto ref Range str)
+    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
+        is(StringTypeOf!Range))
+{
+    return stripLeft(cast(StringTypeOf!Range)str);
+}
+
+/// Ditto
+auto stripLeft(Range)(Range str)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     import std.ascii : isASCII, isWhite;
     import std.uni : isWhite;
     import std.utf : decodeFront;
-
-    static if (__traits(compiles, StringTypeOf!Range))
-        StringTypeOf!Range str = input;
-    else
-        alias str = input;
 
     while (!str.empty)
     {
