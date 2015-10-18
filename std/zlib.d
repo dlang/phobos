@@ -151,6 +151,25 @@ unittest
  *
  * Returns:
  *     the compressed data
+ *
+ * ---
+ * import std.file;
+ * import std.zlib;
+ *
+ * void main(string[] args)
+ * {
+ *     try
+ *     {
+ *         auto data = compress("Lorem ipsum dolor sit amet");
+ *
+ *         write("test.dat", data);
+ *     }
+ *     catch (ZlibException ex)
+ *     {
+ *         // Handle errors
+ *     }
+ * }
+ * ---
  */
 
 ubyte[] compress(const(void)[] srcbuf, int level)
@@ -190,6 +209,25 @@ ubyte[] compress(const(void)[] srcbuf)
  *            if the exact size is supplied.
  *  winbits = the base two logarithm of the maximum window size.
  * Returns: the decompressed data.
+ *
+ * ---
+ * import std.file;
+ * import std.zlib;
+ *
+ * void main(string[] args)
+ * {
+ *     try
+ *     {
+ *         auto data = uncompress(read("test.dat"));
+ *
+ *         // Use uncompressed data
+ *     }
+ *     catch (ZlibException ex)
+ *     {
+ *         // Handle errors
+ *     }
+ * }
+ * ---
  */
 
 void[] uncompress(const(void)[] srcbuf, size_t destlen = 0u, int winbits = 15)

@@ -370,6 +370,34 @@ Returns: Array of characters read.
 
 Throws: $(D FileException) on file error, $(D UTFException) on UTF
 decoding error.
+
+---
+import std.file;
+import std.utf;
+
+void main(string[] args)
+{
+    try
+    {
+        // Read and validate UTF-8 file.
+        auto utf8Data  = readText("test.txt");
+
+        // Read and validate UTF-16 file.
+        auto utf16Data = readText!(wstring)("test.txt");
+
+        // Read and validate UTF-32 file.
+        auto utf32Data = readText!(dstring)("test.txt");
+    }
+    catch (UTFException ex)
+    {
+        // Handle validation errors
+    }
+    catch (FileException ex)
+    {
+        // Handle errors
+    }
+}
+---
  */
 
 S readText(S = string, R)(R name)
@@ -383,7 +411,6 @@ S readText(S = string, R)(R name)
     return result;
 }
 
-///
 @safe unittest
 {
     import std.string;
@@ -530,6 +557,22 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
  *    from = string or range of characters representing the existing file name
  *    to = string or range of characters representing the target file name
  * Throws: $(D FileException) on error.
+ *
+ * ---
+ * import std.file;
+ *
+ * void main(string[] args)
+ * {
+ *     try
+ *     {
+ *         rename("source.txt", "destination.txt");
+ *     }
+ *     catch (FileException ex)
+ *     {
+ *         // Handle error
+ *     }
+ * }
+ * ---
  */
 void rename(RF, RT)(RF from, RT to)
     if ((isInputRange!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF) &&
@@ -603,6 +646,22 @@ Params:
     name = string or range of characters representing the file name
 
 Throws: $(D FileException) on error.
+
+---
+import std.file;
+
+void main(string[] args)
+{
+    try
+    {
+        remove("test.txt");
+    }
+    catch (FileException ex)
+    {
+        // Handle error
+    }
+}
+---
  */
 void remove(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
@@ -1155,6 +1214,18 @@ unittest
  *    name = string or range of characters representing the file name
  * Returns:
  *    true if it exists
+ *
+ * ---
+ * import std.file;
+ *
+ * void main(string[] args)
+ * {
+ *     if (exists("test.txt"))
+ *     {
+ *         // Use file
+ *     }
+ * }
+ * ---
  */
 bool exists(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
@@ -2200,6 +2271,31 @@ version(StdDdoc)
 {
     /++
         Info on a file, similar to what you'd get from stat on a Posix system.
+        ---
+        import std.file;
+        import std.stdio : writefln;
+
+        void main(string[] args)
+        {
+            try
+            {
+                auto file = DirEntry("test.txt");
+
+                writefln("File name: %s", file.name);
+                writefln("Is directory: %s", file.isDir);
+                writefln("Is file: %s", file.isFile);
+                writefln("Is symlink: %s", file.isSymlink);
+                writefln("Size in bytes: %s", file.size);
+                writefln("Time last accessed: %s", file.timeLastAccessed);
+                writefln("Time last modified: %s", file.timeLastModified);
+                writefln("Attributes: %b", file.attributes);
+            }
+            catch (FileException ex)
+            {
+                // Handle error
+            }
+        }
+        ---
       +/
     struct DirEntry
     {
@@ -2771,6 +2867,22 @@ Params:
     to = string or range of characters representing the target file name
 
 Throws: $(D FileException) on error.
+
+---
+import std.file;
+
+void main(string[] args)
+{
+    try
+    {
+        copy("source.txt", "destination.txt");
+    }
+    catch (FileException ex)
+    {
+        // Handle error
+    }
+}
+---
  */
 void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
     if (isInputRange!RF && isSomeChar!(ElementEncodingType!RF) &&

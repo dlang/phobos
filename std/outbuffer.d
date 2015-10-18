@@ -33,6 +33,30 @@ private
  * OutBuffer's internal buffer is allocated with the GC. Pointers
  * stored into the buffer are scanned by the GC, but you have to
  * ensure proper alignment, e.g. by using alignSize((void*).sizeof).
+ *
+ * ---
+ * import std.file;
+ * import std.outbuffer;
+ *
+ * void main(string[] args)
+ * {
+ *     auto buffer  = new OutBuffer();
+ *     ubyte[] data = [0x68, 0x65, 0x6c, 0x6c, 0x6f];
+ *
+ *     buffer.write(data);
+ *     buffer.write(' ');
+ *     buffer.write("world");
+ *
+ *     try
+ *     {
+ *         write("test.txt", buffer.toBytes());
+ *     }
+ *     catch (FileException ex)
+ *     {
+ *         // Handle errors
+ *     }
+ * }
+ * ---
  */
 
 class OutBuffer
