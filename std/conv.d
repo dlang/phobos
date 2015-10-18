@@ -1932,81 +1932,67 @@ Target parse(Target, Source)(ref Source s)
     if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 {
-    static if (Target.sizeof < int.sizeof)
-    {
-        // smaller types are handled like integers
-        auto v = .parse!(Select!(Target.min < 0, int, uint))(s);
-        auto result = ()@trusted{ return cast(Target) v; }();
-        if (result == v)
-            return result;
-        throw new ConvOverflowException("Overflow in integral conversion");
-    }
+    static if (Target.min < 0)
+        bool sign = 0;
     else
+        enum bool sign = 0;
+
+    enum char maxLastDigit = Target.min < 0 ? 7 : 5;
+
+    if (s.empty)
+        throw convError!(Source, Target)(s);
+
+    Unqual!(typeof(s.front)) c = s.front;
+    s.popFront();
+    static if (Target.min < 0)
     {
-        // Larger than int types
-
-        static if (Target.min < 0)
-            bool sign = 0;
-        else
-            enum bool sign = 0;
-
-        enum char maxLastDigit = Target.min < 0 ? 7 : 5;
-
-        if (s.empty)
-            throw convError!(Source, Target)(s);
-
-        Unqual!(typeof(s.front)) c = s.front;
-        s.popFront();
-        static if (Target.min < 0)
+        switch (c)
         {
-            switch (c)
-            {
-                case '-':
-                    sign = true;
-                    goto case '+';
-                case '+':
-                    if (s.empty)
-                        goto Lerr;
-                    c = s.front;
-                    s.popFront();
-                    break;
+            case '-':
+                sign = true;
+                goto case '+';
+            case '+':
+                if (s.empty)
+                    goto Lerr;
+                c = s.front;
+                s.popFront();
+                break;
 
-                default:
-                    break;
-            }
+            default:
+                break;
         }
-
-        {
-            auto d = cast(typeof(c))(c - '0');
-            if (d <= 9)
-            {
-                Target v = cast(Target)d;
-                while (!s.empty)
-                {
-                    d = cast(typeof(d)) (s.front - '0');
-                    if (d > 9)
-                        break;
-
-                    if (v >= 0 && (v < Target.max/10 ||
-                        (v == Target.max/10 && d <= maxLastDigit + sign)))
-                    {
-                        // Note: `v` can become negative here in case of parsing
-                        // the most negative value:
-                        v = cast(Target) (v * 10 + d);
-                        s.popFront();
-                    }
-                    else
-                        throw new ConvOverflowException("Overflow in integral conversion");
-                }
-
-                if (sign)
-                    v = -v;
-                return v;
-            }
-        }
-Lerr:
-        throw convErrorChar!(Source, Target)(c);
     }
+
+    {
+        auto d = cast(typeof(c))(c - '0');
+        if (d <= 9)
+        {
+            Target v = cast(Target)d;
+            while (!s.empty)
+            {
+                d = cast(typeof(d)) (s.front - '0');
+                if (d > 9)
+                    break;
+
+                if (v >= 0 && (v < Target.max/10 ||
+                    (v == Target.max/10 && d <= maxLastDigit + sign)))
+                {
+                    // Note: `v` can become negative here in case of parsing
+                    // the most negative value:
+                    v = cast(Target) (v * 10 + d);
+                    s.popFront();
+                }
+                else
+                    throw new ConvOverflowException("Overflow in integral conversion");
+            }
+
+            if (sign)
+                v = -v;
+            return v;
+        }
+    }
+Lerr:
+    throw convErrorChar!(Source, Target)(c);
 }
 
 @safe pure unittest
@@ -2222,17 +2208,17 @@ Lerr:
 {
     import std.exception;
     assert(collectExceptionMsg("-2A".to! byte ()) == "Unexpected 'A' when converting from type string to type byte");
-//  assert(collectExceptionMsg("-2A".to!ubyte ()) == "Unexpected '-' when converting from type string to type ubyte");
+    assert(collectExceptionMsg("-2A".to!ubyte ()) == "Unexpected '-' when converting from type string to type ubyte");
     assert(collectExceptionMsg("-2A".to! short()) == "Unexpected 'A' when converting from type string to type short");
-//  assert(collectExceptionMsg("-2A".to!ushort()) == "Unexpected '-' when converting from type string to type ushort");
+    assert(collectExceptionMsg("-2A".to!ushort()) == "Unexpected '-' when converting from type string to type ushort");
     assert(collectExceptionMsg("-2A".to! int  ()) == "Unexpected 'A' when converting from type string to type int");
     assert(collectExceptionMsg("-2A".to!uint  ()) == "Unexpected '-' when converting from type string to type uint");
     assert(collectExceptionMsg("-2A".to! long ()) == "Unexpected 'A' when converting from type string to type long");
     assert(collectExceptionMsg("-2A".to!ulong ()) == "Unexpected '-' when converting from type string to type ulong");
-//  assert(collectExceptionMsg("#2A".to! byte ()) == "Unexpected '#' when converting from type string to type byte");
-//  assert(collectExceptionMsg("#2A".to!ubyte ()) == "Unexpected '#' when converting from type string to type ubyte");
-//  assert(collectExceptionMsg("#2A".to! short()) == "Unexpected '#' when converting from type string to type short");
-//  assert(collectExceptionMsg("#2A".to!ushort()) == "Unexpected '#' when converting from type string to type ushort");
+    assert(collectExceptionMsg("#2A".to! byte ()) == "Unexpected '#' when converting from type string to type byte");
+    assert(collectExceptionMsg("#2A".to!ubyte ()) == "Unexpected '#' when converting from type string to type ubyte");
+    assert(collectExceptionMsg("#2A".to! short()) == "Unexpected '#' when converting from type string to type short");
+    assert(collectExceptionMsg("#2A".to!ushort()) == "Unexpected '#' when converting from type string to type ushort");
     assert(collectExceptionMsg("#2A".to! int  ()) == "Unexpected '#' when converting from type string to type int");
     assert(collectExceptionMsg("#2A".to!uint  ()) == "Unexpected '#' when converting from type string to type uint");
     assert(collectExceptionMsg("#2A".to! long ()) == "Unexpected '#' when converting from type string to type long");
