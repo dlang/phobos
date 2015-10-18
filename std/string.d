@@ -4182,9 +4182,16 @@ unittest
     See_Also:
         $(LREF entabber)
  +/
-auto entab(Range)(auto ref Range s, size_t tabSize = 8) pure
-    if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
-        || __traits(compiles, StringTypeOf!Range))
+auto entab(Range)(auto ref Range s, size_t tabSize = 8)
+    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
+        is(StringTypeOf!Range))
+{
+    return entab(cast(StringTypeOf!Range)s, tabSize);
+}
+
+/// Ditto
+auto entab(Range)(Range s, size_t tabSize = 8)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     import std.array : array;
     return entabber(s, tabSize).array;
@@ -4194,6 +4201,18 @@ auto entab(Range)(auto ref Range s, size_t tabSize = 8) pure
 unittest
 {
     assert(entab("        x \n") == "\tx\n");
+}
+
+unittest
+{
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    auto s = "        x \n";
+    assert(entab(s) == entab(TestStruct(s)));
 }
 
 /++
