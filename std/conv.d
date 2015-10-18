@@ -72,6 +72,14 @@ private auto convError(S, T)(S source, int radix, string fn = __FILE__, size_t l
         fn, ln);
 }
 
+private auto convErrorChar(S, T, C)(C c, string fn = __FILE__, size_t ln = __LINE__)
+{
+    return new ConvException(
+        text("Unexpected '", c, "'" ~
+             " when converting from type "~S.stringof~" to type "~T.stringof),
+        fn, ln);
+}
+
 @safe pure/* nothrow*/  // lazy parameter bug
 private auto parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
 {
@@ -1943,12 +1951,11 @@ Target parse(Target, Source)(ref Source s)
             enum bool sign = 0;
 
         enum char maxLastDigit = Target.min < 0 ? 7 : 5;
-        Unqual!(typeof(s.front)) c;
 
         if (s.empty)
-            goto Lerr;
+            throw convError!(Source, Target)(s);
 
-        c = s.front;
+        Unqual!(typeof(s.front)) c = s.front;
         s.popFront();
         static if (Target.min < 0)
         {
@@ -1968,34 +1975,37 @@ Target parse(Target, Source)(ref Source s)
                     break;
             }
         }
-        c -= '0';
-        if (c <= 9)
+
         {
-            Target v = cast(Target)c;
-            while (!s.empty)
+            auto d = cast(typeof(c))(c - '0');
+            if (d <= 9)
             {
-                c = cast(typeof(c)) (s.front - '0');
-                if (c > 9)
-                    break;
-
-                if (v >= 0 && (v < Target.max/10 ||
-                    (v == Target.max/10 && c <= maxLastDigit + sign)))
+                Target v = cast(Target)d;
+                while (!s.empty)
                 {
-                    // Note: `v` can become negative here in case of parsing
-                    // the most negative value:
-                    v = cast(Target) (v * 10 + c);
-                    s.popFront();
-                }
-                else
-                    throw new ConvOverflowException("Overflow in integral conversion");
-            }
+                    d = cast(typeof(d)) (s.front - '0');
+                    if (d > 9)
+                        break;
 
-            if (sign)
-                v = -v;
-            return v;
+                    if (v >= 0 && (v < Target.max/10 ||
+                        (v == Target.max/10 && d <= maxLastDigit + sign)))
+                    {
+                        // Note: `v` can become negative here in case of parsing
+                        // the most negative value:
+                        v = cast(Target) (v * 10 + d);
+                        s.popFront();
+                    }
+                    else
+                        throw new ConvOverflowException("Overflow in integral conversion");
+                }
+
+                if (sign)
+                    v = -v;
+                return v;
+            }
         }
 Lerr:
-        throw convError!(Source, Target)(s);
+        throw convErrorChar!(Source, Target)(c);
     }
 }
 
@@ -2205,6 +2215,28 @@ Lerr:
     }
     auto input = StrInputRange("777");
     assert(parse!int(input) == 777);
+}
+
+// Issue 15215
+@safe pure nothrow unittest
+{
+    import std.exception;
+    assert(collectExceptionMsg("-2A".to! byte ()) == "Unexpected 'A' when converting from type string to type byte");
+//  assert(collectExceptionMsg("-2A".to!ubyte ()) == "Unexpected '-' when converting from type string to type ubyte");
+    assert(collectExceptionMsg("-2A".to! short()) == "Unexpected 'A' when converting from type string to type short");
+//  assert(collectExceptionMsg("-2A".to!ushort()) == "Unexpected '-' when converting from type string to type ushort");
+    assert(collectExceptionMsg("-2A".to! int  ()) == "Unexpected 'A' when converting from type string to type int");
+    assert(collectExceptionMsg("-2A".to!uint  ()) == "Unexpected '-' when converting from type string to type uint");
+    assert(collectExceptionMsg("-2A".to! long ()) == "Unexpected 'A' when converting from type string to type long");
+    assert(collectExceptionMsg("-2A".to!ulong ()) == "Unexpected '-' when converting from type string to type ulong");
+//  assert(collectExceptionMsg("#2A".to! byte ()) == "Unexpected '#' when converting from type string to type byte");
+//  assert(collectExceptionMsg("#2A".to!ubyte ()) == "Unexpected '#' when converting from type string to type ubyte");
+//  assert(collectExceptionMsg("#2A".to! short()) == "Unexpected '#' when converting from type string to type short");
+//  assert(collectExceptionMsg("#2A".to!ushort()) == "Unexpected '#' when converting from type string to type ushort");
+    assert(collectExceptionMsg("#2A".to! int  ()) == "Unexpected '#' when converting from type string to type int");
+    assert(collectExceptionMsg("#2A".to!uint  ()) == "Unexpected '#' when converting from type string to type uint");
+    assert(collectExceptionMsg("#2A".to! long ()) == "Unexpected '#' when converting from type string to type long");
+    assert(collectExceptionMsg("#2A".to!ulong ()) == "Unexpected '#' when converting from type string to type ulong");
 }
 
 /// ditto
