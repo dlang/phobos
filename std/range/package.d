@@ -6425,10 +6425,10 @@ This range splits a $(D source) range into $(D chunkCount) chunks of
 approximately equal length. $(D Source) must be a forward range with
 known length.
 
-Unlike $(LREF chunks), $(D evenChunks) takes a chunk count (not size),
-and each returned chunk will have either $(D source.length / chunkCount)
-or $(D source.length / chunkCount + 1) elements. If $(D source.length <
-chunkCount), some chunks will be empty.
+Unlike $(LREF chunks), $(D evenChunks) takes a chunk count (not size).
+The returned range will contain zero or more $(D source.length /
+chunkCount + 1) elements followed by $(D source.length / chunkCount)
+elements. If $(D source.length < chunkCount), some chunks will be empty.
 
 $(D chunkCount) must not be zero, unless $(D source) is also empty.
 */
