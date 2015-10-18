@@ -303,7 +303,8 @@ private:
                     auto zat = cast(T*) target;
                     if (src)
                     {
-                        assert(target, "target must be non-null");
+                        static if (T.sizeof > 0)
+                            assert(target, "target must be non-null");
                         *zat = *src;
                     }
                 }
@@ -315,7 +316,8 @@ private:
                     auto zat = cast(U*) target;
                     if (src)
                     {
-                        assert(target, "target must be non-null");
+                        static if (U.sizeof > 0)
+                            assert(target, "target must be non-null");
                         *zat = *(cast(UA*) (src));
                     }
                 }
