@@ -2148,3 +2148,109 @@ pure nothrow @safe unittest
 
     auto infSlice = infinite[0 .. $]; // this would throw otherwise
 }
+
+
+/++
+    Convenience mixin for trivially sub-classing exceptions
+
+    Even trivially sub-classing an exception involves writing boilerplate code
+    for the constructor to: 1) correctly pass in the source file and line number
+    the exception was thrown from; 2) be usable with $(LREF enforce) which
+    expects exception constructors to take arguments in a fixed order. This
+    mixin provides that boilerplate code.
+
+    Note however that you need to mark the $(B mixin) line with at least a
+    minimal (i.e. just $(B ///)) DDoc comment if you want the mixed-in
+    constructors to be documented in the newly created Exception subclass.
+
+    $(RED Current limitation): Due to
+    $(LINK2 https://issues.dlang.org/show_bug.cgi?id=11500, bug #11500),
+    currently the constructors specified in this mixin cannot be overloaded with
+    any other custom constructors. Thus this mixin can currently only be used
+    when no such custom constructors need to be explicitly specified.
+ +/
+mixin template basicExceptionCtors()
+{
+    /++
+        Params:
+            msg  = The message for the exception.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+            next = The previous exception in the chain of exceptions, if any.
+    +/
+    this(string msg, string file = __FILE__, size_t line = __LINE__,
+         Throwable next = null) @nogc @safe pure nothrow
+    {
+        super(msg, file, line, next);
+    }
+
+    /++
+        Params:
+            msg  = The message for the exception.
+            next = The previous exception in the chain of exceptions.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+    +/
+    this(string msg, Throwable next, string file = __FILE__,
+         size_t line = __LINE__) @nogc @safe pure nothrow
+    {
+        super(msg, file, line, next);
+    }
+}
+
+///
+unittest
+{
+    class MeaCulpa: Exception
+    {
+        ///
+        mixin basicExceptionCtors;
+    }
+
+    try
+        throw new MeaCulpa("test");
+    catch (MeaCulpa e)
+    {
+        assert(e.msg == "test");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__ - 5);
+    }
+}
+
+@safe pure nothrow unittest
+{
+    class TestException : Exception { mixin basicExceptionCtors; }
+    auto e = new Exception("msg");
+    auto te1 = new TestException("foo");
+    auto te2 = new TestException("foo", e);
+}
+
+unittest
+{
+    class TestException : Exception { mixin basicExceptionCtors; }
+    auto e = new Exception("!!!");
+
+    auto te1 = new TestException("message", "file", 42, e);
+    assert(te1.msg == "message");
+    assert(te1.file == "file");
+    assert(te1.line == 42);
+    assert(te1.next is e);
+
+    auto te2 = new TestException("message", e, "file", 42);
+    assert(te2.msg == "message");
+    assert(te2.file == "file");
+    assert(te2.line == 42);
+    assert(te2.next is e);
+
+    auto te3 = new TestException("foo");
+    assert(te3.msg == "foo");
+    assert(te3.file == __FILE__);
+    assert(te3.line == __LINE__ - 3);
+    assert(te3.next is null);
+
+    auto te4 = new TestException("foo", e);
+    assert(te4.msg == "foo");
+    assert(te4.file == __FILE__);
+    assert(te4.line == __LINE__ - 3);
+    assert(te4.next is e);
+}
