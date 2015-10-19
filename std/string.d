@@ -5832,6 +5832,14 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
  *  but this one is the standard one.
  */
 
+char[4] soundexer(Range)(auto ref Range str)
+    if (!(isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
+        is(StringTypeOf!Range))
+{
+    return soundexer(cast(StringTypeOf!Range)str);
+}
+
+/// Ditto
 char[4] soundexer(Range)(Range str)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
@@ -5981,6 +5989,18 @@ body
     assert(soundexer("Martinez".byWchar) == "M635");
     assert(soundexer("Martinez".byDchar) == "M635");
     });
+}
+
+unittest
+{
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    auto s = "Martinez";
+    assert(soundexer(s) == soundexer(TestStruct(s)));
 }
 
 
