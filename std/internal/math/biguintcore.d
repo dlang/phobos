@@ -2161,14 +2161,21 @@ again:
 private:
 
 // TODO: Replace with a library call
-void itoaZeroPadded(char[] output, uint value, int radix = 10)
-    pure nothrow @safe
+void itoaZeroPadded(char[] output, uint value)
+    pure nothrow @safe @nogc
 {
-    ptrdiff_t x = output.length - 1;
-    for( ; x >= 0; --x)
+    for (auto i = output.length; i--;)
     {
-        output[x]= cast(char)(value % radix + '0');
-        value /= radix;
+        if (value < 10)
+        {
+            output[i] = cast(char)(value + '0');
+            value = 0;
+        }
+        else
+        {
+            output[i] = cast(char)(value % 10 + '0');
+            value /= 10;
+        }
     }
 }
 
