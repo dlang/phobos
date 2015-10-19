@@ -2948,6 +2948,16 @@ unittest
     Returns:
         slice of $(D str) stripped of leading and trailing whitespace.
   +/
+auto strip(Range)(auto ref Range str)
+    if (!(isSomeString!Range ||
+        isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+        isSomeChar!(ElementEncodingType!Range))
+        && is(StringTypeOf!Range))
+{
+    return stripRight(stripLeft(str));
+}
+
+/// Ditto
 auto strip(Range)(Range str)
     if (isSomeString!Range ||
         isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
@@ -2970,6 +2980,18 @@ auto strip(Range)(Range str)
            "hello world");
     assert(strip([paraSep] ~ "hello world" ~ [paraSep]) ==
            "hello world");
+}
+
+@safe pure unittest
+{
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    string s = "     hello world     ";
+    assert(strip(s) == strip(TestStruct(s)));
 }
 
 @safe pure unittest
