@@ -586,6 +586,7 @@ unittest
 // Issue 12477
 unittest
 {
+    import std.algorithm : canFind;
     import std.bitmanip : bitfields;
     import core.exception : AssertError;
 
@@ -600,11 +601,11 @@ unittest
 
     try { s.a = uint.max; assert(0); }
     catch (AssertError ae)
-    { assert(ae.msg == "Value is greater than the maximum value of bitfield 'a'", ae.msg); }
+    { assert(ae.msg.canFind("Value is greater than the maximum value of bitfield 'a'"), ae.msg); }
 
     try { s.b = int.min;  assert(0); }
     catch (AssertError ae)
-    { assert(ae.msg == "Value is smaller than the minimum value of bitfield 'b'", ae.msg); }
+    { assert(ae.msg.canFind("Value is smaller than the minimum value of bitfield 'b'"), ae.msg); }
 }
 
 /**
