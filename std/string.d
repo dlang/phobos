@@ -2278,7 +2278,8 @@ S capitalize(S)(S s) @trusted pure
     Adheres to $(WEB http://www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
 
   Params:
-    s = a string of $(D chars), $(D wchars), or $(D dchars)
+    s = a string of $(D chars), $(D wchars), or $(D dchars), or any custom
+        type that casts to a $(D string) type
     keepTerm = whether delimiter is included or not in the results
   Returns:
     array of strings, each element is a line that is a slice of $(D s)
@@ -2288,6 +2289,14 @@ S capitalize(S)(S s) @trusted pure
     $(XREF regex, splitter)
  +/
 alias KeepTerminator = Flag!"keepTerminator";
+
+/// ditto
+auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = KeepTerminator.no)
+    if (!isSomeString!S)
+{
+    return splitLines(cast(StringTypeOf!S)s, keepTerm);
+}
+
 /// ditto
 S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pure
     if (isSomeString!S)
@@ -2370,6 +2379,18 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
         retval.put(s[iStart .. $]);
 
     return retval.data;
+}
+
+unittest
+{
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    string s = "hello\nworld";
+    assert(s.splitLines() == splitLines(TestStruct(s)));
 }
 
 @safe pure unittest
