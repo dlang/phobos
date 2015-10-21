@@ -2169,11 +2169,11 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
 
 
 /**
- * Capitalize the first character of $(D s) and convert the rest of $(D s)
- * to lowercase.
+ * Capitalize the first character of $(D s) and convert the rest of $(D s) to
+ * lowercase.
  *
  * Params:
- *     s = The string to _capitalize.
+ *     input = The string to _capitalize.
  *
  * Returns:
  *     The capitalized string.
@@ -2181,6 +2181,13 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  * See_Also:
  *      $(XREF uni, toCapitalized) for a lazy range version that doesn't allocate memory
  */
+auto capitalize(S)(auto ref S s)
+    if (!isSomeString!S && is(StringTypeOf!S))
+{
+    return capitalize(cast(StringTypeOf!S)s);
+}
+
+/// Ditto
 S capitalize(S)(S s) @trusted pure
     if (isSomeString!S)
 {
@@ -2255,6 +2262,19 @@ S capitalize(S)(S s) @trusted pure
         assert(s2 !is s1);
     }
     });
+}
+
+unittest
+{
+
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    string s = "hello";
+    assert(s.capitalize() == capitalize(TestStruct(s)));
 }
 
 /++
