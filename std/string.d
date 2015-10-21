@@ -350,21 +350,14 @@ alias CaseSensitive = Flag!"caseSensitive";
         If the parameters are not valid UTF, the result will still
         be in the range [-1 .. s.length], but will not be reliable otherwise.
   +/
-ptrdiff_t indexOf(Range)(Range sIn, in dchar c,
+ptrdiff_t indexOf(Range)(Range s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes)
-    if ( (isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
-        __traits(compiles, StringTypeOf!Range)
-    )
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     import std.ascii : toLower, isASCII;
     import std.uni : toLower;
     import std.utf : byDchar, byCodeUnit, UTFException, codeLength;
     alias Char = Unqual!(ElementEncodingType!Range);
-
-    static if (__traits(compiles, StringTypeOf!Range))
-        StringTypeOf!Range s = sIn;
-    else
-        alias s = sIn;
 
     if (cs == CaseSensitive.yes)
     {
@@ -482,12 +475,12 @@ ptrdiff_t indexOf(Range)(Range sIn, in dchar c,
     return -1;
 }
 
-ptrdiff_t indexOf(T, size_t n)(ref T[n] s, in dchar c,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!T)
+ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c,
+        in CaseSensitive cs = CaseSensitive.yes)
+    if (!(isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
+        is(StringTypeOf!Range))
 {
-    auto r = s[];
-    return indexOf(r, c, cs);
+    return indexOf!(StringTypeOf!Range)(s, c, cs);
 }
 
 unittest
@@ -565,17 +558,10 @@ unittest
         If the parameters are not valid UTF, the result will still
         be in the range [-1 .. s.length], but will not be reliable otherwise.
   +/
-ptrdiff_t indexOf(Range)(Range sIn, in dchar c, in size_t startIdx,
+ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
         in CaseSensitive cs = CaseSensitive.yes)
-    if ((isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) ||
-        __traits(compiles, StringTypeOf!Range)
-    )
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
-    static if (__traits(compiles, StringTypeOf!Range))
-        StringTypeOf!Range s = sIn;
-    else
-        alias s = sIn;
-
     static if (isSomeString!(typeof(s)) ||
                 (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
     {
@@ -603,6 +589,14 @@ ptrdiff_t indexOf(Range)(Range sIn, in dchar c, in size_t startIdx,
         }
     }
     return -1;
+}
+
+ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
+    if (!(isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
+        is(StringTypeOf!Range))
+{
+    return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
 }
 
 unittest
@@ -678,19 +672,13 @@ unittest
         Does not work with case insensitive strings where the mapping of
         tolower and toupper is not 1:1.
   +/
-ptrdiff_t indexOf(Range, Char)(Range sIn, const(Char)[] sub,
+ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
         in CaseSensitive cs = CaseSensitive.yes)
-    if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)
-            && isSomeChar!Char)
-        || __traits(compiles, StringTypeOf!Range))
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        isSomeChar!Char)
 {
     import std.uni : toLower;
     alias Char1 = Unqual!(ElementEncodingType!Range);
-
-    static if (__traits(compiles, StringTypeOf!Range))
-        StringTypeOf!Range s = sIn;
-    else
-        alias s = sIn;
 
     static if (isSomeString!Range)
     {
@@ -756,6 +744,15 @@ ptrdiff_t indexOf(Range, Char)(Range sIn, const(Char)[] sub,
         }
         return -1;
     }
+}
+
+ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub,
+        in CaseSensitive cs = CaseSensitive.yes)
+    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+          isSomeChar!Char) &&
+        is(StringTypeOf!Range))
+{
+    return indexOf!(StringTypeOf!Range)(s, sub, cs);
 }
 
 unittest
@@ -2181,13 +2178,6 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  * See_Also:
  *      $(XREF uni, toCapitalized) for a lazy range version that doesn't allocate memory
  */
-auto capitalize(S)(auto ref S s)
-    if (!isSomeString!S && is(StringTypeOf!S))
-{
-    return capitalize(cast(StringTypeOf!S)s);
-}
-
-/// Ditto
 S capitalize(S)(S s) @trusted pure
     if (isSomeString!S)
 {
@@ -2224,6 +2214,12 @@ S capitalize(S)(S s) @trusted pure
     }
 
     return changed ? cast(S)retval : s;
+}
+
+auto capitalize(S)(auto ref S s)
+    if (!isSomeString!S && is(StringTypeOf!S))
+{
+    return capitalize!(StringTypeOf!S)(s);
 }
 
 @trusted pure unittest
@@ -2304,13 +2300,6 @@ unittest
     $(XREF regex, splitter)
  +/
 alias KeepTerminator = Flag!"keepTerminator";
-
-/// ditto
-auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = KeepTerminator.no)
-    if (!isSomeString!S && is(StringTypeOf!S))
-{
-    return splitLines(cast(StringTypeOf!S)s, keepTerm);
-}
 
 /// ditto
 S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pure
@@ -2396,6 +2385,12 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
     return retval.data;
 }
 
+auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = KeepTerminator.no)
+    if (!isSomeString!S && is(StringTypeOf!S))
+{
+    return splitLines!(StringTypeOf!S)(s, keepTerm);
+}
+
 unittest
 {
     static struct TestStruct
@@ -2474,6 +2469,138 @@ unittest
     });
 }
 
+private struct LineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)
+{
+    import std.uni : lineSep, paraSep;
+    import std.conv : unsigned;
+private:
+    Range _input;
+
+    alias IndexType = typeof(unsigned(_input.length));
+    enum IndexType _unComputed = IndexType.max;
+    IndexType iStart = _unComputed;
+    IndexType iEnd = 0;
+    IndexType iNext = 0;
+
+public:
+    this(Range input)
+    {
+        _input = input;
+    }
+
+    static if (isInfinite!Range)
+    {
+        enum bool empty = false;
+    }
+    else
+    {
+        @property bool empty()
+        {
+            return iStart == _unComputed && iNext == _input.length;
+        }
+    }
+
+    @property typeof(_input) front()
+    {
+        if (iStart == _unComputed)
+        {
+            iStart = iNext;
+        Loop:
+            for (IndexType i = iNext; ; ++i)
+            {
+                if (i == _input.length)
+                {
+                    iEnd = i;
+                    iNext = i;
+                    break Loop;
+                }
+                switch (_input[i])
+                {
+                case '\v', '\f', '\n':
+                    iEnd = i + (keepTerm == KeepTerminator.yes);
+                    iNext = i + 1;
+                    break Loop;
+
+                case '\r':
+                    if (i + 1 < _input.length && _input[i + 1] == '\n')
+                    {
+                        iEnd = i + (keepTerm == KeepTerminator.yes) * 2;
+                        iNext = i + 2;
+                        break Loop;
+                    }
+                    else
+                    {
+                        goto case '\n';
+                    }
+
+                    static if (_input[i].sizeof == 1)
+                    {
+                        /* Manually decode:
+                         *  lineSep is E2 80 A8
+                         *  paraSep is E2 80 A9
+                         */
+                    case 0xE2:
+                        if (i + 2 < _input.length &&
+                            _input[i + 1] == 0x80 &&
+                            (_input[i + 2] == 0xA8 || _input[i + 2] == 0xA9)
+                        )
+                        {
+                            iEnd = i + (keepTerm == KeepTerminator.yes) * 3;
+                            iNext = i + 3;
+                            break Loop;
+                        }
+                        else
+                            goto default;
+                        /* Manually decode:
+                         *  NEL is C2 85
+                         */
+                    case 0xC2:
+                        if(i + 1 < _input.length && _input[i + 1] == 0x85)
+                        {
+                            iEnd = i + (keepTerm == KeepTerminator.yes) * 2;
+                            iNext = i + 2;
+                            break Loop;
+                        }
+                        else
+                            goto default;
+                    }
+                    else
+                    {
+                    case '\u0085':
+                    case lineSep:
+                    case paraSep:
+                        goto case '\n';
+                    }
+
+                default:
+                    break;
+                }
+            }
+        }
+        return _input[iStart .. iEnd];
+    }
+
+    void popFront()
+    {
+        if (iStart == _unComputed)
+        {
+            assert(!empty);
+            front();
+        }
+        iStart = _unComputed;
+    }
+
+    static if (isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            return ret;
+        }
+    }
+}
+
 /***********************************
  *  Split an array or slicable range of characters into a range of lines
     using $(D '\r'), $(D '\n'), $(D '\v'), $(D '\f'), $(D "\r\n"),
@@ -2500,146 +2627,16 @@ unittest
     $(XREF regex, splitter)
  */
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
-if ((hasSlicing!Range && hasLength!Range) ||
-    __traits(compiles, StringTypeOf!Range))
+    if (hasSlicing!Range && hasLength!Range)
 {
-    import std.uni : lineSep, paraSep;
-    import std.conv : unsigned;
+    return LineSplitter!(keepTerm, Range)(r);
+}
 
-    static struct Result
-    {
-    private:
-        static if (__traits(compiles, StringTypeOf!Range))
-            StringTypeOf!Range _input;
-        else
-            Range _input;
-
-        alias IndexType = typeof(unsigned(_input.length));
-        enum IndexType _unComputed = IndexType.max;
-        IndexType iStart = _unComputed;
-        IndexType iEnd = 0;
-        IndexType iNext = 0;
-
-    public:
-        this(Range input)
-        {
-            _input = input;
-        }
-
-        static if (isInfinite!Range)
-        {
-            enum bool empty = false;
-        }
-        else
-        {
-            @property bool empty()
-            {
-                return iStart == _unComputed && iNext == _input.length;
-            }
-        }
-
-        @property typeof(_input) front()
-        {
-            if (iStart == _unComputed)
-            {
-                iStart = iNext;
-              Loop:
-                for (IndexType i = iNext; ; ++i)
-                {
-                    if (i == _input.length)
-                    {
-                        iEnd = i;
-                        iNext = i;
-                        break Loop;
-                    }
-                    switch (_input[i])
-                    {
-                        case '\v', '\f', '\n':
-                            iEnd = i + (keepTerm == KeepTerminator.yes);
-                            iNext = i + 1;
-                            break Loop;
-
-                        case '\r':
-                            if (i + 1 < _input.length && _input[i + 1] == '\n')
-                            {
-                                iEnd = i + (keepTerm == KeepTerminator.yes) * 2;
-                                iNext = i + 2;
-                                break Loop;
-                            }
-                            else
-                            {
-                                goto case '\n';
-                            }
-
-                        static if (_input[i].sizeof == 1)
-                        {
-                            /* Manually decode:
-                             *  lineSep is E2 80 A8
-                             *  paraSep is E2 80 A9
-                             */
-                            case 0xE2:
-                                if (i + 2 < _input.length &&
-                                    _input[i + 1] == 0x80 &&
-                                    (_input[i + 2] == 0xA8 || _input[i + 2] == 0xA9)
-                                   )
-                                {
-                                    iEnd = i + (keepTerm == KeepTerminator.yes) * 3;
-                                    iNext = i + 3;
-                                    break Loop;
-                                }
-                                else
-                                    goto default;
-                            /* Manually decode:
-                            *  NEL is C2 85
-                            */
-                            case 0xC2:
-                                if(i + 1 < _input.length && _input[i + 1] == 0x85)
-                                {
-                                    iEnd = i + (keepTerm == KeepTerminator.yes) * 2;
-                                    iNext = i + 2;
-                                    break Loop;
-                                }
-                                else
-                                    goto default;
-                        }
-                        else
-                        {
-                            case '\u0085':
-                            case lineSep:
-                            case paraSep:
-                                goto case '\n';
-                        }
-
-                        default:
-                            break;
-                    }
-                }
-            }
-            return _input[iStart .. iEnd];
-        }
-
-        void popFront()
-        {
-            if (iStart == _unComputed)
-            {
-                assert(!empty);
-                front();
-            }
-            iStart = _unComputed;
-        }
-
-        static if (isForwardRange!Range)
-        {
-            @property typeof(this) save()
-            {
-                auto ret = this;
-                ret._input = _input.save;
-                return ret;
-            }
-        }
-    }
-
-    return Result(r);
+auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref Range r)
+    if (!(hasSlicing!Range && hasLength!Range) &&
+        is(StringTypeOf!Range))
+{
+    return LineSplitter!(keepTerm, StringTypeOf!Range)(r);
 }
 
 @safe pure unittest
@@ -2748,14 +2745,6 @@ unittest
     Postconditions: $(D str) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
   +/
-auto stripLeft(Range)(auto ref Range str)
-    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
-        is(StringTypeOf!Range))
-{
-    return stripLeft(cast(StringTypeOf!Range)str);
-}
-
-/// Ditto
 auto stripLeft(Range)(Range str)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
@@ -2804,6 +2793,13 @@ auto stripLeft(Range)(Range str)
            "hello world     ");
 }
 
+auto stripLeft(Range)(auto ref Range str)
+    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
+        is(StringTypeOf!Range))
+{
+    return stripLeft!(StringTypeOf!Range)(str);
+}
+
 unittest
 {
     static struct ToString
@@ -2824,22 +2820,11 @@ unittest
     Returns:
         slice of $(D str) stripped of trailing whitespace.
   +/
-auto stripRight(Range)(auto ref Range str)
-    if (!(isSomeString!Range ||
-        (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-            isSomeChar!(ElementEncodingType!Range)))
-        && is(StringTypeOf!Range))
-{
-    return stripRight(cast(StringTypeOf!Range)str);
-}
-
-/// Ditto
 auto stripRight(Range)(Range str)
     if (isSomeString!Range ||
-        (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-            isSomeChar!(ElementEncodingType!Range)))
+        isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+        isSomeChar!(ElementEncodingType!Range))
 {
-
     alias C = Unqual!(ElementEncodingType!(typeof(str)));
 
     static if (isSomeString!(typeof(str)))
@@ -2945,6 +2930,15 @@ unittest
            [paraSep] ~ "hello world");
 }
 
+auto stripRight(Range)(auto ref Range str)
+    if (!(isSomeString!Range ||
+          isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+          isSomeChar!(ElementEncodingType!Range))
+        && is(StringTypeOf!Range))
+{
+    return stripRight!(StringTypeOf!Range)(str);
+}
+
 unittest
 {
     static struct ToString
@@ -2991,16 +2985,6 @@ unittest
     Returns:
         slice of $(D str) stripped of leading and trailing whitespace.
   +/
-auto strip(Range)(auto ref Range str)
-    if (!(isSomeString!Range ||
-        isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-        isSomeChar!(ElementEncodingType!Range))
-        && is(StringTypeOf!Range))
-{
-    return stripRight(stripLeft(str));
-}
-
-/// Ditto
 auto strip(Range)(Range str)
     if (isSomeString!Range ||
         isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
@@ -3023,6 +3007,15 @@ auto strip(Range)(Range str)
            "hello world");
     assert(strip([paraSep] ~ "hello world" ~ [paraSep]) ==
            "hello world");
+}
+
+auto strip(Range)(auto ref Range str)
+    if (!(isSomeString!Range ||
+          isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+          isSomeChar!(ElementEncodingType!Range))
+        && is(StringTypeOf!Range))
+{
+    return stripRight(stripLeft(str));
 }
 
 @safe pure unittest
@@ -4177,14 +4170,6 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
     See_Also:
         $(LREF entabber)
  +/
-auto entab(Range)(auto ref Range s, size_t tabSize = 8)
-    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
-        is(StringTypeOf!Range))
-{
-    return entab(cast(StringTypeOf!Range)s, tabSize);
-}
-
-/// Ditto
 auto entab(Range)(Range s, size_t tabSize = 8)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
@@ -4196,6 +4181,13 @@ auto entab(Range)(Range s, size_t tabSize = 8)
 unittest
 {
     assert(entab("        x \n") == "\tx\n");
+}
+
+auto entab(Range)(auto ref Range s, size_t tabSize = 8)
+    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
+        is(StringTypeOf!Range))
+{
+    return entab!(StringTypeOf!Range)(s, tabSize);
 }
 
 unittest
@@ -5810,15 +5802,6 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
  *  There are other arguably better Soundex algorithms,
  *  but this one is the standard one.
  */
-
-char[4] soundexer(Range)(auto ref Range str)
-    if (!(isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
-        is(StringTypeOf!Range))
-{
-    return soundexer(cast(StringTypeOf!Range)str);
-}
-
-/// Ditto
 char[4] soundexer(Range)(Range str)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
@@ -5872,6 +5855,13 @@ char[4] soundexer(Range)(Range str)
         result[b .. 4] = '0';
   Lret:
     return result;
+}
+
+char[4] soundexer(Range)(auto ref Range str)
+    if (!(isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
+        is(StringTypeOf!Range))
+{
+    return soundexer!(StringTypeOf!Range)(str);
 }
 
 /*****************************
