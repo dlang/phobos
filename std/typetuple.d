@@ -7,6 +7,7 @@
  * Authors:
  * Source:    $(PHOBOSSRC std/_typetuple.d)
  */
+deprecated("Please use std.meta instead.")
 module std.typetuple;
 
 public import std.meta;
@@ -14,7 +15,7 @@ public import std.meta;
 /**
  * Alternate name for $(REF AliasSeq, std,meta) for legacy compatibility.
  */
-alias TypeTuple = AliasSeq;
+deprecated alias TypeTuple = AliasSeq;
 
 ///
 @safe unittest
