@@ -1698,7 +1698,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         return;
     }
     enforceFmt(find("fgFGaAeEs", fs.spec).length,
-        "floating");
+        "incompatible format character for floating point type");
 
     version (CRuntime_Microsoft)
     {
@@ -5459,7 +5459,7 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
                 default:
                     //printf("fc = '%c'\n", fc);
                 Lerror:
-                    throw new FormatException("floating");
+                    throw new FormatException("incompatible format character for floating point type");
             }
             version (DigitalMarsC)
             {
