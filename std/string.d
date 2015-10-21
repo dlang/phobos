@@ -2287,7 +2287,7 @@ alias KeepTerminator = Flag!"keepTerminator";
 
 /// ditto
 auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = KeepTerminator.no)
-    if (!isSomeString!S)
+    if (!isSomeString!S && is(StringTypeOf!S))
 {
     return splitLines(cast(StringTypeOf!S)s, keepTerm);
 }
