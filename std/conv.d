@@ -3671,38 +3671,26 @@ of the passed-in integral.
 See_Also:
     $(LREF parse) for parsing octal strings at runtime.
  */
-@property int octal(string num)()
-    if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
+template octal(string num)
+    if(isOctalLiteral(num))
 {
-    return octal!(int, num);
+    static if((octalFitsInInt!num && !literalIsLong!num) && !literalIsUnsigned!num)
+        enum octal = octal!int(num);
+    else static if((!octalFitsInInt!num || literalIsLong!num) && !literalIsUnsigned!num)
+        enum octal = octal!long(num);
+    else static if((octalFitsInInt!num && !literalIsLong!num) && literalIsUnsigned!num)
+        enum octal = octal!uint(num);
+    else static if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
+        enum octal = octal!ulong(num);
+    else
+        static assert(false);
 }
 
 /// Ditto
-@property long octal(string num)()
-    if((!octalFitsInInt!(num) || literalIsLong!(num)) && !literalIsUnsigned!(num))
+template octal(alias decimalInteger)
+    if (isIntegral!(typeof(decimalInteger)))
 {
-    return octal!(long, num);
-}
-
-/// Ditto
-@property uint octal(string num)()
-    if((octalFitsInInt!(num) && !literalIsLong!(num)) && literalIsUnsigned!(num))
-{
-    return octal!(int, num);
-}
-
-/// Ditto
-@property ulong octal(string num)()
-    if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
-{
-    return octal!(long, num);
-}
-
-/// Ditto
-template octal(alias s)
-    if (isIntegral!(typeof(s)))
-{
-    enum auto octal = octal!(typeof(s), to!string(s));
+    enum octal = octal!(typeof(decimalInteger))(to!string(decimalInteger));
 }
 
 ///
@@ -3720,13 +3708,14 @@ unittest
     Takes a string, num, which is an octal literal, and returns its
     value, in the type T specified.
 */
-@property T octal(T, string num)()
-    if (isOctalLiteral!num)
+private T octal(T)(string num)
 {
+    assert(isOctalLiteral(num));
+
     ulong pow = 1;
     T value = 0;
 
-    for (int pos = num.length - 1; pos >= 0; pos--)
+    foreach_reverse (immutable pos; 0 .. num.length)
     {
         char s = num[pos];
         if (s < '0' || s > '7') // we only care about digits; skip the rest
@@ -3744,8 +3733,7 @@ unittest
 ///
 unittest
 {
-    int a = octal!(int, "10");
-
+    int a = octal!int("10");
     assert(a == 8);
 }
 
@@ -3753,7 +3741,7 @@ unittest
 Take a look at int.max and int.max+1 in octal and the logic for this
 function follows directly.
  */
-template octalFitsInInt(string octalNum)
+private template octalFitsInInt(string octalNum)
 {
     // note it is important to strip the literal of all
     // non-numbers. kill the suffix and underscores lest they mess up
@@ -3763,7 +3751,7 @@ template octalFitsInInt(string octalNum)
         strippedOctalLiteral(octalNum)[0] == '1';
 }
 
-string strippedOctalLiteral(string original)
+private string strippedOctalLiteral(string original)
 {
     string stripped = "";
     foreach (c; original)
@@ -3772,7 +3760,7 @@ string strippedOctalLiteral(string original)
     return stripped;
 }
 
-template literalIsLong(string num)
+private template literalIsLong(string num)
 {
     static if (num.length > 1)
     // can be xxL or xxLu according to spec
@@ -3781,7 +3769,7 @@ template literalIsLong(string num)
         enum literalIsLong = false;
 }
 
-template literalIsUnsigned(string num)
+private template literalIsUnsigned(string num)
 {
     static if (num.length > 1)
     // can be xxU or xxUL according to spec
@@ -3798,7 +3786,7 @@ Returns if the given string is a correctly formatted octal literal.
 The format is specified in lex.html. The leading zero is allowed, but
 not required.
  */
-bool isOctalLiteralString(string num)
+private bool isOctalLiteral(string num)
 {
     if (num.length == 0)
         return false;
@@ -3837,14 +3825,6 @@ bool isOctalLiteralString(string num)
     return true;
 }
 
-/*
-    Returns true if the given compile time string is an octal literal.
-*/
-template isOctalLiteral(string num)
-{
-    enum bool isOctalLiteral = isOctalLiteralString(num);
-}
-
 unittest
 {
     // ensure that you get the right types, even with embedded underscores
@@ -3880,22 +3860,27 @@ unittest
     static assert(!__traits(compiles, octal!"spam"));
     static assert(!__traits(compiles, octal!"77%"));
 
+    static assert(is(typeof(octal!"17777777777") == int));
+    static assert(octal!"17777777777" == int.max);
+
+    static assert(is(typeof(octal!"20000000000U") == ulong)); // Shouldn't this be uint?
+    static assert(octal!"20000000000" == uint(int.max) + 1);
+
+    static assert(is(typeof(octal!"777777777777777777777") == long));
+    static assert(octal!"777777777777777777777" == long.max);
+
+    static assert(is(typeof(octal!"1000000000000000000000U") == ulong));
+    static assert(octal!"1000000000000000000000" == ulong(long.max) + 1);
+
     int a;
     long b;
 
     // biggest value that should fit in an it
-    static assert(__traits(compiles,  a = octal!"17777777777"));
+    static assert(__traits(compiles, a = octal!"17777777777"));
     // should not fit in the int
     static assert(!__traits(compiles, a = octal!"20000000000"));
     // ... but should fit in a long
     static assert(__traits(compiles, b = octal!"20000000000"));
-
-    static assert(!__traits(compiles, a = octal!"1L"));
-
-    // this should pass, but it doesn't, since the int converter
-    // doesn't pass along its suffix to helper templates
-
-    //static assert(!__traits(compiles, a = octal!1L));
 
     static assert(__traits(compiles, b = octal!"1L"));
     static assert(__traits(compiles, b = octal!1L));
