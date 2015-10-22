@@ -1705,7 +1705,7 @@ bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
 }
 
 /// For convenience
-alias AllocateGC = Flag!"AllocateGC";
+alias AllocateGC = Flag!"allocateGC";
 
 /**
 Checks if both ranges are permutations of each other.
@@ -1724,7 +1724,7 @@ Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.lengt
 
 Params:
     pred = an optional parameter to change how equality is defined
-    allocate_gc = A $(D std.typecons.Flag!"AllocateGC") instance
+    allocate_gc = AllocateGC.yes/no
     r1 = A finite forward range
     r2 = A finite forward range
 
