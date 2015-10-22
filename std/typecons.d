@@ -6650,7 +6650,8 @@ template ReplaceType(From, To, T...)
 {
     static if (T.length == 1)
     {
-        static if (is(T[0] == From)) alias ReplaceType = To;
+        static if (is(T[0] == From))
+            alias ReplaceType = To;
         else static if (is(T[0] == const(U), U))
             alias ReplaceType = const(ReplaceType!(From, To, U));
         else static if (is(T[0] == immutable(U), U))
@@ -6687,17 +6688,27 @@ template ReplaceType(From, To, T...)
             alias ReplaceType =
                 ReplaceType!(From, To, U)[ReplaceType!(From, To, V)];
         else static if (is(T[0] : U!V, alias U, V...))
-            alias ReplaceType = U!(ReplaceType!(From, To, V));
-        else alias ReplaceType = T[0];
+        {
+            template replaceTemplateArgs(T...)
+            {
+                static if (is(typeof(T[0])))    // template argument is value or symbol
+                    enum replaceTemplateArgs = T[0];
+                else
+                    alias replaceTemplateArgs = ReplaceType!(From, To, T[0]);
+            }
+            alias ReplaceType = U!(staticMap!(replaceTemplateArgs, V));
+        }
+        else
+            alias ReplaceType = T[0];
     }
     else static if (T.length > 1)
     {
-        alias ReplaceType = TypeTuple!(ReplaceType!(From, To, T[0]),
+        alias ReplaceType = AliasSeq!(ReplaceType!(From, To, T[0]),
             ReplaceType!(From, To, T[1 .. $]));
     }
     else
     {
-        alias ReplaceType = TypeTuple!();
+        alias ReplaceType = AliasSeq!();
     }
 }
 
