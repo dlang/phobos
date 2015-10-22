@@ -6660,20 +6660,14 @@ template ReplaceType(From, To, T...)
             alias ReplaceType = shared(ReplaceType!(From, To, U));
         else static if (is(T[0] == U*, U))
         {
-            static if (is(U == function) || is(U == delegate))
-            {
-                mixin("alias ReplaceType = "
-                    ~replaceTypeInFunctionType!(From, To, T[0])~";");
-            }
+            static if (is(U == function))
+                alias ReplaceType = replaceTypeInFunctionType!(From, To, T[0]);
             else
-            {
                 alias ReplaceType = ReplaceType!(From, To, U)*;
-            }
         }
         else static if (is(T[0] == delegate))
         {
-            mixin("alias ReplaceType = "
-                ~replaceTypeInFunctionType!(From, To, T[0])~";");
+            alias ReplaceType = replaceTypeInFunctionType!(From, To, T[0]);
         }
         else static if (is(T[0] == function))
         {
@@ -6724,67 +6718,87 @@ unittest
     );
 }
 
-private string replaceTypeInFunctionType(X, Y, fun)()
+private template replaceTypeInFunctionType(From, To, fun)
 {
-    alias storageClasses = ParameterStorageClassTuple!fun;
-    string result;
-    result ~= "extern(" ~ functionLinkage!fun ~ ") ";
-    static if (functionAttributes!fun & FunctionAttribute.ref_)
+    alias RX = ReplaceType!(From, To, ReturnType!fun);
+    alias PX = AliasSeq!(ReplaceType!(From, To, Parameters!fun));
+    // Wrapping with AliasSeq is neccesary because ReplaceType doesn't return
+    // tuple if Parameters!fun.length == 1
+
+    string gen()
     {
-        result ~= "ref ";
-    }
-    result ~= (ReplaceType!(X, Y, ReturnType!fun)).stringof;
-    static if (is(fun == delegate))
-        result ~= " delegate";
-    else
-        result ~= " function";
-    result ~= "(";
-    foreach (i, T; Parameters!fun)
-    {
-        if (i) result ~= ", ";
-        if (storageClasses[i] & ParameterStorageClass.scope_)
-            result ~= "scope ";
-        if (storageClasses[i] & ParameterStorageClass.out_)
-            result ~= "out ";
-        if (storageClasses[i] & ParameterStorageClass.ref_)
+        enum  linkage = functionLinkage!fun;
+        alias attributes = functionAttributes!fun;
+        alias storageClasses = ParameterStorageClassTuple!fun;
+
+        string result;
+
+        result ~= "extern(" ~ linkage ~ ") ";
+        static if (attributes & FunctionAttribute.ref_)
+        {
             result ~= "ref ";
-        if (storageClasses[i] & ParameterStorageClass.lazy_)
-            result ~= "lazy ";
-        if (storageClasses[i] & ParameterStorageClass.return_)
-            result ~= "return ";
-        result ~= ReplaceType!(X, Y, T).stringof;
+        }
+
+        result ~= "RX";
+        static if (is(fun == delegate))
+            result ~= " delegate";
+        else
+            result ~= " function";
+
+        result ~= "(";
+        foreach (i, _; PX)
+        {
+            if (i)
+                result ~= ", ";
+            if (storageClasses[i] & ParameterStorageClass.scope_)
+                result ~= "scope ";
+            if (storageClasses[i] & ParameterStorageClass.out_)
+                result ~= "out ";
+            if (storageClasses[i] & ParameterStorageClass.ref_)
+                result ~= "ref ";
+            if (storageClasses[i] & ParameterStorageClass.lazy_)
+                result ~= "lazy ";
+            if (storageClasses[i] & ParameterStorageClass.return_)
+                result ~= "return ";
+
+            result ~= "PX[" ~ i.stringof ~ "]";
+        }
+        static if (variadicFunctionStyle!fun != Variadic.no)
+        {
+            result ~= ", ...";
+        }
+        result ~= ")";
+
+        static if (attributes & FunctionAttribute.pure_)
+            result ~= " pure";
+        static if (attributes & FunctionAttribute.nothrow_)
+            result ~= " nothrow";
+        static if (attributes & FunctionAttribute.property)
+            result ~= " @property";
+        static if (attributes & FunctionAttribute.trusted)
+            result ~= " @trusted";
+        static if (attributes & FunctionAttribute.safe)
+            result ~= " @safe";
+        static if (attributes & FunctionAttribute.nogc)
+            result ~= " @nogc";
+        static if (attributes & FunctionAttribute.system)
+            result ~= " @system";
+        static if (attributes & FunctionAttribute.const_)
+            result ~= " @const";
+        static if (attributes & FunctionAttribute.immutable_)
+            result ~= " immutable";
+        static if (attributes & FunctionAttribute.inout_)
+            result ~= " inout";
+        static if (attributes & FunctionAttribute.shared_)
+            result ~= " shared";
+        static if (attributes & FunctionAttribute.return_)
+            result ~= " return";
+
+        return result;
     }
-    static if (variadicFunctionStyle!fun != Variadic.no)
-    {
-        result ~= ", ...";
-    }
-    result ~= ")";
-    alias attributes = functionAttributes!fun;
-    static if (attributes & FunctionAttribute.pure_)
-        result ~= " pure";
-    static if (attributes & FunctionAttribute.nothrow_)
-        result ~= " nothrow";
-    static if (attributes & FunctionAttribute.property)
-        result ~= " @property";
-    static if (attributes & FunctionAttribute.trusted)
-        result ~= " @trusted";
-    static if (attributes & FunctionAttribute.safe)
-        result ~= " @safe";
-    static if (attributes & FunctionAttribute.nogc)
-        result ~= " @nogc";
-    static if (attributes & FunctionAttribute.system)
-        result ~= " @system";
-    static if (attributes & FunctionAttribute.const_)
-        result ~= " @const";
-    static if (attributes & FunctionAttribute.immutable_)
-        result ~= " immutable";
-    static if (attributes & FunctionAttribute.inout_)
-        result ~= " inout";
-    static if (attributes & FunctionAttribute.shared_)
-        result ~= " shared";
-    static if (attributes & FunctionAttribute.return_)
-        result ~= " return";
-    return result;
+    //pragma(msg, "gen ==> ", gen());
+
+    mixin("alias replaceTypeInFunctionType = " ~ gen() ~ ";");
 }
 
 unittest
@@ -6810,6 +6824,10 @@ unittest
     extern(C) int printf(const char*, ...) nothrow @nogc @system;
     extern(C) float floatPrintf(const char*, ...) nothrow @nogc @system;
     int func(float);
+
+    int x;
+    struct S1 { void foo() { x = 1; } }
+    struct S2 { void bar() { x = 2; } }
 
     alias Pass = Test!(
         int, float, typeof(&func), float delegate(float),
@@ -6852,6 +6870,9 @@ unittest
         int, float, Unique!int, Unique!float,
         int, float, Tuple!(float, int), Tuple!(float, float),
         int, float, RefFun1, RefFun2,
+        S1, S2,
+            S1[1][][S1]* function(),
+            S2[1][][S2]* function(),
     );
 }
 
