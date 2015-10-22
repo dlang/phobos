@@ -6186,6 +6186,26 @@ unittest
     assert(column("abc\u00861") == 5);
 }
 
+size_t column(Range)(auto ref Range str, in size_t tabsize = 8)
+    if (!(isSomeString!Range ||
+          isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)))
+        && is(StringTypeOf!Range))
+{
+    return column!(StringTypeOf!Range)(str, tabsize);
+}
+
+unittest
+{
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    string s = "abc\u00861";
+    assert(column(s) == column(TestStruct(s)));
+}
+
 @safe @nogc unittest
 {
     import std.conv : to;
