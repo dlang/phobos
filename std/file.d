@@ -1405,7 +1405,6 @@ assert("/usr/share/include".isDir);
     }
 }
 
-/// ditto
 @property bool isDir(R)(auto ref R name)
 if (!(isInputRange!R && isSomeChar!(ElementEncodingType!R))
     && is(StringTypeOf!R))
