@@ -1405,6 +1405,14 @@ assert("/usr/share/include".isDir);
     }
 }
 
+/// ditto
+@property bool isDir(R)(auto ref R name)
+if (!(isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    && is(StringTypeOf!R))
+{
+    return isDir(cast(StringTypeOf!R)name);
+}
+
 @safe unittest
 {
     version(Windows)
@@ -1425,6 +1433,21 @@ assert("/usr/share/include".isDir);
     }
 }
 
+unittest
+{
+    version(Windows)
+        enum dir = "C:\\Program Files\\";
+    else version(Posix)
+        enum dir = system_directory;
+
+    if (dir.exists)
+    {
+        DirEntry de = DirEntry(dir);
+        assert(isDir(de));
+        assert(de.isDir);
+        assert(isDir(DirEntry(dir)));
+    }
+}
 
 /++
     Returns whether the given file attributes are for a directory.
