@@ -6729,6 +6729,7 @@ private template replaceTypeInFunctionType(From, To, fun)
     {
         enum  linkage = functionLinkage!fun;
         alias attributes = functionAttributes!fun;
+        enum  variadicStyle = variadicFunctionStyle!fun;
         alias storageClasses = ParameterStorageClassTuple!fun;
 
         string result;
@@ -6763,10 +6764,10 @@ private template replaceTypeInFunctionType(From, To, fun)
 
             result ~= "PX[" ~ i.stringof ~ "]";
         }
-        static if (variadicFunctionStyle!fun != Variadic.no)
-        {
+        static if (variadicStyle == Variadic.typesafe)
+            result ~= " ...";
+        else static if (variadicStyle != Variadic.no)
             result ~= ", ...";
-        }
         result ~= ")";
 
         static if (attributes & FunctionAttribute.pure_)
@@ -6873,6 +6874,9 @@ unittest
         S1, S2,
             S1[1][][S1]* function(),
             S2[1][][S2]* function(),
+        int, string,
+               int[3] function(   int[] arr,    int[2] ...) pure @trusted,
+            string[3] function(string[] arr, string[2] ...) pure @trusted,
     );
 }
 
