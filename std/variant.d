@@ -89,15 +89,7 @@ template maxSize(T...)
 
 struct This;
 
-private template This2Variant(V, T...)
-{
-    // Test if it compiles because right now type replacement does not work for
-    // functions involving local types.
-    static if (__traits(compiles, TypeTuple!(ReplaceType!(This, V, T))))
-        alias This2Variant = TypeTuple!(ReplaceType!(This, V, T));
-    else
-        alias This2Variant = TypeTuple!T;
-}
+private alias This2Variant(V, T...) = TypeTuple!(ReplaceType!(This, V, T));
 
 /**
  * $(D VariantN) is a back-end type seldom used directly by user
@@ -2605,4 +2597,22 @@ unittest
         auto v = Variant(&foo);
         v(); // foo is called in safe code!?
     }));
+}
+
+unittest
+{
+    // Bugzilla 15039
+    import std.variant;
+    import std.typecons;
+
+    alias IntTypedef = Typedef!int;
+    alias Obj = Algebraic!(int, IntTypedef, This[]);
+
+    Obj obj = 1;
+
+    obj.visit!(
+        (int x) => {},
+        (IntTypedef x) => {},
+        (Obj[] x) => {},
+    );
 }
