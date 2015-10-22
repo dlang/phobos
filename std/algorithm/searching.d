@@ -3154,12 +3154,13 @@ bool skipOver(alias pred, R, E)(ref R r, E e)
 /**
 Checks whether the given
 $(XREF_PACK_NAMED range,primitives,isInputRange,input range) starts with (one
-of) the given needle(s).
+of) the given needle(s) or, if no needles are given,
+if its front element fulfils predicate $(D pred).
 
 Params:
 
     pred = Predicate to use in comparing the elements of the haystack and the
-        needle(s).
+        needle(s). Mandatory if no needles are given.
 
     doesThisStart = The input range to check.
 
