@@ -158,6 +158,23 @@ void trustedPrintf(in char* str) @trusted nothrow @nogc
     printf("%s", str);
 }
 
+version (unittest)
+{
+private:
+    struct TestAliasedString
+    {
+        string get() @safe @nogc pure nothrow { return _s; }
+        alias get this;
+        @disable this(this);
+        string _s;
+    }
+
+    bool testAliasedString(alias func, Args...)(string s, Args args)
+    {
+        return func(TestAliasedString(s), args) == func(s, args);
+    }
+}
+
 public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 public import std.format : format, sformat;
 import std.typecons : Flag;
@@ -352,7 +369,8 @@ alias CaseSensitive = Flag!"caseSensitive";
   +/
 ptrdiff_t indexOf(Range)(Range s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isStringLike!Range)
 {
     import std.ascii : toLower, isASCII;
     import std.uni : toLower;
@@ -475,21 +493,17 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     return -1;
 }
 
+/// ditto
 ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes)
-    if (!(isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
-        is(StringTypeOf!Range))
+    if (isStringLike!Range)
 {
     return indexOf!(StringTypeOf!Range)(s, c, cs);
 }
 
 unittest
 {
-    import std.file : DirEntry;
-
-    auto de = DirEntry("std/string.d");
-    auto i = de.indexOf('/');
-    assert(i == 3);
+    assert(testAliasedString!indexOf("std/string.d", '/'));
 }
 
 @safe pure unittest
@@ -560,7 +574,8 @@ unittest
   +/
 ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
         in CaseSensitive cs = CaseSensitive.yes)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isStringLike!Range)
 {
     static if (isSomeString!(typeof(s)) ||
                 (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
@@ -591,21 +606,17 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
     return -1;
 }
 
+/// ditto
 ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
         in CaseSensitive cs = CaseSensitive.yes)
-    if (!(isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
-        is(StringTypeOf!Range))
+    if (isStringLike!Range)
 {
     return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
 }
 
 unittest
 {
-    import std.file : DirEntry;
-
-    auto de = DirEntry("std/string.d");
-    auto i = de.indexOf('/', 3);
-    assert(i == 3);
+    assert(testAliasedString!indexOf("std/string.d", '/', 3));
 }
 
 @safe pure unittest
@@ -757,11 +768,7 @@ ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub,
 
 unittest
 {
-    import std.file : DirEntry;
-
-    auto de = DirEntry("std/string.d");
-    auto i = de.indexOf("string");
-    assert(i == 4);
+    assert(testAliasedString!indexOf("std/string.d", "string"));
 }
 
 @safe pure unittest
@@ -2222,6 +2229,11 @@ auto capitalize(S)(auto ref S s)
     return capitalize!(StringTypeOf!S)(s);
 }
 
+unittest
+{
+    assert(testAliasedString!capitalize("hello"));
+}
+
 @trusted pure unittest
 {
     import std.conv : to;
@@ -2258,19 +2270,6 @@ auto capitalize(S)(auto ref S s)
         assert(s2 !is s1);
     }
     });
-}
-
-unittest
-{
-
-    static struct TestStruct
-    {
-        string s;
-        alias s this;
-    }
-
-    string s = "hello";
-    assert(s.capitalize() == capitalize(TestStruct(s)));
 }
 
 /++
@@ -2393,14 +2392,7 @@ auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = KeepTerminator.no)
 
 unittest
 {
-    static struct TestStruct
-    {
-        string s;
-        alias s this;
-    }
-
-    string s = "hello\nworld";
-    assert(s.splitLines() == splitLines(TestStruct(s)));
+    assert(testAliasedString!splitLines("hello\nworld"));
 }
 
 @safe pure unittest
@@ -2627,14 +2619,16 @@ public:
     $(XREF regex, splitter)
  */
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
-    if (hasSlicing!Range && hasLength!Range)
+    if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
+         isSomeString!Range) &&
+        !isStringLike!Range)
 {
     return LineSplitter!(keepTerm, Range)(r);
 }
 
+/// ditto
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref Range r)
-    if (!(hasSlicing!Range && hasLength!Range) &&
-        is(StringTypeOf!Range))
+    if (isStringLike!Range)
 {
     return LineSplitter!(keepTerm, StringTypeOf!Range)(r);
 }
@@ -2746,7 +2740,8 @@ unittest
     will share the same tail (see $(XREF array, sameTail)).
   +/
 auto stripLeft(Range)(Range str)
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isStringLike!Range)
 {
     import std.ascii : isASCII, isWhite;
     import std.uni : isWhite;
@@ -2772,6 +2767,13 @@ auto stripLeft(Range)(Range str)
     return str;
 }
 
+/// ditto
+auto stripLeft(Range)(auto ref Range str)
+    if (isStringLike!Range)
+{
+    return stripLeft!(StringTypeOf!Range)(str);
+}
+
 ///
 @safe pure unittest
 {
@@ -2793,22 +2795,9 @@ auto stripLeft(Range)(Range str)
            "hello world     ");
 }
 
-auto stripLeft(Range)(auto ref Range str)
-    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
-        is(StringTypeOf!Range))
-{
-    return stripLeft!(StringTypeOf!Range)(str);
-}
-
 unittest
 {
-    static struct ToString
-    {
-        string s;
-        alias s this;
-    }
-
-    assert(stripLeft(ToString("  hello")) == "hello");
+    assert(testAliasedString!stripLeft("  hello"));
 }
 
 /++
@@ -2823,6 +2812,7 @@ unittest
 auto stripRight(Range)(Range str)
     if (isSomeString!Range ||
         isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+        !isStringLike!Range &&
         isSomeChar!(ElementEncodingType!Range))
 {
     alias C = Unqual!(ElementEncodingType!(typeof(str)));
@@ -2913,6 +2903,13 @@ auto stripRight(Range)(Range str)
     }
 }
 
+/// ditto
+auto stripRight(Range)(auto ref Range str)
+    if (isStringLike!Range)
+{
+    return stripRight!(StringTypeOf!Range)(str);
+}
+
 ///
 @safe pure
 unittest
@@ -2930,24 +2927,9 @@ unittest
            [paraSep] ~ "hello world");
 }
 
-auto stripRight(Range)(auto ref Range str)
-    if (!(isSomeString!Range ||
-          isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-          isSomeChar!(ElementEncodingType!Range))
-        && is(StringTypeOf!Range))
-{
-    return stripRight!(StringTypeOf!Range)(str);
-}
-
 unittest
 {
-    static struct ToString
-    {
-        string s;
-        alias s this;
-    }
-
-    assert(stripRight(ToString("hello   ")) == "hello");
+    assert(testAliasedString!stripRight("hello   "));
 }
 
 unittest
@@ -2988,9 +2970,17 @@ unittest
 auto strip(Range)(Range str)
     if (isSomeString!Range ||
         isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+        !isStringLike!Range &&
         isSomeChar!(ElementEncodingType!Range))
 {
     return stripRight(stripLeft(str));
+}
+
+/// ditto
+auto strip(Range)(auto ref Range str)
+    if (isStringLike!Range)
+{
+    return strip!(StringTypeOf!Range)(str);
 }
 
 ///
@@ -3009,25 +2999,9 @@ auto strip(Range)(Range str)
            "hello world");
 }
 
-auto strip(Range)(auto ref Range str)
-    if (!(isSomeString!Range ||
-          isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-          isSomeChar!(ElementEncodingType!Range))
-        && is(StringTypeOf!Range))
-{
-    return stripRight(stripLeft(str));
-}
-
 @safe pure unittest
 {
-    static struct TestStruct
-    {
-        string s;
-        alias s this;
-    }
-
-    string s = "     hello world     ";
-    assert(strip(s) == strip(TestStruct(s)));
+    assert(testAliasedString!strip("     hello world     "));
 }
 
 @safe pure unittest
@@ -3098,8 +3072,9 @@ auto strip(Range)(auto ref Range str)
         slice of str
   +/
 Range chomp(Range)(Range str)
-    if (isRandomAccessRange!Range && isSomeChar!(ElementEncodingType!Range) ||
-        isSomeString!Range)
+    if ((isRandomAccessRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+         isNarrowString!Range) &&
+        !isStringLike!Range)
 {
     import std.uni : lineSep, paraSep, nelSep;
     if (str.empty)
@@ -3154,7 +3129,8 @@ Range chomp(Range)(Range str)
 /// Ditto
 Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
     if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
-         isSomeString!Range) &&
+         isNarrowString!Range) &&
+        !isStringLike!Range &&
         isSomeChar!C2)
 {
     if (delimiter.empty)
@@ -3190,6 +3166,20 @@ Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
     }
 }
 
+/// ditto
+StringTypeOf!Range chomp(Range)(auto ref Range str)
+    if (isStringLike!Range)
+{
+    return chomp!(StringTypeOf!Range)(str);
+}
+
+/// ditto
+StringTypeOf!Range chomp(Range, C2)(auto ref Range str, const(C2)[] delimiter)
+    if (isStringLike!Range)
+{
+    return chomp!(StringTypeOf!Range, C2)(str, delimiter);
+}
+
 ///
 @safe pure
 unittest
@@ -3214,6 +3204,12 @@ unittest
 
     // Don't decode pointlessly
     assert(chomp("hello\xFE", "\r") == "hello\xFE");
+}
+
+unittest
+{
+    assert(testAliasedString!chomp(" hello world  \n\r"));
+    assert(testAliasedString!chomp(" hello world", "orld"));
 }
 
 unittest
@@ -3291,7 +3287,8 @@ unittest
  +/
 Range chompPrefix(Range, C2)(Range str, const(C2)[] delimiter)
     if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
-         isSomeString!Range) &&
+         isNarrowString!Range) &&
+        !isStringLike!Range &&
         isSomeChar!C2)
 {
     alias C1 = ElementEncodingType!Range;
@@ -3322,6 +3319,13 @@ Range chompPrefix(Range, C2)(Range str, const(C2)[] delimiter)
 
         return str;
     }
+}
+
+/// ditto
+StringTypeOf!Range chompPrefix(Range, C2)(auto ref Range str, const(C2)[] delimiter)
+    if (isStringLike!Range)
+{
+    return chompPrefix!(StringTypeOf!Range, C2)(str, delimiter);
 }
 
 ///
@@ -3369,6 +3373,10 @@ unittest
     assert(chompPrefix("\u2020world"d.byDchar, "\u2020"d).array == "world"d);
 }
 
+unittest
+{
+    assert(testAliasedString!chompPrefix("hello world", "hello"));
+}
 
 /++
     Returns $(D str) without its last character, if there is one. If $(D str)
@@ -3382,8 +3390,9 @@ unittest
  +/
 
 Range chop(Range)(Range str)
-    if (isSomeString!Range ||
-        isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+         isNarrowString!Range) &&
+        !isStringLike!Range)
 {
     if (str.empty)
         return str;
@@ -3437,6 +3446,13 @@ Range chop(Range)(Range str)
     }
 }
 
+/// ditto
+StringTypeOf!Range chop(Range)(auto ref Range str)
+    if (isStringLike!Range)
+{
+    return chop!(StringTypeOf!Range)(str);
+}
+
 ///
 @safe pure unittest
 {
@@ -3447,6 +3463,11 @@ Range chop(Range)(Range str)
     assert(chop("hello world\r\n") == "hello world");
     assert(chop("Walter Bright") == "Walter Brigh");
     assert(chop("") == "");
+}
+
+unittest
+{
+    assert(testAliasedString!chop("hello world"));
 }
 
 @safe pure unittest
@@ -3548,7 +3569,8 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ')
   +/
 
 auto leftJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isStringLike!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3614,6 +3636,13 @@ auto leftJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
         static assert(0);
 }
 
+/// ditto
+auto leftJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
+    if (isStringLike!Range)
+{
+    return leftJustifier!(StringTypeOf!Range)(r, width, fillChar);
+}
+
 ///
 @safe pure @nogc nothrow
 unittest
@@ -3633,6 +3662,11 @@ unittest
     r.popFront();
     assert(r.front == 'l');
     assert(save.front == 'e');
+}
+
+unittest
+{
+    assert(testAliasedString!leftJustifier("hello", 2));
 }
 
 /++
@@ -3676,7 +3710,8 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ')
   +/
 
 auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isStringLike!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3772,6 +3807,13 @@ auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
         static assert(0);
 }
 
+/// ditto
+auto rightJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
+    if (isStringLike!Range)
+{
+    return rightJustifier!(StringTypeOf!Range)(r, width, fillChar);
+}
+
 ///
 @safe pure @nogc nothrow
 unittest
@@ -3781,6 +3823,11 @@ unittest
     assert(rightJustifier("hello", 2).equal("hello".byChar));
     assert(rightJustifier("hello", 7).equal("  hello".byChar));
     assert(rightJustifier("hello", 7, 'x').equal("xxhello".byChar));
+}
+
+unittest
+{
+    assert(testAliasedString!rightJustifier("hello", 2));
 }
 
 unittest
@@ -3882,7 +3929,8 @@ unittest
   +/
 
 auto centerJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isStringLike!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3911,6 +3959,13 @@ auto centerJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
         static assert(0);
 }
 
+/// ditto
+auto centerJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
+    if (isStringLike!Range)
+{
+    return centerJustifier!(StringTypeOf!Range)(r, width, fillChar);
+}
+
 ///
 @safe pure @nogc nothrow
 unittest
@@ -3920,6 +3975,11 @@ unittest
     assert(centerJustifier("hello", 2).equal("hello".byChar));
     assert(centerJustifier("hello", 8).equal(" hello  ".byChar));
     assert(centerJustifier("hello", 7, 'x').equal("xhellox".byChar));
+}
+
+unittest
+{
+    assert(testAliasedString!centerJustifier("hello", 8));
 }
 
 unittest
@@ -3991,7 +4051,8 @@ S detab(S)(S s, size_t tabSize = 8) pure
         lazy forward range with tabs replaced with spaces
   +/
 auto detabber(Range)(Range r, size_t tabSize = 8)
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isStringLike!Range)
 {
     import std.uni : lineSep, paraSep, nelSep;
     import std.utf : codeUnitLimit, decodeFront;
@@ -4107,6 +4168,17 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
     assert(detabber(" \n\tx", 9).array == " \n         x");
 }
 
+auto detabber(Range)(auto ref Range r, size_t tabSize = 8)
+    if (isStringLike!Range)
+{
+    return detabber!(StringTypeOf!Range)(r, tabSize);
+}
+
+unittest
+{
+    assert(testAliasedString!detabber(  "  ab\t asdf ", 8));
+}
+
 @trusted pure unittest
 {
     import std.conv : to;
@@ -4192,14 +4264,7 @@ auto entab(Range)(auto ref Range s, size_t tabSize = 8)
 
 unittest
 {
-    static struct TestStruct
-    {
-        string s;
-        alias s this;
-    }
-
-    auto s = "        x \n";
-    assert(entab(s) == entab(TestStruct(s)));
+    assert(testAliasedString!entab("        x \n"));
 }
 
 /++
@@ -4217,7 +4282,7 @@ unittest
         $(LREF entab)
   +/
 auto entabber(Range)(Range r, size_t tabSize = 8)
-    if (isForwardRange!Range)
+    if (isForwardRange!Range && !isStringLike!Range)
 {
     import std.uni : lineSep, paraSep, nelSep;
     import std.utf : codeUnitLimit, decodeFront;
@@ -4440,6 +4505,17 @@ unittest
 {
     import std.array;
     assert(entabber("        x \n").array == "\tx\n");
+}
+
+auto entabber(Range)(auto ref Range r, size_t tabSize = 8)
+    if (isStringLike!Range)
+{
+    return entabber!(StringTypeOf!Range)(r, tabSize);
+}
+
+unittest
+{
+    assert(testAliasedString!entabber("  ab    asdf ", 8));
 }
 
 @safe pure
@@ -5803,7 +5879,8 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
  *  but this one is the standard one.
  */
 char[4] soundexer(Range)(Range str)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isStringLike!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -5857,9 +5934,9 @@ char[4] soundexer(Range)(Range str)
     return result;
 }
 
+/// ditto
 char[4] soundexer(Range)(auto ref Range str)
-    if (!(isInputRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
-        is(StringTypeOf!Range))
+    if (isStringLike!Range)
 {
     return soundexer!(StringTypeOf!Range)(str);
 }
@@ -5962,14 +6039,7 @@ body
 
 unittest
 {
-    static struct TestStruct
-    {
-        string s;
-        alias s this;
-    }
-
-    auto s = "Martinez";
-    assert(soundexer(s) == soundexer(TestStruct(s)));
+    assert(testAliasedString!soundexer("Martinez"));
 }
 
 
@@ -6108,8 +6178,9 @@ string[string] abbrev(string[] values) @safe pure
  */
 
 size_t column(Range)(Range str, in size_t tabsize = 8)
-    if (isSomeString!Range ||
-        isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)))
+    if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
+         isNarrowString!Range) &&
+        !isStringLike!Range)
 {
     static if (is(Unqual!(ElementEncodingType!Range) == char))
     {
@@ -6187,23 +6258,14 @@ unittest
 }
 
 size_t column(Range)(auto ref Range str, in size_t tabsize = 8)
-    if (!(isSomeString!Range ||
-          isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)))
-        && is(StringTypeOf!Range))
+    if (isStringLike!Range)
 {
     return column!(StringTypeOf!Range)(str, tabsize);
 }
 
 unittest
 {
-    static struct TestStruct
-    {
-        string s;
-        alias s this;
-    }
-
-    string s = "abc\u00861";
-    assert(column(s) == column(TestStruct(s)));
+    assert(testAliasedString!column("abc\u00861"));
 }
 
 @safe @nogc unittest
