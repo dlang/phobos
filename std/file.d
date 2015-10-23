@@ -456,12 +456,18 @@ Params:
 Throws: $(D FileException) on error.
  */
 void append(R)(R name, const void[] buffer)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
+    if (_isNonAliasedCharInputRange!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         writeImpl(name, name.tempCString!FSChar(), buffer, true);
     else
         writeImpl(null, name.tempCString!FSChar(), buffer, true);
+}
+
+void append(R)(auto ref R name, const void[] buffer)
+    if (_isAliasedString!R)
+{
+    append!(StringTypeOf!R)(name, buffer);
 }
 
 ///
@@ -479,6 +485,80 @@ unittest
    append("someUniqueFilename", b);
    assert(cast(int[]) read("someUniqueFilename") == a ~ b);
 }
+
+unittest
+{
+    mixin testRangified!(append, "");
+}
+
+// common helper to support structs with alias this to some string type
+private enum _isNonAliasedCharInputRange(R) = {
+    // cannot write simple expression because isExpression not gagged outside of
+    //  constraint or static if
+    static if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+               (!is(StringTypeOf!R) || is(R == StringTypeOf!R)))
+        return true;
+    else
+        return false;
+}();
+
+private enum _isAliasedString(R) = {
+    static if (is(StringTypeOf!R) && !is(R == StringTypeOf!R))
+        return true;
+    else
+        return false;
+}();
+
+version(unittest)
+{
+    mixin template testRangified(alias tmpl, Args...)
+    {
+        static struct NonCopyableAliasThis
+        {
+            string s; alias s this;
+            @disable this(this);
+        }
+        static struct RValueAliasThis
+        {
+            string s;
+            string name() { return s; }
+            alias name this;
+        }
+        void test()
+        {
+            import std.utf;
+
+            auto str = "foo";
+            tmpl(str, Args);   // lvalue
+            tmpl("foo", Args); // rvalue
+
+            auto wstr = "foo"w;
+            tmpl(wstr, Args);   // lvalue
+            tmpl("foo"w, Args); // rvalue
+
+            auto dstr = "foo"w;
+            tmpl(dstr, Args);   // lvalue
+            tmpl("foo"d, Args); // rvalue
+
+            auto crange = wstr.byChar;
+            tmpl(crange, Args);        // lvalue
+            tmpl("foo"w.byChar, Args); // rvalue
+
+            auto wrange = str.byWchar;
+            tmpl(wrange, Args);        // lvalue
+            tmpl("foo".byWchar, Args); // rvalue
+
+            auto nc = NonCopyableAliasThis("foo");
+            tmpl(nc, Args);                 // lvalue
+            tmpl(NonCopyableAliasThis("foo"), Args); // rvalue
+
+            auto rv = RValueAliasThis("foo");
+            tmpl(rv, Args);                 // lvalue
+            tmpl(RValueAliasThis("foo"), Args); // rvalue
+        }
+    }
+}
+
 
 // Posix implementation helper for write and append
 
