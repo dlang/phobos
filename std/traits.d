@@ -5217,6 +5217,18 @@ unittest
  */
 enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isAggregateType!T && !isStaticArray!T;
 
+///
+unittest
+{
+    static assert(isNarrowString!string);
+    static assert(isNarrowString!wstring);
+    static assert(isNarrowString!(char[]));
+    static assert(isNarrowString!(wchar[]));
+
+    static assert(!isNarrowString!dstring);
+    static assert(!isNarrowString!(dchar[]));
+}
+
 unittest
 {
     foreach (T; TypeTuple!(char[], string, wstring))
