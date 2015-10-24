@@ -4890,7 +4890,7 @@ template Utf16Matcher()
         assert(ch <= 0xF_FFFF);
         wchar[2] ret;
         //do not put surrogate bits, they are sliced off
-        ret[0] = (ch>>10);
+        ret[0] = cast(wchar)(ch>>10);
         ret[1] = (ch & 0xFFF);
         return ret;
     }
