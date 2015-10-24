@@ -80,7 +80,7 @@ $(TR $(TDNW Hardware Control) $(TD
  * Macros:
  *      WIKI = Phobos/StdMath
  *
- *      TABLE_SV = <table border=1 cellpadding=4 cellspacing=0>
+ *      TABLE_SV = <table border="1" cellpadding="4" cellspacing="0">
  *              <caption>Special Values</caption>
  *              $0</table>
  *      SVH = $(TR $(TH $1) $(TH $2))
@@ -110,7 +110,7 @@ $(TR $(TDNW Hardware Control) $(TD
  * Copyright: Copyright Digital Mars 2000 - 2011.
  *            D implementations of tan, atan, atan2, exp, expm1, exp2, log, log10, log1p,
  *            log2, floor, ceil and lrint functions are based on the CEPHES math library,
- *            which is Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
+ *            which is Copyright (C) 2001 Stephen L. Moshier $(LT)steve@moshier.net$(GT)
  *            and are incorporated herein by permission of the author.  The author
  *            reserves the right to distribute this material elsewhere under different
  *            copying permissions.  These modifications are distributed here under

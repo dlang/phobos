@@ -329,7 +329,7 @@ class OutBuffer
      *  args = arguments to be formatted
      *
      * See_Also:
-     *  $(XREF stdio, writef);
+     *  $(XREF stdio, _writef);
      *  $(XREF format, formattedWrite);
      */
     void writef(Char, A...)(in Char[] fmt, A args)
@@ -355,7 +355,7 @@ class OutBuffer
      *  args = arguments to be formatted
      *
      * See_Also:
-     *  $(XREF stdio, writefln);
+     *  $(XREF stdio, _writefln);
      *  $(XREF format, formattedWrite);
      */
     void writefln(Char, A...)(in Char[] fmt, A args)

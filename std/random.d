@@ -32,7 +32,7 @@ distribution in various ways. So far the uniform distribution for
 integers and real numbers have been implemented.
 
 Upgrading:
-        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand Phobos D1 $(D rand())) can
+        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand, Phobos D1 $(D rand())) can
         be replaced with $(D uniform!uint()).
 
 Source:    $(PHOBOSSRC std/_random.d)

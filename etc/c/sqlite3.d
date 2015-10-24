@@ -1858,7 +1858,7 @@ enum
 ** Register a geometry callback named zGeom that can be used as part of an
 ** R-Tree geometry query as follows:
 **
-**   SELECT ... FROM <rtree> WHERE <rtree col> MATCH $zGeom(... params ...)
+**   SELECT ... FROM $(LT)rtree$(GT) WHERE $(LT)rtree col$(GT) MATCH $zGeom(... params ...)
 */
 int sqlite3_rtree_geometry_callback(
     sqlite3 *db,

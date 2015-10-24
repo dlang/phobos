@@ -28047,9 +28047,9 @@ private:
     Note:
         Unless your system's local time zone deals with leap seconds (which is
         highly unlikely), then the only way to get a time zone which
-        takes leap seconds into account is to use $(LREF PosixTimeZone) with a
+        takes leap seconds into account is to use $(D PosixTimeZone) with a
         time zone whose name starts with "right/". Those time zone files do
-        include leap seconds, and $(LREF PosixTimeZone) will take them into account
+        include leap seconds, and $(D PosixTimeZone) will take them into account
         (though posix systems which use a "right/" time zone as their local time
         zone will $(I not) take leap seconds into account even though they're
         in the file).
@@ -28872,17 +28872,17 @@ version(StdDdoc)
         occur (especially for historical dates). Also, the TZ Database files
         include far more time zones than Windows does. So, for accurate
         time zone information, use the TZ Database files with
-        $(LREF PosixTimeZone) rather than $(LREF WindowsTimeZone). However, because
-        $(LREF WindowsTimeZone) uses Windows system calls to deal with the time,
+        $(LREF PosixTimeZone) rather than $(D WindowsTimeZone). However, because
+        $(D WindowsTimeZone) uses Windows system calls to deal with the time,
         it's far more likely to match the behavior of other Windows programs.
         Be aware of the differences when selecting a method.
 
-        $(LREF WindowsTimeZone) does not exist on Posix systems.
+        $(D WindowsTimeZone) does not exist on Posix systems.
 
-        To get a $(LREF WindowsTimeZone), either call
+        To get a $(D WindowsTimeZone), either call
         $(D WindowsTimeZone.getTimeZone) or call $(D TimeZone.getTimeZone)
         (which will give a $(LREF PosixTimeZone) on Posix systems and a
-         $(LREF WindowsTimeZone) on Windows systems).
+         $(D WindowsTimeZone) on Windows systems).
 
         See_Also:
             $(WEB www.iana.org/time-zones, Home of the TZ Database files)

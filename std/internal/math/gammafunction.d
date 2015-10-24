@@ -8,7 +8,7 @@
  *
  *
 Macros:
- *  TABLE_SV = <table border=1 cellpadding=4 cellspacing=0>
+ *  TABLE_SV = <table border="1" cellpadding="4" cellspacing="0">
  *      <caption>Special Values</caption>
  *      $0</table>
  *  SVH = $(TR $(TH $1) $(TH $2))

@@ -2,7 +2,7 @@
   $(LUCKY Regular expressions) are a commonly used method of pattern matching
   on strings, with $(I regex) being a catchy word for a pattern in this domain
   specific language. Typical problems usually solved by regular expressions
-  include validation of user input and the ubiquitous find & replace
+  include validation of user input and the ubiquitous find $(AMP) replace
   in text processing utilities.
 
   $(SECTION Synopsis)
@@ -117,21 +117,21 @@
     $(REG_ROW +?, Matches previous character/subexpression 1 or more times.
       Lazy version  - stops as early as possible.)
     $(REG_ROW {n}, Matches previous character/subexpression exactly n times. )
-    $(REG_ROW {n&#44}, Matches previous character/subexpression n times or more.
+    $(REG_ROW {n$(COMMA)}, Matches previous character/subexpression n times or more.
       Greedy version - tries as many times as possible. )
-    $(REG_ROW {n&#44}?, Matches previous character/subexpression n times or more.
+    $(REG_ROW {n$(COMMA)}?, Matches previous character/subexpression n times or more.
       Lazy version - stops as early as possible.)
-    $(REG_ROW {n&#44m}, Matches previous character/subexpression n to m times.
+    $(REG_ROW {n$(COMMA)m}, Matches previous character/subexpression n to m times.
       Greedy version - tries as many times as possible, but no more than m times. )
-    $(REG_ROW {n&#44m}?, Matches previous character/subexpression n to m times.
+    $(REG_ROW {n$(COMMA)m}?, Matches previous character/subexpression n to m times.
       Lazy version - stops as early as possible, but no less then n times.)
-    $(REG_TITLE Other, Subexpressions & alternations )
+    $(REG_TITLE Other, Subexpressions $(AMP) alternations )
     $(REG_ROW (regex),  Matches subexpression regex,
       saving matched portion of text for later retrieval. )
     $(REG_ROW (?:regex), Matches subexpression regex,
       $(U not) saving matched portion of text. Useful to speed up matching. )
     $(REG_ROW A|B, Matches subexpression A, or failing that, matches B. )
-    $(REG_ROW (?P&lt;name&gt;regex), Matches named subexpression
+    $(REG_ROW (?P$(LT)name$(GT)regex), Matches named subexpression
         regex labeling it with name 'name'.
         When referring to a matched portion of text,
         names work like aliases in addition to direct numbers.
@@ -164,8 +164,9 @@
     $(REG_TITLE Pattern element, Semantics )
     $(REG_ROW Any atom, Has the same meaning as outside of a character class.)
     $(REG_ROW a-z, Includes characters a, b, c, ..., z. )
-    $(REG_ROW [a||b]&#44 [a--b]&#44 [a~~b]&#44 [a&&b], Where a, b are arbitrary classes,
-     means union, set difference, symmetric set difference, and intersection respectively.
+    $(REG_ROW [a||b]$(COMMA) [a--b]$(COMMA) [a~~b]$(COMMA) [a$(AMP)$(AMP)b],
+     Where a, b are arbitrary classes, means union, set difference,
+     symmetric set difference, and intersection respectively.
      $(I Any sequence of character class elements implicitly forms a union.) )
   )
 
@@ -209,13 +210,13 @@
     The format string can reference parts of match using the following notation.
     $(REG_TABLE
         $(REG_TITLE Format specifier, Replaced by )
-        $(REG_ROW $&amp;, the whole match. )
+        $(REG_ROW $$(AMP), the whole match. )
         $(REG_ROW $(DOLLAR)$(BACKTICK), part of input $(I preceding) the match. )
         $(REG_ROW $', part of input $(I following) the match. )
         $(REG_ROW $$, '$' character. )
-        $(REG_ROW \c &#44 where c is any character, the character c itself. )
+        $(REG_ROW \c $(COMMA) where c is any character, the character c itself. )
         $(REG_ROW \\, '\' character. )
-        $(REG_ROW &#36;1 .. &#36;99, submatch number 1 to 99 respectively. )
+        $(REG_ROW $(DOLLAR)1 .. $(DOLLAR)99, submatch number 1 to 99 respectively. )
     )
 
   $(SECTION Slicing and zero memory allocations orientation)
@@ -237,7 +238,7 @@
     API and utility constructs are modeled after the original $(D std.regex)
   by Walter Bright and Andrei Alexandrescu.
 
-  Source: $(PHOBOSSRC std/regex/_package.d)
+  Source: $(PHOBOSSRC std/_regex/_package.d)
 
 Macros:
     REG_ROW = $(TR $(TD $(I $1 )) $(TD $+) )

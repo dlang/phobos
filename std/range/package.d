@@ -11,7 +11,7 @@ files, incoming network data, etc.
 
 For more detailed information about the conceptual aspect of ranges and the
 motivation behind them, see Andrei Alexandrescu's article
-$(LINK2 http://www.informit.com/articles/printerfriendly.aspx?p=1407357&rll=1,
+$(LINK2 http://www.informit.com/articles/printerfriendly.aspx?p=1407357$(AMP)rll=1,
 $(I On Iteration)).
 
 Submodules:

@@ -711,8 +711,8 @@ enum CURLOPTTYPE_FUNCTIONPOINT = 20000;
 
 /// ditto
 enum CURLOPTTYPE_OFF_T = 30000;
-/** name is uppercase CURLOPT_<name>,
-   type is one of the defined CURLOPTTYPE_<type>
+/** name is uppercase CURLOPT_$(LT)name$(GT),
+   type is one of the defined CURLOPTTYPE_$(LT)type$(GT)
    number is unique identifier */
 
 /** The macro "##" is ISO C, we assume pre-ISO C doesn't support it. */
@@ -1152,7 +1152,7 @@ enum CurlOption {
   opensocketdata = 10164,       /// ditto
   /** POST volatile input fields. */
   copypostfields,
-  /** set transfer mode (;type=<a|i>) when doing FTP via an HTTP proxy */
+  /** set transfer mode (;type=$(LT)a|i$(GT)) when doing FTP via an HTTP proxy */
   proxy_transfer_mode = 166,
   /** Callback function for seeking in the input stream */
   seekfunction = 20167,
