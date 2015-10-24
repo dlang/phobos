@@ -5611,26 +5611,38 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
          * ulong.max is 1844_6744_0737_0955_1615
          *  long.max is  922_3372_0368_5477_5807
          */
-        struct Result
+        static struct Result
         {
-            this(UT value)
+            void initialize(UT value)
             {
                 bool neg = false;
-                if (value < 0)
+                if (value < 10)
                 {
+                    if (value >= 0)
+                    {
+                        lwr = 0;
+                        upr = 1;
+                        buf[0] = cast(char)(cast(uint)value + '0');
+                        return;
+                    }
                     value = -value;
                     neg = true;
                 }
-                size_t i = buf.length;
-                do
+                auto i = cast(uint)buf.length - 1;
+                while (cast(Unsigned!UT)value >= 10)
                 {
-                    buf[--i] = cast(ubyte)('0' + cast(Unsigned!UT)value % 10);
-                    value = cast(Unsigned!UT)value / 10;
-                } while (value);
+                    buf[i] = cast(ubyte)('0' + cast(Unsigned!UT)value % 10);
+                    value = unsigned(value) / 10;
+                    --i;
+                }
+                buf[i] = cast(char)(cast(uint)value + '0');
                 if (neg)
-                    buf[--i] = '-';
-                lwr = cast(ubyte)i;
-                upr = cast(ubyte)buf.length;
+                {
+                    buf[i - 1] = '-';
+                    --i;
+                }
+                lwr = i;
+                upr = cast(uint)buf.length;
             }
 
             @property size_t length() { return upr - lwr; }
@@ -5653,17 +5665,19 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
             {
                 Result result = void;
                 result.buf = buf;
-                result.lwr = cast(ubyte)(this.lwr + lwr);
-                result.upr = cast(ubyte)(this.lwr + upr);
+                result.lwr = cast(uint)(this.lwr + lwr);
+                result.upr = cast(uint)(this.lwr + upr);
                 return result;
             }
 
           private:
-            char[(UT.sizeof == 4) ? 10 + isSigned!T : 20] buf;
-            ubyte lwr, upr;
+            uint lwr = void, upr = void;
+            char[(UT.sizeof == 4) ? 10 + isSigned!T : 20] buf = void;
         }
 
-        return Result(value);
+        Result result = void;
+        result.initialize(value);
+        return result;
     }
     else
     {
