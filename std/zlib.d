@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * Compress/decompress data using the $(WEB www.zlib.net, zlib library).
+ * Compress/decompress data using the $(WEB www._zlib.net, _zlib library).
  *
  * References:
  *  $(WEB en.wikipedia.org/wiki/Zlib, Wikipedia)

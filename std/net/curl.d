@@ -3063,7 +3063,7 @@ struct HTTP
         }
     }
 
-    /** <a name="HTTP.Method"/ >The standard HTTP methods :
+    /** <a name="HTTP.Method"/>The standard HTTP methods :
      *  $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
      */
     enum Method

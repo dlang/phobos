@@ -2207,7 +2207,7 @@ unittest
 }
 
 /**
- * Alternate name for $(LREF FieldTypeTuple), kept for legacy compatibility.
+ * Alternate name for $(LREF Fields), kept for legacy compatibility.
  */
 alias FieldTypeTuple = Fields;
 

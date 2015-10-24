@@ -283,10 +283,10 @@ Macros:
 MYREF = $(LINK2 std_experimental_allocator_building_blocks_$2.html, $1)&nbsp;
 MYREF2 = $(LINK2 std_experimental_allocator_building_blocks_$2.html#$1, $1)&nbsp;
 MYREF3 = $(LINK2 std_experimental_allocator_$2.html#$1, $1)&nbsp;
-TDC = $(T td nowrap, $(D $1)$+)
-TDC2 = $(T td nowrap, $(D $(MYREF2 $1,$+))$(BR)$(SMALL
+TDC = $(TDNW $(D $1)$+)
+TDC2 = $(TDNW $(D $(MYREF2 $1,$+))$(BR)$(SMALL
 $(D std.experimental.allocator.building_blocks.$2)))
-TDC3 = $(T td nowrap, $(D $(MYREF3 $1,$+))$(BR)$(SMALL
+TDC3 = $(TDNW $(D $(MYREF3 $1,$+))$(BR)$(SMALL
 $(D std.experimental.allocator.$2)))
 RES = $(I result)
 POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))

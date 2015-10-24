@@ -330,12 +330,12 @@ void main(string[] args)
     // underlying $(D FILE*) is closed.
 }
 ----
-<pre class=console>
+$(CONSOLE
 % rdmd test.d Jimmy
 % cat test.txt
 Hello, Jimmy!
 % __
-</pre>
+)
  */
 struct File
 {
