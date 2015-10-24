@@ -538,13 +538,18 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         if (spec.indexStart > 0)
         {
             // using positional parameters!
-            foreach (i; spec.indexStart - 1 .. spec.indexEnd)
+
+            // Make the conditional compilation of this loop explicit, to avoid "statement not reachable" warnings.
+            static if(A.length > 0)
             {
-                if (funs.length <= i) break;
-                if (__ctfe)
-                    formatNth(w, spec, i, args);
-                else
-                    funs[i](w, argsAddresses[i], spec);
+                foreach (i; spec.indexStart - 1 .. spec.indexEnd)
+                {
+                    if (funs.length <= i) break;
+                    if (__ctfe)
+                        formatNth(w, spec, i, args);
+                    else
+                        funs[i](w, argsAddresses[i], spec);
+                }
             }
             if (currentArg < spec.indexEnd) currentArg = spec.indexEnd;
         }
