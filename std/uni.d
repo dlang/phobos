@@ -8175,7 +8175,7 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str
 
 auto asLowerCase(Range)(Range str)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
     {
@@ -8193,7 +8193,7 @@ auto asLowerCase(Range)(Range str)
 /// ditto
 auto asUpperCase(Range)(Range str)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
     {
@@ -8208,26 +8208,24 @@ auto asUpperCase(Range)(Range str)
     }
 }
 
-/// ditto
-auto asLowerCase(Range)(auto ref Range str)
-    if (isStringLike!Range)
-{
-    return asLowerCase!(StringTypeOf!Range)(str);
-}
-
-/// ditto
-auto asUpperCase(Range)(auto ref Range str)
-    if (isStringLike!Range)
-{
-    return asUpperCase!(StringTypeOf!Range)(str);
-}
-
 ///
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
     assert("hEllo".asUpperCase.equal("HELLO"));
+}
+
+auto asLowerCase(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return asLowerCase!(StringTypeOf!Range)(str);
+}
+
+auto asUpperCase(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return asUpperCase!(StringTypeOf!Range)(str);
 }
 
 unittest
@@ -8388,7 +8386,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
 
 auto asCapitalized(Range)(Range str)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
     {
@@ -8403,19 +8401,18 @@ auto asCapitalized(Range)(Range str)
     }
 }
 
-/// ditto
-auto asCapitalized(Range)(auto ref Range str)
-    if (isStringLike!Range)
-{
-    return asCapitalized!(StringTypeOf!Range)(str);
-}
-
 ///
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;
 
     assert("hEllo".asCapitalized.equal("Hello"));
+}
+
+auto asCapitalized(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return asCapitalized!(StringTypeOf!Range)(str);
 }
 
 unittest

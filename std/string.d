@@ -370,7 +370,7 @@ alias CaseSensitive = Flag!"caseSensitive";
 ptrdiff_t indexOf(Range)(Range s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     import std.ascii : toLower, isASCII;
     import std.uni : toLower;
@@ -493,10 +493,9 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     return -1;
 }
 
-/// ditto
 ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes)
-    if (isStringLike!Range)
+    if (isConvertibleToString!Range)
 {
     return indexOf!(StringTypeOf!Range)(s, c, cs);
 }
@@ -575,7 +574,7 @@ unittest
 ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
         in CaseSensitive cs = CaseSensitive.yes)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     static if (isSomeString!(typeof(s)) ||
                 (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
@@ -606,10 +605,9 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
     return -1;
 }
 
-/// ditto
 ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
         in CaseSensitive cs = CaseSensitive.yes)
-    if (isStringLike!Range)
+    if (isConvertibleToString!Range)
 {
     return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
 }
@@ -2621,14 +2619,13 @@ public:
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
     if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
          isSomeString!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     return LineSplitter!(keepTerm, Range)(r);
 }
 
-/// ditto
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref Range r)
-    if (isStringLike!Range)
+    if (isConvertibleToString!Range)
 {
     return LineSplitter!(keepTerm, StringTypeOf!Range)(r);
 }
@@ -2741,7 +2738,7 @@ unittest
   +/
 auto stripLeft(Range)(Range str)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     import std.ascii : isASCII, isWhite;
     import std.uni : isWhite;
@@ -2767,13 +2764,6 @@ auto stripLeft(Range)(Range str)
     return str;
 }
 
-/// ditto
-auto stripLeft(Range)(auto ref Range str)
-    if (isStringLike!Range)
-{
-    return stripLeft!(StringTypeOf!Range)(str);
-}
-
 ///
 @safe pure unittest
 {
@@ -2795,6 +2785,12 @@ auto stripLeft(Range)(auto ref Range str)
            "hello world     ");
 }
 
+auto stripLeft(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return stripLeft!(StringTypeOf!Range)(str);
+}
+
 unittest
 {
     assert(testAliasedString!stripLeft("  hello"));
@@ -2812,7 +2808,7 @@ unittest
 auto stripRight(Range)(Range str)
     if (isSomeString!Range ||
         isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-        !isStringLike!Range &&
+        !isConvertibleToString!Range &&
         isSomeChar!(ElementEncodingType!Range))
 {
     alias C = Unqual!(ElementEncodingType!(typeof(str)));
@@ -2903,13 +2899,6 @@ auto stripRight(Range)(Range str)
     }
 }
 
-/// ditto
-auto stripRight(Range)(auto ref Range str)
-    if (isStringLike!Range)
-{
-    return stripRight!(StringTypeOf!Range)(str);
-}
-
 ///
 @safe pure
 unittest
@@ -2925,6 +2914,12 @@ unittest
            [lineSep] ~ "hello world");
     assert(stripRight([paraSep] ~ "hello world" ~ paraSep) ==
            [paraSep] ~ "hello world");
+}
+
+auto stripRight(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return stripRight!(StringTypeOf!Range)(str);
 }
 
 unittest
@@ -2970,17 +2965,10 @@ unittest
 auto strip(Range)(Range str)
     if (isSomeString!Range ||
         isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-        !isStringLike!Range &&
+        !isConvertibleToString!Range &&
         isSomeChar!(ElementEncodingType!Range))
 {
     return stripRight(stripLeft(str));
-}
-
-/// ditto
-auto strip(Range)(auto ref Range str)
-    if (isStringLike!Range)
-{
-    return strip!(StringTypeOf!Range)(str);
 }
 
 ///
@@ -2997,6 +2985,12 @@ auto strip(Range)(auto ref Range str)
            "hello world");
     assert(strip([paraSep] ~ "hello world" ~ [paraSep]) ==
            "hello world");
+}
+
+auto strip(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return strip!(StringTypeOf!Range)(str);
 }
 
 @safe pure unittest
@@ -3074,7 +3068,7 @@ auto strip(Range)(auto ref Range str)
 Range chomp(Range)(Range str)
     if ((isRandomAccessRange!Range && isSomeChar!(ElementEncodingType!Range) ||
          isNarrowString!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     import std.uni : lineSep, paraSep, nelSep;
     if (str.empty)
@@ -3130,7 +3124,7 @@ Range chomp(Range)(Range str)
 Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
     if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
          isNarrowString!Range) &&
-        !isStringLike!Range &&
+        !isConvertibleToString!Range &&
         isSomeChar!C2)
 {
     if (delimiter.empty)
@@ -3166,20 +3160,6 @@ Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
     }
 }
 
-/// ditto
-StringTypeOf!Range chomp(Range)(auto ref Range str)
-    if (isStringLike!Range)
-{
-    return chomp!(StringTypeOf!Range)(str);
-}
-
-/// ditto
-StringTypeOf!Range chomp(Range, C2)(auto ref Range str, const(C2)[] delimiter)
-    if (isStringLike!Range)
-{
-    return chomp!(StringTypeOf!Range, C2)(str, delimiter);
-}
-
 ///
 @safe pure
 unittest
@@ -3204,6 +3184,18 @@ unittest
 
     // Don't decode pointlessly
     assert(chomp("hello\xFE", "\r") == "hello\xFE");
+}
+
+StringTypeOf!Range chomp(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return chomp!(StringTypeOf!Range)(str);
+}
+
+StringTypeOf!Range chomp(Range, C2)(auto ref Range str, const(C2)[] delimiter)
+    if (isConvertibleToString!Range)
+{
+    return chomp!(StringTypeOf!Range, C2)(str, delimiter);
 }
 
 unittest
@@ -3288,7 +3280,7 @@ unittest
 Range chompPrefix(Range, C2)(Range str, const(C2)[] delimiter)
     if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
          isNarrowString!Range) &&
-        !isStringLike!Range &&
+        !isConvertibleToString!Range &&
         isSomeChar!C2)
 {
     alias C1 = ElementEncodingType!Range;
@@ -3321,13 +3313,6 @@ Range chompPrefix(Range, C2)(Range str, const(C2)[] delimiter)
     }
 }
 
-/// ditto
-StringTypeOf!Range chompPrefix(Range, C2)(auto ref Range str, const(C2)[] delimiter)
-    if (isStringLike!Range)
-{
-    return chompPrefix!(StringTypeOf!Range, C2)(str, delimiter);
-}
-
 ///
 @safe pure unittest
 {
@@ -3335,6 +3320,12 @@ StringTypeOf!Range chompPrefix(Range, C2)(auto ref Range str, const(C2)[] delimi
     assert(chompPrefix("hello world", "hello w") == "orld");
     assert(chompPrefix("hello world", " world") == "hello world");
     assert(chompPrefix("", "hello") == "");
+}
+
+StringTypeOf!Range chompPrefix(Range, C2)(auto ref Range str, const(C2)[] delimiter)
+    if (isConvertibleToString!Range)
+{
+    return chompPrefix!(StringTypeOf!Range, C2)(str, delimiter);
 }
 
 @safe pure
@@ -3392,7 +3383,7 @@ unittest
 Range chop(Range)(Range str)
     if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
          isNarrowString!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     if (str.empty)
         return str;
@@ -3446,13 +3437,6 @@ Range chop(Range)(Range str)
     }
 }
 
-/// ditto
-StringTypeOf!Range chop(Range)(auto ref Range str)
-    if (isStringLike!Range)
-{
-    return chop!(StringTypeOf!Range)(str);
-}
-
 ///
 @safe pure unittest
 {
@@ -3463,6 +3447,12 @@ StringTypeOf!Range chop(Range)(auto ref Range str)
     assert(chop("hello world\r\n") == "hello world");
     assert(chop("Walter Bright") == "Walter Brigh");
     assert(chop("") == "");
+}
+
+StringTypeOf!Range chop(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return chop!(StringTypeOf!Range)(str);
 }
 
 unittest
@@ -3570,7 +3560,7 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ')
 
 auto leftJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3636,13 +3626,6 @@ auto leftJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
         static assert(0);
 }
 
-/// ditto
-auto leftJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
-    if (isStringLike!Range)
-{
-    return leftJustifier!(StringTypeOf!Range)(r, width, fillChar);
-}
-
 ///
 @safe pure @nogc nothrow
 unittest
@@ -3652,6 +3635,12 @@ unittest
     assert(leftJustifier("hello", 2).equal("hello".byChar));
     assert(leftJustifier("hello", 7).equal("hello  ".byChar));
     assert(leftJustifier("hello", 7, 'x').equal("helloxx".byChar));
+}
+
+auto leftJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
+    if (isConvertibleToString!Range)
+{
+    return leftJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
 unittest
@@ -3711,7 +3700,7 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ')
 
 auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3807,13 +3796,6 @@ auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
         static assert(0);
 }
 
-/// ditto
-auto rightJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
-    if (isStringLike!Range)
-{
-    return rightJustifier!(StringTypeOf!Range)(r, width, fillChar);
-}
-
 ///
 @safe pure @nogc nothrow
 unittest
@@ -3823,6 +3805,12 @@ unittest
     assert(rightJustifier("hello", 2).equal("hello".byChar));
     assert(rightJustifier("hello", 7).equal("  hello".byChar));
     assert(rightJustifier("hello", 7, 'x').equal("xxhello".byChar));
+}
+
+auto rightJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
+    if (isConvertibleToString!Range)
+{
+    return rightJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
 unittest
@@ -3930,7 +3918,7 @@ unittest
 
 auto centerJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3959,13 +3947,6 @@ auto centerJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
         static assert(0);
 }
 
-/// ditto
-auto centerJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
-    if (isStringLike!Range)
-{
-    return centerJustifier!(StringTypeOf!Range)(r, width, fillChar);
-}
-
 ///
 @safe pure @nogc nothrow
 unittest
@@ -3975,6 +3956,12 @@ unittest
     assert(centerJustifier("hello", 2).equal("hello".byChar));
     assert(centerJustifier("hello", 8).equal(" hello  ".byChar));
     assert(centerJustifier("hello", 7, 'x').equal("xhellox".byChar));
+}
+
+auto centerJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
+    if (isConvertibleToString!Range)
+{
+    return centerJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
 unittest
@@ -4052,7 +4039,7 @@ S detab(S)(S s, size_t tabSize = 8) pure
   +/
 auto detabber(Range)(Range r, size_t tabSize = 8)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     import std.uni : lineSep, paraSep, nelSep;
     import std.utf : codeUnitLimit, decodeFront;
@@ -4169,7 +4156,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
 }
 
 auto detabber(Range)(auto ref Range r, size_t tabSize = 8)
-    if (isStringLike!Range)
+    if (isConvertibleToString!Range)
 {
     return detabber!(StringTypeOf!Range)(r, tabSize);
 }
@@ -4282,7 +4269,7 @@ unittest
         $(LREF entab)
   +/
 auto entabber(Range)(Range r, size_t tabSize = 8)
-    if (isForwardRange!Range && !isStringLike!Range)
+    if (isForwardRange!Range && !isConvertibleToString!Range)
 {
     import std.uni : lineSep, paraSep, nelSep;
     import std.utf : codeUnitLimit, decodeFront;
@@ -4508,7 +4495,7 @@ unittest
 }
 
 auto entabber(Range)(auto ref Range r, size_t tabSize = 8)
-    if (isStringLike!Range)
+    if (isConvertibleToString!Range)
 {
     return entabber!(StringTypeOf!Range)(r, tabSize);
 }
@@ -5880,7 +5867,7 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
  */
 char[4] soundexer(Range)(Range str)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -5934,9 +5921,8 @@ char[4] soundexer(Range)(Range str)
     return result;
 }
 
-/// ditto
 char[4] soundexer(Range)(auto ref Range str)
-    if (isStringLike!Range)
+    if (isConvertibleToString!Range)
 {
     return soundexer!(StringTypeOf!Range)(str);
 }
@@ -6180,7 +6166,7 @@ string[string] abbrev(string[] values) @safe pure
 size_t column(Range)(Range str, in size_t tabsize = 8)
     if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
          isNarrowString!Range) &&
-        !isStringLike!Range)
+        !isConvertibleToString!Range)
 {
     static if (is(Unqual!(ElementEncodingType!Range) == char))
     {
@@ -6258,7 +6244,7 @@ unittest
 }
 
 size_t column(Range)(auto ref Range str, in size_t tabsize = 8)
-    if (isStringLike!Range)
+    if (isConvertibleToString!Range)
 {
     return column!(StringTypeOf!Range)(str, tabsize);
 }
