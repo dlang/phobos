@@ -1167,10 +1167,10 @@ size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
 // compat overload for alias this strings
 size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
-    if (isStringLike!Range1 || isStringLike!Range2)
+    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 {
     import std.meta : staticMap;
-    alias Types = staticMap!(peelStringLike, Range1, Range2);
+    alias Types = staticMap!(convertToString, Range1, Range2);
     return levenshteinDistance!(equals, Types)(s, t);
 }
 
@@ -1240,10 +1240,10 @@ levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
-    if (isStringLike!Range1 || isStringLike!Range2)
+    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 {
     import std.meta : staticMap;
-    alias Types = staticMap!(peelStringLike, Range1, Range2);
+    alias Types = staticMap!(convertToString, Range1, Range2);
     return levenshteinDistanceAndPath!(equals, Types)(s, t);
 }
 

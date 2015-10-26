@@ -234,19 +234,12 @@ Throws: $(LREF FileException) on error.
 
 void[] read(R)(R name, size_t upTo = size_t.max)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         return readImpl(name, name.tempCString!FSChar(), upTo);
     else
         return readImpl(null, name.tempCString!FSChar(), upTo);
-}
-
-/// ditto
-void[] read(R)(auto ref R name, size_t upTo = size_t.max)
-    if (isStringLike!R)
-{
-    return read!(StringTypeOf!R)(name, upTo);
 }
 
 ///
@@ -263,6 +256,12 @@ void[] read(R)(auto ref R name, size_t upTo = size_t.max)
     assert(read("someUniqueFilename", 2) == "12");
     assert(read("someUniqueFilename".byChar) == "1234");
     assert((cast(ubyte[])read("someUniqueFilename")).length == 4);
+}
+
+void[] read(R)(auto ref R name, size_t upTo = size_t.max)
+    if (isConvertibleToString!R)
+{
+    return read!(StringTypeOf!R)(name, upTo);
 }
 
 unittest
@@ -414,20 +413,13 @@ decoding error.
 S readText(S = string, R)(R name)
     if (isSomeString!S &&
         (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     import std.utf : validate;
     static auto trustedCast(void[] buf) @trusted { return cast(S)buf; }
     auto result = trustedCast(read(name));
     validate(result);
     return result;
-}
-
-/// ditto
-S readText(S = string, R)(auto ref R name)
-    if (isStringLike!R)
-{
-    return readText!(S, StringTypeOf!R)(name);
 }
 
 ///
@@ -441,6 +433,12 @@ S readText(S = string, R)(auto ref R name)
         remove("someUniqueFilename");
     }
     enforce(chomp(readText("someUniqueFilename")) == "abc");
+}
+
+S readText(S = string, R)(auto ref R name)
+    if (isConvertibleToString!R)
+{
+    return readText!(S, StringTypeOf!R)(name);
 }
 
 unittest
@@ -459,19 +457,12 @@ Throws: $(D FileException) on error.
  */
 void write(R)(R name, const void[] buffer)
     if ((isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         writeImpl(name, name.tempCString!FSChar(), buffer, false);
     else
         writeImpl(null, name.tempCString!FSChar(), buffer, false);
-}
-
-/// ditto
-void write(R)(auto ref R name, const void[] buffer)
-    if (isStringLike!R)
-{
-    write!(StringTypeOf!R)(name, buffer);
 }
 
 ///
@@ -486,6 +477,12 @@ unittest
    int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
    write("someUniqueFilename", a);
    assert(cast(int[]) read("someUniqueFilename") == a);
+}
+
+void write(R)(auto ref R name, const void[] buffer)
+    if (isConvertibleToString!R)
+{
+    write!(StringTypeOf!R)(name, buffer);
 }
 
 unittest
@@ -504,19 +501,12 @@ Throws: $(D FileException) on error.
  */
 void append(R)(R name, const void[] buffer)
     if ((isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         writeImpl(name, name.tempCString!FSChar(), buffer, true);
     else
         writeImpl(null, name.tempCString!FSChar(), buffer, true);
-}
-
-/// ditto
-void append(R)(auto ref R name, const void[] buffer)
-    if (isStringLike!R)
-{
-    append!(StringTypeOf!R)(name, buffer);
 }
 
 ///
@@ -533,6 +523,12 @@ unittest
    int[] b = [ 13, 21 ];
    append("someUniqueFilename", b);
    assert(cast(int[]) read("someUniqueFilename") == a ~ b);
+}
+
+void append(R)(auto ref R name, const void[] buffer)
+    if (isConvertibleToString!R)
+{
+    append!(StringTypeOf!R)(name, buffer);
 }
 
 unittest
@@ -610,8 +606,8 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
  * Throws: $(D FileException) on error.
  */
 void rename(RF, RT)(RF from, RT to)
-    if ((isInputRange!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF) && !isStringLike!RF &&
-        (isInputRange!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT) && !isStringLike!RT)
+    if ((isInputRange!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF) && !isConvertibleToString!RF &&
+        (isInputRange!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT) && !isConvertibleToString!RT)
 {
     // Place outside of @trusted block
     auto fromz = from.tempCString!FSChar();
@@ -630,12 +626,11 @@ void rename(RF, RT)(RF from, RT to)
     renameImpl(f, t, fromz, toz);
 }
 
-/// ditto
 void rename(RF, RT)(auto ref RF from, auto ref RT to)
-    if (isStringLike!RF || isStringLike!RT)
+    if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
     import std.meta : staticMap;
-    alias Types = staticMap!(peelStringLike, RF, RT);
+    alias Types = staticMap!(convertToString, RF, RT);
     rename!Types(from, to);
 }
 
@@ -702,7 +697,7 @@ Throws: $(D FileException) on error.
  */
 void remove(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         removeImpl(name, name.tempCString!FSChar());
@@ -710,9 +705,8 @@ void remove(R)(R name)
         removeImpl(null, name.tempCString!FSChar());
 }
 
-/// ditto
 void remove(R)(auto ref R name)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     remove!(StringTypeOf!R)(name);
 }
@@ -792,7 +786,7 @@ Throws: $(D FileException) on error (e.g., file not found).
  */
 ulong getSize(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -817,9 +811,8 @@ ulong getSize(R)(R name)
     }
 }
 
-/// ditto
 ulong getSize(R)(auto ref R name)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return getSize!(StringTypeOf!R)(name);
 }
@@ -857,7 +850,7 @@ void getTimes(R)(R name,
               out SysTime accessTime,
               out SysTime modificationTime)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -888,11 +881,10 @@ void getTimes(R)(R name,
     }
 }
 
-/// ditto
 void getTimes(R)(auto ref R name,
               out SysTime accessTime,
               out SysTime modificationTime)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return getTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
@@ -982,14 +974,7 @@ version(StdDdoc)
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
         if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-            !isStringLike!R);
-
-    /// ditto
-    void getTimesWin(R)(auto ref R name,
-                        out SysTime fileCreationTime,
-                        out SysTime fileAccessTime,
-                        out SysTime fileModificationTime)
-        if (isStringLike!R);
+            !isConvertibleToString!R);
 }
 else version(Windows)
 {
@@ -998,7 +983,7 @@ else version(Windows)
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
         if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-            !isStringLike!R)
+            !isConvertibleToString!R)
     {
         with (getFileAttributesWin(name))
         {
@@ -1012,7 +997,7 @@ else version(Windows)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-        if (isStringLike!R)
+        if (isConvertibleToString!R)
     {
         getTimesWin!(StringTypeOf!R)(name, fileCreationTime, fileAccessTime, fileModificationTime);
     }
@@ -1104,7 +1089,7 @@ void setTimes(R)(R name,
               SysTime accessTime,
               SysTime modificationTime) @safe
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1172,11 +1157,10 @@ void setTimes(R)(R name,
     }
 }
 
-/// ditto
 void setTimes(R)(auto ref R name,
               SysTime accessTime,
               SysTime modificationTime) @safe
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     setTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
@@ -1220,7 +1204,7 @@ unittest
 +/
 SysTime timeLastModified(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1250,9 +1234,8 @@ SysTime timeLastModified(R)(R name)
     }
 }
 
-/// ditto
 SysTime timeLastModified(R)(auto ref R name)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return timeLastModified!(StringTypeOf!R)(name);
 }
@@ -1351,14 +1334,13 @@ unittest
  */
 bool exists(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     return existsImpl(name.tempCString!FSChar());
 }
 
-/// ditto
 bool exists(R)(auto ref R name)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return exists!(StringTypeOf!R)(name);
 }
@@ -1432,7 +1414,7 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
   +/
 uint getAttributes(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1470,9 +1452,8 @@ uint getAttributes(R)(R name)
     }
 }
 
-/// ditto
 uint getAttributes(R)(auto ref R name)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return getAttributes!(StringTypeOf!R)(name);
 }
@@ -1503,7 +1484,7 @@ unittest
  +/
 uint getLinkAttributes(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1526,9 +1507,8 @@ uint getLinkAttributes(R)(R name)
     }
 }
 
-/// ditto
 uint getLinkAttributes(R)(auto ref R name)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return getLinkAttributes!(StringTypeOf!R)(name);
 }
@@ -1550,7 +1530,7 @@ unittest
  +/
 void setAttributes(R)(R name, uint attributes)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     version (Windows)
     {
@@ -1581,9 +1561,8 @@ void setAttributes(R)(R name, uint attributes)
     }
 }
 
-/// ditto
 void setAttributes(R)(auto ref R name, uint attributes)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return setAttributes!(StringTypeOf!R)(name, attributes);
 }
@@ -1613,7 +1592,7 @@ assert("/usr/share/include".isDir);
   +/
 @property bool isDir(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1625,9 +1604,8 @@ assert("/usr/share/include".isDir);
     }
 }
 
-/// ditto
 @property bool isDir(R)(auto ref R name)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return isDir!(StringTypeOf!R)(name);
 }
@@ -1765,7 +1743,7 @@ assert(!"/usr/share/include".isFile);
   +/
 @property bool isFile(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     version(Windows)
         return !name.isDir;
@@ -1773,9 +1751,8 @@ assert(!"/usr/share/include".isFile);
         return (getAttributes(name) & S_IFMT) == S_IFREG;
 }
 
-/// ditto
 @property bool isFile(R)(auto ref R name)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return isFile!(StringTypeOf!R)(name);
 }
@@ -1894,7 +1871,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
   +/
 @property bool isSymlink(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     version(Windows)
         return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1902,9 +1879,8 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
 }
 
-/// ditto
 @property bool isSymlink(R)(auto ref R name)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return isSymlink!(StringTypeOf!R)(name);
 }
@@ -2023,7 +1999,7 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
  */
 void chdir(R)(R pathname)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -2049,9 +2025,8 @@ void chdir(R)(R pathname)
     cenforce(trustedChdir(pathz), pathStr, pathz);
 }
 
-/// ditto
 void chdir(R)(auto ref R pathname)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return chdir!(StringTypeOf!R)(pathname);
 }
@@ -2069,7 +2044,7 @@ Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
  */
 void mkdir(R)(R pathname)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -2100,9 +2075,8 @@ void mkdir(R)(R pathname)
     }
 }
 
-/// ditto
 void mkdir(R)(auto ref R pathname)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     return mkdir!(StringTypeOf!R)(pathname);
 }
@@ -2206,7 +2180,7 @@ Throws: $(D FileException) on error.
  */
 void rmdir(R)(R pathname)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isStringLike!R)
+        !isConvertibleToString!R)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -2232,9 +2206,8 @@ void rmdir(R)(R pathname)
     cenforce(trustedRmdir(pathz), pathStr, pathz);
 }
 
-/// ditto
 void rmdir(R)(auto ref R pathname)
-    if (isStringLike!R)
+    if (isConvertibleToString!R)
 {
     rmdir!(StringTypeOf!R)(pathname);
 }
@@ -3103,8 +3076,8 @@ Params:
 Throws: $(D FileException) on error.
  */
 void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
-    if (isInputRange!RF && isSomeChar!(ElementEncodingType!RF) && !isStringLike!RF &&
-        isInputRange!RT && isSomeChar!(ElementEncodingType!RT) && !isStringLike!RT)
+    if (isInputRange!RF && isSomeChar!(ElementEncodingType!RF) && !isConvertibleToString!RF &&
+        isInputRange!RT && isSomeChar!(ElementEncodingType!RT) && !isConvertibleToString!RT)
 {
     // Place outside of @trusted block
     auto fromz = from.tempCString!FSChar();
@@ -3123,12 +3096,11 @@ void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttribut
     copyImpl(f, t, fromz, toz, preserve);
 }
 
-/// ditto
 void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve = preserveAttributesDefault)
-    if (isStringLike!RF || isStringLike!RT)
+    if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
     import std.map : staticMap;
-    alias Types = staticMap!(peelStringLike, RF, RT);
+    alias Types = staticMap!(convertToString, RF, RT);
     copy!Types(from, to, preserve);
 }
 

@@ -94,7 +94,6 @@
  *           $(LREF isSomeChar)
  *           $(LREF isSomeString)
  *           $(LREF isStaticArray)
- *           $(LREF isStringLike)
  *           $(LREF isUnsigned)
  * ))
  * $(TR $(TD Type behaviours) $(TD
@@ -5240,16 +5239,15 @@ unittest
 }
 
 
-/**
+/*
 Detect whether $(D T) is a struct or static array that is implicitly
 convertible to a string.
  */
-template isStringLike(T)
+template isConvertibleToString(T)
 {
-    enum isStringLike = (isAggregateType!T || isStaticArray!T) && is(StringTypeOf!T);
+    enum isConvertibleToString = (isAggregateType!T || isStaticArray!T) && is(StringTypeOf!T);
 }
 
-///
 unittest
 {
     static struct AliasedString
@@ -5257,17 +5255,17 @@ unittest
         string s;
         alias s this;
     }
-    assert(!isStringLike!string);
-    assert(isStringLike!AliasedString);
-    assert(isStringLike!(char[25]));
+    assert(!isConvertibleToString!string);
+    assert(isConvertibleToString!AliasedString);
+    assert(isConvertibleToString!(char[25]));
 }
 
-package template peelStringLike(T)
+package template convertToString(T)
 {
-    static if (isStringLike!T)
-        alias peelStringLike = StringTypeOf!T;
+    static if (isConvertibleToString!T)
+        alias convertToString = StringTypeOf!T;
     else
-        alias peelStringLike = T;
+        alias convertToString = T;
 }
 
 /**
