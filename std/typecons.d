@@ -840,7 +840,7 @@ template Tuple(Specs...)
          * Returns:
          *     The string representation of this `Tuple`.
          */
-        string toString()()
+        string toString()
         {
             import std.conv : to;
             return this.to!string;
