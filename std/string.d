@@ -360,13 +360,22 @@ alias CaseSensitive = Flag!"caseSensitive";
     Params:
         s = string or InputRange of characters to search in correct UTF format
         c = character to search for
+        startIdx = starting index to a well-formed code point
         cs = CaseSensitive.yes or CaseSensitive.no
 
     Returns:
-        the index of the first occurrence of $(D c) in $(D s). If $(D c)
+        the index of the first occurrence of $(D c) in $(D s) with
+        respect to the start index $(D startIdx). If $(D c)
         is not found, then $(D -1) is returned.
+        If $(D c) is found the value of the returned index is at least
+        $(D startIdx).
         If the parameters are not valid UTF, the result will still
         be in the range [-1 .. s.length], but will not be reliable otherwise.
+
+    Throws:
+        If the sequence starting at $(D startIdx) does not represent a well
+        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
+
   +/
 ptrdiff_t indexOf(Range)(Range s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes)
@@ -494,11 +503,71 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     return -1;
 }
 
+/// Ditto
+ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isConvertibleToString!Range)
+{
+    static if (isSomeString!(typeof(s)) ||
+                (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
+    {
+        if (startIdx < s.length)
+        {
+            ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
+            if (foundIdx != -1)
+            {
+                return foundIdx + cast(ptrdiff_t)startIdx;
+            }
+        }
+    }
+    else
+    {
+        foreach (i; 0 .. startIdx)
+        {
+            if (s.empty)
+                return -1;
+            s.popFront();
+        }
+        ptrdiff_t foundIdx = indexOf(s, c, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t)startIdx;
+        }
+    }
+    return -1;
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(indexOf(s, 'W') == 6);
+    assert(indexOf(s, 'Z') == -1);
+    assert(indexOf(s, 'w', CaseSensitive.no) == 6);
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(indexOf(s, 'W', 4) == 6);
+    assert(indexOf(s, 'Z', 100) == -1);
+    assert(indexOf(s, 'w', 3, CaseSensitive.no) == 6);
+}
+
 ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes)
     if (isConvertibleToString!Range)
 {
     return indexOf!(StringTypeOf!Range)(s, c, cs);
+}
+
+ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
+    if (isConvertibleToString!Range)
+{
+    return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
 }
 
 unittest
@@ -557,62 +626,6 @@ unittest
     });
 }
 
-/++
-    Searches for character in range starting at index startIdx.
-
-    Params:
-        s = string or InputRange of characters to search in correct UTF format
-        c = character to search for
-        startIdx = starting index to a well-formed code point
-        cs = CaseSensitive.yes or CaseSensitive.no
-
-    Returns:
-        the index of the first occurrence of $(D c) in $(D s). If $(D c)
-        is not found, then $(D -1) is returned.
-        If the parameters are not valid UTF, the result will still
-        be in the range [-1 .. s.length], but will not be reliable otherwise.
-  +/
-ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
-{
-    static if (isSomeString!(typeof(s)) ||
-                (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
-    {
-        if (startIdx < s.length)
-        {
-            ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
-            if (foundIdx != -1)
-            {
-                return foundIdx + cast(ptrdiff_t)startIdx;
-            }
-        }
-    }
-    else
-    {
-        foreach (i; 0 .. startIdx)
-        {
-            if (s.empty)
-                return -1;
-            s.popFront();
-        }
-        ptrdiff_t foundIdx = indexOf(s, c, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t)startIdx;
-        }
-    }
-    return -1;
-}
-
-ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
-    if (isConvertibleToString!Range)
-{
-    return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
-}
-
 unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/', 3));
@@ -653,7 +666,7 @@ unittest
             CaseSensitive.no) == 2);
     }
 
-    foreach(cs; EnumMembers!CaseSensitive)
+    foreach (cs; EnumMembers!CaseSensitive)
     {
         assert(indexOf("hello\U00010143\u0100\U00010143", '\u0100', 2, cs)
             == 9);
@@ -670,13 +683,21 @@ unittest
     Params:
         s = string or ForwardRange of characters to search in correct UTF format
         sub = substring to search for
+        startIdx = the index into s to start searching from
         cs = CaseSensitive.yes or CaseSensitive.no
 
     Returns:
-        the index of the first occurrence of $(D sub) in $(D s). If $(D sub)
-        is not found, then $(D -1) is returned.
+        the index of the first occurrence of $(D sub) in $(D s) with
+        respect to the start index $(D startIdx). If $(D sub) is not found,
+        then $(D -1) is returned.
         If the arguments are not valid UTF, the result will still
         be in the range [-1 .. s.length], but will not be reliable otherwise.
+        If $(D sub) is found the value of the returned index is at least
+        $(D startIdx).
+
+    Throws:
+        If the sequence starting at $(D startIdx) does not represent a well
+        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
     Bugs:
         Does not work with case insensitive strings where the mapping of
@@ -754,6 +775,40 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
         }
         return -1;
     }
+}
+
+/// Ditto
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
+        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes)
+    @safe if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    if (startIdx < s.length)
+    {
+        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t)startIdx;
+        }
+    }
+    return -1;
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(indexOf(s, "Wo", 4) == 6);
+    assert(indexOf(s, "Zo", 100) == -1);
+    assert(indexOf(s, "wo", 3, CaseSensitive.no) == 6);
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(indexOf(s, "Wo") == 6);
+    assert(indexOf(s, "Zo") == -1);
+    assert(indexOf(s, "wO", CaseSensitive.no) == 6);
 }
 
 ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub,
@@ -840,45 +895,14 @@ unittest
     }
 }
 
-/++
-    Params:
-        s = string to search
-        sub = substring to search for
-        startIdx = the index into s to start searching from
-        cs = CaseSensitive.yes or CaseSensitive.no
-
-    Returns: The index of the first occurrence of $(D sub) in $(D s) with
-    respect to the start index $(D startIdx). If $(D sub) is not found, then
-    $(D -1) is returned. If $(D sub) is found the value of the returned index
-    is at least $(D startIdx). $(D startIdx) represents a codeunit index in
-    $(D s). If the sequence starting at $(D startIdx) does not represent a well
-    formed codepoint, then a $(XREF utf,UTFException) may be thrown.
-
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes)
-    @safe if (isSomeChar!Char1 && isSomeChar!Char2)
-{
-    if (startIdx < s.length)
-    {
-        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t)startIdx;
-        }
-    }
-    return -1;
-}
-
 @safe pure unittest
 {
     import std.conv : to;
     debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; AliasSeq!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOf(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOf(to!S("def"), to!T("a"), 0) == -1);
@@ -918,7 +942,7 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(indexOf(to!S(""), to!T("")) == indexOf(to!S(""), to!T(""), 0));
         }();
 
-        foreach(cs; EnumMembers!CaseSensitive)
+        foreach (cs; EnumMembers!CaseSensitive)
         {
             assert(indexOf("hello\U00010143\u0100\U00010143", to!S("\u0100"),
                 3, cs) == 9);
@@ -934,10 +958,18 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     Params:
         s = string to search
         c = character to search for
+        startIdx = the index into s to start searching from
         cs = CaseSensitive.yes or CaseSensitive.no
 
-    Returns: The index of the last occurrence of $(D c) in $(D s). If $(D c)
-    is not found, then $(D -1) is returned.
+    Returns:
+        The index of the last occurrence of $(D c) in $(D s). If $(D c) is not
+        found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
+        the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
+        codeunit index in $(D s).
+
+    Throws:
+        If the sequence ending at $(D startIdx) does not represent a well
+        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
@@ -1003,6 +1035,37 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
     return -1;
 }
 
+/// Ditto
+ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+    if (isSomeChar!Char)
+{
+    if (startIdx <= s.length)
+    {
+        return lastIndexOf(s[0u .. startIdx], c, cs);
+    }
+
+    return -1;
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(lastIndexOf(s, 'l') == 9);
+    assert(lastIndexOf(s, 'Z') == -1);
+    assert(lastIndexOf(s, 'L', CaseSensitive.no) == 9);
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(lastIndexOf(s, 'l', 4) == 3);
+    assert(lastIndexOf(s, 'Z', 1337) == -1);
+    assert(lastIndexOf(s, 'L', 7, CaseSensitive.no) == 3);
+}
+
 @safe pure unittest
 {
     import std.conv : to;
@@ -1043,41 +1106,13 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
     });
 }
 
-/++
-    Params:
-        s = string to search
-        c = character to search for
-        startIdx = the index into s to start searching from
-        cs = CaseSensitive.yes or CaseSensitive.no
-
-    Returns: The index of the last occurrence of $(D c) in $(D s). If $(D c) is
-    not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
-    the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
-    codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
-    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
-    thrown.
-
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char)
-{
-    if (startIdx <= s.length)
-    {
-        return lastIndexOf(s[0u .. startIdx], c, cs);
-    }
-
-    return -1;
-}
-
 @safe pure unittest
 {
     import std.conv : to;
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
@@ -1097,7 +1132,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
         assert(lastIndexOf(sPlts, 'S', sPlts.length -2, CaseSensitive.no) == 40);
     }
 
-    foreach(cs; EnumMembers!CaseSensitive)
+    foreach (cs; EnumMembers!CaseSensitive)
     {
         assert(lastIndexOf("\U00010143\u0100\U00010143hello", '\u0100', cs) == 4);
         assert(lastIndexOf("\U00010143\u0100\U00010143hello"w, '\u0100', cs) == 2);
@@ -1109,10 +1144,18 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
     Params:
         s = string to search
         sub = substring to search for
+        startIdx = the index into s to start searching from
         cs = CaseSensitive.yes or CaseSensitive.no
 
-    Returns: the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned.
+    Returns:
+        the index of the last occurrence of $(D sub) in $(D s). If $(D sub) is
+        not found, then $(D -1) is returned. The $(D startIdx) slices $(D s)
+        in the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
+        codeunit index in $(D s).
+
+    Throws:
+        If the sequence ending at $(D startIdx) does not represent a well
+        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
@@ -1124,7 +1167,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     import std.conv : to;
     import std.algorithm : endsWith;
     if (sub.empty)
-        return s.length;
+        return -1;
 
     if (walkLength(sub) == 1)
         return lastIndexOf(s, sub.front, cs);
@@ -1193,6 +1236,54 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     return -1;
 }
 
+/// Ditto
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
+        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
+    if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    if (startIdx <= s.length)
+    {
+        return lastIndexOf(s[0u .. startIdx], sub, cs);
+    }
+
+    return -1;
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(lastIndexOf(s, "ll") == 2);
+    assert(lastIndexOf(s, "Zo") == -1);
+    assert(lastIndexOf(s, "lL", CaseSensitive.no) == 2);
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(lastIndexOf(s, "ll", 4) == 2);
+    assert(lastIndexOf(s, "Zo", 128) == -1);
+    assert(lastIndexOf(s, "lL", 3, CaseSensitive.no) == -1);
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+
+    foreach (S; AliasSeq!(string, wstring, dstring))
+    {
+        auto r = to!S("").lastIndexOf("hello");
+        assert(r == -1, to!string(r));
+
+        r = to!S("hello").lastIndexOf("");
+        assert(r == -1, to!string(r));
+
+        r = to!S("").lastIndexOf("");
+        assert(r == -1, to!string(r));
+    }
+}
+
 @safe pure unittest
 {
     import std.conv : to;
@@ -1216,7 +1307,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("cd")) == 2, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("x")) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("xy")) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("")) == 10, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("")) == -1, typeStr);
             assert(lastIndexOf(to!S("öabcdefcdef"), to!T("ö")) == 0, typeStr);
 
             assert(lastIndexOf(cast(S)null, to!T("a"), CaseSensitive.no) == -1, typeStr);
@@ -1224,7 +1315,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), CaseSensitive.no) == 6, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"), CaseSensitive.no) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("xy"), CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), CaseSensitive.no) == 10, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), CaseSensitive.no) == -1, typeStr);
             assert(lastIndexOf(to!S("öabcdefcdef"), to!T("ö"), CaseSensitive.no) == 0, typeStr);
 
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), CaseSensitive.no) == 6, typeStr);
@@ -1271,43 +1362,15 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     }
 }
 
-/++
-    Params:
-        s = string to search
-        sub = substring to search for
-        startIdx = the index into s to start searching from
-        cs = CaseSensitive.yes or CaseSensitive.no
-
-    Returns: the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
-    the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
-    codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
-    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
-    thrown.
-
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char1 && isSomeChar!Char2)
-{
-    if (startIdx <= s.length)
-    {
-        return lastIndexOf(s[0u .. startIdx], sub, cs);
-    }
-
-    return -1;
-}
-
 @safe pure unittest
 {
     import std.conv : to;
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; AliasSeq!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -1320,7 +1383,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("cd"), 3) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdefx"), to!T("x"), 1) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdefxy"), to!T("xy"), 6) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 8) == 8, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 8) == -1, typeStr);
             assert(lastIndexOf(to!S("öafö"), to!T("ö"), 3) == 0, typeStr ~
                     to!string(lastIndexOf(to!S("öafö"), to!T("ö"), 3))); //BUG 10472
 
@@ -1330,7 +1393,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
                 " " ~ to!string(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), 3, CaseSensitive.no)));
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"),3 , CaseSensitive.no) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdefXY"), to!T("xy"), 4, CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 7, CaseSensitive.no) == 7, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 7, CaseSensitive.no) == -1, typeStr);
 
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), 4, CaseSensitive.no) == 2, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), 4, CaseSensitive.no) == 2, typeStr);
@@ -1338,7 +1401,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S(""), to!T(""), 0) == lastIndexOf(to!S(""), to!T("")), typeStr);
         }();
 
-        foreach(cs; EnumMembers!CaseSensitive)
+        foreach (cs; EnumMembers!CaseSensitive)
         {
             enum csString = to!string(cs);
 
@@ -1469,11 +1532,18 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
 /**
     Returns the index of the first occurence of any of the elements in $(D
     needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned.
+    then $(D -1) is returned. The $(D startIdx) slices $(D haystack) in the
+    following way $(D haystack[startIdx .. $]). $(D startIdx) represents a
+    codeunit index in $(D haystack). If the sequence ending at $(D startIdx)
+    does not represent a well formed codepoint, then a $(XREF utf,UTFException)
+    may be thrown.
 
     Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
+        haystack = String to search for needles in.
+        needles = Strings to search for in haystack.
+        startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
+            the startIdx is greater equal the length of haystack the functions
+            returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
@@ -1481,6 +1551,23 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(true, true)(haystack, needles, cs);
+}
+
+/// Ditto
+ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
+        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
+    if (isSomeChar!Char && isSomeChar!Char2)
+{
+    if (startIdx < haystack.length)
+    {
+        ptrdiff_t foundIdx = indexOfAny(haystack[startIdx .. $], needles, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t)startIdx;
+        }
+    }
+
+    return -1;
 }
 
 ///
@@ -1491,6 +1578,35 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     assert(i == 5);
     i = "öällo world".indexOfAny("lo ");
     assert(i == 4, to!string(i));
+}
+
+///
+@safe pure unittest
+{
+    import std.conv : to;
+
+    ptrdiff_t i = "helloWorld".indexOfAny("Wr", 4);
+    assert(i == 5);
+
+    i = "Foo öällo world".indexOfAny("lh", 3);
+    assert(i == 8, to!string(i));
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+
+    foreach (S; AliasSeq!(string, wstring, dstring))
+    {
+        auto r = to!S("").indexOfAny("hello");
+        assert(r == -1, to!string(r));
+
+        r = to!S("hello").indexOfAny("");
+        assert(r == -1, to!string(r));
+
+        r = to!S("").indexOfAny("");
+        assert(r == -1, to!string(r));
+    }
 }
 
 @safe pure unittest
@@ -1534,60 +1650,15 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     );
 }
 
-/**
-    Returns the index of the first occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned. The $(D startIdx) slices $(D s) in the following
-    way $(D haystack[startIdx .. $]). $(D startIdx) represents a codeunit
-    index in $(D haystack). If the sequence ending at $(D startIdx) does not
-    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
-    thrown.
-
-    Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
-        startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
-        the startIdx is greater equal the length of haystack the functions
-        returns $(D -1).
-        cs = Indicates whether the comparisons are case sensitive.
-*/
-ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
-        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
-{
-    if (startIdx < haystack.length)
-    {
-        ptrdiff_t foundIdx = indexOfAny(haystack[startIdx .. $], needles, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t)startIdx;
-        }
-    }
-
-    return -1;
-}
-
-///
-@safe pure unittest
-{
-    import std.conv : to;
-
-    ptrdiff_t i = "helloWorld".indexOfAny("Wr", 4);
-    assert(i == 5);
-
-    i = "Foo öällo world".indexOfAny("lh", 3);
-    assert(i == 8, to!string(i));
-}
-
 @safe pure unittest
 {
     import std.conv : to;
 
     debug(string) trustedPrintf("string.indexOfAny(startIdx).unittest\n");
 
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; AliasSeq!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfAny(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOfAny(to!S("def"), to!T("AaF"), 0) == -1);
@@ -1615,7 +1686,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
                 CaseSensitive.no) == 0);
         }();
 
-        foreach(cs; EnumMembers!CaseSensitive)
+        foreach (cs; EnumMembers!CaseSensitive)
         {
             assert(indexOfAny("hello\U00010143\u0100\U00010143",
                 to!S("e\u0100"), 3, cs) == 9);
@@ -1630,18 +1701,40 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 /**
     Returns the index of the last occurence of any of the elements in $(D
     needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned.
+    then $(D -1) is returned. The $(D stopIdx) slices $(D haystack) in the
+    following way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit
+    index in $(D haystack). If the sequence ending at $(D startIdx) does not
+    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
+    thrown.
 
     Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
+        haystack = String to search for needles in.
+        needles = Strings to search for in haystack.
+        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]). If
+            the stopIdx is greater equal the length of haystack the functions
+            returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        const(Char2)[] needles, in CaseSensitive cs = CaseSensitive.yes)
+        @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(false, true)(haystack, needles, cs);
+}
+
+/// Ditto
+ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, in size_t stopIdx,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+    if (isSomeChar!Char && isSomeChar!Char2)
+{
+    if (stopIdx <= haystack.length)
+    {
+        return lastIndexOfAny(haystack[0u .. stopIdx], needles, cs);
+    }
+
+    return -1;
 }
 
 ///
@@ -1652,6 +1745,35 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 
     i = "Foo öäöllo world".lastIndexOfAny("öF");
     assert(i == 8);
+}
+
+///
+@safe pure unittest
+{
+    import std.conv : to;
+
+    ptrdiff_t i = "helloWorld".lastIndexOfAny("Wlo", 4);
+    assert(i == 3);
+
+    i = "Foo öäöllo world".lastIndexOfAny("öF", 3);
+    assert(i == 0);
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+
+    foreach (S; AliasSeq!(string, wstring, dstring))
+    {
+        auto r = to!S("").lastIndexOfAny("hello");
+        assert(r == -1, to!string(r));
+
+        r = to!S("hello").lastIndexOfAny("");
+        assert(r == -1, to!string(r));
+
+        r = to!S("").lastIndexOfAny("");
+        assert(r == -1, to!string(r));
+    }
 }
 
 @safe pure unittest
@@ -1707,47 +1829,6 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     }
     }
     );
-}
-
-/**
-    Returns the index of the last occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned. The $(D stopIdx) slices $(D s) in the following
-    way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit index in
-    $(D s). If the sequence ending at $(D startIdx) does not represent a well
-    formed codepoint, then a $(XREF utf,UTFException) may be thrown.
-
-    Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
-        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]). If
-        the stopIdx is greater equal the length of haystack the functions
-        returns $(D -1).
-        cs = Indicates whether the comparisons are case sensitive.
-*/
-ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in size_t stopIdx,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
-{
-    if (stopIdx <= haystack.length)
-    {
-        return lastIndexOfAny(haystack[0u .. stopIdx], needles, cs);
-    }
-
-    return -1;
-}
-
-///
-@safe pure unittest
-{
-    import std.conv : to;
-
-    ptrdiff_t i = "helloWorld".lastIndexOfAny("Wlo", 4);
-    assert(i == 3);
-
-    i = "Foo öäöllo world".lastIndexOfAny("öF", 3);
-    assert(i == 0);
 }
 
 @safe pure unittest
@@ -1810,8 +1891,11 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     element of $(D needles) $(D -1) is returned.
 
     Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
+        haystack = String to search for needles in.
+        needles = Strings to search for in haystack.
+        startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
+            the startIdx is greater equal the length of haystack the functions
+            returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -1822,12 +1906,56 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     return indexOfAnyNeitherImpl!(true, false)(haystack, needles, cs);
 }
 
+/// Ditto
+ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
+        @safe pure
+    if (isSomeChar!Char && isSomeChar!Char2)
+{
+    if (startIdx < haystack.length)
+    {
+        ptrdiff_t foundIdx = indexOfAnyNeitherImpl!(true, false)(
+            haystack[startIdx .. $], needles, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t)startIdx;
+        }
+    }
+    return -1;
+}
+
+///
+@safe pure unittest
+{
+    assert(indexOfNeither("abba", "a", 2) == 2);
+    assert(indexOfNeither("def", "de", 1) == 2);
+    assert(indexOfNeither("dfefffg", "dfe", 4) == 6);
+}
+
 ///
 @safe pure unittest
 {
     assert(indexOfNeither("def", "a") == 0);
     assert(indexOfNeither("def", "de") == 2);
     assert(indexOfNeither("dfefffg", "dfe") == 6);
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+
+    foreach (S; AliasSeq!(string, wstring, dstring))
+    {
+        auto r = to!S("").indexOfNeither("hello");
+        assert(r == -1, to!string(r));
+
+        r = to!S("hello").indexOfNeither("");
+        assert(r == 0, to!string(r));
+
+        r = to!S("").indexOfNeither("");
+        assert(r == -1, to!string(r));
+    }
 }
 
 @safe pure unittest
@@ -1874,45 +2002,6 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     }
     }
     );
-}
-
-/**
-    Returns the index of the first occurence of any character not an elements
-    in $(D needles) in $(D haystack). If all element of $(D haystack) are
-    element of $(D needles) $(D -1) is returned.
-
-    Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
-        startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
-        the startIdx is greater equal the length of haystack the functions
-        returns $(D -1).
-        cs = Indicates whether the comparisons are case sensitive.
-*/
-ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
-        @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
-{
-    if (startIdx < haystack.length)
-    {
-        ptrdiff_t foundIdx = indexOfAnyNeitherImpl!(true, false)(
-            haystack[startIdx .. $], needles, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t)startIdx;
-        }
-    }
-    return -1;
-}
-
-///
-@safe pure unittest
-{
-    assert(indexOfNeither("abba", "a", 2) == 2);
-    assert(indexOfNeither("def", "de", 1) == 2);
-    assert(indexOfNeither("dfefffg", "dfe", 4) == 6);
 }
 
 @safe pure unittest
@@ -1966,8 +2055,11 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     $(D haystack) are element of $(D needles) $(D -1) is returned.
 
     Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
+        haystack = String to search for needles in.
+        needles = Strings to search for in haystack.
+        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]) If
+        the stopIdx is greater equal the length of haystack the functions
+        returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -1978,11 +2070,50 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     return indexOfAnyNeitherImpl!(false, false)(haystack, needles, cs);
 }
 
+/// Ditto
+ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, in size_t stopIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
+        @safe pure
+    if (isSomeChar!Char && isSomeChar!Char2)
+{
+    if (stopIdx < haystack.length)
+    {
+        return indexOfAnyNeitherImpl!(false, false)(haystack[0 .. stopIdx],
+            needles, cs);
+    }
+    return -1;
+}
+
 ///
 @safe pure unittest
 {
     assert(lastIndexOfNeither("abba", "a") == 2);
     assert(lastIndexOfNeither("def", "f") == 1);
+}
+
+///
+@safe pure unittest
+{
+    assert(lastIndexOfNeither("def", "rsa", 3) == -1);
+    assert(lastIndexOfNeither("abba", "a", 2) == 1);
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+
+    foreach (S; AliasSeq!(string, wstring, dstring))
+    {
+        auto r = to!S("").lastIndexOfNeither("hello");
+        assert(r == -1, to!string(r));
+
+        r = to!S("hello").lastIndexOfNeither("");
+        assert(r == 4, to!string(r));
+
+        r = to!S("").lastIndexOfNeither("");
+        assert(r == -1, to!string(r));
+    }
 }
 
 @safe pure unittest
@@ -2032,40 +2163,6 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     );
 }
 
-/**
-    Returns the last index of the first occurence of any character that is not
-    an elements in $(D needles) in $(D haystack). If all element of
-    $(D haystack) are element of $(D needles) $(D -1) is returned.
-
-    Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
-        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]) If
-        the stopIdx is greater equal the length of haystack the functions
-        returns $(D -1).
-        cs = Indicates whether the comparisons are case sensitive.
-*/
-ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in size_t stopIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
-        @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
-{
-    if (stopIdx < haystack.length)
-    {
-        return indexOfAnyNeitherImpl!(false, false)(haystack[0 .. stopIdx],
-            needles, cs);
-    }
-    return -1;
-}
-
-///
-@safe pure unittest
-{
-    assert(lastIndexOfNeither("def", "rsa", 3) == -1);
-    assert(lastIndexOfNeither("abba", "a", 2) == 1);
-}
-
 @safe pure unittest
 {
     import std.conv : to;
@@ -2111,7 +2208,6 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     }
     );
 }
-
 
 /**
  * Returns the _representation of a string, which has the same type
