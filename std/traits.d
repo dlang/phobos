@@ -79,6 +79,7 @@
  *           $(LREF isAggregateType)
  *           $(LREF isArray)
  *           $(LREF isAssociativeArray)
+ *           $(LREF isAutodecodableString)
  *           $(LREF isBasicType)
  *           $(LREF isBoolean)
  *           $(LREF isBuiltinType)
@@ -86,7 +87,6 @@
  *           $(LREF isFloatingPoint)
  *           $(LREF isIntegral)
  *           $(LREF isNarrowString)
- *           $(LREF isAutodecodableString)
  *           $(LREF isNumeric)
  *           $(LREF isPointer)
  *           $(LREF isScalarType)
@@ -94,6 +94,7 @@
  *           $(LREF isSomeChar)
  *           $(LREF isSomeString)
  *           $(LREF isStaticArray)
+ *           $(LREF isStringLike)
  *           $(LREF isUnsigned)
  * ))
  * $(TR $(TD Type behaviours) $(TD
@@ -5238,6 +5239,36 @@ unittest
     }
 }
 
+
+/**
+Detect whether $(D T) is a struct or static array that is implicitly
+convertible to a string.
+ */
+template isStringLike(T)
+{
+    enum isStringLike = (isAggregateType!T || isStaticArray!T) && is(StringTypeOf!T);
+}
+
+///
+unittest
+{
+    static struct AliasedString
+    {
+        string s;
+        alias s this;
+    }
+    assert(!isStringLike!string);
+    assert(isStringLike!AliasedString);
+    assert(isStringLike!(char[25]));
+}
+
+package template peelStringLike(T)
+{
+    static if (isStringLike!T)
+        alias peelStringLike = StringTypeOf!T;
+    else
+        alias peelStringLike = T;
+}
 
 /**
  * Detect whether type $(D T) is a string that will be autodecoded.
