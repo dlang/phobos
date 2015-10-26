@@ -2372,6 +2372,13 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
     return retval.data;
 }
 
+///
+unittest
+{
+    string s = "Hello\nmy\rname\nis";
+    assert(splitLines(s) == ["Hello", "my", "name", "is"]);
+}
+
 @safe pure unittest
 {
     import std.conv : to;
