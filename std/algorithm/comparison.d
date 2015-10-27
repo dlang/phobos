@@ -1164,6 +1164,32 @@ size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     assert(levenshteinDistance("cat"d, "rat"d) == 1);
 }
 
+// compat overload for alias this strings
+size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
+    (auto ref Range1 s, auto ref Range2 t)
+    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+{
+    import std.meta : staticMap;
+    alias Types = staticMap!(convertToString, Range1, Range2);
+    return levenshteinDistance!(equals, Types)(s, t);
+}
+
+@safe unittest
+{
+    static struct S { string s; alias s this; }
+    assert(levenshteinDistance(S("cat"), S("rat")) == 1);
+    assert(levenshteinDistance("cat", S("rat")) == 1);
+    assert(levenshteinDistance(S("cat"), "rat") == 1);
+}
+
+@safe @nogc nothrow unittest
+{
+    static struct S { dstring s; alias s this; }
+    assert(levenshteinDistance(S("cat"d), S("rat"d)) == 1);
+    assert(levenshteinDistance("cat"d, S("rat"d)) == 1);
+    assert(levenshteinDistance(S("cat"d), "rat"d) == 1);
+}
+
 /**
 Returns the Levenshtein distance and the edit path between $(D s) and
 $(D t).
@@ -1180,7 +1206,7 @@ Returns:
 Allocates GC memory for the returned EditOp[] array.
 */
 Tuple!(size_t, EditOp[])
-levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
+levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (Range1 s, Range2 t)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
@@ -1208,6 +1234,25 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
     assert(levenshteinDistance("aa", "abc") == 2);
     assert(levenshteinDistance("Saturday", "Sunday") == 3);
     assert(levenshteinDistance("kitten", "sitting") == 3);
+}
+
+// compat overload for alias this strings
+Tuple!(size_t, EditOp[])
+levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
+    (auto ref Range1 s, auto ref Range2 t)
+    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+{
+    import std.meta : staticMap;
+    alias Types = staticMap!(convertToString, Range1, Range2);
+    return levenshteinDistanceAndPath!(equals, Types)(s, t);
+}
+
+@safe unittest
+{
+    static struct S { string s; alias s this; }
+    assert(levenshteinDistanceAndPath(S("cat"), S("rat"))[0] == 1);
+    assert(levenshteinDistanceAndPath("cat", S("rat"))[0] == 1);
+    assert(levenshteinDistanceAndPath(S("cat"), "rat")[0] == 1);
 }
 
 // max
@@ -1705,7 +1750,7 @@ bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
 }
 
 /// For convenience
-alias AllocateGC = Flag!"AllocateGC";
+alias AllocateGC = Flag!"allocateGC";
 
 /**
 Checks if both ranges are permutations of each other.
@@ -1724,7 +1769,7 @@ Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.lengt
 
 Params:
     pred = an optional parameter to change how equality is defined
-    allocate_gc = A $(D std.typecons.Flag!"AllocateGC") instance
+    allocate_gc = AllocateGC.yes/no
     r1 = A finite forward range
     r2 = A finite forward range
 

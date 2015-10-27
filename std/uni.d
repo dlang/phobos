@@ -659,6 +659,23 @@ debug(std_uni) import std.stdio;
 
 private:
 
+version (unittest)
+{
+private:
+    struct TestAliasedString
+    {
+        string get() @safe @nogc pure nothrow { return _s; }
+        alias get this;
+        @disable this(this);
+        string _s;
+    }
+
+    bool testAliasedString(alias func, Args...)(string s, Args args)
+    {
+        return func(TestAliasedString(s), args) == func(s, args);
+    }
+}
+
 version(std_uni_bootstrap){}
 else
 {
@@ -8157,7 +8174,8 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str
  */
 
 auto asLowerCase(Range)(Range str)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isConvertibleToString!Range)
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
     {
@@ -8174,7 +8192,8 @@ auto asLowerCase(Range)(Range str)
 
 /// ditto
 auto asUpperCase(Range)(Range str)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isConvertibleToString!Range)
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
     {
@@ -8195,6 +8214,24 @@ auto asUpperCase(Range)(Range str)
     import std.algorithm.comparison : equal;
 
     assert("hEllo".asUpperCase.equal("HELLO"));
+}
+
+auto asLowerCase(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return asLowerCase!(StringTypeOf!Range)(str);
+}
+
+auto asUpperCase(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return asUpperCase!(StringTypeOf!Range)(str);
+}
+
+unittest
+{
+    assert(testAliasedString!asLowerCase("hEllo"));
+    assert(testAliasedString!asUpperCase("hEllo"));
 }
 
 unittest
@@ -8348,7 +8385,8 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
  */
 
 auto asCapitalized(Range)(Range str)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isConvertibleToString!Range)
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
     {
@@ -8369,6 +8407,17 @@ auto asCapitalized(Range)(Range str)
     import std.algorithm.comparison : equal;
 
     assert("hEllo".asCapitalized.equal("Hello"));
+}
+
+auto asCapitalized(Range)(auto ref Range str)
+    if (isConvertibleToString!Range)
+{
+    return asCapitalized!(StringTypeOf!Range)(str);
+}
+
+unittest
+{
+    assert(testAliasedString!asCapitalized("hEllo"));
 }
 
 @safe pure nothrow @nogc unittest
