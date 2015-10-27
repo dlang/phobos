@@ -2224,6 +2224,13 @@ S capitalize(S)(S s) @trusted pure
     return changed ? cast(S)retval : s;
 }
 
+///
+pure @safe unittest
+{
+    assert(capitalize("hello") == "Hello");
+    assert(capitalize("World") == "World");
+}
+
 @trusted pure unittest
 {
     import std.conv : to;
