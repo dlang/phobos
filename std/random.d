@@ -2765,7 +2765,7 @@ unittest
 
     foreach (UniformRNG; PseudoRngTypes)
     {
-        auto rng = UniformRNG(unpredictableSeed);
+        auto rng = UniformRNG(1234);
         /* First test the most general case: randomSample of input range, with and
          * without a specified random number generator.
          */
@@ -2966,7 +2966,7 @@ unittest
             size_t count0, count1, count99;
             foreach(_; 0 .. 100_000)
             {
-                auto sample = randomSample(iota(100), 5);
+                auto sample = randomSample(iota(100), 5, &rng);
                 sample.popFront();
                 foreach(s; sample)
                 {
