@@ -19,6 +19,7 @@ $(LI $(XREF math, cmp) was added, defining total ordering on
 	floating-point numbers, including NaN.)
 $(LI FreeBSD now also ships with a shared libphobos2.so library ($(LINK2 http://dlang.org/dll-linux.html, usage info)).)
 $(LI The package $(STDMODREF experimental_allocator, std.experimental.allocator) was added.)
+$(LI $(RELATIVE_LINK2 documentation-improvements, The documentation for Phobos has been improved.))
 
 )
 
@@ -138,6 +139,14 @@ $(LI $(RELATIVE_LINK2 curl-dynamic-loading, libcurl is now loaded dynamically)
         use a $(I .DEF) file on Windows (see $(LINK2
         http://wiki.dlang.org/Curl_on_Windows#Using_the_static_lib, wiki) for
         more info on the latter).
+    )
+)
+
+$(LI $(RELATIVE_LINK2 documentation-improvements, The documentation for Phobos has been improved)
+
+    $(P A large portion of the functions in Phobos have improved documentation, including but
+        not limited to spelling fixes, clarifications, better explanations of function and template
+        parameters, and better explanations of return values. 
     )
 )
 
