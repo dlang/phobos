@@ -3875,7 +3875,15 @@ S center(S)(S s, size_t width, dchar fillChar = ' ')
     return centerJustifier(s, width, fillChar).array;
 }
 
-@trusted pure
+///
+@safe pure unittest
+{
+    assert(center("hello", 7, 'X') == "XhelloX");
+    assert(center("hello", 2, 'X') == "hello");
+    assert(center("hello", 9, 'X') == "XXhelloXX");
+}
+
+@safe pure
 unittest
 {
     import std.conv : to;
