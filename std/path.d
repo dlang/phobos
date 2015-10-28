@@ -58,6 +58,24 @@ module std.path;
 import std.file; //: getcwd;
 import std.range.primitives;
 import std.traits;
+static import std.meta;
+
+version (unittest)
+{
+private:
+    struct TestAliasedString
+    {
+        string get() @safe @nogc pure nothrow { return _s; }
+        alias get this;
+        @disable this(this);
+        string _s;
+    }
+
+    bool testAliasedString(alias func, Args...)(string s, Args args)
+    {
+        return func(TestAliasedString(s), args) == func(s, args);
+    }
+}
 
 /** String used to separate directory names in a path.  Under
     POSIX this is a slash, under Windows a backslash.
@@ -450,12 +468,13 @@ unittest
     (with suitable adaptations for Windows paths).
 */
 auto dirName(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+         isNarrowString!R) &&
+        !isConvertibleToString!R)
 {
-    auto result(bool dot, typeof(path[0..1]) p)
+    static auto result(bool dot, typeof(path[0..1]) p)
     {
-        static if (is(StringTypeOf!R))
+        static if (isSomeString!R)
             return dot ? "." : p;
         else
         {
@@ -535,6 +554,17 @@ unittest
     }
 }
 
+auto dirName(R)(auto ref R path)
+    if (isConvertibleToString!R)
+{
+    return dirName!(StringTypeOf!R)(path);
+}
+
+unittest
+{
+    assert(testAliasedString!dirName("file"));
+}
+
 unittest
 {
     static assert (dirName("dir/file") == "dir");
@@ -590,8 +620,9 @@ unittest
         A slice of $(D path).
 */
 auto rootName(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+         isNarrowString!R) &&
+        !isConvertibleToString!R)
 {
     if (path.empty)
         goto Lnull;
@@ -642,6 +673,11 @@ unittest
 
 unittest
 {
+    assert (testAliasedString!rootName("/foo/bar"));
+}
+
+unittest
+{
     import std.array;
     import std.utf : byChar;
 
@@ -659,6 +695,12 @@ unittest
     }
 }
 
+auto rootName(R)(R path)
+    if (isConvertibleToString!R)
+{
+    return rootName!(StringTypeOf!R)(path);
+}
+
 
 /**
     Get the drive portion of a path.
@@ -674,8 +716,9 @@ unittest
         Always returns an empty range on POSIX.
 */
 auto driveName(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+         isNarrowString!R) &&
+        !isConvertibleToString!R)
 {
     version (Windows)
     {
@@ -684,7 +727,7 @@ auto driveName(R)(R path)
         else if (isUNC(path))
             return path[0 .. uncRootLength(path)];
     }
-    static if (is(StringTypeOf!R))
+    static if (isSomeString!R)
         return cast(ElementEncodingType!R[])null; // legacy code may rely on null return rather than slice
     else
         return path[0..0];
@@ -706,6 +749,17 @@ unittest
 
         static assert (driveName(`d:\file`) == "d:");
     }
+}
+
+auto driveName(R)(auto ref R path)
+    if (isConvertibleToString!R)
+{
+    return driveName!(StringTypeOf!R)(path);
+}
+
+unittest
+{
+    assert(testAliasedString!driveName(`d:\file`));
 }
 
 unittest
@@ -738,8 +792,9 @@ unittest
     Returns: A slice of path without the drive component.
 */
 auto stripDrive(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+    if ((isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+         isNarrowString!R) &&
+        !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -757,6 +812,17 @@ unittest
         assert (stripDrive(`d:\dir\file`) == `\dir\file`);
         assert (stripDrive(`\\server\share\dir\file`) == `\dir\file`);
     }
+}
+
+auto stripDrive(R)(auto ref R path)
+    if (isConvertibleToString!R)
+{
+    return stripDrive!(StringTypeOf!R)(path);
+}
+
+unittest
+{
+    assert(testAliasedString!stripDrive(`d:\dir\file`));
 }
 
 unittest
@@ -899,8 +965,9 @@ unittest
         slice of path with the extension (if any) stripped off
 */
 auto stripExtension(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+         isNarrowString!R) &&
+        !isConvertibleToString!R)
 {
     auto i = extSeparatorPos(path);
     return (i == -1) ? path : path[0 .. i];
@@ -916,6 +983,17 @@ unittest
     assert (stripExtension(".file")          == ".file");
     assert (stripExtension(".file.ext")      == ".file");
     assert (stripExtension("dir/file.ext")   == "dir/file");
+}
+
+auto stripExtension(R)(auto ref R path)
+    if (isConvertibleToString!R)
+{
+    return stripExtension!(StringTypeOf!R)(path);
+}
+
+unittest
+{
+    assert (testAliasedString!stripExtension("file"));
 }
 
 unittest
@@ -1030,7 +1108,8 @@ unittest
  */
 auto withExtension(R, C)(R path, C[] ext)
     if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         is(StringTypeOf!R)) &&
+         isNarrowString!R) &&
+        !isConvertibleToString!R &&
         isSomeChar!C)
 {
     import std.range : only, chain;
@@ -1057,6 +1136,16 @@ unittest
     assert (withExtension("file.ext"w.byWchar, ".").array == "file."w);
 }
 
+auto withExtension(R, C)(auto ref R path, C[] ext)
+    if (isConvertibleToString!R)
+{
+    return withExtension!(StringTypeOf!R)(path, ext);
+}
+
+unittest
+{
+    assert (testAliasedString!withExtension("file", "ext"));
+}
 
 /** Params:
         path = A path name.
@@ -1111,7 +1200,8 @@ unittest
  */
 auto withDefaultExtension(R, C)(R path, C[] ext)
     if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         is(StringTypeOf!R)) &&
+         isNarrowString!R) &&
+        !isConvertibleToString!R &&
         isSomeChar!C)
 {
     import std.range : only, chain;
@@ -1148,6 +1238,17 @@ unittest
     assert (withDefaultExtension("file"w.byWchar, ".ext").array == "file.ext"w);
     assert (withDefaultExtension("file.".byChar, "ext"d).array == "file.");
     assert (withDefaultExtension("file".byChar, "").array == "file.");
+}
+
+auto withDefaultExtension(R, C)(auto ref R path, C[] ext)
+    if (isConvertibleToString!R)
+{
+    return withDefaultExtension!(StringTypeOf!R, C)(path, ext);
+}
+
+unittest
+{
+    assert (testAliasedString!withDefaultExtension("file", "ext"));
 }
 
 /** Combines one or more path segments.
@@ -1349,9 +1450,11 @@ unittest
  */
 auto chainPath(R1, R2, Ranges...)(R1 r1, R2 r2, Ranges ranges)
     if ((isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && isSomeChar!(ElementType!R1) ||
-         is(StringTypeOf!R1)) &&
+         isNarrowString!R1 &&
+        !isConvertibleToString!R1) &&
         (isRandomAccessRange!R2 && hasSlicing!R2 && hasLength!R2 && isSomeChar!(ElementType!R2) ||
-         is(StringTypeOf!R2)) &&
+         isNarrowString!R2 &&
+        !isConvertibleToString!R2) &&
         (Ranges.length == 0 || is(typeof(chainPath(r2, ranges))))
        )
 {
@@ -1440,6 +1543,24 @@ unittest
     }
 }
 
+auto chainPath(Ranges...)(auto ref Ranges ranges)
+    if (Ranges.length >= 2 &&
+        std.meta.anySatisfy!(isConvertibleToString, Ranges))
+{
+    import std.meta : staticMap;
+    alias Types = staticMap!(convertToString, Ranges);
+    return chainPath!Types(ranges);
+}
+
+unittest
+{
+    chainPath(TestAliasedString(null), TestAliasedString(null), TestAliasedString(null));
+    static assert(__traits(compiles, chainPath(TestAliasedString(null), TestAliasedString(null), TestAliasedString(null))));
+    static assert(__traits(compiles, chainPath(TestAliasedString(null), TestAliasedString(null), "")));
+    static assert(__traits(compiles, chainPath(TestAliasedString(null), "", TestAliasedString(null))));
+    static struct S { string s; }
+    static assert(!__traits(compiles, chainPath(TestAliasedString(null), S(""), TestAliasedString(null))));
+}
 
 /** Performs the same task as $(LREF buildPath),
     while at the same time resolving current/parent directory
@@ -1615,8 +1736,9 @@ unittest
 */
 
 auto asNormalizedPath(R)(R path)
-        if (isSomeChar!(ElementEncodingType!R) &&
-            (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R))
+    if (isSomeChar!(ElementEncodingType!R) &&
+        (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R) &&
+        !isConvertibleToString!R)
 {
     alias C = Unqual!(ElementEncodingType!R);
     alias S = typeof(path[0..0]);
@@ -1778,6 +1900,17 @@ unittest
         assert (asNormalizedPath(`\\server\share\foo\..\bar`).array ==
                 `\\server\share\bar`);
     }
+}
+
+auto asNormalizedPath(R)(auto ref R path)
+    if (isConvertibleToString!R)
+{
+    return asNormalizedPath!(StringTypeOf!R)(path);
+}
+
+unittest
+{
+    assert(testAliasedString!asNormalizedPath(null));
 }
 
 unittest
@@ -1985,8 +2118,9 @@ unittest
         bidirectional range of slices of `path`
 */
 auto pathSplitter(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R ||
-        isSomeString!R)
+    if ((isRandomAccessRange!R && hasSlicing!R ||
+         isNarrowString!R) &&
+        !isConvertibleToString!R)
 {
     static struct PathSplitter
     {
@@ -2169,6 +2303,18 @@ unittest
         assert (equal(pathSplitter(`c:\foo\bar`), [`c:\`, "foo", "bar"]));
         assert (equal(pathSplitter(`c:foo\bar`), ["c:foo", "bar"]));
     }
+}
+
+auto pathSplitter(R)(auto ref R path)
+    if (isConvertibleToString!R)
+{
+    return pathSplitter!(StringTypeOf!R)(path);
+}
+
+unittest
+{
+    import std.algorithm.comparison : equal;
+    assert (testAliasedString!pathSplitter("/"));
 }
 
 unittest
@@ -2492,9 +2638,10 @@ unittest
     See_Also:
         $(LREF absolutePath) which returns an allocated string
 */
-auto asAbsolutePath(R1)(R1 path)
-    if (isRandomAccessRange!R1 && isSomeChar!(ElementType!R1) ||
-        isNarrowString!R1)
+auto asAbsolutePath(R)(R path)
+    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+         isNarrowString!R) &&
+        !isConvertibleToString!R)
 {
     import std.file : getcwd;
     string base = null;
@@ -2517,6 +2664,17 @@ unittest
         assert(asAbsolutePath("c:/foo").array == "c:/foo");
     }
     asAbsolutePath("foo");
+}
+
+auto asAbsolutePath(R)(auto ref R path)
+    if (isConvertibleToString!R)
+{
+    return asAbsolutePath!(StringTypeOf!R)(path);
+}
+
+unittest
+{
+    assert(testAliasedString!asAbsolutePath(null));
 }
 
 /** Translates $(D path) into a relative _path.
@@ -2654,9 +2812,11 @@ unittest
 auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     (R1 path, R2 base)
     if ((isNarrowString!R1 ||
-         (isRandomAccessRange!R1 && hasSlicing!R1 && isSomeChar!(ElementType!R1))) &&
+         (isRandomAccessRange!R1 && hasSlicing!R1 && isSomeChar!(ElementType!R1)) &&
+        !isConvertibleToString!R1) &&
         (isNarrowString!R2 ||
-         (isRandomAccessRange!R2 && hasSlicing!R2 && isSomeChar!(ElementType!R2))))
+         (isRandomAccessRange!R2 && hasSlicing!R2 && isSomeChar!(ElementType!R2)) &&
+         !isConvertibleToString!R2))
 {
     bool choosePath = !isAbsolute(path);
 
@@ -2725,6 +2885,29 @@ unittest
     }
     else
         static assert(0);
+}
+
+auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
+    (auto ref R1 path, auto ref R2 base)
+    if (isConvertibleToString!R1 || isConvertibleToString!R2)
+{
+    import std.meta : staticMap;
+    alias Types = staticMap!(convertToString, R1, R2);
+    return asRelativePath!(cs, Types)(path, base);
+}
+
+unittest
+{
+    import std.array;
+    version (Posix)
+        assert (asRelativePath(TestAliasedString("foo"), TestAliasedString("/bar")).array == "foo");
+    else version (Windows)
+        assert (asRelativePath(TestAliasedString("foo"), TestAliasedString(`c:\bar`)).array == "foo");
+    static assert(__traits(compiles, asRelativePath(TestAliasedString(null), "")));
+    static assert(__traits(compiles, asRelativePath("", TestAliasedString(null))));
+    static assert(__traits(compiles, asRelativePath(TestAliasedString(null), TestAliasedString(null))));
+    import std.utf : byDchar;
+    static assert(__traits(compiles, asRelativePath(""d.byDchar, TestAliasedString(null))));
 }
 
 unittest
@@ -2841,8 +3024,8 @@ unittest
 */
 int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
     (Range1 filename1, Range2 filename2)
-    if (isInputRange!Range1 && isSomeChar!(ElementEncodingType!Range1) &&
-        isInputRange!Range2 && isSomeChar!(ElementEncodingType!Range2))
+    if (isInputRange!Range1 && isSomeChar!(ElementEncodingType!Range1) && !isConvertibleToString!Range1 &&
+        isInputRange!Range2 && isSomeChar!(ElementEncodingType!Range2) && !isConvertibleToString!Range2)
 {
     alias C1 = Unqual!(ElementEncodingType!Range1);
     alias C2 = Unqual!(ElementEncodingType!Range2);
@@ -2901,6 +3084,22 @@ unittest
     }
 }
 
+int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
+    (auto ref Range1 filename1, auto ref Range2 filename2)
+    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+{
+    import std.meta : staticMap;
+    alias Types = staticMap!(convertToString, Range1, Range2);
+    return filenameCmp!(cs, Types)(filename1, filename2);
+}
+
+unittest
+{
+    assert (filenameCmp!(CaseSensitive.yes)(TestAliasedString("Abc"), "abc") < 0);
+    assert (filenameCmp!(CaseSensitive.yes)("Abc", TestAliasedString("abc")) < 0);
+    assert (filenameCmp!(CaseSensitive.yes)(TestAliasedString("Abc"), TestAliasedString("abc")) < 0);
+}
+
 unittest
 {
     assert (filenameCmp!(CaseSensitive.yes)("Abc", "abc") < 0);
@@ -2919,7 +3118,6 @@ unittest
     version (Posix)   assert (filenameCmp(`abc\def`, `abc/def`) != 0);
     version (Windows) assert (filenameCmp(`abc\def`, `abc/def`) == 0);
 }
-
 
 /** Matches a pattern against a path.
 
@@ -2964,7 +3162,7 @@ unittest
 bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
     (Range path, const(C)[] pattern)
     @safe pure nothrow
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) && !isConvertibleToString!Range &&
         isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!Range)))
 in
 {
@@ -3136,6 +3334,19 @@ unittest
     }
 }
 
+bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
+    (auto ref Range path, const(C)[] pattern)
+    @safe pure nothrow
+    if (isConvertibleToString!Range)
+{
+    return globMatch!(cs, C, StringTypeOf!Range)(path, pattern);
+}
+
+unittest
+{
+    assert (testAliasedString!globMatch("foo.bar", "*"));
+}
+
 unittest
 {
     assert (globMatch!(CaseSensitive.no)("foo", "Foo"));
@@ -3221,10 +3432,9 @@ unittest
 
 */
 bool isValidFilename(Range)(Range filename)
-    if (is(StringTypeOf!Range) ||
-        isRandomAccessRange!Range &&
-        hasLength!Range && hasSlicing!Range &&
-        isSomeChar!(ElementEncodingType!Range))
+    if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
+         isNarrowString!Range) &&
+        !isConvertibleToString!Range)
 {
     import core.stdc.stdio : FILENAME_MAX;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
@@ -3275,6 +3485,17 @@ unittest
     import std.utf : byCodeUnit;
 
     assert(isValidFilename("hello.exe".byCodeUnit));
+}
+
+bool isValidFilename(Range)(auto ref Range filename)
+    if (isConvertibleToString!Range)
+{
+    return isValidFilename!(StringTypeOf!Range)(filename);
+}
+
+unittest
+{
+    assert(testAliasedString!isValidFilename("hello.exe"));
 }
 
 @safe pure
@@ -3353,10 +3574,9 @@ unittest
         true if $(D path) is a valid _path.
 */
 bool isValidPath(Range)(Range path)
-    if (is(StringTypeOf!Range) ||
-        isRandomAccessRange!Range &&
-        hasLength!Range && hasSlicing!Range &&
-        isSomeChar!(ElementEncodingType!Range))
+    if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
+         isNarrowString!Range) &&
+        !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3450,7 +3670,6 @@ bool isValidPath(Range)(Range path)
     return true;
 }
 
-
 ///
 @safe pure @nogc nothrow
 unittest
@@ -3490,8 +3709,16 @@ unittest
     assert (isValidPath("/foo/bar".byCodeUnit));
 }
 
+bool isValidPath(Range)(auto ref Range path)
+    if (isConvertibleToString!Range)
+{
+    return isValidPath!(StringTypeOf!Range)(path);
+}
 
-
+unittest
+{
+    assert(testAliasedString!isValidPath("/foo/bar"));
+}
 
 /** Performs tilde expansion in paths on POSIX systems.
     On Windows, this function does nothing.

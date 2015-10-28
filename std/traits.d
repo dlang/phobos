@@ -79,6 +79,7 @@
  *           $(LREF isAggregateType)
  *           $(LREF isArray)
  *           $(LREF isAssociativeArray)
+ *           $(LREF isAutodecodableString)
  *           $(LREF isBasicType)
  *           $(LREF isBoolean)
  *           $(LREF isBuiltinType)
@@ -86,7 +87,6 @@
  *           $(LREF isFloatingPoint)
  *           $(LREF isIntegral)
  *           $(LREF isNarrowString)
- *           $(LREF isAutodecodableString)
  *           $(LREF isNumeric)
  *           $(LREF isPointer)
  *           $(LREF isScalarType)
@@ -5250,6 +5250,35 @@ unittest
     }
 }
 
+
+/*
+Detect whether $(D T) is a struct or static array that is implicitly
+convertible to a string.
+ */
+template isConvertibleToString(T)
+{
+    enum isConvertibleToString = (isAggregateType!T || isStaticArray!T) && is(StringTypeOf!T);
+}
+
+unittest
+{
+    static struct AliasedString
+    {
+        string s;
+        alias s this;
+    }
+    assert(!isConvertibleToString!string);
+    assert(isConvertibleToString!AliasedString);
+    assert(isConvertibleToString!(char[25]));
+}
+
+package template convertToString(T)
+{
+    static if (isConvertibleToString!T)
+        alias convertToString = StringTypeOf!T;
+    else
+        alias convertToString = T;
+}
 
 /**
  * Detect whether type $(D T) is a string that will be autodecoded.
