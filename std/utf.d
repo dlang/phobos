@@ -1198,7 +1198,7 @@ dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.
 }
 
 // Gives the maximum value that a code unit for the given range type can hold.
-private template codeUnitLimit(S)
+package template codeUnitLimit(S)
     if (isSomeChar!(ElementEncodingType!S))
 {
     static if (is(Unqual!(ElementEncodingType!S) == char))

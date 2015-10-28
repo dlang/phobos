@@ -802,7 +802,7 @@ $(D rawRead) always reads in binary mode on Windows.
  */
     T[] rawRead(T)(T[] buffer)
     {
-        import std.exception : Exception, errnoEnforce;
+        import std.exception : errnoEnforce;
 
         if (!buffer.length)
             throw new Exception("rawRead must take a non-empty buffer");
