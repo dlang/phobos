@@ -3695,6 +3695,14 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ')
     return rightJustifier(s, width, fillChar).array;
 }
 
+///
+@safe pure unittest
+{
+    assert(rightJustify("hello", 7, 'X') == "XXhello");
+    assert(rightJustify("hello", 2, 'X') == "hello");
+    assert(rightJustify("hello", 9, 'X') == "XXXXhello");
+}
+
 /++
     Right justify $(D s) in a field $(D width) characters wide. $(D fillChar)
     is the character that will be used to fill up the space in the field that
