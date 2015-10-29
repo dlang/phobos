@@ -863,6 +863,97 @@ unittest
     }
 }
 
+/**
+ * Converts an input range $(D range) to an alias sequence.
+ */
+template aliasSeqOf(alias range)
+{
+    import std.range : isInputRange;
+    import std.traits : isArray, isNarrowString;
+
+    alias ArrT = typeof(range);
+    static if (isArray!ArrT && !isNarrowString!ArrT)
+    {
+        static if (range.length == 0)
+        {
+            alias aliasSeqOf = AliasSeq!();
+        }
+        else static if (range.length == 1)
+        {
+            alias aliasSeqOf = AliasSeq!(range[0]);
+        }
+        else
+        {
+            alias aliasSeqOf = AliasSeq!(aliasSeqOf!(range[0 .. $/2]), aliasSeqOf!(range[$/2 .. $]));
+        }
+    }
+    else static if (isInputRange!ArrT)
+    {
+        import std.array : array;
+        alias aliasSeqOf = aliasSeqOf!(array(range));
+    }
+    else
+    {
+        import std.string : format;
+        static assert(false, format("Cannot transform %s of type %s into a AliasSeq.", range, ArrT.stringof));
+    }
+}
+
+///
+unittest
+{
+    import std.algorithm : map, sort;
+    import std.string : capitalize;
+
+    struct S
+    {
+        int a;
+        int c;
+        int b;
+    }
+
+    alias capMembers = aliasSeqOf!([__traits(allMembers, S)].sort().map!capitalize());
+    static assert(capMembers[0] == "A");
+    static assert(capMembers[1] == "B");
+    static assert(capMembers[2] == "C");
+}
+
+///
+unittest
+{
+    enum REF = [0, 1, 2, 3];
+    foreach(I, V; aliasSeqOf!([0, 1, 2, 3]))
+    {
+        static assert(V == I);
+        static assert(V == REF[I]);
+    }
+}
+
+unittest
+{
+    import std.range : iota;
+    import std.conv : to, octal;
+    //Testing compile time octal
+    foreach (I2; aliasSeqOf!(iota(0, 8)))
+        foreach (I1; aliasSeqOf!(iota(0, 8)))
+        {
+            enum oct = I2 *  8 + I1;
+            enum dec = I2 * 10 + I1;
+            enum str = to!string(dec);
+            static assert(octal!dec == oct);
+            static assert(octal!str == oct);
+        }
+}
+
+unittest
+{
+    enum REF = "日本語"d;
+    foreach(I, V; aliasSeqOf!"日本語"c)
+    {
+        static assert(V == REF[I]);
+    }
+}
+
 
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
 package:
