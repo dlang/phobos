@@ -122,7 +122,7 @@ $(LI $(LNAME2 std-algorithm-isSameLength, `isSameLength` was added.)
     ------
 )
 
-$(LI $(RELATIVE_LINK2 curl-dynamic-loading, libcurl is now loaded dynamically)
+$(LI $(LNAME2 curl-dynamic-loading, libcurl is now loaded dynamically)
 
     $(P $(STDMODREF net_curl, std.net.curl) was changed to load curl as shared
         library at runtime.  This simplifies the usage as it's no longer
@@ -142,11 +142,11 @@ $(LI $(RELATIVE_LINK2 curl-dynamic-loading, libcurl is now loaded dynamically)
     )
 )
 
-$(LI $(RELATIVE_LINK2 documentation-improvements, The documentation for Phobos has been improved)
+$(LI $(LNAME2 documentation-improvements, The documentation for Phobos has been improved)
 
     $(P A large portion of the functions in Phobos have improved documentation, including but
         not limited to spelling fixes, clarifications, better explanations of function and template
-        parameters, and better explanations of return values. 
+        parameters, and better explanations of return values.
     )
 )
 
