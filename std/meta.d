@@ -863,6 +863,45 @@ unittest
     }
 }
 
+/**
+ * Converts an array expression to an expression tuple.
+ */
+template ArrayToExpTuple(alias Arr)
+{
+    alias ArrayToExpTuple = ArrayToExpTupleImpl!(0);
+
+    template ArrayToExpTupleImpl(size_t I)
+    {
+        static if (I + 1 == Arr.length)
+            alias ArrayToExpTupleImpl = Arguments!(Arr[I]);
+
+        else static if (I + 1 < Arr.length)
+            alias ArrayToExpTupleImpl = Arguments!(Arr[I], ArrayToExpTupleImpl!(I + 1));
+
+        else
+            static assert(false, "ArrayToExpTupleImpl went past the end of the array!");
+    }
+}
+
+///
+unittest
+{
+    import std.array : array;
+    import std.algorithm : map, sort;
+    import std.string : capitalize;
+
+    struct S
+    {
+        int a;
+        int c;
+        int b;
+    }
+
+    alias capMembers = ArrayToExpTuple!([__traits(allMembers, S)].sort().map!capitalize().array());
+    static assert(capMembers[0] == "A");
+    static assert(capMembers[1] == "B");
+    static assert(capMembers[2] == "C");
+}
 
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
 package:
