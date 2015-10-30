@@ -4623,7 +4623,7 @@ if (!is(T == class) && !(is(T == interface)))
            Returns $(D true) if and only if the underlying store has been
            allocated and initialized.
         */
-        @property nothrow @safe
+        @property nothrow @safe pure @nogc
         bool isInitialized() const
         {
             return _store !is null;
@@ -4633,7 +4633,7 @@ if (!is(T == class) && !(is(T == interface)))
            Returns underlying reference count if it is allocated and initialized
            (a positive integer), and $(D 0) otherwise.
         */
-        @property nothrow @safe
+        @property nothrow @safe pure @nogc
         size_t refCount() const
         {
             return isInitialized ? _store._count : 0;
@@ -4678,7 +4678,7 @@ Postcondition: $(D refCountedStore.isInitialized)
 Constructor that tracks the reference count appropriately. If $(D
 !refCountedStore.isInitialized), does nothing.
  */
-    this(this)
+    this(this) @safe pure nothrow @nogc
     {
         if (!_refCounted.isInitialized) return;
         ++_refCounted._store._count;
@@ -4755,7 +4755,7 @@ Assignment operators
         ref T refCountedPayload() return;
 
         /// ditto
-        @property nothrow @safe
+        @property nothrow @safe pure @nogc
         ref inout(T) refCountedPayload() inout return;
     }
     else
@@ -4771,7 +4771,7 @@ Assignment operators
             }
         }
 
-        @property nothrow @safe
+        @property nothrow @safe pure @nogc
         ref inout(T) refCountedPayload() inout return
         {
             assert(_refCounted.isInitialized, "Attempted to access an uninitialized payload.");
