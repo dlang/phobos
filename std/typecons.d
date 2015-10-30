@@ -291,6 +291,18 @@ unittest
     assert(!uf2.isEmpty);
 }
 
+// Used in Tuple.toString
+private template sharedToString(alias field)
+    if(is(typeof(field) == shared))
+{
+    static immutable sharedToString = typeof(field).stringof;
+}
+
+private template sharedToString(alias field)
+    if(!is(typeof(field) == shared))
+{
+    alias sharedToString = field;
+}
 
 /**
 Tuple of values, for example $(D Tuple!(int, string)) is a record that
@@ -796,7 +808,7 @@ template Tuple(Specs...)
                 }
                 else
                 {
-                    //formattedWrite(sink, fmt.nested, this.expand);
+                    formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
                 }
             }
             else if (fmt.spec == 's')
