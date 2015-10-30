@@ -840,10 +840,12 @@ template Tuple(Specs...)
          * Returns:
          *     The string representation of this `Tuple`.
          */
-        string toString()
+        string toString()() const
         {
-            import std.conv : to;
-            return this.to!string;
+            import std.array : appender;
+            auto app = appender!string();
+            this.toString((const(char)[] chunk) => app ~= chunk);
+            return app.data;
         }
 
         ///
