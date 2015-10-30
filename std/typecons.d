@@ -790,7 +790,7 @@ template Tuple(Specs...)
                         }
                         else
                         {
-                            //formattedWrite(sink, fmt.nested, this.field[i]);
+                            formattedWrite(sink, fmt.nested, this.field[i]);
                         }
                     }
                 }
@@ -849,17 +849,16 @@ template Tuple(Specs...)
         ///
         unittest
         {
-            //import std.format    : format, FormatException;
+            import std.format    : format, FormatException;
             import std.format : format;
-            //import std.exception : assertThrown;
-            // auto if_list = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
+            import std.exception : assertThrown;
+            auto if_list = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
 
-            // assert(format("%s", tuple("a", 1))                          == `Tuple!(string, int)("a", 1)`);
-            // assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))    == `0x1 v 1.0000 w 0xa`);
-            // assert(format("%(q%sq%| x %)", tuple("abc", 1, 2.3, [4,5])) == `qabcq x q1q x q2.3q x q[4, 5]q`);
-            // assert(format("%(%(%d^2 = %.1f%);  %)", if_list)            == `1^2 = 1.0;  2^2 = 4.0;  3^2 = 9.0`);
+            assert(format("%s", tuple("a", 1))                          == `Tuple!(string, int)("a", 1)`);
+            assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))    == `0x1 v 1.0000 w 0xa`);
+            assert(format("%(q%sq%| x %)", tuple("abc", 1, 2.3, [4,5])) == `qabcq x q1q x q2.3q x q[4, 5]q`);
+            assert(format("%(%(%d^2 = %.1f%);  %)", if_list)            == `1^2 = 1.0;  2^2 = 4.0;  3^2 = 9.0`);
 
-            /+
             assertThrown!FormatException(
                 format("%d, %f", tuple(1, 2.0)) == `1, 2.0` // error: %( %) missing
             );
@@ -869,7 +868,6 @@ template Tuple(Specs...)
             assertThrown!FormatException(
                 format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0` // error: %d inadequate for double
             );
-            +/
         }
     }
 }
