@@ -291,6 +291,18 @@ unittest
     assert(!uf2.isEmpty);
 }
 
+// Used in Tuple.toString
+private template sharedToString(alias field)
+    if(is(typeof(field) == shared))
+{
+    static immutable sharedToString = typeof(field).stringof;
+}
+
+private template sharedToString(alias field)
+    if(!is(typeof(field) == shared))
+{
+    alias sharedToString = field;
+}
 
 /**
 Tuple of values, for example $(D Tuple!(int, string)) is a record that
@@ -790,13 +802,13 @@ template Tuple(Specs...)
                         }
                         else
                         {
-                            //formattedWrite(sink, fmt.nested, this.field[i]);
+                            formattedWrite(sink, fmt.nested, this.field[i]);
                         }
                     }
                 }
                 else
                 {
-                    //formattedWrite(sink, fmt.nested, this.expand);
+                    formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
                 }
             }
             else if (fmt.spec == 's')
@@ -840,26 +852,27 @@ template Tuple(Specs...)
          * Returns:
          *     The string representation of this `Tuple`.
          */
-        string toString()
+        string toString()() const
         {
-            import std.conv : to;
-            return this.to!string;
+            import std.array : appender;
+            auto app = appender!string();
+            this.toString((const(char)[] chunk) => app ~= chunk);
+            return app.data;
         }
 
         ///
         unittest
         {
-            //import std.format    : format, FormatException;
+            import std.format    : format, FormatException;
             import std.format : format;
-            //import std.exception : assertThrown;
-            // auto if_list = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
+            import std.exception : assertThrown;
+            auto if_list = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
 
-            // assert(format("%s", tuple("a", 1))                          == `Tuple!(string, int)("a", 1)`);
-            // assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))    == `0x1 v 1.0000 w 0xa`);
-            // assert(format("%(q%sq%| x %)", tuple("abc", 1, 2.3, [4,5])) == `qabcq x q1q x q2.3q x q[4, 5]q`);
-            // assert(format("%(%(%d^2 = %.1f%);  %)", if_list)            == `1^2 = 1.0;  2^2 = 4.0;  3^2 = 9.0`);
+            assert(format("%s", tuple("a", 1))                          == `Tuple!(string, int)("a", 1)`);
+            assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))    == `0x1 v 1.0000 w 0xa`);
+            assert(format("%(q%sq%| x %)", tuple("abc", 1, 2.3, [4,5])) == `qabcq x q1q x q2.3q x q[4, 5]q`);
+            assert(format("%(%(%d^2 = %.1f%);  %)", if_list)            == `1^2 = 1.0;  2^2 = 4.0;  3^2 = 9.0`);
 
-            /+
             assertThrown!FormatException(
                 format("%d, %f", tuple(1, 2.0)) == `1, 2.0` // error: %( %) missing
             );
@@ -869,7 +882,6 @@ template Tuple(Specs...)
             assertThrown!FormatException(
                 format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0` // error: %d inadequate for double
             );
-            +/
         }
     }
 }
