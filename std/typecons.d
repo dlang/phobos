@@ -6668,13 +6668,6 @@ template ReplaceType(From, To, T...)
             static assert(0, "Function types not supported,"
                 " use a function pointer type instead of "~T[0].stringof);
         }
-        else static if (is(T[0] == U[], U))
-            alias ReplaceType = ReplaceType!(From, To, U)[];
-        else static if (is(T[0] == U[n], U, size_t n))
-            alias ReplaceType = ReplaceType!(From, To, U)[n];
-        else static if (is(T[0] == U[V], U, V))
-            alias ReplaceType =
-                ReplaceType!(From, To, U)[ReplaceType!(From, To, V)];
         else static if (is(T[0] : U!V, alias U, V...))
         {
             template replaceTemplateArgs(T...)
@@ -6686,6 +6679,16 @@ template ReplaceType(From, To, T...)
             }
             alias ReplaceType = U!(staticMap!(replaceTemplateArgs, V));
         }
+        else static if (is(T[0] == struct))
+            // don't match with alias this struct below (Issue 15168)
+            alias ReplaceType = T[0];
+        else static if (is(T[0] == U[], U))
+            alias ReplaceType = ReplaceType!(From, To, U)[];
+        else static if (is(T[0] == U[n], U, size_t n))
+            alias ReplaceType = ReplaceType!(From, To, U)[n];
+        else static if (is(T[0] == U[V], U, V))
+            alias ReplaceType =
+                ReplaceType!(From, To, U)[ReplaceType!(From, To, V)];
         else
             alias ReplaceType = T[0];
     }
@@ -6871,5 +6874,15 @@ unittest
         int, string,
                int[3] function(   int[] arr,    int[2] ...) pure @trusted,
             string[3] function(string[] arr, string[2] ...) pure @trusted,
+    );
+
+    // Bugzilla 15168
+    static struct T1 { string s; alias s this; }
+    static struct T2 { char[10] s; alias s this; }
+    static struct T3 { string[string] s; alias s this; }
+    alias Pass2 = Test!(
+        ubyte, ubyte, T1, T1,
+        ubyte, ubyte, T2, T2,
+        ubyte, ubyte, T3, T3,
     );
 }
