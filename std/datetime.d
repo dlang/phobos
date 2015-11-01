@@ -451,6 +451,25 @@ public:
                        ts.tv_nsec / 100 +
                        hnsecsToUnixEpoch;
             }
+            else version(Solaris)
+            {
+                static if(clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    import core.sys.solaris.time;
+                    static if(clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME;
+                    else static if(clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                    else static if(clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
+                    else static assert(0, "Previous static if is wrong.");
+                    timespec ts;
+                    if(clock_gettime(clockArg, &ts) != 0)
+                        throw new TimeException("Call to clock_gettime() failed");
+                    return convert!("seconds", "hnsecs")(ts.tv_sec) +
+                           ts.tv_nsec / 100 +
+                           hnsecsToUnixEpoch;
+                }
+            }
             else static assert(0, "Unsupported OS");
         }
         else static assert(0, "Unsupported OS");
