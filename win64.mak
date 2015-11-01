@@ -279,6 +279,8 @@ SRC_ETC=
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d \
     etc\c\odbc\sql.d etc\c\odbc\sqlext.d etc\c\odbc\sqltypes.d etc\c\odbc\sqlucode.d
 
+SRC_EXPERIMENTAL= experimental\typecons.d
+
 SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_STD_REGEX) \
 	$(SRC_STD_NET) \
@@ -290,7 +292,8 @@ SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS) \
 	$(SRC_ETC) \
-	$(SRC_ETC_C)
+	$(SRC_ETC_C) \
+	$(SRC_EXPERIMENTAL)
 
 SRC_TO_COMPILE= $(SRC_STD_ALL) \
 	$(SRC_STD_ALGO) \
@@ -460,6 +463,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_experimental_ndslice_selection.html \
 	$(DOC)\std_experimental_ndslice_slice.html \
 	$(DOC)\std_experimental_ndslice.html \
+	$(DOC)\std_experimental_typecons.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \

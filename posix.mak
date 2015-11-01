@@ -155,7 +155,7 @@ STD_PACKAGES = std $(addprefix std/,\
   experimental/allocator/building_blocks experimental/logger \
   experimental/ndslice \
   net \
-  range regex)
+  experimental range regex)
 
 # Modules broken down per package
 
@@ -165,6 +165,7 @@ PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   outbuffer parallelism path process random signals socket socketstream stdint \
   stdio stdiobase stream string syserror system traits typecons typetuple uni \
   uri utf uuid variant xml zip zlib
+PACKAGE_std_experimental = typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util

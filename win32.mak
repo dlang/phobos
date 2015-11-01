@@ -255,6 +255,8 @@ SRC_ETC=
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d \
 	etc\c\odbc\sql.d etc\c\odbc\sqlext.d etc\c\odbc\sqltypes.d etc\c\odbc\sqlucode.d
 
+SRC_EXPERIMENTAL= experimental\typecons.d
+
 SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_STD_REGEX) \
 	$(SRC_STD_NET) \
