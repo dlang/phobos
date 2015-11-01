@@ -2100,7 +2100,7 @@ unittest // default logger
 unittest
 {
     import std.file : deleteme, remove;
-    import core.memory : destroy;
+
     string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";
     auto oldunspecificLogger = sharedLog;
 
