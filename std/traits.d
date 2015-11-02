@@ -6672,7 +6672,13 @@ template getUDAs(alias symbol, alias attribute)
 {
     import std.typetuple : Filter;
 
-    enum isDesiredUDA(alias S) = is(typeof(S) == attribute);
+    template isDesiredUDA(alias S) {
+        static if(__traits(compiles, is(typeof(S) == attribute))) {
+            enum isDesiredUDA = is(typeof(S) == attribute);
+        } else {
+            enum isDesiredUDA = isInstanceOf!(attribute, typeof(S));
+        }
+    }
     alias getUDAs = Filter!(isDesiredUDA, __traits(getAttributes, symbol));
 }
 
@@ -6698,6 +6704,22 @@ unittest
     static assert(getUDAs!(c, Attr)[0].value == 42);
     static assert(getUDAs!(c, Attr)[1].name == "Pi");
     static assert(getUDAs!(c, Attr)[1].value == 3);
+
+    struct AttrT(T)
+    {
+        string name;
+        T value;
+    }
+
+    @AttrT!uint("Answer", 42) @AttrT!int("Pi", 3) @AttrT int d;
+    static assert(getUDAs!(d, AttrT)[0].name == "Answer");
+    static assert(getUDAs!(d, AttrT)[0].value == 42);
+    static assert(getUDAs!(d, AttrT)[1].name == "Pi");
+    static assert(getUDAs!(d, AttrT)[1].value == 3);
+    static assert(getUDAs!(d, AttrT!uint)[0].name == "Answer");
+    static assert(getUDAs!(d, AttrT!uint)[0].value == 42);
+    static assert(getUDAs!(d, AttrT!int)[0].name == "Pi");
+    static assert(getUDAs!(d, AttrT!int)[0].value == 3);
 }
 
 /**
