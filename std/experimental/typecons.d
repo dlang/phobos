@@ -47,8 +47,9 @@ module std.experimental.typecons;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
 
-import std.typecons: Tuple, tuple, Bind,
-       isImplicitlyConvertible, mixinAll, staticIota;
+import std.typecons: Tuple, tuple, Bind, DerivedFunctionType,
+       isImplicitlyConvertible, mixinAll, staticIota,
+       GetOverloadedMethods;
 
 private
 {
@@ -98,239 +99,338 @@ unittest
     assert(i.instance() is j.instance());
 }
 
-/**
- * Supports structural based typesafe conversion.
- *
- * If $(D Source) has structural conformance with the $(D interface) $(D Targets),
- * wrap creates internal wrapper class which inherits $(D Targets) and
- * wrap $(D src) object, then return it.
+/*
+ * Determines if the `Source` type satisfies all interface requirements of
+ * `Targets`.
  */
-template wrap(Targets...)
+private template implementsInterface(Source, Targets...)
 if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 {
     import std.meta : staticMap;
 
     // strict upcast
-    auto wrap(Source)(inout Source src) @trusted pure nothrow
+    bool implementsInterface()() @safe pure nothrow
     if (Targets.length == 1 && is(Source : Targets[0]))
     {
-        alias T = Select!(is(Source == shared), shared Targets[0], Targets[0]);
-        return dynamicCast!(inout T)(src);
+        return true;
     }
     // structural upcast
-    template wrap(Source)
+    template implementsInterface()
     if (!allSatisfy!(Bind!(isImplicitlyConvertible, Source), Targets))
     {
-        auto wrap(inout Source src)
+        auto implementsInterface()
         {
-            static assert(hasRequireMethods!(),
-                          "Source "~Source.stringof~
-                          " does not have structural conformance to "~
-                          Targets.stringof);
-
-            alias T = Select!(is(Source == shared), shared Impl, Impl);
-            return new inout T(src);
+            return hasRequiredMethods!();
         }
 
-        template FuncInfo(string s, F)
-        {
-            enum name = s;
-            alias type = F;
-        }
+        // list of FuncInfo
+        alias TargetMembers = UniqMembers!(ConcatInterfaceMembers!Targets);
+        // list of function symbols
+        alias SourceMembers = GetOverloadedMethods!Source;
 
-        // Concat all Targets function members into one tuple
-        template Concat(size_t i = 0)
-        {
-            static if (i >= Targets.length)
-                alias Concat = AliasSeq!();
-            else
-            {
-                alias Concat = AliasSeq!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1));
-            }
-        }
-        // Remove duplicated functions based on the identifier name and function type covariance
-        template Uniq(members...)
-        {
-            static if (members.length == 0)
-                alias Uniq = AliasSeq!();
-            else
-            {
-                alias func = members[0];
-                enum  name = __traits(identifier, func);
-                alias type = FunctionTypeOf!func;
-                template check(size_t i, mem...)
-                {
-                    static if (i >= mem.length)
-                        enum ptrdiff_t check = -1;
-                    else
-                    {
-                        enum ptrdiff_t check =
-                            __traits(identifier, func) == __traits(identifier, mem[i]) &&
-                            !is(DerivedFunctionType!(type, FunctionTypeOf!(mem[i])) == void)
-                          ? i : check!(i + 1, mem);
-                    }
-                }
-                enum ptrdiff_t x = 1 + check!(0, members[1 .. $]);
-                static if (x >= 1)
-                {
-                    alias typex = DerivedFunctionType!(type, FunctionTypeOf!(members[x]));
-                    alias remain = Uniq!(members[1 .. x], members[x + 1 .. $]);
-
-                    static if (remain.length >= 1 && remain[0].name == name &&
-                               !is(DerivedFunctionType!(typex, remain[0].type) == void))
-                    {
-                        alias F = DerivedFunctionType!(typex, remain[0].type);
-                        alias Uniq = AliasSeq!(FuncInfo!(name, F), remain[1 .. $]);
-                    }
-                    else
-                        alias Uniq = AliasSeq!(FuncInfo!(name, typex), remain);
-                }
-                else
-                {
-                    alias Uniq = AliasSeq!(FuncInfo!(name, type), Uniq!(members[1 .. $]));
-                }
-            }
-        }
-        alias TargetMembers = Uniq!(Concat!());             // list of FuncInfo
-        alias SourceMembers = GetOverloadedMethods!Source;  // list of function symbols
-
-        // Check whether all of SourceMembers satisfy covariance target in TargetMembers
-        template hasRequireMethods(size_t i = 0)
+        // Check whether all of SourceMembers satisfy covariance target in
+        // TargetMembers
+        template hasRequiredMethods(size_t i = 0)
         {
             static if (i >= TargetMembers.length)
-                enum hasRequireMethods = true;
+                enum hasRequiredMethods = true;
             else
             {
-                enum hasRequireMethods =
+                enum hasRequiredMethods =
                     findCovariantFunction!(TargetMembers[i], Source, SourceMembers) != -1 &&
-                    hasRequireMethods!(i + 1);
+                    hasRequiredMethods!(i + 1);
             }
-        }
-
-        // Internal wrapper class
-        final class Impl : Structural, Targets
-        {
-        private:
-            Source _wrap_source;
-
-            this(       inout Source s)        inout @safe pure nothrow { _wrap_source = s; }
-            this(shared inout Source s) shared inout @safe pure nothrow { _wrap_source = s; }
-
-            // BUG: making private should work with NVI.
-            protected final inout(Object) _wrap_getSource() inout @trusted
-            {
-                return dynamicCast!(inout Object)(_wrap_source);
-            }
-
-            import std.conv : to;
-            import std.functional : forward;
-            template generateFun(size_t i)
-            {
-                enum name = TargetMembers[i].name;
-                enum fa = functionAttributes!(TargetMembers[i].type);
-                static @property stc()
-                {
-                    string r;
-                    if (fa & FunctionAttribute.property)    r ~= "@property ";
-                    if (fa & FunctionAttribute.ref_)        r ~= "ref ";
-                    if (fa & FunctionAttribute.pure_)       r ~= "pure ";
-                    if (fa & FunctionAttribute.nothrow_)    r ~= "nothrow ";
-                    if (fa & FunctionAttribute.trusted)     r ~= "@trusted ";
-                    if (fa & FunctionAttribute.safe)        r ~= "@safe ";
-                    return r;
-                }
-                static @property mod()
-                {
-                    alias type = AliasSeq!(TargetMembers[i].type)[0];
-                    string r;
-                    static if (is(type == immutable))       r ~= " immutable";
-                    else
-                    {
-                        static if (is(type == shared))      r ~= " shared";
-                        static if (is(type == const))       r ~= " const";
-                        else static if (is(type == inout))  r ~= " inout";
-                        //else  --> mutable
-                    }
-                    return r;
-                }
-                enum n = to!string(i);
-                static if (fa & FunctionAttribute.property)
-                {
-                    static if (Parameters!(TargetMembers[i].type).length == 0)
-                        enum fbody = "_wrap_source."~name;
-                    else
-                        enum fbody = "_wrap_source."~name~" = forward!args";
-                }
-                else
-                {
-                        enum fbody = "_wrap_source."~name~"(forward!args)";
-                }
-                enum generateFun =
-                    "override "~stc~"ReturnType!(TargetMembers["~n~"].type) "
-                    ~ name~"(Parameters!(TargetMembers["~n~"].type) args) "~mod~
-                    "{ return "~fbody~"; }";
-            }
-
-        public:
-            mixin mixinAll!(
-                staticMap!(generateFun, staticIota!(0, TargetMembers.length)));
         }
     }
 }
 /// ditto
-template wrap(Targets...)
+private template implementsInterface(Source, Targets...)
 if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
 {
     import std.meta : staticMap;
 
-    alias wrap = .wrap!(staticMap!(Unqual, Targets));
+    alias implementsInterface = .implementsInterface!(Source, staticMap!(Unqual, Targets));
+}
+
+unittest {
+    interface Foo {
+        void foo();
+    }
+    interface Bar {
+        void bar();
+    }
+    interface FooBar : Foo, Bar {
+        void foobar();
+    }
+
+    struct A {
+        void foo() {}
+    }
+    struct B {
+        void bar() {}
+        void foobar() {}
+    }
+    class C {
+        void foo() {}
+        void bar() {}
+    }
+    struct D {
+        void foo() {}
+        void bar() {}
+        void foobar() {}
+    }
+    // Implements interface
+    static assert(implementsInterface!(A, Foo));
+    static assert(implementsInterface!(A, const(Foo)));
+    static assert(implementsInterface!(A, immutable(Foo)));
+    // Doesn't implement interface
+    static assert(!implementsInterface!(B, Foo));
+    static assert(implementsInterface!(B, Bar));
+    // Implements both interfaces
+    static assert(implementsInterface!(C, Foo));
+    static assert(implementsInterface!(C, Bar));
+    static assert(implementsInterface!(C, Foo, Bar));
+    static assert(implementsInterface!(C, Foo, const(Bar)));
+    static assert(!implementsInterface!(A, Foo, Bar));
+    static assert(!implementsInterface!(A, Foo, immutable(Bar)));
+    // Implements inherited
+    static assert(implementsInterface!(D, FooBar));
+    static assert(!implementsInterface!(B, FooBar));
+}
+
+private template isInterface(ConceptType) {
+    enum isInterface = is(ConceptType == interface);
+}
+
+/**
+ * Supports structural based typesafe conversion.
+ *
+ * If `Source` has structural conformance with the `interface`
+ * `Targets`, wrap creates internal wrapper class which inherits
+ * `Targets` and wrap `src` object, then return it.
+ *
+ * If `Source` is a structure then wrapping/unwrapping will create
+ * a copy, it is not possible to affect the original with a wrapped structure.
+ */
+template wrap(Targets...)
+if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
+{
+    import std.meta : staticMap;
+
+    static if (!allSatisfy!(isMutable, Targets)) {
+        alias wrap = .wrap!(staticMap!(Unqual, Targets));
+    } else {
+        // strict upcast
+        auto wrap(Source)(inout Source src) @trusted pure nothrow
+        if (Targets.length == 1 && is(Source : Targets[0]))
+        {
+            alias T = Select!(is(Source == shared), shared Targets[0], Targets[0]);
+            return dynamicCast!(inout T)(src);
+        }
+        // structural upcast
+        template wrap(Source)
+        if (!allSatisfy!(Bind!(isImplicitlyConvertible, Source), Targets))
+        {
+            auto wrap(inout Source src)
+            {
+                static assert(implementsInterface!(Source, Targets),
+                              "Source "~Source.stringof~
+                              " does not have structural conformance to "~
+                              Targets.stringof);
+
+                alias T = Select!(is(Source == shared), shared Impl, Impl);
+                return new inout T(src);
+            }
+
+            // list of FuncInfo
+            alias TargetMembers = UniqMembers!(ConcatInterfaceMembers!(Targets));
+            // list of function symbols
+            alias SourceMembers = GetOverloadedMethods!Source;
+
+            static if (is(Source == class) || is(Source == interface))
+                alias StructuralType = Object;
+            else static if (is(Source == struct))
+                alias StructuralType = Source;
+
+            // Check whether all of SourceMembers satisfy covariance target in TargetMembers
+            // Internal wrapper class
+            final class Impl : Structural!StructuralType, Targets
+            {
+            private:
+                Source _wrap_source;
+
+                this(       inout Source s)        inout @safe pure nothrow { _wrap_source = s; }
+                this(shared inout Source s) shared inout @safe pure nothrow { _wrap_source = s; }
+
+                static if (is(Source == class) || is(Source == interface))
+                {
+                    // BUG: making private should work with NVI.
+                    protected final inout(Object) _wrap_getSource() inout @safe
+                    {
+                        return dynamicCast!(inout Object)(_wrap_source);
+                    }
+                }
+                else
+                {
+                    // BUG: making private should work with NVI.
+                    protected final inout(Source) _wrap_getSource() inout @safe
+                    {
+                        return _wrap_source;
+                    }
+                }
+
+                import std.conv : to;
+                import std.functional : forward;
+                template generateFun(size_t i)
+                {
+                    enum name = TargetMembers[i].name;
+                    enum fa = functionAttributes!(TargetMembers[i].type);
+                    static @property stc()
+                    {
+                        string r;
+                        if (fa & FunctionAttribute.property)    r ~= "@property ";
+                        if (fa & FunctionAttribute.ref_)        r ~= "ref ";
+                        if (fa & FunctionAttribute.pure_)       r ~= "pure ";
+                        if (fa & FunctionAttribute.nothrow_)    r ~= "nothrow ";
+                        if (fa & FunctionAttribute.trusted)     r ~= "@trusted ";
+                        if (fa & FunctionAttribute.safe)        r ~= "@safe ";
+                        return r;
+                    }
+                    static @property mod()
+                    {
+                        alias type = AliasSeq!(TargetMembers[i].type)[0];
+                        string r;
+                        static if (is(type == immutable))       r ~= " immutable";
+                        else
+                        {
+                            static if (is(type == shared))      r ~= " shared";
+                            static if (is(type == const))       r ~= " const";
+                            else static if (is(type == inout))  r ~= " inout";
+                            //else  --> mutable
+                        }
+                        return r;
+                    }
+                    enum n = to!string(i);
+                    static if (fa & FunctionAttribute.property)
+                    {
+                        static if (Parameters!(TargetMembers[i].type).length == 0)
+                            enum fbody = "_wrap_source."~name;
+                        else
+                            enum fbody = "_wrap_source."~name~" = forward!args";
+                    }
+                    else
+                    {
+                            enum fbody = "_wrap_source."~name~"(forward!args)";
+                    }
+                    enum generateFun =
+                        "override "~stc~"ReturnType!(TargetMembers["~n~"].type) "
+                        ~ name~"(Parameters!(TargetMembers["~n~"].type) args) "~mod~
+                        "{ return "~fbody~"; }";
+                }
+
+            public:
+                mixin mixinAll!(
+                    staticMap!(generateFun, staticIota!(0, TargetMembers.length)));
+            }
+        }
+    }
 }
 
 // Internal class to support dynamic cross-casting
-private interface Structural
+private interface Structural(T)
 {
-    inout(Object) _wrap_getSource() inout @safe pure nothrow;
+    inout(T) _wrap_getSource() inout @safe pure nothrow;
+}
+
+private string unwrapExceptionText(Source, Target)()
+{
+    return Target.stringof~ " not wrapped into "~ Source.stringof;
 }
 
 /**
  * Extract object which wrapped by $(D wrap).
+ *
+ * Params:
+ *     Target = Type to unwrap $(D src) to.
+ *     src = Item originally wrapped with a call to $(D wrap).
+ *
+ * Returns: The $(D Target) type from the wrapped type.
+ * If the type was not wrapped and is a class $(D null) is returned.
+ *
+ * Throws: ConvException when attempting to unwrap a struct
+ * which is not the target type.
  */
 template unwrap(Target)
-if (isMutable!Target)
 {
-    // strict downcast
-    auto unwrap(Source)(inout Source src) @trusted pure nothrow
-    if (is(Target : Source))
-    {
-        alias T = Select!(is(Source == shared), shared Target, Target);
-        return dynamicCast!(inout T)(src);
-    }
-    // structural downcast
-    auto unwrap(Source)(inout Source src) @trusted pure nothrow
-    if (!is(Target : Source))
-    {
-        alias T = Select!(is(Source == shared), shared Target, Target);
-        Object o = dynamicCast!(Object)(src);   // remove qualifier
-        do
+    static if (!isMutable!Target) {
+        alias unwrap = .unwrap!(Unqual!Target);
+    } else {
+        // strict downcast
+        auto unwrap(Source)(inout Source src) @trusted pure nothrow
+        if (is(Target : Source))
         {
-            if (auto a = dynamicCast!(Structural)(o))
+            alias T = Select!(is(Source == shared), shared Target, Target);
+            return dynamicCast!(inout T)(src);
+        }
+        // structural downcast for struct target
+        auto unwrap(Source)(inout Source src)
+        if (is(Target == struct))
+        {
+            alias T = Select!(is(Source == shared), shared Target, Target);
+            Object upCastSource = dynamicCast!(Object)(src);   // remove qualifier
+            do
             {
-                if (auto d = dynamicCast!(inout T)(o = a._wrap_getSource()))
+                if (auto a = dynamicCast!(Structural!Object)(upCastSource))
+                {
+                    upCastSource = a._wrap_getSource();
+                }
+                else if (auto a = dynamicCast!(Structural!T)(upCastSource))
+                {
+                    return a._wrap_getSource();
+                }
+                else
+                {
+                    static if (hasMember!(Source, "_wrap_getSource"))
+                        return unwrap!Target(src._wrap_getSource());
+                    else
+                        break;
+                }
+            } while (upCastSource);
+            import std.conv: ConvException;
+            throw new ConvException(unwrapExceptionText!(Source,Target));
+        }
+        // structural downcast for class target
+        auto unwrap(Source)(inout Source src)
+        if (!is(Target : Source) && !is(Target == struct))
+        {
+            alias T = Select!(is(Source == shared), shared Target, Target);
+            Object upCastSource = dynamicCast!(Object)(src);   // remove qualifier
+            do
+            {
+                if (auto a = dynamicCast!(Structural!Object)(upCastSource))
+                {
+                    if (auto d = dynamicCast!(inout T)(upCastSource = a._wrap_getSource()))
+                        return d;
+                }
+                else if (auto a = dynamicCast!(Structural!T)(upCastSource))
+                {
+                    return a._wrap_getSource();
+                }
+                else if (auto d = dynamicCast!(inout T)(upCastSource))
+                {
                     return d;
-            }
-            else if (auto d = dynamicCast!(inout T)(o))
-                return d;
-            else
-                break;
-        } while (o);
-        return null;
+                }
+                else
+                {
+                    static if (hasMember!(Source, "_wrap_getSource"))
+                        return unwrap!Target(src._wrap_getSource());
+                    else
+                        break;
+                }
+            } while (upCastSource);
+            return null;
+        }
     }
-}
-/// ditto
-template unwrap(Target)
-if (!isMutable!Target)
-{
-    alias unwrap = .unwrap!(Unqual!Target);
 }
 
 ///
@@ -355,9 +455,15 @@ unittest
         int quack() { return 2; }
         @property int height() { return 20; }
     }
+    struct HumanStructure
+    {
+        int quack() { return 3; }
+        @property int height() { return 30; }
+    }
 
     Duck d1 = new Duck();
     Human h1 = new Human();
+    HumanStructure hs1;
 
     interface Refleshable
     {
@@ -366,6 +472,7 @@ unittest
     // does not have structural conformance
     static assert(!__traits(compiles, d1.wrap!Refleshable));
     static assert(!__traits(compiles, h1.wrap!Refleshable));
+    static assert(!__traits(compiles, hs1.wrap!Refleshable));
 
     // strict upcast
     Quack qd = d1.wrap!Quack;
@@ -377,22 +484,34 @@ unittest
 
     // structural upcast
     Quack qh = h1.wrap!Quack;
+    Quack qhs = hs1.wrap!Quack;
     assert(qh.quack() == 2);    // calls Human.quack
+    assert(qhs.quack() == 3);    // calls HumanStructure.quack
     // structural downcast
     Human h2 = qh.unwrap!Human;
+    HumanStructure hs2 = qhs.unwrap!HumanStructure;
     assert(h2 is h1);
+    assert(hs2 is hs1);
 
     // structural upcast (two steps)
     Quack qx = h1.wrap!Quack;   // Human -> Quack
+    Quack qxs = hs1.wrap!Quack;   // HumanStructure -> Quack
     Flyer fx = qx.wrap!Flyer;   // Quack -> Flyer
+    Flyer fxs = qxs.wrap!Flyer;   // Quack -> Flyer
     assert(fx.height == 20);    // calls Human.height
+    assert(fxs.height == 30);    // calls HumanStructure.height
     // strucural downcast (two steps)
     Quack qy = fx.unwrap!Quack; // Flyer -> Quack
+    Quack qys = fxs.unwrap!Quack; // Flyer -> Quack
     Human hy = qy.unwrap!Human; // Quack -> Human
+    HumanStructure hys = qys.unwrap!HumanStructure; // Quack -> HumanStructure
     assert(hy is h1);
+    assert(hys is hs1);
     // strucural downcast (one step)
     Human hz = fx.unwrap!Human; // Flyer -> Human
+    HumanStructure hzs = fxs.unwrap!HumanStructure; // Flyer -> HumanStructure
     assert(hz is h1);
+    assert(hzs is hs1);
 }
 ///
 unittest
@@ -417,6 +536,7 @@ unittest
 }
 unittest
 {
+    // Validate const/immutable
     class A
     {
         int draw()              { return 1; }
@@ -512,15 +632,66 @@ unittest
     assert(i.bar(10) == 100);
 }
 
+// Concat all Targets function members into one tuple
+private template ConcatInterfaceMembers(Targets...)
 {
-
+    static if (Targets.length == 0)
+        alias ConcatInterfaceMembers = AliasSeq!();
+    else static if (Targets.length == 1)
+        alias ConcatInterfaceMembers
+          = AliasSeq!(GetOverloadedMethods!(Targets[0]));
+    else
+        alias ConcatInterfaceMembers = AliasSeq!(
+                GetOverloadedMethods!(Targets[0]),
+                ConcatInterfaceMembers!(Targets[1..$]));
+}
+// Remove duplicated functions based on the identifier name and function type covariance
+private template UniqMembers(members...)
+{
+    template FuncInfo(string s, F)
     {
-        {
-        }
-        {
+        enum name = s;
+        alias type = F;
+    }
 
+    static if (members.length == 0)
+        alias UniqMembers = AliasSeq!();
+    else
+    {
+        alias func = members[0];
+        enum  name = __traits(identifier, func);
+        alias type = FunctionTypeOf!func;
+        template check(size_t i, mem...)
+        {
+            static if (i >= mem.length)
+                enum ptrdiff_t check = -1;
+            else static if
+              (__traits(identifier, func) == __traits(identifier, mem[i]) &&
+              !is(DerivedFunctionType!(type, FunctionTypeOf!(mem[i])) == void))
             {
+                enum ptrdiff_t check = i;
             }
+            else
+                enum ptrdiff_t check = check!(i + 1, mem);
+        }
+        enum ptrdiff_t x = 1 + check!(0, members[1 .. $]);
+        static if (x >= 1)
+        {
+            alias typex = DerivedFunctionType!(type, FunctionTypeOf!(members[x]));
+            alias remain = UniqMembers!(members[1 .. x], members[x + 1 .. $]);
+
+            static if (remain.length >= 1 && remain[0].name == name &&
+                       !is(DerivedFunctionType!(typex, remain[0].type) == void))
+            {
+                alias F = DerivedFunctionType!(typex, remain[0].type);
+                alias UniqMembers = AliasSeq!(FuncInfo!(name, F), remain[1 .. $]);
+            }
+            else
+                alias UniqMembers = AliasSeq!(FuncInfo!(name, typex), remain);
+        }
+        else
+        {
+            alias UniqMembers = AliasSeq!(FuncInfo!(name, type), UniqMembers!(members[1 .. $]));
         }
     }
 }
