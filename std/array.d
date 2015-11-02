@@ -110,22 +110,19 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     alias E = ForeachType!Range;
     static if (hasLength!Range)
     {
+        E[] result;
         auto length = r.length;
-        if (length == 0)
-            return null;
 
-        import std.conv : emplaceRef;
-
-        auto result = (() @trusted => uninitializedArray!(Unqual!E[])(length))();
-
-        // Every element of the uninitialized array must be initialized
-        size_t i;
-        foreach (e; r)
+        if(length > 0)
         {
-            emplaceRef!E(result[i], e);
-            ++i;
+            result.reserve(length);
+
+            foreach (e; r)
+            {
+                result ~= e;
+            }
         }
-        return (() @trusted => cast(E[])result)();
+        return result;
     }
     else
     {
@@ -188,6 +185,19 @@ unittest
     import std.range;
     static struct S{int* p;}
     auto a = array(immutable(S).init.repeat(5));
+}
+
+@safe pure unittest
+{
+    // Issue 14751
+    import std.range;
+    import std.algorithm;
+    static class S {
+        int data;
+        this(int value) pure { data = value; }
+    }
+    auto a = array(iota(5).map!((i) => new immutable S(i)));
+    assert(a.map!(s => s.data).sum == 10);
 }
 
 /**
