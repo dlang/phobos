@@ -342,11 +342,9 @@ $(I FormatChar):
     Floating point infinities are formatted as $(B inf) or
     $(B infinity) if the
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
-*/
 
-/// Ditto
-unittest
-{
+    Example:
+    -----------------
     import std.array : appender;
     import std.format : formattedWrite;
 
@@ -357,9 +355,8 @@ unittest
     writer = appender!string();
     formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
     assert(writer.data == "Date: 5 October");
-}
+    -----------------
 
-/**
     The positional and non-positional styles can be mixed in the same
     format string. (POSIX leaves this behavior undefined.) The internal
     counter for non-positional parameters tracks the next parameter after
@@ -4047,103 +4044,6 @@ here:
 
     stream.clear(); formattedWrite(stream, "%.-3d", 7);
     assert(stream.data == "7", ">" ~ stream.data ~ "<");
-
-
-    // systematic test
-    const string[] flags = [ "-", "+", "#", "0", " ", "" ];
-    const string[] widths = [ "", "0", "4", "20" ];
-    const string[] precs = [ "", ".", ".0", ".4", ".20" ];
-    const string formats = "sdoxXeEfFgGaA";
-
-    foreach (flag1; flags)
-        foreach (flag2; flags)
-            foreach (flag3; flags)
-                foreach (flag4; flags)
-                    foreach (flag5; flags)
-                        foreach (width; widths)
-                            foreach (prec; precs)
-                                foreach (format; formats)
-                                {
-                                    stream.clear();
-                                    auto fmt = "%" ~ flag1 ~ flag2  ~ flag3
-                                        ~ flag4 ~ flag5 ~ width ~ prec ~ format
-                                        ~ '\0';
-                                    fmt = fmt[0 .. $ - 1]; // keep it zero-term
-                                    char[256] buf;
-                                    buf[0] = 0;
-                                    switch (format)
-                                    {
-                                    case 's':
-                                        formattedWrite(stream, fmt, "wyda");
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                            "wyda\0".ptr);
-                                        break;
-                                    case 'd':
-                                        formattedWrite(stream, fmt, 456);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                                 456);
-                                        break;
-                                    case 'o':
-                                        formattedWrite(stream, fmt, 345);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                                 345);
-                                        break;
-                                    case 'x':
-                                        formattedWrite(stream, fmt, 63546);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                            63546);
-                                        break;
-                                    case 'X':
-                                        formattedWrite(stream, fmt, 12566);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                            12566);
-                                        break;
-                                    case 'e':
-                                        formattedWrite(stream, fmt, 3245.345234);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                            3245.345234);
-                                        break;
-                                    case 'E':
-                                        formattedWrite(stream, fmt, 3245.2345234);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                            3245.2345234);
-                                        break;
-                                    case 'f':
-                                        formattedWrite(stream, fmt, 3245234.645675);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                            3245234.645675);
-                                        break;
-                                    case 'F':
-                                        formattedWrite(stream, fmt, 213412.43);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                            213412.43);
-                                        break;
-                                    case 'g':
-                                        formattedWrite(stream, fmt, 234134.34);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                            234134.34);
-                                        break;
-                                    case 'G':
-                                        formattedWrite(stream, fmt, 23141234.4321);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                                 23141234.4321);
-                                        break;
-                                    case 'a':
-                                        formattedWrite(stream, fmt, 21341234.2134123);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                                 21341234.2134123);
-                                        break;
-                                    case 'A':
-                                        formattedWrite(stream, fmt, 1092384098.45234);
-                                        snprintf(buf.ptr, buf.length, fmt.ptr,
-                                                 1092384098.45234);
-                                        break;
-                                    default:
-                                        assert(false);
-                                    }
-                                    auto exp = buf[0 .. strlen(buf.ptr)];
-                                    assert(stream.data == exp);
-                                }
 }
 
 unittest
