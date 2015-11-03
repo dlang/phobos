@@ -863,8 +863,7 @@ template Tuple(Specs...)
         ///
         unittest
         {
-            import std.format    : format, FormatException;
-            import std.format : format;
+            import std.format : format, FormatException;
             import std.exception : assertThrown;
             auto if_list = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
 
