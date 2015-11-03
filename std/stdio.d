@@ -3731,8 +3731,6 @@ unittest
     }
 
     // test with ubyte[] inputs
-    //@@@BUG 2612@@@
-    //alias TestedWith2 = AliasSeq!(immutable(ubyte)[], ubyte[]);
     alias TestedWith2 = AliasSeq!(immutable(ubyte)[], ubyte[]);
     foreach (T; TestedWith2) {
         // test looping with an empty file
