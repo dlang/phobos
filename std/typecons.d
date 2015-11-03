@@ -842,7 +842,8 @@ template Tuple(Specs...)
             {
                 import std.format : FormatException;
                 throw new FormatException(
-                    "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~ Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
+                    "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
+                        Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
             }
         }
 
