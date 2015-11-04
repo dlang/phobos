@@ -234,7 +234,7 @@ class GC
 
     void initialize()
     {
-	//printf("GC.initialize(), this = %p\n", this);
+        //printf("GC.initialize(), this = %p\n", this);
         gcLock = GCLock.classinfo;
         gcx = cast(Gcx *)cstdlib.calloc(1, Gcx.sizeof);
         if (!gcx)
@@ -964,13 +964,13 @@ class GC
             gcx.addRange(pbot, ptop);
         }
         else
-	{
-	    //printf("sync gcLock %p, classinit = %p, this = %p\n", gcLock, GCLock.classinfo, this);
-	    synchronized (gcLock)
-	    {
-		gcx.addRange(pbot, ptop);
-	    }
-	}
+        {
+            //printf("sync gcLock %p, classinit = %p, this = %p\n", gcLock, GCLock.classinfo, this);
+            synchronized (gcLock)
+            {
+                gcx.addRange(pbot, ptop);
+            }
+        }
         //debug(PRINTF) printf("-GC.addRange()\n");
     }
 
@@ -1604,15 +1604,15 @@ struct Gcx
             memmove(pooltable + n,
                     pooltable + n + 1,
                     (--npools - n) * (Pool*).sizeof);
-	    if (npools)
-	    {
-		minAddr = pooltable[0].baseAddr;
-		maxAddr = pooltable[npools - 1].topAddr;
-	    }
-	    else
-	    {	minAddr = null;
-		maxAddr = null;
-	    }
+            if (npools)
+            {
+                minAddr = pooltable[0].baseAddr;
+                maxAddr = pooltable[npools - 1].topAddr;
+            }
+            else
+            {   minAddr = null;
+                maxAddr = null;
+            }
         }
     }
 
@@ -2732,6 +2732,11 @@ struct Pool
             return -1;
         else
             return cast(int)(baseAddr > p2.baseAddr);
+    }
+
+    int opEquals(Pool *p2)
+    {
+        return baseAddr == p2.baseAddr;
     }
 }
 

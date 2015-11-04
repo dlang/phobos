@@ -333,7 +333,7 @@ struct Box
      * Compare this box's value with another box. This implicitly casts if the
      * types are different, identical to the regular type system.
      */
-    bool opEquals(Box other)
+    int opEquals(Box other)
     {
         return opEqualsInternal(other, false);
     }
@@ -388,9 +388,9 @@ struct Box
      * Compare this box's value with another box. This implicitly casts if the
      * types are different, identical to the regular type system.
      */
-    float opCmp(Box other)
+    int opCmp(Box other)
     {
-        return opCmpInternal(other, false);
+        return cast(int)opCmpInternal(other, false);
     }
 
     /**
