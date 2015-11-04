@@ -6339,7 +6339,7 @@ unittest
  */
 
 S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
-        S indent = null, in size_t tabsize = 8) @safe pure if (isSomeString!S)
+        S indent = null, in size_t tabsize = 8) if (isSomeString!S)
 {
     typeof(s.dup) result;
     bool inword;
@@ -6402,6 +6402,18 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
     result ~= '\n';
 
     return result;
+}
+
+///
+@safe pure unittest
+{
+    assert(wrap("a short string", 7) == "a short\nstring\n");
+
+    // wrap will not break inside of a word, but at the next space
+    assert(wrap("a short string", 4) == "a\nshort\nstring\n");
+
+    assert(wrap("a short string", 7, "\t") == "\ta\nshort\nstring\n");
+    assert(wrap("a short string", 7, "\t", "    ") == "\ta\n    short\n    string\n");
 }
 
 @safe pure unittest
