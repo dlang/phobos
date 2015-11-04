@@ -27038,21 +27038,21 @@ public:
         }
         else version(Windows)
         {
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            //return to!string(tzInfo.StandardName);
+
+            wchar[32] str;
+
+            foreach(i, ref wchar c; str)
+                c = tzInfo.StandardName[i];
+
+            string retval;
+
             try
             {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
-
-                //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-                //return to!string(tzInfo.StandardName);
-
-                wchar[32] str;
-
-                foreach(i, ref wchar c; str)
-                    c = tzInfo.StandardName[i];
-
-                string retval;
-
                 foreach(dchar c; str)
                 {
                     if(c == '\0')
@@ -27064,7 +27064,7 @@ public:
                 return retval;
             }
             catch(Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+                assert(0, "GetTimeZoneInformation() returned invalid UTF-16.");
         }
     }
 
@@ -27109,21 +27109,21 @@ public:
         }
         else version(Windows)
         {
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            //return to!string(tzInfo.DaylightName);
+
+            wchar[32] str;
+
+            foreach(i, ref wchar c; str)
+                c = tzInfo.DaylightName[i];
+
+            string retval;
+
             try
             {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
-
-                //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-                //return to!string(tzInfo.DaylightName);
-
-                wchar[32] str;
-
-                foreach(i, ref wchar c; str)
-                    c = tzInfo.DaylightName[i];
-
-                string retval;
-
                 foreach(dchar c; str)
                 {
                     if(c == '\0')
@@ -27135,7 +27135,7 @@ public:
                 return retval;
             }
             catch(Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+                assert(0, "GetTimeZoneInformation() returned invalid UTF-16.");
         }
     }
 
@@ -27194,15 +27194,10 @@ public:
         }
         else version(Windows)
         {
-            try
-            {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
 
-                return tzInfo.DaylightDate.wMonth != 0;
-            }
-            catch(Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+            return tzInfo.DaylightDate.wMonth != 0;
         }
     }
 
@@ -27257,11 +27252,7 @@ public:
             }
 
             TIME_ZONE_INFORMATION tzInfo;
-
-            try
-                GetTimeZoneInformation(&tzInfo);
-            catch(Exception e)
-                assert(0, "The impossible happened. GetTimeZoneInformation() threw.");
+            GetTimeZoneInformation(&tzInfo);
 
             return WindowsTimeZone._dstInEffect(&tzInfo, stdTime);
         }
@@ -27298,11 +27289,7 @@ public:
         else version(Windows)
         {
             TIME_ZONE_INFORMATION tzInfo;
-
-            try
-                GetTimeZoneInformation(&tzInfo);
-            catch(Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+            GetTimeZoneInformation(&tzInfo);
 
             return WindowsTimeZone._utcToTZ(&tzInfo, stdTime, hasDST);
         }
@@ -27354,11 +27341,7 @@ public:
         else version(Windows)
         {
             TIME_ZONE_INFORMATION tzInfo;
-
-            try
-                GetTimeZoneInformation(&tzInfo);
-            catch(Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+            GetTimeZoneInformation(&tzInfo);
 
             return WindowsTimeZone._tzToUTC(&tzInfo, adjTime, hasDST);
         }
