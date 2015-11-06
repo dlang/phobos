@@ -771,29 +771,74 @@ template Tuple(Specs...)
             return h;
         }
 
-        /**
-         * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
-         *
-         * `%s` is the original format.
-         * `%(inner%)` where `inner` is the format applied the expanded `Tuple`,
-         * so `inner` may contain as many formats as the `Tuple` has fields.
-         * `%(inner%|sep%)`, where `inner` is one format, that is applied
-         * on all fields of the `Tuple`. The format must be compatible to all
-         * of them.
-         */
-        //void toString(DG, Char)(scope DG sink, std.format.FormatSpec!Char fmt = "%s") const
-        void toString(DG)(scope DG sink, std.format.FormatSpec!char fmt = "%s") const
+        template toString()
         {
-            if (fmt.nested)
+            import std.format : FormatSpec;
+
+            /**
+             * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
+             *
+             * `%s` is the original format.
+             * `%(inner%)` where `inner` is the format applied the expanded `Tuple`,
+             * so `inner` may contain as many formats as the `Tuple` has fields.
+             * `%(inner%|sep%)`, where `inner` is one format, that is applied
+             * on all fields of the `Tuple`. The format must be compatible to all
+             * of them.
+             */
+            void toString(DG)(scope DG sink) const
             {
-                import std.format : formattedWrite;
-                if (fmt.sep)
+                FormatSpec!char fmt;
+                // When commenting in add to documentation:
+                //  * Not specifying `fmt` at all behaves like `(%(%s%|, %))`.
+
+                // fmt.spec = '(';
+                // fmt.nested = "%s";
+                // fmt.sep = ", ";
+                // sink('(');
+                toString(sink, fmt);
+                // sink(')');
+            }
+            /// ditto
+            void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
+            {
+                import std.format : formatElement, formattedWrite, FormatException;
+                if (fmt.nested)
                 {
+                    if (fmt.sep)
+                    {
+                        foreach (i, Type; Types)
+                        {
+                            static if (i > 0)
+                            {
+                                sink(fmt.sep);
+                            }
+                            // TODO: Change this once toString() works for shared objects.
+                            static if (is(Type == class) && is(Type == shared))
+                            {
+                                sink(Type.stringof);
+                            }
+                            else
+                            {
+                                formattedWrite(sink, fmt.nested, this.field[i]);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
+                    }
+                }
+                else if (fmt.spec == 's')
+                {
+                    enum header = Unqual!(typeof(this)).stringof ~ "(",
+                         footer = ")",
+                         separator = ", ";
+                    sink(header);
                     foreach (i, Type; Types)
                     {
                         static if (i > 0)
                         {
-                            sink(fmt.sep);
+                            sink(separator);
                         }
                         // TODO: Change this once toString() works for shared objects.
                         static if (is(Type == class) && is(Type == shared))
@@ -802,65 +847,34 @@ template Tuple(Specs...)
                         }
                         else
                         {
-                            formattedWrite(sink, fmt.nested, this.field[i]);
+                            FormatSpec!Char f;
+                            formatElement(sink, field[i], f);
                         }
                     }
+                    sink(footer);
                 }
                 else
                 {
-                    formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
+                    throw new FormatException(
+                        "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
+                            Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
                 }
             }
-            else if (fmt.spec == 's')
+
+            /**
+             * Converts to string.
+             *
+             * Returns:
+             *     The string representation of this `Tuple`.
+             */
+            string toString() const
             {
-                enum header = Unqual!(typeof(this)).stringof ~ "(",
-                     footer = ")",
-                     separator = ", ";
-                sink(header);
-                foreach (i, Type; Types)
-                {
-                    static if (i > 0)
-                    {
-                        sink(separator);
-                    }
-                    // TODO: Change this once toString() works for shared objects.
-                    static if (is(Type == class) && is(Type == shared))
-                    {
-                        sink(Type.stringof);
-                    }
-                    else
-                    {
-                        import std.format : FormatSpec, formatElement;
-                        // FormatSpec!Char
-                        FormatSpec!char f;
-                        formatElement(sink, field[i], f);
-                    }
-                }
-                sink(footer);
-            }
-            else
-            {
-                import std.format : FormatException;
-                throw new FormatException(
-                    "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
-                        Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
+                import std.array : appender;
+                auto app = appender!string();
+                this.toString((const(char)[] chunk) => app ~= chunk);
+                return app.data;
             }
         }
-
-        /**
-         * Converts to string.
-         *
-         * Returns:
-         *     The string representation of this `Tuple`.
-         */
-        string toString()() const
-        {
-            import std.array : appender;
-            auto app = appender!string();
-            this.toString((const(char)[] chunk) => app ~= chunk);
-            return app.data;
-        }
-
         ///
         unittest
         {
