@@ -954,6 +954,117 @@ unittest
     }
 }
 
+/**
+  * $(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially applies)
+  * $(D_PARAM Template) by binding its first (left) or last (right) arguments
+  * to $(D_PARAM args).
+  *
+  * Behaves like the identity function when $(D_PARAM args) is empty.
+  * Params:
+  *    Template = template to partially apply
+  *    args     = arguments to bind
+  * Returns:
+  *    _Template with arity smaller than or equal to $(D_PARAM Template)
+  */
+template applyLeft(alias Template, args...)
+{
+    static if (args.length)
+    {
+        template applyLeft(right...)
+        {
+            static if (is(typeof(Template!(args, right))))
+                enum applyLeft = Template!(args, right); // values
+            else
+                alias applyLeft = Template!(args, right); // symbols
+        }
+    }
+    else
+        alias applyLeft = Template;
+}
+
+/// Ditto
+template applyRight(alias Template, args...)
+{
+    static if (args.length)
+    {
+        template applyRight(left...)
+        {
+            static if (is(typeof(Template!(left, args))))
+                enum applyRight = Template!(left, args); // values
+            else
+                alias applyRight = Template!(left, args); // symbols
+        }
+    }
+    else
+        alias applyRight = Template;
+}
+
+///
+unittest
+{
+    import std.traits : isImplicitlyConvertible;
+
+    static assert(allSatisfy!(
+        applyLeft!(isImplicitlyConvertible, ubyte),
+        short, ushort, int, uint, long, ulong));
+
+    static assert(is(Filter!(applyRight!(isImplicitlyConvertible, short),
+        ubyte, string, short, float, int) == AliasSeq!(ubyte, short)));
+}
+
+///
+unittest
+{
+    import std.traits : hasMember, ifTestable;
+
+    struct T1
+    {
+        bool foo;
+    }
+
+    struct T2
+    {
+        struct Test
+        {
+            bool opCast(T : bool)() { return true; }
+        }
+
+        Test foo;
+    }
+
+    static assert(allSatisfy!(applyRight!(hasMember, "foo"), T1, T2));
+    static assert(allSatisfy!(applyRight!(ifTestable, a => a.foo), T1, T2));
+}
+
+///
+unittest
+{
+    import std.traits : Largest;
+
+    alias Types = AliasSeq!(byte, short, int, long);
+
+    static assert(is(staticMap!(applyLeft!(Largest, short), Types) ==
+                AliasSeq!(short, short, int, long)));
+    static assert(is(staticMap!(applyLeft!(Largest, int), Types) ==
+                AliasSeq!(int, int, int, long)));
+}
+
+///
+unittest
+{
+    import std.traits : FunctionAttribute, SetFunctionAttributes;
+
+    static void foo() @system;
+    static int bar(int) @system;
+
+    alias SafeFunctions = AliasSeq!(
+        void function() @safe,
+        int function(int) @safe);
+
+    static assert(is(staticMap!(applyRight!(
+        SetFunctionAttributes, "D", FunctionAttribute.safe),
+        typeof(&foo), typeof(&bar)) == SafeFunctions));
+}
 
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
 package:
