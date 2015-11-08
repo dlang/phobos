@@ -75,6 +75,13 @@
         the common interface of UTF matchers.
     )
     $(LI
+        Adding even more flexibilty to character classification without decoding
+        there is $(LREF tinyUtfBst). TinyUTF tables achieve much smaller footprint
+        then a Matcher (~ 8 bytes * number of intervals) while still operating on UTF
+        directly avoiding decoding.  Each match operation is $(BIGOH log(N)),
+        where N is number of intervals in the given codepoint set.
+    )
+    $(LI
         Generally useful building blocks for customized normalization:
         $(LREF combiningClass) for querying combining class
         and $(LREF allowedIn) for testing the Quick_Check
@@ -4885,7 +4892,6 @@ template Utf16Matcher()
         import std.utf;
         throw new UTFException("Invalid UTF-16 sequence");
     }
-
     // 1-stage ASCII
     alias AsciiSpec = AliasSeq!(bool, wchar, clamp!7);
     //2-stage BMP
@@ -5151,6 +5157,738 @@ public auto utfMatcher(Char, Set)(Set set) @trusted
         static assert(false, "Only character types 'char' and 'wchar' are allowed");
 }
 
+// helper for assert/debug prints
+string utfWordAsHex()(uint val, size_t sz=0)
+{
+    import std.algorithm : reverse;
+    import core.bitop;
+    import std.format;
+    char[] res;
+    if(sz == 0)
+        sz = (bsr(val)+8)/8;
+    while(sz)
+    {
+        res ~= format("%x", val & 0xFF);
+        val >>= 8;
+        sz--;
+        if(sz)
+            res ~= "_";
+    }
+    return res.idup;
+}
+
+// just encode as UTF-8 don't try to validate
+size_t encodeNoCheck_(ref char[4] buf, dchar c) @safe pure nothrow
+{
+    if (c <= 0x7F)
+    {
+        buf[0] = cast(char)c;
+        return 1;
+    }
+    if (c <= 0x7FF)
+    {
+        buf[0] = cast(char)(0xC0 | (c >> 6));
+        buf[1] = cast(char)(0x80 | (c & 0x3F));
+        return 2;
+    }
+    if (c <= 0x3FFF)
+    {
+
+        buf[0] = cast(char)(0xE0 | (c >> 12));
+        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+        buf[2] = cast(char)(0x80 | (c & 0x3F));
+        return 3;
+    }
+    // +1 on top of the usual dchar range so as to allow half-open interval [A,B)
+    assert(c <= 0x11_0000);
+    buf[0] = cast(char)(0xF0 | (c >> 18));
+    buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
+    buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+    buf[3] = cast(char)(0x80 | (c & 0x3F));
+    return 4;
+}
+
+// just encode as UTF-16 don't try to validate
+size_t encodeNoCheck_(ref wchar[2] buf, dchar c) @safe pure nothrow
+{
+    if(c < 0xD800 || (c > 0xE000 && c < 0x1_0000))
+    {
+        buf[0] = cast(wchar)c;
+        return 1;
+    }
+    else
+    {
+        buf[0] = cast(wchar)(((c - 0x1_0000) >> 10) + 0xD800);
+        buf[1] = cast(wchar)(((c - 0x1_0000) & 0x3FF) + 0xDC00);
+        return 2;
+    }
+}
+
+// compatible interface for dchars
+size_t encodeNoCheck_(ref dchar[1] buf, dchar c) @safe pure nothrow
+{
+    buf[0] = c;
+    return 1;
+}
+
+// internal helper
+static T bigEndian_(T)(T val)  pure nothrow
+{
+    version(LittleEndian)
+    {
+        import core.bitop;
+        static if(T.sizeof == 2)
+            return cast(ushort)(val << 8) | cast(ushort)(val >> 8);
+        else static if(T.sizeof == 4)
+            return bswap(val); // works for uints
+    }
+    else
+        return val;
+}
+
+// Load UTF-word from string-ish range.
+// UTF codeunits are represented as 32-bit integer
+// where highest non-zero byte is the first (starter) code unit
+uint toUtfWord(size_t sz, Range)(Range buf) pure nothrow
+    if(is(Range : const(char)[]) || (isRandomAccessRange!Range && is(ElementEncodingType!Range : char)))
+{
+    pragma(inline, true);
+    static if(isArray!Range) // can generalize if there is .ptr but not Array
+    {
+        static if(sz == 1)
+            return buf[0];
+        else static if(sz == 2)
+            return bigEndian_(*cast(ushort*)buf.ptr);
+        else static if(sz == 3)
+        {
+            auto val = bigEndian_(*cast(ushort*)buf.ptr) << 8;
+            val |= cast(uint)buf[2]; //add last 8bits
+            return val;
+        }
+        else
+            return bigEndian_(*cast(uint*)buf.ptr);
+    }
+    else // don't have .ptr
+    {
+        static if(sz == 1)
+            return buf[0];
+        else static if(sz == 2)
+            return (cast(uint)buf[0]<<8) | buf[1];
+        else static if(sz == 3)
+            return (cast(uint)buf[0]<<16) | (cast(uint)buf[1]<<8) | buf[2];
+        else
+            return (cast(uint)buf[0]<<24) | (cast(uint)buf[1]<<16) | (cast(uint)buf[2]<<8) | buf[3];
+    }
+}
+
+// same for UTF-16, resulting words (UTF-16 vs UTF-8) are (of course) not interchangeble
+uint toUtf16Word(Range)(Range buf) pure nothrow
+    if(is(Range : const(wchar)[]) || (isRandomAccessRange!Range && is(ElementEncodingType!Range : wchar)))
+{
+    immutable c = buf[0];
+    if(c < 0xD800)
+        return c;
+    else if(c <= 0xFFFF)
+        return c + 0x1_0000;
+    else //simply take as is
+    {
+        static if(isArray!Range) // can generalize if there is .ptr but not Array
+            return bigEndian_(*cast(uint*)buf.ptr);
+        else
+            return (cast(uint)c<<16) | buf[1];
+    }
+}
+
+// same for UTF-16, resulting words (UTF-16 vs UTF-8) are (of course) not interchangeble
+uint toUtf16Word()(dchar ch) pure nothrow
+{
+    wchar[2] buf;
+    auto sz = encodeNoCheck_(buf, ch);
+    return toUtf16Word(buf[]);
+}
+
+// clean UTF-32 codepoint from UTF-8 word
+dchar fromUtfWord(uint val) @safe pure nothrow
+{
+    // fast path goes first - ASCII
+    if(val <= 0xFF)
+        return val;
+    else if(val <= 0xFF_FF)
+        return ((val & 0x1F_00)>>2) | (val & 0x3F);
+    else if(val <= 0xFF_FF_FF)
+        return ((val & 0x0F_00_00)>>4) | ((val & 0x3F_00)>>2) | (val & 0x3F);
+    else // 4 bytes
+        return ((val & 0x07_00_00_00)>>6) | ((val & 0x3F_00_00)>>4) |
+            ((val & 0x3F_00)>>2) | (val & 0x3F);
+}
+
+unittest
+{
+    import std.format;
+    // enum STEP = 1; // exhaustive but too expansive
+    enum STEP = 7; // some small prime as step
+    for(dchar ch=0; ch < 0x11_0000; ch+=STEP)
+    {
+        char[4] buf;
+        uint val = toUtfWord(buf[], encodeNoCheck_(buf, ch));
+        assert(fromUtfWord(val) == ch, format("0x%x - buf %(0x%x, %) uw %s", ch, buf, utfWordAsHex(val)));
+    }
+}
+
+// size in bytes of UTF sequence in this UTF word
+uint utfWordSize(uint utfWord) @safe pure nothrow
+{
+    import core.bitop;
+    return utfWord ? (bsr(utfWord)+8)/8 : 1;
+}
+
+// ditto with size as run-time parameter
+uint toUtfWord(Range)(Range r, size_t sz)
+{
+    switch(sz)
+    {
+        foreach(c; AliasSeq!(1,2,3,4))
+        {
+            case c:
+                return toUtfWord!c(r);
+        }
+        default:
+            assert(0);
+    }
+}
+
+// another overload for convenience
+uint toUtfWord(dchar ch) pure nothrow
+{
+    char[4] buf;
+    size_t sz = encodeNoCheck_(buf, ch);
+    return toUtfWord(buf[], sz);
+}
+
+// Slice up codepoint interval [a,b) to the jagged UTF word intevals
+struct UtfChunks
+{
+    uint[8] chunks;
+    size_t len=0;
+    //
+    this(Interval)(Interval i)
+    {
+        uint start = toUtfWord(i.a);
+        uint end = toUtfWord(i.b);
+        chunks[len++] = start;
+        foreach(brk; AliasSeq!(0x80, 0x800, 0x4000))
+        {
+            if(i.a < brk && i.b >= brk)
+            {
+                chunks[len++] = toUtfWord(brk-1)+1; // encode max and add 1
+                chunks[len++] = toUtfWord(brk);
+            }
+        }
+        chunks[len++] = end;
+        assert(len % 2 == 0);
+    }
+    //
+    uint[] opIndex() return
+    {
+        return chunks[0..len];
+    }
+}
+
+/++
+    Incapsulates the result of matching range of UTF codeunits against
+    some UTF matcher e.g. $(LREF TinyUtfBst) or $(LREF UtfMatcher).
+
+    Packed in a single machine word, this struct contains info about the length
+    of codepoint tested, if there was a match and whether the UTF encoding was
+    broken.
++/
+struct UtfLookup
+{
+    enum {
+        MASK        = 0xF,
+        MATCH_BIT   = 4,
+        MATCH       = 1<<MATCH_BIT,
+        BROKEN      = MATCH<<1,
+        BROKEN_BIT  = MATCH_BIT+1
+    }
+    private uint word;
+const pure nothrow @safe @nogc:
+    /++
+        Length of the codepoint tseted in UTF range.
+
+        See also: $(XREF utf, stride).
+    +/
+    @property uint stride()(){ return word & MASK; }
+    /// True if the codepoint was recognized by the matcher.
+    @property bool matched()(){ return (word & MATCH) != 0; }
+    /++
+        Indicates if the encoding of UTF range was broken.
+        In such cases $(D stride) always equals 1, $(D matched) is false.
+    +/
+    @property bool broken()(){ return (word & BROKEN) != 0; }
+    /// Short-hand for $(D matched) to use in conditional statements.
+    bool opCast(T:bool)(){ return matched; }
+}
+
+mixin template SegmentedTable(Char)
+{
+    @property auto badEncoding()(){ return UtfLookup(1 | UtfLookup.BROKEN); }
+    // get a proper section of array by UTF-8 code length
+    @property auto segment(size_t sz)()
+    {
+        static if(sz == 1)
+        {
+            static if(!is(typeof(segs))) // single segment
+                return store;
+            else
+                return store[0..segs[0].start]; // up to the start of 2nd segment
+        }
+        else static if(sz > 1)
+        {
+            auto ptr = cast(Value!sz*)(store.ptr + segs[sz-2].start);
+            return ptr[0..segs[sz-2].len]; // .len is measured in Values
+        }
+    }
+
+    // val is UTF word
+    UtfLookup lookup(size_t sz)(uint val)
+    {
+        pragma(inline, true);
+        import std.stdio;
+        // import std.range : assumeSorted;
+        auto seg = segment!sz;
+        // UTF-8 specific continuation bit validation
+        static if(is(Char : char))
+        {
+            uint bad1 = 0x80, bad2 = 0x0;
+            foreach(i; Sequence!(0, sz-1))
+            {
+                enum mask1 = 0x80<<(8*i);
+                enum mask2 = 0x40<<(8*i);
+                bad1 &= (val & mask1)>>(8*i); // 0 is any of bits is 0
+                bad2 |= (val & mask2)>>(8*i); // 1 if any of bits is 1
+            }
+            // starter starts with 01.... binary mask
+            // check absense of at least one '1'
+            bad1 = (~bad1 & 0x80) >> (7 - UtfLookup.BROKEN_BIT);
+            // check absense of at least one '0'
+            bad2 = bad2 >> (6 - UtfLookup.BROKEN_BIT);
+            immutable bad = bad1 | bad2;
+        }
+        else
+        {
+            enum bad = 0;
+        }
+        // the trick is:
+        // if lower bound is even this means all intervals below val are closed pairs [A,B)
+        // else we are inside of some [A, B)
+        uint ret = sharLowerBound!"a<=b"(seg, cast(Value!sz)val) & 1;
+        // ret == 1 - matched
+        return UtfLookup(sz | (ret<<UtfLookup.MATCH_BIT) | bad);
+    }
+}
+
+/+
+   A Tiny Binary Search Table for decode-less codepoint range lookup.
+   Breaks ranges into up into 4 segments - one per UTF encoding length.
++/
+// nullary template to be inlined in user's code and not just some dead weight in phobos.lib
+struct TinyUtf8BST()
+{
+private:
+    ubyte[] store;       // all arrays in one, aligned to 1-2-4-4 bytes respectively
+    alias SegLen = uint; // may try ushort to pack it tighter
+    struct Segment
+    {
+        SegLen start;   // offset in bytes from the start of the store
+        SegLen len;     // in 2 or 4 byte increments
+    }
+    Segment[3] segs;    // of 2-byte, 3-byte  and 4-bytes segments
+    template Value(size_t sz)
+    {
+        static if(sz == 1)
+            alias Value = ubyte;
+        else static if(sz == 2)
+            alias Value = ushort;
+        else
+            alias Value = uint;
+    }
+    mixin SegmentedTable!char;   // reusable table lookup logic
+
+    // From range of [a,b) intervals
+    this(Range)(Range pairs)
+    {
+        bool[3] seenSize; // if seen 2, 3, 4 byte code points
+        // encode and store with the given size
+        void append(uint utfWord)
+        {
+            uint sz = utfWordSize(utfWord);
+            if(sz == 1)
+            {
+                store ~= cast(ubyte)utfWord;
+                return;
+            }
+            static union Place
+            {
+                uint val;
+                ubyte[4] bytes;
+            }
+            Place p;
+            p.val = utfWord;
+            immutable padSize = 1<<(sz+1)/2; // 2 -> 2, 3-4 -> 4
+            immutable mask = padSize - 1;
+            if(!seenSize[sz-2])
+            {
+                // first of sz-sized code points
+                seenSize[sz-2] = true;
+                auto rem = store.length & mask;
+                if(rem) // need to align
+                {
+                    foreach(_; 0..padSize-rem)
+                        store ~= 0;
+                    segs[sz-2].start = cast(SegLen)store.length;
+                }
+                // mark length
+                segs[sz-2].start = cast(SegLen)store.length;
+            }
+            version(LittleEndian)
+            {
+                foreach(i; 0..padSize)
+                    store ~= p.bytes[i];
+            }
+            else // TODO: test on BigEndian iron
+            {
+                foreach(i; 0..padSize)
+                    store ~= p.bytes[sz-1-i];
+            }
+        }
+        foreach(v; pairs)
+        {
+            auto chunks = UtfChunks(v);
+            auto arr = chunks[];
+            for(size_t i=0; i<arr.length; i+=2)
+            {
+                append(arr[i]);
+                append(arr[i+1]);
+            }
+        }
+        size_t total = store.length;
+        foreach_reverse(i; 0..segs.length)
+        {
+            if(seenSize[i])
+            {
+                segs[i].len = cast(SegLen)(total - segs[i].start);
+                total -= segs[i].len;
+            }
+        }
+        // sets the length of the first segment as well
+        // in case we don't have segment of size 2
+        // trim padding for the first (implicit) segment
+        while(total && store[total-1] == 0) total--;
+        segs[0].start = cast(SegLen)total;
+        // scale to Value!sz size
+        segs[0].len /= 2;
+        segs[0].len &= ~1; // trim padding for second segment
+        segs[1].len /= 4;
+        segs[2].len /= 4;
+    }
+
+    // slow path that assumes 1-element cases are handled
+    UtfLookup longMatch(Range)(Range r)
+    {
+        pragma(inline, false); // no point, it's a slow path
+        immutable c = r[0];
+        UtfLookup ret = badEncoding(); // default on fallthrough
+        if(r.length >= 4) // start/middle of input - fast path
+        {
+            if(!(c & 0x20))
+                ret = lookup!2(toUtfWord!2(r));
+            else if(!(c & 0x10))
+                ret = lookup!3(toUtfWord!3(r));
+            else if(!(c & 0x08))
+                ret = lookup!4(toUtfWord!4(r));
+        }
+        else // handle the tail of input - even slower (and more rare) path
+        {
+            switch(r.length)
+            {
+                case 3:
+                    if(!(c & 0x10))
+                        ret = lookup!3(toUtfWord!3(r));
+                    break;
+                case 2:
+                    if(!(c & 0x20))
+                        ret = lookup!2(toUtfWord!2(r));
+                    break;
+                default:
+                    // fallthrough - bad encoding
+            }
+        }
+        return ret;
+    }
+
+    /++
+        Match against the front of the $(D r) range of char. This doesn't throw
+        on bad encoding. Instead the result includes flags for match
+        and broken encoding along with codepoint length (stride).
+
+        Returns:
+            $(LREF UtfLookup) with the results of the test against this matcher.
+    +/
+    public auto opCall(Range)(Range r)
+        if(is(Range : const(char)[]) || (isRandomAccessRange!Range && is(ElementEncodingType!Range : char)))
+    {
+        pragma(inline, true);
+        immutable c = r[0];
+        // no UTF validation - just test where the zero is
+        if(c < 0x80) // fast path for ASCII
+        {
+            return lookup!1(c);
+        }
+        else
+            return longMatch(r);
+    }
+}
+
+// Analog of TinyUtf8BST for UTf-16
+struct TinyUtf16BST()
+{
+private:
+    ushort[] store; // all arrays in one, aligned to 1-2 ushorts respectively
+    alias SegLen = uint; // may try ushort to pack it tighter
+    struct Segment
+    {
+        SegLen start; // offset in ushorts from the start of the store
+        SegLen len; // in ushort or uint increments
+    }
+    Segment[1] segs; // for uint-sized portion
+    template Value(size_t sz)
+    {
+        static if(sz == 1)
+            alias Value = ushort;
+        else
+            alias Value = uint;
+    }
+    mixin SegmentedTable!wchar;   // reusable table lookup logic
+
+    this(Range)(Range pairs)
+    {
+        bool seenLong = false;
+        void appendLong(dchar val)
+        {
+            if(!seenLong)
+            {
+                seenLong = true;
+                // pad to uint size
+                store.length += store.length % 4;
+                segs[0].start = cast(SegLen)store.length;
+            }
+            union Place
+            {
+                ushort[2] us;
+                uint ui;
+            }
+            Place place;
+            place.ui = toUtf16Word(val);
+            store ~= place.us[];
+        }
+        foreach(i; pairs)
+        {
+            if(i.b <= 0xFFFF)
+            {
+                store ~= cast(ushort)i.a;
+                store ~= cast(ushort)i.b;
+            }
+            else if(i.a > 0xFFFF) // both are beyond 2 bytes
+            {
+                appendLong(i.a);
+                appendLong(i.b);
+            }
+            else // cross-cutting a < 16bit b > 16 bit
+            {
+                store ~= cast(ushort)i.a;
+                store ~= cast(ushort)0xFFFF;
+                appendLong(0xFFFF);
+                appendLong(i.b);
+            }
+        }
+        if(!seenLong)
+            segs[0].start = cast(SegLen)store.length;
+    }
+
+    // assumes 1-element cases below surrogates are already handled
+    auto longMatch(Range)(Range r)
+    {
+        pragma(inline, false); // slow path - don't inline
+        immutable c = r[0];
+        auto ret = badEncoding();
+        if(r.length >= 2)
+        {
+            immutable c2 = r[1];
+            if(c2 >= 0xDC00 && c2 <= 0xDFFF)
+                return lookup!2(toUtf16Word(r));
+        }
+        else
+        {
+            if(c >= 0xE000)
+                return lookup!2(toUtf16Word(r)); // [0xE000, 0x1_0000)
+        }
+        return ret;
+    }
+
+    /++
+        Match against the front of the $(D r) range of char. This doesn't throw
+        on bad encoding. Instead the result includes flags for match
+        and broken encoding along with codepoint length (stride).
+
+        Returns:
+            $(LREF UtfLookup) with the results of the test against this matcher.
+    +/
+    public auto opCall(Range)(Range r)
+        if(is(Range : const(wchar)[]) ||
+         (isRandomAccessRange!Range && is(ElementEncodingType!Range : wchar)))
+    {
+        pragma(inline, true);
+        immutable c = r[0];
+        // fast path for BMP under surrogate pairs
+        if(c < 0xD800 || (c > 0xDFFF && c <= 0xFFFF))
+            return lookup!1(c);
+        else
+            return longMatch(r);
+    }
+};
+
+// Analog of TinyUtf8BST for plain UTF-32
+struct TinyUtf32BST()
+{
+private:
+    uint[] store; // plain binary sorted array
+    alias Value(size_t sz) = uint; // always 32bit
+    mixin SegmentedTable!dchar;   // reusable table lookup logic
+
+    this(Range)(Range pairs)
+    {
+        store.length = pairs.length * 2;
+        size_t idx = 0;
+        foreach(p; pairs)
+        {
+            store[idx] = p.a;
+            store[idx+1] = p.b;
+            idx += 2;
+        }
+    }
+
+    /++
+        Match against the front of the $(D r) range of char. This doesn't throw
+        on bad encoding. Instead the result includes flags for match
+        and broken encoding along with codepoint length (stride).
+
+        Returns:
+            $(LREF UtfLookup) with the results of the test against this matcher.
+    +/
+    public auto opCall(Range)(Range r)
+        if(is(Range : const(dchar)[]) ||
+         (isForwardRange!Range && is(ElementEncodingType!Range : dchar)))
+    {
+        pragma(inline, true);
+        return lookup!1(r.front);
+    }
+};
+
+/++
+    Get UTF-8, UTF-16 or UTF-32 Tiny UTF BST type
+    suitable for passed-in $(D Char) parameter.
+
+    Use $(LREF tinyUtfBst) to construct these functors.
+
+    See also: $(LREF UtfLookup).
++/
+public template TinyUtfBst(Char)
+{
+    static if(is(Char : char))
+        alias TinyUtfBst = TinyUtf8BST!();
+    else static if(is(Char : wchar))
+        alias TinyUtfBst = TinyUtf16BST!();
+    else static if(is(Char : dchar))
+        alias TinyUtfBst = TinyUtf32BST!();
+    else
+        static assert(0, "Only built-in character types are supported.");
+}
+
+/++
+    Convenience factory function to create $(LREF TinyUtfBst)
+    for $(D Char) from any $(D CodepointSet).
+
+    Returns:
+        $(LREF TinyUtfBst) matcher for a given set,
+        applicable as a callable to any range of $(D Char)
+        including built-in strings.
+
+    See also: $(LREF UtfLookup).
++/
+public auto tinyUtfBst(Char, CS)(CS set)
+    if(isCodepointSet!CS)
+{
+    return TinyUtfBst!Char(set.byInterval);
+}
+
+unittest
+{
+    import std.conv, std.stdio, std.format, std.utf;
+    // enum TOP = 0x10_FFFF; // exhaustive range
+    enum TOP = 0x1_0000; // limit the range somewhat for every day tests
+    void testSet(Char, Set)(Set set)
+    {
+        static int abs(int a){ return a > 0 ? a : -a; }
+        auto tab = tinyUtfBst!Char(set);
+        for(dchar ch=0; ch<=TOP; ch++)
+        {
+            Char[4/Char.sizeof] buf;
+            static if(Char.sizeof == 2)
+            {
+                if(ch >= 0xD800 || ch <= 0xDFFF)
+                    continue; // skip surrogates - can't encode in UTF-16
+            }
+            auto sz = encodeNoCheck_(buf, ch);
+            auto r = tab(buf[]); // length >= 4 cases
+            auto r2 = tab(buf[0..sz]); // tail cases
+            auto r3 = tab(buf[0..sz].byUTF!Char);
+            assert(r.stride == sz, format("%s 0x%x - %s", Char.stringof, ch, r));
+            assert(r2.stride == sz, format("%s 0x%x - %s", Char.stringof, ch, r));
+            assert(r3.stride == sz, format("%s 0x%x - %s", Char.stringof, ch, r));
+            assert(r.matched == set[ch], format("%s 0x%x - %s", Char.stringof, ch, r));
+            assert(r2.matched == set[ch], format("%s 0x%x - %s", Char.stringof, ch, r));
+            assert(r3.matched == set[ch], format("%s 0x%x - %s", Char.stringof, ch, r));
+        }
+    }
+    void testRange(Char)(uint[] range...)
+    {
+        return testSet!Char(CodepointSet(range));
+    }
+    // trivial sanity checks
+    testRange!char('0', '9', 'a', 'z', 'Ф', 'Я');
+    testRange!char(0x0, 0x10);
+    testRange!char(0x80, 0x100);
+    // walk between break-points
+    testRange!char(0x0, 0x7F, 0x801, 0x3FFF, 0x4001, 0x7FFF, 0x8001, 0x10_FFFF);
+    // across break-points
+    testRange!char(0x7F, 0x81, 0x3FFF, 0x4010, 0x7FF0, 0x10_FFFF);
+    // special case - hits padding of second segment
+    testRange!char(0x0, 0x80, 0x100, 0x702, 0x800, 0x801);
+    // some more tests
+    testRange!char(0x0, 0x80, 0x100, 0x702, 0x810, 0x3FFF, 0x4010, 0x10_FFFF);
+    testSet!char(unicode.L);
+    testSet!char(unicode.L.inverted);
+
+    testRange!wchar('A', 'Z', 'a', 'z', 'й', 'я');
+    testRange!wchar(0, 0xFFFF);
+    testRange!wchar(0xF000, 0x1_0000, 0x1_0000, 0x09_0000);
+    testRange!wchar(0, 0xD800, 0xDC00, 0xFEFF);
+    testRange!wchar(0xD7FF, 0xD800, 0xD800, 0xD801, 0xDBFF, 0xDC01, 0xE000, 0x1FFFF);
+
+    testRange!dchar(0x0, 0x80, 0x100, 0x702, 0x810, 0x3FFF, 0x4010, 0x10_FFFF);
+    testRange!dchar(0xD7FF, 0xD800, 0xD800, 0xD801, 0xDBFF, 0xDC01, 0xE000, 0x1FFFF);
+}
 
 //a range of code units, packed with index to speed up forward iteration
 package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
@@ -5319,11 +6057,14 @@ unittest
     import std.algorithm;
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto utf8 = utfMatcher!char(unicode.L);
+    auto tbst16 = tinyUtfBst!wchar(unicode.L);
+    auto tbst8 = tinyUtfBst!char(unicode.L);
     //decode failure cases UTF-8
-    alias fails8 = AliasSeq!("\xC1", "\x80\x00","\xC0\x00", "\xCF\x79",
+    alias fails8 = AliasSeq!("\xC1", "\xC0\xC0", "\x80\x00","\xC0\x00", "\xCF\x79",
         "\xFF\x00\0x00\0x00\x00", "\xC0\0x80\0x80\x80", "\x80\0x00\0x00\x00",
         "\xCF\x00\0x00\0x00\x00");
     foreach(msg; fails8){
+        assert(tbst8(msg).broken, format("%( %2x %)", cast(ubyte[])msg));
         assert(collectException((){
             auto s = msg;
             import std.utf;
@@ -5335,6 +6076,7 @@ unittest
     //decode failure cases UTF-16
     alias fails16 = AliasSeq!([0xD811], [0xDC02]);
     foreach(msg; fails16){
+        assert(tbst16(msg.map!(x=>cast(wchar)x)).broken, format("%( %2x %)", cast(ushort[])msg));
         assert(collectException((){
             auto s = msg.map!(x => cast(wchar)x);
             utf16.test(s);
