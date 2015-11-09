@@ -1662,7 +1662,7 @@ unittest {
         tuple(1017.644138623741168814449776695062817947092468536L, 1.0L/1024),
     ];
     foreach (test; testData)
-        assert(approxEqual(logmdigammaInverse(test[0]), test[1], 1e-15, 0));
+        assert(approxEqual(logmdigammaInverse(test[0]), test[1], 2e-15, 0));
 
     assert(approxEqual(logmdigamma(logmdigammaInverse(1)), 1, 1e-15, 0));
     assert(approxEqual(logmdigamma(logmdigammaInverse(real.min_normal)), real.min_normal, 1e-15, 0));
