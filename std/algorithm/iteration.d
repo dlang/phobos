@@ -20,7 +20,7 @@ $(T2 each,
         $(D each!writeln([1, 2, 3])) eagerly prints the numbers $(D 1), $(D 2)
         and $(D 3) on their own lines.)
 $(T2 filter,
-        $(D filter!"a > 0"([1, -1, 2, 0, -3])) iterates over elements $(D 1)
+        $(D filter!(a => a > 0)([1, -1, 2, 0, -3])) iterates over elements $(D 1)
         and $(D 2).)
 $(T2 filterBidirectional,
         Similar to $(D filter), but also provides $(D back) and $(D popBack) at
@@ -33,12 +33,12 @@ $(T2 joiner,
         over the characters $(D "hello; world!"). No new string is created -
         the existing inputs are iterated.)
 $(T2 map,
-        $(D map!"2 * a"([1, 2, 3])) lazily returns a range with the numbers
+        $(D map!(a => a * 2)([1, 2, 3])) lazily returns a range with the numbers
         $(D 2), $(D 4), $(D 6).)
 $(T2 permutations,
         Lazily computes all permutations using Heap's algorithm.)
 $(T2 reduce,
-        $(D reduce!"a + b"([1, 2, 3, 4])) returns $(D 10).)
+        $(D reduce!((a, b) => a + b)([1, 2, 3, 4])) returns $(D 10).)
 $(T2 splitter,
         Lazily splits a range by a separator.)
 $(T2 sum,
@@ -169,8 +169,8 @@ if (isBidirectionalRange!Range)
     }
     // Without cache, with array (greedy)
     auto result1 = iota(-4, 5).map!(a =>tuple(a, fun(a)))()
-                             .filter!"a[1]<0"()
-                             .map!"a[0]"()
+                             .filter!(a => a[1] < 0)()
+                             .map!(a => a[0])()
                              .array();
 
     // the values of x that have a negative y are:
@@ -184,8 +184,8 @@ if (isBidirectionalRange!Range)
     // Without array, with cache (lazy)
     auto result2 = iota(-4, 5).map!(a =>tuple(a, fun(a)))()
                              .cache()
-                             .filter!"a[1]<0"()
-                             .map!"a[0]"();
+                             .filter!(a => a[1] < 0)()
+                             .map!(a => a[0])();
 
     // the values of x that have a negative y are:
     assert(equal(result2, [-3, -2, 2]));
@@ -231,8 +231,8 @@ same cost or side effects.
     import std.algorithm.comparison : equal;
     import std.range;
     auto a = [1, 2, 3, 4];
-    assert(equal(a.map!"(a - 1)*a"().cache(),                      [ 0, 2, 6, 12]));
-    assert(equal(a.map!"(a - 1)*a"().cacheBidirectional().retro(), [12, 6, 2,  0]));
+    assert(equal(a.map!(a => (a - 1) * a)().cache(),                      [ 0, 2, 6, 12]));
+    assert(equal(a.map!(a => (a - 1) * a)().cacheBidirectional().retro(), [12, 6, 2,  0]));
     auto r1 = [1, 2, 3, 4].cache()             [1 .. $];
     auto r2 = [1, 2, 3, 4].cacheBidirectional()[1 .. $];
     assert(equal(r1, [2, 3, 4]));
@@ -924,7 +924,9 @@ unittest
 /**
 $(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
 
-Implements the higher order _filter function.
+Implements the higher order _filter function. The predicate is passed to
+$(XREF functional,unaryFun), and can either accept a string, or any callable
+that can be executed via $(D pred(element)).
 
 Params:
     predicate = Function to apply to each element of range
@@ -1128,6 +1130,9 @@ private struct FilterResult(alias pred, Range)
  * that the filtered range can be spanned from both directions. Also,
  * $(XREF range, retro) can be applied against the filtered range.
  *
+ * The predicate is passed to $(XREF functional,unaryFun), and can either
+ * accept a string, or any callable that can be executed via $(D pred(element)).
+ *
  * Params:
  *     pred = Function to apply to each element of range
  *     r = Bidirectional range of elements
@@ -1293,7 +1298,9 @@ Similarly to $(D uniq), $(D group) produces a range that iterates over unique
 consecutive elements of the given range. Each element of this range is a tuple
 of the element and the number of times it is repeated in the original range.
 Equivalence of elements is assessed by using the predicate $(D pred), which
-defaults to $(D "a == b").
+defaults to $(D "a == b").  The predicate is passed to $(XREF functional,binaryFun),
+and can either accept a string, or any callable that can be executed via
+$(D pred(element, element)).
 
 Params:
     pred = Binary predicate for determining equivalence of two elements.
@@ -1655,9 +1662,11 @@ unittest
  * Chunks an input range into subranges of equivalent adjacent elements.
  *
  * Equivalence is defined by the predicate $(D pred), which can be either
- * binary or unary. In the binary form, two _range elements $(D a) and $(D b)
- * are considered equivalent if $(D pred(a,b)) is true. In unary form, two
- * elements are considered equivalent if $(D pred(a) == pred(b)) is true.
+ * binary, which is passed to $(XREF functional,binaryFun), or unary, which is
+ * passed to $(XREF functional,unaryFun). In the binary form, two _range elements
+ * $(D a) and $(D b) are considered equivalent if $(D pred(a,b)) is true. In
+ * unary form, two elements are considered equivalent if $(D pred(a) == pred(b))
+ * is true.
  *
  * This predicate must be an equivalence relation, that is, it must be
  * reflexive ($(D pred(x,x)) is always true), symmetric
@@ -2864,6 +2873,9 @@ Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
 empty elements.
 
+The predicate is passed to $(XREF functional,binaryFun), and can either accept
+a string, or any callable that can be executed via $(D pred(element, s)).
+
 If the empty range is given, the result is a range with one empty
 element. If a range with one separator is given, the result is a range
 with two empty elements.
@@ -3147,7 +3159,9 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 /**
 Similar to the previous overload of $(D splitter), except this one uses another
 range as a separator. This can be used with any narrow string type or sliceable
-range type, but is most popular with string types.
+range type, but is most popular with string types. The predicate is passed to
+$(XREF functional,binaryFun), and can either accept a string, or any callable
+that can be executed via $(D pred(r.front, s.front)).
 
 Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
@@ -3458,6 +3472,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
 Similar to the previous overload of $(D splitter), except this one does not use a separator.
 Instead, the predicate is an unary function on the input range's element type.
+The $(D isTerminator) predicate is passed to $(XREF functional,unaryFun) and can
+either accept a string, or any callable that can be executed via $(D pred(element, s)).
 
 Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
@@ -3490,16 +3506,16 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 {
     import std.algorithm.comparison : equal;
 
-    assert(equal(splitter!"a == ' '"("hello  world"), [ "hello", "", "world" ]));
+    assert(equal(splitter!(a => a == ' ')("hello  world"), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
-    assert(equal(splitter!"a == 0"(a), w));
+    assert(equal(splitter!(a => a == 0)(a), w));
     a = [ 0 ];
-    assert(equal(splitter!"a == 0"(a), [ (int[]).init, (int[]).init ]));
+    assert(equal(splitter!(a => a == 0)(a), [ (int[]).init, (int[]).init ]));
     a = [ 0, 1 ];
-    assert(equal(splitter!"a == 0"(a), [ [], [1] ]));
+    assert(equal(splitter!(a => a == 0)(a), [ [], [1] ]));
     w = [ [0], [1], [2] ];
-    assert(equal(splitter!"a.front == 1"(w), [ [[0]], [[2]] ]));
+    assert(equal(splitter!(a => a.front == 1)(w), [ [[0]], [[2]] ]));
 }
 
 private struct SplitterResult(alias isTerminator, Range)
@@ -4096,7 +4112,9 @@ unittest
 Lazily iterates unique consecutive elements of the given range (functionality
 akin to the $(WEB wikipedia.org/wiki/_Uniq, _uniq) system
 utility). Equivalence of elements is assessed by using the predicate
-$(D pred), by default $(D "a == b"). If the given range is
+$(D pred), by default $(D "a == b"). The predicate is passed to
+$(XREF functional,binaryFun), and can either accept a string, or any callable
+that can be executed via $(D pred(element, element)). If the given range is
 bidirectional, $(D uniq) also yields a bidirectional range.
 
 Params:
