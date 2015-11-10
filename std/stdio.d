@@ -1560,6 +1560,46 @@ is recommended if you want to process a complete file.
         }
     }
 
+    unittest
+    {
+        import std.stdio;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "123\n456789");
+        scope(exit) std.file.remove(deleteme);
+
+        auto file = File(deleteme);
+        char[] buffer = new char[10];
+        char[] line = buffer;
+        file.readln(line);
+        auto beyond = line.length;
+        buffer[beyond] = 'a';
+        file.readln(line); // should not write buffer beyond line
+        assert(buffer[beyond] == 'a');
+    }
+
+    unittest // bugzilla 15293
+    {
+        static import std.file;
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "a\n\naa");
+        scope(exit) std.file.remove(deleteme);
+
+        auto file = File(deleteme);
+        char[] buffer;
+        char[] line;
+
+        file.readln(buffer, '\n');
+
+        line = buffer;
+        file.readln(line, '\n');
+
+        line = buffer;
+        file.readln(line, '\n');
+
+        assert(line[0 .. 1].capacity == 0);
+    }
+
 /** ditto */
     size_t readln(C, R)(ref C[] buf, R terminator)
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
@@ -4043,34 +4083,38 @@ private struct ReadlnAppender
     import core.stdc.string;
 
     char[] buf;
-    size_t cap;
     size_t pos;
-    size_t initcap;
+    bool newBuf = false;
 
     void initialize(char[] b)
     {
         buf = b;
-        cap = initcap = buf.capacity;
-        if (cap < buf.length)
-            cap = buf.length;
         pos = 0;
     }
     @property char[] data()
     {
-        // always shrink/extend the buffer to allow reuse in the next call
-        if (initcap > 0 || cap > buf.length)
+        /* When buf is not known to the outside world, it's safe to append to
+        the returned slice. */
+        if (newBuf)
             assumeSafeAppend(buf.ptr[0..pos]);
         return buf.ptr[0..pos];
     }
 
     void reserve(size_t n)
     {
-        if (pos + n > cap)
+        if (buf.length >= pos + n) // buf is already large enough
+            return;
+
+        if (buf.capacity >= pos + n)
         {
-            size_t ncap = cap * 2 + 128 + n;
+            buf.length = pos + n;
+        }
+        else
+        {
+            newBuf = true;
+            size_t ncap = buf.length * 2 + 128 + n;
             char[] nbuf = new char[ncap];
             memcpy(nbuf.ptr, buf.ptr, pos);
-            cap = nbuf.capacity;
             buf = nbuf.ptr[0 .. buf.length];   // remember initial length
         }
     }
@@ -4097,17 +4141,17 @@ private struct ReadlnAppender
     }
     void putonly(char[] b)
     {
+        import std.algorithm: max;
         assert(pos == 0);   // assume this is the only put call
-        if (b.length > cap)
+        if (b.length > max(buf.length, buf.capacity))
         {
             buf = b.dup;
-            initcap = 0; // no need to call assumeSafeAppend
+            pos = b.length;
         }
         else
         {
-            memcpy(buf.ptr, b.ptr, b.length);
+            putbuf(b);
         }
-        pos = b.length;
     }
 }
 
