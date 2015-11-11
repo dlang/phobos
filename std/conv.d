@@ -3876,14 +3876,18 @@ unittest
     long b;
 
     // biggest value that should fit in an it
-    static assert(__traits(compiles, a = octal!"17777777777"));
+    a = octal!"17777777777";
+    assert(a == a.max);
     // should not fit in the int
     static assert(!__traits(compiles, a = octal!"20000000000"));
     // ... but should fit in a long
-    static assert(__traits(compiles, b = octal!"20000000000"));
+    b = octal!"20000000000";
+    assert(b == 2147483648L);
 
-    static assert(__traits(compiles, b = octal!"1L"));
-    static assert(__traits(compiles, b = octal!1L));
+    b = octal!"1L";
+    assert(b == 1);
+    b = octal!1L;
+    assert(b == 1);
 }
 
 /+
@@ -3909,6 +3913,25 @@ if (is(UT == Unqual!T))
     emplaceImpl!T(chunk, args);
 }
 
+private void kakados(T, Buf, Args...)(ref Buf value, auto ref Args args)
+if (Args.length >= 1)
+{
+    static struct S
+    {
+        T payload;
+        this(ref Args x)
+        {
+            static if (Args.length == 1)
+                payload = x[0];
+            else
+                payload = T(x);
+        }
+    }
+    S* p = () @trusted { return cast(S*) &value; }();
+    emplaceInitializer(*p);
+    p.__ctor(args);
+}
+
 private template emplaceImpl(T)
 {
     alias UT = Unqual!T;
@@ -3929,33 +3952,7 @@ private template emplaceImpl(T)
 
         static if (isStaticArray!T)
         {
-            alias UArg = Unqual!Arg;
-            alias E = ElementEncodingType!(typeof(T.init[]));
-            alias UE = Unqual!E;
-            enum n = T.length;
-
-            static if (!hasElaborateAssign!T && is(typeof(chunk[] = arg)))
-            {
-                // Bulk case optimization
-                chunk[] = arg;
-            }
-            else
-            {
-                // Element by element initialization
-                foreach (i; 0 .. n)
-                {
-                    static if (is(typeof(emplaceRef!(E, UE)(chunk[i], arg))))
-                    {
-                        // Initialize whole array with the same value
-                        emplaceRef!(E, UE)(chunk[i], arg);
-                    }
-                    else
-                    {
-                        // Initialize array from another array
-                        emplaceRef!(E, UE)(chunk[i], arg[i]);
-                    }
-                }
-            }
+            kakados!T(chunk, arg);
         }
         else
         {
@@ -3969,24 +3966,7 @@ private template emplaceImpl(T)
         static if (Args.length == 1 && is(Args[0] : T) &&
             is (typeof({T t = args[0];})) /*Check for legal postblit*/)
         {
-            static if (is(Unqual!T == Unqual!(Args[0])))
-            {
-                //Types match exactly: we postblit
-                static if (!hasElaborateAssign!UT && isAssignable!(UT, T))
-                    chunk = args[0];
-                else
-                {
-                    import core.stdc.string : memcpy;
-                    // This is known to be safe as the two values are the same
-                    // type and the source (args[0]) should be initialized
-                    () @trusted { memcpy(&chunk, &args[0], T.sizeof); }();
-                    static if (hasElaborateCopyConstructor!T)
-                        _postblitRecurse(chunk);
-                }
-            }
-            else
-                //Alias this. Coerce to type T.
-                .emplaceImpl!T(chunk, cast(T)args[0]);
+            kakados!T(chunk, args);
         }
         else static if (is(typeof(chunk.__ctor(args))))
         {
@@ -4191,7 +4171,7 @@ unittest
     S1 s1 = S1.init;
     S2 s2 = S2.init;
     static assert(!__traits(compiles, emplace(&ss1, s1)));
-    static assert( __traits(compiles, emplace(&ss2, s2)));
+    emplace(&ss2, s2);
 }
 
 unittest
