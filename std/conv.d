@@ -3922,6 +3922,7 @@ private template emplaceImpl(T)
         return emplaceInitializer(chunk);
     }
 
+    // Primitive types, enums, static arrays, dynamic arrays
     static if (!is(T == struct))
     ref UT emplaceImpl(Arg)(ref UT chunk, auto ref Arg arg)
     {
@@ -3935,87 +3936,34 @@ private template emplaceImpl(T)
             alias UE = Unqual!E;
             enum n = T.length;
 
-            static if (is(Arg : T))
+            static if (!hasElaborateAssign!T && is(typeof(chunk[] = arg)))
             {
-                //Matching static array
-                static if (!hasElaborateAssign!UT && isAssignable!(UT, Arg))
-                    chunk = arg;
-                else static if (is(UArg == UT))
-                {
-                    import core.stdc.string : memcpy;
-                    // This is known to be safe as the two values are the same
-                    // type and the source (arg) should be initialized
-                    () @trusted { memcpy(&chunk, &arg, T.sizeof); }();
-                    static if (hasElaborateCopyConstructor!T)
-                        _postblitRecurse(chunk);
-                }
-                else
-                    .emplaceImpl!T(chunk, cast(T)arg);
-            }
-            else static if (is(Arg : E[]))
-            {
-                //Matching dynamic array
-                static if (!hasElaborateAssign!UT && is(typeof(chunk[] = arg[])))
-                    chunk[] = arg[];
-                else static if (is(Unqual!(ElementEncodingType!Arg) == UE))
-                {
-                    import core.stdc.string : memcpy;
-                    assert(n == chunk.length, "Array length missmatch in emplace");
-
-                    // This is unsafe as long as the length match is a
-                    // precondition and not an unconditional exception
-                    memcpy(&chunk, arg.ptr, T.sizeof);
-
-                    static if (hasElaborateCopyConstructor!T)
-                        _postblitRecurse(chunk);
-                }
-                else
-                    .emplaceImpl!T(chunk, cast(E[])arg);
-            }
-            else static if (is(Arg : E))
-            {
-                //Case matching single element to array.
-                static if (!hasElaborateAssign!UT && is(typeof(chunk[] = arg)))
-                    chunk[] = arg;
-                else static if (is(UArg == Unqual!E))
-                {
-                    import core.stdc.string : memcpy;
-
-                    foreach(i; 0 .. n)
-                    {
-                        // This is known to be safe as the two values are the same
-                        // type and the source (arg) should be initialized
-                        () @trusted { memcpy(&(chunk[i]), &arg, E.sizeof); }();
-                    }
-
-                    static if (hasElaborateCopyConstructor!T)
-                        _postblitRecurse(chunk);
-                }
-                else
-                    //Alias this. Coerce.
-                    .emplaceImpl!T(chunk, cast(E)arg);
-            }
-            else static if (is(typeof(.emplaceImpl!E(chunk[0], arg))))
-            {
-                //Final case for everything else:
-                //Types that don't match (int to uint[2])
-                //Recursion for multidimensions
-                static if (!hasElaborateAssign!UT && is(typeof(chunk[] = arg)))
-                    chunk[] = arg;
-                else
-                    foreach(i; 0 .. n)
-                        .emplaceImpl!E(chunk[i], arg);
+                // Bulk case optimization
+                chunk[] = arg;
             }
             else
-                static assert(0, convFormat("Sorry, this implementation doesn't know how to emplace a %s with a %s", T.stringof, Arg.stringof));
-
-            return chunk;
+            {
+                // Element by element initialization
+                foreach (i; 0 .. n)
+                {
+                    static if (is(typeof(emplaceRef!(E, UE)(chunk[i], arg))))
+                    {
+                        // Initialize whole array with the same value
+                        emplaceRef!(E, UE)(chunk[i], arg);
+                    }
+                    else
+                    {
+                        // Initialize array from another array
+                        emplaceRef!(E, UE)(chunk[i], arg[i]);
+                    }
+                }
+            }
         }
         else
         {
             chunk = arg;
-            return chunk;
         }
+        return chunk;
     }
     // ditto
     static if (is(T == struct))
