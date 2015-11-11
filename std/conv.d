@@ -5037,10 +5037,10 @@ unittest
         Node* next;
         uint refs;
     }
-    
+
     import core.stdc.stdlib : malloc;
     void[] buf = malloc(Node.sizeof)[0 .. Node.sizeof];
-    
+
     import std.conv : emplace;
     const Node* n = emplace!(const Node)(buf, 42, null, 10);
     assert(n.payload == 42);
