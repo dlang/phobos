@@ -5009,7 +5009,7 @@ T* emplace(T, Args...)(void[] chunk, auto ref Args args)
     if (!is(T == class))
 {
     testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
-    emplace(cast(T*) chunk.ptr, args);
+    emplaceRef!(T, Unqual!T)(*cast(Unqual!T*) chunk.ptr, args);
     return cast(T*) chunk.ptr;
 }
 
@@ -5026,6 +5026,26 @@ unittest
     s.b = 43;
     auto s1 = emplace!S(p, s);
     assert(s1.a == 42 && s1.b == 43);
+}
+
+unittest
+{
+    // Issue 15313
+    static struct Node
+    {
+        int payload;
+        Node* next;
+        uint refs;
+    }
+    
+    import core.stdc.stdlib : malloc;
+    void[] buf = malloc(Node.sizeof)[0 .. Node.sizeof];
+    
+    import std.conv : emplace;
+    const Node* n = emplace!(const Node)(buf, 42, null, 10);
+    assert(n.payload == 42);
+    assert(n.next == null);
+    assert(n.refs == 10);
 }
 
 unittest
