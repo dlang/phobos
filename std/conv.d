@@ -3909,22 +3909,20 @@ if (is(UT == Unqual!T))
     emplaceImpl!T(chunk, args);
 }
 
-
 private template emplaceImpl(T)
 {
     alias UT = Unqual!T;
 
-    ref UT emplaceImpl()(ref UT chunk)
+    void emplaceImpl()(ref UT chunk)
     {
         static assert (is(typeof({static T i;})),
             convFormat("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
-
-        return emplaceInitializer(chunk);
+        emplaceInitializer(chunk);
     }
 
     // Primitive types, enums, static arrays, dynamic arrays
     static if (!is(T == struct))
-    ref UT emplaceImpl(Arg)(ref UT chunk, auto ref Arg arg)
+    void emplaceImpl(Arg)(ref UT chunk, auto ref Arg arg)
     {
         static assert(is(typeof({T t = arg;})),
             convFormat("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
@@ -3963,15 +3961,13 @@ private template emplaceImpl(T)
         {
             chunk = arg;
         }
-        return chunk;
     }
     // ditto
     static if (is(T == struct))
-    ref UT emplaceImpl(Args...)(ref UT chunk, auto ref Args args)
+    void emplaceImpl(Args...)(ref UT chunk, auto ref Args args)
     {
         static if (Args.length == 1 && is(Args[0] : T) &&
-            is (typeof({T t = args[0];})) //Check for legal postblit
-            )
+            is (typeof({T t = args[0];})) /*Check for legal postblit*/)
         {
             static if (is(Unqual!T == Unqual!(Args[0])))
             {
@@ -4016,7 +4012,7 @@ private template emplaceImpl(T)
                 static if (is(Field == UField))
                     .emplaceImpl!Field(field, args[i]);
                 else
-                    .emplaceImpl!Field(*cast(Unqual!Field*)&field, args[i]);
+                    .emplaceImpl!Field(*cast(UField*)&field, args[i]);
             }
         }
         else
@@ -4029,12 +4025,10 @@ private template emplaceImpl(T)
             static assert(false,
                 convFormat("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
         }
-
-        return chunk;
     }
 }
 //emplace helper functions
-private ref T emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
+private void emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
 {
     static if (!hasElaborateAssign!T && isAssignable!T)
         chunk = T.init;
@@ -4044,16 +4038,14 @@ private ref T emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
         static immutable T init = T.init;
         memcpy(&chunk, &init, T.sizeof);
     }
-    return chunk;
 }
 private deprecated("Using static opCall for emplace is deprecated. Plase use emplace(chunk, T(args)) instead.")
-ref T emplaceOpCaller(T, Args...)(ref T chunk, auto ref Args args)
+void emplaceOpCaller(T, Args...)(ref T chunk, auto ref Args args)
 {
     static assert (is(typeof({T t = T.opCall(args);})),
         convFormat("%s.opCall does not return adequate data for construction.", T.stringof));
-    return emplaceImpl!T(chunk, chunk.opCall(args));
+    emplaceImpl!T(chunk, chunk.opCall(args));
 }
-
 
 // emplace
 /**
@@ -5017,7 +5009,8 @@ T* emplace(T, Args...)(void[] chunk, auto ref Args args)
     if (!is(T == class))
 {
     testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
-    return emplace(cast(T*) chunk.ptr, args);
+    emplace(cast(T*) chunk.ptr, args);
+    return cast(T*) chunk.ptr;
 }
 
 ///
