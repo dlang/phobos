@@ -3925,8 +3925,8 @@ if (is(UT == Unqual!T))
                 static if (Args.length == 1)
                     static if (is(typeof(payload = x[0])))
                         payload = x[0];
-                else
-                    payload = T(x[0]);
+                    else
+                        payload = T(x[0]);
                 else
                     payload = T(x);
             }
@@ -3949,7 +3949,7 @@ if (is(UT == Unqual!T))
     }
     else static if (is(typeof(chunk.__ctor(args))))
     {
-        // This catches the rate case of local types that keep a frame pointer
+        // This catches the rare case of local types that keep a frame pointer
         emplaceInitializer(chunk);
         chunk.__ctor(args);
     }
@@ -4151,6 +4151,26 @@ unittest
     s.b = 43;
     auto s1 = emplace!S(p, s);
     assert(s1.a == 42 && s1.b == 43);
+}
+
+// Bulk of emplace unittests starts here
+
+unittest /* unions */
+{
+    static union U
+    {
+        string a;
+        int b;
+        struct
+        {
+            long c;
+            int[] d;
+        }
+    }
+    U u1 = void;
+    U u2 = { "hello" };
+    emplace(&u1, u2);
+    assert(u1.a == "hello");
 }
 
 version(unittest) private struct __conv_EmplaceTest
@@ -5037,6 +5057,7 @@ unittest
     // need ctor args
     static assert(!is(typeof(emplace!A(buf))));
 }
+// Bulk of emplace unittests ends here
 
 unittest
 {
