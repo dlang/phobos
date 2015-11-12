@@ -3876,14 +3876,18 @@ unittest
     long b;
 
     // biggest value that should fit in an it
-    static assert(__traits(compiles, a = octal!"17777777777"));
+    a = octal!"17777777777";
+    assert(a == int.max);
     // should not fit in the int
     static assert(!__traits(compiles, a = octal!"20000000000"));
     // ... but should fit in a long
-    static assert(__traits(compiles, b = octal!"20000000000"));
+    b = octal!"20000000000";
+    assert(b == 1L + int.max);
 
-    static assert(__traits(compiles, b = octal!"1L"));
-    static assert(__traits(compiles, b = octal!1L));
+    b = octal!"1L";
+    assert(b == 1);
+    b = octal!1L;
+    assert(b == 1);
 }
 
 /+
@@ -4129,7 +4133,7 @@ unittest
     struct S { @disable this(); }
     S s = void;
     static assert(!__traits(compiles, emplace(&s)));
-    static assert( __traits(compiles, emplace(&s, S.init)));
+    emplace(&s, S.init);
 }
 
 unittest
@@ -4186,12 +4190,12 @@ unittest
     }
     S1[2] ss1 = void;
     S2[2] ss2 = void;
-    static assert( __traits(compiles, emplace(&ss1)));
+    emplace(&ss1);
     static assert(!__traits(compiles, emplace(&ss2)));
     S1 s1 = S1.init;
     S2 s2 = S2.init;
     static assert(!__traits(compiles, emplace(&ss1, s1)));
-    static assert( __traits(compiles, emplace(&ss2, s2)));
+    emplace(&ss2, s2);
 }
 
 unittest
@@ -4398,7 +4402,8 @@ unittest
         @disable this(this);
     }
     S1 s1 = void;
-    static assert( __traits(compiles, emplace(&s1, 1)));
+    emplace(&s1, 1);
+    assert(s1.i == 1);
     static assert(!__traits(compiles, emplace(&s1, S1.init)));
 
     static struct S2
@@ -4409,14 +4414,14 @@ unittest
     }
     S2 s2 = void;
     static assert(!__traits(compiles, emplace(&s2, 1)));
-    static assert( __traits(compiles, emplace(&s2, S2.init)));
+    emplace(&s2, S2.init);
 
     static struct SS1
     {
         S1 s;
     }
     SS1 ss1 = void;
-    static assert( __traits(compiles, emplace(&ss1)));
+    emplace(&ss1);
     static assert(!__traits(compiles, emplace(&ss1, SS1.init)));
 
     static struct SS2
@@ -4424,7 +4429,7 @@ unittest
         S2 s;
     }
     SS2 ss2 = void;
-    static assert( __traits(compiles, emplace(&ss2)));
+    emplace(&ss2);
     static assert(!__traits(compiles, emplace(&ss2, SS2.init)));
 
 
@@ -4694,7 +4699,7 @@ unittest
         }
         S1 s = void;
         static assert(!__traits(compiles, emplace(&s,  1)));
-        static assert( __traits(compiles, emplace(&s, &i))); //(works, but deprected)
+        static assert( __traits(compiles, emplace(&s, &i))); //(works, but deprecated)
     }
     //With constructor
     {
@@ -4706,8 +4711,8 @@ unittest
             this(int i){this.i = i;}
         }
         S2 s = void;
-        static assert( __traits(compiles, emplace(&s, 1)));  //(works, but deprected)
-        static assert( __traits(compiles, emplace(&s, &i))); //(works, but deprected)
+        static assert( __traits(compiles, emplace(&s, 1)));  //(works, but deprecated)
+        static assert( __traits(compiles, emplace(&s, &i))); //(works, but deprecated)
         emplace(&s,  1);
         assert(s.i == 1);
     }
@@ -4719,7 +4724,7 @@ unittest
             static S3 opCall(ref S3){assert(0);}
         }
         S3 s = void;
-        static assert( __traits(compiles, emplace(&s, S3.init)));
+        emplace(&s, S3.init);
     }
 }
 
