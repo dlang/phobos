@@ -63,17 +63,17 @@ struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
         {
             return arr[0];
         }
-
-        @property void front(uint val)
-        {
-            arr[0] = val;
-        }
     }
     else
     {
         @property uint front() const
         {
             return arr[0];
+        }
+
+        @property void front(uint val)
+        {
+            arr[0] = val;
         }
     }
 
@@ -98,18 +98,17 @@ struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
             {
                 return arr[$ - 1];
             }
-
-            @property void back(uint val)
-            {
-                arr[$ - 1] = val;
-            }
-
         }
         else
         {
             @property uint back() const
             {
                 return arr[$ - 1];
+            }
+
+            @property void back(uint val)
+            {
+                arr[$ - 1] = val;
             }
         }
     }
@@ -122,17 +121,27 @@ struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
             {
                 return arr[index];
             }
-
-            void opIndexAssign(uint val, size_t index)
-            {
-                arr[index] = val;
-            }
         }
         else
         {
             uint opIndex(size_t index) const
             {
                 return arr[index];
+            }
+
+            uint opIndexAssign(uint val, size_t index)
+            {
+                return arr[index] = val;
+            }
+
+            uint opIndexOpAssign(string op)(uint value, size_t index)
+            {
+                mixin("return arr[index] " ~ op ~ "= value;");
+            }
+
+            uint opIndexUnary(string op)(size_t index)
+            {
+                mixin("return " ~ op ~ "arr[index];");
             }
         }
 
