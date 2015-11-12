@@ -142,7 +142,8 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(WEB digitalmars.com, Walter Bright),
          $(WEB erdani.org, Andrei Alexandrescu),
-         and Jonathan M Davis
+        Jonathan M Davis,
+        and David L. 'SpottedTiger' Davis
 
 Source:    $(PHOBOSSRC std/_string.d)
 
@@ -5696,52 +5697,25 @@ unittest
     });
 }
 
-
-/* ************************************************
- * Version       : v0.3
- * Author        : David L. 'SpottedTiger' Davis
- * Date Created  : 31.May.05 Compiled and Tested with dmd v0.125
- * Date Modified : 01.Jun.05 Modified the function to handle the
- *               :           imaginary and complex float-point
- *               :           datatypes.
- *               :
- * Licence       : Public Domain / Contributed to Digital Mars
- */
-
 /**
- * [in] string s can be formatted in the following ways:
- *
- * Integer Whole Number:
- * (for byte, ubyte, short, ushort, int, uint, long, and ulong)
- * ['+'|'-']digit(s)[U|L|UL]
- *
- * examples: 123, 123UL, 123L, +123U, -123L
- *
- * Floating-Point Number:
- * (for float, double, real, ifloat, idouble, and ireal)
- * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
- *      or [nan|nani|inf|-inf]
- *
- * examples: +123., -123.01, 123.3e-10f, 123.3e-10fi, 123.3e-10L
- *
- * (for cfloat, cdouble, and creal)
- * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][+]
- *         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
- *      or [nan|nani|nan+nani|inf|-inf]
- *
- * examples: nan, -123e-1+456.9e-10Li, +123e+10+456i, 123+456
- *
- * [in] bool bAllowSep
- * False by default, but when set to true it will accept the
- * separator characters $(D ',') and $(D '__') within the string, but these
+ * Takes a string $(D s) and determines if it represents a number. This function
+ * also takes an optional parameter, $(D bAllowSep), which will accept the
+ * separator characters $(D ',') and $(D '__') within the string. But these
  * characters should be stripped from the string before using any
- * of the conversion functions like toInt(), toFloat(), and etc
+ * of the conversion functions like $(D to!int()), $(D to!float()), and etc
  * else an error will occur.
  *
  * Also please note, that no spaces are allowed within the string
  * anywhere whether it's a leading, trailing, or embedded space(s),
  * thus they too must be stripped from the string before using this
  * function, or any of the conversion functions.
+ *
+ * Params:
+ *     s = the string to check
+ *     bAllowSep = accept separator characters or not
+ *
+ * Returns:
+ *     $(D bool)
  */
 
 bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
@@ -5851,6 +5825,50 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
     }
 
     return sawDigits;
+}
+
+/**
+ * Integer Whole Number: (byte, ubyte, short, ushort, int, uint, long, and ulong)
+ * ['+'|'-']digit(s)[U|L|UL]
+ */
+@safe pure unittest
+{
+    assert(isNumeric("123"));
+    assert(isNumeric("123UL"));
+    assert(isNumeric("123L"));
+    assert(isNumeric("+123U"));
+    assert(isNumeric("-123L"));
+}
+
+/**
+ * Floating-Point Number: (float, double, real, ifloat, idouble, and ireal)
+ * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
+ *      or [nan|nani|inf|-inf]
+ */
+@safe pure unittest
+{
+    assert(isNumeric("+123"));
+    assert(isNumeric("-123.01"));
+    assert(isNumeric("123.3e-10f"));
+    assert(isNumeric("123.3e-10fi"));
+    assert(isNumeric("123.3e-10L"));
+
+    assert(isNumeric("nan"));
+    assert(isNumeric("nani"));
+    assert(isNumeric("-inf"));
+}
+
+/**
+ * Floating-Point Number: (cfloat, cdouble, and creal)
+ * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][+]
+ *         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
+ *      or [nan|nani|nan+nani|inf|-inf]
+ */
+@safe pure unittest
+{
+    assert(isNumeric("-123e-1+456.9e-10Li"));
+    assert(isNumeric("+123e+10+456i"));
+    assert(isNumeric("123+456"));
 }
 
 @safe pure unittest
