@@ -4097,10 +4097,10 @@ private struct ReadlnAppender
         return buf.ptr[0..pos];
     }
 
-    void reserve(size_t n)
+    bool reserveWithoutAllocating(size_t n)
     {
         if (buf.length >= pos + n) // buf is already large enough
-            return;
+            return true;
 
         immutable curCap = buf.capacity;
         if (curCap >= pos + n)
@@ -4109,8 +4109,14 @@ private struct ReadlnAppender
             /* Any extra capacity we end up not using can safely be claimed
             by someone else. */
             safeAppend = true;
+            return true;
         }
-        else
+
+        return false;
+    }
+    void reserve(size_t n)
+    {
+        if (!reserveWithoutAllocating(n))
         {
             size_t ncap = buf.length * 2 + 128 + n;
             char[] nbuf = new char[ncap];
@@ -4135,25 +4141,14 @@ private struct ReadlnAppender
         foreach(c; u)
             buf.ptr[pos++] = c;
     }
-    void putbuf(char[] b)
-    {
-        reserve(b.length);
-        memcpy(buf.ptr + pos, b.ptr, b.length);
-        pos += b.length;
-    }
     void putonly(char[] b)
     {
-        import std.algorithm: max;
         assert(pos == 0);   // assume this is the only put call
-        if (b.length > max(buf.length, buf.capacity))
-        {
-            buf = b.dup;
-            pos = b.length;
-        }
+        if (reserveWithoutAllocating(b.length))
+            memcpy(buf.ptr + pos, b.ptr, b.length);
         else
-        {
-            putbuf(b);
-        }
+            buf = b.dup;
+        pos = b.length;
     }
 }
 
