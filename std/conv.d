@@ -3937,7 +3937,7 @@ if (is(UT == Unqual!T))
                 chunk = T(args);
             else static if (args.length == 1 && is(typeof(chunk = args[0])))
                 chunk = args[0];
-            else assert(0, "CTFE emplace doesn't support " 
+            else assert(0, "CTFE emplace doesn't support "
                 ~ T.stringof ~ " from " ~ Args.stringof);
         }
         else
@@ -3949,7 +3949,7 @@ if (is(UT == Unqual!T))
     }
     else static if (is(typeof(chunk.__ctor(args))))
     {
-        // This catches the rate case of local types that keep a frame pointer 
+        // This catches the rate case of local types that keep a frame pointer
         emplaceInitializer(chunk);
         chunk.__ctor(args);
     }
@@ -3963,7 +3963,7 @@ if (is(UT == Unqual!T))
         //We can't emplace. Try to diagnose a disabled postblit.
         static assert(!(Args.length == 1 && is(Args[0] : T)),
             convFormat("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
-        
+
         //We can't emplace.
         static assert(false,
             convFormat("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
@@ -4014,7 +4014,7 @@ T* emplace(T)(T* chunk) @safe pure nothrow
 ///
 unittest
 {
-    static struct S 
+    static struct S
     {
         int i = 42;
     }
@@ -4074,10 +4074,10 @@ T emplace(T, Args...)(void[] chunk, auto ref Args args)
     enum classSize = __traits(classInstanceSize, T);
     testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
     auto result = cast(T) chunk.ptr;
-    
+
     // Initialize the object in its pre-ctor state
     chunk[0 .. classSize] = typeid(T).init[];
-    
+
     // Call the ctor if any
     static if (is(typeof(result.__ctor(args))))
     {
@@ -4099,11 +4099,11 @@ unittest
 {
     interface I {}
     class K : I {}
-    
+
     K k = void;
     emplace(&k);
     assert(k is null);
-    
+
     I i = void;
     emplace(&i);
     assert(i is null);
