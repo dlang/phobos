@@ -4403,6 +4403,7 @@ unittest
     }
     S1 s1 = void;
     emplace(&s1, 1);
+    assert(s1.i == 1);
     static assert(!__traits(compiles, emplace(&s1, S1.init)));
 
     static struct S2
