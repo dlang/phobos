@@ -86,6 +86,7 @@
  *           $(LREF isDynamicArray)
  *           $(LREF isFloatingPoint)
  *           $(LREF isIntegral)
+ *           $(LREF isMultiDimensionalArray)
  *           $(LREF isNarrowString)
  *           $(LREF isNumeric)
  *           $(LREF isPointer)
@@ -124,6 +125,7 @@
  *           $(LREF ValueType)
  * ))
  * $(TR $(TD Misc) $(TD
+ *           $(LREF dimensionCount) 
  *           $(LREF mangledName)
  *           $(LREF Select)
  *           $(LREF select)
@@ -5420,6 +5422,58 @@ unittest
 
     //enum EAA : int[int] { a = [1:1], b = [2:2] }
     //static assert( isAssociativeArray!EAA);
+}
+
+/**
+ * Detects whether type $(D T) is a multi dimensional array.
+ * Params:
+ *      T = type to be tested
+ *
+ * Returns:
+ *      true if T is a multi dimensional array
+ */
+template isMultiDimensionalArray(T)
+{
+    static if (!isArray!T)
+        enum isMultiDimensionalArray = false;
+    else
+    {
+        alias DT = typeof(T.init[0]);
+        enum isMultiDimensionalArray = hasLength!DT || isNarrowString!DT;
+    }
+}
+///
+unittest
+{
+    assert(isMultiDimensionalArray!(string[]) );
+    assert(!isMultiDimensionalArray!(int[]) );
+    assert(isMultiDimensionalArray!(int[][]) );
+    assert(!isMultiDimensionalArray!(int) );
+    assert(!isMultiDimensionalArray!(string) );
+    assert(!isMultiDimensionalArray!(int[][] function()) );
+    assert(!isMultiDimensionalArray!void);
+}
+
+/**
+ * Returns the dimension count of a $(D array).
+ */
+size_t dimensionCount(T)()
+if (isArray!T)
+{
+    size_t result = 1;
+    static if (isMultiDimensionalArray!T)
+    {
+        alias DT = typeof(T.init[0]);
+        result += dimensionCount!DT;
+    }
+    return result;
+}
+///
+unittest
+{
+    assert(dimensionCount!(int[]) == 1);
+    assert(dimensionCount!(int[][]) == 2);
+    assert(dimensionCount!(int[][][]) == 3);
 }
 
 /**
