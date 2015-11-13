@@ -573,12 +573,12 @@ void fill(Range, Value)(Range range, Value value)
     {
         int[] a = [1, 2, 3];
         immutable(int) b = 0;
-        static assert(__traits(compiles, a.fill(b)));
+        a.fill(b);
     }
     {
         double[] a = [1, 2, 3];
         immutable(int) b = 0;
-        static assert(__traits(compiles, a.fill(b)));
+        a.fill(b);
     }
 }
 
@@ -982,8 +982,7 @@ unittest
     class S5;
 
     S5 s51;
-    static assert(__traits(compiles, move(s51, s51)),
-                  "issue 13990, cannot move opaque class reference");
+    move(s51, s51);
 }
 
 /// Ditto
@@ -1093,8 +1092,7 @@ unittest
     class S5;
 
     S5 s51;
-    static assert(__traits(compiles, s51 = move(s51)),
-                  "issue 13990, cannot move opaque class reference");
+    s51 = move(s51);
 }
 
 unittest
@@ -1103,8 +1101,8 @@ unittest
     S a, b;
     static assert(!__traits(compiles, () @safe { move(a, b); }));
     static assert(!__traits(compiles, () @safe { move(a); }));
-    static assert(__traits(compiles, () @trusted { move(a, b); }));
-    static assert(__traits(compiles, () @trusted { move(a); }));
+    () @trusted { move(a, b); }();
+    () @trusted { move(a); }();
 }
 
 unittest//Issue 6217
@@ -1166,8 +1164,8 @@ unittest// Issue 8057
         }
     }
     Array!int.Payload x = void;
-    static assert(__traits(compiles, move(x)    ));
-    static assert(__traits(compiles, move(x, x) ));
+    move(x);
+    move(x, x);
 }
 
 /**

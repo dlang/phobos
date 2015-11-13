@@ -377,7 +377,7 @@ unittest
     import std.typecons;
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
-    static assert( __traits(compiles, [ tuple("foo", "bar") ].assocArray()));
+    [ tuple("foo", "bar") ].assocArray();
 }
 
 // Issue 13909
@@ -386,7 +386,7 @@ unittest
     import std.typecons;
     auto a = [tuple!(const string, string)("foo", "bar")];
     auto b = [tuple!(string, const string)("foo", "bar")];
-    static assert( __traits(compiles, assocArray(a)));
+    assocArray(a);
     static assert(!__traits(compiles, assocArray(b)));
 }
 

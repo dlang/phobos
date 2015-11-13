@@ -982,10 +982,10 @@ template Alias(a...)
 unittest
 {
     enum abc = 1;
-    static assert(__traits(compiles, { alias a = Alias!(123); }));
-    static assert(__traits(compiles, { alias a = Alias!(abc); }));
-    static assert(__traits(compiles, { alias a = Alias!(int); }));
-    static assert(__traits(compiles, { alias a = Alias!(1,abc,int); }));
+    alias a = Alias!(123);
+    alias b = Alias!(abc);
+    alias c = Alias!(int);
+    alias d = Alias!(1, abc, int);
 }
 
 

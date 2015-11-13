@@ -979,7 +979,7 @@ unittest {
     void bar(uint){}
     static assert(arity!bar==1);
     void variadicFoo(uint...){}
-    static assert(__traits(compiles,arity!variadicFoo)==false);
+    static assert(!__traits(compiles, arity!variadicFoo));
 }
 
 /**

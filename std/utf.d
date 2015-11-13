@@ -2983,7 +2983,7 @@ const(wchar)* toUTF16z(C)(const(C)[] str) @safe pure
     //toUTFz is already thoroughly tested, so this will just verify that
     //toUTF16z compiles properly for the various string types.
     foreach (S; AliasSeq!(string, wstring, dstring))
-        static assert(__traits(compiles, toUTF16z(to!S("hello world"))));
+        assert(toUTF16z(to!S("hello world")) !is null);
 }
 
 
