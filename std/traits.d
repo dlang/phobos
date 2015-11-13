@@ -5445,12 +5445,12 @@ template isMultiDimensionalArray(T)
 ///
 unittest
 {
-    assert(isMultiDimensionalArray!(string[]) );
-    assert(!isMultiDimensionalArray!(int[]) );
-    assert(isMultiDimensionalArray!(int[][]) );
-    assert(!isMultiDimensionalArray!(int) );
-    assert(!isMultiDimensionalArray!(string) );
-    assert(!isMultiDimensionalArray!(int[][] function()) );
+    assert(isMultiDimensionalArray!(string[]));
+    assert(isMultiDimensionalArray!(int[][]));
+    assert(!isMultiDimensionalArray!(int[]));
+    assert(!isMultiDimensionalArray!(int));
+    assert(!isMultiDimensionalArray!(string));
+    assert(!isMultiDimensionalArray!(int[][] function()));
     assert(!isMultiDimensionalArray!void);
 }
 
