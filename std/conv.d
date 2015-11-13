@@ -4693,6 +4693,7 @@ unittest
         emplace(ps2, 5);
         emplace(ps2, S2.init);
     }
+    foo();
 
     T bar(T)() @property
     {
@@ -4700,12 +4701,20 @@ unittest
         emplace(&t, 5);
         return t;
     }
+    // CTFE
     enum a = bar!int;
     static assert(a == 5);
     enum b = bar!S1;
     static assert(b.i == 5);
     enum c = bar!S2;
     static assert(c.i == 5);
+    // runtime
+    auto aa = bar!int;
+    assert(aa == 5);
+    auto bb = bar!S1;
+    assert(bb.i == 5);
+    auto cc = bar!S2;
+    assert(cc.i == 5);
 }
 
 
