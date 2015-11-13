@@ -3081,7 +3081,7 @@ void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttribut
 void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve = preserveAttributesDefault)
     if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
-    import std.map : staticMap;
+    import std.meta : staticMap;
     alias Types = staticMap!(convertToString, RF, RT);
     copy!Types(from, to, preserve);
 }
