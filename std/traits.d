@@ -5425,7 +5425,7 @@ unittest
 }
 
 /**
- * Detects whether type $(D T) is a multi dimensional array.
+ * Detect whether type $(D T) is a multi dimensional built-in array.
  * Params:
  *      T = type to be tested
  *
@@ -5455,7 +5455,12 @@ unittest
 }
 
 /**
- * Returns the dimension count of a $(D array).
+ * Retrieve the dimension count of a built-in array.
+ * Params:
+ *      T = type to be tested, must be an array
+ *
+ * Returns:
+ *      a $(D size_t) at least equal to 1
  */
 size_t dimensionCount(T)()
 if (isArray!T)
