@@ -3901,136 +3901,81 @@ Furthermore, emplaceRef optionally takes a type paremeter, which specifies
 the type we want to build. This helps to build qualified objects on mutable
 buffer, without breaking the type system with unsafe casts.
 +/
-package void emplaceRef(UT, Args...)(ref UT chunk, auto ref Args args)
-if (is(UT == Unqual!UT))
-{
-    emplaceRef!(UT, UT)(chunk, args);
-}
-// ditto
 package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
 if (is(UT == Unqual!T))
 {
-    emplaceImpl!T(chunk, args);
-}
-
-private template emplaceImpl(T)
-{
-    alias UT = Unqual!T;
-
-    void emplaceImpl()(ref UT chunk)
+    static if (args.length == 0)
     {
         static assert (is(typeof({static T i;})),
             convFormat("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
         emplaceInitializer(chunk);
     }
-
-    // Primitive types, enums, static arrays, dynamic arrays
-    static if (!is(T == struct))
-    void emplaceImpl(Arg)(ref UT chunk, auto ref Arg arg)
+    else static if (
+        !is(T == struct) && Args.length == 1 /* primitives, enums, arrays */
+        ||
+        Args.length == 1 && is(typeof({T t = args[0];})) /* conversions */
+        ||
+        is(typeof(T(args))) /* general constructors */)
     {
-        static assert(is(typeof({T t = arg;})),
-            convFormat("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
-
-        static if (isStaticArray!T)
+        static struct S
         {
-            alias UArg = Unqual!Arg;
-            alias E = ElementEncodingType!(typeof(T.init[]));
-            alias UE = Unqual!E;
-            enum n = T.length;
-
-            static if (!hasElaborateAssign!T && is(typeof(chunk[] = arg)))
+            T payload;
+            this(ref Args x)
             {
-                // Bulk case optimization
-                chunk[] = arg;
-            }
-            else
-            {
-                // Element by element initialization
-                foreach (i; 0 .. n)
-                {
-                    static if (is(typeof(emplaceRef!(E, UE)(chunk[i], arg))))
-                    {
-                        // Initialize whole array with the same value
-                        emplaceRef!(E, UE)(chunk[i], arg);
-                    }
+                static if (Args.length == 1)
+                    static if (is(typeof(payload = x[0])))
+                        payload = x[0];
                     else
-                    {
-                        // Initialize array from another array
-                        emplaceRef!(E, UE)(chunk[i], arg[i]);
-                    }
-                }
+                        payload = T(x[0]);
+                else
+                    payload = T(x);
             }
+        }
+        if (__ctfe)
+        {
+            static if (is(typeof(chunk = T(args))))
+                chunk = T(args);
+            else static if (args.length == 1 && is(typeof(chunk = args[0])))
+                chunk = args[0];
+            else assert(0, "CTFE emplace doesn't support "
+                ~ T.stringof ~ " from " ~ Args.stringof);
         }
         else
         {
-            chunk = arg;
+            S* p = () @trusted { return cast(S*) &chunk; }();
+            emplaceInitializer(*p);
+            p.__ctor(args);
         }
     }
-    // ditto
-    static if (is(T == struct))
-    void emplaceImpl(Args...)(ref UT chunk, auto ref Args args)
+    else static if (is(typeof(chunk.__ctor(args))))
     {
-        static if (Args.length == 1 && is(Args[0] : T) &&
-            is (typeof({T t = args[0];})) /*Check for legal postblit*/)
-        {
-            static if (is(Unqual!T == Unqual!(Args[0])))
-            {
-                //Types match exactly: we postblit
-                static if (!hasElaborateAssign!UT && isAssignable!(UT, T))
-                    chunk = args[0];
-                else
-                {
-                    import core.stdc.string : memcpy;
-                    // This is known to be safe as the two values are the same
-                    // type and the source (args[0]) should be initialized
-                    () @trusted { memcpy(&chunk, &args[0], T.sizeof); }();
-                    static if (hasElaborateCopyConstructor!T)
-                        _postblitRecurse(chunk);
-                }
-            }
-            else
-                //Alias this. Coerce to type T.
-                .emplaceImpl!T(chunk, cast(T)args[0]);
-        }
-        else static if (is(typeof(chunk.__ctor(args))))
-        {
-            // T defines a genuine constructor accepting args
-            // Go the classic route: write .init first, then call ctor
-            emplaceInitializer(chunk);
-            chunk.__ctor(args);
-        }
-        else static if (is(typeof(T.opCall(args))))
-        {
-            //Can be built calling opCall
-            emplaceOpCaller(chunk, args); //emplaceOpCaller is deprecated
-        }
-        else static if (is(typeof(T(args))))
-        {
-            // Struct without constructor that has one matching field for
-            // each argument. Individually emplace each field
-            emplaceInitializer(chunk);
-            foreach (i, ref field; chunk.tupleof[0 .. Args.length])
-            {
-                alias Field = typeof(field);
-                alias UField = Unqual!Field;
-                static if (is(Field == UField))
-                    .emplaceImpl!Field(field, args[i]);
-                else
-                    .emplaceImpl!Field(*cast(UField*)&field, args[i]);
-            }
-        }
-        else
-        {
-            //We can't emplace. Try to diagnose a disabled postblit.
-            static assert(!(Args.length == 1 && is(Args[0] : T)),
-                convFormat("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
+        // This catches the rare case of local types that keep a frame pointer
+        emplaceInitializer(chunk);
+        chunk.__ctor(args);
+    }
+    else static if (is(typeof(T.opCall(args))))
+    {
+        //Can be built calling opCall
+        emplaceOpCaller(chunk, args); //emplaceOpCaller is deprecated
+    }
+    else
+    {
+        //We can't emplace. Try to diagnose a disabled postblit.
+        static assert(!(Args.length == 1 && is(Args[0] : T)),
+            convFormat("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
 
-            //We can't emplace.
-            static assert(false,
-                convFormat("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
-        }
+        //We can't emplace.
+        static assert(false,
+            convFormat("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
     }
 }
+// ditto
+package void emplaceRef(UT, Args...)(ref UT chunk, auto ref Args args)
+if (is(UT == Unqual!UT))
+{
+    emplaceRef!(UT, UT)(chunk, args);
+}
+
 //emplace helper functions
 private void emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
 {
@@ -4048,7 +3993,7 @@ void emplaceOpCaller(T, Args...)(ref T chunk, auto ref Args args)
 {
     static assert (is(typeof({T t = T.opCall(args);})),
         convFormat("%s.opCall does not return adequate data for construction.", T.stringof));
-    emplaceImpl!T(chunk, chunk.opCall(args));
+    emplaceRef!T(chunk, chunk.opCall(args));
 }
 
 // emplace
@@ -4062,8 +4007,20 @@ as $(D chunk)).
  */
 T* emplace(T)(T* chunk) @safe pure nothrow
 {
-    emplaceImpl!T(*chunk);
+    emplaceRef!T(*chunk);
     return chunk;
+}
+
+///
+unittest
+{
+    static struct S
+    {
+        int i = 42;
+    }
+    S[2] s2 = void;
+    emplace(&s2);
+    assert(s2[0].i == 42 && s2[1].i == 42);
 }
 
 /**
@@ -4078,17 +4035,142 @@ Returns: A pointer to the newly constructed object (which is the same
 as $(D chunk)).
  */
 T* emplace(T, Args...)(T* chunk, auto ref Args args)
-if (!is(T == struct) && Args.length == 1)
+if (is(T == struct) || Args.length == 1)
 {
-    emplaceImpl!T(*chunk, args);
+    emplaceRef!T(*chunk, args);
     return chunk;
 }
-/// ditto
-T* emplace(T, Args...)(T* chunk, auto ref Args args)
-if (is(T == struct))
+
+///
+unittest
 {
-    emplaceImpl!T(*chunk, args);
-    return chunk;
+    int a;
+    int b = 42;
+    assert(*emplace!int(&a, b) == 42);
+}
+
+private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow
+{
+    assert(chunk.length >= typeSize, "emplace: Chunk size too small.");
+    assert((cast(size_t)chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
+}
+
+/**
+Given a raw memory area $(D chunk), constructs an object of $(D class)
+type $(D T) at that address. The constructor is passed the arguments
+$(D Args). The $(D chunk) must be as least as large as $(D T) needs
+and should have an alignment multiple of $(D T)'s alignment. (The size
+of a $(D class) instance is obtained by using $(D
+__traits(classInstanceSize, T))).
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object.
+ */
+T emplace(T, Args...)(void[] chunk, auto ref Args args)
+    if (is(T == class))
+{
+    enum classSize = __traits(classInstanceSize, T);
+    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
+    auto result = cast(T) chunk.ptr;
+
+    // Initialize the object in its pre-ctor state
+    chunk[0 .. classSize] = typeid(T).init[];
+
+    // Call the ctor if any
+    static if (is(typeof(result.__ctor(args))))
+    {
+        // T defines a genuine constructor accepting args
+        // Go the classic route: write .init first, then call ctor
+        result.__ctor(args);
+    }
+    else
+    {
+        static assert(args.length == 0 && !is(typeof(&T.__ctor)),
+            "Don't know how to initialize an object of type "
+            ~ T.stringof ~ " with arguments " ~ Args.stringof);
+    }
+    return result;
+}
+
+///
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = void;
+    emplace(&k);
+    assert(k is null);
+
+    I i = void;
+    emplace(&i);
+    assert(i is null);
+}
+
+@nogc pure nothrow unittest
+{
+    int var = 6;
+    ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
+    auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
+}
+
+/**
+Given a raw memory area $(D chunk), constructs an object of non-$(D
+class) type $(D T) at that address. The constructor is passed the
+arguments $(D args), if any. The $(D chunk) must be as least as large
+as $(D T) needs and should have an alignment multiple of $(D T)'s
+alignment.
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object.
+ */
+T* emplace(T, Args...)(void[] chunk, auto ref Args args)
+    if (!is(T == class))
+{
+    testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
+    emplaceRef!(T, Unqual!T)(*cast(Unqual!T*) chunk.ptr, args);
+    return cast(T*) chunk.ptr;
+}
+
+///
+unittest
+{
+    struct S
+    {
+        int a, b;
+    }
+    auto p = new void[S.sizeof];
+    S s;
+    s.a = 42;
+    s.b = 43;
+    auto s1 = emplace!S(p, s);
+    assert(s1.a == 42 && s1.b == 43);
+}
+
+// Bulk of emplace unittests starts here
+
+unittest /* unions */
+{
+    static union U
+    {
+        string a;
+        int b;
+        struct
+        {
+            long c;
+            int[] d;
+        }
+    }
+    U u1 = void;
+    U u2 = { "hello" };
+    emplace(&u1, u2);
+    assert(u1.a == "hello");
 }
 
 version(unittest) private struct __conv_EmplaceTest
@@ -4134,28 +4216,6 @@ unittest
     S s = void;
     static assert(!__traits(compiles, emplace(&s)));
     emplace(&s, S.init);
-}
-
-unittest
-{
-    interface I {}
-    class K : I {}
-
-    K k = void;
-    emplace(&k);
-    assert(k is null);
-
-    I i = void;
-    emplace(&i);
-    assert(i is null);
-}
-
-unittest
-{
-    static struct S {int i = 5;}
-    S[2] s2 = void;
-    emplace(&s2);
-    assert(s2[0].i == 5 && s2[1].i == 5);
 }
 
 unittest
@@ -4208,18 +4268,14 @@ unittest
     S[2] ss1 = void;
     S[2] ss2 = void;
     emplace(&s, 5);
+    assert(s.i == 5);
     emplace(&ss1, s);
+    assert(ss1[0].i == 5 && ss1[1].i == 5);
     emplace(&ss2, ss1);
+    assert(ss2 == ss1);
 }
 
 //Start testing emplace-args here
-
-unittest
-{
-    int a;
-    int b = 42;
-    assert(*emplace!int(&a, b) == 42);
-}
 
 unittest
 {
@@ -4638,6 +4694,7 @@ unittest
         emplace(ps2, 5);
         emplace(ps2, S2.init);
     }
+    foo();
 
     T bar(T)() @property
     {
@@ -4645,9 +4702,20 @@ unittest
         emplace(&t, 5);
         return t;
     }
+    // CTFE
     enum a = bar!int;
+    static assert(a == 5);
     enum b = bar!S1;
+    static assert(b.i == 5);
     enum c = bar!S2;
+    static assert(c.i == 5);
+    // runtime
+    auto aa = bar!int;
+    assert(aa == 5);
+    auto bb = bar!S1;
+    assert(bb.i == 5);
+    auto cc = bar!S2;
+    assert(cc.i == 5);
 }
 
 
@@ -4944,95 +5012,6 @@ pure nothrow @safe /* @nogc */ unittest
     static assert(!__traits(compiles, emplaceRef(uninitializedUnsafeArr, unsafeArr)));
 }
 
-private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow
-{
-    assert(chunk.length >= typeSize, "emplace: Chunk size too small.");
-    assert((cast(size_t)chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
-}
-
-/**
-Given a raw memory area $(D chunk), constructs an object of $(D class)
-type $(D T) at that address. The constructor is passed the arguments
-$(D Args). The $(D chunk) must be as least as large as $(D T) needs
-and should have an alignment multiple of $(D T)'s alignment. (The size
-of a $(D class) instance is obtained by using $(D
-__traits(classInstanceSize, T))).
-
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
-
-Returns: A pointer to the newly constructed object.
- */
-T emplace(T, Args...)(void[] chunk, auto ref Args args)
-    if (is(T == class))
-{
-    enum classSize = __traits(classInstanceSize, T);
-    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
-    auto result = cast(T) chunk.ptr;
-
-    // Initialize the object in its pre-ctor state
-    chunk[0 .. classSize] = typeid(T).init[];
-
-    // Call the ctor if any
-    static if (is(typeof(result.__ctor(args))))
-    {
-        // T defines a genuine constructor accepting args
-        // Go the classic route: write .init first, then call ctor
-        result.__ctor(args);
-    }
-    else
-    {
-        static assert(args.length == 0 && !is(typeof(&T.__ctor)),
-                "Don't know how to initialize an object of type "
-                ~ T.stringof ~ " with arguments " ~ Args.stringof);
-    }
-    return result;
-}
-
-@nogc pure nothrow unittest
-{
-    int var = 6;
-    ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
-    auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
-    assert(k.i == 5);
-    assert(var == 7);
-}
-
-/**
-Given a raw memory area $(D chunk), constructs an object of non-$(D
-class) type $(D T) at that address. The constructor is passed the
-arguments $(D args), if any. The $(D chunk) must be as least as large
-as $(D T) needs and should have an alignment multiple of $(D T)'s
-alignment.
-
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
-
-Returns: A pointer to the newly constructed object.
- */
-T* emplace(T, Args...)(void[] chunk, auto ref Args args)
-    if (!is(T == class))
-{
-    testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
-    emplaceRef!(T, Unqual!T)(*cast(Unqual!T*) chunk.ptr, args);
-    return cast(T*) chunk.ptr;
-}
-
-///
-unittest
-{
-    struct S
-    {
-        int a, b;
-    }
-    auto p = new void[S.sizeof];
-    S s;
-    s.a = 42;
-    s.b = 43;
-    auto s1 = emplace!S(p, s);
-    assert(s1.a == 42 && s1.b == 43);
-}
-
 unittest
 {
     // Issue 15313
@@ -5088,6 +5067,7 @@ unittest
     // need ctor args
     static assert(!is(typeof(emplace!A(buf))));
 }
+// Bulk of emplace unittests ends here
 
 unittest
 {
