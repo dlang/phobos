@@ -611,6 +611,14 @@ struct SysTime
 public:
 
     /++
+			  Creates a SysTime from a DateTime and TimeZone. The DateTime is taken to represent the
+				current time as one would see on a clock in that timezone.
+
+				In the case of daylight saving time, some times are ambiguous; for instance, in the
+				America/Los_Angeles timezone, 2015-11-01T01:00:00 occurred twice. If the given DateTime
+				represents an ambiguous time of this sort, it will be considered as the earliest hour with
+				the relevant number.
+
         Params:
             dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
                        internal std time. As $(LREF DateTime) has no concept of
@@ -6169,6 +6177,9 @@ public:
         $(TR $(TD SysTime) $(TD -) $(TD duration) $(TD -->) $(TD SysTime))
         )
 
+				This is DST-aware. As such, adding an hour to a given SysTime will sometimes not result in
+				an apparent change of time.
+
         Params:
             duration = The duration to add to or subtract from this
                        $(LREF SysTime).
@@ -6375,6 +6386,14 @@ public:
         //static assert(__traits(compiles, ist + duration));
         static assert(__traits(compiles, cst - duration));
         //static assert(__traits(compiles, ist - duration));
+
+				// Test DST
+				auto beforeDST = SysTime(DateTime(2015, 11, 1), TimeZone.getTimeZone("America/Los_Angeles")); 
+				assert((beforeDST + dur!"hours"(1)).toSimpleString == "2015-Nov-01 01:00:00-07:00");
+				assert((beforeDST + dur!"hours"(2)).toSimpleString == "2015-Nov-01 01:00:00-08:00");
+				auto duringDST = SysTime(DateTime(2015, 11, 1, 1), TimeZone.getTimeZone("America/Los_Angeles")); 
+				assert((duringDST + dur!"hours"(1)).toSimpleString == "2015-Nov-01 01:00:00-08:00");
+				assert((duringDST + dur!"hours"(2)).toSimpleString == "2015-Nov-01 02:00:00-08:00");
     }
 
 
