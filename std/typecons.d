@@ -771,6 +771,7 @@ template Tuple(Specs...)
             return h;
         }
 
+        ///
         template toString()
         {
             import std.format : FormatSpec;
