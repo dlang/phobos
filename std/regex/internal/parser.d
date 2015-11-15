@@ -1325,7 +1325,7 @@ struct Parser(R)
             break;
         case '1': .. case '9':
             uint nref = cast(uint)current - '0';
-            uint maxBackref = sum(groupStack.data);
+            uint maxBackref = reduce!"a + b"(0u, groupStack.data);
             enforce(nref < maxBackref, "Backref to unseen group");
             //perl's disambiguation rule i.e.
             //get next digit only if there is such group number
