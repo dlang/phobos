@@ -3264,6 +3264,7 @@ public:
 
     Params:
         path = The directory to iterate over.
+               If empty, the current directory will be iterated.
         mode = Whether the directory's sub-directories should be iterated
                over depth-first ($(D_PARAM depth)), breadth-first
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
@@ -3281,8 +3282,8 @@ foreach (string name; dirEntries("destroy/me", SpanMode.depth))
 {
  remove(name);
 }
-// Iterate a directory in breadth
-foreach (string name; dirEntries(".", SpanMode.breadth))
+// Iterate the current directory in breadth
+foreach (string name; dirEntries("", SpanMode.breadth))
 {
  writeln(name);
 }
@@ -3292,7 +3293,7 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
  writeln(e.name, "\t", e.size);
 }
 // Iterate over all *.d files in current directory and all its subdirectories
-auto dFiles = dirEntries(".", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
+auto dFiles = dirEntries("", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
 foreach(d; dFiles)
     writeln(d.name);
 // Hook it up with std.parallelism to compile them all in parallel:
@@ -3416,7 +3417,7 @@ Examples:
 --------------------
 // Iterate over all D source files in current directory and all its
 // subdirectories
-auto dFiles = dirEntries(".","*.{d,di}",SpanMode.depth);
+auto dFiles = dirEntries("","*.{d,di}",SpanMode.depth);
 foreach(d; dFiles)
     writeln(d.name);
 --------------------
