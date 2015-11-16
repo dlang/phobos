@@ -88,7 +88,7 @@ private template createAccessors(
             // setter
                 ~"@property void " ~ name ~ "(bool v) @safe pure nothrow @nogc { "
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
-                ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
+                ~"else "~store~" &= ~cast(typeof("~store~"))"~myToString(maskAllElse)~";}\n";
         }
         else
         {
@@ -694,6 +694,22 @@ unittest
                   bool, "y", 1,
                   ubyte, "z", 5));
     }
+}
+
+unittest
+{
+    // Issue #15305
+    struct S {
+            mixin(bitfields!(
+                    bool, "alice", 1,
+                    ulong, "bob", 63,
+            ));
+    }
+
+    S s;
+    s.bob = long.max - 1;
+    s.alice = false;
+    assert(s.bob == long.max - 1);
 }
 
 /**
