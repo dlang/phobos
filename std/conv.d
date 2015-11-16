@@ -5518,10 +5518,10 @@ unittest
  * Intended to be lightweight and fast.
  *
  * Params:
- *      Radix = 2, 8, 10, 16
+ *      radix = 2, 8, 10, 16
  *      Char = character type for output
  *      letterCase = lower for deadbeef, upper for DEADBEEF
- *      value = integer to convert. Can be uint or ulong. If Radix is 10, can also be
+ *      value = integer to convert. Can be uint or ulong. If radix is 10, can also be
  *              int or long.
  * Returns:
  *      Random access range with slicing and everything

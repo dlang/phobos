@@ -3054,6 +3054,7 @@ If the target file exists, it is overwritten.
 Params:
     from = string or range of characters representing the existing file name
     to = string or range of characters representing the target file name
+    preserve = whether to preserve the file attributes
 
 Throws: $(D FileException) on error.
  */

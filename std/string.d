@@ -2184,15 +2184,15 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  * See_Also:
  *      $(XREF uni, toCapitalized) for a lazy range version that doesn't allocate memory
  */
-S capitalize(S)(S s) @trusted pure
+S capitalize(S)(S input) @trusted pure
     if (isSomeString!S)
 {
     import std.utf : encode;
 
-    Unqual!(typeof(s[0]))[] retval;
+    Unqual!(typeof(input[0]))[] retval;
     bool changed = false;
 
-    foreach (i, dchar c; s)
+    foreach (i, dchar c; input)
     {
         dchar c2;
 
@@ -2210,7 +2210,7 @@ S capitalize(S)(S s) @trusted pure
                 if (!changed)
                 {
                     changed = true;
-                    retval = s[0 .. i].dup;
+                    retval = input[0 .. i].dup;
                 }
             }
         }
@@ -2219,7 +2219,7 @@ S capitalize(S)(S s) @trusted pure
             std.utf.encode(retval, c2);
     }
 
-    return changed ? cast(S)retval : s;
+    return changed ? cast(S)retval : input;
 }
 
 ///
@@ -2759,12 +2759,12 @@ unittest
     Params:
         input = string or ForwardRange of characters
 
-    Returns: $(D str) stripped of leading whitespace.
+    Returns: $(D input) stripped of leading whitespace.
 
-    Postconditions: $(D str) and the returned value
+    Postconditions: $(D input) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
   +/
-auto stripLeft(Range)(Range str)
+auto stripLeft(Range)(Range input)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         !isConvertibleToString!Range)
 {
@@ -2772,24 +2772,24 @@ auto stripLeft(Range)(Range str)
     import std.uni : isWhite;
     import std.utf : decodeFront;
 
-    while (!str.empty)
+    while (!input.empty)
     {
-        auto c = str.front;
+        auto c = input.front;
         if (std.ascii.isASCII(c))
         {
             if (!std.ascii.isWhite(c))
                 break;
-            str.popFront();
+            input.popFront();
         }
         else
         {
-            auto save = str.save;
-            auto dc = decodeFront(str);
+            auto save = input.save;
+            auto dc = decodeFront(input);
             if (!std.uni.isWhite(dc))
                 return save;
         }
     }
-    return str;
+    return input;
 }
 
 ///
