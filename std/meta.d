@@ -983,9 +983,13 @@ unittest
 {
     enum abc = 1;
     alias a = Alias!(123);
+    static assert(a == 123);
     alias b = Alias!(abc);
+    static assert(b == 1);
     alias c = Alias!(int);
+    static assert(c.stringof == "(int)");
     alias d = Alias!(1, abc, int);
+    static assert(d[0] == 1 && d[1] == 1 && d[2].stringof == "int");
 }
 
 

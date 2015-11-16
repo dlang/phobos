@@ -574,11 +574,13 @@ void fill(Range, Value)(Range range, Value value)
         int[] a = [1, 2, 3];
         immutable(int) b = 0;
         a.fill(b);
+        assert(a == [0, 0, 0]);
     }
     {
         double[] a = [1, 2, 3];
         immutable(int) b = 0;
         a.fill(b);
+        assert(a == [0, 0, 0]);
     }
 }
 
@@ -982,7 +984,10 @@ unittest
     class S5;
 
     S5 s51;
-    move(s51, s51);
+    S5 s52 = s51;
+    S5 s53;
+    move(s52, s53);
+    assert(s53 is s51);
 }
 
 /// Ditto
@@ -1092,17 +1097,24 @@ unittest
     class S5;
 
     S5 s51;
-    s51 = move(s51);
+    S5 s52 = s51;
+    S5 s53;
+    s53 = move(s52);
+    assert(s53 is s51);
 }
 
 unittest
 {
-    static struct S { ~this() @system { } }
+    static struct S { int n = 0; ~this() @system { n = 0; } }
     S a, b;
     static assert(!__traits(compiles, () @safe { move(a, b); }));
     static assert(!__traits(compiles, () @safe { move(a); }));
+    a.n = 1;
     () @trusted { move(a, b); }();
+    assert(a.n == 0);
+    a.n = 1;
     () @trusted { move(a); }();
+    assert(a.n == 0);
 }
 
 unittest//Issue 6217

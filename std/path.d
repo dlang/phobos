@@ -1554,9 +1554,9 @@ auto chainPath(Ranges...)(auto ref Ranges ranges)
 
 unittest
 {
-    chainPath(TestAliasedString(null), TestAliasedString(null), TestAliasedString(null));
-    chainPath(TestAliasedString(null), TestAliasedString(null), "");
-    chainPath(TestAliasedString(null), "", TestAliasedString(null));
+    assert(chainPath(TestAliasedString(null), TestAliasedString(null), TestAliasedString(null)).empty);
+    assert(chainPath(TestAliasedString(null), TestAliasedString(null), "").empty);
+    assert(chainPath(TestAliasedString(null), "", TestAliasedString(null)).empty);
     static struct S { string s; }
     static assert(!__traits(compiles, chainPath(TestAliasedString(null), S(""), TestAliasedString(null))));
 }

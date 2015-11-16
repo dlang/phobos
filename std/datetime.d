@@ -1186,6 +1186,7 @@ public:
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         st.year = 12;
+        assert(st.year == 12);
         static assert(!__traits(compiles, cst.year = 12));
         //static assert(!__traits(compiles, ist.year = 12));
     }
@@ -1282,6 +1283,7 @@ public:
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         st.yearBC = 12;
+        assert(st.yearBC == 12);
         static assert(!__traits(compiles, cst.yearBC = 12));
         //static assert(!__traits(compiles, ist.yearBC = 12));
     }
@@ -6839,6 +6841,7 @@ public:
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         st.dayOfYear = 12;
+        assert(st.dayOfYear == 12);
         static assert(!__traits(compiles, cst.dayOfYear = 12));
         //static assert(!__traits(compiles, ist.dayOfYear = 12));
     }
@@ -9567,6 +9570,7 @@ public:
         const cdate = Date(0, 7, 6);
         immutable idate = Date(0, 7, 6);
         date.yearBC = 7;
+        assert(date.yearBC == 7);
         static assert(!__traits(compiles, cdate.yearBC = 7));
         static assert(!__traits(compiles, idate.yearBC = 7));
     }
@@ -12210,6 +12214,7 @@ public:
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         date.dayOfGregorianCal = 187;
+        assert(date.dayOfGregorianCal == 187);
         static assert(!__traits(compiles, cdate.dayOfGregorianCal = 187));
         static assert(!__traits(compiles, idate.dayOfGregorianCal = 187));
     }
@@ -15039,6 +15044,7 @@ public:
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
         dt.yearBC = 12;
+        assert(dt.yearBC == 12);
         static assert(!__traits(compiles, cdt.yearBC = 12));
         static assert(!__traits(compiles, idt.yearBC = 12));
     }
@@ -15077,6 +15083,7 @@ public:
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
         dt.yearBC = 12;
+        assert(dt.yearBC == 12);
         static assert(!__traits(compiles, cdt.yearBC = 12));
         static assert(!__traits(compiles, idt.yearBC = 12));
     }
@@ -16542,6 +16549,7 @@ public:
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         dt.dayOfYear = 12;
+        assert(dt.dayOfYear == 12);
         static assert(!__traits(compiles, cdt.dayOfYear = 12));
         static assert(!__traits(compiles, idt.dayOfYear = 12));
     }

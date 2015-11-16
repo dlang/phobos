@@ -3944,8 +3944,8 @@ pure unittest
     import std.exception : assertThrown;
 
     static struct S { @disable this(); }
-    zip((S[5]).init[]);
-    auto z = zip(StoppingPolicy.longest, cast(S[]) null, new int[1]);
+    assert(zip((S[5]).init[]).length == 5);
+    assert(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).length == 1);
     assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
 }
 
@@ -4212,10 +4212,6 @@ unittest
     static assert(!__traits(compiles, {
         foreach (ref a, ref b; lockstep(r1, r2)) { a++; }
     }));
-    foreach (a, ref b; lockstep(r1, r2))
-    {
-        a++;
-    }
 }
 
 /**

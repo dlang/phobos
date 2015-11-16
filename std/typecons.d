@@ -1161,7 +1161,7 @@ unittest
         foreach (v1; AliasSeq!(mv, cv, iv, wv, wcv))
         foreach (v2; AliasSeq!(mv, cv, iv, wv, wcv))
         {
-            cast(void) (v1 < v2);
+            assert(!(v1 < v2));
         }
     }
     {
@@ -2179,6 +2179,10 @@ unittest
         auto x2 = immutable Nullable!S1(sm);
         auto x3 =           Nullable!S1(si);
         auto x4 = immutable Nullable!S1(si);
+        assert(x1.val == 1);
+        assert(x2.val == 1);
+        assert(x3.val == 1);
+        assert(x4.val == 1);
     }
 
     auto nm = 10;
@@ -2191,6 +2195,8 @@ unittest
         static assert(!__traits(compiles, { auto x2 = immutable Nullable!S2(sm); }));
         static assert(!__traits(compiles, { auto x3 =           Nullable!S2(si); }));
         auto x4 = immutable Nullable!S2(si);
+        assert(*x1.val == 10);
+        assert(*x4.val == 10);
     }
 
     {
@@ -2200,6 +2206,10 @@ unittest
         auto x2 = immutable Nullable!S3(sm);
         auto x3 =           Nullable!S3(si);
         auto x4 = immutable Nullable!S3(si);
+        assert(*x1.val == 10);
+        assert(*x2.val == 10);
+        assert(*x3.val == 10);
+        assert(*x4.val == 10);
     }
 }
 unittest
@@ -6553,6 +6563,7 @@ public:
         C = 1<<2
     }
     BitFlags!Enum flags1;
+    assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));
 
     // You need to specify the $(D unsafe) parameter for enum with custom values
     enum UnsafeEnum

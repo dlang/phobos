@@ -445,6 +445,7 @@ unittest
     int[] a = new int[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
     put(a, 1);
+    assert(a.length == 9);
     /*
      * a[0] = 65;       // OK
      * a[0] = 'A';      // OK
@@ -452,6 +453,7 @@ unittest
      * put(a, "ABC");   // OK
      */
     put(a, "ABC");
+    assert(a.length == 6);
 }
 
 unittest
@@ -470,7 +472,9 @@ unittest
     int[]   b = new int[10];
     int     c;
     put(b, c);
+    assert(b.length == 9);
     put(a, b);
+    assert(a.length == 9);
     static assert(!__traits(compiles, put(a, c)));
 }
 
