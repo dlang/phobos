@@ -783,10 +783,10 @@ template Tuple(Specs...)
              * `%(inner%)` where `inner` is the format applied the expanded `Tuple`,
              * so `inner` may contain as many formats as the `Tuple` has fields.
              * `%(inner%|sep%)`, where `inner` is one format, that is applied
-             * on all fields of the `Tuple`. The format must be compatible to all
+             * on all fields of the `Tuple`. The inner format must be compatible to all
              * of them.
              */
-            void toString(DG)(scope DG sink) const
+            void toString(DG)(scope DG sink) const pure @safe
             {
                 FormatSpec!char fmt;
                 // When commenting in add to documentation:
@@ -799,8 +799,9 @@ template Tuple(Specs...)
                 toString(sink, fmt);
                 // sink(')');
             }
+
             /// ditto
-            void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
+            void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const pure @safe
             {
                 import std.format : formatElement, formattedWrite, FormatException;
                 if (fmt.nested)
@@ -868,7 +869,7 @@ template Tuple(Specs...)
              * Returns:
              *     The string representation of this `Tuple`.
              */
-            string toString() const
+            string toString() const pure @safe
             {
                 import std.array : appender;
                 auto app = appender!string();
