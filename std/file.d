@@ -3089,9 +3089,8 @@ void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve 
 unittest // issue 15319
 {
     import std.path: dirEntries;
-    auto fs = dirEntries("", SpanMode.depth);
-    foreach(f; fs) copy(f, f);
-    assert(true);
+    auto fs = dirEntries(getcwd, SpanMode.depth);
+    assert(__traits(compiles, copy(fs.front, fs.front)));
 }
 
 private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz,
