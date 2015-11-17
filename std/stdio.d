@@ -378,7 +378,7 @@ object refers to it anymore.
 
 Params:
     name = range or string representing the file _name
-    stdioOpenMode = range or string represting the open mode
+    stdioOpenmode = range or string represting the open mode
         (with the same semantics as in the C standard library $(WEB
         cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
         function)
