@@ -6726,6 +6726,7 @@ unittest
  * Gets all symbols within `symbol` that have the given user-defined attribute.
  * This is not recursive; it will not search for symbols within symbols such as
  * nested structs or unions.
+ * Only searches public members.
  */
 template getSymbolsByUDA(alias symbol, alias attribute)
 {
@@ -6733,8 +6734,14 @@ template getSymbolsByUDA(alias symbol, alias attribute)
 
     static enum hasSpecificUDA(alias S) = hasUDA!(S, attribute);
     alias StringToSymbol(alias Name) = Identity!(__traits(getMember, symbol, Name));
+
+    // filter out members that are inacessible to due to privacy
+    enum isAccessible(alias Name) =
+        __traits(compiles, __traits(getMember, symbol, Name));
+    alias accessibleSymbols = Filter!(isAccessible, __traits(allMembers, symbol));
+
     alias getSymbolsByUDA = Filter!(hasSpecificUDA, TypeTuple!(symbol,
-        staticMap!(StringToSymbol, __traits(allMembers, symbol))));
+        staticMap!(StringToSymbol, accessibleSymbols)));
 }
 
 ///
