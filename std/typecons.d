@@ -785,23 +785,46 @@ template Tuple(Specs...)
              * `%(inner%|sep%)`, where `inner` is one format, that is applied
              * on all fields of the `Tuple`. The inner format must be compatible to all
              * of them.
+             * ---
+             *  Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
+             *
+             *  // Default format
+             *  assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
+             *
+             *  // One Format for each individual component
+             *  assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
+             *  assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
+             *
+             *  // One Format for all components
+             *  assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
+             *
+             *  // Array of Tuples
+             *  assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
+             *
+             *
+             *  // Intuition: Tuple is identical to its components. Error: %( %) missing.
+             *  assertThrown!FormatException(
+             *      format("%d, %f", tuple(1, 2.0)) == `1, 2.0`
+             *  );
+             *
+             *  // Intuition: Tuple is like an Array. Error: %( %| %) missing.
+             *  assertThrown!FormatException(
+             *      format("%d", tuple(1, 2)) == `1, 2`
+             *  );
+             *
+             *  // Error: %d inadequate for double
+             *  assertThrown!FormatException(
+             *      format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
+             *  );
+             * ---
              */
-            void toString(DG)(scope DG sink) const pure @safe
+            void toString(DG)(scope DG sink) const
             {
-                FormatSpec!char fmt;
-                // When commenting in add to documentation:
-                //  * Not specifying `fmt` at all behaves like `(%(%s%|, %))`.
-
-                // fmt.spec = '(';
-                // fmt.nested = "%s";
-                // fmt.sep = ", ";
-                // sink('(');
-                toString(sink, fmt);
-                // sink(')');
+                toString(sink, FormatSpec!char());
             }
 
             /// ditto
-            void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const pure @safe
+            void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
             {
                 import std.format : formatElement, formattedWrite, FormatException;
                 if (fmt.nested)
@@ -869,35 +892,13 @@ template Tuple(Specs...)
              * Returns:
              *     The string representation of this `Tuple`.
              */
-            string toString() const pure @safe
+            string toString() const
             {
                 import std.array : appender;
                 auto app = appender!string();
                 this.toString((const(char)[] chunk) => app ~= chunk);
                 return app.data;
             }
-        }
-        ///
-        unittest
-        {
-            import std.format : format, FormatException;
-            import std.exception : assertThrown;
-            auto if_list = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
-
-            assert(format("%s", tuple("a", 1))                          == `Tuple!(string, int)("a", 1)`);
-            assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))    == `0x1 v 1.0000 w 0xa`);
-            assert(format("%(q%sq%| x %)", tuple("abc", 1, 2.3, [4,5])) == `qabcq x q1q x q2.3q x q[4, 5]q`);
-            assert(format("%(%(%d^2 = %.1f%);  %)", if_list)            == `1^2 = 1.0;  2^2 = 4.0;  3^2 = 9.0`);
-
-            assertThrown!FormatException(
-                format("%d, %f", tuple(1, 2.0)) == `1, 2.0` // error: %( %) missing
-            );
-            assertThrown!FormatException(
-                format("%d", tuple(1, 2.0)) == `1, 2.0` // error: %( %| %) missing
-            );
-            assertThrown!FormatException(
-                format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0` // error: %d inadequate for double
-            );
         }
     }
 }
@@ -1395,6 +1396,46 @@ unittest
     alias T = Tuple!(string, "s");
     T x;
     x = T.init;
+}
+
+@safe unittest
+{
+    import std.format : format, FormatException;
+    import std.exception : assertThrown;
+
+    // enum tupStr = tuple(1, 1.0).toString; // toString is impure.
+    //static assert (tupStr == `Tuple!(int, double)(1, 1)`);
+
+    Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
+
+    // Default format
+    assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
+
+    // One Format for each individual component
+    assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
+    assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
+
+    // One Format for all components
+    assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
+
+    // Array of Tuples
+    assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
+
+
+    // Intuition: Tuple is identical to its components. Error: %( %) missing.
+    assertThrown!FormatException(
+        format("%d, %f", tuple(1, 2.0)) == `1, 2.0`
+    );
+
+    // Intuition: Tuple is like an Array. Error: %( %| %) missing.
+    assertThrown!FormatException(
+        format("%d", tuple(1, 2)) == `1, 2`
+    );
+
+    // Error: %d inadequate for double
+    assertThrown!FormatException(
+        format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
+    );
 }
 
 /**
