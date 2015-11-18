@@ -1949,6 +1949,8 @@ sort!((a, b) => hashFun(a) < hashFun(b))(array);
 schwartzSort!(hashFun, "a < b")(array);
 ----
 
+See also $(WEB http://rosettacode.org/wiki/Sort_an_array_of_composite_structures#D, this example) on Rosetta Code.
+
 The $(D schwartzSort) function might require less temporary data and
 be faster than the Perl idiom or the decorate-sort-undecorate idiom
 present in Python and Lisp. This is because sorting is done in-place
