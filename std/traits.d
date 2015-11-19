@@ -5460,18 +5460,17 @@ unittest
  *      T = type to be tested, must be an array
  *
  * Returns:
- *      a $(D size_t) at least equal to 1
+ *      an integer value at least equal to 1
  */
 size_t dimensionCount(T)()
 if (isArray!T)
 {
-    size_t result = 1;
     static if (isMultiDimensionalArray!T)
     {
         alias DT = typeof(T.init[0]);
-        result += dimensionCount!DT;
+        enum dimensionCount = dimensionCount!DT + 1;
     }
-    return result;
+    else dimensionCount = 1;
 }
 ///
 unittest
