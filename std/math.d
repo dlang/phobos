@@ -2230,7 +2230,7 @@ unittest
             [ 0x1p+80L,      real.infinity            ], // far overflow
             [ real.infinity, real.infinity            ],
             [-0x1.6p+9L,     0x1.44a3824e5285fp-1016L ], // near underflow
-            [-0x1.64p+9L,    0x0.06f84920bb2d3p-1022L ], // near underflow - subnormal
+            [-0x1.64p+9L,    0x0.06f84920bb2d4p-1022L ], // near underflow - subnormal
             [-0x1.743p+9L,   0x0.0000000000001p-1022L ], // ditto
             [-0x1.8p+9L,     0                        ], // close underflow
             [-0x1p30L,       0                        ], // far underflow
