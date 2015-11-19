@@ -718,6 +718,9 @@ unittest
 
 struct BitArray
 {
+
+private:
+
     import std.format : FormatSpec;
     import core.bitop: bts, btr, bsf, bt;
 
@@ -725,7 +728,6 @@ struct BitArray
     size_t* ptr;
     enum bitsPerSizeT = size_t.sizeof * 8;
 
-private:
     @property size_t fullWords() const @nogc pure nothrow
     {
         return len / bitsPerSizeT;
