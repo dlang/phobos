@@ -17,13 +17,12 @@ Synopsis:
 
     //check a type
     long x;
-    if (j["code"].type() == JSON_TYPE.INTEGER)
+    if (const(JSONValue)* code = "code" in j)
     {
-        x = j["code"].integer;
-    }
-    else
-    {
-        x = to!int(j["code"].str);
+        if (code.type() == JSON_TYPE.INTEGER)
+            x = code.integer;
+        else
+            x = to!int(code.str);
     }
 
     // create a json struct
@@ -129,9 +128,9 @@ struct JSONValue
     }
 
     /**
-        $(RED Deprecated. Instead, please assign the value with the adequate
+        Deprecated: Instead, please assign the value with the adequate
               type to $(D JSONValue) directly. This will be removed in
-              June 2015.)
+              June 2015.
 
         Sets the _type of this $(D JSONValue). Previous content is cleared.
       */
@@ -172,7 +171,7 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.STRING).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
+    /// Throws: a $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
     @property inout(string) str() inout pure
     {
         enforce!JSONException(type == JSON_TYPE.STRING,
@@ -199,7 +198,7 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.INTEGER).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.INTEGER).
+    /// Throws: a $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.INTEGER).
     @property inout(long) integer() inout pure @safe
     {
         enforce!JSONException(type == JSON_TYPE.INTEGER,
@@ -214,7 +213,7 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.UINTEGER).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.UINTEGER).
+    /// Throws: a $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.UINTEGER).
     @property inout(ulong) uinteger() inout pure @safe
     {
         enforce!JSONException(type == JSON_TYPE.UINTEGER,
@@ -229,7 +228,7 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.FLOAT).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.FLOAT).
+    /// Throws: a $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.FLOAT).
     @property inout(double) floating() inout pure @safe
     {
         enforce!JSONException(type == JSON_TYPE.FLOAT,
@@ -244,7 +243,7 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.OBJECT).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.OBJECT).
+    /// Throws: a $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.OBJECT).
     @property ref inout(JSONValue[string]) object() inout pure
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
@@ -259,7 +258,7 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.ARRAY).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.ARRAY).
+    /// Throws: a $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.ARRAY).
     @property ref inout(JSONValue[]) array() inout pure
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
@@ -417,7 +416,7 @@ struct JSONValue
     }
 
     /// Array syntax for json arrays.
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
+    /// Throws: a $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
     ref inout(JSONValue) opIndex(size_t i) inout pure
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
@@ -435,7 +434,7 @@ struct JSONValue
     }
 
     /// Hash syntax for json objects.
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
+    /// Throws: a $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
     ref inout(JSONValue) opIndex(string k) inout pure
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
@@ -455,7 +454,7 @@ struct JSONValue
     /// If JSON value is null, then operator initializes it with object and then
     /// sets $(D value) for it.
     ///
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT)
+    /// Throws: a $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT)
     /// or $(D JSON_TYPE.NULL).
     void opIndexAssign(T)(auto ref T value, string key) pure
     {
@@ -535,6 +534,9 @@ struct JSONValue
         }
     }
 
+    /// Support for the $(D in) operator.
+    ///
+    /// Throws: a $(D JSONException) if the right hand side argument $(D JSON_TYPE) is not $(D OBJECT).
     auto opBinaryRight(string op : "in")(string k) const
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
@@ -634,7 +636,7 @@ struct JSONValue
 
 /**
 Parses a serialized string and returns a tree of JSON values.
-Throws a $(XREF json,JSONException) if the depth exceeds the max depth.
+Throws: a $(XREF json,JSONException) if the depth exceeds the max depth.
 Params:
     json = json-formatted string to parse
     maxDepth = maximum depth of nesting allowed, -1 disables depth checking
@@ -964,7 +966,7 @@ if(isInputRange!T)
 
 /**
 Parses a serialized string and returns a tree of JSON values.
-Throws a $(XREF json,JSONException) if the depth exceeds the max depth.
+Throws: a $(XREF json,JSONException) if the depth exceeds the max depth.
 Params:
     json = json-formatted string to parse
     options = enable decoding string representations of NaN/Inf as float values
