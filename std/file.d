@@ -3082,9 +3082,16 @@ void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttribut
 void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve = preserveAttributesDefault)
     if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
-    import std.map : staticMap;
+    import std.meta : staticMap;
     alias Types = staticMap!(convertToString, RF, RT);
     copy!Types(from, to, preserve);
+}
+
+unittest // issue 15319
+{
+    import std.path: dirEntries;
+    auto fs = dirEntries(getcwd, SpanMode.depth);
+    assert(__traits(compiles, copy(fs.front, fs.front)));
 }
 
 private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz,
