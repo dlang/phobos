@@ -125,7 +125,7 @@
  *           $(LREF ValueType)
  * ))
  * $(TR $(TD Misc) $(TD
- *           $(LREF dimensionCount) 
+ *           $(LREF dimensionCount)
  *           $(LREF mangledName)
  *           $(LREF Select)
  *           $(LREF select)
