@@ -10,6 +10,7 @@ Macros:
 WIKI = Phobos/StdFile
 
 Copyright: Copyright Digital Mars 2007 - 2011.
+See_Also:  The $(WEB ddili.org/ders/d.en/files.html, official tutorial) for an introduction to working with files in D.
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
