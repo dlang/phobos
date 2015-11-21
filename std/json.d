@@ -17,12 +17,12 @@ Synopsis:
 
     //check a type
     long x;
-    if ("code" in j)
+    if (const(JSONValue)* code = "code" in j)
     {
-        if (j["code"].type() == JSON_TYPE.INTEGER)
-            x = j["code"].integer;
+        if (code.type() == JSON_TYPE.INTEGER)
+            x = code.integer;
         else
-            x = to!int(j["code"].str);
+            x = to!int(code.str);
     }
 
     // create a json struct
