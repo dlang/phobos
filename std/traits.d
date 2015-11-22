@@ -5470,7 +5470,7 @@ if (isArray!T)
         alias DT = typeof(T.init[0]);
         enum dimensionCount = dimensionCount!DT + 1;
     }
-    else dimensionCount = 1;
+    else enum dimensionCount = 1;
 }
 ///
 unittest
