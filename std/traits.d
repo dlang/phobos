@@ -6801,6 +6801,15 @@ unittest
     static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
 }
 
+// #15335: getSymbolsByUDA fail to compile if symbol has private members
+unittest
+{
+  // two members are marked with Attr, but one is private
+  // this should compile but only return the visible member
+  import std.internal.test.uda;
+  static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 1);
+}
+
 /**
    Returns: $(D true) iff all types $(D T) are the same.
 */
