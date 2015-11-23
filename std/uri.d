@@ -855,9 +855,9 @@ struct URI
         return _query;
     }
     /// ditto
-    @property void query(in URIQuery q)
+    @property void query(string src)
     {
-        _query = q;
+        _query = URIQuery(src);
     }
 
 
