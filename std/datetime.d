@@ -26533,6 +26533,13 @@ public:
 
 
     /++
+        $(RED Please use either PosixTimeZone.getTimeZone or
+              WindowsTimeZone.getTimeZone ($(LREF parseTZConversions) can be
+              used to convert time zone names if necessary). This function will
+              be deprecated in 2.072, because Microsoft changes their time zones
+              too often for us to compile the conversions into Phobos and have
+              them be properly up-to-date.)
+
         Returns a $(LREF2 .TimeZone, TimeZone) with the give name per the TZ Database.
 
         This returns a $(LREF PosixTimeZone) on Posix systems and a
@@ -29358,6 +29365,210 @@ else version(Posix)
 
 
 /++
+    Provides the conversions between the IANA time zone database time zone names
+    (which POSIX systems use) and the time zone names that Windows uses.
+
+    Windows uses a different set of time zone names than the IANA time zone
+    database does, and how they correspond to one another changes over time
+    (particularly when Microsoft updates Windows).
+    $(WEB http://unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
+    provides the current conversions (which may or may not match up with what's
+    on a particular Windows box depending on how up-to-date it is), and
+    parseTZConversions reads in those conversions from windowsZones.xml so that
+    a D program can use those conversions.
+
+    However, it should be noted that the time zone information on Windows is
+    frequently less accurate than that in the IANA time zone database, and if
+    someone really wants accurate time zone information, they should use the
+    IANA time zone database files with $(LREF PosixTimeZone) on Windows rather
+    than $(LREF WindowsTimeZone), whereas $(LREF WindowsTimeZone) makes more
+    sense when trying to match what Windows will think the time is in a specific
+    time zone.
+
+    Also, the IANA time zone database has a lot more time zones than Windows
+    does.
+
+    Params:
+        windowsZonesXMLFileText The text from
+        $(WEB http://unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
+
+    Throws:
+        Exception if there is an error while parsing the given XML.
+
+--------------------
+    // Parse the conversions from a local file.
+    auto text = std.file.readText("path/to/windowsZones.xml");
+    auto conversions = parseTZConversions(text);
+
+    // Alternatively, grab the XML file from the web at runtime
+    // and parse it so that it's guaranteed to be up-to-date, though
+    // that has the downside that the code needs to worry about the
+    // site being down or unicode.org changing the URL.
+    auto url = "http://unicode.org/cldr/data/common/supplemental/windowsZones.xml";
+    auto conversions2 = parseTZConversions(std.net.curl.get(url));
+--------------------
+  +/
+struct TZConversions
+{
+    /++
+        The key is the Windows time zone name, and the value is a list of
+        IANA TZ database names which are close (currently only ever one, but
+        it allows for multiple in case it's ever necessary).
+      +/
+    string[][string] toWindows;
+
+    /++
+        The key is the IANA time zone database name, and the value is a list of
+        Windows time zone names which are close (usually only one, but it could
+        be multiple).
+      +/
+    string[][string] fromWindows;
+}
+
+/++ ditto +/
+TZConversions parseTZConversions(string windowsZonesXMLText) @safe pure
+{
+    // This is a bit hacky, since it doesn't properly read XML, but it avoids
+    // needing to pull in std.xml (which we're theoretically replacing at some
+    // point anyway.
+    import std.algorithm : find, sort, uniq;
+    import std.array : array, split;
+    import std.string : lineSplitter;
+
+    string[][string] win2Nix;
+    string[][string] nix2Win;
+
+    immutable f1 = `<mapZone other="`;
+    immutable f2 = `type="`;
+
+    foreach(line; windowsZonesXMLText.lineSplitter())
+    {
+        // Sample line:
+        // <mapZone other="Canada Central Standard Time" territory="CA" type="America/Regina America/Swift_Current"/>
+
+        line = line.find(f1);
+        if(line.empty)
+            continue;
+        line = line[f1.length .. $];
+        auto next = line.find('"');
+        enforce(!next.empty, "Error parsing. Text does not appear to be from windowsZones.xml");
+        auto win = line[0 .. $ - next.length];
+        line = next.find(f2);
+        enforce(!line.empty, "Error parsing. Text does not appear to be from windowsZones.xml");
+        line = line[f2.length .. $];
+        next = line.find('"');
+        enforce(!next.empty, "Error parsing. Text does not appear to be from windowsZones.xml");
+        auto nixes = line[0 .. $ - next.length].split();
+
+        if(auto n = win in win2Nix)
+            *n ~= nixes;
+        else
+            win2Nix[win] = nixes;
+
+        foreach(nix; nixes)
+        {
+            if(auto w = nix in nix2Win)
+                *w ~= win;
+            else
+                nix2Win[nix] = [win];
+        }
+    }
+
+    foreach(key, ref value; nix2Win)
+        value = value.sort().uniq().array();
+    foreach(key, ref value; win2Nix)
+        value = value.sort().uniq().array();
+
+    return TZConversions(nix2Win, win2Nix);
+}
+
+unittest
+{
+    import std.algorithm;
+
+    // Reduced text from http://unicode.org/cldr/data/common/supplemental/windowsZones.xml
+    auto sampleFileText =
+`<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE supplementalData SYSTEM "../../common/dtd/ldmlSupplemental.dtd">
+<!--
+Copyright © 1991-2013 Unicode, Inc.
+CLDR data files are interpreted according to the LDML specification (http://unicode.org/reports/tr35/)
+For terms of use, see http://www.unicode.org/copyright.html
+-->
+
+<supplementalData>
+    <version number="$Revision$"/>
+
+    <windowsZones>
+        <mapTimezones otherVersion="7df0005" typeVersion="2015g">
+
+            <!-- (UTC-12:00) International Date Line West -->
+            <mapZone other="Dateline Standard Time" territory="001" type="Etc/GMT+12"/>
+            <mapZone other="Dateline Standard Time" territory="ZZ" type="Etc/GMT+12"/>
+
+            <!-- (UTC-11:00) Coordinated Universal Time-11 -->
+            <mapZone other="UTC-11" territory="001" type="Etc/GMT+11"/>
+            <mapZone other="UTC-11" territory="AS" type="Pacific/Pago_Pago"/>
+            <mapZone other="UTC-11" territory="NU" type="Pacific/Niue"/>
+            <mapZone other="UTC-11" territory="UM" type="Pacific/Midway"/>
+            <mapZone other="UTC-11" territory="ZZ" type="Etc/GMT+11"/>
+
+            <!-- (UTC-10:00) Hawaii -->
+            <mapZone other="Hawaiian Standard Time" territory="001" type="Pacific/Honolulu"/>
+            <mapZone other="Hawaiian Standard Time" territory="CK" type="Pacific/Rarotonga"/>
+            <mapZone other="Hawaiian Standard Time" territory="PF" type="Pacific/Tahiti"/>
+            <mapZone other="Hawaiian Standard Time" territory="UM" type="Pacific/Johnston"/>
+            <mapZone other="Hawaiian Standard Time" territory="US" type="Pacific/Honolulu"/>
+            <mapZone other="Hawaiian Standard Time" territory="ZZ" type="Etc/GMT+10"/>
+
+            <!-- (UTC-09:00) Alaska -->
+            <mapZone other="Alaskan Standard Time" territory="001" type="America/Anchorage"/>
+            <mapZone other="Alaskan Standard Time" territory="US" type="America/Anchorage America/Juneau America/Nome America/Sitka America/Yakutat"/>
+        </mapTimezones>
+    </windowsZones>
+</supplementalData>`;
+
+    auto tzConversions = parseTZConversions(sampleFileText);
+    assert(tzConversions.toWindows.length == 15);
+    assert(tzConversions.toWindows["America/Anchorage"] == ["Alaskan Standard Time"]);
+    assert(tzConversions.toWindows["America/Juneau"] == ["Alaskan Standard Time"]);
+    assert(tzConversions.toWindows["America/Nome"] == ["Alaskan Standard Time"]);
+    assert(tzConversions.toWindows["America/Sitka"] == ["Alaskan Standard Time"]);
+    assert(tzConversions.toWindows["America/Yakutat"] == ["Alaskan Standard Time"]);
+    assert(tzConversions.toWindows["Etc/GMT+10"] == ["Hawaiian Standard Time"]);
+    assert(tzConversions.toWindows["Etc/GMT+11"] == ["UTC-11"]);
+    assert(tzConversions.toWindows["Etc/GMT+12"] == ["Dateline Standard Time"]);
+    assert(tzConversions.toWindows["Pacific/Honolulu"] == ["Hawaiian Standard Time"]);
+    assert(tzConversions.toWindows["Pacific/Johnston"] == ["Hawaiian Standard Time"]);
+    assert(tzConversions.toWindows["Pacific/Midway"] == ["UTC-11"]);
+    assert(tzConversions.toWindows["Pacific/Niue"] == ["UTC-11"]);
+    assert(tzConversions.toWindows["Pacific/Pago_Pago"] == ["UTC-11"]);
+    assert(tzConversions.toWindows["Pacific/Rarotonga"] == ["Hawaiian Standard Time"]);
+    assert(tzConversions.toWindows["Pacific/Tahiti"] == ["Hawaiian Standard Time"]);
+
+    assert(tzConversions.fromWindows.length == 4);
+    assert(tzConversions.fromWindows["Alaskan Standard Time"] ==
+           ["America/Anchorage", "America/Juneau", "America/Nome", "America/Sitka", "America/Yakutat"]);
+    assert(tzConversions.fromWindows["Dateline Standard Time"] == ["Etc/GMT+12"]);
+    assert(tzConversions.fromWindows["Hawaiian Standard Time"] ==
+           ["Etc/GMT+10", "Pacific/Honolulu", "Pacific/Johnston", "Pacific/Rarotonga", "Pacific/Tahiti"]);
+    assert(tzConversions.fromWindows["UTC-11"] ==
+           ["Etc/GMT+11", "Pacific/Midway", "Pacific/Niue", "Pacific/Pago_Pago"]);
+
+    foreach(key, value; tzConversions.fromWindows)
+    {
+        assert(value.isSorted, key);
+        assert(equal(value.uniq(), value), key);
+    }
+}
+
+
+/++
+    $(RED Please use $(LREF parseTZConversions) instead. This function will be
+          deprecated in 2.072, because Microsoft changes their time zones too
+          often for us to compile the conversions into Phobos and have them be
+          properly up-to-date.)
+
     Converts the given TZ Database name to the corresponding Windows time zone
     name.
 
@@ -29827,6 +30038,11 @@ version(Windows) unittest
 
 
 /++
+    $(RED Please use $(LREF parseTZConversions) instead. This function will be
+          deprecated in 2.072, because Microsoft changes their time zones too
+          often for us to compile the conversions into Phobos and have them be
+          properly up-to-date.)
+
     Converts the given Windows time zone name to a corresponding TZ Database
     name.
 
