@@ -5462,7 +5462,7 @@ unittest
  * Returns:
  *      an integer value at least equal to 1
  */
-template dimensionCount(T)()
+template dimensionCount(T)
 if (isArray!T)
 {
     static if (isMultiDimensionalArray!T)
