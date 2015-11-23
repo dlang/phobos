@@ -559,7 +559,6 @@ unittest
     }
 }
 
-
 /* ====================== URI Struct ================ */
 void enforceURI(bool chk, lazy string msg) pure
 {
@@ -1233,7 +1232,7 @@ struct URIQuery
     }
 
     /// Sink-based toString method
-    void toString(scope void delegate(const(char)[]) sink) const
+    void toString(scope void delegate(const(char)[]) sink) const pure
     {
         bool isFirst = true;
         foreach (key, values; _data)
