@@ -1403,7 +1403,7 @@ unittest
     import std.format : format, FormatException;
     import std.exception : assertThrown;
 
-    // enum tupStr = tuple(1, 1.0).toString; // assert toString is unpure.
+    // enum tupStr = tuple(1, 1.0).toString; // toString is impure.
     //static assert (tupStr == `Tuple!(int, double)(1, 1)`);
 
     Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
