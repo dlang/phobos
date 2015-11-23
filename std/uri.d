@@ -35,6 +35,9 @@ private import std.ascii;
 private import core.stdc.stdlib;
 private import std.utf;
 private import std.traits : isSomeChar;
+import std.array;
+import std.string;
+import std.conv;
 import core.exception : OutOfMemoryError;
 import std.exception : assumeUnique;
 
@@ -1232,7 +1235,7 @@ struct URIQuery
     }
 
     /// Sink-based toString method
-    void toString(scope void delegate(const(char)[]) sink) const pure
+    void toString(scope void delegate(const(char)[]) sink) const
     {
         bool isFirst = true;
         foreach (key, values; _data)
