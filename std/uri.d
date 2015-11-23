@@ -850,7 +850,7 @@ struct URI
     //}
 
     /// Reference to URIQuery
-    @property ref URIQuery query() pure
+    @property URIQuery query() pure
     {
         return _query;
     }
