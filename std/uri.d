@@ -849,11 +849,17 @@ struct URI
     //  return tmp.data;
     //}
 
-    /// Reference to URIQuery
+    /// URIQuery
     @property URIQuery query() pure
     {
         return _query;
     }
+    /// ditto
+    @property void query(in URIQuery q)
+    {
+        _query = q;
+    }
+
 
     /// Get/set URI userInfo
     @property string userInfo() const pure nothrow
