@@ -5209,7 +5209,7 @@ unittest
 
 /**
     There is one exception to the fact that the new type is not related to the
-    old type. $(LINK2 http://dlang.org/function.html#pseudo-member, Pseudo-member)
+    old type. $(LINK2 ../spec/function.html#pseudo-member, Pseudo-member)
     functions are usable with the new type; they will be forwarded on to the
     proxied value.
  */
