@@ -6727,14 +6727,29 @@ unittest
  * This is not recursive; it will not search for symbols within symbols such as
  * nested structs or unions.
  */
-template getSymbolsByUDA(alias symbol, alias attribute)
-{
-    import std.typetuple : Filter, staticMap, TypeTuple;
+template getSymbolsByUDA(alias symbol, alias attribute) {
+    import std.string : format;
+    import std.meta : AliasSeq, Filter;
 
-    static enum hasSpecificUDA(alias S) = hasUDA!(S, attribute);
-    alias StringToSymbol(alias Name) = Identity!(__traits(getMember, symbol, Name));
-    alias getSymbolsByUDA = Filter!(hasSpecificUDA, TypeTuple!(symbol,
-        staticMap!(StringToSymbol, __traits(allMembers, symbol))));
+    // translate a list of strings into symbols. mixing in the entire alias
+    // avoids trying to access the symbol, which could cause a privacy violation
+    template toSymbols(names...) {
+        static if (names.length == 1)
+            mixin("alias toSymbols = AliasSeq!(symbol.%s);".format(names[0]));
+        else
+            mixin("alias toSymbols = AliasSeq!(symbol.%s, toSymbols!(names[1..$]));"
+                  .format(names[0]));
+    }
+
+    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol.%s, attribute)".format(name));
+
+    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, __traits(allMembers, symbol)));
+
+    // if the symbol itself has the UDA, tack it on to the front of the list
+    static if (hasUDA!(symbol, attribute))
+        alias getSymbolsByUDA = AliasSeq!(symbol, membersWithUDA);
+    else
+        alias getSymbolsByUDA = membersWithUDA;
 }
 
 ///
@@ -6792,6 +6807,16 @@ unittest
     static assert(getSymbolsByUDA!(C, UDA).length == 2);
     static assert(getSymbolsByUDA!(C, UDA)[0].stringof == "C");
     static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
+}
+
+// #15335: getSymbolsByUDA fails if type has private members
+unittest
+{
+    // HasPrivateMembers has, well, private members, one of which has a UDA.
+    import std.internal.test.uda;
+    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 2);
+    static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
+    static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[1], Attr));
 }
 
 /**
