@@ -987,9 +987,9 @@ unittest
     alias b = Alias!(abc);
     static assert(b == 1);
     alias c = Alias!(int);
-    static assert(c.stringof == "(int)");
+    static assert(is(c[0] == int));
     alias d = Alias!(1, abc, int);
-    static assert(d[0] == 1 && d[1] == 1 && d[2].stringof == "int");
+    static assert(d[0] == 1 && d[1] == 1 && is(d[2] == int));
 }
 
 
