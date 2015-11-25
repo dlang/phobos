@@ -848,6 +848,8 @@ See_Also: $(XREF range,tee)
 template each(alias pred = "a")
 {
     import std.meta : AliasSeq;
+    import std.traits : Parameters;
+
     alias BinaryArgs = AliasSeq!(pred, "i", "a");
 
     enum isRangeUnaryIterable(R) =
@@ -868,7 +870,7 @@ template each(alias pred = "a")
 
     enum isForeachBinaryIterable(R) =
         is(typeof((R r) {
-            foreach (i, ref a; r)
+            foreach (ref i, ref a; r)
                 cast(void)binaryFun!BinaryArgs(i, a);
         }));
 
@@ -911,9 +913,31 @@ template each(alias pred = "a")
         }
         else // if (isForeachBinaryIterable!Iterable)
         {
-            foreach (i, ref e; r)
+            foreach (ref i, ref e; r)
                 cast(void)binaryFun!BinaryArgs(i, e);
         }
+    }
+
+    // opApply with >2 parameters. count the delegate args.
+    // only works if it is not templated (otherwise we cannot count the args)
+    void each(Iterable)(Iterable r)
+        if (!isRangeIterable!Iterable && !isForeachIterable!Iterable &&
+            __traits(compiles, Parameters!(Parameters!(r.opApply))))
+    {
+        auto dg(Parameters!(Parameters!(r.opApply)) params) {
+            pred(params);
+            return 0; // tells opApply to continue iteration
+        }
+        r.opApply(&dg);
+    }
+
+    // range interface with >2 parameters.
+    void each(Range)(Range range)
+        if (!isRangeIterable!Range && !isForeachIterable!Range &&
+            __traits(compiles, typeof(range.front).length))
+    {
+        for (auto r = range; !r.empty; r.popFront())
+            pred(r.front.expand);
     }
 }
 
@@ -951,6 +975,50 @@ unittest
         import std.parallelism;
         arr.parallel.each!"a++";
     })));
+}
+
+// binary foreach with two ref args
+unittest
+{
+    import std.range : lockstep;
+
+    auto a = [ 1, 2, 3 ];
+    auto b = [ 2, 3, 4 ];
+
+    a.lockstep(b).each!((ref x, ref y) { ++x; ++y; });
+
+    assert(a == [ 2, 3, 4 ]);
+    assert(b == [ 3, 4, 5 ]);
+}
+
+// #15358: application of `each` with >2 args (opApply)
+unittest
+{
+    import std.range : lockstep;
+    auto a = [0,1,2];
+    auto b = [3,4,5];
+    auto c = [6,7,8];
+
+    lockstep(a, b, c).each!((ref x, ref y, ref z) { ++x; ++y; ++z; });
+
+    assert(a == [1,2,3]);
+    assert(b == [4,5,6]);
+    assert(c == [7,8,9]);
+}
+
+// #15358: application of `each` with >2 args (range interface)
+unittest
+{
+    import std.range : zip;
+    auto a = [0,1,2];
+    auto b = [3,4,5];
+    auto c = [6,7,8];
+
+    int[] res;
+
+    zip(a, b, c).each!((x, y, z) { res ~= x + y + z; });
+
+    assert(res == [9, 12, 15]);
 }
 
 /**
