@@ -327,7 +327,7 @@ void main(string[] args)
     }
     f.writeln("!");
     // f exits scope, reference count falls to zero,
-    // underlying $(D FILE*) is closed.
+    // underlying FILE* is closed.
 }
 ----
 $(CONSOLE
