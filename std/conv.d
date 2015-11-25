@@ -3783,7 +3783,7 @@ private template literalIsUnsigned(string num)
 /*
 Returns if the given string is a correctly formatted octal literal.
 
-The format is specified in lex.html. The leading zero is allowed, but
+The format is specified in spec/lex.html. The leading zero is allowed, but
 not required.
  */
 private bool isOctalLiteral(string num)
