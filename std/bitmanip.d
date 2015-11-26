@@ -1237,17 +1237,19 @@ public:
         return hash;
     }
 
-    deprecated("Please use the constructor instead. This function will be removed in Jan 2016.")
-    /***************************************
-     * $(RED Will be deprecated in 2.068. Please use the constructor instead.)
-     */
+    // @@@DEPRECATED_2016-01@@@
+    /++
+        $(RED Deprecated. Please use the constructor instead. This will be
+              removed in January 2016.)
+      +/
+    deprecated("Please use the constructor instead.")
     void init(bool[] ba) pure nothrow
     {
         this = BitArray(ba);
     }
 
-    deprecated("Please use the constructor instead. This function will be removed in Jan 2016.")
     /// ditto
+    deprecated("Please use the constructor instead.")
     void init(void[] v, size_t numbits) pure nothrow
     {
         this = BitArray(v, numbits);

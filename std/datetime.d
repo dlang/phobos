@@ -708,7 +708,7 @@ public:
     /++
         $(RED Deprecated. Please use the overload which takes a
               $(CXREF time, Duration) for the fractional seconds. This overload
-              will be removed in August 2016).
+              will be removed in August 2016.)
 
         Params:
             dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
@@ -2132,7 +2132,7 @@ public:
         $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
               uses a $(CXREF time, Duration) to represent the fractional seconds
               instead of a $(CXREF time, FracSec). This overload will be removed
-              in August 2016).
+              in August 2016.)
 
         Fractional seconds past the second.
      +/
@@ -2205,7 +2205,7 @@ public:
         $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
               uses a $(CXREF time, Duration) to represent the fractional seconds
               instead of a $(CXREF time, FracSec). This overload will be removed
-              in August 2016).
+              in August 2016.)
 
         Fractional seconds past the second.
 

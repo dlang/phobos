@@ -138,13 +138,6 @@ unittest
     assert(isEven(2) && !isEven(1));
 }
 
-/+ Undocumented, will be removed December 2014+/
-deprecated("Parameter byRef is obsolete. Please call unaryFun!(fun, parmName) directly.")
-template unaryFun(alias fun, bool byRef, string parmName = "a")
-{
-    alias unaryFun = unaryFun!(fun, parmName);
-}
-
 unittest
 {
     static int f1(int a) { return a + 1; }
@@ -157,7 +150,7 @@ unittest
     //assert(unaryFun!("return a + 1;")(41) == 42);
 
     int num = 41;
-    assert(unaryFun!("a + 1", true)(num) == 42);
+    assert(unaryFun!"a + 1"(num) == 42);
 
     // Issue 9906
     struct Seen
@@ -687,10 +680,7 @@ template partial(alias fun, alias arg)
     }
 }
 
-/**
-Deprecated alias for $(D partial), kept for backwards compatibility
- */
-
+// Explicitly undocumented. It will be removed in March 2016. @@@DEPRECATED_2016-03@@@
 deprecated("Please use std.functional.partial instead")
 alias curry = partial;
 

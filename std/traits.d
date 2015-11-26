@@ -1636,25 +1636,7 @@ unittest
 }
 
 
-/**
-$(RED Deprecated. It's badly named and provides redundant functionality. It was
-also badly broken prior to 2.060 (bug# 8362), so any code which uses it
-probably needs to be changed anyway. Please use $(D allSatisfy(isSafe, ...))
-instead. This will be removed in June 2015.)
-
-$(D true) all functions are $(D isSafe).
-
-Example
--------------
-@safe    int add(int a, int b) {return a+b;}
-@trusted int sub(int a, int b) {return a-b;}
-@system  int mul(int a, int b) {return a*b;}
-
-static assert( areAllSafe!(add, add));
-static assert( areAllSafe!(add, sub));
-static assert(!areAllSafe!(sub, mul));
--------------
-*/
+// Explicitly undocumented. It will be removed in June 2016. @@@DEPRECATED_2016-06@@@
 deprecated("Please use allSatisfy(isSafe, ...) instead.")
 template areAllSafe(funcs...)
     if (funcs.length > 0)
@@ -5490,10 +5472,7 @@ Returns the target type of a pointer.
 */
 alias PointerTarget(T : T*) = T;
 
-/**
-  $(RED Deprecated. Please use $(LREF PointerTarget) instead. This will be
-        removed in June 2015.)
- */
+// Explicitly undocumented. It will be removed in June 2016. @@@DEPRECATED_2016-06@@@
 deprecated("Please use PointerTarget instead.")
 alias pointerTarget = PointerTarget;
 

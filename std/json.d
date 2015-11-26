@@ -128,13 +128,7 @@ struct JSONValue
           assert(j["language"].type == JSON_TYPE.STRING);
     }
 
-    /**
-        $(RED Deprecated. Instead, please assign the value with the adequate
-              type to $(D JSONValue) directly. This will be removed in
-              June 2015.)
-
-        Sets the _type of this $(D JSONValue). Previous content is cleared.
-      */
+    // Explicitly undocumented. It will be removed in June 2016. @@@DEPRECATED_2016-06@@@
     deprecated("Please assign the value with the adequate type to JSONValue directly.")
     @property JSON_TYPE type(JSON_TYPE newType)
     {
