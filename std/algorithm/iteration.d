@@ -765,14 +765,14 @@ unittest
 
     // Issue #10130 - map of iota with const step.
     const step = 2;
-    static assert(__traits(compiles, map!(i => i)(iota(0, 10, step))));
+    assert(map!(i => i)(iota(0, 10, step)).walkLength == 5);
 
     // Need these to all by const to repro the float case, due to the
     // CommonType template used in the float specialization of iota.
     const floatBegin = 0.0;
     const floatEnd = 1.0;
     const floatStep = 0.02;
-    static assert(__traits(compiles, map!(i => i)(iota(floatBegin, floatEnd, floatStep))));
+    assert(map!(i => i)(iota(floatBegin, floatEnd, floatStep)).walkLength == 50);
 }
 
 @safe unittest

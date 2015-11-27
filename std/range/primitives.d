@@ -444,14 +444,16 @@ unittest
 {
     int[] a = new int[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
-    static assert( __traits(compiles, put(a, 1)));
+    put(a, 1);
+    assert(a.length == 9);
     /*
      * a[0] = 65;       // OK
      * a[0] = 'A';      // OK
      * a[0] = "ABC"[0]; // OK
      * put(a, "ABC");   // OK
      */
-    static assert( __traits(compiles, put(a, "ABC")));
+    put(a, "ABC");
+    assert(a.length == 6);
 }
 
 unittest
@@ -466,11 +468,13 @@ unittest
 
 unittest
 {
-    int[][] a;
-    int[]   b;
+    int[][] a = new int[][10];
+    int[]   b = new int[10];
     int     c;
-    static assert( __traits(compiles, put(b, c)));
-    static assert( __traits(compiles, put(a, b)));
+    put(b, c);
+    assert(b.length == 9);
+    put(a, b);
+    assert(a.length == 9);
     static assert(!__traits(compiles, put(a, c)));
 }
 

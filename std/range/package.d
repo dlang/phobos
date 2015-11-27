@@ -3871,8 +3871,8 @@ unittest
     }
 
     // BUG 8900
-    static assert(__traits(compiles, zip([1, 2], repeat('a'))));
-    static assert(__traits(compiles, zip(repeat('a'), [1, 2])));
+    assert(zip([1, 2], repeat('a')).array == [tuple(1, 'a'), tuple(2, 'a')]);
+    assert(zip(repeat('a'), [1, 2]).array == [tuple('a', 1), tuple('a', 2)]);
 
     // Doesn't work yet.  Issues w/ emplace.
     // static assert(is(Zip!(immutable int[], immutable float[])));
@@ -3944,8 +3944,8 @@ pure unittest
     import std.exception : assertThrown;
 
     static struct S { @disable this(); }
-    static assert(__traits(compiles, zip((S[5]).init[])));
-    auto z = zip(StoppingPolicy.longest, cast(S[]) null, new int[1]);
+    assert(zip((S[5]).init[]).length == 5);
+    assert(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).length == 1);
     assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
 }
 
@@ -4211,9 +4211,6 @@ unittest
     // foreach over it with ref.
     static assert(!__traits(compiles, {
         foreach (ref a, ref b; lockstep(r1, r2)) { a++; }
-    }));
-    static assert(__traits(compiles, {
-        foreach (a, ref b; lockstep(r1, r2)) { a++; }
     }));
 }
 

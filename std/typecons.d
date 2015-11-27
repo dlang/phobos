@@ -1161,8 +1161,7 @@ unittest
         foreach (v1; AliasSeq!(mv, cv, iv, wv, wcv))
         foreach (v2; AliasSeq!(mv, cv, iv, wv, wcv))
         {
-            static assert(__traits(compiles, v1 < v2),
-                          typeof(v1).stringof ~ " < " ~ typeof(v2).stringof);
+            assert(!(v1 < v2));
         }
     }
     {
@@ -2176,10 +2175,14 @@ unittest
     {
         auto sm = S1(1);
         immutable si = immutable S1(1);
-        static assert( __traits(compiles, { auto x1 =           Nullable!S1(sm); }));
-        static assert( __traits(compiles, { auto x2 = immutable Nullable!S1(sm); }));
-        static assert( __traits(compiles, { auto x3 =           Nullable!S1(si); }));
-        static assert( __traits(compiles, { auto x4 = immutable Nullable!S1(si); }));
+        auto x1 =           Nullable!S1(sm);
+        auto x2 = immutable Nullable!S1(sm);
+        auto x3 =           Nullable!S1(si);
+        auto x4 = immutable Nullable!S1(si);
+        assert(x1.val == 1);
+        assert(x2.val == 1);
+        assert(x3.val == 1);
+        assert(x4.val == 1);
     }
 
     auto nm = 10;
@@ -2188,19 +2191,25 @@ unittest
     {
         auto sm = S2(&nm);
         immutable si = immutable S2(&ni);
-        static assert( __traits(compiles, { auto x =           Nullable!S2(sm); }));
-        static assert(!__traits(compiles, { auto x = immutable Nullable!S2(sm); }));
-        static assert(!__traits(compiles, { auto x =           Nullable!S2(si); }));
-        static assert( __traits(compiles, { auto x = immutable Nullable!S2(si); }));
+        auto x1 =           Nullable!S2(sm);
+        static assert(!__traits(compiles, { auto x2 = immutable Nullable!S2(sm); }));
+        static assert(!__traits(compiles, { auto x3 =           Nullable!S2(si); }));
+        auto x4 = immutable Nullable!S2(si);
+        assert(*x1.val == 10);
+        assert(*x4.val == 10);
     }
 
     {
         auto sm = S3(&ni);
         immutable si = immutable S3(&ni);
-        static assert( __traits(compiles, { auto x =           Nullable!S3(sm); }));
-        static assert( __traits(compiles, { auto x = immutable Nullable!S3(sm); }));
-        static assert( __traits(compiles, { auto x =           Nullable!S3(si); }));
-        static assert( __traits(compiles, { auto x = immutable Nullable!S3(si); }));
+        auto x1 =           Nullable!S3(sm);
+        auto x2 = immutable Nullable!S3(sm);
+        auto x3 =           Nullable!S3(si);
+        auto x4 = immutable Nullable!S3(si);
+        assert(*x1.val == 10);
+        assert(*x2.val == 10);
+        assert(*x3.val == 10);
+        assert(*x4.val == 10);
     }
 }
 unittest
@@ -6553,7 +6562,8 @@ public:
         B = 1<<1,
         C = 1<<2
     }
-    static assert(__traits(compiles, BitFlags!Enum));
+    BitFlags!Enum flags1;
+    assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));
 
     // You need to specify the $(D unsafe) parameter for enum with custom values
     enum UnsafeEnum
@@ -6563,8 +6573,8 @@ public:
         C,
         D = B|C
     }
-    static assert(!__traits(compiles, BitFlags!UnsafeEnum));
-    static assert(__traits(compiles, BitFlags!(UnsafeEnum, Yes.unsafe)));
+    static assert(!__traits(compiles, { BitFlags!UnsafeEnum flags2; }));
+    BitFlags!(UnsafeEnum, Yes.unsafe) flags3;
 
     immutable BitFlags!Enum flags_empty;
     // A default constructed BitFlags has no value set
