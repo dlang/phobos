@@ -6599,7 +6599,7 @@ unittest
 
 /**
  * Determine if a symbol has a given
- * $(LINK2 ../spec/attribute.html#uda, user-defined attribute).
+ * $(DDSUBLINK spec/attribute,uda, user-defined attribute).
  */
 template hasUDA(alias symbol, alias attribute)
 {
@@ -6666,7 +6666,7 @@ unittest
 }
 
 /**
- * Gets the $(LINK2 ../spec/attribute.html#uda, user-defined attributes) of the
+ * Gets the $(DDSUBLINK spec/attribute,uda, user-defined attributes) of the
  * given type from the given symbol.
  */
 template getUDAs(alias symbol, alias attribute)

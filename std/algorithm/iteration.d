@@ -3915,14 +3915,14 @@ $(LI In all other cases, a simple element by element addition is done.)
 )
 
 For floating point inputs, calculations are made in
-$(LINK2 ../spec/type.html, $(D real))
+$(DDLINK spec/type, Types, $(D real))
 precision for $(D real) inputs and in $(D double) precision otherwise
 (Note this is a special case that deviates from $(D reduce)'s behavior,
 which would have kept $(D float) precision for a $(D float) range).
 For all other types, the calculations are done in the same type obtained
 from from adding two elements of the range, which may be a different
 type from the elements themselves (for example, in case of
-$(LINK2 ../spec/type.html#integer-promotions, integral promotion)).
+$(DDSUBLINK spec/type,integer-promotions, integral promotion)).
 
 A seed may be passed to $(D sum). Not only will this seed be used as an initial
 value, but its type will override all the above, and determine the algorithm

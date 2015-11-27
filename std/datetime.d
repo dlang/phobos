@@ -89,7 +89,8 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
         $(LREF DateTimeException)).
 
     See_Also:
-        <a href="../intro-to-datetime.html">Introduction to std&#46;_datetime </a><br>
+        $(DDLINK intro-to-_datetime, Introduction to std.datetime,
+                 Introduction to std&#46;_datetime)<br>
         $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601)<br>
         $(WEB en.wikipedia.org/wiki/Tz_database,
               Wikipedia entry on TZ Database)<br>
