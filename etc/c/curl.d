@@ -90,10 +90,12 @@ enum LIBCURL_VERSION_NUM = 0x071504;
  */
 enum LIBCURL_TIMESTAMP = "Thu Feb 17 12:19:40 UTC 2011";
 
-/** Data type definition of curl_off_t. */
-/// jdrewsen - Always 64bit signed and that is what long is in D.
-/// Comment below is from curlbuild.h:
-/**
+/** Data type definition of curl_off_t.
+ *
+ * jdrewsen - Always 64bit signed and that is what long is in D.
+ *
+ * Comment below is from curlbuild.h:
+ *
  * NOTE 2:
  *
  * For any given platform/compiler curl_off_t must be typedef'ed to a
@@ -711,8 +713,8 @@ enum CURLOPTTYPE_FUNCTIONPOINT = 20000;
 
 /// ditto
 enum CURLOPTTYPE_OFF_T = 30000;
-/** name is uppercase CURLOPT_<name>,
-   type is one of the defined CURLOPTTYPE_<type>
+/** name is uppercase CURLOPT_$(LT)name$(GT),
+   type is one of the defined CURLOPTTYPE_$(LT)type$(GT)
    number is unique identifier */
 
 /** The macro "##" is ISO C, we assume pre-ISO C doesn't support it. */
@@ -820,7 +822,7 @@ enum CurlOption {
   /** Time to use with the above condition. Specified in number of seconds
      since 1 Jan 1970 */
   timevalue,
-  /** 35 = OBSOLETE */
+  /* 35 = OBSOLETE */
 
   /** Custom request, for customizing the get command like
      HTTP: DELETE, TRACE and others
@@ -829,7 +831,7 @@ enum CurlOption {
   customrequest = 10036,
   /** HTTP request, for odd commands like DELETE, TRACE and others */
   stderr,
-  /** 38 is not used */
+  /* 38 is not used */
 
   /** send linked-list of post-transfer QUOTE commands */
   postquote = 10039,
@@ -851,7 +853,7 @@ enum CurlOption {
   followlocation, /** use Location: Luke! */
   transfertext,  /** transfer data in text/ASCII format */
   put,           /** HTTP PUT */
-  /** 55 = OBSOLETE */
+  /* 55 = OBSOLETE */
 
   /** Function that will be called instead of the internal progress display
    * function. This function should be defined as the curl_progress_callback
@@ -879,8 +881,8 @@ enum CurlOption {
   /** The CApath or CAfile used to validate the peer certificate
      this option is used only if SSL_VERIFYPEER is true */
   cainfo = 10065,
-  /** 66 = OBSOLETE */
-  /** 67 = OBSOLETE */
+  /* 66 = OBSOLETE */
+  /* 67 = OBSOLETE */
 
   /** Maximum number of http redirects to follow */
   maxredirs = 68,
@@ -894,7 +896,7 @@ enum CurlOption {
   /** What policy to use when closing connections when the cache is filled
      up */
   closepolicy,
-  /** 73 = OBSOLETE */
+  /* 73 = OBSOLETE */
 
   /** Set to explicitly use a new connection for the upcoming transfer.
      Do not use this unless you're absolutely sure of this, as it makes the
@@ -1051,13 +1053,13 @@ enum CurlOption {
   postfieldsize_large = 30120,
   /** Enable/disable the TCP Nagle algorithm */
   tcp_nodelay = 121,
-  /** 122 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
-  /** 123 OBSOLETE. Gone in 7.16.0 */
-  /** 124 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
-  /** 125 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
-  /** 126 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
-  /** 127 OBSOLETE. Gone in 7.16.0 */
-  /** 128 OBSOLETE. Gone in 7.16.0 */
+  /* 122 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
+  /* 123 OBSOLETE. Gone in 7.16.0 */
+  /* 124 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
+  /* 125 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
+  /* 126 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
+  /* 127 OBSOLETE. Gone in 7.16.0 */
+  /* 128 OBSOLETE. Gone in 7.16.0 */
 
   /** When FTP over SSL/TLS is selected (with CURLOPT_USE_SSL), this option
      can be used to change libcurl's default action which is to first try
@@ -1072,8 +1074,8 @@ enum CurlOption {
   ftpsslauth = 129,
   ioctlfunction = 20130,        ///
   ioctldata = 10131,            ///
-  /** 132 OBSOLETE. Gone in 7.16.0 */
-  /** 133 OBSOLETE. Gone in 7.16.0 */
+  /* 132 OBSOLETE. Gone in 7.16.0 */
+  /* 133 OBSOLETE. Gone in 7.16.0 */
 
   /** zero terminated string for pass on to the FTP server when asked for
      "account" info */
@@ -1109,7 +1111,8 @@ enum CurlOption {
      (instead of using the iconv calls in libcurl)
      Note that this is used only for SSL certificate processing */
   conv_from_utf8_function,
-  /** if the connection proceeds too quickly then need to slow it down */
+  /** If the connection proceeds too quickly then need to slow it down */
+  /** */
   /** limit-rate: maximum number of bytes per second to send or receive */
   max_send_speed_large = 30145,
   max_recv_speed_large, /// ditto
@@ -1152,7 +1155,7 @@ enum CurlOption {
   opensocketdata = 10164,       /// ditto
   /** POST volatile input fields. */
   copypostfields,
-  /** set transfer mode (;type=<a|i>) when doing FTP via an HTTP proxy */
+  /** set transfer mode (;type=$(LT)a|i$(GT)) when doing FTP via an HTTP proxy */
   proxy_transfer_mode = 166,
   /** Callback function for seeking in the input stream */
   seekfunction = 20167,
@@ -1396,20 +1399,24 @@ extern (C) struct curl_forms
     const(char) *value;        ///
 }
 
-/** use this for multipart formpost building */
-/** Returns code for curl_formadd()
+/** Use this for multipart formpost building
+ *
+ * Returns code for curl_formadd()
  *
  * Returns:
- * CURL_FORMADD_OK             on success
- * CURL_FORMADD_MEMORY         if the FormInfo allocation fails
- * CURL_FORMADD_OPTION_TWICE   if one option is given twice for one Form
- * CURL_FORMADD_NULL           if a null pointer was given for a char
- * CURL_FORMADD_MEMORY         if the allocation of a FormInfo struct failed
- * CURL_FORMADD_UNKNOWN_OPTION if an unknown option was used
- * CURL_FORMADD_INCOMPLETE     if the some FormInfo is not complete (or error)
- * CURL_FORMADD_MEMORY         if a curl_httppost struct cannot be allocated
- * CURL_FORMADD_MEMORY         if some allocation for string copying failed.
- * CURL_FORMADD_ILLEGAL_ARRAY  if an illegal option is used in an array
+ *
+ * $(UL
+ * $(LI CURL_FORMADD_OK             on success )
+ * $(LI CURL_FORMADD_MEMORY         if the FormInfo allocation fails )
+ * $(LI CURL_FORMADD_OPTION_TWICE   if one option is given twice for one Form )
+ * $(LI CURL_FORMADD_NULL           if a null pointer was given for a char )
+ * $(LI CURL_FORMADD_MEMORY         if the allocation of a FormInfo struct failed )
+ * $(LI CURL_FORMADD_UNKNOWN_OPTION if an unknown option was used )
+ * $(LI CURL_FORMADD_INCOMPLETE     if the some FormInfo is not complete (or error) )
+ * $(LI CURL_FORMADD_MEMORY         if a curl_httppost struct cannot be allocated )
+ * $(LI CURL_FORMADD_MEMORY         if some allocation for string copying failed. )
+ * $(LI CURL_FORMADD_ILLEGAL_ARRAY  if an illegal option is used in an array )
+ * )
  *
  ***************************************************************************/
 enum CurlFormAdd {
@@ -1825,7 +1832,7 @@ extern (C) struct _N28
   int ares_num;
   /** This field was added in CURLVERSION_THIRD */
   const(char) *libidn;
-  /** These field were added in CURLVERSION_FOURTH */
+  /** These field were added in CURLVERSION_FOURTH. */
   /** Same as '_libiconv_version' if built with HAVE_ICONV */
   int iconv_ver_num;
   const(char) *libssh_version;  /** human readable string */
@@ -2249,7 +2256,6 @@ extern (C) {
  *
  * Returns: The callback should return zero.
  */
-/** private callback pointer */
 
 extern (C) {
   alias int function(CURLM *multi,    /** multi handle */

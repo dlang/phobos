@@ -80,7 +80,7 @@ $(TR $(TDNW Hardware Control) $(TD
  * Macros:
  *      WIKI = Phobos/StdMath
  *
- *      TABLE_SV = <table border=1 cellpadding=4 cellspacing=0>
+ *      TABLE_SV = <table border="1" cellpadding="4" cellspacing="0">
  *              <caption>Special Values</caption>
  *              $0</table>
  *      SVH = $(TR $(TH $1) $(TH $2))
@@ -110,7 +110,7 @@ $(TR $(TDNW Hardware Control) $(TD
  * Copyright: Copyright Digital Mars 2000 - 2011.
  *            D implementations of tan, atan, atan2, exp, expm1, exp2, log, log10, log1p,
  *            log2, floor, ceil and lrint functions are based on the CEPHES math library,
- *            which is Copyright (C) 2001 Stephen L. Moshier <steve@moshier.net>
+ *            which is Copyright (C) 2001 Stephen L. Moshier $(LT)steve@moshier.net$(GT)
  *            and are incorporated herein by permission of the author.  The author
  *            reserves the right to distribute this material elsewhere under different
  *            copying permissions.  These modifications are distributed here under
@@ -549,14 +549,14 @@ auto abs(Num)(Num y) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.typetuple;
-    foreach (T; TypeTuple!(float, double, real))
+    import std.meta : AliasSeq;
+    foreach (T; AliasSeq!(float, double, real))
     {
         T f = 3;
         assert(abs(f) == f);
         assert(abs(-f) == f);
     }
-    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    foreach (T; AliasSeq!(cfloat, cdouble, creal))
     {
         T f = -12+3i;
         assert(abs(f) == hypot(f.re, f.im));
@@ -2230,7 +2230,7 @@ unittest
             [ 0x1p+80L,      real.infinity            ], // far overflow
             [ real.infinity, real.infinity            ],
             [-0x1.6p+9L,     0x1.44a3824e5285fp-1016L ], // near underflow
-            [-0x1.64p+9L,    0x0.06f84920bb2d3p-1022L ], // near underflow - subnormal
+            [-0x1.64p+9L,    0x0.06f84920bb2d4p-1022L ], // near underflow - subnormal
             [-0x1.743p+9L,   0x0.0000000000001p-1022L ], // ditto
             [-0x1.8p+9L,     0                        ], // close underflow
             [-0x1p30L,       0                        ], // far underflow
@@ -2556,9 +2556,9 @@ unittest
 
 unittest
 {
-    import std.typetuple, std.typecons;
+    import std.meta, std.typecons;
 
-    foreach (T; TypeTuple!(real, double, float))
+    foreach (T; AliasSeq!(real, double, float))
     {
         Tuple!(T, T, int)[] vals =     // x,frexp,exp
             [
@@ -2611,9 +2611,9 @@ unittest
 
 unittest
 {
-    import std.typetuple: TypeTuple;
+    import std.meta: AliasSeq;
     void foo() {
-        foreach (T; TypeTuple!(real, double, float))
+        foreach (T; AliasSeq!(real, double, float))
         {
             int exp;
             const T a = 1;
@@ -2836,8 +2836,8 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
 
 @trusted nothrow @nogc unittest
 {
-    import std.typetuple, std.typecons;
-    foreach (F; TypeTuple!(float, double, real))
+    import std.meta, std.typecons;
+    foreach (F; AliasSeq!(float, double, real))
     {
         alias T = Tuple!(F, int);
         T[13] vals =   // x, ilogb(x)
@@ -2909,8 +2909,8 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 ///
 @nogc @safe pure nothrow unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(float, double, real))
+    import std.meta;
+    foreach(T; AliasSeq!(float, double, real))
     {
         T r;
 
@@ -4924,9 +4924,9 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 
 @safe pure nothrow @nogc unittest
 {
-    import std.typetuple;
+    import std.meta;
 
-    foreach(T; TypeTuple!(float, double, real))
+    foreach(T; AliasSeq!(float, double, real))
     {
         // CTFE-able tests
         assert(isNaN(T.init));
@@ -5107,9 +5107,9 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.typetuple;
+    import std.meta;
 
-    foreach (T; TypeTuple!(float, double, real))
+    foreach (T; AliasSeq!(float, double, real))
     {
         T f;
         for (f = 1.0; !isSubnormal(f); f /= 2)
@@ -5345,11 +5345,11 @@ R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.typetuple;
+    import std.meta;
 
-    foreach (X; TypeTuple!(float, double, real, int, long))
+    foreach (X; AliasSeq!(float, double, real, int, long))
     {
-        foreach (Y; TypeTuple!(float, double, real))
+        foreach (Y; AliasSeq!(float, double, real))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             X x = 21;
             Y y = 23.8;
@@ -7263,8 +7263,8 @@ unittest
 
 unittest
 {
-    import std.typetuple;
-    foreach (T; TypeTuple!(float, double, real))
+    import std.meta;
+    foreach (T; AliasSeq!(float, double, real))
     {
         T[] values = [-cast(T)NaN(20), -cast(T)NaN(10), -T.nan, -T.infinity,
                       -T.max, -T.max / 2, T(-16.0), T(-1.0).nextDown,

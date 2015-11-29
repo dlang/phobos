@@ -85,10 +85,10 @@ import std.conv;
 import std.exception;
 import std.functional;
 import std.math;
+import std.meta;
 import std.range;
 import std.traits;
 import std.typecons;
-import std.typetuple;
 
 version(OSX)
 {
@@ -236,7 +236,7 @@ private template isSafeTask(F)
         (functionAttributes!F & (FunctionAttribute.safe | FunctionAttribute.trusted)) != 0 &&
         (functionAttributes!F & FunctionAttribute.ref_) == 0 &&
         (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
-        allSatisfy!(noUnsharedAliasing, ParameterTypeTuple!F);
+        allSatisfy!(noUnsharedAliasing, Parameters!F);
 }
 
 unittest
@@ -2326,9 +2326,9 @@ public:
     */
     auto asyncBuf(C1, C2)(C1 next, C2 empty, size_t initialBufSize = 0, size_t nBuffers = 100)
     if(is(typeof(C2.init()) : bool) &&
-        ParameterTypeTuple!C1.length == 1 &&
-        ParameterTypeTuple!C2.length == 0 &&
-        isArray!(ParameterTypeTuple!C1[0])
+        Parameters!C1.length == 1 &&
+        Parameters!C2.length == 0 &&
+        isArray!(Parameters!C1[0])
     ) {
         auto roundRobin = RoundRobinBuffer!(C1, C2)(next, empty, initialBufSize, nBuffers);
         return asyncBuf(roundRobin, nBuffers / 2);
@@ -2496,7 +2496,7 @@ public:
                 // since we're assuming functions are associative anyhow.
 
                 // This is so that loops can be unrolled automatically.
-                enum ilpTuple = TypeTuple!(0, 1, 2, 3, 4, 5);
+                enum ilpTuple = AliasSeq!(0, 1, 2, 3, 4, 5);
                 enum nILP = ilpTuple.length;
                 immutable subSize = (upperBound - lowerBound) / nILP;
 
@@ -3453,7 +3453,7 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
         {
             foreach(ref ElementType!R elem; range)
             {
-                static if(ParameterTypeTuple!dg.length == 2)
+                static if(Parameters!dg.length == 2)
                 {
                     res = dg(index, elem);
                 }
@@ -3469,7 +3469,7 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
         {
             foreach(ElementType!R elem; range)
             {
-                static if(ParameterTypeTuple!dg.length == 2)
+                static if(Parameters!dg.length == 2)
                 {
                     res = dg(index, elem);
                 }
@@ -3493,7 +3493,7 @@ private enum string parallelApplyMixinRandomAccess = q{
     }
 
     // Whether iteration is with or without an index variable.
-    enum withIndex = ParameterTypeTuple!(typeof(dg)).length == 2;
+    enum withIndex = Parameters!(typeof(dg)).length == 2;
 
     shared size_t workUnitIndex = size_t.max;  // Effectively -1:  chunkIndex + 1 == 0
     immutable len = range.length;
@@ -3548,7 +3548,7 @@ enum string parallelApplyMixinInputRange = q{
     }
 
     // Whether iteration is with or without an index variable.
-    enum withIndex = ParameterTypeTuple!(typeof(dg)).length == 2;
+    enum withIndex = Parameters!(typeof(dg)).length == 2;
 
     // This protects the range while copying it.
     auto rangeMutex = new Mutex();
@@ -3805,7 +3805,7 @@ private struct RoundRobinBuffer(C1, C2)
 {
     // No need for constraints because they're already checked for in asyncBuf.
 
-    alias Array = ParameterTypeTuple!(C1.init)[0];
+    alias Array = Parameters!(C1.init)[0];
     alias T = typeof(Array.init[0]);
 
     T[][] bufs;

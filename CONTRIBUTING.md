@@ -25,6 +25,6 @@ Tips for Development
         rdmd -unittest -main std/regex.d
 
 2. Do not forget to test your changes.
-   Aim for a [high code coverage of your tests](http://forum.dlang.org/thread/ki5ovr$17m1$1@digitalmars.com).
+   Aim for a [high code coverage of your tests](http://forum.dlang.org/post/ki5ovr$17m1$1@digitalmars.com).
 
 3. Do not forget the [API Documentation](http://dlang.org/phobos/).

@@ -10,6 +10,11 @@ Macros:
 WIKI = Phobos/StdFile
 
 Copyright: Copyright Digital Mars 2007 - 2011.
+See_Also:  The $(WEB ddili.org/ders/d.en/files.html, official tutorial) for an
+introduction to working with files in D, module
+$(LINK2 std_stdio.html,$(D std.stdio)) for opening files and manipulating them
+via handles, and module $(LINK2 std_path.html,$(D std.path)) for manipulating
+path strings.
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
@@ -23,11 +28,11 @@ import core.stdc.stdlib, core.stdc.string, core.stdc.errno;
 import std.conv;
 import std.datetime;
 import std.exception;
+import std.meta;
 import std.path;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
-import std.typetuple;
 import std.internal.cstring;
 
 version (Windows)
@@ -87,24 +92,6 @@ else version(Posix)
     package enum system_directory = "/usr/include";
     package enum system_file      = "/usr/include/assert.h";
 }
-
-
-// @@@@ TEMPORARY - THIS SHOULD BE IN THE CORE @@@
-// {{{
-version (Windows)
-{
-    enum FILE_ATTRIBUTE_REPARSE_POINT = 0x400;
-
-    // Required by tempPath():
-    private extern(Windows) DWORD GetTempPathW(DWORD nBufferLength,
-                                               LPWSTR lpBuffer);
-    // Required by rename():
-    enum MOVEFILE_REPLACE_EXISTING = 1;
-    private extern(Windows) DWORD MoveFileExW(LPCWSTR lpExistingFileName,
-                                              LPCWSTR lpNewFileName,
-                                              DWORD dwFlags);
-}
-// }}}
 
 
 /++
@@ -359,7 +346,7 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     }
 
     alias defaults =
-        TypeTuple!(GENERIC_READ,
+        AliasSeq!(GENERIC_READ,
             FILE_SHARE_READ | FILE_SHARE_WRITE, (SECURITY_ATTRIBUTES*).init,
             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
             HANDLE.init);
@@ -565,7 +552,7 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
     if (append)
     {
         alias defaults =
-            TypeTuple!(GENERIC_WRITE, 0, null, OPEN_ALWAYS,
+            AliasSeq!(GENERIC_WRITE, 0, null, OPEN_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
 
@@ -582,7 +569,7 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
     else // write
     {
         alias defaults =
-            TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
+            AliasSeq!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
 
@@ -1116,14 +1103,14 @@ void setTimes(R)(R name,
         const ta = SysTimeToFILETIME(accessTime);
         const tm = SysTimeToFILETIME(modificationTime);
         alias defaults =
-            TypeTuple!(GENERIC_WRITE,
-                         0,
-                         null,
-                         OPEN_EXISTING,
-                         FILE_ATTRIBUTE_NORMAL |
-                         FILE_ATTRIBUTE_DIRECTORY |
-                         FILE_FLAG_BACKUP_SEMANTICS,
-                         HANDLE.init);
+            AliasSeq!(GENERIC_WRITE,
+                      0,
+                      null,
+                      OPEN_EXISTING,
+                      FILE_ATTRIBUTE_NORMAL |
+                      FILE_ATTRIBUTE_DIRECTORY |
+                      FILE_FLAG_BACKUP_SEMANTICS,
+                      HANDLE.init);
         auto h = trustedCreateFileW(namez, defaults);
 
         static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
@@ -3072,6 +3059,7 @@ If the target file exists, it is overwritten.
 Params:
     from = string or range of characters representing the existing file name
     to = string or range of characters representing the target file name
+    preserve = whether to preserve the file attributes
 
 Throws: $(D FileException) on error.
  */
@@ -3099,9 +3087,16 @@ void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttribut
 void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve = preserveAttributesDefault)
     if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
-    import std.map : staticMap;
+    import std.meta : staticMap;
     alias Types = staticMap!(convertToString, RF, RT);
     copy!Types(from, to, preserve);
+}
+
+unittest // issue 15319
+{
+    import std.path: dirEntries;
+    auto fs = dirEntries(getcwd, SpanMode.depth);
+    assert(__traits(compiles, copy(fs.front, fs.front)));
 }
 
 private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz,
@@ -3435,7 +3430,8 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            auto h = cenforce(opendir(directory.tempCString()), directory);
+            auto h = directory.length ? opendir(directory.tempCString()) : opendir(".");
+            cenforce(h, directory);
             _stack.put(DirHandle(directory, h));
             return next();
         }
@@ -3575,6 +3571,7 @@ public:
 
     Params:
         path = The directory to iterate over.
+               If empty, the current directory will be iterated.
         mode = Whether the directory's sub-directories should be iterated
                over depth-first ($(D_PARAM depth)), breadth-first
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
@@ -3592,8 +3589,8 @@ foreach (string name; dirEntries("destroy/me", SpanMode.depth))
 {
  remove(name);
 }
-// Iterate a directory in breadth
-foreach (string name; dirEntries(".", SpanMode.breadth))
+// Iterate the current directory in breadth
+foreach (string name; dirEntries("", SpanMode.breadth))
 {
  writeln(name);
 }
@@ -3603,7 +3600,7 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
  writeln(e.name, "\t", e.size);
 }
 // Iterate over all *.d files in current directory and all its subdirectories
-auto dFiles = dirEntries(".", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
+auto dFiles = dirEntries("", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
 foreach(d; dFiles)
     writeln(d.name);
 // Hook it up with std.parallelism to compile them all in parallel:
@@ -3703,6 +3700,9 @@ unittest
     // issue 11392
     auto dFiles = dirEntries(testdir, SpanMode.shallow);
     foreach(d; dFiles){}
+
+    // issue 15146
+    dirEntries("", SpanMode.shallow).walkLength();
 }
 
 /++
@@ -3727,7 +3727,7 @@ Examples:
 --------------------
 // Iterate over all D source files in current directory and all its
 // subdirectories
-auto dFiles = dirEntries(".","*.{d,di}",SpanMode.depth);
+auto dFiles = dirEntries("","*.{d,di}",SpanMode.depth);
 foreach(d; dFiles)
     writeln(d.name);
 --------------------

@@ -979,7 +979,7 @@ unittest {
     void bar(uint){}
     static assert(arity!bar==1);
     void variadicFoo(uint...){}
-    static assert(__traits(compiles,arity!variadicFoo)==false);
+    static assert(!__traits(compiles, arity!variadicFoo));
 }
 
 /**
@@ -2207,7 +2207,7 @@ unittest
 }
 
 /**
- * Alternate name for $(LREF FieldTypeTuple), kept for legacy compatibility.
+ * Alternate name for $(LREF Fields), kept for legacy compatibility.
  */
 alias FieldTypeTuple = Fields;
 
@@ -5217,6 +5217,18 @@ unittest
  */
 enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isAggregateType!T && !isStaticArray!T;
 
+///
+unittest
+{
+    static assert(isNarrowString!string);
+    static assert(isNarrowString!wstring);
+    static assert(isNarrowString!(char[]));
+    static assert(isNarrowString!(wchar[]));
+
+    static assert(!isNarrowString!dstring);
+    static assert(!isNarrowString!(dchar[]));
+}
+
 unittest
 {
     foreach (T; TypeTuple!(char[], string, wstring))
@@ -6586,7 +6598,8 @@ unittest
 }
 
 /**
- * Determine if a symbol has a given $(LINK2 ../attribute.html#uda, user-defined attribute).
+ * Determine if a symbol has a given
+ * $(DDSUBLINK spec/attribute,uda, user-defined attribute).
  */
 template hasUDA(alias symbol, alias attribute)
 {
@@ -6653,14 +6666,20 @@ unittest
 }
 
 /**
- * Gets the $(LINK2 ../attribute.html#uda, user-defined attributes) of the given
- * type from the given symbol.
+ * Gets the $(DDSUBLINK spec/attribute,uda, user-defined attributes) of the
+ * given type from the given symbol.
  */
 template getUDAs(alias symbol, alias attribute)
 {
     import std.typetuple : Filter;
 
-    enum isDesiredUDA(alias S) = is(typeof(S) == attribute);
+    template isDesiredUDA(alias S) {
+        static if(__traits(compiles, is(typeof(S) == attribute))) {
+            enum isDesiredUDA = is(typeof(S) == attribute);
+        } else {
+            enum isDesiredUDA = isInstanceOf!(attribute, typeof(S));
+        }
+    }
     alias getUDAs = Filter!(isDesiredUDA, __traits(getAttributes, symbol));
 }
 
@@ -6686,6 +6705,22 @@ unittest
     static assert(getUDAs!(c, Attr)[0].value == 42);
     static assert(getUDAs!(c, Attr)[1].name == "Pi");
     static assert(getUDAs!(c, Attr)[1].value == 3);
+
+    struct AttrT(T)
+    {
+        string name;
+        T value;
+    }
+
+    @AttrT!uint("Answer", 42) @AttrT!int("Pi", 3) @AttrT int d;
+    static assert(getUDAs!(d, AttrT)[0].name == "Answer");
+    static assert(getUDAs!(d, AttrT)[0].value == 42);
+    static assert(getUDAs!(d, AttrT)[1].name == "Pi");
+    static assert(getUDAs!(d, AttrT)[1].value == 3);
+    static assert(getUDAs!(d, AttrT!uint)[0].name == "Answer");
+    static assert(getUDAs!(d, AttrT!uint)[0].value == 42);
+    static assert(getUDAs!(d, AttrT!int)[0].name == "Pi");
+    static assert(getUDAs!(d, AttrT!int)[0].value == 3);
 }
 
 /**
@@ -6758,4 +6793,45 @@ unittest
     static assert(getSymbolsByUDA!(C, UDA).length == 2);
     static assert(getSymbolsByUDA!(C, UDA)[0].stringof == "C");
     static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
+}
+
+/**
+   Returns: $(D true) iff all types $(D T) are the same.
+*/
+template allSameType(T...)
+{
+    static if (T.length <= 1)
+    {
+        enum bool allSameType = true;
+    }
+    else
+    {
+        enum bool allSameType = is(T[0] == T[1]) && allSameType!(T[1..$]);
+    }
+}
+
+///
+unittest
+{
+    static assert(allSameType!(int, int));
+    static assert(allSameType!(int, int, int));
+    static assert(allSameType!(float, float, float));
+    static assert(!allSameType!(int, double));
+    static assert(!allSameType!(int, float, double));
+    static assert(!allSameType!(int, float, double, real));
+    static assert(!allSameType!(short, int, float, double, real));
+}
+
+/**
+   Returns: $(D true) iff the type $(D T) can be tested in an $(D
+   if)-expression, that is if $(D if (pred(T.init)) {}) is compilable.
+*/
+enum ifTestable(T, alias pred = a => a) = __traits(compiles, { if (pred(T.init)) {} });
+
+unittest
+{
+    import std.meta : AliasSeq;
+    static assert(allSatisfy!(ifTestable, AliasSeq!(bool, int, float, double, string)));
+    struct BoolWrapper { bool value; }
+    static assert(!ifTestable!(bool, a => BoolWrapper(a)));
 }

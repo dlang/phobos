@@ -142,7 +142,8 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(WEB digitalmars.com, Walter Bright),
          $(WEB erdani.org, Andrei Alexandrescu),
-         and Jonathan M Davis
+        Jonathan M Davis,
+        and David L. 'SpottedTiger' Davis
 
 Source:    $(PHOBOSSRC std/_string.d)
 
@@ -179,9 +180,9 @@ public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 public import std.format : format, sformat;
 import std.typecons : Flag;
 
+import std.meta;
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
 
 //public imports for backward compatibility
 public import std.algorithm : startsWith, endsWith, cmp, count;
@@ -514,7 +515,7 @@ unittest
     import std.utf : byChar, byWchar, byDchar;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(indexOf(cast(S)null, cast(dchar)'a') == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a') == -1);
@@ -627,7 +628,7 @@ unittest
     assert("hello".byWchar.indexOf(cast(dchar)'l', 1) == 2);
     assert("hello".byWchar.indexOf(cast(dchar)'l', 6) == -1);
 
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(indexOf(cast(S)null, cast(dchar)'a', 1) == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a', 1) == -1);
@@ -777,9 +778,9 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOf(cast(S)null, to!T("a")) == -1);
             assert(indexOf(to!S("def"), to!T("a")) == -1);
@@ -875,9 +876,9 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     import std.conv : to;
     debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach(T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOf(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOf(to!S("def"), to!T("a"), 0) == -1);
@@ -1010,7 +1011,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
@@ -1076,7 +1077,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
@@ -1201,9 +1202,9 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -1256,9 +1257,9 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 @safe pure unittest // issue13529
 {
     import std.conv : to;
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         {
             enum typeStr = S.stringof ~ " " ~ T.stringof;
             auto idx = lastIndexOf(to!T("Hällö Wörldö ö"),to!S("ö ö"));
@@ -1304,9 +1305,9 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach(T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -1501,9 +1502,9 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfAny(cast(S)null, to!T("a")) == -1);
             assert(indexOfAny(to!S("def"), to!T("rsa")) == -1);
@@ -1584,9 +1585,9 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 
     debug(string) trustedPrintf("string.indexOfAny(startIdx).unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach(T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfAny(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOfAny(to!S("def"), to!T("AaF"), 0) == -1);
@@ -1662,9 +1663,9 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfAny(cast(S)null, to!T("a")) == -1);
             assert(lastIndexOfAny(to!S("def"), to!T("rsa")) == -1);
@@ -1758,9 +1759,9 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -1838,9 +1839,9 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfNeither(cast(S)null, to!T("a")) == -1);
             assert(indexOfNeither("abba", "a") == 1);
@@ -1923,9 +1924,9 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfNeither(cast(S)null, to!T("a"), 1) == -1);
             assert(indexOfNeither(to!S("def"), to!T("a"), 1) == 1,
@@ -1993,9 +1994,9 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfNeither(cast(S)null, to!T("a")) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("rsa")) == 2);
@@ -2074,9 +2075,9 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfNeither(cast(S)null, to!T("a"), 1337) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("f")) == 1);
@@ -2126,7 +2127,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     if (isSomeChar!Char)
 {
-    alias ToRepType(T) = TypeTuple!(ubyte, ushort, uint)[T.sizeof / 2];
+    alias ToRepType(T) = AliasSeq!(ubyte, ushort, uint)[T.sizeof / 2];
     return cast(ModifyTypePreservingTQ!(ToRepType, Char)[])s;
 }
 
@@ -2152,12 +2153,12 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
         assert(representation(str) is cast(T[]) str);
     }
 
-    foreach (Type; TypeTuple!(Tuple!(char , ubyte ),
-                              Tuple!(wchar, ushort),
-                              Tuple!(dchar, uint  )))
+    foreach (Type; AliasSeq!(Tuple!(char , ubyte ),
+                             Tuple!(wchar, ushort),
+                             Tuple!(dchar, uint  )))
     {
-        alias Char = FieldTypeTuple!Type[0];
-        alias Int  = FieldTypeTuple!Type[1];
+        alias Char = Fields!Type[0];
+        alias Int  = Fields!Type[1];
         enum immutable(Char)[] hello = "hello";
 
         test!(   immutable Char,    immutable Int)(hello);
@@ -2183,15 +2184,15 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  * See_Also:
  *      $(XREF uni, toCapitalized) for a lazy range version that doesn't allocate memory
  */
-S capitalize(S)(S s) @trusted pure
+S capitalize(S)(S input) @trusted pure
     if (isSomeString!S)
 {
     import std.utf : encode;
 
-    Unqual!(typeof(s[0]))[] retval;
+    Unqual!(typeof(input[0]))[] retval;
     bool changed = false;
 
-    foreach (i, dchar c; s)
+    foreach (i, dchar c; input)
     {
         dchar c2;
 
@@ -2209,7 +2210,7 @@ S capitalize(S)(S s) @trusted pure
                 if (!changed)
                 {
                     changed = true;
-                    retval = s[0 .. i].dup;
+                    retval = input[0 .. i].dup;
                 }
             }
         }
@@ -2218,7 +2219,14 @@ S capitalize(S)(S s) @trusted pure
             std.utf.encode(retval, c2);
     }
 
-    return changed ? cast(S)retval : s;
+    return changed ? cast(S)retval : input;
+}
+
+///
+pure @safe unittest
+{
+    assert(capitalize("hello") == "Hello");
+    assert(capitalize("World") == "World");
 }
 
 auto capitalize(S)(auto ref S s)
@@ -2240,7 +2248,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s1 = to!S("FoL");
         S s2;
@@ -2382,6 +2390,13 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
     return retval.data;
 }
 
+///
+unittest
+{
+    string s = "Hello\nmy\rname\nis";
+    assert(splitLines(s) == ["Hello", "my", "name", "is"]);
+}
+
 auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = KeepTerminator.no)
     if (!isSomeString!S && is(StringTypeOf!S))
 {
@@ -2402,7 +2417,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         auto s = to!S(
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n" ~
@@ -2624,6 +2639,19 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
     return LineSplitter!(keepTerm, Range)(r);
 }
 
+///
+@safe pure unittest
+{
+    import std.array : array;
+
+    string s = "Hello\nmy\rname\nis";
+
+    /* notice the call to $(D array) to turn the lazy range created by
+    lineSplitter comparable to the $(D string[]) created by splitLines.
+    */
+    assert(lineSplitter(s).array == splitLines(s));
+}
+
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref Range r)
     if (isConvertibleToString!Range)
 {
@@ -2640,7 +2668,7 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref R
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         auto s = to!S(
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\n" ~
@@ -2731,12 +2759,12 @@ unittest
     Params:
         input = string or ForwardRange of characters
 
-    Returns: $(D str) stripped of leading whitespace.
+    Returns: $(D input) stripped of leading whitespace.
 
-    Postconditions: $(D str) and the returned value
+    Postconditions: $(D input) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
   +/
-auto stripLeft(Range)(Range str)
+auto stripLeft(Range)(Range input)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         !isConvertibleToString!Range)
 {
@@ -2744,24 +2772,24 @@ auto stripLeft(Range)(Range str)
     import std.uni : isWhite;
     import std.utf : decodeFront;
 
-    while (!str.empty)
+    while (!input.empty)
     {
-        auto c = str.front;
+        auto c = input.front;
         if (std.ascii.isASCII(c))
         {
             if (!std.ascii.isWhite(c))
                 break;
-            str.popFront();
+            input.popFront();
         }
         else
         {
-            auto save = str.save;
-            auto dc = decodeFront(str);
+            auto save = input.save;
+            auto dc = decodeFront(input);
             if (!std.uni.isWhite(dc))
                 return save;
         }
     }
-    return str;
+    return input;
 }
 
 ///
@@ -2938,7 +2966,7 @@ unittest
     assert(stripRight("\u2028hello world\u2020\u2028".byChar).array == "\u2028hello world\u2020");
     assert(stripRight("hello world\U00010001"w.byWchar).array == "hello world\U00010001"w);
 
-    foreach (C; TypeTuple!(char, wchar, dchar))
+    foreach (C; AliasSeq!(char, wchar, dchar))
     {
         foreach (s; invalidUTFstrings!C())
         {
@@ -3008,9 +3036,9 @@ auto strip(Range)(auto ref Range str)
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const  char[],  string,
-                           wchar[], const wchar[], wstring,
-                           dchar[], const dchar[], dstring))
+    foreach (S; AliasSeq!( char[], const  char[],  string,
+                          wchar[], const wchar[], wstring,
+                          dchar[], const dchar[], dstring))
     {
         assert(equal(stripLeft(to!S("  foo\t ")), "foo\t "));
         assert(equal(stripLeft(to!S("\u2008  foo\t \u2007")), "foo\t \u2007"));
@@ -3214,7 +3242,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         // @@@ BUG IN COMPILER, MUST INSERT CAST
         assert(chomp(cast(S)null) is null);
@@ -3234,7 +3262,7 @@ unittest
         assert(chomp(to!S("hello\u2029\u2129")) == "hello\u2029\u2129");
         assert(chomp(to!S("hello\u2029\u0185")) == "hello\u2029\u0185");
 
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             // @@@ BUG IN COMPILER, MUST INSERT CAST
             assert(chomp(cast(S)null, cast(T)null) is null);
@@ -3336,9 +3364,9 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(equal(chompPrefix(to!S("abcdefgh"), to!T("abcde")), "fgh"));
             assert(equal(chompPrefix(to!S("abcde"), to!T("abcdefgh")), "abcde"));
@@ -3504,7 +3532,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(chop(cast(S) null) is null);
         assert(equal(chop(to!S("hello")), "hell"));
@@ -3539,6 +3567,14 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ')
 {
     import std.array;
     return leftJustifier(s, width, fillChar).array;
+}
+
+///
+@safe pure unittest
+{
+    assert(leftJustify("hello", 7, 'X') == "helloXX");
+    assert(leftJustify("hello", 2, 'X') == "hello");
+    assert(leftJustify("hello", 9, 'X') == "helloXXXX");
 }
 
 /++
@@ -3679,6 +3715,14 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ')
 {
     import std.array;
     return rightJustifier(s, width, fillChar).array;
+}
+
+///
+@safe pure unittest
+{
+    assert(rightJustify("hello", 7, 'X') == "XXhello");
+    assert(rightJustify("hello", 2, 'X') == "hello");
+    assert(rightJustify("hello", 9, 'X') == "XXXXhello");
 }
 
 /++
@@ -3861,7 +3905,15 @@ S center(S)(S s, size_t width, dchar fillChar = ' ')
     return centerJustifier(s, width, fillChar).array;
 }
 
-@trusted pure
+///
+@safe pure unittest
+{
+    assert(center("hello", 7, 'X') == "XhelloX");
+    assert(center("hello", 2, 'X') == "hello");
+    assert(center("hello", 9, 'X') == "XXhelloXX");
+}
+
+@safe pure
 unittest
 {
     import std.conv : to;
@@ -3871,7 +3923,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         S s = to!S("hello");
 
@@ -4019,16 +4071,50 @@ unittest
     Returns:
         GC allocated string with tabs replaced with spaces
   +/
-S detab(S)(S s, size_t tabSize = 8) pure
-    if (isSomeString!S)
+auto detab(Range)(auto ref Range s, size_t tabSize = 8) pure
+    if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+        || __traits(compiles, StringTypeOf!Range))
 {
     import std.array;
     return detabber(s, tabSize).array;
 }
 
+///
+@trusted pure unittest
+{
+    import std.array;
+
+    assert(detab(" \n\tx", 9) == " \n         x");
+}
+
+unittest
+{
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    static struct TestStruct2
+    {
+        string s;
+        alias s this;
+        @disable this(this);
+    }
+
+    string s = " \n\tx";
+    string cmp = " \n         x";
+    auto t = TestStruct(s);
+    assert(detab(t, 9) == cmp);
+    assert(detab(TestStruct(s), 9) == cmp);
+    assert(detab(TestStruct(s), 9) == detab(TestStruct(s), 9));
+    assert(detab(TestStruct2(s), 9) == detab(TestStruct2(s), 9));
+    assert(detab(TestStruct2(s), 9) == cmp);
+}
+
 /++
-    Replace each tab character in $(D r) with the number of spaces necessary
-    to align the following character at the next tab stop.
+    Replace each tab character in $(D r) with the number of spaces
+    necessary to align the following character at the next tab stop.
 
     Params:
         r = string or forward range
@@ -4045,7 +4131,8 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
     import std.utf : codeUnitLimit, decodeFront;
 
     assert(tabSize > 0);
-    alias C = Unqual!(ElementEncodingType!Range);
+
+    alias C = Unqual!(ElementEncodingType!(Range));
 
     static struct Result
     {
@@ -4064,7 +4151,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
             _tabSize = tabSize;
         }
 
-        static if (isInfinite!Range)
+        static if (isInfinite!(Range))
         {
             enum bool empty = false;
         }
@@ -4080,7 +4167,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
         {
             if (nspaces)
                 return ' ';
-            static if (isSomeString!Range)
+            static if (isSomeString!(Range))
                 C c = _input[0];
             else
                 C c = _input.front;
@@ -4128,7 +4215,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
                 --nspaces;
             if (!nspaces)
             {
-                static if (isSomeString!Range)
+                static if (isSomeString!(Range))
                    _input = _input[1 .. $];
                 else
                     _input.popFront();
@@ -4176,7 +4263,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         S s = to!S("This \tis\t a fofof\tof list");
         assert(cmp(detab(s), "This    is       a fofof        of list") == 0);
@@ -4630,9 +4717,9 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
-                           wchar[], const(wchar)[], immutable(wchar)[],
-                           dchar[], const(dchar)[], immutable(dchar)[]))
+    foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
     {
         assert(translate(to!S("hello world"), cast(dchar[dchar])['h' : 'q', 'l' : '5']) ==
                to!S("qe55o wor5d"));
@@ -4644,11 +4731,11 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
                to!S("hell0 o w0rld"));
         assert(translate(to!S("hello world"), cast(dchar[dchar])null) == to!S("hello world"));
 
-        foreach (T; TypeTuple!( char[], const( char)[], immutable( char)[],
-                               wchar[], const(wchar)[], immutable(wchar)[],
-                               dchar[], const(dchar)[], immutable(dchar)[]))
+        foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            foreach(R; TypeTuple!(dchar[dchar], const dchar[dchar],
+            foreach(R; AliasSeq!(dchar[dchar], const dchar[dchar],
                         immutable dchar[dchar]))
             {
                 R tt = ['h' : 'q', 'l' : '5'];
@@ -4687,9 +4774,9 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
-                           wchar[], const(wchar)[], immutable(wchar)[],
-                           dchar[], const(dchar)[], immutable(dchar)[]))
+    foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
     {
         assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"]) ==
                to!S("yellowe4242o wor42d"));
@@ -4705,12 +4792,12 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
                to!S("hello  world"));
         assert(translate(to!S("hello world"), cast(string[dchar])null) == to!S("hello world"));
 
-        foreach (T; TypeTuple!( char[], const( char)[], immutable( char)[],
-                               wchar[], const(wchar)[], immutable(wchar)[],
-                               dchar[], const(dchar)[], immutable(dchar)[]))
+        foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
 
-            foreach(R; TypeTuple!(string[dchar], const string[dchar],
+            foreach(R; AliasSeq!(string[dchar], const string[dchar],
                         immutable string[dchar]))
             {
                 R tt = ['h' : "yellow", 'l' : "42"];
@@ -4950,7 +5037,7 @@ body
     import std.exception;
     assertCTFEable!(
     {
-    foreach (C; TypeTuple!(char, const char, immutable char))
+    foreach (C; AliasSeq!(char, const char, immutable char))
     {
         assert(translate!C("hello world", makeTransTable("hl", "q5")) == to!(C[])("qe55o wor5d"));
 
@@ -4959,7 +5046,7 @@ body
         static assert(is(typeof(s) == typeof(translate!C(s, transTable))));
     }
 
-    foreach (S; TypeTuple!(char[], const(char)[], immutable(char)[]))
+    foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[]))
     {
         assert(translate(to!S("hello world"), makeTransTable("hl", "q5")) == to!S("qe55o wor5d"));
         assert(translate(to!S("hello \U00010143 world"), makeTransTable("hl", "q5")) ==
@@ -4970,7 +5057,7 @@ body
         assert(translate(to!S("hello \U00010143 world"), makeTransTable("12345", "67890")) ==
                to!S("hello \U00010143 world"));
 
-        foreach (T; TypeTuple!(char[], const(char)[], immutable(char)[]))
+        foreach (T; AliasSeq!(char[], const(char)[], immutable(char)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(translate(to!S("hello world"), makeTransTable("hl", "q5"), to!T("r")) ==
                    to!S("qe55o wo5d"));
@@ -5573,13 +5660,13 @@ unittest
     import std.algorithm : equal;
 
     // Complete list of test types; too slow to test'em all
-    // alias TestTypes = TypeTuple!(
+    // alias TestTypes = AliasSeq!(
     //          char[], const( char)[], immutable( char)[],
     //         wchar[], const(wchar)[], immutable(wchar)[],
     //         dchar[], const(dchar)[], immutable(dchar)[]);
 
     // Reduced list of test types
-    alias TestTypes = TypeTuple!(char[], const(wchar)[], immutable(dchar)[]);
+    alias TestTypes = AliasSeq!(char[], const(wchar)[], immutable(dchar)[]);
 
     import std.exception;
     assertCTFEable!(
@@ -5610,52 +5697,25 @@ unittest
     });
 }
 
-
-/* ************************************************
- * Version       : v0.3
- * Author        : David L. 'SpottedTiger' Davis
- * Date Created  : 31.May.05 Compiled and Tested with dmd v0.125
- * Date Modified : 01.Jun.05 Modified the function to handle the
- *               :           imaginary and complex float-point
- *               :           datatypes.
- *               :
- * Licence       : Public Domain / Contributed to Digital Mars
- */
-
 /**
- * [in] string s can be formatted in the following ways:
- *
- * Integer Whole Number:
- * (for byte, ubyte, short, ushort, int, uint, long, and ulong)
- * ['+'|'-']digit(s)[U|L|UL]
- *
- * examples: 123, 123UL, 123L, +123U, -123L
- *
- * Floating-Point Number:
- * (for float, double, real, ifloat, idouble, and ireal)
- * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
- *      or [nan|nani|inf|-inf]
- *
- * examples: +123., -123.01, 123.3e-10f, 123.3e-10fi, 123.3e-10L
- *
- * (for cfloat, cdouble, and creal)
- * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][+]
- *         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
- *      or [nan|nani|nan+nani|inf|-inf]
- *
- * examples: nan, -123e-1+456.9e-10Li, +123e+10+456i, 123+456
- *
- * [in] bool bAllowSep
- * False by default, but when set to true it will accept the
- * separator characters $(D ',') and $(D '__') within the string, but these
+ * Takes a string $(D s) and determines if it represents a number. This function
+ * also takes an optional parameter, $(D bAllowSep), which will accept the
+ * separator characters $(D ',') and $(D '__') within the string. But these
  * characters should be stripped from the string before using any
- * of the conversion functions like toInt(), toFloat(), and etc
+ * of the conversion functions like $(D to!int()), $(D to!float()), and etc
  * else an error will occur.
  *
  * Also please note, that no spaces are allowed within the string
  * anywhere whether it's a leading, trailing, or embedded space(s),
  * thus they too must be stripped from the string before using this
  * function, or any of the conversion functions.
+ *
+ * Params:
+ *     s = the string to check
+ *     bAllowSep = accept separator characters or not
+ *
+ * Returns:
+ *     $(D bool)
  */
 
 bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
@@ -5765,6 +5825,50 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
     }
 
     return sawDigits;
+}
+
+/**
+ * Integer Whole Number: (byte, ubyte, short, ushort, int, uint, long, and ulong)
+ * ['+'|'-']digit(s)[U|L|UL]
+ */
+@safe pure unittest
+{
+    assert(isNumeric("123"));
+    assert(isNumeric("123UL"));
+    assert(isNumeric("123L"));
+    assert(isNumeric("+123U"));
+    assert(isNumeric("-123L"));
+}
+
+/**
+ * Floating-Point Number: (float, double, real, ifloat, idouble, and ireal)
+ * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
+ *      or [nan|nani|inf|-inf]
+ */
+@safe pure unittest
+{
+    assert(isNumeric("+123"));
+    assert(isNumeric("-123.01"));
+    assert(isNumeric("123.3e-10f"));
+    assert(isNumeric("123.3e-10fi"));
+    assert(isNumeric("123.3e-10L"));
+
+    assert(isNumeric("nan"));
+    assert(isNumeric("nani"));
+    assert(isNumeric("-inf"));
+}
+
+/**
+ * Floating-Point Number: (cfloat, cdouble, and creal)
+ * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][+]
+ *         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
+ *      or [nan|nani|nan+nani|inf|-inf]
+ */
+@safe pure unittest
+{
+    assert(isNumeric("-123e-1+456.9e-10Li"));
+    assert(isNumeric("+123e+10+456i"));
+    assert(isNumeric("123+456"));
 }
 
 @safe pure unittest
@@ -6290,7 +6394,7 @@ unittest
  */
 
 S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
-        S indent = null, in size_t tabsize = 8) @safe pure if (isSomeString!S)
+        S indent = null, in size_t tabsize = 8) if (isSomeString!S)
 {
     typeof(s.dup) result;
     bool inword;
@@ -6353,6 +6457,18 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
     result ~= '\n';
 
     return result;
+}
+
+///
+@safe pure unittest
+{
+    assert(wrap("a short string", 7) == "a short\nstring\n");
+
+    // wrap will not break inside of a word, but at the next space
+    assert(wrap("a short string", 4) == "a\nshort\nstring\n");
+
+    assert(wrap("a short string", 7, "\t") == "\ta\nshort\nstring\n");
+    assert(wrap("a short string", 7, "\t", "    ") == "\ta\n    short\n    string\n");
 }
 
 @safe pure unittest
@@ -6529,7 +6645,7 @@ S[] outdent(S)(S[] lines) @safe pure if(isSomeString!S)
     assertCTFEable!(
     {
 
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         enum S blank = "";
         assert(blank.outdent() == blank);
@@ -6608,7 +6724,7 @@ auto assumeUTF(T)(T[] arr) pure
     if(staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 {
     import std.utf : validate;
-    alias ToUTFType(U) = TypeTuple!(char, wchar, dchar)[U.sizeof / 2];
+    alias ToUTFType(U) = AliasSeq!(char, wchar, dchar)[U.sizeof / 2];
     auto asUTF = cast(ModifyTypePreservingTQ!(ToUTFType, T)[])arr;
     debug validate(asUTF);
     return asUTF;
@@ -6627,7 +6743,7 @@ auto assumeUTF(T)(T[] arr) pure
 pure unittest
 {
     import std.algorithm : equal;
-    foreach(T; TypeTuple!(char[], wchar[], dchar[]))
+    foreach(T; AliasSeq!(char[], wchar[], dchar[]))
     {
         immutable T jti = "Hello World";
         T jt = jti.dup;

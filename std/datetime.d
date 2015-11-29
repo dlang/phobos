@@ -89,7 +89,8 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
         $(LREF DateTimeException)).
 
     See_Also:
-        <a href="../intro-to-datetime.html">Introduction to std&#46;_datetime </a><br>
+        $(DDLINK intro-to-_datetime, Introduction to std.datetime,
+                 Introduction to std&#46;_datetime)<br>
         $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601)<br>
         $(WEB en.wikipedia.org/wiki/Tz_database,
               Wikipedia entry on TZ Database)<br>
@@ -347,8 +348,8 @@ public:
         assert(norm1 <= norm2, format("%s %s", norm1, norm2));
         assert(abs(norm1 - norm2) <= seconds(2));
 
-        import std.typetuple;
-        foreach(ct; TypeTuple!(ClockType.coarse, ClockType.precise, ClockType.second))
+        import std.meta : AliasSeq;
+        foreach(ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {
             scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currTime!ct;
@@ -451,6 +452,25 @@ public:
                        ts.tv_nsec / 100 +
                        hnsecsToUnixEpoch;
             }
+            else version(Solaris)
+            {
+                static if(clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    import core.sys.solaris.time;
+                    static if(clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME;
+                    else static if(clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                    else static if(clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
+                    else static assert(0, "Previous static if is wrong.");
+                    timespec ts;
+                    if(clock_gettime(clockArg, &ts) != 0)
+                        throw new TimeException("Call to clock_gettime() failed");
+                    return convert!("seconds", "hnsecs")(ts.tv_sec) +
+                           ts.tv_nsec / 100 +
+                           hnsecsToUnixEpoch;
+                }
+            }
             else static assert(0, "Unsupported OS");
         }
         else static assert(0, "Unsupported OS");
@@ -467,8 +487,8 @@ public:
         assert(norm1 <= norm2, format("%s %s", norm1, norm2));
         assert(abs(norm1 - norm2) <= limit);
 
-        import std.typetuple;
-        foreach(ct; TypeTuple!(ClockType.coarse, ClockType.precise, ClockType.second))
+        import std.meta : AliasSeq;
+        foreach(ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {
             scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currStdTime!ct;
@@ -908,15 +928,15 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
-        static assert(__traits(compiles, st == st));
-        static assert(__traits(compiles, st == cst));
-        //static assert(__traits(compiles, st == ist));
-        static assert(__traits(compiles, cst == st));
-        static assert(__traits(compiles, cst == cst));
-        //static assert(__traits(compiles, cst == ist));
-        //static assert(__traits(compiles, ist == st));
-        //static assert(__traits(compiles, ist == cst));
-        //static assert(__traits(compiles, ist == ist));
+        assert(st == st);
+        assert(st == cst);
+        //assert(st == ist);
+        assert(cst == st);
+        assert(cst == cst);
+        //assert(cst == ist);
+        //assert(ist == st);
+        //assert(ist == cst);
+        //assert(ist == ist);
     }
 
     /++
@@ -989,15 +1009,15 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
-        static assert(__traits(compiles, st.opCmp(st)));
-        static assert(__traits(compiles, st.opCmp(cst)));
-        //static assert(__traits(compiles, st.opCmp(ist)));
-        static assert(__traits(compiles, cst.opCmp(st)));
-        static assert(__traits(compiles, cst.opCmp(cst)));
-        //static assert(__traits(compiles, cst.opCmp(ist)));
-        //static assert(__traits(compiles, ist.opCmp(st)));
-        //static assert(__traits(compiles, ist.opCmp(cst)));
-        //static assert(__traits(compiles, ist.opCmp(ist)));
+        assert(st.opCmp(st) == 0);
+        assert(st.opCmp(cst) == 0);
+        //assert(st.opCmp(ist) == 0);
+        assert(cst.opCmp(st) == 0);
+        assert(cst.opCmp(cst) == 0);
+        //assert(cst.opCmp(ist) == 0);
+        //assert(ist.opCmp(st) == 0);
+        //assert(ist.opCmp(cst) == 0);
+        //assert(ist.opCmp(ist) == 0);
     }
 
     /++
@@ -1042,8 +1062,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.year));
-        //static assert(__traits(compiles, ist.year));
+        assert(cst.year == 1999);
+        //assert(ist.year == 1999);
     }
 
     /++
@@ -1166,7 +1186,8 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st.year = 12));
+        st.year = 12;
+        assert(st.year == 12);
         static assert(!__traits(compiles, cst.year = 12));
         //static assert(!__traits(compiles, ist.year = 12));
     }
@@ -1262,7 +1283,8 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st.yearBC = 12));
+        st.yearBC = 12;
+        assert(st.yearBC == 12);
         static assert(!__traits(compiles, cst.yearBC = 12));
         //static assert(!__traits(compiles, ist.yearBC = 12));
     }
@@ -1316,8 +1338,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.month));
-        //static assert(__traits(compiles, ist.month));
+        assert(cst.month == 7);
+        //assert(ist.month == 7);
     }
 
 
@@ -1477,8 +1499,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.day));
-        //static assert(__traits(compiles, ist.day));
+         assert(cst.day == 6);
+        //assert(ist.day == 6);
     }
 
 
@@ -1640,8 +1662,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.hour));
-        //static assert(__traits(compiles, ist.hour));
+        assert(cst.hour == 12);
+        //assert(ist.hour == 12);
     }
 
 
@@ -1765,8 +1787,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.minute));
-        //static assert(__traits(compiles, ist.minute));
+        assert(cst.minute == 30);
+        //assert(ist.minute == 30);
     }
 
 
@@ -1894,8 +1916,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.second));
-        //static assert(__traits(compiles, ist.second));
+        assert(cst.second == 33);
+        //assert(ist.second == 33);
     }
 
 
@@ -2023,8 +2045,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.fracSecs));
-        //static assert(__traits(compiles, ist.fracSecs));
+        assert(cst.fracSecs == Duration.zero);
+        //assert(ist.fracSecs == Duration.zero);
     }
 
 
@@ -2176,8 +2198,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.fracSec));
-        //static assert(__traits(compiles, ist.fracSec));
+        assert(cst.fracSec == FracSec.zero);
+        //assert(ist.fracSec == FracSec.zero);
     }
 
 
@@ -2266,13 +2288,13 @@ public:
         assert(SysTime(0).stdTime == 0);
         assert(SysTime(1).stdTime == 1);
         assert(SysTime(-1).stdTime == -1);
-        assert(SysTime(DateTime(1, 1, 1, 0, 0, 33), hnsecs(502), UTC()).stdTime == 330000502L);
-        assert(SysTime(DateTime(1970, 1, 1, 0, 0, 0), UTC()).stdTime == 621355968000000000L);
+        assert(SysTime(DateTime(1, 1, 1, 0, 0, 33), hnsecs(502), UTC()).stdTime == 330_000_502L);
+        assert(SysTime(DateTime(1970, 1, 1, 0, 0, 0), UTC()).stdTime == 621_355_968_000_000_000L);
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.stdTime));
-        //static assert(__traits(compiles, ist.stdTime));
+        assert(cst.stdTime > 0);
+        //assert(ist.stdTime > 0);
     }
 
 
@@ -2489,8 +2511,8 @@ public:
     unittest
     {
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
-        import std.typetuple : TypeTuple;
-        foreach(units; TypeTuple!("hnsecs", "usecs", "msecs"))
+        import std.meta : AliasSeq;
+        foreach(units; AliasSeq!("hnsecs", "usecs", "msecs"))
             assert(SysTime(DateTime(1970, 1, 1, 0, 0, 0), dur!units(1), UTC()).toUnixTime() == 0);
         assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime() == 1);
         assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_999), UTC()).toUnixTime() == 0);
@@ -3907,7 +3929,7 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st.roll!"years"(4)));
+        st.roll!"years"(4);
         static assert(!__traits(compiles, cst.roll!"years"(4)));
         //static assert(!__traits(compiles, ist.roll!"years"(4)));
     }
@@ -6352,10 +6374,10 @@ public:
         auto duration = dur!"seconds"(12);
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst + duration));
-        //static assert(__traits(compiles, ist + duration));
-        static assert(__traits(compiles, cst - duration));
-        //static assert(__traits(compiles, ist - duration));
+        assert(cst + duration == SysTime(DateTime(1999, 7, 6, 12, 30, 45)));
+        //assert(ist + duration == SysTime(DateTime(1999, 7, 6, 12, 30, 45)));
+        assert(cst - duration == SysTime(DateTime(1999, 7, 6, 12, 30, 21)));
+        //assert(ist - duration == SysTime(DateTime(1999, 7, 6, 12, 30, 21)));
     }
 
 
@@ -6653,17 +6675,17 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st - st));
-        static assert(__traits(compiles, cst - st));
-        //static assert(__traits(compiles, ist - st));
+        assert(st - st == Duration.zero);
+        assert(cst - st == Duration.zero);
+        //assert(ist - st == Duration.zero);
 
-        static assert(__traits(compiles, st - cst));
-        static assert(__traits(compiles, cst - cst));
-        //static assert(__traits(compiles, ist - cst));
+        assert(st - cst == Duration.zero);
+        assert(cst - cst == Duration.zero);
+        //assert(ist - cst == Duration.zero);
 
-        //static assert(__traits(compiles, st - ist));
-        //static assert(__traits(compiles, cst - ist));
-        //static assert(__traits(compiles, ist - ist));
+        //assert(st - ist == Duration.zero);
+        //assert(cst - ist == Duration.zero);
+        //assert(ist - ist == Duration.zero);
     }
 
 
@@ -6714,17 +6736,17 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st.diffMonths(st)));
-        static assert(__traits(compiles, cst.diffMonths(st)));
-        //static assert(__traits(compiles, ist.diffMonths(st)));
+        assert(st.diffMonths(st) == 0);
+        assert(cst.diffMonths(st) == 0);
+        //assert(ist.diffMonths(st) == 0);
 
-        static assert(__traits(compiles, st.diffMonths(cst)));
-        static assert(__traits(compiles, cst.diffMonths(cst)));
-        //static assert(__traits(compiles, ist.diffMonths(cst)));
+        assert(st.diffMonths(cst) == 0);
+        assert(cst.diffMonths(cst) == 0);
+        //assert(ist.diffMonths(cst) == 0);
 
-        //static assert(__traits(compiles, st.diffMonths(ist)));
-        //static assert(__traits(compiles, cst.diffMonths(ist)));
-        //static assert(__traits(compiles, ist.diffMonths(ist)));
+        //assert(st.diffMonths(ist) == 0);
+        //assert(cst.diffMonths(ist) == 0);
+        //assert(ist.diffMonths(ist) == 0);
     }
 
 
@@ -6741,9 +6763,9 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st.isLeapYear));
-        static assert(__traits(compiles, cst.isLeapYear));
-        //static assert(__traits(compiles, ist.isLeapYear));
+        assert(!st.isLeapYear);
+        assert(!cst.isLeapYear);
+        //assert(!ist.isLeapYear);
     }
 
 
@@ -6760,9 +6782,9 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st.dayOfWeek));
-        static assert(__traits(compiles, cst.dayOfWeek));
-        //static assert(__traits(compiles, ist.dayOfWeek));
+        assert(st.dayOfWeek == DayOfWeek.tue);
+        assert(cst.dayOfWeek == DayOfWeek.tue);
+        //assert(ist.dayOfWeek == DayOfWeek.tue);
     }
 
 
@@ -6787,9 +6809,9 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st.dayOfYear));
-        static assert(__traits(compiles, cst.dayOfYear));
-        //static assert(__traits(compiles, ist.dayOfYear));
+        assert(st.dayOfYear == 187);
+        assert(cst.dayOfYear == 187);
+        //assert(ist.dayOfYear == 187);
     }
 
 
@@ -6819,7 +6841,8 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st.dayOfYear = 12));
+        st.dayOfYear = 12;
+        assert(st.dayOfYear == 12);
         static assert(!__traits(compiles, cst.dayOfYear = 12));
         //static assert(!__traits(compiles, ist.dayOfYear = 12));
     }
@@ -7023,8 +7046,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.dayOfGregorianCal));
-        //static assert(__traits(compiles, ist.dayOfGregorianCal));
+        assert(cst.dayOfGregorianCal == 729_941);
+        //assert(ist.dayOfGregorianCal == 729_941);
     }
 
 
@@ -7467,9 +7490,9 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st.isoWeek));
-        static assert(__traits(compiles, cst.isoWeek));
-        //static assert(__traits(compiles, ist.isoWeek));
+        assert(st.isoWeek == 27);
+        assert(cst.isoWeek == 27);
+        //assert(ist.isoWeek == 27);
     }
 
 
@@ -7562,8 +7585,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.endOfMonth));
-        //static assert(__traits(compiles, ist.endOfMonth));
+        assert(cst.endOfMonth == SysTime(DateTime(1999, 7, 31, 23, 59, 59), hnsecs(9_999_999)));
+        //assert(ist.endOfMonth == SysTime(DateTime(1999, 7, 31, 23, 59, 59), hnsecs(9_999_999)));
     }
 
 
@@ -7618,8 +7641,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.daysInMonth));
-        //static assert(__traits(compiles, ist.daysInMonth));
+        assert(cst.daysInMonth == 31);
+        //assert(ist.daysInMonth == 31);
     }
 
 
@@ -7651,8 +7674,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.isAD));
-        //static assert(__traits(compiles, ist.isAD));
+        assert(cst.isAD);
+        //assert(ist.isAD);
     }
 
 
@@ -7698,8 +7721,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.julianDay));
-        //static assert(__traits(compiles, ist.julianDay));
+        assert(cst.julianDay == 2_451_366);
+        //assert(ist.julianDay == 2_451_366);
     }
 
 
@@ -7722,8 +7745,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cst.modJulianDay));
-        //static assert(__traits(compiles, ist.modJulianDay));
+        assert(cst.modJulianDay == 51_365);
+        //assert(ist.modJulianDay == 51_365);
     }
 
 
@@ -7756,8 +7779,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cast(Date)cst));
-        //static assert(__traits(compiles, cast(Date)ist));
+        assert(cast(Date)cst != Date.init);
+        //assert(cast(Date)ist != Date.init);
     }
 
 
@@ -7815,8 +7838,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cast(DateTime)cst));
-        //static assert(__traits(compiles, cast(DateTime)ist));
+        assert(cast(DateTime)cst != DateTime.init);
+        //assert(cast(DateTime)ist != DateTime.init);
     }
 
 
@@ -7864,8 +7887,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cast(TimeOfDay)cst));
-        //static assert(__traits(compiles, cast(TimeOfDay)ist));
+        assert(cast(TimeOfDay)cst != TimeOfDay.init);
+        //assert(cast(TimeOfDay)ist != TimeOfDay.init);
     }
 
 
@@ -8005,8 +8028,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cast(TimeOfDay)cst));
-        //static assert(__traits(compiles, cast(TimeOfDay)ist));
+        assert(cast(TimeOfDay)cst != TimeOfDay.init);
+        //assert(cast(TimeOfDay)ist != TimeOfDay.init);
     }
 
 
@@ -8141,8 +8164,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cast(TimeOfDay)cst));
-        //static assert(__traits(compiles, cast(TimeOfDay)ist));
+        assert(cast(TimeOfDay)cst != TimeOfDay.init);
+        //assert(cast(TimeOfDay)ist != TimeOfDay.init);
     }
 
     /++
@@ -8276,8 +8299,8 @@ public:
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, cast(TimeOfDay)cst));
-        //static assert(__traits(compiles, cast(TimeOfDay)ist));
+        assert(cast(TimeOfDay)cst != TimeOfDay.init);
+        //assert(cast(TimeOfDay)ist != TimeOfDay.init);
     }
 
 
@@ -8294,9 +8317,9 @@ public:
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        static assert(__traits(compiles, st.toString()));
-        static assert(__traits(compiles, cst.toString()));
-        //static assert(__traits(compiles, ist.toString()));
+        assert(st.toString());
+        assert(cst.toString());
+        //assert(ist.toString());
     }
 
 
@@ -9384,15 +9407,15 @@ public:
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date.opCmp(date)));
-        static assert(__traits(compiles, date.opCmp(cdate)));
-        static assert(__traits(compiles, date.opCmp(idate)));
-        static assert(__traits(compiles, cdate.opCmp(date)));
-        static assert(__traits(compiles, cdate.opCmp(cdate)));
-        static assert(__traits(compiles, cdate.opCmp(idate)));
-        static assert(__traits(compiles, idate.opCmp(date)));
-        static assert(__traits(compiles, idate.opCmp(cdate)));
-        static assert(__traits(compiles, idate.opCmp(idate)));
+        assert(date.opCmp(date) == 0);
+        assert(date.opCmp(cdate) == 0);
+        assert(date.opCmp(idate) == 0);
+        assert(cdate.opCmp(date) == 0);
+        assert(cdate.opCmp(cdate) == 0);
+        assert(cdate.opCmp(idate) == 0);
+        assert(idate.opCmp(date) == 0);
+        assert(idate.opCmp(cdate) == 0);
+        assert(idate.opCmp(idate) == 0);
     }
 
 
@@ -9421,8 +9444,8 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.year == 1999));
-        static assert(__traits(compiles, idate.year == 1999));
+        assert(cdate.year == 1999);
+        assert(idate.year == 1999);
     }
 
     /++
@@ -9506,9 +9529,9 @@ public:
         auto date = Date(0, 7, 6);
         const cdate = Date(0, 7, 6);
         immutable idate = Date(0, 7, 6);
-        static assert(__traits(compiles, date.yearBC));
-        static assert(__traits(compiles, cdate.yearBC));
-        static assert(__traits(compiles, idate.yearBC));
+        assert(date.yearBC == 1);
+        assert(cdate.yearBC == 1);
+        assert(idate.yearBC == 1);
     }
 
 
@@ -9547,7 +9570,8 @@ public:
         auto date = Date(0, 7, 6);
         const cdate = Date(0, 7, 6);
         immutable idate = Date(0, 7, 6);
-        static assert(__traits(compiles, date.yearBC = 7));
+        date.yearBC = 7;
+        assert(date.yearBC == 7);
         static assert(!__traits(compiles, cdate.yearBC = 7));
         static assert(!__traits(compiles, idate.yearBC = 7));
     }
@@ -9577,8 +9601,8 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.month == 7));
-        static assert(__traits(compiles, idate.month == 7));
+        assert(cdate.month == 7);
+        assert(idate.month == 7);
     }
 
     /++
@@ -9657,8 +9681,8 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.day == 6));
-        static assert(__traits(compiles, idate.day == 6));
+        assert(cdate.day == 6);
+        assert(idate.day == 6);
     }
 
     /++
@@ -11515,13 +11539,13 @@ public:
         auto duration = dur!"days"(12);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date + duration));
-        static assert(__traits(compiles, cdate + duration));
-        static assert(__traits(compiles, idate + duration));
+        assert(date + duration == Date(1999, 7, 18));
+        assert(cdate + duration == Date(1999, 7, 18));
+        assert(idate + duration == Date(1999, 7, 18));
 
-        static assert(__traits(compiles, date - duration));
-        static assert(__traits(compiles, cdate - duration));
-        static assert(__traits(compiles, idate - duration));
+        assert(date - duration == Date(1999, 6, 24));
+        assert(cdate - duration == Date(1999, 6, 24));
+        assert(idate - duration == Date(1999, 6, 24));
     }
 
 
@@ -11602,11 +11626,11 @@ public:
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date += duration));
+        date += duration;
         static assert(!__traits(compiles, cdate += duration));
         static assert(!__traits(compiles, idate += duration));
 
-        static assert(__traits(compiles, date -= duration));
+        date -= duration;
         static assert(!__traits(compiles, cdate -= duration));
         static assert(!__traits(compiles, idate -= duration));
     }
@@ -11640,17 +11664,17 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date - date));
-        static assert(__traits(compiles, cdate - date));
-        static assert(__traits(compiles, idate - date));
+        assert(date - date == Duration.zero);
+        assert(cdate - date == Duration.zero);
+        assert(idate - date == Duration.zero);
 
-        static assert(__traits(compiles, date - cdate));
-        static assert(__traits(compiles, cdate - cdate));
-        static assert(__traits(compiles, idate - cdate));
+        assert(date - cdate == Duration.zero);
+        assert(cdate - cdate == Duration.zero);
+        assert(idate - cdate == Duration.zero);
 
-        static assert(__traits(compiles, date - idate));
-        static assert(__traits(compiles, cdate - idate));
-        static assert(__traits(compiles, idate - idate));
+        assert(date - idate == Duration.zero);
+        assert(cdate - idate == Duration.zero);
+        assert(idate - idate == Duration.zero);
     }
 
 
@@ -11896,17 +11920,17 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date.diffMonths(date)));
-        static assert(__traits(compiles, cdate.diffMonths(date)));
-        static assert(__traits(compiles, idate.diffMonths(date)));
+        assert(date.diffMonths(date) == 0);
+        assert(cdate.diffMonths(date) == 0);
+        assert(idate.diffMonths(date) == 0);
 
-        static assert(__traits(compiles, date.diffMonths(cdate)));
-        static assert(__traits(compiles, cdate.diffMonths(cdate)));
-        static assert(__traits(compiles, idate.diffMonths(cdate)));
+        assert(date.diffMonths(cdate) == 0);
+        assert(cdate.diffMonths(cdate) == 0);
+        assert(idate.diffMonths(cdate) == 0);
 
-        static assert(__traits(compiles, date.diffMonths(idate)));
-        static assert(__traits(compiles, cdate.diffMonths(idate)));
-        static assert(__traits(compiles, idate.diffMonths(idate)));
+        assert(date.diffMonths(idate) == 0);
+        assert(cdate.diffMonths(idate) == 0);
+        assert(idate.diffMonths(idate) == 0);
     }
 
 
@@ -11941,9 +11965,9 @@ public:
     {
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.dayOfWeek == DayOfWeek.sun));
+        assert(cdate.dayOfWeek == DayOfWeek.tue);
         static assert(!__traits(compiles, cdate.dayOfWeek = DayOfWeek.sun));
-        static assert(__traits(compiles, idate.dayOfWeek == DayOfWeek.sun));
+        assert(idate.dayOfWeek == DayOfWeek.tue);
         static assert(!__traits(compiles, idate.dayOfWeek = DayOfWeek.sun));
     }
 
@@ -11997,8 +12021,8 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.dayOfYear == 187));
-        static assert(__traits(compiles, idate.dayOfYear == 187));
+        assert(cdate.dayOfYear == 187);
+        assert(idate.dayOfYear == 187);
     }
 
     /++
@@ -12140,9 +12164,9 @@ public:
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date.dayOfGregorianCal));
-        static assert(__traits(compiles, cdate.dayOfGregorianCal));
-        static assert(__traits(compiles, idate.dayOfGregorianCal));
+        assert(date.dayOfGregorianCal == 729_941);
+        assert(cdate.dayOfGregorianCal == 729_941);
+        assert(idate.dayOfGregorianCal == 729_941);
     }
 
     /++
@@ -12190,7 +12214,8 @@ public:
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date.dayOfGregorianCal = 187));
+        date.dayOfGregorianCal = 187;
+        assert(date.dayOfGregorianCal == 187);
         static assert(!__traits(compiles, cdate.dayOfGregorianCal = 187));
         static assert(!__traits(compiles, idate.dayOfGregorianCal = 187));
     }
@@ -12291,9 +12316,9 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.isoWeek == 3));
+        assert(cdate.isoWeek == 27);
         static assert(!__traits(compiles, cdate.isoWeek = 3));
-        static assert(__traits(compiles, idate.isoWeek == 3));
+        assert(idate.isoWeek == 27);
         static assert(!__traits(compiles, idate.isoWeek = 3));
     }
 
@@ -12440,8 +12465,8 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.isAD));
-        static assert(__traits(compiles, idate.isAD));
+        assert(cdate.isAD);
+        assert(idate.isAD);
     }
 
 
@@ -12467,8 +12492,8 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.julianDay));
-        static assert(__traits(compiles, idate.julianDay));
+        assert(cdate.julianDay == 2_451_366);
+        assert(idate.julianDay == 2_451_366);
     }
 
 
@@ -12488,8 +12513,8 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.modJulianDay));
-        static assert(__traits(compiles, idate.modJulianDay));
+        assert(cdate.modJulianDay == 51_365);
+        assert(idate.modJulianDay == 51_365);
     }
 
 
@@ -12545,8 +12570,8 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.toISOString()));
-        static assert(__traits(compiles, idate.toISOString()));
+        assert(cdate.toISOString() == "19990706");
+        assert(idate.toISOString() == "19990706");
     }
 
     /++
@@ -12601,8 +12626,8 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.toISOExtString()));
-        static assert(__traits(compiles, idate.toISOExtString()));
+        assert(cdate.toISOExtString() == "1999-07-06");
+        assert(idate.toISOExtString() == "1999-07-06");
     }
 
     /++
@@ -12657,8 +12682,8 @@ public:
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.toSimpleString()));
-        static assert(__traits(compiles, idate.toSimpleString()));
+        assert(cdate.toSimpleString() == "1999-Jul-06");
+        assert(idate.toSimpleString() == "1999-Jul-06");
     }
 
 
@@ -12675,9 +12700,9 @@ public:
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date.toString()));
-        static assert(__traits(compiles, cdate.toString()));
-        static assert(__traits(compiles, idate.toString()));
+        assert(date.toString());
+        assert(cdate.toString());
+        assert(idate.toString());
     }
 
 
@@ -13433,8 +13458,8 @@ public:
 
         const ctod = TimeOfDay(12, 30, 33);
         immutable itod = TimeOfDay(12, 30, 33);
-        static assert(__traits(compiles, ctod.opCmp(itod)));
-        static assert(__traits(compiles, itod.opCmp(ctod)));
+        assert(ctod.opCmp(itod) == 0);
+        assert(itod.opCmp(ctod) == 0);
     }
 
 
@@ -13453,8 +13478,8 @@ public:
 
         const ctod = TimeOfDay(12, 0, 0);
         immutable itod = TimeOfDay(12, 0, 0);
-        static assert(__traits(compiles, ctod.hour == 12));
-        static assert(__traits(compiles, itod.hour == 12));
+        assert(ctod.hour == 12);
+        assert(itod.hour == 12);
     }
 
 
@@ -13504,8 +13529,8 @@ public:
 
         const ctod = TimeOfDay(0, 30, 0);
         immutable itod = TimeOfDay(0, 30, 0);
-        static assert(__traits(compiles, ctod.minute == 30));
-        static assert(__traits(compiles, itod.minute == 30));
+        assert(ctod.minute == 30);
+        assert(itod.minute == 30);
     }
 
 
@@ -13555,8 +13580,8 @@ public:
 
         const ctod = TimeOfDay(0, 0, 33);
         immutable itod = TimeOfDay(0, 0, 33);
-        static assert(__traits(compiles, ctod.second == 33));
-        static assert(__traits(compiles, itod.second == 33));
+        assert(ctod.second == 33);
+        assert(itod.second == 33);
     }
 
 
@@ -13916,15 +13941,15 @@ public:
         }
 
         auto duration = dur!"hours"(11);
-        const ctod = TimeOfDay(12, 33, 30);
-        immutable itod = TimeOfDay(12, 33, 30);
-        static assert(__traits(compiles, tod + duration));
-        static assert(__traits(compiles, ctod + duration));
-        static assert(__traits(compiles, itod + duration));
+        const ctod = TimeOfDay(12, 30, 33);
+        immutable itod = TimeOfDay(12, 30, 33);
+        assert(tod + duration == TimeOfDay(23, 30, 33));
+        assert(ctod + duration == TimeOfDay(23, 30, 33));
+        assert(itod + duration == TimeOfDay(23, 30, 33));
 
-        static assert(__traits(compiles, tod - duration));
-        static assert(__traits(compiles, ctod - duration));
-        static assert(__traits(compiles, itod - duration));
+        assert(tod - duration == TimeOfDay(1, 30, 33));
+        assert(ctod - duration == TimeOfDay(1, 30, 33));
+        assert(itod - duration == TimeOfDay(1, 30, 33));
     }
 
 
@@ -14039,17 +14064,17 @@ public:
 
         const ctod = TimeOfDay(12, 30, 33);
         immutable itod = TimeOfDay(12, 30, 33);
-        static assert(__traits(compiles, tod - tod));
-        static assert(__traits(compiles, ctod - tod));
-        static assert(__traits(compiles, itod - tod));
+        assert(tod - tod == Duration.zero);
+        assert(ctod - tod == Duration.zero);
+        assert(itod - tod == Duration.zero);
 
-        static assert(__traits(compiles, tod - ctod));
-        static assert(__traits(compiles, ctod - ctod));
-        static assert(__traits(compiles, itod - ctod));
+        assert(tod - ctod == Duration.zero);
+        assert(ctod - ctod == Duration.zero);
+        assert(itod - ctod == Duration.zero);
 
-        static assert(__traits(compiles, tod - itod));
-        static assert(__traits(compiles, ctod - itod));
-        static assert(__traits(compiles, itod - itod));
+        assert(tod - itod == Duration.zero);
+        assert(ctod - itod == Duration.zero);
+        assert(itod - itod == Duration.zero);
     }
 
 
@@ -14077,9 +14102,9 @@ public:
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
         immutable itod = TimeOfDay(12, 30, 33);
-        static assert(__traits(compiles, tod.toISOString()));
-        static assert(__traits(compiles, ctod.toISOString()));
-        static assert(__traits(compiles, itod.toISOString()));
+        assert(tod.toISOString() == "123033");
+        assert(ctod.toISOString() == "123033");
+        assert(itod.toISOString() == "123033");
     }
 
 
@@ -14107,9 +14132,9 @@ public:
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
         immutable itod = TimeOfDay(12, 30, 33);
-        static assert(__traits(compiles, tod.toISOExtString()));
-        static assert(__traits(compiles, ctod.toISOExtString()));
-        static assert(__traits(compiles, itod.toISOExtString()));
+        assert(tod.toISOExtString() == "12:30:33");
+        assert(ctod.toISOExtString() == "12:30:33");
+        assert(itod.toISOExtString() == "12:30:33");
     }
 
 
@@ -14126,9 +14151,9 @@ public:
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
         immutable itod = TimeOfDay(12, 30, 33);
-        static assert(__traits(compiles, tod.toString()));
-        static assert(__traits(compiles, ctod.toString()));
-        static assert(__traits(compiles, itod.toString()));
+        assert(tod.toString());
+        assert(ctod.toString());
+        assert(itod.toString());
     }
 
 
@@ -14811,15 +14836,15 @@ public:
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 30));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 30));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 30));
-        static assert(__traits(compiles, dt.opCmp(dt)));
-        static assert(__traits(compiles, dt.opCmp(cdt)));
-        static assert(__traits(compiles, dt.opCmp(idt)));
-        static assert(__traits(compiles, cdt.opCmp(dt)));
-        static assert(__traits(compiles, cdt.opCmp(cdt)));
-        static assert(__traits(compiles, cdt.opCmp(idt)));
-        static assert(__traits(compiles, idt.opCmp(dt)));
-        static assert(__traits(compiles, idt.opCmp(cdt)));
-        static assert(__traits(compiles, idt.opCmp(idt)));
+        assert(dt.opCmp(dt) == 0);
+        assert(dt.opCmp(cdt) == 0);
+        assert(dt.opCmp(idt) == 0);
+        assert(cdt.opCmp(dt) == 0);
+        assert(cdt.opCmp(cdt) == 0);
+        assert(cdt.opCmp(idt) == 0);
+        assert(idt.opCmp(dt) == 0);
+        assert(idt.opCmp(cdt) == 0);
+        assert(idt.opCmp(idt) == 0);
     }
 
 
@@ -14845,8 +14870,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6);
         immutable idt = DateTime(1999, 7, 6);
-        static assert(__traits(compiles, cdt.date == Date(2010, 1, 1)));
-        static assert(__traits(compiles, idt.date == Date(2010, 1, 1)));
+        assert(cdt.date == Date(1999, 7, 6));
+        assert(idt.date == Date(1999, 7, 6));
     }
 
 
@@ -14897,8 +14922,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, cdt.timeOfDay == TimeOfDay(12, 30, 33)));
-        static assert(__traits(compiles, idt.timeOfDay == TimeOfDay(12, 30, 33)));
+        assert(cdt.timeOfDay == TimeOfDay(12, 30, 33));
+        assert(idt.timeOfDay == TimeOfDay(12, 30, 33));
     }
 
 
@@ -14945,8 +14970,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, idt.year));
-        static assert(__traits(compiles, idt.year));
+        assert(idt.year == 1999);
+        assert(idt.year == 1999);
     }
 
 
@@ -15019,7 +15044,8 @@ public:
         auto dt = DateTime(1999, 7, 6, 12, 30, 33);
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, dt.yearBC = 12));
+        dt.yearBC = 12;
+        assert(dt.yearBC == 12);
         static assert(!__traits(compiles, cdt.yearBC = 12));
         static assert(!__traits(compiles, idt.yearBC = 12));
     }
@@ -15057,7 +15083,8 @@ public:
         auto dt = DateTime(1999, 7, 6, 12, 30, 33);
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, dt.yearBC = 12));
+        dt.yearBC = 12;
+        assert(dt.yearBC == 12);
         static assert(!__traits(compiles, cdt.yearBC = 12));
         static assert(!__traits(compiles, idt.yearBC = 12));
     }
@@ -15087,8 +15114,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, cdt.month));
-        static assert(__traits(compiles, idt.month));
+        assert(cdt.month == 7);
+        assert(idt.month == 7);
     }
 
 
@@ -15165,8 +15192,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, cdt.day));
-        static assert(__traits(compiles, idt.day));
+        assert(cdt.day == 6);
+        assert(idt.day == 6);
     }
 
 
@@ -15284,8 +15311,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, cdt.hour));
-        static assert(__traits(compiles, idt.hour));
+        assert(cdt.hour == 12);
+        assert(idt.hour == 12);
     }
 
 
@@ -15334,8 +15361,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, cdt.minute));
-        static assert(__traits(compiles, idt.minute));
+        assert(cdt.minute == 30);
+        assert(idt.minute == 30);
     }
 
 
@@ -15384,8 +15411,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, cdt.second));
-        static assert(__traits(compiles, idt.second));
+        assert(cdt.second == 33);
+        assert(idt.second == 33);
     }
 
 
@@ -16203,10 +16230,10 @@ public:
         auto duration = dur!"seconds"(12);
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, cdt + duration));
-        static assert(__traits(compiles, idt + duration));
-        static assert(__traits(compiles, cdt - duration));
-        static assert(__traits(compiles, idt - duration));
+        assert(cdt + duration == DateTime(1999, 7, 6, 12, 30, 45));
+        assert(idt + duration == DateTime(1999, 7, 6, 12, 30, 45));
+        assert(cdt - duration == DateTime(1999, 7, 6, 12, 30, 21));
+        assert(idt - duration == DateTime(1999, 7, 6, 12, 30, 21));
     }
 
 
@@ -16365,17 +16392,17 @@ public:
 
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, dt - dt));
-        static assert(__traits(compiles, cdt - dt));
-        static assert(__traits(compiles, idt - dt));
+        assert(dt - dt == Duration.zero);
+        assert(cdt - dt == Duration.zero);
+        assert(idt - dt == Duration.zero);
 
-        static assert(__traits(compiles, dt - cdt));
-        static assert(__traits(compiles, cdt - cdt));
-        static assert(__traits(compiles, idt - cdt));
+        assert(dt - cdt == Duration.zero);
+        assert(cdt - cdt == Duration.zero);
+        assert(idt - cdt == Duration.zero);
 
-        static assert(__traits(compiles, dt - idt));
-        static assert(__traits(compiles, cdt - idt));
-        static assert(__traits(compiles, idt - idt));
+        assert(dt - idt == Duration.zero);
+        assert(cdt - idt == Duration.zero);
+        assert(idt - idt == Duration.zero);
     }
 
 
@@ -16426,17 +16453,17 @@ public:
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, dt.diffMonths(dt)));
-        static assert(__traits(compiles, cdt.diffMonths(dt)));
-        static assert(__traits(compiles, idt.diffMonths(dt)));
+        assert(dt.diffMonths(dt) == 0);
+        assert(cdt.diffMonths(dt) == 0);
+        assert(idt.diffMonths(dt) == 0);
 
-        static assert(__traits(compiles, dt.diffMonths(cdt)));
-        static assert(__traits(compiles, cdt.diffMonths(cdt)));
-        static assert(__traits(compiles, idt.diffMonths(cdt)));
+        assert(dt.diffMonths(cdt) == 0);
+        assert(cdt.diffMonths(cdt) == 0);
+        assert(idt.diffMonths(cdt) == 0);
 
-        static assert(__traits(compiles, dt.diffMonths(idt)));
-        static assert(__traits(compiles, cdt.diffMonths(idt)));
-        static assert(__traits(compiles, idt.diffMonths(idt)));
+        assert(dt.diffMonths(idt) == 0);
+        assert(cdt.diffMonths(idt) == 0);
+        assert(idt.diffMonths(idt) == 0);
     }
 
 
@@ -16453,9 +16480,9 @@ public:
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, dt.isLeapYear));
-        static assert(__traits(compiles, cdt.isLeapYear));
-        static assert(__traits(compiles, idt.isLeapYear));
+        assert(!dt.isLeapYear);
+        assert(!cdt.isLeapYear);
+        assert(!idt.isLeapYear);
     }
 
 
@@ -16472,9 +16499,9 @@ public:
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, dt.dayOfWeek));
-        static assert(__traits(compiles, cdt.dayOfWeek));
-        static assert(__traits(compiles, idt.dayOfWeek));
+        assert(dt.dayOfWeek == DayOfWeek.tue);
+        assert(cdt.dayOfWeek == DayOfWeek.tue);
+        assert(idt.dayOfWeek == DayOfWeek.tue);
     }
 
 
@@ -16499,9 +16526,9 @@ public:
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, dt.dayOfYear));
-        static assert(__traits(compiles, cdt.dayOfYear));
-        static assert(__traits(compiles, idt.dayOfYear));
+        assert(dt.dayOfYear == 187);
+        assert(cdt.dayOfYear == 187);
+        assert(idt.dayOfYear == 187);
     }
 
 
@@ -16522,7 +16549,8 @@ public:
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, dt.dayOfYear = 12));
+        dt.dayOfYear = 12;
+        assert(dt.dayOfYear == 12);
         static assert(!__traits(compiles, cdt.dayOfYear = 12));
         static assert(!__traits(compiles, idt.dayOfYear = 12));
     }
@@ -16555,8 +16583,8 @@ public:
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, cdt.dayOfGregorianCal));
-        static assert(__traits(compiles, idt.dayOfGregorianCal));
+        assert(cdt.dayOfGregorianCal == 729_941);
+        assert(idt.dayOfGregorianCal == 729_941);
     }
 
 
@@ -16628,9 +16656,9 @@ public:
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, dt.isoWeek));
-        static assert(__traits(compiles, cdt.isoWeek));
-        static assert(__traits(compiles, idt.isoWeek));
+        assert(dt.isoWeek == 27);
+        assert(cdt.isoWeek == 27);
+        assert(idt.isoWeek == 27);
     }
 
 
@@ -16696,8 +16724,8 @@ public:
 
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, cdt.endOfMonth));
-        static assert(__traits(compiles, idt.endOfMonth));
+        assert(cdt.endOfMonth == DateTime(1999, 7, 31, 23, 59, 59));
+        assert(idt.endOfMonth == DateTime(1999, 7, 31, 23, 59, 59));
     }
 
 
@@ -16722,8 +16750,8 @@ public:
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, cdt.daysInMonth));
-        static assert(__traits(compiles, idt.daysInMonth));
+        assert(cdt.daysInMonth == 31);
+        assert(idt.daysInMonth == 31);
     }
 
 
@@ -16748,8 +16776,8 @@ public:
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, cdt.isAD));
-        static assert(__traits(compiles, idt.isAD));
+        assert(cdt.isAD);
+        assert(idt.isAD);
     }
 
 
@@ -16796,8 +16824,8 @@ public:
 
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, cdt.julianDay));
-        static assert(__traits(compiles, idt.julianDay));
+        assert(cdt.julianDay == 2_451_366);
+        assert(idt.julianDay == 2_451_366);
     }
 
 
@@ -16820,8 +16848,8 @@ public:
 
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, cdt.modJulianDay));
-        static assert(__traits(compiles, idt.modJulianDay));
+        assert(cdt.modJulianDay == 51_365);
+        assert(idt.modJulianDay == 51_365);
     }
 
 
@@ -16872,8 +16900,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, cdt.toISOString()));
-        static assert(__traits(compiles, idt.toISOString()));
+        assert(cdt.toISOString() == "19990706T123033");
+        assert(idt.toISOString() == "19990706T123033");
     }
 
 
@@ -16925,8 +16953,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, cdt.toISOExtString()));
-        static assert(__traits(compiles, idt.toISOExtString()));
+        assert(cdt.toISOExtString() == "1999-07-06T12:30:33");
+        assert(idt.toISOExtString() == "1999-07-06T12:30:33");
     }
 
     /++
@@ -16977,8 +17005,8 @@ public:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(__traits(compiles, cdt.toSimpleString()));
-        static assert(__traits(compiles, idt.toSimpleString()));
+        assert(cdt.toSimpleString() == "1999-Jul-06 12:30:33");
+        assert(idt.toSimpleString() == "1999-Jul-06 12:30:33");
     }
 
 
@@ -16995,9 +17023,9 @@ public:
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-        static assert(__traits(compiles, dt.toString()));
-        static assert(__traits(compiles, cdt.toString()));
-        static assert(__traits(compiles, idt.toString()));
+        assert(dt.toString());
+        assert(cdt.toString());
+        assert(idt.toString());
     }
 
 
@@ -19068,8 +19096,8 @@ unittest
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, cInterval.begin));
-    static assert(__traits(compiles, iInterval.begin));
+    assert(cInterval.begin == Date(2010, 7, 4));
+    assert(iInterval.begin == Date(2010, 7, 4));
 
     //Verify Examples.
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin == Date(1996, 1, 2));
@@ -19084,8 +19112,8 @@ unittest
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, cInterval.end));
-    static assert(__traits(compiles, iInterval.end));
+    assert(cInterval.end == Date(2012, 1, 7));
+    assert(iInterval.end == Date(2012, 1, 7));
 
     //Verify Examples.
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end == Date(2012, 3, 1));
@@ -19102,8 +19130,8 @@ unittest
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, cInterval.length));
-    static assert(__traits(compiles, iInterval.length));
+    assert(cInterval.length != Duration.zero);
+    assert(iInterval.length != Duration.zero);
 
     //Verify Examples.
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length == dur!"days"(5903));
@@ -19120,8 +19148,8 @@ unittest
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, cInterval.empty));
-    static assert(__traits(compiles, iInterval.empty));
+    assert(!cInterval.empty);
+    assert(!iInterval.empty);
 
     //Verify Examples.
     assert(Interval!Date(Date(1996, 1, 2), Date(1996, 1, 2)).empty);
@@ -19148,9 +19176,9 @@ unittest
     const cdate = Date(2010, 7, 6);
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.contains(cdate)));
-    static assert(__traits(compiles, cInterval.contains(cdate)));
-    static assert(__traits(compiles, iInterval.contains(cdate)));
+    assert(interval.contains(cdate));
+    assert(cInterval.contains(cdate));
+    assert(iInterval.contains(cdate));
 
     //Verify Examples.
     assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Date(1994, 12, 24)));
@@ -19216,33 +19244,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.contains(interval)));
-    static assert(__traits(compiles, interval.contains(cInterval)));
-    static assert(__traits(compiles, interval.contains(iInterval)));
-    static assert(__traits(compiles, interval.contains(posInfInterval)));
-    static assert(__traits(compiles, interval.contains(cPosInfInterval)));
-    static assert(__traits(compiles, interval.contains(iPosInfInterval)));
-    static assert(__traits(compiles, interval.contains(negInfInterval)));
-    static assert(__traits(compiles, interval.contains(cNegInfInterval)));
-    static assert(__traits(compiles, interval.contains(iNegInfInterval)));
-    static assert(__traits(compiles, cInterval.contains(interval)));
-    static assert(__traits(compiles, cInterval.contains(cInterval)));
-    static assert(__traits(compiles, cInterval.contains(iInterval)));
-    static assert(__traits(compiles, cInterval.contains(posInfInterval)));
-    static assert(__traits(compiles, cInterval.contains(cPosInfInterval)));
-    static assert(__traits(compiles, cInterval.contains(iPosInfInterval)));
-    static assert(__traits(compiles, cInterval.contains(negInfInterval)));
-    static assert(__traits(compiles, cInterval.contains(cNegInfInterval)));
-    static assert(__traits(compiles, cInterval.contains(iNegInfInterval)));
-    static assert(__traits(compiles, iInterval.contains(interval)));
-    static assert(__traits(compiles, iInterval.contains(cInterval)));
-    static assert(__traits(compiles, iInterval.contains(iInterval)));
-    static assert(__traits(compiles, iInterval.contains(posInfInterval)));
-    static assert(__traits(compiles, iInterval.contains(cPosInfInterval)));
-    static assert(__traits(compiles, iInterval.contains(iPosInfInterval)));
-    static assert(__traits(compiles, iInterval.contains(negInfInterval)));
-    static assert(__traits(compiles, iInterval.contains(cNegInfInterval)));
-    static assert(__traits(compiles, iInterval.contains(iNegInfInterval)));
+    assert(interval.contains(interval));
+    assert(interval.contains(cInterval));
+    assert(interval.contains(iInterval));
+    assert(!interval.contains(posInfInterval));
+    assert(!interval.contains(cPosInfInterval));
+    assert(!interval.contains(iPosInfInterval));
+    assert(!interval.contains(negInfInterval));
+    assert(!interval.contains(cNegInfInterval));
+    assert(!interval.contains(iNegInfInterval));
+    assert(cInterval.contains(interval));
+    assert(cInterval.contains(cInterval));
+    assert(cInterval.contains(iInterval));
+    assert(!cInterval.contains(posInfInterval));
+    assert(!cInterval.contains(cPosInfInterval));
+    assert(!cInterval.contains(iPosInfInterval));
+    assert(!cInterval.contains(negInfInterval));
+    assert(!cInterval.contains(cNegInfInterval));
+    assert(!cInterval.contains(iNegInfInterval));
+    assert(iInterval.contains(interval));
+    assert(iInterval.contains(cInterval));
+    assert(iInterval.contains(iInterval));
+    assert(!iInterval.contains(posInfInterval));
+    assert(!iInterval.contains(cPosInfInterval));
+    assert(!iInterval.contains(iPosInfInterval));
+    assert(!iInterval.contains(negInfInterval));
+    assert(!iInterval.contains(cNegInfInterval));
+    assert(!iInterval.contains(iNegInfInterval));
 
     //Verify Examples.
     assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -19274,9 +19302,9 @@ unittest
     const cdate = Date(2010, 7, 6);
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.isBefore(cdate)));
-    static assert(__traits(compiles, cInterval.isBefore(cdate)));
-    static assert(__traits(compiles, iInterval.isBefore(cdate)));
+    assert(!interval.isBefore(cdate));
+    assert(!cInterval.isBefore(cdate));
+    assert(!iInterval.isBefore(cdate));
 
     //Verify Examples.
     assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Date(1994, 12, 24)));
@@ -19342,33 +19370,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.isBefore(interval)));
-    static assert(__traits(compiles, interval.isBefore(cInterval)));
-    static assert(__traits(compiles, interval.isBefore(iInterval)));
-    static assert(__traits(compiles, interval.isBefore(posInfInterval)));
-    static assert(__traits(compiles, interval.isBefore(cPosInfInterval)));
-    static assert(__traits(compiles, interval.isBefore(iPosInfInterval)));
-    static assert(__traits(compiles, interval.isBefore(negInfInterval)));
-    static assert(__traits(compiles, interval.isBefore(cNegInfInterval)));
-    static assert(__traits(compiles, interval.isBefore(iNegInfInterval)));
-    static assert(__traits(compiles, cInterval.isBefore(interval)));
-    static assert(__traits(compiles, cInterval.isBefore(cInterval)));
-    static assert(__traits(compiles, cInterval.isBefore(iInterval)));
-    static assert(__traits(compiles, cInterval.isBefore(posInfInterval)));
-    static assert(__traits(compiles, cInterval.isBefore(cPosInfInterval)));
-    static assert(__traits(compiles, cInterval.isBefore(iPosInfInterval)));
-    static assert(__traits(compiles, cInterval.isBefore(negInfInterval)));
-    static assert(__traits(compiles, cInterval.isBefore(cNegInfInterval)));
-    static assert(__traits(compiles, cInterval.isBefore(iNegInfInterval)));
-    static assert(__traits(compiles, iInterval.isBefore(interval)));
-    static assert(__traits(compiles, iInterval.isBefore(cInterval)));
-    static assert(__traits(compiles, iInterval.isBefore(iInterval)));
-    static assert(__traits(compiles, iInterval.isBefore(posInfInterval)));
-    static assert(__traits(compiles, iInterval.isBefore(cPosInfInterval)));
-    static assert(__traits(compiles, iInterval.isBefore(iPosInfInterval)));
-    static assert(__traits(compiles, iInterval.isBefore(negInfInterval)));
-    static assert(__traits(compiles, iInterval.isBefore(cNegInfInterval)));
-    static assert(__traits(compiles, iInterval.isBefore(iNegInfInterval)));
+    assert(!interval.isBefore(interval));
+    assert(!interval.isBefore(cInterval));
+    assert(!interval.isBefore(iInterval));
+    assert(!interval.isBefore(posInfInterval));
+    assert(!interval.isBefore(cPosInfInterval));
+    assert(!interval.isBefore(iPosInfInterval));
+    assert(!interval.isBefore(negInfInterval));
+    assert(!interval.isBefore(cNegInfInterval));
+    assert(!interval.isBefore(iNegInfInterval));
+    assert(!cInterval.isBefore(interval));
+    assert(!cInterval.isBefore(cInterval));
+    assert(!cInterval.isBefore(iInterval));
+    assert(!cInterval.isBefore(posInfInterval));
+    assert(!cInterval.isBefore(cPosInfInterval));
+    assert(!cInterval.isBefore(iPosInfInterval));
+    assert(!cInterval.isBefore(negInfInterval));
+    assert(!cInterval.isBefore(cNegInfInterval));
+    assert(!cInterval.isBefore(iNegInfInterval));
+    assert(!iInterval.isBefore(interval));
+    assert(!iInterval.isBefore(cInterval));
+    assert(!iInterval.isBefore(iInterval));
+    assert(!iInterval.isBefore(posInfInterval));
+    assert(!iInterval.isBefore(cPosInfInterval));
+    assert(!iInterval.isBefore(iPosInfInterval));
+    assert(!iInterval.isBefore(negInfInterval));
+    assert(!iInterval.isBefore(cNegInfInterval));
+    assert(!iInterval.isBefore(iNegInfInterval));
 
     //Verify Examples.
     assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -19401,9 +19429,9 @@ unittest
     const cdate = Date(2010, 7, 6);
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.isAfter(cdate)));
-    static assert(__traits(compiles, cInterval.isAfter(cdate)));
-    static assert(__traits(compiles, iInterval.isAfter(cdate)));
+    assert(!interval.isAfter(cdate));
+    assert(!cInterval.isAfter(cdate));
+    assert(!iInterval.isAfter(cdate));
 
     //Verify Examples.
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Date(1994, 12, 24)));
@@ -19469,33 +19497,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.isAfter(interval)));
-    static assert(__traits(compiles, interval.isAfter(cInterval)));
-    static assert(__traits(compiles, interval.isAfter(iInterval)));
-    static assert(__traits(compiles, interval.isAfter(posInfInterval)));
-    static assert(__traits(compiles, interval.isAfter(cPosInfInterval)));
-    static assert(__traits(compiles, interval.isAfter(iPosInfInterval)));
-    static assert(__traits(compiles, interval.isAfter(negInfInterval)));
-    static assert(__traits(compiles, interval.isAfter(cNegInfInterval)));
-    static assert(__traits(compiles, interval.isAfter(iNegInfInterval)));
-    static assert(__traits(compiles, cInterval.isAfter(interval)));
-    static assert(__traits(compiles, cInterval.isAfter(cInterval)));
-    static assert(__traits(compiles, cInterval.isAfter(iInterval)));
-    static assert(__traits(compiles, cInterval.isAfter(posInfInterval)));
-    static assert(__traits(compiles, cInterval.isAfter(cPosInfInterval)));
-    static assert(__traits(compiles, cInterval.isAfter(iPosInfInterval)));
-    static assert(__traits(compiles, cInterval.isAfter(negInfInterval)));
-    static assert(__traits(compiles, cInterval.isAfter(cNegInfInterval)));
-    static assert(__traits(compiles, cInterval.isAfter(iNegInfInterval)));
-    static assert(__traits(compiles, iInterval.isAfter(interval)));
-    static assert(__traits(compiles, iInterval.isAfter(cInterval)));
-    static assert(__traits(compiles, iInterval.isAfter(iInterval)));
-    static assert(__traits(compiles, iInterval.isAfter(posInfInterval)));
-    static assert(__traits(compiles, iInterval.isAfter(cPosInfInterval)));
-    static assert(__traits(compiles, iInterval.isAfter(iPosInfInterval)));
-    static assert(__traits(compiles, iInterval.isAfter(negInfInterval)));
-    static assert(__traits(compiles, iInterval.isAfter(cNegInfInterval)));
-    static assert(__traits(compiles, iInterval.isAfter(iNegInfInterval)));
+    assert(!interval.isAfter(interval));
+    assert(!interval.isAfter(cInterval));
+    assert(!interval.isAfter(iInterval));
+    assert(!interval.isAfter(posInfInterval));
+    assert(!interval.isAfter(cPosInfInterval));
+    assert(!interval.isAfter(iPosInfInterval));
+    assert(!interval.isAfter(negInfInterval));
+    assert(!interval.isAfter(cNegInfInterval));
+    assert(!interval.isAfter(iNegInfInterval));
+    assert(!cInterval.isAfter(interval));
+    assert(!cInterval.isAfter(cInterval));
+    assert(!cInterval.isAfter(iInterval));
+    assert(!cInterval.isAfter(posInfInterval));
+    assert(!cInterval.isAfter(cPosInfInterval));
+    assert(!cInterval.isAfter(iPosInfInterval));
+    assert(!cInterval.isAfter(negInfInterval));
+    assert(!cInterval.isAfter(cNegInfInterval));
+    assert(!cInterval.isAfter(iNegInfInterval));
+    assert(!iInterval.isAfter(interval));
+    assert(!iInterval.isAfter(cInterval));
+    assert(!iInterval.isAfter(iInterval));
+    assert(!iInterval.isAfter(posInfInterval));
+    assert(!iInterval.isAfter(cPosInfInterval));
+    assert(!iInterval.isAfter(iPosInfInterval));
+    assert(!iInterval.isAfter(negInfInterval));
+    assert(!iInterval.isAfter(cNegInfInterval));
+    assert(!iInterval.isAfter(iNegInfInterval));
 
     //Verify Examples.
     assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -19565,33 +19593,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.intersects(interval)));
-    static assert(__traits(compiles, interval.intersects(cInterval)));
-    static assert(__traits(compiles, interval.intersects(iInterval)));
-    static assert(__traits(compiles, interval.intersects(posInfInterval)));
-    static assert(__traits(compiles, interval.intersects(cPosInfInterval)));
-    static assert(__traits(compiles, interval.intersects(iPosInfInterval)));
-    static assert(__traits(compiles, interval.intersects(negInfInterval)));
-    static assert(__traits(compiles, interval.intersects(cNegInfInterval)));
-    static assert(__traits(compiles, interval.intersects(iNegInfInterval)));
-    static assert(__traits(compiles, cInterval.intersects(interval)));
-    static assert(__traits(compiles, cInterval.intersects(cInterval)));
-    static assert(__traits(compiles, cInterval.intersects(iInterval)));
-    static assert(__traits(compiles, cInterval.intersects(posInfInterval)));
-    static assert(__traits(compiles, cInterval.intersects(cPosInfInterval)));
-    static assert(__traits(compiles, cInterval.intersects(iPosInfInterval)));
-    static assert(__traits(compiles, cInterval.intersects(negInfInterval)));
-    static assert(__traits(compiles, cInterval.intersects(cNegInfInterval)));
-    static assert(__traits(compiles, cInterval.intersects(iNegInfInterval)));
-    static assert(__traits(compiles, iInterval.intersects(interval)));
-    static assert(__traits(compiles, iInterval.intersects(cInterval)));
-    static assert(__traits(compiles, iInterval.intersects(iInterval)));
-    static assert(__traits(compiles, iInterval.intersects(posInfInterval)));
-    static assert(__traits(compiles, iInterval.intersects(cPosInfInterval)));
-    static assert(__traits(compiles, iInterval.intersects(iPosInfInterval)));
-    static assert(__traits(compiles, iInterval.intersects(negInfInterval)));
-    static assert(__traits(compiles, iInterval.intersects(cNegInfInterval)));
-    static assert(__traits(compiles, iInterval.intersects(iNegInfInterval)));
+    assert(interval.intersects(interval));
+    assert(interval.intersects(cInterval));
+    assert(interval.intersects(iInterval));
+    assert(interval.intersects(posInfInterval));
+    assert(interval.intersects(cPosInfInterval));
+    assert(interval.intersects(iPosInfInterval));
+    assert(interval.intersects(negInfInterval));
+    assert(interval.intersects(cNegInfInterval));
+    assert(interval.intersects(iNegInfInterval));
+    assert(cInterval.intersects(interval));
+    assert(cInterval.intersects(cInterval));
+    assert(cInterval.intersects(iInterval));
+    assert(cInterval.intersects(posInfInterval));
+    assert(cInterval.intersects(cPosInfInterval));
+    assert(cInterval.intersects(iPosInfInterval));
+    assert(cInterval.intersects(negInfInterval));
+    assert(cInterval.intersects(cNegInfInterval));
+    assert(cInterval.intersects(iNegInfInterval));
+    assert(iInterval.intersects(interval));
+    assert(iInterval.intersects(cInterval));
+    assert(iInterval.intersects(iInterval));
+    assert(iInterval.intersects(posInfInterval));
+    assert(iInterval.intersects(cPosInfInterval));
+    assert(iInterval.intersects(iPosInfInterval));
+    assert(iInterval.intersects(negInfInterval));
+    assert(iInterval.intersects(cNegInfInterval));
+    assert(iInterval.intersects(iNegInfInterval));
 
     //Verify Examples.
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -19691,33 +19719,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.intersection(interval)));
-    static assert(__traits(compiles, interval.intersection(cInterval)));
-    static assert(__traits(compiles, interval.intersection(iInterval)));
-    static assert(__traits(compiles, interval.intersection(posInfInterval)));
-    static assert(__traits(compiles, interval.intersection(cPosInfInterval)));
-    static assert(__traits(compiles, interval.intersection(iPosInfInterval)));
-    static assert(__traits(compiles, interval.intersection(negInfInterval)));
-    static assert(__traits(compiles, interval.intersection(cNegInfInterval)));
-    static assert(__traits(compiles, interval.intersection(iNegInfInterval)));
-    static assert(__traits(compiles, cInterval.intersection(interval)));
-    static assert(__traits(compiles, cInterval.intersection(cInterval)));
-    static assert(__traits(compiles, cInterval.intersection(iInterval)));
-    static assert(__traits(compiles, cInterval.intersection(posInfInterval)));
-    static assert(__traits(compiles, cInterval.intersection(cPosInfInterval)));
-    static assert(__traits(compiles, cInterval.intersection(iPosInfInterval)));
-    static assert(__traits(compiles, cInterval.intersection(negInfInterval)));
-    static assert(__traits(compiles, cInterval.intersection(cNegInfInterval)));
-    static assert(__traits(compiles, cInterval.intersection(iNegInfInterval)));
-    static assert(__traits(compiles, iInterval.intersection(interval)));
-    static assert(__traits(compiles, iInterval.intersection(cInterval)));
-    static assert(__traits(compiles, iInterval.intersection(iInterval)));
-    static assert(__traits(compiles, iInterval.intersection(posInfInterval)));
-    static assert(__traits(compiles, iInterval.intersection(cPosInfInterval)));
-    static assert(__traits(compiles, iInterval.intersection(iPosInfInterval)));
-    static assert(__traits(compiles, iInterval.intersection(negInfInterval)));
-    static assert(__traits(compiles, iInterval.intersection(cNegInfInterval)));
-    static assert(__traits(compiles, iInterval.intersection(iNegInfInterval)));
+    assert(!interval.intersection(interval).empty);
+    assert(!interval.intersection(cInterval).empty);
+    assert(!interval.intersection(iInterval).empty);
+    assert(!interval.intersection(posInfInterval).empty);
+    assert(!interval.intersection(cPosInfInterval).empty);
+    assert(!interval.intersection(iPosInfInterval).empty);
+    assert(!interval.intersection(negInfInterval).empty);
+    assert(!interval.intersection(cNegInfInterval).empty);
+    assert(!interval.intersection(iNegInfInterval).empty);
+    assert(!cInterval.intersection(interval).empty);
+    assert(!cInterval.intersection(cInterval).empty);
+    assert(!cInterval.intersection(iInterval).empty);
+    assert(!cInterval.intersection(posInfInterval).empty);
+    assert(!cInterval.intersection(cPosInfInterval).empty);
+    assert(!cInterval.intersection(iPosInfInterval).empty);
+    assert(!cInterval.intersection(negInfInterval).empty);
+    assert(!cInterval.intersection(cNegInfInterval).empty);
+    assert(!cInterval.intersection(iNegInfInterval).empty);
+    assert(!iInterval.intersection(interval).empty);
+    assert(!iInterval.intersection(cInterval).empty);
+    assert(!iInterval.intersection(iInterval).empty);
+    assert(!iInterval.intersection(posInfInterval).empty);
+    assert(!iInterval.intersection(cPosInfInterval).empty);
+    assert(!iInterval.intersection(iPosInfInterval).empty);
+    assert(!iInterval.intersection(negInfInterval).empty);
+    assert(!iInterval.intersection(cNegInfInterval).empty);
+    assert(!iInterval.intersection(iNegInfInterval).empty);
 
     //Verify Examples.
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
@@ -19793,33 +19821,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.isAdjacent(interval)));
-    static assert(__traits(compiles, interval.isAdjacent(cInterval)));
-    static assert(__traits(compiles, interval.isAdjacent(iInterval)));
-    static assert(__traits(compiles, interval.isAdjacent(posInfInterval)));
-    static assert(__traits(compiles, interval.isAdjacent(cPosInfInterval)));
-    static assert(__traits(compiles, interval.isAdjacent(iPosInfInterval)));
-    static assert(__traits(compiles, interval.isAdjacent(negInfInterval)));
-    static assert(__traits(compiles, interval.isAdjacent(cNegInfInterval)));
-    static assert(__traits(compiles, interval.isAdjacent(iNegInfInterval)));
-    static assert(__traits(compiles, cInterval.isAdjacent(interval)));
-    static assert(__traits(compiles, cInterval.isAdjacent(cInterval)));
-    static assert(__traits(compiles, cInterval.isAdjacent(iInterval)));
-    static assert(__traits(compiles, cInterval.isAdjacent(posInfInterval)));
-    static assert(__traits(compiles, cInterval.isAdjacent(cPosInfInterval)));
-    static assert(__traits(compiles, cInterval.isAdjacent(iPosInfInterval)));
-    static assert(__traits(compiles, cInterval.isAdjacent(negInfInterval)));
-    static assert(__traits(compiles, cInterval.isAdjacent(cNegInfInterval)));
-    static assert(__traits(compiles, cInterval.isAdjacent(iNegInfInterval)));
-    static assert(__traits(compiles, iInterval.isAdjacent(interval)));
-    static assert(__traits(compiles, iInterval.isAdjacent(cInterval)));
-    static assert(__traits(compiles, iInterval.isAdjacent(iInterval)));
-    static assert(__traits(compiles, iInterval.isAdjacent(posInfInterval)));
-    static assert(__traits(compiles, iInterval.isAdjacent(cPosInfInterval)));
-    static assert(__traits(compiles, iInterval.isAdjacent(iPosInfInterval)));
-    static assert(__traits(compiles, iInterval.isAdjacent(negInfInterval)));
-    static assert(__traits(compiles, iInterval.isAdjacent(cNegInfInterval)));
-    static assert(__traits(compiles, iInterval.isAdjacent(iNegInfInterval)));
+    assert(!interval.isAdjacent(interval));
+    assert(!interval.isAdjacent(cInterval));
+    assert(!interval.isAdjacent(iInterval));
+    assert(!interval.isAdjacent(posInfInterval));
+    assert(!interval.isAdjacent(cPosInfInterval));
+    assert(!interval.isAdjacent(iPosInfInterval));
+    assert(!interval.isAdjacent(negInfInterval));
+    assert(!interval.isAdjacent(cNegInfInterval));
+    assert(!interval.isAdjacent(iNegInfInterval));
+    assert(!cInterval.isAdjacent(interval));
+    assert(!cInterval.isAdjacent(cInterval));
+    assert(!cInterval.isAdjacent(iInterval));
+    assert(!cInterval.isAdjacent(posInfInterval));
+    assert(!cInterval.isAdjacent(cPosInfInterval));
+    assert(!cInterval.isAdjacent(iPosInfInterval));
+    assert(!cInterval.isAdjacent(negInfInterval));
+    assert(!cInterval.isAdjacent(cNegInfInterval));
+    assert(!cInterval.isAdjacent(iNegInfInterval));
+    assert(!iInterval.isAdjacent(interval));
+    assert(!iInterval.isAdjacent(cInterval));
+    assert(!iInterval.isAdjacent(iInterval));
+    assert(!iInterval.isAdjacent(posInfInterval));
+    assert(!iInterval.isAdjacent(cPosInfInterval));
+    assert(!iInterval.isAdjacent(iPosInfInterval));
+    assert(!iInterval.isAdjacent(negInfInterval));
+    assert(!iInterval.isAdjacent(cNegInfInterval));
+    assert(!iInterval.isAdjacent(iNegInfInterval));
 
     //Verify Examples.
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(1990, 7, 6), Date(1996, 1, 2))));
@@ -19930,33 +19958,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.merge(interval)));
-    static assert(__traits(compiles, interval.merge(cInterval)));
-    static assert(__traits(compiles, interval.merge(iInterval)));
-    static assert(__traits(compiles, interval.merge(posInfInterval)));
-    static assert(__traits(compiles, interval.merge(cPosInfInterval)));
-    static assert(__traits(compiles, interval.merge(iPosInfInterval)));
-    static assert(__traits(compiles, interval.merge(negInfInterval)));
-    static assert(__traits(compiles, interval.merge(cNegInfInterval)));
-    static assert(__traits(compiles, interval.merge(iNegInfInterval)));
-    static assert(__traits(compiles, cInterval.merge(interval)));
-    static assert(__traits(compiles, cInterval.merge(cInterval)));
-    static assert(__traits(compiles, cInterval.merge(iInterval)));
-    static assert(__traits(compiles, cInterval.merge(posInfInterval)));
-    static assert(__traits(compiles, cInterval.merge(cPosInfInterval)));
-    static assert(__traits(compiles, cInterval.merge(iPosInfInterval)));
-    static assert(__traits(compiles, cInterval.merge(negInfInterval)));
-    static assert(__traits(compiles, cInterval.merge(cNegInfInterval)));
-    static assert(__traits(compiles, cInterval.merge(iNegInfInterval)));
-    static assert(__traits(compiles, iInterval.merge(interval)));
-    static assert(__traits(compiles, iInterval.merge(cInterval)));
-    static assert(__traits(compiles, iInterval.merge(iInterval)));
-    static assert(__traits(compiles, iInterval.merge(posInfInterval)));
-    static assert(__traits(compiles, iInterval.merge(cPosInfInterval)));
-    static assert(__traits(compiles, iInterval.merge(iPosInfInterval)));
-    static assert(__traits(compiles, iInterval.merge(negInfInterval)));
-    static assert(__traits(compiles, iInterval.merge(cNegInfInterval)));
-    static assert(__traits(compiles, iInterval.merge(iNegInfInterval)));
+    assert(!interval.merge(interval).empty);
+    assert(!interval.merge(cInterval).empty);
+    assert(!interval.merge(iInterval).empty);
+    assert(!interval.merge(posInfInterval).empty);
+    assert(!interval.merge(cPosInfInterval).empty);
+    assert(!interval.merge(iPosInfInterval).empty);
+    assert(!interval.merge(negInfInterval).empty);
+    assert(!interval.merge(cNegInfInterval).empty);
+    assert(!interval.merge(iNegInfInterval).empty);
+    assert(!cInterval.merge(interval).empty);
+    assert(!cInterval.merge(cInterval).empty);
+    assert(!cInterval.merge(iInterval).empty);
+    assert(!cInterval.merge(posInfInterval).empty);
+    assert(!cInterval.merge(cPosInfInterval).empty);
+    assert(!cInterval.merge(iPosInfInterval).empty);
+    assert(!cInterval.merge(negInfInterval).empty);
+    assert(!cInterval.merge(cNegInfInterval).empty);
+    assert(!cInterval.merge(iNegInfInterval).empty);
+    assert(!iInterval.merge(interval).empty);
+    assert(!iInterval.merge(cInterval).empty);
+    assert(!iInterval.merge(iInterval).empty);
+    assert(!iInterval.merge(posInfInterval).empty);
+    assert(!iInterval.merge(cPosInfInterval).empty);
+    assert(!iInterval.merge(iPosInfInterval).empty);
+    assert(!iInterval.merge(negInfInterval).empty);
+    assert(!iInterval.merge(cNegInfInterval).empty);
+    assert(!iInterval.merge(iNegInfInterval).empty);
 
     //Verify Examples.
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
@@ -20068,33 +20096,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, interval.span(interval)));
-    static assert(__traits(compiles, interval.span(cInterval)));
-    static assert(__traits(compiles, interval.span(iInterval)));
-    static assert(__traits(compiles, interval.span(posInfInterval)));
-    static assert(__traits(compiles, interval.span(cPosInfInterval)));
-    static assert(__traits(compiles, interval.span(iPosInfInterval)));
-    static assert(__traits(compiles, interval.span(negInfInterval)));
-    static assert(__traits(compiles, interval.span(cNegInfInterval)));
-    static assert(__traits(compiles, interval.span(iNegInfInterval)));
-    static assert(__traits(compiles, cInterval.span(interval)));
-    static assert(__traits(compiles, cInterval.span(cInterval)));
-    static assert(__traits(compiles, cInterval.span(iInterval)));
-    static assert(__traits(compiles, cInterval.span(posInfInterval)));
-    static assert(__traits(compiles, cInterval.span(cPosInfInterval)));
-    static assert(__traits(compiles, cInterval.span(iPosInfInterval)));
-    static assert(__traits(compiles, cInterval.span(negInfInterval)));
-    static assert(__traits(compiles, cInterval.span(cNegInfInterval)));
-    static assert(__traits(compiles, cInterval.span(iNegInfInterval)));
-    static assert(__traits(compiles, iInterval.span(interval)));
-    static assert(__traits(compiles, iInterval.span(cInterval)));
-    static assert(__traits(compiles, iInterval.span(iInterval)));
-    static assert(__traits(compiles, iInterval.span(posInfInterval)));
-    static assert(__traits(compiles, iInterval.span(cPosInfInterval)));
-    static assert(__traits(compiles, iInterval.span(iPosInfInterval)));
-    static assert(__traits(compiles, iInterval.span(negInfInterval)));
-    static assert(__traits(compiles, iInterval.span(cNegInfInterval)));
-    static assert(__traits(compiles, iInterval.span(iNegInfInterval)));
+    assert(!interval.span(interval).empty);
+    assert(!interval.span(cInterval).empty);
+    assert(!interval.span(iInterval).empty);
+    assert(!interval.span(posInfInterval).empty);
+    assert(!interval.span(cPosInfInterval).empty);
+    assert(!interval.span(iPosInfInterval).empty);
+    assert(!interval.span(negInfInterval).empty);
+    assert(!interval.span(cNegInfInterval).empty);
+    assert(!interval.span(iNegInfInterval).empty);
+    assert(!cInterval.span(interval).empty);
+    assert(!cInterval.span(cInterval).empty);
+    assert(!cInterval.span(iInterval).empty);
+    assert(!cInterval.span(posInfInterval).empty);
+    assert(!cInterval.span(cPosInfInterval).empty);
+    assert(!cInterval.span(iPosInfInterval).empty);
+    assert(!cInterval.span(negInfInterval).empty);
+    assert(!cInterval.span(cNegInfInterval).empty);
+    assert(!cInterval.span(iNegInfInterval).empty);
+    assert(!iInterval.span(interval).empty);
+    assert(!iInterval.span(cInterval).empty);
+    assert(!iInterval.span(iInterval).empty);
+    assert(!iInterval.span(posInfInterval).empty);
+    assert(!iInterval.span(cPosInfInterval).empty);
+    assert(!iInterval.span(iPosInfInterval).empty);
+    assert(!iInterval.span(negInfInterval).empty);
+    assert(!iInterval.span(cNegInfInterval).empty);
+    assert(!iInterval.span(iNegInfInterval).empty);
 
     //Verify Examples.
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(Interval!Date(Date(1990, 7, 6), Date(1991, 1, 8))) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
@@ -20373,8 +20401,8 @@ unittest
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, cInterval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri))));
-    static assert(__traits(compiles, iInterval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri))));
+    assert(!cInterval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri)).empty);
+    assert(!iInterval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri)).empty);
 }
 
 //Test Interval's bwdRange.
@@ -20439,8 +20467,8 @@ unittest
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, cInterval.bwdRange(everyDayOfWeek!Date(DayOfWeek.fri))));
-    static assert(__traits(compiles, iInterval.bwdRange(everyDayOfWeek!Date(DayOfWeek.fri))));
+    assert(!cInterval.bwdRange(everyDayOfWeek!Date(DayOfWeek.fri)).empty);
+    assert(!iInterval.bwdRange(everyDayOfWeek!Date(DayOfWeek.fri)).empty);
 }
 
 //Test Interval's toString().
@@ -20450,8 +20478,8 @@ unittest
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, cInterval.toString()));
-    static assert(__traits(compiles, iInterval.toString()));
+    assert(cInterval.toString());
+    assert(iInterval.toString());
 }
 
 
@@ -21501,8 +21529,8 @@ unittest
 
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
-    static assert(__traits(compiles, cPosInfInterval.begin));
-    static assert(__traits(compiles, iPosInfInterval.begin));
+    assert(cPosInfInterval.begin != Date.init);
+    assert(iPosInfInterval.begin != Date.init);
 
     //Verify Examples.
     assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
@@ -21518,8 +21546,8 @@ unittest
 
     const cPosInfInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iPosInfInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    static assert(__traits(compiles, cPosInfInterval.empty));
-    static assert(__traits(compiles, iPosInfInterval.empty));
+    assert(!cPosInfInterval.empty);
+    assert(!iPosInfInterval.empty);
 
     //Verify Examples.
     assert(!PosInfInterval!Date(Date(1996, 1, 2)).empty);
@@ -21543,9 +21571,9 @@ unittest
     const cdate = Date(2010, 7, 6);
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
-    static assert(__traits(compiles, posInfInterval.contains(cdate)));
-    static assert(__traits(compiles, cPosInfInterval.contains(cdate)));
-    static assert(__traits(compiles, iPosInfInterval.contains(cdate)));
+    assert(posInfInterval.contains(cdate));
+    assert(cPosInfInterval.contains(cdate));
+    assert(iPosInfInterval.contains(cdate));
 
     //Verify Examples.
     assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(1994, 12, 24)));
@@ -21607,33 +21635,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, posInfInterval.contains(interval)));
-    static assert(__traits(compiles, posInfInterval.contains(cInterval)));
-    static assert(__traits(compiles, posInfInterval.contains(iInterval)));
-    static assert(__traits(compiles, posInfInterval.contains(posInfInterval)));
-    static assert(__traits(compiles, posInfInterval.contains(cPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.contains(iPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.contains(negInfInterval)));
-    static assert(__traits(compiles, posInfInterval.contains(cNegInfInterval)));
-    static assert(__traits(compiles, posInfInterval.contains(iNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.contains(interval)));
-    static assert(__traits(compiles, cPosInfInterval.contains(cInterval)));
-    static assert(__traits(compiles, cPosInfInterval.contains(iInterval)));
-    static assert(__traits(compiles, cPosInfInterval.contains(posInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.contains(cPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.contains(iPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.contains(negInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.contains(cNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.contains(iNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.contains(interval)));
-    static assert(__traits(compiles, iPosInfInterval.contains(cInterval)));
-    static assert(__traits(compiles, iPosInfInterval.contains(iInterval)));
-    static assert(__traits(compiles, iPosInfInterval.contains(posInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.contains(cPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.contains(iPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.contains(negInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.contains(cNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.contains(iNegInfInterval)));
+    assert(posInfInterval.contains(interval));
+    assert(posInfInterval.contains(cInterval));
+    assert(posInfInterval.contains(iInterval));
+    assert(posInfInterval.contains(posInfInterval));
+    assert(posInfInterval.contains(cPosInfInterval));
+    assert(posInfInterval.contains(iPosInfInterval));
+    assert(!posInfInterval.contains(negInfInterval));
+    assert(!posInfInterval.contains(cNegInfInterval));
+    assert(!posInfInterval.contains(iNegInfInterval));
+    assert(cPosInfInterval.contains(interval));
+    assert(cPosInfInterval.contains(cInterval));
+    assert(cPosInfInterval.contains(iInterval));
+    assert(cPosInfInterval.contains(posInfInterval));
+    assert(cPosInfInterval.contains(cPosInfInterval));
+    assert(cPosInfInterval.contains(iPosInfInterval));
+    assert(!cPosInfInterval.contains(negInfInterval));
+    assert(!cPosInfInterval.contains(cNegInfInterval));
+    assert(!cPosInfInterval.contains(iNegInfInterval));
+    assert(iPosInfInterval.contains(interval));
+    assert(iPosInfInterval.contains(cInterval));
+    assert(iPosInfInterval.contains(iInterval));
+    assert(iPosInfInterval.contains(posInfInterval));
+    assert(iPosInfInterval.contains(cPosInfInterval));
+    assert(iPosInfInterval.contains(iPosInfInterval));
+    assert(!iPosInfInterval.contains(negInfInterval));
+    assert(!iPosInfInterval.contains(cNegInfInterval));
+    assert(!iPosInfInterval.contains(iNegInfInterval));
 
     //Verify Examples.
     assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -21664,9 +21692,9 @@ unittest
     const cdate = Date(2010, 7, 6);
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
-    static assert(__traits(compiles, posInfInterval.isBefore(cdate)));
-    static assert(__traits(compiles, cPosInfInterval.isBefore(cdate)));
-    static assert(__traits(compiles, iPosInfInterval.isBefore(cdate)));
+    assert(!posInfInterval.isBefore(cdate));
+    assert(!cPosInfInterval.isBefore(cdate));
+    assert(!iPosInfInterval.isBefore(cdate));
 
     //Verify Examples.
     assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(1994, 12, 24)));
@@ -21728,33 +21756,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, posInfInterval.isBefore(interval)));
-    static assert(__traits(compiles, posInfInterval.isBefore(cInterval)));
-    static assert(__traits(compiles, posInfInterval.isBefore(iInterval)));
-    static assert(__traits(compiles, posInfInterval.isBefore(posInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isBefore(cPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isBefore(iPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isBefore(negInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isBefore(cNegInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isBefore(iNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isBefore(interval)));
-    static assert(__traits(compiles, cPosInfInterval.isBefore(cInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isBefore(iInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isBefore(posInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isBefore(cPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isBefore(iPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isBefore(negInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isBefore(cNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isBefore(iNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isBefore(interval)));
-    static assert(__traits(compiles, iPosInfInterval.isBefore(cInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isBefore(iInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isBefore(posInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isBefore(cPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isBefore(iPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isBefore(negInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isBefore(cNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isBefore(iNegInfInterval)));
+    assert(!posInfInterval.isBefore(interval));
+    assert(!posInfInterval.isBefore(cInterval));
+    assert(!posInfInterval.isBefore(iInterval));
+    assert(!posInfInterval.isBefore(posInfInterval));
+    assert(!posInfInterval.isBefore(cPosInfInterval));
+    assert(!posInfInterval.isBefore(iPosInfInterval));
+    assert(!posInfInterval.isBefore(negInfInterval));
+    assert(!posInfInterval.isBefore(cNegInfInterval));
+    assert(!posInfInterval.isBefore(iNegInfInterval));
+    assert(!cPosInfInterval.isBefore(interval));
+    assert(!cPosInfInterval.isBefore(cInterval));
+    assert(!cPosInfInterval.isBefore(iInterval));
+    assert(!cPosInfInterval.isBefore(posInfInterval));
+    assert(!cPosInfInterval.isBefore(cPosInfInterval));
+    assert(!cPosInfInterval.isBefore(iPosInfInterval));
+    assert(!cPosInfInterval.isBefore(negInfInterval));
+    assert(!cPosInfInterval.isBefore(cNegInfInterval));
+    assert(!cPosInfInterval.isBefore(iNegInfInterval));
+    assert(!iPosInfInterval.isBefore(interval));
+    assert(!iPosInfInterval.isBefore(cInterval));
+    assert(!iPosInfInterval.isBefore(iInterval));
+    assert(!iPosInfInterval.isBefore(posInfInterval));
+    assert(!iPosInfInterval.isBefore(cPosInfInterval));
+    assert(!iPosInfInterval.isBefore(iPosInfInterval));
+    assert(!iPosInfInterval.isBefore(negInfInterval));
+    assert(!iPosInfInterval.isBefore(cNegInfInterval));
+    assert(!iPosInfInterval.isBefore(iNegInfInterval));
 
     //Verify Examples.
     assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -21784,9 +21812,9 @@ unittest
     const cdate = Date(2010, 7, 6);
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
-    static assert(__traits(compiles, posInfInterval.isAfter(cdate)));
-    static assert(__traits(compiles, cPosInfInterval.isAfter(cdate)));
-    static assert(__traits(compiles, iPosInfInterval.isAfter(cdate)));
+    assert(!posInfInterval.isAfter(cdate));
+    assert(!cPosInfInterval.isAfter(cdate));
+    assert(!iPosInfInterval.isAfter(cdate));
 
     //Verify Examples.
     assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(1994, 12, 24)));
@@ -21848,33 +21876,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, posInfInterval.isAfter(interval)));
-    static assert(__traits(compiles, posInfInterval.isAfter(cInterval)));
-    static assert(__traits(compiles, posInfInterval.isAfter(iInterval)));
-    static assert(__traits(compiles, posInfInterval.isAfter(posInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isAfter(cPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isAfter(iPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isAfter(negInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isAfter(cNegInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isAfter(iNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAfter(interval)));
-    static assert(__traits(compiles, cPosInfInterval.isAfter(cInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAfter(iInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAfter(posInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAfter(cPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAfter(iPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAfter(negInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAfter(cNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAfter(iNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAfter(interval)));
-    static assert(__traits(compiles, iPosInfInterval.isAfter(cInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAfter(iInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAfter(posInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAfter(cPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAfter(iPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAfter(negInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAfter(cNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAfter(iNegInfInterval)));
+    assert(!posInfInterval.isAfter(interval));
+    assert(!posInfInterval.isAfter(cInterval));
+    assert(!posInfInterval.isAfter(iInterval));
+    assert(!posInfInterval.isAfter(posInfInterval));
+    assert(!posInfInterval.isAfter(cPosInfInterval));
+    assert(!posInfInterval.isAfter(iPosInfInterval));
+    assert(!posInfInterval.isAfter(negInfInterval));
+    assert(!posInfInterval.isAfter(cNegInfInterval));
+    assert(!posInfInterval.isAfter(iNegInfInterval));
+    assert(!cPosInfInterval.isAfter(interval));
+    assert(!cPosInfInterval.isAfter(cInterval));
+    assert(!cPosInfInterval.isAfter(iInterval));
+    assert(!cPosInfInterval.isAfter(posInfInterval));
+    assert(!cPosInfInterval.isAfter(cPosInfInterval));
+    assert(!cPosInfInterval.isAfter(iPosInfInterval));
+    assert(!cPosInfInterval.isAfter(negInfInterval));
+    assert(!cPosInfInterval.isAfter(cNegInfInterval));
+    assert(!cPosInfInterval.isAfter(iNegInfInterval));
+    assert(!iPosInfInterval.isAfter(interval));
+    assert(!iPosInfInterval.isAfter(cInterval));
+    assert(!iPosInfInterval.isAfter(iInterval));
+    assert(!iPosInfInterval.isAfter(posInfInterval));
+    assert(!iPosInfInterval.isAfter(cPosInfInterval));
+    assert(!iPosInfInterval.isAfter(iPosInfInterval));
+    assert(!iPosInfInterval.isAfter(negInfInterval));
+    assert(!iPosInfInterval.isAfter(cNegInfInterval));
+    assert(!iPosInfInterval.isAfter(iNegInfInterval));
 
     //Verify Examples.
     assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -21943,33 +21971,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, posInfInterval.intersects(interval)));
-    static assert(__traits(compiles, posInfInterval.intersects(cInterval)));
-    static assert(__traits(compiles, posInfInterval.intersects(iInterval)));
-    static assert(__traits(compiles, posInfInterval.intersects(posInfInterval)));
-    static assert(__traits(compiles, posInfInterval.intersects(cPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.intersects(iPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.intersects(negInfInterval)));
-    static assert(__traits(compiles, posInfInterval.intersects(cNegInfInterval)));
-    static assert(__traits(compiles, posInfInterval.intersects(iNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersects(interval)));
-    static assert(__traits(compiles, cPosInfInterval.intersects(cInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersects(iInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersects(posInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersects(cPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersects(iPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersects(negInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersects(cNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersects(iNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersects(interval)));
-    static assert(__traits(compiles, iPosInfInterval.intersects(cInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersects(iInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersects(posInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersects(cPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersects(iPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersects(negInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersects(cNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersects(iNegInfInterval)));
+    assert(posInfInterval.intersects(interval));
+    assert(posInfInterval.intersects(cInterval));
+    assert(posInfInterval.intersects(iInterval));
+    assert(posInfInterval.intersects(posInfInterval));
+    assert(posInfInterval.intersects(cPosInfInterval));
+    assert(posInfInterval.intersects(iPosInfInterval));
+    assert(posInfInterval.intersects(negInfInterval));
+    assert(posInfInterval.intersects(cNegInfInterval));
+    assert(posInfInterval.intersects(iNegInfInterval));
+    assert(cPosInfInterval.intersects(interval));
+    assert(cPosInfInterval.intersects(cInterval));
+    assert(cPosInfInterval.intersects(iInterval));
+    assert(cPosInfInterval.intersects(posInfInterval));
+    assert(cPosInfInterval.intersects(cPosInfInterval));
+    assert(cPosInfInterval.intersects(iPosInfInterval));
+    assert(cPosInfInterval.intersects(negInfInterval));
+    assert(cPosInfInterval.intersects(cNegInfInterval));
+    assert(cPosInfInterval.intersects(iNegInfInterval));
+    assert(iPosInfInterval.intersects(interval));
+    assert(iPosInfInterval.intersects(cInterval));
+    assert(iPosInfInterval.intersects(iInterval));
+    assert(iPosInfInterval.intersects(posInfInterval));
+    assert(iPosInfInterval.intersects(cPosInfInterval));
+    assert(iPosInfInterval.intersects(iPosInfInterval));
+    assert(iPosInfInterval.intersects(negInfInterval));
+    assert(iPosInfInterval.intersects(cNegInfInterval));
+    assert(iPosInfInterval.intersects(iNegInfInterval));
 
     //Verify Examples.
     assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -22067,33 +22095,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, posInfInterval.intersection(interval)));
-    static assert(__traits(compiles, posInfInterval.intersection(cInterval)));
-    static assert(__traits(compiles, posInfInterval.intersection(iInterval)));
-    static assert(__traits(compiles, posInfInterval.intersection(posInfInterval)));
-    static assert(__traits(compiles, posInfInterval.intersection(cPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.intersection(iPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.intersection(negInfInterval)));
-    static assert(__traits(compiles, posInfInterval.intersection(cNegInfInterval)));
-    static assert(__traits(compiles, posInfInterval.intersection(iNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersection(interval)));
-    static assert(__traits(compiles, cPosInfInterval.intersection(cInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersection(iInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersection(posInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersection(cPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersection(iPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersection(negInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersection(cNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.intersection(iNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersection(interval)));
-    static assert(__traits(compiles, iPosInfInterval.intersection(cInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersection(iInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersection(posInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersection(cPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersection(iPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersection(negInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersection(cNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.intersection(iNegInfInterval)));
+    assert(!posInfInterval.intersection(interval).empty);
+    assert(!posInfInterval.intersection(cInterval).empty);
+    assert(!posInfInterval.intersection(iInterval).empty);
+    assert(!posInfInterval.intersection(posInfInterval).empty);
+    assert(!posInfInterval.intersection(cPosInfInterval).empty);
+    assert(!posInfInterval.intersection(iPosInfInterval).empty);
+    assert(!posInfInterval.intersection(negInfInterval).empty);
+    assert(!posInfInterval.intersection(cNegInfInterval).empty);
+    assert(!posInfInterval.intersection(iNegInfInterval).empty);
+    assert(!cPosInfInterval.intersection(interval).empty);
+    assert(!cPosInfInterval.intersection(cInterval).empty);
+    assert(!cPosInfInterval.intersection(iInterval).empty);
+    assert(!cPosInfInterval.intersection(posInfInterval).empty);
+    assert(!cPosInfInterval.intersection(cPosInfInterval).empty);
+    assert(!cPosInfInterval.intersection(iPosInfInterval).empty);
+    assert(!cPosInfInterval.intersection(negInfInterval).empty);
+    assert(!cPosInfInterval.intersection(cNegInfInterval).empty);
+    assert(!cPosInfInterval.intersection(iNegInfInterval).empty);
+    assert(!iPosInfInterval.intersection(interval).empty);
+    assert(!iPosInfInterval.intersection(cInterval).empty);
+    assert(!iPosInfInterval.intersection(iInterval).empty);
+    assert(!iPosInfInterval.intersection(posInfInterval).empty);
+    assert(!iPosInfInterval.intersection(cPosInfInterval).empty);
+    assert(!iPosInfInterval.intersection(iPosInfInterval).empty);
+    assert(!iPosInfInterval.intersection(negInfInterval).empty);
+    assert(!iPosInfInterval.intersection(cNegInfInterval).empty);
+    assert(!iPosInfInterval.intersection(iNegInfInterval).empty);
 
     //Verify Examples.
     assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
@@ -22161,33 +22189,33 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, posInfInterval.isAdjacent(interval)));
-    static assert(__traits(compiles, posInfInterval.isAdjacent(cInterval)));
-    static assert(__traits(compiles, posInfInterval.isAdjacent(iInterval)));
-    static assert(__traits(compiles, posInfInterval.isAdjacent(posInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isAdjacent(cPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isAdjacent(iPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isAdjacent(negInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isAdjacent(cNegInfInterval)));
-    static assert(__traits(compiles, posInfInterval.isAdjacent(iNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAdjacent(interval)));
-    static assert(__traits(compiles, cPosInfInterval.isAdjacent(cInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAdjacent(iInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAdjacent(posInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAdjacent(cPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAdjacent(iPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAdjacent(negInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAdjacent(cNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.isAdjacent(iNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAdjacent(interval)));
-    static assert(__traits(compiles, iPosInfInterval.isAdjacent(cInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAdjacent(iInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAdjacent(posInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAdjacent(cPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAdjacent(iPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAdjacent(negInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAdjacent(cNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.isAdjacent(iNegInfInterval)));
+    assert(!posInfInterval.isAdjacent(interval));
+    assert(!posInfInterval.isAdjacent(cInterval));
+    assert(!posInfInterval.isAdjacent(iInterval));
+    assert(!posInfInterval.isAdjacent(posInfInterval));
+    assert(!posInfInterval.isAdjacent(cPosInfInterval));
+    assert(!posInfInterval.isAdjacent(iPosInfInterval));
+    assert(!posInfInterval.isAdjacent(negInfInterval));
+    assert(!posInfInterval.isAdjacent(cNegInfInterval));
+    assert(!posInfInterval.isAdjacent(iNegInfInterval));
+    assert(!cPosInfInterval.isAdjacent(interval));
+    assert(!cPosInfInterval.isAdjacent(cInterval));
+    assert(!cPosInfInterval.isAdjacent(iInterval));
+    assert(!cPosInfInterval.isAdjacent(posInfInterval));
+    assert(!cPosInfInterval.isAdjacent(cPosInfInterval));
+    assert(!cPosInfInterval.isAdjacent(iPosInfInterval));
+    assert(!cPosInfInterval.isAdjacent(negInfInterval));
+    assert(!cPosInfInterval.isAdjacent(cNegInfInterval));
+    assert(!cPosInfInterval.isAdjacent(iNegInfInterval));
+    assert(!iPosInfInterval.isAdjacent(interval));
+    assert(!iPosInfInterval.isAdjacent(cInterval));
+    assert(!iPosInfInterval.isAdjacent(iInterval));
+    assert(!iPosInfInterval.isAdjacent(posInfInterval));
+    assert(!iPosInfInterval.isAdjacent(cPosInfInterval));
+    assert(!iPosInfInterval.isAdjacent(iPosInfInterval));
+    assert(!iPosInfInterval.isAdjacent(negInfInterval));
+    assert(!iPosInfInterval.isAdjacent(cNegInfInterval));
+    assert(!iPosInfInterval.isAdjacent(iNegInfInterval));
 
     //Verify Examples.
     assert(PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
@@ -22280,30 +22308,30 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, posInfInterval.merge(interval)));
-    static assert(__traits(compiles, posInfInterval.merge(cInterval)));
-    static assert(__traits(compiles, posInfInterval.merge(iInterval)));
-    static assert(__traits(compiles, posInfInterval.merge(posInfInterval)));
-    static assert(__traits(compiles, posInfInterval.merge(cPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.merge(iPosInfInterval)));
+    assert(!posInfInterval.merge(interval).empty);
+    assert(!posInfInterval.merge(cInterval).empty);
+    assert(!posInfInterval.merge(iInterval).empty);
+    assert(!posInfInterval.merge(posInfInterval).empty);
+    assert(!posInfInterval.merge(cPosInfInterval).empty);
+    assert(!posInfInterval.merge(iPosInfInterval).empty);
     static assert(!__traits(compiles, posInfInterval.merge(negInfInterval)));
     static assert(!__traits(compiles, posInfInterval.merge(cNegInfInterval)));
     static assert(!__traits(compiles, posInfInterval.merge(iNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.merge(interval)));
-    static assert(__traits(compiles, cPosInfInterval.merge(cInterval)));
-    static assert(__traits(compiles, cPosInfInterval.merge(iInterval)));
-    static assert(__traits(compiles, cPosInfInterval.merge(posInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.merge(cPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.merge(iPosInfInterval)));
+    assert(!cPosInfInterval.merge(interval).empty);
+    assert(!cPosInfInterval.merge(cInterval).empty);
+    assert(!cPosInfInterval.merge(iInterval).empty);
+    assert(!cPosInfInterval.merge(posInfInterval).empty);
+    assert(!cPosInfInterval.merge(cPosInfInterval).empty);
+    assert(!cPosInfInterval.merge(iPosInfInterval).empty);
     static assert(!__traits(compiles, cPosInfInterval.merge(negInfInterval)));
     static assert(!__traits(compiles, cPosInfInterval.merge(cNegInfInterval)));
     static assert(!__traits(compiles, cPosInfInterval.merge(iNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.merge(interval)));
-    static assert(__traits(compiles, iPosInfInterval.merge(cInterval)));
-    static assert(__traits(compiles, iPosInfInterval.merge(iInterval)));
-    static assert(__traits(compiles, iPosInfInterval.merge(posInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.merge(cPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.merge(iPosInfInterval)));
+    assert(!iPosInfInterval.merge(interval).empty);
+    assert(!iPosInfInterval.merge(cInterval).empty);
+    assert(!iPosInfInterval.merge(iInterval).empty);
+    assert(!iPosInfInterval.merge(posInfInterval).empty);
+    assert(!iPosInfInterval.merge(cPosInfInterval).empty);
+    assert(!iPosInfInterval.merge(iPosInfInterval).empty);
     static assert(!__traits(compiles, iPosInfInterval.merge(negInfInterval)));
     static assert(!__traits(compiles, iPosInfInterval.merge(cNegInfInterval)));
     static assert(!__traits(compiles, iPosInfInterval.merge(iNegInfInterval)));
@@ -22396,30 +22424,30 @@ unittest
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, posInfInterval.span(interval)));
-    static assert(__traits(compiles, posInfInterval.span(cInterval)));
-    static assert(__traits(compiles, posInfInterval.span(iInterval)));
-    static assert(__traits(compiles, posInfInterval.span(posInfInterval)));
-    static assert(__traits(compiles, posInfInterval.span(cPosInfInterval)));
-    static assert(__traits(compiles, posInfInterval.span(iPosInfInterval)));
+    assert(!posInfInterval.span(interval).empty);
+    assert(!posInfInterval.span(cInterval).empty);
+    assert(!posInfInterval.span(iInterval).empty);
+    assert(!posInfInterval.span(posInfInterval).empty);
+    assert(!posInfInterval.span(cPosInfInterval).empty);
+    assert(!posInfInterval.span(iPosInfInterval).empty);
     static assert(!__traits(compiles, posInfInterval.span(negInfInterval)));
     static assert(!__traits(compiles, posInfInterval.span(cNegInfInterval)));
     static assert(!__traits(compiles, posInfInterval.span(iNegInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.span(interval)));
-    static assert(__traits(compiles, cPosInfInterval.span(cInterval)));
-    static assert(__traits(compiles, cPosInfInterval.span(iInterval)));
-    static assert(__traits(compiles, cPosInfInterval.span(posInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.span(cPosInfInterval)));
-    static assert(__traits(compiles, cPosInfInterval.span(iPosInfInterval)));
+    assert(!cPosInfInterval.span(interval).empty);
+    assert(!cPosInfInterval.span(cInterval).empty);
+    assert(!cPosInfInterval.span(iInterval).empty);
+    assert(!cPosInfInterval.span(posInfInterval).empty);
+    assert(!cPosInfInterval.span(cPosInfInterval).empty);
+    assert(!cPosInfInterval.span(iPosInfInterval).empty);
     static assert(!__traits(compiles, cPosInfInterval.span(negInfInterval)));
     static assert(!__traits(compiles, cPosInfInterval.span(cNegInfInterval)));
     static assert(!__traits(compiles, cPosInfInterval.span(iNegInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.span(interval)));
-    static assert(__traits(compiles, iPosInfInterval.span(cInterval)));
-    static assert(__traits(compiles, iPosInfInterval.span(iInterval)));
-    static assert(__traits(compiles, iPosInfInterval.span(posInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.span(cPosInfInterval)));
-    static assert(__traits(compiles, iPosInfInterval.span(iPosInfInterval)));
+    assert(!iPosInfInterval.span(interval).empty);
+    assert(!iPosInfInterval.span(cInterval).empty);
+    assert(!iPosInfInterval.span(iInterval).empty);
+    assert(!iPosInfInterval.span(posInfInterval).empty);
+    assert(!iPosInfInterval.span(cPosInfInterval).empty);
+    assert(!iPosInfInterval.span(iPosInfInterval).empty);
     static assert(!__traits(compiles, iPosInfInterval.span(negInfInterval)));
     static assert(!__traits(compiles, iPosInfInterval.span(cNegInfInterval)));
     static assert(!__traits(compiles, iPosInfInterval.span(iNegInfInterval)));
@@ -22629,8 +22657,8 @@ unittest
 
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
-    static assert(__traits(compiles, cPosInfInterval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri))));
-    static assert(__traits(compiles, iPosInfInterval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri))));
+    assert(!cPosInfInterval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri)).empty);
+    assert(!iPosInfInterval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri)).empty);
 }
 
 //Test PosInfInterval's toString().
@@ -22640,8 +22668,8 @@ unittest
 
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
-    static assert(__traits(compiles, cPosInfInterval.toString()));
-    static assert(__traits(compiles, iPosInfInterval.toString()));
+    assert(cPosInfInterval.toString());
+    assert(iPosInfInterval.toString());
 }
 
 
@@ -23703,8 +23731,8 @@ unittest
 
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, cNegInfInterval.end));
-    static assert(__traits(compiles, iNegInfInterval.end));
+    assert(cNegInfInterval.end != Date.init);
+    assert(iNegInfInterval.end != Date.init);
 
     //Verify Examples.
     assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
@@ -23720,8 +23748,8 @@ unittest
 
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, cNegInfInterval.empty));
-    static assert(__traits(compiles, iNegInfInterval.empty));
+    assert(!cNegInfInterval.empty);
+    assert(!iNegInfInterval.empty);
 
     //Verify Examples.
     assert(!NegInfInterval!Date(Date(1996, 1, 2)).empty);
@@ -23745,9 +23773,9 @@ unittest
     const cdate = Date(2010, 7, 6);
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.contains(cdate)));
-    static assert(__traits(compiles, cNegInfInterval.contains(cdate)));
-    static assert(__traits(compiles, iNegInfInterval.contains(cdate)));
+    assert(negInfInterval.contains(cdate));
+    assert(cNegInfInterval.contains(cdate));
+    assert(iNegInfInterval.contains(cdate));
 
     //Verify Examples.
     assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(1994, 12, 24)));
@@ -23810,33 +23838,33 @@ unittest
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.contains(interval)));
-    static assert(__traits(compiles, negInfInterval.contains(cInterval)));
-    static assert(__traits(compiles, negInfInterval.contains(iInterval)));
-    static assert(__traits(compiles, negInfInterval.contains(posInfInterval)));
-    static assert(__traits(compiles, negInfInterval.contains(cPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.contains(iPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.contains(negInfInterval)));
-    static assert(__traits(compiles, negInfInterval.contains(cNegInfInterval)));
-    static assert(__traits(compiles, negInfInterval.contains(iNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.contains(interval)));
-    static assert(__traits(compiles, cNegInfInterval.contains(cInterval)));
-    static assert(__traits(compiles, cNegInfInterval.contains(iInterval)));
-    static assert(__traits(compiles, cNegInfInterval.contains(posInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.contains(cPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.contains(iPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.contains(negInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.contains(cNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.contains(iNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.contains(interval)));
-    static assert(__traits(compiles, iNegInfInterval.contains(cInterval)));
-    static assert(__traits(compiles, iNegInfInterval.contains(iInterval)));
-    static assert(__traits(compiles, iNegInfInterval.contains(posInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.contains(cPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.contains(iPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.contains(negInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.contains(cNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.contains(iNegInfInterval)));
+    assert(negInfInterval.contains(interval));
+    assert(negInfInterval.contains(cInterval));
+    assert(negInfInterval.contains(iInterval));
+    assert(!negInfInterval.contains(posInfInterval));
+    assert(!negInfInterval.contains(cPosInfInterval));
+    assert(!negInfInterval.contains(iPosInfInterval));
+    assert(negInfInterval.contains(negInfInterval));
+    assert(negInfInterval.contains(cNegInfInterval));
+    assert(negInfInterval.contains(iNegInfInterval));
+    assert(cNegInfInterval.contains(interval));
+    assert(cNegInfInterval.contains(cInterval));
+    assert(cNegInfInterval.contains(iInterval));
+    assert(!cNegInfInterval.contains(posInfInterval));
+    assert(!cNegInfInterval.contains(cPosInfInterval));
+    assert(!cNegInfInterval.contains(iPosInfInterval));
+    assert(cNegInfInterval.contains(negInfInterval));
+    assert(cNegInfInterval.contains(cNegInfInterval));
+    assert(cNegInfInterval.contains(iNegInfInterval));
+    assert(iNegInfInterval.contains(interval));
+    assert(iNegInfInterval.contains(cInterval));
+    assert(iNegInfInterval.contains(iInterval));
+    assert(!iNegInfInterval.contains(posInfInterval));
+    assert(!iNegInfInterval.contains(cPosInfInterval));
+    assert(!iNegInfInterval.contains(iPosInfInterval));
+    assert(iNegInfInterval.contains(negInfInterval));
+    assert(iNegInfInterval.contains(cNegInfInterval));
+    assert(iNegInfInterval.contains(iNegInfInterval));
 
     //Verify Examples.
     assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -23867,9 +23895,9 @@ unittest
     const cdate = Date(2010, 7, 6);
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.isBefore(cdate)));
-    static assert(__traits(compiles, cNegInfInterval.isBefore(cdate)));
-    static assert(__traits(compiles, iNegInfInterval.isBefore(cdate)));
+    assert(!negInfInterval.isBefore(cdate));
+    assert(!cNegInfInterval.isBefore(cdate));
+    assert(!iNegInfInterval.isBefore(cdate));
 
     //Verify Examples.
     assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(1994, 12, 24)));
@@ -23932,33 +23960,33 @@ unittest
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.isBefore(interval)));
-    static assert(__traits(compiles, negInfInterval.isBefore(cInterval)));
-    static assert(__traits(compiles, negInfInterval.isBefore(iInterval)));
-    static assert(__traits(compiles, negInfInterval.isBefore(posInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isBefore(cPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isBefore(iPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isBefore(negInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isBefore(cNegInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isBefore(iNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isBefore(interval)));
-    static assert(__traits(compiles, cNegInfInterval.isBefore(cInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isBefore(iInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isBefore(posInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isBefore(cPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isBefore(iPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isBefore(negInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isBefore(cNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isBefore(iNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isBefore(interval)));
-    static assert(__traits(compiles, iNegInfInterval.isBefore(cInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isBefore(iInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isBefore(posInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isBefore(cPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isBefore(iPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isBefore(negInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isBefore(cNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isBefore(iNegInfInterval)));
+    assert(!negInfInterval.isBefore(interval));
+    assert(!negInfInterval.isBefore(cInterval));
+    assert(!negInfInterval.isBefore(iInterval));
+    assert(!negInfInterval.isBefore(posInfInterval));
+    assert(!negInfInterval.isBefore(cPosInfInterval));
+    assert(!negInfInterval.isBefore(iPosInfInterval));
+    assert(!negInfInterval.isBefore(negInfInterval));
+    assert(!negInfInterval.isBefore(cNegInfInterval));
+    assert(!negInfInterval.isBefore(iNegInfInterval));
+    assert(!cNegInfInterval.isBefore(interval));
+    assert(!cNegInfInterval.isBefore(cInterval));
+    assert(!cNegInfInterval.isBefore(iInterval));
+    assert(!cNegInfInterval.isBefore(posInfInterval));
+    assert(!cNegInfInterval.isBefore(cPosInfInterval));
+    assert(!cNegInfInterval.isBefore(iPosInfInterval));
+    assert(!cNegInfInterval.isBefore(negInfInterval));
+    assert(!cNegInfInterval.isBefore(cNegInfInterval));
+    assert(!cNegInfInterval.isBefore(iNegInfInterval));
+    assert(!iNegInfInterval.isBefore(interval));
+    assert(!iNegInfInterval.isBefore(cInterval));
+    assert(!iNegInfInterval.isBefore(iInterval));
+    assert(!iNegInfInterval.isBefore(posInfInterval));
+    assert(!iNegInfInterval.isBefore(cPosInfInterval));
+    assert(!iNegInfInterval.isBefore(iPosInfInterval));
+    assert(!iNegInfInterval.isBefore(negInfInterval));
+    assert(!iNegInfInterval.isBefore(cNegInfInterval));
+    assert(!iNegInfInterval.isBefore(iNegInfInterval));
 
     //Verify Examples.
     assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -23990,9 +24018,9 @@ unittest
     const cdate = Date(2010, 7, 6);
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.isAfter(cdate)));
-    static assert(__traits(compiles, cNegInfInterval.isAfter(cdate)));
-    static assert(__traits(compiles, iNegInfInterval.isAfter(cdate)));
+    assert(!negInfInterval.isAfter(cdate));
+    assert(!cNegInfInterval.isAfter(cdate));
+    assert(!iNegInfInterval.isAfter(cdate));
 }
 
 //Test NegInfInterval's isAfter(Interval).
@@ -24050,33 +24078,33 @@ unittest
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.isAfter(interval)));
-    static assert(__traits(compiles, negInfInterval.isAfter(cInterval)));
-    static assert(__traits(compiles, negInfInterval.isAfter(iInterval)));
-    static assert(__traits(compiles, negInfInterval.isAfter(posInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isAfter(cPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isAfter(iPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isAfter(negInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isAfter(cNegInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isAfter(iNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAfter(interval)));
-    static assert(__traits(compiles, cNegInfInterval.isAfter(cInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAfter(iInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAfter(posInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAfter(cPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAfter(iPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAfter(negInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAfter(cNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAfter(iNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAfter(interval)));
-    static assert(__traits(compiles, iNegInfInterval.isAfter(cInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAfter(iInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAfter(posInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAfter(cPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAfter(iPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAfter(negInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAfter(cNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAfter(iNegInfInterval)));
+    assert(!negInfInterval.isAfter(interval));
+    assert(!negInfInterval.isAfter(cInterval));
+    assert(!negInfInterval.isAfter(iInterval));
+    assert(!negInfInterval.isAfter(posInfInterval));
+    assert(!negInfInterval.isAfter(cPosInfInterval));
+    assert(!negInfInterval.isAfter(iPosInfInterval));
+    assert(!negInfInterval.isAfter(negInfInterval));
+    assert(!negInfInterval.isAfter(cNegInfInterval));
+    assert(!negInfInterval.isAfter(iNegInfInterval));
+    assert(!cNegInfInterval.isAfter(interval));
+    assert(!cNegInfInterval.isAfter(cInterval));
+    assert(!cNegInfInterval.isAfter(iInterval));
+    assert(!cNegInfInterval.isAfter(posInfInterval));
+    assert(!cNegInfInterval.isAfter(cPosInfInterval));
+    assert(!cNegInfInterval.isAfter(iPosInfInterval));
+    assert(!cNegInfInterval.isAfter(negInfInterval));
+    assert(!cNegInfInterval.isAfter(cNegInfInterval));
+    assert(!cNegInfInterval.isAfter(iNegInfInterval));
+    assert(!iNegInfInterval.isAfter(interval));
+    assert(!iNegInfInterval.isAfter(cInterval));
+    assert(!iNegInfInterval.isAfter(iInterval));
+    assert(!iNegInfInterval.isAfter(posInfInterval));
+    assert(!iNegInfInterval.isAfter(cPosInfInterval));
+    assert(!iNegInfInterval.isAfter(iPosInfInterval));
+    assert(!iNegInfInterval.isAfter(negInfInterval));
+    assert(!iNegInfInterval.isAfter(cNegInfInterval));
+    assert(!iNegInfInterval.isAfter(iNegInfInterval));
 
     //Verify Examples.
     assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(1994, 12, 24)));
@@ -24149,33 +24177,33 @@ unittest
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.intersects(interval)));
-    static assert(__traits(compiles, negInfInterval.intersects(cInterval)));
-    static assert(__traits(compiles, negInfInterval.intersects(iInterval)));
-    static assert(__traits(compiles, negInfInterval.intersects(posInfInterval)));
-    static assert(__traits(compiles, negInfInterval.intersects(cPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.intersects(iPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.intersects(negInfInterval)));
-    static assert(__traits(compiles, negInfInterval.intersects(cNegInfInterval)));
-    static assert(__traits(compiles, negInfInterval.intersects(iNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersects(interval)));
-    static assert(__traits(compiles, cNegInfInterval.intersects(cInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersects(iInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersects(posInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersects(cPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersects(iPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersects(negInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersects(cNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersects(iNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersects(interval)));
-    static assert(__traits(compiles, iNegInfInterval.intersects(cInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersects(iInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersects(posInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersects(cPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersects(iPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersects(negInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersects(cNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersects(iNegInfInterval)));
+    assert(negInfInterval.intersects(interval));
+    assert(negInfInterval.intersects(cInterval));
+    assert(negInfInterval.intersects(iInterval));
+    assert(negInfInterval.intersects(posInfInterval));
+    assert(negInfInterval.intersects(cPosInfInterval));
+    assert(negInfInterval.intersects(iPosInfInterval));
+    assert(negInfInterval.intersects(negInfInterval));
+    assert(negInfInterval.intersects(cNegInfInterval));
+    assert(negInfInterval.intersects(iNegInfInterval));
+    assert(cNegInfInterval.intersects(interval));
+    assert(cNegInfInterval.intersects(cInterval));
+    assert(cNegInfInterval.intersects(iInterval));
+    assert(cNegInfInterval.intersects(posInfInterval));
+    assert(cNegInfInterval.intersects(cPosInfInterval));
+    assert(cNegInfInterval.intersects(iPosInfInterval));
+    assert(cNegInfInterval.intersects(negInfInterval));
+    assert(cNegInfInterval.intersects(cNegInfInterval));
+    assert(cNegInfInterval.intersects(iNegInfInterval));
+    assert(iNegInfInterval.intersects(interval));
+    assert(iNegInfInterval.intersects(cInterval));
+    assert(iNegInfInterval.intersects(iInterval));
+    assert(iNegInfInterval.intersects(posInfInterval));
+    assert(iNegInfInterval.intersects(cPosInfInterval));
+    assert(iNegInfInterval.intersects(iPosInfInterval));
+    assert(iNegInfInterval.intersects(negInfInterval));
+    assert(iNegInfInterval.intersects(cNegInfInterval));
+    assert(iNegInfInterval.intersects(iNegInfInterval));
 
     //Verify Examples.
     assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -24273,33 +24301,33 @@ unittest
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.intersection(interval)));
-    static assert(__traits(compiles, negInfInterval.intersection(cInterval)));
-    static assert(__traits(compiles, negInfInterval.intersection(iInterval)));
-    static assert(__traits(compiles, negInfInterval.intersection(posInfInterval)));
-    static assert(__traits(compiles, negInfInterval.intersection(cPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.intersection(iPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.intersection(negInfInterval)));
-    static assert(__traits(compiles, negInfInterval.intersection(cNegInfInterval)));
-    static assert(__traits(compiles, negInfInterval.intersection(iNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersection(interval)));
-    static assert(__traits(compiles, cNegInfInterval.intersection(cInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersection(iInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersection(posInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersection(cPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersection(iPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersection(negInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersection(cNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.intersection(iNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersection(interval)));
-    static assert(__traits(compiles, iNegInfInterval.intersection(cInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersection(iInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersection(posInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersection(cPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersection(iPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersection(negInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersection(cNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.intersection(iNegInfInterval)));
+    assert(!negInfInterval.intersection(interval).empty);
+    assert(!negInfInterval.intersection(cInterval).empty);
+    assert(!negInfInterval.intersection(iInterval).empty);
+    assert(!negInfInterval.intersection(posInfInterval).empty);
+    assert(!negInfInterval.intersection(cPosInfInterval).empty);
+    assert(!negInfInterval.intersection(iPosInfInterval).empty);
+    assert(!negInfInterval.intersection(negInfInterval).empty);
+    assert(!negInfInterval.intersection(cNegInfInterval).empty);
+    assert(!negInfInterval.intersection(iNegInfInterval).empty);
+    assert(!cNegInfInterval.intersection(interval).empty);
+    assert(!cNegInfInterval.intersection(cInterval).empty);
+    assert(!cNegInfInterval.intersection(iInterval).empty);
+    assert(!cNegInfInterval.intersection(posInfInterval).empty);
+    assert(!cNegInfInterval.intersection(cPosInfInterval).empty);
+    assert(!cNegInfInterval.intersection(iPosInfInterval).empty);
+    assert(!cNegInfInterval.intersection(negInfInterval).empty);
+    assert(!cNegInfInterval.intersection(cNegInfInterval).empty);
+    assert(!cNegInfInterval.intersection(iNegInfInterval).empty);
+    assert(!iNegInfInterval.intersection(interval).empty);
+    assert(!iNegInfInterval.intersection(cInterval).empty);
+    assert(!iNegInfInterval.intersection(iInterval).empty);
+    assert(!iNegInfInterval.intersection(posInfInterval).empty);
+    assert(!iNegInfInterval.intersection(cPosInfInterval).empty);
+    assert(!iNegInfInterval.intersection(iPosInfInterval).empty);
+    assert(!iNegInfInterval.intersection(negInfInterval).empty);
+    assert(!iNegInfInterval.intersection(cNegInfInterval).empty);
+    assert(!iNegInfInterval.intersection(iNegInfInterval).empty);
 
     //Verify Examples.
     assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1990, 7 , 6), Date(2000, 8, 2)));
@@ -24367,33 +24395,33 @@ unittest
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.isAdjacent(interval)));
-    static assert(__traits(compiles, negInfInterval.isAdjacent(cInterval)));
-    static assert(__traits(compiles, negInfInterval.isAdjacent(iInterval)));
-    static assert(__traits(compiles, negInfInterval.isAdjacent(posInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isAdjacent(cPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isAdjacent(iPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isAdjacent(negInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isAdjacent(cNegInfInterval)));
-    static assert(__traits(compiles, negInfInterval.isAdjacent(iNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAdjacent(interval)));
-    static assert(__traits(compiles, cNegInfInterval.isAdjacent(cInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAdjacent(iInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAdjacent(posInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAdjacent(cPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAdjacent(iPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAdjacent(negInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAdjacent(cNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.isAdjacent(iNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAdjacent(interval)));
-    static assert(__traits(compiles, iNegInfInterval.isAdjacent(cInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAdjacent(iInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAdjacent(posInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAdjacent(cPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAdjacent(iPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAdjacent(negInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAdjacent(cNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.isAdjacent(iNegInfInterval)));
+    assert(!negInfInterval.isAdjacent(interval));
+    assert(!negInfInterval.isAdjacent(cInterval));
+    assert(!negInfInterval.isAdjacent(iInterval));
+    assert(!negInfInterval.isAdjacent(posInfInterval));
+    assert(!negInfInterval.isAdjacent(cPosInfInterval));
+    assert(!negInfInterval.isAdjacent(iPosInfInterval));
+    assert(!negInfInterval.isAdjacent(negInfInterval));
+    assert(!negInfInterval.isAdjacent(cNegInfInterval));
+    assert(!negInfInterval.isAdjacent(iNegInfInterval));
+    assert(!cNegInfInterval.isAdjacent(interval));
+    assert(!cNegInfInterval.isAdjacent(cInterval));
+    assert(!cNegInfInterval.isAdjacent(iInterval));
+    assert(!cNegInfInterval.isAdjacent(posInfInterval));
+    assert(!cNegInfInterval.isAdjacent(cPosInfInterval));
+    assert(!cNegInfInterval.isAdjacent(iPosInfInterval));
+    assert(!cNegInfInterval.isAdjacent(negInfInterval));
+    assert(!cNegInfInterval.isAdjacent(cNegInfInterval));
+    assert(!cNegInfInterval.isAdjacent(iNegInfInterval));
+    assert(!iNegInfInterval.isAdjacent(interval));
+    assert(!iNegInfInterval.isAdjacent(cInterval));
+    assert(!iNegInfInterval.isAdjacent(iInterval));
+    assert(!iNegInfInterval.isAdjacent(posInfInterval));
+    assert(!iNegInfInterval.isAdjacent(cPosInfInterval));
+    assert(!iNegInfInterval.isAdjacent(iPosInfInterval));
+    assert(!iNegInfInterval.isAdjacent(negInfInterval));
+    assert(!iNegInfInterval.isAdjacent(cNegInfInterval));
+    assert(!iNegInfInterval.isAdjacent(iNegInfInterval));
 
     //Verify Examples.
     assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
@@ -24488,33 +24516,33 @@ unittest
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.merge(interval)));
-    static assert(__traits(compiles, negInfInterval.merge(cInterval)));
-    static assert(__traits(compiles, negInfInterval.merge(iInterval)));
+    assert(!negInfInterval.merge(interval).empty);
+    assert(!negInfInterval.merge(cInterval).empty);
+    assert(!negInfInterval.merge(iInterval).empty);
     static assert(!__traits(compiles, negInfInterval.merge(posInfInterval)));
     static assert(!__traits(compiles, negInfInterval.merge(cPosInfInterval)));
     static assert(!__traits(compiles, negInfInterval.merge(iPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.merge(negInfInterval)));
-    static assert(__traits(compiles, negInfInterval.merge(cNegInfInterval)));
-    static assert(__traits(compiles, negInfInterval.merge(iNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.merge(interval)));
-    static assert(__traits(compiles, cNegInfInterval.merge(cInterval)));
-    static assert(__traits(compiles, cNegInfInterval.merge(iInterval)));
+    assert(!negInfInterval.merge(negInfInterval).empty);
+    assert(!negInfInterval.merge(cNegInfInterval).empty);
+    assert(!negInfInterval.merge(iNegInfInterval).empty);
+    assert(!cNegInfInterval.merge(interval).empty);
+    assert(!cNegInfInterval.merge(cInterval).empty);
+    assert(!cNegInfInterval.merge(iInterval).empty);
     static assert(!__traits(compiles, cNegInfInterval.merge(posInfInterval)));
     static assert(!__traits(compiles, cNegInfInterval.merge(cPosInfInterval)));
     static assert(!__traits(compiles, cNegInfInterval.merge(iPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.merge(negInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.merge(cNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.merge(iNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.merge(interval)));
-    static assert(__traits(compiles, iNegInfInterval.merge(cInterval)));
-    static assert(__traits(compiles, iNegInfInterval.merge(iInterval)));
+    assert(!cNegInfInterval.merge(negInfInterval).empty);
+    assert(!cNegInfInterval.merge(cNegInfInterval).empty);
+    assert(!cNegInfInterval.merge(iNegInfInterval).empty);
+    assert(!iNegInfInterval.merge(interval).empty);
+    assert(!iNegInfInterval.merge(cInterval).empty);
+    assert(!iNegInfInterval.merge(iInterval).empty);
     static assert(!__traits(compiles, iNegInfInterval.merge(posInfInterval)));
     static assert(!__traits(compiles, iNegInfInterval.merge(cPosInfInterval)));
     static assert(!__traits(compiles, iNegInfInterval.merge(iPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.merge(negInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.merge(cNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.merge(iNegInfInterval)));
+    assert(!iNegInfInterval.merge(negInfInterval).empty);
+    assert(!iNegInfInterval.merge(cNegInfInterval).empty);
+    assert(!iNegInfInterval.merge(iNegInfInterval).empty);
 
     //Verify Examples.
     assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == NegInfInterval!Date(Date(2012, 3 , 1)));
@@ -24604,33 +24632,33 @@ unittest
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, negInfInterval.span(interval)));
-    static assert(__traits(compiles, negInfInterval.span(cInterval)));
-    static assert(__traits(compiles, negInfInterval.span(iInterval)));
+    assert(!negInfInterval.span(interval).empty);
+    assert(!negInfInterval.span(cInterval).empty);
+    assert(!negInfInterval.span(iInterval).empty);
     static assert(!__traits(compiles, negInfInterval.span(posInfInterval)));
     static assert(!__traits(compiles, negInfInterval.span(cPosInfInterval)));
     static assert(!__traits(compiles, negInfInterval.span(iPosInfInterval)));
-    static assert(__traits(compiles, negInfInterval.span(negInfInterval)));
-    static assert(__traits(compiles, negInfInterval.span(cNegInfInterval)));
-    static assert(__traits(compiles, negInfInterval.span(iNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.span(interval)));
-    static assert(__traits(compiles, cNegInfInterval.span(cInterval)));
-    static assert(__traits(compiles, cNegInfInterval.span(iInterval)));
+    assert(!negInfInterval.span(negInfInterval).empty);
+    assert(!negInfInterval.span(cNegInfInterval).empty);
+    assert(!negInfInterval.span(iNegInfInterval).empty);
+    assert(!cNegInfInterval.span(interval).empty);
+    assert(!cNegInfInterval.span(cInterval).empty);
+    assert(!cNegInfInterval.span(iInterval).empty);
     static assert(!__traits(compiles, cNegInfInterval.span(posInfInterval)));
     static assert(!__traits(compiles, cNegInfInterval.span(cPosInfInterval)));
     static assert(!__traits(compiles, cNegInfInterval.span(iPosInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.span(negInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.span(cNegInfInterval)));
-    static assert(__traits(compiles, cNegInfInterval.span(iNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.span(interval)));
-    static assert(__traits(compiles, iNegInfInterval.span(cInterval)));
-    static assert(__traits(compiles, iNegInfInterval.span(iInterval)));
+    assert(!cNegInfInterval.span(negInfInterval).empty);
+    assert(!cNegInfInterval.span(cNegInfInterval).empty);
+    assert(!cNegInfInterval.span(iNegInfInterval).empty);
+    assert(!iNegInfInterval.span(interval).empty);
+    assert(!iNegInfInterval.span(cInterval).empty);
+    assert(!iNegInfInterval.span(iInterval).empty);
     static assert(!__traits(compiles, iNegInfInterval.span(posInfInterval)));
     static assert(!__traits(compiles, iNegInfInterval.span(cPosInfInterval)));
     static assert(!__traits(compiles, iNegInfInterval.span(iPosInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.span(negInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.span(cNegInfInterval)));
-    static assert(__traits(compiles, iNegInfInterval.span(iNegInfInterval)));
+    assert(!iNegInfInterval.span(negInfInterval).empty);
+    assert(!iNegInfInterval.span(cNegInfInterval).empty);
+    assert(!iNegInfInterval.span(iNegInfInterval).empty);
 
     //Verify Examples.
     assert(NegInfInterval!Date(Date(2012, 3, 1)).span(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == NegInfInterval!Date(Date(2012, 3 , 1)));
@@ -24843,8 +24871,8 @@ unittest
 
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, cNegInfInterval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri))));
-    static assert(__traits(compiles, iNegInfInterval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri))));
+    assert(!cNegInfInterval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).empty);
+    assert(!iNegInfInterval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).empty);
 }
 
 //Test NegInfInterval's toString().
@@ -24854,8 +24882,8 @@ unittest
 
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-    static assert(__traits(compiles, cNegInfInterval.toString()));
-    static assert(__traits(compiles, iNegInfInterval.toString()));
+    assert(cNegInfInterval.toString());
+    assert(iNegInfInterval.toString());
 }
 
 
@@ -24952,8 +24980,8 @@ unittest
     assert(funcBwd(Date(2010, 9, 7)) == Date(2010, 9, 6));
 
     static assert(!__traits(compiles, everyDayOfWeek!(TimeOfDay)(DayOfWeek.mon)));
-    static assert(__traits(compiles, everyDayOfWeek!(DateTime)(DayOfWeek.mon)));
-    static assert(__traits(compiles, everyDayOfWeek!(SysTime)(DayOfWeek.mon)));
+    assert(everyDayOfWeek!(DateTime)(DayOfWeek.mon) !is null);
+    assert(everyDayOfWeek!(SysTime)(DayOfWeek.mon) !is null);
 }
 
 
@@ -25080,8 +25108,8 @@ unittest
     assert(funcBwd(Date(2011, 7, 30)) == Date(2011, 6, 30));
 
     static assert(!__traits(compiles, everyMonth!(TimeOfDay)(Month.jan)));
-    static assert(__traits(compiles, everyMonth!(DateTime)(Month.jan)));
-    static assert(__traits(compiles, everyMonth!(SysTime)(Month.jan)));
+    assert(everyMonth!(DateTime)(Month.jan) !is null);
+    assert(everyMonth!(SysTime)(Month.jan) !is null);
 }
 
 
@@ -25158,10 +25186,10 @@ unittest
     assert(funcBwd(Date(2010, 1, 23)) == Date(2009, 12, 27));
     assert(funcBwd(Date(2010, 1, 24)) == Date(2009, 12, 28));
 
-    static assert(__traits(compiles, everyDuration!Date(dur!"hnsecs"(1))));
-    static assert(__traits(compiles, everyDuration!TimeOfDay(dur!"hnsecs"(1))));
-    static assert(__traits(compiles, everyDuration!DateTime(dur!"hnsecs"(1))));
-    static assert(__traits(compiles, everyDuration!SysTime(dur!"hnsecs"(1))));
+    assert(everyDuration!Date(dur!"hnsecs"(1)) !is null);
+    assert(everyDuration!TimeOfDay(dur!"hnsecs"(1)) !is null);
+    assert(everyDuration!DateTime(dur!"hnsecs"(1)) !is null);
+    assert(everyDuration!SysTime(dur!"hnsecs"(1)) !is null);
 }
 
 
@@ -25298,10 +25326,10 @@ unittest
         assert(funcBwd(Date(2011, 3, 4)) == Date(2010, 1, 1));
     }
 
-    static assert(__traits(compiles, everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
+    assert(everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1)) !is null);
     static assert(!__traits(compiles, everyDuration!TimeOfDay(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
-    static assert(__traits(compiles, everyDuration!DateTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
-    static assert(__traits(compiles, everyDuration!SysTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
+    assert(everyDuration!DateTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1)) !is null);
+    assert(everyDuration!SysTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1)) !is null);
 }
 
 
@@ -25634,7 +25662,7 @@ unittest
         assert(range.empty);
 
         const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
-        static assert(__traits(compiles, cRange.empty));
+        assert(!cRange.empty);
 
         //Apparently, creating an immutable IntervalRange!Date doesn't work, so we can't test if
         //empty works with it. However, since an immutable range is pretty useless, it's no great loss.
@@ -25649,7 +25677,7 @@ unittest
         assert(range.empty);
 
         const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
-        static assert(__traits(compiles, cRange.empty));
+        assert(!cRange.empty);
 
         //Apparently, creating an immutable IntervalRange!Date doesn't work, so we can't test if
         //empty works with it. However, since an immutable range is pretty useless, it's no great loss.
@@ -25671,7 +25699,7 @@ unittest
         assert(poppedRange.front == Date(2010, 7, 7));
 
         const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
-        static assert(__traits(compiles, cRange.front));
+        assert(cRange.front != Date.init);
     }
 
     //bwd
@@ -25686,7 +25714,7 @@ unittest
         assert(poppedRange.front == Date(2012, 1, 4));
 
         const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
-        static assert(__traits(compiles, cRange.front));
+        assert(cRange.front != Date.init);
     }
 }
 
@@ -25710,7 +25738,7 @@ unittest
         assert(walkLength(range) == 79);
 
         const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
-        static assert(__traits(compiles, cRange.front));
+        assert(cRange.front != Date.init);
     }
 
     //bwd
@@ -25768,7 +25796,7 @@ unittest
         assert(range.interval == interval);
 
         const cRange = range;
-        static assert(__traits(compiles, cRange.interval));
+        assert(!cRange.interval.empty);
     }
 
     //bwd
@@ -25780,7 +25808,7 @@ unittest
         assert(range.interval == interval);
 
         const cRange = range;
-        static assert(__traits(compiles, cRange.interval));
+        assert(!cRange.interval.empty);
     }
 }
 
@@ -25818,7 +25846,7 @@ unittest
         assert(range.direction == Direction.fwd);
 
         const cRange = range;
-        static assert(__traits(compiles, cRange.direction));
+        assert(cRange.direction == Direction.fwd);
     }
 
     //bwd
@@ -25830,7 +25858,7 @@ unittest
         assert(range.direction == Direction.bwd);
 
         const cRange = range;
-        static assert(__traits(compiles, cRange.direction));
+        assert(cRange.direction == Direction.bwd);
     }
 }
 
@@ -26060,7 +26088,7 @@ unittest
     assert(poppedRange.front == Date(2010, 7, 7));
 
     const cRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
-    static assert(__traits(compiles, cRange.front));
+    assert(cRange.front != Date.init);
 }
 
 //Test PosInfIntervalRange's popFront().
@@ -26100,7 +26128,7 @@ unittest
     assert(range.interval == interval);
 
     const cRange = range;
-    static assert(__traits(compiles, cRange.interval));
+    assert(!cRange.interval.empty);
 }
 
 //Test PosInfIntervalRange's func.
@@ -26347,7 +26375,7 @@ unittest
     assert(poppedRange.front == Date(2012, 1, 4));
 
     const cRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
-    static assert(__traits(compiles, cRange.front));
+    assert(cRange.front != Date.init);
 }
 
 //Test NegInfIntervalRange's popFront().
@@ -26388,7 +26416,7 @@ unittest
     assert(range.interval == interval);
 
     const cRange = range;
-    static assert(__traits(compiles, cRange.interval));
+    assert(!cRange.interval.empty);
 }
 
 //Test NegInfIntervalRange's func.
@@ -27038,21 +27066,21 @@ public:
         }
         else version(Windows)
         {
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            //return to!string(tzInfo.StandardName);
+
+            wchar[32] str;
+
+            foreach(i, ref wchar c; str)
+                c = tzInfo.StandardName[i];
+
+            string retval;
+
             try
             {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
-
-                //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-                //return to!string(tzInfo.StandardName);
-
-                wchar[32] str;
-
-                foreach(i, ref wchar c; str)
-                    c = tzInfo.StandardName[i];
-
-                string retval;
-
                 foreach(dchar c; str)
                 {
                     if(c == '\0')
@@ -27064,7 +27092,7 @@ public:
                 return retval;
             }
             catch(Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+                assert(0, "GetTimeZoneInformation() returned invalid UTF-16.");
         }
     }
 
@@ -27109,21 +27137,21 @@ public:
         }
         else version(Windows)
         {
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            //return to!string(tzInfo.DaylightName);
+
+            wchar[32] str;
+
+            foreach(i, ref wchar c; str)
+                c = tzInfo.DaylightName[i];
+
+            string retval;
+
             try
             {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
-
-                //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-                //return to!string(tzInfo.DaylightName);
-
-                wchar[32] str;
-
-                foreach(i, ref wchar c; str)
-                    c = tzInfo.DaylightName[i];
-
-                string retval;
-
                 foreach(dchar c; str)
                 {
                     if(c == '\0')
@@ -27135,7 +27163,7 @@ public:
                 return retval;
             }
             catch(Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+                assert(0, "GetTimeZoneInformation() returned invalid UTF-16.");
         }
     }
 
@@ -27194,15 +27222,10 @@ public:
         }
         else version(Windows)
         {
-            try
-            {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
 
-                return tzInfo.DaylightDate.wMonth != 0;
-            }
-            catch(Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+            return tzInfo.DaylightDate.wMonth != 0;
         }
     }
 
@@ -27257,11 +27280,7 @@ public:
             }
 
             TIME_ZONE_INFORMATION tzInfo;
-
-            try
-                GetTimeZoneInformation(&tzInfo);
-            catch(Exception e)
-                assert(0, "The impossible happened. GetTimeZoneInformation() threw.");
+            GetTimeZoneInformation(&tzInfo);
 
             return WindowsTimeZone._dstInEffect(&tzInfo, stdTime);
         }
@@ -27298,11 +27317,7 @@ public:
         else version(Windows)
         {
             TIME_ZONE_INFORMATION tzInfo;
-
-            try
-                GetTimeZoneInformation(&tzInfo);
-            catch(Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+            GetTimeZoneInformation(&tzInfo);
 
             return WindowsTimeZone._utcToTZ(&tzInfo, stdTime, hasDST);
         }
@@ -27354,11 +27369,7 @@ public:
         else version(Windows)
         {
             TIME_ZONE_INFORMATION tzInfo;
-
-            try
-                GetTimeZoneInformation(&tzInfo);
-            catch(Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+            GetTimeZoneInformation(&tzInfo);
 
             return WindowsTimeZone._tzToUTC(&tzInfo, adjTime, hasDST);
         }
@@ -27708,8 +27719,7 @@ public:
         assert(west.utcToTZ(54_321_234_567_890L) == 54_033_234_567_890L);
 
         const cstz = west;
-        static assert(__traits(compiles, west.utcToTZ(50002)));
-        static assert(__traits(compiles, cstz.utcToTZ(50002)));
+        assert(cstz.utcToTZ(50002) == west.utcToTZ(50002));
     }
 
 
@@ -27736,8 +27746,7 @@ public:
         assert(west.tzToUTC(54_033_234_567_890L) == 54_321_234_567_890L);
 
         const cstz = west;
-        static assert(__traits(compiles, west.tzToUTC(20005)));
-        static assert(__traits(compiles, cstz.tzToUTC(20005)));
+        assert(cstz.tzToUTC(20005) == west.tzToUTC(20005));
     }
 
 
@@ -28047,9 +28056,9 @@ private:
     Note:
         Unless your system's local time zone deals with leap seconds (which is
         highly unlikely), then the only way to get a time zone which
-        takes leap seconds into account is to use $(LREF PosixTimeZone) with a
+        takes leap seconds into account is to use $(D PosixTimeZone) with a
         time zone whose name starts with "right/". Those time zone files do
-        include leap seconds, and $(LREF PosixTimeZone) will take them into account
+        include leap seconds, and $(D PosixTimeZone) will take them into account
         (though posix systems which use a "right/" time zone as their local time
         zone will $(I not) take leap seconds into account even though they're
         in the file).
@@ -28872,17 +28881,17 @@ version(StdDdoc)
         occur (especially for historical dates). Also, the TZ Database files
         include far more time zones than Windows does. So, for accurate
         time zone information, use the TZ Database files with
-        $(LREF PosixTimeZone) rather than $(LREF WindowsTimeZone). However, because
-        $(LREF WindowsTimeZone) uses Windows system calls to deal with the time,
+        $(LREF PosixTimeZone) rather than $(D WindowsTimeZone). However, because
+        $(D WindowsTimeZone) uses Windows system calls to deal with the time,
         it's far more likely to match the behavior of other Windows programs.
         Be aware of the differences when selecting a method.
 
-        $(LREF WindowsTimeZone) does not exist on Posix systems.
+        $(D WindowsTimeZone) does not exist on Posix systems.
 
-        To get a $(LREF WindowsTimeZone), either call
+        To get a $(D WindowsTimeZone), either call
         $(D WindowsTimeZone.getTimeZone) or call $(D TimeZone.getTimeZone)
         (which will give a $(LREF PosixTimeZone) on Posix systems and a
-         $(LREF WindowsTimeZone) on Windows systems).
+         $(D WindowsTimeZone) on Windows systems).
 
         See_Also:
             $(WEB www.iana.org/time-zones, Home of the TZ Database files)
@@ -30380,31 +30389,87 @@ unittest
 /++
     Whether the given type defines all of the necessary functions for it to
     function as a time point.
+
+    1. $(D T) must define a static property named $(D min) which is the smallest
+       value of $(D T) as $(Unqual!T).
+
+    2. $(D T) must define a static property named $(D max) which is the largest
+       value of $(D T) as $(Unqual!T).
+
+    3. $(D T) must define an $(D opBinary) for addition and subtraction that
+       accepts $(CXREF time, Duration) and returns $(D Unqual!T).
+
+    4. $(D T) must define an $(D opOpAssign) for addition and subtraction that
+       accepts $(CXREF time, Duration) and returns $(D ref Unqual!T).
+
+    5. $(D T) must define a $(D opBinary) for subtraction which accepts $(D T)
+       and returns returns $(CXREF time, Duration).
   +/
 template isTimePoint(T)
 {
-    enum isTimePoint = hasMin!T &&
-                       hasMax!T &&
-                       hasOverloadedOpBinaryWithDuration!T &&
-                       hasOverloadedOpAssignWithDuration!T &&
-                       hasOverloadedOpBinaryWithSelf!T;
+    enum isTimePoint = hasMin &&
+                       hasMax &&
+                       hasOverloadedOpBinaryWithDuration &&
+                       hasOverloadedOpAssignWithDuration &&
+                       hasOverloadedOpBinaryWithSelf &&
+                       !is(U == Duration);
+
+private:
+
+    alias U = Unqual!T;
+
+    enum hasMin = __traits(hasMember, T, "min") &&
+                  is(typeof(T.min) == U) &&
+                  is(typeof({static assert(__traits(isStaticFunction, T.min));}));
+
+    enum hasMax = __traits(hasMember, T, "max") &&
+                  is(typeof(T.max) == U) &&
+                  is(typeof({static assert(__traits(isStaticFunction, T.max));}));
+
+    enum hasOverloadedOpBinaryWithDuration = is(typeof(T.init + Duration.init) == U) &&
+                                             is(typeof(T.init - Duration.init) == U);
+
+    enum hasOverloadedOpAssignWithDuration = is(typeof(U.init += Duration.init) == U) &&
+                                             is(typeof(U.init -= Duration.init) == U) &&
+                                             is(typeof(
+                                             {
+                                                 alias add = U.opOpAssign!("+", Duration);
+                                                 alias sub = U.opOpAssign!("-", Duration);
+                                                 alias FA = FunctionAttribute;
+                                                 static assert((functionAttributes!add & FA.ref_) != 0);
+                                                 static assert((functionAttributes!sub & FA.ref_) != 0);
+                                             }));
+
+    enum hasOverloadedOpBinaryWithSelf = is(typeof(T.init - T.init) == Duration);
+}
+
+///
+unittest
+{
+    static assert(isTimePoint!Date);
+    static assert(isTimePoint!DateTime);
+    static assert(isTimePoint!SysTime);
+    static assert(isTimePoint!TimeOfDay);
+
+    static assert(!isTimePoint!int);
+    static assert(!isTimePoint!Duration);
+    static assert(!isTimePoint!(Interval!SysTime));
 }
 
 unittest
 {
-    static assert(isTimePoint!(Date));
-    static assert(isTimePoint!(DateTime));
-    static assert(isTimePoint!(TimeOfDay));
-    static assert(isTimePoint!(SysTime));
-    static assert(isTimePoint!(const Date));
-    static assert(isTimePoint!(const DateTime));
-    static assert(isTimePoint!(const TimeOfDay));
-    static assert(isTimePoint!(const SysTime));
-    static assert(isTimePoint!(immutable Date));
-    static assert(isTimePoint!(immutable DateTime));
-    static assert(isTimePoint!(immutable TimeOfDay));
-    static assert(isTimePoint!(immutable SysTime));
+    import std.meta : AliasSeq;
+
+    foreach(TP; AliasSeq!(Date, DateTime, SysTime, TimeOfDay))
+    {
+        static assert(isTimePoint!(const TP), TP.stringof);
+        static assert(isTimePoint!(immutable TP), TP.stringof);
+    }
+
+    foreach(T; AliasSeq!(float, string, Duration, Interval!Date, PosInfInterval!Date, NegInfInterval!Date))
+        static assert(!isTimePoint!T, T.stringof);
 }
+
 
 /++
     Whether the given Gregorian Year is a leap year.
@@ -31276,10 +31341,10 @@ unittest
     import std.algorithm;
     import std.ascii;
     import std.format : format;
+    import std.meta;
     import std.range;
     import std.string;
     import std.typecons;
-    import std.typetuple;
 
     static struct Rand3Letters
     {
@@ -31294,10 +31359,10 @@ unittest
         static auto start() { Rand3Letters retval; retval.popFront(); return retval; }
     }
 
-    foreach(cr; TypeTuple!(function(string a){return cast(char[])a;},
-                           function(string a){return cast(ubyte[])a;},
-                           function(string a){return a;},
-                           function(string a){return map!(b => cast(char)b)(a.representation);}))
+    foreach(cr; AliasSeq!(function(string a){return cast(char[])a;},
+                          function(string a){return cast(ubyte[])a;},
+                          function(string a){return a;},
+                          function(string a){return map!(b => cast(char)b)(a.representation);}))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
@@ -31545,10 +31610,10 @@ unittest
     import std.algorithm;
     import std.ascii;
     import std.format : format;
+    import std.meta;
     import std.range;
     import std.string;
     import std.typecons;
-    import std.typetuple;
 
     auto std1 = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
     auto std2 = SysTime(DateTime(2012, 12, 21, 13, 14, 0), UTC());
@@ -31559,10 +31624,10 @@ unittest
     auto tooLate1 = SysTime(Date(10_000, 1, 1), UTC());
     auto tooLate2 = SysTime(DateTime(12_007, 12, 31, 12, 22, 19), UTC());
 
-    foreach(cr; TypeTuple!(function(string a){return cast(char[])a;},
-                           function(string a){return cast(ubyte[])a;},
-                           function(string a){return a;},
-                           function(string a){return map!(b => cast(char)b)(a.representation);}))
+    foreach(cr; AliasSeq!(function(string a){return cast(char[])a;},
+                          function(string a){return cast(ubyte[])a;},
+                          function(string a){return a;},
+                          function(string a){return map!(b => cast(char)b)(a.representation);}))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
@@ -31872,9 +31937,9 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
 unittest
 {
     import std.format : format;
+    import std.meta;
     import std.string;
     import std.typecons;
-    import std.typetuple;
 
     static string genTest(size_t index)
     {
@@ -31891,7 +31956,7 @@ unittest
     }
 
     static assert(timeStrings.length == 10);
-    foreach(n; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+    foreach(n; AliasSeq!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
         mixin(genTest(n));
 }
 
@@ -33000,12 +33065,12 @@ R _stripCFWS(R)(R range)
 unittest
 {
     import std.algorithm;
+    import std.meta;
     import std.string;
     import std.typecons;
-    import std.typetuple;
 
-    foreach(cr; TypeTuple!(function(string a){return cast(ubyte[])a;},
-                           function(string a){return map!(b => cast(char)b)(a.representation);}))
+    foreach(cr; AliasSeq!(function(string a){return cast(ubyte[])a;},
+                          function(string a){return map!(b => cast(char)b)(a.representation);}))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
 
@@ -33132,170 +33197,6 @@ unittest
         scope(failure) writeln(str);
         assert(_convDigits!int(str) == -1);
     }
-}
-
-
-/+
-    Whether the given type defines the static property min which returns the
-    minimum value for the type.
-  +/
-template hasMin(T)
-{
-    enum hasMin = __traits(hasMember, T, "min") &&
-                  __traits(isStaticFunction, T.min) &&
-                  is(typeof(T.min) == Unqual!T);
-}
-
-unittest
-{
-    static assert(hasMin!(Date));
-    static assert(hasMin!(TimeOfDay));
-    static assert(hasMin!(DateTime));
-    static assert(hasMin!(SysTime));
-    static assert(hasMin!(const Date));
-    static assert(hasMin!(const TimeOfDay));
-    static assert(hasMin!(const DateTime));
-    static assert(hasMin!(const SysTime));
-    static assert(hasMin!(immutable Date));
-    static assert(hasMin!(immutable TimeOfDay));
-    static assert(hasMin!(immutable SysTime));
-}
-
-
-/+
-    Whether the given type defines the static property max which returns the
-    maximum value for the type.
-  +/
-template hasMax(T)
-{
-    enum hasMax = __traits(hasMember, T, "max") &&
-                  __traits(isStaticFunction, T.max) &&
-                  is(typeof(T.max) == Unqual!T);
-}
-
-unittest
-{
-    static assert(hasMax!(Date));
-    static assert(hasMax!(TimeOfDay));
-    static assert(hasMax!(DateTime));
-    static assert(hasMax!(SysTime));
-    static assert(hasMax!(const Date));
-    static assert(hasMax!(const TimeOfDay));
-    static assert(hasMax!(const DateTime));
-    static assert(hasMax!(const SysTime));
-    static assert(hasMax!(immutable Date));
-    static assert(hasMax!(immutable TimeOfDay));
-    static assert(hasMax!(immutable DateTime));
-    static assert(hasMax!(immutable SysTime));
-}
-
-
-/+
-    Whether the given type defines the overloaded opBinary operators that a time
-    point is supposed to define which work with time durations. Namely:
-
-    $(BOOKTABLE,
-    $(TR $(TD TimePoint opBinary"+"(duration)))
-    $(TR $(TD TimePoint opBinary"-"(duration)))
-    )
-  +/
-template hasOverloadedOpBinaryWithDuration(T)
-{
-    enum hasOverloadedOpBinaryWithDuration = __traits(compiles, T.init + dur!"days"(5)) &&
-                                             is(typeof(T.init + dur!"days"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init - dur!"days"(5)) &&
-                                             is(typeof(T.init - dur!"days"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init + TickDuration.from!"hnsecs"(5)) &&
-                                             is(typeof(T.init + TickDuration.from!"hnsecs"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init - TickDuration.from!"hnsecs"(5)) &&
-                                             is(typeof(T.init - TickDuration.from!"hnsecs"(5)) == Unqual!T);
-}
-
-unittest
-{
-    static assert(hasOverloadedOpBinaryWithDuration!(Date));
-    static assert(hasOverloadedOpBinaryWithDuration!(TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithDuration!(DateTime));
-    static assert(hasOverloadedOpBinaryWithDuration!(SysTime));
-    static assert(hasOverloadedOpBinaryWithDuration!(const Date));
-    static assert(hasOverloadedOpBinaryWithDuration!(const TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithDuration!(const DateTime));
-    static assert(hasOverloadedOpBinaryWithDuration!(const SysTime));
-    static assert(hasOverloadedOpBinaryWithDuration!(immutable Date));
-    static assert(hasOverloadedOpBinaryWithDuration!(immutable TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithDuration!(immutable DateTime));
-    static assert(hasOverloadedOpBinaryWithDuration!(immutable SysTime));
-}
-
-
-/+
-    Whether the given type defines the overloaded opOpAssign operators that a time point is supposed
-    to define. Namely:
-
-    $(BOOKTABLE,
-    $(TR $(TD TimePoint opOpAssign"+"(duration)))
-    $(TR $(TD TimePoint opOpAssign"-"(duration)))
-    )
-  +/
-template hasOverloadedOpAssignWithDuration(T)
-{
-    enum hasOverloadedOpAssignWithDuration = is(typeof(
-    {
-        auto  d = dur!"days"(5);
-        auto td = TickDuration.from!"hnsecs"(5);
-        alias U = Unqual!T;
-        static assert(is(typeof(U.init +=  d) == U));
-        static assert(is(typeof(U.init -=  d) == U));
-        static assert(is(typeof(U.init += td) == U));
-        static assert(is(typeof(U.init -= td) == U));
-    }));
-}
-
-unittest
-{
-    static assert(hasOverloadedOpAssignWithDuration!(Date));
-    static assert(hasOverloadedOpAssignWithDuration!(TimeOfDay));
-    static assert(hasOverloadedOpAssignWithDuration!(DateTime));
-    static assert(hasOverloadedOpAssignWithDuration!(SysTime));
-    static assert(hasOverloadedOpAssignWithDuration!(const Date));
-    static assert(hasOverloadedOpAssignWithDuration!(const TimeOfDay));
-    static assert(hasOverloadedOpAssignWithDuration!(const DateTime));
-    static assert(hasOverloadedOpAssignWithDuration!(const SysTime));
-    static assert(hasOverloadedOpAssignWithDuration!(immutable Date));
-    static assert(hasOverloadedOpAssignWithDuration!(immutable TimeOfDay));
-    static assert(hasOverloadedOpAssignWithDuration!(immutable DateTime));
-    static assert(hasOverloadedOpAssignWithDuration!(immutable SysTime));
-}
-
-
-/+
-    Whether the given type defines the overloaded opBinary operator that a time point is supposed
-    to define which works with itself. Namely:
-
-    $(BOOKTABLE,
-    $(TR $(TD duration opBinary"-"(Date)))
-    )
-  +/
-template hasOverloadedOpBinaryWithSelf(T)
-{
-    enum hasOverloadedOpBinaryWithSelf = __traits(compiles, T.init - T.init) &&
-                                         is(Unqual!(typeof(T.init - T.init)) == Duration);
-}
-
-unittest
-{
-    static assert(hasOverloadedOpBinaryWithSelf!(Date));
-    static assert(hasOverloadedOpBinaryWithSelf!(TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithSelf!(DateTime));
-    static assert(hasOverloadedOpBinaryWithSelf!(SysTime));
-    static assert(hasOverloadedOpBinaryWithSelf!(const Date));
-    static assert(hasOverloadedOpBinaryWithSelf!(const TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithSelf!(const DateTime));
-    static assert(hasOverloadedOpBinaryWithSelf!(const SysTime));
-    static assert(hasOverloadedOpBinaryWithSelf!(immutable Date));
-    static assert(hasOverloadedOpBinaryWithSelf!(immutable TimeOfDay));
-    static assert(hasOverloadedOpBinaryWithSelf!(immutable DateTime));
-    static assert(hasOverloadedOpBinaryWithSelf!(immutable SysTime));
 }
 
 

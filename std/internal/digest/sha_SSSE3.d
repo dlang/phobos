@@ -142,11 +142,14 @@ version(USE_SSSE3)
     /** Simple version to produce numbers < 100 as string. */
     private nothrow pure string to_string(uint i)
     {
+        if (i < 10)
+            return "0123456789"[i .. i + 1];
+
         assert(i < 100);
-        string s;
-        if (i >= 10)
-            s ~= cast(char)('0' + (i / 10) % 10);
-        return s ~ cast(char)('0' + i % 10);
+        char[2] s;
+        s[0] = cast(char)(i / 10 + '0');
+        s[1] = cast(char)(i % 10 + '0');
+        return s.idup;
     }
 
     /** Returns the reference to constant used in round i. */

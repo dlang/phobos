@@ -68,8 +68,8 @@ Source:    $(PHOBOSSRC std/_variant.d)
 */
 module std.variant;
 
-import core.stdc.string, std.conv, std.exception, std.traits, std.typecons,
-    std.typetuple;
+import core.stdc.string, std.conv, std.exception, std.meta, std.traits,
+    std.typecons;
 
 /++
     Gives the $(D sizeof) the largest type given.
@@ -89,7 +89,7 @@ template maxSize(T...)
 
 struct This;
 
-private alias This2Variant(V, T...) = TypeTuple!(ReplaceType!(This, V, T));
+private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
 
 /**
  * $(D VariantN) is a back-end type seldom used directly by user
@@ -260,27 +260,27 @@ private:
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
             alias UA = Unqual!A;
-            alias MutaTypes = TypeTuple!(UA, ImplicitConversionTargets!UA);
+            alias MutaTypes = AliasSeq!(UA, ImplicitConversionTargets!UA);
             alias ConstTypes = staticMap!(ConstOf, MutaTypes);
             alias SharedTypes = staticMap!(SharedOf, MutaTypes);
             alias SharedConstTypes = staticMap!(SharedConstOf, MutaTypes);
             alias ImmuTypes  = staticMap!(ImmutableOf, MutaTypes);
 
             static if (is(A == immutable))
-                alias AllTypes = TypeTuple!(ImmuTypes, ConstTypes, SharedConstTypes);
+                alias AllTypes = AliasSeq!(ImmuTypes, ConstTypes, SharedConstTypes);
             else static if (is(A == shared))
             {
                 static if (is(A == const))
                     alias AllTypes = SharedConstTypes;
                 else
-                    alias AllTypes = TypeTuple!(SharedTypes, SharedConstTypes);
+                    alias AllTypes = AliasSeq!(SharedTypes, SharedConstTypes);
             }
             else
             {
                 static if (is(A == const))
                     alias AllTypes = ConstTypes;
                 else
-                    alias AllTypes = TypeTuple!(MutaTypes, ConstTypes);
+                    alias AllTypes = AliasSeq!(MutaTypes, ConstTypes);
             }
 
             foreach (T ; AllTypes)
@@ -295,7 +295,8 @@ private:
                     auto zat = cast(T*) target;
                     if (src)
                     {
-                        assert(target, "target must be non-null");
+                        static if (T.sizeof > 0)
+                            assert(target, "target must be non-null");
                         *zat = *src;
                     }
                 }
@@ -307,7 +308,8 @@ private:
                     auto zat = cast(U*) target;
                     if (src)
                     {
-                        assert(target, "target must be non-null");
+                        static if (U.sizeof > 0)
+                            assert(target, "target must be non-null");
                         *zat = *(cast(UA*) (src));
                     }
                 }
@@ -484,7 +486,7 @@ private:
             }
             else
             {
-                alias ParamTypes = ParameterTypeTuple!A;
+                alias ParamTypes = Parameters!A;
                 auto p = cast(Variant*) parm;
                 auto argCount = p.get!size_t;
                 // To assign the tuple we need to use the unqualified version,
@@ -1139,7 +1141,7 @@ public:
      */
     int opApply(Delegate)(scope Delegate dg) if (is(Delegate == delegate))
     {
-        alias A = ParameterTypeTuple!(Delegate)[0];
+        alias A = Parameters!(Delegate)[0];
         if (type == typeid(A[]))
         {
             auto arr = get!(A[]);
@@ -1208,7 +1210,7 @@ unittest
     }
 
     static assert(S.sizeof >= Variant.sizeof);
-    alias Types = TypeTuple!(string, int, S);
+    alias Types = AliasSeq!(string, int, S);
     alias MyVariant = VariantN!(maxSize!Types, Types);
 
     auto v = MyVariant(S.init);
@@ -1467,7 +1469,7 @@ static class VariantException : Exception
 unittest
 {
     alias W1 = This2Variant!(char, int, This[int]);
-    alias W2 = TypeTuple!(int, char[int]);
+    alias W2 = AliasSeq!(int, char[int]);
     static assert(is(W1 == W2));
 
     alias var_t = Algebraic!(void, string);
@@ -2183,7 +2185,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                 // Handle normal function objects
                 static if (isSomeFunction!dg)
                 {
-                    alias Params = ParameterTypeTuple!dg;
+                    alias Params = Parameters!dg;
                     static if (Params.length == 0)
                     {
                         // Just check exception functions in the first
@@ -2307,24 +2309,24 @@ unittest
 
     int i = 10;
     v = i;
-    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!int) == 10);
         assert(v.get!(qual!float) == 10.0f);
     }
-    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
     }
 
     const(int) ci = 20;
     v = ci;
-    foreach (qual; TypeTuple!(ConstOf))
+    foreach (qual; AliasSeq!(ConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2332,12 +2334,12 @@ unittest
 
     immutable(int) ii = ci;
     v = ii;
-    foreach (qual; TypeTuple!(ImmutableOf, ConstOf, SharedConstOf))
+    foreach (qual; AliasSeq!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; TypeTuple!(MutableOf, SharedOf))
+    foreach (qual; AliasSeq!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2345,12 +2347,12 @@ unittest
 
     int[] ai = [1,2,3];
     v = ai;
-    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!(int[])) == [1,2,3]);
         assert(v.get!(qual!(int)[]) == [1,2,3]);
     }
-    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2358,12 +2360,12 @@ unittest
 
     const(int[]) cai = [4,5,6];
     v = cai;
-    foreach (qual; TypeTuple!(ConstOf))
+    foreach (qual; AliasSeq!(ConstOf))
     {
         assert(v.get!(qual!(int[])) == [4,5,6]);
         assert(v.get!(qual!(int)[]) == [4,5,6]);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2377,7 +2379,7 @@ unittest
     assert(v.get!(const(int)[]) == [7,8,9]);
     //assert(v.get!(shared(const(int[]))) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
     //assert(v.get!(shared(const(int))[]) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
-    foreach (qual; TypeTuple!(MutableOf))
+    foreach (qual; AliasSeq!(MutableOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2387,13 +2389,13 @@ unittest
     class B : A {}
     B b = new B();
     v = b;
-    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!B) is b);
         assert(v.get!(qual!A) is b);
         assert(v.get!(qual!Object) is b);
     }
-    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2402,13 +2404,13 @@ unittest
 
     const(B) cb = new B();
     v = cb;
-    foreach (qual; TypeTuple!(ConstOf))
+    foreach (qual; AliasSeq!(ConstOf))
     {
         assert(v.get!(qual!B) is cb);
         assert(v.get!(qual!A) is cb);
         assert(v.get!(qual!Object) is cb);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2417,13 +2419,13 @@ unittest
 
     immutable(B) ib = new immutable(B)();
     v = ib;
-    foreach (qual; TypeTuple!(ImmutableOf, ConstOf, SharedConstOf))
+    foreach (qual; AliasSeq!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is ib);
         assert(v.get!(qual!A) is ib);
         assert(v.get!(qual!Object) is ib);
     }
-    foreach (qual; TypeTuple!(MutableOf, SharedOf))
+    foreach (qual; AliasSeq!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2432,13 +2434,13 @@ unittest
 
     shared(B) sb = new shared B();
     v = sb;
-    foreach (qual; TypeTuple!(SharedOf, SharedConstOf))
+    foreach (qual; AliasSeq!(SharedOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is sb);
         assert(v.get!(qual!A) is sb);
         assert(v.get!(qual!Object) is sb);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, ConstOf))
+    foreach (qual; AliasSeq!(MutableOf, ImmutableOf, ConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2447,13 +2449,13 @@ unittest
 
     shared(const(B)) scb = new shared const B();
     v = scb;
-    foreach (qual; TypeTuple!(SharedConstOf))
+    foreach (qual; AliasSeq!(SharedConstOf))
     {
         assert(v.get!(qual!B) is scb);
         assert(v.get!(qual!A) is scb);
         assert(v.get!(qual!Object) is scb);
     }
-    foreach (qual; TypeTuple!(MutableOf, ConstOf, ImmutableOf, SharedOf))
+    foreach (qual; AliasSeq!(MutableOf, ConstOf, ImmutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));

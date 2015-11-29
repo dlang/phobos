@@ -1,7 +1,7 @@
 /**
  * Validates an email address according to RFCs 5321, 5322 and others.
  *
- * Authors: Dominic Sayers <dominic@sayers.cc>, Jacob Carlborg
+ * Authors: Dominic Sayers $(LT)dominic@sayers.cc$(GT), Jacob Carlborg
  * Copyright: Dominic Sayers, Jacob Carlborg 2008-.
  * Test schema documentation: Copyright © 2011, Daniel Marschall
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)

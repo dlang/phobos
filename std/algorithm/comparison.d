@@ -17,6 +17,9 @@ $(T2 clamp,
 $(T2 cmp,
         $(D cmp("abc", "abcd")) is $(D -1), $(D cmp("abc", "aba")) is $(D 1),
         and $(D cmp("abc", "abc")) is $(D 0).)
+$(T2 either,
+        Return first parameter $(D p) that passes an $(D if (p)) test, e.g.
+        $(D either(0, 42, 43)) returns $(D 42).)
 $(T2 equal,
         Compares ranges for element-by-element equality, e.g.
         $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns $(D true).)
@@ -60,6 +63,7 @@ import std.range;
 import std.traits;
 // FIXME
 import std.typecons; // : tuple, Tuple, Flag;
+import std.meta : allSatisfy;
 
 /**
 Find $(D value) _among $(D values), returning the 1-based index
@@ -136,7 +140,7 @@ efficient search, but one that only supports matching on equality:
 
 @safe unittest
 {
-    import std.typetuple : TypeTuple;
+    import std.meta : AliasSeq;
 
     if (auto pos = 3.among(1, 2, 3))
         assert(pos == 3);
@@ -148,7 +152,7 @@ efficient search, but one that only supports matching on equality:
     assert(position);
     assert(position == 1);
 
-    alias values = TypeTuple!("foo", "bar", "baz");
+    alias values = AliasSeq!("foo", "bar", "baz");
     auto arr = [values];
     assert(arr[0 .. "foo".among(values)] == ["foo"]);
     assert(arr[0 .. "bar".among(values)] == ["foo", "bar"]);
@@ -173,8 +177,8 @@ efficient search, but one that only supports matching on equality:
 // in a tuple.
 private template indexOfFirstOvershadowingChoiceOnLast(choices...)
 {
-    alias firstParameterTypes = ParameterTypeTuple!(choices[0]);
-    alias lastParameterTypes = ParameterTypeTuple!(choices[$ - 1]);
+    alias firstParameterTypes = Parameters!(choices[0]);
+    alias lastParameterTypes = Parameters!(choices[$ - 1]);
 
     static if (lastParameterTypes.length == 0)
     {
@@ -256,7 +260,7 @@ auto castSwitch(choices...)(Object switchObject)
             static assert(isCallable!choice,
                     "A choice handler must be callable");
 
-            alias choiceParameterTypes = ParameterTypeTuple!choice;
+            alias choiceParameterTypes = Parameters!choice;
             static assert(choiceParameterTypes.length <= 1,
                     "A choice handler can not have more than one argument.");
 
@@ -272,7 +276,7 @@ auto castSwitch(choices...)(Object switchObject)
                 static assert(indexOfOvershadowingChoice == index,
                         "choice number %d(type %s) is overshadowed by choice number %d(type %s)".format(
                             index + 1, CastClass.stringof, indexOfOvershadowingChoice + 1,
-                            ParameterTypeTuple!(choices[indexOfOvershadowingChoice])[0].stringof));
+                            Parameters!(choices[indexOfOvershadowingChoice])[0].stringof));
 
                 if (classInfo == typeid(CastClass))
                 {
@@ -299,7 +303,7 @@ auto castSwitch(choices...)(Object switchObject)
         // Checking for derived matches:
         foreach (choice; choices)
         {
-            alias choiceParameterTypes = ParameterTypeTuple!choice;
+            alias choiceParameterTypes = Parameters!choice;
             static if (choiceParameterTypes.length == 1)
             {
                 if (auto castedObject = cast(choiceParameterTypes[0]) switchObject)
@@ -329,7 +333,7 @@ auto castSwitch(choices...)(Object switchObject)
         // Checking for null matches:
         foreach (index, choice; choices)
         {
-            static if (ParameterTypeTuple!(choice).length == 0)
+            static if (Parameters!(choice).length == 0)
             {
                 immutable indexOfOvershadowingChoice =
                     indexOfFirstOvershadowingChoiceOnLast!(choices[0..index + 1]);
@@ -1955,4 +1959,87 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
         [mytuple(1, 4), mytuple(2, 5)],
         [mytuple(2, 3), mytuple(1, 2)]
     ));
+}
+
+/**
+Get first parameter $(D p) that passes an $(D if (unaryFun!pred(p))) test.  If
+no parameter passes the test return the last.
+
+Similar to behaviour of `or` operator in dynamic languages such as Lisp's
+`(or ...)` and Python's `a or b or ...` except that the last argument is
+returned upon no match.
+
+Simplifies logic, for instance, in parsing rules where a set of alternative
+matchers are tried. The first one that matches returns it match result,
+typically as an abstract syntax tree (AST).
+
+NOTE: Lazy parameters are currently, too restrictively, inferred by DMD to
+always throw eventhough they don't need to be. This makes it impossible to
+currently mark $(D either) as $(D nothrow). See issue at
+https://issues.dlang.org/show_bug.cgi?id=12647
+
+Returns:
+    The first parameter that passes the test $(D pred).
+*/
+CommonType!(T, Ts) either(alias pred = a => a, T, Ts...)(T first, lazy Ts alternatives)
+    if (alternatives.length >= 1 &&
+        !is(CommonType!(T, Ts) == void) &&
+        allSatisfy!(ifTestable, T, Ts))
+{
+    alias predFun = unaryFun!pred;
+
+    if (predFun(first)) return first;
+
+    foreach (e; alternatives[0 .. $ - 1])
+        if (predFun(e)) return e;
+
+    return alternatives[$ - 1];
+}
+
+///
+@safe pure unittest
+{
+    const a = 1;
+    const b = 2;
+    auto ab = either(a, b);
+    static assert(is(typeof(ab) == const(int)));
+    assert(ab == a);
+
+    auto c = 2;
+    const d = 3;
+    auto cd = either!(a => a == 3)(c, d); // use predicate
+    static assert(is(typeof(cd) == int));
+    assert(cd == d);
+
+    auto e = 0;
+    const f = 2;
+    auto ef = either(e, f);
+    static assert(is(typeof(ef) == int));
+    assert(ef == f);
+
+    immutable p = 1;
+    immutable q = 2;
+    auto pq = either(p, q);
+    static assert(is(typeof(pq) == immutable(int)));
+    assert(pq == p);
+
+    assert(either(3, 4) == 3);
+    assert(either(0, 4) == 4);
+    assert(either(0, 0) == 0);
+    assert(either("", "a") == "");
+
+    string r = null;
+    assert(either(r, "a") == "a");
+    assert(either("a", "") == "a");
+
+    immutable s = [1, 2];
+    assert(either(s, s) == s);
+
+    assert(either([0, 1], [1, 2]) == [0, 1]);
+    assert(either([0, 1], [1]) == [0, 1]);
+    assert(either("a", "b") == "a");
+
+    static assert(!__traits(compiles, either(1, "a")));
+    static assert(!__traits(compiles, either(1.0, "a")));
+    static assert(!__traits(compiles, either('a', "a")));
 }

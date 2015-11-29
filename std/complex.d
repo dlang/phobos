@@ -3,7 +3,8 @@
 /** This module contains the $(LREF Complex) type, which is used to represent
     _complex numbers, along with related mathematical operations and functions.
 
-    $(LREF Complex) will eventually $(LINK2 ../deprecate.html, replace)
+    $(LREF Complex) will eventually
+    $(DDLINK deprecate, Deprecated Features, replace)
     the built-in types $(D cfloat), $(D cdouble), $(D creal), $(D ifloat),
     $(D idouble), and $(D ireal).
 

@@ -50,7 +50,6 @@ import core.stdc.stdint, core.stdc.string, std.string, core.stdc.stdlib, std.con
 
 import core.stdc.config;
 import core.time : dur, Duration;
-import std.algorithm : max;
 import std.exception : assumeUnique, enforce, collectException;
 
 import std.internal.cstring;
@@ -63,7 +62,8 @@ version(Windows)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    private import core.sys.windows.windows, core.sys.windows.winsock2, std.windows.syserror;
+    public import core.sys.windows.winsock2;
+    private import core.sys.windows.windows, std.windows.syserror;
     private alias _ctimeval = core.sys.windows.winsock2.timeval;
     private alias _clinger = core.sys.windows.winsock2.linger;
 
@@ -2380,6 +2380,7 @@ public:
 
     /// Return the current capacity of this $(D SocketSet). The exact
     /// meaning of the return value varies from platform to platform.
+    ///
     /// Note that since D 2.065, this value does not indicate a
     /// restriction, and $(D SocketSet) will grow its capacity as
     /// needed automatically.
@@ -3246,6 +3247,8 @@ public:
 
         version (Windows)
         {
+            import std.algorithm.comparison : max;
+
             auto msecs = to!int(value.total!"msecs");
             if (msecs != 0 && option == SocketOption.RCVTIMEO)
                 msecs = max(1, msecs - WINSOCK_TIMEOUT_SKEW);
