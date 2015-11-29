@@ -6277,6 +6277,7 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
         double sign = 1.0;
         if (x < 0)
         {
+            static assert(real.mant_dig <= (8 * ulong.sizeof));
             // Result is real only if y is an integer
             // Check for a non-zero fractional part
             enum real maxPrecise = ulong.max;
