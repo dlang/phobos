@@ -6277,15 +6277,16 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
         double sign = 1.0;
         if (x < 0)
         {
-            static assert(real.mant_dig <= (8 * ulong.sizeof));
             // Result is real only if y is an integer
             // Check for a non-zero fractional part
-            enum real maxPrecise = ulong.max;
-            enum real minPrecise = -maxPrecise;
-            if (y >= minPrecise && y <= maxPrecise)
+            enum ulong_dig = 8 * ulong.sizeof;
+            static assert(real.mant_dig <= ulong_dig);
+            enum real maxOdd = ulong.max >> (ulong_dig - real.mant_dig);
+
+            const real absY = fabs(y);
+            if (absY <= maxOdd)
             {
-                real absY = fabs(y);
-                ulong w = cast(ulong)absY;
+                const ulong w = cast(ulong)absY;
                 if (w != absY)
                     return sqrt(x); // Complex result -- create a NaN
                 if (w & 1)
@@ -6366,8 +6367,13 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
     assert(isIdentical(pow(-0.0, 6.0), 0.0));
 
     // Issue #14786 fixed
-    assert(pow(-1.0L, cast(real) ((1UL << 63) + 1UL)) == -1.0L);
-    assert(pow(-1.0L, cast(real) (~0UL)) == -1.0L);
+    immutable real maxOdd = pow(2.0L, real.mant_dig) - 1.0L;
+    assert(pow(-1.0L,  maxOdd) == -1.0L);
+    assert(pow(-1.0L, -maxOdd) == -1.0L);
+    assert(pow(-1.0L, maxOdd + 1.0L) == 1.0L);
+    assert(pow(-1.0L, -maxOdd + 1.0L) == 1.0L);
+    assert(pow(-1.0L, maxOdd - 1.0L) == 1.0L);
+    assert(pow(-1.0L, -maxOdd - 1.0L) == 1.0L);
 
     // Now, actual numbers.
     assert(approxEqual(pow(two, three), 8.0));
