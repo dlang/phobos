@@ -781,6 +781,7 @@ T[] options(T = char)(const(char)[] url, HTTP conn = HTTP())
     return _basicHTTP!(T)(url, null, conn);
 }
 
+// Explicitly undocumented. It will be removed in February 2017. @@@DEPRECATED_2017-02@@@
 deprecated("options does not send any data")
 T[] options(T = char, OptionsUnit)(const(char)[] url,
                                    const(OptionsUnit)[] optionsData = null,
@@ -4148,13 +4149,6 @@ struct Curl
         if (throwOnError)
             _check(code);
         return code;
-    }
-
-    // Explicitly undocumented. It will be removed in November 2015.
-    deprecated("Pass ThrowOnError.yes or .no instead of a boolean.")
-    CurlCode perform(bool throwOnError)
-    {
-        return perform(cast(ThrowOnError)throwOnError);
     }
 
     /**

@@ -3953,11 +3953,6 @@ if (is(UT == Unqual!T))
         emplaceInitializer(chunk);
         chunk.__ctor(args);
     }
-    else static if (is(typeof(T.opCall(args))))
-    {
-        //Can be built calling opCall
-        emplaceOpCaller(chunk, args); //emplaceOpCaller is deprecated
-    }
     else
     {
         //We can't emplace. Try to diagnose a disabled postblit.
@@ -3987,13 +3982,6 @@ private void emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
         static immutable T init = T.init;
         memcpy(&chunk, &init, T.sizeof);
     }
-}
-private deprecated("Using static opCall for emplace is deprecated. Plase use emplace(chunk, T(args)) instead.")
-void emplaceOpCaller(T, Args...)(ref T chunk, auto ref Args args)
-{
-    static assert (is(typeof({T t = T.opCall(args);})),
-        convFormat("%s.opCall does not return adequate data for construction.", T.stringof));
-    emplaceRef!T(chunk, chunk.opCall(args));
 }
 
 // emplace
@@ -4767,7 +4755,6 @@ unittest
         }
         S1 s = void;
         static assert(!__traits(compiles, emplace(&s,  1)));
-        static assert( __traits(compiles, emplace(&s, &i))); //(works, but deprecated)
     }
     //With constructor
     {
@@ -4779,8 +4766,6 @@ unittest
             this(int i){this.i = i;}
         }
         S2 s = void;
-        static assert( __traits(compiles, emplace(&s, 1)));  //(works, but deprecated)
-        static assert( __traits(compiles, emplace(&s, &i))); //(works, but deprecated)
         emplace(&s,  1);
         assert(s.i == 1);
     }
