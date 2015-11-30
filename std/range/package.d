@@ -7833,28 +7833,10 @@ sgi.com/tech/stl/binary_search.html, binary_search).
     bool contains(V)(V value)
     if (isRandomAccessRange!Range)
     {
-        size_t first = 0, count = _input.length;
-        while (count > 0)
-        {
-            immutable step = count / 2, it = first + step;
-            if (predFun(_input[it], value))
-            {
-                // Less than value, bump left bound up
-                first = it + 1;
-                count -= step + 1;
-            }
-            else if (predFun(value, _input[it]))
-            {
-                // Greater than value, chop count
-                count = step;
-            }
-            else
-            {
-                // Found!!!
-                return true;
-            }
-        }
-        return false;
+        if(empty) return false;
+        immutable i = getTransitionIndex!(SearchPolicy.binarySearch, geq)(value);
+        if(i >= length) return false;
+        return !predFun(value, _input[i]);
     }
 
 // groupBy
