@@ -16153,6 +16153,21 @@ public:
         Params:
             duration = The duration to add to or subtract from this
                        $(LREF DateTime).
+
+        See_Also:
+            $(CXREF time, Duration).
+
+        Examples:
+        --------------------
+        import std.datetime, std.stdio;
+        void main()
+        {
+            DateTime oldYear = DateTime(2015, 12, 31, 23, 59, 59);
+            DateTime newYear = oldYear + 1.seconds;
+            Duration diff = newYear - oldYear;
+            writeln(diff); /* 1 sec */
+        }
+        --------------------
       +/
     DateTime opBinary(string op, D)(in D duration) @safe const pure nothrow
         if((op == "+" || op == "-") &&
