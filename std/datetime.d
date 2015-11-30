@@ -6173,7 +6173,7 @@ public:
         )
 
         Params:
-            duration = The duration to add to or subtract from this
+            duration = The $(CXREF time, Duration) to add to or subtract from this
                        $(LREF SysTime).
       +/
     SysTime opBinary(string op, D)(in D duration) @safe const pure nothrow
@@ -6192,6 +6192,14 @@ public:
 
         mixin(format("retval._stdTime %s= hnsecs;", op));
         return retval;
+    }
+
+    ///
+    unittest
+    {
+        auto st1 = SysTime(DateTime(2015, 12, 31, 23, 59, 59));
+        auto st2 = st1 + 1.seconds;
+        assert(st2 == SysTime(DateTime(2016, 1, 1, 0, 0, 0)));
     }
 
     unittest
@@ -16151,23 +16159,8 @@ public:
         )
 
         Params:
-            duration = The duration to add to or subtract from this
+            duration = The $(CXREF time, Duration) to add to or subtract from this
                        $(LREF DateTime).
-
-        See_Also:
-            $(CXREF time, Duration).
-
-        Examples:
-        --------------------
-        import std.datetime, std.stdio;
-        void main()
-        {
-            DateTime oldYear = DateTime(2015, 12, 31, 23, 59, 59);
-            DateTime newYear = oldYear + 1.seconds;
-            Duration diff = newYear - oldYear;
-            writeln(diff); /* 1 sec */
-        }
-        --------------------
       +/
     DateTime opBinary(string op, D)(in D duration) @safe const pure nothrow
         if((op == "+" || op == "-") &&
@@ -16184,6 +16177,14 @@ public:
             immutable hnsecs = duration.hnsecs;
 
         mixin(format(`return retval._addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
+    }
+
+    ///
+    unittest
+    {
+        DateTime oldYear = DateTime(2015, 12, 31, 23, 59, 59);
+        DateTime newYear = oldYear + 1.seconds;
+        assert(newYear == DateTime(2016, 1, 1, 0, 0, 0));
     }
 
     unittest
