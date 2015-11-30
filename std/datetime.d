@@ -6197,9 +6197,9 @@ public:
     ///
     unittest
     {
-        auto st1 = SysTime(DateTime(2015, 12, 31, 23, 59, 59));
-        auto st2 = st1 + 1.seconds;
-        assert(st2 == SysTime(DateTime(2016, 1, 1, 0, 0, 0)));
+        auto oldYear = SysTime(DateTime(2015, 12, 31, 23, 59, 59));
+        auto newYear = oldYear + 1.seconds;
+        assert(newYear == SysTime(DateTime(2016, 1, 1, 0, 0, 0)));
     }
 
     unittest
@@ -16182,8 +16182,8 @@ public:
     ///
     unittest
     {
-        DateTime oldYear = DateTime(2015, 12, 31, 23, 59, 59);
-        DateTime newYear = oldYear + 1.seconds;
+        auto oldYear = DateTime(2015, 12, 31, 23, 59, 59);
+        auto newYear = oldYear + 1.seconds;
         assert(newYear == DateTime(2016, 1, 1, 0, 0, 0));
     }
 
