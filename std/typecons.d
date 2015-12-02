@@ -1922,14 +1922,14 @@ Returns:
     }
 
 /**
-Forwads $(D T) opEquals to handle the null state.
+Forwards $(D T) opEquals to handle the null state.
 
 Returns:
     $(D true) if two nullables are in null state,
     $(D false) if two nullables have a different null state,
     the values comparison result otherwise.
 */
-    bool opEquals(R)(R rhs)
+    bool opEquals(R)(R rhs) const
     if(is(R == typeof(this)) || is(R : T))
     {
         static if (is(R == typeof(this)))
