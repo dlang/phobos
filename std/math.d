@@ -4158,8 +4158,8 @@ long lrint(real x) @trusted pure nothrow @nogc
 
 /*******************************************
  * Return the value of x rounded to the nearest integer.
- * If the fractional part of x is exactly 0.5, the return value is rounded to
- * the even integer.
+ * If the fractional part of x is exactly 0.5, the return value is
+ * rounded away from zero.
  */
 real round(real x) @trusted nothrow @nogc
 {
