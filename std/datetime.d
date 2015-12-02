@@ -6173,7 +6173,7 @@ public:
         )
 
         Params:
-            duration = The duration to add to or subtract from this
+            duration = The $(CXREF time, Duration) to add to or subtract from this
                        $(LREF SysTime).
       +/
     SysTime opBinary(string op, D)(in D duration) @safe const pure nothrow
@@ -6192,6 +6192,14 @@ public:
 
         mixin(format("retval._stdTime %s= hnsecs;", op));
         return retval;
+    }
+
+    ///
+    unittest
+    {
+        auto oldYear = SysTime(DateTime(2015, 12, 31, 23, 59, 59));
+        auto newYear = oldYear + 1.seconds;
+        assert(newYear == SysTime(DateTime(2016, 1, 1, 0, 0, 0)));
     }
 
     unittest
@@ -16151,7 +16159,7 @@ public:
         )
 
         Params:
-            duration = The duration to add to or subtract from this
+            duration = The $(CXREF time, Duration) to add to or subtract from this
                        $(LREF DateTime).
       +/
     DateTime opBinary(string op, D)(in D duration) @safe const pure nothrow
@@ -16169,6 +16177,14 @@ public:
             immutable hnsecs = duration.hnsecs;
 
         mixin(format(`return retval._addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
+    }
+
+    ///
+    unittest
+    {
+        auto oldYear = DateTime(2015, 12, 31, 23, 59, 59);
+        auto newYear = oldYear + 1.seconds;
+        assert(newYear == DateTime(2016, 1, 1, 0, 0, 0));
     }
 
     unittest
