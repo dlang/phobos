@@ -2183,44 +2183,16 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  *     The capitalized string.
  *
  * See_Also:
- *      $(XREF uni, toCapitalized) for a lazy range version that doesn't allocate memory
+ *      $(XREF uni, asCapitalized) for a lazy range version that doesn't allocate memory
  */
 S capitalize(S)(S input) @trusted pure
     if (isSomeString!S)
 {
-    import std.utf : encode;
+    import std.uni : asCapitalized;
+    import std.conv: to;
+    import std.array;
 
-    Unqual!(typeof(input[0]))[] retval;
-    bool changed = false;
-
-    foreach (i, dchar c; input)
-    {
-        dchar c2;
-
-        if (i == 0)
-        {
-            c2 = std.uni.toUpper(c);
-            if (c != c2)
-                changed = true;
-        }
-        else
-        {
-            c2 = std.uni.toLower(c);
-            if (c != c2)
-            {
-                if (!changed)
-                {
-                    changed = true;
-                    retval = input[0 .. i].dup;
-                }
-            }
-        }
-
-        if (changed)
-            std.utf.encode(retval, c2);
-    }
-
-    return changed ? cast(S)retval : input;
+    return input.asCapitalized.array.to!S;
 }
 
 ///
@@ -2236,12 +2208,12 @@ auto capitalize(S)(auto ref S s)
     return capitalize!(StringTypeOf!S)(s);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!capitalize("hello"));
 }
 
-@trusted pure unittest
+@safe pure unittest
 {
     import std.conv : to;
     import std.algorithm : cmp;
@@ -2260,7 +2232,6 @@ unittest
 
         s2 = capitalize(s1[0 .. 2]);
         assert(cmp(s2, "Fo") == 0);
-        assert(s2.ptr == s1.ptr);
 
         s1 = to!S("fOl");
         s2 = capitalize(s1);
@@ -2268,7 +2239,7 @@ unittest
         assert(s2 !is s1);
         s1 = to!S("\u0131 \u0130");
         s2 = capitalize(s1);
-        assert(cmp(s2, "\u0049 \u0069") == 0);
+        assert(cmp(s2, "\u0049 i\u0307") == 0);
         assert(s2 !is s1);
 
         s1 = to!S("\u017F \u0049");
