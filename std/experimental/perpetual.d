@@ -4,6 +4,7 @@ private import std.traits : hasIndirections, isAssignable;
 private import std.exception;
 private import std.string;
 private import std.conv;
+private import std.format : FormatSpec, formatValue;
 private import core.stdc.stdio;
 version (Windows)
 {
@@ -68,9 +69,11 @@ struct Perpetual(T)
         @property Element[] Ref() { return _value; }
 
         /// Convert to string the value, not the class itself
-        @property toString() {
-         return to!string(_value); 
-     }
+    	@property void toString(scope void delegate(const(char)[]) sink,
+            FormatSpec!char fmt) const
+        {
+	        sink.formatValue(_value, fmt);
+        }
 
         /// Index of uninitialized part of the array
         @property initIndex() const { return _heap.unplowed/Element.sizeof; }
@@ -89,9 +92,11 @@ struct Perpetual(T)
         @property ref Element Ref() {    return *_value; }
 
         /// Convert to string
-        @property toString() {
-         return to!string(*_value); 
-     }
+    	@property void toString(scope void delegate(const(char)[]) sink,
+            FormatSpec!char fmt) const
+        {
+	        sink.formatValue(*_value, fmt);
+        }
     }
 
     /** If whole or part of the file was created and 
