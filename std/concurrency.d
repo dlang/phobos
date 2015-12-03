@@ -1377,9 +1377,9 @@ private:
             import core.time;
             scope(exit) notified = false;
 
-            for( auto limit = TickDuration.currSystemTick + period;
+            for( auto limit = MonoTime.currTime + period;
                  !notified && !period.isNegative;
-                 period = limit - TickDuration.currSystemTick )
+                 period = limit - MonoTime.currTime )
             {
                 yield();
             }
@@ -2054,7 +2054,7 @@ private
             static if( timedWait )
             {
                 import core.time;
-                auto limit = TickDuration.currSystemTick + period;
+                auto limit = MonoTime.currTime + period;
             }
 
             while( true )
@@ -2102,7 +2102,7 @@ private
                     {
                         static if( timedWait )
                         {
-                            period = limit - TickDuration.currSystemTick;
+                            period = limit - MonoTime.currTime;
                         }
                         continue;
                     }
