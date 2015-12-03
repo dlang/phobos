@@ -2554,8 +2554,8 @@ auto takeNone(R)(R range)
 
 /++
     Convenience function which calls
-    $(D range.$(LREF popFrontN)(n)) and returns $(D range). $(D drop)
-    makes it easier to pop elements from a range
+    $(D $(XREF_PACK range,primitives,popFrontN)(n)) and returns
+    $(D range). $(D drop) makes it easier to pop elements from a range
     and then pass it to another function within a single expression,
     whereas $(D popFrontN) would require multiple statements.
 
@@ -2633,8 +2633,8 @@ R dropBack(R)(R range, size_t n)
 
 /++
     Similar to $(LREF drop) and $(D dropBack) but they call
-    $(D range.$(LREF popFrontExactly)(n)) and $(D range.popBackExactly(n))
-    instead.
+    $(D $(XREF_PACK range,primitives,popFrontExactly)(n)) and
+    $(D range.popBackExactly(n)) instead.
 
     Note: Unlike $(D drop), $(D dropExactly) will assume that the
     range holds at least $(D n) elements. This makes $(D dropExactly)
@@ -8904,11 +8904,12 @@ struct NullSink
 /++
 
   Implements a "tee" style pipe, wrapping an input range so that elements of the
-  range can be passed to a provided function or $(LREF OutputRange) as they are
+  range can be passed to a provided function or
+  $(XREF_PACK range,primitives,isOutputRange) as they are
   iterated over. This is useful for printing out intermediate values in a long
   chain of range code, performing some operation with side-effects on each call
   to $(D front) or $(D popFront), or diverting the elements of a range into an
-  auxiliary $(LREF OutputRange).
+  auxiliary $(XREF_PACK range,primitives,isOutputRange).
 
   It is important to note that as the resultant range is evaluated lazily,
   in the case of the version of $(D tee) that takes a function, the function
@@ -9002,8 +9003,8 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 {
     /*
         Distinguish between function literals and template lambdas
-        when using either as an $(LREF OutputRange). Since a template
-        has no type, typeof(template) will always return void.
+        when using either as an $(XREF_PACK range,primitives,isOutputRange).
+        Since a template has no type, typeof(template) will always return void.
         If it's a template lambda, it's first necessary to instantiate
         it with $(D ElementType!R1).
     */
