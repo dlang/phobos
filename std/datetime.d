@@ -499,7 +499,12 @@ public:
     }
 
 
+    // @@@DEPRECATED_2017-01@@@
     /++
+        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
+              in favor of $(CXREF time, MonoTime). Use $(D MonoTime.currTime)
+              instead. currSystemTick will be removed in January 2017.)
+
         The current system tick. The number of ticks per second varies from
         system to system. currSystemTick uses a monotonic clock, so it's
         intended for precision timing by comparing relative time values, not
@@ -515,17 +520,39 @@ public:
         Throws:
             $(LREF DateTimeException) if it fails to get the time.
       +/
+    deprecated("Use core.time.MonoTime.currTime instead")
     static @property TickDuration currSystemTick() @safe nothrow
     {
         return TickDuration.currSystemTick;
     }
 
-    unittest
+    deprecated unittest
     {
         assert(Clock.currSystemTick.length > 0);
     }
 
+    // @@@DEPRECATED_2017-01@@@
     /++
+        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
+              in favor of $(CXREF time, MonoTime). To duplicate the behavior
+              of currAppTick with $(D MonoTime), store the value of
+              $(D MonoTime.currTime) when the program starts, and then subtract
+              it from the current value of $(D MonoTime.currTime) in order to
+              determine how long the program has been running. currAppTick will
+              be removed in January 2017.)
+
+        --------------------
+        immutable MonoTime startupTime;
+        shared static this()
+        {
+            startupTime = MonoTime.currTime;
+        }
+        Duration timeSinceProgramStarted()
+        {
+            return MonoTime.currTime - startupTime;
+        }
+        --------------------
+
         The current number of system ticks since the application started.
         The number of ticks per second varies from system to system.
         This uses a monotonic clock.
@@ -540,12 +567,13 @@ public:
         Throws:
             $(LREF DateTimeException) if it fails to get the time.
       +/
+    deprecated("Use core.time.MonoTime instead. See currAppTick's documentation for details.")
     static @property TickDuration currAppTick() @safe
     {
         return currSystemTick - TickDuration.appOrigin;
     }
 
-    unittest
+    deprecated unittest
     {
         auto a = Clock.currSystemTick;
         auto b = Clock.currAppTick;
@@ -6162,44 +6190,44 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a duration from this
-        $(LREF SysTime).
+        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        this $(LREF SysTime).
 
-        The legal types of arithmetic for $(LREF SysTime) using this operator are
+        The legal types of arithmetic for $(LREF SysTime) using this operator
+        are
 
         $(BOOKTABLE,
-        $(TR $(TD SysTime) $(TD +) $(TD duration) $(TD -->) $(TD SysTime))
-        $(TR $(TD SysTime) $(TD -) $(TD duration) $(TD -->) $(TD SysTime))
+        $(TR $(TD SysTime) $(TD +) $(TD Duration) $(TD -->) $(TD SysTime))
+        $(TR $(TD SysTime) $(TD -) $(TD Duration) $(TD -->) $(TD SysTime))
         )
 
         Params:
-            duration = The $(CXREF time, Duration) to add to or subtract from this
-                       $(LREF SysTime).
+            duration = The $(CXREF time, Duration) to add to or subtract from
+                       this $(LREF SysTime).
       +/
-    SysTime opBinary(string op, D)(in D duration) @safe const pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
+    SysTime opBinary(string op)(Duration duration) @safe const pure nothrow
+        if(op == "+" || op == "-")
     {
-        import std.format : format;
-
         SysTime retval = SysTime(this._stdTime, this._timezone);
-
-        static if(is(Unqual!D == Duration))
-            immutable hnsecs = duration.total!"hnsecs";
-        else static if(is(Unqual!D == TickDuration))
-            immutable hnsecs = duration.hnsecs;
-
-        mixin(format("retval._stdTime %s= hnsecs;", op));
+        immutable hnsecs = duration.total!"hnsecs";
+        mixin("retval._stdTime " ~ op ~ "= hnsecs;");
         return retval;
     }
 
     ///
     unittest
     {
-        auto oldYear = SysTime(DateTime(2015, 12, 31, 23, 59, 59));
-        auto newYear = oldYear + 1.seconds;
-        assert(newYear == SysTime(DateTime(2016, 1, 1, 0, 0, 0)));
+        assert(SysTime(DateTime(2015, 12, 31, 23, 59, 59)) + seconds(1) ==
+               SysTime(DateTime(2016, 1, 1, 0, 0, 0)));
+
+        assert(SysTime(DateTime(2015, 12, 31, 23, 59, 59)) + hours(1) ==
+               SysTime(DateTime(2016, 1, 1, 0, 59, 59)));
+
+        assert(SysTime(DateTime(2016, 1, 1, 0, 0, 0)) - seconds(1) ==
+               SysTime(DateTime(2015, 12, 31, 23, 59, 59)));
+
+        assert(SysTime(DateTime(2016, 1, 1, 0, 59, 59)) - hours(1) ==
+               SysTime(DateTime(2015, 12, 31, 23, 59, 59)));
     }
 
     unittest
@@ -6223,14 +6251,6 @@ public:
         assert(st + dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_685)));
         assert(st + dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_671)));
 
-        //This probably only runs in cases where gettimeofday() is used, but it's
-        //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
-        {
-            assert(st + TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
-            assert(st + TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
-        }
-
         assert(st - dur!"weeks"(-7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33), hnsecs(2_345_678)));
         assert(st - dur!"weeks"(7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33), hnsecs(2_345_678)));
         assert(st - dur!"days"(-7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33), hnsecs(2_345_678)));
@@ -6247,14 +6267,6 @@ public:
         assert(st - dur!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
         assert(st - dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_685)));
         assert(st - dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_671)));
-
-        //This probably only runs in cases where gettimeofday() is used, but it's
-        //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
-        {
-            assert(st - TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
-            assert(st - TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
-        }
 
         static void testST(in SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
         {
@@ -6388,35 +6400,63 @@ public:
         //assert(ist - duration == SysTime(DateTime(1999, 7, 6, 12, 30, 21)));
     }
 
+    // @@@DEPRECATED_2017-01@@@
+    /++
+        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
+              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+              Use $(D Duration) instead. This overload will be removed in
+              January 2017.)
+
+        Defines + and - with $(CXREF time, TickDuration).
+      +/
+    deprecated("Use Duration instead of TickDuration.")
+    SysTime opBinary(string op)(TickDuration td) @safe const pure nothrow
+        if(op == "+" || op == "-")
+    {
+        SysTime retval = SysTime(this._stdTime, this._timezone);
+        immutable hnsecs = td.hnsecs;
+        mixin("retval._stdTime " ~ op ~ "= hnsecs;");
+        return retval;
+    }
+
+    deprecated unittest
+    {
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
+        {
+            auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
+
+            assert(st + TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
+            assert(st + TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
+
+            assert(st - TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
+            assert(st - TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
+        }
+    }
+
 
     /++
-        Gives the result of adding or subtracting a duration from this
-        $(LREF SysTime), as well as assigning the result to this $(LREF SysTime).
+        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        this $(LREF SysTime), as well as assigning the result to this
+        $(LREF SysTime).
 
         The legal types of arithmetic for $(LREF SysTime) using this operator are
 
         $(BOOKTABLE,
-        $(TR $(TD SysTime) $(TD +) $(TD duration) $(TD -->) $(TD SysTime))
-        $(TR $(TD SysTime) $(TD -) $(TD duration) $(TD -->) $(TD SysTime))
+        $(TR $(TD SysTime) $(TD +) $(TD Duration) $(TD -->) $(TD SysTime))
+        $(TR $(TD SysTime) $(TD -) $(TD Duration) $(TD -->) $(TD SysTime))
         )
 
         Params:
-            duration = The duration to add to or subtract from this
-                       $(LREF SysTime).
+            duration = The $(CXREF time, Duration) to add to or subtract from
+                       this $(LREF SysTime).
       +/
-    ref SysTime opOpAssign(string op, D)(in D duration) @safe pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
+    ref SysTime opOpAssign(string op)(Duration duration) @safe pure nothrow
+        if(op == "+" || op == "-")
     {
-        import std.format : format;
-
-        static if(is(Unqual!D == Duration))
-            auto hnsecs = duration.total!"hnsecs";
-        else static if(is(Unqual!D == TickDuration))
-            auto hnsecs = duration.hnsecs;
-
-        mixin(format("_stdTime %s= hnsecs;", op));
+        immutable hnsecs = duration.total!"hnsecs";
+        mixin("_stdTime " ~ op ~ "= hnsecs;");
         return this;
     }
 
@@ -6598,6 +6638,54 @@ public:
         //static assert(!__traits(compiles, ist += duration));
         static assert(!__traits(compiles, cst -= duration));
         //static assert(!__traits(compiles, ist -= duration));
+    }
+
+    // @@@DEPRECATED_2017-01@@@
+    /++
+        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
+              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+              Use $(D Duration) instead. This overload will be removed in
+              January 2017.)
+
+        Defines += and -= with $(CXREF time, TickDuration).
+      +/
+    deprecated("Use Duration instead of TickDuration.")
+    ref SysTime opOpAssign(string op)(TickDuration td) @safe pure nothrow
+        if(op == "+" || op == "-")
+    {
+        immutable hnsecs = td.hnsecs;
+        mixin("_stdTime " ~ op ~ "= hnsecs;");
+        return this;
+    }
+
+    deprecated unittest
+    {
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
+        {
+            {
+                auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
+                st += TickDuration.from!"usecs"(7);
+                assert(st == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
+            }
+            {
+                auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
+                st += TickDuration.from!"usecs"(-7);
+                assert(st == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
+            }
+
+            {
+                auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
+                st -= TickDuration.from!"usecs"(-7);
+                assert(st == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
+            }
+            {
+                auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
+                st -= TickDuration.from!"usecs"(7);
+                assert(st == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
+            }
+        }
     }
 
 
@@ -11458,34 +11546,36 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a duration from this
-        $(LREF Date).
+        Gives the result of adding or subtracting a $(CXREF tiem, Duration) from
+        this $(LREF Date).
 
-        The legal types of arithmetic for Date using this operator are
+        The legal types of arithmetic for $(LREF Date) using this operator are
 
         $(BOOKTABLE,
-        $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
-        $(TR $(TD Date) $(TD -) $(TD duration) $(TD -->) $(TD Date))
+        $(TR $(TD Date) $(TD +) $(TD Duration) $(TD -->) $(TD Date))
+        $(TR $(TD Date) $(TD -) $(TD Duration) $(TD -->) $(TD Date))
         )
 
         Params:
-            duration = The duration to add to or subtract from this $(LREF Date).
+            duration = The $(CXREF time, Duration) to add to or subtract from
+                       this $(LREF Date).
       +/
-    Date opBinary(string op, D)(in D duration) @safe const pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
+    Date opBinary(string op)(Duration duration) @safe const pure nothrow
+        if(op == "+" || op == "-")
     {
-        import std.format : format;
-
         Date retval = this;
+        immutable days = duration.total!"days";
+        mixin("return retval._addDays(" ~ op ~ "days);");
+    }
 
-        static if(is(Unqual!D == Duration))
-            immutable days = duration.total!"days";
-        else static if(is(Unqual!D == TickDuration))
-            immutable days = convert!("hnsecs", "days")(duration.hnsecs);
+    ///
+    unittest
+    {
+        assert(Date(2015, 12, 31) + days(1) == Date(2016, 1, 1));
+        assert(Date(2004, 2, 26) + days(4) == Date(2004, 3, 1));
 
-        mixin(format("return retval._addDays(%sdays);", op));
+        assert(Date(2016, 1, 1) - days(1) == Date(2015, 12, 31));
+        assert(Date(2004, 3, 1) - days(4) == Date(2004, 2, 26));
     }
 
     unittest
@@ -11510,14 +11600,6 @@ public:
         assert(date + dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 7));
         assert(date + dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 5));
 
-        //This probably only runs in cases where gettimeofday() is used, but it's
-        //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
-        {
-            assert(date + TickDuration.from!"usecs"(86_400_000_000) == Date(1999, 7, 7));
-            assert(date + TickDuration.from!"usecs"(-86_400_000_000) == Date(1999, 7, 5));
-        }
-
         assert(date - dur!"weeks"(-7) == Date(1999, 8, 24));
         assert(date - dur!"weeks"(7) == Date(1999, 5, 18));
         assert(date - dur!"days"(-7) == Date(1999, 7, 13));
@@ -11536,14 +11618,6 @@ public:
         assert(date - dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 7));
         assert(date - dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 5));
 
-        //This probably only runs in cases where gettimeofday() is used, but it's
-        //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
-        {
-            assert(date - TickDuration.from!"usecs"(-86_400_000_000) == Date(1999, 7, 7));
-            assert(date - TickDuration.from!"usecs"(86_400_000_000) == Date(1999, 7, 5));
-        }
-
         auto duration = dur!"days"(12);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
@@ -11556,34 +11630,61 @@ public:
         assert(idate - duration == Date(1999, 6, 24));
     }
 
+    // @@@DEPRECATED_2017-01@@@
+    /++
+        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
+              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+              Use $(D Duration) instead. This overload will be removed in
+              January 2017.)
+
+        Defines + and - with $(CXREF time, TickDuration).
+      +/
+    deprecated("Use Duration instead of TickDuration.")
+    Date opBinary(string op)(TickDuration td) @safe const pure nothrow
+        if(op == "+" || op == "-")
+    {
+        Date retval = this;
+        immutable days = convert!("hnsecs", "days")(td.hnsecs);
+        mixin("return retval._addDays(" ~ op ~ "days);");
+    }
+
+    deprecated unittest
+    {
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
+        {
+            auto date = Date(1999, 7, 6);
+
+            assert(date + TickDuration.from!"usecs"(86_400_000_000) == Date(1999, 7, 7));
+            assert(date + TickDuration.from!"usecs"(-86_400_000_000) == Date(1999, 7, 5));
+
+            assert(date - TickDuration.from!"usecs"(-86_400_000_000) == Date(1999, 7, 7));
+            assert(date - TickDuration.from!"usecs"(86_400_000_000) == Date(1999, 7, 5));
+        }
+    }
+
 
     /++
-        Gives the result of adding or subtracting a duration from this
-        $(LREF Date), as well as assigning the result to this $(LREF Date).
+        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        this $(LREF Date), as well as assigning the result to this $(LREF Date).
 
         The legal types of arithmetic for $(LREF Date) using this operator are
 
         $(BOOKTABLE,
-        $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
-        $(TR $(TD Date) $(TD -) $(TD duration) $(TD -->) $(TD Date))
+        $(TR $(TD Date) $(TD +) $(TD Duration) $(TD -->) $(TD Date))
+        $(TR $(TD Date) $(TD -) $(TD Duration) $(TD -->) $(TD Date))
         )
 
         Params:
-            duration = The duration to add to or subtract from this $(LREF Date).
+            duration = The $(CXREF time, Duration) to add to or subtract from
+                       this $(LREF Date).
       +/
-    ref Date opOpAssign(string op, D)(in D duration) @safe pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
+    ref Date opOpAssign(string op)(Duration duration) @safe pure nothrow
+        if(op == "+" || op == "-")
     {
-        import std.format : format;
-
-        static if(is(Unqual!D == Duration))
-            immutable days = duration.total!"days";
-        else static if(is(Unqual!D == TickDuration))
-            immutable days = convert!("hnsecs", "days")(duration.hnsecs);
-
-        mixin(format("return _addDays(%sdays);", op));
+        immutable days = duration.total!"days";
+        mixin("return _addDays(" ~ op ~ "days);");
     }
 
     unittest
@@ -11643,11 +11744,60 @@ public:
         static assert(!__traits(compiles, idate -= duration));
     }
 
+    // @@@DEPRECATED_2017-01@@@
+    /++
+        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
+              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+              Use $(D Duration) instead. This overload will be removed in
+              January 2017.)
+
+        Defines += and -= with $(CXREF time, TickDuration).
+      +/
+    deprecated("Use Duration instead of TickDuration.")
+    ref Date opOpAssign(string op)(TickDuration td) @safe pure nothrow
+        if(op == "+" || op == "-")
+    {
+        immutable days = convert!("seconds", "days")(td.seconds);
+        mixin("return _addDays(" ~ op ~ "days);");
+    }
+
+    deprecated unittest
+    {
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
+        {
+            {
+                auto date = Date(1999, 7, 6);
+                date += TickDuration.from!"usecs"(86_400_000_000);
+                assert(date == Date(1999, 7, 7));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date += TickDuration.from!"usecs"(-86_400_000_000);
+                assert(date == Date(1999, 7, 5));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date -= TickDuration.from!"usecs"(-86_400_000_000);
+                assert(date == Date(1999, 7, 7));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date -= TickDuration.from!"usecs"(86_400_000_000);
+                assert(date == Date(1999, 7, 5));
+            }
+        }
+    }
+
 
     /++
         Gives the difference between two $(LREF Date)s.
 
-        The legal types of arithmetic for Date using this operator are
+        The legal types of arithmetic for $(LREF Date) using this operator are
 
         $(BOOKTABLE,
         $(TR $(TD Date) $(TD -) $(TD Date) $(TD -->) $(TD duration))
@@ -13869,35 +14019,41 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a duration from this
-        $(LREF TimeOfDay).
+        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        this $(LREF TimeOfDay).
 
-        The legal types of arithmetic for $(LREF TimeOfDay) using this operator are
+        The legal types of arithmetic for $(LREF TimeOfDay) using this operator
+        are
 
         $(BOOKTABLE,
-        $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
-        $(TR $(TD TimeOfDay) $(TD -) $(TD duration) $(TD -->) $(TD TimeOfDay))
+        $(TR $(TD TimeOfDay) $(TD +) $(TD Duration) $(TD -->) $(TD TimeOfDay))
+        $(TR $(TD TimeOfDay) $(TD -) $(TD Duration) $(TD -->) $(TD TimeOfDay))
         )
 
         Params:
-            duration = The duration to add to or subtract from this
-                       $(LREF TimeOfDay).
+            duration = The $(CXREF time, Duration) to add to or subtract from
+                       this $(LREF TimeOfDay).
       +/
-    TimeOfDay opBinary(string op, D)(in D duration) @safe const pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
+    TimeOfDay opBinary(string op)(Duration duration) @safe const pure nothrow
+        if(op == "+" || op == "-")
     {
-        import std.format : format;
-
         TimeOfDay retval = this;
+        immutable seconds = duration.total!"seconds";
+        mixin("return retval._addSeconds(" ~ op ~ "seconds);");
+    }
 
-        static if(is(Unqual!D == Duration))
-            immutable hnsecs = duration.total!"hnsecs";
-        else static if(is(Unqual!D == TickDuration))
-            immutable hnsecs = duration.hnsecs;
+    ///
+    unittest
+    {
+        assert(TimeOfDay(12, 12, 12) + seconds(1) == TimeOfDay(12, 12, 13));
+        assert(TimeOfDay(12, 12, 12) + minutes(1) == TimeOfDay(12, 13, 12));
+        assert(TimeOfDay(12, 12, 12) + hours(1) == TimeOfDay(13, 12, 12));
+        assert(TimeOfDay(23, 59, 59) + seconds(1) == TimeOfDay(0, 0, 0));
 
-        mixin(format(`return retval._addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
+        assert(TimeOfDay(12, 12, 12) - seconds(1) == TimeOfDay(12, 12, 11));
+        assert(TimeOfDay(12, 12, 12) - minutes(1) == TimeOfDay(12, 11, 12));
+        assert(TimeOfDay(12, 12, 12) - hours(1) == TimeOfDay(11, 12, 12));
+        assert(TimeOfDay(0, 0, 0) - seconds(1) == TimeOfDay(23, 59, 59));
     }
 
     unittest
@@ -13918,14 +14074,6 @@ public:
         assert(tod + dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 40));
         assert(tod + dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 26));
 
-        //This probably only runs in cases where gettimeofday() is used, but it's
-        //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
-        {
-            assert(tod + TickDuration.from!"usecs"(7_000_000) == TimeOfDay(12, 30, 40));
-            assert(tod + TickDuration.from!"usecs"(-7_000_000) == TimeOfDay(12, 30, 26));
-        }
-
         assert(tod - dur!"hours"(-7) == TimeOfDay(19, 30, 33));
         assert(tod - dur!"hours"(7) == TimeOfDay(5, 30, 33));
         assert(tod - dur!"minutes"(-7) == TimeOfDay(12, 37, 33));
@@ -13940,14 +14088,6 @@ public:
         assert(tod - dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 40));
         assert(tod - dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 26));
 
-        //This probably only runs in cases where gettimeofday() is used, but it's
-        //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
-        {
-            assert(tod - TickDuration.from!"usecs"(-7_000_000) == TimeOfDay(12, 30, 40));
-            assert(tod - TickDuration.from!"usecs"(7_000_000) == TimeOfDay(12, 30, 26));
-        }
-
         auto duration = dur!"hours"(11);
         const ctod = TimeOfDay(12, 30, 33);
         immutable itod = TimeOfDay(12, 30, 33);
@@ -13960,35 +14100,63 @@ public:
         assert(itod - duration == TimeOfDay(1, 30, 33));
     }
 
+    // @@@DEPRECATED_2017-01@@@
+    /++
+        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
+              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+              Use $(D Duration) instead. This overload will be removed in
+              January 2017.)
+
+        Defines + and - with $(CXREF time, TickDuration).
+      +/
+    deprecated("Use Duration instead of TickDuration.")
+    TimeOfDay opBinary(string op)(TickDuration td) @safe const pure nothrow
+        if(op == "+" || op == "-")
+    {
+        TimeOfDay retval = this;
+        immutable seconds = td.seconds;
+        mixin("return retval._addSeconds(" ~ op ~ "seconds);");
+    }
+
+    deprecated unittest
+    {
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
+        {
+            auto tod = TimeOfDay(12, 30, 33);
+
+            assert(tod + TickDuration.from!"usecs"(7_000_000) == TimeOfDay(12, 30, 40));
+            assert(tod + TickDuration.from!"usecs"(-7_000_000) == TimeOfDay(12, 30, 26));
+
+            assert(tod - TickDuration.from!"usecs"(-7_000_000) == TimeOfDay(12, 30, 40));
+            assert(tod - TickDuration.from!"usecs"(7_000_000) == TimeOfDay(12, 30, 26));
+        }
+    }
+
 
     /++
-        Gives the result of adding or subtracting a duration from this
-        $(LREF TimeOfDay), as well as assigning the result to this
+        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        this $(LREF TimeOfDay), as well as assigning the result to this
         $(LREF TimeOfDay).
 
-        The legal types of arithmetic for $(LREF TimeOfDay) using this operator are
+        The legal types of arithmetic for $(LREF TimeOfDay) using this operator
+        are
 
         $(BOOKTABLE,
-        $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
-        $(TR $(TD TimeOfDay) $(TD -) $(TD duration) $(TD -->) $(TD TimeOfDay))
+        $(TR $(TD TimeOfDay) $(TD +) $(TD Duration) $(TD -->) $(TD TimeOfDay))
+        $(TR $(TD TimeOfDay) $(TD -) $(TD Duration) $(TD -->) $(TD TimeOfDay))
         )
 
         Params:
-            duration = The duration to add to or subtract from this
-                       $(LREF TimeOfDay).
+            duration = The $(CXREF time, Duration) to add to or subtract from
+                       this $(LREF TimeOfDay).
       +/
-    ref TimeOfDay opOpAssign(string op, D)(in D duration) @safe pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
+    ref TimeOfDay opOpAssign(string op)(Duration duration) @safe pure nothrow
+        if(op == "+" || op == "-")
     {
-        import std.format : format;
-        static if(is(Unqual!D == Duration))
-            immutable hnsecs = duration.total!"hnsecs";
-        else static if(is(Unqual!D == TickDuration))
-            immutable hnsecs = duration.hnsecs;
-
-        mixin(format(`return _addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
+        immutable seconds = duration.total!"seconds";
+        mixin("return _addSeconds(" ~ op ~ "seconds);");
     }
 
     unittest
@@ -14033,6 +14201,55 @@ public:
         static assert(!__traits(compiles, itod += duration));
         static assert(!__traits(compiles, ctod -= duration));
         static assert(!__traits(compiles, itod -= duration));
+    }
+
+    // @@@DEPRECATED_2017-01@@@
+    /++
+        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
+              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+              Use $(D Duration) instead. This overload will be removed in
+              January 2017.)
+
+        Defines += and -= with $(CXREF time, TickDuration).
+      +/
+    deprecated("Use Duration instead of TickDuration.")
+    ref TimeOfDay opOpAssign(string op)(TickDuration td) @safe pure nothrow
+        if(op == "+" || op == "-")
+    {
+        immutable seconds = td.seconds;
+        mixin("return _addSeconds(" ~ op ~ "seconds);");
+    }
+
+    deprecated unittest
+    {
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
+        {
+            {
+                auto tod = TimeOfDay(12, 30, 33);
+                tod += TickDuration.from!"usecs"(7_000_000);
+                assert(tod == TimeOfDay(12, 30, 40));
+            }
+
+            {
+                auto tod = TimeOfDay(12, 30, 33);
+                tod += TickDuration.from!"usecs"(-7_000_000);
+                assert(tod == TimeOfDay(12, 30, 26));
+            }
+
+            {
+                auto tod = TimeOfDay(12, 30, 33);
+                tod -= TickDuration.from!"usecs"(-7_000_000);
+                assert(tod == TimeOfDay(12, 30, 40));
+            }
+
+            {
+                auto tod = TimeOfDay(12, 30, 33);
+                tod -= TickDuration.from!"usecs"(7_000_000);
+                assert(tod == TimeOfDay(12, 30, 26));
+            }
+        }
     }
 
 
@@ -16148,43 +16365,43 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a duration from this
-        $(LREF DateTime).
+        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        this $(LREF DateTime).
 
-        The legal types of arithmetic for $(LREF DateTime) using this operator are
+        The legal types of arithmetic for $(LREF DateTime) using this operator
+        are
 
         $(BOOKTABLE,
-        $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
-        $(TR $(TD DateTime) $(TD -) $(TD duration) $(TD -->) $(TD DateTime))
+        $(TR $(TD DateTime) $(TD +) $(TD Duration) $(TD -->) $(TD DateTime))
+        $(TR $(TD DateTime) $(TD -) $(TD Duration) $(TD -->) $(TD DateTime))
         )
 
         Params:
-            duration = The $(CXREF time, Duration) to add to or subtract from this
-                       $(LREF DateTime).
+            duration = The $(CXREF time, Duration) to add to or subtract from
+                       this $(LREF DateTime).
       +/
-    DateTime opBinary(string op, D)(in D duration) @safe const pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
+    DateTime opBinary(string op)(Duration duration) @safe const pure nothrow
+        if(op == "+" || op == "-")
     {
-        import std.format : format;
-
         DateTime retval = this;
-
-        static if(is(Unqual!D == Duration))
-            immutable hnsecs = duration.total!"hnsecs";
-        else static if(is(Unqual!D == TickDuration))
-            immutable hnsecs = duration.hnsecs;
-
-        mixin(format(`return retval._addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
+        immutable seconds = duration.total!"seconds";
+        mixin("return retval._addSeconds(" ~ op ~ "seconds);");
     }
 
     ///
     unittest
     {
-        auto oldYear = DateTime(2015, 12, 31, 23, 59, 59);
-        auto newYear = oldYear + 1.seconds;
-        assert(newYear == DateTime(2016, 1, 1, 0, 0, 0));
+        assert(DateTime(2015, 12, 31, 23, 59, 59) + seconds(1) ==
+               DateTime(2016, 1, 1, 0, 0, 0));
+
+        assert(DateTime(2015, 12, 31, 23, 59, 59) + hours(1) ==
+               DateTime(2016, 1, 1, 0, 59, 59));
+
+        assert(DateTime(2016, 1, 1, 0, 0, 0) - seconds(1) ==
+               DateTime(2015, 12, 31, 23, 59, 59));
+
+        assert(DateTime(2016, 1, 1, 0, 59, 59) - hours(1) ==
+               DateTime(2015, 12, 31, 23, 59, 59));
     }
 
     unittest
@@ -16209,14 +16426,6 @@ public:
         assert(dt + dur!"hnsecs"(70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
         assert(dt + dur!"hnsecs"(-70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
 
-        //This probably only runs in cases where gettimeofday() is used, but it's
-        //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
-        {
-            assert(dt + TickDuration.from!"usecs"(7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assert(dt + TickDuration.from!"usecs"(-7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-        }
-
         assert(dt - dur!"weeks"(-7) == DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
         assert(dt - dur!"weeks"(7) == DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
         assert(dt - dur!"days"(-7) == DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
@@ -16235,14 +16444,6 @@ public:
         assert(dt - dur!"hnsecs"(-70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
         assert(dt - dur!"hnsecs"(70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
 
-        //This probably only runs in cases where gettimeofday() is used, but it's
-        //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
-        {
-            assert(dt - TickDuration.from!"usecs"(-7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assert(dt - TickDuration.from!"usecs"(7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-        }
-
         auto duration = dur!"seconds"(12);
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -16250,6 +16451,40 @@ public:
         assert(idt + duration == DateTime(1999, 7, 6, 12, 30, 45));
         assert(cdt - duration == DateTime(1999, 7, 6, 12, 30, 21));
         assert(idt - duration == DateTime(1999, 7, 6, 12, 30, 21));
+    }
+
+    // @@@DEPRECATED_2017-01@@@
+    /++
+        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
+              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+              Use $(D Duration) instead. This overload will be removed in
+              January 2017.)
+
+        Defines + and - with $(CXREF time, TickDuration).
+      +/
+    deprecated("Use Duration instead of TickDuration.")
+    DateTime opBinary(string op)(in TickDuration td) @safe const pure nothrow
+        if(op == "+" || op == "-")
+    {
+        DateTime retval = this;
+        immutable seconds = td.seconds;
+        mixin("return retval._addSeconds(" ~ op ~ "seconds);");
+    }
+
+    deprecated unittest
+    {
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
+        {
+            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+
+            assert(dt + TickDuration.from!"usecs"(7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assert(dt + TickDuration.from!"usecs"(-7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+
+            assert(dt - TickDuration.from!"usecs"(-7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assert(dt - TickDuration.from!"usecs"(7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+        }
     }
 
 
@@ -16334,6 +16569,56 @@ public:
         static assert(!__traits(compiles, idt += duration));
         static assert(!__traits(compiles, cdt -= duration));
         static assert(!__traits(compiles, idt -= duration));
+    }
+
+    // @@@DEPRECATED_2017-01@@@
+    /++
+        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
+              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+              Use $(D Duration) instead. This overload will be removed in
+              January 2017.)
+
+        Defines += and -= with $(CXREF time, TickDuration).
+      +/
+    deprecated("Use Duration instead of TickDuration.")
+    ref DateTime opOpAssign(string op)(TickDuration td) @safe pure nothrow
+        if(op == "+" || op == "-")
+    {
+        DateTime retval = this;
+        immutable seconds = td.seconds;
+        mixin("return _addSeconds(" ~ op ~ "seconds);");
+    }
+
+    deprecated unittest
+    {
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
+        {
+            {
+                auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+                dt += TickDuration.from!"usecs"(7_000_000);
+                assert(dt == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            }
+
+            {
+                auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+                dt += TickDuration.from!"usecs"(-7_000_000);
+                assert(dt == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            }
+
+            {
+                auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+                dt -= TickDuration.from!"usecs"(-7_000_000);
+                assert(dt == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            }
+
+            {
+                auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+                dt -= TickDuration.from!"usecs"(7_000_000);
+                assert(dt == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            }
+        }
     }
 
 
@@ -30054,7 +30339,7 @@ public:
         if(_flagStarted)
         {
             // Set current system time if StopWatch is measuring.
-            _timeStart = Clock.currSystemTick;
+            _timeStart = TickDuration.currSystemTick;
         }
         else
         {
@@ -30083,7 +30368,7 @@ public:
     {
         assert(!_flagStarted);
         _flagStarted = true;
-        _timeStart = Clock.currSystemTick;
+        _timeStart = TickDuration.currSystemTick;
     }
 
     @trusted unittest
@@ -30109,7 +30394,7 @@ public:
     {
         assert(_flagStarted);
         _flagStarted = false;
-        _timeMeasured += Clock.currSystemTick - _timeStart;
+        _timeMeasured += TickDuration.currSystemTick - _timeStart;
     }
 
     @trusted unittest
@@ -30135,7 +30420,7 @@ public:
     TickDuration peek() const
     {
         if(_flagStarted)
-            return Clock.currSystemTick - _timeStart + _timeMeasured;
+            return TickDuration.currSystemTick - _timeStart + _timeMeasured;
 
         return _timeMeasured;
     }
@@ -30449,8 +30734,12 @@ private:
                                              is(typeof(U.init -= Duration.init) == U) &&
                                              is(typeof(
                                              {
-                                                 alias add = U.opOpAssign!("+", Duration);
-                                                 alias sub = U.opOpAssign!("-", Duration);
+                                                 // Until the overload with TickDuration is removed, this is ambiguous.
+                                                 //alias add = U.opOpAssign!"+";
+                                                 //alias sub = U.opOpAssign!"-";
+                                                 U u;
+                                                 auto ref add() { return u += Duration.init; }
+                                                 auto ref sub() { return u -= Duration.init; }
                                                  alias FA = FunctionAttribute;
                                                  static assert((functionAttributes!add & FA.ref_) != 0);
                                                  static assert((functionAttributes!sub & FA.ref_) != 0);
