@@ -1119,17 +1119,17 @@ A single unsigned integer seed value, different on each successive call
 */
 @property uint unpredictableSeed() @trusted
 {
-    import core.thread : Thread, getpid, TickDuration;
+    import core.thread : Thread, getpid, MonoTime;
     static bool seeded;
     static MinstdRand0 rand;
     if (!seeded)
     {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick.length);
+        rand.seed((getpid() + threadID) ^ cast(uint) MonoTime.currTime.ticks);
         seeded = true;
     }
     rand.popFront();
-    return cast(uint) (TickDuration.currSystemTick.length ^ rand.front);
+    return cast(uint) (MonoTime.currTime.ticks ^ rand.front);
 }
 
 ///
