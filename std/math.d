@@ -4158,8 +4158,9 @@ long lrint(real x) @trusted pure nothrow @nogc
 
 /*******************************************
  * Return the value of x rounded to the nearest integer.
+ *
  * If the fractional part of x is exactly 0.5, the return value is rounded to
- * the even integer.
+ * the nearby even integer.
  */
 real round(real x) @trusted nothrow @nogc
 {
@@ -4173,6 +4174,41 @@ real round(real x) @trusted nothrow @nogc
     }
     else
         return core.stdc.math.roundl(x);
+}
+
+///
+@safe nothrow @nogc unittest
+{
+    assert(round(0.49) == 0);
+    assert(round(0.5 ) == 0);
+    assert(round(0.51) == 1);
+    assert(round(1.5 ) == 2);
+}
+
+/*******************************************
+ * Return the value of x rounded to the given precision (number of decimal places).
+ *
+ * If the fractional part of x $(I below) the last required decimal place is
+ * exactly 0.5, the last decimal place is rounded to the nearby even digit.
+ *
+ * The precision can be negative, in which case rounding to the nearest multiple
+ * of positive powers of ten (10, 100 etc) will occur.
+ */
+real round(real val, int prec) @safe nothrow @nogc
+{
+    real pow = 10 ^^ prec;
+    return round(val * pow) / pow;
+}
+
+///
+@safe nothrow @nogc unittest
+{
+    assert(round(1234.56789,  2) == 1234.57);
+    assert(round(1234.565,    2) == 1234.56);
+    assert(round(1234.575,    2) == 1234.58);
+    assert(round(1234.56789, -2) == 1200.00);
+    assert(round(1250.0,     -2) == 1200.00);
+    assert(round(1350.0,     -2) == 1400.00);
 }
 
 /**********************************************
