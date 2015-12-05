@@ -434,12 +434,12 @@ package void* alignUpTo(void* ptr, uint alignment)
 /**
 Returns `true` if `x` is a nonzero power of two.
 */
-package bool isPowerOf2(uint x)
+package bool isPowerOf2(uint x) @nogc
 {
     return (x & -x) > (x - 1);
 }
 
-unittest
+@nogc unittest
 {
     assert(!isPowerOf2(0));
     assert(isPowerOf2(1));
@@ -455,12 +455,12 @@ unittest
     assert(isPowerOf2(1UL << 31));
 }
 
-package bool isGoodStaticAlignment(uint x)
+package bool isGoodStaticAlignment(uint x) @nogc
 {
     return x.isPowerOf2;
 }
 
-package bool isGoodDynamicAlignment(uint x)
+package bool isGoodDynamicAlignment(uint x) @nogc
 {
     return x.isPowerOf2 && x >= (void*).sizeof;
 }
