@@ -21,7 +21,7 @@ struct Mallocator
     paradoxically, $(D malloc) is $(D @safe) but that's only useful to safe
     programs that can afford to leak memory allocated.
     */
-    @trusted void[] allocate(size_t bytes) shared
+    @nogc @trusted void[] allocate(size_t bytes) shared
     {
         import core.stdc.stdlib : malloc;
         if (!bytes) return null;
@@ -30,7 +30,7 @@ struct Mallocator
     }
 
     /// Ditto
-    @system bool deallocate(void[] b) shared
+    @nogc @system bool deallocate(void[] b) shared
     {
         import core.stdc.stdlib : free;
         free(b.ptr);
@@ -38,7 +38,7 @@ struct Mallocator
     }
 
     /// Ditto
-    @system bool reallocate(ref void[] b, size_t s) shared
+    @nogc @system bool reallocate(ref void[] b, size_t s) shared
     {
         import core.stdc.stdlib : realloc;
         if (!s)
@@ -64,23 +64,23 @@ struct Mallocator
 }
 
 ///
-unittest
+@nogc unittest
 {
     auto buffer = Mallocator.instance.allocate(1024 * 1024 * 4);
     scope(exit) Mallocator.instance.deallocate(buffer);
     //...
 }
 
-unittest
+@nogc unittest
 {
-    static void test(A)()
+    @nogc static void test(A)()
     {
         int* p = null;
-        p = new int;
+        p = cast(int*) A.instance.allocate(int.sizeof);
+        scope(exit) A.instance.deallocate(p[0 .. int.sizeof]);
         *p = 42;
         assert(*p == 42);
     }
-
     test!Mallocator();
 }
 
@@ -96,7 +96,8 @@ unittest
     test!Mallocator();
 }
 
-version (Posix) private extern(C) int posix_memalign(void**, size_t, size_t);
+version (Posix) private extern(C) @nogc
+int posix_memalign(void**, size_t, size_t);
 version (Windows)
 {
     // DMD Win 32 bit, DigitalMars C standard library misses the _aligned_xxx
@@ -110,13 +111,13 @@ version (Windows)
         {
             void* basePtr;
             size_t size;
-            static AlignInfo* opCall(void* ptr)
+            static AlignInfo* opCall(void* ptr) @nogc
             {
                 return cast(AlignInfo*) (ptr - AlignInfo.sizeof);
             }
         }
 
-        private void* _aligned_malloc(size_t size, size_t alignment)
+        private void* _aligned_malloc(size_t size, size_t alignment) @nogc
         {
             import std.c.stdlib: malloc;
             size_t offset = alignment + size_t.sizeof * 2 - 1;
@@ -138,6 +139,7 @@ version (Windows)
         }
 
         private void* _aligned_realloc(void* ptr, size_t size, size_t alignment)
+        @nogc
         {
             import std.c.stdlib: free;
             import std.c.string: memcpy;
@@ -163,7 +165,7 @@ version (Windows)
             return alignedPtr;
         }
 
-        private void _aligned_free(void *ptr)
+        private void _aligned_free(void *ptr) @nogc
         {
             import std.c.stdlib: free;
             if (!ptr) return;
@@ -175,9 +177,9 @@ version (Windows)
     // DMD Win 64 bit, uses microsoft standard C library which implements them
     else
     {
-        private extern(C) void* _aligned_malloc(size_t, size_t);
-        private extern(C) void _aligned_free(void *memblock);
-        private extern(C) void* _aligned_realloc(void *, size_t, size_t);
+        @nogc private extern(C) void* _aligned_malloc(size_t, size_t);
+        @nogc private extern(C) void _aligned_free(void *memblock);
+        @nogc private extern(C) void* _aligned_realloc(void *, size_t, size_t);
     }
 }
 
@@ -196,7 +198,7 @@ struct AlignedMallocator
     /**
     Forwards to $(D alignedAllocate(bytes, platformAlignment)).
     */
-    @trusted void[] allocate(size_t bytes) shared
+    @nogc @trusted void[] allocate(size_t bytes) shared
     {
         if (!bytes) return null;
         return alignedAllocate(bytes, alignment);
@@ -208,21 +210,17 @@ struct AlignedMallocator
     $(WEB msdn.microsoft.com/en-us/library/8z34s9c6(v=vs.80).aspx,
     $(D __aligned_malloc)) on Windows.
     */
-    version(Posix) @trusted
+    version(Posix) @trusted @nogc
     void[] alignedAllocate(size_t bytes, uint a) shared
     {
-        import std.conv : to;
         import core.stdc.errno : ENOMEM;
-        assert(a.isGoodDynamicAlignment, to!string(a));
+        assert(a.isGoodDynamicAlignment);
         void* result;
         auto code = posix_memalign(&result, a, bytes);
         if (code == ENOMEM) return null;
-        import std.exception : enforce;
-        import std.conv : text;
-        enforce(code == 0, text("Invalid alignment requested: ", a));
         return result[0 .. bytes];
     }
-    else version(Windows) @trusted
+    else version(Windows) @trusted @nogc
     void[] alignedAllocate(size_t bytes, uint a) shared
     {
         auto result = _aligned_malloc(bytes, a);
@@ -235,7 +233,7 @@ struct AlignedMallocator
     $(WEB msdn.microsoft.com/en-US/library/17b5h8td(v=vs.80).aspx,
     $(D __aligned_free(b.ptr))) on Windows.
     */
-    version (Posix) @system
+    version (Posix) @system @nogc
     bool deallocate(void[] b) shared
     {
         import core.stdc.stdlib : free;
@@ -254,11 +252,12 @@ struct AlignedMallocator
     On Posix, forwards to $(D realloc). On Windows, forwards to
     $(D alignedReallocate(b, newSize, platformAlignment)).
     */
-    version (Posix) @system bool reallocate(ref void[] b, size_t newSize) shared
+    version (Posix) @system @nogc
+    bool reallocate(ref void[] b, size_t newSize) shared
     {
         return Mallocator.instance.reallocate(b, newSize);
     }
-    version (Windows) @system
+    version (Windows) @system @nogc
     bool reallocate(ref void[] b, size_t newSize) shared
     {
         return alignedReallocate(b, newSize, alignment);
@@ -270,7 +269,7 @@ struct AlignedMallocator
     $(WEB msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
     $(D __aligned_realloc(b.ptr, newSize, a))).
     */
-    version (Windows) @system
+    version (Windows) @system @nogc
     bool alignedReallocate(ref void[] b, size_t s, uint a) shared
     {
         if (!s)
@@ -294,7 +293,7 @@ struct AlignedMallocator
 }
 
 ///
-unittest
+@nogc unittest
 {
     auto buffer = AlignedMallocator.instance.alignedAllocate(1024 * 1024 * 4,
         128);
@@ -304,7 +303,7 @@ unittest
 
 version(unittest) version(CRuntime_DigitalMars)
     size_t addr(ref void* ptr){return cast(size_t) ptr;}
-version(CRuntime_DigitalMars) unittest
+version(CRuntime_DigitalMars) @nogc unittest
 {
     void* m;
 
