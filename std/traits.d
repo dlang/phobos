@@ -29,7 +29,6 @@
  *           $(LREF variadicFunctionStyle)
  * ))
  * $(TR $(TD Aggregate Type _traits) $(TD
- *           $(LREF classInstanceAlignment)
  *           $(LREF BaseTypes)
  *           $(LREF BaseClasses)
  *           $(LREF BaseInterfaces)
@@ -38,17 +37,19 @@
  *           $(LREF FieldTypes)
  *           $(LREF EnumMembers)
  *           $(LREF RepresentationTypes)
+ *           $(LREF MemberFunctions)
+ *           $(LREF hasMember)
  *           $(LREF hasAliasing)
  *           $(LREF hasElaborateAssign)
  *           $(LREF hasElaborateCopyConstructor)
  *           $(LREF hasElaborateDestructor)
- *           $(LREF hasIndirections)
- *           $(LREF hasMember)
- *           $(LREF hasNested)
  *           $(LREF hasUnsharedAliasing)
+ *           $(LREF hasIndirections)
+ *           $(LREF hasNested)
  *           $(LREF isNested)
- *           $(LREF TemplateArgsOf)
+ *           $(LREF classInstanceAlignment)
  *           $(LREF TemplateOf)
+ *           $(LREF TemplateArgsOf)
  * ))
  * $(TR $(TD Type Conversion) $(TD
  *           $(LREF CommonType)
@@ -60,6 +61,7 @@
  *           $(LREF isImplicitlyConvertible)
  * ))
  * <!--$(TR $(TD SomethingTypeOf) $(TD
+ *           $(LREF BuiltinTypeOf)
  *           $(LREF BooleanTypeOf)
  *           $(LREF IntegralTypeOf)
  *           $(LREF FloatingPointTypeOf)
@@ -67,46 +69,45 @@
  *           $(LREF UnsignedTypeOf)
  *           $(LREF SignedTypeOf)
  *           $(LREF CharTypeOf)
+ *           $(LREF ArrayTypeOf)
  *           $(LREF StaticArrayTypeOf)
  *           $(LREF DynamicArrayTypeOf)
- *           $(LREF ArrayTypeOf)
  *           $(LREF StringTypeOf)
  *           $(LREF AssocArrayTypeOf)
- *           $(LREF BuiltinTypeOf)
  * ))-->
  * $(TR $(TD Categories of types) $(TD
- *           $(LREF isAggregateType)
- *           $(LREF isArray)
- *           $(LREF isAssociativeArray)
- *           $(LREF isAutodecodableString)
- *           $(LREF isBasicType)
- *           $(LREF isBoolean)
  *           $(LREF isBuiltinType)
- *           $(LREF isDynamicArray)
- *           $(LREF isFloatingPoint)
- *           $(LREF isIntegral)
- *           $(LREF isNarrowString)
- *           $(LREF isNumeric)
- *           $(LREF isPointer)
+ *           $(LREF isBasicType)
  *           $(LREF isScalarType)
+ *           $(LREF isNumeric)
+ *           $(LREF isIntegral)
+ *           $(LREF isFloatingPoint)
  *           $(LREF isSigned)
- *           $(LREF isSomeChar)
- *           $(LREF isSomeString)
- *           $(LREF isStaticArray)
  *           $(LREF isUnsigned)
+ *           $(LREF isSomeChar)
+ *           $(LREF isBoolean)
+ *           $(LREF isArray)
+ *           $(LREF isStaticArray)
+ *           $(LREF isDynamicArray)
+ *           $(LREF isAssociativeArray)
+ *           $(LREF isAggregateType)
+ *           $(LREF isSomeString)
+ *           $(LREF isNarrowString)
+ *           $(LREF isAutodecodableString)
+ *           $(LREF isPointer)
  * ))
  * $(TR $(TD Type behaviours) $(TD
  *           $(LREF isAbstractClass)
  *           $(LREF isAbstractFunction)
+ *           $(LREF isInstanceOf)
  *           $(LREF isCallable)
  *           $(LREF isDelegate)
  *           $(LREF isFinalClass)
  *           $(LREF isFinalFunction)
  *           $(LREF isFunctionPointer)
- *           $(LREF isInstanceOf)
+ *           $(LREF isSomeFunction)
  *           $(LREF isIterable)
  *           $(LREF isMutable)
- *           $(LREF isSomeFunction)
  *           $(LREF isExpressionSeq)
  *           $(LREF isTypeSeq)
  * ))
@@ -117,8 +118,8 @@
  *           $(LREF mostNegative)
  *           $(LREF OriginalType)
  *           $(LREF PointerTarget)
- *           $(LREF Signed)
  *           $(LREF Unqual)
+ *           $(LREF Signed)
  *           $(LREF Unsigned)
  *           $(LREF ValueType)
  * ))
@@ -264,23 +265,12 @@ private
     alias CharTypeSeq          = AliasSeq!(char, wchar, dchar);
 }
 
-package
-{
-    /// Add specific qualifier to the given type T.
-    template MutableOf(T)     { alias MutableOf     =              T  ; }
-}
-
-/// Add specific qualifier to the given type T.
+template MutableOf(T)     { alias MutableOf     =              T  ; }
 template InoutOf(T)       { alias InoutOf       =        inout(T) ; }
-/// ditto.
 template ConstOf(T)       { alias ConstOf       =        const(T) ; }
-/// ditto.
 template SharedOf(T)      { alias SharedOf      =       shared(T) ; }
-/// ditto.
 template SharedInoutOf(T) { alias SharedInoutOf = shared(inout(T)); }
-/// ditto.
 template SharedConstOf(T) { alias SharedConstOf = shared(const(T)); }
-/// ditto.
 template ImmutableOf(T)   { alias ImmutableOf   =    immutable(T) ; }
 
 unittest
@@ -831,7 +821,7 @@ unittest
         static assert(fqn!(typeof(cFuncPtr)) == format("extern(C) %s function(double, string)", inner_name));
 
         // Delegate type with qualified function type
-        static assert(fqn!(typeof(attrDeleg)) == format("shared(immutable(%s) "~
+        static assert(fqn!(typeof(attrDeleg)) == format("shared(immutable(%s) " ~
             "delegate(ref double, scope string) nothrow @trusted shared const)", inner_name));
 
         // Variable argument function types
@@ -3413,10 +3403,10 @@ template EnumMembers(E)
         }
         else
         {
-            mixin("template Symbolize(alias "~ ident ~")"
-                 ~"{"
-                     ~"alias Symbolize = "~ ident ~";"
-                 ~"}");
+            mixin("template Symbolize(alias " ~ ident ~ ")"
+                 ~ "{"
+                     ~ "alias Symbolize = " ~ ident ~ ";"
+                ~ "}");
         }
     }
 
@@ -4619,7 +4609,7 @@ private template AliasThisTypeOf(T) if (isAggregateType!T)
         alias AliasThisTypeOf = typeof(__traits(getMember, T.init, members[0]));
     }
     else
-        static assert(0, T.stringof~" does not have alias this type");
+        static assert(0, T.stringof ~ " does not have alias this type");
 }
 
 /*
@@ -4636,7 +4626,7 @@ template BooleanTypeOf(T)
         alias BooleanTypeOf = X;
     }
     else
-        static assert(0, T.stringof~" is not boolean type");
+        static assert(0, T.stringof ~ " is not boolean type");
 }
 
 unittest
@@ -4687,7 +4677,7 @@ template IntegralTypeOf(T)
         alias IntegralTypeOf = X;
     }
     else
-        static assert(0, T.stringof~" is not an integral type");
+        static assert(0, T.stringof ~ " is not an integral type");
 }
 
 unittest
@@ -4721,7 +4711,7 @@ template FloatingPointTypeOf(T)
         alias FloatingPointTypeOf = X;
     }
     else
-        static assert(0, T.stringof~" is not a floating point type");
+        static assert(0, T.stringof ~ " is not a floating point type");
 }
 
 unittest
@@ -4750,7 +4740,7 @@ template NumericTypeOf(T)
         alias NumericTypeOf = X;
     }
     else
-        static assert(0, T.stringof~" is not a numeric type");
+        static assert(0, T.stringof ~ " is not a numeric type");
 }
 
 unittest
@@ -4778,7 +4768,7 @@ template UnsignedTypeOf(T)
                staticIndexOf!(Unqual!X, UnsignedIntTypeSeq) >= 0)
         alias UnsignedTypeOf = X;
     else
-        static assert(0, T.stringof~" is not an unsigned type.");
+        static assert(0, T.stringof ~ " is not an unsigned type.");
 }
 
 /*
@@ -4791,7 +4781,7 @@ template SignedTypeOf(T)
     else static if (is(FloatingPointTypeOf!T X))
         alias SignedTypeOf = X;
     else
-        static assert(0, T.stringof~" is not an signed type.");
+        static assert(0, T.stringof ~ " is not an signed type.");
 }
 
 /*
@@ -4808,7 +4798,7 @@ template CharTypeOf(T)
         alias CharTypeOf = X;
     }
     else
-        static assert(0, T.stringof~" is not a character type");
+        static assert(0, T.stringof ~ " is not a character type");
 }
 
 unittest
@@ -4847,7 +4837,7 @@ template StaticArrayTypeOf(T)
     static if (is(X : E[n], E, size_t n))
         alias StaticArrayTypeOf = X;
     else
-        static assert(0, T.stringof~" is not a static array type");
+        static assert(0, T.stringof ~ " is not a static array type");
 }
 
 unittest
@@ -4884,7 +4874,7 @@ template DynamicArrayTypeOf(T)
         alias DynamicArrayTypeOf = X;
     }
     else
-        static assert(0, T.stringof~" is not a dynamic array");
+        static assert(0, T.stringof ~ " is not a dynamic array");
 }
 
 unittest
@@ -4916,7 +4906,7 @@ template ArrayTypeOf(T)
         alias ArrayTypeOf = X;
     }
     else
-        static assert(0, T.stringof~" is not an array type");
+        static assert(0, T.stringof ~ " is not an array type");
 }
 
 /*
@@ -4929,7 +4919,7 @@ template StringTypeOf(T)
         // It is impossible to determine exact string type from typeof(null) -
         // it means that StringTypeOf!(typeof(null)) is undefined.
         // Then this behavior is convenient for template constraint.
-        static assert(0, T.stringof~" is not a string type");
+        static assert(0, T.stringof ~ " is not a string type");
     }
     else static if (is(T : const char[]) || is(T : const wchar[]) || is(T : const dchar[]))
     {
@@ -4939,7 +4929,7 @@ template StringTypeOf(T)
             static assert(0);
     }
     else
-        static assert(0, T.stringof~" is not a string type");
+        static assert(0, T.stringof ~ " is not a string type");
 }
 
 unittest
@@ -4985,12 +4975,12 @@ template AssocArrayTypeOf(T)
         alias AssocArrayTypeOf = X;
     }
     else
-        static assert(0, T.stringof~" is not an associative array type");
+        static assert(0, T.stringof ~ " is not an associative array type");
 }
 
 unittest
 {
-    foreach (T; AliasSeq!(int/*bool, CharTypeSeq, NumericTypeSeq, ImaginaryTypeSeq, ComplexTypeSeq*/))
+    foreach (T; AliasSeq!(int /*, bool, CharTypeSeq, NumericTypeSeq, ImaginaryTypeSeq, ComplexTypeSeq*/))
         foreach (P; AliasSeq!(TypeQualifierSeq, InoutOf, SharedInoutOf))
             foreach (Q; AliasSeq!(TypeQualifierSeq, InoutOf, SharedInoutOf))
                 foreach (R; AliasSeq!(TypeQualifierSeq, InoutOf, SharedInoutOf))
@@ -4998,7 +4988,7 @@ unittest
                     static assert(is( P!(Q!T[R!T]) == AssocArrayTypeOf!(            P!(Q!T[R!T])  ) ));
                 }
 
-    foreach (T; AliasSeq!(int/*bool, CharTypeSeq, NumericTypeSeq, ImaginaryTypeSeq, ComplexTypeSeq*/))
+    foreach (T; AliasSeq!(int /*, bool, CharTypeSeq, NumericTypeSeq, ImaginaryTypeSeq, ComplexTypeSeq*/))
         foreach (O; AliasSeq!(TypeQualifierSeq, InoutOf, SharedInoutOf))
             foreach (P; AliasSeq!TypeQualifierSeq)
                 foreach (Q; AliasSeq!TypeQualifierSeq)
