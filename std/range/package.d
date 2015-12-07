@@ -6116,7 +6116,8 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
 
 /**
 This range iterates over fixed-sized chunks of size $(D chunkSize) of a
-$(D source) range. $(D Source) must be a forward range.
+$(D source) range. $(D Source) must be a forward range. $(D chunkSize) must be
+greater than zero.
 
 If $(D !isInfinite!Source) and $(D source.walkLength) is not evenly
 divisible by $(D chunkSize), the back element of this range will contain
