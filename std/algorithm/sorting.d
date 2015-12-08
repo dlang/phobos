@@ -2301,7 +2301,7 @@ auto topN(alias less = "a < b",
 
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
-    auto heap = BinaryHeap!Range1(r1);
+    auto heap = BinaryHeap!(Range1, less)(r1);
     for (; !r2.empty; r2.popFront())
     {
         heap.conditionalInsert(r2.front);
@@ -2324,6 +2324,16 @@ unittest
     auto t = topN(c, d);
     sort(t);
     assert(t == [ 0, 1, 2, 2, 3 ]);
+}
+
+// bug 15420
+unittest
+{
+    int[] a = [ 5, 7, 2, 6, 7 ];
+    int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
+    topN!"a > b"(a, b);
+    sort!"a > b"(a);
+    assert(a == [ 7, 7, 7, 6, 6 ]);
 }
 
 /**
