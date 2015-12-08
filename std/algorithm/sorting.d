@@ -2152,7 +2152,7 @@ BUGS:
 
 Stable topN has not been implemented yet.
 */
-void topN(alias less = "a < b",
+auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r, size_t nth)
     if (isRandomAccessRange!(Range) && hasLength!Range)
@@ -2162,6 +2162,7 @@ void topN(alias less = "a < b",
 
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
+    auto ret = r[0 .. nth];
     while (r.length > nth)
     {
         auto pivot = uniform(0, r.length);
@@ -2173,7 +2174,7 @@ void topN(alias less = "a < b",
         pivot = r.length - right.length;
         if (pivot == nth)
         {
-            return;
+            return ret;
         }
         if (pivot < nth)
         {
@@ -2187,6 +2188,7 @@ void topN(alias less = "a < b",
             r = r[0 .. pivot];
         }
     }
+    return ret;
 }
 
 ///
@@ -2196,6 +2198,12 @@ void topN(alias less = "a < b",
     auto n = 4;
     topN!"a < b"(v, n);
     assert(v[n] == 9);
+
+    // bug 12987
+    int[] a = [ 25, 7, 9, 2, 0, 5, 21 ];
+    auto t = topN(a, n);
+    sort(t);
+    assert(t == [0, 2, 5, 7]);
 }
 
 @safe unittest
@@ -2283,7 +2291,7 @@ Params:
     r1 = The first range.
     r2 = The second range.
  */
-void topN(alias less = "a < b",
+auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(Range1 r1, Range2 r2)
     if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
@@ -2298,6 +2306,7 @@ void topN(alias less = "a < b",
     {
         heap.conditionalInsert(r2.front);
     }
+    return r1;
 }
 
 ///
@@ -2308,6 +2317,13 @@ unittest
     topN(a, b);
     sort(a);
     assert(a == [0, 1, 2, 2, 3]);
+
+    // bug 12987
+    int[] c = [ 5, 7, 2, 6, 7 ];
+    int[] d = [ 2, 1, 5, 6, 7, 3, 0 ];
+    auto t = topN(c, d);
+    sort(t);
+    assert(t == [ 0, 1, 2, 2, 3 ]);
 }
 
 /**
