@@ -2077,7 +2077,7 @@ private
                             m_notFull.notifyAll();
                         static if( timedWait )
                         {
-                            if( period.isNegative || !m_putMsg.wait( period ) )
+                            if( period <= Duration.zero || !m_putMsg.wait( period ) )
                                 return false;
                         }
                         else
