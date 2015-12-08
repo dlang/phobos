@@ -2267,36 +2267,20 @@ Lerr:
 
 @safe pure unittest
 {
-    // @@@BUG@@@ the size of China
-        // foreach (i; 2..37)
-        // {
-        //      assert(parse!int("0",i) == 0);
-        //      assert(parse!int("1",i) == 1);
-        //      assert(parse!byte("10",i) == i);
-        // }
-        foreach (i; 2..37)
-        {
-            string s = "0";
-                assert(parse!int(s,i) == 0);
-            s = "1";
-                assert(parse!int(s,i) == 1);
-            s = "10";
-                assert(parse!byte(s,i) == i);
-        }
-    // Same @@@BUG@@@ as above
-        //assert(parse!int("0011001101101", 2) == 0b0011001101101);
-        // assert(parse!int("765",8) == 0765);
-        // assert(parse!int("fCDe",16) == 0xfcde);
-    auto s = "0011001101101";
-        assert(parse!int(s, 2) == 0b0011001101101);
-    s = "765";
-        assert(parse!int(s, 8) == octal!765);
-    s = "fCDe";
-        assert(parse!int(s, 16) == 0xfcde);
+    string s; // parse doesn't accept rvalues
+    foreach (i; 2..37)
+    {
+        assert(parse!int(s = "0", i) == 0);
+        assert(parse!int(s = "1", i) == 1);
+        assert(parse!byte(s = "10", i) == i);
+    }
+
+    assert(parse!int(s = "0011001101101", 2) == 0b0011001101101);
+    assert(parse!int(s = "765", 8) == octal!765);
+    assert(parse!int(s = "fCDe", 16) == 0xfcde);
 
     // 6609
-    s = "-42";
-    assert(parse!int(s, 10) == -42);
+    assert(parse!int(s = "-42", 10) == -42);
 }
 
 @safe pure unittest // bugzilla 7302
