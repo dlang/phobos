@@ -2198,12 +2198,6 @@ auto topN(alias less = "a < b",
     auto n = 4;
     topN!"a < b"(v, n);
     assert(v[n] == 9);
-
-    // bug 12987
-    int[] a = [ 25, 7, 9, 2, 0, 5, 21 ];
-    auto t = topN(a, n);
-    sort(t);
-    assert(t == [0, 2, 5, 7]);
 }
 
 @safe unittest
@@ -2282,6 +2276,16 @@ auto topN(alias less = "a < b",
     }
 }
 
+// bug 12987
+@safe unittest
+{
+    int[] a = [ 25, 7, 9, 2, 0, 5, 21 ];
+    auto n = 4;
+    auto t = topN(a, n);
+    sort(t);
+    assert(t == [0, 2, 5, 7]);
+}
+
 /**
 Stores the smallest elements of the two ranges in the left-hand range.
 
@@ -2317,11 +2321,14 @@ unittest
     topN(a, b);
     sort(a);
     assert(a == [0, 1, 2, 2, 3]);
+}
 
-    // bug 12987
-    int[] c = [ 5, 7, 2, 6, 7 ];
-    int[] d = [ 2, 1, 5, 6, 7, 3, 0 ];
-    auto t = topN(c, d);
+// bug 12987
+unittest
+{
+    int[] a = [ 5, 7, 2, 6, 7 ];
+    int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
+    auto t = topN(a, b);
     sort(t);
     assert(t == [ 0, 1, 2, 2, 3 ]);
 }
