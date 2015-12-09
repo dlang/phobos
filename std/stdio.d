@@ -379,8 +379,8 @@ object refers to it anymore.
 Params:
     name = range or string representing the file _name
     stdioOpenmode = range or string represting the open mode
-        (with the same semantics as in the C standard library $(WEB
-        cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
+        (with the same semantics as in the C standard library
+        $(WEB cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
         function)
 
 Throws: $(D ErrnoException) if the file could not be opened.
