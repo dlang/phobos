@@ -115,11 +115,26 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     {
         assert(!store.empty, "Cannot pop an empty store.");
         if (store.length == 1) return;
-        auto t1 = moveFront(store[]);
-        auto t2 = moveBack(store[]);
+        static if(isRandomAccessRange!Store)
+        {
+            auto t1 = moveFront(store);
+            auto t2 = moveBack(store);
+        }
+        else
+        {
+            auto t1 = moveFront(store[]);
+            auto t2 = moveBack(store[]);
+        }
         store.front = move(t2);
         store.back = move(t1);
-        percolate(store[], 0, store.length - 1);
+        static if(isRandomAccessRange!Store)
+        {
+            percolate(store, 0, store.length - 1);
+        }
+        else
+        {
+            percolate(store[], 0, store.length - 1);
+        }
     }
 
 public:
@@ -147,7 +162,10 @@ the heap work incorrectly.
         _store = move(s);
         _length = min(_store.length, initialSize);
         if (_length < 2) return;
-        buildHeap(s[]);
+        static if (isRandomAccessRange!Store)
+            buildHeap(s);
+        else
+            buildHeap(s[]);
         assertValid();
     }
 
@@ -293,13 +311,28 @@ Removes the largest element from the heap.
         enforce(!empty, "Cannot call removeFront on an empty heap.");
         if (_length > 1)
         {
-            auto t1 = moveFront(_store[]);
-            auto t2 = moveAt(_store[], _length - 1);
+            static if(isRandomAccessRange!Store)
+            {
+                auto t1 = moveFront(_store);
+                auto t2 = moveAt(_store, _length - 1);
+            }
+            else
+            {
+                auto t1 = moveFront(_store[]);
+                auto t2 = moveAt(_store[], _length - 1);
+            }
             _store.front = move(t2);
             _store[_length - 1] = move(t1);
         }
         --_length;
-        percolate(_store[], 0, _length);
+        static if(isRandomAccessRange!Store)
+        {
+            percolate(_store, 0, _length);
+        }
+        else
+        {
+            percolate(_store[], 0, _length);
+        }
     }
 
     /// ditto
@@ -325,7 +358,14 @@ Replaces the largest element in the store with $(D value).
         // must replace the top
         assert(!empty, "Cannot call replaceFront on an empty heap.");
         _store.front = value;
-        percolate(_store[], 0, _length);
+        static if(isRandomAccessRange!Store)
+        {
+            percolate(_store, 0, _length);
+        }
+        else
+        {
+            percolate(_store[], 0, _length);
+        }
         debug(BinaryHeap) assertValid();
     }
 
@@ -349,7 +389,10 @@ must be collected.
         assert(!_store.empty, "Cannot replace front of an empty heap.");
         if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
-        percolate(_store[], 0, _length);
+        static if (isRandomAccessRange!Store)
+            percolate(_store, 0, _length);
+        else
+            percolate(_store[], 0, _length);
         debug(BinaryHeap) assertValid();
         return true;
     }
@@ -426,4 +469,14 @@ unittest
     auto h = heapify(a);
     static assert(isInputRange!(typeof(h)));
     assert(h.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
+}
+
+unittest
+{
+    import std.internal.test.dummytest;
+    foreach(DummyRange; AllDummyRanges)
+    {
+        auto a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
+        auto h = heapify(a);
+    }
 }
