@@ -150,7 +150,7 @@ algorithms return the same range type as their input range.
 ---
 import std.algorithm : equal, find;
 import std.container;
-import std.range : takeOne;
+import std.range : take;
 
 auto array = make!Array(1, 2, 3);
 
@@ -163,7 +163,7 @@ array = make!Array(1, 2, 3);
 
 // the range given to `linearRemove` is a Take!(Array!int.Range)
 // spanning just the element "2"
-array.linearRemove(array[].find(2).takeOne());
+array.linearRemove(array[].find(2).take(1));
 
 assert(array[].equal([1, 3]));
 ---
