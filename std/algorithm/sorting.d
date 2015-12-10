@@ -2302,9 +2302,13 @@ auto topN(alias less = "a < b",
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
     auto heap = BinaryHeap!Range1(r1);
-    for (; !r2.empty; r2.popFront())
+    foreach (ref e; r2)
     {
-        heap.conditionalInsert(r2.front);
+        auto f = heap.front;
+        if (heap.conditionalInsert(e))
+        {
+           e = f;
+        }
     }
     return r1;
 }
@@ -2324,6 +2328,50 @@ unittest
     auto t = topN(c, d);
     sort(t);
     assert(t == [ 0, 1, 2, 2, 3 ]);
+}
+
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
+    import std.meta : AliasSeq;
+    alias RandomRanges = AliasSeq!(
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
+        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random),
+    );
+
+    foreach (T1; RandomRanges)
+    {
+        foreach (T2; AllDummyRanges)
+        {
+            T1 a;
+            T2 b;
+            topN(a, b);
+            sort(a);
+            assert(equal(a, [ 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 ]));
+            sort(b);
+            assert(equal(b, [ 6, 6, 7, 7, 8, 8, 9, 9, 10, 10 ]));
+        }
+    }
+}
+
+// bug 15421
+unittest
+{
+    auto a = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
+    auto b = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
+
+    topN(a, 4);
+    topN(b[0 .. 4], b[4 .. $]);
+
+    sort(a[0 .. 4]);
+    sort(a[4 .. $]);
+    sort(b[0 .. 4]);
+    sort(b[4 .. $]);
+
+    assert(a[0 .. 4] == b[0 .. 4]);
+    assert(a[4 .. $] == b[4 .. $]);
+    assert(a == b);
 }
 
 /**
