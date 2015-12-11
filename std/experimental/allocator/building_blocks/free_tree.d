@@ -53,7 +53,6 @@ struct FreeTree(ParentAllocator)
 
     import std.algorithm : min, max, swap;
     import std.traits : hasMember;
-    version(unittest) import std.stdio : writef, writefln, writeln;
 
     // State {
     static if (stateSize!ParentAllocator) private ParentAllocator parent;
@@ -112,8 +111,10 @@ struct FreeTree(ParentAllocator)
         return findAndRemove(n.kid[s > n.size], s);
     }
 
+    debug(std_experimental_allocator_free_tree)
     private void dump()
     {
+        import std.stdio : writef, writefln, writeln;
         writeln(typeof(this).stringof, "@", &this, " {");
         scope(exit) writeln("}");
 
