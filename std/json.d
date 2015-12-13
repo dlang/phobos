@@ -112,9 +112,9 @@ struct JSONValue
     private JSON_TYPE type_tag;
 
     /**
-      Returns the JSON_TYPE of the value stored in this structure.
+      Returns: the JSON_TYPE of the value stored in this structure.
     */
-    @property JSON_TYPE type() const pure nothrow @safe @nogc
+    @property JSON_TYPE type()() const
     {
         return type_tag;
     }
@@ -167,14 +167,14 @@ struct JSONValue
     /// Value getter/setter for $(D JSON_TYPE.STRING).
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.STRING).
-    @property inout(string) str() inout pure
+    @property inout(string) str()() inout
     {
         enforce!JSONException(type == JSON_TYPE.STRING,
                                 "JSONValue is not a string");
         return store.str;
     }
     /// ditto
-    @property string str(string v) pure nothrow @nogc
+    @property string str()(string v)
     {
         assign(v);
         return store.str;
@@ -195,14 +195,14 @@ struct JSONValue
     /// Value getter/setter for $(D JSON_TYPE.INTEGER).
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.INTEGER).
-    @property inout(long) integer() inout pure @safe
+    @property inout(long) integer()() inout
     {
         enforce!JSONException(type == JSON_TYPE.INTEGER,
                                 "JSONValue is not an integer");
         return store.integer;
     }
     /// ditto
-    @property long integer(long v) pure nothrow @safe @nogc
+    @property long integer()(long v)
     {
         assign(v);
         return store.integer;
@@ -211,14 +211,14 @@ struct JSONValue
     /// Value getter/setter for $(D JSON_TYPE.UINTEGER).
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.UINTEGER).
-    @property inout(ulong) uinteger() inout pure @safe
+    @property inout(ulong) uinteger()() inout
     {
         enforce!JSONException(type == JSON_TYPE.UINTEGER,
                                 "JSONValue is not an unsigned integer");
         return store.uinteger;
     }
     /// ditto
-    @property ulong uinteger(ulong v) pure nothrow @safe @nogc
+    @property ulong uinteger()(ulong v)
     {
         assign(v);
         return store.uinteger;
@@ -227,14 +227,14 @@ struct JSONValue
     /// Value getter/setter for $(D JSON_TYPE.FLOAT).
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.FLOAT).
-    @property inout(double) floating() inout pure @safe
+    @property inout(double) floating()() inout
     {
         enforce!JSONException(type == JSON_TYPE.FLOAT,
                                 "JSONValue is not a floating type");
         return store.floating;
     }
     /// ditto
-    @property double floating(double v) pure nothrow @safe @nogc
+    @property double floating()(double v)
     {
         assign(v);
         return store.floating;
@@ -243,14 +243,14 @@ struct JSONValue
     /// Value getter/setter for $(D JSON_TYPE.OBJECT).
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.OBJECT).
-    @property ref inout(JSONValue[string]) object() inout pure
+    @property ref inout(JSONValue[string]) object()() inout
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
         return store.object;
     }
     /// ditto
-    @property JSONValue[string] object(JSONValue[string] v) pure nothrow @nogc
+    @property JSONValue[string] object()(JSONValue[string] v)
     {
         assign(v);
         return store.object;
@@ -259,21 +259,21 @@ struct JSONValue
     /// Value getter/setter for $(D JSON_TYPE.ARRAY).
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.ARRAY).
-    @property ref inout(JSONValue[]) array() inout pure
+    @property ref inout(JSONValue[]) array()() inout
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
         return store.array;
     }
     /// ditto
-    @property JSONValue[] array(JSONValue[] v) pure nothrow @nogc
+    @property JSONValue[] array()(JSONValue[] v)
     {
         assign(v);
         return store.array;
     }
 
     /// Test whether the type is $(D JSON_TYPE.NULL)
-    @property bool isNull() const pure nothrow @safe @nogc
+    @property bool isNull()() const
     {
         return type == JSON_TYPE.NULL;
     }
@@ -435,7 +435,7 @@ struct JSONValue
 
     /// Hash syntax for json objects.
     /// Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
-    ref inout(JSONValue) opIndex(string k) inout pure
+    ref inout(JSONValue) opIndex()(string k) inout
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
@@ -456,7 +456,7 @@ struct JSONValue
     ///
     /// Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT)
     /// or $(D JSON_TYPE.NULL).
-    void opIndexAssign(T)(auto ref T value, string key) pure
+    void opIndexAssign(T)(auto ref T value, string key)
     {
         enforceEx!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
                                 "JSONValue must be object or null");
@@ -474,7 +474,7 @@ struct JSONValue
             assert( j["language"].str == "Perl" );
     }
 
-    void opIndexAssign(T)(T arg, size_t i) pure
+    void opIndexAssign(T)(T arg, size_t i)
     {
         enforceEx!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
@@ -564,7 +564,7 @@ struct JSONValue
         return opEquals(rhs);
     }
 
-    bool opEquals(ref const JSONValue rhs) const pure nothrow @nogc
+    bool opEquals (ref const JSONValue rhs) const pure nothrow @nogc
     {
         // Default doesn't work well since store is a union.  Compare only
         // what should be in store.
@@ -1177,7 +1177,7 @@ Exception thrown on JSON errors
 */
 class JSONException : Exception
 {
-    this(string msg, int line = 0, int pos = 0) pure nothrow @safe
+    this()(string msg, int line = 0, int pos = 0)
     {
         if(line)
             super(text(msg, " (Line ", line, ":", pos, ")"));
@@ -1185,7 +1185,7 @@ class JSONException : Exception
             super(msg);
     }
 
-    this(string msg, string file, size_t line) pure nothrow @safe
+    this()(string msg, string file, size_t line)
     {
         super(msg, file, line);
     }
