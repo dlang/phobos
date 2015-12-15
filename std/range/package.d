@@ -1257,6 +1257,8 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     static struct Result
     {
         import std.algorithm : max;
+        import std.algorithm.internal : addressOf;
+
         private union
         {
             void[max(R1.sizeof, R2.sizeof)] buffer = void;
@@ -1278,8 +1280,8 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
         {
             this.condition = condition;
             import std.conv : emplace;
-            if (condition) emplace(&this.r1(), r1);
-            else emplace(&this.r2(), r2);
+            if (condition) emplace(addressOf(this.r1), r1);
+            else emplace(addressOf(this.r2), r2);
         }
 
         // Carefully defined postblit to postblit the appropriate range

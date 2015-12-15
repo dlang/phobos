@@ -74,5 +74,4 @@ version(unittest)
     }
 }
 
-package T* addressOf(T)(ref T val) { return &val; }
-
+package(std) T* addressOf(T)(ref T val) { return &val; }

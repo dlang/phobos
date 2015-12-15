@@ -1594,12 +1594,12 @@ assert("/usr/share/include".isDir);
 @property bool isDir(R)(auto ref R name)
     if (isConvertibleToString!R)
 {
-    return isDir!(StringTypeOf!R)(name);
+    return name.isDir!(StringTypeOf!R);
 }
 
 unittest
 {
-    static assert(__traits(compiles, isDir(TestAliasedString(null))));
+    static assert(__traits(compiles, TestAliasedString(null).isDir));
 }
 
 @safe unittest
@@ -1632,9 +1632,8 @@ unittest
     if (dir.exists)
     {
         DirEntry de = DirEntry(dir);
-        assert(isDir(de));
         assert(de.isDir);
-        assert(isDir(DirEntry(dir)));
+        assert(DirEntry(dir).isDir);
     }
 }
 
@@ -1741,12 +1740,12 @@ assert(!"/usr/share/include".isFile);
 @property bool isFile(R)(auto ref R name)
     if (isConvertibleToString!R)
 {
-    return isFile!(StringTypeOf!R)(name);
+    return name.isFile!(StringTypeOf!R);
 }
 
 unittest
 {
-    static assert(__traits(compiles, isFile(TestAliasedString(null))));
+    static assert(__traits(compiles, TestAliasedString(null).isFile));
 }
 
 @safe unittest
@@ -1869,12 +1868,12 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
 @property bool isSymlink(R)(auto ref R name)
     if (isConvertibleToString!R)
 {
-    return isSymlink!(StringTypeOf!R)(name);
+    return name.isSymlink!(StringTypeOf!R);
 }
 
 unittest
 {
-    static assert(__traits(compiles, isSymlink(TestAliasedString(null))));
+    static assert(__traits(compiles, TestAliasedString(null).isSymlink));
 }
 
 unittest

@@ -2280,13 +2280,13 @@ unittest
 {
     int pidA, pidB;
     ThreadID tidA, tidB;
-    pidA = thisProcessID();
-    tidA = thisThreadID();
+    pidA = thisProcessID;
+    tidA = thisThreadID;
 
     import core.thread;
     auto t = new Thread({
-        pidB = thisProcessID();
-        tidB = thisThreadID();
+        pidB = thisProcessID;
+        tidB = thisThreadID;
     });
     t.start();
     t.join();

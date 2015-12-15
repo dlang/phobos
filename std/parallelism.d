@@ -284,12 +284,6 @@ private template randAssignable(R)
     enum randAssignable = isRandomAccessRange!R && hasAssignableElements!R;
 }
 
-// Work around syntactic ambiguity w.r.t. address of function return vals.
-private T* addressOf(T)(ref T val) pure nothrow
-{
-    return &val;
-}
-
 private enum TaskStatus : ubyte
 {
     notStarted,
@@ -438,6 +432,8 @@ struct Task(alias fun, Args...)
 
     private static void impl(void* myTask)
     {
+        import std.algorithm.internal : addressOf;
+
         Task* myCastedTask = cast(typeof(this)*) myTask;
         static if(is(ReturnType == void))
         {
@@ -3599,6 +3595,8 @@ enum string parallelApplyMixinInputRange = q{
             // Returns:  The previous value of nPopped.
             size_t makeTemp()
             {
+                import std.algorithm.internal : addressOf;
+
                 if(temp is null)
                 {
                     temp = uninitializedArray!Temp(workUnitSize);

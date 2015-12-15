@@ -1045,7 +1045,7 @@ unittest
     auto num = rnd.front;  // same for each run
 
     // Seed with an unpredictable value
-    rnd.seed(unpredictableSeed());
+    rnd.seed(unpredictableSeed);
     num = rnd.front; // different across rnd
 }
 

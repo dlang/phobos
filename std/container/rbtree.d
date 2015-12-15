@@ -1874,7 +1874,7 @@ unittest
     static assert(is(typeof(rt1.length)));
     static assert(is(typeof(5 in rt1)));
 
-    static assert(is(typeof(rt1.upperBound(3).front()) == const(int)));
+    static assert(is(typeof(rt1.upperBound(3).front) == const(int)));
     import std.algorithm : equal;
     assert(rt1.upperBound(3).equal([4, 5]));
     assert(rt1.lowerBound(3).equal([1, 2]));
@@ -1888,7 +1888,7 @@ unittest
     immutable rt1 = redBlackTree(5,4,3,2,1);
     static assert(is(typeof(rt1.length)));
 
-    static assert(is(typeof(rt1.upperBound(3).front()) == immutable(int)));
+    static assert(is(typeof(rt1.upperBound(3).front) == immutable(int)));
     import std.algorithm : equal;
     assert(rt1.upperBound(2).equal([3, 4, 5]));
 }
