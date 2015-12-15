@@ -1168,8 +1168,19 @@ private void appendJSONChar(Appender!string* dst, dchar c,
     import std.uni : isControl;
 
     if(isControl(c))
-        error("Illegal control character.");
-    dst.put(c);
+    {
+        dst.put("\\u");
+        foreach_reverse (i; 0 .. 4)
+        {
+            char ch = (c >>> (4 * i)) & 0x0f;
+            ch += ch < 10 ? '0' : 'A' - 10;
+            dst.put(ch);
+        }
+    }
+    else
+    {
+        dst.put(c);
+    }
 }
 
 /**
@@ -1263,6 +1274,10 @@ unittest
     JSONValue jv2 = JSONValue("value");
     assert(jv2.type == JSON_TYPE.STRING);
     assert(jv2.str == "value");
+
+    JSONValue jv3 = JSONValue("\u001c");
+    assert(jv3.type == JSON_TYPE.STRING);
+    assert(jv3.str == "\u001C");
 }
 
 unittest
@@ -1404,7 +1419,9 @@ unittest
     assert(val.to!string() == "\"\&spades;\&diams;\"");
 
     //0x7F is a control character (see Unicode spec)
-    assertThrown(parseJSON(`{ "foo": "` ~ "\u007F" ~ `"}`));
+    val = parseJSON(`"\u007F"`);
+    assert(toJSON(&val) == "\"\\u007F\"");
+    assert(val.to!string() == "\"\\u007F\"");
 
     with(parseJSON(`""`))
         assert(str == "" && str !is null);
