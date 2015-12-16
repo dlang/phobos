@@ -7,7 +7,9 @@ enables the same set of algorithms (see $(LINK2 std_algorithm.html,
 std.algorithm)) to be used with a vast variety of different concrete types. For
 example, a linear search algorithm such as $(LINK2 std_algorithm.html#find,
 std.algorithm.find) works not just for arrays, but for linked-lists, input
-files, incoming network data, etc.
+files, incoming network data, etc. See also Ali Çehreli's
+$(WEB ddili.org/ders/d.en/ranges.html, tutorial on ranges) for the basics
+of working with and creating range-based code.
 
 For more detailed information about the conceptual aspect of ranges and the
 motivation behind them, see Andrei Alexandrescu's article
