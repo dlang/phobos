@@ -222,16 +222,8 @@ class ReferenceInputRange(T)
 }
 
 /**
-Reference forward range
+Infinite input range
 */
-class ReferenceForwardRange(T) : ReferenceInputRange!T
-{
-    this(Range)(Range r) if (isInputRange!Range) {super(r);}
-    final @property ReferenceForwardRange save()
-    {return new ReferenceForwardRange!T(_payload);}
-}
-
-//Infinite input range
 class ReferenceInfiniteInputRange(T)
 {
     this(T first = T.init) {_val = first;}
@@ -241,10 +233,42 @@ class ReferenceInfiniteInputRange(T)
     protected T _val;
 }
 
-//Infinite forward range
+/**
+Reference forward range
+*/
+class ReferenceForwardRange(T) : ReferenceInputRange!T
+{
+    this(Range)(Range r) if (isInputRange!Range) {super(r);}
+    final @property auto save(this This)() {return new This( _payload);}
+}
+
+/**
+Infinite forward range
+*/
 class ReferenceInfiniteForwardRange(T) : ReferenceInfiniteInputRange!T
 {
     this(T first = T.init) {super(first);}
     final @property ReferenceInfiniteForwardRange save()
     {return new ReferenceInfiniteForwardRange!T(_val);}
+}
+
+/**
+Reference bidirectional range
+*/
+class ReferenceBidirectionalRange(T) : ReferenceForwardRange!T
+{
+    this(Range)(Range r) if (isInputRange!Range) {super(r);}
+    final @property ref T back(){return _payload.back;}
+    final void popBack(){_payload.popBack();}
+}
+
+unittest
+{
+    static assert(isInputRange!(ReferenceInputRange!int));
+    static assert(isInputRange!(ReferenceInfiniteInputRange!int));
+
+    static assert(isForwardRange!(ReferenceForwardRange!int));
+    static assert(isForwardRange!(ReferenceInfiniteForwardRange!int));
+
+    static assert(isBidirectionalRange!(ReferenceBidirectionalRange!int));
 }
