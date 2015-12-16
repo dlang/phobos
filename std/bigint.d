@@ -30,6 +30,7 @@ import std.conv : ConvException;
 private import std.internal.math.biguintcore;
 private import std.format : FormatSpec, FormatException;
 private import std.traits;
+private import std.range.primitives;
 
 /** A struct representing an arbitrary precision integer.
  *
@@ -49,42 +50,87 @@ private:
     bool sign = false;
 public:
     /**
-     * Construct a BigInt from a decimal or hexadecimal string.
+     * Construct a BigInt from a decimal or hexadecimal string. The number must
+     * be in the form of a decimal or hex literal. It may have a leading `+`
+     * or `-` sign, followed by `0x` or `0X` if hexadecimal. Underscores are
+     * permitted in any location after the `0x` and/or the sign of the number.
      *
-     * The number must be in the form of a D decimal or hex literal. It may
-     * have a leading + or - sign; followed by "0x" if hexadecimal.
-     * Underscores are permitted.  An empty string is treated as "0".
+     * Params:
+     *     s = a finite bidirectional range of any character type
      *
-     * Throws: ConvException if invalid character found, or string is empty.
+     * Throws:
+     *     $(D ConvException) if the string doesn't represent a valid number
      */
-    this(T : const(char)[])(T s, string file = __FILE__, size_t line = __LINE__)
-        pure
+    this(Range)(Range s) if (
+        isBidirectionalRange!Range &&
+        isSomeChar!(ElementType!Range) &&
+        !isInfinite!Range)
     {
-        if (s.length == 0)
-            throw new ConvException("Can't initialize BigInt with "~
-                                    "empty string", file, line);
+        import std.algorithm.iteration : filterBidirectional;
+        import std.algorithm.searching : startsWith;
+        import std.exception : enforce;
+        import std.conv : ConvException;
+
+        enforce!ConvException(!s.empty, "Can't initialize BigInt with an empty range");
+
         bool neg = false;
-        if (s[0] == '-') {
-            neg = true;
-            s = s[1..$];
-        } else if (s[0] == '+') {
-            s = s[1..$];
-        }
-        data = 0UL;
         bool ok;
-        assert(isZero());
-        if (s.length > 2 && (s[0..2] == "0x" || s[0..2] == "0X"))
+
+        data = 0UL;
+
+        // check for signs and if the string is a hex value
+        if (s.front == '+')
         {
-            ok = data.fromHexString(s[2..$]);
-        } else {
-            ok = data.fromDecimalString(s);
+            s.popFront(); // skip '+'
         }
-        if (!ok)
-            throw new ConvException("Invalid digit string", file, line);
+        else if (s.front == '-')
+        {
+            neg = true;
+            s.popFront();
+        }
+
+        if (s.save.startsWith("0x") || s.save.startsWith("0X"))
+        {
+            s.popFront;
+            s.popFront;
+
+            if (!s.empty)
+                ok = data.fromHexString(s.filterBidirectional!(a => a != '_'));
+            else
+                ok = false;
+        }
+        else
+        {
+            ok = data.fromDecimalString(s.filterBidirectional!(a => a != '_'));
+        }
+
+        enforce!ConvException(ok, "Not a valid numerical string");
 
         if (isZero())
             neg = false;
+
         sign = neg;
+    }
+
+    unittest
+    {
+        import std.internal.test.dummyrange;
+        import std.exception : assertThrown;
+
+        auto r1 = new ReferenceBidirectionalRange!dchar("101");
+        auto big1 = BigInt(r1);
+        assert(big1 == BigInt(101));
+
+        auto r2 = new ReferenceBidirectionalRange!dchar("1_000");
+        auto big2 = BigInt(r2);
+        assert(big2 == BigInt(1000));
+
+        auto r3 = new ReferenceBidirectionalRange!dchar("0x0");
+        auto big3 = BigInt(r3);
+        assert(big3 == BigInt(0));
+
+        auto r4 = new ReferenceBidirectionalRange!dchar("0x");
+        assertThrown!ConvException(BigInt(r4));
     }
 
     /// Construct a BigInt from a built-in integral type.
@@ -1106,6 +1152,9 @@ unittest {
     assert(BigInt(-4) % BigInt(5) == -4);
     assert(BigInt(2)/BigInt(-3) == BigInt(0)); // bug 8022
     assert(BigInt("-1") > long.min); // bug 9548
+
+    assert(toDecimalString(BigInt("0000000000000000000000000000000000000000001234567"))
+        == "1234567");
 }
 
 unittest // Minimum signed value bug tests.
