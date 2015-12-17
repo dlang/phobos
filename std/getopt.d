@@ -285,7 +285,7 @@ void main(string[] args)
         list.
 
 ---------
-void main(string[] args)
+int main(string[] args)
 {
   uint verbosityLevel = 1;
   void myHandler(string option, string value)
@@ -295,13 +295,13 @@ void main(string[] args)
       case "quiet": verbosityLevel = 0; break;
       case "verbose": verbosityLevel = 2; break;
       case "shouting": verbosityLevel = verbosityLevel.max; break;
-      default :
-        stderr.writeln("Dunno how verbose you want me to be by saying ",
-          value);
-        exit(1);
+      default:
+        stderr.writeln("Not sure how verbose you want me to be by saying ", value);
+        return 1;
     }
   }
   getopt(args, "verbosity", &myHandler);
+  return 0;
 }
 ---------
         )
