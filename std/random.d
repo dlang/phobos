@@ -2438,6 +2438,7 @@ struct RandomSample(Range, UniformRNG = void)
         return _toSelect == 0;
     }
 
+/// Ditto
     @property auto ref front()
     {
         assert(!empty);
