@@ -145,11 +145,16 @@ SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogge
 	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
+SRC_STD_TESTING= std\experimental\testing\attrs.d std\experimental\testing\io.d \
+	std\experimental\testing\options.d std\experimental\testing\reflection.d \
+	std\experimental\testing\runner.d std\experimental\testing\should.d \
+	std\experimental\testing\testcase.d std\experimental\testing\testsuite.d
+
 SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\conv.d std\zip.d std\cstream.d \
-	$(SRC_STD_CONTAINER) $(SRC_STD_LOGGER)
+	$(SRC_STD_CONTAINER) $(SRC_STD_LOGGER) $(SRC_STD_TESTING)
 
 SRC_STD_REST= std\stdint.d \
 	std\json.d \
@@ -382,6 +387,15 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_experimental_logger_multilogger.html \
 	$(DOC)\std_experimental_logger_nulllogger.html \
 	$(DOC)\std_experimental_logger.html \
+	$(DOC)\std_experimental_testing_attrs.html \
+	$(DOC)\std_experimental_testing_io.html \
+	$(DOC)\std_experimental_testing_options.html \
+	$(DOC)\std_experimental_testing_reflection.html \
+	$(DOC)\std_experimental_testing_runner.html \
+	$(DOC)\std_experimental_testing_should.html \
+	$(DOC)\std_experimental_testing_testcase.html \
+	$(DOC)\std_experimental_testing_testsuite.html \
+	$(DOC)\std_experimental_testing.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -827,6 +841,30 @@ $(DOC)\std_experimental_logger_nulllogger.html : $(STDDOC) std\experimental\logg
 $(DOC)\std_experimental_logger.html : $(STDDOC) std\experimental\logger\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger.html $(STDDOC) std\experimental\logger\package.d
 
+$(DOC)\std_experimental_testing.html : $(STDDOC) std\experimental\testing\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_testing.html $(STDDOC) std\experimental\testing\package.d
+
+$(DOC)\std_experimental_testing_io.html : $(STDDOC) std\experimental\testing\io.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_testing_io.html $(STDDOC) std\experimental\testing\io.d
+
+$(DOC)\std_experimental_testing_options.html : $(STDDOC) std\experimental\testing\options.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_testing_options.html $(STDDOC) std\experimental\testing\options.d
+
+$(DOC)\std_experimental_testing_reflection.html : $(STDDOC) std\experimental\testing\reflection.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_testing_reflection.html $(STDDOC) std\experimental\testing\reflection.d
+
+$(DOC)\std_experimental_testing_runners.html : $(STDDOC) std\experimental\testing\runners.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_testing_runners.html $(STDDOC) std\experimental\testing\runners.d
+
+$(DOC)\std_experimental_testing_should.html : $(STDDOC) std\experimental\testing\should.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_testing_should.html $(STDDOC) std\experimental\testing\should.d
+
+$(DOC)\std_experimental_testing_testcase.html : $(STDDOC) std\experimental\testing\testcase.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_testing_testcase.html $(STDDOC) std\experimental\testing\testcase.d
+
+$(DOC)\std_experimental_testing_testsuite.html : $(STDDOC) std\experimental\testing\testsuite.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_testing_testsuite.html $(STDDOC) std\experimental\testing\testsuite.d
+
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d
 
@@ -916,7 +954,7 @@ zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_ALGO) \
-	$(SRC_STD_LOGGER)
+	$(SRC_STD_LOGGER) $(SRC_STD_TESTING)
 	del phobos.zip
 	zip32 -u phobos win32.mak win64.mak posix.mak osmodel.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -935,6 +973,7 @@ zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
 	zip32 -u phobos $(SRC_STD_LOGGER)
+	zip32 -u phobos $(SRC_STD_TESTING)
 	zip32 -u phobos $(SRC_STD_DIGEST)
 	zip32 -u phobos $(SRC_STD_CONTAINER)
 	zip32 -u phobos $(SRC_STD_REGEX)
@@ -968,4 +1007,3 @@ install: phobos.zip
 auto-tester-build: targets
 
 auto-tester-test: unittest
-

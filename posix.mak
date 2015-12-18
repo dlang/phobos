@@ -58,7 +58,7 @@ WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) \
-	$(EXTRA_DOCUMENTABLES))
+	$(EXTRA_DOCUMENTABLES) std/experimental/testing/gen_ut_main std/experimental/testing/gen_ut_main_mixin)
 STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc $(DOCSRC)/.generated/modlist-prerelease.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 # Set DDOC, the documentation generator
@@ -152,8 +152,9 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 # packages and their modules.
 STD_PACKAGES = std $(addprefix std/,\
   algorithm container digest experimental/allocator \
-  experimental/allocator/building_blocks experimental/logger net \
-  range regex)
+  experimental/allocator/building_blocks experimental/logger \
+  experimental/testing \
+  net range regex)
 
 # Modules broken down per package
 
@@ -176,6 +177,8 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   fallback_allocator free_list free_tree bitmapped_block \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
+PACKAGE_std_experimental_testing = \
+  attrs io options package reflection runner should testcase testsuite
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
