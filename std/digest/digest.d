@@ -208,7 +208,7 @@ version(ExampleDigest)
              * interface for $(D ubyte) and $(D const(ubyte)[]).
              * The following usages of $(D put) must work for any type which
              * passes $(LREF isDigest):
-             * Examples:
+             * Example:
              * ----
              * ExampleDigest dig;
              * dig.put(cast(ubyte)0); //single ubyte
@@ -565,7 +565,7 @@ interface Digest
          * Also implements the $(XREF_PACK range,primitives,isOutputRange)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
-         * Examples:
+         * Example:
          * ----
          * void test(Digest dig)
          * {
@@ -896,7 +896,7 @@ class WrapperDigest(T) if(isDigest!T) : Digest
          * The finish function returns the hash value. It takes an optional buffer to copy the data
          * into. If a buffer is passed, it must have a length at least $(LREF length) bytes.
          *
-         * Examples:
+         * Example:
          * --------
          *
          * import std.digest.md;

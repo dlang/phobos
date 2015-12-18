@@ -675,7 +675,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
          *
          * Generic code which deals with different Digest types should always call start though.
          *
-         * Examples:
+         * Example:
          * --------
          * SHA1 digest;
          * //digest.start(); //Not necessary

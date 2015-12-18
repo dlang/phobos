@@ -1250,7 +1250,7 @@ unittest
         name            = The name of the file to get the modification time for.
         returnIfMissing = The time to return if the given file does not exist.
 
-Examples:
+Example:
 --------------------
 if(timeLastModified(source) >= timeLastModified(target, SysTime.min))
 {
@@ -1571,7 +1571,7 @@ unittest
     Throws:
         $(D FileException) if the given file does not exist.
 
-Examples:
+Example:
 --------------------
 assert(!"/etc/fonts/fonts.conf".isDir);
 assert("/usr/share/include".isDir);
@@ -1646,7 +1646,7 @@ unittest
     Returns:
         true if attibutes specifies a directory
 
-Examples:
+Example:
 --------------------
 assert(!attrIsDir(getAttributes("/etc/fonts/fonts.conf")));
 assert(!attrIsDir(getLinkAttributes("/etc/fonts/fonts.conf")));
@@ -1721,7 +1721,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
     Throws:
         $(D FileException) if the given file does not exist.
 
-Examples:
+Example:
 --------------------
 assert("/etc/fonts/fonts.conf".isFile);
 assert(!"/usr/share/include".isFile);
@@ -1789,7 +1789,7 @@ unittest
     Returns:
         true if the given file attributes are for a file
 
-Examples:
+Example:
 --------------------
 assert(attrIsFile(getAttributes("/etc/fonts/fonts.conf")));
 assert(attrIsFile(getLinkAttributes("/etc/fonts/fonts.conf")));
@@ -1962,7 +1962,7 @@ unittest
     Returns:
         true if attributes are for a symbolic link
 
-Examples:
+Example:
 --------------------
 core.sys.posix.unistd.symlink("/etc/fonts/fonts.conf", "/tmp/alink");
 
@@ -2515,7 +2515,7 @@ version(StdDdoc)
         /++
             Returns the path to the file represented by this $(D DirEntry).
 
-Examples:
+Example:
 --------------------
 auto de1 = DirEntry("/etc/fonts/fonts.conf");
 assert(de1.name == "/etc/fonts/fonts.conf");
@@ -2531,7 +2531,7 @@ assert(de2.name == "/usr/share/include");
             Returns whether the file represented by this $(D DirEntry) is a
             directory.
 
-Examples:
+Example:
 --------------------
 auto de1 = DirEntry("/etc/fonts/fonts.conf");
 assert(!de1.isDir);
@@ -2557,7 +2557,7 @@ assert(de2.isDir);
             information about a special file (see the stat man page for more
             details).
 
-Examples:
+Example:
 --------------------
 auto de1 = DirEntry("/etc/fonts/fonts.conf");
 assert(de1.isFile);
@@ -3581,7 +3581,7 @@ public:
     Throws:
         $(D FileException) if the directory does not exist.
 
-Examples:
+Example:
 --------------------
 // Iterate a directory in depth
 foreach (string name; dirEntries("destroy/me", SpanMode.depth))
@@ -3722,7 +3722,7 @@ unittest
     Throws:
         $(D FileException) if the directory does not exist.
 
-Examples:
+Example:
 --------------------
 // Iterate over all D source files in current directory and all its
 // subdirectories

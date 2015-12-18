@@ -291,7 +291,7 @@ struct MD5
          * Also implements the $(XREF_PACK range,primitives,isOutputRange)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
-         * Examples:
+         * Example:
          * ----
          * MD5 dig;
          * dig.put(cast(ubyte)0); //single ubyte
@@ -345,7 +345,7 @@ struct MD5
          *
          * Generic code which deals with different Digest types should always call start though.
          *
-         * Examples:
+         * Example:
          * --------
          * MD5 digest;
          * //digest.start(); //Not necessary

@@ -75,7 +75,7 @@ $(TR $(TDNW UUID namespaces)
  * boost._uuid) from the Boost project with some minor additions and API
  * changes for a more D-like API.
  *
- * Examples:
+ * Example:
  * ------------------------
  * UUID[] ids;
  * ids ~= randomUUID();
@@ -207,7 +207,7 @@ public struct UUID
              * format. These 16-ubytes always equal the big-endian structure
              * defined in RFC 4122.
              *
-             * Examples:
+             * Example:
              * -----------------------------------------------
              * auto rawData = uuid.data; //get data
              * rawData[0] = 1; //modify
@@ -330,7 +330,7 @@ public struct UUID
          *
          * For a less strict parser, see $(LREF parseUUID)
          *
-         * Examples:
+         * Example:
          * -------------------------
          * id = UUID("8AB3060E-2cba-4f23-b74c-b52db3bdfb46");
          * assert(id.data == [138, 179, 6, 14, 44, 186, 79, 35, 183, 76,

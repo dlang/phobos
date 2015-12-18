@@ -261,7 +261,7 @@ import std.exception, std.traits, std.range;
     This is an intended form for caching and storage of frequently
     used regular expressions.
 
-    Examples:
+    Example:
 
     Test if this object doesn't contain any compiled pattern.
     ---

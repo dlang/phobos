@@ -767,7 +767,7 @@ $(D TaskPool) is provided by $(XREF parallelism, taskPool).
 
 Returns:  A pointer to the $(D Task).
 
-Examples:
+Example:
 ---
 // Read two files into memory at the same time.
 import std.file;
@@ -834,7 +834,7 @@ auto task(alias fun, Args...)(Args args)
 Creates a $(D Task) on the GC heap that calls a function pointer, delegate, or
 class/struct with overloaded opCall.
 
-Examples:
+Example:
 ---
 // Read two files in at the same time again,
 // but this time use a function pointer instead
@@ -1461,7 +1461,7 @@ public:
     $(D workUnitSize) should  be 1.  An overload that chooses a default work
     unit size is also available.
 
-    Examples:
+    Example:
     ---
     // Find the logarithm of every number from 1 to
     // 10_000_000 in parallel.
@@ -1785,7 +1785,7 @@ public:
         current call to $(D map) will be ignored and the size of the buffer
         will be the buffer size of $(D source).
 
-        Examples:
+        Example:
         ---
         // Pipeline reading a file, converting each line
         // to a number, taking the logarithms of the numbers,
@@ -2087,7 +2087,7 @@ public:
     $(D asyncBuf) is useful, for example, when performing expensive operations
     on the elements of ranges that represent data on a disk or network.
 
-    Examples:
+    Example:
     ---
     import std.conv, std.stdio;
 
@@ -2283,7 +2283,7 @@ public:
 
     nBuffers = The number of buffers to cycle through when calling $(D next).
 
-    Examples:
+    Example:
     ---
     // Fetch lines of a file in a background
     // thread while processing previously fetched
@@ -2717,7 +2717,7 @@ public:
 
     This function is useful for maintaining worker-local resources.
 
-    Examples:
+    Example:
     ---
     // Execute a loop that computes the greatest common
     // divisor of every number from 0 through 999 with
@@ -2778,7 +2778,7 @@ public:
 
     2.  Recycling temporary buffers across iterations of a parallel foreach loop.
 
-    Examples:
+    Example:
     ---
     // Calculate pi as in our synopsis example, but
     // use an imperative instead of a functional style.

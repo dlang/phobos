@@ -1430,7 +1430,7 @@ alias splitter = std.algorithm.iteration.splitter;
     The separator can be a value of the same type as the elements in $(D range)
     or it can be another forward _range.
 
-    Examples:
+    Example:
         If $(D range) is a $(D string), $(D sep) can be a $(D char) or another
         $(D string). The return type will be an array of strings. If $(D range) is
         an $(D int) array, $(D sep) can be an $(D int) or another $(D int) array.

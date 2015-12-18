@@ -1292,7 +1292,7 @@ Signal codes are defined in the $(D core.sys.posix.signal) module
 Throws:
 $(LREF ProcessException) on failure.
 
-Examples:
+Example:
 See the $(LREF spawnProcess) documentation.
 
 See_also:

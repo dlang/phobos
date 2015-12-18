@@ -317,7 +317,7 @@ else static assert (0);
     the comparison is case sensitive or not.  See the
     $(LREF filenameCmp) documentation for details.
 
-    Examples:
+    Example:
     ---
     assert (baseName("dir/file.ext")         == "file.ext");
     assert (baseName("dir/file.ext", ".ext") == "file");
@@ -2458,7 +2458,7 @@ unittest
 
     Returns: Whether a path is absolute or not.
 
-    Examples:
+    Example:
     On POSIX, an absolute path starts at the root directory.
     (In fact, $(D _isAbsolute) is just an alias for $(LREF isRooted).)
     ---
@@ -3753,7 +3753,7 @@ unittest
     if it could not be expanded.
     For Windows, $(D expandTilde) merely returns its argument $(D inputPath).
 
-    Examples:
+    Example:
     -----
     void processFile(string path)
     {
