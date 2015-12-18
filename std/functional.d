@@ -483,6 +483,7 @@ unittest //check user defined types
 */
 alias lessThan = safeOp!"<";
 
+///
 pure @safe @nogc nothrow unittest
 {
     assert(lessThan(2, 3));
@@ -503,6 +504,7 @@ pure @safe @nogc nothrow unittest
 */
 alias greaterThan = safeOp!">";
 
+///
 unittest
 {
     assert(!greaterThan(2, 3));
@@ -523,6 +525,7 @@ unittest
 */
 alias equalTo = safeOp!"==";
 
+///
 unittest
 {
     assert(equalTo(0U, 0));
@@ -542,6 +545,7 @@ template reverseArgs(alias pred)
     }
 }
 
+///
 unittest
 {
     alias gt = reverseArgs!(binaryFun!("a < b"));
@@ -552,15 +556,27 @@ unittest
     foo(4, 5);
     alias zyx = reverseArgs!(foo);
     assert(zyx(5, 4) == foo(4, 5));
+}
 
+///
+unittest
+{
     int abc(int a, int b, int c) { return a * b + c; }
     alias cba = reverseArgs!abc;
     assert(abc(91, 17, 32) == cba(32, 17, 91));
+}
 
+///
+unittest
+{
     int a(int a) { return a * 2; }
     alias _a = reverseArgs!a;
     assert(a(2) == _a(2));
+}
 
+///
+unittest
+{
     int b() { return 4; }
     alias _b = reverseArgs!b;
     assert(b() == _b());
@@ -579,10 +595,16 @@ template binaryReverseArgs(alias pred)
     }
 }
 
+///
 unittest
 {
     alias gt = binaryReverseArgs!(binaryFun!("a < b"));
     assert(gt(2, 1) && !gt(1, 1));
+}
+
+///
+unittest
+{
     int x = 42;
     bool xyz(int a, int b) { return a * x < b / x; }
     auto foo = &xyz;
