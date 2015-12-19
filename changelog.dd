@@ -5,9 +5,24 @@ $(COMMENT Pending changelog for 2.069. This will get copied to dlang.org and
 )
 
 $(BUGSTITLE Library Changes,
+
+$(LI $(RELATIVE_LINK2 json-encode-control-characters, `std.json` encodes string control characters.))
+
 )
 
 $(BUGSTITLE Library Changes,
+
+$(LI $(LNAME2 json-encode-control-characters, `std.json` encodes string control characters.)
+
+    $(P Instead of throwing a $(XREF json, JSONException), $(XREF json, toJSON)
+        encodes now the control characters of a string.
+    )
+
+    ------
+    assert(toJSON(JSONValue("foo\u007fbar") == `"foo\u007Fbar"`);
+    ------
+)
+
 )
 
 Macros:
