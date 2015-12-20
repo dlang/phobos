@@ -42,8 +42,8 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(D $(LREF toDelegate)))
         $(TD Converts a callable to a delegate.
     ))
-    $(TR $(TD $(D $(LREF unaryFun)), $(D $(LREF binaryFun)))
-        $(TD Create a unary or binary function from a string. Most often
+    $(TR $(TD `$(LREF unaryFun)`, `$(LREF binaryFun)`, `$(LREF stringLambda)`)
+        $(TD Create a function from a string. Most often
         used when defining algorithms on ranges.
     ))
 )
@@ -260,6 +260,133 @@ unittest
     static assert(!is(typeof(binaryFun!FuncObj)));
 }
 
+/**
+Transforms a string representing an expression into a n-ary function.
+$(UL
+    $(LI The number of parameters is given by `argc`. If no explicit
+        `argc` is given, it is inferred to be `paramNames.length`.)
+    $(LI Explicit names for the function parameters may be given as
+        `paramNames`. If more than `argc` names are supplied, the
+        extras will be ignored.)
+    $(LI The letters (`a` through `z`) are used as default names
+        for up to the first 26 function parameters.)
+    $(LI `args[index]` can always be used to access any parameter by index,
+        regardless of whether it has been given a name.))
+
+If `fun` is not a `string`,  `stringLambda` aliases itself to `fun`.
+In such cases, `stringLambda` does $(B not) verify that `fun` accepts
+the specified number of arguments. (Try $(XREF traits, arity) instead.)
+*/
+template stringLambda(alias fun, size_t argc, paramNames...)
+    if (paramNames.length == 0 || allSatisfy!(isSomeString, typeof(paramNames)))
+{
+    static if (is(typeof(fun) : string))
+    {
+        static if (!fun._ctfeMatchNary(paramNames))
+        {
+            import std.traits, std.typecons, std.typetuple;
+            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+        }
+
+        auto stringLambda(ArgTypes...)(auto ref ArgTypes args)
+            if (ArgTypes.length == argc)
+        {
+            mixin(stringLambdaAliases!(argc, paramNames));
+            return mixin(fun);
+        }
+    }
+    else static if (needOpCallAlias!fun)
+    {
+        // Issue 9906
+        alias stringLambda = fun.opCall;
+    }
+    else
+    {
+        alias stringLambda = fun;
+    }
+}
+
+/// ditto
+template stringLambda(alias fun, paramNames...)
+    if (allSatisfy!(isSomeString, typeof(paramNames)))
+{
+    alias stringLambda = stringLambda!(fun, paramNames.length, paramNames);
+}
+
+/*
+ * This generates the string of aliases used by stringLamda.
+ * The stringLambda parameter aliases mixin depends only on argc and paramNames,
+ * not fun. Therefore, compilation can be sped up by generating it at global
+ * scope and memoizing it as a template, instead of regenerating it with every
+ * stringLambda instantiation.
+ */
+private template stringLambdaAliases(size_t argc, paramNames...)
+{
+    import std.conv : to;
+    import std.array : appender;
+    import std.algorithm : min;
+
+    enum stringLambdaAliases = function()
+    {
+        // use a letter for each unspecified param, stopping at 'z'
+        enum numLetters = min(argc, 'z' - 'a' + 1);
+
+        auto ret = appender!string();
+
+        // first create aliases from the specified param names
+        foreach(i, name; paramNames)
+        {
+            if(i >= argc)
+                break;
+            ret ~= "alias " ~ paramNames[i] ~ " = args[" ~ i.to!string ~ "];";
+        }
+
+        // fill in remaining aliases with letters
+        for(size_t i = paramNames.length; i < numLetters; ++i)
+            ret ~= "alias " ~ cast(char)('a' + i) ~ " = args[" ~ i.to!string ~ "];";
+
+        return ret.data;
+    }();
+}
+
+///
+unittest
+{
+    // generated param names
+    alias sum = stringLambda!("a + b + c", 3);
+    assert(sum(1, 2, 3) == 6);
+
+    // explicit param names
+    alias prod = stringLambda!("x * y * z * w", "x", "y", "z", "w");
+    assert(prod(2,3,4,5) == 120);
+
+    // library function invocation
+    alias least = stringLambda!("min(a,b,c)", 3);
+    assert(least(5, 3, 7) == 3);
+}
+
+// stringLambda edge cases
+unittest
+{
+    import std.typecons : staticIota;
+
+    // use all 26 generated params
+    alias many = stringLambda!("[a,b,y,z]", 26);
+    assert(many(staticIota!(0, 26)) == [0,1,24,25]);
+
+    // use all 26 generated params plus a 27'th 'unnamed' param
+    alias more = stringLambda!("[a,b,y,z,args[26]]", 27);
+    assert(more(staticIota!(0, 27)) == [0,1,24,25,26]);
+
+    // use a mix of explicit params and args[n]
+    alias mix = stringLambda!("[x,y,args[2],args[3]]", 4, "x", "y");
+    assert(mix(1,2,3,4) == [1,2,3,4]);
+
+    // use a mix of explicit and implicit params
+    alias mix2 = stringLambda!("[x,y,c,d]", 4, "x", "y");
+    assert(mix(1,2,3,4) == [1,2,3,4]);
+}
+
 // skip all ASCII chars except a..z, A..Z, 0..9, '_' and '.'.
 private uint _ctfeSkipOp(ref string op)
 {
@@ -419,6 +546,83 @@ unittest {
     static assert(_ctfeMatchBinary("ё>b", "b", "ё"));
     static assert(_ctfeMatchBinary("b[ё(-1)]", "b", "ё"));
     static assert(_ctfeMatchBinary("ё[-21]", "b", "ё"));
+}
+
+// returns 1 if $(D fun) is trivial n-ary function
+private uint _ctfeMatchNary(string fun, string[] names...)
+{
+    if (!__ctfe) assert(false);
+    fun._ctfeSkipOp();
+    for (;;)
+    {
+        uint h = 0;
+
+        foreach(name ; names)
+            h += fun._ctfeSkipName(name);
+
+        h += fun._ctfeSkipInteger;
+
+        if (h == 0)
+        {
+            fun._ctfeSkipOp();
+            break;
+        }
+        else if (h == 1)
+        {
+            if(!fun._ctfeSkipOp())
+                break;
+        }
+        else
+            return 0;
+    }
+    return fun.length == 0;
+}
+
+unittest {
+    static assert(!_ctfeMatchNary("sqrt(ё)", "ё", "b"));
+    static assert(!_ctfeMatchNary("ё.sqrt", "ё", "b"));
+    static assert(!_ctfeMatchNary(".ё+ё", "ё", "b"));
+    static assert(!_ctfeMatchNary("_ё+ё", "ё", "b"));
+    static assert(!_ctfeMatchNary("ёё", "ё", "b"));
+    static assert(_ctfeMatchNary("a+a", "a", "b"));
+    static assert(_ctfeMatchNary("a + 10", "a", "b"));
+    static assert(_ctfeMatchNary("4 == a", "a", "b"));
+    static assert(_ctfeMatchNary("2==a", "a", "b"));
+    static assert(_ctfeMatchNary("1 != a", "a", "b"));
+    static assert(_ctfeMatchNary("a!=4", "a", "b"));
+    static assert(_ctfeMatchNary("a< 1", "a", "b"));
+    static assert(_ctfeMatchNary("434 < a", "a", "b"));
+    static assert(_ctfeMatchNary("132 > a", "a", "b"));
+    static assert(_ctfeMatchNary("123 >a", "a", "b"));
+    static assert(_ctfeMatchNary("a>82", "a", "b"));
+    static assert(_ctfeMatchNary("ё>82", "ё", "q"));
+    static assert(_ctfeMatchNary("ё[ё(10)]", "ё", "q"));
+    static assert(_ctfeMatchNary("ё[21]", "ё", "q"));
+
+    static assert(!_ctfeMatchNary("sqrt(ё)+b", "b", "ё"));
+    static assert(!_ctfeMatchNary("ё.sqrt-b", "b", "ё"));
+    static assert(!_ctfeMatchNary(".ё+b", "b", "ё"));
+    static assert(!_ctfeMatchNary("_b+ё", "b", "ё"));
+    static assert(!_ctfeMatchNary("ba", "b", "a"));
+    static assert(_ctfeMatchNary("a+b", "b", "a"));
+    static assert(_ctfeMatchNary("a + b", "b", "a"));
+    static assert(_ctfeMatchNary("b == a", "b", "a"));
+    static assert(_ctfeMatchNary("b==a", "b", "a"));
+    static assert(_ctfeMatchNary("b != a", "b", "a"));
+    static assert(_ctfeMatchNary("a!=b", "b", "a"));
+    static assert(_ctfeMatchNary("a< b", "b", "a"));
+    static assert(_ctfeMatchNary("b < a", "b", "a"));
+    static assert(_ctfeMatchNary("b > a", "b", "a"));
+    static assert(_ctfeMatchNary("b >a", "b", "a"));
+    static assert(_ctfeMatchNary("a>b", "b", "a"));
+    static assert(_ctfeMatchNary("ё>b", "b", "ё"));
+    static assert(_ctfeMatchNary("b[ё(-1)]", "b", "ё"));
+    static assert(_ctfeMatchNary("ё[-21]", "b", "ё"));
+
+    static assert(!_ctfeMatchNary("sqrt(a)+b-c", "a", "b", "c"));
+    static assert(!_ctfeMatchNary("a.sqrt-c+b", "a", "b", "c"));
+    static assert(_ctfeMatchNary("a+b+c", "a", "b", "c"));
+    static assert(_ctfeMatchNary("args.length + args[1] + args[0] + a + b", "b", "a"));
 }
 
 //undocumented
