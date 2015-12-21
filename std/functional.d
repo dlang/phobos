@@ -103,32 +103,7 @@ function. The string must either use symbol name $(D a) as
 the parameter or provide the symbol via the $(D parmName) argument.
 If $(D fun) is not a string, $(D unaryFun) aliases itself away to $(D fun).
 */
-
-template unaryFun(alias fun, string parmName = "a")
-{
-    static if (is(typeof(fun) : string))
-    {
-        static if (!fun._ctfeMatchUnary(parmName))
-        {
-            import std.traits, std.typecons, std.meta;
-            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
-        }
-        auto unaryFun(ElementType)(auto ref ElementType __a)
-        {
-            mixin("alias " ~ parmName ~ " = __a ;");
-            return mixin(fun);
-        }
-    }
-    else static if (needOpCallAlias!fun)
-    {
-        // Issue 9906
-        alias unaryFun = fun.opCall;
-    }
-    else
-    {
-        alias unaryFun = fun;
-    }
-}
+alias unaryFun(alias fun, string parmName = "a") = stringLambda!(fun, 1, parmName);
 
 ///
 unittest
@@ -187,35 +162,8 @@ provide the symbols via the $(D parm1Name) and $(D parm2Name) arguments.
 If $(D fun) is not a string, $(D binaryFun) aliases itself away to
 $(D fun).
 */
-
-template binaryFun(alias fun, string parm1Name = "a",
-        string parm2Name = "b")
-{
-    static if (is(typeof(fun) : string))
-    {
-        static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
-        {
-            import std.traits, std.typecons, std.meta;
-            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
-        }
-        auto binaryFun(ElementType1, ElementType2)
-            (auto ref ElementType1 __a, auto ref ElementType2 __b)
-        {
-            mixin("alias "~parm1Name~" = __a ;");
-            mixin("alias "~parm2Name~" = __b ;");
-            return mixin(fun);
-        }
-    }
-    else static if (needOpCallAlias!fun)
-    {
-        // Issue 9906
-        alias binaryFun = fun.opCall;
-    }
-    else
-    {
-        alias binaryFun = fun;
-    }
-}
+alias binaryFun(alias fun, string parm1Name = "a", string parm2Name = "b") =
+    stringLambda!(fun, 2, parm1Name, parm2Name);
 
 ///
 unittest
@@ -431,121 +379,6 @@ private uint _ctfeSkipName(ref string op, string name)
         return 1;
     }
     return 0;
-}
-
-// returns 1 if $(D fun) is trivial unary function
-private uint _ctfeMatchUnary(string fun, string name)
-{
-    if (!__ctfe) assert(false);
-    import std.stdio;
-    fun._ctfeSkipOp();
-    for (;;)
-    {
-        immutable h = fun._ctfeSkipName(name) + fun._ctfeSkipInteger();
-        if (h == 0)
-        {
-            fun._ctfeSkipOp();
-            break;
-        }
-        else if (h == 1)
-        {
-            if(!fun._ctfeSkipOp())
-                break;
-        }
-        else
-            return 0;
-    }
-    return fun.length == 0;
-}
-
-unittest
-{
-    static assert(!_ctfeMatchUnary("sqrt(ё)", "ё"));
-    static assert(!_ctfeMatchUnary("ё.sqrt", "ё"));
-    static assert(!_ctfeMatchUnary(".ё+ё", "ё"));
-    static assert(!_ctfeMatchUnary("_ё+ё", "ё"));
-    static assert(!_ctfeMatchUnary("ёё", "ё"));
-    static assert(_ctfeMatchUnary("a+a", "a"));
-    static assert(_ctfeMatchUnary("a + 10", "a"));
-    static assert(_ctfeMatchUnary("4 == a", "a"));
-    static assert(_ctfeMatchUnary("2==a", "a"));
-    static assert(_ctfeMatchUnary("1 != a", "a"));
-    static assert(_ctfeMatchUnary("a!=4", "a"));
-    static assert(_ctfeMatchUnary("a< 1", "a"));
-    static assert(_ctfeMatchUnary("434 < a", "a"));
-    static assert(_ctfeMatchUnary("132 > a", "a"));
-    static assert(_ctfeMatchUnary("123 >a", "a"));
-    static assert(_ctfeMatchUnary("a>82", "a"));
-    static assert(_ctfeMatchUnary("ё>82", "ё"));
-    static assert(_ctfeMatchUnary("ё[ё(ё)]", "ё"));
-    static assert(_ctfeMatchUnary("ё[21]", "ё"));
-}
-
-// returns 1 if $(D fun) is trivial binary function
-private uint _ctfeMatchBinary(string fun, string name1, string name2)
-{
-    if (!__ctfe) assert(false);
-    fun._ctfeSkipOp();
-    for (;;)
-    {
-        immutable h = fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger();
-        if (h == 0)
-        {
-            fun._ctfeSkipOp();
-            break;
-        }
-        else if (h == 1)
-        {
-            if(!fun._ctfeSkipOp())
-                break;
-        }
-        else
-            return 0;
-    }
-    return fun.length == 0;
-}
-
-unittest {
-
-    static assert(!_ctfeMatchBinary("sqrt(ё)", "ё", "b"));
-    static assert(!_ctfeMatchBinary("ё.sqrt", "ё", "b"));
-    static assert(!_ctfeMatchBinary(".ё+ё", "ё", "b"));
-    static assert(!_ctfeMatchBinary("_ё+ё", "ё", "b"));
-    static assert(!_ctfeMatchBinary("ёё", "ё", "b"));
-    static assert(_ctfeMatchBinary("a+a", "a", "b"));
-    static assert(_ctfeMatchBinary("a + 10", "a", "b"));
-    static assert(_ctfeMatchBinary("4 == a", "a", "b"));
-    static assert(_ctfeMatchBinary("2==a", "a", "b"));
-    static assert(_ctfeMatchBinary("1 != a", "a", "b"));
-    static assert(_ctfeMatchBinary("a!=4", "a", "b"));
-    static assert(_ctfeMatchBinary("a< 1", "a", "b"));
-    static assert(_ctfeMatchBinary("434 < a", "a", "b"));
-    static assert(_ctfeMatchBinary("132 > a", "a", "b"));
-    static assert(_ctfeMatchBinary("123 >a", "a", "b"));
-    static assert(_ctfeMatchBinary("a>82", "a", "b"));
-    static assert(_ctfeMatchBinary("ё>82", "ё", "q"));
-    static assert(_ctfeMatchBinary("ё[ё(10)]", "ё", "q"));
-    static assert(_ctfeMatchBinary("ё[21]", "ё", "q"));
-
-    static assert(!_ctfeMatchBinary("sqrt(ё)+b", "b", "ё"));
-    static assert(!_ctfeMatchBinary("ё.sqrt-b", "b", "ё"));
-    static assert(!_ctfeMatchBinary(".ё+b", "b", "ё"));
-    static assert(!_ctfeMatchBinary("_b+ё", "b", "ё"));
-    static assert(!_ctfeMatchBinary("ba", "b", "a"));
-    static assert(_ctfeMatchBinary("a+b", "b", "a"));
-    static assert(_ctfeMatchBinary("a + b", "b", "a"));
-    static assert(_ctfeMatchBinary("b == a", "b", "a"));
-    static assert(_ctfeMatchBinary("b==a", "b", "a"));
-    static assert(_ctfeMatchBinary("b != a", "b", "a"));
-    static assert(_ctfeMatchBinary("a!=b", "b", "a"));
-    static assert(_ctfeMatchBinary("a< b", "b", "a"));
-    static assert(_ctfeMatchBinary("b < a", "b", "a"));
-    static assert(_ctfeMatchBinary("b > a", "b", "a"));
-    static assert(_ctfeMatchBinary("b >a", "b", "a"));
-    static assert(_ctfeMatchBinary("a>b", "b", "a"));
-    static assert(_ctfeMatchBinary("ё>b", "b", "ё"));
-    static assert(_ctfeMatchBinary("b[ё(-1)]", "b", "ё"));
-    static assert(_ctfeMatchBinary("ё[-21]", "b", "ё"));
 }
 
 // returns 1 if $(D fun) is trivial n-ary function
