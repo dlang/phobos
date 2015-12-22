@@ -189,14 +189,20 @@ package auto invalidUTFstrings(Char)() @safe pure @nogc nothrow
 }
 
 /++
-    Returns whether $(D c) is a valid UTF-32 character.
+    Check whether the given Unicode code point is valid.
 
+    Params:
+        c = code point to check
+
+    Returns:
+        $(D true) iff $(D c) is a valid Unicode code point
+
+    Note:
     $(D '\uFFFE') and $(D '\uFFFF') are considered valid by $(D isValidDchar),
     as they are permitted for internal use by an application, but they are
     not allowed for interchange by the Unicode standard.
   +/
-@safe
-pure nothrow bool isValidDchar(dchar c) @nogc
+bool isValidDchar(dchar c) pure nothrow @safe @nogc
 {
     /* Note: FFFE and FFFF are specifically permitted by the
      * Unicode standard for application internal use, but are not
@@ -208,7 +214,7 @@ pure nothrow bool isValidDchar(dchar c) @nogc
           (c > 0xDFFF && c <= 0x10FFFF /*&& c != 0xFFFE && c != 0xFFFF*/);
 }
 
-unittest
+pure nothrow @safe @nogc unittest
 {
     import std.exception;
     debug(utf) printf("utf.isValidDchar.unittest\n");
@@ -232,26 +238,26 @@ unittest
 
 
 /++
-    $(D stride) returns the length of the UTF-8 sequence starting at $(D index)
+    Calculate the length of the UTF sequence starting at $(D index)
     in $(D str).
 
-    $(D stride) works with both UTF-8 strings and ranges of $(D char). If no
-    index is passed, then an input range will work, but if an index is passed,
-    then a random-access range is required.
-
-    $(D index) defaults to $(D 0) if none is passed.
+    Params:
+        str = input range of UTF code units. Must be random access if
+        $(D index) is passed
+        index = starting index of UTF sequence (default: $(D 0))
 
     Returns:
-        The number of bytes in the UTF-8 sequence, a value between 1 and 4
-        (as per $(WEB tools.ietf.org/html/rfc3629#section-3, RFC 3629$(COMMA) section 3)).
+        The number of code units in the UTF sequence. For UTF-8, this is a
+        value between 1 and 4 (as per $(WEB tools.ietf.org/html/rfc3629#section-3, RFC 3629$(COMMA) section 3)).
+        For UTF-16, it is either 1 or 2. For UTF-32, it is always 1.
 
     Throws:
         May throw a $(D UTFException) if $(D str[index]) is not the start of a
-        valid UTF-8 sequence.
+        valid UTF sequence.
 
-    Notes:
+    Note:
         $(D stride) will only analyze the first $(D str[index]) element. It
-        will not fully verify the validity of UTF-8 sequence, nor even verify
+        will not fully verify the validity of the UTF sequence, nor even verify
         the presence of the sequence: it will not actually guarantee that
         $(D index + stride(str, index) <= str.length).
   +/
@@ -377,28 +383,202 @@ unittest // invalid start bytes
         assertThrown!UTFException(stride([c]));
 }
 
+/// Ditto
+uint stride(S)(auto ref S str, size_t index)
+    if (is(S : const wchar[]) ||
+        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
+{
+    static if (is(typeof(str.length) : ulong))
+        assert(index < str.length, "Past the end of the UTF-16 sequence");
+    immutable uint u = str[index];
+    return 1 + (u >= 0xD800 && u <= 0xDBFF);
+}
+
+/// Ditto
+uint stride(S)(auto ref S str) @safe pure
+    if (is(S : const wchar[]))
+{
+    return stride(str, 0);
+}
+
+/// Ditto
+uint stride(S)(auto ref S str)
+    if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
+{
+    assert(!str.empty, "UTF-16 sequence is empty");
+    immutable uint u = str.front;
+    return 1 + (u >= 0xD800 && u <= 0xDBFF);
+}
+
+unittest
+{
+    import std.conv : to;
+    import std.exception;
+    import std. string : format;
+    import core.exception : AssertError;
+    static void test(wstring s, dchar c, size_t i = 0, size_t line = __LINE__)
+    {
+        enforce(stride(s, i) == codeLength!wchar(c),
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(stride(RandomCU!wchar(s), i) == codeLength!wchar(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        auto refRandom = new RefRandomCU!wchar(s);
+        immutable randLen = refRandom.length;
+        enforce(stride(refRandom, i) == codeLength!wchar(c),
+                new AssertError(format("Unit test failure rand ref range: %s", s), __FILE__, line));
+        enforce(refRandom.length == randLen,
+                new AssertError(format("Unit test failure rand ref range length: %s", s), __FILE__, line));
+
+        if (i == 0)
+        {
+            enforce(stride(s) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure string 0: %s", s), __FILE__, line));
+
+            enforce(stride(InputCU!wchar(s)) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure range 0: %s", s), __FILE__, line));
+
+            auto refBidir = new RefBidirCU!wchar(s);
+            immutable bidirLen = refBidir.length;
+            enforce(stride(refBidir) == codeLength!wchar(c),
+                    new AssertError(format("Unit test failure bidir ref range code length: %s", s), __FILE__, line));
+            enforce(refBidir.length == bidirLen,
+                    new AssertError(format("Unit test failure bidir ref range length: %s", s), __FILE__, line));
+        }
+    }
+
+    assertCTFEable!(
+    {
+    test("a", 'a');
+    test(" ", ' ');
+    test("\u2029", '\u2029'); //paraSep
+    test("\u0100", '\u0100');
+    test("\u0430", '\u0430');
+    test("\U00010143", '\U00010143');
+    test("abcdefcdef", 'a');
+    test("hello\U00010143\u0100\U00010143", 'h', 0);
+    test("hello\U00010143\u0100\U00010143", 'e', 1);
+    test("hello\U00010143\u0100\U00010143", 'l', 2);
+    test("hello\U00010143\u0100\U00010143", 'l', 3);
+    test("hello\U00010143\u0100\U00010143", 'o', 4);
+    test("hello\U00010143\u0100\U00010143", '\U00010143', 5);
+    test("hello\U00010143\u0100\U00010143", '\u0100', 7);
+    test("hello\U00010143\u0100\U00010143", '\U00010143', 8);
+
+    foreach (S; AliasSeq!(wchar[], const wchar[], wstring))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!(() => stride(str, 0)));
+        static assert(isSafe!(() => stride(str)   ));
+        static assert((functionAttributes!(() => stride(str, 0)) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!(() => stride(str)   ) & FunctionAttribute.pure_) != 0);
+    }
+    });
+}
+
+/// Ditto
+uint stride(S)(auto ref S str, size_t index = 0)
+    if (is(S : const dchar[]) ||
+        (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
+{
+    static if (is(typeof(str.length) : ulong))
+        assert(index < str.length, "Past the end of the UTF-32 sequence");
+    else
+        assert(!str.empty, "UTF-32 sequence is empty.");
+    return 1;
+}
+
+unittest
+{
+    import std.conv : to;
+    import std.exception;
+    import std. string : format;
+    import core.exception : AssertError;
+    static void test(dstring s, dchar c, size_t i = 0, size_t line = __LINE__)
+    {
+        enforce(stride(s, i) == codeLength!dchar(c),
+                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
+
+        enforce(stride(RandomCU!dchar(s), i) == codeLength!dchar(c),
+                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
+
+        auto refRandom = new RefRandomCU!dchar(s);
+        immutable randLen = refRandom.length;
+        enforce(stride(refRandom, i) == codeLength!dchar(c),
+                new AssertError(format("Unit test failure rand ref range: %s", s), __FILE__, line));
+        enforce(refRandom.length == randLen,
+                new AssertError(format("Unit test failure rand ref range length: %s", s), __FILE__, line));
+
+        if (i == 0)
+        {
+            enforce(stride(s) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure string 0: %s", s), __FILE__, line));
+
+            enforce(stride(InputCU!dchar(s)) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure range 0: %s", s), __FILE__, line));
+
+            auto refBidir = new RefBidirCU!dchar(s);
+            immutable bidirLen = refBidir.length;
+            enforce(stride(refBidir) == codeLength!dchar(c),
+                    new AssertError(format("Unit test failure bidir ref range code length: %s", s), __FILE__, line));
+            enforce(refBidir.length == bidirLen,
+                    new AssertError(format("Unit test failure bidir ref range length: %s", s), __FILE__, line));
+        }
+    }
+
+    assertCTFEable!(
+    {
+    test("a", 'a');
+    test(" ", ' ');
+    test("\u2029", '\u2029'); //paraSep
+    test("\u0100", '\u0100');
+    test("\u0430", '\u0430');
+    test("\U00010143", '\U00010143');
+    test("abcdefcdef", 'a');
+    test("hello\U00010143\u0100\U00010143", 'h', 0);
+    test("hello\U00010143\u0100\U00010143", 'e', 1);
+    test("hello\U00010143\u0100\U00010143", 'l', 2);
+    test("hello\U00010143\u0100\U00010143", 'l', 3);
+    test("hello\U00010143\u0100\U00010143", 'o', 4);
+    test("hello\U00010143\u0100\U00010143", '\U00010143', 5);
+    test("hello\U00010143\u0100\U00010143", '\u0100', 6);
+    test("hello\U00010143\u0100\U00010143", '\U00010143', 7);
+
+    foreach (S; AliasSeq!(dchar[], const dchar[], dstring))
+    {
+        enum str = to!S("hello world");
+        static assert(isSafe!(() => stride(str, 0)));
+        static assert(isSafe!(() => stride(str)   ));
+        static assert((functionAttributes!(() => stride(str, 0)) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!(() => stride(str)   ) & FunctionAttribute.pure_) != 0);
+    }
+    });
+}
 
 /++
-    $(D strideBack) returns the length of the UTF-8 sequence ending one code
-    unit before $(D index) in $(D str).
+    Calculate the length of the UTF sequence ending one code unit before
+    $(D index) in $(D str).
 
-    $(D strideBack) works with both UTF-8 strings and bidirectional ranges of
-    $(D char). If no index is passed, then a bidirectional range will work, but
-    if an index is passed, then a random-access range is required.
-
-    $(D index) defaults to $(D str.length) if none is passed.
+    Params:
+        str = bidirectional range of UTF code units. Must be random access if
+        $(D index) is passed
+        index = index one past end of UTF sequence (default: $(D str.length))
 
     Returns:
-        The number of bytes in the UTF-8 sequence.
+        The number of code units in the UTF sequence. For UTF-8, this is a
+        value between 1 and 4 (as per $(WEB tools.ietf.org/html/rfc3629#section-3, RFC 3629$(COMMA) section 3)).
+        For UTF-16, it is either 1 or 2. For UTF-32, it is always 1.
 
     Throws:
         May throw a $(D UTFException) if $(D str[index]) is not one past the
-        end of a valid UTF-8 sequence.
+        end of a valid UTF sequence.
 
-    Notes:
-        $(D strideBack) will not fully verify the validity of the UTF-8
-        sequence. It will, however, guarantee that
-        $(D index - stride(str, index)) is a valid index.
+    Note:
+        $(D strideBack) will only analyze the element at $(D str[index - 1])
+        element. It will not fully verify the validity of the UTF sequence, nor
+        even verify the presence of the sequence: it will not actually
+        guarantee that $(D strideBack(str, index) <= index).
   +/
 uint strideBack(S)(auto ref S str, size_t index)
     if (is(S : const char[]) ||
@@ -438,6 +618,7 @@ uint strideBack(S)(auto ref S str)
     return strideBack(str, str.length);
 }
 
+/// Ditto
 uint strideBack(S)(auto ref S str)
     if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
 {
@@ -521,148 +702,9 @@ unittest
     });
 }
 
-
-/++
-    $(D stride) returns the length of the UTF-16 sequence starting at $(D index)
-    in $(D str).
-
-    $(D stride) works with both UTF-16 strings and ranges of $(D wchar). If no
-    index is passed, then an input range will work, but if an index is passed,
-    then a random-access range is required.
-
-    $(D index) defaults to $(D 0) if none is passed.
-
-    Returns:
-        The number of bytes in the UTF-16 sequence.
-
-    Throws:
-        May throw a $(D UTFException) if $(D str[index]) is not the start of a
-        valid UTF-16 sequence.
-
-    Notes:
-        $(D stride) will only analyze the first $(D str[index]) element. It
-        will not fully verify the validity of UTF-16 sequence, nor even verify
-        the presence of the sequence: it will not actually guarantee that
-        $(D index + stride(str, index) <= str.length).
-  +/
-uint stride(S)(auto ref S str, size_t index)
-    if (is(S : const wchar[]) ||
-        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
-{
-    static if (is(typeof(str.length) : ulong))
-        assert(index < str.length, "Past the end of the UTF-16 sequence");
-    immutable uint u = str[index];
-    return 1 + (u >= 0xD800 && u <= 0xDBFF);
-}
-
-/// Ditto
-uint stride(S)(auto ref S str) @safe pure
-    if (is(S : const wchar[]))
-{
-    return stride(str, 0);
-}
-
-uint stride(S)(auto ref S str)
-    if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
-{
-    assert(!str.empty, "UTF-16 sequence is empty");
-    immutable uint u = str.front;
-    return 1 + (u >= 0xD800 && u <= 0xDBFF);
-}
-
-@trusted unittest
-{
-    import std.conv : to;
-    import std.exception;
-    import std. string : format;
-    import core.exception : AssertError;
-    static void test(wstring s, dchar c, size_t i = 0, size_t line = __LINE__)
-    {
-        enforce(stride(s, i) == codeLength!wchar(c),
-                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
-
-        enforce(stride(RandomCU!wchar(s), i) == codeLength!wchar(c),
-                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
-
-        auto refRandom = new RefRandomCU!wchar(s);
-        immutable randLen = refRandom.length;
-        enforce(stride(refRandom, i) == codeLength!wchar(c),
-                new AssertError(format("Unit test failure rand ref range: %s", s), __FILE__, line));
-        enforce(refRandom.length == randLen,
-                new AssertError(format("Unit test failure rand ref range length: %s", s), __FILE__, line));
-
-        if (i == 0)
-        {
-            enforce(stride(s) == codeLength!wchar(c),
-                    new AssertError(format("Unit test failure string 0: %s", s), __FILE__, line));
-
-            enforce(stride(InputCU!wchar(s)) == codeLength!wchar(c),
-                    new AssertError(format("Unit test failure range 0: %s", s), __FILE__, line));
-
-            auto refBidir = new RefBidirCU!wchar(s);
-            immutable bidirLen = refBidir.length;
-            enforce(stride(refBidir) == codeLength!wchar(c),
-                    new AssertError(format("Unit test failure bidir ref range code length: %s", s), __FILE__, line));
-            enforce(refBidir.length == bidirLen,
-                    new AssertError(format("Unit test failure bidir ref range length: %s", s), __FILE__, line));
-        }
-    }
-
-    assertCTFEable!(
-    {
-    test("a", 'a');
-    test(" ", ' ');
-    test("\u2029", '\u2029'); //paraSep
-    test("\u0100", '\u0100');
-    test("\u0430", '\u0430');
-    test("\U00010143", '\U00010143');
-    test("abcdefcdef", 'a');
-    test("hello\U00010143\u0100\U00010143", 'h', 0);
-    test("hello\U00010143\u0100\U00010143", 'e', 1);
-    test("hello\U00010143\u0100\U00010143", 'l', 2);
-    test("hello\U00010143\u0100\U00010143", 'l', 3);
-    test("hello\U00010143\u0100\U00010143", 'o', 4);
-    test("hello\U00010143\u0100\U00010143", '\U00010143', 5);
-    test("hello\U00010143\u0100\U00010143", '\u0100', 7);
-    test("hello\U00010143\u0100\U00010143", '\U00010143', 8);
-
-    foreach (S; AliasSeq!(wchar[], const wchar[], wstring))
-    {
-        enum str = to!S("hello world");
-        static assert(isSafe!(() => stride(str, 0)));
-        static assert(isSafe!(() => stride(str)   ));
-        static assert((functionAttributes!(() => stride(str, 0)) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!(() => stride(str)   ) & FunctionAttribute.pure_) != 0);
-    }
-    });
-}
-
-
-/++
-    $(D strideBack) returns the length of the UTF-16 sequence ending one code
-    unit before $(D index) in $(D str).
-
-    $(D strideBack) works with both UTF-16 strings and ranges of $(D wchar). If
-    no index is passed, then a bidirectional range will work, but if an index is
-    passed, then a random-access range is required.
-
-    $(D index) defaults to $(D str.length) if none is passed.
-
-    Returns:
-        The number of bytes in the UTF-16 sequence.
-
-    Throws:
-        May throw a $(D UTFException) if $(D str[index]) is not one past the
-        end of a valid UTF-16 sequence.
-
-    Notes:
-        $(D stride) will only analyze the element at $(D str[index - 1])
-        element. It will not fully verify the validity of UTF-16 sequence, nor
-        even verify the presence of the sequence: it will not actually
-        guarantee that $(D stride(str, index) <= index).
-  +/
 //UTF-16 is self synchronizing: The length of strideBack can be found from
 //the value of a single wchar
+/// Ditto
 uint strideBack(S)(auto ref S str, size_t index)
     if (is(S : const wchar[]) ||
         (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
@@ -757,114 +799,7 @@ unittest
     });
 }
 
-
-/++
-    $(D stride) returns the length of the UTF-32 sequence starting at $(D index)
-    in $(D str).
-
-    $(D stride) works with both UTF-32 strings and ranges of $(D dchar).
-
-    Returns:
-        The number of bytes in the UTF-32 sequence (always $(D 1)).
-
-    Throws:
-        Never.
-  +/
-uint stride(S)(auto ref S str, size_t index = 0)
-    if (is(S : const dchar[]) ||
-        (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
-{
-    static if (is(typeof(str.length) : ulong))
-        assert(index < str.length, "Past the end of the UTF-32 sequence");
-    else
-        assert(!str.empty, "UTF-32 sequence is empty.");
-    return 1;
-}
-
-unittest
-{
-    import std.conv : to;
-    import std.exception;
-    import std. string : format;
-    import core.exception : AssertError;
-    static void test(dstring s, dchar c, size_t i = 0, size_t line = __LINE__)
-    {
-        enforce(stride(s, i) == codeLength!dchar(c),
-                new AssertError(format("Unit test failure string: %s", s), __FILE__, line));
-
-        enforce(stride(RandomCU!dchar(s), i) == codeLength!dchar(c),
-                new AssertError(format("Unit test failure range: %s", s), __FILE__, line));
-
-        auto refRandom = new RefRandomCU!dchar(s);
-        immutable randLen = refRandom.length;
-        enforce(stride(refRandom, i) == codeLength!dchar(c),
-                new AssertError(format("Unit test failure rand ref range: %s", s), __FILE__, line));
-        enforce(refRandom.length == randLen,
-                new AssertError(format("Unit test failure rand ref range length: %s", s), __FILE__, line));
-
-        if (i == 0)
-        {
-            enforce(stride(s) == codeLength!dchar(c),
-                    new AssertError(format("Unit test failure string 0: %s", s), __FILE__, line));
-
-            enforce(stride(InputCU!dchar(s)) == codeLength!dchar(c),
-                    new AssertError(format("Unit test failure range 0: %s", s), __FILE__, line));
-
-            auto refBidir = new RefBidirCU!dchar(s);
-            immutable bidirLen = refBidir.length;
-            enforce(stride(refBidir) == codeLength!dchar(c),
-                    new AssertError(format("Unit test failure bidir ref range code length: %s", s), __FILE__, line));
-            enforce(refBidir.length == bidirLen,
-                    new AssertError(format("Unit test failure bidir ref range length: %s", s), __FILE__, line));
-        }
-    }
-
-    assertCTFEable!(
-    {
-    test("a", 'a');
-    test(" ", ' ');
-    test("\u2029", '\u2029'); //paraSep
-    test("\u0100", '\u0100');
-    test("\u0430", '\u0430');
-    test("\U00010143", '\U00010143');
-    test("abcdefcdef", 'a');
-    test("hello\U00010143\u0100\U00010143", 'h', 0);
-    test("hello\U00010143\u0100\U00010143", 'e', 1);
-    test("hello\U00010143\u0100\U00010143", 'l', 2);
-    test("hello\U00010143\u0100\U00010143", 'l', 3);
-    test("hello\U00010143\u0100\U00010143", 'o', 4);
-    test("hello\U00010143\u0100\U00010143", '\U00010143', 5);
-    test("hello\U00010143\u0100\U00010143", '\u0100', 6);
-    test("hello\U00010143\u0100\U00010143", '\U00010143', 7);
-
-    foreach (S; AliasSeq!(dchar[], const dchar[], dstring))
-    {
-        enum str = to!S("hello world");
-        static assert(isSafe!(() => stride(str, 0)));
-        static assert(isSafe!(() => stride(str)   ));
-        static assert((functionAttributes!(() => stride(str, 0)) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!(() => stride(str)   ) & FunctionAttribute.pure_) != 0);
-    }
-    });
-}
-
-
-/++
-    $(D strideBack) returns the length of the UTF-32 sequence ending one code
-    unit before $(D index) in $(D str).
-
-    $(D strideBack) works with both UTF-32 strings and ranges of $(D dchar). If
-    no index is passed, then a bidirectional range will work, but if an index is
-    passed, then a random-access range is required.
-
-    $(D index) defaults to $(D str.length) if none is passed.
-
-    Returns:
-        The number of bytes in the UTF-32 sequence (always $(D 1)).
-
-    Throws:
-        Never.
-  +/
+/// Ditto
 uint strideBack(S)(auto ref S str, size_t index)
     if (isRandomAccessRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 {
@@ -1041,7 +976,7 @@ unittest
 
 /* =================== Decode ======================= */
 
-/// Whether or not to replace invalid UTF with replacementDchar
+/// Whether or not to replace invalid UTF with $(LREF replacementDchar)
 alias UseReplacementDchar = Flag!"useReplacementDchar";
 
 /++
