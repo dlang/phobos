@@ -1921,19 +1921,32 @@ Returns:
         return _value;
     }
 
-///
-unittest
-{
-    import std.exception: assertThrown, assertNotThrown;
+/**
+Forwards $(D T) opEquals to handle the null state.
 
-    Nullable!int ni;
-    //`get` is implicitly called. Will throw
-    //an AssertError in non-release mode
-    assertThrown!Throwable(ni == 0);
-
-    ni = 0;
-    assertNotThrown!Throwable(ni == 0);
-}
+Returns:
+    $(D true) if two nullables are in null state,
+    $(D false) if two nullables have a different null state,
+    the values comparison result otherwise.
+*/
+    bool opEquals(R)(R rhs) const
+    if(is(R == typeof(this)) || is(R : T))
+    {
+        static if (is(R == typeof(this)))
+        {
+            if (rhs.isNull && isNull)
+                return true;
+            else if (rhs.isNull != isNull)
+                return false;
+            else
+                return get() == rhs.get;
+        }
+        else
+        {
+            if (isNull) return false;
+            else return get == rhs;
+        }
+    }
 
 /**
 Implicitly converts to $(D T).
@@ -1972,6 +1985,17 @@ unittest
     {
         //Add the customer to the database
     }
+}
+
+unittest
+{
+    // issue 14804
+	Nullable!int n1 = 0;
+	Nullable!int n2;
+	Nullable!int n3;
+
+	assert(n1 != n2);
+	assert(n2 == n3);
 }
 
 unittest
