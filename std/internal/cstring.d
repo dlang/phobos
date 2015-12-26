@@ -4,7 +4,7 @@ Helper functions for working with $(I C strings).
 This module is intended to provide fast, safe and garbage free
 way to work with $(I C strings).
 
-Examples:
+Example:
 ---
 version(Posix):
 

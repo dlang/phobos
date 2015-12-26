@@ -3346,7 +3346,7 @@ int[] abc = cast(int[]) [ EnumMembers!E ];
  Cast is not necessary if the type of the variable is inferred. See the
  example below.
 
-Examples:
+Example:
  Creating an array of enumerated values:
 --------------------
 enum Sqrts : real
@@ -4519,7 +4519,7 @@ $(D __traits(compiles, ...)) purposes. No actual value is returned.
 Note: Trying to use returned value will result in a
 "Symbol Undefined" error at link time.
 
-Examples:
+Example:
 ---
 // Note that `f` doesn't have to be implemented
 // as is isn't called.
@@ -6044,7 +6044,7 @@ unittest
  *     $(LI $(D immutable))
  *     $(LI $(D shared))
  * )
- * Examples:
+ * Example:
  * ---
  * static assert(is(CopyTypeQualifiers!(inout const real, int) == inout const int));
  * ---

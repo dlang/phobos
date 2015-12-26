@@ -6050,7 +6050,7 @@ struct Indexed(Source, Indices)
         given logical index.  This is useful, for example, when indexing
         an $(D Indexed) without adding another layer of indirection.
 
-        Examples:
+        Example:
         ---
         auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
         assert(ind.physicalIndex(0) == 1);
@@ -6993,7 +6993,7 @@ If $(D range) does not have length, and $(D popFront) is called when
 $(D front.index == Enumerator.max), the index will overflow and
 continue from $(D Enumerator.min).
 
-Examples:
+Example:
 Useful for using $(D foreach) with an index loop variable:
 ----
     import std.stdio : stdin, stdout;

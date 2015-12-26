@@ -1215,7 +1215,7 @@ private struct DelegateFaker(F)
  * Convert a callable to a delegate with the same parameter list and
  * return type, avoiding heap allocations and use of auxiliary storage.
  *
- * Examples:
+ * Example:
  * ----
  * void doStuff() {
  *     writeln("Hello, world.");

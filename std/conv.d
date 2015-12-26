@@ -195,7 +195,7 @@ conversion is truncating towards zero, the same way a cast would
 truncate. (To round a floating point value when casting to an
 integral, use $(D_PARAM roundTo).)
 
-Examples:
+Example:
 -------------------------
 int a = 420;
 auto b = to!long(a); // same as long b = a;

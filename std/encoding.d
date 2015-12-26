@@ -2124,7 +2124,7 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Params:
     s = the string to be decoded
 
- Examples:
+ Example:
  --------------------------------------------------------
  string s = "hello world";
  foreach(c;codePoints(s))
@@ -2343,7 +2343,7 @@ abstract class EncodingScheme
      * This function allows user-defined subclasses of EncodingScheme to
      * be declared in other modules.
      *
-     * Examples:
+     * Example:
      * ----------------------------------------------
      * class Amiga1251 : EncodingScheme
      * {
@@ -2372,7 +2372,7 @@ abstract class EncodingScheme
      * This function is only aware of EncodingSchemes which have been
      * registered with the register() function.
      *
-     * Examples:
+     * Example:
      * ---------------------------------------------------
      * auto scheme = EncodingScheme.create("Amiga-1251");
      * ---------------------------------------------------

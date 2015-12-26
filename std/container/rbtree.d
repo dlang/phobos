@@ -1348,7 +1348,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
        Complexity: $(BIGOH m log(n)) (where m is the number of elements to remove)
 
-       Examples:
+       Example:
 --------------------
 auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
 rbt.removeKey(1, 4, 7);

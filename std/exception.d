@@ -1521,7 +1521,7 @@ class ErrnoException : Exception
         expression, if it does not throw. Otherwise, returns the result of
         errorHandler.
 
-    Examples:
+    Example:
     --------------------
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
@@ -1550,7 +1550,7 @@ class ErrnoException : Exception
     be implicitly casted to, and that type will be the type of the compound
     expression.
 
-    Examples:
+    Example:
     --------------------
     //null and new Object have a common type(Object).
     static assert(is(typeof(null.ifThrown(new Object())) == Object));

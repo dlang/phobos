@@ -1939,7 +1939,7 @@ corresponding $(D sort), but $(D schwartzSort) evaluates $(D
 transform) only $(D r.length) times (less than half when compared to
 regular sorting). The usage can be best illustrated with an example.
 
-Examples:
+Example:
 ----
 uint hashFun(string) { ... expensive computation ... }
 string[] array = ...;
