@@ -1976,41 +1976,36 @@ schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, R)(R r)
     if (isRandomAccessRange!R && hasLength!R)
 {
-    import core.stdc.stdlib : malloc, free;
-    import std.conv : emplace;
-    import std.string : representation;
+    import core.stdc.stdlib : free;
+    import std.algorithm.iteration : map;
+    import std.internal.mmm : checkedMallocArray, destroyArray;
     import std.range : zip, SortedRange;
 
     alias T = typeof(unaryFun!transform(r.front));
-    auto xform1 = (cast(T*) malloc(r.length * T.sizeof))[0 .. r.length];
-    size_t length;
+    auto xformArray = checkedMallocArray(map!(e => unaryFun!transform(e))(r));
     scope(exit)
     {
-        static if (hasElaborateDestructor!T)
-        {
-            foreach (i; 0 .. length) collectException(destroy(xform1[i]));
-        }
-        free(xform1.ptr);
+        auto destroyedArray = destroyArray(xformArray);
+        // xform1 does not escape schwartzSort, so this is known to be safe.
+        () @trusted { free(destroyedArray.ptr); }();
     }
-    for (; length != r.length; ++length)
-    {
-        emplace(xform1.ptr + length, unaryFun!transform(r[length]));
-    }
+
     // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
     // for the intermediate array, lest zip gets confused.
-    static if (isNarrowString!(typeof(xform1)))
+    static if (isNarrowString!(typeof(xformArray)))
     {
-        auto xform = xform1.representation();
+        import std.string : representation;
+        auto xform = xformArray.representation();
     }
     else
     {
-        alias xform = xform1;
+        alias xform = xformArray;
     }
     zip(xform, r).sort!((a, b) => binaryFun!less(a[0], b[0]), ss)();
     return typeof(return)(r);
 }
 
-unittest
+@safe unittest
 {
     // issue 4909
     import std.typecons : Tuple;
@@ -2018,7 +2013,7 @@ unittest
     schwartzSort!"a[0]"(chars);
 }
 
-unittest
+@safe unittest
 {
     // issue 5924
     import std.typecons : Tuple;
@@ -2026,7 +2021,7 @@ unittest
     schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : map;
     import std.math : log2;
@@ -2059,7 +2054,7 @@ unittest
     assert(isSorted!("a > b")(map!(entropy)(arr)));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : map;
     import std.math : log2;
