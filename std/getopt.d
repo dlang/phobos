@@ -55,6 +55,7 @@ static assert(is(typeof(new GetOptException("message", Exception.init))));
 /**
    Parse and remove command line options from a string array.
 
+
    Synopsis:
 
 ---------
@@ -118,10 +119,10 @@ void main(string[] args)
 ---------
 
     To set $(D verbose) to $(D true), invoke the program with either
-    $(D --verbose) or $(D --verbose=true).
+    `--verbose` or `--verbose=true`.
 
     To set $(D debugging) to $(D false), invoke the program with
-    $(D --debugging=false).
+    `--debugging=false`.
     )
 
     $(LI $(I Numeric options.) If an option is bound to a numeric type, a
@@ -134,7 +135,7 @@ void main(string[] args)
 ---------
 
     To set $(D timeout) to $(D 5), invoke the program with either
-    $(D --timeout=5) or $(D --timeout 5).
+    `--timeout=5` or `--timeout 5`.
     )
 
     $(LI $(I Incremental options.) If an option name has a "+" suffix and is
@@ -146,10 +147,10 @@ void main(string[] args)
   getopt(args, "paranoid+", &paranoid);
 ---------
 
-    Invoking the program with "--paranoid --paranoid --paranoid" will set $(D
+    Invoking the program with `--paranoid --paranoid --paranoid` will set $(D
     paranoid) to 3. Note that an incremental option never expects a parameter,
-    e.g., in the command line "--paranoid 42 --paranoid", the "42" does not set
-    $(D paranoid) to 42; instead, $(D paranoid) is set to 2 and "42" is not
+    e.g., in the command line `--paranoid 42 --paranoid`, the `42` does not set
+    $(D paranoid) to 42; instead, $(D paranoid) is set to 2 and `42` is not
     considered as part of the normal program arguments.
     )
 
@@ -1479,6 +1480,7 @@ unittest
 }
 
 /** This function prints the passed $(D Option)s and text in an aligned manner on $(D stdout).
+
 
 The passed text will be printed first, followed by a newline, then the short
 and long version of every option will be printed. The short and long version

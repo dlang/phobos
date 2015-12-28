@@ -2,6 +2,7 @@
 
 /**
 A one-stop shop for converting values from one type to another.
+Typical usage: `$(LREF to)!SomeType(some_variable);`
 
 Copyright: Copyright Digital Mars 2007-.
 

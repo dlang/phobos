@@ -81,7 +81,6 @@ Source:
     $(PHOBOSSRC std/_process.d)
 Macros:
     WIKI=Phobos/StdProcess
-    OBJECTREF=$(D $(LINK2 object.html#$0,$0))
     LREF=$(D $(LINK2 #.$0,$0))
 */
 module std.process;
@@ -2005,7 +2004,7 @@ struct ProcessPipes
     standard input stream.
 
     Throws:
-    $(OBJECTREF Error) if the child process' standard input stream hasn't
+    $(REF Error) if the child process' standard input stream hasn't
     been redirected.
     */
     @property File stdin() @safe nothrow
@@ -2021,7 +2020,7 @@ struct ProcessPipes
     standard output stream.
 
     Throws:
-    $(OBJECTREF Error) if the child process' standard output stream hasn't
+    $(REF Error) if the child process' standard output stream hasn't
     been redirected.
     */
     @property File stdout() @safe nothrow
@@ -2037,7 +2036,7 @@ struct ProcessPipes
     standard error stream.
 
     Throws:
-    $(OBJECTREF Error) if the child process' standard error stream hasn't
+    $(REF Error) if the child process' standard error stream hasn't
     been redirected.
     */
     @property File stderr() @safe nothrow
@@ -2478,7 +2477,7 @@ executeShell(
 ---
 
 Throws:
-$(OBJECTREF Exception) if any part of the command line contains unescapable
+$(REF Exception) if any part of the command line contains unescapable
 characters (NUL on all platforms, as well as CR and LF on Windows).
 */
 string escapeShellCommand(in char[][] args...) @safe pure
@@ -2968,7 +2967,7 @@ static:
     ---
 
     Throws:
-    $(OBJECTREF Exception) if the environment variable does not exist,
+    $(REF Exception) if the environment variable does not exist,
     or $(XREF utf,UTFException) if the variable contains invalid UTF-16
     characters (Windows only).
 
@@ -3024,8 +3023,14 @@ static:
     environment["foo"] = "bar";
     ---
 
+    $(WARNING
+        Environment variables are inherited by child processes, but are
+        not passed up to parent processes. Don't expect setting a value
+        through this to be seen in the shell after your program terminates.
+    )
+
     Throws:
-    $(OBJECTREF Exception) if the environment variable could not be added
+    $(REF Exception) if the environment variable could not be added
         (e.g. if the name is invalid).
     */
     inout(char)[] opIndexAssign(inout char[] value, in char[] name) @trusted
@@ -3077,7 +3082,7 @@ static:
     variable names in uppercase (e.g. $(D PATH)).
 
     Throws:
-    $(OBJECTREF Exception) if the environment variables could not
+    $(REF Exception) if the environment variables could not
         be retrieved (Windows only).
     */
     string[string] toAA() @trusted

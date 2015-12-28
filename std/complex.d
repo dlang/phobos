@@ -111,7 +111,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     instead, it is used via $(XREF string,format), as shown in the examples
     below.  Supported format characters are 'e', 'f', 'g', 'a', and 's'.
 
-    See the $(LINK2 std_format.html, std.format) and $(XREF string, format)
+    See the $(MREF std,format) and $(XREF string, format)
     documentation for more information.
     */
     string toString() const /* TODO: @safe pure nothrow */

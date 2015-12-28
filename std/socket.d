@@ -33,16 +33,29 @@
         Thanks to Benjamin Herr for his assistance.
  */
 
-/**
- * Socket primitives.
- * Example: See $(SAMPLESRC listener.d) and $(SAMPLESRC htmlget.d)
- * License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger),
- *      $(WEB thecybershadow.net, Vladimir Panteleev)
- * Source:  $(PHOBOSSRC std/_socket.d)
- * Macros:
- *      WIKI=Phobos/StdSocket
- */
+/++
+    This module wraps socket functionality with a cross-platform interface.
+
+
+    Example:
+    ---
+    // client
+    import std.socket;
+
+    void main() {
+        auto socket = new Socket(new InternetAddress("localhost", 2525));
+        socket.send("Hello!");
+    }
+    ---
+
+    Example: See $(SAMPLESRC listener.d) and $(SAMPLESRC htmlget.d)
+    License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger),
+         $(WEB thecybershadow.net, Vladimir Panteleev)
+    Source:  $(PHOBOSSRC std/_socket.d)
+    Macros:
+         WIKI=Phobos/StdSocket
++/
 
 module std.socket;
 
@@ -417,8 +430,10 @@ class Protocol
 {
     /// These members are populated when one of the following functions are called successfully:
     ProtocolType type;
-    string name;                /// ditto
-    string[] aliases;           /// ditto
+    /// ditto
+    string name;
+    /// ditto
+    string[] aliases;
 
 
     void populate(protoent* proto) @system pure nothrow
@@ -448,7 +463,7 @@ class Protocol
         }
     }
 
-    /** Returns: false on failure */
+    /** Returns: $(D false) on failure */
     bool getProtocolByName(in char[] name) @trusted nothrow
     {
         protoent* proto;
@@ -460,7 +475,7 @@ class Protocol
     }
 
 
-    /** Returns: false on failure */
+    /** Returns: $(D false) on failure */
     // Same as getprotobynumber().
     bool getProtocolByType(ProtocolType type) @trusted nothrow
     {
@@ -552,7 +567,7 @@ class Service
 
     /**
      * If a protocol name is omitted, any protocol will be matched.
-     * Returns: false on failure.
+     * Returns: $(D false) on failure.
      */
     bool getServiceByName(in char[] name, in char[] protocolName = null) @trusted nothrow
     {
@@ -631,7 +646,7 @@ private mixin template socketOSExceptionCtors()
 
 
 /**
- * Class for exceptions thrown from an $(D InternetHost).
+ * Class for exceptions thrown from an $(LREF InternetHost).
  */
 class HostException: SocketOSException
 {
@@ -641,8 +656,8 @@ class HostException: SocketOSException
 /**
  * $(D InternetHost) is a class for resolving IPv4 addresses.
  *
- * Consider using $(D getAddress), $(D parseAddress) and $(D Address) methods
- * instead of using this class directly.
+ * Consider using $(LREF getAddress), $(LREF parseAddress) and $(LREF Address)
+ * methods instead of using this class directly.
  *
  * Example:
  * ---
@@ -763,7 +778,7 @@ class InternetHost
 
     /**
      * Resolve host name.
-     * Returns: false if unable to resolve.
+     * Returns: $(D false) if unable to resolve.
      */
     bool getHostByName(in char[] name) @trusted
     {
@@ -800,7 +815,7 @@ class InternetHost
      * Params:
      *   addr = The IPv4 address to resolve, in host byte order.
      * Returns:
-     *   false if unable to resolve.
+     *   $(D false) if unable to resolve.
      */
     bool getHostByAddr(uint addr) @trusted
     {
@@ -813,7 +828,7 @@ class InternetHost
     /**
      * Same as previous, but addr is an IPv4 address string in the
      * dotted-decimal form $(I a.b.c.d).
-     * Returns: false if unable to resolve.
+     * Returns: $(D false) if unable to resolve.
      */
     bool getHostByAddr(in char[] addr) @trusted
     {
@@ -862,27 +877,27 @@ unittest
 }
 
 
-/// Holds information about a socket _address retrieved by $(D getAddressInfo).
+/// Holds information about a socket _address retrieved by $(LREF getAddressInfo).
 struct AddressInfo
 {
     AddressFamily family;   /// Address _family
     SocketType type;        /// Socket _type
     ProtocolType protocol;  /// Protocol
     Address address;        /// Socket _address
-    string canonicalName;   /// Canonical name, when $(D AddressInfoFlags.CANONNAME) is used.
+    string canonicalName;   /// Canonical name, when $(REF AddressInfoFlags.CANONNAME) is used.
 }
 
 // A subset of flags supported on all platforms with getaddrinfo.
-/// Specifies option flags for $(D getAddressInfo).
+/// Specifies option flags for $(LREF getAddressInfo).
 enum AddressInfoFlags: int
 {
-    /// The resulting addresses will be used in a call to $(D Socket.bind).
+    /// The resulting addresses will be used in a call to $(LREF Socket.bind).
     PASSIVE = AI_PASSIVE,
 
-    /// The canonical name is returned in $(D canonicalName) member in the first $(D AddressInfo).
+    /// The canonical name is returned in $(LREF canonicalName) member in the first $(LREF AddressInfo).
     CANONNAME = AI_CANONNAME,
 
-    /// The $(D node) parameter passed to $(D getAddressInfo) must be a numeric string.
+    /// The $(D node) parameter passed to $(LREF getAddressInfo) must be a numeric string.
     /// This will suppress any potentially lengthy network host address lookups.
     NUMERICHOST = AI_NUMERICHOST,
 }
@@ -906,21 +921,22 @@ private string formatGaiError(int err) @trusted
 /**
  * Provides _protocol-independent translation from host names to socket
  * addresses. If advanced functionality is not required, consider using
- * $(D getAddress) for compatibility with older systems.
+ * $(LREF getAddress) for compatibility with older systems.
  *
- * Returns: Array with one $(D AddressInfo) per socket address.
+ * Returns: Array with one $(LREF AddressInfo) per socket address.
  *
- * Throws: $(D SocketOSException) on failure, or $(D SocketFeatureException)
- * if this functionality is not available on the current system.
+ * Throws: $(LREF SocketOSException) on failure, or
+ * $(LREF SocketFeatureException) if this functionality is not available
+ * on the current system.
  *
  * Params:
  *  node     = string containing host name or numeric address
  *  options  = optional additional parameters, identified by type:
  *             $(UL $(LI $(D string) - service name or port number)
- *                  $(LI $(D AddressInfoFlags) - option flags)
- *                  $(LI $(D AddressFamily) - address family to filter by)
- *                  $(LI $(D SocketType) - socket type to filter by)
- *                  $(LI $(D ProtocolType) - protocol to filter by))
+ *                  $(LI $(LREF AddressInfoFlags) - option flags)
+ *                  $(LI $(LREF AddressFamily) - address family to filter by)
+ *                  $(LI $(LREF SocketType) - socket type to filter by)
+ *                  $(LI $(LREF ProtocolType) - protocol to filter by))
  *
  * Example:
  * ---
@@ -1092,12 +1108,12 @@ private ushort serviceToPort(in char[] service)
 
 /**
  * Provides _protocol-independent translation from host names to socket
- * addresses. Uses $(D getAddressInfo) if the current system supports it,
- * and $(D InternetHost) otherwise.
+ * addresses. Uses $(LREF getAddressInfo) if the current system supports it,
+ * and $(LREF InternetHost) otherwise.
  *
- * Returns: Array with one $(D Address) instance per socket address.
+ * Returns: Array with one $(LREF Address) instance per socket address.
  *
- * Throws: $(D SocketOSException) on failure.
+ * Throws: $(LREF SocketOSException) on failure.
  *
  * Example:
  * ---
@@ -1171,13 +1187,13 @@ unittest
 
 /**
  * Provides _protocol-independent parsing of network addresses. Does not
- * attempt name resolution. Uses $(D getAddressInfo) with
- * $(D AddressInfoFlags.NUMERICHOST) if the current system supports it, and
- * $(D InternetAddress) otherwise.
+ * attempt name resolution. Uses $(LREF getAddressInfo) with
+ * $(REF AddressInfoFlags.NUMERICHOST) if the current system supports it, and
+ * $(LREF InternetAddress) otherwise.
  *
- * Returns: An $(D Address) instance representing specified address.
+ * Returns: An $(LREF Address) instance representing specified address.
  *
- * Throws: $(D SocketException) on failure.
+ * Throws: $(LREF SocketException) on failure.
  *
  * Example:
  * ---
@@ -1252,7 +1268,7 @@ unittest
 
 
 /**
- * Class for exceptions thrown from an $(D Address).
+ * Class for exceptions thrown from an $(LREF Address).
  */
 class AddressException: SocketOSException
 {
@@ -1363,9 +1379,9 @@ abstract class Address
     /**
      * Attempts to retrieve the host address as a human-readable string.
      *
-     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
-     * if address retrieval for this address family is not available on the
-     * current system.
+     * Throws: $(LREF AddressException) on failure, or
+     * $(LREF SocketFeatureException) if address retrieval for this address
+     * family is not available on the current system.
      */
     string toAddrString() const
     {
@@ -1375,10 +1391,10 @@ abstract class Address
     /**
      * Attempts to retrieve the host name as a fully qualified domain name.
      *
-     * Returns: The FQDN corresponding to this $(D Address), or $(D null) if
+     * Returns: The FQDN corresponding to this $(LREF Address), or $(D null) if
      * the host name did not resolve.
      *
-     * Throws: $(D AddressException) on error, or $(D SocketFeatureException)
+     * Throws: $(LREF AddressException) on error, or $(LREF SocketFeatureException)
      * if host name lookup for this address family is not available on the
      * current system.
      */
@@ -1390,7 +1406,7 @@ abstract class Address
     /**
      * Attempts to retrieve the numeric port number as a string.
      *
-     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * Throws: $(LREF AddressException) on failure, or $(LREF SocketFeatureException)
      * if port number retrieval for this address family is not available on the
      * current system.
      */
@@ -1402,7 +1418,7 @@ abstract class Address
     /**
      * Attempts to retrieve the service name as a string.
      *
-     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * Throws: $(LREF AddressException) on failure, or $(LREF SocketFeatureException)
      * if service name lookup for this address family is not available on the
      * current system.
      */
@@ -1468,14 +1484,14 @@ protected:
     socklen_t len;
 
 public:
-    /// Constructs an $(D Address) with a reference to the specified $(D sockaddr).
+    /// Constructs an $(LREF Address) with a reference to the specified $(D sockaddr).
     this(sockaddr* sa, socklen_t len) pure nothrow @nogc
     {
         this.sa  = sa;
         this.len = len;
     }
 
-    /// Constructs an $(D Address) with a copy of the specified $(D sockaddr).
+    /// Constructs an $(LREF Address) with a copy of the specified $(D sockaddr).
     this(const(sockaddr)* sa, socklen_t len) @system pure nothrow
     {
         this.sa = cast(sockaddr*) (cast(ubyte*)sa)[0..len].dup.ptr;
@@ -1504,7 +1520,7 @@ public:
  * $(D InternetAddress) encapsulates an IPv4 (Internet Protocol version 4)
  * socket address.
  *
- * Consider using $(D getAddress), $(D parseAddress) and $(D Address) methods
+ * Consider using $(LREF getAddress), $(LREF parseAddress) and $(LREF Address) methods
  * instead of using this class directly.
  */
 class InternetAddress: Address
@@ -1553,12 +1569,12 @@ public:
     }
 
     /**
-     * Construct a new $(D InternetAddress).
+     * Construct a new $(LREF InternetAddress).
      * Params:
      *   addr = an IPv4 address string in the dotted-decimal form a.b.c.d,
-     *          or a host name which will be resolved using an $(D InternetHost)
+     *          or a host name which will be resolved using an $(LREF InternetHost)
      *          object.
-     *   port = port number, may be $(D PORT_ANY).
+     *   port = port number, may be $(LREF PORT_ANY).
      */
     this(in char[] addr, ushort port)
     {
@@ -1578,10 +1594,10 @@ public:
     }
 
     /**
-     * Construct a new $(D InternetAddress).
+     * Construct a new $(LREF InternetAddress).
      * Params:
-     *   addr = (optional) an IPv4 address in host byte order, may be $(D ADDR_ANY).
-     *   port = port number, may be $(D PORT_ANY).
+     *   addr = (optional) an IPv4 address in host byte order, may be $(LREF ADDR_ANY).
+     *   port = port number, may be $(LREF PORT_ANY).
      */
     this(uint addr, ushort port) pure nothrow @nogc
     {
@@ -1599,7 +1615,7 @@ public:
     }
 
     /**
-     * Construct a new $(D InternetAddress).
+     * Construct a new $(LREF InternetAddress).
      * Params:
      *   addr = A sockaddr_in as obtained from lower-level API calls such as getifaddrs.
      */
@@ -1624,10 +1640,10 @@ public:
     /**
      * Attempts to retrieve the host name as a fully qualified domain name.
      *
-     * Returns: The FQDN corresponding to this $(D InternetAddress), or
+     * Returns: The FQDN corresponding to this $(LREF InternetAddress), or
      * $(D null) if the host name did not resolve.
      *
-     * Throws: $(D AddressException) on error.
+     * Throws: $(LREF AddressException) on error.
      */
     override string toHostNameString() const
     {
@@ -1676,7 +1692,7 @@ public:
      * Parse an IPv4 address string in the dotted-decimal form $(I a.b.c.d)
      * and return the number.
      * Returns: If the string is not a legitimate IPv4 address,
-     * $(D ADDR_NONE) is returned.
+     * $(LREF ADDR_NONE) is returned.
      */
     static uint parse(in char[] addr) @trusted nothrow
     {
@@ -1755,11 +1771,11 @@ unittest
 
 
 /**
- * $(D Internet6Address) encapsulates an IPv6 (Internet Protocol version 6)
+ * $(LREF Internet6Address) encapsulates an IPv6 (Internet Protocol version 6)
  * socket address.
  *
- * Consider using $(D getAddress), $(D parseAddress) and $(D Address) methods
- * instead of using this class directly.
+ * Consider using $(LREF getAddress), $(LREF parseAddress) and $(LREF Address)
+ * methods instead of using this class directly.
  */
 class Internet6Address: Address
 {
@@ -1824,10 +1840,10 @@ public:
     }
 
     /**
-     * Construct a new $(D Internet6Address).
+     * Construct a new $(LREF Internet6Address).
      * Params:
      *   addr    = an IPv6 host address string in the form described in RFC 2373,
-     *             or a host name which will be resolved using $(D getAddressInfo).
+     *             or a host name which will be resolved using $(LREF getAddressInfo).
      *   service = (optional) service name.
      */
     this(in char[] addr, in char[] service = null) @trusted
@@ -1838,11 +1854,11 @@ public:
     }
 
     /**
-     * Construct a new $(D Internet6Address).
+     * Construct a new $(LREF Internet6Address).
      * Params:
      *   addr = an IPv6 host address string in the form described in RFC 2373,
-     *          or a host name which will be resolved using $(D getAddressInfo).
-     *   port = port number, may be $(D PORT_ANY).
+     *          or a host name which will be resolved using $(LREF getAddressInfo).
+     *   port = port number, may be $(LREF PORT_ANY).
      */
     this(in char[] addr, ushort port)
     {
@@ -1853,11 +1869,11 @@ public:
     }
 
     /**
-     * Construct a new $(D Internet6Address).
+     * Construct a new $(LREF Internet6Address).
      * Params:
      *   addr = (optional) an IPv6 host address in host byte order, or
-     *          $(D ADDR_ANY).
-     *   port = port number, may be $(D PORT_ANY).
+     *          $(LREF ADDR_ANY).
+     *   port = port number, may be $(LREF PORT_ANY).
      */
     this(ubyte[16] addr, ushort port) pure nothrow @nogc
     {
@@ -1875,7 +1891,7 @@ public:
     }
 
      /**
-     * Construct a new $(D Internet6Address).
+     * Construct a new $(LREF Internet6Address).
      * Params:
      *   addr = A sockaddr_in6 as obtained from lower-level API calls such as getifaddrs.
      */
@@ -1888,7 +1904,7 @@ public:
    /**
      * Parse an IPv6 host address string as described in RFC 2373, and return the
      * address.
-     * Throws: $(D SocketException) on error.
+     * Throws: $(LREF SocketException) on error.
      */
     static ubyte[16] parse(in char[] addr) @trusted
     {
@@ -1937,18 +1953,18 @@ version(StdDdoc)
     }
 
     /**
-     * $(D UnixAddress) encapsulates an address for a Unix domain socket
+     * $(LREF UnixAddress) encapsulates an address for a Unix domain socket
      * ($(D AF_UNIX)). Available only on supported systems.
      */
     class UnixAddress: Address
     {
         private this() pure nothrow @nogc {}
 
-        /// Construct a new $(D UnixAddress) from the specified path.
+        /// Construct a new $(LREF UnixAddress) from the specified path.
         this(in char[] path) { }
 
         /**
-         * Construct a new $(D UnixAddress).
+         * Construct a new $(LREF UnixAddress).
          * Params:
          *   addr = A sockaddr_un as obtained from lower-level API calls.
          */
@@ -2065,7 +2081,7 @@ static if (is(sockaddr_un))
 
 
 /**
- * Class for exceptions thrown by $(D Socket.accept).
+ * Class for exceptions thrown by $(LREF Socket.accept).
  */
 class SocketAcceptException: SocketOSException
 {
@@ -2131,9 +2147,9 @@ struct TimeVal
 
 
 /**
- * A collection of sockets for use with $(D Socket.select).
+ * A collection of sockets for use with $(LREF Socket.select).
  *
- * $(D SocketSet) wraps the platform $(D fd_set) type. However, unlike
+ * $(LREF SocketSet) wraps the platform $(D fd_set) type. However, unlike
  * $(D fd_set), $(D SocketSet) is not statically limited to $(D FD_SETSIZE)
  * or any other limit, and grows as needed.
  */
@@ -2292,7 +2308,7 @@ public:
         }
     }
 
-    /// Add a $(D Socket) to the collection.
+    /// Add a $(LREF Socket) to the collection.
     /// The socket must not already be in the collection.
     void add(Socket s) pure nothrow
     {
@@ -2320,7 +2336,7 @@ public:
     }
 
 
-    /// Remove this $(D Socket) from the collection.
+    /// Remove this $(LREF Socket) from the collection.
     /// Does nothing if the socket is not in the collection already.
     void remove(Socket s) pure nothrow
     {
@@ -2344,7 +2360,7 @@ public:
     }
 
 
-    /// Return nonzero if this $(D Socket) is in the collection.
+    /// Return nonzero if this $(LREF Socket) is in the collection.
     int isSet(Socket s) const pure nothrow @nogc
     {
         return isSet(s.sock);
@@ -2629,7 +2645,7 @@ public:
 
     /**
      * Create a blocking socket. If a single protocol type exists to support
-     * this socket type within the address family, the $(D ProtocolType) may be
+     * this socket type within the address family, the $(LREF ProtocolType) may be
      * omitted.
      */
     this(AddressFamily af, SocketType type, ProtocolType protocol) @trusted
@@ -2664,7 +2680,7 @@ public:
 
     /**
      * Create a blocking socket using the parameters from the specified
-     * $(D AddressInfo) structure.
+     * $(LREF AddressInfo) structure.
      */
     this(in AddressInfo info)
     {
@@ -2695,7 +2711,7 @@ public:
     /**
      * Get/set socket's blocking flag.
      *
-     * When a socket is blocking, calls to receive(), accept(), and send()
+     * When a socket is blocking, calls to $(REF receive)(), $(REF accept)(), and $(REF send)()
      * will block and wait for data/action.
      * A non-blocking socket will immediately return instead of blocking.
      */
@@ -2795,9 +2811,9 @@ public:
     }
 
     /**
-     * Listen for an incoming connection. $(D bind) must be called before you
+     * Listen for an incoming connection. $(LREF bind) must be called before you
      * can $(D listen). The $(D backlog) is a request of how many pending
-     * incoming connections are queued until $(D accept)ed.
+     * incoming connections are queued until $(LREF accept)ed.
      */
     void listen(int backlog) @trusted const
     {
@@ -2806,7 +2822,7 @@ public:
     }
 
     /**
-     * Called by $(D accept) when a new $(D Socket) must be created for a new
+     * Called by $(LREF accept) when a new $(D Socket) must be created for a new
      * connection. To use a derived class, override this method and return an
      * instance of your class. The returned $(D Socket)'s handle must not be
      * set; $(D Socket) has a protected constructor $(D this()) to use in this
@@ -2821,8 +2837,8 @@ public:
 
     /**
      * Accept an incoming connection. If the socket is blocking, $(D accept)
-     * waits for a connection request. Throws $(D SocketAcceptException) if
-     * unable to _accept. See $(D accepting) for use with derived classes.
+     * waits for a connection request. Throws $(LREF SocketAcceptException) if
+     * unable to _accept. See $(LREF accepting) for use with derived classes.
      */
     Socket accept() const @trusted
     {
@@ -2872,8 +2888,8 @@ public:
 
     /**
      * Immediately drop any connections and release socket resources.
-     * Calling $(D shutdown) before $(D close) is recommended for
-     * connection-oriented sockets. The $(D Socket) object is no longer
+     * Calling $(LREF shutdown) before $(D close) is recommended for
+     * connection-oriented sockets. The $(LREF Socket) object is no longer
      * usable after $(D close).
      */
     //calling shutdown() before this is recommended
@@ -2895,7 +2911,7 @@ public:
         return to!string(result.ptr);
     }
 
-    /// Remote endpoint $(D Address).
+    /// Remote endpoint $(LREF Address).
     @property Address remoteAddress() const @trusted
     {
         Address addr = createAddress();
@@ -2908,7 +2924,7 @@ public:
         return addr;
     }
 
-    /// Local endpoint $(D Address).
+    /// Local endpoint $(LREF Address).
     @property Address localAddress() const @trusted
     {
         Address addr = createAddress();
@@ -2922,8 +2938,8 @@ public:
     }
 
     /**
-     * Send or receive error code. See $(D wouldHaveBlocked),
-     * $(D lastSocketError) and $(D Socket.getErrorText) for obtaining more
+     * Send or receive error code. See $(LREF wouldHaveBlocked),
+     * $(LREF lastSocketError), and $(LREF Socket.getErrorText) for obtaining more
      * information about the error.
      */
     enum int ERROR = _SOCKET_ERROR;
@@ -2940,7 +2956,7 @@ public:
     /**
      * Send data on the connection. If the socket is blocking and there is no
      * buffer space left, $(D send) waits.
-     * Returns: The number of bytes actually sent, or $(D Socket.ERROR) on
+     * Returns: The number of bytes actually sent, or $(LREF Socket.ERROR) on
      * failure.
      */
     //returns number of bytes actually sent, or -1 on error
@@ -2967,7 +2983,7 @@ public:
      * Send data to a specific destination Address. If the destination address is
      * not specified, a connection must have been made and that address is used.
      * If the socket is blocking and there is no buffer space left, $(D sendTo) waits.
-     * Returns: The number of bytes actually sent, or $(D Socket.ERROR) on
+     * Returns: The number of bytes actually sent, or $(LREF Socket.ERROR) on
      * failure.
      */
     ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) @trusted const nothrow @nogc
@@ -3019,7 +3035,7 @@ public:
      * Receive data on the connection. If the socket is blocking, $(D receive)
      * waits until there is data to be received.
      * Returns: The number of bytes actually received, $(D 0) if the remote side
-     * has closed the connection, or $(D Socket.ERROR) on failure.
+     * has closed the connection, or $(LREF Socket.ERROR) on failure.
      */
     //returns number of bytes actually received, 0 on connection closure, or -1 on error
     ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted const nothrow @nogc
@@ -3043,11 +3059,11 @@ public:
     }
 
     /**
-     * Receive data and get the remote endpoint $(D Address).
+     * Receive data and get the remote endpoint $(LREF Address).
      * If the socket is blocking, $(D receiveFrom) waits until there is data to
      * be received.
      * Returns: The number of bytes actually received, $(D 0) if the remote side
-     * has closed the connection, or $(D Socket.ERROR) on failure.
+     * has closed the connection, or $(LREF Socket.ERROR) on failure.
      */
     ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from) @trusted const nothrow
     {
@@ -3179,27 +3195,28 @@ public:
     }
 
     /**
-     * Sets a timeout (duration) option, i.e. $(D SocketOption.SNDTIMEO) or
-     * $(D RCVTIMEO). Zero indicates no timeout.
+     * Sets a timeout (duration) option, i.e. $(REF SocketOption.SNDTIMEO) or
+     * $(REF SocketOption.RCVTIMEO). Zero indicates no timeout.
      *
      * In a typical application, you might also want to consider using
      * a non-blocking socket instead of setting a timeout on a blocking one.
      *
-     * Note: While the receive timeout setting is generally quite accurate
+     *
+     * $(NOTE While the receive timeout setting is generally quite accurate
      * on *nix systems even for smaller durations, there are two issues to
      * be aware of on Windows: First, although undocumented, the effective
      * timeout duration seems to be the one set on the socket plus half
      * a second. $(D setOption()) tries to compensate for that, but still,
      * timeouts under 500ms are not possible on Windows. Second, be aware
      * that the actual amount of time spent until a blocking call returns
-     * randomly varies on the order of 10ms.
+     * randomly varies on the order of 10ms.)
      *
      * Params:
      *   level  = The level at which a socket option is defined.
-     *   option = Either $(D SocketOption.SNDTIMEO) or $(D SocketOption.RCVTIMEO).
+     *   option = Either $(REF SocketOption.SNDTIMEO) or $(REF SocketOption.RCVTIMEO).
      *   value  = The timeout duration to set. Must not be negative.
      *
-     * Throws: $(D SocketException) if setting the options fails.
+     * Throws: $(LREF SocketException) if setting the options fails.
      *
      * Example:
      * ---
@@ -3218,6 +3235,9 @@ public:
      * writefln("Waited %s ms until the socket timed out.",
      *     sw.peek.msecs);
      * ---
+     *
+     * See_Also:
+     * $(REF blocking)
      */
     void setOption(SocketOptionLevel level, SocketOption option, Duration value) @trusted const
     {
@@ -3263,8 +3283,8 @@ public:
      *   interval = Number of seconds between when successive keep-alive
      *              packets are sent if no acknowledgement is received.
      *
-     * Throws: $(D SocketOSException) if setting the options fails, or
-     * $(D SocketFeatureException) if setting keep-alive parameters is
+     * Throws: $(LREF SocketOSException) if setting the options fails, or
+     * $(LREF SocketFeatureException) if setting keep-alive parameters is
      * unsupported on the current platform.
      */
     void setKeepAlive(int time, int interval) @trusted const
@@ -3295,13 +3315,13 @@ public:
     }
 
     /**
-     * Wait for a socket to change status. A wait timeout of $(Duration) or
-     * $(D TimeVal), may be specified; if a timeout is not specified or the
-     * $(D TimeVal) is $(D null), the maximum timeout is used. The $(D TimeVal)
+     * Wait for a socket to change status. A wait timeout of $(CXREF time,Duration) or
+     * $(LREF TimeVal), may be specified; if a timeout is not specified or the
+     * $(LREF TimeVal) is $(D null), the maximum timeout is used. The $(LREF TimeVal)
      * timeout has an unspecified value when $(D select) returns.
      * Returns: The number of sockets with status changes, $(D 0) on timeout,
      * or $(D -1) on interruption. If the return value is greater than $(D 0),
-     * the $(D SocketSets) are updated to only contain the sockets having status
+     * the $(LREF SocketSet)s are updated to only contain the sockets having status
      * changes. For a connecting socket, a write status change means the
      * connection is established and it's able to send. For a listening socket,
      * a read status change means there is an incoming connection request and
@@ -3472,7 +3492,7 @@ class TcpSocket: Socket
 
 
     //shortcut
-    /// Constructs a blocking TCP Socket and connects to an $(D Address).
+    /// Constructs a blocking TCP Socket and connects to an $(LREF Address).
     this(Address connectTo)
     {
         this(connectTo.addressFamily);
@@ -3503,7 +3523,7 @@ class UdpSocket: Socket
  *
  * The two sockets are indistinguishable.
  *
- * Throws: $(D SocketException) if creation of the sockets fails.
+ * Throws: $(LREF SocketException) if creation of the sockets fails.
  */
 Socket[2] socketPair() @trusted
 {

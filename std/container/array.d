@@ -184,16 +184,17 @@ for the array is reclaimed as soon as possible; there is no reliance
 on the garbage collector. $(D Array) uses $(D malloc) and $(D free)
 for managing its own memory.
 
+
 This means that pointers to elements of an $(D Array) will become
 dangling as soon as the element is removed from the $(D Array). On the other hand
 the memory allocated by an $(D Array) will be scanned by the GC and
 GC managed objects referenced from an $(D Array) will be kept alive.
 
-Note:
-
-When using $(D Array) with range-based functions like those in $(D std.algorithm),
-$(D Array) must be sliced to get a range (for example, use $(D array[].map!)
-instead of $(D array.map!)). The container itself is not a range.
+$(TIP
+    When using $(D Array) with range-based functions like those in $(D std.algorithm),
+    $(D Array) must be sliced to get a range (for example, use $(D array[].map!)
+    instead of $(D array.map!)). The container itself is not a range.
+}
  */
 struct Array(T)
 if (!is(Unqual!T == bool))

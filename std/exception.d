@@ -764,13 +764,13 @@ unittest
     returned. $(D E) can be $(D void).
 
     If an exception is thrown but it has an empty message, then
-    $(D emptyExceptionMsg) is returned.
+    $(LREF emptyExceptionMsg) is returned.
 
-    Note that while $(D collectExceptionMsg) $(I can) be used to collect any
-    $(D Throwable) and not just $(D Exception)s, it is generally ill-advised to
-    catch anything that is neither an $(D Exception) nor a type derived from
-    $(D Exception). So, do not use $(D collectExceptionMsg) to collect
-    non-$(D Exception)s unless you're sure that that's what you really want to
+    Note that while $(LREF collectExceptionMsg) $(I can) be used to collect any
+    $(LREF Throwable) and not just $(LREF Exception)s, it is generally ill-advised to
+    catch anything that is neither an $(LREF Exception) nor a type derived from
+    $(LREF Exception). So, do not use $(LREF collectExceptionMsg) to collect
+    non-$(LREF Exception)s unless you're sure that that's what you really want to
     do.
 
     Params:
@@ -803,7 +803,7 @@ unittest
 }
 
 /++
-    Value that collectExceptionMsg returns when it catches an exception
+    Value that $(LREF collectExceptionMsg) returns when it catches an exception
     with an empty exception message.
  +/
 enum emptyExceptionMsg = "<Empty Exception Message>";

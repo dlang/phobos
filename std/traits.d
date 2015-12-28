@@ -160,9 +160,9 @@ module std.traits;
 
 import std.typetuple;
 
-///////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
 // Functions
-///////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
 
 // Petit demangler
 // (this or similar thing will eventually go to std.demangle if necessary
@@ -273,15 +273,15 @@ package
 
 /// Add specific qualifier to the given type T.
 template InoutOf(T)       { alias InoutOf       =        inout(T) ; }
-/// ditto.
+/// ditto
 template ConstOf(T)       { alias ConstOf       =        const(T) ; }
-/// ditto.
+/// ditto
 template SharedOf(T)      { alias SharedOf      =       shared(T) ; }
-/// ditto.
+/// ditto
 template SharedInoutOf(T) { alias SharedInoutOf = shared(inout(T)); }
-/// ditto.
+/// ditto
 template SharedConstOf(T) { alias SharedConstOf = shared(const(T)); }
-/// ditto.
+/// ditto
 template ImmutableOf(T)   { alias ImmutableOf   =    immutable(T) ; }
 
 unittest
@@ -295,7 +295,7 @@ unittest
     static assert(is(  ImmutableOf!int ==    immutable int));
 }
 
-// Get qualifier template from the given type T
+/// Get qualifier template from the given type T
 template QualifierOf(T)
 {
          static if (is(T == shared(const U), U)) alias QualifierOf = SharedConstOf;
@@ -6151,7 +6151,7 @@ unittest
 }
 
 /**
-Returns the type of `Target` with the "constness" of `Source`. A type's $(BOLD constness)
+Returns the type of `Target` with the "constness" of `Source`. A type's $(B constness)
 refers to whether it is `const`, `immutable`, or `inout`. If `source` has no constness, the
 returned type will be the same as `Target`.
 */

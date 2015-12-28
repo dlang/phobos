@@ -2136,6 +2136,9 @@ private mixin template Protocol()
       * incoming ubyte[] since it is not guaranteed to be valid after the
       * callback returns.
       *
+      * This function may be called multiple times as data comes in more than
+      * one chunk.
+      *
       * Returns:
       * The callback returns the number of incoming bytes read. If the entire array is
       * not read the request will abort.

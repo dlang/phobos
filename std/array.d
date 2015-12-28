@@ -7,60 +7,60 @@ This module provides all kinds of functions to create, manipulate or convert arr
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF _array)))
+    $(TR $(TD $(LREF _array))
         $(TD Returns a copy of the input in a newly allocated dynamic _array.
     ))
-    $(TR $(TD $(D $(LREF appender)))
+    $(TR $(TD $(LREF appender))
         $(TD Returns a new Appender initialized with a given _array.
     ))
-    $(TR $(TD $(D $(LREF assocArray)))
+    $(TR $(TD $(LREF assocArray))
         $(TD Returns a newly allocated associative _array from a range of key/value tuples.
     ))
-    $(TR $(TD $(D $(LREF byPair)))
+    $(TR $(TD $(LREF byPair))
         $(TD Construct a range iterating over an associative _array by key/value tuples.
     ))
-    $(TR $(TD $(D $(LREF insertInPlace)))
+    $(TR $(TD $(LREF insertInPlace))
         $(TD Inserts into an existing _array at a given position.
     ))
-    $(TR $(TD $(D $(LREF join)))
+    $(TR $(TD $(LREF join))
         $(TD Concatenates a range of ranges into one _array.
     ))
-    $(TR $(TD $(D $(LREF minimallyInitializedArray)))
+    $(TR $(TD $(LREF minimallyInitializedArray))
         $(TD Returns a new _array of type $(D T).
     ))
-    $(TR $(TD $(D $(LREF replace)))
+    $(TR $(TD $(LREF replace))
         $(TD Returns a new _array with all occurrences of a certain subrange replaced.
     ))
-    $(TR $(TD $(D $(LREF replaceFirst)))
+    $(TR $(TD $(LREF replaceFirst))
         $(TD Returns a new _array with the first occurrence of a certain subrange replaced.
     ))
-    $(TR $(TD $(D $(LREF replaceInPlace)))
+    $(TR $(TD $(LREF replaceInPlace))
         $(TD Replaces all occurrences of a certain subrange and puts the result into a given _array.
     ))
-    $(TR $(TD $(D $(LREF replaceInto)))
+    $(TR $(TD $(LREF replaceInto))
         $(TD Replaces all occurrences of a certain subrange and puts the result into an output range.
     ))
-    $(TR $(TD $(D $(LREF replaceLast)))
+    $(TR $(TD $(LREF replaceLast))
         $(TD Returns a new _array with the last occurrence of a certain subrange replaced.
     ))
-    $(TR $(TD $(D $(LREF replaceSlice)))
+    $(TR $(TD $(LREF replaceSlice))
         $(TD Returns a new _array with a given slice replaced.
     ))
-    $(TR $(TD $(D $(LREF replicate)))
+    $(TR $(TD $(LREF replicate))
         $(TD Creates a new _array out of several copies of an input _array or range.
     ))
-    $(TR $(TD $(D $(LREF sameHead)))
+    $(TR $(TD $(LREF sameHead))
         $(TD Checks if the initial segments of two arrays refer to the same
         place in memory.
     ))
-    $(TR $(TD $(D $(LREF sameTail)))
+    $(TR $(TD $(LREF sameTail))
         $(TD Checks if the final segments of two arrays refer to the same place
         in memory.
     ))
-    $(TR $(TD $(D $(LREF split)))
+    $(TR $(TD $(LREF split))
         $(TD Eagerly split a range or string into an _array.
     ))
-    $(TR $(TD $(D $(LREF uninitializedArray)))
+    $(TR $(TD $(LREF uninitializedArray))
         $(TD Returns a new _array of type $(D T) without initializing its elements.
     ))
 )
@@ -519,7 +519,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I) && hasIndirections!(ElementEn
     return arrayAllocImpl!(false, T, ST)(sizes);
 }
 
-///
+/// ditto
 auto uninitializedArray(T, I...)(I sizes) nothrow @trusted
 if (isDynamicArray!T && allSatisfy!(isIntegral, I) && !hasIndirections!(ElementEncodingType!T))
 {
@@ -551,6 +551,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I) && !hasIndirections!(ElementE
 
 /++
 Returns a new array of type $(D T) allocated on the garbage collected heap.
+
 
 Partial initialization is done for types with indirections, for preservation
 of memory safety. Note that elements will only be initialized to 0, but not
@@ -1545,12 +1546,19 @@ private enum bool hasCheapIteration(R) = isArray!R;
    Concatenates all of the ranges in $(D ror) together into one array using
    $(D sep) as the separator if present.
 
+   ---
+    string result = join(["a", "b", "c"], ", "); // result == "a, b, c";
+   ---
+
    Params:
         ror = Range of Ranges of Elements
         sep = Range of Elements
 
    Returns:
-        an allocated array of Elements
+        an allocated array of Elements. The returned value is of the same
+        type as the elements, so if you gave it a set of strings, it will
+        return a string. If you gave it a series of arrays of $(D int)s,
+        to join, it will return an array of $(D int)s.
 
    See_Also:
         $(XREF_PACK algorithm,iteration,joiner)

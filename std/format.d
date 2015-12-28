@@ -14,16 +14,16 @@
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF formattedRead)))
+    $(TR $(TD $(LREF formattedRead))
         $(TD Reads values according to the _format string from an InputRange.
     ))
-    $(TR $(TD $(D $(LREF formattedWrite)))
+    $(TR $(TD $(LREF formattedWrite))
         $(TD Formats its arguments according to the _format string and puts them
         to an OutputRange.
     ))
 )
 
-   Please see the documentation of function $(D $(LREF formattedWrite)) for a
+   Please see the documentation of function $(LREF formattedWrite) for a
    description of the _format string.
 
    Two functions have been added for convenience:
@@ -31,18 +31,18 @@ $(TR $(TH Function Name) $(TH Description)
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF _format)))
+    $(TR $(TD $(LREF _format))
         $(TD Returns a GC-allocated string with the formatting result.
     ))
-    $(TR $(TD $(D $(LREF sformat)))
+    $(TR $(TD $(LREF sformat))
         $(TD Puts the formatting result into a preallocated array.
     ))
 )
 
-   These two functions are publicly imported by $(LINK2 std_string.html,
-   std.string) to be easily available.
+   These two functions are publicly imported by $(MREF std,string)
+   to be easily available.
 
-   The functions $(D $(LREF formatValue)) and $(D $(LREF unformatValue)) are
+   The functions $(LREF formatValue) and $(LREF unformatValue) are
    used for the plumbing.
 
    Macros: WIKI = Phobos/StdFormat
@@ -108,6 +108,7 @@ private alias enforceFmt = enforceEx!FormatException;
    to $(D fmt), and sends the resulting characters to $(D w). The
    encoding of the output is the same as $(D Char). The type $(D Writer)
    must satisfy $(D $(XREF_PACK range,primitives,isOutputRange)!(Writer, Char)).
+
 
    The variadic arguments are normally consumed in order. POSIX-style
    $(WEB opengroup.org/onlinepubs/009695399/functions/printf.html,
