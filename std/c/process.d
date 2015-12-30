@@ -1,15 +1,17 @@
+// @@@DEPRECATED_2017-06@@@
 
 /**
- * $(RED Deprecated. Please use $(D core.stdc.stdlib) or the core.sys.posix.*
- *       modules you need instead.  This module will be removed in December 2015.)
+ * $(RED Deprecated. Use $(D core.stdc.stdlib) or the appropriate
+ *       core.sys.posix.* modules instead. This module will be removed in June
+ *       2017.)
+ *
  * C's &lt;process.h&gt;
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
  * License: Public Domain
  * Macros:
  *      WIKI=Phobos/StdCProcess
  */
-
-/// Please import core.stdc.stdlib or the core.sys.posix.* modules you need instead. This module will be deprecated in DMD 2.068.
+deprecated("Import core.stdc.stdlib or the appropriate core.sys.posix.* modules instead")
 module std.c.process;
 
 private import core.stdc.stddef;

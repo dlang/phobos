@@ -1,10 +1,12 @@
 // Written in the D programming language.
 
-/*
- * This module is just for making std.socket work under FreeBSD, and these
- * definitions should actually be in druntime. (core.sys.posix.netdb or sth)
- */
-/// Please import the core.sys.posix.* modules you need instead. This module will be deprecated in DMD 2.068.
+// @@@DEPRECATED_2017-06@@@
+
+/++
+    $(RED Deprecated. Use the appropriate $(D core.sys.posix.*) modules instead.
+          This module will be removed in June 2017.)
+  +/
+deprecated("Import the appropriate core.sys.posix.* modules instead")
 module std.c.freebsd.socket;
 
 version (FreeBSD):

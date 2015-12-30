@@ -3285,45 +3285,6 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
                 return ret;
             }
         }
-
-        // Bidirectional functionality as suggested by Brad Roberts.
-        static if (isBidirectionalRange!Range && isBidirectionalRange!Separator)
-        {
-            //Deprecated. It will be removed in December 2015
-            deprecated("splitter!(Range, Range) cannot be iterated backwards (due to separator overlap).")
-            @property Range back()
-            {
-                ensureBackLength();
-                return _input[_input.length - _backLength .. _input.length];
-            }
-
-            //Deprecated. It will be removed in December 2015
-            deprecated("splitter!(Range, Range) cannot be iterated backwards (due to separator overlap).")
-            void popBack()
-            {
-                ensureBackLength();
-                if (_backLength == _input.length)
-                {
-                    // done
-                    _input = _input[0 .. 0];
-                    _frontLength = _frontLength.max;
-                    _backLength = _backLength.max;
-                    return;
-                }
-                if (_backLength + separatorLength == _input.length)
-                {
-                    // Special case: popping the first-to-first item; there is
-                    // an empty item right before this. Leave the separator in.
-                    _input = _input[0 .. 0];
-                    _frontLength = 0;
-                    _backLength = 0;
-                    return;
-                }
-                // Normal case
-                _input = _input[0 .. _input.length - _backLength - separatorLength];
-                _backLength = _backLength.max;
-            }
-        }
     }
 
     return Result(r, s);
