@@ -21,7 +21,7 @@ struct Mallocator
     paradoxically, $(D malloc) is $(D @safe) but that's only useful to safe
     programs that can afford to leak memory allocated.
     */
-    @nogc @trusted void[] allocate(size_t bytes) shared
+    nothrow @nogc @trusted void[] allocate(size_t bytes) shared
     {
         import core.stdc.stdlib : malloc;
         if (!bytes) return null;
@@ -30,7 +30,7 @@ struct Mallocator
     }
 
     /// Ditto
-    @nogc @system bool deallocate(void[] b) shared
+    nothrow @nogc @system bool deallocate(void[] b) shared
     {
         import core.stdc.stdlib : free;
         free(b.ptr);
@@ -38,7 +38,7 @@ struct Mallocator
     }
 
     /// Ditto
-    @nogc @system bool reallocate(ref void[] b, size_t s) shared
+    nothrow @nogc @system bool reallocate(ref void[] b, size_t s) shared
     {
         import core.stdc.stdlib : realloc;
         if (!s)
