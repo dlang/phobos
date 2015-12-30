@@ -460,6 +460,9 @@ private template isSpawnable(F, T...)
  *
  *     // Fails:  char[] has mutable aliasing.
  *     auto tid2 = spawn(&f2, str.dup);
+ *
+ *     // New thread with anonymous function
+ *     spawn( (){ writeln("This is so great!"); } );
  * }
  * ---
  */
