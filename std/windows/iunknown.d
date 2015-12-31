@@ -1,6 +1,12 @@
 // Written in the D programming language.
 
-/// Please import core.sys.windows.com instead. This module will be deprecated in DMD 2.068.
+// @@@DEPRECATED_2017-06@@@
+
+/++
+    $(RED Deprecated. Use $(D core.sys.windows.com instead. This module
+          will be removed in June 2017.)
+  +/
+deprecated("Import core.sys.windows.com instead")
 module std.windows.iunknown;
 
 // Replaced by:

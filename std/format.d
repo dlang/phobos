@@ -6477,23 +6477,6 @@ unittest
  * Format arguments into buffer $(I buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
  * Returns: The slice of $(D buf) containing the formatted string.
- *
- *  $(RED sformat's current implementation has been replaced with $(LREF xsformat)'s
- *        implementation in November 2012.
- *        This is seamless for most code, but it makes it so that the only
- *        argument that can be a format string is the first one, so any
- *        code which used multiple format strings has broken. Please change
- *        your calls to sformat accordingly.
- *
- *        e.g.:
- *        ----
- *        sformat(buf, "key = %s", key, ", value = %s", value)
- *        ----
- *        needs to be rewritten as:
- *        ----
- *        sformat(buf, "key = %s, value = %s", key, value)
- *        ----
- *   )
  */
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
