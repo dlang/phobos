@@ -110,7 +110,7 @@ SRC_STD_1_HEAVY= std\stdio.d std\stdiobase.d \
 
 SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
 
-SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
+SRC_STD_3= std\csv.d std\math.d std\complex.d std\bigint.d \
 	std\bitmanip.d std\typecons.d \
 	std\uni.d std\base64.d std\ascii.d \
 	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
@@ -138,6 +138,7 @@ SRC_STD_ALGO= std\algorithm\package.d std\algorithm\comparison.d \
 	std\algorithm\iteration.d std\algorithm\mutation.d \
 	std\algorithm\searching.d std\algorithm\setops.d \
 	std\algorithm\sorting.d std\algorithm\internal.d
+	std\algorithm\sorting.d
 
 SRC_STD_5_HEAVY= $(SRC_STD_ALGO)
 
@@ -175,7 +176,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\typetuple.d std\traits.d \
 	std\getopt.d \
-	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
+	std\variant.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\concurrencybase.d std\stdiobase.d std\parallelism.d \
@@ -188,6 +189,8 @@ SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\pa
 
 SRC_STD_RANGE= std\range\package.d std\range\primitives.d \
 	std\range\interfaces.d
+
+SRC_STD_NUMERIC= std\numeric\package.d std\numeric\summation.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -243,6 +246,7 @@ SRC_TO_COMPILE_NOT_STD= \
 SRC_TO_COMPILE= $(SRC_STD_ALL) \
 	$(SRC_STD_ALGO) \
 	$(SRC_STD_RANGE) \
+	$(SRC_STD_NUMERIC) \
 	$(SRC_TO_COMPILE_NOT_STD)
 
 SRC_ZLIB= \
@@ -347,6 +351,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_meta.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
+	$(DOC)\std_numeric_summation.html \
 	$(DOC)\std_outbuffer.html \
 	$(DOC)\std_parallelism.html \
 	$(DOC)\std_path.html \
@@ -425,6 +430,7 @@ UNITTEST_OBJS= \
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_NUMERIC)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
@@ -463,7 +469,8 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=93 -unittest -main -run std\csv.d
 	$(DMD) -conf= -cov=91 -unittest -main -run std\math.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\complex.d
-	$(DMD) -conf= -cov=70 -unittest -main -run std\numeric.d
+	$(DMD) -conf= -cov=70 -unittest -main -run std\numeric\package.d
+	$(DMD) -conf= -cov=70 -unittest -main -run std\numeric\summation.d
 	$(DMD) -conf= -cov=94 -unittest -main -run std\bigint.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\bitmanip.d
 	$(DMD) -conf= -cov=82 -unittest -main -run std\typecons.d
@@ -722,8 +729,11 @@ $(DOC)\std_mathspecial.html : $(STDDOC) std\mathspecial.d
 $(DOC)\std_mmfile.html : $(STDDOC) std\mmfile.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_mmfile.html $(STDDOC) std\mmfile.d
 
-$(DOC)\std_numeric.html : $(STDDOC) std\numeric.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_numeric.html $(STDDOC) std\numeric.d
+$(DOC)\std_numeric.html : $(STDDOC) std\numeric\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_numeric.html $(STDDOC) std\numeric\package.d
+
+$(DOC)\std_numeric_summation.html : $(STDDOC) std\numeric\summation.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_numeric_summation.html $(STDDOC) std\numeric\summation.d
 
 $(DOC)\std_outbuffer.html : $(STDDOC) std\outbuffer.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_outbuffer.html $(STDDOC) std\outbuffer.d
@@ -916,7 +926,7 @@ zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_ALGO) \
-	$(SRC_STD_LOGGER)
+	$(SRC_STD_LOGGER) $(SRC_STD_NUMERIC)
 	del phobos.zip
 	zip32 -u phobos win32.mak win64.mak posix.mak osmodel.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -939,6 +949,7 @@ zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_CONTAINER)
 	zip32 -u phobos $(SRC_STD_REGEX)
 	zip32 -u phobos $(SRC_STD_RANGE)
+	zip32 -u phobos $(SRC_STD_NUMERIC)
 	zip32 -u phobos $(SRC_STD_ALGO)
 
 phobos.zip : zip
