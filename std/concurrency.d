@@ -462,7 +462,7 @@ private template isSpawnable(F, T...)
  *     auto tid2 = spawn(&f2, str.dup);
  *
  *     // New thread with anonymous function
- *     spawn( (){ writeln("This is so great!"); } );
+ *     spawn({ writeln("This is so great!"); });
  * }
  * ---
  */
