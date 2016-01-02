@@ -2315,8 +2315,8 @@ private struct PtrShell(Range)
     auto ref opIndex(sizediff_t index)
     in
     {
-        assert(_shift + index >= 0);
         import std.range.primitives: hasLength;
+        assert(_shift + index >= 0);
         static if (hasLength!Range)
             assert(_shift + index <= _range.length);
     }
@@ -2330,6 +2330,7 @@ private struct PtrShell(Range)
         auto ref opIndexAssign(T)(T value, sizediff_t index)
         in
         {
+            import std.range.primitives: hasLength;
             assert(_shift + index >= 0);
             static if (hasLength!Range)
                 assert(_shift + index <= _range.length);
@@ -2342,6 +2343,7 @@ private struct PtrShell(Range)
         auto ref opIndexOpAssign(string op, T)(T value, sizediff_t index)
         in
         {
+            import std.range.primitives: hasLength;
             assert(_shift + index >= 0);
             static if (hasLength!Range)
                 assert(_shift + index <= _range.length);
@@ -2349,6 +2351,19 @@ private struct PtrShell(Range)
         body
         {
             mixin (`return _range[_shift + index] ` ~ op ~ `= value;`);
+        }
+
+        auto ref opUnary(string op, T)(T value, sizediff_t index)
+        in
+        {
+            import std.range.primitives: hasLength;
+            assert(_shift + index >= 0);
+            static if (hasLength!Range)
+                assert(_shift + index <= _range.length);
+        }
+        body
+        {
+            mixin (`return ` ~ op ~ `_range[_shift + index];`);
         }
     }
 
@@ -2367,9 +2382,7 @@ private auto ptrShell(Range)(Range range, sizediff_t shift = 0)
     return PtrShell!Range(shift, range);
 }
 
-version(none) // TODO: Remove before merge
-// @safe pure nothrow ?
-unittest
+@safe pure nothrow @nogc unittest
 {
     import std.internal.test.dummyrange;
     foreach (RB; AliasSeq!(ReturnBy.Reference, ReturnBy.Value))
@@ -2379,10 +2392,26 @@ unittest
         auto ptr = range.ptrShell;
         assert(ptr[0] == range[0]);
         auto save0 = range[0];
-        ptr[0] += 10;
-        ++ptr[0];
+        ptr[0] += 11;
         assert(ptr[0] == save0 + 11);
         (ptr + 5)[2] = 333;
+        assert(range[7] == 333);
+    }
+}
+
+pure nothrow @nogc unittest
+{
+    import std.internal.test.dummyrange;
+    foreach (RB; AliasSeq!(ReturnBy.Reference, ReturnBy.Value))
+    {
+        DummyRange!(RB, Length.Yes, RangeType.Random) range;
+        assert(range.length >= 10);
+        auto slice = range.sliced(10);
+        assert(slice[0] == range[0]);
+        auto save0 = range[0];
+        slice[0] += 11;
+        assert(slice[0] == save0 + 11);
+        slice[5 .. $][2] = 333;
         assert(range[7] == 333);
     }
 }
@@ -2521,13 +2550,13 @@ private void _indexAssign(bool lastStrideEquals1, string op, size_t N, size_t RN
 {
     static if (N == 1)
     {
-        static if(lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range) && (isPointer!RRange || isDynamicArray!RRange))
+        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range) && (isPointer!RRange || isDynamicArray!RRange))
         {
-            static if(isPointer!Range)
+            static if (isPointer!Range)
                 auto l = slice._ptr;
             else
                 auto l = slice._ptr._range[slice._ptr._shift .. slice._ptr._shift + slice._lengths[0]];
-            static if(isPointer!RRange)
+            static if (isPointer!RRange)
                 auto r = value._ptr;
             else
                 auto r = value._ptr._range[value._ptr._shift .. value._ptr._shift + value._lengths[0]];
@@ -2573,9 +2602,9 @@ private void _indexAssign(bool lastStrideEquals1, string op, size_t N, Range, T)
     assert(slice.length == value.length, __FUNCTION__ ~ ": argument must have the same length.");
     static if (N == 1)
     {
-        static if(lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range))
+        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range))
         {
-            static if(isPointer!Range)
+            static if (isPointer!Range)
                 auto l = slice._ptr;
             else
                 auto l = slice._ptr._range[slice._ptr._shift .. slice._ptr._shift + slice._lengths[0]];
@@ -2622,9 +2651,9 @@ private void _indexAssign(bool lastStrideEquals1, string op, size_t N, Range, T)
 {
     static if (N == 1)
     {
-        static if(lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range))
+        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range))
         {
-            static if(isPointer!Range)
+            static if (isPointer!Range)
                 auto l = slice._ptr;
             else
                 auto l = slice._ptr._range[slice._ptr._shift .. $];
