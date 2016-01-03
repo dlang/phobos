@@ -491,9 +491,9 @@ if (isNarrowString!R1 && isNarrowString!R2)
     import std.algorithm.iteration : filter;
     import std.conv : to;
     import std.exception : assertThrown;
-    import std.utf : UTFException;
+    import std.meta : AliasSeq;
     import std.range;
-    import std.typetuple : TypeTuple;
+    import std.utf : UTFException;
 
     assert(commonPrefix([1, 2, 3], [1, 2, 3, 4, 5]) == [1, 2, 3]);
     assert(commonPrefix([1, 2, 3, 4, 5], [1, 2, 3]) == [1, 2, 3]);
@@ -504,11 +504,11 @@ if (isNarrowString!R1 && isNarrowString!R2)
     assert(commonPrefix(cast(int[])null, [1, 2, 3]).empty);
     assert(commonPrefix(cast(int[])null, cast(int[])null).empty);
 
-    foreach (S; TypeTuple!(char[], const(char)[], string,
-                           wchar[], const(wchar)[], wstring,
-                           dchar[], const(dchar)[], dstring))
+    foreach (S; AliasSeq!(char[], const(char)[], string,
+                          wchar[], const(wchar)[], wstring,
+                          dchar[], const(dchar)[], dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach(T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(commonPrefix(to!S(""), to!T("")).empty);
             assert(commonPrefix(to!S(""), to!T("hello")).empty);
@@ -1091,13 +1091,13 @@ if (isBidirectionalRange!R &&
 @safe unittest
 {
     import std.algorithm.iteration : filterBidirectional;
-    import std.typetuple : TypeTuple;
+    import std.meta : AliasSeq;
     import std.conv : to;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
@@ -1105,7 +1105,7 @@ if (isBidirectionalRange!R &&
         assert(endsWith(to!S("abc"), 'x', 'n', 'c') == 3);
         assert(endsWith(to!S("abc\uFF28"), 'a', '\uFF28', 'c') == 2);
 
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             //Lots of strings
             assert(endsWith(to!S("abc"), to!T("")));
@@ -1139,7 +1139,7 @@ if (isBidirectionalRange!R &&
         }();
     }
 
-    foreach (T; TypeTuple!(int, short))
+    foreach (T; AliasSeq!(int, short))
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
@@ -1394,10 +1394,10 @@ if (isInputRange!InputRange &&
 
 @safe pure unittest
 {
-    import std.typetuple : TypeTuple;
-    foreach(R; TypeTuple!(string, wstring, dstring))
+    import std.meta : AliasSeq;
+    foreach(R; AliasSeq!(string, wstring, dstring))
     {
-        foreach(E; TypeTuple!(char, wchar, dchar))
+        foreach(E; AliasSeq!(char, wchar, dchar))
         {
             R r1 = "hello world";
             E e1 = 'w';
@@ -1438,15 +1438,15 @@ if (isInputRange!InputRange &&
 @safe unittest
 {
     import std.exception : assertCTFEable;
-    import std.typetuple : TypeTuple;
+    import std.meta : AliasSeq;
 
     void dg() @safe pure nothrow
     {
         byte[]  sarr = [1, 2, 3, 4];
         ubyte[] uarr = [1, 2, 3, 4];
-        foreach(arr; TypeTuple!(sarr, uarr))
+        foreach(arr; AliasSeq!(sarr, uarr))
         {
-            foreach(T; TypeTuple!(byte, ubyte, int, uint))
+            foreach(T; AliasSeq!(byte, ubyte, int, uint))
             {
                 assert(find(arr, cast(T) 3) == arr[2 .. $]);
                 assert(find(arr, cast(T) 9) == arr[$ .. $]);
@@ -1989,7 +1989,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 @safe unittest
 {
     import std.algorithm.internal : rndstuff;
-    import std.typetuple : TypeTuple;
+    import std.meta : AliasSeq;
     import std.uni : toUpper;
 
     debug(std_algorithm) scope(success)
@@ -1999,7 +1999,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     assert(find(a, 5).empty);
     assert(find(a, 2) == [2, 3]);
 
-    foreach (T; TypeTuple!(int, double))
+    foreach (T; AliasSeq!(int, double))
     {
         auto b = rndstuff!(T)();
         if (!b.length) continue;
@@ -2021,8 +2021,8 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 {
     import std.algorithm.internal : rndstuff;
     import std.algorithm.comparison : equal;
+    import std.meta : AliasSeq;
     import std.range : retro;
-    import std.typetuple : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2031,7 +2031,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     assert(find(retro(a), 5).empty);
     assert(equal(find(retro(a), 2), [ 2, 3, 2, 1 ][]));
 
-    foreach (T; TypeTuple!(int, double))
+    foreach (T; AliasSeq!(int, double))
     {
         auto b = rndstuff!(T)();
         if (!b.length) continue;
@@ -2120,7 +2120,7 @@ $(LREF among) for checking a value against multiple possibilities.
  +/
 template canFind(alias pred="a == b")
 {
-    import std.typetuple : allSatisfy;
+    import std.meta : allSatisfy;
 
     /++
     Returns $(D true) if and only if any value $(D v) found in the
@@ -2404,20 +2404,49 @@ Params:
     needle = What to look for.
 
 Returns:
-    A tuple of the split portions of `haystack` (see above for details).
+
+A sub-type of Tuple!() of the split portions of `haystack` (see above for
+details).  This sub-type of Tuple!() has opCast defined for bool.  This opCast
+returns $(D true) when the separating $(D needle) was found (!result[1].empty)
+and $(D false) otherwise.  This enables the convenient idiom shown in the
+following example.
+
+Example:
+---
+if (const split = haystack.findSplit(needle))
+{
+     doSomethingWithSplit(split);
+}
+---
  */
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2)
 {
+    static struct Result(S1, S2) if (isForwardRange!S1 &&
+                                     isForwardRange!S2)
+    {
+        this(S1 pre, S1 separator, S2 post)
+        {
+            asTuple = typeof(asTuple)(pre, separator, post);
+        }
+        Tuple!(S1, S1, S2) asTuple;
+        bool opCast(T : bool)()
+        {
+            return !asTuple[1].empty;
+        }
+        alias asTuple this;
+    }
+
     static if (isSomeString!R1 && isSomeString!R2
             || isRandomAccessRange!R1 && hasLength!R2)
     {
         auto balance = find!pred(haystack, needle);
         immutable pos1 = haystack.length - balance.length;
         immutable pos2 = balance.empty ? pos1 : pos1 + needle.length;
-        return tuple(haystack[0 .. pos1],
-                haystack[pos1 .. pos2],
-                haystack[pos2 .. haystack.length]);
+        return Result!(typeof(haystack[0 .. pos1]),
+                       typeof(haystack[pos2 .. haystack.length]))(haystack[0 .. pos1],
+                                                                  haystack[pos1 .. pos2],
+                                                                  haystack[pos2 .. haystack.length]);
     }
     else
     {
@@ -2442,9 +2471,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
                 pos2 = ++pos1;
             }
         }
-        return tuple(takeExactly(original, pos1),
-                takeExactly(haystack, pos2 - pos1),
-                h);
+        return Result!(typeof(takeExactly(original, pos1)),
+                       typeof(h))(takeExactly(original, pos1),
+                                  takeExactly(haystack, pos2 - pos1),
+                                  h);
     }
 }
 
@@ -2452,12 +2482,29 @@ if (isForwardRange!R1 && isForwardRange!R2)
 auto findSplitBefore(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2)
 {
+    static struct Result(S1, S2) if (isForwardRange!S1 &&
+                                     isForwardRange!S2)
+    {
+        this(S1 pre, S2 post)
+        {
+            asTuple = typeof(asTuple)(pre, post);
+        }
+        Tuple!(S1, S2) asTuple;
+        bool opCast(T : bool)()
+        {
+            return !asTuple[0].empty;
+        }
+        alias asTuple this;
+    }
+
     static if (isSomeString!R1 && isSomeString!R2
             || isRandomAccessRange!R1 && hasLength!R2)
     {
         auto balance = find!pred(haystack, needle);
         immutable pos = haystack.length - balance.length;
-        return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
+        return Result!(typeof(haystack[0 .. pos]),
+                       typeof(haystack[pos .. haystack.length]))(haystack[0 .. pos],
+                                                                 haystack[pos .. haystack.length]);
     }
     else
     {
@@ -2481,7 +2528,9 @@ if (isForwardRange!R1 && isForwardRange!R2)
                 ++pos;
             }
         }
-        return tuple(takeExactly(original, pos), haystack);
+        return Result!(typeof(takeExactly(original, pos)),
+                       typeof(haystack))(takeExactly(original, pos),
+                                         haystack);
     }
 }
 
@@ -2489,12 +2538,29 @@ if (isForwardRange!R1 && isForwardRange!R2)
 auto findSplitAfter(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2)
 {
+    static struct Result(S1, S2) if (isForwardRange!S1 &&
+                                     isForwardRange!S2)
+    {
+        this(S1 pre, S2 post)
+        {
+            asTuple = typeof(asTuple)(pre, post);
+        }
+        Tuple!(S1, S2) asTuple;
+        bool opCast(T : bool)()
+        {
+            return !asTuple[1].empty;
+        }
+        alias asTuple this;
+    }
+
     static if (isSomeString!R1 && isSomeString!R2
             || isRandomAccessRange!R1 && hasLength!R2)
     {
         auto balance = find!pred(haystack, needle);
         immutable pos = balance.empty ? 0 : haystack.length - balance.length + needle.length;
-        return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
+        return Result!(typeof(haystack[0 .. pos]),
+                       typeof(haystack[pos .. haystack.length]))(haystack[0 .. pos],
+                                                                 haystack[pos .. haystack.length]);
     }
     else
     {
@@ -2508,7 +2574,9 @@ if (isForwardRange!R1 && isForwardRange!R2)
             if (h.empty)
             {
                 // Failed search
-                return tuple(takeExactly(original, 0), original);
+                return Result!(typeof(takeExactly(original, 0)),
+                               typeof(original))(takeExactly(original, 0),
+                                                 original);
             }
             if (binaryFun!pred(h.front, n.front))
             {
@@ -2524,7 +2592,9 @@ if (isForwardRange!R1 && isForwardRange!R2)
                 pos2 = ++pos1;
             }
         }
-        return tuple(takeExactly(original, pos2), h);
+        return Result!(typeof(takeExactly(original, pos2)),
+                       typeof(h))(takeExactly(original, pos2),
+                                  h);
     }
 }
 
@@ -2533,6 +2603,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     auto a = "Carl Sagan Memorial Station";
     auto r = findSplit(a, "Velikovsky");
+    import std.typecons : isTuple;
+    static assert(isTuple!(typeof(r.asTuple)));
+    static assert(isTuple!(typeof(r)));
+    assert(!r);
     assert(r[0] == a);
     assert(r[1].empty);
     assert(r[2].empty);
@@ -2541,9 +2615,11 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[1] == " ");
     assert(r[2] == "Sagan Memorial Station");
     auto r1 = findSplitBefore(a, "Sagan");
+    assert(r1);
     assert(r1[0] == "Carl ", r1[0]);
     assert(r1[1] == "Sagan Memorial Station");
     auto r2 = findSplitAfter(a, "Sagan");
+    assert(r2);
     assert(r2[0] == "Carl Sagan");
     assert(r2[1] == " Memorial Station");
 }
@@ -2552,27 +2628,33 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto r = findSplit(a, [9, 1]);
+    assert(!r);
     assert(r[0] == a);
     assert(r[1].empty);
     assert(r[2].empty);
     r = findSplit(a, [3]);
+    assert(r);
     assert(r[0] == a[0 .. 2]);
     assert(r[1] == a[2 .. 3]);
     assert(r[2] == a[3 .. $]);
 
     auto r1 = findSplitBefore(a, [9, 1]);
+    assert(r1);
     assert(r1[0] == a);
     assert(r1[1].empty);
     r1 = findSplitBefore(a, [3, 4]);
+    assert(r1);
     assert(r1[0] == a[0 .. 2]);
     assert(r1[1] == a[2 .. $]);
 
-    r1 = findSplitAfter(a, [9, 1]);
-    assert(r1[0].empty);
-    assert(r1[1] == a);
-    r1 = findSplitAfter(a, [3, 4]);
-    assert(r1[0] == a[0 .. 4]);
-    assert(r1[1] == a[4 .. $]);
+    auto r2 = findSplitAfter(a, [9, 1]);
+    assert(r2);
+    assert(r2[0].empty);
+    assert(r2[1] == a);
+    r2 = findSplitAfter(a, [3, 4]);
+    assert(r2);
+    assert(r2[0] == a[0 .. 4]);
+    assert(r2[1] == a[4 .. $]);
 }
 
 @safe unittest
@@ -2583,27 +2665,33 @@ if (isForwardRange!R1 && isForwardRange!R2)
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto fwd = filter!"a > 0"(a);
     auto r = findSplit(fwd, [9, 1]);
+    assert(!r);
     assert(equal(r[0], a));
     assert(r[1].empty);
     assert(r[2].empty);
     r = findSplit(fwd, [3]);
+    assert(r);
     assert(equal(r[0],  a[0 .. 2]));
     assert(equal(r[1], a[2 .. 3]));
     assert(equal(r[2], a[3 .. $]));
 
     auto r1 = findSplitBefore(fwd, [9, 1]);
+    assert(r1);
     assert(equal(r1[0], a));
     assert(r1[1].empty);
     r1 = findSplitBefore(fwd, [3, 4]);
+    assert(r1);
     assert(equal(r1[0], a[0 .. 2]));
     assert(equal(r1[1], a[2 .. $]));
 
-    r1 = findSplitAfter(fwd, [9, 1]);
-    assert(r1[0].empty);
-    assert(equal(r1[1], a));
-    r1 = findSplitAfter(fwd, [3, 4]);
-    assert(equal(r1[0], a[0 .. 4]));
-    assert(equal(r1[1], a[4 .. $]));
+    auto r2 = findSplitAfter(fwd, [9, 1]);
+    assert(r2);
+    assert(r2[0].empty);
+    assert(equal(r2[1], a));
+    r2 = findSplitAfter(fwd, [3, 4]);
+    assert(r2);
+    assert(equal(r2[0], a[0 .. 4]));
+    assert(equal(r2[1], a[4 .. $]));
 }
 
 /**
@@ -2736,7 +2824,7 @@ unittest
 unittest
 {
     import std.conv : text;
-    import std.typetuple : TypeTuple;
+    import std.meta : AliasSeq;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2786,7 +2874,7 @@ unittest
     }
     static assert(!isAssignable!S3);
 
-    foreach (Type; TypeTuple!(S1, IS1, S2, IS2, S3))
+    foreach (Type; AliasSeq!(S1, IS1, S2, IS2, S3))
     {
         static if (is(Type == immutable)) alias V = immutable int;
         else                              alias V = int;
@@ -3225,13 +3313,13 @@ if (isInputRange!R &&
 {
     import std.algorithm.iteration : filter;
     import std.conv : to;
+    import std.meta : AliasSeq;
     import std.range;
-    import std.typetuple : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
@@ -3239,7 +3327,7 @@ if (isInputRange!R &&
         assert(startsWith(to!S("abc"), 'x', 'n', 'a') == 3);
         assert(startsWith(to!S("\uFF28abc"), 'a', '\uFF28', 'c') == 2);
 
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             //Lots of strings
             assert(startsWith(to!S("abc"), to!T("")));
@@ -3281,7 +3369,7 @@ if (isInputRange!R &&
     assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(3)));
     assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(1)));
 
-    foreach (T; TypeTuple!(int, short))
+    foreach (T; AliasSeq!(int, short))
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
@@ -3528,4 +3616,3 @@ unittest // Issue 13124
     auto s = "hello how\nare you";
     s.until!(c => c.among!('\n', '\r'));
 }
-

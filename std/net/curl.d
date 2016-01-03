@@ -165,12 +165,12 @@ import std.conv;
 import std.datetime;
 import std.encoding;
 import std.exception;
+import std.meta;
 import std.regex;
 import std.socket : InternetAddress;
 import std.string;
 import std.traits;
 import std.typecons;
-import std.typetuple;
 
 import std.internal.cstring;
 
@@ -183,7 +183,7 @@ version(unittest)
     import std.stdio;
     import std.range;
     import std.process : environment;
-    import std.file : tempDir;
+    import std.file : deleteme;
     import std.path : buildPath;
 
     import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
@@ -425,7 +425,7 @@ unittest
             assert(s.recvReq.hdrs.canFind("GET /"));
             s.send(httpOK("Hello world"));
         });
-        auto fn = buildPath(tempDir(), "downloaded-http-file");
+        auto fn = deleteme;
         scope (exit) std.file.remove(fn);
         download(host, fn);
         assert(std.file.readText(fn) == "Hello world");
@@ -483,7 +483,7 @@ unittest
 {
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        auto fn = buildPath(tempDir(), "downloaded-http-file");
+        auto fn = deleteme;
         scope (exit) std.file.remove(fn);
         std.file.write(fn, "upload data\n");
         testServer.handle((s) {
@@ -781,6 +781,7 @@ T[] options(T = char)(const(char)[] url, HTTP conn = HTTP())
     return _basicHTTP!(T)(url, null, conn);
 }
 
+// Explicitly undocumented. It will be removed in February 2017. @@@DEPRECATED_2017-02@@@
 deprecated("options does not send any data")
 T[] options(T = char, OptionsUnit)(const(char)[] url,
                                    const(OptionsUnit)[] optionsData = null,
@@ -3063,7 +3064,7 @@ struct HTTP
         }
     }
 
-    /** <a name="HTTP.Method"/ >The standard HTTP methods :
+    /** <a name="HTTP.Method"/>The standard HTTP methods :
      *  $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
      */
     enum Method
@@ -3938,7 +3939,7 @@ struct Curl
     alias InData = ubyte[];
     bool stopped;
 
-    private static auto ref curl() @property { return CurlAPI.instance(); }
+    private static auto ref curl() @property { return CurlAPI.instance; }
 
     // A handle should not be used by two threads simultaneously
     private CURL* handle;
@@ -3982,7 +3983,7 @@ struct Curl
         copy.stopped = false;
 
         with (CurlOption) {
-            auto tt = TypeTuple!(file, writefunction, writeheader,
+            auto tt = AliasSeq!(file, writefunction, writeheader,
                 headerfunction, infile, readfunction, ioctldata, ioctlfunction,
                 seekdata, seekfunction, sockoptdata, sockoptfunction,
                 opensocketdata, opensocketfunction, progressdata,
@@ -4148,13 +4149,6 @@ struct Curl
         if (throwOnError)
             _check(code);
         return code;
-    }
-
-    // Explicitly undocumented. It will be removed in November 2015.
-    deprecated("Pass ThrowOnError.yes or .no instead of a boolean.")
-    CurlCode perform(bool throwOnError)
-    {
-        return perform(cast(ThrowOnError)throwOnError);
     }
 
     /**

@@ -142,7 +142,8 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(WEB digitalmars.com, Walter Bright),
          $(WEB erdani.org, Andrei Alexandrescu),
-         and Jonathan M Davis
+        Jonathan M Davis,
+        and David L. 'SpottedTiger' Davis
 
 Source:    $(PHOBOSSRC std/_string.d)
 
@@ -179,9 +180,9 @@ public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 public import std.format : format, sformat;
 import std.typecons : Flag;
 
+import std.meta;
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
 
 //public imports for backward compatibility
 public import std.algorithm : startsWith, endsWith, cmp, count;
@@ -359,13 +360,22 @@ alias CaseSensitive = Flag!"caseSensitive";
     Params:
         s = string or InputRange of characters to search in correct UTF format
         c = character to search for
+        startIdx = starting index to a well-formed code point
         cs = CaseSensitive.yes or CaseSensitive.no
 
     Returns:
-        the index of the first occurrence of $(D c) in $(D s). If $(D c)
+        the index of the first occurrence of $(D c) in $(D s) with
+        respect to the start index $(D startIdx). If $(D c)
         is not found, then $(D -1) is returned.
+        If $(D c) is found the value of the returned index is at least
+        $(D startIdx).
         If the parameters are not valid UTF, the result will still
         be in the range [-1 .. s.length], but will not be reliable otherwise.
+
+    Throws:
+        If the sequence starting at $(D startIdx) does not represent a well
+        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
+
   +/
 ptrdiff_t indexOf(Range)(Range s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes)
@@ -493,11 +503,71 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     return -1;
 }
 
+/// Ditto
+ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        !isConvertibleToString!Range)
+{
+    static if (isSomeString!(typeof(s)) ||
+                (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
+    {
+        if (startIdx < s.length)
+        {
+            ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
+            if (foundIdx != -1)
+            {
+                return foundIdx + cast(ptrdiff_t)startIdx;
+            }
+        }
+    }
+    else
+    {
+        foreach (i; 0 .. startIdx)
+        {
+            if (s.empty)
+                return -1;
+            s.popFront();
+        }
+        ptrdiff_t foundIdx = indexOf(s, c, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t)startIdx;
+        }
+    }
+    return -1;
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(indexOf(s, 'W') == 6);
+    assert(indexOf(s, 'Z') == -1);
+    assert(indexOf(s, 'w', CaseSensitive.no) == 6);
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(indexOf(s, 'W', 4) == 6);
+    assert(indexOf(s, 'Z', 100) == -1);
+    assert(indexOf(s, 'w', 3, CaseSensitive.no) == 6);
+}
+
 ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes)
     if (isConvertibleToString!Range)
 {
     return indexOf!(StringTypeOf!Range)(s, c, cs);
+}
+
+ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
+    if (isConvertibleToString!Range)
+{
+    return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
 }
 
 unittest
@@ -514,7 +584,7 @@ unittest
     import std.utf : byChar, byWchar, byDchar;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(indexOf(cast(S)null, cast(dchar)'a') == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a') == -1);
@@ -556,62 +626,6 @@ unittest
     });
 }
 
-/++
-    Searches for character in range starting at index startIdx.
-
-    Params:
-        s = string or InputRange of characters to search in correct UTF format
-        c = character to search for
-        startIdx = starting index to a well-formed code point
-        cs = CaseSensitive.yes or CaseSensitive.no
-
-    Returns:
-        the index of the first occurrence of $(D c) in $(D s). If $(D c)
-        is not found, then $(D -1) is returned.
-        If the parameters are not valid UTF, the result will still
-        be in the range [-1 .. s.length], but will not be reliable otherwise.
-  +/
-ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
-{
-    static if (isSomeString!(typeof(s)) ||
-                (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
-    {
-        if (startIdx < s.length)
-        {
-            ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
-            if (foundIdx != -1)
-            {
-                return foundIdx + cast(ptrdiff_t)startIdx;
-            }
-        }
-    }
-    else
-    {
-        foreach (i; 0 .. startIdx)
-        {
-            if (s.empty)
-                return -1;
-            s.popFront();
-        }
-        ptrdiff_t foundIdx = indexOf(s, c, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t)startIdx;
-        }
-    }
-    return -1;
-}
-
-ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
-    if (isConvertibleToString!Range)
-{
-    return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
-}
-
 unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/', 3));
@@ -627,7 +641,7 @@ unittest
     assert("hello".byWchar.indexOf(cast(dchar)'l', 1) == 2);
     assert("hello".byWchar.indexOf(cast(dchar)'l', 6) == -1);
 
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(indexOf(cast(S)null, cast(dchar)'a', 1) == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a', 1) == -1);
@@ -652,7 +666,7 @@ unittest
             CaseSensitive.no) == 2);
     }
 
-    foreach(cs; EnumMembers!CaseSensitive)
+    foreach (cs; EnumMembers!CaseSensitive)
     {
         assert(indexOf("hello\U00010143\u0100\U00010143", '\u0100', 2, cs)
             == 9);
@@ -669,13 +683,21 @@ unittest
     Params:
         s = string or ForwardRange of characters to search in correct UTF format
         sub = substring to search for
+        startIdx = the index into s to start searching from
         cs = CaseSensitive.yes or CaseSensitive.no
 
     Returns:
-        the index of the first occurrence of $(D sub) in $(D s). If $(D sub)
-        is not found, then $(D -1) is returned.
+        the index of the first occurrence of $(D sub) in $(D s) with
+        respect to the start index $(D startIdx). If $(D sub) is not found,
+        then $(D -1) is returned.
         If the arguments are not valid UTF, the result will still
         be in the range [-1 .. s.length], but will not be reliable otherwise.
+        If $(D sub) is found the value of the returned index is at least
+        $(D startIdx).
+
+    Throws:
+        If the sequence starting at $(D startIdx) does not represent a well
+        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
     Bugs:
         Does not work with case insensitive strings where the mapping of
@@ -755,6 +777,40 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
     }
 }
 
+/// Ditto
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
+        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes)
+    @safe if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    if (startIdx < s.length)
+    {
+        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t)startIdx;
+        }
+    }
+    return -1;
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(indexOf(s, "Wo", 4) == 6);
+    assert(indexOf(s, "Zo", 100) == -1);
+    assert(indexOf(s, "wo", 3, CaseSensitive.no) == 6);
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(indexOf(s, "Wo") == 6);
+    assert(indexOf(s, "Zo") == -1);
+    assert(indexOf(s, "wO", CaseSensitive.no) == 6);
+}
+
 ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub,
         in CaseSensitive cs = CaseSensitive.yes)
     if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
@@ -777,9 +833,9 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOf(cast(S)null, to!T("a")) == -1);
             assert(indexOf(to!S("def"), to!T("a")) == -1);
@@ -839,45 +895,14 @@ unittest
     }
 }
 
-/++
-    Params:
-        s = string to search
-        sub = substring to search for
-        startIdx = the index into s to start searching from
-        cs = CaseSensitive.yes or CaseSensitive.no
-
-    Returns: The index of the first occurrence of $(D sub) in $(D s) with
-    respect to the start index $(D startIdx). If $(D sub) is not found, then
-    $(D -1) is returned. If $(D sub) is found the value of the returned index
-    is at least $(D startIdx). $(D startIdx) represents a codeunit index in
-    $(D s). If the sequence starting at $(D startIdx) does not represent a well
-    formed codepoint, then a $(XREF utf,UTFException) may be thrown.
-
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes)
-    @safe if (isSomeChar!Char1 && isSomeChar!Char2)
-{
-    if (startIdx < s.length)
-    {
-        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t)startIdx;
-        }
-    }
-    return -1;
-}
-
 @safe pure unittest
 {
     import std.conv : to;
     debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOf(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOf(to!S("def"), to!T("a"), 0) == -1);
@@ -917,7 +942,7 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(indexOf(to!S(""), to!T("")) == indexOf(to!S(""), to!T(""), 0));
         }();
 
-        foreach(cs; EnumMembers!CaseSensitive)
+        foreach (cs; EnumMembers!CaseSensitive)
         {
             assert(indexOf("hello\U00010143\u0100\U00010143", to!S("\u0100"),
                 3, cs) == 9);
@@ -933,10 +958,18 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     Params:
         s = string to search
         c = character to search for
+        startIdx = the index into s to start searching from
         cs = CaseSensitive.yes or CaseSensitive.no
 
-    Returns: The index of the last occurrence of $(D c) in $(D s). If $(D c)
-    is not found, then $(D -1) is returned.
+    Returns:
+        The index of the last occurrence of $(D c) in $(D s). If $(D c) is not
+        found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
+        the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
+        codeunit index in $(D s).
+
+    Throws:
+        If the sequence ending at $(D startIdx) does not represent a well
+        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
@@ -1002,6 +1035,37 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
     return -1;
 }
 
+/// Ditto
+ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+    if (isSomeChar!Char)
+{
+    if (startIdx <= s.length)
+    {
+        return lastIndexOf(s[0u .. startIdx], c, cs);
+    }
+
+    return -1;
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(lastIndexOf(s, 'l') == 9);
+    assert(lastIndexOf(s, 'Z') == -1);
+    assert(lastIndexOf(s, 'L', CaseSensitive.no) == 9);
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(lastIndexOf(s, 'l', 4) == 3);
+    assert(lastIndexOf(s, 'Z', 1337) == -1);
+    assert(lastIndexOf(s, 'L', 7, CaseSensitive.no) == 3);
+}
+
 @safe pure unittest
 {
     import std.conv : to;
@@ -1010,7 +1074,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
@@ -1042,41 +1106,13 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
     });
 }
 
-/++
-    Params:
-        s = string to search
-        c = character to search for
-        startIdx = the index into s to start searching from
-        cs = CaseSensitive.yes or CaseSensitive.no
-
-    Returns: The index of the last occurrence of $(D c) in $(D s). If $(D c) is
-    not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
-    the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
-    codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
-    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
-    thrown.
-
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char)
-{
-    if (startIdx <= s.length)
-    {
-        return lastIndexOf(s[0u .. startIdx], c, cs);
-    }
-
-    return -1;
-}
-
 @safe pure unittest
 {
     import std.conv : to;
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
@@ -1096,7 +1132,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
         assert(lastIndexOf(sPlts, 'S', sPlts.length -2, CaseSensitive.no) == 40);
     }
 
-    foreach(cs; EnumMembers!CaseSensitive)
+    foreach (cs; EnumMembers!CaseSensitive)
     {
         assert(lastIndexOf("\U00010143\u0100\U00010143hello", '\u0100', cs) == 4);
         assert(lastIndexOf("\U00010143\u0100\U00010143hello"w, '\u0100', cs) == 2);
@@ -1108,10 +1144,18 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
     Params:
         s = string to search
         sub = substring to search for
+        startIdx = the index into s to start searching from
         cs = CaseSensitive.yes or CaseSensitive.no
 
-    Returns: the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned.
+    Returns:
+        the index of the last occurrence of $(D sub) in $(D s). If $(D sub) is
+        not found, then $(D -1) is returned. The $(D startIdx) slices $(D s)
+        in the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
+        codeunit index in $(D s).
+
+    Throws:
+        If the sequence ending at $(D startIdx) does not represent a well
+        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
@@ -1123,7 +1167,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     import std.conv : to;
     import std.algorithm : endsWith;
     if (sub.empty)
-        return s.length;
+        return -1;
 
     if (walkLength(sub) == 1)
         return lastIndexOf(s, sub.front, cs);
@@ -1192,6 +1236,54 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     return -1;
 }
 
+/// Ditto
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
+        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
+    if (isSomeChar!Char1 && isSomeChar!Char2)
+{
+    if (startIdx <= s.length)
+    {
+        return lastIndexOf(s[0u .. startIdx], sub, cs);
+    }
+
+    return -1;
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(lastIndexOf(s, "ll") == 2);
+    assert(lastIndexOf(s, "Zo") == -1);
+    assert(lastIndexOf(s, "lL", CaseSensitive.no) == 2);
+}
+
+///
+@safe pure unittest
+{
+    string s = "Hello World";
+    assert(lastIndexOf(s, "ll", 4) == 2);
+    assert(lastIndexOf(s, "Zo", 128) == -1);
+    assert(lastIndexOf(s, "lL", 3, CaseSensitive.no) == -1);
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+
+    foreach (S; AliasSeq!(string, wstring, dstring))
+    {
+        auto r = to!S("").lastIndexOf("hello");
+        assert(r == -1, to!string(r));
+
+        r = to!S("hello").lastIndexOf("");
+        assert(r == -1, to!string(r));
+
+        r = to!S("").lastIndexOf("");
+        assert(r == -1, to!string(r));
+    }
+}
+
 @safe pure unittest
 {
     import std.conv : to;
@@ -1201,9 +1293,9 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -1215,7 +1307,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("cd")) == 2, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("x")) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("xy")) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("")) == 10, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("")) == -1, typeStr);
             assert(lastIndexOf(to!S("öabcdefcdef"), to!T("ö")) == 0, typeStr);
 
             assert(lastIndexOf(cast(S)null, to!T("a"), CaseSensitive.no) == -1, typeStr);
@@ -1223,7 +1315,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), CaseSensitive.no) == 6, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"), CaseSensitive.no) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("xy"), CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), CaseSensitive.no) == 10, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), CaseSensitive.no) == -1, typeStr);
             assert(lastIndexOf(to!S("öabcdefcdef"), to!T("ö"), CaseSensitive.no) == 0, typeStr);
 
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), CaseSensitive.no) == 6, typeStr);
@@ -1256,9 +1348,9 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 @safe pure unittest // issue13529
 {
     import std.conv : to;
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         {
             enum typeStr = S.stringof ~ " " ~ T.stringof;
             auto idx = lastIndexOf(to!T("Hällö Wörldö ö"),to!S("ö ö"));
@@ -1270,43 +1362,15 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     }
 }
 
-/++
-    Params:
-        s = string to search
-        sub = substring to search for
-        startIdx = the index into s to start searching from
-        cs = CaseSensitive.yes or CaseSensitive.no
-
-    Returns: the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
-    the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
-    codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
-    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
-    thrown.
-
-    $(D cs) indicates whether the comparisons are case sensitive.
-  +/
-ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char1 && isSomeChar!Char2)
-{
-    if (startIdx <= s.length)
-    {
-        return lastIndexOf(s[0u .. startIdx], sub, cs);
-    }
-
-    return -1;
-}
-
 @safe pure unittest
 {
     import std.conv : to;
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -1319,7 +1383,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("cd"), 3) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdefx"), to!T("x"), 1) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdefxy"), to!T("xy"), 6) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 8) == 8, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 8) == -1, typeStr);
             assert(lastIndexOf(to!S("öafö"), to!T("ö"), 3) == 0, typeStr ~
                     to!string(lastIndexOf(to!S("öafö"), to!T("ö"), 3))); //BUG 10472
 
@@ -1329,7 +1393,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
                 " " ~ to!string(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), 3, CaseSensitive.no)));
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"),3 , CaseSensitive.no) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdefXY"), to!T("xy"), 4, CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 7, CaseSensitive.no) == 7, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 7, CaseSensitive.no) == -1, typeStr);
 
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), 4, CaseSensitive.no) == 2, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), 4, CaseSensitive.no) == 2, typeStr);
@@ -1337,7 +1401,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S(""), to!T(""), 0) == lastIndexOf(to!S(""), to!T("")), typeStr);
         }();
 
-        foreach(cs; EnumMembers!CaseSensitive)
+        foreach (cs; EnumMembers!CaseSensitive)
         {
             enum csString = to!string(cs);
 
@@ -1468,11 +1532,18 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
 /**
     Returns the index of the first occurence of any of the elements in $(D
     needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned.
+    then $(D -1) is returned. The $(D startIdx) slices $(D haystack) in the
+    following way $(D haystack[startIdx .. $]). $(D startIdx) represents a
+    codeunit index in $(D haystack). If the sequence ending at $(D startIdx)
+    does not represent a well formed codepoint, then a $(XREF utf,UTFException)
+    may be thrown.
 
     Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
+        haystack = String to search for needles in.
+        needles = Strings to search for in haystack.
+        startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
+            the startIdx is greater equal the length of haystack the functions
+            returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
@@ -1480,6 +1551,23 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(true, true)(haystack, needles, cs);
+}
+
+/// Ditto
+ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
+        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
+    if (isSomeChar!Char && isSomeChar!Char2)
+{
+    if (startIdx < haystack.length)
+    {
+        ptrdiff_t foundIdx = indexOfAny(haystack[startIdx .. $], needles, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t)startIdx;
+        }
+    }
+
+    return -1;
 }
 
 ///
@@ -1492,6 +1580,35 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     assert(i == 4, to!string(i));
 }
 
+///
+@safe pure unittest
+{
+    import std.conv : to;
+
+    ptrdiff_t i = "helloWorld".indexOfAny("Wr", 4);
+    assert(i == 5);
+
+    i = "Foo öällo world".indexOfAny("lh", 3);
+    assert(i == 8, to!string(i));
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+
+    foreach (S; AliasSeq!(string, wstring, dstring))
+    {
+        auto r = to!S("").indexOfAny("hello");
+        assert(r == -1, to!string(r));
+
+        r = to!S("hello").indexOfAny("");
+        assert(r == -1, to!string(r));
+
+        r = to!S("").indexOfAny("");
+        assert(r == -1, to!string(r));
+    }
+}
+
 @safe pure unittest
 {
     import std.conv : to;
@@ -1501,9 +1618,9 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfAny(cast(S)null, to!T("a")) == -1);
             assert(indexOfAny(to!S("def"), to!T("rsa")) == -1);
@@ -1533,60 +1650,15 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     );
 }
 
-/**
-    Returns the index of the first occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned. The $(D startIdx) slices $(D s) in the following
-    way $(D haystack[startIdx .. $]). $(D startIdx) represents a codeunit
-    index in $(D haystack). If the sequence ending at $(D startIdx) does not
-    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
-    thrown.
-
-    Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
-        startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
-        the startIdx is greater equal the length of haystack the functions
-        returns $(D -1).
-        cs = Indicates whether the comparisons are case sensitive.
-*/
-ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
-        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
-{
-    if (startIdx < haystack.length)
-    {
-        ptrdiff_t foundIdx = indexOfAny(haystack[startIdx .. $], needles, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t)startIdx;
-        }
-    }
-
-    return -1;
-}
-
-///
-@safe pure unittest
-{
-    import std.conv : to;
-
-    ptrdiff_t i = "helloWorld".indexOfAny("Wr", 4);
-    assert(i == 5);
-
-    i = "Foo öällo world".indexOfAny("lh", 3);
-    assert(i == 8, to!string(i));
-}
-
 @safe pure unittest
 {
     import std.conv : to;
 
     debug(string) trustedPrintf("string.indexOfAny(startIdx).unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfAny(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOfAny(to!S("def"), to!T("AaF"), 0) == -1);
@@ -1614,7 +1686,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
                 CaseSensitive.no) == 0);
         }();
 
-        foreach(cs; EnumMembers!CaseSensitive)
+        foreach (cs; EnumMembers!CaseSensitive)
         {
             assert(indexOfAny("hello\U00010143\u0100\U00010143",
                 to!S("e\u0100"), 3, cs) == 9);
@@ -1629,18 +1701,40 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 /**
     Returns the index of the last occurence of any of the elements in $(D
     needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned.
+    then $(D -1) is returned. The $(D stopIdx) slices $(D haystack) in the
+    following way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit
+    index in $(D haystack). If the sequence ending at $(D startIdx) does not
+    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
+    thrown.
 
     Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
+        haystack = String to search for needles in.
+        needles = Strings to search for in haystack.
+        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]). If
+            the stopIdx is greater equal the length of haystack the functions
+            returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        const(Char2)[] needles, in CaseSensitive cs = CaseSensitive.yes)
+        @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(false, true)(haystack, needles, cs);
+}
+
+/// Ditto
+ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, in size_t stopIdx,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+    if (isSomeChar!Char && isSomeChar!Char2)
+{
+    if (stopIdx <= haystack.length)
+    {
+        return lastIndexOfAny(haystack[0u .. stopIdx], needles, cs);
+    }
+
+    return -1;
 }
 
 ///
@@ -1653,6 +1747,35 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     assert(i == 8);
 }
 
+///
+@safe pure unittest
+{
+    import std.conv : to;
+
+    ptrdiff_t i = "helloWorld".lastIndexOfAny("Wlo", 4);
+    assert(i == 3);
+
+    i = "Foo öäöllo world".lastIndexOfAny("öF", 3);
+    assert(i == 0);
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+
+    foreach (S; AliasSeq!(string, wstring, dstring))
+    {
+        auto r = to!S("").lastIndexOfAny("hello");
+        assert(r == -1, to!string(r));
+
+        r = to!S("hello").lastIndexOfAny("");
+        assert(r == -1, to!string(r));
+
+        r = to!S("").lastIndexOfAny("");
+        assert(r == -1, to!string(r));
+    }
+}
+
 @safe pure unittest
 {
     import std.conv : to;
@@ -1662,9 +1785,9 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfAny(cast(S)null, to!T("a")) == -1);
             assert(lastIndexOfAny(to!S("def"), to!T("rsa")) == -1);
@@ -1708,47 +1831,6 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     );
 }
 
-/**
-    Returns the index of the last occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned. The $(D stopIdx) slices $(D s) in the following
-    way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit index in
-    $(D s). If the sequence ending at $(D startIdx) does not represent a well
-    formed codepoint, then a $(XREF utf,UTFException) may be thrown.
-
-    Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
-        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]). If
-        the stopIdx is greater equal the length of haystack the functions
-        returns $(D -1).
-        cs = Indicates whether the comparisons are case sensitive.
-*/
-ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in size_t stopIdx,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
-{
-    if (stopIdx <= haystack.length)
-    {
-        return lastIndexOfAny(haystack[0u .. stopIdx], needles, cs);
-    }
-
-    return -1;
-}
-
-///
-@safe pure unittest
-{
-    import std.conv : to;
-
-    ptrdiff_t i = "helloWorld".lastIndexOfAny("Wlo", 4);
-    assert(i == 3);
-
-    i = "Foo öäöllo world".lastIndexOfAny("öF", 3);
-    assert(i == 0);
-}
-
 @safe pure unittest
 {
     import std.conv : to;
@@ -1758,9 +1840,9 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -1809,8 +1891,11 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     element of $(D needles) $(D -1) is returned.
 
     Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
+        haystack = String to search for needles in.
+        needles = Strings to search for in haystack.
+        startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
+            the startIdx is greater equal the length of haystack the functions
+            returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -1819,6 +1904,33 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(true, false)(haystack, needles, cs);
+}
+
+/// Ditto
+ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
+        @safe pure
+    if (isSomeChar!Char && isSomeChar!Char2)
+{
+    if (startIdx < haystack.length)
+    {
+        ptrdiff_t foundIdx = indexOfAnyNeitherImpl!(true, false)(
+            haystack[startIdx .. $], needles, cs);
+        if (foundIdx != -1)
+        {
+            return foundIdx + cast(ptrdiff_t)startIdx;
+        }
+    }
+    return -1;
+}
+
+///
+@safe pure unittest
+{
+    assert(indexOfNeither("abba", "a", 2) == 2);
+    assert(indexOfNeither("def", "de", 1) == 2);
+    assert(indexOfNeither("dfefffg", "dfe", 4) == 6);
 }
 
 ///
@@ -1833,14 +1945,31 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
 {
     import std.conv : to;
 
+    foreach (S; AliasSeq!(string, wstring, dstring))
+    {
+        auto r = to!S("").indexOfNeither("hello");
+        assert(r == -1, to!string(r));
+
+        r = to!S("hello").indexOfNeither("");
+        assert(r == 0, to!string(r));
+
+        r = to!S("").indexOfNeither("");
+        assert(r == -1, to!string(r));
+    }
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+
     debug(string) trustedPrintf("string.indexOf.unittest\n");
 
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfNeither(cast(S)null, to!T("a")) == -1);
             assert(indexOfNeither("abba", "a") == 1);
@@ -1875,45 +2004,6 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     );
 }
 
-/**
-    Returns the index of the first occurence of any character not an elements
-    in $(D needles) in $(D haystack). If all element of $(D haystack) are
-    element of $(D needles) $(D -1) is returned.
-
-    Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
-        startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
-        the startIdx is greater equal the length of haystack the functions
-        returns $(D -1).
-        cs = Indicates whether the comparisons are case sensitive.
-*/
-ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
-        @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
-{
-    if (startIdx < haystack.length)
-    {
-        ptrdiff_t foundIdx = indexOfAnyNeitherImpl!(true, false)(
-            haystack[startIdx .. $], needles, cs);
-        if (foundIdx != -1)
-        {
-            return foundIdx + cast(ptrdiff_t)startIdx;
-        }
-    }
-    return -1;
-}
-
-///
-@safe pure unittest
-{
-    assert(indexOfNeither("abba", "a", 2) == 2);
-    assert(indexOfNeither("def", "de", 1) == 2);
-    assert(indexOfNeither("dfefffg", "dfe", 4) == 6);
-}
-
 @safe pure unittest
 {
     import std.conv : to;
@@ -1923,9 +2013,9 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfNeither(cast(S)null, to!T("a"), 1) == -1);
             assert(indexOfNeither(to!S("def"), to!T("a"), 1) == 1,
@@ -1965,8 +2055,11 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     $(D haystack) are element of $(D needles) $(D -1) is returned.
 
     Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
+        haystack = String to search for needles in.
+        needles = Strings to search for in haystack.
+        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]) If
+        the stopIdx is greater equal the length of haystack the functions
+        returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -1977,11 +2070,50 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     return indexOfAnyNeitherImpl!(false, false)(haystack, needles, cs);
 }
 
+/// Ditto
+ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, in size_t stopIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
+        @safe pure
+    if (isSomeChar!Char && isSomeChar!Char2)
+{
+    if (stopIdx < haystack.length)
+    {
+        return indexOfAnyNeitherImpl!(false, false)(haystack[0 .. stopIdx],
+            needles, cs);
+    }
+    return -1;
+}
+
 ///
 @safe pure unittest
 {
     assert(lastIndexOfNeither("abba", "a") == 2);
     assert(lastIndexOfNeither("def", "f") == 1);
+}
+
+///
+@safe pure unittest
+{
+    assert(lastIndexOfNeither("def", "rsa", 3) == -1);
+    assert(lastIndexOfNeither("abba", "a", 2) == 1);
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+
+    foreach (S; AliasSeq!(string, wstring, dstring))
+    {
+        auto r = to!S("").lastIndexOfNeither("hello");
+        assert(r == -1, to!string(r));
+
+        r = to!S("hello").lastIndexOfNeither("");
+        assert(r == 4, to!string(r));
+
+        r = to!S("").lastIndexOfNeither("");
+        assert(r == -1, to!string(r));
+    }
 }
 
 @safe pure unittest
@@ -1993,9 +2125,9 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfNeither(cast(S)null, to!T("a")) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("rsa")) == 2);
@@ -2031,40 +2163,6 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     );
 }
 
-/**
-    Returns the last index of the first occurence of any character that is not
-    an elements in $(D needles) in $(D haystack). If all element of
-    $(D haystack) are element of $(D needles) $(D -1) is returned.
-
-    Params:
-    haystack = String to search for needles in.
-    needles = Strings to search for in haystack.
-        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]) If
-        the stopIdx is greater equal the length of haystack the functions
-        returns $(D -1).
-        cs = Indicates whether the comparisons are case sensitive.
-*/
-ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in size_t stopIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
-        @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
-{
-    if (stopIdx < haystack.length)
-    {
-        return indexOfAnyNeitherImpl!(false, false)(haystack[0 .. stopIdx],
-            needles, cs);
-    }
-    return -1;
-}
-
-///
-@safe pure unittest
-{
-    assert(lastIndexOfNeither("def", "rsa", 3) == -1);
-    assert(lastIndexOfNeither("abba", "a", 2) == 1);
-}
-
 @safe pure unittest
 {
     import std.conv : to;
@@ -2074,9 +2172,9 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfNeither(cast(S)null, to!T("a"), 1337) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("f")) == 1);
@@ -2111,7 +2209,6 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     );
 }
 
-
 /**
  * Returns the _representation of a string, which has the same type
  * as the string except the character type is replaced by $(D ubyte),
@@ -2126,7 +2223,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     if (isSomeChar!Char)
 {
-    alias ToRepType(T) = TypeTuple!(ubyte, ushort, uint)[T.sizeof / 2];
+    alias ToRepType(T) = AliasSeq!(ubyte, ushort, uint)[T.sizeof / 2];
     return cast(ModifyTypePreservingTQ!(ToRepType, Char)[])s;
 }
 
@@ -2152,12 +2249,12 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
         assert(representation(str) is cast(T[]) str);
     }
 
-    foreach (Type; TypeTuple!(Tuple!(char , ubyte ),
-                              Tuple!(wchar, ushort),
-                              Tuple!(dchar, uint  )))
+    foreach (Type; AliasSeq!(Tuple!(char , ubyte ),
+                             Tuple!(wchar, ushort),
+                             Tuple!(dchar, uint  )))
     {
-        alias Char = FieldTypeTuple!Type[0];
-        alias Int  = FieldTypeTuple!Type[1];
+        alias Char = Fields!Type[0];
+        alias Int  = Fields!Type[1];
         enum immutable(Char)[] hello = "hello";
 
         test!(   immutable Char,    immutable Int)(hello);
@@ -2183,15 +2280,15 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  * See_Also:
  *      $(XREF uni, toCapitalized) for a lazy range version that doesn't allocate memory
  */
-S capitalize(S)(S s) @trusted pure
+S capitalize(S)(S input) @trusted pure
     if (isSomeString!S)
 {
     import std.utf : encode;
 
-    Unqual!(typeof(s[0]))[] retval;
+    Unqual!(typeof(input[0]))[] retval;
     bool changed = false;
 
-    foreach (i, dchar c; s)
+    foreach (i, dchar c; input)
     {
         dchar c2;
 
@@ -2209,7 +2306,7 @@ S capitalize(S)(S s) @trusted pure
                 if (!changed)
                 {
                     changed = true;
-                    retval = s[0 .. i].dup;
+                    retval = input[0 .. i].dup;
                 }
             }
         }
@@ -2218,7 +2315,14 @@ S capitalize(S)(S s) @trusted pure
             std.utf.encode(retval, c2);
     }
 
-    return changed ? cast(S)retval : s;
+    return changed ? cast(S)retval : input;
+}
+
+///
+pure @safe unittest
+{
+    assert(capitalize("hello") == "Hello");
+    assert(capitalize("World") == "World");
 }
 
 auto capitalize(S)(auto ref S s)
@@ -2240,7 +2344,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s1 = to!S("FoL");
         S s2;
@@ -2382,6 +2486,13 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
     return retval.data;
 }
 
+///
+unittest
+{
+    string s = "Hello\nmy\rname\nis";
+    assert(splitLines(s) == ["Hello", "my", "name", "is"]);
+}
+
 auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = KeepTerminator.no)
     if (!isSomeString!S && is(StringTypeOf!S))
 {
@@ -2402,7 +2513,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         auto s = to!S(
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n" ~
@@ -2575,7 +2686,7 @@ public:
         if (iStart == _unComputed)
         {
             assert(!empty);
-            front();
+            front;
         }
         iStart = _unComputed;
     }
@@ -2624,6 +2735,19 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
     return LineSplitter!(keepTerm, Range)(r);
 }
 
+///
+@safe pure unittest
+{
+    import std.array : array;
+
+    string s = "Hello\nmy\rname\nis";
+
+    /* notice the call to $(D array) to turn the lazy range created by
+    lineSplitter comparable to the $(D string[]) created by splitLines.
+    */
+    assert(lineSplitter(s).array == splitLines(s));
+}
+
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref Range r)
     if (isConvertibleToString!Range)
 {
@@ -2640,7 +2764,7 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref R
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         auto s = to!S(
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\n" ~
@@ -2731,12 +2855,12 @@ unittest
     Params:
         input = string or ForwardRange of characters
 
-    Returns: $(D str) stripped of leading whitespace.
+    Returns: $(D input) stripped of leading whitespace.
 
-    Postconditions: $(D str) and the returned value
+    Postconditions: $(D input) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
   +/
-auto stripLeft(Range)(Range str)
+auto stripLeft(Range)(Range input)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         !isConvertibleToString!Range)
 {
@@ -2744,24 +2868,24 @@ auto stripLeft(Range)(Range str)
     import std.uni : isWhite;
     import std.utf : decodeFront;
 
-    while (!str.empty)
+    while (!input.empty)
     {
-        auto c = str.front;
+        auto c = input.front;
         if (std.ascii.isASCII(c))
         {
             if (!std.ascii.isWhite(c))
                 break;
-            str.popFront();
+            input.popFront();
         }
         else
         {
-            auto save = str.save;
-            auto dc = decodeFront(str);
+            auto save = input.save;
+            auto dc = decodeFront(input);
             if (!std.uni.isWhite(dc))
                 return save;
         }
     }
-    return str;
+    return input;
 }
 
 ///
@@ -2938,7 +3062,7 @@ unittest
     assert(stripRight("\u2028hello world\u2020\u2028".byChar).array == "\u2028hello world\u2020");
     assert(stripRight("hello world\U00010001"w.byWchar).array == "hello world\U00010001"w);
 
-    foreach (C; TypeTuple!(char, wchar, dchar))
+    foreach (C; AliasSeq!(char, wchar, dchar))
     {
         foreach (s; invalidUTFstrings!C())
         {
@@ -3008,9 +3132,9 @@ auto strip(Range)(auto ref Range str)
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const  char[],  string,
-                           wchar[], const wchar[], wstring,
-                           dchar[], const dchar[], dstring))
+    foreach (S; AliasSeq!( char[], const  char[],  string,
+                          wchar[], const wchar[], wstring,
+                          dchar[], const dchar[], dstring))
     {
         assert(equal(stripLeft(to!S("  foo\t ")), "foo\t "));
         assert(equal(stripLeft(to!S("\u2008  foo\t \u2007")), "foo\t \u2007"));
@@ -3214,7 +3338,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         // @@@ BUG IN COMPILER, MUST INSERT CAST
         assert(chomp(cast(S)null) is null);
@@ -3234,7 +3358,7 @@ unittest
         assert(chomp(to!S("hello\u2029\u2129")) == "hello\u2029\u2129");
         assert(chomp(to!S("hello\u2029\u0185")) == "hello\u2029\u0185");
 
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             // @@@ BUG IN COMPILER, MUST INSERT CAST
             assert(chomp(cast(S)null, cast(T)null) is null);
@@ -3336,9 +3460,9 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(equal(chompPrefix(to!S("abcdefgh"), to!T("abcde")), "fgh"));
             assert(equal(chompPrefix(to!S("abcde"), to!T("abcdefgh")), "abcde"));
@@ -3504,7 +3628,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(chop(cast(S) null) is null);
         assert(equal(chop(to!S("hello")), "hell"));
@@ -3539,6 +3663,14 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ')
 {
     import std.array;
     return leftJustifier(s, width, fillChar).array;
+}
+
+///
+@safe pure unittest
+{
+    assert(leftJustify("hello", 7, 'X') == "helloXX");
+    assert(leftJustify("hello", 2, 'X') == "hello");
+    assert(leftJustify("hello", 9, 'X') == "helloXXXX");
 }
 
 /++
@@ -3679,6 +3811,14 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ')
 {
     import std.array;
     return rightJustifier(s, width, fillChar).array;
+}
+
+///
+@safe pure unittest
+{
+    assert(rightJustify("hello", 7, 'X') == "XXhello");
+    assert(rightJustify("hello", 2, 'X') == "hello");
+    assert(rightJustify("hello", 9, 'X') == "XXXXhello");
 }
 
 /++
@@ -3861,7 +4001,15 @@ S center(S)(S s, size_t width, dchar fillChar = ' ')
     return centerJustifier(s, width, fillChar).array;
 }
 
-@trusted pure
+///
+@safe pure unittest
+{
+    assert(center("hello", 7, 'X') == "XhelloX");
+    assert(center("hello", 2, 'X') == "hello");
+    assert(center("hello", 9, 'X') == "XXhelloXX");
+}
+
+@safe pure
 unittest
 {
     import std.conv : to;
@@ -3871,7 +4019,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         S s = to!S("hello");
 
@@ -4019,16 +4167,50 @@ unittest
     Returns:
         GC allocated string with tabs replaced with spaces
   +/
-S detab(S)(S s, size_t tabSize = 8) pure
-    if (isSomeString!S)
+auto detab(Range)(auto ref Range s, size_t tabSize = 8) pure
+    if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+        || __traits(compiles, StringTypeOf!Range))
 {
     import std.array;
     return detabber(s, tabSize).array;
 }
 
+///
+@trusted pure unittest
+{
+    import std.array;
+
+    assert(detab(" \n\tx", 9) == " \n         x");
+}
+
+unittest
+{
+    static struct TestStruct
+    {
+        string s;
+        alias s this;
+    }
+
+    static struct TestStruct2
+    {
+        string s;
+        alias s this;
+        @disable this(this);
+    }
+
+    string s = " \n\tx";
+    string cmp = " \n         x";
+    auto t = TestStruct(s);
+    assert(detab(t, 9) == cmp);
+    assert(detab(TestStruct(s), 9) == cmp);
+    assert(detab(TestStruct(s), 9) == detab(TestStruct(s), 9));
+    assert(detab(TestStruct2(s), 9) == detab(TestStruct2(s), 9));
+    assert(detab(TestStruct2(s), 9) == cmp);
+}
+
 /++
-    Replace each tab character in $(D r) with the number of spaces necessary
-    to align the following character at the next tab stop.
+    Replace each tab character in $(D r) with the number of spaces
+    necessary to align the following character at the next tab stop.
 
     Params:
         r = string or forward range
@@ -4045,7 +4227,8 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
     import std.utf : codeUnitLimit, decodeFront;
 
     assert(tabSize > 0);
-    alias C = Unqual!(ElementEncodingType!Range);
+
+    alias C = Unqual!(ElementEncodingType!(Range));
 
     static struct Result
     {
@@ -4064,7 +4247,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
             _tabSize = tabSize;
         }
 
-        static if (isInfinite!Range)
+        static if (isInfinite!(Range))
         {
             enum bool empty = false;
         }
@@ -4080,7 +4263,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
         {
             if (nspaces)
                 return ' ';
-            static if (isSomeString!Range)
+            static if (isSomeString!(Range))
                 C c = _input[0];
             else
                 C c = _input.front;
@@ -4123,12 +4306,12 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
         void popFront()
         {
             if (!index)
-                front();
+                front;
             if (nspaces)
                 --nspaces;
             if (!nspaces)
             {
-                static if (isSomeString!Range)
+                static if (isSomeString!(Range))
                    _input = _input[1 .. $];
                 else
                     _input.popFront();
@@ -4176,7 +4359,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         S s = to!S("This \tis\t a fofof\tof list");
         assert(cmp(detab(s), "This    is       a fofof        of list") == 0);
@@ -4340,12 +4523,12 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
 
         @property C front()
         {
-            //writefln("   front(): ntabs = %s nspaces = %s index = %s front = '%s'", ntabs, nspaces, index, getFront());
+            //writefln("   front(): ntabs = %s nspaces = %s index = %s front = '%s'", ntabs, nspaces, index, getFront);
             if (ntabs)
                 return '\t';
             if (nspaces)
                 return ' ';
-            C c = getFront();
+            C c = getFront;
             if (index)
                 return c;
             dchar dc;
@@ -4459,9 +4642,9 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
 
         void popFront()
         {
-            //writefln("popFront(): ntabs = %s nspaces = %s index = %s front = '%s'", ntabs, nspaces, index, getFront());
+            //writefln("popFront(): ntabs = %s nspaces = %s index = %s front = '%s'", ntabs, nspaces, index, getFront);
             if (!index)
-                front();
+                front;
             if (ntabs)
                 --ntabs;
             else if (nspaces)
@@ -4630,9 +4813,9 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
-                           wchar[], const(wchar)[], immutable(wchar)[],
-                           dchar[], const(dchar)[], immutable(dchar)[]))
+    foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
     {
         assert(translate(to!S("hello world"), cast(dchar[dchar])['h' : 'q', 'l' : '5']) ==
                to!S("qe55o wor5d"));
@@ -4644,11 +4827,11 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
                to!S("hell0 o w0rld"));
         assert(translate(to!S("hello world"), cast(dchar[dchar])null) == to!S("hello world"));
 
-        foreach (T; TypeTuple!( char[], const( char)[], immutable( char)[],
-                               wchar[], const(wchar)[], immutable(wchar)[],
-                               dchar[], const(dchar)[], immutable(dchar)[]))
+        foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            foreach(R; TypeTuple!(dchar[dchar], const dchar[dchar],
+            foreach(R; AliasSeq!(dchar[dchar], const dchar[dchar],
                         immutable dchar[dchar]))
             {
                 R tt = ['h' : 'q', 'l' : '5'];
@@ -4687,9 +4870,9 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
-                           wchar[], const(wchar)[], immutable(wchar)[],
-                           dchar[], const(dchar)[], immutable(dchar)[]))
+    foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
     {
         assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"]) ==
                to!S("yellowe4242o wor42d"));
@@ -4705,12 +4888,12 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
                to!S("hello  world"));
         assert(translate(to!S("hello world"), cast(string[dchar])null) == to!S("hello world"));
 
-        foreach (T; TypeTuple!( char[], const( char)[], immutable( char)[],
-                               wchar[], const(wchar)[], immutable(wchar)[],
-                               dchar[], const(dchar)[], immutable(dchar)[]))
+        foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
 
-            foreach(R; TypeTuple!(string[dchar], const string[dchar],
+            foreach(R; AliasSeq!(string[dchar], const string[dchar],
                         immutable string[dchar]))
             {
                 R tt = ['h' : "yellow", 'l' : "42"];
@@ -4950,7 +5133,7 @@ body
     import std.exception;
     assertCTFEable!(
     {
-    foreach (C; TypeTuple!(char, const char, immutable char))
+    foreach (C; AliasSeq!(char, const char, immutable char))
     {
         assert(translate!C("hello world", makeTransTable("hl", "q5")) == to!(C[])("qe55o wor5d"));
 
@@ -4959,7 +5142,7 @@ body
         static assert(is(typeof(s) == typeof(translate!C(s, transTable))));
     }
 
-    foreach (S; TypeTuple!(char[], const(char)[], immutable(char)[]))
+    foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[]))
     {
         assert(translate(to!S("hello world"), makeTransTable("hl", "q5")) == to!S("qe55o wor5d"));
         assert(translate(to!S("hello \U00010143 world"), makeTransTable("hl", "q5")) ==
@@ -4970,7 +5153,7 @@ body
         assert(translate(to!S("hello \U00010143 world"), makeTransTable("12345", "67890")) ==
                to!S("hello \U00010143 world"));
 
-        foreach (T; TypeTuple!(char[], const(char)[], immutable(char)[]))
+        foreach (T; AliasSeq!(char[], const(char)[], immutable(char)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(translate(to!S("hello world"), makeTransTable("hl", "q5"), to!T("r")) ==
                    to!S("qe55o wo5d"));
@@ -5573,13 +5756,13 @@ unittest
     import std.algorithm : equal;
 
     // Complete list of test types; too slow to test'em all
-    // alias TestTypes = TypeTuple!(
+    // alias TestTypes = AliasSeq!(
     //          char[], const( char)[], immutable( char)[],
     //         wchar[], const(wchar)[], immutable(wchar)[],
     //         dchar[], const(dchar)[], immutable(dchar)[]);
 
     // Reduced list of test types
-    alias TestTypes = TypeTuple!(char[], const(wchar)[], immutable(dchar)[]);
+    alias TestTypes = AliasSeq!(char[], const(wchar)[], immutable(dchar)[]);
 
     import std.exception;
     assertCTFEable!(
@@ -5610,52 +5793,25 @@ unittest
     });
 }
 
-
-/* ************************************************
- * Version       : v0.3
- * Author        : David L. 'SpottedTiger' Davis
- * Date Created  : 31.May.05 Compiled and Tested with dmd v0.125
- * Date Modified : 01.Jun.05 Modified the function to handle the
- *               :           imaginary and complex float-point
- *               :           datatypes.
- *               :
- * Licence       : Public Domain / Contributed to Digital Mars
- */
-
 /**
- * [in] string s can be formatted in the following ways:
- *
- * Integer Whole Number:
- * (for byte, ubyte, short, ushort, int, uint, long, and ulong)
- * ['+'|'-']digit(s)[U|L|UL]
- *
- * examples: 123, 123UL, 123L, +123U, -123L
- *
- * Floating-Point Number:
- * (for float, double, real, ifloat, idouble, and ireal)
- * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
- *      or [nan|nani|inf|-inf]
- *
- * examples: +123., -123.01, 123.3e-10f, 123.3e-10fi, 123.3e-10L
- *
- * (for cfloat, cdouble, and creal)
- * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][+]
- *         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
- *      or [nan|nani|nan+nani|inf|-inf]
- *
- * examples: nan, -123e-1+456.9e-10Li, +123e+10+456i, 123+456
- *
- * [in] bool bAllowSep
- * False by default, but when set to true it will accept the
- * separator characters $(D ',') and $(D '__') within the string, but these
+ * Takes a string $(D s) and determines if it represents a number. This function
+ * also takes an optional parameter, $(D bAllowSep), which will accept the
+ * separator characters $(D ',') and $(D '__') within the string. But these
  * characters should be stripped from the string before using any
- * of the conversion functions like toInt(), toFloat(), and etc
+ * of the conversion functions like $(D to!int()), $(D to!float()), and etc
  * else an error will occur.
  *
  * Also please note, that no spaces are allowed within the string
  * anywhere whether it's a leading, trailing, or embedded space(s),
  * thus they too must be stripped from the string before using this
  * function, or any of the conversion functions.
+ *
+ * Params:
+ *     s = the string to check
+ *     bAllowSep = accept separator characters or not
+ *
+ * Returns:
+ *     $(D bool)
  */
 
 bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
@@ -5765,6 +5921,50 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
     }
 
     return sawDigits;
+}
+
+/**
+ * Integer Whole Number: (byte, ubyte, short, ushort, int, uint, long, and ulong)
+ * ['+'|'-']digit(s)[U|L|UL]
+ */
+@safe pure unittest
+{
+    assert(isNumeric("123"));
+    assert(isNumeric("123UL"));
+    assert(isNumeric("123L"));
+    assert(isNumeric("+123U"));
+    assert(isNumeric("-123L"));
+}
+
+/**
+ * Floating-Point Number: (float, double, real, ifloat, idouble, and ireal)
+ * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
+ *      or [nan|nani|inf|-inf]
+ */
+@safe pure unittest
+{
+    assert(isNumeric("+123"));
+    assert(isNumeric("-123.01"));
+    assert(isNumeric("123.3e-10f"));
+    assert(isNumeric("123.3e-10fi"));
+    assert(isNumeric("123.3e-10L"));
+
+    assert(isNumeric("nan"));
+    assert(isNumeric("nani"));
+    assert(isNumeric("-inf"));
+}
+
+/**
+ * Floating-Point Number: (cfloat, cdouble, and creal)
+ * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][+]
+ *         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
+ *      or [nan|nani|nan+nani|inf|-inf]
+ */
+@safe pure unittest
+{
+    assert(isNumeric("-123e-1+456.9e-10Li"));
+    assert(isNumeric("+123e+10+456i"));
+    assert(isNumeric("123+456"));
 }
 
 @safe pure unittest
@@ -6290,7 +6490,7 @@ unittest
  */
 
 S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
-        S indent = null, in size_t tabsize = 8) @safe pure if (isSomeString!S)
+        S indent = null, in size_t tabsize = 8) if (isSomeString!S)
 {
     typeof(s.dup) result;
     bool inword;
@@ -6353,6 +6553,18 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
     result ~= '\n';
 
     return result;
+}
+
+///
+@safe pure unittest
+{
+    assert(wrap("a short string", 7) == "a short\nstring\n");
+
+    // wrap will not break inside of a word, but at the next space
+    assert(wrap("a short string", 4) == "a\nshort\nstring\n");
+
+    assert(wrap("a short string", 7, "\t") == "\ta\nshort\nstring\n");
+    assert(wrap("a short string", 7, "\t", "    ") == "\ta\n    short\n    string\n");
 }
 
 @safe pure unittest
@@ -6529,7 +6741,7 @@ S[] outdent(S)(S[] lines) @safe pure if(isSomeString!S)
     assertCTFEable!(
     {
 
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         enum S blank = "";
         assert(blank.outdent() == blank);
@@ -6608,7 +6820,7 @@ auto assumeUTF(T)(T[] arr) pure
     if(staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 {
     import std.utf : validate;
-    alias ToUTFType(U) = TypeTuple!(char, wchar, dchar)[U.sizeof / 2];
+    alias ToUTFType(U) = AliasSeq!(char, wchar, dchar)[U.sizeof / 2];
     auto asUTF = cast(ModifyTypePreservingTQ!(ToUTFType, T)[])arr;
     debug validate(asUTF);
     return asUTF;
@@ -6627,7 +6839,7 @@ auto assumeUTF(T)(T[] arr) pure
 pure unittest
 {
     import std.algorithm : equal;
-    foreach(T; TypeTuple!(char[], wchar[], dchar[]))
+    foreach(T; AliasSeq!(char[], wchar[], dchar[]))
     {
         immutable T jti = "Hello World";
         T jt = jti.dup;

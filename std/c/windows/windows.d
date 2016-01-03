@@ -2,7 +2,13 @@
 /* Windows is a registered trademark of Microsoft Corporation in the United
 States and other countries. */
 
-/// Please import core.sys.windows.windows instead. This module will be deprecated in DMD 2.068.
+// @@@DEPRECATED_2017-06@@@
+
+/++
+    $(RED Deprecated. Use $(D core.sys.windows.windows instead. This module will
+          be removed in June 2017.)
+  +/
+deprecated("Import core.sys.windows.windows instead")
 module std.c.windows.windows;
 
 version (Windows):

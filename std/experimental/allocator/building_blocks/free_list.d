@@ -269,7 +269,7 @@ struct FreeList(ParentAllocator,
             alias toAllocate = bytes;
         }
         assert(toAllocate == max || max == unbounded);
-        auto result = parent.allocate(bytes);
+        auto result = parent.allocate(toAllocate);
         static if (hasTolerance)
         {
             if (result) result = result.ptr[0 .. bytes];

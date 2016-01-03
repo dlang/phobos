@@ -193,7 +193,7 @@ Params:
   condition = The condition must be $(D true) for the data to be logged.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 log(LogLevel.warning, true, "Hello World", 3.1415);
 --------------------
@@ -238,7 +238,7 @@ Params:
   ll = The $(D LogLevel) used by this log call.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 log(LogLevel.warning, "Hello World", 3.1415);
 --------------------
@@ -283,7 +283,7 @@ Params:
   condition = The condition must be $(D true) for the data to be logged.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 log(true, "Hello World", 3.1415);
 --------------------
@@ -320,7 +320,7 @@ $(D sharedLog) must be greater or equal to the $(D defaultLogLevel).
 Params:
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 log("Hello World", 3.1415);
 --------------------
@@ -362,7 +362,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 logf(LogLevel.warning, true, "Hello World %f", 3.1415);
 --------------------
@@ -394,7 +394,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 logf(LogLevel.warning, "Hello World %f", 3.1415);
 --------------------
@@ -425,7 +425,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 logf(true, "Hello World %f", 3.1415);
 --------------------
@@ -451,7 +451,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 logf("Hello World %f", 3.1415);
 --------------------
@@ -516,7 +516,7 @@ Params:
   condition = The condition must be $(D true) for the data to be logged.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 trace(1337, "is number");
 info(1337, "is number");
@@ -589,7 +589,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 tracef("is number %d", 1);
 infof("is number %d", 2);
@@ -612,7 +612,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 tracef(false, "is number %d", 1);
 infof(false, "is number %d", 2);
@@ -928,7 +928,7 @@ abstract class Logger
         Params:
           args = The data that should be logged.
 
-        Examples:
+        Example:
         --------------------
         auto s = new FileLogger(stdout);
         s.trace(1337, "is number");
@@ -975,7 +975,7 @@ abstract class Logger
           condition = The condition must be $(D true) for the data to be logged.
           args = The data that should be logged.
 
-        Examples:
+        Example:
         --------------------
         auto s = new FileLogger(stdout);
         s.trace(true, 1337, "is number");
@@ -1024,7 +1024,7 @@ abstract class Logger
           msg = The $(D printf)-style string.
           args = The data that should be logged.
 
-        Examples:
+        Example:
         --------------------
         auto s = new FileLogger(stderr);
         s.tracef(true, "is number %d", 1);
@@ -1071,7 +1071,7 @@ abstract class Logger
           msg = The $(D printf)-style string.
           args = The data that should be logged.
 
-        Examples:
+        Example:
         --------------------
         auto s = new FileLogger(stderr);
         s.tracef("is number %d", 1);
@@ -1144,7 +1144,7 @@ abstract class Logger
 
     Returns: The logger used by the logging function as reference.
 
-    Examples:
+    Example:
     --------------------
     auto l = new StdioLogger();
     l.log(1337);
@@ -1210,7 +1210,7 @@ abstract class Logger
       ll = The specific $(D LogLevel) used for logging the log message.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.log(LogLevel.trace, 1337, "is number");
@@ -1279,7 +1279,7 @@ abstract class Logger
       condition = The condition must be $(D true) for the data to be logged.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.log(true, 1337, "is number");
@@ -1348,7 +1348,7 @@ abstract class Logger
     Params:
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.log(1337, "is number");
@@ -1422,7 +1422,7 @@ abstract class Logger
       msg = The format string used for this log call.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.logf(LogLevel.trace, true ,"%d %s", 1337, "is number");
@@ -1468,7 +1468,7 @@ abstract class Logger
       msg = The format string used for this log call.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.logf(LogLevel.trace, "%d %s", 1337, "is number");
@@ -1515,7 +1515,7 @@ abstract class Logger
       msg = The format string used for this log call.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.logf(true ,"%d %s", 1337, "is number");
@@ -1560,7 +1560,7 @@ abstract class Logger
       msg = The format string used for this log call.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.logf("%d %s", 1337, "is number");
@@ -2100,7 +2100,7 @@ unittest // default logger
 unittest
 {
     import std.file : deleteme, remove;
-    import core.memory : destroy;
+
     string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";
     auto oldunspecificLogger = sharedLog;
 

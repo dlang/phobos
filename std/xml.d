@@ -349,7 +349,7 @@ bool isExtender(dchar c)
  *
  * Returns: The encoded string
  *
- * Examples:
+ * Example:
  * --------------
  * writefln(encode("a > b")); // writes "a &gt; b"
  * --------------
@@ -434,7 +434,7 @@ enum DecodeMode
  *
  * Returns: The decoded string
  *
- * Examples:
+ * Example:
  * --------------
  * writefln(decode("a &gt; b")); // writes "a > b"
  * --------------
@@ -591,7 +591,7 @@ class Document : Element
         /**
          * Compares two Documents for equality
          *
-         * Examples:
+         * Example:
          * --------------
          * Document d1,d2;
          * if (d1 == d2) { }
@@ -613,7 +613,7 @@ class Document : Element
          * You should rarely need to call this function. It exists so that
          * Documents can be used as associative array keys.
          *
-         * Examples:
+         * Example:
          * --------------
          * Document d1,d2;
          * if (d1 < d2) { }
@@ -677,7 +677,7 @@ class Element : Item
      *      name = the name of the element.
      *      interior = (optional) the string interior.
      *
-     * Examples:
+     * Example:
      * -------------------------------------------------------
      * auto element = new Element("title","Serenity")
      *     // constructs the element <title>Serenity</title>
@@ -709,7 +709,7 @@ class Element : Item
      * Params:
      *      item = the item you wish to append.
      *
-     * Examples:
+     * Example:
      * --------------
      * Element element;
      * element ~= new Text("hello");
@@ -727,7 +727,7 @@ class Element : Item
      * Params:
      *      item = the item you wish to append.
      *
-     * Examples:
+     * Example:
      * --------------
      * Element element;
      * element ~= new CData("hello");
@@ -745,7 +745,7 @@ class Element : Item
      * Params:
      *      item = the item you wish to append.
      *
-     * Examples:
+     * Example:
      * --------------
      * Element element;
      * element ~= new Comment("hello");
@@ -763,7 +763,7 @@ class Element : Item
      * Params:
      *      item = the item you wish to append.
      *
-     * Examples:
+     * Example:
      * --------------
      * Element element;
      * element ~= new ProcessingInstruction("hello");
@@ -781,7 +781,7 @@ class Element : Item
      * Params:
      *      item = the item you wish to append.
      *
-     * Examples:
+     * Example:
      * --------------
      * Element element;
      * Element other = new Element("br");
@@ -822,7 +822,7 @@ class Element : Item
     /**
      * Compares two Elements for equality
      *
-     * Examples:
+     * Example:
      * --------------
      * Element e1,e2;
      * if (e1 == e2) { }
@@ -846,7 +846,7 @@ class Element : Item
      * You should rarely need to call this function. It exists so that Elements
      * can be used as associative array keys.
      *
-     * Examples:
+     * Example:
      * --------------
      * Element e1,e2;
      * if (e1 < e2) { }
@@ -941,7 +941,7 @@ class Element : Item
         /**
          * Returns the string representation of an Element
          *
-         * Examples:
+         * Example:
          * --------------
          * auto element = new Element("br");
          * writefln(element.toString()); // writes "<br />"
@@ -1023,7 +1023,7 @@ class Tag
      *      type = (optional) the Tag's type. If omitted, defaults to
      *          TagType.START.
      *
-     * Examples:
+     * Example:
      * --------------
      * auto tag = new Tag("img",Tag.EMPTY);
      * tag.attr["src"] = "http://example.com/example.jpg";
@@ -1089,7 +1089,7 @@ class Tag
          * You should rarely need to call this function. It exists so that Tags
          * can be used as associative array keys.
          *
-         * Examples:
+         * Example:
          * --------------
          * Tag tag1,tag2
          * if (tag1 == tag2) { }
@@ -1108,7 +1108,7 @@ class Tag
         /**
          * Compares two Tags
          *
-         * Examples:
+         * Example:
          * --------------
          * Tag tag1,tag2
          * if (tag1 < tag2) { }
@@ -1139,7 +1139,7 @@ class Tag
         /**
          * Returns the string representation of a Tag
          *
-         * Examples:
+         * Example:
          * --------------
          * auto tag = new Tag("book",TagType.START);
          * writefln(tag.toString()); // writes "<book>"
@@ -1171,7 +1171,7 @@ class Tag
         /**
          * Returns true if the Tag is a start tag
          *
-         * Examples:
+         * Example:
          * --------------
          * if (tag.isStart) { }
          * --------------
@@ -1181,7 +1181,7 @@ class Tag
         /**
          * Returns true if the Tag is an end tag
          *
-         * Examples:
+         * Example:
          * --------------
          * if (tag.isEnd) { }
          * --------------
@@ -1191,7 +1191,7 @@ class Tag
         /**
          * Returns true if the Tag is an empty tag
          *
-         * Examples:
+         * Example:
          * --------------
          * if (tag.isEmpty) { }
          * --------------
@@ -1216,7 +1216,7 @@ class Comment : Item
      * Throws: CommentException if the comment body is illegal (contains "--"
      * or exactly equals "-")
      *
-     * Examples:
+     * Example:
      * --------------
      * auto item = new Comment("This is a comment");
      *    // constructs <!--This is a comment-->
@@ -1232,7 +1232,7 @@ class Comment : Item
     /**
      * Compares two comments for equality
      *
-     * Examples:
+     * Example:
      * --------------
      * Comment item1,item2;
      * if (item1 == item2) { }
@@ -1251,7 +1251,7 @@ class Comment : Item
      * You should rarely need to call this function. It exists so that Comments
      * can be used as associative array keys.
      *
-     * Examples:
+     * Example:
      * --------------
      * Comment item1,item2;
      * if (item1 < item2) { }
@@ -1296,7 +1296,7 @@ class CData : Item
      *
      * Throws: CDataException if the segment body is illegal (contains "]]>")
      *
-     * Examples:
+     * Example:
      * --------------
      * auto item = new CData("<b>hello</b>");
      *    // constructs <![CDATA[<b>hello</b>]]>
@@ -1311,7 +1311,7 @@ class CData : Item
     /**
      * Compares two CDatas for equality
      *
-     * Examples:
+     * Example:
      * --------------
      * CData item1,item2;
      * if (item1 == item2) { }
@@ -1330,7 +1330,7 @@ class CData : Item
      * You should rarely need to call this function. It exists so that CDatas
      * can be used as associative array keys.
      *
-     * Examples:
+     * Example:
      * --------------
      * CData item1,item2;
      * if (item1 < item2) { }
@@ -1374,7 +1374,7 @@ class Text : Item
      *      content = the text. This function encodes the text before
      *      insertion, so it is safe to insert any text
      *
-     * Examples:
+     * Example:
      * --------------
      * auto Text = new CData("a < b");
      *    // constructs a &lt; b
@@ -1388,7 +1388,7 @@ class Text : Item
     /**
      * Compares two text sections for equality
      *
-     * Examples:
+     * Example:
      * --------------
      * Text item1,item2;
      * if (item1 == item2) { }
@@ -1407,7 +1407,7 @@ class Text : Item
      * You should rarely need to call this function. It exists so that Texts
      * can be used as associative array keys.
      *
-     * Examples:
+     * Example:
      * --------------
      * Text item1,item2;
      * if (item1 < item2) { }
@@ -1455,7 +1455,7 @@ class XMLInstruction : Item
      *
      * Throws: XIException if the segment body is illegal (contains ">")
      *
-     * Examples:
+     * Example:
      * --------------
      * auto item = new XMLInstruction("ATTLIST");
      *    // constructs <!ATTLIST>
@@ -1470,7 +1470,7 @@ class XMLInstruction : Item
     /**
      * Compares two XML instructions for equality
      *
-     * Examples:
+     * Example:
      * --------------
      * XMLInstruction item1,item2;
      * if (item1 == item2) { }
@@ -1489,7 +1489,7 @@ class XMLInstruction : Item
      * You should rarely need to call this function. It exists so that
      * XmlInstructions can be used as associative array keys.
      *
-     * Examples:
+     * Example:
      * --------------
      * XMLInstruction item1,item2;
      * if (item1 < item2) { }
@@ -1534,7 +1534,7 @@ class ProcessingInstruction : Item
      *
      * Throws: PIException if the segment body is illegal (contains "?>")
      *
-     * Examples:
+     * Example:
      * --------------
      * auto item = new ProcessingInstruction("php");
      *    // constructs <?php?>
@@ -1549,7 +1549,7 @@ class ProcessingInstruction : Item
     /**
      * Compares two processing instructions for equality
      *
-     * Examples:
+     * Example:
      * --------------
      * ProcessingInstruction item1,item2;
      * if (item1 == item2) { }
@@ -1568,7 +1568,7 @@ class ProcessingInstruction : Item
      * You should rarely need to call this function. It exists so that
      * ProcessingInstructions can be used as associative array keys.
      *
-     * Examples:
+     * Example:
      * --------------
      * ProcessingInstruction item1,item2;
      * if (item1 < item2) { }
@@ -1742,7 +1742,7 @@ class ElementParser
      * the name, in which case the handler will be called for any unmatched
      * start tag.
      *
-     * Examples:
+     * Example:
      * --------------
      * // Call this function whenever a <podcast> start tag is encountered
      * onStartTag["podcast"] = (ElementParser xml)
@@ -1778,7 +1778,7 @@ class ElementParser
      * the name, in which case the handler will be called for any unmatched
      * end tag.
      *
-     * Examples:
+     * Example:
      * --------------
      * // Call this function whenever a </podcast> end tag is encountered
      * onEndTag["podcast"] = (in Element e)
@@ -1811,7 +1811,7 @@ class ElementParser
     /**
      * Register a handler which will be called whenever text is encountered.
      *
-     * Examples:
+     * Example:
      * --------------
      * // Call this function whenever text is encountered
      * onText = (string s)
@@ -1838,7 +1838,7 @@ class ElementParser
      * probably want to use onTextRaw only in circumstances where you
      * know that decoding is unnecessary.
      *
-     * Examples:
+     * Example:
      * --------------
      * // Call this function whenever text is encountered
      * onText = (string s)
@@ -1858,7 +1858,7 @@ class ElementParser
      * Register a handler which will be called whenever a character data
      * segment is encountered.
      *
-     * Examples:
+     * Example:
      * --------------
      * // Call this function whenever a CData section is encountered
      * onCData = (string s)
@@ -1879,7 +1879,7 @@ class ElementParser
      * Register a handler which will be called whenever a comment is
      * encountered.
      *
-     * Examples:
+     * Example:
      * --------------
      * // Call this function whenever a comment is encountered
      * onComment = (string s)
@@ -1900,7 +1900,7 @@ class ElementParser
      * Register a handler which will be called whenever a processing
      * instruction is encountered.
      *
-     * Examples:
+     * Example:
      * --------------
      * // Call this function whenever a processing instruction is encountered
      * onPI = (string s)
@@ -1921,7 +1921,7 @@ class ElementParser
      * Register a handler which will be called whenever an XML instruction is
      * encountered.
      *
-     * Examples:
+     * Example:
      * --------------
      * // Call this function whenever an XML instruction is encountered
      * // (Note: XML instructions may only occur preceding the root tag of a

@@ -444,14 +444,16 @@ unittest
 {
     int[] a = new int[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
-    static assert( __traits(compiles, put(a, 1)));
+    put(a, 1);
+    assert(a.length == 9);
     /*
      * a[0] = 65;       // OK
      * a[0] = 'A';      // OK
      * a[0] = "ABC"[0]; // OK
      * put(a, "ABC");   // OK
      */
-    static assert( __traits(compiles, put(a, "ABC")));
+    put(a, "ABC");
+    assert(a.length == 6);
 }
 
 unittest
@@ -466,11 +468,13 @@ unittest
 
 unittest
 {
-    int[][] a;
-    int[]   b;
+    int[][] a = new int[][10];
+    int[]   b = new int[10];
     int     c;
-    static assert( __traits(compiles, put(b, c)));
-    static assert( __traits(compiles, put(a, b)));
+    put(b, c);
+    assert(b.length == 9);
+    put(a, b);
+    assert(a.length == 9);
     static assert(!__traits(compiles, put(a, c)));
 }
 
@@ -511,8 +515,8 @@ unittest
 unittest
 {
     import std.conv : to;
+    import std.meta : AliasSeq;
     import std.typecons : tuple;
-    import std.typetuple;
 
     static struct PutC(C)
     {
@@ -538,7 +542,7 @@ unittest
     putChar(p, cast(dchar)'a');
 
     //Source Char
-    foreach (SC; TypeTuple!(char, wchar, dchar))
+    foreach (SC; AliasSeq!(char, wchar, dchar))
     {
         SC ch = 'I';
         dchar dh = '♥';
@@ -546,10 +550,10 @@ unittest
         immutable(SC)[][] ss = ["日本語", "が", "好き", "ですか", "？"];
 
         //Target Char
-        foreach (TC; TypeTuple!(char, wchar, dchar))
+        foreach (TC; AliasSeq!(char, wchar, dchar))
         {
             //Testing PutC and PutS
-            foreach (Type; TypeTuple!(PutC!TC, PutS!TC))
+            foreach (Type; AliasSeq!(PutC!TC, PutS!TC))
             (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
                 Type type;
                 auto sink = new Type();
@@ -609,7 +613,7 @@ unittest
 unittest
 {
     import std.format;
-    import std.typetuple;
+    import std.meta : AliasSeq;
     struct PutC(C)
     {
         void put(C){}
@@ -642,7 +646,7 @@ unittest
     }
     void foo()
     {
-        foreach(C; TypeTuple!(char, wchar, dchar))
+        foreach(C; AliasSeq!(char, wchar, dchar))
         {
             formattedWrite((C c){},        "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
             formattedWrite((const(C)[]){}, "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
@@ -2090,9 +2094,9 @@ if (isNarrowString!(C[]))
 
 @safe pure unittest
 {
-    import std.typetuple;
+    import std.meta : AliasSeq;
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
         S s = "\xC2\xA9hello";
         s.popFront();
@@ -2163,9 +2167,9 @@ if (isNarrowString!(T[]))
 
 @safe pure unittest
 {
-    import std.typetuple;
+    import std.meta : AliasSeq;
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
         S s = "hello\xE2\x89\xA0";
         s.popBack();

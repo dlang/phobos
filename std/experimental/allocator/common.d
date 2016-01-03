@@ -162,7 +162,7 @@ template stateSize(T)
     static if (is(T == class) || is(T == interface))
         enum stateSize = __traits(classInstanceSize, T);
     else static if (is(T == struct) || is(T == union))
-        enum stateSize = FieldTypeTuple!T.length || isNested!T ? T.sizeof : 0;
+        enum stateSize = Fields!T.length || isNested!T ? T.sizeof : 0;
     else static if (is(T == void))
         enum size_t stateSize = 0;
     else
@@ -434,12 +434,12 @@ package void* alignUpTo(void* ptr, uint alignment)
 /**
 Returns `true` if `x` is a nonzero power of two.
 */
-package bool isPowerOf2(uint x)
+package bool isPowerOf2(uint x) @nogc
 {
     return (x & -x) > (x - 1);
 }
 
-unittest
+@nogc unittest
 {
     assert(!isPowerOf2(0));
     assert(isPowerOf2(1));
@@ -455,12 +455,12 @@ unittest
     assert(isPowerOf2(1UL << 31));
 }
 
-package bool isGoodStaticAlignment(uint x)
+package bool isGoodStaticAlignment(uint x) @nogc
 {
     return x.isPowerOf2;
 }
 
-package bool isGoodDynamicAlignment(uint x)
+package bool isGoodDynamicAlignment(uint x) @nogc
 {
     return x.isPowerOf2 && x >= (void*).sizeof;
 }
@@ -560,12 +560,12 @@ Forwards each of the methods in `funs` (if defined) to `member`.
 */
 /*package*/ string forwardToMember(string member, string[] funs...)
 {
-    string result = "    import std.traits : hasMember, ParameterTypeTuple;\n";
+    string result = "    import std.traits : hasMember, Parameters;\n";
     foreach (fun; funs)
     {
         result ~= "
     static if (hasMember!(typeof("~member~"), `"~fun~"`))
-    auto ref "~fun~"(ParameterTypeTuple!(typeof("~member~"."~fun~")) args)
+    auto ref "~fun~"(Parameters!(typeof("~member~"."~fun~")) args)
     {
         return "~member~"."~fun~"(args);
     }\n";

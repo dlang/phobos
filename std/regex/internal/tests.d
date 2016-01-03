@@ -5,8 +5,8 @@ module std.regex.internal.tests;
 
 package(std.regex):
 
-import std.algorithm, std.conv, std.exception, std.range, std.typecons,
-    std.typetuple, std.regex;
+import std.algorithm, std.conv, std.exception, std.meta, std.range,
+    std.typecons, std.regex;
 
 import std.regex.internal.parser : Escapables; // characters that need escaping
 
@@ -347,7 +347,7 @@ unittest
     void run_tests(alias matchFn)()
     {
         int i;
-        foreach(Char; TypeTuple!( char, wchar, dchar))
+        foreach(Char; AliasSeq!( char, wchar, dchar))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             alias String = immutable(Char)[];
             String produceExpected(M,Range)(auto ref M m, Range fmt)
@@ -417,7 +417,7 @@ unittest
             alias Tests = Sequence!(220, tv.length);
         }
         else
-            alias Tests = TypeTuple!(Sequence!(0, 30), Sequence!(235, tv.length-5));
+            alias Tests = AliasSeq!(Sequence!(0, 30), Sequence!(235, tv.length-5));
         foreach(a, v; Tests)
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum tvd = tv[v];
@@ -670,7 +670,7 @@ unittest
     {
         import std.uni : toUpper;
 
-        foreach(i, v; TypeTuple!(string, wstring, dstring))
+        foreach(i, v; AliasSeq!(string, wstring, dstring))
         {
             auto baz(Cap)(Cap m)
             if (is(Cap == Captures!(Cap.String)))
@@ -753,7 +753,7 @@ unittest
 }
 unittest
 {// bugzilla 7679
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         enum re = ctRegex!(to!S(r"\."));
         auto str = to!S("a.b");

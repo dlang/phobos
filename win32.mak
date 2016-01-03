@@ -211,6 +211,12 @@ SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\pa
 SRC_STD_RANGE= std\range\package.d std\range\primitives.d \
 	std\range\interfaces.d
 
+SRC_STD_NDSLICE= std\experimental\ndslice\package.d \
+	std\experimental\ndslice\iteration.d \
+	std\experimental\ndslice\selection.d \
+	std\experimental\ndslice\slice.d \
+	std\experimental\ndslice\internal.d
+
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
@@ -265,6 +271,7 @@ SRC_TO_COMPILE_NOT_STD= \
 SRC_TO_COMPILE= $(SRC_STD_ALL) \
 	$(SRC_STD_ALGO) \
 	$(SRC_STD_RANGE) \
+	$(SRC_STD_NDSLICE) \
 	$(SRC_TO_COMPILE_NOT_STD)
 
 SRC_ZLIB= \
@@ -468,6 +475,7 @@ UNITTEST_OBJS= \
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_NDSLICE)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
@@ -1039,7 +1047,7 @@ zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_ALGO) \
+	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_NDSLICE) $(SRC_STD_ALGO) \
 	$(SRC_STD_LOGGER) $(SRC_STD_ALLOC)
 	del phobos.zip
 	zip32 -u phobos win32.mak win64.mak posix.mak osmodel.mak $(STDDOC)
@@ -1064,6 +1072,7 @@ zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_CONTAINER)
 	zip32 -u phobos $(SRC_STD_REGEX)
 	zip32 -u phobos $(SRC_STD_RANGE)
+	zip32 -u phobos $(SRC_STD_NDSLICE)
 	zip32 -u phobos $(SRC_STD_ALGO)
 
 phobos.zip : zip

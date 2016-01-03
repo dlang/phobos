@@ -1,3 +1,4 @@
+// @@@DEPRECATED_2017-06@@@
 
 /* Written by Walter Bright, Christopher E. Miller, and many others.
  * http://www.digitalmars.com/d/
@@ -6,7 +7,11 @@
  * countries.
  */
 
-/// Please import the core.sys.posix.* modules you need instead. This module will be deprecated in DMD 2.068.
+/++
+    $(RED Deprecated. Use the appropriate $(D core.sys.posix.*) modules instead.
+          This module will be removed in June 2017.)
+  +/
+deprecated("Import the appropriate core.sys.posix.* modules instead")
 module std.c.linux.linux;
 
 version (linux):

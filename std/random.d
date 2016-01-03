@@ -32,7 +32,7 @@ distribution in various ways. So far the uniform distribution for
 integers and real numbers have been implemented.
 
 Upgrading:
-        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand Phobos D1 $(D rand())) can
+        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand, Phobos D1 $(D rand())) can
         be replaced with $(D uniform!uint()).
 
 Source:    $(PHOBOSSRC std/_random.d)
@@ -66,9 +66,9 @@ import std.traits;
 
 version(unittest)
 {
-    static import std.typetuple;
-    package alias PseudoRngTypes = std.typetuple.TypeTuple!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
-                                              Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+    static import std.meta;
+    package alias PseudoRngTypes = std.meta.AliasSeq!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
+                                                      Xorshift96, Xorshift128, Xorshift160, Xorshift192);
 }
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
@@ -515,7 +515,7 @@ unittest
     assert(rnd.front == 399268537);
 
     // Check .save works
-    foreach (Type; std.typetuple.TypeTuple!(MinstdRand0, MinstdRand))
+    foreach (Type; std.meta.AliasSeq!(MinstdRand0, MinstdRand))
     {
         auto rnd1 = Type(unpredictableSeed);
         auto rnd2 = rnd1.save;
@@ -795,7 +795,7 @@ unittest
 {
     import std.range;
     // Check .save works
-    foreach(Type; std.typetuple.TypeTuple!(Mt19937))
+    foreach(Type; std.meta.AliasSeq!(Mt19937))
     {
         auto gen1 = Type(unpredictableSeed);
         auto gen2 = gen1.save;
@@ -813,7 +813,7 @@ unittest
                                                         0x9d2c5680, 15,
                                                         0xefc60000, 18);
 
-    foreach (R; std.typetuple.TypeTuple!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
+    foreach (R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
         auto a = R();
 }
 
@@ -1045,7 +1045,7 @@ unittest
     auto num = rnd.front;  // same for each run
 
     // Seed with an unpredictable value
-    rnd.seed(unpredictableSeed());
+    rnd.seed(unpredictableSeed);
     num = rnd.front; // different across rnd
 }
 
@@ -1068,7 +1068,7 @@ unittest
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
     ];
 
-    alias XorshiftTypes = std.typetuple.TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+    alias XorshiftTypes = std.meta.AliasSeq!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192);
 
     foreach (I, Type; XorshiftTypes)
     {
@@ -1119,17 +1119,17 @@ A single unsigned integer seed value, different on each successive call
 */
 @property uint unpredictableSeed() @trusted
 {
-    import core.thread : Thread, getpid, TickDuration;
+    import core.thread : Thread, getpid, MonoTime;
     static bool seeded;
     static MinstdRand0 rand;
     if (!seeded)
     {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick.length);
+        rand.seed((getpid() + threadID) ^ cast(uint) MonoTime.currTime.ticks);
         seeded = true;
     }
     rand.popFront();
-    return cast(uint) (TickDuration.currSystemTick.length ^ rand.front);
+    return cast(uint) (MonoTime.currTime.ticks ^ rand.front);
 }
 
 ///
@@ -1424,7 +1424,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
 
-    foreach (T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong, float, double, real))
     {
         T lo = 0, hi = 100;
@@ -1478,7 +1478,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
 
     auto reproRng = Xorshift(239842);
 
-    foreach (T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short,
+    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short,
                           ushort, int, uint, long, ulong))
     {
         T lo = T.min + 10, hi = T.max - 10;
@@ -1597,7 +1597,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 
 @safe unittest
 {
-    foreach(T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach(T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong))
     {
         T init = uniform!T();
@@ -1744,11 +1744,11 @@ body
 
 @safe unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach (UniformRNG; PseudoRngTypes)
     {
 
-        foreach (T; std.typetuple.TypeTuple!(float, double, real))
+        foreach (T; std.meta.AliasSeq!(float, double, real))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             UniformRNG rng = UniformRNG(unpredictableSeed);
 
@@ -2208,7 +2208,7 @@ unittest
     import std.algorithm;
     import std.conv;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
-    foreach (UniformRNG; std.typetuple.TypeTuple!(void, PseudoRngTypes))
+    foreach (UniformRNG; std.meta.AliasSeq!(void, PseudoRngTypes))
     {
         static if (is(UniformRNG == void))
         {
@@ -2438,6 +2438,7 @@ struct RandomSample(Range, UniformRNG = void)
         return _toSelect == 0;
     }
 
+/// Ditto
     @property auto ref front()
     {
         assert(!empty);
@@ -2765,7 +2766,7 @@ unittest
 
     foreach (UniformRNG; PseudoRngTypes)
     {
-        auto rng = UniformRNG(unpredictableSeed);
+        auto rng = UniformRNG(1234);
         /* First test the most general case: randomSample of input range, with and
          * without a specified random number generator.
          */
@@ -2966,7 +2967,7 @@ unittest
             size_t count0, count1, count99;
             foreach(_; 0 .. 100_000)
             {
-                auto sample = randomSample(iota(100), 5);
+                auto sample = randomSample(iota(100), 5, &rng);
                 sample.popFront();
                 foreach(s; sample)
                 {

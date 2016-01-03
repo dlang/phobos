@@ -163,7 +163,7 @@ struct DList(T)
   private
   {
     //Construct as new PayNode, and returns it as a BaseNode.
-    static BaseNode* createNode(Stuff)(ref Stuff arg, BaseNode* prev = null, BaseNode* next = null)
+    static BaseNode* createNode(Stuff)(auto ref Stuff arg, BaseNode* prev = null, BaseNode* next = null)
     {
         return (new PayNode(BaseNode(prev, next), arg)).asBaseNode();
     }
@@ -379,7 +379,7 @@ Appends the contents of the argument $(D rhs) into $(D this).
         return this;
     }
 
-/// ditto
+    // Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
     deprecated("Please, use `dlist ~= dlist[];` instead.")
     DList opOpAssign(string op)(DList rhs)
     if (op == "~")
@@ -935,4 +935,12 @@ private:
     static class Test : ITest {}
 
     DList!ITest().insertBack(new Test());
+}
+
+@safe unittest //15263
+{
+    import std.range : iota;
+    auto a = DList!int();
+    a.insertFront(iota(0, 5)); // can insert range with non-ref front
+    assert(a.front == 0 && a.back == 4);
 }

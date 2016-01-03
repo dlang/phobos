@@ -2124,7 +2124,7 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Params:
     s = the string to be decoded
 
- Examples:
+ Example:
  --------------------------------------------------------
  string s = "hello world";
  foreach(c;codePoints(s))
@@ -2285,14 +2285,14 @@ unittest
 
 unittest
 {
+    import std.meta;
     import std.range;
-    import std.typetuple;
     {
         import std.conv : to;
 
         string asciiCharString = to!string(iota(0, 128, 1));
 
-        alias Types = TypeTuple!(string, Latin1String, Latin2String, AsciiString, Windows1250String, Windows1252String, dstring, wstring);
+        alias Types = AliasSeq!(string, Latin1String, Latin2String, AsciiString, Windows1250String, Windows1252String, dstring, wstring);
         foreach(S; Types)
             foreach(D; Types)
             {
@@ -2307,7 +2307,7 @@ unittest
     }
     {
         string czechChars = "Příliš žluťoučký kůň úpěl ďábelské ódy.";
-        alias Types = TypeTuple!(string, dstring, wstring);
+        alias Types = AliasSeq!(string, dstring, wstring);
         foreach(S; Types)
             foreach(D; Types)
             {
@@ -2343,7 +2343,7 @@ abstract class EncodingScheme
      * This function allows user-defined subclasses of EncodingScheme to
      * be declared in other modules.
      *
-     * Examples:
+     * Example:
      * ----------------------------------------------
      * class Amiga1251 : EncodingScheme
      * {
@@ -2372,7 +2372,7 @@ abstract class EncodingScheme
      * This function is only aware of EncodingSchemes which have been
      * registered with the register() function.
      *
-     * Examples:
+     * Example:
      * ---------------------------------------------------
      * auto scheme = EncodingScheme.create("Amiga-1251");
      * ---------------------------------------------------

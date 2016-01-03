@@ -339,7 +339,7 @@ unittest
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value), if $(D !value) is false. Otherwise,
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
     $(D new Exception(msg)) is thrown.
 
     Note:
@@ -383,8 +383,8 @@ T enforce(T, string file, size_t line = __LINE__)
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value) if $(D !value) is false. Otherwise, the given delegate
-    is called.
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise, the given
+    delegate is called.
 
     The safety and purity of this function are inferred from $(D Dg)'s safety
     and purity.
@@ -442,13 +442,13 @@ unittest
 // purity and safety inference test
 unittest
 {
-    import std.typetuple;
+    import std.meta : AliasSeq;
 
-    foreach (EncloseSafe; TypeTuple!(false, true))
-    foreach (EnclosePure; TypeTuple!(false, true))
+    foreach (EncloseSafe; AliasSeq!(false, true))
+    foreach (EnclosePure; AliasSeq!(false, true))
     {
-        foreach (BodySafe; TypeTuple!(false, true))
-        foreach (BodyPure; TypeTuple!(false, true))
+        foreach (BodySafe; AliasSeq!(false, true))
+        foreach (BodyPure; AliasSeq!(false, true))
         {
             enum code =
                 "delegate void() " ~
@@ -543,7 +543,8 @@ unittest
         value = The value to test.
         ex = The exception to throw if the value evaluates to false.
 
-    Returns: $(D value) if $(D !value) is false. Otherwise, $(D ex) is thrown.
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise, $(D ex) is
+    thrown.
 
     Example:
     --------------------
@@ -572,9 +573,10 @@ unittest
         value = The value to test.
         msg = The message to include in the `ErrnoException` if it is thrown.
 
-    Returns: $(D value) if $(D !value) is false. Otherwise,
-    $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that
-    the last operation set $(D errno) to an error code.
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
+    $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
+    operation set $(D errno) to an error code corresponding with the failed
+    condition.
 
     Example:
     --------------------
@@ -1226,7 +1228,7 @@ unittest
     //To check the class payload itself, iterate on its members:
     ()
     {
-        foreach (index, _; FieldTypeTuple!C)
+        foreach (index, _; Fields!C)
             if (doesPointTo(a.tupleof[index], i))
                 return;
         assert(0);
@@ -1421,6 +1423,7 @@ unittest //more alias this opCast
     assert(!mayPointTo(A.init, p));
 }
 
+// Explicitly undocumented. It will be removed in May 2016. @@@DEPRECATED_2016-05@@@
 deprecated ("pointsTo is ambiguous. Please use either of doesPointTo or mayPointTo")
 alias pointsTo = doesPointTo;
 
@@ -1518,7 +1521,7 @@ class ErrnoException : Exception
         expression, if it does not throw. Otherwise, returns the result of
         errorHandler.
 
-    Examples:
+    Example:
     --------------------
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
@@ -1547,7 +1550,7 @@ class ErrnoException : Exception
     be implicitly casted to, and that type will be the type of the compound
     expression.
 
-    Examples:
+    Example:
     --------------------
     //null and new Object have a common type(Object).
     static assert(is(typeof(null.ifThrown(new Object())) == Object));

@@ -6,148 +6,21 @@ $(COMMENT Pending changelog for 2.069. This will get copied to dlang.org and
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(RELATIVE_LINK2 more-rangified-functions, More phobos functions were rangified.))
-$(LI $(RELATIVE_LINK2 std-algorithm-moveEmplace, `moveEmplace` was added))
-$(LI $(RELATIVE_LINK2 std-algorithm-isPermutation, `isPermutation` was added))
-$(LI $(RELATIVE_LINK2 std-algorithm-isSameLength, `isSameLength` was added))
-$(LI $(RELATIVE_LINK2 curl-dynamic-loading, libcurl is now loaded dynamically))
-$(LI $(XREF traits, getUDAs) was added to help get
-	user-defined attributes of specific types from symbols.)
-$(LI $(XREF traits, getSymbolsByUDA) was
-	added to find symbols with specific user-defined attributes.)
-$(LI $(XREF math, cmp) was added, defining total ordering on
-	floating-point numbers, including NaN.)
-$(LI FreeBSD now also ships with a shared libphobos2.so library ($(LINK2 http://dlang.org/dll-linux.html, usage info)).)
-$(LI The package $(STDMODREF experimental_allocator, std.experimental.allocator) was added.)
-$(LI $(RELATIVE_LINK2 documentation-improvements, The documentation for Phobos has been improved.))
+$(LI $(RELATIVE_LINK2 json-encode-control-characters, `std.json` encodes string control characters.))
 
 )
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(LNAME2 more-rangified-functions, More phobos functions were rangified.)
+$(LI $(LNAME2 json-encode-control-characters, `std.json` encodes string control characters.)
 
-    $(P Following the work released with $(RELATIVE_LINK2 rangified-functions,
-        2.068.0) more phobos functions were rangified.
-    )
-
-    $(BOOKTABLE Rangified Functions:,
-        $(TR $(TH Module) $(TH Functions)
-        )
-        $(TR $(TD $(STDMODREF stdio, std.stdio))
-            $(TD
-                <a href="phobos/std_file.html#.File.this">File.this</a>
-            )
-        )
-        $(TR $(TD $(STDMODREF file, std.file))
-            $(TD
-                $(XREF file, append)
-                $(XREF file, chdir)
-                $(XREF file, copy)
-                $(XREF file, exists)
-                $(XREF file, getAttributes)
-                $(XREF file, getLinkAttributes)
-                $(XREF file, getSize)
-                $(XREF file, getTimes)
-                $(XREF file, getTimesWin)
-                $(XREF file, isDir)
-                $(XREF file, isFile)
-                $(XREF file, isSymlink)
-                $(XREF file, mkdir)
-                $(XREF file, read)
-                $(XREF file, readText)
-                $(XREF file, remove)
-                $(XREF file, rename)
-                $(XREF file, rmdir)
-                $(XREF file, setAttributes)
-                $(XREF file, setTimes)
-                $(XREF file, timeLastModified)
-                $(XREF file, write)
-            )
-        )
-    )
-)
-
-$(LI $(LNAME2 std-algorithm-moveEmplace, A combined `moveEmplace` was added.)
-
-    $(P $(XREF algorithm_mutation, moveEmplace) efficiently combines $(XREF
-        algorithm_mutation, move) with $(XREF conv, emplace) thus avoids having
-        to initialize and destroy a value before moving into uninitialized data.
+    $(P Instead of throwing a $(XREF json, JSONException), $(XREF json, toJSON)
+        encodes now the control characters of a string.
     )
 
     ------
-    T* moveToHeap(T)(ref T value)
-    {
-        import core.memory : GC;
-
-        auto ptr = cast(T*)GC.malloc(T.sizeof);
-        // move value and emplace it into ptr
-        moveEmplace(value, *ptr);
-        return ptr;
-    }
+    assert(toJSON(JSONValue("foo\u007fbar") == `"foo\u007Fbar"`);
     ------
-    $(P There are also $(XREF algorithm_mutation, moveEmplaceAll)
-        and $(XREF algorithm_mutation, moveEmplaceSome) as counterparts of
-        $(XREF algorithm_mutation, moveAll) and $(XREF algorithm_mutation, moveSome).
-    )
-)
-
-$(LI $(LNAME2 std-algorithm-isPermutation, `isPermutation` was added.)
-
-    $(P $(XREF algorithm_comparison, isPermuatation) compares two forward ranges to
-        determine if they are permuations of each other.
-    )
-
-    ------
-    auto r1 = [10, 15, 7, 12, 30];
-    auto r2 = [7, 10, 12, 15, 30];
-
-    assert(r1.isPermutation(r2));
-    ------
-)
-
-$(LI $(LNAME2 std-algorithm-isSameLength, `isSameLength` was added.)
-
-    $(P $(XREF algorithm_comparison, isSameLength) compares two input ranges to
-        determine if they have the same length. This algorithm always takes advantage
-        of the `length` range primitive if it exists. Otherwise, this algorithm will
-        walk the ranges to find their length.
-    )
-
-    ------
-    auto r1 = [1, 10, 100, 1000, 10000];
-    auto r2 = [1, 2, 3, 4, 5];
-
-    assert(r1.isSameLength(r2));
-    ------
-)
-
-$(LI $(LNAME2 curl-dynamic-loading, libcurl is now loaded dynamically)
-
-    $(P $(STDMODREF net_curl, std.net.curl) was changed to load curl as shared
-        library at runtime.  This simplifies the usage as it's no longer
-        necessary to link against libcurl or to install any development
-        libraries.
-    )
-
-    $(P The implementation will also try to get the needed curl symbols from the
-        executable itself. So it remains possible to link with a specific
-        version of libcurl or with a static libcurl library.
-    )
-
-    $(P To make this work you have to link with $(I --export-dynamic) respectively
-        use a $(I .DEF) file on Windows (see $(LINK2
-        http://wiki.dlang.org/Curl_on_Windows#Using_the_static_lib, wiki) for
-        more info on the latter).
-    )
-)
-
-$(LI $(LNAME2 documentation-improvements, The documentation for Phobos has been improved)
-
-    $(P A large portion of the functions in Phobos have improved documentation, including but
-        not limited to spelling fixes, clarifications, better explanations of function and template
-        parameters, and better explanations of return values.
-    )
 )
 
 )

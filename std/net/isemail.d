@@ -1,7 +1,7 @@
 /**
  * Validates an email address according to RFCs 5321, 5322 and others.
  *
- * Authors: Dominic Sayers <dominic@sayers.cc>, Jacob Carlborg
+ * Authors: Dominic Sayers $(LT)dominic@sayers.cc$(GT), Jacob Carlborg
  * Copyright: Dominic Sayers, Jacob Carlborg 2008-.
  * Test schema documentation: Copyright © 2011, Daniel Marschall
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
@@ -1726,7 +1726,7 @@ enum AsciiToken
 /*
  * Returns the maximum of the values in the given array.
  *
- * Examples:
+ * Example:
  * ---
  * assert([1, 2, 3, 4].max == 4);
  * assert([3, 5, 9, 2, 5].max == 9);
@@ -1761,7 +1761,7 @@ unittest
  * Returns the portion of string specified by the $(D_PARAM start) and
  * $(D_PARAM length) parameters.
  *
- * Examples:
+ * Example:
  * ---
  * assert("abcdef".substr(-1) == "f");
  * assert("abcdef".substr(-2) == "ef");
@@ -1857,7 +1857,7 @@ unittest
  * characters, that will be used in the comparison, can be specified. Supports both
  * case-sensitive and case-insensitive comparison.
  *
- * Examples:
+ * Example:
  * ---
  * assert("abc".compareFirstN("abcdef", 3) == 0);
  * assert("abc".compareFirstN("Abc", 3, true) == 0);
@@ -1906,7 +1906,7 @@ unittest
  * Returns a range consisting of the elements of the $(D_PARAM input) range that
  * matches the given $(D_PARAM pattern).
  *
- * Examples:
+ * Example:
  * ---
  * assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
  * assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`(\w+)`), true), ["0123", "4567"]));
@@ -1941,7 +1941,7 @@ unittest
 /*
  * Pops the last element of the given range and returns the element.
  *
- * Examples:
+ * Example:
  * ---
  * auto array = [0, 1, 2, 3];
  * auto    result = array.pop();
@@ -1975,7 +1975,7 @@ unittest
  * Returns the character at the given index as a string. The returned string will be a
  * slice of the original string.
  *
- * Examples:
+ * Example:
  * ---
  * assert("abc".get(1, 'b') == "b");
  * assert("löv".get(1, 'ö') == "ö");

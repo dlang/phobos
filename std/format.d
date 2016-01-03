@@ -62,9 +62,9 @@ module std.format;
 
 import core.vararg;
 import std.exception;
+import std.meta;
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
 
 version(CRuntime_DigitalMars)
 {
@@ -218,68 +218,68 @@ $(I FormatChar):
     $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
     numbers in a signed conversion with a space.)))
 
-    <dl>
-        <dt>$(I Width)
-        <dd>
+    $(DL
+        $(DT $(I Width))
+        $(DD
         Specifies the minimum field width.
         If the width is a $(B *), an additional argument of type $(B int),
         preceding the actual argument, is taken as the width.
         If the width is negative, it is as if the $(B -) was given
-        as a $(I Flags) character.
+        as a $(I Flags) character.)
 
-        <dt>$(I Precision)
-        <dd> Gives the precision for numeric conversions.
+        $(DT $(I Precision))
+        $(DD Gives the precision for numeric conversions.
         If the precision is a $(B *), an additional argument of type $(B int),
         preceding the actual argument, is taken as the precision.
-        If it is negative, it is as if there was no $(I Precision) specifier.
+        If it is negative, it is as if there was no $(I Precision) specifier.)
 
-        <dt>$(I FormatChar)
-        <dd>
-        <dl>
-            <dt>$(B 's')
-            <dd>The corresponding argument is formatted in a manner consistent
+        $(DT $(I FormatChar))
+        $(DD
+        $(DL
+            $(DT $(B 's'))
+            $(DD The corresponding argument is formatted in a manner consistent
             with its type:
-            <dl>
-                <dt>$(B bool)
-                <dd>The result is <tt>'true'</tt> or <tt>'false'</tt>.
-                <dt>integral types
-                <dd>The $(B %d) format is used.
-                <dt>floating point types
-                <dd>The $(B %g) format is used.
-                <dt>string types
-                <dd>The result is the string converted to UTF-8.
+            $(DL
+                $(DT $(B bool))
+                $(DD The result is $(D "true") or $(D "false").)
+                $(DT integral types)
+                $(DD The $(B %d) format is used.)
+                $(DT floating point types)
+                $(DD The $(B %g) format is used.)
+                $(DT string types)
+                $(DD The result is the string converted to UTF-8.
                 A $(I Precision) specifies the maximum number of characters
-                to use in the result.
-                <dt>structs
-                <dd>If the struct defines a $(B toString()) method the result is
+                to use in the result.)
+                $(DT structs)
+                $(DD If the struct defines a $(B toString()) method the result is
                 the string returned from this function. Otherwise the result is
                 StructName(field<sub>0</sub>, field<sub>1</sub>, ...) where
                 field<sub>n</sub> is the nth element formatted with the default
-                format.
-                <dt>classes derived from $(B Object)
-                <dd>The result is the string returned from the class instance's
+                format.)
+                $(DT classes derived from $(B Object))
+                $(DD The result is the string returned from the class instance's
                 $(B .toString()) method.
                 A $(I Precision) specifies the maximum number of characters
-                to use in the result.
-                <dt>unions
-                <dd>If the union defines a $(B toString()) method the result is
+                to use in the result.)
+                $(DT unions)
+                $(DD If the union defines a $(B toString()) method the result is
                 the string returned from this function. Otherwise the result is
-                the name of the union, without its contents.
-                <dt>non-string static and dynamic arrays
-                <dd>The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
+                the name of the union, without its contents.)
+                $(DT non-string static and dynamic arrays)
+                $(DD The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
                 where s<sub>n</sub> is the nth element
-                formatted with the default format.
-                <dt>associative arrays
-                <dd>The result is the equivalent of what the initializer
+                formatted with the default format.)
+                $(DT associative arrays)
+                $(DD The result is the equivalent of what the initializer
                 would look like for the contents of the associative array,
-                e.g.: ["red" : 10, "blue" : 20].
-            </dl>
+                e.g.: ["red" : 10, "blue" : 20].)
+            ))
 
-            <dt>$(B 'c')
-            <dd>The corresponding argument must be a character type.
+            $(DT $(B 'c'))
+            $(DD The corresponding argument must be a character type.)
 
-            <dt>$(B 'b','d','o','x','X')
-            <dd> The corresponding argument must be an integral type
+            $(DT $(B 'b','d','o','x','X'))
+            $(DD The corresponding argument must be an integral type
             and is formatted as an integer. If the argument is a signed type
             and the $(I FormatChar) is $(B d) it is converted to
             a signed string of characters, otherwise it is treated as
@@ -291,26 +291,26 @@ $(I FormatChar):
             If there are fewer resulting digits than the $(I Precision),
             leading zeros are used as necessary.
             If the $(I Precision) is 0 and the number is 0, no digits
-            result.
+            result.)
 
-            <dt>$(B 'e','E')
-            <dd> A floating point number is formatted as one digit before
+            $(DT $(B 'e','E'))
+            $(DD A floating point number is formatted as one digit before
             the decimal point, $(I Precision) digits after, the $(I FormatChar),
             &plusmn;, followed by at least a two digit exponent:
             $(I d.dddddd)e$(I &plusmn;dd).
             If there is no $(I Precision), six
             digits are generated after the decimal point.
-            If the $(I Precision) is 0, no decimal point is generated.
+            If the $(I Precision) is 0, no decimal point is generated.)
 
-            <dt>$(B 'f','F')
-            <dd> A floating point number is formatted in decimal notation.
+            $(DT $(B 'f','F'))
+            $(DD A floating point number is formatted in decimal notation.
             The $(I Precision) specifies the number of digits generated
             after the decimal point. It defaults to six. At least one digit
             is generated before the decimal point. If the $(I Precision)
-            is zero, no decimal point is generated.
+            is zero, no decimal point is generated.)
 
-            <dt>$(B 'g','G')
-            <dd> A floating point number is formatted in either $(B e) or
+            $(DT $(B 'g','G'))
+            $(DD A floating point number is formatted in either $(B e) or
             $(B f) format for $(B g); $(B E) or $(B F) format for
             $(B G).
             The $(B f) format is used if the exponent for an $(B e) format
@@ -318,10 +318,10 @@ $(I FormatChar):
             The $(I Precision) specifies the number of significant
             digits, and defaults to six.
             Trailing zeros are elided after the decimal point, if the fractional
-            part is zero then no decimal point is generated.
+            part is zero then no decimal point is generated.)
 
-            <dt>$(B 'a','A')
-            <dd> A floating point number is formatted in hexadecimal
+            $(DT $(B 'a','A'))
+            $(DD A floating point number is formatted in hexadecimal
             exponential notation 0x$(I h.hhhhhh)p$(I &plusmn;d).
             There is one hexadecimal digit before the decimal point, and as
             many after as specified by the $(I Precision).
@@ -333,9 +333,9 @@ $(I FormatChar):
             $(I h.hhhhhh)*2<sup>$(I &plusmn;d)</sup>.
             The exponent for zero is zero.
             The hexadecimal digits, x and p are in upper case if the
-            $(I FormatChar) is upper case.
-        </dl>
-    </dl>
+            $(I FormatChar) is upper case.)
+        ))
+    )
 
     Floating point NaN's are formatted as $(B nan) if the
     $(I FormatChar) is lower case, or $(B NAN) if upper.
@@ -343,22 +343,19 @@ $(I FormatChar):
     $(B infinity) if the
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
 
-    Examples:
-    -------------------------
-    import std.array;
-    import std.format;
+    Example:
+    -----------------
+    import std.array : appender;
+    import std.format : formattedWrite;
 
-    void main()
-    {
-        auto writer = appender!string();
-        formattedWrite(writer, "%s is the ultimate %s.", 42, "answer");
-        assert(writer.data == "42 is the ultimate answer.");
-        // Clear the writer
-        writer = appender!string();
-        formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
-        assert(writer.data == "Date: 5 October");
-    }
-    ------------------------
+    auto writer = appender!string();
+    formattedWrite(writer, "%s is the ultimate %s.", 42, "answer");
+    assert(writer.data == "42 is the ultimate answer.");
+    // Clear the writer
+    writer = appender!string();
+    formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
+    assert(writer.data == "Date: 5 October");
+    -----------------
 
     The positional and non-positional styles can be mixed in the same
     format string. (POSIX leaves this behavior undefined.) The internal
@@ -376,10 +373,10 @@ $(I FormatChar):
     }
     -------------------------
     The output is:
-<pre class=console>
+$(CONSOLE
 My items are 1 2 3.
 My items are 1, 2, 3.
-</pre>
+)
 
     The trailing end of the sub-format string following the specifier for each
     item is interpreted as the array delimiter, and is therefore omitted
@@ -395,9 +392,9 @@ My items are 1, 2, 3.
     }
     -------------------------
     which gives the output:
-<pre class=console>
+$(CONSOLE
 My items are -1-, -2-, -3-.
-</pre>
+)
 
     These compound format specifiers may be nested in the case of a nested
     array argument:
@@ -419,7 +416,7 @@ My items are -1-, -2-, -3-.
     }
     -------------------------
     The output is:
-<pre class=console>
+$(CONSOLE
 1 2 3
 4 5 6
 7 8 9
@@ -431,7 +428,7 @@ My items are -1-, -2-, -3-.
 [[1 2 3]
  [4 5 6]
  [7 8 9]]
-</pre>
+)
 
     Inside a compound format specifier, strings and characters are escaped
     automatically. To avoid this behavior, add $(B '-') flag to
@@ -447,11 +444,11 @@ My items are -1-, -2-, -3-.
     }
     -------------------------
    which gives the output:
-<pre class=console>
+$(CONSOLE
 My friends are ["John", "Nancy"].
 My friends are "John", "Nancy".
 My friends are John, Nancy.
-</pre>
+)
  */
 uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
@@ -538,13 +535,18 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         if (spec.indexStart > 0)
         {
             // using positional parameters!
-            foreach (i; spec.indexStart - 1 .. spec.indexEnd)
+
+            // Make the conditional compilation of this loop explicit, to avoid "statement not reachable" warnings.
+            static if(A.length > 0)
             {
-                if (funs.length <= i) break;
-                if (__ctfe)
-                    formatNth(w, spec, i, args);
-                else
-                    funs[i](w, argsAddresses[i], spec);
+                foreach (i; spec.indexStart - 1 .. spec.indexEnd)
+                {
+                    if (funs.length <= i) break;
+                    if (__ctfe)
+                        formatNth(w, spec, i, args);
+                    else
+                        funs[i](w, argsAddresses[i], spec);
+                }
             }
             if (currentArg < spec.indexEnd) currentArg = spec.indexEnd;
         }
@@ -591,7 +593,7 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
     static if (!S.length)
     {
         spec.readUpToNextSpec(r);
-        enforce(spec.trailing.empty);
+        enforce(spec.trailing.empty, "Trailing characters in formattedRead format string");
         return 0;
     }
     else
@@ -1249,10 +1251,10 @@ unittest
     import std.array : appender;
     auto a = appender!(string)();
 
-    auto f = FormatSpec!char("%-(%s%");
+    auto f = FormatSpec!char("%-(%s%"); // %)")
     assertThrown(f.writeUpToNextSpec(a));
 
-    f = FormatSpec!char("%(%-");
+    f = FormatSpec!char("%(%-"); // %)")
     assertThrown(f.writeUpToNextSpec(a));
 }
 
@@ -1698,7 +1700,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         return;
     }
     enforceFmt(find("fgFGaAeEs", fs.spec).length,
-        "floating");
+        "incompatible format character for floating point type");
 
     version (CRuntime_Microsoft)
     {
@@ -1785,7 +1787,7 @@ unittest
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
-    foreach (T; TypeTuple!(float, double, real))
+    foreach (T; AliasSeq!(float, double, real))
     {
         formatTest( to!(          T)(5.5), "5.5" );
         formatTest( to!(    const T)(5.5), "5.5" );
@@ -1839,13 +1841,13 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
-    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    foreach (T; AliasSeq!(cfloat, cdouble, creal))
     {
         formatTest( to!(          T)(1 + 1i), "1+1i" );
         formatTest( to!(    const T)(1 + 1i), "1+1i" );
         formatTest( to!(immutable T)(1 + 1i), "1+1i" );
     }
-    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    foreach (T; AliasSeq!(cfloat, cdouble, creal))
     {
         formatTest( to!(          T)(0 - 3i), "0-3i" );
         formatTest( to!(    const T)(0 - 3i), "0-3i" );
@@ -1890,7 +1892,7 @@ if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
-    foreach (T; TypeTuple!(ifloat, idouble, ireal))
+    foreach (T; AliasSeq!(ifloat, idouble, ireal))
     {
         formatTest( to!(          T)(1i), "1i" );
         formatTest( to!(    const T)(1i), "1i" );
@@ -1936,7 +1938,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     else
     {
-        alias U = TypeTuple!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
+        alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
         formatValue(w, cast(U) val, f);
     }
 }
@@ -2262,7 +2264,7 @@ unittest
 unittest
 {
     // string literal from valid UTF sequence is encoding free.
-    foreach (StrType; TypeTuple!(string, wstring, dstring))
+    foreach (StrType; AliasSeq!(string, wstring, dstring))
     {
         // Valid and printable (ASCII)
         formatTest( [cast(StrType)"hello"],
@@ -3677,7 +3679,9 @@ pure unittest
 unittest
 {
     import std.conv : text, octal;
-    import std.array;
+    import std.array : appender;
+    import std.c.stdio : snprintf;
+    import core.stdc.string : strlen;
 
     debug(format) printf("std.format.format.unittest\n");
 
@@ -4040,110 +4044,6 @@ here:
 
     stream.clear(); formattedWrite(stream, "%.-3d", 7);
     assert(stream.data == "7", ">" ~ stream.data ~ "<");
-
-
-    // systematic test
-    const string[] flags = [ "-", "+", "#", "0", " ", "" ];
-    const string[] widths = [ "", "0", "4", "20" ];
-    const string[] precs = [ "", ".", ".0", ".4", ".20" ];
-    const string formats = "sdoxXeEfFgGaA";
-  /+
-  foreach (flag1; flags)
-      foreach (flag2; flags)
-          foreach (flag3; flags)
-              foreach (flag4; flags)
-                  foreach (flag5; flags)
-                      foreach (width; widths)
-                          foreach (prec; precs)
-                              foreach (format; formats)
-                              {
-                                  stream.clear();
-                                  auto fmt = "%" ~ flag1 ~ flag2  ~ flag3
-                                      ~ flag4 ~ flag5 ~ width ~ prec ~ format
-                                      ~ '\0';
-                                  fmt = fmt[0 .. $ - 1]; // keep it zero-term
-                                  char buf[256];
-                                  buf[0] = 0;
-                                  switch (format)
-                                  {
-                                  case 's':
-                                      formattedWrite(stream, fmt, "wyda");
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                          "wyda\0".ptr);
-                                      break;
-                                  case 'd':
-                                      formattedWrite(stream, fmt, 456);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                               456);
-                                      break;
-                                  case 'o':
-                                      formattedWrite(stream, fmt, 345);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                               345);
-                                      break;
-                                  case 'x':
-                                      formattedWrite(stream, fmt, 63546);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                          63546);
-                                      break;
-                                  case 'X':
-                                      formattedWrite(stream, fmt, 12566);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                          12566);
-                                      break;
-                                  case 'e':
-                                      formattedWrite(stream, fmt, 3245.345234);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                          3245.345234);
-                                      break;
-                                  case 'E':
-                                      formattedWrite(stream, fmt, 3245.2345234);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                          3245.2345234);
-                                      break;
-                                  case 'f':
-                                      formattedWrite(stream, fmt, 3245234.645675);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                          3245234.645675);
-                                      break;
-                                  case 'F':
-                                      formattedWrite(stream, fmt, 213412.43);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                          213412.43);
-                                      break;
-                                  case 'g':
-                                      formattedWrite(stream, fmt, 234134.34);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                          234134.34);
-                                      break;
-                                  case 'G':
-                                      formattedWrite(stream, fmt, 23141234.4321);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                               23141234.4321);
-                                      break;
-                                  case 'a':
-                                      formattedWrite(stream, fmt, 21341234.2134123);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                               21341234.2134123);
-                                      break;
-                                  case 'A':
-                                      formattedWrite(stream, fmt, 1092384098.45234);
-                                      snprintf(buf.ptr, buf.length, fmt.ptr,
-                                               1092384098.45234);
-                                      break;
-                                  default:
-                                      break;
-                                  }
-                                  auto exp = buf[0 .. strlen(buf.ptr)];
-                                  if (stream.data != exp)
-                                  {
-                                      writeln("Format: \"", fmt, '"');
-                                      writeln("Expected: >", exp, "<");
-                                      writeln("Actual:   >", stream.data,
-                                              "<");
-                                      assert(false);
-                                  }
-                              }+/
 }
 
 unittest
@@ -4152,28 +4052,13 @@ unittest
     import std.stdio;
 
     immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
-    if (false) writeln(aa.keys);
     assert(aa[3] == "hello");
     assert(aa[4] == "betty");
-    // if (false)
-    // {
-    //     writeln(aa.values[0]);
-    //     writeln(aa.values[1]);
-    //     writefln("%s", typeid(typeof(aa.values)));
-    //     writefln("%s", aa[3]);
-    //     writefln("%s", aa[4]);
-    //     writefln("%s", aa.values);
-    //     //writefln("%s", aa);
-    //     wstring a = "abcd";
-    //     writefln(a);
-    //     dstring b = "abcd";
-    //     writefln(b);
-    // }
 
     auto stream = appender!(char[])();
     alias AllNumerics =
-        TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
-                   float, double, real);
+        AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                  float, double, real);
     foreach (T; AllNumerics)
     {
         T value = 1;
@@ -4182,11 +4067,8 @@ unittest
         assert(stream.data == "1");
     }
 
-    //auto r = format("%s", aa.values);
-    stream.clear(); formattedWrite(stream, "%s", aa);
-    //assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]", stream.data);
-    //r = format("%s", aa);
-    //assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
+    stream.clear();
+    formattedWrite(stream, "%s", aa);
 }
 
 unittest
@@ -4219,21 +4101,21 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
     {
         alias aa1 = val;
         alias aa2 = val2;
-        //assert(aa1 == aa2);
+        assert(aa1 == aa2);
 
         assert(aa1.length == aa2.length);
 
         assert(aa1.keys == aa2.keys);
 
-        //assert(aa1.values == aa2.values);
+        assert(aa1.values == aa2.values);
         assert(aa1.values.length == aa2.values.length);
         foreach (i; 0 .. aa1.values.length)
             assert(aa1.values[i] == aa2.values[i]);
 
-        //foreach (i, key; aa1.keys)
-        //    assert(aa1.values[i] == aa1[key]);
-        //foreach (i, key; aa2.keys)
-        //    assert(aa2.values[i] == aa2[key]);
+        foreach (i, key; aa1.keys)
+            assert(aa1.values[i] == aa1[key]);
+        foreach (i, key; aa2.keys)
+            assert(aa2.values[i] == aa2[key]);
         return;
     }
     enforce!AssertError(
@@ -4268,21 +4150,21 @@ void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn =
     {
         alias aa1 = val;
         alias aa2 = val2;
-        //assert(aa1 == aa2);
+        assert(aa1 == aa2);
 
         assert(aa1.length == aa2.length);
 
         assert(aa1.keys == aa2.keys);
 
-        //assert(aa1.values == aa2.values);
+        assert(aa1.values == aa2.values);
         assert(aa1.values.length == aa2.values.length);
         foreach (i; 0 .. aa1.values.length)
             assert(aa1.values[i] == aa2.values[i]);
 
-        //foreach (i, key; aa1.keys)
-        //    assert(aa1.values[i] == aa1[key]);
-        //foreach (i, key; aa2.keys)
-        //    assert(aa2.values[i] == aa2[key]);
+        foreach (i, key; aa1.keys)
+            assert(aa1.values[i] == aa1[key]);
+        foreach (i, key; aa2.keys)
+            assert(aa2.values[i] == aa2[key]);
         return;
     }
     enforce!AssertError(
@@ -4496,7 +4378,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     enforce(find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
-    enforce(spec.width == 0);   // TODO
+    enforce(spec.width == 0, "Parsing integers with a width specification is not implemented");   // TODO
 
     uint base =
         spec.spec == 'x' || spec.spec == 'X' ? 16 :
@@ -4519,7 +4401,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     {
         // raw read
         //enforce(input.length >= T.sizeof);
-        enforce(isSomeString!Range || ElementType!(Range).sizeof == 1);
+        enforce(isSomeString!Range || ElementType!(Range).sizeof == 1, "Cannot parse input of type %s".format(Range.stringof));
         union X
         {
             ubyte[T.sizeof] raw;
@@ -4878,7 +4760,7 @@ body
         {
             auto fmt = FormatSpec!Char(spec.nested);
             fmt.readUpToNextSpec(input);
-            enforce(!input.empty);
+            enforce(!input.empty, "Unexpected end of input when parsing range");
 
             debug (unformatRange) printf("\t) spec = %c, front = %c ", fmt.spec, input.front);
             static if (isStaticArray!T)
@@ -4904,7 +4786,7 @@ body
             static if (isStaticArray!T)
             {
                 debug (unformatRange) printf("i = %u < %u\n", i, T.length);
-                enforce(i <= T.length);
+                enforce(i <= T.length, "Too many format specifiers for static array of length %d".format(T.length));
             }
 
             if (spec.sep != null)
@@ -4923,8 +4805,8 @@ body
             {
                 while (!sep.empty)
                 {
-                    enforce(!input.empty);
-                    enforce(input.front == sep.front);
+                    enforce(!input.empty, "Unexpected end of input when parsing range separator");
+                    enforce(input.front == sep.front, "Unexpected character when parsing range separator");
                     input.popFront();
                     sep.popFront();
                 }
@@ -4934,7 +4816,7 @@ body
     }
     static if (isStaticArray!T)
     {
-        enforce(i == T.length);
+        enforce(i == T.length, "Too few (%d) format specifiers for static array of length %d".format(i, T.length));
     }
     return result;
 }
@@ -5083,7 +4965,7 @@ private TypeInfo primitiveTypeInfo(Mangle m)
  *        A $(I format specification) starts with a '%' character,
  *        and has the following grammar:
 
-<pre>
+$(CONSOLE
 $(I FormatSpecification):
     $(B '%%')
     $(B '%') $(I Flags) $(I Width) $(I Precision) $(I FormatChar)
@@ -5138,88 +5020,88 @@ $(I FormatChar):
     $(B 'G')
     $(B 'a')
     $(B 'A')
-</pre>
-    <dl>
-    <dt>$(I Flags)
-    <dl>
-        <dt>$(B '-')
-        <dd>
+)
+    $(DL
+    $(DT $(I Flags))
+    $(DL
+        $(DT $(B '-'))
+        $(DD
         Left justify the result in the field.
-        It overrides any $(B 0) flag.
+        It overrides any $(B 0) flag.)
 
-        <dt>$(B '+')
-        <dd>Prefix positive numbers in a signed conversion with a $(B +).
-        It overrides any $(I space) flag.
+        $(DT $(B '+'))
+        $(DD Prefix positive numbers in a signed conversion with a $(B +).
+        It overrides any $(I space) flag.)
 
-        <dt>$(B '#')
-        <dd>Use alternative formatting:
-        <dl>
-            <dt>For $(B 'o'):
-            <dd> Add to precision as necessary so that the first digit
+        $(DT $(B '#'))
+        $(DD Use alternative formatting:
+        $(DL
+            $(DT For $(B 'o'):)
+            $(DD Add to precision as necessary so that the first digit
             of the octal formatting is a '0', even if both the argument
-            and the $(I Precision) are zero.
-            <dt> For $(B 'x') ($(B 'X')):
-            <dd> If non-zero, prefix result with $(B 0x) ($(B 0X)).
-            <dt> For floating point formatting:
-            <dd> Always insert the decimal point.
-            <dt> For $(B 'g') ($(B 'G')):
-            <dd> Do not elide trailing zeros.
-        </dl>
+            and the $(I Precision) are zero.)
+            $(DT For $(B 'x') ($(B 'X')):)
+            $(DD If non-zero, prefix result with $(B 0x) ($(B 0X)).)
+            $(DT For floating point formatting:)
+            $(DD Always insert the decimal point.)
+            $(DT For $(B 'g') ($(B 'G')):)
+            $(DD Do not elide trailing zeros.)
+        ))
 
-        <dt>$(B '0')
-        <dd> For integer and floating point formatting when not nan or
+        $(DT $(B '0'))
+        $(DD For integer and floating point formatting when not nan or
         infinity, use leading zeros
         to pad rather than spaces.
-        Ignore if there's a $(I Precision).
+        Ignore if there's a $(I Precision).)
 
-        <dt>$(B ' ')
-        <dd>Prefix positive numbers in a signed conversion with a space.
-    </dl>
+        $(DT $(B ' '))
+        $(DD Prefix positive numbers in a signed conversion with a space.)
+    )
 
-    <dt>$(I Width)
-    <dd>
+    $(DT $(I Width))
+    $(DD
     Specifies the minimum field width.
     If the width is a $(B *), the next argument, which must be
     of type $(B int), is taken as the width.
     If the width is negative, it is as if the $(B -) was given
-    as a $(I Flags) character.
+    as a $(I Flags) character.)
 
-    <dt>$(I Precision)
-    <dd> Gives the precision for numeric conversions.
+    $(DT $(I Precision))
+    $(DD Gives the precision for numeric conversions.
     If the precision is a $(B *), the next argument, which must be
     of type $(B int), is taken as the precision. If it is negative,
-    it is as if there was no $(I Precision).
+    it is as if there was no $(I Precision).)
 
-    <dt>$(I FormatChar)
-    <dd>
-    <dl>
-        <dt>$(B 's')
-        <dd>The corresponding argument is formatted in a manner consistent
+    $(DT $(I FormatChar))
+    $(DD
+    $(DL
+        $(DT $(B 's'))
+        $(DD The corresponding argument is formatted in a manner consistent
         with its type:
-        <dl>
-            <dt>$(B bool)
-            <dd>The result is <tt>'true'</tt> or <tt>'false'</tt>.
-            <dt>integral types
-            <dd>The $(B %d) format is used.
-            <dt>floating point types
-            <dd>The $(B %g) format is used.
-            <dt>string types
-            <dd>The result is the string converted to UTF-8.
+        $(DL
+            $(DT $(B bool))
+            $(DD The result is <tt>'true'</tt> or <tt>'false'</tt>.)
+            $(DT integral types)
+            $(DD The $(B %d) format is used.)
+            $(DT floating point types)
+            $(DD The $(B %g) format is used.)
+            $(DT string types)
+            $(DD The result is the string converted to UTF-8.)
             A $(I Precision) specifies the maximum number of characters
             to use in the result.
-            <dt>classes derived from $(B Object)
-            <dd>The result is the string returned from the class instance's
+            $(DT classes derived from $(B Object))
+            $(DD The result is the string returned from the class instance's
             $(B .toString()) method.
             A $(I Precision) specifies the maximum number of characters
-            to use in the result.
-            <dt>non-string static and dynamic arrays
-            <dd>The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
+            to use in the result.)
+            $(DT non-string static and dynamic arrays)
+            $(DD The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
             where s<sub>k</sub> is the kth element
-            formatted with the default format.
-        </dl>
+            formatted with the default format.)
+        ))
 
-        <dt>$(B 'b','d','o','x','X')
-        <dd> The corresponding argument must be an integral type
+        $(DT $(B 'b','d','o','x','X'))
+        $(DD The corresponding argument must be an integral type
         and is formatted as an integer. If the argument is a signed type
         and the $(I FormatChar) is $(B d) it is converted to
         a signed string of characters, otherwise it is treated as
@@ -5231,25 +5113,25 @@ $(I FormatChar):
         If there are fewer resulting digits than the $(I Precision),
         leading zeros are used as necessary.
         If the $(I Precision) is 0 and the number is 0, no digits
-        result.
+        result.)
 
-        <dt>$(B 'e','E')
-        <dd> A floating point number is formatted as one digit before
+        $(DT $(B 'e','E'))
+        $(DD A floating point number is formatted as one digit before
         the decimal point, $(I Precision) digits after, the $(I FormatChar),
         &plusmn;, followed by at least a two digit exponent: $(I d.dddddd)e$(I &plusmn;dd).
         If there is no $(I Precision), six
         digits are generated after the decimal point.
-        If the $(I Precision) is 0, no decimal point is generated.
+        If the $(I Precision) is 0, no decimal point is generated.)
 
-        <dt>$(B 'f','F')
-        <dd> A floating point number is formatted in decimal notation.
+        $(DT $(B 'f','F'))
+        $(DD A floating point number is formatted in decimal notation.
         The $(I Precision) specifies the number of digits generated
         after the decimal point. It defaults to six. At least one digit
         is generated before the decimal point. If the $(I Precision)
-        is zero, no decimal point is generated.
+        is zero, no decimal point is generated.)
 
-        <dt>$(B 'g','G')
-        <dd> A floating point number is formatted in either $(B e) or
+        $(DT $(B 'g','G'))
+        $(DD A floating point number is formatted in either $(B e) or
         $(B f) format for $(B g); $(B E) or $(B F) format for
         $(B G).
         The $(B f) format is used if the exponent for an $(B e) format
@@ -5257,10 +5139,10 @@ $(I FormatChar):
         The $(I Precision) specifies the number of significant
         digits, and defaults to six.
         Trailing zeros are elided after the decimal point, if the fractional
-        part is zero then no decimal point is generated.
+        part is zero then no decimal point is generated.)
 
-        <dt>$(B 'a','A')
-        <dd> A floating point number is formatted in hexadecimal
+        $(DT $(B 'a','A'))
+        $(DD A floating point number is formatted in hexadecimal
         exponential notation 0x$(I h.hhhhhh)p$(I &plusmn;d).
         There is one hexadecimal digit before the decimal point, and as
         many after as specified by the $(I Precision).
@@ -5272,15 +5154,15 @@ $(I FormatChar):
         $(I h.hhhhhh)*2<sup>$(I &plusmn;d)</sup>.
         The exponent for zero is zero.
         The hexadecimal digits, x and p are in upper case if the
-        $(I FormatChar) is upper case.
-    </dl>
+        $(I FormatChar) is upper case.)
+    )
 
     Floating point NaN's are formatted as $(B nan) if the
     $(I FormatChar) is lower case, or $(B NAN) if upper.
     Floating point infinities are formatted as $(B inf) or
     $(B infinity) if the
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
-    </dl>
+    ))
 
 Example:
 
@@ -5459,7 +5341,7 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
                 default:
                     //printf("fc = '%c'\n", fc);
                 Lerror:
-                    throw new FormatException("floating");
+                    throw new FormatException("incompatible format character for floating point type");
             }
             version (DigitalMarsC)
             {
@@ -6595,23 +6477,6 @@ unittest
  * Format arguments into buffer $(I buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
  * Returns: The slice of $(D buf) containing the formatted string.
- *
- *  $(RED sformat's current implementation has been replaced with $(LREF xsformat)'s
- *        implementation in November 2012.
- *        This is seamless for most code, but it makes it so that the only
- *        argument that can be a format string is the first one, so any
- *        code which used multiple format strings has broken. Please change
- *        your calls to sformat accordingly.
- *
- *        e.g.:
- *        ----
- *        sformat(buf, "key = %s", key, ", value = %s", value)
- *        ----
- *        needs to be rewritten as:
- *        ----
- *        sformat(buf, "key = %s, value = %s", key, value)
- *        ----
- *   )
  */
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {

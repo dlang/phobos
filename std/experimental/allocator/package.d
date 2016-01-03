@@ -250,7 +250,7 @@ unittest
 }
 
 import std.algorithm, std.conv, std.exception, std.range, std.traits,
-    std.typecons, std.typetuple;
+    std.typecons;
 version(unittest) import std.random, std.stdio;
 
 /**

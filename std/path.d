@@ -317,7 +317,7 @@ else static assert (0);
     the comparison is case sensitive or not.  See the
     $(LREF filenameCmp) documentation for details.
 
-    Examples:
+    Example:
     ---
     assert (baseName("dir/file.ext")         == "file.ext");
     assert (baseName("dir/file.ext", ".ext") == "file");
@@ -1554,10 +1554,9 @@ auto chainPath(Ranges...)(auto ref Ranges ranges)
 
 unittest
 {
-    chainPath(TestAliasedString(null), TestAliasedString(null), TestAliasedString(null));
-    static assert(__traits(compiles, chainPath(TestAliasedString(null), TestAliasedString(null), TestAliasedString(null))));
-    static assert(__traits(compiles, chainPath(TestAliasedString(null), TestAliasedString(null), "")));
-    static assert(__traits(compiles, chainPath(TestAliasedString(null), "", TestAliasedString(null))));
+    assert(chainPath(TestAliasedString(null), TestAliasedString(null), TestAliasedString(null)).empty);
+    assert(chainPath(TestAliasedString(null), TestAliasedString(null), "").empty);
+    assert(chainPath(TestAliasedString(null), "", TestAliasedString(null)).empty);
     static struct S { string s; }
     static assert(!__traits(compiles, chainPath(TestAliasedString(null), S(""), TestAliasedString(null))));
 }
@@ -2459,7 +2458,7 @@ unittest
 
     Returns: Whether a path is absolute or not.
 
-    Examples:
+    Example:
     On POSIX, an absolute path starts at the root directory.
     (In fact, $(D _isAbsolute) is just an alias for $(LREF isRooted).)
     ---
@@ -2903,11 +2902,11 @@ unittest
         assert (asRelativePath(TestAliasedString("foo"), TestAliasedString("/bar")).array == "foo");
     else version (Windows)
         assert (asRelativePath(TestAliasedString("foo"), TestAliasedString(`c:\bar`)).array == "foo");
-    static assert(__traits(compiles, asRelativePath(TestAliasedString(null), "")));
-    static assert(__traits(compiles, asRelativePath("", TestAliasedString(null))));
-    static assert(__traits(compiles, asRelativePath(TestAliasedString(null), TestAliasedString(null))));
+    assert(asRelativePath(TestAliasedString("foo"), "bar").array == "foo");
+    assert(asRelativePath("foo", TestAliasedString("bar")).array == "foo");
+    assert(asRelativePath(TestAliasedString("foo"), TestAliasedString("bar")).array == "foo");
     import std.utf : byDchar;
-    static assert(__traits(compiles, asRelativePath(""d.byDchar, TestAliasedString(null))));
+    assert(asRelativePath("foo"d.byDchar, TestAliasedString("bar")).array == "foo");
 }
 
 unittest
@@ -3509,8 +3508,8 @@ unittest
     else version (Posix) valid ~= pfdep;
     else static assert (0);
 
-    import std.typetuple;
-    foreach (T; TypeTuple!(char[], const(char)[], string, wchar[],
+    import std.meta : AliasSeq;
+    foreach (T; AliasSeq!(char[], const(char)[], string, wchar[],
         const(wchar)[], wstring, dchar[], const(dchar)[], dstring))
     {
         foreach (fn; valid)
@@ -3754,7 +3753,7 @@ unittest
     if it could not be expanded.
     For Windows, $(D expandTilde) merely returns its argument $(D inputPath).
 
-    Examples:
+    Example:
     -----
     void processFile(string path)
     {

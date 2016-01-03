@@ -23,9 +23,9 @@ module std.conv;
 
 public import std.ascii : LetterCase;
 
+import std.meta;
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
 
 // Same as std.string.format, but "self-importing".
 // Helps reduce code and imports, particularly in static asserts.
@@ -195,7 +195,7 @@ conversion is truncating towards zero, the same way a cast would
 truncate. (To round a floating point value when casting to an
 integral, use $(D_PARAM roundTo).)
 
-Examples:
+Example:
 -------------------------
 int a = 420;
 auto b = to!long(a); // same as long b = a;
@@ -335,12 +335,12 @@ template to(T)
 @safe pure unittest
 {
     import std.exception;
-    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assertThrown!ConvException(to!T(" 0"));
         assertThrown!ConvException(to!T(" 0", 8));
     }
-    foreach (T; TypeTuple!(float, double, real))
+    foreach (T; AliasSeq!(float, double, real))
     {
         assertThrown!ConvException(to!T(" 0"));
     }
@@ -407,12 +407,12 @@ T toImpl(T, S)(S value)
 {
     import std.exception;
     // Conversion between same size
-    foreach (S; TypeTuple!(byte, short, int, long))
+    foreach (S; AliasSeq!(byte, short, int, long))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias U = Unsigned!S;
 
-        foreach (Sint; TypeTuple!(S, const S, immutable S))
-        foreach (Uint; TypeTuple!(U, const U, immutable U))
+        foreach (Sint; AliasSeq!(S, const S, immutable S))
+        foreach (Uint; AliasSeq!(U, const U, immutable U))
         {
             // positive overflow
             Uint un = Uint.max;
@@ -427,8 +427,8 @@ T toImpl(T, S)(S value)
     }();
 
     // Conversion between different size
-    foreach (i, S1; TypeTuple!(byte, short, int, long))
-    foreach (   S2; TypeTuple!(byte, short, int, long)[i+1..$])
+    foreach (i, S1; AliasSeq!(byte, short, int, long))
+    foreach (   S2; AliasSeq!(byte, short, int, long)[i+1..$])
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias U1 = Unsigned!S1;
         alias U2 = Unsigned!S2;
@@ -436,8 +436,8 @@ T toImpl(T, S)(S value)
         static assert(U1.sizeof < S2.sizeof);
 
         // small unsigned to big signed
-        foreach (Uint; TypeTuple!(U1, const U1, immutable U1))
-        foreach (Sint; TypeTuple!(S2, const S2, immutable S2))
+        foreach (Uint; AliasSeq!(U1, const U1, immutable U1))
+        foreach (Sint; AliasSeq!(S2, const S2, immutable S2))
         {
             Uint un = Uint.max;
             assertNotThrown(to!Sint(un));
@@ -445,8 +445,8 @@ T toImpl(T, S)(S value)
         }
 
         // big unsigned to small signed
-        foreach (Uint; TypeTuple!(U2, const U2, immutable U2))
-        foreach (Sint; TypeTuple!(S1, const S1, immutable S1))
+        foreach (Uint; AliasSeq!(U2, const U2, immutable U2))
+        foreach (Sint; AliasSeq!(S1, const S1, immutable S1))
         {
             Uint un = Uint.max;
             assertThrown(to!Sint(un));
@@ -455,16 +455,16 @@ T toImpl(T, S)(S value)
         static assert(S1.sizeof < U2.sizeof);
 
         // small signed to big unsigned
-        foreach (Sint; TypeTuple!(S1, const S1, immutable S1))
-        foreach (Uint; TypeTuple!(U2, const U2, immutable U2))
+        foreach (Sint; AliasSeq!(S1, const S1, immutable S1))
+        foreach (Uint; AliasSeq!(U2, const U2, immutable U2))
         {
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
         }
 
         // big signed to small unsigned
-        foreach (Sint; TypeTuple!(S2, const S2, immutable S2))
-        foreach (Uint; TypeTuple!(U1, const U1, immutable U1))
+        foreach (Sint; AliasSeq!(S2, const S2, immutable S2))
+        foreach (Uint; AliasSeq!(U1, const U1, immutable U1))
         {
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
@@ -755,8 +755,8 @@ T toImpl(T, S)(S value)
     class C : B, I, J {}
     class D : I {}
 
-    foreach (m1; TypeTuple!(0,1,2,3,4)) // enumerate modifiers
-    foreach (m2; TypeTuple!(0,1,2,3,4)) // ditto
+    foreach (m1; AliasSeq!(0,1,2,3,4)) // enumerate modifiers
+    foreach (m2; AliasSeq!(0,1,2,3,4)) // ditto
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias srcmod = AddModifier!m1;
         alias tgtmod = AddModifier!m2;
@@ -965,15 +965,15 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     void dg()
     {
         // string to string conversion
-        alias Chars = TypeTuple!(char, wchar, dchar);
+        alias Chars = AliasSeq!(char, wchar, dchar);
         foreach (LhsC; Chars)
         {
-            alias LhStrings = TypeTuple!(LhsC[], const(LhsC)[], immutable(LhsC)[]);
+            alias LhStrings = AliasSeq!(LhsC[], const(LhsC)[], immutable(LhsC)[]);
             foreach (Lhs; LhStrings)
             {
                 foreach (RhsC; Chars)
                 {
-                    alias RhStrings = TypeTuple!(RhsC[], const(RhsC)[], immutable(RhsC)[]);
+                    alias RhStrings = AliasSeq!(RhsC[], const(RhsC)[], immutable(RhsC)[]);
                     foreach (Rhs; RhStrings)
                     {
                         Lhs s1 = to!Lhs("wyda");
@@ -1034,9 +1034,9 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 {
     // Conversion representing character value with string
     alias AllChars =
-        TypeTuple!( char, const( char), immutable( char),
-                   wchar, const(wchar), immutable(wchar),
-                   dchar, const(dchar), immutable(dchar));
+        AliasSeq!( char, const( char), immutable( char),
+                  wchar, const(wchar), immutable(wchar),
+                  dchar, const(dchar), immutable(dchar));
     foreach (Char1; AllChars)
     {
         foreach (Char2; AllChars)
@@ -1063,14 +1063,14 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     import std.exception;
     // Conversion representing integer values with string
 
-    foreach (Int; TypeTuple!(ubyte, ushort, uint, ulong))
+    foreach (Int; AliasSeq!(ubyte, ushort, uint, ulong))
     {
         assert(to!string(Int(0)) == "0");
         assert(to!string(Int(9)) == "9");
         assert(to!string(Int(123)) == "123");
     }
 
-    foreach (Int; TypeTuple!(byte, short, int, long))
+    foreach (Int; AliasSeq!(byte, short, int, long))
     {
         assert(to!string(Int(0)) == "0");
         assert(to!string(Int(9)) == "9");
@@ -1171,7 +1171,7 @@ unittest
     enum EC : char { a = 'x', b = 'y' }
     enum ES : string { a = "aaa", b = "bbb" }
 
-    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    foreach (E; AliasSeq!(EB, EU, EI, EF, EC, ES))
     {
         assert(to! string(E.a) == "a"c);
         assert(to!wstring(E.a) == "a"w);
@@ -1199,7 +1199,7 @@ unittest
     assert(to!string(E.doo) == "foo");
     assert(to!string(E.bar) == "bar");
 
-    foreach (S; TypeTuple!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
+    foreach (S; AliasSeq!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
     {
         auto s1 = to!S(E.foo);
         auto s2 = to!S(E.foo);
@@ -1208,7 +1208,7 @@ unittest
         assert(s1 is s2);
     }
 
-    foreach (S; TypeTuple!(char[], wchar[], dchar[]))
+    foreach (S; AliasSeq!(char[], wchar[], dchar[]))
     {
         auto s1 = to!S(E.foo);
         auto s2 = to!S(E.foo);
@@ -1275,7 +1275,7 @@ body
 
 @safe pure nothrow unittest
 {
-    foreach (Int; TypeTuple!(uint, ulong))
+    foreach (Int; AliasSeq!(uint, ulong))
     {
         assert(to!string(Int(16), 16) == "10");
         assert(to!string(Int(15), 2u) == "1111");
@@ -1285,7 +1285,7 @@ body
         assert(to!string(Int(0x1234AF), 16u, LetterCase.lower) == "1234af");
     }
 
-    foreach (Int; TypeTuple!(int, long))
+    foreach (Int; AliasSeq!(int, long))
     {
         assert(to!string(Int(-10), 10u) == "-10");
     }
@@ -1594,9 +1594,9 @@ private void testFloatingToIntegral(Floating, Integral)()
 
 @safe pure unittest
 {
-    alias AllInts = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
-    alias AllFloats = TypeTuple!(float, double, real);
-    alias AllNumerics = TypeTuple!(AllInts, AllFloats);
+    alias AllInts = AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong);
+    alias AllFloats = AliasSeq!(float, double, real);
+    alias AllNumerics = AliasSeq!(AllInts, AllFloats);
     // test with same type
     {
         foreach (T; AllNumerics)
@@ -1670,9 +1670,9 @@ private void testFloatingToIntegral(Floating, Integral)()
 }
 /*@safe pure */unittest
 {
-    alias AllInts = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
-    alias AllFloats = TypeTuple!(float, double, real);
-    alias AllNumerics = TypeTuple!(AllInts, AllFloats);
+    alias AllInts = AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong);
+    alias AllFloats = AliasSeq!(float, double, real);
+    alias AllNumerics = AliasSeq!(AllInts, AllFloats);
     // test conversions to string
     {
         foreach (T; AllNumerics)
@@ -1747,7 +1747,7 @@ T toImpl(T, S)(S value, uint radix)
 
 @safe pure unittest
 {
-    foreach (Str; TypeTuple!(string, wstring, dstring))
+    foreach (Str; AliasSeq!(string, wstring, dstring))
     {
         Str a = "123";
         assert(to!int(a) == 123);
@@ -1828,7 +1828,7 @@ unittest
 {
     import std.exception;
     // boundary values
-    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
+    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint))
     {
         assert(roundTo!Int(Int.min - 0.4L) == Int.min);
         assert(roundTo!Int(Int.max + 0.4L) == Int.max);
@@ -1837,15 +1837,19 @@ unittest
     }
 }
 
-/***************************************************************
- * The $(D_PARAM parse) family of functions works quite like the
- * $(D_PARAM to) family, except that (1) it only works with character ranges
- * as input, (2) takes the input by reference and advances it to
- * the position following the conversion, and (3) does not throw if it
- * could not convert the entire input. It still throws if an overflow
- * occurred during conversion or if no character of the input
- * was meaningfully converted.
- */
+/**
+The $(D parse) family of functions works quite like the $(D to)
+family, except that:
+$(OL
+    $(LI It only works with character ranges as input.)
+    $(LI It takes the input by reference. (This means that rvalues - such
+    as string literals - are not accepted: use $(D to) instead.))
+    $(LI It advances the input to the position following the conversion.)
+    $(LI It does not throw if it could not convert the entire input.))
+
+It still throws if an overflow occurred during conversion or if no character
+of the input was meaningfully converted.
+*/
 Target parse(Target, Source)(ref Source s)
     if (isInputRange!Source &&
         isSomeChar!(ElementType!Source) &&
@@ -2007,7 +2011,7 @@ Lerr:
 
 @safe pure unittest
 {
-    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         {
             assert(to!Int("0") == 0);
@@ -2103,7 +2107,7 @@ Lerr:
 {
     import std.exception;
     // parsing error check
-    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         {
             immutable string[] errors1 =
@@ -2142,7 +2146,7 @@ Lerr:
     }
 
     // positive overflow check
-    foreach (i, Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (i, Int; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         immutable string[] errors =
         [
@@ -2160,7 +2164,7 @@ Lerr:
     }
 
     // negative overflow check
-    foreach (i, Int; TypeTuple!(byte, short, int, long))
+    foreach (i, Int; AliasSeq!(byte, short, int, long))
     {
         immutable string[] errors =
         [
@@ -2267,36 +2271,20 @@ Lerr:
 
 @safe pure unittest
 {
-    // @@@BUG@@@ the size of China
-        // foreach (i; 2..37)
-        // {
-        //      assert(parse!int("0",i) == 0);
-        //      assert(parse!int("1",i) == 1);
-        //      assert(parse!byte("10",i) == i);
-        // }
-        foreach (i; 2..37)
-        {
-            string s = "0";
-                assert(parse!int(s,i) == 0);
-            s = "1";
-                assert(parse!int(s,i) == 1);
-            s = "10";
-                assert(parse!byte(s,i) == i);
-        }
-    // Same @@@BUG@@@ as above
-        //assert(parse!int("0011001101101", 2) == 0b0011001101101);
-        // assert(parse!int("765",8) == 0765);
-        // assert(parse!int("fCDe",16) == 0xfcde);
-    auto s = "0011001101101";
-        assert(parse!int(s, 2) == 0b0011001101101);
-    s = "765";
-        assert(parse!int(s, 8) == octal!765);
-    s = "fCDe";
-        assert(parse!int(s, 16) == 0xfcde);
+    string s; // parse doesn't accept rvalues
+    foreach (i; 2..37)
+    {
+        assert(parse!int(s = "0", i) == 0);
+        assert(parse!int(s = "1", i) == 1);
+        assert(parse!byte(s = "10", i) == i);
+    }
+
+    assert(parse!int(s = "0011001101101", 2) == 0b0011001101101);
+    assert(parse!int(s = "765", 8) == octal!765);
+    assert(parse!int(s = "fCDe", 16) == 0xfcde);
 
     // 6609
-    s = "-42";
-    assert(parse!int(s, 10) == -42);
+    assert(parse!int(s = "-42", 10) == -42);
 }
 
 @safe pure unittest // bugzilla 7302
@@ -2355,7 +2343,7 @@ unittest
     enum EC : char { a = 'a', b = 'b', c = 'c' }
     enum ES : string { a = "aaa", b = "bbb", c = "ccc" }
 
-    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    foreach (E; AliasSeq!(EB, EU, EI, EF, EC, ES))
     {
         assert(to!E("a"c) == E.a);
         assert(to!E("b"w) == E.b);
@@ -2804,7 +2792,7 @@ unittest
         return f;
     }
 
-    foreach (Float; TypeTuple!(float, double, real))
+    foreach (Float; AliasSeq!(float, double, real))
     {
         assert(to!Float("123") == Literal!Float(123));
         assert(to!Float("+123") == Literal!Float(+123));
@@ -3060,9 +3048,9 @@ Target parse(Target, Source)(ref Source s)
 
 @safe pure unittest
 {
-    foreach (Str; TypeTuple!(string, wstring, dstring))
+    foreach (Str; AliasSeq!(string, wstring, dstring))
     {
-        foreach (Char; TypeTuple!(char, wchar, dchar))
+        foreach (Char; AliasSeq!(char, wchar, dchar))
         {
             static if (is(Unqual!Char == dchar) ||
                        Char.sizeof == ElementEncodingType!Str.sizeof)
@@ -3671,38 +3659,26 @@ of the passed-in integral.
 See_Also:
     $(LREF parse) for parsing octal strings at runtime.
  */
-@property int octal(string num)()
-    if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
+template octal(string num)
+    if(isOctalLiteral(num))
 {
-    return octal!(int, num);
+    static if((octalFitsInInt!num && !literalIsLong!num) && !literalIsUnsigned!num)
+        enum octal = octal!int(num);
+    else static if((!octalFitsInInt!num || literalIsLong!num) && !literalIsUnsigned!num)
+        enum octal = octal!long(num);
+    else static if((octalFitsInInt!num && !literalIsLong!num) && literalIsUnsigned!num)
+        enum octal = octal!uint(num);
+    else static if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
+        enum octal = octal!ulong(num);
+    else
+        static assert(false);
 }
 
 /// Ditto
-@property long octal(string num)()
-    if((!octalFitsInInt!(num) || literalIsLong!(num)) && !literalIsUnsigned!(num))
+template octal(alias decimalInteger)
+    if (isIntegral!(typeof(decimalInteger)))
 {
-    return octal!(long, num);
-}
-
-/// Ditto
-@property uint octal(string num)()
-    if((octalFitsInInt!(num) && !literalIsLong!(num)) && literalIsUnsigned!(num))
-{
-    return octal!(int, num);
-}
-
-/// Ditto
-@property ulong octal(string num)()
-    if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
-{
-    return octal!(long, num);
-}
-
-/// Ditto
-template octal(alias s)
-    if (isIntegral!(typeof(s)))
-{
-    enum auto octal = octal!(typeof(s), to!string(s));
+    enum octal = octal!(typeof(decimalInteger))(to!string(decimalInteger));
 }
 
 ///
@@ -3720,13 +3696,14 @@ unittest
     Takes a string, num, which is an octal literal, and returns its
     value, in the type T specified.
 */
-@property T octal(T, string num)()
-    if (isOctalLiteral!num)
+private T octal(T)(string num)
 {
+    assert(isOctalLiteral(num));
+
     ulong pow = 1;
     T value = 0;
 
-    for (int pos = num.length - 1; pos >= 0; pos--)
+    foreach_reverse (immutable pos; 0 .. num.length)
     {
         char s = num[pos];
         if (s < '0' || s > '7') // we only care about digits; skip the rest
@@ -3744,8 +3721,7 @@ unittest
 ///
 unittest
 {
-    int a = octal!(int, "10");
-
+    int a = octal!int("10");
     assert(a == 8);
 }
 
@@ -3753,7 +3729,7 @@ unittest
 Take a look at int.max and int.max+1 in octal and the logic for this
 function follows directly.
  */
-template octalFitsInInt(string octalNum)
+private template octalFitsInInt(string octalNum)
 {
     // note it is important to strip the literal of all
     // non-numbers. kill the suffix and underscores lest they mess up
@@ -3763,7 +3739,7 @@ template octalFitsInInt(string octalNum)
         strippedOctalLiteral(octalNum)[0] == '1';
 }
 
-string strippedOctalLiteral(string original)
+private string strippedOctalLiteral(string original)
 {
     string stripped = "";
     foreach (c; original)
@@ -3772,7 +3748,7 @@ string strippedOctalLiteral(string original)
     return stripped;
 }
 
-template literalIsLong(string num)
+private template literalIsLong(string num)
 {
     static if (num.length > 1)
     // can be xxL or xxLu according to spec
@@ -3781,7 +3757,7 @@ template literalIsLong(string num)
         enum literalIsLong = false;
 }
 
-template literalIsUnsigned(string num)
+private template literalIsUnsigned(string num)
 {
     static if (num.length > 1)
     // can be xxU or xxUL according to spec
@@ -3795,10 +3771,10 @@ template literalIsUnsigned(string num)
 /*
 Returns if the given string is a correctly formatted octal literal.
 
-The format is specified in lex.html. The leading zero is allowed, but
+The format is specified in spec/lex.html. The leading zero is allowed, but
 not required.
  */
-bool isOctalLiteralString(string num)
+private bool isOctalLiteral(string num)
 {
     if (num.length == 0)
         return false;
@@ -3837,14 +3813,6 @@ bool isOctalLiteralString(string num)
     return true;
 }
 
-/*
-    Returns true if the given compile time string is an octal literal.
-*/
-template isOctalLiteral(string num)
-{
-    enum bool isOctalLiteral = isOctalLiteralString(num);
-}
-
 unittest
 {
     // ensure that you get the right types, even with embedded underscores
@@ -3880,25 +3848,34 @@ unittest
     static assert(!__traits(compiles, octal!"spam"));
     static assert(!__traits(compiles, octal!"77%"));
 
+    static assert(is(typeof(octal!"17777777777") == int));
+    static assert(octal!"17777777777" == int.max);
+
+    static assert(is(typeof(octal!"20000000000U") == ulong)); // Shouldn't this be uint?
+    static assert(octal!"20000000000" == uint(int.max) + 1);
+
+    static assert(is(typeof(octal!"777777777777777777777") == long));
+    static assert(octal!"777777777777777777777" == long.max);
+
+    static assert(is(typeof(octal!"1000000000000000000000U") == ulong));
+    static assert(octal!"1000000000000000000000" == ulong(long.max) + 1);
+
     int a;
     long b;
 
     // biggest value that should fit in an it
-    static assert(__traits(compiles,  a = octal!"17777777777"));
+    a = octal!"17777777777";
+    assert(a == int.max);
     // should not fit in the int
     static assert(!__traits(compiles, a = octal!"20000000000"));
     // ... but should fit in a long
-    static assert(__traits(compiles, b = octal!"20000000000"));
+    b = octal!"20000000000";
+    assert(b == 1L + int.max);
 
-    static assert(!__traits(compiles, a = octal!"1L"));
-
-    // this should pass, but it doesn't, since the int converter
-    // doesn't pass along its suffix to helper templates
-
-    //static assert(!__traits(compiles, a = octal!1L));
-
-    static assert(__traits(compiles, b = octal!"1L"));
-    static assert(__traits(compiles, b = octal!1L));
+    b = octal!"1L";
+    assert(b == 1);
+    b = octal!1L;
+    assert(b == 1);
 }
 
 /+
@@ -3912,196 +3889,78 @@ Furthermore, emplaceRef optionally takes a type paremeter, which specifies
 the type we want to build. This helps to build qualified objects on mutable
 buffer, without breaking the type system with unsafe casts.
 +/
-package ref UT emplaceRef(UT, Args...)(ref UT chunk, auto ref Args args)
-if (is(UT == Unqual!UT))
+package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
+if (is(UT == Unqual!T))
 {
-    return emplaceImpl!UT(chunk, args);
-}
-// ditto
-package ref UT emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
-if (is(UT == Unqual!T) && !is(T == UT))
-{
-    return emplaceImpl!T(chunk, args);
-}
-
-
-private template emplaceImpl(T)
-{
-    alias UT = Unqual!T;
-
-    ref UT emplaceImpl()(ref UT chunk)
+    static if (args.length == 0)
     {
         static assert (is(typeof({static T i;})),
             convFormat("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
-
-        return emplaceInitializer(chunk);
+        emplaceInitializer(chunk);
     }
-
-    static if (!is(T == struct))
-    ref UT emplaceImpl(Arg)(ref UT chunk, auto ref Arg arg)
+    else static if (
+        !is(T == struct) && Args.length == 1 /* primitives, enums, arrays */
+        ||
+        Args.length == 1 && is(typeof({T t = args[0];})) /* conversions */
+        ||
+        is(typeof(T(args))) /* general constructors */)
     {
-        static assert(is(typeof({T t = arg;})),
-            convFormat("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
-
-        static if (isStaticArray!T)
+        static struct S
         {
-            alias UArg = Unqual!Arg;
-            alias E = ElementEncodingType!(typeof(T.init[]));
-            alias UE = Unqual!E;
-            enum n = T.length;
-
-            static if (is(Arg : T))
+            T payload;
+            this(ref Args x)
             {
-                //Matching static array
-                static if (!hasElaborateAssign!UT && isAssignable!(UT, Arg))
-                    chunk = arg;
-                else static if (is(UArg == UT))
-                {
-                    import core.stdc.string : memcpy;
-                    // This is known to be safe as the two values are the same
-                    // type and the source (arg) should be initialized
-                    () @trusted { memcpy(&chunk, &arg, T.sizeof); }();
-                    static if (hasElaborateCopyConstructor!T)
-                        _postblitRecurse(chunk);
-                }
+                static if (Args.length == 1)
+                    static if (is(typeof(payload = x[0])))
+                        payload = x[0];
+                    else
+                        payload = T(x[0]);
                 else
-                    .emplaceImpl!T(chunk, cast(T)arg);
+                    payload = T(x);
             }
-            else static if (is(Arg : E[]))
-            {
-                //Matching dynamic array
-                static if (!hasElaborateAssign!UT && is(typeof(chunk[] = arg[])))
-                    chunk[] = arg[];
-                else static if (is(Unqual!(ElementEncodingType!Arg) == UE))
-                {
-                    import core.stdc.string : memcpy;
-                    assert(n == chunk.length, "Array length missmatch in emplace");
-
-                    // This is unsafe as long as the length match is a
-                    // precondition and not an unconditional exception
-                    memcpy(&chunk, arg.ptr, T.sizeof);
-
-                    static if (hasElaborateCopyConstructor!T)
-                        _postblitRecurse(chunk);
-                }
-                else
-                    .emplaceImpl!T(chunk, cast(E[])arg);
-            }
-            else static if (is(Arg : E))
-            {
-                //Case matching single element to array.
-                static if (!hasElaborateAssign!UT && is(typeof(chunk[] = arg)))
-                    chunk[] = arg;
-                else static if (is(UArg == Unqual!E))
-                {
-                    import core.stdc.string : memcpy;
-
-                    foreach(i; 0 .. n)
-                    {
-                        // This is known to be safe as the two values are the same
-                        // type and the source (arg) should be initialized
-                        () @trusted { memcpy(&(chunk[i]), &arg, E.sizeof); }();
-                    }
-
-                    static if (hasElaborateCopyConstructor!T)
-                        _postblitRecurse(chunk);
-                }
-                else
-                    //Alias this. Coerce.
-                    .emplaceImpl!T(chunk, cast(E)arg);
-            }
-            else static if (is(typeof(.emplaceImpl!E(chunk[0], arg))))
-            {
-                //Final case for everything else:
-                //Types that don't match (int to uint[2])
-                //Recursion for multidimensions
-                static if (!hasElaborateAssign!UT && is(typeof(chunk[] = arg)))
-                    chunk[] = arg;
-                else
-                    foreach(i; 0 .. n)
-                        .emplaceImpl!E(chunk[i], arg);
-            }
-            else
-                static assert(0, convFormat("Sorry, this implementation doesn't know how to emplace a %s with a %s", T.stringof, Arg.stringof));
-
-            return chunk;
+        }
+        if (__ctfe)
+        {
+            static if (is(typeof(chunk = T(args))))
+                chunk = T(args);
+            else static if (args.length == 1 && is(typeof(chunk = args[0])))
+                chunk = args[0];
+            else assert(0, "CTFE emplace doesn't support "
+                ~ T.stringof ~ " from " ~ Args.stringof);
         }
         else
         {
-            chunk = arg;
-            return chunk;
+            S* p = () @trusted { return cast(S*) &chunk; }();
+            emplaceInitializer(*p);
+            p.__ctor(args);
         }
     }
-    // ditto
-    static if (is(T == struct))
-    ref UT emplaceImpl(Args...)(ref UT chunk, auto ref Args args)
+    else static if (is(typeof(chunk.__ctor(args))))
     {
-        static if (Args.length == 1 && is(Args[0] : T) &&
-            is (typeof({T t = args[0];})) //Check for legal postblit
-            )
-        {
-            static if (is(Unqual!T == Unqual!(Args[0])))
-            {
-                //Types match exactly: we postblit
-                static if (!hasElaborateAssign!UT && isAssignable!(UT, T))
-                    chunk = args[0];
-                else
-                {
-                    import core.stdc.string : memcpy;
-                    // This is known to be safe as the two values are the same
-                    // type and the source (args[0]) should be initialized
-                    () @trusted { memcpy(&chunk, &args[0], T.sizeof); }();
-                    static if (hasElaborateCopyConstructor!T)
-                        _postblitRecurse(chunk);
-                }
-            }
-            else
-                //Alias this. Coerce to type T.
-                .emplaceImpl!T(chunk, cast(T)args[0]);
-        }
-        else static if (is(typeof(chunk.__ctor(args))))
-        {
-            // T defines a genuine constructor accepting args
-            // Go the classic route: write .init first, then call ctor
-            emplaceInitializer(chunk);
-            chunk.__ctor(args);
-        }
-        else static if (is(typeof(T.opCall(args))))
-        {
-            //Can be built calling opCall
-            emplaceOpCaller(chunk, args); //emplaceOpCaller is deprecated
-        }
-        else static if (is(typeof(T(args))))
-        {
-            // Struct without constructor that has one matching field for
-            // each argument. Individually emplace each field
-            emplaceInitializer(chunk);
-            foreach (i, ref field; chunk.tupleof[0 .. Args.length])
-            {
-                alias Field = typeof(field);
-                alias UField = Unqual!Field;
-                static if (is(Field == UField))
-                    .emplaceImpl!Field(field, args[i]);
-                else
-                    .emplaceImpl!Field(*cast(Unqual!Field*)&field, args[i]);
-            }
-        }
-        else
-        {
-            //We can't emplace. Try to diagnose a disabled postblit.
-            static assert(!(Args.length == 1 && is(Args[0] : T)),
-                convFormat("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
+        // This catches the rare case of local types that keep a frame pointer
+        emplaceInitializer(chunk);
+        chunk.__ctor(args);
+    }
+    else
+    {
+        //We can't emplace. Try to diagnose a disabled postblit.
+        static assert(!(Args.length == 1 && is(Args[0] : T)),
+            convFormat("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
 
-            //We can't emplace.
-            static assert(false,
-                convFormat("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
-        }
-
-        return chunk;
+        //We can't emplace.
+        static assert(false,
+            convFormat("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
     }
 }
+// ditto
+package void emplaceRef(UT, Args...)(ref UT chunk, auto ref Args args)
+if (is(UT == Unqual!UT))
+{
+    emplaceRef!(UT, UT)(chunk, args);
+}
+
 //emplace helper functions
-private ref T emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
+private void emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
 {
     static if (!hasElaborateAssign!T && isAssignable!T)
         chunk = T.init;
@@ -4111,16 +3970,7 @@ private ref T emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
         static immutable T init = T.init;
         memcpy(&chunk, &init, T.sizeof);
     }
-    return chunk;
 }
-private deprecated("Using static opCall for emplace is deprecated. Plase use emplace(chunk, T(args)) instead.")
-ref T emplaceOpCaller(T, Args...)(ref T chunk, auto ref Args args)
-{
-    static assert (is(typeof({T t = T.opCall(args);})),
-        convFormat("%s.opCall does not return adequate data for construction.", T.stringof));
-    return emplaceImpl!T(chunk, chunk.opCall(args));
-}
-
 
 // emplace
 /**
@@ -4133,8 +3983,20 @@ as $(D chunk)).
  */
 T* emplace(T)(T* chunk) @safe pure nothrow
 {
-    emplaceImpl!T(*chunk);
+    emplaceRef!T(*chunk);
     return chunk;
+}
+
+///
+unittest
+{
+    static struct S
+    {
+        int i = 42;
+    }
+    S[2] s2 = void;
+    emplace(&s2);
+    assert(s2[0].i == 42 && s2[1].i == 42);
 }
 
 /**
@@ -4149,17 +4011,142 @@ Returns: A pointer to the newly constructed object (which is the same
 as $(D chunk)).
  */
 T* emplace(T, Args...)(T* chunk, auto ref Args args)
-if (!is(T == struct) && Args.length == 1)
+if (is(T == struct) || Args.length == 1)
 {
-    emplaceImpl!T(*chunk, args);
+    emplaceRef!T(*chunk, args);
     return chunk;
 }
-/// ditto
-T* emplace(T, Args...)(T* chunk, auto ref Args args)
-if (is(T == struct))
+
+///
+unittest
 {
-    emplaceImpl!T(*chunk, args);
-    return chunk;
+    int a;
+    int b = 42;
+    assert(*emplace!int(&a, b) == 42);
+}
+
+private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow
+{
+    assert(chunk.length >= typeSize, "emplace: Chunk size too small.");
+    assert((cast(size_t)chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
+}
+
+/**
+Given a raw memory area $(D chunk), constructs an object of $(D class)
+type $(D T) at that address. The constructor is passed the arguments
+$(D Args). The $(D chunk) must be as least as large as $(D T) needs
+and should have an alignment multiple of $(D T)'s alignment. (The size
+of a $(D class) instance is obtained by using $(D
+__traits(classInstanceSize, T))).
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object.
+ */
+T emplace(T, Args...)(void[] chunk, auto ref Args args)
+    if (is(T == class))
+{
+    enum classSize = __traits(classInstanceSize, T);
+    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
+    auto result = cast(T) chunk.ptr;
+
+    // Initialize the object in its pre-ctor state
+    chunk[0 .. classSize] = typeid(T).init[];
+
+    // Call the ctor if any
+    static if (is(typeof(result.__ctor(args))))
+    {
+        // T defines a genuine constructor accepting args
+        // Go the classic route: write .init first, then call ctor
+        result.__ctor(args);
+    }
+    else
+    {
+        static assert(args.length == 0 && !is(typeof(&T.__ctor)),
+            "Don't know how to initialize an object of type "
+            ~ T.stringof ~ " with arguments " ~ Args.stringof);
+    }
+    return result;
+}
+
+///
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = void;
+    emplace(&k);
+    assert(k is null);
+
+    I i = void;
+    emplace(&i);
+    assert(i is null);
+}
+
+@nogc pure nothrow unittest
+{
+    int var = 6;
+    ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
+    auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
+    assert(k.i == 5);
+    assert(var == 7);
+}
+
+/**
+Given a raw memory area $(D chunk), constructs an object of non-$(D
+class) type $(D T) at that address. The constructor is passed the
+arguments $(D args), if any. The $(D chunk) must be as least as large
+as $(D T) needs and should have an alignment multiple of $(D T)'s
+alignment.
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object.
+ */
+T* emplace(T, Args...)(void[] chunk, auto ref Args args)
+    if (!is(T == class))
+{
+    testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
+    emplaceRef!(T, Unqual!T)(*cast(Unqual!T*) chunk.ptr, args);
+    return cast(T*) chunk.ptr;
+}
+
+///
+unittest
+{
+    struct S
+    {
+        int a, b;
+    }
+    auto p = new void[S.sizeof];
+    S s;
+    s.a = 42;
+    s.b = 43;
+    auto s1 = emplace!S(p, s);
+    assert(s1.a == 42 && s1.b == 43);
+}
+
+// Bulk of emplace unittests starts here
+
+unittest /* unions */
+{
+    static union U
+    {
+        string a;
+        int b;
+        struct
+        {
+            long c;
+            int[] d;
+        }
+    }
+    U u1 = void;
+    U u2 = { "hello" };
+    emplace(&u1, u2);
+    assert(u1.a == "hello");
 }
 
 version(unittest) private struct __conv_EmplaceTest
@@ -4204,29 +4191,7 @@ unittest
     struct S { @disable this(); }
     S s = void;
     static assert(!__traits(compiles, emplace(&s)));
-    static assert( __traits(compiles, emplace(&s, S.init)));
-}
-
-unittest
-{
-    interface I {}
-    class K : I {}
-
-    K k = void;
-    emplace(&k);
-    assert(k is null);
-
-    I i = void;
-    emplace(&i);
-    assert(i is null);
-}
-
-unittest
-{
-    static struct S {int i = 5;}
-    S[2] s2 = void;
-    emplace(&s2);
-    assert(s2[0].i == 5 && s2[1].i == 5);
+    emplace(&s, S.init);
 }
 
 unittest
@@ -4261,12 +4226,12 @@ unittest
     }
     S1[2] ss1 = void;
     S2[2] ss2 = void;
-    static assert( __traits(compiles, emplace(&ss1)));
+    emplace(&ss1);
     static assert(!__traits(compiles, emplace(&ss2)));
     S1 s1 = S1.init;
     S2 s2 = S2.init;
     static assert(!__traits(compiles, emplace(&ss1, s1)));
-    static assert( __traits(compiles, emplace(&ss2, s2)));
+    emplace(&ss2, s2);
 }
 
 unittest
@@ -4279,18 +4244,14 @@ unittest
     S[2] ss1 = void;
     S[2] ss2 = void;
     emplace(&s, 5);
+    assert(s.i == 5);
     emplace(&ss1, s);
+    assert(ss1[0].i == 5 && ss1[1].i == 5);
     emplace(&ss2, ss1);
+    assert(ss2 == ss1);
 }
 
 //Start testing emplace-args here
-
-unittest
-{
-    int a;
-    int b = 42;
-    assert(*emplace!int(&a, b) == 42);
-}
 
 unittest
 {
@@ -4473,7 +4434,8 @@ unittest
         @disable this(this);
     }
     S1 s1 = void;
-    static assert( __traits(compiles, emplace(&s1, 1)));
+    emplace(&s1, 1);
+    assert(s1.i == 1);
     static assert(!__traits(compiles, emplace(&s1, S1.init)));
 
     static struct S2
@@ -4484,14 +4446,14 @@ unittest
     }
     S2 s2 = void;
     static assert(!__traits(compiles, emplace(&s2, 1)));
-    static assert( __traits(compiles, emplace(&s2, S2.init)));
+    emplace(&s2, S2.init);
 
     static struct SS1
     {
         S1 s;
     }
     SS1 ss1 = void;
-    static assert( __traits(compiles, emplace(&ss1)));
+    emplace(&ss1);
     static assert(!__traits(compiles, emplace(&ss1, SS1.init)));
 
     static struct SS2
@@ -4499,7 +4461,7 @@ unittest
         S2 s;
     }
     SS2 ss2 = void;
-    static assert( __traits(compiles, emplace(&ss2)));
+    emplace(&ss2);
     static assert(!__traits(compiles, emplace(&ss2, SS2.init)));
 
 
@@ -4708,6 +4670,7 @@ unittest
         emplace(ps2, 5);
         emplace(ps2, S2.init);
     }
+    foo();
 
     T bar(T)() @property
     {
@@ -4715,9 +4678,20 @@ unittest
         emplace(&t, 5);
         return t;
     }
+    // CTFE
     enum a = bar!int;
+    static assert(a == 5);
     enum b = bar!S1;
+    static assert(b.i == 5);
     enum c = bar!S2;
+    static assert(c.i == 5);
+    // runtime
+    auto aa = bar!int;
+    assert(aa == 5);
+    auto bb = bar!S1;
+    assert(bb.i == 5);
+    auto cc = bar!S2;
+    assert(cc.i == 5);
 }
 
 
@@ -4769,7 +4743,6 @@ unittest
         }
         S1 s = void;
         static assert(!__traits(compiles, emplace(&s,  1)));
-        static assert( __traits(compiles, emplace(&s, &i))); //(works, but deprected)
     }
     //With constructor
     {
@@ -4781,8 +4754,6 @@ unittest
             this(int i){this.i = i;}
         }
         S2 s = void;
-        static assert( __traits(compiles, emplace(&s, 1)));  //(works, but deprected)
-        static assert( __traits(compiles, emplace(&s, &i))); //(works, but deprected)
         emplace(&s,  1);
         assert(s.i == 1);
     }
@@ -4794,7 +4765,7 @@ unittest
             static S3 opCall(ref S3){assert(0);}
         }
         S3 s = void;
-        static assert( __traits(compiles, emplace(&s, S3.init)));
+        emplace(&s, S3.init);
     }
 }
 
@@ -4807,7 +4778,7 @@ unittest //@@@9559@@@
     auto asArray = std.array.array(ints);
 }
 
-unittest //http://forum.dlang.org/thread/nxbdgtdlmwscocbiypjs@forum.dlang.org
+unittest //http://forum.dlang.org/post/nxbdgtdlmwscocbiypjs@forum.dlang.org
 {
     import std.array : array;
     import std.datetime : SysTime, UTC;
@@ -5014,92 +4985,24 @@ pure nothrow @safe /* @nogc */ unittest
     static assert(!__traits(compiles, emplaceRef(uninitializedUnsafeArr, unsafeArr)));
 }
 
-private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow
-{
-    assert(chunk.length >= typeSize, "emplace: Chunk size too small.");
-    assert((cast(size_t)chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
-}
-
-/**
-Given a raw memory area $(D chunk), constructs an object of $(D class)
-type $(D T) at that address. The constructor is passed the arguments
-$(D Args). The $(D chunk) must be as least as large as $(D T) needs
-and should have an alignment multiple of $(D T)'s alignment. (The size
-of a $(D class) instance is obtained by using $(D
-__traits(classInstanceSize, T))).
-
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
-
-Returns: A pointer to the newly constructed object.
- */
-T emplace(T, Args...)(void[] chunk, auto ref Args args)
-    if (is(T == class))
-{
-    enum classSize = __traits(classInstanceSize, T);
-    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
-    auto result = cast(T) chunk.ptr;
-
-    // Initialize the object in its pre-ctor state
-    chunk[0 .. classSize] = typeid(T).init[];
-
-    // Call the ctor if any
-    static if (is(typeof(result.__ctor(args))))
-    {
-        // T defines a genuine constructor accepting args
-        // Go the classic route: write .init first, then call ctor
-        result.__ctor(args);
-    }
-    else
-    {
-        static assert(args.length == 0 && !is(typeof(&T.__ctor)),
-                "Don't know how to initialize an object of type "
-                ~ T.stringof ~ " with arguments " ~ Args.stringof);
-    }
-    return result;
-}
-
-@nogc pure nothrow unittest
-{
-    int var = 6;
-    ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
-    auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
-    assert(k.i == 5);
-    assert(var == 7);
-}
-
-/**
-Given a raw memory area $(D chunk), constructs an object of non-$(D
-class) type $(D T) at that address. The constructor is passed the
-arguments $(D args), if any. The $(D chunk) must be as least as large
-as $(D T) needs and should have an alignment multiple of $(D T)'s
-alignment.
-
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
-
-Returns: A pointer to the newly constructed object.
- */
-T* emplace(T, Args...)(void[] chunk, auto ref Args args)
-    if (!is(T == class))
-{
-    testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
-    return emplace(cast(T*) chunk.ptr, args);
-}
-
-///
 unittest
 {
-    struct S
+    // Issue 15313
+    static struct Node
     {
-        int a, b;
+        int payload;
+        Node* next;
+        uint refs;
     }
-    auto p = new void[S.sizeof];
-    S s;
-    s.a = 42;
-    s.b = 43;
-    auto s1 = emplace!S(p, s);
-    assert(s1.a == 42 && s1.b == 43);
+
+    import core.stdc.stdlib : malloc;
+    void[] buf = malloc(Node.sizeof)[0 .. Node.sizeof];
+
+    import std.conv : emplace;
+    const Node* n = emplace!(const Node)(buf, 42, null, 10);
+    assert(n.payload == 42);
+    assert(n.next == null);
+    assert(n.refs == 10);
 }
 
 unittest
@@ -5137,6 +5040,7 @@ unittest
     // need ctor args
     static assert(!is(typeof(emplace!A(buf))));
 }
+// Bulk of emplace unittests ends here
 
 unittest
 {
@@ -5204,28 +5108,28 @@ unittest
 
 unittest
 {
-    foreach(T; TypeTuple!(byte, ubyte))
+    foreach(T; AliasSeq!(byte, ubyte))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ubyte));
         static assert(is(typeof(unsigned(cast(const T)1)) == ubyte));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == ubyte));
     }
 
-    foreach(T; TypeTuple!(short, ushort))
+    foreach(T; AliasSeq!(short, ushort))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ushort));
         static assert(is(typeof(unsigned(cast(const T)1)) == ushort));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == ushort));
     }
 
-    foreach(T; TypeTuple!(int, uint))
+    foreach(T; AliasSeq!(int, uint))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == uint));
         static assert(is(typeof(unsigned(cast(const T)1)) == uint));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == uint));
     }
 
-    foreach(T; TypeTuple!(long, ulong))
+    foreach(T; AliasSeq!(long, ulong))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ulong));
         static assert(is(typeof(unsigned(cast(const T)1)) == ulong));
@@ -5242,7 +5146,7 @@ auto unsigned(T)(T x) if (isSomeChar!T)
 
 unittest
 {
-    foreach(T; TypeTuple!(char, wchar, dchar))
+    foreach(T; AliasSeq!(char, wchar, dchar))
     {
         static assert(is(typeof(unsigned(cast(T)'A')) == T));
         static assert(is(typeof(unsigned(cast(const T)'A')) == T));
@@ -5278,28 +5182,28 @@ unittest
 
 unittest
 {
-    foreach(T; TypeTuple!(byte, ubyte))
+    foreach(T; AliasSeq!(byte, ubyte))
     {
         static assert(is(typeof(signed(cast(T)1)) == byte));
         static assert(is(typeof(signed(cast(const T)1)) == byte));
         static assert(is(typeof(signed(cast(immutable T)1)) == byte));
     }
 
-    foreach(T; TypeTuple!(short, ushort))
+    foreach(T; AliasSeq!(short, ushort))
     {
         static assert(is(typeof(signed(cast(T)1)) == short));
         static assert(is(typeof(signed(cast(const T)1)) == short));
         static assert(is(typeof(signed(cast(immutable T)1)) == short));
     }
 
-    foreach(T; TypeTuple!(int, uint))
+    foreach(T; AliasSeq!(int, uint))
     {
         static assert(is(typeof(signed(cast(T)1)) == int));
         static assert(is(typeof(signed(cast(const T)1)) == int));
         static assert(is(typeof(signed(cast(immutable T)1)) == int));
     }
 
-    foreach(T; TypeTuple!(long, ulong))
+    foreach(T; AliasSeq!(long, ulong))
     {
         static assert(is(typeof(signed(cast(T)1)) == long));
         static assert(is(typeof(signed(cast(const T)1)) == long));
@@ -5587,10 +5491,10 @@ unittest
  * Intended to be lightweight and fast.
  *
  * Params:
- *      Radix = 2, 8, 10, 16
+ *      radix = 2, 8, 10, 16
  *      Char = character type for output
  *      letterCase = lower for deadbeef, upper for DEADBEEF
- *      value = integer to convert. Can be uint or ulong. If Radix is 10, can also be
+ *      value = integer to convert. Can be uint or ulong. If radix is 10, can also be
  *              int or long.
  * Returns:
  *      Random access range with slicing and everything

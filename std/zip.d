@@ -17,7 +17,7 @@
  * Macros:
  *      WIKI = Phobos/StdZip
  *
- * Examples:
+ * Example:
  * ---
 // Read existing zip file.
 import std.digest.crc, std.file, std.stdio, std.zip;
