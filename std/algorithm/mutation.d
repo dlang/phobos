@@ -1530,7 +1530,7 @@ offsets can be passed in.
 
 ----
 int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-assert(remove(a, 1, tuple(3, 5), 9) == [ 0, 2, 6, 7, 8, 10 ]);
+assert(remove(a, 1, tuple(3, 5), 9) == [ 0, 2, 5, 6, 7, 8, 10 ]);
 ----
 
 In this case, the slots at positions 1, 3, 4, and 9 are removed from
