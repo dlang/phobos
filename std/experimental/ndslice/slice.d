@@ -611,7 +611,7 @@ $(TR $(TD A $(BLUE fully defined slice) is an empty sequence
 
 $(H3 Internal Binary Representation)
 
-Multidimensional $(SUBREF slice, Slice) is a structure that consists of lengths, strides, and a pointer.
+Multidimensional Slice is a structure that consists of lengths, strides, and a pointer.
 For ranges, a shell is used instead of a pointer.
 This shell contains a shift of the current initial element of a multidimensional slice
 and the range itself. With the exception of overloaded operators, no functions in this
