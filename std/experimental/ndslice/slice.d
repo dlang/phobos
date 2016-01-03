@@ -301,7 +301,6 @@ pure nothrow unittest
 Allocates an array through a specified allocator and creates an n-dimensional slice over it.
 See also $(LINK2 std_experimental_allocator.html, std.experimental.allocator).
 +/
-version(Posix)
 unittest
 {
     import std.experimental.allocator;
