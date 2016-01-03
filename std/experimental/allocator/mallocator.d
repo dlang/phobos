@@ -240,7 +240,7 @@ struct AlignedMallocator
         free(b.ptr);
         return true;
     }
-    else version (Windows) @system
+    else version (Windows) @system @nogc
     bool deallocate(void[] b) shared
     {
         _aligned_free(b.ptr);
@@ -302,7 +302,7 @@ struct AlignedMallocator
 }
 
 version(unittest) version(CRuntime_DigitalMars)
-    size_t addr(ref void* ptr){return cast(size_t) ptr;}
+    size_t addr(ref void* ptr) @nogc {return cast(size_t) ptr;}
 version(CRuntime_DigitalMars) @nogc unittest
 {
     void* m;
