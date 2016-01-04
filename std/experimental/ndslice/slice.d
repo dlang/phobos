@@ -301,7 +301,6 @@ pure nothrow unittest
 Allocates an array through a specified allocator and creates an n-dimensional slice over it.
 See also $(LINK2 std_experimental_allocator.html, std.experimental.allocator).
 +/
-version(Posix)
 unittest
 {
     import std.experimental.allocator;
@@ -611,7 +610,7 @@ $(TR $(TD A $(BLUE fully defined slice) is an empty sequence
 
 $(H3 Internal Binary Representation)
 
-Multidimensional $(SUBREF slice, Slice) is a structure that consists of lengths, strides, and a pointer.
+Multidimensional Slice is a structure that consists of lengths, strides, and a pointer.
 For ranges, a shell is used instead of a pointer.
 This shell contains a shift of the current initial element of a multidimensional slice
 and the range itself. With the exception of overloaded operators, no functions in this
@@ -2315,8 +2314,8 @@ private struct PtrShell(Range)
     auto ref opIndex(sizediff_t index)
     in
     {
-        assert(_shift + index >= 0);
         import std.range.primitives: hasLength;
+        assert(_shift + index >= 0);
         static if (hasLength!Range)
             assert(_shift + index <= _range.length);
     }
@@ -2330,6 +2329,7 @@ private struct PtrShell(Range)
         auto ref opIndexAssign(T)(T value, sizediff_t index)
         in
         {
+            import std.range.primitives: hasLength;
             assert(_shift + index >= 0);
             static if (hasLength!Range)
                 assert(_shift + index <= _range.length);
@@ -2342,6 +2342,7 @@ private struct PtrShell(Range)
         auto ref opIndexOpAssign(string op, T)(T value, sizediff_t index)
         in
         {
+            import std.range.primitives: hasLength;
             assert(_shift + index >= 0);
             static if (hasLength!Range)
                 assert(_shift + index <= _range.length);
@@ -2349,6 +2350,19 @@ private struct PtrShell(Range)
         body
         {
             mixin (`return _range[_shift + index] ` ~ op ~ `= value;`);
+        }
+
+        auto ref opIndexUnary(string op)(sizediff_t index)
+        in
+        {
+            import std.range.primitives: hasLength;
+            assert(_shift + index >= 0);
+            static if (hasLength!Range)
+                assert(_shift + index <= _range.length);
+        }
+        body
+        {
+            mixin (`return ` ~ op ~ `_range[_shift + index];`);
         }
     }
 
@@ -2367,14 +2381,13 @@ private auto ptrShell(Range)(Range range, sizediff_t shift = 0)
     return PtrShell!Range(shift, range);
 }
 
-version(none) // TODO: Remove before merge
-// @safe pure nothrow ?
-unittest
+@safe pure nothrow unittest
 {
     import std.internal.test.dummyrange;
     foreach (RB; AliasSeq!(ReturnBy.Reference, ReturnBy.Value))
     {
         DummyRange!(RB, Length.Yes, RangeType.Random) range;
+        range.reinit;
         assert(range.length >= 10);
         auto ptr = range.ptrShell;
         assert(ptr[0] == range[0]);
@@ -2383,6 +2396,25 @@ unittest
         ++ptr[0];
         assert(ptr[0] == save0 + 11);
         (ptr + 5)[2] = 333;
+        assert(range[7] == 333);
+    }
+}
+
+pure nothrow unittest
+{
+    import std.internal.test.dummyrange;
+    foreach (RB; AliasSeq!(ReturnBy.Reference, ReturnBy.Value))
+    {
+        DummyRange!(RB, Length.Yes, RangeType.Random) range;
+        range.reinit;
+        assert(range.length >= 10);
+        auto slice = range.sliced(10);
+        assert(slice[0] == range[0]);
+        auto save0 = range[0];
+        slice[0] += 10;
+        ++slice[0];
+        assert(slice[0] == save0 + 11);
+        slice[5 .. $][2] = 333;
         assert(range[7] == 333);
     }
 }
@@ -2521,13 +2553,13 @@ private void _indexAssign(bool lastStrideEquals1, string op, size_t N, size_t RN
 {
     static if (N == 1)
     {
-        static if(lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range) && (isPointer!RRange || isDynamicArray!RRange))
+        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range) && (isPointer!RRange || isDynamicArray!RRange))
         {
-            static if(isPointer!Range)
+            static if (isPointer!Range)
                 auto l = slice._ptr;
             else
                 auto l = slice._ptr._range[slice._ptr._shift .. slice._ptr._shift + slice._lengths[0]];
-            static if(isPointer!RRange)
+            static if (isPointer!RRange)
                 auto r = value._ptr;
             else
                 auto r = value._ptr._range[value._ptr._shift .. value._ptr._shift + value._lengths[0]];
@@ -2573,9 +2605,9 @@ private void _indexAssign(bool lastStrideEquals1, string op, size_t N, Range, T)
     assert(slice.length == value.length, __FUNCTION__ ~ ": argument must have the same length.");
     static if (N == 1)
     {
-        static if(lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range))
+        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range))
         {
-            static if(isPointer!Range)
+            static if (isPointer!Range)
                 auto l = slice._ptr;
             else
                 auto l = slice._ptr._range[slice._ptr._shift .. slice._ptr._shift + slice._lengths[0]];
@@ -2622,9 +2654,9 @@ private void _indexAssign(bool lastStrideEquals1, string op, size_t N, Range, T)
 {
     static if (N == 1)
     {
-        static if(lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range))
+        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range))
         {
-            static if(isPointer!Range)
+            static if (isPointer!Range)
                 auto l = slice._ptr;
             else
                 auto l = slice._ptr._range[slice._ptr._shift .. $];
