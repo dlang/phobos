@@ -936,8 +936,7 @@ the current user's preferred _command interpreter (aka. shell).
 The string $(D command) is passed verbatim to the shell, and is therefore
 subject to its rules about _command structure, argument/filename quoting
 and escaping of special characters.
-The path to the shell executable is always $(CODE /bin/sh) on POSIX, and
-determined by the $(LREF userShell) function on Windows.
+The path to the shell executable defaults to $(LREF nativeShell).
 
 In all other respects this function works just like $(D spawnProcess).
 Please refer to the $(LREF spawnProcess) documentation for descriptions
@@ -960,7 +959,8 @@ Pid spawnShell(in char[] command,
                File stderr = std.stdio.stderr,
                const string[string] env = null,
                Config config = Config.none,
-               in char[] workDir = null)
+               in char[] workDir = null,
+               string shellPath = nativeShell)
     @trusted // TODO: Should be @safe
 {
     version (Windows)
@@ -969,13 +969,13 @@ Pid spawnShell(in char[] command,
         // It does not use CommandLineToArgvW.
         // Instead, it treats the first and last quote specially.
         // See CMD.EXE /? for details.
-        auto args = escapeShellFileName(userShell)
+        auto args = escapeShellFileName(shellPath)
                     ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
     }
     else version (Posix)
     {
         const(char)[][3] args;
-        args[0] = "/bin/sh";
+        args[0] = shellPath;
         args[1] = shellSwitch;
         args[2] = command;
     }
@@ -986,7 +986,8 @@ Pid spawnShell(in char[] command,
 Pid spawnShell(in char[] command,
                const string[string] env,
                Config config = Config.none,
-               in char[] workDir = null)
+               in char[] workDir = null,
+               string shellPath = nativeShell)
     @trusted // TODO: Should be @safe
 {
     return spawnShell(command,
@@ -995,7 +996,8 @@ Pid spawnShell(in char[] command,
                       std.stdio.stderr,
                       env,
                       config,
-                      workDir);
+                      workDir,
+                      shellPath);
 }
 
 unittest
@@ -1642,24 +1644,26 @@ parameters are forwarded straight to the underlying spawn functions,
 and we refer to their documentation for details.
 
 Params:
-args     = An array which contains the program name as the zeroth element
-           and any command-line arguments in the following elements.
-           (See $(LREF spawnProcess) for details.)
-program  = The program name, $(I without) command-line arguments.
-           (See $(LREF spawnProcess) for details.)
-command  = A shell command which is passed verbatim to the command
-           interpreter.  (See $(LREF spawnShell) for details.)
-redirect = Flags that determine which streams are redirected, and
-           how.  See $(LREF Redirect) for an overview of available
-           flags.
-env      = Additional environment variables for the child process.
-           (See $(LREF spawnProcess) for details.)
-config   = Flags that control process creation. See $(LREF Config)
-           for an overview of available flags, and note that the
-           $(D retainStd...) flags have no effect in this function.
-workDir  = The working directory for the new process.
-           By default the child process inherits the parent's working
-           directory.
+args      = An array which contains the program name as the zeroth element
+            and any command-line arguments in the following elements.
+            (See $(LREF spawnProcess) for details.)
+program   = The program name, $(I without) command-line arguments.
+            (See $(LREF spawnProcess) for details.)
+command   = A shell command which is passed verbatim to the command
+            interpreter.  (See $(LREF spawnShell) for details.)
+redirect  = Flags that determine which streams are redirected, and
+            how.  See $(LREF Redirect) for an overview of available
+            flags.
+env       = Additional environment variables for the child process.
+            (See $(LREF spawnProcess) for details.)
+config    = Flags that control process creation. See $(LREF Config)
+            for an overview of available flags, and note that the
+            $(D retainStd...) flags have no effect in this function.
+workDir   = The working directory for the new process.
+            By default the child process inherits the parent's working
+            directory.
+shellPath = The path to the shell to use to run the specified program.
+            By default this is $(LREF nativeShell).
 
 Returns:
 A $(LREF ProcessPipes) object which contains $(XREF stdio,File)
@@ -1734,19 +1738,26 @@ ProcessPipes pipeShell(in char[] command,
                        Redirect redirect = Redirect.all,
                        const string[string] env = null,
                        Config config = Config.none,
-                       in char[] workDir = null)
+                       in char[] workDir = null,
+                       string shellPath = nativeShell)
     @safe
 {
-    return pipeProcessImpl!spawnShell(command, redirect, env, config, workDir);
+    return pipeProcessImpl!spawnShell(command,
+                                      redirect,
+                                      env,
+                                      config,
+                                      workDir,
+                                      shellPath);
 }
 
 // Implementation of the pipeProcess() family of functions.
-private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
+private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd, ExtraSpawnFuncArgs...)
                                     (Cmd command,
                                      Redirect redirectFlags,
                                      const string[string] env = null,
                                      Config config = Config.none,
-                                     in char[] workDir = null)
+                                     in char[] workDir = null,
+                                     ExtraSpawnFuncArgs extraArgs = ExtraSpawnFuncArgs.init)
     @trusted //TODO: @safe
 {
     File childStdin, childStdout, childStderr;
@@ -1813,7 +1824,7 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
 
     config &= ~(Config.retainStdin | Config.retainStdout | Config.retainStderr);
     pipes._pid = spawnFunc(command, childStdin, childStdout, childStderr,
-                           env, config, workDir);
+                           env, config, workDir, extraArgs);
     return pipes;
 }
 
@@ -2034,6 +2045,9 @@ maxOutput = The maximum number of bytes of output that should be
 workDir   = The working directory for the new process.
             By default the child process inherits the parent's working
             directory.
+shellPath = The path to the shell to use to run the specified program.
+            By default this is $(LREF nativeShell).
+
 
 Returns:
 An $(D std.typecons.Tuple!(int, "status", string, "output")).
@@ -2073,19 +2087,26 @@ auto executeShell(in char[] command,
                   const string[string] env = null,
                   Config config = Config.none,
                   size_t maxOutput = size_t.max,
-                  in char[] workDir = null)
+                  in char[] workDir = null,
+                  string shellPath = nativeShell)
     @trusted //TODO: @safe
 {
-    return executeImpl!pipeShell(command, env, config, maxOutput, workDir);
+    return executeImpl!pipeShell(command,
+                                 env,
+                                 config,
+                                 maxOutput,
+                                 workDir,
+                                 shellPath);
 }
 
 // Does the actual work for execute() and executeShell().
-private auto executeImpl(alias pipeFunc, Cmd)(
+private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     Cmd commandLine,
     const string[string] env = null,
     Config config = Config.none,
     size_t maxOutput = size_t.max,
-    in char[] workDir = null)
+    in char[] workDir = null,
+    ExtraPipeFuncArgs extraArgs = ExtraPipeFuncArgs.init)
 {
     import std.string;
     import std.typecons : Tuple;
@@ -2093,7 +2114,7 @@ private auto executeImpl(alias pipeFunc, Cmd)(
     import std.algorithm : min;
 
     auto p = pipeFunc(commandLine, Redirect.stdout | Redirect.stderrToStdout,
-                      env, config, workDir);
+                      env, config, workDir, extraArgs);
 
     auto a = appender!(ubyte[])();
     enum size_t defaultChunkSize = 4096;
@@ -2212,14 +2233,14 @@ class ProcessException : Exception
 
 
 /**
-Determines the path to the current user's default command interpreter.
+Determines the path to the current user's preferred command interpreter.
 
 On Windows, this function returns the contents of the COMSPEC environment
-variable, if it exists.  Otherwise, it returns the string $(D "cmd.exe").
+variable, if it exists.  Otherwise, it returns the result of $(LREF nativeShell).
 
 On POSIX, $(D userShell) returns the contents of the SHELL environment
-variable, if it exists and is non-empty.  Otherwise, it returns
-$(D "/bin/sh").
+variable, if it exists and is non-empty.  Otherwise, it returns the result of
+$(LREF nativeShell).
 */
 @property string userShell() @safe
 {
@@ -2228,6 +2249,19 @@ $(D "/bin/sh").
     else version (Posix)   return environment.get("SHELL", "/bin/sh");
 }
 
+/**
+The platform-specific native shell path.
+
+On Windows, this function returns $(D "cmd.exe").
+
+On POSIX, $(D nativeShell) returns $(D "/bin/sh").
+*/
+@property string nativeShell() @safe @nogc pure nothrow
+{
+    version (Windows)      return "cmd.exe";
+    else version (Android) return "/system/bin/sh";
+    else version (Posix)   return "/bin/sh";
+}
 
 // A command-line switch that indicates to the shell that it should
 // interpret the following argument as a command to be executed.
