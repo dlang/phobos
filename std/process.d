@@ -3204,7 +3204,16 @@ private:
 
             // Cache the last call's result.
             static string lastResult;
-            if (v != lastResult) lastResult = v.idup;
+            if (v.empty)
+            {
+                // Return non-null array for blank result to distinguish from
+                // not-present result.
+                lastResult = "";
+            }
+            else if (v != lastResult)
+            {
+                lastResult = v.idup;
+            }
             value = lastResult;
             return true;
         }
@@ -3233,10 +3242,14 @@ private:
     assertThrown(environment["std_process"]);
 
     // get() without default value
-    assert (environment.get("std_process") == null);
+    assert (environment.get("std_process") is null);
 
     // get() with default value
     assert (environment.get("std_process", "baz") == "baz");
+
+    // get() on an empty (but present) value
+    environment["std_process"] = "";
+    assert(environment.get("std_process") !is null);
 
     // Convert to associative array
     auto aa = environment.toAA();
