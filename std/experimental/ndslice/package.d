@@ -44,7 +44,7 @@
 /**
 $(H1 Multidimensional Random Access Ranges)
 
-The package provides a multidimensional array implementation,
+The package provides a multidimensional array implementation.
 It would be well suited to creating machine learning and image
 processing algorithms, but should also be general enough for use anywhere with
 homogeneously-typed multidimensional data.
