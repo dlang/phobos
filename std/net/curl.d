@@ -3886,12 +3886,12 @@ private struct CurlAPI
             enforce!CurlException(handle !is null, "Failed to load curl, tried %(%s, %).".format(names));
         }
 
-        foreach (mem; __traits(allMembers, API))
+        foreach (i, FP; typeof(API.tupleof))
         {
-            void* p = loadSym(handle, "curl_"~mem);
-
-            __traits(getMember, _api, mem) = cast(typeof(__traits(getMember, _api, mem)))
-                enforce!CurlException(p, "Couldn't load curl_"~mem~" from libcurl.");
+            enum name = __traits(identifier, _api.tupleof[i]);
+            auto p = enforce!CurlException(loadSym(handle, "curl_"~name),
+                                           "Couldn't load curl_"~name~" from libcurl.");
+            _api.tupleof[i] = cast(FP) p;
         }
 
         enforce!CurlException(!_api.global_init(CurlGlobal.all),

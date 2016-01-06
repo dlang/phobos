@@ -3093,7 +3093,7 @@ void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve 
 
 unittest // issue 15319
 {
-    import std.path: dirEntries;
+    import std.file : dirEntries;
     auto fs = dirEntries(getcwd, SpanMode.depth);
     assert(__traits(compiles, copy(fs.front, fs.front)));
 }
