@@ -23,7 +23,9 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(D $(LREF forward)))
         $(TD Forwards function arguments while saving ref-ness.
     ))
-    $(TR $(TD $(D $(LREF lessThan)), $(D $(LREF greaterThan)), $(D $(LREF equalTo)))
+    $(TR $(TD $(D $(LREF lessThan)), $(D $(LREF greaterThan)),
+            $(D $(LREF equalTo)), $(D $(LREF lessOrEqualThan)),
+            $(D $(LREF greaterOrEqualThan)), $(D $(LREF notEqualTo)))
         $(TD Ready-made predicate functions to compare two values.
     ))
     $(TR $(TD $(D $(LREF memoize)))
@@ -486,16 +488,37 @@ alias lessThan = safeOp!"<";
 ///
 pure @safe @nogc nothrow unittest
 {
-    assert(lessThan(2, 3));
-    assert(lessThan(2U, 3U));
-    assert(lessThan(2, 3.0));
-    assert(lessThan(-2, 3U));
-    assert(lessThan(2, 3U));
+    assert( lessThan(2, 3));
+    assert( lessThan(2U, 3U));
+    assert( lessThan(2, 3.0));
+    assert( lessThan(-2, 3U));
+    assert( lessThan(2, 3U));
     assert(!lessThan(3U, -2));
     assert(!lessThan(3U, 2));
     assert(!lessThan(0, 0));
     assert(!lessThan(0U, 0));
     assert(!lessThan(0, 0U));
+}
+
+/**
+   Predicate that returns $(D_PARAM a <= b).
+   Correctly compares signed and unsigned integers, ie. -1 <= 2U.
+*/
+alias lessOrEqualThan = safeOp!"<=";
+
+///
+pure @safe @nogc nothrow unittest
+{
+    assert( lessOrEqualThan(2, 3));
+    assert( lessOrEqualThan(2U, 3U));
+    assert( lessOrEqualThan(2, 3.0));
+    assert( lessOrEqualThan(-2, 3U));
+    assert( lessOrEqualThan(2, 3U));
+    assert(!lessOrEqualThan(3U, -2));
+    assert(!lessOrEqualThan(3U, 2));
+    assert( lessOrEqualThan(0, 0));
+    assert( lessOrEqualThan(0U, 0));
+    assert( lessOrEqualThan(0, 0U));
 }
 
 /**
@@ -512,11 +535,32 @@ unittest
     assert(!greaterThan(2, 3.0));
     assert(!greaterThan(-2, 3U));
     assert(!greaterThan(2, 3U));
-    assert(greaterThan(3U, -2));
-    assert(greaterThan(3U, 2));
+    assert( greaterThan(3U, -2));
+    assert( greaterThan(3U, 2));
     assert(!greaterThan(0, 0));
     assert(!greaterThan(0U, 0));
     assert(!greaterThan(0, 0U));
+}
+
+/**
+   Predicate that returns $(D_PARAM a >= b).
+   Correctly compares signed and unsigned integers, ie. 2U >= -1.
+*/
+alias greaterOrEqualThan = safeOp!">=";
+
+///
+unittest
+{
+    assert(!greaterOrEqualThan(2, 3));
+    assert(!greaterOrEqualThan(2U, 3U));
+    assert(!greaterOrEqualThan(2, 3.0));
+    assert(!greaterOrEqualThan(-2, 3U));
+    assert(!greaterOrEqualThan(2, 3U));
+    assert( greaterOrEqualThan(3U, -2));
+    assert( greaterOrEqualThan(3U, 2));
+    assert( greaterOrEqualThan(0, 0));
+    assert( greaterOrEqualThan(0U, 0));
+    assert( greaterOrEqualThan(0, 0U));
 }
 
 /**
@@ -528,10 +572,25 @@ alias equalTo = safeOp!"==";
 ///
 unittest
 {
-    assert(equalTo(0U, 0));
-    assert(equalTo(0, 0U));
+    assert( equalTo(0U, 0));
+    assert( equalTo(0, 0U));
     assert(!equalTo(-1, ~0U));
 }
+
+/**
+   Predicate that returns $(D_PARAM a != b).
+   Correctly compares signed and unsigned integers, ie. !(-1 != ~0U).
+*/
+alias notEqualTo = safeOp!"!=";
+
+///
+unittest
+{
+    assert(!notEqualTo(0U, 0));
+    assert(!notEqualTo(0, 0U));
+    assert( notEqualTo(1, 0U));
+}
+
 /**
    N-ary predicate that reverses the order of arguments, e.g., given
    $(D pred(a, b, c)), returns $(D pred(c, b, a)).
@@ -1466,4 +1525,3 @@ template forward(args...)
     int value = 3;
     auto x2 = bar(value); // case of OK
 }
-
