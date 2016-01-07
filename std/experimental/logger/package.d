@@ -68,7 +68,7 @@ required $(D Logger).
 
 $(H3 Logging Fundamentals)
 $(H4 LogLevel)
-The $(D LogLevel) of an log call can be defined in two ways. The first is by
+The $(D LogLevel) of a log call can be defined in two ways. The first is by
 calling $(D log) and passing the $(D LogLevel) explicit as the first argument.
 The second way of setting the $(D LogLevel) of a
 log call, is by calling either $(D trace), $(D info), $(D warning),
@@ -98,9 +98,9 @@ The global $(D LogLevel) is accessible by using $(D globalLogLevel).
 To assign the $(D LogLevel) of a $(D Logger) use the $(D logLevel) property of
 the logger.
 
-$(H4 Printf Sytle Logging)
+$(H4 Printf Style Logging)
 If $(D printf)-style logging is needed add a $(B f) to the logging call, such as
-$(D myLogger.infof("Hello %s", "world");) or $(fatalf("errno %d", 1337))
+$(D myLogger.infof("Hello %s", "world");) or $(D fatalf("errno %d", 1337)).
 The additional $(B f) enables $(D printf)-style logging for call combinations of
 explicit $(D LogLevel) and conditional logging functions and methods.
 
