@@ -124,9 +124,9 @@ method.
 -------------
 class MyCustomLogger : Logger
 {
-    this(string newName, LogLevel lv) @safe
+    this(LogLevel lv) @safe
     {
-        super(newName, lv);
+        super(lv);
     }
 
     override void writeLogMsg(ref LogEntry payload)
@@ -135,8 +135,8 @@ class MyCustomLogger : Logger
     }
 }
 
-auto logger = new MyCustomLogger();
-logger.log("Awesome log message");
+auto logger = new MyCustomLogger(LogLevel.info);
+logger.log("Awesome log message with LogLevel.info");
 -------------
 
 To gain more precise control over the logging process, additionally to
