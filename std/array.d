@@ -339,9 +339,8 @@ range, which must be a range of tuples (Key, Value). Returns a null associative
 array reference when given an empty range.
 Duplicates: Associative arrays have unique keys. If r contains duplicate keys,
 then the result will contain the value of the last pair for that key in r.
-See_Also: $(XREF typecons, Tuple)
+See_Also: $(REF Tuple, std, typecons)
  */
-
 auto assocArray(Range)(Range r)
     if (isInputRange!Range)
 {
@@ -1247,7 +1246,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 /********************************************
 Returns an array that consists of $(D s) (which must be an input
 range) repeated $(D n) times. This function allocates, fills, and
-returns a new array. For a lazy version, refer to $(XREF range, repeat).
+returns a new array. For a lazy version, refer to $(REF repeat, std, range).
  */
 ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
 {
@@ -1327,10 +1326,10 @@ delimiter. Runs of whitespace are merged together (no empty words are produced).
 $(D @safe), $(D pure) and $(D CTFE)-able.
 
 See_Also:
-$(XREF_PACK algorithm,iteration,splitter) for a version that splits using any
+$(REF splitter, std, algorithm, iteration) for a version that splits using any
 separator.
 
-$(XREF regex, splitter) for a version that splits using a regular
+$(REF splitter, std, regex) for a version that splits using a regular
 expression defined separator.
 +/
 S[] split(S)(S s) @safe pure
@@ -1420,7 +1419,7 @@ unittest
 }
 
 /++
-Alias for $(XREF_PACK algorithm,iteration,_splitter).
+Alias for $(REF _splitter, std, algorithm, iteration).
  +/
 deprecated("Please use std.algorithm.iteration.splitter instead.")
 alias splitter = std.algorithm.iteration.splitter;
@@ -1429,7 +1428,7 @@ alias splitter = std.algorithm.iteration.splitter;
     Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.
 
     The _range must be a
-    $(XREF_PACK_NAMED _range,primitives,isForwardRange,forward _range).
+    $(REF_ALTTEXT forward _range, isForwardRange, std, _range, primitives).
     The separator can be a value of the same type as the elements in $(D range)
     or it can be another forward _range.
 
@@ -1448,7 +1447,7 @@ alias splitter = std.algorithm.iteration.splitter;
         An array containing the divided parts of $(D range).
 
     See_Also:
-        $(XREF_PACK algorithm,iteration,splitter) for the lazy version of this
+        $(REF splitter, std, algorithm, iteration) for the lazy version of this
         function.
  +/
 auto split(Range, Separator)(Range range, Separator sep)
@@ -1548,7 +1547,7 @@ private enum bool hasCheapIteration(R) = isArray!R;
         an allocated array of Elements
 
    See_Also:
-        $(XREF_PACK algorithm,iteration,joiner)
+        $(REF joiner, std, algorithm, iteration)
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if(isInputRange!RoR &&
