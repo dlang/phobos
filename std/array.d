@@ -335,7 +335,10 @@ unittest
 Returns a newly allocated associative _array from a range of key/value tuples.
 Params: r = An input range of tuples of keys and values.
 Returns: A newly allocated associative array out of elements of the input
-range, which must be a range of tuples (Key, Value).
+range, which must be a range of tuples (Key, Value). Returns a null associative
+array reference when given an empty range.
+Duplicates: Associative arrays have unique keys. If r contains duplicate keys,
+then the result will contain the value of the last pair for that key in r.
 See_Also: $(XREF typecons, Tuple)
  */
 
