@@ -1890,8 +1890,9 @@ unittest
 // joiner
 /**
 Lazily joins a range of ranges with a separator. The separator itself
-is a range. If you do not provide a separator, then the ranges are
-joined directly without anything in between them.
+is a range. If a separator is not provided, then the ranges are
+joined directly without anything in between them (often called $(D flatten)
+in other languages).
 
 Params:
     r = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of input
@@ -1900,7 +1901,7 @@ Params:
         element(s) to serve as separators in the joined range.
 
 Returns:
-An input range of elements in the joined range. This will be a forward range if
+A range of elements in the joined range. This will be a forward range if
 both outer and inner ranges of $(D RoR) are forward ranges; otherwise it will
 be only an input range.
 
