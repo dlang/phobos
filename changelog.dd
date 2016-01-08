@@ -9,6 +9,7 @@ $(BUGSTITLE Library Changes,
 $(LI $(RELATIVE_LINK2 json-encode-control-characters, `std.json` encodes string control characters.))
 $(LI The package $(STDMODREF experimental_ndslice, std.experimental.ndslice) was added.
 It is also available as part of the $(LINK2 https://github.com/DlangScience/mir, Mir library).)
+$(LI Default LogLevel of FileLogger was changed to LogLevel.all.)
 
 )
 
