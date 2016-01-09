@@ -1,38 +1,17 @@
 // Written in the D programming language.
 
 /**
-This module implements a variety of type constructors, i.e., templates
-that allow construction of new, useful general-purpose types.
+This module implements a experimental additions/modifications to std.typecons.
 
-Source:    $(PHOBOSSRC std/_typecons.d)
+Use this module to test out new functionality of wrap which allows for a struct
+to be wrapped against an interface. The implementation in std.typecons only
+allows for classes to use the wrap functionality.
+
+Source:    $(PHOBOSSRC std/experimental/_typecons.d)
 
 Macros:
 
 WIKI = Phobos/StdVariant
-
-Synopsis:
-
-----
-// value tuples
-alias Coord = Tuple!(float, "x", float, "y", float, "z");
-Coord c;
-c[1] = 1;       // access by index
-c.z = 1;        // access by given name
-alias DicEntry = Tuple!(string, string); // names can be omitted
-
-// Rebindable references to const and immutable objects
-void bar()
-{
-    const w1 = new Widget, w2 = new Widget;
-    w1.foo();
-    // w1 = w2 would not work; can't rebind const object
-    auto r = Rebindable!(const Widget)(w1);
-    // invoke method as if r were a Widget object
-    r.foo();
-    // rebind r to refer to another object
-    r = w2;
-}
-----
 
 Copyright: Copyright the respective authors, 2008-
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -146,7 +125,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
         }
     }
 }
-/// ditto
+// ditto
 private template implementsInterface(Source, Targets...)
 if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
 {
@@ -214,6 +193,10 @@ private template isInterface(ConceptType) {
  *
  * If `Source` is a structure then wrapping/unwrapping will create
  * a copy, it is not possible to affect the original with a wrapped structure.
+ *
+ *
+ * Bugs:
+ * $(D wrap) does not support interfaces which take or return their interface type.
  */
 template wrap(Targets...)
 if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
@@ -284,6 +267,8 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
 
                 import std.conv : to;
                 import std.functional : forward;
+                // TODO: Create and use a wrapperSignature!fun to build the
+                // function signature.
                 template generateFun(size_t i)
                 {
                     enum name = TargetMembers[i].name;
@@ -410,19 +395,23 @@ template unwrap(Target)
             Object upCastSource = dynamicCast!(Object)(src);   // remove qualifier
             do
             {
+                // Unwrap classes
                 if (auto a = dynamicCast!(Structural!Object)(upCastSource))
                 {
                     if (auto d = dynamicCast!(inout T)(upCastSource = a._wrap_getSource()))
                         return d;
                 }
+                // Unwrap a structure of type T
                 else if (auto a = dynamicCast!(Structural!T)(upCastSource))
                 {
                     return a._wrap_getSource();
                 }
+                // Unwrap class that already inherited from interface
                 else if (auto d = dynamicCast!(inout T)(upCastSource))
                 {
                     return d;
                 }
+                // Recurse to find the struct Target within a wrapped tree
                 else
                 {
                     static if (hasMember!(Source, "_wrap_getSource"))
