@@ -1962,24 +1962,24 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
 }
 
 /**
-Get first parameter $(D p) that passes an $(D if (unaryFun!pred(p))) test.  If
-no parameter passes the test return the last.
+Get the _first argument `a` that passes an `if (unaryFun!pred(a))` test.  If
+no argument passes the test, return the last argument.
 
-Similar to behaviour of `or` operator in dynamic languages such as Lisp's
+Similar to behaviour of the `or` operator in dynamic languages such as Lisp's
 `(or ...)` and Python's `a or b or ...` except that the last argument is
 returned upon no match.
 
 Simplifies logic, for instance, in parsing rules where a set of alternative
-matchers are tried. The first one that matches returns it match result,
+matchers are tried. The _first one that matches returns it match result,
 typically as an abstract syntax tree (AST).
 
-NOTE: Lazy parameters are currently, too restrictively, inferred by DMD to
-always throw eventhough they don't need to be. This makes it impossible to
-currently mark $(D either) as $(D nothrow). See issue at
-https://issues.dlang.org/show_bug.cgi?id=12647
+Bugs:
+Lazy parameters are currently, too restrictively, inferred by DMD to
+always throw even though they don't need to be. This makes it impossible to
+currently mark `either` as `nothrow`. See issue at $(BUGZILLA 12647).
 
 Returns:
-    The first parameter that passes the test $(D pred).
+    The _first argument that passes the test `pred`.
 */
 CommonType!(T, Ts) either(alias pred = a => a, T, Ts...)(T first, lazy Ts alternatives)
     if (alternatives.length >= 1 &&
