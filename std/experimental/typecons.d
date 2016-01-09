@@ -267,52 +267,35 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
 
                 import std.conv : to;
                 import std.functional : forward;
-                // TODO: Create and use a wrapperSignature!fun to build the
-                // function signature.
                 template generateFun(size_t i)
                 {
                     enum name = TargetMembers[i].name;
                     enum fa = functionAttributes!(TargetMembers[i].type);
-                    static @property stc()
+                    static args(int num)()
                     {
                         string r;
-                        if (fa & FunctionAttribute.property)    r ~= "@property ";
-                        if (fa & FunctionAttribute.ref_)        r ~= "ref ";
-                        if (fa & FunctionAttribute.pure_)       r ~= "pure ";
-                        if (fa & FunctionAttribute.nothrow_)    r ~= "nothrow ";
-                        if (fa & FunctionAttribute.trusted)     r ~= "@trusted ";
-                        if (fa & FunctionAttribute.safe)        r ~= "@safe ";
-                        return r;
-                    }
-                    static @property mod()
-                    {
-                        alias type = AliasSeq!(TargetMembers[i].type)[0];
-                        string r;
-                        static if (is(type == immutable))       r ~= " immutable";
-                        else
+                        bool first = true;
+                        foreach(i; staticIota!(0, num))
                         {
-                            static if (is(type == shared))      r ~= " shared";
-                            static if (is(type == const))       r ~= " const";
-                            else static if (is(type == inout))  r ~= " inout";
-                            //else  --> mutable
+                            import std.conv : to;
+                            r ~= (first ? "" : ", ") ~ " a" ~ (i+1).to!string;
+                            first = false;
                         }
                         return r;
                     }
-                    enum n = to!string(i);
                     static if (fa & FunctionAttribute.property)
                     {
                         static if (Parameters!(TargetMembers[i].type).length == 0)
                             enum fbody = "_wrap_source."~name;
                         else
-                            enum fbody = "_wrap_source."~name~" = forward!args";
+                            enum fbody = "_wrap_source."~name~" = a1";
                     }
                     else
                     {
-                            enum fbody = "_wrap_source."~name~"(forward!args)";
+                            enum fbody = "_wrap_source."~name~"("~args!(Parameters!(TargetMembers[i].type).length)~")";
                     }
                     enum generateFun =
-                        "override "~stc~"ReturnType!(TargetMembers["~n~"].type) "
-                        ~ name~"(Parameters!(TargetMembers["~n~"].type) args) "~mod~
+                        "override "~wrapperSignature!(TargetMembers[i]) ~
                         "{ return "~fbody~"; }";
                 }
 
@@ -322,6 +305,76 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
             }
         }
     }
+}
+
+// Build a signature that matches the provided function
+// Each argument will be provided a name in the form a#
+private template wrapperSignature(alias fun)
+{
+    enum name = fun.name;
+    enum fa = functionAttributes!(fun.type);
+    static @property stc()
+    {
+        string r;
+        if (fa & FunctionAttribute.property)    r ~= "@property ";
+        if (fa & FunctionAttribute.ref_)        r ~= "ref ";
+        if (fa & FunctionAttribute.pure_)       r ~= "pure ";
+        if (fa & FunctionAttribute.nothrow_)    r ~= "nothrow ";
+        if (fa & FunctionAttribute.trusted)     r ~= "@trusted ";
+        if (fa & FunctionAttribute.safe)        r ~= "@safe ";
+        return r;
+    }
+    static @property mod()
+    {
+        alias type = AliasSeq!(fun.type)[0];
+        string r;
+        static if (is(type == immutable))       r ~= " immutable";
+        else
+        {
+            static if (is(type == shared))      r ~= " shared";
+            static if (is(type == const))       r ~= " const";
+            else static if (is(type == inout))  r ~= " inout";
+            //else  --> mutable
+        }
+        return r;
+    }
+    alias param = Parameters!(fun.type);
+    static @property wrapperParameters()
+    {
+        string r;
+        bool first = true;
+        foreach(i, p; param)
+        {
+            import std.conv : to;
+            r ~= (first ? "" : ", ") ~ p.stringof ~ " a" ~ (i+1).to!string;
+            first = false;
+        }
+        return r;
+    }
+
+    enum wrapperSignature =
+        stc~ReturnType!(fun.type).stringof ~ " "
+        ~ name~"("~wrapperParameters~")"~mod;
+}
+
+unittest
+{
+    interface M
+    {
+        void f1();
+        void f2(string[] args, int count);
+        void f3(string[] args, int count) pure const;
+    }
+
+    alias TargetMembers = UniqMembers!(ConcatInterfaceMembers!M);
+    static assert(wrapperSignature!(TargetMembers[0]) == "void f1()"
+                  , wrapperSignature!(TargetMembers[0]));
+
+    static assert(wrapperSignature!(TargetMembers[1]) == "void f2(string[] a1, int a2)"
+                  , wrapperSignature!(TargetMembers[1]));
+
+    static assert(wrapperSignature!(TargetMembers[2]) == "pure void f3(string[] a1, int a2) const"
+                  , wrapperSignature!(TargetMembers[2]));
 }
 
 // Internal class to support dynamic cross-casting
