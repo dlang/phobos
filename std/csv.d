@@ -1013,14 +1013,14 @@ public:
 
         if (!_input.range.empty)
         {
-           if (_input.range.front == '\r')
-           {
-               _input.range.popFront();
-               if (_input.range.front == '\n')
-                   _input.range.popFront();
-           }
-           else if (_input.range.front == '\n')
-               _input.range.popFront();
+            if (_input.range.front == '\r')
+            {
+                _input.range.popFront();
+                if (!_input.range.empty && _input.range.front == '\n')
+                    _input.range.popFront();
+            }
+            else if (_input.range.front == '\n')
+                _input.range.popFront();
         }
 
         if (_input.range.empty)
@@ -1125,6 +1125,19 @@ public:
     {
         assert(equal(record, ans));
     }
+}
+
+// Bugzilla 15545
+pure unittest
+{
+    enum failData =
+    "name, surname, age
+    Joe, Joker, 99\r";
+    bool pass = true;
+    auto r = csvReader(failData);
+    try foreach(entry; r){}
+    catch pass = false;
+    assert(pass);
 }
 
 /*
