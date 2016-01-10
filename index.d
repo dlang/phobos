@@ -104,6 +104,10 @@ $(BOOKTABLE ,
         $(TD Compute MD5 hash of arbitrary data.)
     )
     $(TR
+        $(TDNW $(LINK2 std_digest_murmurhash.html, std.digest.murmurhash))
+        $(TD Compute MurmurHash of arbitrary data.)
+    )
+    $(TR
         $(TDNW $(LINK2 std_digest_ripemd.html, std.digest.ripemd))
         $(TD Compute RIPEMD-160 hash of arbitrary data.)
     )

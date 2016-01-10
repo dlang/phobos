@@ -208,7 +208,8 @@ SRC_STD_DIGEST= \
 	std\digest\md.d \
 	std\digest\ripemd.d \
 	std\digest\digest.d \
-	std\digest\hmac.d
+	std\digest\hmac.d \
+	std\digest\murmurhash.d
 
 SRC_STD_NET= \
 	std\net\isemail.d \
@@ -1198,4 +1199,3 @@ install: phobos.zip
 auto-tester-build: targets
 
 auto-tester-test: unittest
-
