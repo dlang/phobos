@@ -1016,7 +1016,7 @@ public:
            if (_input.range.front == '\r')
            {
                _input.range.popFront();
-               if (_input.range.front == '\n')
+               if (!_input.range.empty && _input.range.front == '\n')
                    _input.range.popFront();
            }
            else if (_input.range.front == '\n')
@@ -1693,4 +1693,17 @@ unittest
             assert(row == [4, 5, 6]);
         ++i;
     }
+}
+
+@safe pure unittest // Bugzilla Issue 15545
+{
+	string data = 
+	"1, 2, 3
+	4, 5, 6\r";
+	
+	auto reader = csvReader(data);
+	
+	foreach(entry; reader)
+	{
+	}
 }
