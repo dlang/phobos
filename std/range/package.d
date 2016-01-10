@@ -6767,6 +6767,543 @@ if (isForwardRange!Source && hasLength!Source)
     assert(equal(chunks, [[1], [2], [3], [], []]));
 }
 
+private enum isNullable(T) = is(typeof(T.init is null));
+private enum isCopyable(T) = is(typeof({ T t = T.init; auto copy = t; }));
+
+/**
+ * Range type to eliminate null dereferences.
+ *
+ * This type has two states; an $(I empty) state and a $(I non-empty) state.
+ * It holds a value of type `T` when $(I non-empty), and nothing when
+ * $(I empty). It is $(I empty) in the default initialized state.
+ *
+ * Construct with $(LREF none) for explicitly empty instances, $(LREF only)
+ * for non-empty instances and $(LREF option) to convert from nullable values.
+ *
+ * Option eliminates null dereferences in two ways. Primarily by encouraging
+ * range algorithms, which tend to have the desired behavior on empty ranges.
+ * For other cases, all access (dereference) to the underlying value is
+ * protected by explicit calls such as $(LREF _Option.getOrElse) and
+ * $(LREF _Option.assumeNonEmpty).
+ *
+ * For non-mutable types of `T`, Option can only be reassigned to $(LREF none).
+ * Params:
+ *    T = type of contained value
+ */
+struct Option(T)
+{
+    static if (isMutable!T) import std.algorithm.mutation : move;
+
+    private T value = T.init; // For when T has @disable this();
+    private bool isDefined = false;
+
+    // Constructor for the `only` constructor function
+    private this(T value, bool isDefined)
+    {
+        this.isDefined = isDefined;
+        if (isDefined)
+        {
+            static if (isMutable!T) this.value = move(value);
+            else this.value = value;
+        }
+        else this.value = T.init;
+    }
+
+    private Option!U upcast(U)() @property
+        if (is(T : U))
+    {
+        return typeof(return)(this.value, this.isDefined);
+    }
+
+    /// Construct an empty instance.
+    /// See_Also: $(LREF none)
+    this(NoneType)
+    {
+        this.value = T.init; // Required for nested structs
+    }
+
+    /**
+     * Construct an instance which emptiness depends on whether value
+     * is null or not. The resulting instance is $(I empty) iff value is null.
+     *
+     * Use this to interface with code that uses $(D null) to mean absence of
+     * _value. To construct an instance holding a $(I non-empty) null _value,
+     * use $(LREF only).
+     *
+     * Identical to $(LREF only) when `T` is not a nullable type.
+     *
+     * Params: value = null for empty instance, or a non-null _value to hold
+     * See_Also: $(LREF option) for a type-inference-friendly version of this operation
+     */
+    this(T value)
+    {
+        static if (isNullable!T) isDefined = value !is null;
+        else isDefined = true;
+        if (isDefined)
+        {
+            static if (isMutable!T) this.value = move(value);
+            else this.value = value;
+        }
+        else this.value = T.init;
+    }
+
+    /**
+     * Empty this instance.
+     *
+     * To assign a new held value `v`, assign to `only(v)` or `option(v)`.
+     * See_Also: $(LREF none), $(LREF only), $(LREF option)
+     */
+    void opAssign(NoneType)
+    {
+        if (isDefined)
+        {
+            // `destroy(classReference);` destroys through indirection,
+            // which we don't want here
+            static if (is(T == class) || is(T == interface)) value = null;
+            // Leave destruction of const and immutable values to end of scope
+            else static if (isMutable!T) destroy(value);
+            isDefined = false;
+        }
+    }
+
+    static if (isMutable!T)
+    {
+        void opAssign(Option other)
+        {
+            import std.algorithm.mutation : swap;
+            this.isDefined = other.isDefined;
+            if (isDefined) swap(this.value, other.value);
+        }
+    }
+
+    static if (isMutable!T && isNullable!T && !is(T == typeof(null)))
+    {
+        this(Option!(typeof(null)) opt)
+        {
+            this = opt;
+        }
+
+        void opAssign(Option!(typeof(null)) opt)
+        {
+            this.value = null;
+            this.isDefined = opt.isDefined; // for the unlikely case that `opt`
+            // originates from anywhere but `option(null)` (which means isDefined = true)
+        }
+    }
+
+    /**
+     * Range primitives.
+     *
+     * `Option` is either a single-element range containing the value it holds
+     * or an _empty range when no value is held.
+     *
+     * Slicing is only provided for mutable types `T`.
+     *
+     * Note: Using front or back _to nullify the held value results in a
+     * $(I non-_empty) null instance. Only popping or assigning _to $(LREF none)
+     * empties the instance.
+     * See_Also: $(MREF std, range)
+     */
+    ref inout(T) front() inout @property { assert(isDefined); return value; }
+    ref inout(T) back() inout @property { assert(isDefined); return value; } /// Ditto
+    bool empty() const @property { return !isDefined; } /// Ditto
+    void popFront() { this = none; } /// Ditto
+    void popBack() { this = none; } /// Ditto
+    static if (isCopyable!T) Option save() @property { return this; } /// Ditto
+    size_t length() const @property { return isDefined; } /// Ditto
+    alias opDollar = length; /// Ditto
+
+    /// Ditto
+    ref inout(T) opIndex(size_t index) inout
+    {
+        version(assert)
+        {
+            import core.exception : RangeError;
+            if (!isDefined || index != 0) throw new RangeError();
+        }
+        return value;
+    }
+
+    static if (isCopyable!T)
+    {
+        /// Ditto
+        Option opSlice(size_t from, size_t to)
+        {
+            version(assert)
+            {
+                import core.exception : RangeError;
+                if (from > to || length < to) throw new RangeError();
+            }
+            return to > from ? this : Option(none);
+        }
+
+        // For compatibility with the old unary `only`
+        Option opSlice()
+        {
+            return this;
+        }
+    }
+
+    /**
+     * Assume this instance holds a value and return it.
+     *
+     * Range algorithms are preferable over raw access to the underlying
+     * value when possible. In other cases, using Option and assumeNonEmpty is
+     * preferable to using a raw nullable reference, as the `AssertError` is
+     * guaranteed to be thrown, and unlike a segmentation fault or other
+     * undefined behavior, will happen as close to the underlying error as
+     * possible. Further, using assumeNonEmpty formalizes the assumption of
+     * non-null.
+     * Returns: The held value
+     * Throws: `AssertError` if this instance is empty
+     * Note: `opt.assumeNonEmpty = null;` does not empty the instance; to empty
+     * the instance, assign to $(LREF none).
+     * Bugs: This function is currently not `nothrow` or `@nogc`.
+     * $(LREF Option.front) can be used as a workaround when these attributes
+     * are desired. See $(BUGZILLA 12647).
+     */
+    // this function is not nothrow due to bug 12647, and not @nogc.
+    // onAssertError isn't @nogc either.
+    ref inout(T) assumeNonEmpty() inout @property pure @safe
+    {
+        import core.exception : AssertError;
+        import std.exception : enforce;
+        enforce!AssertError(isDefined, T.stringof ~ " assumption failed to hold");
+        return value;
+    }
+
+    /**
+     * If there is a held value, return it; otherwise return other.
+     * Params: other = value to return if this instance is empty
+     * Bugs: These functions are currently not `nothrow` or `@nogc`. See
+     * $(BUGZILLA 12647).
+     * See_Also: $(REF Algebraic, std, variant)
+     */
+    // TODO: Do lazy parameters offer ref yet?
+    auto ref CommonType!(inout(T), U) getOrElse(U)(lazy U other) inout
+        if (!is(CommonType!(T, U) == void))
+    {
+        return isDefined ? value : other;
+    }
+
+    /// Ditto
+    Option!(CommonType!(T, U)) orElse(U)(lazy Option!U other)
+        if (!is(CommonType!(T, U) == void))
+    {
+        alias Super = CommonType!(T, U);
+        return isDefined ? only!Super(this.value) : other.upcast!Super;
+    }
+
+    version(StdDdoc)
+    {
+        /// Ditto
+        Algebraic!(inout(T), U) or(U)(lazy U other) inout;
+    }
+    else // inout does not support field variables at this time
+    {
+        template or(U)
+        {
+            import std.variant : Algebraic;
+            Algebraic!(T, U) or(lazy U other)
+            {
+                return isDefined ? typeof(return)(value) : typeof(return)(other);
+            }
+
+            Algebraic!(const T, U) or(lazy U other) const
+            {
+                return isDefined ? typeof(return)(value) : typeof(return)(other);
+            }
+
+            Algebraic!(immutable T, U) or(lazy U other) immutable
+            {
+                return isDefined ? typeof(return)(value) : typeof(return)(other);
+            }
+        }
+    }
+}
+
+/// Convert from null to Option as soon as possible when interfacing with code that uses null:
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map, joiner;
+    import std.range : only;
+
+    static shared(int)* getX(bool yes)
+    {
+        static shared int x = 42;
+        return yes? &x : null;
+    }
+
+    auto values = only(false, true, false).map!getX.map!option;
+    assert(values[0].empty);
+    assert(values[1].map!(p => *p).equal(only(42)));
+    assert(values[2].empty);
+
+    auto aa = ["foo": 42];
+    assert(option("foo" in aa).map!(p => *p).equal(only(42)));
+
+    static class A {}
+    auto arr = [new Object, new A, null];
+    assert(arr.map!(o => option(cast(A)o)).joiner.equal(only(arr[1])));
+}
+
+/// Use $(REF joiner, std, algorithm, iteration) to $(I flatten) a range of `Option`s:
+nothrow @safe @nogc unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : joiner;
+    import std.range : only;
+    static maybeValues = [only(42), Option!int(none), only(24)];
+    assert(maybeValues.joiner.equal(only(42, 24)));
+}
+
+/// There is no `flatMap`; use `joiner` with $(REF map, std, algorithm, iteration):
+@safe unittest
+{
+    static import std.uni;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : joiner, map;
+
+    static maybeValues = [Option!string(none), only("hello"), only("world")];
+    assert(maybeValues.joiner.map!(std.uni.toUpper).joiner(" ").equal("HELLO WORLD"));
+}
+
+/// Use `foreach` or $(REF each, std, algorithm, iteration) with `joiner` to perform an operation with side effects on `Option`s:
+nothrow @safe @nogc unittest
+{
+    import std.algorithm.iteration : each, joiner;
+    static maybeValues = [only("hello"), only("world"), Option!string(none)];
+    uint count = 0;
+    foreach (value; maybeValues.joiner) ++count;
+    assert(count == 2);
+    maybeValues.joiner.each!(value => ++count);
+    assert(count == 4);
+}
+
+/// Use $(LREF none) to explicitly construct empty `Option`s:
+pure nothrow @safe @nogc unittest
+{
+    Option!int i = none;
+    assert(i.empty);
+}
+
+/// Use $(LREF _Option.getOrElse) to dereference with a fallback:
+pure /+ nothrow +/ @safe /+ @nogc +/ unittest
+{
+    auto opt = only(42);
+    assert(opt.getOrElse(24) == 42);
+    opt = none;
+    assert(opt.getOrElse(24) == 24);
+}
+
+/// Use $(LREF _Option.orElse) to chain with another Option:
+pure /+ nothrow @nogc +/ unittest
+{
+    int i = 42;
+    int* a = null;
+    int* b = &i;
+    auto opt = option(a).orElse(option(b));
+    assert(opt.assumeNonEmpty == b);
+}
+
+/// Use $(LREF _Option.or) to convert to $(REF Algebraic, std, variant):
+unittest
+{
+    auto opt = only(42);
+    assert(opt.or("foo").peek!int);
+    opt = none;
+    assert(opt.or("foo").peek!string);
+}
+
+pure nothrow @nogc unittest
+{
+    void* p = null;
+    assert(!only(p).empty);
+
+    void* p2 = &p;
+    assert(!only(p2).empty);
+
+    Option!(void*) opt = only(null);
+    assert(!opt.empty);
+}
+
+unittest
+{
+    import std.range.primitives;
+    foreach (Opt; AliasSeq!(Option!int, Option!(const int)))
+    {
+        static assert(isRandomAccessRange!Opt);
+        static assert(hasLength!Opt);
+        auto opt = only(42);
+        assert(!opt.empty);
+        assert(opt.length == 1);
+        assert(opt.front == 42);
+        assert(opt.back == 42);
+        assert(opt[0] == 42);
+        assert(opt[0 .. 1][0] == 42);
+        opt = none;
+        assert(opt.empty);
+        assert(opt.length == 0);
+        assert(opt[0 .. 0].empty);
+    }
+    // slicing requires reassignability, which Option!(const int) does not provide
+    static assert(hasSlicing!(Option!int));
+    auto opt = only(42);
+    opt.front = 24;
+    assert(opt.front == 24);
+}
+
+unittest
+{
+    class C { bool destroyed = false; ~this() { destroyed = true; } }
+    auto c = new C;
+    auto optClass = only(c);
+    assert(!optClass.empty);
+    optClass = none;
+    assert(optClass.empty);
+    assert(!c.destroyed);
+}
+
+pure nothrow @safe @nogc unittest
+{
+    auto nullOpt = only(null);
+    Option!(int*) pOpt = nullOpt;
+    assert(!pOpt.empty);
+    nullOpt = none;
+    assert(nullOpt.empty);
+    pOpt = nullOpt;
+    assert(pOpt.empty);
+}
+
+pure nothrow @safe @nogc unittest
+{
+    struct NonCopyable
+    {
+        @disable this();
+        @disable this(this);
+    }
+
+    Option!NonCopyable defaultConstructed;
+    Option!NonCopyable opt = NonCopyable.init;
+    opt = only(NonCopyable.init);
+    opt = option(NonCopyable.init);
+}
+
+pure nothrow @safe @nogc unittest
+{
+    Option!(const int) opt = only!(const int)(42);
+    static assert(!__traits(compiles, opt = only(24)));
+    assert(!opt.empty);
+    assert(opt.front == 42);
+    opt = none;
+    assert(opt.empty);
+}
+
+pure /+ nothrow +/ @safe /+ @nogc +/ unittest
+{
+    int a = 42;
+    long b = 24;
+    assert(only(a).getOrElse(b) == a);
+    assert(only(b).getOrElse(a) == b);
+
+    auto opt = only(a).orElse(only(b));
+    static assert(is(typeof(opt) == Option!long));
+    assert(opt.front == 42);
+
+    auto pOpt = Option!(int*)(none).orElse(Option!(immutable int*)(none));
+    static assert(is(typeof(pOpt) == Option!(const(int)*)));
+    assert(pOpt.empty);
+}
+
+/// Constructor function for $(LREF Option).
+/// See_Also: $(LREF Option.this) for detailed behavior
+Option!T option(T)(T value)
+{
+    static if (isMutable!T)
+    {
+        import std.algorithm.mutation : move;
+        return Option!T(move(value));
+    }
+    else return Option!T(value);
+}
+
+///
+pure nothrow @safe unittest
+{
+    Object p = null;
+    assert(option(p).empty);
+
+    auto p2 = new Object;
+    assert(!option(p2).empty);
+}
+
+private struct NoneType {}
+
+/// Special value representing an absence of value when constructing $(LREF Option).
+immutable NoneType none = NoneType();
+
+///
+pure @safe unittest
+{
+    Option!int opt = none;
+    assert(opt.empty);
+    opt = only(42);
+    assert(opt.assumeNonEmpty == 42);
+}
+
+/**
+ * Return the `front` or `back` of range when it is non-empty, or $(LREF none) otherwise.
+ * See_Also: $(LREF Option)
+ */
+Option!(ElementType!Range) frontOption(Range)(Range range)
+    if (isInputRange!Range)
+{
+    return range.empty ? typeof(return)(none) : only(range.front);
+}
+
+/// Ditto
+Option!(ElementType!Range) backOption(Range)(Range range)
+    if (isBidirectionalRange!Range)
+{
+    return range.empty ? typeof(return)(none) : only(range.back);
+}
+
+pure nothrow @safe @nogc unittest
+{
+    import std.range : only;
+    int[] arr;
+    assert(arr.frontOption.empty);
+    assert(arr.backOption.empty);
+    assert(only(0).frontOption.front == 0);
+    assert(only(0).backOption.back == 0);
+}
+
+/**
+ * Return the associated value for key in assocArray as an $(LREF Option).
+ * Returns:
+ *    $(I non-empty) `Option` with the associated value for key, or an
+ *    $(I empty) `Option` when key does not exist in assocArray
+ * Examples:
+----
+auto assocArray = ["foo": 42];
+
+// Write assocArray["foo"] to stdout only if it exists
+assocArray.lookup("foo").copy(stdout.lockingTextWriter);
+----
+ */
+Option!V lookup(T : V[K], V, K)(T assocArray, auto ref K key)
+{
+    if (auto pValue = key in assocArray) return only(*pValue);
+    return typeof(return)(none);
+}
+
+pure nothrow @safe unittest
+{
+    auto assocArray = ["foo": 42];
+    assert(assocArray.lookup("foo").front == 42);
+    assert(assocArray.lookup("bar").empty);
+}
 
 private struct OnlyResult(T, size_t arity)
 {
@@ -6854,47 +7391,6 @@ private struct OnlyResult(T, size_t arity)
         private T[arity] data;
 }
 
-// Specialize for single-element results
-private struct OnlyResult(T, size_t arity : 1)
-{
-    @property T front() { assert(!_empty); return _value; }
-    @property T back() { assert(!_empty); return _value; }
-    @property bool empty() const { return _empty; }
-    @property size_t length() const { return !_empty; }
-    @property auto save() { return this; }
-    void popFront() { assert(!_empty); _empty = true; }
-    void popBack() { assert(!_empty); _empty = true; }
-    alias opDollar = length;
-
-    private this()(auto ref T value)
-    {
-        this._value = value;
-        this._empty = false;
-    }
-
-    T opIndex(size_t i)
-    {
-        assert(!_empty && i == 0);
-        return _value;
-    }
-
-    OnlyResult opSlice()
-    {
-        return this;
-    }
-
-    OnlyResult opSlice(size_t from, size_t to)
-    {
-        assert(from <= to && to <= length);
-        OnlyResult copy = this;
-        copy._empty = _empty || from == to;
-        return copy;
-    }
-
-    private Unqual!T _value;
-    private bool _empty = true;
-}
-
 // Specialize for the empty range
 private struct OnlyResult(T, size_t arity : 0)
 {
@@ -6935,14 +7431,25 @@ As copying the range means copying all elements, it can be
 safely returned from functions. For the same reason, copying
 the returned range may be expensive for a large number of arguments.
  */
+Option!T only(T)(T value)
+{
+    static if (isMutable!T)
+    {
+        import std.algorithm.mutation : move;
+        return Option!T(move(value), true);
+    }
+    else return Option!T(value, true);
+}
+
+/// Ditto
 auto only(Values...)(auto ref Values values)
-    if(!is(CommonType!Values == void) || Values.length == 0)
+    if (Values.length != 1 && is(CommonType!Values) || Values.length == 0)
 {
     return OnlyResult!(CommonType!Values, Values.length)(values);
 }
 
 ///
-@safe unittest
+pure @safe unittest
 {
     import std.algorithm;
     import std.uni;
@@ -6954,6 +7461,18 @@ auto only(Values...)(auto ref Values values)
 
     string title = "The D Programming Language";
     assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
+}
+
+/// Returns a $(I non-empty) $(LREF Option) when called with one argument:
+pure /+ nothrow +/ @safe /+ @nogc +/ unittest
+{
+    Option!int opt = only(42);
+    assert(opt.assumeNonEmpty == 42);
+    opt = none;
+    assert(opt.empty);
+
+    // only(…) is always non-empty
+    assert(!only(null).empty);
 }
 
 unittest
@@ -6989,7 +7508,9 @@ unittest
     assert(emptyRange[0 .. 0].equal(emptyRange));
 }
 
-// Tests the single-element result
+// This test was written for the old unary specialization of OnlyResult,
+// which has been superseded by Option. This test ensures backwards
+// compatibility with the old implementation
 @safe unittest
 {
     import std.algorithm : equal;
