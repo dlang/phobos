@@ -2903,8 +2903,6 @@ Range minPos(alias pred = "a < b", Range)(Range range)
     if (isForwardRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
-    if (range.empty) return range;
-
     static if (hasSlicing!Range && isRandomAccessRange!Range && hasLength!Range)
     {
         // Prefer index-based access
@@ -2920,6 +2918,7 @@ Range minPos(alias pred = "a < b", Range)(Range range)
     }
     else
     {
+        if (range.empty) return range;
         auto result = range.save;
         for (range.popFront(); !range.empty; range.popFront())
         {
