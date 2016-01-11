@@ -2918,11 +2918,12 @@ Range minPos(alias pred = "a < b", Range)(Range range)
     }
     else
     {
-        if (range.empty) return range;
         auto result = range.save;
+        if (range.empty) return result;
         for (range.popFront(); !range.empty; range.popFront())
         {
-            //Note: Unlike minCount, we do not care to find equivalence, so a single pred call is enough
+            // Note: Unlike minCount, we do not care to find equivalence, so a
+            // single pred call is enough.
             if (binaryFun!pred(range.front, result.front))
             {
                 // change the min
