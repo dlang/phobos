@@ -2206,24 +2206,23 @@ auto topN(alias less = "a < b",
         auto right = r.partition!(a => binaryFun!less(a, r.back), ss);
         assert(right.length >= 1);
         pivot = r.length - right.length;
-        if (pivot < nth)
+        if (pivot > nth)
         {
-            ++pivot;
-            r = r[pivot .. $];
-            nth -= pivot;
-        }
-        else if (pivot > nth)
-        {
+            // We don't care to swap the pivot back, won't be visited anymore
             assert(pivot < r.length);
             r = r[0 .. pivot];
+            continue;
         }
-        else
+        // Swap the pivot to where it should be
+        swap(right.front, r.back);
+        if (pivot == nth)
         {
-            // Happy case!
-            // Swap the pivot to where it should be
-            swap(right.front, r.back);
+            // Found Waldo!
             break;
         }
+        ++pivot; // skip the pivot
+        r = r[pivot .. $];
+        nth -= pivot;
     }
     return ret;
 }

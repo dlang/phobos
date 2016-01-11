@@ -2904,18 +2904,34 @@ Range minPos(alias pred = "a < b", Range)(Range range)
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
     if (range.empty) return range;
-    auto result = range.save;
 
-    for (range.popFront(); !range.empty; range.popFront())
+    static if (hasSlicing!Range && isRandomAccessRange!Range && hasLength!Range)
     {
-        //Note: Unlike minCount, we do not care to find equivalence, so a single pred call is enough
-        if (binaryFun!pred(range.front, result.front))
+        // Prefer index-based access
+        size_t pos = 0;
+        foreach (i; 1 .. range.length)
         {
-            // change the min
-            result = range.save;
+            if (binaryFun!pred(range[i], range[pos]))
+            {
+                pos = i;
+            }
         }
+        return range[pos .. $];
     }
-    return result;
+    else
+    {
+        auto result = range.save;
+        for (range.popFront(); !range.empty; range.popFront())
+        {
+            //Note: Unlike minCount, we do not care to find equivalence, so a single pred call is enough
+            if (binaryFun!pred(range.front, result.front))
+            {
+                // change the min
+                result = range.save;
+            }
+        }
+        return result;
+    }
 }
 
 ///
