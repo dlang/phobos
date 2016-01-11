@@ -2165,16 +2165,33 @@ auto topN(alias less = "a < b",
     auto ret = r[0 .. nth];
     while (r.length > nth)
     {
-        auto pivot = uniform(0, r.length);
-        swap(r[pivot], r.back);
-        assert(!binaryFun!(less)(r.back, r.back));
-        auto right = partition!((a) => binaryFun!less(a, r.back), ss)(r);
+        if (nth == 0)
+        {
+            // Special-case "min"
+            import std.algorithm.searching : minPos;
+            swap(r.front, r.minPos!less.front);
+            break;
+        }
+        auto pivot = r.getPivot!less;
+        assert(!binaryFun!less(r[pivot], r[pivot]));
+        static if (is(typeof({ auto local = r[pivot]; })))
+        {
+            // Create a local copy of the pivot, it's faster
+            auto local = r[pivot];
+            auto right = r.partition!(a => binaryFun!less(a, local), ss);
+        }
+        else
+        {
+            // Data is noncopyable, conservatively use swap
+            swap(r[pivot], r.back);
+            auto right = r.partition!(a => binaryFun!less(a, r.back), ss);
+            swap(right.front, r.back);
+        }
         assert(right.length >= 1);
-        swap(right.front, r.back);
         pivot = r.length - right.length;
         if (pivot == nth)
         {
-            return ret;
+            break;
         }
         if (pivot < nth)
         {
@@ -2975,4 +2992,3 @@ shapes. Here's a non-trivial example:
     }
     assert(n == 60);
 }
-
