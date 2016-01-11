@@ -362,38 +362,66 @@ Range partition(alias predicate,
     {
         // Inspired from www.stepanovpapers.com/PAM3-partition_notes.pdf,
         // section "Bidirectional Partition Algorithm (Hoare)"
-        auto result = r;
-        for (;;)
+        static if (isDynamicArray!Range)
         {
+            // For dynamic arrays prefer index-based manipulation
+            if (!r.length) return r;
+            size_t lo = 0, hi = r.length - 1;
             for (;;)
             {
-                if (r.empty) return result;
-                if (!pred(r.front)) break;
+                for (;;)
+                {
+                    if (lo > hi) return r[lo .. $];
+                    if (!pred(r[lo])) break;
+                    ++lo;
+                }
+                // found the left bound
+                assert(lo <= hi);
+                for (;;)
+                {
+                    if (lo == hi) return r[lo .. $];
+                    if (pred(r[hi])) break;
+                    --hi;
+                }
+                // found the right bound, swap & make progress
+                swap(r[lo++], r[hi--]);
+            }
+        }
+        else
+        {
+            auto result = r;
+            for (;;)
+            {
+                for (;;)
+                {
+                    if (r.empty) return result;
+                    if (!pred(r.front)) break;
+                    r.popFront();
+                    result.popFront();
+                }
+                // found the left bound
+                assert(!r.empty);
+                for (;;)
+                {
+                    if (pred(r.back)) break;
+                    r.popBack();
+                    if (r.empty) return result;
+                }
+                // found the right bound, swap & make progress
+                static if (is(typeof(swap(r.front, r.back))))
+                {
+                    swap(r.front, r.back);
+                }
+                else
+                {
+                    auto t1 = moveFront(r), t2 = moveBack(r);
+                    r.front = t2;
+                    r.back = t1;
+                }
                 r.popFront();
                 result.popFront();
-            }
-            // found the left bound
-            assert(!r.empty);
-            for (;;)
-            {
-                if (pred(r.back)) break;
                 r.popBack();
-                if (r.empty) return result;
             }
-            // found the right bound, swap & make progress
-            static if (is(typeof(swap(r.front, r.back))))
-            {
-                swap(r.front, r.back);
-            }
-            else
-            {
-                auto t1 = moveFront(r), t2 = moveBack(r);
-                r.front = t2;
-                r.back = t1;
-            }
-            r.popFront();
-            result.popFront();
-            r.popBack();
         }
     }
 }
