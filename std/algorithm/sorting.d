@@ -2174,35 +2174,27 @@ auto topN(alias less = "a < b",
         }
         auto pivot = r.getPivot!less;
         assert(!binaryFun!less(r[pivot], r[pivot]));
-        static if (is(typeof({ auto local = r[pivot]; })))
-        {
-            // Create a local copy of the pivot, it's faster
-            auto local = r[pivot];
-            auto right = r.partition!(a => binaryFun!less(a, local), ss);
-        }
-        else
-        {
-            // Data is noncopyable, conservatively use swap
-            swap(r[pivot], r.back);
-            auto right = r.partition!(a => binaryFun!less(a, r.back), ss);
-            swap(right.front, r.back);
-        }
+        swap(r[pivot], r.back);
+        auto right = r.partition!(a => binaryFun!less(a, r.back), ss);
         assert(right.length >= 1);
         pivot = r.length - right.length;
-        if (pivot == nth)
-        {
-            break;
-        }
         if (pivot < nth)
         {
             ++pivot;
             r = r[pivot .. $];
             nth -= pivot;
         }
-        else
+        else if (pivot > nth)
         {
             assert(pivot < r.length);
             r = r[0 .. pivot];
+        }
+        else
+        {
+            // Happy case!
+            // Swap the pivot to where it should be
+            swap(right.front, r.back);
+            break;
         }
     }
     return ret;
