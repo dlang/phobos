@@ -1229,6 +1229,7 @@ private size_t getPivot(alias less, Range)(Range r)
 {
     if (r.length < 5)
     {
+        // Don't bother much, just return a random index
         return r.length / 2;
     }
 
@@ -1386,7 +1387,7 @@ private void shortSort(alias less, Range)(Range r)
                 r[j - 1] = temp;
             }
         }
-        else
+        else if (pred(r[e], r[d]))
         {
             size_t j = i;
             while (pred(r[j + 1], r[j]))
