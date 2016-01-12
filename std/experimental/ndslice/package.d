@@ -203,13 +203,13 @@ Returns:
 +/
 T median(Range, T)(Range r, T[] buf)
 {
-    import std.algorithm.sorting: sort;
+    import std.algorithm.sorting: topN;
     size_t n;
     foreach (e; r)
         buf[n++] = e;
-    buf[0 .. n].sort();
-    immutable m = n >> 1;
-    return n & 1 ? buf[m] : cast(T)((buf[m - 1] + buf[m]) / 2);
+    auto m = n >> 1;
+    buf[0 .. n].topN(m);
+    return buf[m];
 }
 -------
 
@@ -328,13 +328,13 @@ unittest
 
     static T median(Range, T)(Range r, T[] buf)
     {
-        import std.algorithm.sorting: sort;
+        import std.algorithm.sorting: topN;
         size_t n;
         foreach (e; r)
             buf[n++] = e;
-        buf[0 .. n].sort();
-        immutable m = n >> 1;
-        return n & 1 ? buf[m] : cast(T)((buf[m - 1] + buf[m]) / 2);
+        auto m = n >> 1;
+        buf[0 .. n].topN(m);
+        return buf[m];
     }
 
     import std.conv: to;
