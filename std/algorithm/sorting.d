@@ -1227,45 +1227,84 @@ unittest //Issue 16413 - @system comparison function
 
 private size_t getPivot(alias less, Range)(Range r)
 {
-    import std.algorithm.mutation : swapAt;
-
-    // This algorithm sorts the first, middle and last elements of r,
-    // then returns the index of the middle element.  In effect, it uses the
-    // median-of-three heuristic.
-
-    alias pred = binaryFun!(less);
-    immutable len = r.length;
-    immutable size_t mid = len / 2;
-    immutable uint result = ((cast(uint) (pred(r[0], r[mid]))) << 2) |
-                            ((cast(uint) (pred(r[0], r[len - 1]))) << 1) |
-                            (cast(uint) (pred(r[mid], r[len - 1])));
-
-    switch (result)
+    if (r.length < 5)
     {
-        case 0b001:
-            r.swapAt(0, len - 1);
-            r.swapAt(0, mid);
-            break;
-        case 0b110:
-            r.swapAt(mid, len - 1);
-            break;
-        case 0b011:
-            r.swapAt(0, mid);
-            break;
-        case 0b100:
-            r.swapAt(mid, len - 1);
-            r.swapAt(0, mid);
-            break;
-        case 0b000:
-            r.swapAt(0, len - 1);
-            break;
-        case 0b111:
-            break;
-        default:
-            assert(0);
+        return r.length / 2;
     }
 
-    return mid;
+    // The plan here is to take the median of five by taking five elements in
+    // the array, sort in place, and return the position of the third. We choose
+    // five equidistant elements starting at a random position in the first
+    // fifth of the array. For sorting we use Demuth's algorithm which needs
+    // only seven comparisons, see Knuth TAoCP Vol 3, 2nd ed, 5.3.1
+
+    import std.random : LinearCongruentialEngine;
+    // Create a simple random engine that doesn't throw.
+    auto rng = LinearCongruentialEngine!(uint, 1664525, 1013904223, 0)(
+        cast(uint) r.length);
+
+    immutable
+        fifth = r.length / 5,
+        a = rng.front % fifth, // imprecise method but we don't really care
+        b = a + fifth,
+        c = a + fifth * 2,
+        d = a + fifth * 3,
+        e = a + fifth * 4;
+
+    assert(a < b && b < c && c < d && d < e);
+
+    import std.algorithm.mutation : swapAt;
+    alias pred = binaryFun!less;
+
+    // Demuth's algorithm has four steps:
+
+    // 1. Sort first two pairs
+    if (pred(r[b], r[a])) r.swapAt(a, b);
+    if (pred(r[d], r[c])) r.swapAt(c, d);
+
+    // 2. Arrange first two pairs by the largest element
+    if (pred(r[d], r[b]))
+    {
+        r.swapAt(a, c);
+        r.swapAt(b, d);
+    }
+    assert(!pred(r[b], r[a]) && !pred(r[d], r[b]) && !pred(r[d], r[c]));
+
+    // 3. Insert e into [a, b, d]
+    if (pred(r[e], r[b]))
+    {
+        r.swapAt(d, e);
+        r.swapAt(b, d);
+        if (pred(r[b], r[a]))
+        {
+            r.swapAt(a, b);
+        }
+    }
+    else if (pred(r[e], r[d]))
+    {
+        r.swapAt(d, e);
+    }
+    assert(!pred(r[b], r[a]) && !pred(r[d], r[b]) && !pred(r[e], r[d]));
+
+    // 4. Insert c into [a, b, d, e] (note: we already know the last is greater)
+    assert(!pred(r[e], r[c]));
+    if (pred(r[c], r[b]))
+    {
+        r.swapAt(b, c);
+        if (pred(r[b], r[a]))
+        {
+            r.swapAt(a, b);
+        }
+    }
+    else if (pred(r[d], r[c]))
+    {
+        r.swapAt(c, d);
+    }
+
+    assert(!pred(r[b], r[a]) && !pred(r[c], r[b]) && !pred(r[d], r[c])
+        && !pred(r[e], r[d]));
+
+    return c;
 }
 
 /*
