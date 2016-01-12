@@ -120,6 +120,10 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF stride)))
         $(TD Iterates a _range with stride $(I n).
     ))
+    $(TR $(TD $(D $(LREF tail)))
+        $(TD Return a _range advanced to within $(D n) elements of the end of
+        the given _range.
+    ))
     $(TR $(TD $(D $(LREF take)))
         $(TD Creates a sub-_range consisting of only up to the first $(I n)
         elements of the given _range.
@@ -2554,6 +2558,118 @@ auto takeNone(R)(R range)
     assert(takeNone(filtered).empty);
     //@@@BUG@@@ 8339 and 5941 force this to be takeExactly
     //static assert(is(typeof(filtered) == typeof(takeNone(filtered))), typeof(filtered).stringof);
+}
+
+/++
+ + Return a _range advanced to within $(D _n) elements of the end of
+ + $(D _range).
+ +
+ + Intended as the _range equivalent of the Unix
+ + $(WEB en.wikipedia.org/wiki/Tail_%28Unix%29, _tail) utility. When the length
+ + of $(D _range) is less than or equal to $(D _n), $(D _range) is returned
+ + as-is.
+ +
+ + Completes in $(BIGOH 1) steps for ranges that support slicing and have
+ + length. Completes in $(BIGOH _range.length) time for all other ranges.
+ +
+ + Params:
+ +    range = _range to get _tail of
+ +    n = maximum number of elements to include in _tail
+ +
+ + Returns:
+ +    Returns the _tail of $(D _range) augmented with length information
+ +/
+auto tail(Range)(Range range, size_t n)
+    if (isInputRange!Range && !isInfinite!Range &&
+        (hasLength!Range || isForwardRange!Range))
+{
+    static if (hasLength!Range)
+    {
+        immutable length = range.length;
+        if (n >= length)
+            return range.takeExactly(length);
+        else
+            return range.drop(length - n).takeExactly(n);
+    }
+    else
+    {
+        Range scout = range.save;
+        foreach (immutable i; 0 .. n)
+        {
+            if (scout.empty)
+                return range.takeExactly(i);
+            scout.popFront();
+        }
+
+        auto tail = range.save;
+        while (!scout.empty)
+        {
+            assert(!tail.empty);
+            scout.popFront();
+            tail.popFront();
+        }
+
+        return tail.takeExactly(n);
+    }
+}
+
+///
+pure @safe unittest
+{
+    // tail -c n
+    assert([1, 2, 3].tail(1) == [3]);
+    assert([1, 2, 3].tail(2) == [2, 3]);
+    assert([1, 2, 3].tail(3) == [1, 2, 3]);
+    assert([1, 2, 3].tail(4) == [1, 2, 3]);
+    assert([1, 2, 3].tail(0).length == 0);
+
+    // tail --lines=n
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : joiner;
+    import std.string : lineSplitter;
+
+    assert("one\ntwo\nthree"
+            .lineSplitter
+            .tail(2)
+            .joiner("\n")
+            .equal("two\nthree"));
+}
+
+// @nogc prevented by @@@BUG@@@ 15408
+pure nothrow @safe /+@nogc+/ unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
+
+    static immutable cheatsheet = [6, 7, 8, 9, 10];
+
+    foreach (R; AllDummyRanges)
+    {
+        static if (isInputRange!R && !isInfinite!R &&
+                   (hasLength!R || isForwardRange!R))
+        {
+            assert(R.init.tail(5).equal(cheatsheet));
+            static assert(R.init.tail(5).equal(cheatsheet));
+
+            assert(R.init.tail(0).length == 0);
+            assert(R.init.tail(10).equal(R.init));
+            assert(R.init.tail(11).equal(R.init));
+        }
+    }
+
+    // Infinite ranges are not supported
+    static assert(!__traits(compiles, repeat(0).tail(0)));
+
+    // Neither are non-forward ranges without length
+    static assert(!__traits(compiles, DummyRange!(ReturnBy.Value, Length.No,
+        RangeType.Input).init.tail(5)));
+}
+
+@nogc unittest
+{
+    static immutable input = [1, 2, 3];
+    static immutable expectedOutput = [2, 3];
+    assert(input.tail(2) == expectedOutput);
 }
 
 /++
