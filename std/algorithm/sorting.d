@@ -856,6 +856,7 @@ private size_t getPivot(alias less, Range)(Range r)
 {
     if (r.length < 5)
     {
+        // Don't bother much, just return a random index
         return r.length / 2;
     }
 
@@ -936,38 +937,80 @@ private size_t getPivot(alias less, Range)(Range r)
 
 private void optimisticInsertionSort(alias less, Range)(Range r)
 {
-    import std.algorithm.mutation : swapAt;
-
-    alias pred = binaryFun!(less);
     if (r.length < 2)
     {
         return;
     }
 
-    immutable maxJ = r.length - 1;
-    for (size_t i = r.length - 2; i != size_t.max; --i)
+    import std.algorithm.mutation : swapAt;
+    alias pred = binaryFun!less;
+
+    size_t i = void;
+
+    if (r.length < 5)
     {
-        size_t j = i;
-
-        static if (hasAssignableElements!Range)
-        {
-            auto temp = r[i];
-
-            for (; j < maxJ && pred(r[j + 1], temp); ++j)
-            {
-                r[j] = r[j + 1];
-            }
-
-            r[j] = temp;
-        }
-        else
-        {
-            for (; j < maxJ && pred(r[j + 1], r[j]); ++j)
-            {
-                swapAt(r, j, j + 1);
-            }
-        }
+        i = 1;
     }
+    else
+    {
+        // Sort first five elements using Demuth's algorithm
+        enum : uint { a, b, c, d, e }
+        // 1. Sort first two pairs
+        if (pred(r[b], r[a])) r.swapAt(a, b);
+        if (pred(r[d], r[c])) r.swapAt(c, d);
+        // 2. Arrange first two pairs by the largest element
+        if (pred(r[d], r[b]))
+        {
+            r.swapAt(a, c);
+            r.swapAt(b, d);
+        }
+        assert(!pred(r[b], r[a]) && !pred(r[d], r[b]) && !pred(r[d], r[c]));
+        // 3. Insert r[4] into [r[0], r[1], r[3]]
+        if (pred(r[e], r[b]))
+        {
+            r.swapAt(d, e);
+            r.swapAt(b, d);
+            if (pred(r[b], r[a]))
+            {
+                r.swapAt(a, b);
+            }
+        }
+        else if (pred(r[e], r[d]))
+        {
+            r.swapAt(d, e);
+        }
+        assert(!pred(r[b], r[a]) && !pred(r[d], r[b]) && !pred(r[e], r[d]));
+        // 4. Insert c into [a, b, d, e] (note: we already know the last is
+        // greater)
+        assert(!pred(r[e], r[c]));
+        if (pred(r[c], r[b]))
+        {
+            r.swapAt(b, c);
+            if (pred(r[b], r[a]))
+            {
+                r.swapAt(a, b);
+            }
+        }
+        else if (pred(r[d], r[c]))
+        {
+            r.swapAt(c, d);
+        }
+
+        assert(!pred(r[b], r[a]) && !pred(r[c], r[b]) && !pred(r[d], r[c])
+            && !pred(r[e], r[d]));
+        i = 5;
+     }
+
+     for (; i < r.length; ++i)
+     {
+         // Stuff to the left of i is sorted
+         size_t j = i, j_1 = i - 1;
+         for (; pred(r[j], r[j_1]); j = j_1--)
+         {
+             r.swapAt(j_1, j);
+             if (j_1 == 0) break;
+         }
+     }
 }
 
 @safe unittest
