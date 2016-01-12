@@ -459,7 +459,6 @@ template assumeSameStructure(Names...)
     mixin (
     "
     auto assumeSameStructure(
-            ReplaceArrayWithPointer mod = ReplaceArrayWithPointer.yes,
             size_t N, " ~ _Range_Types!Names ~ ")
             (" ~ _Slice_DeclarationList!Names ~ ")
     {
