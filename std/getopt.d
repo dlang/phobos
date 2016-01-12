@@ -285,9 +285,10 @@ void main(string[] args)
         list.
 
 ---------
-void main(string[] args)
+int main(string[] args)
 {
   uint verbosityLevel = 1;
+  bool handlerFailed = false;
   void myHandler(string option, string value)
   {
     switch (value)
@@ -298,10 +299,12 @@ void main(string[] args)
       default :
         stderr.writeln("Dunno how verbose you want me to be by saying ",
           value);
-        exit(1);
+        handlerFailed = true;
+        break;
     }
   }
   getopt(args, "verbosity", &myHandler);
+  return handlerFailed ? 1 : 0;
 }
 ---------
         )
