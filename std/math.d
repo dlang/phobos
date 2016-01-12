@@ -267,6 +267,8 @@ template floatTraits(T)
             enum EXPPOS_SHORT = 0;
             enum SIGNPOS_BYTE = 0;
         }
+
+        alias Integral = uint;
     }
     else static if (T.mant_dig == 53)
     {
@@ -289,6 +291,8 @@ template floatTraits(T)
                 enum EXPPOS_SHORT = 0;
                 enum SIGNPOS_BYTE = 0;
             }
+
+            alias Integral = ulong;
         }
         else static if (T.sizeof == 12)
         {
@@ -307,6 +311,9 @@ template floatTraits(T)
                 enum EXPPOS_SHORT = 0;
                 enum SIGNPOS_BYTE = 0;
             }
+
+            import std.typecons : Tuple;
+            alias Integral = Tuple!(ulong, ushort);
         }
         else
             static assert(false, "No traits support for " ~ T.stringof);
@@ -328,6 +335,9 @@ template floatTraits(T)
             enum EXPPOS_SHORT = 0;
             enum SIGNPOS_BYTE = 0;
         }
+
+        import std.typecons : Tuple;
+        alias Integral = Tuple!(ulong, "significand", ushort);
     }
     else static if (T.mant_dig == 113)
     {
@@ -346,6 +356,8 @@ template floatTraits(T)
             enum EXPPOS_SHORT = 0;
             enum SIGNPOS_BYTE = 0;
         }
+
+        alias Integral = ulong[2];
     }
     else static if (T.mant_dig == 106)
     {
@@ -364,9 +376,28 @@ template floatTraits(T)
             enum EXPPOS_SHORT = 0; // [4] is also an exp short
             enum SIGNPOS_BYTE = 0;
         }
+
+        alias Integral = ulong[2];
     }
     else
         static assert(false, "No traits support for " ~ T.stringof);
+
+    // Intended to use for reinterpreting floating-point numbers
+    // as various integral types
+    union Layout
+    {
+        Unqual!T number;
+        ubyte[T.sizeof] bytes;
+        ushort[T.sizeof / 2] shorts;
+        uint[T.sizeof / 4] ints;
+        Integral integral; // Reinterpret into fewest integrals possible
+
+        static if (T.sizeof % 8 == 0)
+            ulong[T.sizeof / 8] longs;
+
+        static if (realFormat == RealFormat.ibmExtended)
+            double[2] doubles; // Because it *is* a pair of doubles
+    }
 }
 
 // These apply to all floating-point types
@@ -387,20 +418,12 @@ else
 T floorImpl(T)(const T x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(T);
-    // Take care not to trigger library calls from the compiler,
-    // while ensuring that we don't get defeated by some optimizers.
-    union floatBits
-    {
-        T rv;
-        ushort[T.sizeof/2] vu;
-    }
-    floatBits y = void;
-    y.rv = x;
+    F.Layout y = { number : x };
 
     // Find the exponent (power of 2)
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        int exp = ((y.vu[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
+        int exp = ((y.shorts[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
 
         version (LittleEndian)
             int pos = 0;
@@ -409,7 +432,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+        int exp = ((y.shorts[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
 
         version (LittleEndian)
             int pos = 0;
@@ -418,7 +441,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+        int exp = (y.shorts[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
         version (LittleEndian)
             int pos = 0;
@@ -427,7 +450,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+        int exp = (y.shorts[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
         version (LittleEndian)
             int pos = 0;
@@ -451,20 +474,20 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
     while (exp >= 16)
     {
         version (LittleEndian)
-            y.vu[pos++] = 0;
+            y.shorts[pos++] = 0;
         else
-            y.vu[pos--] = 0;
+            y.shorts[pos--] = 0;
         exp -= 16;
     }
 
     // Clear the remaining bits.
     if (exp > 0)
-        y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+        y.shorts[pos] &= 0xffff ^ ((1 << exp) - 1);
 
-    if ((x < 0.0) && (x != y.rv))
-        y.rv -= 1.0;
+    if ((x < 0.0) && (x != y.number))
+        y.number -= 1.0;
 
-    return y.rv;
+    return y.number;
 }
 
 public:
@@ -2359,28 +2382,24 @@ creal expi(real y) @trusted pure nothrow @nogc
 T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
     if(isFloatingPoint!T)
 {
-    Unqual!T vf = value;
-    ushort* vu = cast(ushort*)&vf;
-    static if(is(Unqual!T == float))
-        int* vi = cast(int*)&vf;
-    else
-        long* vl = cast(long*)&vf;
     int ex;
     alias F = floatTraits!T;
 
-    ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+    F.Layout rep = { number : value };
+
+    ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
     static if (F.realFormat == RealFormat.ieeeExtended)
     {
         if (ex)
         {   // If exponent is non-zero
             if (ex == F.EXPMASK) // infinity or NaN
             {
-                if (*vl &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
+                if (rep.integral.significand &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
                 {
-                    *vl |= 0xC000_0000_0000_0000;  // convert NaNS to NaNQ
+                    rep.integral.significand |= 0xC000_0000_0000_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
-                else if (vu[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
+                else if (rep.shorts[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
                     exp = int.min;
                 else   // positive infinity
                     exp = int.max;
@@ -2389,10 +2408,11 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
             else
             {
                 exp = ex - F.EXPBIAS;
-                vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
+                rep.shorts[F.EXPPOS_SHORT] =
+                    (0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FFE;
             }
         }
-        else if (!*vl)
+        else if (!rep.integral.significand)
         {
             // vf is +-0.0
             exp = 0;
@@ -2401,12 +2421,12 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {
             // subnormal
 
-            vf *= F.RECIP_EPSILON;
-            ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+            rep.number *= F.RECIP_EPSILON;
+            ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
+            rep.shorts[F.EXPPOS_SHORT] = (0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FFE;
         }
-        return vf;
+        return rep.number;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
@@ -2414,14 +2434,14 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)
             {   // infinity or NaN
-                if (vl[MANTISSA_LSB] |
-                    ( vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
+                if (rep.longs[MANTISSA_LSB] |
+                    (rep.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
                 {
                     // convert NaNS to NaNQ
-                    vl[MANTISSA_MSB] |= 0x0000_8000_0000_0000;
+                    rep.longs[MANTISSA_MSB] |= 0x0000_8000_0000_0000;
                     exp = int.min;
                 }
-                else if (vu[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
+                else if (rep.shorts[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
                     exp = int.min;
                 else   // positive infinity
                     exp = int.max;
@@ -2430,12 +2450,12 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
             else
             {
                 exp = ex - F.EXPBIAS;
-                vu[F.EXPPOS_SHORT] =
-                    cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+                rep.shorts[F.EXPPOS_SHORT] =
+                    cast(ushort)((0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FFE);
             }
         }
-        else if ((vl[MANTISSA_LSB]
-                       |(vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
+        else if ((rep.longs[MANTISSA_LSB]
+                       |(rep.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
         {
             // vf is +-0.0
             exp = 0;
@@ -2443,13 +2463,13 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            vf *= F.RECIP_EPSILON;
-            ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+            rep.number *= F.RECIP_EPSILON;
+            ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] =
-                cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+            rep.shorts[F.EXPPOS_SHORT] =
+                cast(ushort)((0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FFE);
         }
-        return vf;
+        return rep.number;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
@@ -2457,25 +2477,26 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if (*vl == 0x7FF0_0000_0000_0000)  // positive infinity
+                if (rep.integral == 0x7FF0_0000_0000_0000)  // positive infinity
                 {
                     exp = int.max;
                 }
-                else if (*vl == 0xFFF0_0000_0000_0000) // negative infinity
+                else if (rep.integral == 0xFFF0_0000_0000_0000) // negative infinity
                     exp = int.min;
                 else
                 { // NaN
-                    *vl |= 0x0008_0000_0000_0000;  // convert NaNS to NaNQ
+                    rep.integral |= 0x0008_0000_0000_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
             }
             else
             {
                 exp = (ex - F.EXPBIAS) >> 4;
-                vu[F.EXPPOS_SHORT] = cast(ushort)((0x800F & vu[F.EXPPOS_SHORT]) | 0x3FE0);
+                rep.shorts[F.EXPPOS_SHORT] =
+                    cast(ushort)((0x800F & rep.shorts[F.EXPPOS_SHORT]) | 0x3FE0);
             }
         }
-        else if (!(*vl & 0x7FFF_FFFF_FFFF_FFFF))
+        else if (!(rep.integral & 0x7FFF_FFFF_FFFF_FFFF))
         {
             // vf is +-0.0
             exp = 0;
@@ -2483,13 +2504,13 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            vf *= F.RECIP_EPSILON;
-            ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+            rep.number *= F.RECIP_EPSILON;
+            ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] =
-                cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
+            rep.shorts[F.EXPPOS_SHORT] =
+                cast(ushort)((0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3FE0);
         }
-        return vf;
+        return rep.number;
     }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -2497,25 +2518,26 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if (*vi == 0x7F80_0000)  // positive infinity
+                if (rep.integral == 0x7F80_0000)  // positive infinity
                 {
                     exp = int.max;
                 }
-                else if (*vi == 0xFF80_0000) // negative infinity
+                else if (rep.integral == 0xFF80_0000) // negative infinity
                     exp = int.min;
                 else
                 { // NaN
-                    *vi |= 0x0040_0000;  // convert NaNS to NaNQ
+                    rep.integral |= 0x0040_0000;  // convert NaNS to NaNQ
                     exp = int.min;
                 }
             }
             else
             {
                 exp = (ex - F.EXPBIAS) >> 7;
-                vu[F.EXPPOS_SHORT] = cast(ushort)((0x807F & vu[F.EXPPOS_SHORT]) | 0x3F00);
+                rep.shorts[F.EXPPOS_SHORT] =
+                    cast(ushort)((0x807F & rep.shorts[F.EXPPOS_SHORT]) | 0x3F00);
             }
         }
-        else if (!(*vi & 0x7FFF_FFFF))
+        else if (!(rep.integral & 0x7FFF_FFFF))
         {
             // vf is +-0.0
             exp = 0;
@@ -2523,13 +2545,13 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            vf *= F.RECIP_EPSILON;
-            ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+            rep.number *= F.RECIP_EPSILON;
+            ex = rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] =
-                cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3F00);
+            rep.shorts[F.EXPPOS_SHORT] =
+                cast(ushort)((0x8000 & rep.shorts[F.EXPPOS_SHORT]) | 0x3F00);
         }
-        return vf;
+        return rep.number;
     }
     else // static if (F.realFormat == RealFormat.ibmExtended)
     {
@@ -2658,18 +2680,9 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!T;
 
-    union floatBits
-    {
-        T rv;
-        ushort[T.sizeof/2] vu;
-        uint[T.sizeof/4] vui;
-        static if(T.sizeof >= 8)
-            long[T.sizeof/8] vl;
-    }
-    floatBits y = void;
-    y.rv = x;
+    F.Layout y = { number : x };
 
-    int ex = y.vu[F.EXPPOS_SHORT] & F.EXPMASK;
+    int ex = y.shorts[F.EXPPOS_SHORT] & F.EXPMASK;
     static if (F.realFormat == RealFormat.ieeeExtended)
     {
         if (ex)
@@ -2677,7 +2690,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
             // If exponent is non-zero
             if (ex == F.EXPMASK) // infinity or NaN
             {
-                if (y.vl[0] &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
+                if (y.integral.significand &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
                     return FP_ILOGBNAN;
                 else // +-infinity
                     return int.max;
@@ -2687,7 +2700,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ex - F.EXPBIAS - 1;
             }
         }
-        else if (!y.vl[0])
+        else if (!y.integral.significand)
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2695,8 +2708,8 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            uint msb = y.vui[MANTISSA_MSB];
-            uint lsb = y.vui[MANTISSA_LSB];
+            uint msb = y.ints[MANTISSA_MSB];
+            uint lsb = y.ints[MANTISSA_LSB];
             if (msb)
                 return ex - F.EXPBIAS - T.mant_dig + 1 + 32 + core.bitop.bsr(msb);
             else
@@ -2710,7 +2723,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
             if (ex == F.EXPMASK)
             {
                 // infinity or NaN
-                if (y.vl[MANTISSA_LSB] | ( y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
+                if (y.longs[MANTISSA_LSB] | ( y.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
                     return FP_ILOGBNAN;
                 else // +- infinity
                     return int.max;
@@ -2720,7 +2733,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ex - F.EXPBIAS - 1;
             }
         }
-        else if ((y.vl[MANTISSA_LSB] | (y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
+        else if ((y.longs[MANTISSA_LSB] | (y.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2728,8 +2741,8 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            ulong msb = y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF;
-            ulong lsb = y.vl[MANTISSA_LSB];
+            ulong msb = y.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF;
+            ulong lsb = y.longs[MANTISSA_LSB];
             if (msb)
                 return ex - F.EXPBIAS - T.mant_dig + 1 + bsr_ulong(msb) + 64;
             else
@@ -2742,7 +2755,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if ((y.vl[0] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FF0_0000_0000_0000)  // +- infinity
+                if ((y.integral & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FF0_0000_0000_0000)  // +- infinity
                     return int.max;
                 else // NaN
                     return FP_ILOGBNAN;
@@ -2752,7 +2765,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ((ex - F.EXPBIAS) >> 4) - 1;
             }
         }
-        else if (!(y.vl[0] & 0x7FFF_FFFF_FFFF_FFFF))
+        else if (!(y.integral & 0x7FFF_FFFF_FFFF_FFFF))
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2760,8 +2773,8 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            uint msb = y.vui[MANTISSA_MSB] & F.MANTISSAMASK_INT;
-            uint lsb = y.vui[MANTISSA_LSB];
+            uint msb = y.ints[MANTISSA_MSB] & F.MANTISSAMASK_INT;
+            uint lsb = y.ints[MANTISSA_LSB];
             if (msb)
                 return ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1 + core.bitop.bsr(msb) + 32;
             else
@@ -2775,7 +2788,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if ((y.vui[0] & 0x7FFF_FFFF) == 0x7F80_0000)  // +- infinity
+                if ((y.integral & 0x7FFF_FFFF) == 0x7F80_0000)  // +- infinity
                     return int.max;
                 else // NaN
                     return FP_ILOGBNAN;
@@ -2785,7 +2798,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ((ex - F.EXPBIAS) >> 7) - 1;
             }
         }
-        else if (!(y.vui[0] & 0x7FFF_FFFF))
+        else if (!(y.integral & 0x7FFF_FFFF))
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2793,7 +2806,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            uint mantissa = y.vui[0] & F.MANTISSAMASK_INT;
+            uint mantissa = y.integral & F.MANTISSAMASK_INT;
             return ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1 + core.bitop.bsr(mantissa);
         }
     }
@@ -4043,11 +4056,11 @@ long lrint(real x) @trusted pure nothrow @nogc
             // Rounding limit when casting from real(double) to ulong.
             enum real OF = 4.50359962737049600000E15L;
 
-            uint* vi = cast(uint*)(&x);
+            F.Layout rep = { number : x };
 
             // Find the exponent and sign
-            uint msb = vi[MANTISSA_MSB];
-            uint lsb = vi[MANTISSA_LSB];
+            uint msb = rep.ints[MANTISSA_MSB];
+            uint lsb = rep.ints[MANTISSA_LSB];
             int exp = ((msb >> 20) & 0x7ff) - 0x3ff;
             int sign = msb >> 31;
             msb &= 0xfffff;
@@ -4061,9 +4074,9 @@ long lrint(real x) @trusted pure nothrow @nogc
                 {
                     // Adjust x and check result.
                     real j = sign ? -OF : OF;
-                    x = (j + x) - j;
-                    msb = vi[MANTISSA_MSB];
-                    lsb = vi[MANTISSA_LSB];
+                    rep.number = (j + rep.number) - j;
+                    msb = rep.ints[MANTISSA_MSB];
+                    lsb = rep.ints[MANTISSA_LSB];
                     exp = ((msb >> 20) & 0x7ff) - 0x3ff;
                     msb &= 0xfffff;
                     msb |= 0x100000;
@@ -4093,37 +4106,36 @@ long lrint(real x) @trusted pure nothrow @nogc
             // Rounding limit when casting from real(80-bit) to ulong.
             enum real OF = 9.22337203685477580800E18L;
 
-            ushort* vu = cast(ushort*)(&x);
-            uint* vi = cast(uint*)(&x);
+            F.Layout rep = { number : x };
 
             // Find the exponent and sign
-            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-            int sign = (vu[F.EXPPOS_SHORT] >> 15) & 1;
+            int exp = (rep.shorts[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+            int sign = (rep.shorts[F.EXPPOS_SHORT] >> 15) & 1;
 
             if (exp < 63)
             {
                 // Adjust x and check result.
                 real j = sign ? -OF : OF;
-                x = (j + x) - j;
-                exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+                rep.number = (j + rep.number) - j;
+                exp = (rep.shorts[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
                 version (LittleEndian)
                 {
                     if (exp < 0)
                         result = 0;
                     else if (exp <= 31)
-                        result = vi[1] >> (31 - exp);
+                        result = rep.ints[1] >> (31 - exp);
                     else
-                        result = (cast(long) vi[1] << (exp - 31)) | (vi[0] >> (63 - exp));
+                        result = (cast(long) rep.ints[1] << (exp - 31)) | (rep.ints[0] >> (63 - exp));
                 }
                 else
                 {
                     if (exp < 0)
                         result = 0;
                     else if (exp <= 31)
-                        result = vi[1] >> (31 - exp);
+                        result = rep.ints[1] >> (31 - exp);
                     else
-                        result = (cast(long) vi[1] << (exp - 31)) | (vi[2] >> (63 - exp));
+                        result = (cast(long) rep.ints[1] << (exp - 31)) | (rep.ints[2] >> (63 - exp));
                 }
             }
             else
@@ -4871,30 +4883,28 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
+    F.Layout rep = { number : x };
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        const uint p = *cast(uint *)&x;
-        return ((p & 0x7F80_0000) == 0x7F80_0000)
-            && p & 0x007F_FFFF; // not infinity
+        return ((rep.integral & 0x7F80_0000) == 0x7F80_0000)
+            && rep.integral & 0x007F_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        const ulong  p = *cast(ulong *)&x;
-        return ((p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-            && p & 0x000F_FFFF_FFFF_FFFF; // not infinity
+        return ((rep.integral & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
+            && rep.integral & 0x000F_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        const ulong ps = *cast(ulong *)&x;
+        const ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
         return e == F.EXPMASK &&
-            ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
+            rep.integral.significand & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        const ulong psLsb = (cast(ulong *)&x)[MANTISSA_LSB];
-        const ulong psMsb = (cast(ulong *)&x)[MANTISSA_MSB];
+        const ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
+        const ulong psLsb = rep.longs[MANTISSA_LSB];
+        const ulong psMsb = rep.longs[MANTISSA_MSB];
         return e == F.EXPMASK &&
             (psLsb | (psMsb& 0x0000_FFFF_FFFF_FFFF)) != 0;
     }
@@ -4965,8 +4975,8 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
-    ushort* pe = cast(ushort *)&x;
-    return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
+    F.Layout rep = { number : x };
+    return (rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
 }
 
 ///
@@ -5019,14 +5029,16 @@ int isFinite(X)(X x) @trusted pure nothrow @nogc
 bool isNormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
+    F.Layout rep = { number : x };
+
     static if (F.realFormat == RealFormat.ibmExtended)
     {
         // doubledouble is normal if the least significant part is normal.
-        return isNormal((cast(double*)&x)[MANTISSA_LSB]);
+        return isNormal(rep.doubles[MANTISSA_LSB]);
     }
     else
     {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+        ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
         return (e != F.EXPMASK && e != 0);
     }
 }
@@ -5069,34 +5081,30 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
         be converted to normal reals.
     */
     alias F = floatTraits!(X);
+    F.Layout rep = { number : x };
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        uint *p = cast(uint *)&x;
-        return (*p & F.EXPMASK_INT) == 0 && *p & F.MANTISSAMASK_INT;
+        return (rep.integral & F.EXPMASK_INT) == 0 && rep.integral & F.MANTISSAMASK_INT;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        uint *p = cast(uint *)&x;
-        return (p[MANTISSA_MSB] & F.EXPMASK_INT) == 0
-            && (p[MANTISSA_LSB] || p[MANTISSA_MSB] & F.MANTISSAMASK_INT);
+        return (rep.ints[MANTISSA_MSB] & F.EXPMASK_INT) == 0
+            && (rep.ints[MANTISSA_LSB] || rep.ints[MANTISSA_MSB] & F.MANTISSAMASK_INT);
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        long*   ps = cast(long *)&x;
+        ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
         return (e == 0 &&
-          (((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) != 0));
+          (((rep.longs[MANTISSA_LSB]|(rep.longs[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) != 0));
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        ushort* pe = cast(ushort *)&x;
-        long*   ps = cast(long *)&x;
-
-        return (pe[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && *ps > 0;
+        return (rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK) == 0 &&
+            rep.integral.significand > 0;
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        return isSubnormal((cast(double*)&x)[MANTISSA_MSB]);
+        return isSubnormal(rep.doubles[MANTISSA_MSB]);
     }
     else
     {
@@ -5135,32 +5143,32 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
+    F.Layout rep = { number : x };
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        return ((*cast(uint *)&x) & 0x7FFF_FFFF) == 0x7F80_0000;
+        return (rep.integral & 0x7FFF_FFFF) == 0x7F80_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
+        return (rep.integral & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF0_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        const ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
-        const ulong ps = *cast(ulong *)&x;
+        const ushort e = cast(ushort)(F.EXPMASK & rep.shorts[F.EXPPOS_SHORT]);
 
         // On Motorola 68K, infinity can have hidden bit = 1 or 0. On x86, it is always 1.
-        return e == F.EXPMASK && (ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
+        return e == F.EXPMASK && (rep.integral.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0;
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
+        return ((rep.longs[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF8_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        const long psLsb = (cast(long *)&x)[MANTISSA_LSB];
-        const long psMsb = (cast(long *)&x)[MANTISSA_MSB];
+        const long psLsb = rep.longs[MANTISSA_LSB];
+        const long psMsb = rep.longs[MANTISSA_MSB];
         return (psLsb == 0)
             && (psMsb & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
     }
@@ -5251,23 +5259,17 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
 bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 {
     // We're doing a bitwise comparison so the endianness is irrelevant.
-    long*   pxs = cast(long *)&x;
-    long*   pys = cast(long *)&y;
     alias F = floatTraits!(real);
+    F.Layout repX = { number : x }, repY = { number : y };
+
     static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        return pxs[0] == pys[0];
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple
-                 || F.realFormat == RealFormat.ibmExtended)
-    {
-        return pxs[0] == pys[0] && pxs[1] == pys[1];
+        return repX.integral == repY.integral;
     }
     else
     {
-        ushort* pxe = cast(ushort *)&x;
-        ushort* pye = cast(ushort *)&y;
-        return pxe[4] == pye[4] && pxs[0] == pys[0];
+        return repX.integral[0] == repY.integral[0]
+            && repX.integral[1] == repY.integral[1];
     }
 }
 
@@ -5277,7 +5279,8 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 int signbit(X)(X x) @nogc @trusted pure nothrow
 {
     alias F = floatTraits!(X);
-    return ((cast(ubyte *)&x)[F.SIGNPOS_BYTE] & 0x80) != 0;
+    F.Layout rep = { number : x };
+    return (rep.bytes[F.SIGNPOS_BYTE] & 0x80) != 0;
 }
 
 ///
@@ -5326,14 +5329,14 @@ int signbit(X)(X x) @nogc @trusted pure nothrow
 R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
     if (isFloatingPoint!(R) && isFloatingPoint!(X))
 {
-    ubyte* pto   = cast(ubyte *)&to;
-    const ubyte* pfrom = cast(ubyte *)&from;
-
     alias T = floatTraits!(R);
     alias F = floatTraits!(X);
-    pto[T.SIGNPOS_BYTE] &= 0x7F;
-    pto[T.SIGNPOS_BYTE] |= pfrom[F.SIGNPOS_BYTE] & 0x80;
-    return to;
+    T.Layout repTo = { number : to };
+    F.Layout repFrom = { number : from };
+
+    repTo.bytes[T.SIGNPOS_BYTE] &= 0x7F;
+    repTo.bytes[T.SIGNPOS_BYTE] |= repFrom.bytes[F.SIGNPOS_BYTE] & 0x80;
+    return repTo.number;
 }
 
 // ditto
@@ -5592,13 +5595,15 @@ debug(UnitTest)
 real nextUp(real x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(real);
+    F.Layout rep = { number : x };
+
     static if (F.realFormat == RealFormat.ieeeDouble)
     {
         return nextUp(cast(double)x);
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+        ushort e = F.EXPMASK & rep.shorts[F.EXPPOS_SHORT];
         if (e == F.EXPMASK)
         {
             // NaN or Infinity
@@ -5607,80 +5612,77 @@ real nextUp(real x) @trusted pure nothrow @nogc
             return x; // +Inf and NaN are unchanged.
         }
 
-        ulong*   ps = cast(ulong *)&e;
-        if (ps[MANTISSA_LSB] & 0x8000_0000_0000_0000)
+        if (rep.longs[MANTISSA_LSB] & 0x8000_0000_0000_0000)
         {
             // Negative number
 
-            if (ps[MANTISSA_LSB] == 0
-                && ps[MANTISSA_MSB] == 0x8000_0000_0000_0000)
+            if (rep.longs[MANTISSA_LSB] == 0
+                && rep.longs[MANTISSA_MSB] == 0x8000_0000_0000_0000)
             {
                 // it was negative zero, change to smallest subnormal
-                ps[MANTISSA_LSB] = 0x0000_0000_0000_0001;
-                ps[MANTISSA_MSB] = 0;
-                return x;
+                rep.longs[MANTISSA_LSB] = 0x0000_0000_0000_0001;
+                rep.longs[MANTISSA_MSB] = 0;
+                return rep.number;
             }
-            --*ps;
-            if (ps[MANTISSA_LSB] == 0) --ps[MANTISSA_MSB];
+            --rep.longs[0];
+            if (rep.longs[MANTISSA_LSB] == 0) --rep.longs[MANTISSA_MSB];
         }
         else
         {
             // Positive number
-            ++ps[MANTISSA_LSB];
-            if (ps[MANTISSA_LSB] == 0) ++ps[MANTISSA_MSB];
+            ++rep.longs[MANTISSA_LSB];
+            if (rep.longs[MANTISSA_LSB] == 0) ++rep.longs[MANTISSA_MSB];
         }
-        return x;
+        return rep.number;
 
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
         // For 80-bit reals, the "implied bit" is a nuisance...
-        ushort *pe = cast(ushort *)&x;
-        ulong  *ps = cast(ulong  *)&x;
 
-        if ((pe[F.EXPPOS_SHORT] & F.EXPMASK) == F.EXPMASK)
+        if ((rep.shorts[F.EXPPOS_SHORT] & F.EXPMASK) == F.EXPMASK)
         {
             // First, deal with NANs and infinity
             if (x == -real.infinity) return -real.max;
             return x; // +Inf and NaN are unchanged.
         }
-        if (pe[F.EXPPOS_SHORT] & 0x8000)
+        if (rep.shorts[F.EXPPOS_SHORT] & 0x8000)
         {
             // Negative number -- need to decrease the significand
-            --*ps;
+            --rep.integral.significand;
             // Need to mask with 0x7FFF... so subnormals are treated correctly.
-            if ((*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_FFFF_FFFF_FFFF)
+            if ((rep.integral.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_FFFF_FFFF_FFFF)
             {
-                if (pe[F.EXPPOS_SHORT] == 0x8000)   // it was negative zero
+                if (rep.shorts[F.EXPPOS_SHORT] == 0x8000)   // it was negative zero
                 {
-                    *ps = 1;
-                    pe[F.EXPPOS_SHORT] = 0; // smallest subnormal.
-                    return x;
+                    rep.integral.significand = 1;
+                    rep.shorts[F.EXPPOS_SHORT] = 0; // smallest subnormal.
+                    return rep.number;
                 }
 
-                --pe[F.EXPPOS_SHORT];
+                --rep.shorts[F.EXPPOS_SHORT];
 
-                if (pe[F.EXPPOS_SHORT] == 0x8000)
-                    return x; // it's become a subnormal, implied bit stays low.
+                if (rep.shorts[F.EXPPOS_SHORT] == 0x8000)
+                    return rep.number; // it's become a subnormal, implied bit stays low.
 
-                *ps = 0xFFFF_FFFF_FFFF_FFFF; // set the implied bit
-                return x;
+                rep.integral.significand = 0xFFFF_FFFF_FFFF_FFFF; // set the implied bit
+                return rep.number;
             }
-            return x;
+            return rep.number;
         }
         else
         {
             // Positive number -- need to increase the significand.
             // Works automatically for positive zero.
-            ++*ps;
-            if ((*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0)
+            ++rep.integral.significand;
+            if ((rep.integral.significand & 0x7FFF_FFFF_FFFF_FFFF) == 0)
             {
                 // change in exponent
-                ++pe[F.EXPPOS_SHORT];
-                *ps = 0x8000_0000_0000_0000; // set the high bit
+                ++rep.shorts[F.EXPPOS_SHORT];
+                rep.integral.significand = 0x8000_0000_0000_0000; // set the high bit
             }
         }
-        return x;
+        return rep.number;
     }
     else // static if (F.realFormat == RealFormat.ibmExtended)
     {
@@ -5691,58 +5693,58 @@ real nextUp(real x) @trusted pure nothrow @nogc
 /** ditto */
 double nextUp(double x) @trusted pure nothrow @nogc
 {
-    ulong *ps = cast(ulong *)&x;
+    floatTraits!(double).Layout rep = { number : x };
 
-    if ((*ps & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
+    if ((rep.integral & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
     {
         // First, deal with NANs and infinity
         if (x == -x.infinity) return -x.max;
         return x; // +INF and NAN are unchanged.
     }
-    if (*ps & 0x8000_0000_0000_0000)    // Negative number
+    if (rep.integral & 0x8000_0000_0000_0000)    // Negative number
     {
-        if (*ps == 0x8000_0000_0000_0000) // it was negative zero
+        if (rep.integral == 0x8000_0000_0000_0000) // it was negative zero
         {
-            *ps = 0x0000_0000_0000_0001; // change to smallest subnormal
-            return x;
+            rep.integral = 0x0000_0000_0000_0001; // change to smallest subnormal
+            return rep.number;
         }
-        --*ps;
+        --rep.integral;
     }
     else
     {   // Positive number
-        ++*ps;
+        ++rep.integral;
     }
-    return x;
+    return rep.number;
 }
 
 /** ditto */
 float nextUp(float x) @trusted pure nothrow @nogc
 {
-    uint *ps = cast(uint *)&x;
+    floatTraits!(float).Layout rep = { number : x };
 
-    if ((*ps & 0x7F80_0000) == 0x7F80_0000)
+    if ((rep.integral & 0x7F80_0000) == 0x7F80_0000)
     {
         // First, deal with NANs and infinity
         if (x == -x.infinity) return -x.max;
 
         return x; // +INF and NAN are unchanged.
     }
-    if (*ps & 0x8000_0000)   // Negative number
+    if (rep.integral & 0x8000_0000)   // Negative number
     {
-        if (*ps == 0x8000_0000) // it was negative zero
+        if (rep.integral == 0x8000_0000) // it was negative zero
         {
-            *ps = 0x0000_0001; // change to smallest subnormal
-            return x;
+            rep.integral = 0x0000_0001; // change to smallest subnormal
+            return rep.number;
         }
 
-        --*ps;
+        --rep.integral;
     }
     else
     {
         // Positive number
-        ++*ps;
+        ++rep.integral;
     }
-    return x;
+    return rep.number;
 }
 
 /**
@@ -6417,18 +6419,20 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
     alias F = floatTraits!(X);
+    F.Layout repX = { number : x }, repY = { number : y };
+
     static if (F.realFormat == RealFormat.ibmExtended)
     {
-        if (cast(double*)(&x)[MANTISSA_MSB] == cast(double*)(&y)[MANTISSA_MSB])
+        if (repX.doubles[MANTISSA_MSB] == repY.doubles[MANTISSA_MSB])
         {
             return double.mant_dig
-            + feqrel(cast(double*)(&x)[MANTISSA_LSB],
-                    cast(double*)(&y)[MANTISSA_LSB]);
+            + feqrel(repX.doubles[MANTISSA_LSB],
+                    repY.doubles[MANTISSA_LSB]);
         }
         else
         {
-            return feqrel(cast(double*)(&x)[MANTISSA_MSB],
-                    cast(double*)(&y)[MANTISSA_MSB]);
+            return feqrel(repX.doubles[MANTISSA_MSB],
+                    repY.doubles[MANTISSA_MSB]);
         }
     }
     else
@@ -6441,12 +6445,7 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
         if (x == y)
             return X.mant_dig; // ensure diff!=0, cope with INF.
 
-        Unqual!X diff = fabs(x - y);
-
-        ushort *pa = cast(ushort *)(&x);
-        ushort *pb = cast(ushort *)(&y);
-        ushort *pd = cast(ushort *)(&diff);
-
+        F.Layout repDiff = { number : fabs(x - y) };
 
         // The difference in abs(exponent) between x or y and abs(x-y)
         // is equal to the number of significand bits of x which are
@@ -6458,17 +6457,18 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
         // always 1 lower than we want, except that if bitsdiff==0,
         // they could have 0 or 1 bits in common.
 
-        int bitsdiff = (((  (pa[F.EXPPOS_SHORT] & F.EXPMASK)
-                          + (pb[F.EXPPOS_SHORT] & F.EXPMASK)
+        int bitsdiff = (((  (repX.shorts[F.EXPPOS_SHORT] & F.EXPMASK)
+                          + (repY.shorts[F.EXPPOS_SHORT] & F.EXPMASK)
                           - (1 << F.EXPSHIFT)) >> 1)
-                        - (pd[F.EXPPOS_SHORT] & F.EXPMASK)) >> F.EXPSHIFT;
-        if ( (pd[F.EXPPOS_SHORT] & F.EXPMASK) == 0)
+                        - (repDiff.shorts[F.EXPPOS_SHORT] & F.EXPMASK)) >> F.EXPSHIFT;
+        if ( (repDiff.shorts[F.EXPPOS_SHORT] & F.EXPMASK) == 0)
         {   // Difference is subnormal
             // For subnormals, we need to add the number of zeros that
             // lie at the start of diff's significand.
             // We do this by multiplying by 2^^real.mant_dig
-            diff *= F.RECIP_EPSILON;
-            return bitsdiff + X.mant_dig - ((pd[F.EXPPOS_SHORT] & F.EXPMASK) >> F.EXPSHIFT);
+            repDiff.number *= F.RECIP_EPSILON;
+            return bitsdiff + X.mant_dig -
+                ((repDiff.shorts[F.EXPPOS_SHORT] & F.EXPMASK) >> F.EXPSHIFT);
         }
 
         if (bitsdiff > 0)
@@ -6476,7 +6476,7 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
 
         // Avoid out-by-1 errors when factor is almost 2.
         if (bitsdiff == 0
-            && ((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT]) & F.EXPMASK) == 0)
+            && ((repX.shorts[F.EXPPOS_SHORT] ^ repY.shorts[F.EXPPOS_SHORT]) & F.EXPMASK) == 0)
         {
             return 1;
         } else return 0;
@@ -6574,25 +6574,23 @@ body
     // average them (avoiding overflow), and cast the result back to a floating-point number.
 
     alias F = floatTraits!(T);
-    T u;
+    F.Layout repX = { number : x };
+    F.Layout repY = { number : y };
+    F.Layout res;
+
     static if (F.realFormat == RealFormat.ieeeExtended)
     {
         // There's slight additional complexity because they are actually
         // 79-bit reals...
-        ushort *ue = cast(ushort *)&u;
-        ulong *ul = cast(ulong *)&u;
-        ushort *xe = cast(ushort *)&x;
-        ulong *xl = cast(ulong *)&x;
-        ushort *ye = cast(ushort *)&y;
-        ulong *yl = cast(ulong *)&y;
 
         // Ignore the useless implicit bit. (Bonus: this prevents overflows)
-        ulong m = ((*xl) & 0x7FFF_FFFF_FFFF_FFFFL) + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL);
+        ulong m = (repX.integral.significand & 0x7FFF_FFFF_FFFF_FFFFL)
+                  + (repY.integral.significand & 0x7FFF_FFFF_FFFF_FFFFL);
 
         // @@@ BUG? @@@
         // Cast shouldn't be here
-        ushort e = cast(ushort) ((xe[F.EXPPOS_SHORT] & F.EXPMASK)
-                                 + (ye[F.EXPPOS_SHORT] & F.EXPMASK));
+        ushort e = cast(ushort) ((repX.shorts[F.EXPPOS_SHORT] & F.EXPMASK)
+                                 + (repY.shorts[F.EXPPOS_SHORT] & F.EXPMASK));
         if (m & 0x8000_0000_0000_0000L)
         {
             ++e;
@@ -6605,60 +6603,50 @@ body
         if (c)
             m |= 0x4000_0000_0000_0000L; // shift carry into significand
         if (e)
-            *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
+            res.integral.significand = m | 0x8000_0000_0000_0000L; // set implicit bit...
         else
-            *ul = m; // ... unless exponent is 0 (subnormal or zero).
+            res.integral.significand = m; // ... unless exponent is 0 (subnormal or zero).
 
-        ue[4]= e | (xe[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
+        res.shorts[4] = e | (repX.shorts[F.EXPPOS_SHORT] & 0x8000); // restore sign bit
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
         // This would be trivial if 'ucent' were implemented...
-        ulong *ul = cast(ulong *)&u;
-        ulong *xl = cast(ulong *)&x;
-        ulong *yl = cast(ulong *)&y;
-
         // Multi-byte add, then multi-byte right shift.
-        ulong mh = ((xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL)
-                    + (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL));
+        ulong mh = ((repX.longs[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL)
+                    + (repY.longs[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL));
 
         // Discard the lowest bit (to avoid overflow)
-        ulong ml = (xl[MANTISSA_LSB]>>>1) + (yl[MANTISSA_LSB]>>>1);
+        ulong ml = (repX.longs[MANTISSA_LSB]>>>1) + (repY.longs[MANTISSA_LSB]>>>1);
 
         // add the lowest bit back in, if necessary.
-        if (xl[MANTISSA_LSB] & yl[MANTISSA_LSB] & 1)
+        if (repX.longs[MANTISSA_LSB] & repY.longs[MANTISSA_LSB] & 1)
         {
             ++ml;
             if (ml == 0) ++mh;
         }
         mh >>>=1;
-        ul[MANTISSA_MSB] = mh | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
-        ul[MANTISSA_LSB] = ml;
+        res.longs[MANTISSA_MSB] = mh | (res.longs[MANTISSA_MSB] & 0x8000_0000_0000_0000);
+        res.longs[MANTISSA_LSB] = ml;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        ulong *ul = cast(ulong *)&u;
-        ulong *xl = cast(ulong *)&x;
-        ulong *yl = cast(ulong *)&y;
-        ulong m = (((*xl) & 0x7FFF_FFFF_FFFF_FFFFL)
-                   + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
-                   m |= ((*xl) & 0x8000_0000_0000_0000L);
-                   *ul = m;
+        ulong m = ((repX.integral & 0x7FFF_FFFF_FFFF_FFFFL)
+                   + (repY.integral & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
+        m |= (repX.integral & 0x8000_0000_0000_0000L);
+        res.integral = m;
     }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        uint *ul = cast(uint *)&u;
-        uint *xl = cast(uint *)&x;
-        uint *yl = cast(uint *)&y;
-        uint m = (((*xl) & 0x7FFF_FFFF) + ((*yl) & 0x7FFF_FFFF)) >>> 1;
-        m |= ((*xl) & 0x8000_0000);
-        *ul = m;
+        uint m = ((repX.integral & 0x7FFF_FFFF) + (repY.integral & 0x7FFF_FFFF)) >>> 1;
+        m |= (repX.integral & 0x8000_0000);
+        res.integral = m;
     }
     else
     {
         assert(0, "Not implemented");
     }
-    return u;
+    return res.number;
 }
 
 @safe pure nothrow @nogc unittest
@@ -7119,36 +7107,25 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
 {
     alias F = floatTraits!T;
 
+    import std.typecons : Tuple;
+    Tuple!(F.Layout, F.Layout) vars = void;
+    vars[0].number = x;
+    vars[1].number = y;
+
     static if (F.realFormat == RealFormat.ieeeSingle
                || F.realFormat == RealFormat.ieeeDouble)
     {
-        static if (T.sizeof == 4)
-            alias UInt = uint;
-        else
-            alias UInt = ulong;
-
-        union Repainter
-        {
-            T number;
-            UInt bits;
-        }
-
-        enum msb = ~(UInt.max >>> 1);
-
-        import std.typecons : Tuple;
-        Tuple!(Repainter, Repainter) vars = void;
-        vars[0].number = x;
-        vars[1].number = y;
+        enum msb = ~(F.Integral.max >>> 1);
 
         foreach (ref var; vars)
-            if (var.bits & msb)
-                var.bits = ~var.bits;
+            if (var.integral & msb)
+                var.integral = ~var.integral;
             else
-                var.bits |= msb;
+                var.integral |= msb;
 
-        if (vars[0].bits < vars[1].bits)
+        if (vars[0].integral < vars[1].integral)
             return -1;
-        else if (vars[0].bits > vars[1].bits)
+        else if (vars[0].integral > vars[1].integral)
             return 1;
         else
             return 0;
@@ -7157,66 +7134,27 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
                     || F.realFormat == RealFormat.ieeeExtended
                     || F.realFormat == RealFormat.ieeeQuadruple)
     {
-        static if (F.realFormat == RealFormat.ieeeQuadruple)
-            alias RemT = ulong;
-        else
-            alias RemT = ushort;
-
-        struct Bits
-        {
-            ulong bulk;
-            RemT rem;
-        }
-
-        union Repainter
-        {
-            T number;
-            Bits bits;
-            ubyte[T.sizeof] bytes;
-        }
-
-        import std.typecons : Tuple;
-        Tuple!(Repainter, Repainter) vars = void;
-        vars[0].number = x;
-        vars[1].number = y;
-
         foreach (ref var; vars)
             if (var.bytes[F.SIGNPOS_BYTE] & 0x80)
             {
-                var.bits.bulk = ~var.bits.bulk;
-                var.bits.rem = ~var.bits.rem;
+                var.integral[0] = ~var.integral[0];
+                var.integral[1] = ~var.integral[1];
             }
             else
             {
                 var.bytes[F.SIGNPOS_BYTE] |= 0x80;
             }
 
-        version(LittleEndian)
-        {
-            if (vars[0].bits.rem < vars[1].bits.rem)
-                return -1;
-            else if (vars[0].bits.rem > vars[1].bits.rem)
-                return 1;
-            else if (vars[0].bits.bulk < vars[1].bits.bulk)
-                return -1;
-            else if (vars[0].bits.bulk > vars[1].bits.bulk)
-                return 1;
-            else
-                return 0;
-        }
+        if (vars[0].integral[MANTISSA_MSB] < vars[1].integral[MANTISSA_MSB])
+            return -1;
+        else if (vars[0].integral[MANTISSA_MSB] > vars[1].integral[MANTISSA_MSB])
+            return 1;
+        else if (vars[0].integral[MANTISSA_LSB] < vars[1].integral[MANTISSA_LSB])
+            return -1;
+        else if (vars[0].integral[MANTISSA_LSB] > vars[1].integral[MANTISSA_LSB])
+            return 1;
         else
-        {
-            if (vars[0].bits.bulk < vars[1].bits.bulk)
-                return -1;
-            else if (vars[0].bits.bulk > vars[1].bits.bulk)
-                return 1;
-            else if (vars[0].bits.rem < vars[1].bits.rem)
-                return -1;
-            else if (vars[0].bits.rem > vars[1].bits.rem)
-                return 1;
-            else
-                return 0;
-        }
+            return 0;
     }
     else
     {
