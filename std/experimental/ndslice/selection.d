@@ -1058,13 +1058,31 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
 
             auto ref opIndex(size_t index)
             {
-                return _slice._ptr[getShift(index)];
+                static if (N == PureN)
+                {
+                    return _slice._ptr[getShift(index)];
+                }
+                else with (_slice)
+                {
+                    alias M = DeepElemType.PureN;
+                    return DeepElemType(_lengths[$ - M .. $], _strides[$ - M .. $], _ptr);
+                }
             }
 
             static if (PureN == 1 && rangeHasMutableElements && !hasAccessByRef)
             auto opIndexAssign(DeepElemType elem, size_t index)
             {
-                return _slice[getShift(index)] = elem;
+                static if (N == PureN)
+                {
+                    return _slice._ptr[getShift(index)] = elem;
+                }
+                else
+                {
+                    static assert(0,
+                        "ByElement.opIndexAssign is not implemented for packed slices."
+                        ~ "Use additional empty slicing `elemsOfSlice[index][] = value`"
+                        ~ tailErrorMessage());
+                }
             }
 
             auto opIndex(_Slice sl)
@@ -1282,6 +1300,21 @@ Use $(SUBREF iteration, allReversed) in pipeline before
     assert(elems0.equal(range[slice0.elementsCount - 13 .. slice0.elementsCount]));
 
     foreach (elem; elems0) {}
+}
+
+// Issue 15549
+unittest
+{
+    import std.range: iota;
+    import std.range.primitives;
+    alias A = typeof(10.iota.sliced(2, 5).sliced(1, 1, 1, 1));
+    static assert(isRandomAccessRange!A);
+    static assert(hasLength!A);
+    static assert(hasSlicing!A);
+    alias B = typeof(new double[10].sliced(2, 5).sliced(1, 1, 1, 1));
+    static assert(isRandomAccessRange!B);
+    static assert(hasLength!B);
+    static assert(hasSlicing!B);
 }
 
 /++
