@@ -734,7 +734,7 @@ void initializeAll(Range)(Range range)
         //We avoid calling emplace here, because our goal is to initialize to
         //the static state of T.init,
         //So we want to avoid any un-necassarilly CC'ing of T.init
-        auto p = typeid(T).init().ptr;
+        auto p = typeid(T).initializer().ptr;
         if (p)
             for ( ; !range.empty ; range.popFront() )
                 memcpy(addressOf(range.front), p, T.sizeof);
@@ -824,10 +824,10 @@ unittest
     static assert (!hasElaborateAssign!S2);
     static assert ( hasElaborateAssign!S3);
     static assert ( hasElaborateAssign!S4);
-    assert (!typeid(S1).init().ptr);
-    assert ( typeid(S2).init().ptr);
-    assert (!typeid(S3).init().ptr);
-    assert ( typeid(S4).init().ptr);
+    assert (!typeid(S1).initializer().ptr);
+    assert ( typeid(S2).initializer().ptr);
+    assert (!typeid(S3).initializer().ptr);
+    assert ( typeid(S4).initializer().ptr);
 
     foreach(S; AliasSeq!(S1, S2, S3, S4))
     {
@@ -1221,7 +1221,7 @@ void moveEmplace(T)(ref T source, ref T target) @system
             else
                 enum sz = T.sizeof;
 
-            auto init = typeid(T).init();
+            auto init = typeid(T).initializer();
             if (init.ptr is null) // null ptr means initialize to 0s
                 memset(&source, 0, sz);
             else

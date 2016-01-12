@@ -4763,7 +4763,7 @@ if (!is(T == class) && !(is(T == interface)))
                 else
                     enum sz = T.sizeof;
 
-                auto init = typeid(T).init();
+                auto init = typeid(T).initializer();
                 if (init.ptr is null) // null ptr means initialize to 0s
                     memset(&source, 0, sz);
                 else

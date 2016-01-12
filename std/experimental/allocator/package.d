@@ -1064,7 +1064,7 @@ void dispose(A, T)(auto ref A alloc, T p)
 if (is(T == class) || is(T == interface))
 {
     if (!p) return;
-    auto support = (cast(void*) p)[0 .. typeid(p).init.length];
+    auto support = (cast(void*) p)[0 .. typeid(p).initializer.length];
     destroy(p);
     alloc.deallocate(support);
 }
