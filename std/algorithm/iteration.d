@@ -2845,12 +2845,12 @@ private template ReduceSeedType(E)
     {
         import std.algorithm.internal : algoFormat;
 
-        E e = E.init;
-        static alias ReduceSeedType = Unqual!(typeof(fun(e, e)));
+        alias ReduceSeedType = Unqual!(typeof(fun(lvalueOf!E, lvalueOf!E)));
 
         //Check the Seed type is useable.
         ReduceSeedType s = ReduceSeedType.init;
-        static assert(is(typeof({ReduceSeedType s = e;})) && is(typeof(s = fun(s, e))),
+        static assert(is(typeof({ReduceSeedType s = lvalueOf!E;})) &&
+            is(typeof(lvalueOf!ReduceSeedType = fun(lvalueOf!ReduceSeedType, lvalueOf!E))),
             algoFormat("Unable to deduce an acceptable seed type for %s with element type %s.", fullyQualifiedName!fun, E.stringof));
     }
 }
