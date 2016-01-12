@@ -98,6 +98,7 @@ $(LEADINGROW Publicly imported functions)
          $(SHORTXREF array, replace)
          $(SHORTXREF array, replaceInPlace)
          $(SHORTXREF array, split)
+         $(SHORTXREF array, empty)
     ))
     $(TR $(TD std.format)
         $(TD
@@ -187,7 +188,7 @@ import std.traits;
 
 //public imports for backward compatibility
 public import std.algorithm : startsWith, endsWith, cmp, count;
-public import std.array : join, replace, replaceInPlace, split;
+public import std.array : join, replace, replaceInPlace, split, empty;
 
 /* ************* Exceptions *************** */
 
