@@ -2423,8 +2423,13 @@ $(D Range) that locks the file and allows fast writing to it.
     {
     private:
         import std.range.primitives : ElementType, isInfinite, isInputRange;
-        FILE* fps_;          // the shared file handle
-        _iobuf* handle_;     // the unshared version of fps
+        // the shared file handle
+        FILE* fps_;
+
+        // the unshared version of fps
+        @property _iobuf* handle_() @trusted { return cast(_iobuf*)fps_; }
+
+        // the file's orientation (byte- or wide-oriented)
         int orientation_;
     public:
         deprecated("accessing fps/handle/orientation directly can break LockingTextWriter integrity")
@@ -2443,7 +2448,6 @@ $(D Range) that locks the file and allows fast writing to it.
             fps_ = f._p.handle;
             orientation_ = fwide(fps_, 0);
             FLOCK(fps_);
-            handle_ = cast(_iobuf*)fps_;
         }
 
         ~this() @trusted
@@ -2452,7 +2456,6 @@ $(D Range) that locks the file and allows fast writing to it.
             {
                 FUNLOCK(fps_);
                 fps_ = null;
-                handle_ = null;
             }
         }
 
