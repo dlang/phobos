@@ -4122,6 +4122,32 @@ unittest
     f.close();
 }
 
+
+/**
+Writes an array or range to a file.
+Shorthand for $(D data.copy(File(fileName, "wb").lockingBinaryWriter)).
+Similar to $(XREF file,write), strings are written as-is,
+rather than encoded according to the $(D File)'s $(WEB
+en.cppreference.com/w/c/io#Narrow_and_wide_orientation,
+orientation).
+*/
+void toFile(T)(T data, string fileName)
+    if (is(typeof(std.algorithm.mutation.copy(data, stdout.lockingBinaryWriter))))
+{
+    std.algorithm.mutation.copy(data, File(fileName, "wb").lockingBinaryWriter);
+}
+
+unittest
+{
+    static import std.file;
+
+    auto deleteme = testFilename();
+    scope(exit) { std.file.remove(deleteme); }
+
+    "Test".toFile(deleteme);
+    assert(std.file.readText(deleteme) == "Test");
+}
+
 /*********************
  * Thrown if I/O errors happen.
  */
