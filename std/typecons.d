@@ -5189,8 +5189,10 @@ mixin template Proxy(alias a)
                 return a.opCmp(b);
             else static if (is(typeof(b.opCmp(a))))
                 return -b.opCmp(a);
+            else static if (isFloatingPoint!ValueType || isFloatingPoint!B)
+                return a < b ? -1 : a > b ? +1 : a == b ? 0 : float.nan;
             else
-                return a < b ? -1 : a > b ? +1 : 0;
+                return a < b ? -1 : (a > b);
         }
 
         static if (accessibleFrom!(const typeof(this)))
@@ -5731,6 +5733,54 @@ unittest
     assert(s + 1 == 13);
     C c = new C();
     assert(s * 2 == 24);
+}
+
+// Check all floating point comparisons for both Proxy and Typedef,
+// also against int and a Typedef!int, to be as regression-proof
+// as possible. bug 15561
+unittest
+{
+    static struct MyFloatImpl
+    {
+        float value;
+        mixin Proxy!value;
+    }
+    static void allFail(T0, T1)(T0 a, T1 b)
+    {
+        assert(!(a==b));
+        assert(!(a<b));
+        assert(!(a<=b));
+        assert(!(a>b));
+        assert(!(a>=b));
+    }
+    foreach (T1; AliasSeq!(MyFloatImpl, Typedef!float, Typedef!double,
+        float, real, Typedef!int, int))
+    {
+        foreach (T2; AliasSeq!(MyFloatImpl, Typedef!float))
+        {
+            T1 a;
+            T2 b;
+
+            static if (isFloatingPoint!T1 || isFloatingPoint!(TypedefType!T1))
+                allFail(a, b);
+            a = 3;
+            allFail(a, b);
+
+            b = 4;
+            assert(a!=b);
+            assert(a<b);
+            assert(a<=b);
+            assert(!(a>b));
+            assert(!(a>=b));
+
+            a = 4;
+            assert(a==b);
+            assert(!(a<b));
+            assert(a<=b);
+            assert(!(a>b));
+            assert(a>=b);
+        }
+    }
 }
 
 /**
