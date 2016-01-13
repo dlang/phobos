@@ -82,25 +82,6 @@ public enum CustomFloatFlags
     none = 0
 }
 
-// 64-bit version of core.bitop.bsr
-private int bsr64(ulong value)
-{
-    import core.bitop : bsr;
-
-    union Ulong
-    {
-        ulong raw;
-        struct
-        {
-            uint low;
-            uint high;
-        }
-    }
-    Ulong v;
-    v.raw = value;
-    return v.high==0 ? core.bitop.bsr(v.low) : core.bitop.bsr(v.high) + 32;
-}
-
 private template CustomFloatParams(uint bits)
 {
     enum CustomFloatFlags flags = CustomFloatFlags.ieee
@@ -264,7 +245,8 @@ private:
         {
             if(sig > 0)
             {
-                auto shift2 = precision - bsr64(sig);
+                import core.bitop : bsr;
+                auto shift2 = precision - bsr(sig);
                 exp  -= shift2-1;
                 shift += shift2;
             }
@@ -3075,16 +3057,18 @@ void slowFourier4(Ret, R)(R range, Ret buf)
     buf[3] = range[0] + range[1] * C(0, 1) - range[2] - range[3] * C(0, 1);
 }
 
-bool isPowerOfTwo(size_t num)
+bool isPowerOfTwo(N)(N num)
+    if (isScalarType!N && !isFloatingPoint!N)
 {
     import core.bitop : bsf, bsr;
     return bsr(num) == bsf(num);
 }
 
-size_t roundDownToPowerOf2(size_t num)
+N roundDownToPowerOf2(N)(N num)
+    if (isScalarType!N && !isFloatingPoint!N)
 {
     import core.bitop : bsr;
-    return num & (1 << bsr(num));
+    return num & (cast(N) 1 << bsr(num));
 }
 
 unittest

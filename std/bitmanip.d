@@ -3766,21 +3766,8 @@ private uint countTrailingZeros(T)(T value) @nogc pure nothrow
     // bsf doesn't give the correct result for 0.
     if (!value)
         return 8 * T.sizeof;
-
-    static if (T.sizeof == 8 && size_t.sizeof == 4)
-    {
-        // bsf's parameter is size_t, so it doesn't work with 64-bit integers
-        // on a 32-bit machine. For this case, we call bsf on each 32-bit half.
-        uint lower = cast(uint)value;
-        if (lower)
-            return bsf(lower);
-        value >>>= 32;
-        return 32 + bsf(cast(uint)value);
-    }
     else
-    {
         return bsf(value);
-    }
 }
 
 ///
