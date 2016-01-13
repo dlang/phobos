@@ -362,38 +362,66 @@ Range partition(alias predicate,
     {
         // Inspired from www.stepanovpapers.com/PAM3-partition_notes.pdf,
         // section "Bidirectional Partition Algorithm (Hoare)"
-        auto result = r;
-        for (;;)
+        static if (isDynamicArray!Range)
         {
+            // For dynamic arrays prefer index-based manipulation
+            if (!r.length) return r;
+            size_t lo = 0, hi = r.length - 1;
             for (;;)
             {
-                if (r.empty) return result;
-                if (!pred(r.front)) break;
+                for (;;)
+                {
+                    if (lo > hi) return r[lo .. $];
+                    if (!pred(r[lo])) break;
+                    ++lo;
+                }
+                // found the left bound
+                assert(lo <= hi);
+                for (;;)
+                {
+                    if (lo == hi) return r[lo .. $];
+                    if (pred(r[hi])) break;
+                    --hi;
+                }
+                // found the right bound, swap & make progress
+                swap(r[lo++], r[hi--]);
+            }
+        }
+        else
+        {
+            auto result = r;
+            for (;;)
+            {
+                for (;;)
+                {
+                    if (r.empty) return result;
+                    if (!pred(r.front)) break;
+                    r.popFront();
+                    result.popFront();
+                }
+                // found the left bound
+                assert(!r.empty);
+                for (;;)
+                {
+                    if (pred(r.back)) break;
+                    r.popBack();
+                    if (r.empty) return result;
+                }
+                // found the right bound, swap & make progress
+                static if (is(typeof(swap(r.front, r.back))))
+                {
+                    swap(r.front, r.back);
+                }
+                else
+                {
+                    auto t1 = moveFront(r), t2 = moveBack(r);
+                    r.front = t2;
+                    r.back = t1;
+                }
                 r.popFront();
                 result.popFront();
-            }
-            // found the left bound
-            assert(!r.empty);
-            for (;;)
-            {
-                if (pred(r.back)) break;
                 r.popBack();
-                if (r.empty) return result;
             }
-            // found the right bound, swap & make progress
-            static if (is(typeof(swap(r.front, r.back))))
-            {
-                swap(r.front, r.back);
-            }
-            else
-            {
-                auto t1 = moveFront(r), t2 = moveBack(r);
-                r.front = t2;
-                r.back = t1;
-            }
-            r.popFront();
-            result.popFront();
-            r.popBack();
         }
     }
 }
@@ -2165,28 +2193,36 @@ auto topN(alias less = "a < b",
     auto ret = r[0 .. nth];
     while (r.length > nth)
     {
-        auto pivot = uniform(0, r.length);
+        if (nth == 0)
+        {
+            // Special-case "min"
+            import std.algorithm.searching : minPos;
+            swap(r.front, r.minPos!less.front);
+            break;
+        }
+        auto pivot = r.getPivot!less;
+        assert(!binaryFun!less(r[pivot], r[pivot]));
         swap(r[pivot], r.back);
-        assert(!binaryFun!(less)(r.back, r.back));
-        auto right = partition!((a) => binaryFun!less(a, r.back), ss)(r);
+        auto right = r.partition!(a => binaryFun!less(a, r.back), ss);
         assert(right.length >= 1);
-        swap(right.front, r.back);
         pivot = r.length - right.length;
-        if (pivot == nth)
+        if (pivot > nth)
         {
-            return ret;
-        }
-        if (pivot < nth)
-        {
-            ++pivot;
-            r = r[pivot .. $];
-            nth -= pivot;
-        }
-        else
-        {
+            // We don't care to swap the pivot back, won't be visited anymore
             assert(pivot < r.length);
             r = r[0 .. pivot];
+            continue;
         }
+        // Swap the pivot to where it should be
+        swap(right.front, r.back);
+        if (pivot == nth)
+        {
+            // Found Waldo!
+            break;
+        }
+        ++pivot; // skip the pivot
+        r = r[pivot .. $];
+        nth -= pivot;
     }
     return ret;
 }
@@ -2975,4 +3011,3 @@ shapes. Here's a non-trivial example:
     }
     assert(n == 60);
 }
-
