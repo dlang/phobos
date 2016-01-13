@@ -31,6 +31,10 @@ $(BOOKTABLE ,
         bidirectional _range that also supports the array subscripting
         operation via the primitive $(D opIndex).
     ))
+    $(TR $(TD $(D $(LREF isSortedRange)))
+        $(TD Tests if something is a $(I sorted _range) sorted on a specific
+        predicate function $(D pred).
+    ))
 )
 
 It also provides number of templates that test for various _range capabilities:
@@ -998,6 +1002,145 @@ unittest
     static assert( isRandomAccessRange!(E));
     static assert( isRandomAccessRange!(int[]));
     static assert( isRandomAccessRange!(inout(int)[]));
+}
+
+auto standardizePredicatePrefix(S)(S s) if (isSomeString!S)
+{
+    if (s.length >= 2)
+    {
+        if (s[0] != 'a')
+            return s;
+
+        size_t n = 0; // whitespace count
+        while (1 + n < s.length &&
+               s[1 + n] == ' ')
+            ++n;
+
+        return 'a' ~ s[1 + n .. $];
+    }
+    return s;
+}
+
+auto standardizePredicateSuffix(S)(S s) if (isSomeString!S)
+{
+    if (s.length >= 2)
+    {
+        if (s[$ - 1] != 'b')
+            return s;
+
+        size_t n = 0; // whitespace count
+        while (1 + n < s.length &&
+               s[$ - 2 - n] == ' ')
+            ++n;
+
+        return s[0 .. $ - 1 - n] ~ 'b';
+    }
+    return s;
+}
+
+auto standardizePredicate(S)(S s) if (isSomeString!S)
+{
+    return standardizePredicateSuffix(standardizePredicatePrefix(s));
+}
+
+unittest
+{
+    static assert(standardizePredicate("a < b") == "a<b");
+    static assert(standardizePredicate("a  < b") == "a<b");
+    static assert(standardizePredicate("a    <=    b") == "a<=b");
+    static assert(standardizePredicate("a > b") == "a>b");
+}
+
+import std.functional : binaryFun;
+
+enum binaryFunString(alias pred : binaryFun!T, T ...) = T[0];
+
+unittest
+{
+    enum pred = "a+b";
+    alias x = binaryFun!pred;
+    static assert(binaryFunString!x == pred);
+}
+
+/**
+   Returns true if $(D T) is a Range Sorted on predicate $(D pred).
+
+   Currently checks if $(D T) is an instance of $(D SortedRange).
+
+   See also: http://forum.dlang.org/post/mqskge$2968$1@digitalmars.com
+*/
+template isSortedRange(T, alias pred = "a < b")
+{
+    import std.range : SortedRange;
+    static if (is(T == SortedRange!Args, Args...))
+    {
+        import std.traits : TemplateArgsOf;
+        alias TArgs = TemplateArgsOf!T;
+        static if (TArgs.length == 2)
+        {
+            alias predArg = TArgs[1];
+            static if (isSomeString!(typeof(pred)))
+            {
+                alias predString = pred;
+            }
+            else
+            {
+                alias predString = binaryFunString!pred;
+            }
+
+            static if (isSomeString!(typeof(predArg)))
+            {
+                alias predArgString = predArg;
+            }
+            else
+            {
+                alias predArgString = binaryFunString!predArg;
+            }
+
+            enum isSortedRange = (standardizePredicate(predString) ==
+                                  standardizePredicate(predArgString));
+        }
+        else
+        {
+            enum isSortedRange = false;
+        }
+    }
+    else
+    {
+        enum isSortedRange = false;
+    }
+}
+
+///
+unittest
+{
+    import std.functional : binaryFun;
+
+    alias R = int[];
+
+    enum pred = "a < b";
+    alias fun = binaryFun!"a<b";
+
+    enum rpred = "a>b";
+    alias rfun = binaryFun!"a > b";
+
+    import std.range : SortedRange;
+
+    alias SR = SortedRange!(R, pred);
+    static assert(isSortedRange!(SR, pred));
+    static assert(isSortedRange!(SR, fun));
+
+    alias SR2 = SortedRange!(R, binaryFun!pred);
+    static assert(isSortedRange!(SR2, pred));
+    static assert(isSortedRange!(SR2, fun));
+
+    alias SR_ = SortedRange!(R, pred);
+    static assert(!isSortedRange!(SR_, rpred));
+    static assert(!isSortedRange!(SR_, rfun));
+
+    alias IR = int[];
+    static assert(!isSortedRange!(IR, pred));
+    static assert(!isSortedRange!(IR, fun));
 }
 
 @safe unittest

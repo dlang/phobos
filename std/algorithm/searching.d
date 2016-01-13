@@ -2903,19 +2903,26 @@ Range minPos(alias pred = "a < b", Range)(Range range)
     if (isForwardRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
-    if (range.empty) return range;
-    auto result = range.save;
-
-    for (range.popFront(); !range.empty; range.popFront())
+    static if (isSortedRange!(Range, pred))
     {
-        //Note: Unlike minCount, we do not care to find equivalence, so a single pred call is enough
-        if (binaryFun!pred(range.front, result.front))
-        {
-            // change the min
-            result = range.save;
-        }
+        return range;
     }
-    return result;
+    else
+    {
+        if (range.empty) return range;
+        auto result = range.save;
+
+        for (range.popFront(); !range.empty; range.popFront())
+        {
+            //Note: Unlike minCount, we do not care to find equivalence, so a single pred call is enough
+            if (binaryFun!pred(range.front, result.front))
+            {
+                // change the min
+                result = range.save;
+            }
+        }
+        return result;
+    }
 }
 
 ///
@@ -2926,6 +2933,11 @@ Range minPos(alias pred = "a < b", Range)(Range range)
     assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
     // Maximum is 4 and first occurs in position 2
     assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
+
+    // Test SortedRange as input
+    import std.algorithm.sorting : sort;
+    import std.algorithm : equal;
+    assert(equal(minPos(a.sort()), [ 1, 1, 1, 2, 2, 2, 3, 4, 4 ]));
 }
 
 @safe unittest
@@ -2972,6 +2984,76 @@ unittest
 
     immutable(int[])[] b = [ [4], [2, 4], [4], [4] ];
     assert(minPos!("a[0] < b[0]")(b) == [ [2, 4], [4], [4] ]);
+}
+
+import std.algorithm.comparison : min, max;
+
+/** Returns: Minimum Element in $(D range) or $(D unit) if $(D range) is empty.
+ */
+auto minElement(alias F = min, R)(R range,
+                                  ElementType!R unit = ElementType!R.max)
+    if (isInputRange!R)
+{
+    import std.range.primitives : isSortedRange;
+    static if (isSortedRange!(R, "a < b"))
+    {
+        import std.range.primitives : front;
+        return range.empty ? unit : range.front;
+    }
+    else static if (isSortedRange!(R, "a > b") &&
+                    isBidirectionalRange!R)
+    {
+        import std.range.primitives : back;
+        return range.empty ? unit : range.back;
+    }
+    else
+    {
+        import std.algorithm.iteration : reduce;
+        return reduce!F(unit, range);
+    }
+}
+
+@safe pure nothrow unittest
+{
+    import std.algorithm.sorting : sort, assumeSorted;
+    auto x = [2, 4, 1, 3];
+    assert(x.minElement == 1);
+    assert(x.sort!"a < b".minElement == 1);
+    assert(x.sort!"a > b".minElement == 1);
+}
+
+/** Returns: Maximum Element in $(D range) or $(D unit) if $(D range) is empty.
+ */
+auto maxElement(alias F = max, R)(R range,
+                                  ElementType!R unit = ElementType!R.min)
+    if (isInputRange!R)
+{
+    import std.range.primitives : isSortedRange;
+    static if (isSortedRange!(R, "a > b"))
+    {
+        import std.range.primitives : front;
+        return range.empty ? unit : range.front;
+    }
+    else static if (isSortedRange!(R, "a < b") &&
+                    isBidirectionalRange!R)
+    {
+        import std.range.primitives : back;
+        return range.empty ? unit : range.back;
+    }
+    else
+    {
+        import std.algorithm.iteration : reduce;
+        return reduce!F(unit, range);
+    }
+}
+
+@safe pure nothrow unittest
+{
+    import std.algorithm.sorting : sort, assumeSorted;
+    auto x = [2, 4, 1, 3];
+    assert(x.maxElement == 4);
+    assert(x.sort!"a < b".maxElement == 4);
+    assert(x.sort!"a > b".maxElement == 4);
 }
 
 /**

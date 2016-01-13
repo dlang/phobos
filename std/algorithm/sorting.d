@@ -144,39 +144,45 @@ Returns: true if the range is sorted, false otherwise.
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
-    if (r.empty) return true;
-
-    static if (isRandomAccessRange!Range && hasLength!Range)
+    static if (isSortedRange!(Range, less))
     {
-        immutable limit = r.length - 1;
-        foreach (i; 0 .. limit)
-        {
-            if (!binaryFun!less(r[i + 1], r[i])) continue;
-            assert(
-                !binaryFun!less(r[i], r[i + 1]),
-                "Predicate for isSorted is not antisymmetric. Both" ~
-                        " pred(a, b) and pred(b, a) are true for certain values.");
-            return false;
-        }
+        return true;
     }
     else
     {
-        auto ahead = r;
-        ahead.popFront();
-        size_t i;
-
-        for (; !ahead.empty; ahead.popFront(), r.popFront(), ++i)
+        if (r.empty) return true;
+        static if (isRandomAccessRange!Range && hasLength!Range)
         {
-            if (!binaryFun!less(ahead.front, r.front)) continue;
-            // Check for antisymmetric predicate
-            assert(
-                !binaryFun!less(r.front, ahead.front),
-                "Predicate for isSorted is not antisymmetric. Both" ~
-                        " pred(a, b) and pred(b, a) are true for certain values.");
-            return false;
+            immutable limit = r.length - 1;
+            foreach (i; 0 .. limit)
+            {
+                if (!binaryFun!less(r[i + 1], r[i])) continue;
+                assert(
+                    !binaryFun!less(r[i], r[i + 1]),
+                    "Predicate for isSorted is not antisymmetric. Both" ~
+                    " pred(a, b) and pred(b, a) are true for certain values.");
+                return false;
+            }
         }
+        else
+        {
+            auto ahead = r;
+            ahead.popFront();
+            size_t i;
+
+            for (; !ahead.empty; ahead.popFront(), r.popFront(), ++i)
+            {
+                if (!binaryFun!less(ahead.front, r.front)) continue;
+                // Check for antisymmetric predicate
+                assert(
+                    !binaryFun!less(r.front, ahead.front),
+                    "Predicate for isSorted is not antisymmetric. Both" ~
+                    " pred(a, b) and pred(b, a) are true for certain values.");
+                return false;
+            }
+        }
+        return true;
     }
-    return true;
 }
 
 ///
@@ -188,6 +194,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
     assert(isSorted(arr));
     sort!("a > b")(arr);
     assert(isSorted!("a > b")(arr));
+    assert(isSorted(sort(arr)));
 }
 
 @safe unittest
@@ -994,7 +1001,7 @@ See_Also:
 */
 SortedRange!(Range, less)
 sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
-        Range)(Range r)
+     Range)(Range r)
     if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
                                           hasAssignableElements!Range)) ||
          (ss != SwapStrategy.unstable && hasAssignableElements!Range)) &&
@@ -1006,25 +1013,32 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
        swaps using assignment.
        Stable sorting uses TimSort, which needs to copy elements into a buffer,
        requiring assignable elements. +/
-{
-    import std.range : assumeSorted;
-    alias lessFun = binaryFun!(less);
-    alias LessRet = typeof(lessFun(r.front, r.front));    // instantiate lessFun
-    static if (is(LessRet == bool))
     {
-        static if (ss == SwapStrategy.unstable)
-            quickSortImpl!(lessFun)(r, r.length);
-        else //use Tim Sort for semistable & stable
-            TimSortImpl!(lessFun, Range).sort(r, null);
-
-        enum maxLen = 8;
-        assert(isSorted!lessFun(r), "Failed to sort range of type " ~ Range.stringof);
+    static if (isSortedRange!(Range, less))
+    {
+        return r;               // already sorted, so just return $(D r) as is
     }
     else
     {
-        static assert(false, "Invalid predicate passed to sort: " ~ less.stringof);
+        import std.range : assumeSorted;
+        alias lessFun = binaryFun!(less);
+        alias LessRet = typeof(lessFun(r.front, r.front));    // instantiate lessFun
+        static if (is(LessRet == bool))
+        {
+            static if (ss == SwapStrategy.unstable)
+                quickSortImpl!(lessFun)(r, r.length);
+            else //use Tim Sort for semistable & stable
+                TimSortImpl!(lessFun, Range).sort(r, null);
+
+            enum maxLen = 8;
+            assert(isSorted!lessFun(r), "Failed to sort range of type " ~ Range.stringof);
+        }
+        else
+        {
+            static assert(false, "Invalid predicate passed to sort: " ~ less.stringof);
+        }
+        return assumeSorted!less(r);
     }
-    return assumeSorted!less(r);
 }
 
 ///
@@ -2975,4 +2989,3 @@ shapes. Here's a non-trivial example:
     }
     assert(n == 60);
 }
-
