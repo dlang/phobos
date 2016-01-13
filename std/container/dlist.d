@@ -2,7 +2,7 @@
 This module implements a generic doubly-linked list container.
 It can be used as a queue, dequeue or stack.
 
-This module is a submodule of $(LINK2 std_container.html, std.container).
+This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_dlist.d)
 Macros:

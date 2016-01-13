@@ -4,17 +4,16 @@
 Utilities for manipulating files and scanning directories. Functions
 in this module handle files as a unit, e.g., read or write one _file
 at a time. For opening files and manipulating them via handles refer
-to module $(LINK2 std_stdio.html,$(D std.stdio)).
+to module $(MREF std, stdio).
 
 Macros:
 WIKI = Phobos/StdFile
 
 Copyright: Copyright Digital Mars 2007 - 2011.
 See_Also:  The $(WEB ddili.org/ders/d.en/files.html, official tutorial) for an
-introduction to working with files in D, module
-$(LINK2 std_stdio.html,$(D std.stdio)) for opening files and manipulating them
-via handles, and module $(LINK2 std_path.html,$(D std.path)) for manipulating
-path strings.
+introduction to working with files in D, module  $(MREF std, stdio) for opening
+files and manipulating them via handles, and module $(MREF std, path) for
+manipulating path strings.
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),

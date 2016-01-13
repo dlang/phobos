@@ -116,22 +116,15 @@ $(LEADINGROW Publicly imported functions)
 )
 
 There is a rich set of functions for _string handling defined in other modules.
-Functions related to Unicode and ASCII are found in $(LINK2 std_uni.html, std.uni)
-and $(LINK2 std_ascii.html, std.ascii), respectively. Other functions that have a
-wider generality than just strings can be found in $(LINK2 std_algorithm.html,
-std.algorithm) and $(LINK2 std_range.html, std.range).
+Functions related to Unicode and ASCII are found in $(MREF std, uni) and
+$(MREF std, ascii), respectively. Other functions that have a wider generality
+than just strings can be found in $(MREF std, algorithm) and $(MREF std, range).
 
 See_Also:
     $(LIST
-    $(LINK2 std_algorithm.html, std.algorithm) and
-    $(LINK2 std_range.html, std.range)
-    for generic range algorithms
-    ,
-    $(LINK2 std_ascii.html, std.ascii)
-    for functions that work with ASCII strings
-    ,
-    $(LINK2 std_uni.html, std.uni)
-    for functions that work with unicode strings
+    $(MREF std, algorithm) and $(MREF std, range) for generic range algorithms,
+    $(MREF std, ascii) for functions that work with ASCII strings,
+    $(MREF std, uni) for functions that work with unicode strings
     )
 
 Macros: WIKI = Phobos/StdString
@@ -5459,7 +5452,7 @@ S squeeze(S)(S s, in S pattern = null)
 /***************************************************************
  Finds the position $(D_PARAM pos) of the first character in $(D_PARAM
  s) that does not match $(D_PARAM pattern) (in the terminology used by
- $(LINK2 std_string.html,inPattern)). Updates $(D_PARAM s =
+ $(XREF string, inPattern)). Updates $(D_PARAM s =
  s[pos..$]). Returns the slice from the beginning of the original
  (before update) string up to, and excluding, $(D_PARAM pos).
 
