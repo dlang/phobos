@@ -2186,15 +2186,10 @@ unittest
     }
 }
 
-
 /// An exception that signals a problem with starting or waiting for a process.
 class ProcessException : Exception
 {
-    // Standard constructor.
-    this(string msg, string file = __FILE__, size_t line = __LINE__)
-    {
-        super(msg, file, line);
-    }
+    mixin basicExceptionCtors;
 
     // Creates a new ProcessException based on errno.
     static ProcessException newFromErrno(string customMsg = null,

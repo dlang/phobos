@@ -33,6 +33,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.getopt;
 
 import std.traits;
+import std.exception;  // basicExceptionCtors
 
 /**
 Thrown on one of the following conditions:
@@ -45,18 +46,7 @@ $(UL
 */
 class GetOptException : Exception
 {
-    @safe pure nothrow
-    this(string msg, string file = __FILE__,
-        size_t line = __LINE__)
-    {
-        super(msg, file, line);
-    }
-    @safe pure nothrow
-    this(string msg, Exception next, string file = __FILE__,
-        size_t line = __LINE__)
-    {
-        super(msg, file, line, next);
-    }
+    mixin basicExceptionCtors;
 }
 
 static assert(is(typeof(new GetOptException("message"))));
