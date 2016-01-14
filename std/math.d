@@ -2624,21 +2624,7 @@ unittest
     }
 }
 
-static import core.bitop;
-static if (size_t.sizeof == 4)
-{
-    private int bsr_ulong(ulong x) @trusted pure nothrow @nogc
-    {
-        size_t msb = x >> 32;
-        size_t lsb = cast(size_t) x;
-        if (msb)
-            return core.bitop.bsr(msb) + 32;
-        else
-            return core.bitop.bsr(lsb);
-    }
-}
-else
-    private alias bsr_ulong = core.bitop.bsr;
+import core.bitop : bsr;
 
 /******************************************
  * Extracts the exponent of x as a signed integral value.
@@ -2664,7 +2650,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         ushort[T.sizeof/2] vu;
         uint[T.sizeof/4] vui;
         static if(T.sizeof >= 8)
-            long[T.sizeof/8] vl;
+            ulong[T.sizeof/8] vul;
     }
     floatBits y = void;
     y.rv = x;
@@ -2677,7 +2663,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
             // If exponent is non-zero
             if (ex == F.EXPMASK) // infinity or NaN
             {
-                if (y.vl[0] &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
+                if (y.vul[0] &  0x7FFF_FFFF_FFFF_FFFF)  // NaN
                     return FP_ILOGBNAN;
                 else // +-infinity
                     return int.max;
@@ -2687,7 +2673,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ex - F.EXPBIAS - 1;
             }
         }
-        else if (!y.vl[0])
+        else if (!y.vul[0])
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2695,22 +2681,17 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            uint msb = y.vui[MANTISSA_MSB];
-            uint lsb = y.vui[MANTISSA_LSB];
-            if (msb)
-                return ex - F.EXPBIAS - T.mant_dig + 1 + 32 + core.bitop.bsr(msb);
-            else
-                return ex - F.EXPBIAS - T.mant_dig + 1 + core.bitop.bsr(lsb);
+            return ex - F.EXPBIAS - T.mant_dig + 1 + bsr(y.vul[0]);
         }
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        if (ex)     // If exponent is non-zero
+        if (ex)    // If exponent is non-zero
         {
             if (ex == F.EXPMASK)
             {
                 // infinity or NaN
-                if (y.vl[MANTISSA_LSB] | ( y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
+                if (y.vul[MANTISSA_LSB] | ( y.vul[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
                     return FP_ILOGBNAN;
                 else // +- infinity
                     return int.max;
@@ -2720,7 +2701,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ex - F.EXPBIAS - 1;
             }
         }
-        else if ((y.vl[MANTISSA_LSB] | (y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
+        else if ((y.vul[MANTISSA_LSB] | (y.vul[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2728,12 +2709,12 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            ulong msb = y.vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF;
-            ulong lsb = y.vl[MANTISSA_LSB];
+            ulong msb = y.vul[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF;
+            ulong lsb = y.vul[MANTISSA_LSB];
             if (msb)
-                return ex - F.EXPBIAS - T.mant_dig + 1 + bsr_ulong(msb) + 64;
+                return ex - F.EXPBIAS - T.mant_dig + 1 + bsr(msb) + 64;
             else
-                return ex - F.EXPBIAS - T.mant_dig + 1 + bsr_ulong(lsb);
+                return ex - F.EXPBIAS - T.mant_dig + 1 + bsr(lsb);
         }
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
@@ -2742,7 +2723,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         {
             if (ex == F.EXPMASK)   // infinity or NaN
             {
-                if ((y.vl[0] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FF0_0000_0000_0000)  // +- infinity
+                if ((y.vul[0] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FF0_0000_0000_0000)  // +- infinity
                     return int.max;
                 else // NaN
                     return FP_ILOGBNAN;
@@ -2752,7 +2733,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
                 return ((ex - F.EXPBIAS) >> 4) - 1;
             }
         }
-        else if (!(y.vl[0] & 0x7FFF_FFFF_FFFF_FFFF))
+        else if (!(y.vul[0] & 0x7FFF_FFFF_FFFF_FFFF))
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -2760,13 +2741,8 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            uint msb = y.vui[MANTISSA_MSB] & F.MANTISSAMASK_INT;
-            uint lsb = y.vui[MANTISSA_LSB];
-            if (msb)
-                return ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1 + core.bitop.bsr(msb) + 32;
-            else
-                return ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1 + core.bitop.bsr(lsb);
-
+            enum MANTISSAMASK_64 = ((cast(ulong)F.MANTISSAMASK_INT) << 32) | 0xFFFF_FFFF;
+            return ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1 + bsr(y.vul[0] & MANTISSAMASK_64);
         }
     }
     else static if (F.realFormat == RealFormat.ieeeSingle)
@@ -2794,7 +2770,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         {
             // subnormal
             uint mantissa = y.vui[0] & F.MANTISSAMASK_INT;
-            return ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1 + core.bitop.bsr(mantissa);
+            return ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1 + bsr(mantissa);
         }
     }
     else // static if (F.realFormat == RealFormat.ibmExtended)
@@ -2802,6 +2778,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         core.stdc.math.ilogbl(x);
     }
 }
+/// ditto
 int ilogb(T)(const T x) @safe pure nothrow @nogc
     if(isIntegral!T && isUnsigned!T)
 {
@@ -2809,19 +2786,11 @@ int ilogb(T)(const T x) @safe pure nothrow @nogc
         return FP_ILOGB0;
     else
     {
-        static if (T.sizeof <= size_t.sizeof) {
-            return core.bitop.bsr(x);
-        }
-        else static if (T.sizeof == ulong.sizeof)
-        {
-            return bsr_ulong(x);
-        }
-        else
-        {
-            assert (false, "integer size too large for the current ilogb implementation");
-        }
+        static assert (T.sizeof <= ulong.sizeof, "integer size too large for the current ilogb implementation");
+        return bsr(x);
     }
 }
+/// ditto
 int ilogb(T)(const T x) @safe pure nothrow @nogc
     if(isIntegral!T && isSigned!T)
 {
