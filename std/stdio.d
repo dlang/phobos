@@ -903,6 +903,56 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
     }
 
 /**
+Sets the $(LREF File) to "raw" mode, such that all subsequent reads and writes will
+behave like $(LREF rawRead) and $(LREF rawWrite).
+
+Calls $(LREF flush) (all platforms), and sets the $(D FILE*) to binary mode on Windows.
+
+This can be used to set $(D stdin) and $(D stdout), which are implicitly opened in text
+mode, to binary mode on Windows.
+
+See_Also:
+$(LREF rawRead)
+$(LREF rawWrite)
+ */
+    void setRawMode()
+    {
+        flush(); // before changing translation mode
+        version(Windows)
+        {
+            immutable fd = ._fileno(_p.handle);
+            ._setmode(fd, _O_BINARY);
+            version(DIGITAL_MARS_STDIO)
+            {
+                import core.atomic;
+                immutable info = __fhnd_info[fd];
+                atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
+            }
+        }
+    }
+
+    unittest
+    {
+        static import std.file;
+
+        auto deleteme = testFilename();
+        auto f = File(deleteme, "w"); // open in text mode
+        scope(exit) std.file.remove(deleteme);
+        f.write("\r\n\n\r\n");
+        f.setRawMode();
+        f.write("raw\r\n\n\r\n");
+        f.close();
+        version(Windows)
+        {
+            assert(std.file.read(deleteme) == "\r\r\n\r\n\r\r\nraw\r\n\n\r\n");
+        }
+        else
+        {
+            assert(std.file.read(deleteme) == "\r\n\n\r\nraw\r\n\n\r\n");
+        }
+    }
+
+/**
 Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
 for the file handle.
 
