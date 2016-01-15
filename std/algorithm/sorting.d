@@ -1276,7 +1276,7 @@ package(std) template HeapOps(alias less, Range)
         // Sort
         for (size_t i = r.length - 1; i > 0; --i)
         {
-            swapAt(r, 0, i);
+            r.swapAt(0, i);
             siftDown(r, 0, i);
         }
     }
@@ -1332,7 +1332,7 @@ package(std) template HeapOps(alias less, Range)
             auto child1 = child + 1;
             if (child1 < end && lessFun(r[child], r[child1])) child = child1;
 
-            swapAt(r, parent, child);
+            r.swapAt(parent, child);
             parent = child;
         }
 
@@ -1344,7 +1344,7 @@ package(std) template HeapOps(alias less, Range)
             parent = (child - 1) / 2;
             if(lessFun(r[parent], r[child]))
             {
-                swapAt(r, parent, child);
+                r.swapAt(parent, child);
                 child = parent;
             }
             else break;
