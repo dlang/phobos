@@ -2240,17 +2240,18 @@ auto topN(alias less = "a < b",
     {
         assert(nth < r.length);
         import std.algorithm.mutation : swap;
-        import std.algorithm.searching : minPos;
-        if (nth == 0)
+        immutable eighth = r.length / 8;
+        if (nth < eighth)
         {
-            // Special-case "min"
-            swap(r.front, r.minPos!less.front);
+            // Close to the beginning, use the heap-based algo
+            topNHeap!less(r, nth);
             break;
         }
-        if (nth + 1 == r.length)
+        if (nth + eighth > r.length)
         {
-            // Special-case "max"
-            swap(r.back, r.minPos!((a, b) => binaryFun!less(b, a)).front);
+            // Close to the top, use reverse psychology
+            topNHeap!((a, b) => binaryFun!less(b, a))
+                (r.retro, r.length - nth - 1);
             break;
         }
         auto pivot = r.getPivot!less;
@@ -2280,6 +2281,26 @@ auto topN(alias less = "a < b",
     return ret;
 }
 
+// Alternative topN algorithm that uses a heap. Build a max heap in the left
+// portion of the range, then progressively swaps into it whichever smaller
+// elements are on the right side. Works well when nth is relatively small
+// compared to r.length (complexity is O(r.length * log(nth))).
+private void topNHeap(alias less, Range)(Range r, size_t nth)
+{
+    assert(nth < r.length);
+    alias H = HeapOps!(less, Range);
+    ++nth;
+    H.buildHeap(r[0 .. nth]);
+    import std.algorithm.mutation : swapAt;
+    foreach (i; nth .. r.length)
+    {
+        if (!binaryFun!less(r[i], r.front)) continue;
+        r.swapAt(0, i);
+        H.siftDown(r, 0, nth);
+    }
+    r.swapAt(0, --nth);
+}
+
 ///
 @safe unittest
 {
@@ -2289,6 +2310,8 @@ auto topN(alias less = "a < b",
     auto n = 4;
     topN!"a < b"(v, n);
     assert(v[n] == 9);
+    foreach (i; 0 .. n) assert(v[i] < v[n]);
+    foreach (i; n .. v.length) assert(v[i] >= v[n]);
 }
 
 @safe unittest
