@@ -2163,7 +2163,7 @@ $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
 $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
 (if stable) evaluations of $(D less) and $(D swap).
 
-If $(D n >= r.length), the algorithm has no effect.
+If $(D n >= r.length), the algorithm has no effect and returns `r[0 .. $]`.
 
 Params:
     less = The predicate to sort by.
@@ -2185,19 +2185,28 @@ auto topN(alias less = "a < b",
         Range)(Range r, size_t nth)
     if (isRandomAccessRange!(Range) && hasLength!Range)
 {
-    import std.algorithm : swap; // FIXME
-    import std.random : uniform;
-
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
+
+    if (nth >= r.length) return r[0 .. $];
+
+
     auto ret = r[0 .. nth];
-    while (r.length > nth)
+    for (;;)
     {
+        assert(nth < r.length);
+        import std.algorithm.mutation : swap;
+        import std.algorithm.searching : minPos;
         if (nth == 0)
         {
             // Special-case "min"
-            import std.algorithm.searching : minPos;
             swap(r.front, r.minPos!less.front);
+            break;
+        }
+        if (nth + 1 == r.length)
+        {
+            // Special-case "max"
+            swap(r.back, r.minPos!((a, b) => binaryFun!less(b, a)).front);
             break;
         }
         auto pivot = r.getPivot!less;
@@ -2231,6 +2240,8 @@ auto topN(alias less = "a < b",
 @safe unittest
 {
     int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
+    topN!"a < b"(v, 100);
+    assert(v == [ 25, 7, 9, 2, 0, 5, 21 ]);
     auto n = 4;
     topN!"a < b"(v, n);
     assert(v[n] == 9);
