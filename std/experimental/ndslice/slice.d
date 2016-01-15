@@ -845,7 +845,10 @@ struct Slice(size_t _N, _Range)
             size_t stride;
             foreach (i; Iota!(0, N)) //static
             {
-                assert(_indexes[0][i] < _lengths[i], "indexStride: index must be less than lengths");
+                assert(_indexes[0][i] < _lengths[i],
+                    "indexStride: index at position "
+                    ~ i.stringof ~ " (from range [0 .." ~ N.stringof ~ ")) "
+                    ~ " must be less than corresponding length");
                 stride += _strides[i] * _indexes[0][i];
             }
             return stride;
@@ -855,7 +858,10 @@ struct Slice(size_t _N, _Range)
             size_t stride;
             foreach (i, index; _indexes) //static
             {
-                assert(index < _lengths[i], "indexStride: index must be less than lengths");
+                assert(index < _lengths[i],
+                    "indexStride: index at position "
+                    ~ i.stringof ~ " (from range [0 .." ~ N.stringof ~ ")) "
+                    ~ " must be less than corresponding length");
                 stride += _strides[i] * index;
             }
             return stride;
