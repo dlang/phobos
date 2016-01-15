@@ -27,7 +27,9 @@ Creates an n-dimensional slice-shell over a `range`.
 Params:
     range = a random access range or an array; only index operator
         `auto opIndex(size_t index)` is required for ranges. The length of the
-        range must be greater than or equal to the sum of shift and the product of
+        range should be equal to the sum of shift and the product of
+        lengths. If `allowDownsize`, the length of the
+        range should be greater than or equal to the sum of shift and the product of
         lengths.
     lengths = list of lengths for each dimension
     shift = index of the first element of a `range`.
@@ -41,15 +43,21 @@ Use `no` for compile time function evaluation.
 Returns:
     n-dimensional slice
 +/
-auto sliced(Flag!"replaceArrayWithPointer" mod = Yes.replaceArrayWithPointer, Range, Lengths...)(Range range, Lengths lengths)
+auto sliced(
+    Flag!"replaceArrayWithPointer" replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Flag!"allowDownsize" allowDownsize = No.allowDownsize,
+    Range, Lengths...)(Range range, Lengths lengths)
     if (!isStaticArray!Range && !isNarrowString!Range
         && allSatisfy!(isIndex, Lengths) && Lengths.length)
 {
-    return .sliced!(mod, Lengths.length, Range)(range, [lengths]);
+    return .sliced!(replaceArrayWithPointer, allowDownsize, Lengths.length, Range)(range, [lengths]);
 }
 
 ///ditto
-auto sliced(Flag!"replaceArrayWithPointer" mod = Yes.replaceArrayWithPointer, size_t N, Range)(Range range, auto ref in size_t[N] lengths, size_t shift = 0)
+auto sliced(
+    Flag!"replaceArrayWithPointer" replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Flag!"allowDownsize" allowDownsize = No.allowDownsize,
+    size_t N, Range)(Range range, auto ref in size_t[N] lengths, size_t shift = 0)
     if (!isStaticArray!Range && !isNarrowString!Range && N)
 in
 {
@@ -59,13 +67,24 @@ in
             "All lengths must be positive."
             ~ tailErrorMessage!());
     static if (hasLength!Range)
-        assert(lengthsProduct!N(lengths) + shift <= range.length,
-            "Range length must be greater than or equal to the sum of shift and the product of lengths."
-            ~ tailErrorMessage!());
+    {
+        static if (allowDownsize)
+        {
+            assert(lengthsProduct!N(lengths) + shift <= range.length,
+                "Range length must be greater than or equal to the sum of shift and the product of lengths."
+                ~ tailErrorMessage!());
+        }
+        else
+        {
+            assert(lengthsProduct!N(lengths) + shift == range.length,
+                "Range length must be equal to the sum of shift and the product of lengths."
+                ~ tailErrorMessage!());
+        }
+    }
 }
 body
 {
-    static if (isDynamicArray!Range && mod)
+    static if (isDynamicArray!Range && replaceArrayWithPointer)
     {
         Slice!(N, typeof(range.ptr)) ret = void;
         ret._ptr = range.ptr + shift;
@@ -126,18 +145,21 @@ template sliced(Names...)
     mixin (
     "
     auto sliced(
-            Flag!`replaceArrayWithPointer` mod = Yes.replaceArrayWithPointer,
+            Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+            Flag!`allowDownsize` allowDownsize = No.allowDownsize,
             " ~ _Range_Types!Names ~ "
             Lengths...)
             (" ~ _Range_DeclarationList!Names ~
             "Lengths lengths)
     if (allSatisfy!(isIndex, Lengths))
     {
-        return .sliced!Names(" ~ _Range_Values!Names ~ "[lengths]);
+        alias sliced = .sliced!Names;
+        return sliced!(replaceArrayWithPointer, allowDownsize)(" ~ _Range_Values!Names ~ "[lengths]);
     }
 
     auto sliced(
-            Flag!`replaceArrayWithPointer` mod = Yes.replaceArrayWithPointer,
+            Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+            Flag!`allowDownsize` allowDownsize = No.allowDownsize,
             size_t N, " ~ _Range_Types!Names ~ ")
             (" ~ _Range_DeclarationList!Names ~"
             auto ref in size_t[N] lengths,
@@ -165,16 +187,28 @@ template sliced(Names...)
                 static assert(!isNarrowString!R);
                 mixin (`alias r = range_` ~ name ~`;`);
                 static if (hasLength!R)
-                    assert(minLength <= r.length,
-                        `length of range '` ~ name ~`' must be greater than or equal `
-                        ~ `to the sum of shift and the product of lengths.`
-                        ~ tailErrorMessage!());
-                static if (isDynamicArray!T && mod)
+                {
+                    static if (allowDownsize)
+                    {
+                        assert(minLength <= r.length,
+                            `length of range '` ~ name ~`' must be greater than or equal `
+                            ~ `to the sum of shift and the product of lengths.`
+                            ~ tailErrorMessage!());
+                    }
+                    else
+                    {
+                        assert(minLength == r.length,
+                            `length of range '` ~ name ~`' must be equal `
+                            ~ `to the sum of shift and the product of lengths.`
+                            ~ tailErrorMessage!());
+                    }
+                }
+                static if (isDynamicArray!T && replaceArrayWithPointer)
                     range.ptrs[i] = r.ptr;
                 else
                     range.ptrs[i] = T(0, r);
             }
-            return .sliced!(mod, N, SPT)(range, lengths, shift);
+            return .sliced!(replaceArrayWithPointer, allowDownsize, N, SPT)(range, lengths, shift);
         }
     ~ "}");
 }
@@ -382,6 +416,18 @@ pure nothrow @nogc unittest
     static assert(isRandomAccessRange!S);
 }
 
+/// Slice tuple and flags
+pure nothrow @nogc unittest
+{
+    import std.typecons: Yes, No;
+    static immutable a = [1, 2, 3, 4, 5, 6];
+    static immutable b = [1.0, 2, 3, 4, 5, 6];
+    alias namedSliced = sliced!("a", "b");
+    auto slice = namedSliced!(No.replaceArrayWithPointer, Yes.allowDownsize)
+        (a, b, 2, 3);
+    assert(slice[1, 2].a == slice[1, 2].b);
+}
+
 // sliced slice
 pure nothrow unittest
 {
@@ -534,7 +580,6 @@ pure nothrow unittest
     ///Сompile time function evaluation
     static assert(maxAvg(matrix) == 3);
 }
-
 
 /++
 Returns the element type of the `Slice` type.
