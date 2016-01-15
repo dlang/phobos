@@ -196,10 +196,37 @@ This is handled as a special case and always returns a $(D dchar[]),
 $(D const(dchar)[]), or $(D immutable(dchar)[]) depending on the constness of
 the input.
 */
-ElementType!String[] array(String)(String str) if (isNarrowString!String)
+auto array(String)(String str) if (isNarrowString!String)
 {
     import std.utf : toUTF32;
-    return cast(typeof(return)) str.toUTF32;
+
+    static if (is(ElementEncodingType!String == char) ||
+               is(ElementEncodingType!String == wchar))
+    {
+        alias ReturnType = dchar[];
+    }
+    else static if (is(ElementEncodingType!String == const(char)) ||
+                    is(ElementEncodingType!String == const(wchar)))
+    {
+        alias ReturnType = const(dchar)[];
+    }
+    else
+    {
+        alias ReturnType = immutable(dchar)[];
+    }
+
+    return cast(ReturnType) str.toUTF32;
+}
+
+unittest
+{
+    // Issue 14553
+    foreach(T; TypeTuple!(char, wchar))
+    {
+        assert(is(ReturnType!(array!(T[])) == dchar[]));
+        assert(is(ReturnType!(array!(const(T)[])) == const(dchar)[]));
+        assert(is(ReturnType!(array!(immutable(T)[])) == immutable(dchar)[]));
+    }
 }
 
 unittest
