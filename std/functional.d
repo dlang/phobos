@@ -270,31 +270,127 @@ template stringLambda(alias fun, paramNames...)
  */
 private template stringLambdaAliases(size_t argc, paramNames...)
 {
-    import std.conv : to;
-    import std.array : appender;
-    import std.algorithm : min;
-
-    enum stringLambdaAliases = function()
+    private enum alphas = ('z' - 'a') + 1;
+    static if(argc < paramNames.length)
     {
-        // use a letter for each unspecified param, stopping at 'z'
-        enum numLetters = min(argc, 'z' - 'a' + 1);
-
-        auto ret = appender!string();
-
-        // first create aliases from the specified param names
-        foreach(i, name; paramNames)
+        // ignore unneeded paramNames
+        enum stringLambdaAliases = stringLambdaAliases!(
+            argc,
+            paramNames[0 .. argc]);
+    }
+    else static if(argc > paramNames.length && argc > alphas)
+    {
+        // there are no default aliases after "z"
+        enum stringLambdaAliases = stringLambdaAliases!(
+            alphas > paramNames.length? alphas : paramNames.length,
+            paramNames);
+    }
+    else
+    {
+        enum stringLambdaAliases = function()
         {
-            if(i >= argc)
-                break;
-            ret ~= "alias " ~ paramNames[i] ~ " = args[" ~ i.to!string ~ "];";
-        }
+            // NO IMPORTS
+            if (!__ctfe) assert(false);
 
-        // fill in remaining aliases with letters
-        for(size_t i = paramNames.length; i < numLetters; ++i)
-            ret ~= "alias " ~ cast(char)('a' + i) ~ " = args[" ~ i.to!string ~ "];";
+            char[20] iStr_buff;
+            auto iStr = iStr_buff[($-1) .. $];
+            iStr[0] = '0';
+            void incIdx(ref char[] iStr)
+            {
+                ptrdiff_t x = iStr.length - 1;
+                while(true)
+                {
+                    ++(iStr[x]);
+                    if(iStr[x] <= '9')
+                        return;
 
-        return ret.data;
-    }();
+                    iStr[x] = '0';
+                    --x;
+
+                    if(x < 0)
+                    {
+                        iStr = iStr_buff[($ - (iStr.length + 1)) .. $];
+                        iStr[0] = '1';
+                        return;
+                    }
+                }
+            }
+
+            // minimize reallocations by guessing how big the buffer needs to be
+            enum line = "alias  = args[];\n".length;
+            auto ret_buff = new char[argc * (line + 8)];
+            auto ret = ret_buff[0 .. 0];
+            void put(in char[] append)
+            {
+                ret = ret_buff[0 .. (ret.length + append.length)];
+                ret[($ - append.length) .. $] = append;
+            }
+            void addName(in char[] name, in char[] i)
+            {
+                while(ret_buff.length < (ret.length + line + name.length + i.length))
+                    ret_buff.length *= 2;
+
+                put("alias ");
+                put(name);
+                put(" = args[");
+                put(i);
+                put("];\n");
+            }
+
+            // first create aliases from the specified param names
+            foreach(i, name; paramNames)
+            {
+                addName(name, iStr);
+                incIdx(iStr);
+            }
+            size_t i = paramNames.length;
+
+            // use a letter for each unspecified param, stopping at 'z'
+            while(i < argc)
+            {
+                char[1] name = void;
+                name[0] = cast(char)('a' + i);
+                addName(name, iStr);
+
+                ++i;
+                incIdx(iStr);
+            }
+            return cast(string) ret;
+        }();
+    }
+}
+unittest
+{
+    static assert(stringLambdaAliases!(0) == "");
+
+    // default names
+    enum defUn = "alias a = args[0];\n";
+    static assert(stringLambdaAliases!(1) == defUn);
+    static assert(stringLambdaAliases!(1, "a") == defUn);
+
+    enum defBin = "alias a = args[0];\nalias b = args[1];\n";
+    static assert(stringLambdaAliases!(2) == defBin);
+    static assert(stringLambdaAliases!(2, "a") == defBin);
+    static assert(stringLambdaAliases!(2, "a", "b") == defBin);
+
+    // custom names
+    static assert(stringLambdaAliases!(2, "foo")
+        == "alias foo = args[0];\nalias b = args[1];\n");
+    static assert(stringLambdaAliases!(2, "foo", "ping")
+        == "alias foo = args[0];\nalias ping = args[1];\n");
+
+    // reallocation
+    static assert(stringLambdaAliases!(1, "a123456789b123456789")
+        == "alias a123456789b123456789 = args[0];\n");
+    static assert(stringLambdaAliases!(1, "a123456789b123456789c123456789d123456789")
+        == "alias a123456789b123456789c123456789d123456789 = args[0];\n");
+
+    // excess parmNames
+    static assert(stringLambdaAliases!(2, "alice", "bob", "charlie", "dan")
+        == "alias alice = args[0];\nalias bob = args[1];\n");
+
+    // large argc
+    static assert(stringLambdaAliases!(63) == stringLambdaAliases!(35));
 }
 
 ///
