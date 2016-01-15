@@ -1270,18 +1270,14 @@ package(std) template HeapOps(alias less, Range)
     void heapSort()(Range r)
     {
         // If true, there is nothing to do
-        if(r.length < 2) return;
-
+        if (r.length < 2) return;
         // Build Heap
         buildHeap(r);
-
         // Sort
-        size_t i = r.length - 1;
-        while(i > 0)
+        for (size_t i = r.length - 1; i > 0; --i)
         {
             swapAt(r, 0, i);
-            percolate(r, 0, i);
-            --i;
+            siftDown(r, 0, i);
         }
     }
 
@@ -1289,7 +1285,35 @@ package(std) template HeapOps(alias less, Range)
     void buildHeap()(Range r)
     {
         size_t i = r.length / 2;
-        while(i > 0) percolate(r, --i, r.length);
+        while (i-- > 0) siftDown(r, i, r.length);
+        assert(isHeap(r));
+    }
+
+    bool isHeap()(Range r)
+    {
+        size_t parent = 0;
+        foreach (child; 1 .. r.length)
+        {
+            if (lessFun(r[parent], r[child])) return false;
+            // Increment parent every other pass
+            parent += !(child & 1);
+        }
+        return true;
+    }
+
+    //template because of @@@12410@@@
+    void siftDown()(Range r, size_t parent, immutable size_t end)
+    {
+        for (;;)
+        {
+            auto child = parent * 2 + 1;
+            if (child >= end) break;
+            auto child1 = child + 1;
+            if (child1 < end && lessFun(r[child], r[child1])) child = child1;
+            if (!lessFun(r[parent], r[child])) break;
+            r.swapAt(parent, child);
+            parent = child;
+        }
     }
 
     //template because of @@@12410@@@
@@ -1305,7 +1329,8 @@ package(std) template HeapOps(alias less, Range)
 
             if(child >= end) break;
 
-            if(child + 1 < end && lessFun(r[child], r[child + 1])) child += 1;
+            auto child1 = child + 1;
+            if (child1 < end && lessFun(r[child], r[child1])) child = child1;
 
             swapAt(r, parent, child);
             parent = child;
@@ -2189,7 +2214,6 @@ auto topN(alias less = "a < b",
             "Stable topN not yet implemented");
 
     if (nth >= r.length) return r[0 .. $];
-
 
     auto ret = r[0 .. nth];
     for (;;)
