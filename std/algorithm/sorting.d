@@ -1277,15 +1277,18 @@ package(std) template HeapOps(alias less, Range)
         for (size_t i = r.length - 1; i > 0; --i)
         {
             r.swapAt(0, i);
-            siftDown(r, 0, i);
+            percolate(r, 0, i);
         }
     }
 
     //template because of @@@12410@@@
     void buildHeap()(Range r)
     {
-        size_t i = r.length / 2;
-        while (i-- > 0) siftDown(r, i, r.length);
+        immutable n = r.length;
+        for (size_t i = n / 2; i-- > 0; )
+        {
+            siftDown(r, i, n);
+        }
         assert(isHeap(r));
     }
 
@@ -1301,53 +1304,70 @@ package(std) template HeapOps(alias less, Range)
         return true;
     }
 
-    //template because of @@@12410@@@
+    // Sifts down r[parent] (which is initially assumed to be messed up) so the
+    // heap property is restored for r[parent .. end].
+    // template because of @@@12410@@@
     void siftDown()(Range r, size_t parent, immutable size_t end)
     {
         for (;;)
         {
-            auto child = parent * 2 + 1;
-            if (child >= end) break;
-            auto child1 = child + 1;
-            if (child1 < end && lessFun(r[child], r[child1])) child = child1;
+            auto child = (parent + 1) * 2;
+            if (child >= end)
+            {
+                // Leftover left child?
+                if (child == end && lessFun(r[parent], r[--child]))
+                    r.swapAt(parent, child);
+                break;
+            }
+            auto leftChild = child - 1;
+            if (lessFun(r[child], r[leftChild])) child = leftChild;
             if (!lessFun(r[parent], r[child])) break;
             r.swapAt(parent, child);
             parent = child;
         }
     }
 
+    // Alternate version of siftDown that performs fewer comparisons, see
+    // https://en.wikipedia.org/wiki/Heapsort#Bottom-up_heapsort. The percolate
+    // process first sifts the parent all the way down (without comparing it
+    // against the leaves), and then a bit up until the heap property is
+    // restored. So there are more swaps but fewer comparisons. Gains are made
+    // when the final position is likely to end toward the bottom of the heap,
+    // so not a lot of sifts back are performed.
     //template because of @@@12410@@@
     void percolate()(Range r, size_t parent, immutable size_t end)
     {
         immutable root = parent;
-        size_t child = void;
 
         // Sift down
-        while(true)
+        for (;;)
         {
-            child = parent * 2 + 1;
+            auto child = (parent + 1) * 2;
 
-            if(child >= end) break;
+            if (child >= end)
+            {
+                if (child == end)
+                {
+                    // Leftover left node.
+                    --child;
+                    r.swapAt(parent, child);
+                    parent = child;
+                }
+                break;
+            }
 
-            auto child1 = child + 1;
-            if (child1 < end && lessFun(r[child], r[child1])) child = child1;
-
+            auto leftChild = child - 1;
+            if (lessFun(r[child], r[leftChild])) child = leftChild;
             r.swapAt(parent, child);
             parent = child;
         }
 
-        child = parent;
-
         // Sift up
-        while(child > root)
+        for (auto child = parent; child > root; child = parent)
         {
             parent = (child - 1) / 2;
-            if(lessFun(r[parent], r[child]))
-            {
-                r.swapAt(parent, child);
-                child = parent;
-            }
-            else break;
+            if (!lessFun(r[parent], r[child])) break;
+            r.swapAt(parent, child);
         }
     }
 }
