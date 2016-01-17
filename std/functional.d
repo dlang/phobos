@@ -228,9 +228,14 @@ the specified number of arguments. (Try $(XREF traits, arity) instead.)
 template stringLambda(alias fun, size_t argc, paramNames...)
     if (paramNames.length == 0 || allSatisfy!(isSomeString, typeof(paramNames)))
 {
+    static if(paramNames.length > argc)
+        private alias usedNames = paramNames[0 .. argc];
+    else
+        private alias usedNames = paramNames;
+
     static if (is(typeof(fun) : string))
     {
-        static if (!fun._ctfeMatchNary(paramNames))
+        static if (!fun._ctfeMatchNary(usedNames, "args.length", "args"))
         {
             import std.traits, std.typecons, std.typetuple;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
@@ -239,7 +244,7 @@ template stringLambda(alias fun, size_t argc, paramNames...)
         auto stringLambda(ArgTypes...)(auto ref ArgTypes args)
             if (ArgTypes.length == argc)
         {
-            mixin(stringLambdaAliases!(argc, paramNames));
+            mixin(stringLambdaAliases!(argc, usedNames));
             return mixin(fun);
         }
     }
@@ -270,15 +275,10 @@ template stringLambda(alias fun, paramNames...)
  */
 private template stringLambdaAliases(size_t argc, paramNames...)
 {
+    static assert(paramNames.length <= argc);
+
     private enum alphas = ('z' - 'a') + 1;
-    static if(argc < paramNames.length)
-    {
-        // ignore unneeded paramNames
-        enum stringLambdaAliases = stringLambdaAliases!(
-            argc,
-            paramNames[0 .. argc]);
-    }
-    else static if(argc > paramNames.length && argc > alphas)
+    static if(argc > paramNames.length && argc > alphas)
     {
         // there are no default aliases after "z"
         enum stringLambdaAliases = stringLambdaAliases!(
@@ -384,10 +384,6 @@ unittest
         == "alias a123456789b123456789 = args[0];\n");
     static assert(stringLambdaAliases!(1, "a123456789b123456789c123456789d123456789")
         == "alias a123456789b123456789c123456789d123456789 = args[0];\n");
-
-    // excess parmNames
-    static assert(stringLambdaAliases!(2, "alice", "bob", "charlie", "dan")
-        == "alias alice = args[0];\nalias bob = args[1];\n");
 
     // large argc
     static assert(stringLambdaAliases!(63) == stringLambdaAliases!(35));
