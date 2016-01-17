@@ -2228,7 +2228,7 @@ Stable topN has not been implemented yet.
 auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r, size_t nth)
-    if (isRandomAccessRange!(Range) && hasLength!Range)
+    if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
 {
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
