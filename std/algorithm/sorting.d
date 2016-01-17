@@ -1270,59 +1270,104 @@ package(std) template HeapOps(alias less, Range)
     void heapSort()(Range r)
     {
         // If true, there is nothing to do
-        if(r.length < 2) return;
-
+        if (r.length < 2) return;
         // Build Heap
         buildHeap(r);
-
         // Sort
-        size_t i = r.length - 1;
-        while(i > 0)
+        for (size_t i = r.length - 1; i > 0; --i)
         {
-            swapAt(r, 0, i);
+            r.swapAt(0, i);
             percolate(r, 0, i);
-            --i;
         }
     }
 
     //template because of @@@12410@@@
     void buildHeap()(Range r)
     {
-        size_t i = r.length / 2;
-        while(i > 0) percolate(r, --i, r.length);
+        immutable n = r.length;
+        for (size_t i = n / 2; i-- > 0; )
+        {
+            siftDown(r, i, n);
+        }
+        assert(isHeap(r));
     }
 
+    bool isHeap()(Range r)
+    {
+        size_t parent = 0;
+        foreach (child; 1 .. r.length)
+        {
+            if (lessFun(r[parent], r[child])) return false;
+            // Increment parent every other pass
+            parent += !(child & 1);
+        }
+        return true;
+    }
+
+    // Sifts down r[parent] (which is initially assumed to be messed up) so the
+    // heap property is restored for r[parent .. end].
+    // template because of @@@12410@@@
+    void siftDown()(Range r, size_t parent, immutable size_t end)
+    {
+        for (;;)
+        {
+            auto child = (parent + 1) * 2;
+            if (child >= end)
+            {
+                // Leftover left child?
+                if (child == end && lessFun(r[parent], r[--child]))
+                    r.swapAt(parent, child);
+                break;
+            }
+            auto leftChild = child - 1;
+            if (lessFun(r[child], r[leftChild])) child = leftChild;
+            if (!lessFun(r[parent], r[child])) break;
+            r.swapAt(parent, child);
+            parent = child;
+        }
+    }
+
+    // Alternate version of siftDown that performs fewer comparisons, see
+    // https://en.wikipedia.org/wiki/Heapsort#Bottom-up_heapsort. The percolate
+    // process first sifts the parent all the way down (without comparing it
+    // against the leaves), and then a bit up until the heap property is
+    // restored. So there are more swaps but fewer comparisons. Gains are made
+    // when the final position is likely to end toward the bottom of the heap,
+    // so not a lot of sifts back are performed.
     //template because of @@@12410@@@
     void percolate()(Range r, size_t parent, immutable size_t end)
     {
         immutable root = parent;
-        size_t child = void;
 
         // Sift down
-        while(true)
+        for (;;)
         {
-            child = parent * 2 + 1;
+            auto child = (parent + 1) * 2;
 
-            if(child >= end) break;
+            if (child >= end)
+            {
+                if (child == end)
+                {
+                    // Leftover left node.
+                    --child;
+                    r.swapAt(parent, child);
+                    parent = child;
+                }
+                break;
+            }
 
-            if(child + 1 < end && lessFun(r[child], r[child + 1])) child += 1;
-
-            swapAt(r, parent, child);
+            auto leftChild = child - 1;
+            if (lessFun(r[child], r[leftChild])) child = leftChild;
+            r.swapAt(parent, child);
             parent = child;
         }
 
-        child = parent;
-
         // Sift up
-        while(child > root)
+        for (auto child = parent; child > root; child = parent)
         {
             parent = (child - 1) / 2;
-            if(lessFun(r[parent], r[child]))
-            {
-                swapAt(r, parent, child);
-                child = parent;
-            }
-            else break;
+            if (!lessFun(r[parent], r[child])) break;
+            r.swapAt(parent, child);
         }
     }
 }
@@ -2189,7 +2234,6 @@ auto topN(alias less = "a < b",
             "Stable topN not yet implemented");
 
     if (nth >= r.length) return r[0 .. $];
-
 
     auto ret = r[0 .. nth];
     for (;;)
