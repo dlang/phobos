@@ -235,7 +235,7 @@ template stringLambda(alias fun, size_t argc, paramNames...)
 
     static if (is(typeof(fun) : string))
     {
-        static if (!fun._ctfeMatchNary(usedNames, "args.length", "args"))
+        static if (fun.strLambdaNeedsImports(usedNames))
         {
             import std.traits, std.typecons, std.typetuple;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
@@ -244,7 +244,7 @@ template stringLambda(alias fun, size_t argc, paramNames...)
         auto stringLambda(ArgTypes...)(auto ref ArgTypes args)
             if (ArgTypes.length == argc)
         {
-            mixin(stringLambdaAliases!(argc, usedNames));
+            mixin(strLambdaAliases!(argc, usedNames));
             return mixin(fun);
         }
     }
@@ -273,7 +273,7 @@ template stringLambda(alias fun, paramNames...)
  * scope and memoizing it as a template, instead of regenerating it with every
  * stringLambda instantiation.
  */
-private template stringLambdaAliases(size_t argc, paramNames...)
+private template strLambdaAliases(size_t argc, paramNames...)
 {
     static assert(paramNames.length <= argc);
 
@@ -281,13 +281,13 @@ private template stringLambdaAliases(size_t argc, paramNames...)
     static if(argc > paramNames.length && argc > alphas)
     {
         // there are no default aliases after "z"
-        enum stringLambdaAliases = stringLambdaAliases!(
+        enum strLambdaAliases = strLambdaAliases!(
             alphas > paramNames.length? alphas : paramNames.length,
             paramNames);
     }
     else
     {
-        enum stringLambdaAliases = function()
+        enum strLambdaAliases = function()
         {
             // NO IMPORTS
             if (!__ctfe) assert(false);
@@ -361,32 +361,32 @@ private template stringLambdaAliases(size_t argc, paramNames...)
 }
 unittest
 {
-    static assert(stringLambdaAliases!(0) == "");
+    static assert(strLambdaAliases!(0) == "");
 
     // default names
     enum defUn = "alias a = args[0];\n";
-    static assert(stringLambdaAliases!(1) == defUn);
-    static assert(stringLambdaAliases!(1, "a") == defUn);
+    static assert(strLambdaAliases!(1) == defUn);
+    static assert(strLambdaAliases!(1, "a") == defUn);
 
     enum defBin = "alias a = args[0];\nalias b = args[1];\n";
-    static assert(stringLambdaAliases!(2) == defBin);
-    static assert(stringLambdaAliases!(2, "a") == defBin);
-    static assert(stringLambdaAliases!(2, "a", "b") == defBin);
+    static assert(strLambdaAliases!(2) == defBin);
+    static assert(strLambdaAliases!(2, "a") == defBin);
+    static assert(strLambdaAliases!(2, "a", "b") == defBin);
 
     // custom names
-    static assert(stringLambdaAliases!(2, "foo")
+    static assert(strLambdaAliases!(2, "foo")
         == "alias foo = args[0];\nalias b = args[1];\n");
-    static assert(stringLambdaAliases!(2, "foo", "ping")
+    static assert(strLambdaAliases!(2, "foo", "ping")
         == "alias foo = args[0];\nalias ping = args[1];\n");
 
     // reallocation
-    static assert(stringLambdaAliases!(1, "a123456789b123456789")
+    static assert(strLambdaAliases!(1, "a123456789b123456789")
         == "alias a123456789b123456789 = args[0];\n");
-    static assert(stringLambdaAliases!(1, "a123456789b123456789c123456789d123456789")
+    static assert(strLambdaAliases!(1, "a123456789b123456789c123456789d123456789")
         == "alias a123456789b123456789c123456789d123456789 = args[0];\n");
 
     // large argc
-    static assert(stringLambdaAliases!(63) == stringLambdaAliases!(35));
+    static assert(strLambdaAliases!(63) == strLambdaAliases!(35));
 }
 
 ///
@@ -427,127 +427,123 @@ unittest
     assert(mix(1,2,3,4) == [1,2,3,4]);
 }
 
-// skip all ASCII chars except a..z, A..Z, 0..9, '_' and '.'.
-private uint _ctfeSkipOp(ref string op)
+// returns true if `fun` contains symbols other than its parameters
+private bool strLambdaNeedsImports(string fun, const(string[]) names...)
 {
     if (!__ctfe) assert(false);
-    import std.ascii : isASCII, isAlphaNum;
-    immutable oldLength = op.length;
-    while (op.length)
-    {
-        immutable front = op[0];
-        if(front.isASCII() && !(front.isAlphaNum() || front == '_' || front == '.'))
-            op = op[1..$];
-        else
-            break;
+
+    size_t maxSym = ".length".length;
+    bool[string] known = [
+        "args"    : true,
+        ".length" : true
+    ];
+    foreach(name; names) {
+        if(name.length > maxSym)
+            maxSym = name.length;
+
+        known[name] = true;
     }
-    return oldLength != op.length;
-}
+    known = known.rehash;
 
-// skip all digits
-private uint _ctfeSkipInteger(ref string op)
-{
-    if (!__ctfe) assert(false);
-    import std.ascii : isDigit;
-    immutable oldLength = op.length;
-    while (op.length)
+    char[] symBuff = new char[maxSym];
+    char[] sym;
+    bool inSym =  false;
+    foreach(char ch; fun)
     {
-        immutable front = op[0];
-        if(front.isDigit())
-            op = op[1..$];
-        else
-            break;
-    }
-    return oldLength != op.length;
-}
+        const alphish = (ch >= 'A' && ch <= 'z')?
+            (ch >= '_' && ch != '`') || (ch <= 'Z') :
+            (ch > 0x7F);
+        /* Non-ASCII (ch > 0x7F) are probably part of an identifier.
+           Worst case, we'll just waste a little time importing stuff we don't need. */
 
-// skip name
-private uint _ctfeSkipName(ref string op, string name)
-{
-    if (!__ctfe) assert(false);
-    if (op.length >= name.length && op[0..name.length] == name)
-    {
-        op = op[name.length..$];
-        return 1;
-    }
-    return 0;
-}
-
-// returns 1 if $(D fun) is trivial n-ary function
-private uint _ctfeMatchNary(string fun, string[] names...)
-{
-    if (!__ctfe) assert(false);
-    fun._ctfeSkipOp();
-    for (;;)
-    {
-        uint h = 0;
-
-        foreach(name ; names)
-            h += fun._ctfeSkipName(name);
-
-        h += fun._ctfeSkipInteger;
-
-        if (h == 0)
+        if(inSym)
         {
-            fun._ctfeSkipOp();
-            break;
+            if(sym[$ - 1] == '.')
+            {
+                import std.ascii : isWhite;
+                if(isWhite(ch))
+                    continue;
+            }
+
+            if(alphish || (ch >= '0' && ch <= '9'))
+            {
+                if(sym.length < maxSym)
+                {
+                    sym = symBuff[0 .. (sym.length + 1)];
+                    sym[$ - 1] = ch;
+                } else
+                    return true;
+            }
+            else
+            {
+                if(!(sym in known))
+                    return true;
+
+                inSym = false;
+            }
         }
-        else if (h == 1)
+
+        if(!inSym)
         {
-            if(!fun._ctfeSkipOp())
-                break;
+            if(alphish || ch == '.')
+            {
+                inSym = true;
+                sym = symBuff[0 .. 1];
+                sym[0] = ch;
+            }
         }
-        else
-            return 0;
     }
-    return fun.length == 0;
+
+    return inSym? !(sym in known) : false;
 }
+
 
 unittest {
-    static assert(!_ctfeMatchNary("sqrt(ё)", "ё", "b"));
-    static assert(!_ctfeMatchNary("ё.sqrt", "ё", "b"));
-    static assert(!_ctfeMatchNary(".ё+ё", "ё", "b"));
-    static assert(!_ctfeMatchNary("_ё+ё", "ё", "b"));
-    static assert(!_ctfeMatchNary("ёё", "ё", "b"));
-    static assert(_ctfeMatchNary("a+a", "a", "b"));
-    static assert(_ctfeMatchNary("a + 10", "a", "b"));
-    static assert(_ctfeMatchNary("4 == a", "a", "b"));
-    static assert(_ctfeMatchNary("2==a", "a", "b"));
-    static assert(_ctfeMatchNary("1 != a", "a", "b"));
-    static assert(_ctfeMatchNary("a!=4", "a", "b"));
-    static assert(_ctfeMatchNary("a< 1", "a", "b"));
-    static assert(_ctfeMatchNary("434 < a", "a", "b"));
-    static assert(_ctfeMatchNary("132 > a", "a", "b"));
-    static assert(_ctfeMatchNary("123 >a", "a", "b"));
-    static assert(_ctfeMatchNary("a>82", "a", "b"));
-    static assert(_ctfeMatchNary("ё>82", "ё", "q"));
-    static assert(_ctfeMatchNary("ё[ё(10)]", "ё", "q"));
-    static assert(_ctfeMatchNary("ё[21]", "ё", "q"));
+    static assert( strLambdaNeedsImports("sqrt(ё)", "ё", "b"));
+    static assert( strLambdaNeedsImports("ё.sqrt", "ё", "b"));
+    static assert( strLambdaNeedsImports(".ё+ё", "ё", "b"));
+    static assert( strLambdaNeedsImports("_ё+ё", "ё", "b"));
+    static assert( strLambdaNeedsImports("ёё", "ё", "b"));
+    static assert(!strLambdaNeedsImports("a+a", "a", "b"));
+    static assert(!strLambdaNeedsImports("a + 10", "a", "b"));
+    static assert(!strLambdaNeedsImports("4 == a", "a", "b"));
+    static assert(!strLambdaNeedsImports("2==a", "a", "b"));
+    static assert(!strLambdaNeedsImports("1 != a", "a", "b"));
+    static assert(!strLambdaNeedsImports("a!=4", "a", "b"));
+    static assert(!strLambdaNeedsImports("a< 1", "a", "b"));
+    static assert(!strLambdaNeedsImports("434 < a", "a", "b"));
+    static assert(!strLambdaNeedsImports("132 > a", "a", "b"));
+    static assert(!strLambdaNeedsImports("123 >a", "a", "b"));
+    static assert(!strLambdaNeedsImports("a>82", "a", "b"));
+    static assert(!strLambdaNeedsImports("ё>82", "ё", "q"));
+    static assert(!strLambdaNeedsImports("ё[ё(10)]", "ё", "q"));
+    static assert(!strLambdaNeedsImports("ё[21]", "ё", "q"));
 
-    static assert(!_ctfeMatchNary("sqrt(ё)+b", "b", "ё"));
-    static assert(!_ctfeMatchNary("ё.sqrt-b", "b", "ё"));
-    static assert(!_ctfeMatchNary(".ё+b", "b", "ё"));
-    static assert(!_ctfeMatchNary("_b+ё", "b", "ё"));
-    static assert(!_ctfeMatchNary("ba", "b", "a"));
-    static assert(_ctfeMatchNary("a+b", "b", "a"));
-    static assert(_ctfeMatchNary("a + b", "b", "a"));
-    static assert(_ctfeMatchNary("b == a", "b", "a"));
-    static assert(_ctfeMatchNary("b==a", "b", "a"));
-    static assert(_ctfeMatchNary("b != a", "b", "a"));
-    static assert(_ctfeMatchNary("a!=b", "b", "a"));
-    static assert(_ctfeMatchNary("a< b", "b", "a"));
-    static assert(_ctfeMatchNary("b < a", "b", "a"));
-    static assert(_ctfeMatchNary("b > a", "b", "a"));
-    static assert(_ctfeMatchNary("b >a", "b", "a"));
-    static assert(_ctfeMatchNary("a>b", "b", "a"));
-    static assert(_ctfeMatchNary("ё>b", "b", "ё"));
-    static assert(_ctfeMatchNary("b[ё(-1)]", "b", "ё"));
-    static assert(_ctfeMatchNary("ё[-21]", "b", "ё"));
+    static assert( strLambdaNeedsImports("sqrt(ё)+b", "b", "ё"));
+    static assert( strLambdaNeedsImports("ё.sqrt-b", "b", "ё"));
+    static assert( strLambdaNeedsImports(".ё+b", "b", "ё"));
+    static assert( strLambdaNeedsImports("_b+ё", "b", "ё"));
+    static assert( strLambdaNeedsImports("ba", "b", "a"));
+    static assert(!strLambdaNeedsImports("a+b", "b", "a"));
+    static assert(!strLambdaNeedsImports("a + b", "b", "a"));
+    static assert(!strLambdaNeedsImports("b == a", "b", "a"));
+    static assert(!strLambdaNeedsImports("b==a", "b", "a"));
+    static assert(!strLambdaNeedsImports("b != a", "b", "a"));
+    static assert(!strLambdaNeedsImports("a!=b", "b", "a"));
+    static assert(!strLambdaNeedsImports("a< b", "b", "a"));
+    static assert(!strLambdaNeedsImports("b < a", "b", "a"));
+    static assert(!strLambdaNeedsImports("b > a", "b", "a"));
+    static assert(!strLambdaNeedsImports("b >a", "b", "a"));
+    static assert(!strLambdaNeedsImports("a>b", "b", "a"));
+    static assert(!strLambdaNeedsImports("ё>b", "b", "ё"));
+    static assert(!strLambdaNeedsImports("b[ё(-1)]", "b", "ё"));
+    static assert(!strLambdaNeedsImports("ё[-21]", "b", "ё"));
 
-    static assert(!_ctfeMatchNary("sqrt(a)+b-c", "a", "b", "c"));
-    static assert(!_ctfeMatchNary("a.sqrt-c+b", "a", "b", "c"));
-    static assert(_ctfeMatchNary("a+b+c", "a", "b", "c"));
-    static assert(_ctfeMatchNary("args.length + args[1] + args[0] + a + b", "b", "a"));
+    static assert( strLambdaNeedsImports("sqrt(a)+b-c", "a", "b", "c"));
+    static assert( strLambdaNeedsImports("a.sqrt-c+b", "a", "b", "c"));
+    static assert(!strLambdaNeedsImports("a+b+c", "a", "b", "c"));
+    static assert(!strLambdaNeedsImports("args.length + args[1] + args[0] + a + b", "b", "a"));
+    static assert(!strLambdaNeedsImports("args    .  length"));
 }
 
 //undocumented
