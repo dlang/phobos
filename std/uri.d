@@ -36,20 +36,14 @@ private import core.stdc.stdlib;
 private import std.utf;
 private import std.traits : isSomeChar;
 import core.exception : OutOfMemoryError;
-import std.exception : assumeUnique;
+import std.exception;
 
 /** This Exception is thrown if something goes wrong when encoding or
 decoding a URI.
 */
 class URIException : Exception
 {
-    import std.array : empty;
-    @safe pure nothrow this(string msg, string file = __FILE__,
-        size_t line = __LINE__, Throwable next = null)
-    {
-        super("URI Exception" ~ (!msg.empty ? ": " ~ msg : ""), file, line,
-            next);
-    }
+    mixin basicExceptionCtors;
 }
 
 private enum

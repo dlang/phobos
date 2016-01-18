@@ -299,10 +299,7 @@ class MailboxFull : Exception
  */
 class TidMissingException : Exception
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__)
-    {
-        super(msg, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 
@@ -1695,8 +1692,7 @@ void yield(T)(ref T value)
         cur.m_value = &value;
         return Fiber.yield();
     }
-    throw new Exception("yield(T) called with no active generator for the supplied type",
-                        __FILE__, __LINE__);
+    throw new Exception("yield(T) called with no active generator for the supplied type");
 }
 
 

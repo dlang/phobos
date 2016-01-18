@@ -741,9 +741,5 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
 ///Exception object thrown in case of errors during regex compilation.
 public class RegexException : Exception
 {
-    ///
-    @trusted this(string msg, string file = __FILE__, size_t line = __LINE__)
-    {//@@@BUG@@@ Exception constructor is not @safe
-        super(msg, file, line);
-    }
+    mixin basicExceptionCtors;
 }

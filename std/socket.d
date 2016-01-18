@@ -50,7 +50,7 @@ import core.stdc.stdint, core.stdc.string, std.string, core.stdc.stdlib, std.con
 
 import core.stdc.config;
 import core.time : dur, Duration;
-import std.exception : assumeUnique, enforce, collectException;
+import std.exception;
 
 import std.internal.cstring;
 
@@ -145,17 +145,7 @@ version(unittest)
 /// Base exception thrown by $(D std.socket).
 class SocketException: Exception
 {
-    ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) pure nothrow
-    {
-        super(msg, file, line, next);
-    }
-
-    ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__) pure nothrow
-    {
-        super(msg, next, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 
@@ -279,34 +269,14 @@ class SocketOSException: SocketException
 /// Socket exceptions representing invalid parameters specified by user code.
 class SocketParameterException: SocketException
 {
-    ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) pure nothrow
-    {
-        super(msg, file, line, next);
-    }
-
-    ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__) pure nothrow
-    {
-        super(msg, next, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 /// Socket exceptions representing attempts to use network capabilities not
 /// available on the current system.
 class SocketFeatureException: SocketException
 {
-    ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) pure nothrow
-    {
-        super(msg, file, line, next);
-    }
-
-    ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__) pure nothrow
-    {
-        super(msg, next, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 
@@ -625,28 +595,37 @@ unittest
 }
 
 
-/**
- * Class for exceptions thrown from an $(D InternetHost).
- */
-class HostException: SocketOSException
+private mixin template socketOSExceptionCtors()
 {
     ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null, int err = _lasterr())
+    this(string msg, string file = __FILE__, size_t line = __LINE__,
+         Throwable next = null, int err = _lasterr())
     {
         super(msg, file, line, next, err);
     }
 
     ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__, int err = _lasterr())
+    this(string msg, Throwable next, string file = __FILE__,
+         size_t line = __LINE__, int err = _lasterr())
     {
         super(msg, next, file, line, err);
     }
 
     ///
-    this(string msg, int err, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    this(string msg, int err, string file = __FILE__, size_t line = __LINE__,
+         Throwable next = null)
     {
         super(msg, next, file, line, err);
     }
+}
+
+
+/**
+ * Class for exceptions thrown from an $(D InternetHost).
+ */
+class HostException: SocketOSException
+{
+    mixin socketOSExceptionCtors;
 }
 
 /**
@@ -1251,23 +1230,7 @@ unittest
  */
 class AddressException: SocketOSException
 {
-    ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null, int err = _lasterr())
-    {
-        super(msg, file, line, next, err);
-    }
-
-    ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__, int err = _lasterr())
-    {
-        super(msg, next, file, line, err);
-    }
-
-    ///
-    this(string msg, int err, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
-    {
-        super(msg, next, file, line, err);
-    }
+    mixin socketOSExceptionCtors;
 }
 
 
@@ -2080,23 +2043,7 @@ static if (is(sockaddr_un))
  */
 class SocketAcceptException: SocketOSException
 {
-    ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null, int err = _lasterr())
-    {
-        super(msg, file, line, next, err);
-    }
-
-    ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__, int err = _lasterr())
-    {
-        super(msg, next, file, line, err);
-    }
-
-    ///
-    this(string msg, int err, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
-    {
-        super(msg, next, file, line, err);
-    }
+    mixin socketOSExceptionCtors;
 }
 
 /// How a socket is shutdown:
