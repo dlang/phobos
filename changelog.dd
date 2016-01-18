@@ -51,6 +51,7 @@ $(BUGSTITLE Library Changes,
     logic.)
     $(LI $(RELATIVE_LINK2 quantize, Added `std.math.quantize`, for rounding to
         the nearest multiple of some number.))
+    $(LI $(RELATIVE_LINK2 traits, Three new traits were added to `std.traits`.))
 )
 
 $(BUGSTITLE Library Changes,
@@ -264,6 +265,57 @@ assert(12345.6789L.quantize(20.0L) == 12340.0L);
 assert(12345.6789L.quantize!(10, -2) == 12345.68L);
 assert(12345.6789L.quantize!(10, floor)(-2) == 12345.67L);
 ---
+
+$(LI $(LNAME2 traits, Three new traits were added to `std.traits`.)
+    $(P $(XREF traits, isType), $(XREF traits, isFunction), and
+    $(XREF traits, isFinal) were added to `std.traits`.
+    )
+
+-------
+import std.traits;
+
+static assert(isType!int);
+
+struct S {}
+class C {}
+interface I {}
+
+static assert(isType!S);
+static assert(isType!C);
+static assert(isType!I);
+-------
+
+-------
+import std.traits;
+
+void func(){}
+struct S
+{
+    @property int prop(){ return 0; }
+}
+
+static assert(isFunction!func);
+static assert(isFunction!(S.prop));
+
+// is a delegate type, not function type
+static assert(!isFunction!(typeof(&S.prop)));
+-------
+
+-------
+import std.traits;
+
+class C
+{
+    void nf() {}
+    final void ff() {}
+}
+final class FC {}
+
+static assert(!isFinal!(C));
+static assert( isFinal!(FC));
+static assert(!isFinal!(C.nf));
+static assert( isFinal!(C.ff));
+-------
 )
 
 )
