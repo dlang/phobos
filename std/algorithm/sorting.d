@@ -2236,19 +2236,20 @@ auto topN(alias less = "a < b",
     if (nth >= r.length) return r[0 .. $];
 
     auto ret = r[0 .. nth];
-
-    for (;;)
+    auto maxExpectedLength = r.length;
+    for (uint step = 1;; ++step)
     {
         assert(nth < r.length);
+
         import std.algorithm.mutation : swapAt;
         import core.bitop : bsr;
 
-        immutable logLength = bsr(r.length);
-
         // If nth <= n/log(n) we go with topNHeap. Say n is 1024, then we use
         // topNHeap for n from 0 through 102 inclusive.
+        immutable logLength = bsr(r.length);
         if (nth * logLength <= r.length)
         {
+        heapSmallNth:
             topNHeap!less(r, nth);
             break;
         }
@@ -2256,9 +2257,24 @@ auto topN(alias less = "a < b",
         immutable delta = r.length - nth - 1;
         if (delta * logLength <= r.length)
         {
+        heapLargeNth:
             topNHeap!((a, b) => binaryFun!less(b, a))(r.retro, delta);
             break;
         }
+
+        // Performance tracking: we need to avoid the edge case of quadratic
+        // performance in quickselect. We want to make sure that after 3 steps
+        // or more, each step reduces the length by the arbitrary constant 1.0 /
+        // 8.0 (12.5%) or better on average. To track performance we manage
+        // maxExpectedLength, which is he upper bound for r.length.
+        if (step > 3 && r.length > maxExpectedLength)
+        {
+            // Performance has degraded, enough with this nonsense!
+            // Shameless goto is shameless.
+            if (nth * 2 <= r.length) goto heapSmallNth;
+            goto heapLargeNth;
+        }
+        maxExpectedLength = maxExpectedLength * 7 / 8;
 
         // nth is close to median, take one quickselect step
         auto pivot = r.getPivot!less;
