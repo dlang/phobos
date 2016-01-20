@@ -2690,19 +2690,32 @@ private void medianOf5OrFewer(alias less, Range)(Range r)
 Computes an approximate median in $(BIGOH r.length) time by using the
 $(LUCKY median of medians) algorithm by Blum, Floyd, Pratt, Rivest, and
 Tarjan, first published in their paper $(LUCKY Time Bounds for Selection). The
-`medianOfMedians` function may be used either directly for computing the index
-of an approximate median, or as a pivot for partitioning or sorting.
+two functions work in tandem and are mututally recursive:
+`medianOfMediansPartition` calls `medianOfMediansPivot` to get a pivot, and
+`medianOfMediansPivot` calls`medianOfMediansPartition` to compute the median
+for a subset of values.
+
+User code may call `medianOfMediansPartition` directly to partition data.
+Semantics is identical to $(LREF topN). Generally, `topN` is expected to be
+faster than `medianOfMediansPartition` especially for small values of `nth`.
+Also, user code may call `medianOfMediansPivot` to get the index of a good
+median approximation (which may be used as a pivot choosing strategy in a
+quicksort implementation).
 
 Params:
-    less = the ordering predicate used for comparison, modeled after `<`
-    r = the random access range in which the median is sought
+    less = The ordering predicate used for comparison, modeled after `<`.
+    r = The random access range of interest.
+    nth = Same as in $(LREF topN), the index of the element that should be in
+        sorted position after the function is done. (`medianOfMediansPivot`
+        calls `medianOfMediansPartition` with half the range length.)
 
-Returns: An index `i` such that `r[i]` is within 30th to 70th percentiles (i.e.
-in the middle 4 deciles). That means there are at least `0.3 * r.length`
-elements `x` in `r` that satisfy `!less(x, r[i])` and also at least
-`0.3 * r.length` elements `y` in `r` that satisfy `!less(r[i], y)`.
+Returns: `medianOfMediansPivot` returns an index `i` such that `r[i]` is within
+30th to 70th percentiles (i.e. in the middle 4 deciles). That means there are
+at least `0.3 * r.length` elements `x` in `r` that satisfy `!less(x, r[i])`
+and also at least `0.3 * r.length` elements `y` in `r` that satisfy
+`!less(r[i], y)`. `medianOfMediansPartition` returns `r[0 .. min($, nth)]`.
 */
-size_t medianOfMedians(alias less = "a < b", Range)(Range r)
+size_t medianOfMediansPivot(alias less = "a < b", Range)(Range r)
 if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
 {
     alias lessFun = binaryFun!less;
@@ -2721,23 +2734,63 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
     r[i .. $].medianOf5OrFewer!lessFun;
     // Take a stride across all medians of five
     import std.range : stride;
-    return 2 + 5 * r[2 .. $].stride(5).medianOfMedians!less;
+    auto s = r[2 .. $].stride(5);
+    auto left = s.medianOfMediansPartition!lessFun(s.length / 2);
+    return 2 + 5 * left.length;
+}
+
+/// ditto
+Range medianOfMediansPartition(alias less = "a < b", Range)
+    (Range r, size_t nth)
+if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
+{
+    if (nth >= r.length) return r[0 .. $];
+    auto result = r[0 .. nth];
+    for (;;)
+    {
+        auto pivot = r.medianOfMediansPivot!less;
+        assert(pivot < r.length);
+        assert(!binaryFun!less(r[pivot], r[pivot]));
+        import std.algorithm.mutation : swapAt;
+        r.swapAt(pivot, r.length - 1);
+        auto right = r.partition!(a => binaryFun!less(a, r.back));
+        assert(right.length >= 1);
+        pivot = r.length - right.length;
+        if (pivot > nth)
+        {
+            // We don't care to swap the pivot back, won't be visited anymore
+            assert(pivot < r.length);
+            r = r[0 .. pivot];
+            continue;
+        }
+        // Swap the pivot to where it should be
+        right.swapAt(0, right.length - 1);
+        if (pivot == nth)
+        {
+            // Found Waldo!
+            break;
+        }
+        ++pivot; // skip the pivot
+        r = r[pivot .. $];
+        nth -= pivot;
+    }
+    return result;
 }
 
 ///
 unittest
 {
-    import std.algorithm.iteration : map;
-    import std.algorithm.searching : count;
+    import std.algorithm : count, map, minPos;
     import std.array : array;
     import std.random : uniform;
     import std.range : iota;
+    // Create an array of 100 random integers ranging between 0 and 1000.
     auto v = iota(0, 100).map!(_ => uniform(0, 1_000)).array;
-    auto m = v.medianOfMedians;
-    auto notGreater = v.count!(a => a <= v[m]);
-    auto notSmaller = v.count!(a => a >= v[m]);
-    assert(notGreater >= 0.3 * v.length);
-    assert(notSmaller >= 0.3 * v.length);
+    auto left = v.medianOfMediansPartition(v.length / 2);
+    // The largest element left of the median is less than or equal
+    assert(left.minPos!"a > b".front <= v[left.length]);
+    // The smallest element right of the median is greater than or equal
+    assert(v[left.length .. $].minPos.front >= v[left.length]);
 }
 
 // nextPermutation
