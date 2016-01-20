@@ -2626,6 +2626,120 @@ unittest
     }
 }
 
+// Always leaves median in r[2]. Credit goes to Xinok, see e.g.
+// http://stackoverflow.com/questions/11065963/possible-to-partition-five-elements-by-median-with-six-comparisons
+private void medianOf5(alias less, Range)(Range r)
+{
+    assert(r.length == 5);
+    enum : uint { a, b, c, d, e }
+    scope(success) assert(!less(r[c], r[a]) && !less(r[c], r[b]) &&
+        !less(r[d], r[c]) && !less(r[e], r[c]));
+
+    import std.algorithm.mutation : swapAt;
+
+    if (less(r[b], r[a])) r.swapAt(a, b);
+    if (less(r[e], r[d])) r.swapAt(d, e);
+    if (less(r[a], r[d]))
+    {
+        if (less(r[c], r[b])) r.swapAt(b, c);
+    }
+    else
+    {
+        r.swapAt(a, d);
+        r.swapAt(d, b);
+        if (less(r[e], r[c])) r.swapAt(c, e);
+        r.swapAt(c, d);
+    }
+    if (!less(r[b], r[d])) // #5
+    {
+        r.swapAt(b, d);
+        r.swapAt(c, e);
+    }
+    if (less(r[d], r[c])) r.swapAt(c, d);
+}
+
+// Places median value at r[($ | 1) / 2]. That means for even values of
+// r.length, the index is right-leaning: r[1] for length 2, r[2] for length 4.
+private void medianOf5OrFewer(alias less, Range)(Range r)
+{
+    assert(r.length <= 5);
+    import std.algorithm.mutation : swapAt;
+    switch (r.length)
+    {
+        case 5:
+            medianOf5!less(r);
+            break;
+        case 4:
+            if (less(r[0], r[1])) r.swapAt(0, 1);
+            if (less(r[0], r[2])) r.swapAt(0, 2);
+            // a<=b and a<=c so first element can't be the median
+            r = r[1 .. $];
+            goto case 3;
+        case 3:
+            if (less(r[2], r[0])) r.swapAt(0, 2);
+            if (less(r[1], r[0])) r.swapAt(0, 1); // b<a<=c so a is the median
+            // a<=c && a<=b, median is b or c
+            else if (less(r[2], r[1])) r.swapAt(1, 2);
+            break;
+        default:
+            break;
+    }
+}
+
+/**
+Computes an approximate median in $(BIGOH r.length) time by using the
+$(LUCKY median of medians) algorithm by Blum, Floyd, Pratt, Rivest, and
+Tarjan, first published in their paper $(LUCKY Time Bounds for Selection). The
+`medianOfMedians` function may be used either directly for computing the index
+of an approximate median, or as a pivot for partitioning or sorting.
+
+Params:
+    less = the ordering predicate used for comparison, modeled after `<`
+    r = the random access range in which the median is sought
+
+Returns: An index `i` such that `r[i]` is within 30th to 70th percentiles (i.e.
+in the middle 4 deciles). That means there are at least `0.3 * r.length`
+elements `x` in `r` that satisfy `!less(x, r[i])` and also at least
+`0.3 * r.length` elements `y` in `r` that satisfy `!less(r[i], y)`.
+*/
+size_t medianOfMedians(alias less = "a < b", Range)(Range r)
+if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
+{
+    alias lessFun = binaryFun!less;
+    if (r.length <= 5)
+    {
+        r.medianOf5OrFewer!lessFun;
+        return (r.length | 1) / 2;
+    }
+    // Take the median of each group of 5
+    size_t i = 0;
+    for (size_t j = 5; j < r.length; i = j, j += 5)
+    {
+        r[i .. j].medianOf5!lessFun;
+    }
+    // Leftovers
+    r[i .. $].medianOf5OrFewer!lessFun;
+    // Take a stride across all medians of five
+    import std.range : stride;
+    return 2 + 5 * r[2 .. $].stride(5).medianOfMedians!less;
+}
+
+///
+unittest
+{
+    import std.algorithm.iteration : map;
+    import std.algorithm.searching : count;
+    import std.array : array;
+    import std.random : uniform;
+    import std.range : iota;
+    auto v = iota(0, 100).map!(_ => uniform(0, 1_000)).array;
+    auto m = v.medianOfMedians;
+    auto notGreater = v.count!(a => a <= v[m]);
+    auto notSmaller = v.count!(a => a >= v[m]);
+    assert(notGreater >= 0.3 * v.length);
+    assert(notSmaller >= 0.3 * v.length);
+}
+
 // nextPermutation
 /**
  * Permutes $(D range) in-place to the next lexicographically greater
