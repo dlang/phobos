@@ -968,7 +968,10 @@ Returns:
 otherwise the position of the matching needle, that is, 1 if the range ends
 with $(D withOneOfThese[0]), 2 if it ends with $(D withOneOfThese[1]), and so
 on.
- */
+
+In the case when no needle parameters are given, return $(D true) iff back of
+$(D doesThisStart) fulfils predicate $(D pred).
+*/
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
 if (isBidirectionalRange!Range && Needles.length > 1 &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
@@ -1073,9 +1076,30 @@ if (isBidirectionalRange!R &&
         : binaryFun!pred(doesThisEnd.back, withThis);
 }
 
+/// Ditto
+bool endsWith(alias pred, R)(R doesThisEnd)
+    if (isInputRange!R &&
+        ifTestable!(typeof(doesThisEnd.front), unaryFun!pred))
+{
+    return !doesThisEnd.empty && unaryFun!pred(doesThisEnd.back);
+}
+
 ///
 @safe unittest
 {
+    import std.ascii : isAlpha;
+    assert("abc".endsWith!(a => a.isAlpha));
+    assert("abc".endsWith!isAlpha);
+
+    assert(!"ab1".endsWith!(a => a.isAlpha));
+
+    assert(!"ab1".endsWith!isAlpha);
+    assert(!"".endsWith!(a => a.isAlpha));
+
+    import std.algorithm.comparison : among;
+    assert("abc".endsWith!(a => a.among('c', 'd') != 0));
+    assert(!"abc".endsWith!(a => a.among('a', 'b') != 0));
+
     assert(endsWith("abc", ""));
     assert(!endsWith("abc", "b"));
     assert(endsWith("abc", "a", 'c') == 2);
@@ -3127,12 +3151,13 @@ bool skipOver(alias pred, R, E)(ref R r, E e)
 /**
 Checks whether the given
 $(XREF_PACK_NAMED range,primitives,isInputRange,input range) starts with (one
-of) the given needle(s).
+of) the given needle(s) or, if no needles are given,
+if its front element fulfils predicate $(D pred).
 
 Params:
 
     pred = Predicate to use in comparing the elements of the haystack and the
-        needle(s).
+        needle(s). Mandatory if no needles are given.
 
     doesThisStart = The input range to check.
 
@@ -3154,6 +3179,9 @@ elements in $(D withOneOfThese), then the shortest one matches (if there are
 two which match which are of the same length (e.g. $(D "a") and $(D 'a')), then
 the left-most of them in the argument
 list matches).
+
+In the case when no needle parameters are given, return $(D true) iff front of
+$(D doesThisStart) fulfils predicate $(D pred).
  */
 uint startsWith(alias pred = "a == b", Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
 if (isInputRange!Range && Needles.length > 1 &&
@@ -3298,17 +3326,36 @@ if (isInputRange!R1 &&
 
 /// Ditto
 bool startsWith(alias pred = "a == b", R, E)(R doesThisStart, E withThis)
-if (isInputRange!R &&
-    is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
+    if (isInputRange!R &&
+        is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
     return doesThisStart.empty
         ? false
         : binaryFun!pred(doesThisStart.front, withThis);
 }
 
+/// Ditto
+bool startsWith(alias pred, R)(R doesThisStart)
+    if (isInputRange!R &&
+        ifTestable!(typeof(doesThisStart.front), unaryFun!pred))
+{
+    return !doesThisStart.empty && unaryFun!pred(doesThisStart.front);
+}
+
 ///
 @safe unittest
 {
+    import std.ascii : isAlpha;
+
+    assert("abc".startsWith!(a => a.isAlpha));
+    assert("abc".startsWith!isAlpha);
+    assert(!"1ab".startsWith!(a => a.isAlpha));
+    assert(!"".startsWith!(a => a.isAlpha));
+
+    import std.algorithm.comparison : among;
+    assert("abc".startsWith!(a => a.among('a', 'b') != 0));
+    assert(!"abc".startsWith!(a => a.among('b', 'c') != 0));
+
     assert(startsWith("abc", ""));
     assert(startsWith("abc", "a"));
     assert(!startsWith("abc", "b"));
