@@ -310,7 +310,7 @@ private:
         mbox = cast(shared)m;
     }
 
-    @property MessageBox  mbox(){
+    @property inout MessageBox  mbox() inout {
         return cast(MessageBox) mbox_;
     }
 
