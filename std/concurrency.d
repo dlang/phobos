@@ -83,15 +83,6 @@ private
     import std.typecons;
     import std.concurrencybase;
 
-    template hasLocalAliasing(T...)
-    {
-        static if( !T.length )
-            enum hasLocalAliasing = false;
-        else
-            enum hasLocalAliasing = (std.traits.hasUnsharedAliasing!(T[0]) && !is(T[0] == Tid)) ||
-                                     std.concurrency.hasLocalAliasing!(T[1 .. $]);
-    }
-
     enum MsgType
     {
         standard,
@@ -316,11 +307,15 @@ struct Tid
 private:
     this( MessageBox m ) @safe
     {
-        mbox = m;
+        mbox = cast(shared)m;
     }
 
+    @property inout MessageBox  mbox() inout {
+        return cast(MessageBox) mbox_;
+    }
 
-    MessageBox  mbox;
+    //shared to make hasUnsharedAliasing!Tid false without overloading it locally (bug #4957)
+    shared MessageBox  mbox_;
 
 public:
 
@@ -372,6 +367,14 @@ public:
 
 unittest
 {
+    struct TestMessage{
+        Tid tid;
+    }
+    
+    static assert(!hasUnsharedAliasing(Tid));
+    static assert(!hasUnsharedAliasing(TestMessage));
+
+
     static void fun()
     {
         string res = receiveOnly!string();
@@ -466,7 +469,7 @@ private template isSpawnable(F, T...)
 Tid spawn(F, T...)( F fn, T args )
     if ( isSpawnable!(F, T) )
 {
-    static assert( !hasLocalAliasing!(T),
+    static assert( !hasUnsharedAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
     return _spawn( false, fn, args );
 }
@@ -494,7 +497,7 @@ Tid spawn(F, T...)( F fn, T args )
 Tid spawnLinked(F, T...)( F fn, T args )
     if ( isSpawnable!(F, T) )
 {
-    static assert( !hasLocalAliasing!(T),
+    static assert( !hasUnsharedAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
     return _spawn( true, fn, args );
 }
@@ -589,7 +592,7 @@ unittest
  */
 void send(T...)( Tid tid, T vals )
 {
-    static assert( !hasLocalAliasing!(T),
+    static assert( !hasUnsharedAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
     _send( tid, vals );
 }
@@ -604,7 +607,7 @@ void send(T...)( Tid tid, T vals )
  */
 void prioritySend(T...)( Tid tid, T vals )
 {
-    static assert( !hasLocalAliasing!(T),
+    static assert( !hasUnsharedAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
     _send( MsgType.priority, tid, vals );
 }
