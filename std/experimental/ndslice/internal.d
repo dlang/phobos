@@ -5,6 +5,11 @@ import std.meta; //: AliasSeq, anySatisfy, Filter, Reverse;
 
 package:
 
+enum string indexStrideAssertMsg(size_t i, size_t N) =
+    "index at position "
+    ~ i.stringof ~ " (from the range [0 .." ~ N.stringof ~ ")) "
+    ~ " must be less than corresponding length.";
+
 enum string tailErrorMessage(
     string fun = __FUNCTION__,
     string pfun = __PRETTY_FUNCTION__) =

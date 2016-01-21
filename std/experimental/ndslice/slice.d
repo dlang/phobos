@@ -886,10 +886,7 @@ struct Slice(size_t _N, _Range)
             size_t stride;
             foreach (i; Iota!(0, N)) //static
             {
-                assert(_indexes[0][i] < _lengths[i],
-                    "indexStride: index at position "
-                    ~ i.stringof ~ " (from the range [0 .." ~ N.stringof ~ ")) "
-                    ~ " must be less than corresponding length");
+                assert(_indexes[0][i] < _lengths[i], indexStrideAssertMsg!(i, N) ~ tailErrorMessage!());
                 stride += _strides[i] * _indexes[0][i];
             }
             return stride;
@@ -899,10 +896,7 @@ struct Slice(size_t _N, _Range)
             size_t stride;
             foreach (i, index; _indexes) //static
             {
-                assert(index < _lengths[i],
-                    "indexStride: index at position "
-                    ~ i.stringof ~ " (from the range [0 .." ~ N.stringof ~ ")) "
-                    ~ " must be less than corresponding length");
+                assert(index < _lengths[i], indexStrideAssertMsg!(i, N) ~ tailErrorMessage!());
                 stride += _strides[i] * index;
             }
             return stride;
@@ -917,10 +911,7 @@ struct Slice(size_t _N, _Range)
             size_t stride;
             foreach_reverse (i; Iota!(0, N)) //static
             {
-                assert(_indexes[0][i] < _lengths[N - 1 - i],
-                    "mathIndexStride: index at position "
-                    ~ i.stringof ~ " (from the range [0 .." ~ N.stringof ~ ")) "
-                    ~ " must be less than corresponding length");
+                assert(_indexes[0][i] < _lengths[N - 1 - i], indexStrideAssertMsg!(i, N) ~ tailErrorMessage!());
                 stride += _strides[N - 1 - i] * _indexes[0][i];
             }
             return stride;
@@ -930,10 +921,7 @@ struct Slice(size_t _N, _Range)
             size_t stride;
             foreach_reverse (i, index; _indexes) //static
             {
-                assert(index < _lengths[N - 1 - i],
-                    "mathIndexStride: index at position "
-                    ~ i.stringof ~ " (from the range [0 .." ~ N.stringof ~ ")) "
-                    ~ " must be less than corresponding length");
+                assert(index < _lengths[N - 1 - i], indexStrideAssertMsg!(i, N) ~ tailErrorMessage!());
                 stride += _strides[N - 1 - i] * index;
             }
             return stride;
