@@ -1383,8 +1383,8 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  Returns the attributes of the given file.
 
  Note that the file attributes on Windows and Posix systems are
- completely different. On Windows, they're what is returned by $(WEB
- msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
+ completely different. On Windows, they're what is returned by
+ $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
  GetFileAttributes), whereas on Posix systems, they're the $(LUCKY
  st_mode) value which is part of the $(D stat struct) gotten by
  calling the $(WEB en.wikipedia.org/wiki/Stat_%28Unix%29, $(D stat))
