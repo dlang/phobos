@@ -18,7 +18,7 @@ module std.experimental.ndslice.slice;
 
 import std.traits;
 import std.meta;
-import std.typecons; //: Flag;
+import std.typecons; //: Flag, Yes, No;
 
 import std.experimental.ndslice.internal;
 
@@ -35,10 +35,13 @@ Params:
     Names = names of elements in a slice tuple.
         Slice tuple is a slice, which holds single set of lengths and strides
         for a number of ranges.
+    mod = If `yes`, the array will be replaced with its pointer to improve performance.
+Use `no` for compile time function evaluation.
+
 Returns:
     n-dimensional slice
 +/
-auto sliced(ReplaceArrayWithPointer mod = ReplaceArrayWithPointer.yes, Range, Lengths...)(Range range, Lengths lengths)
+auto sliced(Flag!"replaceArrayWithPointer" mod = Yes.replaceArrayWithPointer, Range, Lengths...)(Range range, Lengths lengths)
     if (!isStaticArray!Range && !isNarrowString!Range
         && allSatisfy!(isIndex, Lengths) && Lengths.length)
 {
@@ -46,7 +49,7 @@ auto sliced(ReplaceArrayWithPointer mod = ReplaceArrayWithPointer.yes, Range, Le
 }
 
 ///ditto
-auto sliced(ReplaceArrayWithPointer mod = ReplaceArrayWithPointer.yes, size_t N, Range)(Range range, auto ref in size_t[N] lengths, size_t shift = 0)
+auto sliced(Flag!"replaceArrayWithPointer" mod = Yes.replaceArrayWithPointer, size_t N, Range)(Range range, auto ref in size_t[N] lengths, size_t shift = 0)
     if (!isStaticArray!Range && !isNarrowString!Range && N)
 in
 {
@@ -123,7 +126,7 @@ template sliced(Names...)
     mixin (
     "
     auto sliced(
-            ReplaceArrayWithPointer mod = ReplaceArrayWithPointer.yes,
+            Flag!`replaceArrayWithPointer` mod = Yes.replaceArrayWithPointer,
             " ~ _Range_Types!Names ~ "
             Lengths...)
             (" ~ _Range_DeclarationList!Names ~
@@ -134,7 +137,7 @@ template sliced(Names...)
     }
 
     auto sliced(
-            ReplaceArrayWithPointer mod = ReplaceArrayWithPointer.yes,
+            Flag!`replaceArrayWithPointer` mod = Yes.replaceArrayWithPointer,
             size_t N, " ~ _Range_Types!Names ~ ")
             (" ~ _Range_DeclarationList!Names ~"
             auto ref in size_t[N] lengths,
@@ -516,12 +519,6 @@ pure nothrow unittest
     assert(alpha == beta);
 }
 
-/++
-If `yes`, the array will be replaced with its pointer to improve performance.
-Use `no` for compile time function evaluation.
-+/
-alias ReplaceArrayWithPointer = Flag!"replaceArrayWithPointer";
-
 ///
 @safe pure nothrow unittest
 {
@@ -534,7 +531,7 @@ alias ReplaceArrayWithPointer = Flag!"replaceArrayWithPointer";
              / matrix.length;
     }
     enum matrix = [1, 2,
-                   3, 4].sliced!(ReplaceArrayWithPointer.no)(2, 2);
+                   3, 4].sliced!(No.replaceArrayWithPointer)(2, 2);
     ///Сompile time function evaluation
     static assert(maxAvg(matrix) == 3);
 }
@@ -1487,7 +1484,7 @@ struct Slice(size_t _N, _Range)
     static if(doUnittest)
     pure nothrow unittest
     {
-        auto slice = new int[15].sliced!(ReplaceArrayWithPointer.no)(5, 3);
+        auto slice = new int[15].sliced!(No.replaceArrayWithPointer)(5, 3);
 
         /// Fully defined slice
         assert(slice[] == slice);
@@ -1605,7 +1602,7 @@ struct Slice(size_t _N, _Range)
         static if(doUnittest)
         pure nothrow unittest
         {
-            auto a = new int[6].sliced!(ReplaceArrayWithPointer.no)(2, 3);
+            auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
             auto b = [1, 2, 3, 4].sliced(2, 2);
 
             a[0..$, 0..$-1] = b;
@@ -1658,7 +1655,7 @@ struct Slice(size_t _N, _Range)
         static if(doUnittest)
         pure nothrow unittest
         {
-            auto a = new int[6].sliced!(ReplaceArrayWithPointer.no)(2, 3);
+            auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
             auto b = [[1, 2], [3, 4]];
 
             a[] = [[1, 2, 3], [4, 5, 6]];
@@ -1716,7 +1713,7 @@ struct Slice(size_t _N, _Range)
         static if(doUnittest)
         pure nothrow unittest
         {
-            auto a = new int[6].sliced!(ReplaceArrayWithPointer.no)(2, 3);
+            auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
 
             a[] = 9;
             assert(a == [[9, 9, 9], [9, 9, 9]]);
@@ -1759,7 +1756,7 @@ struct Slice(size_t _N, _Range)
         static if(doUnittest)
         pure nothrow unittest
         {
-            auto a = new int[6].sliced!(ReplaceArrayWithPointer.no)(2, 3);
+            auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
 
             a[1, 2] = 3;
             assert(a[1, 2] == 3);
@@ -1787,7 +1784,7 @@ struct Slice(size_t _N, _Range)
         static if(doUnittest)
         pure nothrow unittest
         {
-            auto a = new int[6].sliced!(ReplaceArrayWithPointer.no)(2, 3);
+            auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
 
             a[1, 2] += 3;
             assert(a[1, 2] == 3);
@@ -1826,7 +1823,7 @@ struct Slice(size_t _N, _Range)
         static if(doUnittest)
         pure nothrow unittest
         {
-            auto a = new int[6].sliced!(ReplaceArrayWithPointer.no)(2, 3);
+            auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
             auto b = [1, 2, 3, 4].sliced(2, 2);
 
             a[0..$, 0..$-1] += b;
@@ -1875,7 +1872,7 @@ struct Slice(size_t _N, _Range)
         static if(doUnittest)
         pure nothrow unittest
         {
-            auto a = new int[6].sliced!(ReplaceArrayWithPointer.no)(2, 3);
+            auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
 
             a[0..$, 0..$-1] += [[1, 2], [3, 4]];
             assert(a == [[1, 2, 0], [3, 4, 0]]);
@@ -1920,7 +1917,7 @@ struct Slice(size_t _N, _Range)
         static if(doUnittest)
         pure nothrow unittest
         {
-            auto a = new int[6].sliced!(ReplaceArrayWithPointer.no)(2, 3);
+            auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
 
             a[] += 1;
             assert(a == [[1, 1, 1], [1, 1, 1]]);
@@ -1954,7 +1951,7 @@ struct Slice(size_t _N, _Range)
         static if(doUnittest)
         pure nothrow unittest
         {
-            auto a = new int[6].sliced!(ReplaceArrayWithPointer.no)(2, 3);
+            auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
 
             ++a[1, 2];
             assert(a[1, 2] == 1);
@@ -1999,7 +1996,7 @@ struct Slice(size_t _N, _Range)
         static if(doUnittest)
         pure nothrow unittest
         {
-            auto a = new int[6].sliced!(ReplaceArrayWithPointer.no)(2, 3);
+            auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
 
             ++a[];
             assert(a == [[1, 1, 1], [1, 1, 1]]);
