@@ -6451,8 +6451,14 @@ string getLine(Flag!"keepTerminator" keepTerminator)
     ...
 }
 ...
-auto line = getLine(Flag!"keepTerminator".yes);
+auto line = getLine(Yes.keepTerminator);
 ----
+
+The structs $(D Yes) and $(D No) are provided as shorthand for
+$(D Flag!"Name".yes) and $(D Flag!"Name".no) and are preferred for brevity and
+readability. These convenience structs mean it is usually unnecessary and
+counterproductive to create an alias of a $(D Flag) as a way of avoiding typing
+out the full type while specifying the affirmative or negative options.
 
 Passing categorical data by means of unstructured $(D bool)
 parameters is classified under "simple-data coupling" by Steve
@@ -6460,20 +6466,6 @@ McConnell in the $(LUCKY Code Complete) book, along with three other
 kinds of coupling. The author argues citing several studies that
 coupling has a negative effect on code quality. $(D Flag) offers a
 simple structuring method for passing yes/no flags to APIs.
-
-An alias can be used to reduce the verbosity of the flag's type:
-----
-alias KeepTerminator = Flag!"keepTerminator";
-string getline(KeepTerminator keepTerminator)
-{
-    ...
-    if (keepTerminator) ...
-    ...
-}
-...
-// Code calling getLine can now refer to flag values using the shorter name:
-auto line = getLine(KeepTerminator.yes);
-----
  */
 template Flag(string name) {
     ///
