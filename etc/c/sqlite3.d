@@ -1917,7 +1917,7 @@ enum
 /*
 ** CAPI3REF: Prepared Statement Scan Status Opcodes
 */
-enum 
+enum
 {
     SQLITE_SCANSTAT_NLOOP    = 0,
     SQLITE_SCANSTAT_NVISIT   = 1,
@@ -2046,7 +2046,7 @@ struct Fts5ExtensionApi
     int function(Fts5Context*) xColumnCount;
     int function(Fts5Context*, sqlite3_int64 *pnRow) xRowCount;
     int function(Fts5Context*, int iCol, sqlite3_int64 *pnToken) xColumnTotalSize;
-    int function(Fts5Context*, 
+    int function(Fts5Context*,
         const char *pText, int nText,
         void *pCtx,
         int function(void*, int, const char*, int, int, int) xToken
@@ -2072,17 +2072,17 @@ struct fts5_tokenizer
 {
     int function(void*, const char **azArg, int nArg, Fts5Tokenizer **ppOut) xCreate;
     void function(Fts5Tokenizer*) xDelete;
-    int function(Fts5Tokenizer*, 
+    int function(Fts5Tokenizer*,
         void *pCtx,
         int flags,
-        const char *pText, int nText, 
+        const char *pText, int nText,
         int function(
             void *pCtx,
             int tflags,
             const char *pToken,
             int nToken,
             int iStart,
-            int iEnd  
+            int iEnd
         ) xToken
     ) xTokenize;
 }
