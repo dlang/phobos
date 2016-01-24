@@ -18,7 +18,8 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 {
     import std.traits : hasMember;
     import common = std.experimental.allocator.common : roundUpToMultipleOf,
-        reallocate;
+        reallocate,
+        Ternary;
 
     static assert((max - (min - 1)) % step == 0,
         "Invalid limits when instantiating " ~ Bucketizer.stringof);
@@ -176,7 +177,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
         if (!b.ptr) return Ternary.no;
         if (auto a = allocatorFor(b.length))
         {
-            const actual = goodAllocSize(bytes);
+            const actual = goodAllocSize(b.length);
             return a.owns(b.ptr[0 .. actual]);
         }
         return Ternary.no;
