@@ -3438,11 +3438,9 @@ void copyRecurse(string from, string to,
                 is no setLinkAttributes here, and no fchmodat in the C headers.
                 Just enforcing that the new attributes are the same as the old
                 ones, for now. */
-                if (getLinkAttributes(to) != attrs)
-                {
-                    throw new FileException(from, "Cannot preserve " ~
-                        "non-default attributes of symbolic link.");
-                }
+                enforce(getLinkAttributes(to) == attrs,
+                    new FileException(from, "Cannot preserve non-default " ~
+                        "attributes of symbolic link."));
             }
             /*NOTE: Would copy timestamps of the symlink here, but there is no
             setLinkTimes here, and no lutimes in the C headers. Just ignoring
