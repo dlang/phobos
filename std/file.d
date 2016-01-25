@@ -3411,7 +3411,7 @@ void copyRecurse(string from, string to,
     if (attrIsFile(attrs)) copy(from, to, preserve);
     else if (attrIsDir(attrs))
     {
-        mkdirRecurse(std.conv.to!string(to));
+        mkdirRecurse(to);
 
         if (preserve == PreserveAttributes.yes) setAttributes(to, attrs);
 
