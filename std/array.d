@@ -190,6 +190,19 @@ unittest
     auto a = array(immutable(S).init.repeat(5));
 }
 
+unittest
+{
+    // Issue 15604
+    struct A
+    {
+        void opAssign(T)(T v) {}
+        Object o = new Object;
+    }
+
+    [A()].array;
+}
+
+
 /**
 Convert a narrow string to an array type that fully supports random access.
 This is handled as a special case and always returns a $(D dchar[]),

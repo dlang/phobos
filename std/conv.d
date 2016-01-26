@@ -3967,7 +3967,7 @@ private void emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
     else
     {
         import core.stdc.string : memcpy;
-        static immutable T init = T.init;
+        static immutable T init;// = T.init;
         memcpy(&chunk, &init, T.sizeof);
     }
 }
@@ -4944,6 +4944,17 @@ unittest //Constness
     IS[2] iss = IS.init;
     emplaceRef!(IS[2])(ss, iss);
     emplaceRef!(IS[2])(ss, iss[]);
+}
+
+unittest
+{
+    struct S
+    {
+        void opAssign(T)(T v) {}
+        Object o = new Object;
+    }
+    S s = void;
+    emplaceRef!(s, S());
 }
 
 pure nothrow @safe @nogc unittest
