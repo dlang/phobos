@@ -2201,6 +2201,21 @@ template canFind(alias pred="a == b")
     assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
+/**
+ * Example using a custom predicate.
+ * Note that the needle appears as the second argument of the predicate.
+ */
+@safe unittest
+{
+    auto words1 = [
+        "apple",
+        "beeswax",
+        "cardboard"
+    ];
+    assert(!canFind(words1, "bees"));
+    assert( canFind!((string a, string b) => a.startsWith(b))(words1, "bees"));
+}
+
 @safe unittest
 {
     import std.algorithm.internal : rndstuff;
