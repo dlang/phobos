@@ -115,7 +115,7 @@ SRC_STD_1_HEAVY= std\stdio.d std\stdiobase.d \
 SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
 
 SRC_STD_math=std\math.d
-SRC_STD_3= std\csv.d std\complex.d std\numeric.d std\bigint.d
+SRC_STD_3= std\benchmark.d std\csv.d std\complex.d std\numeric.d std\bigint.d
 SRC_STD_3c= std\datetime.d std\bitmanip.d std\typecons.d
 
 SRC_STD_3a= std\uni.d std\base64.d std\ascii.d \
@@ -210,7 +210,7 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 SRC=	unittest.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
-	std\math.d std\string.d std\path.d std\datetime.d \
+	std\benchmark.d std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
 	std\meta.d std\metastrings.d std\mmfile.d \
@@ -364,6 +364,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_array.html \
 	$(DOC)\std_ascii.html \
 	$(DOC)\std_base64.html \
+	$(DOC)\std_benchmark.html \
 	$(DOC)\std_bigint.html \
 	$(DOC)\std_bitmanip.html \
 	$(DOC)\std_concurrency.html \
@@ -665,6 +666,9 @@ $(DOC)\std_ascii.html : $(STDDOC) std\ascii.d
 
 $(DOC)\std_base64.html : $(STDDOC) std\base64.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_base64.html $(STDDOC) std\base64.d
+
+$(DOC)\std_benchmark.html : $(STDDOC) std\benchmark.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_benchmark.html $(STDDOC) std\benchmark.d
 
 $(DOC)\std_bigint.html : $(STDDOC) std\bigint.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_bigint.html $(STDDOC) std\bigint.d
