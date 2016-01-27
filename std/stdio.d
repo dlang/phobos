@@ -3015,13 +3015,6 @@ unittest
 }
 
 /**
- * $(RED Deprecated. Please use $(D isFileHandle) instead. This alias will be
- *       removed in June 2015.)
- */
-deprecated("Please use isFileHandle instead.")
-alias isStreamingDevice = isFileHandle;
-
-/**
  * Property used by writeln/etc. so it can infer @safe since stdout is __gshared
  */
 private @property File trustedStdout() @trusted { return stdout; }
