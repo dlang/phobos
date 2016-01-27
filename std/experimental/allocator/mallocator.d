@@ -229,12 +229,21 @@ struct AlignedMallocator
     @trusted @nogc nothrow
     void[] alignedAllocate(size_t bytes, uint a) shared
     {
-        import core.stdc.errno : ENOMEM;
+        import core.stdc.errno : ENOMEM, EINVAL;
         assert(a.isGoodDynamicAlignment);
         void* result;
         auto code = posix_memalign(&result, a, bytes);
-        if (code == ENOMEM) return null;
-        return result[0 .. bytes];
+        if (code == ENOMEM)
+            return null;
+
+        else if (code == EINVAL)
+            assert (0, "AlignedMallocator.alignment is not a power of two multiple of (void*).sizeof, according to posix_memalign!");
+
+        else if (code != 0)
+            assert (0, "posix_memalign returned an unknown code!");
+
+        else
+            return result[0 .. bytes];
     }
     else version(Windows)
     @trusted @nogc nothrow
