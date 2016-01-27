@@ -2207,13 +2207,13 @@ template canFind(alias pred="a == b")
  */
 @safe unittest
 {
-    auto words1 = [
+    auto words = [
         "apple",
         "beeswax",
         "cardboard"
     ];
-    assert(!canFind(words1, "bees"));
-    assert( canFind!((string a, string b) => a.startsWith(b))(words1, "bees"));
+    assert(!canFind(words, "bees"));
+    assert( canFind!((string a, string b) => a.startsWith(b))(words, "bees"));
 }
 
 @safe unittest
