@@ -573,9 +573,20 @@ unittest
 
 private T[] uninitializedFillDefault(T)(T[] array) nothrow
 {
-    static immutable __gshared T t;
+    T t = T.init;
     fillWithMemcpy(array, t);
     return array;
+}
+
+pure nothrow @nogc
+unittest
+{
+    static struct S { int x = 42; @disable this(this); }
+
+    int[5] expected = [42, 42, 42, 42, 42];
+    S[5] arr = void;
+    uninitializedFillDefault(arr);
+    assert ((cast(int*)arr.ptr)[0 .. arr.length] == expected);
 }
 
 unittest
@@ -614,7 +625,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
 
 unittest
 {
-    void test(A)(auto ref A alloc)
+    void test1(A)(auto ref A alloc)
     {
         int[] a = alloc.makeArray!int(0);
         assert(a.length == 0 && a.ptr is null);
@@ -622,9 +633,20 @@ unittest
         assert(a.length == 5);
         assert(a == [ 0, 0, 0, 0, 0]);
     }
+
+    void test2(A)(auto ref A alloc)
+    {
+        static struct S { int x = 42; @disable this(this); }
+        S[] arr = alloc.makeArray!S(5);
+        assert(arr.length == 5);
+        assert((cast(int*)arr.ptr)[0 .. 5] == [ 42, 42, 42, 42, 42]);
+    }
+
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
-    test(theAllocator);
+    test1(GCAllocator.instance);
+    test1(theAllocator);
+    test2(GCAllocator.instance);
+    test2(theAllocator);
 }
 
 /// Ditto
