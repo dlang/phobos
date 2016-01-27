@@ -13,6 +13,8 @@ Ternary type with three thruth values.
 */
 struct Ternary
 {
+    @safe @nogc nothrow pure:
+
     package ubyte value = 6;
     package static Ternary make(ubyte b)
     {
@@ -82,10 +84,11 @@ struct Ternary
     }
 }
 
+@safe @nogc nothrow pure
 unittest
 {
     alias f = Ternary.no, t = Ternary.yes, u = Ternary.unknown;
-    auto truthTableAnd =
+    Ternary[27] truthTableAnd =
     [
         t, t, t,
         t, u, u,
@@ -98,7 +101,7 @@ unittest
         f, f, f,
     ];
 
-    auto truthTableOr =
+    Ternary[27] truthTableOr =
     [
         t, t, t,
         t, u, t,
@@ -111,7 +114,7 @@ unittest
         f, f, f,
     ];
 
-    auto truthTableXor =
+    Ternary[27] truthTableXor =
     [
         t, t, f,
         t, u, u,
@@ -169,6 +172,7 @@ template stateSize(T)
         enum stateSize = T.sizeof;
 }
 
+@safe @nogc nothrow pure
 unittest
 {
     static assert(stateSize!void == 0);
@@ -224,6 +228,7 @@ size_t goodAllocSize(A)(auto ref A a, size_t n)
 /**
 Returns s rounded up to a multiple of base.
 */
+@safe @nogc nothrow pure
 package size_t roundUpToMultipleOf(size_t s, uint base)
 {
     assert(base);
@@ -231,6 +236,7 @@ package size_t roundUpToMultipleOf(size_t s, uint base)
     return rem ? s + base - rem : s;
 }
 
+@safe @nogc nothrow pure
 unittest
 {
     assert(10.roundUpToMultipleOf(11) == 11);
@@ -242,6 +248,7 @@ unittest
 /**
 Returns `n` rounded up to a multiple of alignment, which must be a power of 2.
 */
+@safe @nogc nothrow pure
 package size_t roundUpToAlignment(size_t n, uint alignment)
 {
     assert(alignment.isPowerOf2);
@@ -253,6 +260,7 @@ package size_t roundUpToAlignment(size_t n, uint alignment)
     return result;
 }
 
+@safe @nogc nothrow pure
 unittest
 {
     assert(10.roundUpToAlignment(4) == 12);
@@ -264,12 +272,14 @@ unittest
 /**
 Returns `n` rounded down to a multiple of alignment, which must be a power of 2.
 */
+@safe @nogc nothrow pure
 package size_t roundDownToAlignment(size_t n, uint alignment)
 {
     assert(alignment.isPowerOf2);
     return n & ~size_t(alignment - 1);
 }
 
+@safe @nogc nothrow pure
 unittest
 {
     assert(10.roundDownToAlignment(4) == 8);
@@ -283,6 +293,7 @@ Advances the beginning of `b` to start at alignment `a`. The resulting buffer
 may therefore be shorter. Returns the adjusted buffer, or null if obtaining a
 non-empty buffer is impossible.
 */
+@nogc nothrow pure
 package void[] roundUpToAlignment(void[] b, uint a)
 {
     auto e = b.ptr + b.length;
@@ -291,6 +302,7 @@ package void[] roundUpToAlignment(void[] b, uint a)
     return p[0 .. e - p];
 }
 
+@nogc nothrow pure
 unittest
 {
     void[] empty;
@@ -303,6 +315,7 @@ unittest
 /**
 Like `a / b` but rounds the result up, not down.
 */
+@safe @nogc nothrow pure
 package size_t divideRoundUp(size_t a, size_t b)
 {
     assert(b);
@@ -312,6 +325,7 @@ package size_t divideRoundUp(size_t a, size_t b)
 /**
 Returns `s` rounded up to a multiple of `base`.
 */
+@nogc nothrow pure
 package void[] roundStartToMultipleOf(void[] s, uint base)
 {
     assert(base);
@@ -321,6 +335,7 @@ package void[] roundStartToMultipleOf(void[] s, uint base)
     return p[0 .. end - p];
 }
 
+nothrow pure
 unittest
 {
     void[] p;
@@ -332,6 +347,7 @@ unittest
 /**
 Returns $(D s) rounded up to the nearest power of 2.
 */
+@safe @nogc nothrow pure
 package size_t roundUpToPowerOf2(size_t s)
 {
     import std.meta : AliasSeq;
@@ -348,6 +364,7 @@ package size_t roundUpToPowerOf2(size_t s)
     return s + 1;
 }
 
+@safe @nogc nothrow pure
 unittest
 {
     assert(0.roundUpToPowerOf2 == 0);
@@ -367,6 +384,7 @@ unittest
 /**
 Returns the number of trailing zeros of $(D x).
 */
+@safe @nogc nothrow pure
 package uint trailingZeros(ulong x)
 {
     uint result;
@@ -377,6 +395,7 @@ package uint trailingZeros(ulong x)
     return result;
 }
 
+@safe @nogc nothrow pure
 unittest
 {
     assert(trailingZeros(0) == 64);
@@ -389,6 +408,7 @@ unittest
 /**
 Returns `true` if `ptr` is aligned at `alignment`.
 */
+@nogc nothrow pure
 package bool alignedAt(void* ptr, uint alignment)
 {
     return cast(size_t) ptr % alignment == 0;
@@ -398,11 +418,13 @@ package bool alignedAt(void* ptr, uint alignment)
 Returns the effective alignment of `ptr`, i.e. the largest power of two that is
 a divisor of `ptr`.
 */
+@nogc nothrow pure
 package uint effectiveAlignment(void* ptr)
 {
     return 1U << trailingZeros(cast(size_t) ptr);
 }
 
+@nogc nothrow pure
 unittest
 {
     int x;
@@ -413,6 +435,7 @@ unittest
 Aligns a pointer down to a specified alignment. The resulting pointer is less
 than or equal to the given pointer.
 */
+@nogc nothrow pure
 package void* alignDownTo(void* ptr, uint alignment)
 {
     assert(alignment.isPowerOf2);
@@ -423,6 +446,7 @@ package void* alignDownTo(void* ptr, uint alignment)
 Aligns a pointer up to a specified alignment. The resulting pointer is greater
 than or equal to the given pointer.
 */
+@nogc nothrow pure
 package void* alignUpTo(void* ptr, uint alignment)
 {
     assert(alignment.isPowerOf2);
@@ -434,12 +458,14 @@ package void* alignUpTo(void* ptr, uint alignment)
 /**
 Returns `true` if `x` is a nonzero power of two.
 */
-package bool isPowerOf2(uint x) @nogc
+@safe @nogc nothrow pure
+package bool isPowerOf2(uint x)
 {
     return (x & -x) > (x - 1);
 }
 
-@nogc unittest
+@safe @nogc nothrow pure
+unittest
 {
     assert(!isPowerOf2(0));
     assert(isPowerOf2(1));
@@ -455,12 +481,14 @@ package bool isPowerOf2(uint x) @nogc
     assert(isPowerOf2(1UL << 31));
 }
 
-package bool isGoodStaticAlignment(uint x) @nogc
+@safe @nogc nothrow pure
+package bool isGoodStaticAlignment(uint x)
 {
     return x.isPowerOf2;
 }
 
-package bool isGoodDynamicAlignment(uint x) @nogc
+@safe @nogc nothrow pure
+package bool isGoodDynamicAlignment(uint x)
 {
     return x.isPowerOf2 && x >= (void*).sizeof;
 }
