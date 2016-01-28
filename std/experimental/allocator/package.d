@@ -168,7 +168,7 @@ void fun(size_t n)
     // Use a stack-installed allocator for up to 64KB
     StackFront!65536 myAllocator;
     int[] a2 = myAllocator.makeArray!int(n);
-    scope(exit) theAllocator.dispose(a2);
+    scope(exit) myAllocator.dispose(a2);
     ...
 }
 ----
