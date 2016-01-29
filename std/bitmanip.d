@@ -720,24 +720,33 @@ unittest
 
 struct BitArray
 {
+    deprecated("Use the constructor instead.")
+    @property void ptr(size_t* p) pure nothrow @nogc { _ptr = p; }
+    deprecated("Use .opIndex instead.")
+    @property inout(size_t)* ptr() inout pure nothrow @nogc { return _ptr; }
+
+    deprecated("Use .length instead.")
+    @property void len(size_t v) pure nothrow @nogc { _len = v; }
+    deprecated("Use .length instead.")
+    @property size_t len() const pure nothrow @nogc { return _len; }
 
 private:
 
     import std.format : FormatSpec;
     import core.bitop: bts, btr, bsf, bt;
 
-    size_t len;
-    size_t* ptr;
+    size_t _len;
+    size_t* _ptr;
     enum bitsPerSizeT = size_t.sizeof * 8;
 
     @property size_t fullWords() const @nogc pure nothrow
     {
-        return len / bitsPerSizeT;
+        return _len / bitsPerSizeT;
     }
     // Number of bits after the last full word
     @property size_t endBits() const @nogc pure nothrow
     {
-        return len % bitsPerSizeT;
+        return _len % bitsPerSizeT;
     }
     // Bit mask to extract the bits after the last full word
     @property size_t endMask() const @nogc pure nothrow
@@ -755,7 +764,7 @@ public:
      */
     @property size_t dim() const @nogc pure nothrow
     {
-        return lenToDim(len);
+        return lenToDim(_len);
     }
 
     /**********************************************
@@ -763,7 +772,7 @@ public:
      */
     @property size_t length() const @nogc pure nothrow
     {
-        return len;
+        return _len;
     }
 
     /**********************************************
@@ -774,7 +783,7 @@ public:
      */
     @property size_t length(size_t newlen) pure nothrow
     {
-        if (newlen != len)
+        if (newlen != _len)
         {
             size_t olddim = dim;
             size_t newdim = lenToDim(newlen);
@@ -782,14 +791,14 @@ public:
             if (newdim != olddim)
             {
                 // Create a fake array so we can use D's realloc machinery
-                auto b = ptr[0 .. olddim];
+                auto b = _ptr[0 .. olddim];
                 b.length = newdim;                // realloc
-                ptr = b.ptr;
+                _ptr = b.ptr;
             }
 
-            len = newlen;
+            _len = newlen;
         }
-        return len;
+        return _len;
     }
 
     /**********************************************
@@ -798,11 +807,11 @@ public:
     bool opIndex(size_t i) const @nogc pure nothrow
     in
     {
-        assert(i < len);
+        assert(i < _len);
     }
     body
     {
-        return cast(bool) bt(ptr, i);
+        return cast(bool) bt(_ptr, i);
     }
 
     unittest
@@ -826,14 +835,14 @@ public:
     bool opIndexAssign(bool b, size_t i) @nogc pure nothrow
     in
     {
-        assert(i < len);
+        assert(i < _len);
     }
     body
     {
         if (b)
-            bts(ptr, i);
+            bts(_ptr, i);
         else
-            btr(ptr, i);
+            btr(_ptr, i);
         return b;
     }
 
@@ -844,9 +853,9 @@ public:
     {
         BitArray ba;
 
-        auto b = ptr[0 .. dim].dup;
-        ba.len = len;
-        ba.ptr = b.ptr;
+        auto b = _ptr[0 .. dim].dup;
+        ba._len = _len;
+        ba._ptr = b.ptr;
         return ba;
     }
 
@@ -875,7 +884,7 @@ public:
     {
         int result;
 
-        foreach (i; 0 .. len)
+        foreach (i; 0 .. _len)
         {
             bool b = opIndex(i);
             result = dg(b);
@@ -891,7 +900,7 @@ public:
     {
         int result;
 
-        foreach (i; 0 .. len)
+        foreach (i; 0 .. _len)
         {
             bool b = opIndex(i);
             result = dg(b);
@@ -906,7 +915,7 @@ public:
     {
         int result;
 
-        foreach (i; 0 .. len)
+        foreach (i; 0 .. _len)
         {
             bool b = opIndex(i);
             result = dg(i, b);
@@ -922,7 +931,7 @@ public:
     {
         int result;
 
-        foreach (i; 0 .. len)
+        foreach (i; 0 .. _len)
         {
             bool b = opIndex(i);
             result = dg(i, b);
@@ -976,13 +985,13 @@ public:
     }
     body
     {
-        if (len >= 2)
+        if (_len >= 2)
         {
             bool t;
             size_t lo, hi;
 
             lo = 0;
-            hi = len - 1;
+            hi = _len - 1;
             for (; lo < hi; lo++, hi--)
             {
                 t = this[lo];
@@ -1020,12 +1029,12 @@ public:
     }
     body
     {
-        if (len >= 2)
+        if (_len >= 2)
         {
             size_t lo, hi;
 
             lo = 0;
-            hi = len - 1;
+            hi = _len - 1;
             while (1)
             {
                 while (1)
@@ -1078,8 +1087,8 @@ public:
     {
         if (this.length != a2.length)
             return false;
-        auto p1 = this.ptr;
-        auto p2 = a2.ptr;
+        auto p1 = this._ptr;
+        auto p2 = a2._ptr;
 
         if (p1[0..fullWords] != p2[0..fullWords])
             return false;
@@ -1126,8 +1135,8 @@ public:
         auto lesser = this.length < a2.length ? &this : &a2;
         size_t fullWords = lesser.fullWords;
         size_t endBits = lesser.endBits;
-        auto p1 = this.ptr;
-        auto p2 = a2.ptr;
+        auto p1 = this._ptr;
+        auto p2 = a2._ptr;
 
         foreach (i; 0 .. fullWords)
         {
@@ -1225,13 +1234,13 @@ public:
     size_t toHash() const @nogc pure nothrow
     {
         size_t hash = 3557;
-        auto fullBytes = len / 8;
+        auto fullBytes = _len / 8;
         foreach (i; 0 .. fullBytes)
         {
             hash *= 3559;
-            hash += (cast(byte*)this.ptr)[i];
+            hash += (cast(byte*)this._ptr)[i];
         }
-        foreach (i; 8*fullBytes .. len)
+        foreach (i; 8*fullBytes .. _len)
         {
             hash *= 3571;
             hash += this[i];
@@ -1266,10 +1275,10 @@ public:
     }
 
     // Deliberately undocumented: raw initialization of bit array.
-    this(size_t _len, size_t* _ptr)
+    this(size_t len, size_t* ptr)
     {
-        len = _len;
-        ptr = _ptr;
+        _len = len;
+        _ptr = ptr;
     }
 
     /***************************************
@@ -1288,12 +1297,12 @@ public:
     }
     body
     {
-        ptr = cast(size_t*)v.ptr;
-        len = numbits;
+        _ptr = cast(size_t*)v.ptr;
+        _len = numbits;
         if (endBits)
         {
             // Need to mask away extraneous bits from v.
-            ptr[dim - 1] &= endMask;
+            _ptr[dim - 1] &= endMask;
         }
     }
 
@@ -1326,7 +1335,7 @@ public:
      */
     void[] opCast(T : void[])() @nogc pure nothrow
     {
-        return cast(void[])ptr[0 .. dim];
+        return cast(void[])_ptr[0 .. dim];
     }
 
     /***************************************
@@ -1334,7 +1343,7 @@ public:
      */
     size_t[] opCast(T : size_t[])() @nogc pure nothrow
     {
-        return ptr[0 .. dim];
+        return _ptr[0 .. dim];
     }
 
     unittest
@@ -1357,14 +1366,14 @@ public:
         auto dim = this.dim;
 
         BitArray result;
-        result.length = len;
+        result.length = _len;
 
-        result.ptr[0..dim] = ~this.ptr[0..dim];
+        result._ptr[0..dim] = ~this._ptr[0..dim];
 
         // Avoid putting garbage in extra bits
         // Remove once we zero on length extension
         if (endBits)
-            result.ptr[dim - 1] &= endMask;
+            result._ptr[dim - 1] &= endMask;
 
         return result;
     }
@@ -1393,24 +1402,24 @@ public:
         if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
-        assert(len == e2.length);
+        assert(_len == e2.length);
     }
     body
     {
         auto dim = this.dim;
 
         BitArray result;
-        result.length = len;
+        result.length = _len;
 
         static if (op == "-")
-            result.ptr[0..dim] = this.ptr[0..dim] & ~e2.ptr[0..dim];
+            result._ptr[0..dim] = this._ptr[0..dim] & ~e2._ptr[0..dim];
         else
-            mixin("result.ptr[0..dim] = this.ptr[0..dim]"~op~" e2.ptr[0..dim];");
+            mixin("result._ptr[0..dim] = this._ptr[0..dim]"~op~" e2._ptr[0..dim];");
 
         // Avoid putting garbage in extra bits
         // Remove once we zero on length extension
         if (endBits)
-            result.ptr[dim - 1] &= endMask;
+            result._ptr[dim - 1] &= endMask;
 
         return result;
     }
@@ -1499,27 +1508,27 @@ public:
         if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
-        assert(len == e2.length);
+        assert(_len == e2.length);
     }
     body
     {
         foreach (i; 0 .. fullWords)
         {
             static if (op == "-")
-                ptr[i] &= ~e2.ptr[i];
+                _ptr[i] &= ~e2._ptr[i];
             else
-                mixin("ptr[i] "~op~"= e2.ptr[i];");
+                mixin("_ptr[i] "~op~"= e2._ptr[i];");
         }
         if (!endBits)
             return this;
 
         size_t i = fullWords;
-        size_t endWord = ptr[i];
+        size_t endWord = _ptr[i];
         static if (op == "-")
-            endWord &= ~e2.ptr[i];
+            endWord &= ~e2._ptr[i];
         else
-            mixin("endWord "~op~"= e2.ptr[i];");
-        ptr[i] = (ptr[i] & ~endMask) | (endWord & endMask);
+            mixin("endWord "~op~"= e2._ptr[i];");
+        _ptr[i] = (_ptr[i] & ~endMask) | (endWord & endMask);
 
         return this;
     }
@@ -1622,8 +1631,8 @@ public:
 
     BitArray opCatAssign(bool b) pure nothrow
     {
-        length = len + 1;
-        this[len - 1] = b;
+        length = _len + 1;
+        this[_len - 1] = b;
         return this;
     }
 
@@ -1653,9 +1662,9 @@ public:
 
     BitArray opCatAssign(BitArray b) pure nothrow
     {
-        auto istart = len;
-        length = len + b.length;
-        for (auto i = istart; i < len; i++)
+        auto istart = _len;
+        length = _len + b.length;
+        for (auto i = istart; i < _len; i++)
             this[i] = b[i - istart];
         return this;
     }
@@ -1690,8 +1699,8 @@ public:
         BitArray r;
 
         r = this.dup;
-        r.length = len + 1;
-        r[len] = b;
+        r.length = _len + 1;
+        r[_len] = b;
         return r;
     }
 
@@ -1700,9 +1709,9 @@ public:
     {
         BitArray r;
 
-        r.length = len + 1;
+        r.length = _len + 1;
         r[0] = b;
-        foreach (i; 0 .. len)
+        foreach (i; 0 .. _len)
             r[1 + i] = this[i];
         return r;
     }
@@ -1838,16 +1847,16 @@ public:
         {
             foreach_reverse (i; 1 .. dim - wordsToShift)
             {
-                ptr[i + wordsToShift] = rollLeft(ptr[i], ptr[i-1],
+                _ptr[i + wordsToShift] = rollLeft(_ptr[i], _ptr[i-1],
                                                  bitsToShift);
             }
-            ptr[wordsToShift] = rollLeft(ptr[0], 0, bitsToShift);
+            _ptr[wordsToShift] = rollLeft(_ptr[0], 0, bitsToShift);
         }
 
         import std.algorithm : min;
         foreach (i; 0 .. min(wordsToShift, dim))
         {
-            ptr[i] = 0;
+            _ptr[i] = 0;
         }
     }
 
@@ -1872,8 +1881,8 @@ public:
         {
             foreach (i; 0 .. dim - wordsToShift - 1)
             {
-                ptr[i] = rollRight(ptr[i + wordsToShift + 1],
-                                   ptr[i + wordsToShift], bitsToShift);
+                _ptr[i] = rollRight(_ptr[i + wordsToShift + 1],
+                                   _ptr[i + wordsToShift], bitsToShift);
             }
         }
 
@@ -1881,14 +1890,14 @@ public:
         // end of the array.
         if (wordsToShift < dim)
         {
-            ptr[dim - wordsToShift - 1] = rollRight(0, ptr[dim - 1] & endMask,
+            _ptr[dim - wordsToShift - 1] = rollRight(0, _ptr[dim - 1] & endMask,
                                                     bitsToShift);
         }
 
         import std.algorithm : min;
         foreach (i; 0 .. min(wordsToShift, dim))
         {
-            ptr[dim - i - 1] = 0;
+            _ptr[dim - i - 1] = 0;
         }
     }
 
@@ -2021,8 +2030,8 @@ public:
         import std.range : iota;
 
         return iota(dim).
-               filter!(i => ptr[i])().
-               map!(i => BitsSet!size_t(ptr[i], i * bitsPerSizeT))().
+               filter!(i => _ptr[i])().
+               map!(i => BitsSet!size_t(_ptr[i], i * bitsPerSizeT))().
                joiner();
     }
 
@@ -2069,22 +2078,22 @@ public:
         if (!length)
             return;
 
-        auto leftover = len % 8;
+        auto leftover = _len % 8;
         foreach (idx; 0 .. leftover)
         {
             char[1] res = cast(char)(this[idx] + '0');
             sink.put(res[]);
         }
 
-        if (leftover && len > 8)
+        if (leftover && _len > 8)
             sink.put("_");
 
         size_t count;
-        foreach (idx; leftover .. len)
+        foreach (idx; leftover .. _len)
         {
             char[1] res = cast(char)(this[idx] + '0');
             sink.put(res[]);
-            if (++count == 8 && idx != len - 1)
+            if (++count == 8 && idx != _len - 1)
             {
                 sink.put("_");
                 count = 0;
@@ -2095,11 +2104,11 @@ public:
     private void formatBitArray(scope void delegate(const(char)[]) sink) const
     {
         sink("[");
-        foreach (idx; 0 .. len)
+        foreach (idx; 0 .. _len)
         {
             char[1] res = cast(char)(this[idx] + '0');
             sink(res[]);
-            if (idx+1 < len)
+            if (idx+1 < _len)
                 sink(", ");
         }
         sink("]");
