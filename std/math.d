@@ -128,6 +128,7 @@ version (Win64)
         version = Win64_DMD_InlineAsm;
 }
 
+import core.bitop;
 import core.math;
 import core.stdc.math;
 import std.traits;
@@ -2623,8 +2624,6 @@ unittest
         }
     }
 }
-
-import core.bitop : bsr;
 
 /******************************************
  * Extracts the exponent of x as a signed integral value.
