@@ -634,7 +634,7 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
 {
     version(Windows)
     {
-        auto result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
+        auto result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
         if (!result)
         {
             import core.stdc.wchar_ : wcslen;
