@@ -235,7 +235,8 @@ unittest
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.mallocator : Mallocator;
-    import std.experimental.allocator.common : unbounded;
+    import std.experimental.allocator.common : unbounded, Ternary;
+    import std.algorithm : max;
     Bucketizer!(
         FreeList!(
             AllocatorList!(
