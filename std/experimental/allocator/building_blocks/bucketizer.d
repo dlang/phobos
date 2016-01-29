@@ -231,12 +231,19 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 ///
 unittest
 {
+    import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.common : unbounded;
-    Bucketizer!(FreeList!(Mallocator, 0, unbounded),
+    Bucketizer!(
+        FreeList!(
+            AllocatorList!(
+                (size_t n) => Region!Mallocator(max(n, 1024 * 1024))),
+            0, unbounded),
         65, 512, 64) a;
     auto b = a.allocate(400);
     assert(b.length == 400);
+    assert(a.owns(b) == Ternary.yes);
     a.deallocate(b);
 }
