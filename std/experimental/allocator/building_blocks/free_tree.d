@@ -330,12 +330,12 @@ struct FreeTree(ParentAllocator)
         a.deallocate(b1);
         a.deallocate(b3);
         a.deallocate(b2);
-        assert(a.formatSizes == "(20000 (10000 30000))", a.formatSizes);
+        assert(a.formatSizes == "(20480 (12288 32768))", a.formatSizes);
 
         b1 = a.allocate(10000);
-        assert(a.formatSizes == "(20000 (_ 30000))", a.formatSizes);
+        assert(a.formatSizes == "(20480 (_ 32768))", a.formatSizes);
         b1 = a.allocate(30000);
-        assert(a.formatSizes == "(20000)", a.formatSizes);
+        assert(a.formatSizes == "(20480)", a.formatSizes);
         b1 = a.allocate(20000);
         assert(a.formatSizes == "(_)", a.formatSizes);
     }
