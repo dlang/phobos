@@ -85,15 +85,14 @@ struct GCAllocator
     {
         if(n == 0)
             return 0;
+        if(n <= 16)
+            return 16;
+
         import core.bitop: bsr;
 
-        auto largestBit = bsr(n);
-        if (largestBit < 4) // less than 16
-            return 16;
-        if (size_t(1) << largestBit == n) // is a power of 2
-            return n;
-        if (largestBit < 12) // less than 4096
-            return size_t(1) << (largestBit + 1);
+        auto largestBit = bsr(n-1) + 1;
+        if (largestBit <= 12) // 4096 or less
+            return size_t(1) << largestBit;
 
         // larger, we use a multiple of 4096.
         return ((n + 4095) / 4096) * 4096;
