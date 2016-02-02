@@ -144,6 +144,11 @@ unittest
         scope(exit) GCAllocator.instance.deallocate(buffer);
 
         assert(GC.sizeOf(buffer.ptr) == s);
+
+        auto buffer2 = GCAllocator.instance.allocate(s - (s / 2) + 1);
+        scope(exit) GCAllocator.instance.deallocate(buffer2);
+
+        assert(GC.sizeOf(buffer2.ptr) == s);
     }
 
     // anything above a page is simply rounded up to next page
