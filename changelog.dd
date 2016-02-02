@@ -1,7 +1,7 @@
 Ddoc
 
-$(COMMENT Pending changelog for 2.069. This will get copied to dlang.org and
-    cleared when master gets merged into stable prior to 2.069.
+$(COMMENT Pending changelog for 2.071. This will get copied to dlang.org and
+    cleared when master gets merged into stable prior to 2.071.
 )
 
 $(BUGSTITLE Library Changes,
@@ -11,6 +11,8 @@ $(LI The package $(STDMODREF experimental_ndslice, std.experimental.ndslice) was
 It is also available as part of the $(LINK2 https://github.com/DlangScience/mir, Mir library).)
 $(LI Default LogLevel of FileLogger was changed to LogLevel.all.)
 $(LI Access to the internal `ptr` and `len` fields of $(XREF bitmanip, BitArray) was deprecated.)
+$(LI $(XREF experimental.allocator.gc_allocator, GCAllocator.goodAllocSize)
+was added.)
 )
 
 $(BUGSTITLE Library Changes,
