@@ -23,6 +23,8 @@ $(BUGSTITLE Library Changes,
     of the type being iterated)
     $(LI $(XREF algorithm, sorting, isStrictlyMonotonic) which doesn't allow
     equal values was added.)
+    $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
+        rangified.)
 )
 
 $(BUGSTITLE Library Changes,

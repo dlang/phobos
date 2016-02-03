@@ -2310,15 +2310,31 @@ unittest
         $(D FileException) on error (which includes if the _symlink already
         exists).
   +/
-version(StdDdoc) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe;
-else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe
+version(StdDdoc) void symlink(RO, RL)(RO original, RL link)
+    if ((isInputRange!RO && isSomeChar!(ElementType!RO) ||
+            isConvertibleToString!RO) &&
+        (isInputRange!RL && isSomeChar!(ElementType!RL) ||
+            isConvertibleToString!RL));
+else version(Posix) void symlink(RO, RL)(RO original, RL link)
+    if ((isInputRange!RO && isSomeChar!(ElementType!RO) ||
+            isConvertibleToString!RO) &&
+        (isInputRange!RL && isSomeChar!(ElementType!RL) ||
+            isConvertibleToString!RL))
 {
-    static auto trustedSymlink(const(C1)[] path1, const(C2)[] path2) @trusted
+    static if (isConvertibleToString!RO || isConvertibleToString!RL)
     {
-        return core.sys.posix.unistd.symlink(path1.tempCString(),
-                                             path2.tempCString());
+        import std.meta : staticMap;
+        alias Types = staticMap!(convertToString, RO, RL);
+        symlink!Types(original, link);
     }
-    cenforce(trustedSymlink(original, link) == 0, link);
+    else
+    {
+        auto oz = original.tempCString();
+        auto lz = link.tempCString();
+        alias posixSymlink = core.sys.posix.unistd.symlink;
+        immutable int result = () @trusted {return posixSymlink(oz, lz);} ();
+        cenforce(result == 0, text(link));
+    }
 }
 
 version(Posix) @safe unittest
@@ -2364,6 +2380,12 @@ version(Posix) @safe unittest
     }
 }
 
+version(Posix) unittest
+{
+    static assert(__traits(compiles,
+        symlink(TestAliasedString(null), TestAliasedString(null))));
+}
+
 
 /++
     $(BLUE This function is Posix-Only.)
@@ -2376,23 +2398,22 @@ version(Posix) @safe unittest
     Throws:
         $(D FileException) on error.
   +/
-version(StdDdoc) string readLink(C)(const(C)[] link) @safe;
-else version(Posix) string readLink(C)(const(C)[] link) @safe
+version(StdDdoc) string readLink(R)(R link)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+        !isConvertibleToString!R);
+else version(Posix) string readLink(R)(R link)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+        !isConvertibleToString!R)
 {
-    static auto trustedReadlink(const(C)[] path, char[] buf) @trusted
-    {
-        return core.sys.posix.unistd.readlink(path.tempCString(), buf.ptr, buf.length);
-    }
-    static auto trustedAssumeUnique(ref C[] array) @trusted
-    {
-        return assumeUnique(array);
-    }
-
+    alias posixReadlink = core.sys.posix.unistd.readlink;
     enum bufferLen = 2048;
     enum maxCodeUnits = 6;
     char[bufferLen] buffer;
-    auto size = trustedReadlink(link, buffer);
-    cenforce(size != -1, link);
+    const linkz = link.tempCString();
+    auto size = () @trusted {
+        return posixReadlink(linkz, buffer.ptr, buffer.length);
+    } ();
+    cenforce(size != -1, to!string(link));
 
     if(size <= bufferLen - maxCodeUnits)
         return to!string(buffer[0 .. size]);
@@ -2401,19 +2422,32 @@ else version(Posix) string readLink(C)(const(C)[] link) @safe
 
     foreach(i; 0 .. 10)
     {
-        size = trustedReadlink(link, dynamicBuffer);
-        cenforce(size != -1, link);
+        size = () @trusted {
+            return posixReadlink(linkz, dynamicBuffer.ptr, dynamicBuffer.length);
+        } ();
+        cenforce(size != -1, to!string(link));
 
         if(size <= dynamicBuffer.length - maxCodeUnits)
         {
             dynamicBuffer.length = size;
-            return trustedAssumeUnique(dynamicBuffer);
+            return () @trusted {
+                return assumeUnique(dynamicBuffer);
+            } ();
         }
 
         dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
     }
 
     throw new FileException(to!string(link), "Path is too long to read.");
+}
+
+/// ditto
+version(StdDdoc) string readLink(R)(R link)
+    if (isConvertibleToString!R);
+else version(Posix) string readLink(R)(R link)
+    if (isConvertibleToString!R)
+{
+    return readLink!(StringTypeOf!R)(link);
 }
 
 version(Posix) @safe unittest
@@ -2432,6 +2466,27 @@ version(Posix) @safe unittest
     }
 
     assertThrown!FileException(readLink("/doesnotexist"));
+}
+
+version(Posix) @safe unittest
+{
+    static assert(__traits(compiles, readLink(TestAliasedString("foo"))));
+}
+
+version(Posix) unittest // input range of dchars
+{
+    mkdirRecurse(deleteme);
+    scope(exit) if(deleteme.exists) rmdirRecurse(deleteme);
+    write(deleteme ~ "/f", "");
+    import std.range.interfaces: InputRange, inputRangeObject;
+    import std.utf: byChar;
+    immutable string link = deleteme ~ "/l";
+    symlink("f", link);
+    InputRange!dchar linkr = inputRangeObject(link);
+    alias R = typeof(linkr);
+    static assert(isInputRange!R);
+    static assert(!isForwardRange!R);
+    assert(readLink(linkr) == "f");
 }
 
 
