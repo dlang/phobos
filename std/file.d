@@ -2206,18 +2206,17 @@ unittest
 /++
     $(BLUE This function is Posix-Only.)
 
-    Creates a symlink.
+    Creates a symbolic _link (_symlink).
 
     Params:
-        original = The file to link from.
-        link     = The symlink to create.
-
-    Note:
-        Relative paths are relative to the current working directory,
-        not the files being linked to or from.
+        original = The file that is being linked. This is the target path that's
+            stored in the _symlink. A relative path is relative to the created
+            _symlink.
+        link = The _symlink to create. A relative path is relative to the
+            current working directory.
 
     Throws:
-        $(D FileException) on error (which includes if the symlink already
+        $(D FileException) on error (which includes if the _symlink already
         exists).
   +/
 version(StdDdoc) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe;
