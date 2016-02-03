@@ -6,27 +6,12 @@ $(COMMENT Pending changelog for 2.071. This will get copied to dlang.org and
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(RELATIVE_LINK2 json-encode-control-characters, `std.json` encodes string control characters.))
-$(LI The package $(STDMODREF experimental_ndslice, std.experimental.ndslice) was added.
-It is also available as part of the $(LINK2 https://github.com/DlangScience/mir, Mir library).)
-$(LI Default LogLevel of FileLogger was changed to LogLevel.all.)
-$(LI Access to the internal `ptr` and `len` fields of $(XREF bitmanip, BitArray) was deprecated.)
 $(LI $(XREF experimental.allocator.gc_allocator, GCAllocator.goodAllocSize)
 was added.)
+
 )
 
 $(BUGSTITLE Library Changes,
-
-$(LI $(LNAME2 json-encode-control-characters, `std.json` encodes string control characters.)
-
-    $(P Instead of throwing a $(XREF json, JSONException), $(XREF json, toJSON)
-        encodes now the control characters of a string.
-    )
-
-    ------
-    assert(toJSON(JSONValue("foo\u007fbar") == `"foo\u007Fbar"`);
-    ------
-)
 
 )
 
