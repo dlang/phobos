@@ -6,7 +6,7 @@ $(COMMENT Pending changelog for 2.071. This will get copied to dlang.org and
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(XREF experimental.allocator.gc_allocator, GCAllocator.goodAllocSize)
+$(LI $(REF GCAllocator.goodAllocSize, std,experimental,allocator,gc_allocator)
 was added.)
 
 )
