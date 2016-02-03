@@ -457,10 +457,6 @@ template map(fun...) if (fun.length >= 1)
 
             alias _funs = staticMap!(unaryFun, fun);
             alias _fun = adjoin!_funs;
-
-            alias ReturnTypes = staticMap!(AppliedReturnType, _funs);
-            static assert(staticIndexOf!(void, ReturnTypes) == -1,
-                          "All mapping functions must not return void.");
         }
         else
         {
