@@ -1074,7 +1074,7 @@ version(Windows) unittest
  +/
 void setTimes(R)(R name,
               SysTime accessTime,
-              SysTime modificationTime) @safe
+              SysTime modificationTime)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
@@ -1146,13 +1146,13 @@ void setTimes(R)(R name,
 
 void setTimes(R)(auto ref R name,
               SysTime accessTime,
-              SysTime modificationTime) @safe
+              SysTime modificationTime)
     if (isConvertibleToString!R)
 {
     setTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, setTimes(TestAliasedString("foo"), SysTime.init, SysTime.init)));
 }
