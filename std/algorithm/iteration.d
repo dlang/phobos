@@ -25,6 +25,8 @@ $(T2 filter,
 $(T2 filterBidirectional,
         Similar to $(D filter), but also provides $(D back) and $(D popBack) at
         a small increase in cost.)
+$(T2 fold,
+        $(D fold!((a, b) => a + b)([1, 2, 3, 4])) returns $(D 10).)
 $(T2 group,
         $(D group([5, 2, 2, 3, 3])) returns a range containing the tuples
         $(D tuple(5, 1)), $(D tuple(2, 2)), and $(D tuple(3, 2)).)
@@ -2520,6 +2522,8 @@ template reduce(fun...) if (fun.length >= 1)
     $(D reduce) will operate on an unqualified copy. If this happens
     then the returned type will not perfectly match $(D S).
 
+    Use $(D fold) instead of $(D reduce) to use the seed version in a UFCS chain.
+
     Params:
         fun = one or more functions
         seed = the initial value of the accumulator
@@ -2867,6 +2871,80 @@ private template ReduceSeedType(E)
             algoFormat("Unable to deduce an acceptable seed type for %s with element type %s.", fullyQualifiedName!fun, E.stringof));
     }
 }
+
+
+/++
+Implements the homonym function (also known as $(D accumulate), $(D
+compress), $(D inject), or $(D foldl)) present in various programming
+languages of functional flavor. The call $(D fold!(fun)(range, seed))
+first assigns $(D seed) to an internal variable $(D result),
+also called the accumulator. Then, for each element $(D x) in $(D
+range), $(D result = fun(result, x)) gets evaluated. Finally, $(D
+result) is returned. The one-argument version $(D fold!(fun)(range))
+works similarly, but it uses the first element of the range as the
+seed (the range must be non-empty).
+
+Returns:
+    the accumulated $(D result)
+
+See_Also:
+    $(WEB en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
+
+    $(LREF sum) is similar to $(D fold!((a, b) => a + b)) that offers
+    precise summing of floating point numbers.
+
+    This is functionally equivalent to $(LREF reduce) with the argument order reversed,
+    and without the need to use $(LREF tuple) for multiple seeds.
++/
+template fold(fun...) if (fun.length >= 1)
+{
+    auto fold(R, S...)(R r, S seed)
+    {
+        static if (S.length < 2)
+        {
+            return reduce!fun(seed, r);
+        }
+        else
+        {
+            import std.typecons: tuple;
+            return reduce!fun(tuple(seed), r);
+        }
+    }
+}
+
+///
+@safe pure unittest
+{
+    immutable arr = [1, 2, 3, 4, 5];
+
+    // Sum all elements
+    assert(arr.fold!((a, b) => a + b) == 15);
+
+    // Sum all elements with explicit seed
+    assert(arr.fold!((a, b) => a + b)(6) == 21);
+
+    import std.algorithm.comparison: min, max;
+    import std.typecons: tuple;
+
+    // Compute minimum and maximum at the same time
+    assert(arr.fold!(min, max) == tuple(1, 5));
+
+    // Compute minimum and maximum at the same time with seeds
+    assert(arr.fold!(min, max)(0, 7) == tuple(0, 7));
+
+    // Can be used in a UFCS chain
+    assert(arr.map!(a => a + 1).fold!((a, b) => a + b) == 20);
+}
+
+@safe @nogc pure nothrow unittest
+{
+    int[1] arr;
+    static assert(!is(typeof(arr.fold!())));
+    static assert(!is(typeof(arr.fold!(a => a))));
+    static assert(is(typeof(arr.fold!((a, b) => a))));
+    static assert(is(typeof(arr.fold!((a, b) => a)(1))));
+}
+
 
 // splitter
 /**
