@@ -1368,6 +1368,49 @@ Throws: $(D Exception) if the file is not opened.
         w.put('\n');
     }
 
+    /**
+
+    Writes its arguments in text format to the file separated pairwise by a
+    space (or custom `separator`), followed by a newline (or custom `eol`).
+
+    Throws: $(D Exception) if the file is not opened.
+            $(D ErrnoException) on an error writing to the file.
+    */
+    void print(string separator = " ", string eol = "\n", S...)(S args)
+    {
+        import std.conv : to;
+        enum string s = ()
+        {
+            string result = "write(";
+            foreach (i, _; S)
+            {
+                if (i > 0)
+                {
+                    if (separator.length == 0) result ~= ", ";
+                    else if (separator.length == 1) result ~= ", separator[0], ";
+                    else result ~= ", separator, ";
+                }
+                result ~= "args[" ~ to!string(i) ~ "]";
+            }
+            if (eol.length == 0) result ~= ");";
+            else if (eol.length == 1) result ~= ", eol[0]);";
+            else result ~= ", eol);";
+            return result;
+        }();
+        // to debug: pragma(msg, s);
+        mixin(s);
+    }
+
+    ///
+    unittest
+    {
+        void cubes(uint limit)
+        {
+            foreach (i; 0 .. limit)
+                stdout.print(i, i * i * i);
+        }
+    }
+
 /**
 Read line from the file handle and return it as a specified type.
 
@@ -3312,6 +3355,23 @@ unittest
     //     assert(read == "Hello, nice world number 42!\r\n1\r\n1\r\n1\r\n", read);
     // else
     //     assert(read == "Hello, nice world number 42!\n1\n1\n1\n", "["~read~"]");
+}
+
+/**
+Forwards to `stdout.print`.
+*/
+void print(string separator = " ", string eol = "\n", S...)(S args)
+{
+    trustedStdout.print!(separator, eol)(args);
+}
+
+///
+unittest
+{
+    void printCSVRow(Data...)(Data data)
+    {
+        print!", "(data);
+    }
 }
 
 /**
