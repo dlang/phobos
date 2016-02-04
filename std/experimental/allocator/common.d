@@ -230,8 +230,12 @@ Returns s rounded up to a multiple of base.
 */
 @safe @nogc nothrow pure
 package size_t roundUpToMultipleOf(size_t s, uint base)
+in
 {
     assert(base);
+}
+body
+{
     auto rem = s % base;
     return rem ? s + base - rem : s;
 }
@@ -250,13 +254,21 @@ Returns `n` rounded up to a multiple of alignment, which must be a power of 2.
 */
 @safe @nogc nothrow pure
 package size_t roundUpToAlignment(size_t n, uint alignment)
+in
 {
     assert(alignment.isPowerOf2);
+}
+out(result)
+{
+    assert(result >= n);
+}
+body
+{
+
     immutable uint slack = cast(uint) n & (alignment - 1);
     const result = slack
         ? n + alignment - slack
         : n;
-    assert(result >= n);
     return result;
 }
 
@@ -274,8 +286,12 @@ Returns `n` rounded down to a multiple of alignment, which must be a power of 2.
 */
 @safe @nogc nothrow pure
 package size_t roundDownToAlignment(size_t n, uint alignment)
+in
 {
     assert(alignment.isPowerOf2);
+}
+body
+{
     return n & ~size_t(alignment - 1);
 }
 
@@ -317,8 +333,12 @@ Like `a / b` but rounds the result up, not down.
 */
 @safe @nogc nothrow pure
 package size_t divideRoundUp(size_t a, size_t b)
+in
 {
     assert(b);
+}
+body
+{
     return (a + b - 1) / b;
 }
 
@@ -327,8 +347,12 @@ Returns `s` rounded up to a multiple of `base`.
 */
 @nogc nothrow pure
 package void[] roundStartToMultipleOf(void[] s, uint base)
+in
 {
     assert(base);
+}
+body
+{
     auto p = cast(void*) roundUpToMultipleOf(
         cast(size_t) s.ptr, base);
     auto end = s.ptr + s.length;
@@ -349,9 +373,13 @@ Returns $(D s) rounded up to the nearest power of 2.
 */
 @safe @nogc nothrow pure
 package size_t roundUpToPowerOf2(size_t s)
+in
+{
+    assert(s <= (size_t.max >> 1) + 1);
+}
+body
 {
     import std.meta : AliasSeq;
-    assert(s <= (size_t.max >> 1) + 1);
     --s;
     static if (size_t.sizeof == 4)
         alias Shifts = AliasSeq!(1, 2, 4, 8, 16);
@@ -437,8 +465,12 @@ than or equal to the given pointer.
 */
 @nogc nothrow pure
 package void* alignDownTo(void* ptr, uint alignment)
+in
 {
     assert(alignment.isPowerOf2);
+}
+body
+{
     return cast(void*) (cast(size_t) ptr & ~(alignment - 1UL));
 }
 
@@ -448,8 +480,12 @@ than or equal to the given pointer.
 */
 @nogc nothrow pure
 package void* alignUpTo(void* ptr, uint alignment)
+in
 {
     assert(alignment.isPowerOf2);
+}
+body
+{
     immutable uint slack = cast(size_t) ptr & (alignment - 1U);
     return slack ? ptr + alignment - slack : ptr;
 }
