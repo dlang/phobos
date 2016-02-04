@@ -446,9 +446,7 @@ template map(fun...) if (fun.length >= 1)
 {
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
-        import std.meta : staticMap;
-
-        alias AppliedReturnType(alias f) = typeof(f(r.front));
+        import std.meta : AliasSeq, staticMap;
 
         static if (fun.length > 1)
         {
@@ -457,17 +455,19 @@ template map(fun...) if (fun.length >= 1)
 
             alias _funs = staticMap!(unaryFun, fun);
             alias _fun = adjoin!_funs;
-
-            alias ReturnTypes = staticMap!(AppliedReturnType, _funs);
-            static assert(staticIndexOf!(void, ReturnTypes) == -1,
-                          "All mapping functions must not return void.");
         }
         else
         {
             alias _fun = unaryFun!fun;
+            alias _funs = AliasSeq!(_fun);
+        }
 
-            static assert(!is(AppliedReturnType!_fun == void),
-                          "Mapping function must not return void.");
+        // Once DMD issue #5710 is fixed, this validation loop can be moved into a template.
+        alias RE = ElementType!(Range);
+        foreach(f; _funs)
+        {
+            static assert(!is(typeof(f(RE.init)) == void),
+                "Mapping function(s) must not return void: " ~ _funs.stringof);
         }
 
         return MapResult!(_fun, Range)(r);
@@ -748,6 +748,10 @@ unittest
     static assert(!__traits(compiles, map!(voidFun, voidFun)([1])));
     static assert(!__traits(compiles, map!(nonvoidFun, voidFun)([1])));
     static assert(!__traits(compiles, map!(voidFun, nonvoidFun)([1])));
+    static assert(!__traits(compiles, map!(a => voidFun(a))([1])));
+
+    // Phobos issue #15480
+    auto dd = map!(z => z * z, c => c * c * c)([ 1, 2, 3, 4 ]);
 }
 
 @safe unittest
