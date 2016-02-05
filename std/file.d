@@ -2332,7 +2332,7 @@ else version(Posix) void symlink(RO, RL)(RO original, RL link)
         auto oz = original.tempCString();
         auto lz = link.tempCString();
         alias posixSymlink = core.sys.posix.unistd.symlink;
-        immutable int result = () @trusted {return posixSymlink(oz, lz);} ();
+        immutable int result = () @trusted { return posixSymlink(oz, lz); } ();
         cenforce(result == 0, text(link));
     }
 }
