@@ -740,10 +740,10 @@ template Tuple(Specs...)
          *     the original.
          */
         @property
-        ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
+        Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @safe const
         if (from <= to && to <= Types.length)
         {
-            return *cast(typeof(return)*) &(field[from]);
+            return typeof(return)(field[from .. to]);
         }
 
         ///
@@ -755,6 +755,14 @@ template Tuple(Specs...)
             auto s = a.slice!(1, 3);
             static assert(is(typeof(s) == Tuple!(string, float)));
             assert(s[0] == "abc" && s[1] == 4.5);
+
+            // Phobos issue #15645
+            Tuple!(int, int, long) b;
+            b[1] = 42;
+            b[2] = 101;
+            auto t = b.slice!(1, 3);
+            static assert(is(typeof(t) == Tuple!(int, long)));
+            assert(t[0] == 42 && t[1] == 102);
         }
 
         /**
