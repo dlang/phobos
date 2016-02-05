@@ -2311,14 +2311,14 @@ unittest
         exists).
   +/
 version(StdDdoc) void symlink(RO, RL)(RO original, RL link)
-    if ((isInputRange!RO && isSomeChar!(ElementType!RO) ||
+    if ((isInputRange!RO && isSomeChar!(ElementEncodingType!RO) ||
             isConvertibleToString!RO) &&
-        (isInputRange!RL && isSomeChar!(ElementType!RL) ||
+        (isInputRange!RL && isSomeChar!(ElementEncodingType!RL) ||
             isConvertibleToString!RL));
 else version(Posix) void symlink(RO, RL)(RO original, RL link)
-    if ((isInputRange!RO && isSomeChar!(ElementType!RO) ||
+    if ((isInputRange!RO && isSomeChar!(ElementEncodingType!RO) ||
             isConvertibleToString!RO) &&
-        (isInputRange!RL && isSomeChar!(ElementType!RL) ||
+        (isInputRange!RL && isSomeChar!(ElementEncodingType!RL) ||
             isConvertibleToString!RL))
 {
     static if (isConvertibleToString!RO || isConvertibleToString!RL)
@@ -2399,55 +2399,54 @@ version(Posix) unittest
         $(D FileException) on error.
   +/
 version(StdDdoc) string readLink(R)(R link)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R);
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) ||
+        isConvertibleToString!R);
 else version(Posix) string readLink(R)(R link)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) ||
+        isConvertibleToString!R)
 {
-    alias posixReadlink = core.sys.posix.unistd.readlink;
-    enum bufferLen = 2048;
-    enum maxCodeUnits = 6;
-    char[bufferLen] buffer;
-    const linkz = link.tempCString();
-    auto size = () @trusted {
-        return posixReadlink(linkz, buffer.ptr, buffer.length);
-    } ();
-    cenforce(size != -1, to!string(link));
-
-    if(size <= bufferLen - maxCodeUnits)
-        return to!string(buffer[0 .. size]);
-
-    auto dynamicBuffer = new char[](bufferLen * 3 / 2);
-
-    foreach(i; 0 .. 10)
+    static if (isConvertibleToString!R)
     {
-        size = () @trusted {
-            return posixReadlink(linkz, dynamicBuffer.ptr, dynamicBuffer.length);
+        return readLink!(convertToString!R)(link);
+    }
+    else
+    {
+        alias posixReadlink = core.sys.posix.unistd.readlink;
+        enum bufferLen = 2048;
+        enum maxCodeUnits = 6;
+        char[bufferLen] buffer;
+        const linkz = link.tempCString();
+        auto size = () @trusted {
+            return posixReadlink(linkz, buffer.ptr, buffer.length);
         } ();
         cenforce(size != -1, to!string(link));
 
-        if(size <= dynamicBuffer.length - maxCodeUnits)
+        if(size <= bufferLen - maxCodeUnits)
+            return to!string(buffer[0 .. size]);
+
+        auto dynamicBuffer = new char[](bufferLen * 3 / 2);
+
+        foreach(i; 0 .. 10)
         {
-            dynamicBuffer.length = size;
-            return () @trusted {
-                return assumeUnique(dynamicBuffer);
+            size = () @trusted {
+                return posixReadlink(linkz, dynamicBuffer.ptr,
+                    dynamicBuffer.length);
             } ();
+            cenforce(size != -1, to!string(link));
+
+            if(size <= dynamicBuffer.length - maxCodeUnits)
+            {
+                dynamicBuffer.length = size;
+                return () @trusted {
+                    return assumeUnique(dynamicBuffer);
+                } ();
+            }
+
+            dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
         }
 
-        dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
+        throw new FileException(to!string(link), "Path is too long to read.");
     }
-
-    throw new FileException(to!string(link), "Path is too long to read.");
-}
-
-/// ditto
-version(StdDdoc) string readLink(R)(R link)
-    if (isConvertibleToString!R);
-else version(Posix) string readLink(R)(R link)
-    if (isConvertibleToString!R)
-{
-    return readLink!(StringTypeOf!R)(link);
 }
 
 version(Posix) @safe unittest
