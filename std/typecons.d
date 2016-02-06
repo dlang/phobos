@@ -743,7 +743,7 @@ template Tuple(Specs...)
         inout(Tuple!(sliceSpecs!(from, to))) slice(size_t from, size_t to)() inout
         if (from <= to && to <= Types.length)
         {
-            return Tuple!(sliceSpecs!(from, to))(field[from .. to]);
+            return Tuple!(sliceSpecs!(from, to))(expand[from .. to]);
         }
 
         ///
