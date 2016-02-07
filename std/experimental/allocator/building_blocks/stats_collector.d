@@ -664,15 +664,12 @@ unittest
     alloc.reallocate(b, 20);
     alloc.deallocate(b);
 
+    import std.file : deleteme, remove;
     import std.stdio : File;
     import std.range : walkLength;
-    version(Posix)
-        auto f = "/tmp/dlang.std.experimental.allocator.stats_collector.txt";
-    version(Windows)
-    {
-        import std.process: environment;
-        auto f = environment.get("temp") ~ r"\dlang.std.experimental.allocator.stats_collector.txt";
-    }
+
+    auto f = deleteme ~ "-dlang.std.experimental.allocator.stats_collector.txt";
+    scope(exit) remove(f);
     Allocator.reportPerCallStatistics(File(f, "w"));
     alloc.reportStatistics(File(f, "a"));
     assert(File(f).byLine.walkLength == 22);

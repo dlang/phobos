@@ -3118,6 +3118,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     else version(Posix)
     {
         import core.stdc.stdio;
+        static import std.conv;
 
         immutable fd = core.sys.posix.fcntl.open(fromz, O_RDONLY);
         cenforce(fd != -1, f, fromz);
@@ -3158,7 +3159,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
                 size -= toxfer;
             }
             if (preserve)
-                cenforce(fchmod(fdw, statbuf.st_mode) == 0, f, fromz);
+                cenforce(fchmod(fdw, std.conv.to!mode_t(statbuf.st_mode)) == 0, f, fromz);
         }
 
         cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
@@ -3901,6 +3902,11 @@ string tempDir() @trusted
             wchar[MAX_PATH + 2] buf;
             DWORD len = GetTempPathW(buf.length, buf.ptr);
             if (len) cache = toUTF8(buf[0 .. len]);
+        }
+        else version(Android)
+        {
+            // Don't check for a global temporary directory as
+            // Android doesn't have one.
         }
         else version(Posix)
         {
