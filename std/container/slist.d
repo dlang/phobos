@@ -280,7 +280,8 @@ Complexity: $(BIGOH 1)
      */
     void clear()
     {
-        _first = null;
+        if (_root)
+            _first = null;
     }
 
 /**
@@ -769,4 +770,11 @@ unittest
     SList!int s;
     s.insertAfter(s[], 1);
     assert(s.front == 1);
+}
+
+unittest
+{
+    // issue 15659
+    SList!int s;
+    s.clear();
 }
