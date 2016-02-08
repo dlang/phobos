@@ -217,6 +217,10 @@ unittest {
 
     enum real erf0_875  = (1-0.215911865234375) - 1.3073705765341685464282101150637224028267E-5;
 
+    static bool isNaNWithPayload(real x, ulong payload) @safe pure nothrow @nogc
+    {
+      return isNaN(x) && getNaNPayload(x) == payload;
+    }
 
     assert(feqrel(erfc(0.250L), erfc0_250 )>=real.mant_dig-1);
     assert(feqrel(erfc(0.375L), erfc0_375 )>=real.mant_dig-0);
@@ -234,8 +238,8 @@ unittest {
     assert(isIdentical(erf(-0.0),-0.0));
     assert(erf(real.infinity) == 1.0);
     assert(erf(-real.infinity) == -1.0);
-    assert(isIdentical(erf(NaN(0xDEF)),NaN(0xDEF)));
-    assert(isIdentical(erfc(NaN(0xDEF)),NaN(0xDEF)));
+    assert(isNaNWithPayload(erf(NaN(0xDEF)), 0xDEF));
+    assert(isNaNWithPayload(erfc(NaN(0xDEF)), 0xDEF));
     assert(isIdentical(erfc(real.infinity),0.0));
     assert(erfc(-real.infinity) == 2.0);
     assert(erfc(0) == 1.0);
