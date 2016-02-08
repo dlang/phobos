@@ -885,7 +885,7 @@ unittest
 }
 
 /// Ditto
-bool expandArray(T, Allocator)(auto ref Allocator alloc, T[] array,
+bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     size_t delta, auto ref T init)
 {
     if (!delta) return true;
@@ -897,6 +897,19 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, T[] array,
     import std.algorithm : uninitializedFill;
     array[oldLength .. $].uninitializedFill(init);
     return true;
+}
+
+unittest
+{
+    void test(A)(auto ref A alloc)
+    {
+        auto arr = alloc.makeArray!int([1, 2, 3]);
+        assert(alloc.expandArray(arr, 3, 1));
+        assert(arr == [1, 2, 3, 1, 1, 1]);
+    }
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test(GCAllocator.instance);
+    test(theAllocator);
 }
 
 /// Ditto
