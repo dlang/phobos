@@ -635,7 +635,9 @@ struct ThreadList(DataIndex)
                     size_t end = source[n].end;
                     if(s[idx..end].front == front)
                     {
-                        t.uopCounter += std.utf.stride(s[idx..end], 0);
+                        import std.utf : stride;
+
+                        t.uopCounter += stride(s[idx..end], 0);
                         if(t.uopCounter + source[n].begin == source[n].end)
                         {//last codepoint
                             t.pc += IRL!(IR.Backref);

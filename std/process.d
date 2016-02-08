@@ -2632,13 +2632,14 @@ private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
         }
     }
 
+    import std.ascii : isDigit;
     // Empty arguments need to be specified as ""
     if (!arg.length)
         needEscape = true;
     else
     // Arguments ending with digits need to be escaped,
     // to disambiguate with 1>file redirection syntax
-    if (std.ascii.isDigit(arg[$-1]))
+    if (isDigit(arg[$-1]))
         needEscape = true;
 
     if (!needEscape)
@@ -3033,8 +3034,10 @@ static:
         {
             for (int i=0; environ[i] != null; ++i)
             {
+                import std.string : indexOf;
+
                 immutable varDef = to!string(environ[i]);
-                immutable eq = std.string.indexOf(varDef, '=');
+                immutable eq = indexOf(varDef, '=');
                 assert (eq >= 0);
 
                 immutable name = varDef[0 .. eq];

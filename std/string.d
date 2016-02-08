@@ -395,8 +395,8 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         !isConvertibleToString!Range)
 {
-    import std.ascii : toLower, isASCII;
-    import std.uni : toLower;
+    static import std.ascii;
+    static import std.uni;
     import std.utf : byDchar, byCodeUnit, UTFException, codeLength;
     alias Char = Unqual!(ElementEncodingType!Range);
 
@@ -731,12 +731,12 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
         const(Char1)[] balance;
         if (cs == CaseSensitive.yes)
         {
-            balance = std.algorithm.find(s, sub);
+            balance = find(s, sub);
         }
         else
         {
-            balance = std.algorithm.find!
-                ((a, b) => std.uni.toLower(a) == std.uni.toLower(b))
+            balance = find!
+                ((a, b) => toLower(a) == toLower(b))
                 (s, sub);
         }
         return balance.empty ? -1 : balance.ptr - s.ptr;
@@ -990,7 +990,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
-    import std.ascii : isASCII, toLower;
+    static import std.ascii, std.uni;
     import std.utf : canSearchInCodeUnits;
     if (cs == CaseSensitive.yes)
     {
@@ -2843,8 +2843,8 @@ auto stripLeft(Range)(Range input)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         !isConvertibleToString!Range)
 {
-    import std.ascii : isASCII, isWhite;
-    import std.uni : isWhite;
+    static import std.ascii;
+    static import std.uni;
     import std.utf : decodeFront;
 
     while (!input.empty)
@@ -2919,9 +2919,11 @@ auto stripRight(Range)(Range str)
     static if (isSomeString!(typeof(str)))
     {
         import std.utf : codeLength;
+        import std.uni : isWhite;
+
         foreach_reverse (i, dchar c; str)
         {
-            if (!std.uni.isWhite(c))
+            if (!isWhite(c))
                 return str[0 .. i + codeLength!C(c)];
         }
 
@@ -5090,9 +5092,9 @@ in
     assert(from.length == to.length);
     assert(from.length <= 256);
     foreach (char c; from)
-        assert(std.ascii.isASCII(c));
+        assert(isASCII(c));
     foreach (char c; to)
-        assert(std.ascii.isASCII(c));
+        assert(isASCII(c));
 }
 body
 {
@@ -6271,7 +6273,9 @@ string[string] abbrev(string[] values) @safe pure
                 break;
         }
 
-        for (size_t j = 0; j < value.length; j += std.utf.stride(value, j))
+        import std.utf : stride;
+
+        for (size_t j = 0; j < value.length; j += stride(value, j))
         {
             string v = value[0 .. j];
 

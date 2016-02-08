@@ -6952,15 +6952,14 @@ int sicmp(S1, S2)(S1 str1, S2 str2)
     if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
     && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
 {
-    import std.utf : decode;
-
     alias sTable = simpleCaseTable;
     size_t ridx=0;
     foreach(dchar lhs; str1)
     {
         if(ridx == str2.length)
             return 1;
-        dchar rhs = std.utf.decode(str2, ridx);
+        import std.utf : decode;
+        dchar rhs = decode(str2, ridx);
         int diff = lhs - rhs;
         if(!diff)
             continue;
