@@ -8052,7 +8052,7 @@ public:
             return format("%s%s%s",
                           dateTime.toISOString(),
                           fracSecsToISOString(cast(int)hnsecs),
-                          SimpleTimeZone.toISOString(utcOffset));
+                          SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch(Exception e)
             assert(0, "format() threw.");
@@ -8182,7 +8182,7 @@ public:
             return format("%s%s%s",
                           dateTime.toISOExtString(),
                           fracSecsToISOString(cast(int)hnsecs),
-                          SimpleTimeZone.toISOString(utcOffset));
+                          SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch(Exception e)
             assert(0, "format() threw.");
@@ -8316,7 +8316,7 @@ public:
             return format("%s%s%s",
                           dateTime.toSimpleString(),
                           fracSecsToISOString(cast(int)hnsecs),
-                          SimpleTimeZone.toISOString(utcOffset));
+                          SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch(Exception e)
             assert(0, "format() threw.");
@@ -8495,7 +8495,7 @@ public:
             else if(zoneStr == "Z")
                 parsedZone = UTC();
             else
-                parsedZone = SimpleTimeZone.fromISOString(zoneStr);
+                parsedZone = SimpleTimeZone.fromISOExtString(zoneStr);
 
             auto retval = SysTime(dateTime, fracSec, parsedZone);
 
@@ -8718,7 +8718,7 @@ public:
             else if(zoneStr == "Z")
                 parsedZone = UTC();
             else
-                parsedZone = SimpleTimeZone.fromISOString(zoneStr);
+                parsedZone = SimpleTimeZone.fromISOExtString(zoneStr);
 
             auto retval = SysTime(dateTime, fracSec, parsedZone);
 
@@ -8944,7 +8944,7 @@ public:
             else if(zoneStr == "Z")
                 parsedZone = UTC();
             else
-                parsedZone = SimpleTimeZone.fromISOString(zoneStr);
+                parsedZone = SimpleTimeZone.fromISOExtString(zoneStr);
 
             auto retval = SysTime(dateTime, fracSec, parsedZone);
 
@@ -28125,7 +28125,7 @@ private:
             utcOffset = The number of minutes offset from UTC (negative means
                         west).
       +/
-    static string toISOString(Duration utcOffset) @safe pure
+    static string toISOExtString(Duration utcOffset) @safe pure
     {
         import std.format : format;
 
@@ -28142,30 +28142,30 @@ private:
     {
         static string testSTZInvalid(Duration offset)
         {
-            return SimpleTimeZone.toISOString(offset);
+            return SimpleTimeZone.toISOExtString(offset);
         }
 
         assertThrown!DateTimeException(testSTZInvalid(dur!"minutes"(1440)));
         assertThrown!DateTimeException(testSTZInvalid(dur!"minutes"(-1440)));
 
-        assert(toISOString(dur!"minutes"(0)) == "+00:00");
-        assert(toISOString(dur!"minutes"(1)) == "+00:01");
-        assert(toISOString(dur!"minutes"(10)) == "+00:10");
-        assert(toISOString(dur!"minutes"(59)) == "+00:59");
-        assert(toISOString(dur!"minutes"(60)) == "+01:00");
-        assert(toISOString(dur!"minutes"(90)) == "+01:30");
-        assert(toISOString(dur!"minutes"(120)) == "+02:00");
-        assert(toISOString(dur!"minutes"(480)) == "+08:00");
-        assert(toISOString(dur!"minutes"(1439)) == "+23:59");
+        assert(toISOExtString(dur!"minutes"(0)) == "+00:00");
+        assert(toISOExtString(dur!"minutes"(1)) == "+00:01");
+        assert(toISOExtString(dur!"minutes"(10)) == "+00:10");
+        assert(toISOExtString(dur!"minutes"(59)) == "+00:59");
+        assert(toISOExtString(dur!"minutes"(60)) == "+01:00");
+        assert(toISOExtString(dur!"minutes"(90)) == "+01:30");
+        assert(toISOExtString(dur!"minutes"(120)) == "+02:00");
+        assert(toISOExtString(dur!"minutes"(480)) == "+08:00");
+        assert(toISOExtString(dur!"minutes"(1439)) == "+23:59");
 
-        assert(toISOString(dur!"minutes"(-1)) == "-00:01");
-        assert(toISOString(dur!"minutes"(-10)) == "-00:10");
-        assert(toISOString(dur!"minutes"(-59)) == "-00:59");
-        assert(toISOString(dur!"minutes"(-60)) == "-01:00");
-        assert(toISOString(dur!"minutes"(-90)) == "-01:30");
-        assert(toISOString(dur!"minutes"(-120)) == "-02:00");
-        assert(toISOString(dur!"minutes"(-480)) == "-08:00");
-        assert(toISOString(dur!"minutes"(-1439)) == "-23:59");
+        assert(toISOExtString(dur!"minutes"(-1)) == "-00:01");
+        assert(toISOExtString(dur!"minutes"(-10)) == "-00:10");
+        assert(toISOExtString(dur!"minutes"(-59)) == "-00:59");
+        assert(toISOExtString(dur!"minutes"(-60)) == "-01:00");
+        assert(toISOExtString(dur!"minutes"(-90)) == "-01:30");
+        assert(toISOExtString(dur!"minutes"(-120)) == "-02:00");
+        assert(toISOExtString(dur!"minutes"(-480)) == "-08:00");
+        assert(toISOExtString(dur!"minutes"(-1439)) == "-23:59");
     }
 
 
@@ -28179,7 +28179,7 @@ private:
         Params:
             isoString = A string which represents a time zone in the ISO format.
       +/
-    static immutable(SimpleTimeZone) fromISOString(S)(S isoString) @safe pure
+    static immutable(SimpleTimeZone) fromISOExtString(S)(S isoString) @safe pure
         if(isSomeString!S)
     {
         import std.ascii : isDigit;
@@ -28222,102 +28222,101 @@ private:
 
     unittest
     {
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString(""));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("Z"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("-"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("+"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("-:"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("+:"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("-1:"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("+1:"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("1"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("-24:00"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("+24:00"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("+1:0"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString(""));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("Z"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("-"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("+"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("-:"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("+:"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("-1:"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("+1:"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("1"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("-24:00"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("+24:00"));
+        assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString("+1:0"));
 
-        assert(SimpleTimeZone.fromISOString("+00:00").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+00:00").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(0))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+00:01").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+00:01").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(1))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+00:10").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+00:10").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(10))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+00:59").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+00:59").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(59))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+01:00").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+01:00").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+01:30").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+01:30").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(90))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+02:00").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+02:00").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(120))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+08:00").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+08:00").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(480))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+23:59").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+23:59").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(1439))).utcOffset);
 
-        assert(SimpleTimeZone.fromISOString("-00:01").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-00:01").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-1))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-00:10").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-00:10").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-10))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-00:59").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-00:59").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-59))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-01:00").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-01:00").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-01:30").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-01:30").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-90))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-02:00").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-02:00").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-120))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-08:00").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-08:00").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-480))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-23:59").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-23:59").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-1439))).utcOffset);
 
-        assert(SimpleTimeZone.fromISOString("+0").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+0").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(0))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+1").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+1").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+2").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+2").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(120))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+23").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+23").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(1380))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+2").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+2").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(120))).utcOffset);
 
-        assert(SimpleTimeZone.fromISOString("+0").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+0").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(0))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+1").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+1").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+2").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+2").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(120))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+23").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+23").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(1380))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+1:00").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+1:00").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+1:01").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("+1:01").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(61))).utcOffset);
 
-        assert(SimpleTimeZone.fromISOString("-0").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-0").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(0))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-1").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-1").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-2").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-2").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-120))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-23").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-23").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-1380))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-1:00").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-1:00").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-1:01").utcOffset ==
+        assert(SimpleTimeZone.fromISOExtString("-1:01").utcOffset ==
                (new immutable SimpleTimeZone(dur!"minutes"(-61))).utcOffset);
     }
 
-    //Test that converting from an ISO string to a SimpleTimeZone to an ISO String works properly.
     unittest
     {
         static void testSTZ(in string isoString, int expectedOffset, size_t line = __LINE__)
         {
-            auto stz = SimpleTimeZone.fromISOString(isoString);
+            auto stz = SimpleTimeZone.fromISOExtString(isoString);
             assert(stz.utcOffset == dur!"minutes"(expectedOffset));
 
-            auto result = SimpleTimeZone.toISOString(stz.utcOffset);
+            auto result = SimpleTimeZone.toISOExtString(stz.utcOffset);
             assert(result == isoString);
         }
 
