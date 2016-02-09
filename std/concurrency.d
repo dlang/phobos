@@ -339,6 +339,17 @@ public:
 
 }
 
+unittest
+{
+    import std.conv : text;
+    Tid tid;
+    assert(text(tid) == "Tid(0)");
+    auto tid2 = thisTid;
+    assert(text(tid2) != "Tid(0)");
+    auto tid3 = tid2;
+    assert(text(tid2) == text(tid3));
+}
+
 
 /**
  * Returns the caller's Tid.
