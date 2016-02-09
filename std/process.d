@@ -450,10 +450,33 @@ private Pid spawnProcessImpl(in char[][] args,
         setCLOEXEC(STDERR_FILENO, false);
         if (!(config & Config.inheritFDs))
         {
-            import core.sys.posix.sys.resource;
-            rlimit r;
-            getrlimit(RLIMIT_NOFILE, &r);
-            foreach (i; 3 .. cast(int) r.rlim_cur) close(i);
+            version(linux)        const auto fdpath = "/proc/self/fd";
+            else version(OSX)     const auto fdpath = "/dev/fd";
+            else version(FreeBSD) const auto fdpath = "/dev/fd";
+            else                  const string fdpath = null;
+
+            static if (fdpath != null)
+            {
+                import std.file;
+                foreach (fdent; dirEntries(fdpath, SpanMode.shallow, false))
+                {
+                    auto fdnum = baseName(fdent.name).to!int;
+                    if (fdnum == STDIN_FILENO ||
+                        fdnum == STDOUT_FILENO ||
+                        fdnum == STDERR_FILENO)
+                    {
+                        continue;
+                    }
+                    close(fdnum);
+                }
+            }
+            else
+            {
+                import core.sys.posix.sys.resource;
+                rlimit r;
+                getrlimit(RLIMIT_NOFILE, &r);
+                foreach (i; 3 .. cast(int) r.rlim_cur) close(i);
+            }
         }
 
         // Close the old file descriptors, unless they are
