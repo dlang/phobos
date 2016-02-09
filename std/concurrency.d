@@ -334,9 +334,20 @@ public:
     void toString(scope void delegate(const(char)[]) sink)
     {
         import std.format;
-        formattedWrite(sink, "Tid(%x)", &mbox);
+        formattedWrite(sink, "Tid(%x)", cast(void*)mbox);
     }
 
+}
+
+unittest
+{
+    import std.conv : text;
+    Tid tid;
+    assert(text(tid) == "Tid(0)");
+    auto tid2 = thisTid;
+    assert(text(tid2) != "Tid(0)");
+    auto tid3 = tid2;
+    assert(text(tid2) == text(tid3));
 }
 
 
