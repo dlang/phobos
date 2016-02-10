@@ -61,6 +61,81 @@ unittest
 }
 
 /**
+ * Allows `alias`ing of any single symbol, type or compile-time expression.
+ *
+ * Not everything can be directly aliased. An alias cannot be declared
+ * of - for example - a literal:
+ *
+ * `alias a = 4; //Error`
+ *
+ * With this template any single entity can be aliased:
+ *
+ * `alias b = Alias!4; //OK`
+ *
+ * See_Also:
+ * To alias more than one thing at once, use $(LREF AliasSeq)
+ */
+template Alias(alias a)
+{
+    static if (__traits(compiles, { alias x = a; }))
+        alias Alias = a;
+    else static if (__traits(compiles, { enum x = a; }))
+        enum Alias = a;
+    else
+        static assert(0, "Cannot alias " ~ a.stringof);
+}
+
+/// Ditto
+template Alias(T)
+{
+    alias Alias = T;
+}
+
+///
+unittest
+{
+    // Without Alias this would fail if Args[0] was e.g. a value and
+    // some logic would be needed to detect when to use enum instead
+    alias Head(Args ...) = Alias!(Args[0]);
+    alias Tail(Args ...) = Args[1 .. $];
+
+    alias Blah = AliasSeq!(3, int, "hello");
+    static assert(Head!Blah == 3);
+    static assert(is(Head!(Tail!Blah) == int));
+    static assert((Tail!Blah)[1] == "hello");
+}
+
+///
+unittest
+{
+    alias a = Alias!(123);
+    static assert(a == 123);
+
+    enum abc = 1;
+    alias b = Alias!(abc);
+    static assert(b == 1);
+
+    alias c = Alias!(3 + 4);
+    static assert(c == 7);
+
+    alias concat = (s0, s1) => s0 ~ s1;
+    alias d = Alias!(concat("Hello", " World!"));
+    static assert(d == "Hello World!");
+
+    alias e = Alias!(int);
+    static assert(is(e == int));
+
+    alias f = Alias!(AliasSeq!(int));
+    static assert(!is(typeof(f[0]))); //not an AliasSeq
+    static assert(is(f == int));
+
+    auto g = 6;
+    alias h = Alias!g;
+    ++h;
+    assert(g == 7);
+}
+
+/**
  * Returns the index of the first occurrence of type T in the
  * sequence of zero or more types TList.
  * If not found, -1 is returned.
@@ -952,44 +1027,6 @@ unittest
     {
         static assert(V == REF[I]);
     }
-}
-
-
-// : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
-package:
-
-/*
- * With the builtin alias declaration, you cannot declare
- * aliases of, for example, literal values. You can alias anything
- * including literal values via this template.
- */
-// symbols and literal values
-template Alias(alias a)
-{
-    static if (__traits(compiles, { alias x = a; }))
-        alias Alias = a;
-    else static if (__traits(compiles, { enum x = a; }))
-        enum Alias = a;
-    else
-        static assert(0, "Cannot alias " ~ a.stringof);
-}
-// types and tuples
-template Alias(a...)
-{
-    alias Alias = a;
-}
-
-unittest
-{
-    enum abc = 1;
-    alias a = Alias!(123);
-    static assert(a == 123);
-    alias b = Alias!(abc);
-    static assert(b == 1);
-    alias c = Alias!(int);
-    static assert(is(c[0] == int));
-    alias d = Alias!(1, abc, int);
-    static assert(d[0] == 1 && d[1] == 1 && is(d[2] == int));
 }
 
 
