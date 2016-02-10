@@ -1859,7 +1859,7 @@ unittest
   Returns:
       A string to be mixed in to an aggregate, such as a `struct` or `class`.
 */
-string alignForSize(E...)(string[] names...)
+string alignForSize(E...)(const char[][] names...)
 {
     // Sort all of the members by .alignof.
     // BUG: Alignment is not always optimal for align(1) structs
@@ -1910,6 +1910,16 @@ unittest
 
     static assert(passNormalX || passAbnormalX && double.alignof <= (int[]).alignof);
     static assert(passNormalY || passAbnormalY && double.alignof <= int.alignof);
+}
+
+// Issue 12914
+unittest
+{
+    immutable string[] fieldNames = ["x", "y"];
+    struct S
+    {
+        mixin(alignForSize!(byte, int)(fieldNames));
+    }
 }
 
 /**
