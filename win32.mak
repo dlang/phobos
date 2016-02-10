@@ -167,8 +167,7 @@ SRC_STD_ALLOC= std\experimental\allocator\common.d std\experimental\allocator\gc
 	std\experimental\allocator\package.d \
 	$(SRC_STD_ALLOC_BB)
 
-SRC_STD_6= std\variant.d \
-	std\syserror.d std\zlib.d \
+SRC_STD_6= std\variant.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\conv.d std\zip.d std\cstream.d \
 	$(SRC_STD_CONTAINER) $(SRC_STD_LOGGER) $(SRC_STD_ALLOC)
@@ -190,7 +189,6 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
 	std\meta.d std\mmfile.d \
-	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
@@ -555,7 +553,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\setops.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\sorting.d
 	$(DMD) -conf= -cov=83 -unittest -main -run std\variant.d
-	$(DMD) -conf= -cov=0  -unittest -main -run std\syserror.d
 	$(DMD) -conf= -cov=58 -unittest -main -run std\zlib.d
 	$(DMD) -conf= -cov=54 -unittest -main -run std\stream.d
 	$(DMD) -conf= -cov=53 -unittest -main -run std\socket.d

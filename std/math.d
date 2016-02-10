@@ -4883,6 +4883,7 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
     assert(!isNaN(cast(real)-53.6));
 }
 
+// Explicitly undocumented. It will be removed in July 2016. @@@DEPRECATED_2016-07@@@
 deprecated("isNaN is not defined for integer types")
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isIntegral!(X))
@@ -4962,6 +4963,7 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
     assert(!isFinite(real.infinity));
 }
 
+// Explicitly undocumented. It will be removed in July 2016. @@@DEPRECATED_2016-07@@@
 deprecated("isFinite is not defined for integer types")
 int isFinite(X)(X x) @trusted pure nothrow @nogc
     if (isIntegral!(X))
@@ -5085,6 +5087,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
     }
 }
 
+// Explicitly undocumented. It will be removed in July 2016. @@@DEPRECATED_2016-07@@@
 deprecated("isSubnormal is not defined for integer types")
 int isSubnormal(X)(X x) @trusted pure nothrow @nogc
     if (isIntegral!X)
@@ -5281,6 +5284,7 @@ int signbit(X)(X x) @nogc @trusted pure nothrow
 }
 
 
+// Explicitly undocumented. It will be removed in July 2016. @@@DEPRECATED_2016-07@@@
 deprecated("signbit is not defined for integer types")
 int signbit(X)(X x) @nogc @trusted pure nothrow
     if (isIntegral!X)
@@ -5347,6 +5351,7 @@ R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
     }
 }
 
+// Explicitly undocumented. It will be removed in July 2016. @@@DEPRECATED_2016-07@@@
 deprecated("copysign : from can't be of integer type")
 R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
     if (isIntegral!R)
@@ -6960,6 +6965,7 @@ bool approxEqual(T, U)(T lhs, U rhs)
     assert(approxEqual(10, a));
 }
 
+// Explicitly undocumented. They will be removed in March 2017. @@@DEPRECATED_2017-03@@@
 // Included for backwards compatibility with Phobos1
 deprecated("Phobos1 math functions are deprecated, use isNaN") alias isnan = isNaN;
 deprecated("Phobos1 math functions are deprecated, use isFinite ") alias isfinite = isFinite;

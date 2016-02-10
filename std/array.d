@@ -1419,8 +1419,12 @@ unittest
     assert(a == [[1], [4, 5, 1], [4, 5]]);
 }
 
+// @@@DEPRECATED_2017-01@@@
 /++
-Alias for $(XREF_PACK algorithm,iteration,_splitter).
+    $(RED Deprecated. Use $(XREF_PACK algorithm,iteration,_splitter) instead.
+          This will be removed in January 2017.)
+
+    Alias for $(XREF_PACK algorithm,iteration,_splitter).
  +/
 deprecated("Please use std.algorithm.iteration.splitter instead.")
 alias splitter = std.algorithm.iteration.splitter;
@@ -2676,6 +2680,7 @@ if (isDynamicArray!A)
     //Broken function. To be removed.
     static if (is(T == immutable))
     {
+        // Explicitly undocumented. It will be removed in March 2016. @@@DEPRECATED_2016-03@@@
         deprecated ("Using this constructor will break the type system. Please fix your code to use `Appender!(T[]).this(T[] arr)' directly.")
         this(Unqual!T[] arr) pure nothrow
         {

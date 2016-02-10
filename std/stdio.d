@@ -2466,12 +2466,6 @@ $(D Range) that locks the file and allows fast writing to it.
         _iobuf* handle_;     // the unshared version of fps
         int orientation_;
     public:
-        deprecated("accessing fps/handle/orientation directly can break LockingTextWriter integrity")
-        {
-            alias fps = fps_;
-            alias handle = handle_;
-            alias orientation = orientation_;
-        }
 
         this(ref File f) @trusted
         {
