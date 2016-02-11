@@ -1292,12 +1292,6 @@ public:
         return value;
     }
 
-    deprecated("Please use value_QWORD instead.")
-    ulong value_QWORD_LITTLEENDIAN()
-    {
-        return value_QWORD;
-    }
-
     /**
         Obtains the value as a binary blob.
 

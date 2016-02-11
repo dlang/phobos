@@ -496,7 +496,6 @@ $(COMMENT
             $(LINK2 std_mmfile.html, std.mmfile)$(BR)
             $(LINK2 std_socketstream.html, std.socketstream)$(BR)
             $(LINK2 std_stream.html, std.stream)$(BR)
-            $(LINK2 std_syserror.html, std.syserror)$(BR)
             $(LINK2 std_typetuple.html, std.typetuple)$(BR)
         )
         $(TD

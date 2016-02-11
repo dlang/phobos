@@ -720,6 +720,7 @@ unittest
 
 struct BitArray
 {
+    // Explicitly undocumented. They will be removed in April 2016. @@@DEPRECATED_2016-04@@@
     deprecated("Use the constructor instead.")
     @property void ptr(size_t* p) pure nothrow @nogc { _ptr = p; }
     deprecated("Use .opIndex instead.")
@@ -1248,14 +1249,14 @@ public:
         return hash;
     }
 
-    // Explictly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
+    // Explicitly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
     deprecated("Use the constructor instead.")
     void init(bool[] ba) pure nothrow
     {
         this = BitArray(ba);
     }
 
-    // Explictly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
+    // Explicitly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
     deprecated("Use the constructor instead.")
     void init(void[] v, size_t numbits) pure nothrow
     {
