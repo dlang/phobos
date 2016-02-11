@@ -998,6 +998,9 @@ always satisfy these conditions for floating point types, because the expression
 will always be $(D false) when either $(D a) or $(D b) is NaN.
 Use $(XREF math, cmp) instead.
 
+If `less` involves expensive computations on the _sort key, it may be
+worthwhile to use $(LREF schwartzSort) instead.
+
 Params:
     less = The predicate to sort by.
     ss = The swapping strategy to use.
@@ -2003,14 +2006,20 @@ unittest
 
 // schwartzSort
 /**
-Sorts a range using an algorithm akin to the $(WEB
-wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also
-known as the decorate-sort-undecorate pattern in Python and Lisp.
-This function is helpful when the sort comparison includes
-an expensive computation. The complexity is the same as that of the
-corresponding $(D sort), but $(D schwartzSort) evaluates $(D
-transform) only $(D r.length) times (less than half when compared to
-regular sorting). The usage can be best illustrated with an example.
+Alternative sorting method that should be used when comparing keys involves an
+expensive computation. Instead of using `less(a, b)` for comparing elements,
+`schwartzSort` uses `less(transform(a), transform(b))`. The values of the
+`transform` function are precomputed in a temporary array, thus saving on
+repeatedly computing it. Conversely, if the cost of `transform` is small
+compared to the cost of allocating and filling the precomputed array, `sort`
+may be faster and therefore preferable.
+
+This approach to sorting is akin to the $(WEB
+wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also known as
+the decorate-sort-undecorate pattern in Python and Lisp. The complexity is the
+same as that of the corresponding `sort`, but `schwartzSort` evaluates
+`transform` only `r.length` times (less than half when compared to regular
+sorting). The usage can be best illustrated with an example.
 
 Example:
 ----
