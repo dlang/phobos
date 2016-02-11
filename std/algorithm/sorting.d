@@ -2003,14 +2003,18 @@ unittest
 
 // schwartzSort
 /**
+Returns the same output as an equivalent call to $(D sort), but it will be 
+faster when the sort comparison requires an expensive computation. 
+$(D schwartzSort) allocates a temporary array to cache the sort keys. It can 
+therefore be slower than $(D sort) in other cases.
+
 Sorts a range using an algorithm akin to the $(WEB
 wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also
-known as the decorate-sort-undecorate pattern in Python and Lisp.
-This function is helpful when the sort comparison includes
-an expensive computation. The complexity is the same as that of the
-corresponding $(D sort), but $(D schwartzSort) evaluates $(D
-transform) only $(D r.length) times (less than half when compared to
-regular sorting). The usage can be best illustrated with an example.
+known as the decorate-sort-undecorate pattern in Python and Lisp. The 
+complexity is the same as that of the corresponding $(D sort), but 
+$(D schwartzSort) evaluates $(D transform) only $(D r.length) times (less than 
+half when compared to regular sorting). The usage can be best illustrated with 
+an example.
 
 Example:
 ----
