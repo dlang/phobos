@@ -2635,6 +2635,173 @@ unittest
     }
 }
 
+// Always leaves median in r[2]. Credit goes to Xinok, see e.g.
+// http://stackoverflow.com/questions/11065963/possible-to-partition-five-elements-by-median-with-six-comparisons
+private void medianOf5(alias less, Range)(Range r)
+{
+    assert(r.length == 5);
+    enum : uint { a, b, c, d, e }
+    scope(success) assert(!less(r[c], r[a]) && !less(r[c], r[b]) &&
+        !less(r[d], r[c]) && !less(r[e], r[c]));
+
+    import std.algorithm.mutation : swapAt;
+
+    if (less(r[b], r[a])) r.swapAt(a, b);
+    if (less(r[e], r[d])) r.swapAt(d, e);
+    if (less(r[a], r[d]))
+    {
+        if (less(r[c], r[b])) r.swapAt(b, c);
+    }
+    else
+    {
+        r.swapAt(a, d);
+        r.swapAt(d, b);
+        if (less(r[e], r[c])) r.swapAt(c, e);
+        r.swapAt(c, d);
+    }
+    if (!less(r[b], r[d])) // #5
+    {
+        r.swapAt(b, d);
+        r.swapAt(c, e);
+    }
+    if (less(r[d], r[c])) r.swapAt(c, d);
+}
+
+// Places median value at r[($ | 1) / 2]. That means for even values of
+// r.length, the index is right-leaning: r[1] for length 2, r[2] for length 4.
+private void medianOf5OrFewer(alias less, Range)(Range r)
+{
+    assert(r.length <= 5);
+    import std.algorithm.mutation : swapAt;
+    switch (r.length)
+    {
+        case 5:
+            medianOf5!less(r);
+            break;
+        case 4:
+            if (less(r[0], r[1])) r.swapAt(0, 1);
+            if (less(r[0], r[2])) r.swapAt(0, 2);
+            // a<=b and a<=c so first element can't be the median
+            r = r[1 .. $];
+            goto case 3;
+        case 3:
+            if (less(r[2], r[0])) r.swapAt(0, 2);
+            if (less(r[1], r[0])) r.swapAt(0, 1); // b<a<=c so a is the median
+            // a<=c && a<=b, median is b or c
+            else if (less(r[2], r[1])) r.swapAt(1, 2);
+            break;
+        default:
+            break;
+    }
+}
+
+/**
+Computes an approximate median in $(BIGOH r.length) time by using the
+$(LUCKY median of medians) algorithm by Blum, Floyd, Pratt, Rivest, and
+Tarjan, first published in their paper $(LUCKY Time Bounds for Selection). The
+two functions work in tandem and are mututally recursive:
+`medianOfMediansPartition` calls `medianOfMediansPivot` to get a pivot, and
+`medianOfMediansPivot` calls`medianOfMediansPartition` to compute the median
+for a subset of values.
+
+User code may call `medianOfMediansPartition` directly to partition data.
+Semantics is identical to $(LREF topN). Generally, `topN` is expected to be
+faster than `medianOfMediansPartition` especially for small values of `nth`.
+Also, user code may call `medianOfMediansPivot` to get the index of a good
+median approximation (which may be used as a pivot choosing strategy in a
+quicksort implementation).
+
+Params:
+    less = The ordering predicate used for comparison, modeled after `<`.
+    r = The random access range of interest.
+    nth = Same as in $(LREF topN), the index of the element that should be in
+        sorted position after the function is done. (`medianOfMediansPivot`
+        calls `medianOfMediansPartition` with half the range length.)
+
+Returns: `medianOfMediansPivot` returns an index `i` such that `r[i]` is within
+30th to 70th percentiles (i.e. in the middle 4 deciles). That means there are
+at least `0.3 * r.length` elements `x` in `r` that satisfy `!less(x, r[i])`
+and also at least `0.3 * r.length` elements `y` in `r` that satisfy
+`!less(r[i], y)`. `medianOfMediansPartition` returns `r[0 .. min($, nth)]`.
+*/
+size_t medianOfMediansPivot(alias less = "a < b", Range)(Range r)
+if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
+{
+    alias lessFun = binaryFun!less;
+    if (r.length <= 5)
+    {
+        r.medianOf5OrFewer!lessFun;
+        return (r.length | 1) / 2;
+    }
+    // Take the median of each group of 5
+    size_t i = 0;
+    for (size_t j = 5; j < r.length; i = j, j += 5)
+    {
+        r[i .. j].medianOf5!lessFun;
+    }
+    // Leftovers
+    r[i .. $].medianOf5OrFewer!lessFun;
+    // Take a stride across all medians of five
+    import std.range : stride;
+    auto s = r[2 .. $].stride(5);
+    auto left = s.medianOfMediansPartition!lessFun(s.length / 2);
+    return 2 + 5 * left.length;
+}
+
+/// ditto
+Range medianOfMediansPartition(alias less = "a < b", Range)
+    (Range r, size_t nth)
+if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
+{
+    if (nth >= r.length) return r[0 .. $];
+    auto result = r[0 .. nth];
+    for (;;)
+    {
+        auto pivot = r.medianOfMediansPivot!less;
+        assert(pivot < r.length);
+        assert(!binaryFun!less(r[pivot], r[pivot]));
+        import std.algorithm.mutation : swapAt;
+        r.swapAt(pivot, r.length - 1);
+        auto right = r.partition!(a => binaryFun!less(a, r.back));
+        assert(right.length >= 1);
+        pivot = r.length - right.length;
+        if (pivot > nth)
+        {
+            // We don't care to swap the pivot back, won't be visited anymore
+            assert(pivot < r.length);
+            r = r[0 .. pivot];
+            continue;
+        }
+        // Swap the pivot to where it should be
+        right.swapAt(0, right.length - 1);
+        if (pivot == nth)
+        {
+            // Found Waldo!
+            break;
+        }
+        ++pivot; // skip the pivot
+        r = r[pivot .. $];
+        nth -= pivot;
+    }
+    return result;
+}
+
+///
+unittest
+{
+    import std.algorithm : count, map, minPos;
+    import std.array : array;
+    import std.random : uniform;
+    import std.range : iota;
+    // Create an array of 100 random integers ranging between 0 and 1000.
+    auto v = iota(0, 100).map!(_ => uniform(0, 1_000)).array;
+    auto left = v.medianOfMediansPartition(v.length / 2);
+    // The largest element left of the median is less than or equal
+    assert(left.minPos!"a > b".front <= v[left.length]);
+    // The smallest element right of the median is greater than or equal
+    assert(v[left.length .. $].minPos.front >= v[left.length]);
+}
+
 // nextPermutation
 /**
  * Permutes $(D range) in-place to the next lexicographically greater
