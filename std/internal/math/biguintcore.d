@@ -344,6 +344,17 @@ public:
         return buff[z-frontExtraBytes..$];
     }
 
+    /**
+     * Convert to an octal string.
+     */
+    char[] toOctalString() const
+    {
+        auto predictLength = 1 + data.length*BigDigitBits / 3;
+        char[] buff = new char[predictLength];
+        size_t firstNonZero = biguintToOctal(buff, data);
+        return buff[firstNonZero .. $];
+    }
+
     // return false if invalid character found
     bool fromHexString(const(char)[] s) pure nothrow @safe
     {
@@ -1549,6 +1560,70 @@ char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0,
     return buff;
 }
 
+/**
+ * Convert a big uint into an octal string.
+ *
+ * Params:
+ *  buff = The destination buffer for the octal string. Must be large enough to
+ *      store the result, including leading zeroes, which is
+ *      ceil(data.length * BigDigitBits / 3) characters.
+ *      The buffer is filled from back to front, starting from `buff[$-1]`.
+ *  data = The biguint to be converted.
+ *
+ * Returns: The index of the leading non-zero digit in `buff`. Will be
+ * `buff.length - 1` if the entire big uint is zero.
+ */
+size_t biguintToOctal(char[] buff, const(BigDigit)[] data)
+    pure nothrow @safe @nogc
+{
+    ubyte carry = 0;
+    int shift = 0;
+    size_t penPos = buff.length - 1;
+    size_t lastNonZero = buff.length - 1;
+
+    pragma(inline) void output(int digit) @nogc nothrow
+    {
+        if (digit != 0)
+            lastNonZero = penPos;
+        buff[penPos--] = cast(char)('0' + digit);
+    }
+
+    foreach (bigdigit; data)
+    {
+        if (shift < 0)
+        {
+            // Some bits were carried over from previous word.
+            assert(shift > -3);
+            output(((bigdigit << -shift) | carry) & 0b111);
+            shift += 3;
+            assert(shift > 0);
+        }
+
+        while (shift <= BigDigitBits - 3)
+        {
+            output((bigdigit >>> shift) & 0b111);
+            shift += 3;
+        }
+
+        if (shift < BigDigitBits)
+        {
+            // Some bits need to be carried forward.
+            carry = (bigdigit >>> shift) & 0b11;
+        }
+        shift -= BigDigitBits;
+        assert(shift >= -2 && shift <= 0);
+    }
+
+    if (shift < 0)
+    {
+        // Last word had bits that haven't been output yet.
+        assert(shift > -3);
+        output(carry);
+    }
+
+    return lastNonZero;
+}
+
 /** Convert a big uint into a decimal string.
  *
  * Params:
@@ -2428,4 +2503,42 @@ unittest
     r = b[0..a.length];
     assert(r[] == r1[]);
     assert(q[] == q1[]);
+}
+
+// biguintToOctal
+unittest
+{
+    enum bufSize = 5 * BigDigitBits / 3 + 1;
+    auto buf = new char[bufSize];
+    size_t i;
+    BigDigit[] data = [ 342391 ];
+
+    // Basic functionality with single word
+    i = biguintToOctal(buf, data);
+    assert(i == bufSize - 7 && buf[i .. $] == "1234567");
+
+    // Test carrying bits between words
+    data = [ 0x77053977, 0x39770539, 0x00000005 ];
+    i = biguintToOctal(buf, data);
+    assert(i == bufSize - 23 && buf[i .. $] == "12345670123456701234567");
+
+    // Test carried bits in the last word
+    data = [ 0x80000000 ];
+    i = biguintToOctal(buf, data);
+    assert(buf[i .. $] == "20000000000");
+
+    // Test boundary between 3rd and 4th word where the number of bits is
+    // divisible by 3 and no bits should be carried.
+    //
+    // The 0xC0000000's are for "poisoning" the carry to be non-zero when the
+    // rollover happens, so that if any bugs happen in wrongly adding the carry
+    // to the next word, non-zero bits will show up in the output.
+    data = [ 0xC0000000, 0xC0000000, 0xC0000000, 0x00000010 ];
+    i = biguintToOctal(buf, data);
+    assert(buf[i .. $] == "2060000000001400000000030000000000");
+
+    // Boundary case: 0
+    data = [ 0 ];
+    i = biguintToOctal(buf, data);
+    assert(buf[i .. $] == "0");
 }
