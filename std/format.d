@@ -1562,7 +1562,8 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
     }
     // adjust precision to print a '0' for octal if alternate format is on
     else if (base == 8 && fs.flHash &&
-             (precision <= 1 || precision <= digits.length)) // too low precision
+             (precision <= 1 || precision <= digits.length) && // too low precision
+             digits.length > 0)
         prefix1 = '0';
 
     size_t zerofill = precision > digits.length ? precision - digits.length : 0;
@@ -6308,6 +6309,8 @@ unittest
     assert(r == "012345");
     r = format("%o", 9);
     assert(r == "11");
+    r = format("%#o", 0);   // issue 15663
+    assert(r == "0");
 
     r = format("%+d", 123);
     assert(r == "+123");
