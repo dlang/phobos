@@ -1376,29 +1376,12 @@ Throws: $(D Exception) if the file is not opened.
     Throws: $(D Exception) if the file is not opened.
             $(D ErrnoException) on an error writing to the file.
     */
-    void print(string separator = " ", string eol = "\n", S...)(S args)
+    void print(string separator = " ", string eol = "\n", S...)(auto ref S args)
     {
-        import std.conv : to;
-        enum string s = ()
-        {
-            string result = "write(";
-            foreach (i, _; S)
-            {
-                if (i > 0)
-                {
-                    if (separator.length == 0) result ~= ", ";
-                    else if (separator.length == 1) result ~= ", separator[0], ";
-                    else result ~= ", separator, ";
-                }
-                result ~= "args[" ~ to!string(i) ~ "]";
-            }
-            if (eol.length == 0) result ~= ");";
-            else if (eol.length == 1) result ~= ", eol[0]);";
-            else result ~= ", eol);";
-            return result;
-        }();
-        // to debug: pragma(msg, s);
-        mixin(s);
+        import std.range : repeat;
+        import std.string : join;
+        static immutable fmt = repeat("%s", S.length).join(separator) ~ eol;
+        writefln(fmt, args);
     }
 
     ///
