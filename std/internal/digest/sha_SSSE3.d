@@ -228,7 +228,7 @@ version(USE_SSSE3)
             }
             if (i1 < seq1.length)
             {
-                res ~= seq1[i1..std.algorithm.min(i1+dist,$)];
+                res ~= seq1[i1..min(i1+dist,$)];
                 i1 += dist;
             }
         }
