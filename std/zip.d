@@ -283,7 +283,7 @@ final class ZipArchive
     import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
     import std.algorithm : max;
     import std.conv : to;
-    import std.zlib : compress;
+    static import std.zlib;
     import std.datetime : DosFileTime;
 
     string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
