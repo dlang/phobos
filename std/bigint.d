@@ -25,6 +25,8 @@
 
 module std.bigint;
 
+import std.conv : ConvException;
+
 private import std.internal.math.biguintcore;
 private import std.format : FormatSpec, FormatException;
 private import std.traits;
@@ -46,13 +48,21 @@ private:
     BigUint data;     // BigInt adds signed arithmetic to BigUint.
     bool sign = false;
 public:
-    /// Construct a BigInt from a decimal or hexadecimal string.
-    /// The number must be in the form of a D decimal or hex literal:
-    /// It may have a leading + or - sign; followed by "0x" if hexadecimal.
-    /// Underscores are permitted.
-    /// BUG: Should throw a IllegalArgumentException/ConvError if invalid character found
-    this(T : const(char)[] )(T s) pure
+    /**
+     * Construct a BigInt from a decimal or hexadecimal string.
+     *
+     * The number must be in the form of a D decimal or hex literal. It may
+     * have a leading + or - sign; followed by "0x" if hexadecimal.
+     * Underscores are permitted.  An empty string is treated as "0".
+     *
+     * Throws: ConvException if invalid character found, or string is empty.
+     */
+    this(T : const(char)[])(T s, string file = __FILE__, size_t line = __LINE__)
+        pure
     {
+        if (s.length == 0)
+            throw new ConvException("Can't initialize BigInt with "~
+                                    "empty string", file, line);
         bool neg = false;
         if (s[0] == '-') {
             neg = true;
@@ -70,7 +80,8 @@ public:
         } else {
             ok = data.fromDecimalString(s);
         }
-        assert(ok);
+        if (!ok)
+            throw new ConvException("Invalid digit string", file, line);
 
         if (isZero())
             neg = false;
@@ -1574,4 +1585,13 @@ unittest // 14124
     x %= -3;
     assert(!x.isNegative());
     assert(x.isZero());
+}
+
+// issue 15678
+unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!ConvException(BigInt(""));
+    assertThrown!ConvException(BigInt("0x1234BARF"));
+    assertThrown!ConvException(BigInt("1234PUKE"));
 }
