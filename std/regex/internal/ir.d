@@ -490,7 +490,7 @@ struct Regex(Char)
     }
 
 package(std.regex):
-    import std.regex.internal.kickstart; //TODO: get rid of this dependency
+    import std.regex.internal.kickstart : Kickstart; //TODO: get rid of this dependency
     NamedGroup[] dict;  //maps name -> user group number
     uint ngroup;        //number of internal groups
     uint maxCounterDepth; //max depth of nested {n,m} repetitions
