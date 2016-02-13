@@ -285,6 +285,27 @@ Complexity: $(BIGOH 1)
     }
 
 /**
+Reverses SList in-place. Performs no memory allocation.
+
+Complexity: $(BIGOH n)
+     */
+    void reverse()
+    {
+        if (!empty)
+        {
+            Node* prev;
+            while (_first)
+            {
+                auto next = _first._next;
+                _first._next = prev;
+                prev = _first;
+                _first = next;
+            }
+            _first = prev;
+        }
+    }
+
+/**
 Inserts $(D stuff) to the front of the container. $(D stuff) can be a
 value convertible to $(D T) or a range of objects convertible to $(D
 T). The stable version behaves the same, but guarantees that ranges
@@ -777,4 +798,21 @@ unittest
     // issue 15659
     SList!int s;
     s.clear();
+}
+
+unittest
+{
+    SList!int s;
+    s.reverse();
+}
+
+unittest
+{
+    import std.algorithm : equal;
+
+    auto s = SList!int([1, 2, 3]);
+    assert(s[].equal([1, 2, 3]));
+
+    s.reverse();
+    assert(s[].equal([3, 2, 1]));
 }
