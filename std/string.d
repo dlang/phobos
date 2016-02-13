@@ -2811,15 +2811,10 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref R
 
 unittest
 {
-    import std.file : DirEntry;
     import std.algorithm.comparison : equal;
-
     auto s = "std/string.d";
-    auto de = DirEntry(s);
-    auto i = de.lineSplitter();
-    auto j = s.lineSplitter();
-
-    assert(equal(i, j));
+    auto as = TestAliasedString(s);
+    assert(equal(s.lineSplitter(), as.lineSplitter()));
 }
 
 /++
