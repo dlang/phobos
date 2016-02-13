@@ -2137,6 +2137,7 @@ class File: Stream {
   // run a few tests
   unittest {
     import std.internal.cstring : tempCString;
+    import core.stdc.stdio : remove;
 
     File file = new File;
     int i = 666;
@@ -2257,6 +2258,7 @@ class BufferedFile: BufferedStream {
   // run a few tests same as File
   unittest {
     import std.internal.cstring : tempCString;
+    import core.stdc.stdio : remove;
 
     BufferedFile file = new BufferedFile;
     int i = 666;
