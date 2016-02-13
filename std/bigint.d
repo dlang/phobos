@@ -71,7 +71,6 @@ public:
             s = s[1..$];
         }
         data = 0UL;
-        auto q = 0X3;
         bool ok;
         assert(isZero());
         if (s.length > 2 && (s[0..2] == "0x" || s[0..2] == "0X"))
