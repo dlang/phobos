@@ -740,14 +740,14 @@ template Tuple(Specs...)
          *     the original.
          */
         @property
-        ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
+        inout(Tuple!(sliceSpecs!(from, to))) slice(size_t from, size_t to)() inout
         if (from <= to && to <= Types.length)
         {
-            return *cast(typeof(return)*) &(field[from]);
+            return Tuple!(sliceSpecs!(from, to))(expand[from .. to]);
         }
 
         ///
-        unittest
+        @safe unittest
         {
             Tuple!(int, string, float, double) a;
             a[1] = "abc";
@@ -982,6 +982,24 @@ private template ReverseTupleType(T)
     static if (is(T : Tuple!A, A...))
         alias ReverseTupleType = Tuple!(ReverseTupleSpecs!A);
 }
+
+/* Phobos issue #15645: Tuple.slice() causes memory corruption
+   https://issues.dlang.org/show_bug.cgi?id=15645 */
+@safe unittest
+{
+    Tuple!(int, int, long) b;
+    b[1] = 42;
+    b[2] = 101;
+    auto t = b.slice!(1, 3);
+    static assert(is(typeof(t) == Tuple!(int, long)));
+    assert(t[0] == 42 && t[1] == 102);
+
+    const auto c = tuple!("a", "b", "c")(42, true, "somestring");
+    auto u = c.slice!(1, 3);
+    static assert(is(typeof(u) == const(Tuple!(bool, "b", string, "c"))));
+    assert(c.b == true && c.c == "somestring");
+}
+
 
 /* Reverse the Specs of a Tuple. */
 private template ReverseTupleSpecs(T...)
