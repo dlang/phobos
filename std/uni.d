@@ -672,7 +672,18 @@ private:
 
     bool testAliasedString(alias func, Args...)(string s, Args args)
     {
-        return func(TestAliasedString(s), args) == func(s, args);
+        import std.algorithm.comparison : equal;
+        auto a = func(TestAliasedString(s), args);
+        auto b = func(s, args);
+        static if (is(typeof(equal(a, b))))
+        {
+            // For ranges, compare contents instead of object identity.
+            return equal(a, b);
+        }
+        else
+        {
+            return a == b;
+        }
     }
 }
 
