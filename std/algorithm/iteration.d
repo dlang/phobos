@@ -200,7 +200,7 @@ Tip: $(D cache) is eager when evaluating elements. If calling front on the
 underlying range has a side effect, it will be observeable before calling
 front on the actual cached range.
 
-Furtermore, care should be taken composing $(D cache) with $(XREF range,take).
+Furtermore, care should be taken composing $(D cache) with $(XREF _range,take).
 By placing $(D take) before $(D cache), then $(D cache) will be "aware"
 of when the range ends, and correctly stop caching elements when needed.
 If calling front has no side effect though, placing $(D take) after $(D cache)
