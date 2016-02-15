@@ -1500,6 +1500,7 @@ Data is written to one end of the _pipe and read from the other.
 ---
 auto p = pipe();
 p.writeEnd.writeln("Hello World");
+p.writeEnd.flush();
 assert (p.readEnd.readln().chomp() == "Hello World");
 ---
 Pipes can, for example, be used for interprocess communication
