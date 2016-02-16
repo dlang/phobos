@@ -147,7 +147,7 @@ the heap work incorrectly.
         _store = move(s);
         _length = min(_store.length, initialSize);
         if (_length < 2) return;
-        buildHeap(s[]);
+        buildHeap(_store[]);
         assertValid();
     }
 
@@ -426,4 +426,13 @@ unittest
     auto h = heapify(a);
     static assert(isInputRange!(typeof(h)));
     assert(h.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
+}
+
+unittest // 15675
+{
+    import std.container.array : Array;
+
+    Array!int elements = [1, 2, 10, 12];
+    auto heap = heapify(elements);
+    assert(heap.front == 12);
 }
