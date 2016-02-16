@@ -7990,33 +7990,6 @@ bool isUpper(dchar c)
 }
 
 
-/++
-    If $(D c) is a Unicode uppercase $(CHARACTER), then its lowercase equivalent
-    is returned. Otherwise $(D c) is returned.
-
-    Warning: certain alphabets like German and Greek have no 1:1
-    upper-lower mapping. Use overload of toLower which takes full string instead.
-+/
-@safe pure nothrow @nogc
-dchar toLower(dchar c)
-{
-     // optimize ASCII case
-    if(c < 0xAA)
-    {
-        if(c < 'A')
-            return c;
-        if(c <= 'Z')
-            return c + 32;
-        return c;
-    }
-    size_t idx = toLowerSimpleIndex(c);
-    if(idx != ushort.max)
-    {
-        return toLowerTab(idx);
-    }
-    return c;
-}
-
 //TODO: Hidden for now, needs better API.
 //Other transforms could use better API as well, but this one is a new primitive.
 @safe pure nothrow @nogc
@@ -8773,6 +8746,33 @@ void toUpperInPlace(C)(ref C[] s) @trusted pure
     { toUpperInPlace!wchar(s); }
     void toUpperInPlace(ref dchar[] s)
     { toUpperInPlace!dchar(s); }
+}
+
+/++
+    If $(D c) is a Unicode uppercase $(CHARACTER), then its lowercase equivalent
+    is returned. Otherwise $(D c) is returned.
+
+    Warning: certain alphabets like German and Greek have no 1:1
+    upper-lower mapping. Use overload of toLower which takes full string instead.
++/
+@safe pure nothrow @nogc
+dchar toLower(dchar c)
+{
+     // optimize ASCII case
+    if(c < 0xAA)
+    {
+        if(c < 'A')
+            return c;
+        if(c <= 'Z')
+            return c + 32;
+        return c;
+    }
+    size_t idx = toLowerSimpleIndex(c);
+    if(idx != ushort.max)
+    {
+        return toLowerTab(idx);
+    }
+    return c;
 }
 
 /++
