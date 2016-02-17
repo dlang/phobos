@@ -2228,7 +2228,7 @@ body
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
     Target v = 0;
-    size_t atStart = true;
+    bool atStart = true;
 
     for (; !s.empty; s.popFront())
     {
