@@ -1939,7 +1939,7 @@ Target parse(Target, Source)(ref Source s)
     }
     else
     {
-        // Larger than int types
+        // int or larger types
 
         static if (Target.min < 0)
             bool sign = 0;
