@@ -1953,7 +1953,6 @@ Target parse(Target, Source)(ref Source s)
             goto Lerr;
 
         c = s.front;
-        s.popFront();
         static if (Target.min < 0)
         {
             switch (c)
@@ -1962,10 +1961,10 @@ Target parse(Target, Source)(ref Source s)
                     sign = true;
                     goto case '+';
                 case '+':
+                    s.popFront();
                     if (s.empty)
                         goto Lerr;
                     c = s.front;
-                    s.popFront();
                     break;
 
                 default:
@@ -1976,6 +1975,7 @@ Target parse(Target, Source)(ref Source s)
         if (c <= 9)
         {
             Target v = cast(Target)c;
+            s.popFront();
             while (!s.empty)
             {
                 c = cast(typeof(c)) (s.front - '0');
@@ -2176,6 +2176,36 @@ Lerr:
         foreach (j, s; errors[i..$])
             assertThrown!ConvOverflowException(to!Int(s));
     }
+}
+
+@safe pure unittest
+{
+    void checkErrMsg(string input, dchar charInMsg, dchar charNotInMsg)
+    {
+        try
+        {
+            int x = input.to!int();
+            assert(false, "Invalid conversion did not throw");
+        }
+        catch(ConvException e)
+        {
+            // Ensure error message contains failing character, not the character
+            // beyond.
+            import std.algorithm.searching : canFind;
+            assert( e.msg.canFind(charInMsg) &&
+                   !e.msg.canFind(charNotInMsg));
+        }
+        catch(Exception e)
+        {
+            assert(false, "Did not throw ConvException");
+        }
+    }
+    checkErrMsg("@$", '@', '$');
+    checkErrMsg("@$123", '@', '$');
+    checkErrMsg("1@$23", '@', '$');
+    checkErrMsg("1@$", '@', '$');
+    checkErrMsg("1@$2", '@', '$');
+    checkErrMsg("12@$", '@', '$');
 }
 
 @safe pure unittest
