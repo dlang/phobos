@@ -956,7 +956,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     }
     client.url = url;
     HTTP.StatusLine statusLine;
-    ubyte[] content;
+    import std.array : appender;
+    auto content = appender!(ubyte[])();
     string[string] headers;
     client.onReceive = (ubyte[] data)
     {
@@ -994,6 +995,10 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     client.onReceiveHeader = (in char[] key,
                               in char[] value)
     {
+        if (key == "content-length") {
+            import std.conv : to;
+            content.reserve(value.to!size_t);
+        }
         if (auto v = key in headers)
         {
             *v ~= ", ";
@@ -1019,7 +1024,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         }
     }
 
-    return _decodeContent!T(content, charset);
+    return _decodeContent!T(content.data, charset);
 }
 
 unittest
