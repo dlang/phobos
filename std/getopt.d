@@ -527,9 +527,96 @@ private pure Option splitAndGet(string opt) @trusted nothrow
     return ret;
 }
 
-private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
-        ref GetoptResult rslt, ref GetOptException excep, T opts)
+/*
+This function verifies that the variadic parameters passed in getOpt
+follow this pattern:
+
+  [config override], option, [description], receiver,
+
+ - config override: a config value, optional
+ - option:          a string
+ - description:     a string, optional
+ - receiver:        a pointer or a callable
+*/
+private template optionValidator(A...)
 {
+    import std.typecons: staticIota;
+    import std.format: format;
+
+    enum fmt = "getopt validator: %s (at position %d)";
+    enum isReceiver(T) = isPointer!T || (is(T==function)) || (is(T==delegate));
+
+    auto validator()
+    {
+        string msg;
+        static if (A.length > 0)
+        {
+            static if (isReceiver!(A[0]))
+            {
+                msg = format(fmt, "first argument must be a string or a config", 0);
+            }
+            else static if (!isSomeString!(A[0]) && !is(A[0] == config))
+            {
+                msg = format(fmt, "invalid argument type " ~ A[0].stringof, 0);
+            }
+            else foreach(i; staticIota!(1, A.length))
+            {
+                static if (!isReceiver!(A[i]) && !isSomeString!(A[i]) &&
+                    !(is(A[i] == config)))
+                {
+                    msg = format(fmt, "invalid argument type " ~ A[i].stringof, i);
+                    break;
+                }
+                else static if (isReceiver!(A[i]) && !isSomeString!(A[i-1]))
+                {
+                    msg = format(fmt, "a receiver can not be preceeded by a receiver", i);
+                    break;
+                }
+                else static if (i > 1 && isSomeString!(A[i]) && isSomeString!(A[i-1])
+                    && isSomeString!(A[i-2]))
+                {
+                    msg = format(fmt, "a string can not be preceeded by two strings", i);
+                    break;
+                }
+            }
+            static if (!isReceiver!(A[$-1]) && !is(A[$-1] == config))
+            {
+                msg = format(fmt, "last argument must be a receiver or a config",
+                    A.length -1);
+            }
+        }
+        return msg;
+    }
+    enum message = validator;
+    alias optionValidator = message;
+}
+
+@safe pure unittest
+{
+    alias P = void*;
+    alias S = string;
+    alias C = config;
+    alias F = void function();
+
+    static assert(optionValidator!(C,S,S,P) == "");
+    static assert(optionValidator!(C,S,S,P,C,S,F) == "");
+    static assert(optionValidator!(C,S,S,P,C,S,F) == "");
+
+    static assert(optionValidator!(P,S,S) != "");
+    static assert(optionValidator!(P,P,S) != "");
+    static assert(optionValidator!(P,F,S,P) != "");
+    static assert(optionValidator!(C,C,S) != "");
+    static assert(optionValidator!(S,S,P,S,S,P,S) != "");
+    static assert(optionValidator!(S,S,P,P) != "");
+    static assert(optionValidator!(S,S,S,P) != "");
+}
+
+private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
+    ref GetoptResult rslt, ref GetOptException excep, T opts)
+{
+    enum validationMessage = optionValidator!T;
+    static assert(validationMessage == "", validationMessage);
+
     import std.algorithm : remove;
     import std.conv : to;
     static if (opts.length)
@@ -623,7 +710,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 }
 
 private bool handleOption(R)(string option, R receiver, ref string[] args,
-        ref configuration cfg, bool incremental)
+    ref configuration cfg, bool incremental)
 {
     import std.algorithm : map, splitter;
     import std.ascii : isAlpha;
