@@ -972,11 +972,13 @@ public:
      * arithmetic conversions.
      */
 
+    alias opBinaryRight = opBinary;
+
     // Adapted from http://www.prowiki.org/wiki4d/wiki.cgi?DanielKeep/Variant
     // arithmetic
-    VariantN opAdd(T)(T rhs) { return opArithmetic!(T, "+")(rhs); }
+    VariantN opBinary(string op : "+", T)(T rhs) { return opArithmetic!(T, "+")(rhs); }
     ///ditto
-    VariantN opSub(T)(T rhs) { return opArithmetic!(T, "-")(rhs); }
+    VariantN opBinary(string op : "-", T)(T rhs) { return opArithmetic!(T, "-")(rhs); }
 
     // Commenteed all _r versions for now because of ambiguities
     // arising when two Variants are used
@@ -987,50 +989,50 @@ public:
     //     return VariantN(lhs).opArithmetic!(VariantN, "-")(this);
     // }
     ///ditto
-    VariantN opMul(T)(T rhs) { return opArithmetic!(T, "*")(rhs); }
+    VariantN opBinary(string op : "*", T)(T rhs) { return opArithmetic!(T, "*")(rhs); }
     ///ditto
-    VariantN opDiv(T)(T rhs) { return opArithmetic!(T, "/")(rhs); }
+    VariantN opBinary(string op : "/", T)(T rhs) { return opArithmetic!(T, "/")(rhs); }
     // ///ditto
     // VariantN opDiv_r(T)(T lhs)
     // {
     //     return VariantN(lhs).opArithmetic!(VariantN, "/")(this);
     // }
     ///ditto
-    VariantN opMod(T)(T rhs) { return opArithmetic!(T, "%")(rhs); }
+    VariantN opBinary(string op : "%", T)(T rhs) { return opArithmetic!(T, "%")(rhs); }
     // ///ditto
     // VariantN opMod_r(T)(T lhs)
     // {
     //     return VariantN(lhs).opArithmetic!(VariantN, "%")(this);
     // }
     ///ditto
-    VariantN opAnd(T)(T rhs) { return opLogic!(T, "&")(rhs); }
+    VariantN opBinary(string op : "&", T)(T rhs) { return opLogic!(T, "&")(rhs); }
     ///ditto
-    VariantN opOr(T)(T rhs) { return opLogic!(T, "|")(rhs); }
+    VariantN opBinary(string op : "|", T)(T rhs) { return opLogic!(T, "|")(rhs); }
     ///ditto
-    VariantN opXor(T)(T rhs) { return opLogic!(T, "^")(rhs); }
+    VariantN opBinary(string op : "^", T)(T rhs) { return opLogic!(T, "^")(rhs); }
     ///ditto
-    VariantN opShl(T)(T rhs) { return opLogic!(T, "<<")(rhs); }
+    VariantN opBinary(string op : "<<", T)(T rhs) { return opLogic!(T, "<<")(rhs); }
     // ///ditto
     // VariantN opShl_r(T)(T lhs)
     // {
     //     return VariantN(lhs).opLogic!(VariantN, "<<")(this);
     // }
     ///ditto
-    VariantN opShr(T)(T rhs) { return opLogic!(T, ">>")(rhs); }
+    VariantN opBinary(string op : ">>", T)(T rhs) { return opLogic!(T, ">>")(rhs); }
     // ///ditto
     // VariantN opShr_r(T)(T lhs)
     // {
     //     return VariantN(lhs).opLogic!(VariantN, ">>")(this);
     // }
     ///ditto
-    VariantN opUShr(T)(T rhs) { return opLogic!(T, ">>>")(rhs); }
+    VariantN opBinary(string op : ">>>", T)(T rhs) { return opLogic!(T, ">>>")(rhs); }
     // ///ditto
     // VariantN opUShr_r(T)(T lhs)
     // {
     //     return VariantN(lhs).opLogic!(VariantN, ">>>")(this);
     // }
     ///ditto
-    VariantN opCat(T)(T rhs)
+    VariantN opBinary(string op : "~", T)(T rhs)
     {
         auto temp = this;
         temp ~= rhs;
@@ -1045,29 +1047,29 @@ public:
     // }
 
     ///ditto
-    VariantN opAddAssign(T)(T rhs)  { return this = this + rhs; }
+    VariantN opOpAssign(string op : "+", T)(T rhs)  { return this = this + rhs; }
     ///ditto
-    VariantN opSubAssign(T)(T rhs)  { return this = this - rhs; }
+    VariantN opOpAssign(string op : "-", T)(T rhs)  { return this = this - rhs; }
     ///ditto
-    VariantN opMulAssign(T)(T rhs)  { return this = this * rhs; }
+    VariantN opOpAssign(string op : "*", T)(T rhs)  { return this = this * rhs; }
     ///ditto
-    VariantN opDivAssign(T)(T rhs)  { return this = this / rhs; }
+    VariantN opOpAssign(string op : "/", T)(T rhs)  { return this = this / rhs; }
     ///ditto
-    VariantN opModAssign(T)(T rhs)  { return this = this % rhs; }
+    VariantN opOpAssign(string op : "%", T)(T rhs)  { return this = this % rhs; }
     ///ditto
-    VariantN opAndAssign(T)(T rhs)  { return this = this & rhs; }
+    VariantN opOpAssign(string op : "&", T)(T rhs)  { return this = this & rhs; }
     ///ditto
-    VariantN opOrAssign(T)(T rhs)   { return this = this | rhs; }
+    VariantN opOpAssign(string op : "|", T)(T rhs)   { return this = this | rhs; }
     ///ditto
-    VariantN opXorAssign(T)(T rhs)  { return this = this ^ rhs; }
+    VariantN opOpAssign(string op : "^", T)(T rhs)  { return this = this ^ rhs; }
     ///ditto
-    VariantN opShlAssign(T)(T rhs)  { return this = this << rhs; }
+    VariantN opOpAssign(string op : "<<", T)(T rhs)  { return this = this << rhs; }
     ///ditto
-    VariantN opShrAssign(T)(T rhs)  { return this = this >> rhs; }
+    VariantN opOpAssign(string op : ">>", T)(T rhs)  { return this = this >> rhs; }
     ///ditto
-    VariantN opUShrAssign(T)(T rhs) { return this = this >>> rhs; }
+    VariantN opOpAssign(string op : ">>>", T)(T rhs) { return this = this >>> rhs; }
     ///ditto
-    VariantN opCatAssign(T)(T rhs)
+    VariantN opOpAssign(string op : "~", T)(T rhs)
     {
         auto toAppend = Variant(rhs);
         fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);

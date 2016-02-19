@@ -425,8 +425,11 @@ public:
     //
     // All of these member functions create a new BigUint.
 
+    BigUint opBinary(string op : ">>") (ulong y) pure nothrow const { return doOpShr(y); }
+    BigUint opBinary(string op : "<<") (ulong y) pure nothrow const { return doOpShl(y); }
+
     // return x >> y
-    BigUint opShr(Tulong)(Tulong y) pure nothrow const if (is (Tulong == ulong))
+    BigUint doOpShr(Tulong)(Tulong y) pure nothrow const if (is (Tulong == ulong))
     {
         assert(y>0);
         uint bits = cast(uint)y & BIGDIGITSHIFTMASK;
@@ -449,7 +452,7 @@ public:
     }
 
     // return x << y
-    BigUint opShl(Tulong)(Tulong y) pure nothrow const if (is (Tulong == ulong))
+    BigUint doOpShl(Tulong)(Tulong y) pure nothrow const if (is (Tulong == ulong))
     {
         assert(y>0);
         if (isZero()) return this;
