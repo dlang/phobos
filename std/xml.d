@@ -441,8 +441,6 @@ enum DecodeMode
  */
 string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
 {
-    import std.utf : encode;
-
     if (mode == DecodeMode.NONE) return s;
 
     char[] buffer;
@@ -467,7 +465,8 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
                     string t = s[i..$];
                     checkCharRef(t, d);
                     char[4] temp;
-                    buffer ~= temp[0 .. std.utf.encode(temp, d)];
+                    import std.utf : encode;
+                    buffer ~= temp[0 .. encode(temp, d)];
                     i = s.length - t.length - 1;
                 }
                 catch(Err e)
@@ -2971,4 +2970,3 @@ private
         throw new XMLException(s);
     }
 }
-

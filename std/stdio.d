@@ -3936,11 +3936,11 @@ Initialize with a message and an error code.
             char[256] buf = void;
             version (CRuntime_Glibc)
             {
-                auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
+                auto s = strerror_r(errno, buf.ptr, buf.length);
             }
             else
             {
-                core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
+                strerror_r(errno, buf.ptr, buf.length);
                 auto s = buf.ptr;
             }
         }
@@ -4273,7 +4273,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     import core.memory;
     import core.stdc.stdlib : free;
     import core.stdc.wchar_ : fwide;
-    import std.utf : encode;
 
     if (orientation == File.Orientation.wide)
     {
@@ -4305,7 +4304,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         }
                         c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                     }
-                    std.utf.encode(buf, c);
+                    import std.utf : encode;
+                    encode(buf, c);
                 }
             }
             if (ferror(fp))
@@ -4317,10 +4317,12 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             buf.length = 0;
             for (int c; (c = FGETWC(fp)) != -1; )
             {
+                import std.utf : encode;
+
                 if ((c & ~0x7F) == 0)
                     buf ~= cast(char)c;
                 else
-                    std.utf.encode(buf, cast(dchar)c);
+                    encode(buf, cast(dchar)c);
                 if (c == terminator)
                     break;
             }
@@ -4372,7 +4374,6 @@ version (NO_GETDELIM)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation)
 {
     import core.stdc.wchar_ : fwide;
-    import std.utf : encode;
 
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
@@ -4404,7 +4405,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         }
                         c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                     }
-                    std.utf.encode(buf, c);
+                    import std.utf : encode;
+                    encode(buf, c);
                 }
             }
             if (ferror(fp))

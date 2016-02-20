@@ -1435,7 +1435,6 @@ Params:
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    import std.system : Endian;
     alias U = IntegralTypeOf!T;
     U val = obj;    // Extracting alias this may be impure/system/may-throw
 
@@ -1445,10 +1444,8 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         auto raw = (ref val)@trusted{
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
-        if (std.system.endian == Endian.littleEndian && f.flPlus
-            || std.system.endian == Endian.bigEndian && f.flDash)
+        if (needToSwapEndianess(f))
         {
-            // must swap bytes
             foreach_reverse (c; raw)
                 put(w, c);
         }
@@ -1675,7 +1672,6 @@ void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import core.stdc.stdio : snprintf;
-    import std.system : Endian;
     import std.algorithm : find, min;
     FormatSpec!Char fs = f; // fs is copy for change its values.
     FloatingPointTypeOf!T val = obj;
@@ -1686,10 +1682,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         auto raw = (ref val)@trusted{
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
-        if (std.system.endian == Endian.littleEndian && f.flPlus
-            || std.system.endian == Endian.bigEndian && f.flDash)
+        if (needToSwapEndianess(f))
         {
-            // must swap bytes
             foreach_reverse (c; raw)
                 put(w, c);
         }
@@ -2502,7 +2496,7 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
     import std.uni : isGraphical;
 
     string fmt;
-    if (std.uni.isGraphical(c))
+    if (isGraphical(c))
     {
         if (c == quote || c == '\\')
             put(w, '\\');
@@ -2552,7 +2546,9 @@ if (is(StringTypeOf!T) && !is(T == enum))
             put(app, '\"');
             for (size_t i = 0; i < str.length; )
             {
-                auto c = std.utf.decode(str, i);
+                import std.utf : decode;
+
+                auto c = decode(str, i);
                 // \uFFFE and \uFFFF are considered valid by isValidDchar,
                 // so need checking for interchange.
                 if (c == 0xFFFE || c == 0xFFFF)
@@ -5994,7 +5990,8 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
                     if (c > 0x7F)        // if UTF sequence
                     {
                         i--;                // back up and decode UTF sequence
-                        c = std.utf.decode(fmt, i);
+                        import std.utf : decode;
+                        c = decode(fmt, i);
                     }
                   Lputc:
                     putc(c);
@@ -6088,6 +6085,15 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
 
   Lerror:
     throw new FormatException();
+}
+
+
+private bool needToSwapEndianess(Char)(ref FormatSpec!Char f)
+{
+    import std.system : endian, Endian;
+
+    return endian == Endian.littleEndian && f.flPlus
+        || endian == Endian.bigEndian && f.flDash;
 }
 
 /* ======================== Unit Tests ====================================== */
