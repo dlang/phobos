@@ -1141,6 +1141,67 @@ unittest
         typeof(&foo), typeof(&bar)) == SafeFunctions));
 }
 
+/**
+ * Creates an `AliasSeq` which repeats a type or an `AliasSeq` exactly `n` times.
+ */
+template Repeat(size_t n, TList...) if (n > 0)
+{
+    static if (n == 1)
+    {
+        alias Repeat = AliasSeq!TList;
+    }
+    else static if (n == 2)
+    {
+        alias Repeat = AliasSeq!(TList, TList);
+    }
+    else
+    {
+        alias R = Repeat!((n - 1) / 2, TList);
+        static if ((n - 1) % 2 == 0)
+        {
+            alias Repeat = AliasSeq!(TList, R, R);
+        }
+        else
+        {
+            alias Repeat = AliasSeq!(TList, TList, R, R);
+        }
+    }
+}
+
+///
+unittest
+{
+    alias ImInt1 = Repeat!(1, immutable(int));
+    static assert(is(ImInt1 == AliasSeq!(immutable(int))));
+
+    alias Real3 = Repeat!(3, real);
+    static assert(is(Real3 == AliasSeq!(real, real, real)));
+
+    alias Real12 = Repeat!(4, Real3);
+    static assert(is(Real12 == AliasSeq!(real, real, real, real, real, real,
+        real, real, real, real, real, real)));
+
+    alias Composite = AliasSeq!(uint, int);
+    alias Composite2 = Repeat!(2, Composite);
+    static assert(is(Composite2 == AliasSeq!(uint, int, uint, int)));
+}
+
+
+///
+unittest
+{
+    auto staticArray(T, size_t n)(Repeat!(n, T) elems)
+    {
+        T[n] a = [elems];
+        return a;
+    }
+
+    auto a = staticArray!(long, 3)(3, 1, 4);
+    assert(is(typeof(a) == long[3]));
+    assert(a == [3, 1, 4]);
+}
+
+
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
 private:
 
