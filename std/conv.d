@@ -4803,9 +4803,10 @@ unittest //@@@9559@@@
 {
     import std.algorithm : map;
     import std.typecons : Nullable;
+    import std.array: array;
     alias I = Nullable!int;
     auto ints = [0, 1, 2].map!(i => i & 1 ? I.init : I(i))();
-    auto asArray = std.array.array(ints);
+    auto asArray = array(ints);
 }
 
 unittest //http://forum.dlang.org/post/nxbdgtdlmwscocbiypjs@forum.dlang.org

@@ -31629,7 +31629,7 @@ SysTime parseRFC822DateTime(R)(R value) @safe
        (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
     import std.functional : not;
-    import std.ascii : isDigit;
+    import std.ascii : isDigit, isAlpha, isPrintable;
     import std.typecons : Rebindable;
     import std.string : capitalize, format;
     import std.conv : to;
@@ -31663,7 +31663,7 @@ SysTime parseRFC822DateTime(R)(R value) @safe
     }
 
     // day-of-week
-    if(std.ascii.isAlpha(value[0]))
+    if(isAlpha(value[0]))
     {
         auto dowStr = sliceAsString(value[0 .. 3]);
         switch(dowStr)
@@ -31683,7 +31683,7 @@ afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
     }
 
     // day
-    immutable digits = std.ascii.isDigit(value[1]) ? 2 : 1;
+    immutable digits = isDigit(value[1]) ? 2 : 1;
     immutable day = _convDigits!short(value[0 .. digits]);
     if(day == -1)
         throw new DateTimeException("Invalid day");
@@ -31817,7 +31817,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     // that if the next character is printable (and not part of CFWS), then it
     // might be part of the timezone and thus affect what the timezone was
     // supposed to be, so we'll throw, but otherwise, we'll just ignore it.
-    if(!value.empty && std.ascii.isPrintable(value[0]) && value[0] != ' ' && value[0] != '(')
+    if(!value.empty && isPrintable(value[0]) && value[0] != ' ' && value[0] != '(')
         throw new DateTimeException("Invalid timezone");
 
     try
@@ -33699,7 +33699,7 @@ T _convDigits(T, R)(R str)
     {
         if(i != 0)
             num *= 10;
-        if(!std.ascii.isDigit(str[i]))
+        if(!isDigit(str[i]))
             return -1;
         num += str[i] - '0';
     }

@@ -1960,7 +1960,7 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
     auto r = representation(s);
     for (size_t i = 0; i < s.length; )
     {
-        immutable step = std.utf.stride(s, i);
+        immutable step = stride(s, i);
         if (step > 1)
         {
             .reverse(r[i .. i + step]);

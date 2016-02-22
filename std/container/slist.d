@@ -700,13 +700,14 @@ unittest
 
 unittest
 {
-    import std.algorithm;
+    static import std.algorithm;
+    import std.range: take;
 
     // insertAfter documentation example
     auto sl = SList!string(["a", "b", "d"]);
     sl.insertAfter(sl[], "e"); // insert at the end (slowest)
     assert(std.algorithm.equal(sl[], ["a", "b", "d", "e"]));
-    sl.insertAfter(std.range.take(sl[], 2), "c"); // insert after "b"
+    sl.insertAfter(take(sl[], 2), "c"); // insert after "b"
     assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
 }
 
