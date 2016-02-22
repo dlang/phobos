@@ -1086,6 +1086,45 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
                 }
             }
 
+            static if (isMutable!DeepElemType && N == PureN)
+            {
+                auto opIndexAssign(V)(V val, _Slice slice)
+                {
+                    return this[slice][] = val;
+                }
+
+                auto opIndexAssign(V)(V val)
+                {
+                    foreach (ref e; this)
+                        e = val;
+                    return this;
+                }
+
+                auto opIndexAssign(V : T[], T)(V val)
+                    if (__traits(compiles, front = val[0]))
+                {
+                    assert(_length == val.length, "lengths should be equal" ~ tailErrorMessage!());
+                    foreach (ref e; this)
+                    {
+                        e = val[0];
+                        val = val[1 .. $];
+                    }
+                    return this;
+                }
+
+                auto opIndexAssign(V : Slice!(1, _Range), _Range)(V val)
+                    if (__traits(compiles, front = val.front))
+                {
+                    assert(_length == val.length, "lengths should be equal" ~ tailErrorMessage!());
+                    foreach (ref e; this)
+                    {
+                        e = val.front;
+                        val.popFront;
+                    }
+                    return this;
+                }
+            }
+
             auto opIndex(_Slice sl)
             {
                 auto ret = this;
@@ -1187,11 +1226,14 @@ pure nothrow unittest
 /++
 Random access and slicing
 +/
-@safe @nogc pure nothrow unittest
+@nogc nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    import std.range: iota;
-    auto elems = 20.iota.sliced(4, 5).byElement;
+    import std.algorithm.comparison: equal;
+    import std.array: array;
+    import std.range: iota, repeat;
+    static data = 20.iota.array;
+    auto elems = data.sliced(4, 5).byElement;
 
     elems = elems[11 .. $ - 2];
 
@@ -1201,6 +1243,21 @@ Random access and slicing
 
     foreach (i; 0 .. 7)
         assert(elems[i] == i + 11);
+
+    // assign an element
+    elems[2 .. 6] = -1;
+    assert(elems[2 .. 6].equal(repeat(-1, 4)));
+
+    // assign an array
+    static ar = [-1, -2, -3, -4];
+    elems[2 .. 6] = ar;
+    assert(elems[2 .. 6].equal(ar));
+
+    // assign a slice
+    ar[] *= 2;
+    auto sl = ar.sliced(ar.length);
+    elems[2 .. 6] = sl;
+    assert(elems[2 .. 6].equal(sl));
 }
 
 /++
