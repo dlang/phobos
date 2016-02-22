@@ -948,7 +948,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
             }
 
             static if (PureN == 1 && isMutable!DeepElemType && !hasAccessByRef)
-            auto front(DeepElemType elem) @property
+            auto front(E)(E elem) @property
             {
                 assert(!this.empty);
                 return _slice._ptr[0] = elem;
@@ -982,7 +982,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
             }
 
             static if (PureN == 1 && isMutable!DeepElemType && !hasAccessByRef)
-            auto back(DeepElemType elem) @property
+            auto back(E)(E elem) @property
             {
                 assert(!this.empty);
                 return opIndexAssign(_length - 1, elem);
@@ -1071,7 +1071,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
             }
 
             static if (PureN == 1 && isMutable!DeepElemType && !hasAccessByRef)
-            auto opIndexAssign(DeepElemType elem, size_t index)
+            auto opIndexAssign(E)(E elem, size_t index)
             {
                 static if (N == PureN)
                 {
@@ -1376,7 +1376,7 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
             }
 
             static if (PureN == 1 && isMutable!DeepElemType && !hasAccessByRef)
-            auto front(DeepElemType elem) @property
+            auto front(E)(E elem) @property
             {
                 pragma(inline, true);
                 assert(!this.empty);
