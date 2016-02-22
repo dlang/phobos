@@ -1295,7 +1295,7 @@ Throws: $(D Exception) if the file is not opened.
             {
                 import std.format : formattedWrite;
 
-                std.format.formattedWrite(w, "%s", arg);
+                formattedWrite(w, "%s", arg);
             }
             else static if (isSomeString!A)
             {
@@ -1322,7 +1322,7 @@ Throws: $(D Exception) if the file is not opened.
                 import std.format : formattedWrite;
 
                 // Most general case
-                std.format.formattedWrite(w, "%s", arg);
+                formattedWrite(w, "%s", arg);
             }
         }
     }
@@ -1349,7 +1349,7 @@ Throws: $(D Exception) if the file is not opened.
     {
         import std.format : formattedWrite;
 
-        std.format.formattedWrite(lockingTextWriter(), fmt, args);
+        formattedWrite(lockingTextWriter(), fmt, args);
     }
 
 /**
@@ -1364,7 +1364,7 @@ Throws: $(D Exception) if the file is not opened.
         import std.format : formattedWrite;
 
         auto w = lockingTextWriter();
-        std.format.formattedWrite(w, fmt, args);
+        formattedWrite(w, fmt, args);
         w.put('\n');
     }
 
@@ -1842,7 +1842,7 @@ Allows to directly use range operations on lines of a file.
                     line = null;
                 }
                 else if (keepTerminator == KeepTerminator.no
-                        && std.algorithm.endsWith(line, terminator))
+                        && endsWith(line, terminator))
                 {
                     static if (isScalarType!Terminator)
                         enum tlen = 1;
@@ -1938,6 +1938,7 @@ the contents may well have changed).
 
     unittest
     {
+        static import std.file;
         auto deleteme = testFilename();
         std.file.write(deleteme, "hi");
         scope(success) std.file.remove(deleteme);
@@ -2214,6 +2215,7 @@ $(XREF file,readText)
 
     unittest
     {
+        static import std.file;
         auto deleteme = testFilename();
         std.file.write(deleteme, "hi");
         scope(success) std.file.remove(deleteme);
@@ -2565,7 +2567,7 @@ $(D Range) that locks the file and allows fast writing to it.
                     else
                     {
                         char[4] buf;
-                        auto b = std.utf.toUTF8(buf, c);
+                        auto b = toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
                             trustedFPUTC(b[i], handle_);
                     }
@@ -2588,7 +2590,7 @@ $(D Range) that locks the file and allows fast writing to it.
                     else
                     {
                         char[4] buf = void;
-                        auto b = std.utf.toUTF8(buf, c);
+                        auto b = toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
                             trustedFPUTC(b[i], handle_);
                     }
@@ -4472,6 +4474,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
 
 unittest
 {
+    static import std.file;
     auto deleteme = testFilename();
     scope(exit) std.file.remove(deleteme);
 

@@ -1074,7 +1074,8 @@ struct FormatSpec(Char)
     //--------------------------------------------------------------------------
     private bool readUpToNextSpec(R)(ref R r)
     {
-        import std.ascii : isLower;
+        import std.ascii : isLower, isWhite;
+        import std.utf : stride;
 
         // Reset content
         if (__ctfe)
@@ -1120,8 +1121,8 @@ struct FormatSpec(Char)
             {
                 if (trailing.ptr[0] == ' ')
                 {
-                    while (!r.empty && std.ascii.isWhite(r.front)) r.popFront();
-                    //r = std.algorithm.find!(not!(std.ascii.isWhite))(r);
+                    while (!r.empty && isWhite(r.front)) r.popFront();
+                    //r = std.algorithm.find!(not!(isWhite))(r);
                 }
                 else
                 {
@@ -1131,7 +1132,7 @@ struct FormatSpec(Char)
                     if (r.front != trailing.front) break;
                     r.popFront();
                 }
-                trailing = trailing[std.utf.stride(trailing, 0) .. $];
+                trailing = trailing[stride(trailing, 0) .. $];
             }
         }
         return false;
