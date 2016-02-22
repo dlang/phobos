@@ -473,7 +473,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
         immutable limit = min(r1.length, r2.length);
         for (size_t i = 0; i < limit;)
         {
-            immutable codeLen = std.utf.stride(r1, i);
+            immutable codeLen = stride(r1, i);
             size_t j = 0;
 
             for (; j < codeLen && i < limit; ++i, ++j)

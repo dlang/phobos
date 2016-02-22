@@ -1479,20 +1479,21 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
     }
     else
     {
+        import std.uni: toLower;
         if (needles.length <= 16 && needles.walkLength(17))
         {
             size_t si = 0;
             dchar[16] scratch = void;
             foreach ( dchar c; needles)
             {
-                scratch[si++] = std.uni.toLower(c);
+                scratch[si++] = toLower(c);
             }
 
             static if (forward)
             {
                 foreach (i, dchar c; haystack)
                 {
-                    if (canFind(scratch[0 .. si], std.uni.toLower(c)) == any)
+                    if (canFind(scratch[0 .. si], toLower(c)) == any)
                     {
                         return i;
                     }
@@ -1502,7 +1503,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
             {
                 foreach_reverse (i, dchar c; haystack)
                 {
-                    if (canFind(scratch[0 .. si], std.uni.toLower(c)) == any)
+                    if (canFind(scratch[0 .. si], toLower(c)) == any)
                     {
                         return i;
                     }
@@ -1513,14 +1514,14 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
         {
             static bool f(dchar a, dchar b)
             {
-                return std.uni.toLower(a) == b;
+                return toLower(a) == b;
             }
 
             static if (forward)
             {
                 foreach (i, dchar c; haystack)
                 {
-                    if (canFind!f(needles, std.uni.toLower(c)) == any)
+                    if (canFind!f(needles, toLower(c)) == any)
                     {
                         return i;
                     }
@@ -1530,7 +1531,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
             {
                 foreach_reverse (i, dchar c; haystack)
                 {
-                    if (canFind!f(needles, std.uni.toLower(c)) == any)
+                    if (canFind!f(needles, toLower(c)) == any)
                     {
                         return i;
                     }
@@ -2914,12 +2915,12 @@ auto stripRight(Range)(Range str)
         !isConvertibleToString!Range &&
         isSomeChar!(ElementEncodingType!Range))
 {
+    import std.uni : isWhite;
     alias C = Unqual!(ElementEncodingType!(typeof(str)));
 
     static if (isSomeString!(typeof(str)))
     {
         import std.utf : codeLength;
-        import std.uni : isWhite;
 
         foreach_reverse (i, dchar c; str)
         {
@@ -2936,7 +2937,7 @@ auto stripRight(Range)(Range str)
         {
             static if (C.sizeof == 4)
             {
-                if (std.uni.isWhite(str[i]))
+                if (isWhite(str[i]))
                     continue;
                 break;
             }
@@ -2945,7 +2946,7 @@ auto stripRight(Range)(Range str)
                 auto c2 = str[i];
                 if (c2 < 0xD800 || c2 >= 0xE000)
                 {
-                    if (std.uni.isWhite(c2))
+                    if (isWhite(c2))
                         continue;
                 }
                 else if (c2 >= 0xDC00)
@@ -2956,7 +2957,7 @@ auto stripRight(Range)(Range str)
                         if (c1 >= 0xD800 && c1 < 0xDC00)
                         {
                             dchar c = ((c1 - 0xD7C0) << 10) + (c2 - 0xDC00);
-                            if (std.uni.isWhite(c))
+                            if (isWhite(c))
                             {
                                 --i;
                                 continue;
@@ -2973,7 +2974,7 @@ auto stripRight(Range)(Range str)
                 char cx = str[i];
                 if (cx <= 0x7F)
                 {
-                    if (std.uni.isWhite(cx))
+                    if (isWhite(cx))
                         continue;
                     break;
                 }
@@ -2992,7 +2993,7 @@ auto stripRight(Range)(Range str)
                         --i;
                     }
 
-                    if (!std.uni.isWhite(str[i .. i + stride].byDchar.front))
+                    if (!str[i .. i + stride].byDchar.front.isWhite)
                         return str[0 .. i + stride];
                 }
             }
@@ -5349,7 +5350,7 @@ S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
         }
         if (changed)
         {
-            std.utf.encode(r, c);
+            encode(r, c);
         }
     }
     if (changed)
@@ -5383,7 +5384,7 @@ S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
 
 S squeeze(S)(S s, in S pattern = null)
 {
-    import std.utf : encode;
+    import std.utf : encode, stride;
 
     Unqual!(typeof(s[0]))[] r;
     dchar lastc;
@@ -5404,10 +5405,10 @@ S squeeze(S)(S s, in S pattern = null)
             {
                 if (r is null)
                     r = s[0 .. lasti].dup;
-                std.utf.encode(r, c);
+                encode(r, c);
             }
             else
-                lasti = i + std.utf.stride(s, i);
+                lasti = i + stride(s, i);
             lastc = c;
         }
         else
@@ -5417,7 +5418,7 @@ S squeeze(S)(S s, in S pattern = null)
             {
                 if (r is null)
                     r = s[0 .. lasti].dup;
-                std.utf.encode(r, c);
+                encode(r, c);
             }
         }
     }
@@ -5506,7 +5507,7 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
 {
     import std.ascii : isAlphaNum;
 
-    if (s.length && std.ascii.isAlphaNum(s[$ - 1]))
+    if (s.length && isAlphaNum(s[$ - 1]))
     {
         auto r = s.dup;
         size_t i = r.length - 1;
@@ -5539,7 +5540,7 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
                 break;
 
             default:
-                if (std.ascii.isAlphaNum(c))
+                if (isAlphaNum(c))
                     r[i]++;
                 return r;
             }
@@ -5653,10 +5654,10 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
         for (size_t i = 0; i < from.length; )
         {
-            dchar f = std.utf.decode(from, i);
+            dchar f = decode(from, i);
             if (f == '-' && lastf != dchar.init && i < from.length)
             {
-                dchar nextf = std.utf.decode(from, i);
+                dchar nextf = decode(from, i);
                 if (lastf <= c && c <= nextf)
                 {
                     n += c - lastf - 1;
@@ -5686,10 +5687,10 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
         // Find the nth character in to[]
         dchar nextt;
         for (size_t i = 0; i < to.length; )
-        {   dchar t = std.utf.decode(to, i);
+        {   dchar t = decode(to, i);
             if (t == '-' && lastt != dchar.init && i < to.length)
             {
-                nextt = std.utf.decode(to, i);
+                nextt = decode(to, i);
                 n -= nextt - lastt;
                 if (n < 0)
                 {
@@ -6475,6 +6476,7 @@ unittest
 S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
         S indent = null, in size_t tabsize = 8) if (isSomeString!S)
 {
+    import std.uni: isWhite;
     typeof(s.dup) result;
     bool inword;
     bool first = true;
@@ -6488,7 +6490,7 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
     auto col = column(firstindent, tabsize);
     foreach (size_t i, dchar c; s)
     {
-        if (std.uni.isWhite(c))
+        if (isWhite(c))
         {
             if (inword)
             {

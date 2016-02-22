@@ -4140,7 +4140,7 @@ unittest
     {
         import std.file : deleteme;
 
-        string temp_file = std.file.deleteme ~ "-tempDelMe.txt";
+        string temp_file = deleteme ~ "-tempDelMe.txt";
         auto file = File(temp_file, "wb");
         scope(exit)
         {

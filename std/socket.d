@@ -2008,7 +2008,7 @@ static if (is(sockaddr_un))
         immutable ubyte[] data = [1, 2, 3, 4];
         Socket[2] pair;
 
-        auto name = std.file.deleteme ~ "-unix-socket";
+        auto name = deleteme ~ "-unix-socket";
         auto address = new UnixAddress(name);
 
         auto listener = new Socket(AddressFamily.UNIX, SocketType.STREAM);

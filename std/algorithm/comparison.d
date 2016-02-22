@@ -663,8 +663,8 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
         {
             if (i1 == r1.length) return threeWay(i2, r2.length);
             if (i2 == r2.length) return threeWay(r1.length, i1);
-            immutable c1 = std.utf.decode(r1, i1),
-                c2 = std.utf.decode(r2, i2);
+            immutable c1 = decode(r1, i1),
+                c2 = decode(r2, i2);
             if (c1 != c2) return threeWayInt(cast(int) c1, cast(int) c2);
         }
     }
@@ -1157,7 +1157,7 @@ size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     assert(levenshteinDistance("abcde", "abcde") == 0);
     assert(levenshteinDistance("abcde", "abCde") == 1);
     assert(levenshteinDistance("kitten", "sitting") == 3);
-    assert(levenshteinDistance!((a, b) => std.uni.toUpper(a) == std.uni.toUpper(b))
+    assert(levenshteinDistance!((a, b) => toUpper(a) == toUpper(b))
         ("parks", "SPARK") == 2);
     assert(levenshteinDistance("parks".filter!"true", "spark".filter!"true") == 2);
     assert(levenshteinDistance("ID", "I♥D") == 1);
