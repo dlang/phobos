@@ -284,7 +284,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
         if (op == "^^" && isNumeric!R)
     {
-        static import std.math;
+        import std.math : cos, exp, log, sin, PI;
         Unqual!(CommonType!(T, R)) ab = void, ar = void;
 
         if (lhs >= 0)
@@ -292,17 +292,17 @@ struct Complex(T)  if (isFloatingPoint!T)
             // r = lhs
             // theta = 0
             ab = lhs ^^ this.re;
-            ar = std.math.log(lhs) * this.im;
+            ar = log(lhs) * this.im;
         }
         else
         {
             // r = -lhs
             // theta = PI
-            ab = (-lhs) ^^ this.re * std.math.exp(-std.math.PI * this.im);
-            ar = std.math.PI * this.re + std.math.log(-lhs) * this.im;
+            ab = (-lhs) ^^ this.re * exp(-PI * this.im);
+            ar = PI * this.re + log(-lhs) * this.im;
         }
 
-        return typeof(return)(ab * std.math.cos(ar), ab * std.math.sin(ar));
+        return typeof(return)(ab * cos(ar), ab * sin(ar));
     }
 
     // OP-ASSIGN OPERATORS
@@ -356,14 +356,14 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
-        static import std.math;
+        import std.math: exp, log, cos, sin;
         immutable r = abs(this);
         immutable t = arg(this);
-        immutable ab = r^^z.re * std.math.exp(-t*z.im);
-        immutable ar = t*z.re + std.math.log(r)*z.im;
+        immutable ab = r^^z.re * exp(-t*z.im);
+        immutable ar = t*z.re + log(r)*z.im;
 
-        re = ab*std.math.cos(ar);
-        im = ab*std.math.sin(ar);
+        re = ab*cos(ar);
+        im = ab*sin(ar);
         return this;
     }
 
@@ -388,11 +388,11 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
     {
-        static import std.math;
+        import std.math: cos, sin;
         immutable ab = abs(this)^^r;
         immutable ar = arg(this)*r;
-        re = ab*std.math.cos(ar);
-        im = ab*std.math.sin(ar);
+        re = ab*cos(ar);
+        im = ab*sin(ar);
         return this;
     }
 
@@ -759,9 +759,9 @@ unittest
 Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
     @safe pure nothrow @nogc
 {
-    static import std.math;
+    import std.math : sin, cos;
     return Complex!(CommonType!(T,U))
-        (modulus*std.math.cos(argument), modulus*std.math.sin(argument));
+        (modulus*cos(argument), modulus*sin(argument));
 }
 
 ///
@@ -792,8 +792,8 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 unittest
 {
     static import std.math;
-  assert(sin(complex(0.0)) == 0.0);
-  assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
+    assert(sin(complex(0.0)) == 0.0);
+    assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
 }
 
 
