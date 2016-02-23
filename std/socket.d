@@ -466,9 +466,11 @@ class Protocol
 }
 
 
+// Skip this test on Android because getprotobyname/number are
+// unimplemented in bionic.
+version(CRuntime_Bionic) {} else
 unittest
 {
-    // getprotobyname,number are unimplemented in bionic
     softUnittest({
         Protocol proto = new Protocol;
         assert(proto.getProtocolByType(ProtocolType.TCP));
