@@ -2412,36 +2412,33 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 /**
-These functions find the first occurrence of $(D needle) in $(D
-haystack) and then split $(D haystack) as follows.
+These functions find the first occurrence of `needle` in `haystack` and then
+split `haystack` as follows.
 
-$(D findSplit) returns a tuple $(D result) containing $(I three)
-ranges. $(D result[0]) is the portion of $(D haystack) before $(D
-needle), $(D result[1]) is the portion of $(D haystack) that matches
-$(D needle), and $(D result[2]) is the portion of $(D haystack) after
-the match. If $(D needle) was not found, $(D result[0])
-comprehends $(D haystack) entirely and $(D result[1]) and $(D result[2])
-are empty.
+`findSplit` returns a tuple `result` containing $(I three) ranges. `result[0]`
+is the portion of `haystack` before `needle`, `result[1]` is the portion of
+`haystack` that matches `needle`, and `result[2]` is the portion of `haystack`
+after the match. If `needle` was not found, `result[0]` comprehends `haystack`
+entirely and `result[1]` and `result[2]` are empty.
 
-$(D findSplitBefore) returns a tuple $(D result) containing two
-ranges. $(D result[0]) is the portion of $(D haystack) before $(D
-needle), and $(D result[1]) is the balance of $(D haystack) starting
-with the match. If $(D needle) was not found, $(D result[0])
-comprehends $(D haystack) entirely and $(D result[1]) is empty.
+`findSplitBefore` returns a tuple `result` containing two ranges. `result[0]` is
+the portion of `haystack` before `needle`, and `result[1]` is the balance of
+`haystack` starting with the match. If `needle` was not found, `result[0]`
+comprehends `haystack` entirely and `result[1]` is empty.
 
-$(D findSplitAfter) returns a tuple $(D result) containing two ranges.
-$(D result[0]) is the portion of $(D haystack) up to and including the
-match, and $(D result[1]) is the balance of $(D haystack) starting
-after the match. If $(D needle) was not found, $(D result[0]) is empty
-and $(D result[1]) is $(D haystack).
+`findSplitAfter` returns a tuple `result` containing two ranges.
+`result[0]` is the portion of `haystack` up to and including the
+match, and `result[1]` is the balance of `haystack` starting
+after the match. If `needle` was not found, `result[0]` is empty
+and `result[1]` is `haystack`.
 
 In all cases, the concatenation of the returned ranges spans the
-entire $(D haystack).
+entire `haystack`.
 
-If $(D haystack) is a random-access range, all three components of the
-tuple have the same type as $(D haystack). Otherwise, $(D haystack)
-must be a forward range and the type of $(D result[0]) and $(D
-result[1]) is the same as $(XREF range,takeExactly).
+If `haystack` is a random-access range, all three components of the tuple have
+the same type as `haystack`. Otherwise, `haystack` must be a forward range and
+the type of `result[0]` and `result[1]` is the same as $(XREF
+range,takeExactly).
 
 Params:
     pred = Predicate to use for comparing needle against haystack.
@@ -2450,11 +2447,11 @@ Params:
 
 Returns:
 
-A sub-type of Tuple!() of the split portions of `haystack` (see above for
-details).  This sub-type of Tuple!() has opCast defined for bool.  This opCast
-returns $(D true) when the separating $(D needle) was found (!result[1].empty)
-and $(D false) otherwise.  This enables the convenient idiom shown in the
-following example.
+A sub-type of `Tuple!()` of the split portions of `haystack` (see above for
+details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
+`opCast` returns `true` when the separating `needle` was found
+(`!result[1].empty`) and `false` otherwise.  This enables the convenient idiom
+shown in the following example.
 
 Example:
 ---
