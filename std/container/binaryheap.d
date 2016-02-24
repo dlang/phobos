@@ -1,6 +1,6 @@
 /**
-This module provides a $(D BinaryHeap) adaptor that makes a binary heap out of
-any user-provided random-access range.
+This module provides a $(D BinaryHeap) (aka priority queue)
+adaptor that makes a binary heap out of any user-provided random-access range.
 
 This module is a submodule of $(LINK2 std_container.html, std.container).
 
