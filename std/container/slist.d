@@ -1,5 +1,6 @@
 /**
 This module implements a singly-linked list container.
+It can be used as a stack.
 
 This module is a submodule of $(LINK2 std_container.html, std.container).
 
@@ -23,6 +24,7 @@ public import std.container.util;
 
 /**
    Implements a simple and fast singly-linked list.
+   It can be used as a stack.
 
    $(D SList) uses reference semantics.
  */
