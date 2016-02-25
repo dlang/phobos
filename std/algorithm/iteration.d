@@ -197,14 +197,14 @@ if (isBidirectionalRange!Range)
 
 /++
 Tip: $(D cache) is eager when evaluating elements. If calling front on the
-underlying range has a side effect, it will be observeable before calling
-front on the actual cached range.
+underlying _range has a side effect, it will be observeable before calling
+front on the actual cached _range.
 
-Furtermore, care should be taken composing $(D cache) with $(XREF _range,take).
+Furthermore, care should be taken composing $(D cache) with $(XREF _range,take).
 By placing $(D take) before $(D cache), then $(D cache) will be "aware"
-of when the range ends, and correctly stop caching elements when needed.
+of when the _range ends, and correctly stop caching elements when needed.
 If calling front has no side effect though, placing $(D take) after $(D cache)
-may yield a faster range.
+may yield a faster _range.
 
 Either way, the resulting ranges will be equivalent, but maybe not at the
 same cost or side effects.
