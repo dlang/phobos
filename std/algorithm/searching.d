@@ -33,6 +33,9 @@ $(T2 commonPrefix,
         $(D commonPrefix("parakeet", "parachute")) returns $(D "para").)
 $(T2 endsWith,
         $(D endsWith("rocks", "ks")) returns $(D true).)
+$(T2 extremum,
+        Selects the extreme element of a range.
+        $(D [[0, 4], [1, 2]].extremum!"a[1] > b[1]") returns $(D [0, 4]).)
 $(T2 find,
         $(D find("hello world", "or")) returns $(D "orld") using linear search.
         (For binary search refer to $(XREF range,sortedRange).))
@@ -59,6 +62,12 @@ $(T2 minCount,
         $(D minCount([2, 1, 1, 4, 1])) returns $(D tuple(1, 3)).)
 $(T2 maxCount,
         $(D maxCount([2, 4, 1, 4, 1])) returns $(D tuple(4, 2)).)
+$(T2 minElement,
+        Selects the minimal element of a range.
+        $(D minElement([3, 4, 1, 2])) returns $(D 1).)
+$(T2 maxElement,
+        Selects the maximal element of a range.
+        $(D maxElement([3, 4, 1, 2])) returns $(D 4).)
 $(T2 minPos,
         $(D minPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [1, 3, 4, 1]),
         i.e., positions the range at the first occurrence of its minimal
@@ -1202,6 +1211,60 @@ bool endsWith(alias pred, R)(R doesThisEnd)
         assert(endsWith!("a%10 == b%10")(arr, [14, 15]));
         assert(!endsWith!("a%10 == b%10")(arr, [15, 14]));
     }
+}
+
+/**
+Iterates the passed range and selects the extreme element with $(D less).
+If the extreme element occurs multiple time, the first occurrence will be
+returned.
+
+Params:
+    selector = custom selector predicate
+    r = Range from which the extreme value will be selected
+
+Returns: The extreme value according to $(D less) of the passed-in values.
+*/
+auto extremum(alias selector, Range)(Range r)
+    if (isInputRange!Range && !isInfinite!Range)
+in
+{
+    assert(!r.empty, "r is an empty range");
+}
+body
+{
+    alias selectorFun = binaryFun!selector;
+    Unqual!(ElementType!Range) extremeElement = r.front;
+
+    static if (isRandomAccessRange!Range && hasLength!Range)
+    {
+        auto lenArray = r.length;
+        for (size_t i = 1; i < lenArray; i++)
+        {
+            if (selectorFun(r[i], extremeElement))
+            {
+                extremeElement = r[i];
+            }
+        }
+    }
+    else
+    {
+        r.popFront();
+        while (!r.empty)
+        {
+            if (selectorFun(el, r.front))
+            {
+                extremeElement = r.front;
+            }
+            r.popFront();
+        }
+    }
+    return extremeElement;
+}
+
+///
+unittest
+{
+    assert([[0, 4], [1, 2]].extremum!"a[1] > b[1]" == [0, 4]);
 }
 
 // find
@@ -2961,6 +3024,128 @@ unittest
         assert(minCount!"a.i < b.i"(r2) == tuple(Type(one), 2));
         assert(one == 1 && two == 2);
     }
+}
+
+/**
+Iterates the passed range and returns the maximal element.
+A custom mapping for comparison key can be used with $(D map).
+
+Params:
+    map = custom mapping for the comparison key
+    r = Range from which the maximum will be selected
+
+Returns: The maximal element of the passed-in range.
+
+See_Also:
+    $(XREF max)
+*/
+auto maxElement(alias map = "a", Range)(Range r)
+    if (isInputRange!Range && !isInfinite!Range)
+{
+    static if(map != "a")
+    {
+        alias mapFun = unaryFun!map;
+        return extremum!((a, b) => mapFun(a) > mapFun(b))(r);
+    }
+    else
+    {
+        return extremum!("a > b")(r);
+    }
+}
+
+///
+unittest
+{
+    import std.range: enumerate, iota;
+
+    assert([2, 1, 4, 3].maxElement == 4);
+    // allows to get the index too
+    assert([2, 1, 4, 3].enumerate.maxElement!"a.value" == tuple(2, 4));
+}
+
+unittest
+{
+    import std.range: enumerate, iota;
+
+    // supports mapping
+    assert([3, 4, 5, 1, 2].enumerate.maxElement!"a.value" == tuple(2, 5));
+    assert([5, 2, 4].enumerate.maxElement!"a.value" == tuple(0, 5));
+
+    // forward ranges
+    assert(iota(1, 5).maxElement() == 4);
+    assert(iota(2, 5).enumerate.maxElement!"a.value" == tuple(2, 4));
+    assert(iota(4, 14).enumerate.maxElement!"a.value" == tuple(9, 13));
+
+    // should work with const
+    const(int)[] immArr = [2, 3, 1];
+    assert(immArr.maxElement == 3);
+
+    // should work with immutable
+    immutable(int)[] immArr2 = [2, 3, 1];
+    assert(immArr2.maxElement == 3);
+
+    // with strings
+    assert(["a", "c", "b"].maxElement == "c");
+}
+
+/**
+Iterates the passed range and returns the minimal element.
+A custom mapping for comparison key can be used with $(D map).
+
+Params:
+    map = custom mapping for the comparison key
+    r = Range from which the minimal element will be selected
+
+Returns: The minimal element of the passed-in range.
+
+See_Also:
+    $(XREF min)
+*/
+auto minElement(alias map = "a", Range)(Range r)
+    if (isInputRange!Range && !isInfinite!Range)
+{
+    static if(map != "a")
+    {
+        alias mapFun = unaryFun!map;
+        return extremum!((a, b) => mapFun(a) < mapFun(b))(r);
+    }
+    else
+    {
+        return extremum!("a < b")(r);
+    }
+}
+
+///
+unittest
+{
+    import std.range: enumerate, iota;
+
+    assert([2, 1, 4, 3].minElement == 1);
+    // allows to get the index too
+    assert(iota(1, 10).enumerate.minElement!"a.value" == tuple(0, 1));
+}
+
+unittest
+{
+    import std.range: enumerate, iota;
+    // supports mapping
+    assert([3, 4, 5, 1, 2].enumerate.minElement!"a.value" == tuple(3, 1));
+    assert([5, 2, 4].enumerate.minElement!"a.value" == tuple(1, 2));
+
+    // forward ranges
+    assert(iota(1, 5).minElement() == 1);
+    assert(iota(2, 5).enumerate.minElement!"a.value" == tuple(0, 2));
+
+    // should work with const
+    const(int)[] immArr = [2, 1, 3];
+    assert(immArr.minElement == 1);
+
+    // should work with immutable
+    immutable(int)[] immArr2 = [2, 1, 3];
+    assert(immArr2.minElement == 1);
+
+    // with strings
+    assert(["b", "a", "c"].minElement == "a");
 }
 
 // minPos

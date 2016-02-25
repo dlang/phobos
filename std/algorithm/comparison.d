@@ -1270,6 +1270,9 @@ Params:
 Returns:
     The maximum of the passed-in args. The type of the returned value is
     the type among the passed arguments that is able to store the largest value.
+
+See_Also:
+    $(XREF_PACK algorithm,searching,maxElement)
 */
 MaxType!T max(T...)(T args)
     if (T.length >= 2)
@@ -1382,6 +1385,8 @@ Iterates the passed arguments and returns the minimum value.
 Params: args = The values to select the minimum from. At least two arguments
     must be passed, and they must be comparable with `<`.
 Returns: The minimum of the passed-in values.
+See_Also:
+    $(XREF_PACK algorithm,searching,minElement)
 */
 MinType!T min(T...)(T args)
     if (T.length >= 2)
