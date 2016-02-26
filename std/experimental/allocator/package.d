@@ -1099,7 +1099,19 @@ void dispose(A, T)(auto ref A alloc, T p)
 if (is(T == class) || is(T == interface))
 {
     if (!p) return;
-    auto support = (cast(void*) p)[0 .. typeid(p).initializer.length];
+    static if (is(T==interface))
+    {
+        version(Windows)
+        {
+            import core.sys.windows.unknwn;
+            static assert(!is(T: IUnknown), "COM interfaces can't be destroyed in "
+                ~ __PRETTY_FUNCTION__);
+        }
+        auto ob = cast(Object) p;
+    }
+    else
+        alias ob = p;
+    auto support = (cast(void*) ob)[0 .. typeid(ob).initializer.length];
     destroy(p);
     alloc.deallocate(support);
 }
@@ -1153,6 +1165,20 @@ unittest
 
     int[] arr = theAllocator.makeArray!int(43);
     theAllocator.dispose(arr);
+}
+
+unittest //bugzilla 15721
+{
+    import std.experimental.allocator.mallocator: Mallocator;
+
+    interface Foo {}
+    class Bar: Foo {}
+
+    Bar bar;
+    Foo foo;
+    bar = Mallocator.instance.make!Bar;
+    foo = cast(Foo) bar;
+    Mallocator.instance.dispose(foo);
 }
 
 /**
