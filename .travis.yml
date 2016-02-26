@@ -1,0 +1,16 @@
+language: d
+git:
+  depth: 1
+install:
+    - mkdir phobos
+    - ls -1 | grep -v ^phobos | xargs -I{} mv {} phobos
+    - git clone --depth=1 https://github.com/D-Programming-Language/dmd
+    - git clone --depth=1 https://github.com/D-Programming-Language/druntime
+script:
+    - (cd dmd && make -f posix.mak)
+    - (cd druntime && make -f posix.mak)
+    - (cd phobos && make -f posix.mak)
+    - (cd phobos && make -f posix.mak unittest)
+os:
+  - linux
+  - osx
