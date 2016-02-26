@@ -2071,9 +2071,6 @@ foreach (e; randomCover(a, rndGen))  // ... so this second random cover
     writeln(e);                      // the previous one.
 }
 ----
-
-These issues will be resolved in a second-generation std.random that
-re-implements random number generators as reference types.
  */
 struct RandomCover(Range, UniformRNG = void)
     if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
@@ -2327,9 +2324,6 @@ foreach (e; randomSample(a, 5, rndGen))  // ... so this second random
     writeln(e);                          // values as the previous one.
 }
 ----
-
-These issues will be resolved in a second-generation std.random that
-re-implements random number generators as reference types.
 */
 struct RandomSample(Range, UniformRNG = void)
     if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
