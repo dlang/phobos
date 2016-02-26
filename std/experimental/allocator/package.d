@@ -1099,7 +1099,7 @@ void dispose(A, T)(auto ref A alloc, T p)
 if (is(T == class) || is(T == interface))
 {
     if (!p) return;
-    auto support = (cast(void*) p)[0 .. typeid(p).initializer.length];
+    auto support = (cast(void*) cast(Object) p)[0 .. size_t.sizeof];
     destroy(p);
     alloc.deallocate(support);
 }
@@ -1153,6 +1153,20 @@ unittest
 
     int[] arr = theAllocator.makeArray!int(43);
     theAllocator.dispose(arr);
+}
+
+unittest //bugzilla 15721
+{
+    import std.experimental.allocator.mallocator: Mallocator;
+
+    interface Foo {}
+    class Bar: Foo {}
+
+    Bar bar;
+    Foo foo;
+    bar = Mallocator.instance.make!Bar;
+    foo = cast(Foo) bar;
+    Mallocator.instance.dispose(foo);
 }
 
 /**
