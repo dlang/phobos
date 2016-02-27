@@ -19,6 +19,8 @@ $(T2 isPartitioned,
         afterwards.)
 $(T2 isSorted,
         $(D isSorted([1, 1, 2, 3])) returns $(D true).)
+$(T2 isStrictlySorted,
+        $(D isStrictlySorted([1, 1, 2, 3])) returns $(D false).)
 $(T2 ordered,
         $(D ordered(1, 1, 2, 3)) returns $(D true).)
 $(T2 strictlyOrdered,
@@ -130,53 +132,87 @@ unittest
     assert(b == [ 3, 4, 5, 6 ]);
 }
 
+private bool isSortedImpl(alias less = "a < b", bool isStrict = false, Range)(Range r)
+if (isForwardRange!Range)
+{
+    if (r.empty) return true;
+
+    static if (isRandomAccessRange!Range && hasLength!Range)
+    {
+        immutable limit = r.length > 0 ? r.length - 1 : 0;
+        foreach (i; 0 .. limit)
+        {
+            static if (isStrict)
+            {
+                if (!binaryFun!less(r[i], r[i + 1])) return false;
+                assert(!binaryFun!less(r[i + 1], r[i]),
+                    __FUNCTION__ ~ ": incorrect non-strict predicate.");
+            }
+            else
+            {
+                if (!binaryFun!less(r[i + 1], r[i])) continue;
+                enum errorMsg = "Predicate for isSorted is not antisymmetric. Both" ~
+                                " pred(a, b) and pred(b, a) are true for certain values.";
+                assert(!binaryFun!less(r[i], r[i + 1]), errorMsg);
+                return false;
+            }
+        }
+    }
+    else
+    {
+        auto ahead = r.save;
+        ahead.popFront();
+        size_t i;
+
+        for (; !ahead.empty; ahead.popFront(), r.popFront(), ++i)
+        {
+            static if (isStrict)
+            {
+                if (!binaryFun!less(r.front, ahead.front)) return false;
+                // Check for antisymmetric predicate
+                enum errorMsg = __FUNCTION__ ~ ": incorrect non-strict predicate.";
+                assert(!binaryFun!less(ahead.front, r.front), errorMsg);
+            }
+            else
+            {
+                if (!binaryFun!less(ahead.front, r.front)) continue;
+                // Check for antisymmetric predicate
+                enum errorMsg = "Predicate for isSorted is not antisymmetric. Both" ~
+                            " pred(a, b) and pred(b, a) are true for certain values.";
+                assert(!binaryFun!less(r.front, ahead.front), errorMsg);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 // isSorted
 /**
 Checks whether a forward range is sorted according to the comparison
 operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
 less).
 
+$(D isSorted) allows repeated values, e.g. $(D isSorted([1, 1, 2])) is $(D true). To verify
+that the values are ordered strictly monotonically, use $(LREF isStrictlySorted):
+$(D isStrictlySorted([1, 1, 2])) is $(D false).
+
+With either function, the predicate must be a strict ordering just like with $(D isSorted). For
+example, using $(D "a <= b") instead of $(D "a < b") is incorrect and will cause failed
+assertions.
+
 Params:
     less = Predicate the range should be sorted by.
     r = Forward range to check for sortedness.
 
 Returns: true if the range is sorted, false otherwise.
+
+See_Also:
+    $(LREF isStrictlySorted) checks whether a forward range is strictly sorted.
 */
-bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
+bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!Range)
 {
-    if (r.empty) return true;
-
-    static if (isRandomAccessRange!Range && hasLength!Range)
-    {
-        immutable limit = r.length - 1;
-        foreach (i; 0 .. limit)
-        {
-            if (!binaryFun!less(r[i + 1], r[i])) continue;
-            assert(
-                !binaryFun!less(r[i], r[i + 1]),
-                "Predicate for isSorted is not antisymmetric. Both" ~
-                        " pred(a, b) and pred(b, a) are true for certain values.");
-            return false;
-        }
-    }
-    else
-    {
-        auto ahead = r;
-        ahead.popFront();
-        size_t i;
-
-        for (; !ahead.empty; ahead.popFront(), r.popFront(), ++i)
-        {
-            if (!binaryFun!less(ahead.front, r.front)) continue;
-            // Check for antisymmetric predicate
-            assert(
-                !binaryFun!less(r.front, ahead.front),
-                "Predicate for isSorted is not antisymmetric. Both" ~
-                        " pred(a, b) and pred(b, a) are true for certain values.");
-            return false;
-        }
-    }
-    return true;
+    return isSortedImpl!(less, false)(r);
 }
 
 ///
@@ -205,11 +241,71 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
     int[] b = [1, 3, 2];
     assert(!isSorted(b));
 
+    // ignores duplicates
+    int[] c = [1, 1, 2];
+    assert(isSorted(c));
+
     dchar[] ds = "コーヒーが好きです"d.dup;
     sort(ds);
     string s = to!string(ds);
     assert(isSorted(ds));  // random-access
     assert(isSorted(s));   // bidirectional
+}
+
+// isStrictlySorted
+/**
+Checks whether a forward range is strictly sorted according to the comparison
+operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
+less).
+
+Params:
+    less = Predicate the range should be strictly sorted by.
+    r = Forward range to check for sortedness.
+
+Returns: true if the range is strictly sorted, false otherwise.
+
+See_Also:
+    $(LREF isSorted) checks whether a forward range is sorted without requiring
+    strictness.
+*/
+bool isStrictlySorted(alias less = "a < b", Range)(Range r) if (isForwardRange!Range)
+{
+    return isSortedImpl!(less, true)(r);
+}
+
+///
+@safe unittest
+{
+    assert([1, 2].isStrictlySorted);
+    assert(![1, 1, 2].isStrictlySorted);
+    assert([2, 1].isStrictlySorted!((a, b) => a > b));
+    assert(![2, 1, 1].isStrictlySorted!((a, b) => a > b));
+}
+
+@safe unittest
+{
+    import std.conv : to;
+
+    assert("abcd".isStrictlySorted);
+    assert(!"aacd".isStrictlySorted);
+    assert(!"acb".isStrictlySorted);
+
+    assert([1, 2, 3].isStrictlySorted);
+    assert(![1, 3, 2].isStrictlySorted);
+    assert(![1, 1, 2].isStrictlySorted);
+
+    // ー occurs twice -> can't be strict
+    dchar[] ds = "コーヒーが好きです"d.dup;
+    sort(ds);
+    string s = to!string(ds);
+    assert(!isStrictlySorted(ds));  // random-access
+    assert(!isStrictlySorted(s));   // bidirectional
+
+    dchar[] ds2 = "コーヒが好きです"d.dup;
+    sort(ds2);
+    string s2 = to!string(ds2);
+    assert(isStrictlySorted(ds2));  // random-access
+    assert(isStrictlySorted(s2));   // bidirectional
 }
 
 /**
