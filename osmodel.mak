@@ -12,6 +12,9 @@ ifeq (,$(OS))
   ifeq (FreeBSD,$(uname_S))
     OS:=freebsd
   endif
+  ifeq (NetBSD,$(uname_S))
+    OS:=netbsd
+  endif
   ifeq (OpenBSD,$(uname_S))
     OS:=openbsd
   endif

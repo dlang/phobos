@@ -59,6 +59,12 @@ version (FreeBSD)
     version = HAS_GETDELIM;
 }
 
+version (NetBSD)
+{
+    version = GENERIC_IO;
+    version = HAS_GETDELIM;
+}
+
 version (Solaris)
 {
     version = GENERIC_IO;

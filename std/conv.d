@@ -2862,7 +2862,21 @@ unittest
 
     // min and max
     real r = to!real(to!string(real.min_normal));
-    assert(to!string(r) == to!string(real.min_normal));
+    version(NetBSD)
+    {
+        // NetBSD notice
+        // to!string returns 3.3621e-4932L. It is less than real.min_normal and it is subnormal value
+        // Simple C code
+        //     long double rd = 3.3621e-4932L;
+        //     printf("%Le\n", rd);
+        // has unexpected result: 1.681050e-4932
+        //
+        // Bug report: http://gnats.netbsd.org/cgi-bin/query-pr-single.pl?number=50937
+    }
+    else
+    {
+        assert(to!string(r) == to!string(real.min_normal));
+    }
     r = to!real(to!string(real.max));
     assert(to!string(r) == to!string(real.max));
 }

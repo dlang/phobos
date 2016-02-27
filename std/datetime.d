@@ -452,6 +452,20 @@ public:
                        ts.tv_nsec / 100 +
                        hnsecsToUnixEpoch;
             }
+            else version(NetBSD)
+            {
+                static if(clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    timeval tv;
+                    if(gettimeofday(&tv, null) != 0)
+                        throw new TimeException("Call to gettimeofday() failed");
+                    return convert!("seconds", "hnsecs")(tv.tv_sec) +
+                           convert!("usecs", "hnsecs")(tv.tv_usec) +
+                           hnsecsToUnixEpoch;
+                }
+            }
             else version(Solaris)
             {
                 static if(clockType == ClockType.second)
@@ -27049,6 +27063,7 @@ public:
         version(Posix)
         {
             version(FreeBSD)      enum utcZone = "Etc/UTC";
+            else version(NetBSD)  enum utcZone = "UTC";
             else version(linux)   enum utcZone = "UTC";
             else version(OSX)     enum utcZone = "UTC";
             else static assert(0, "The location of the UTC timezone file on this Posix platform must be set.");
@@ -27487,6 +27502,10 @@ public:
             {
                 // A bug on FreeBSD 9+ makes it so that this test fails.
                 // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=168862
+            }
+            else version(NetBSD)
+            {
+                // The same bug on NetBSD 7+
             }
             else
             {
@@ -28929,6 +28948,7 @@ public:
 
                     if(!tzName.extension().empty ||
                        !tzName.startsWith(subName) ||
+                       tzName == "leapseconds" ||
                        tzName == "+VERSION")
                     {
                         continue;
