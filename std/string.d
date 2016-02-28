@@ -2839,6 +2839,9 @@ unittest
 
     Postconditions: $(D input) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
+
+    See_Also:
+        Generic stripping on ranges: $(REF _stripLeft, std, algorithm, mutation)
   +/
 auto stripLeft(Range)(Range input)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
@@ -2908,6 +2911,9 @@ unittest
 
     Returns:
         slice of $(D str) stripped of trailing whitespace.
+
+    See_Also:
+        Generic stripping on ranges: $(REF _stripRight, std, algorithm, mutation)
   +/
 auto stripRight(Range)(Range str)
     if (isSomeString!Range ||
@@ -3067,6 +3073,9 @@ unittest
 
     Returns:
         slice of $(D str) stripped of leading and trailing whitespace.
+
+    See_Also:
+        Generic stripping on ranges: $(REF _strip, std, algorithm, mutation)
   +/
 auto strip(Range)(Range str)
     if (isSomeString!Range ||
@@ -6856,3 +6865,4 @@ pure unittest
         assert(equal(jt, hti));
     }
 }
+
