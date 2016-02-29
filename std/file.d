@@ -1317,7 +1317,7 @@ unittest
  * Params:
  *    name = string or range of characters representing the file name
  * Returns:
- *    true if it exists
+ *    true if the filename specified as input exists
  */
 bool exists(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
