@@ -50,8 +50,7 @@ import core.stdc.stdint, core.stdc.string, std.string, core.stdc.stdlib, std.con
 
 import core.stdc.config;
 import core.time : dur, Duration;
-import std.algorithm : max;
-import std.exception : assumeUnique, enforce, collectException;
+import std.exception;
 
 import std.internal.cstring;
 
@@ -63,7 +62,8 @@ version(Windows)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    private import core.sys.windows.windows, core.sys.windows.winsock2, std.windows.syserror;
+    public import core.sys.windows.winsock2;
+    private import core.sys.windows.windows, std.windows.syserror;
     private alias _ctimeval = core.sys.windows.winsock2.timeval;
     private alias _clinger = core.sys.windows.winsock2.linger;
 
@@ -145,17 +145,7 @@ version(unittest)
 /// Base exception thrown by $(D std.socket).
 class SocketException: Exception
 {
-    ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) pure nothrow
-    {
-        super(msg, file, line, next);
-    }
-
-    ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__) pure nothrow
-    {
-        super(msg, next, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 
@@ -279,34 +269,14 @@ class SocketOSException: SocketException
 /// Socket exceptions representing invalid parameters specified by user code.
 class SocketParameterException: SocketException
 {
-    ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) pure nothrow
-    {
-        super(msg, file, line, next);
-    }
-
-    ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__) pure nothrow
-    {
-        super(msg, next, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 /// Socket exceptions representing attempts to use network capabilities not
 /// available on the current system.
 class SocketFeatureException: SocketException
 {
-    ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) pure nothrow
-    {
-        super(msg, file, line, next);
-    }
-
-    ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__) pure nothrow
-    {
-        super(msg, next, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 
@@ -496,9 +466,11 @@ class Protocol
 }
 
 
+// Skip this test on Android because getprotobyname/number are
+// unimplemented in bionic.
+version(CRuntime_Bionic) {} else
 unittest
 {
-    // getprotobyname,number are unimplemented in bionic
     softUnittest({
         Protocol proto = new Protocol;
         assert(proto.getProtocolByType(ProtocolType.TCP));
@@ -625,28 +597,37 @@ unittest
 }
 
 
-/**
- * Class for exceptions thrown from an $(D InternetHost).
- */
-class HostException: SocketOSException
+private mixin template socketOSExceptionCtors()
 {
     ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null, int err = _lasterr())
+    this(string msg, string file = __FILE__, size_t line = __LINE__,
+         Throwable next = null, int err = _lasterr())
     {
         super(msg, file, line, next, err);
     }
 
     ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__, int err = _lasterr())
+    this(string msg, Throwable next, string file = __FILE__,
+         size_t line = __LINE__, int err = _lasterr())
     {
         super(msg, next, file, line, err);
     }
 
     ///
-    this(string msg, int err, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    this(string msg, int err, string file = __FILE__, size_t line = __LINE__,
+         Throwable next = null)
     {
         super(msg, next, file, line, err);
     }
+}
+
+
+/**
+ * Class for exceptions thrown from an $(D InternetHost).
+ */
+class HostException: SocketOSException
+{
+    mixin socketOSExceptionCtors;
 }
 
 /**
@@ -1061,6 +1042,12 @@ unittest
             assert(results.length && results[0].family == AddressFamily.INET6);
         }
     });
+
+    if (getaddrinfoPointer)
+    {
+        auto results = getAddressInfo(null, "1234", AddressInfoFlags.PASSIVE, SocketType.STREAM, ProtocolType.TCP, AddressFamily.INET);
+        assert(results.length == 1 && results[0].address.toString() == "0.0.0.0:1234");
+    }
 }
 
 
@@ -1245,23 +1232,7 @@ unittest
  */
 class AddressException: SocketOSException
 {
-    ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null, int err = _lasterr())
-    {
-        super(msg, file, line, next, err);
-    }
-
-    ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__, int err = _lasterr())
-    {
-        super(msg, next, file, line, err);
-    }
-
-    ///
-    this(string msg, int err, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
-    {
-        super(msg, next, file, line, err);
-    }
+    mixin socketOSExceptionCtors;
 }
 
 
@@ -1659,17 +1630,22 @@ public:
      * Compares with another InternetAddress of same type for equality
      * Returns: true if the InternetAddresses share the same address and
      * port number.
-     * Examples:
-     * --------------
-     * InternetAddress addr1,addr2;
-     * if (addr1 == addr2) { }
-     * --------------
      */
     override bool opEquals(Object o) const
     {
         auto other = cast(InternetAddress)o;
         return other && this.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr &&
             this.sin.sin_port == other.sin.sin_port;
+    }
+
+    ///
+    @system unittest
+    {
+        auto addr1 = new InternetAddress("127.0.0.1", 80);
+        auto addr2 = new InternetAddress("127.0.0.2", 80);
+
+        assert(addr1 == addr1);
+        assert(addr1 != addr2);
     }
 
     /**
@@ -2034,7 +2010,7 @@ static if (is(sockaddr_un))
         immutable ubyte[] data = [1, 2, 3, 4];
         Socket[2] pair;
 
-        auto name = std.file.deleteme ~ "-unix-socket";
+        auto name = deleteme ~ "-unix-socket";
         auto address = new UnixAddress(name);
 
         auto listener = new Socket(AddressFamily.UNIX, SocketType.STREAM);
@@ -2069,23 +2045,7 @@ static if (is(sockaddr_un))
  */
 class SocketAcceptException: SocketOSException
 {
-    ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null, int err = _lasterr())
-    {
-        super(msg, file, line, next, err);
-    }
-
-    ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__, int err = _lasterr())
-    {
-        super(msg, next, file, line, err);
-    }
-
-    ///
-    this(string msg, int err, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
-    {
-        super(msg, next, file, line, err);
-    }
+    mixin socketOSExceptionCtors;
 }
 
 /// How a socket is shutdown:
@@ -2369,6 +2329,7 @@ public:
 
     /// Return the current capacity of this $(D SocketSet). The exact
     /// meaning of the return value varies from platform to platform.
+    ///
     /// Note that since D 2.065, this value does not indicate a
     /// restriction, and $(D SocketSet) will grow its capacity as
     /// needed automatically.
@@ -3235,6 +3196,8 @@ public:
 
         version (Windows)
         {
+            import std.algorithm.comparison : max;
+
             auto msecs = to!int(value.total!"msecs");
             if (msecs != 0 && option == SocketOption.RCVTIMEO)
                 msecs = max(1, msecs - WINSOCK_TIMEOUT_SKEW);

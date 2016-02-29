@@ -92,14 +92,11 @@ else
 endif
 
 # Set CFLAGS
-CFLAGS=
-ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
-	CFLAGS += $(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
-	ifeq ($(BUILD),debug)
-		CFLAGS += -g
-	else
-		CFLAGS += -O3
-	endif
+CFLAGS=$(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
+ifeq ($(BUILD),debug)
+	CFLAGS += -g
+else
+	CFLAGS += -O3
 endif
 
 # Set DFLAGS
@@ -145,29 +142,50 @@ endif
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
-# Packages in std. Just mention the package name here and the actual files in
-# the package in STD_MODULES.
-STD_PACKAGES = $(addprefix std/, algorithm container experimental/logger \
-	range regex)
+# Given one or more packages, returns their respective libraries
+P2LIB=$(addprefix $(ROOT)/libphobos2_,$(addsuffix $(DOTLIB),$(subst /,_,$1)))
+# Given one or more packages, returns the modules they contain
+P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 
-# Modules in std (including those in packages), in alphabetical order.
-STD_MODULES = $(addprefix std/, \
-  array ascii base64 bigint bitmanip compiler complex concurrency concurrencybase \
-  $(addprefix container/, array binaryheap dlist rbtree slist util) \
-  conv cstream csv datetime demangle \
-  $(addprefix digest/, digest crc hmac md ripemd sha) \
-  encoding exception \
-  $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \
-  file format functional getopt json math mathspecial \
-  meta metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
-  process random \
-  $(addprefix range/, primitives interfaces) \
-  $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
-	kickstart tests thompson)) \
-  signals socket socketstream stdint stdio stdiobase stream \
-  string syserror system traits typecons typetuple uni uri utf uuid variant \
-  xml zip zlib $(addprefix algorithm/,comparison iteration \
-    mutation searching setops sorting))
+# Packages in std. Just mention the package name here. The contents of package
+# xy/zz is in variable PACKAGE_xy_zz. This allows automation in iterating
+# packages and their modules.
+STD_PACKAGES = std $(addprefix std/,\
+  algorithm container digest experimental/allocator \
+  experimental/allocator/building_blocks experimental/logger \
+  experimental/ndslice \
+  net \
+  range regex)
+
+# Modules broken down per package
+
+PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
+  concurrencybase conv cstream csv datetime demangle encoding exception file format \
+  functional getopt json math mathspecial meta mmfile numeric \
+  outbuffer parallelism path process random signals socket socketstream stdint \
+  stdio stdiobase stream string system traits typecons typetuple uni \
+  uri utf uuid variant xml zip zlib
+PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
+  sorting
+PACKAGE_std_container = array binaryheap dlist package rbtree slist util
+PACKAGE_std_digest = crc digest hmac md ripemd sha
+PACKAGE_std_experimental_logger = core filelogger \
+  nulllogger multilogger package
+PACKAGE_std_experimental_allocator = \
+  common gc_allocator mallocator mmap_allocator package showcase typed
+PACKAGE_std_experimental_allocator_building_blocks = \
+  affix_allocator allocator_list bucketizer \
+  fallback_allocator free_list free_tree bitmapped_block \
+  kernighan_ritchie null_allocator package quantizer \
+  region scoped_allocator segregator stats_collector
+PACKAGE_std_experimental_ndslice = package iteration selection slice
+PACKAGE_std_net = curl isemail
+PACKAGE_std_range = interfaces package primitives
+PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
+  backtracking kickstart tests thompson)
+
+# Modules in std (including those in packages)
+STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -181,11 +199,7 @@ EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
   odbc/sqltypes odbc/sqlucode sqlite3 zlib) $(addprefix std/c/,fenv locale \
   math process stdarg stddef stdio stdlib string time wcharh)
 
-ifeq (,$(findstring win,$(OS)))
-	EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_COMMON)
-else
-	EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
-endif
+EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
 
 EXTRA_MODULES_INTERNAL := $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
@@ -194,13 +208,13 @@ EXTRA_MODULES_INTERNAL := $(addprefix			\
 	cstring processinit unicode_tables scopebuffer\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm) \
 	$(addprefix std/internal/test/, dummyrange) \
+	$(addprefix std/experimental/ndslice/, internal) \
 	$(addprefix std/algorithm/, internal)
 
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) \
-  $(addsuffix /package,$(STD_PACKAGES))
+D_MODULES = $(STD_MODULES) $(EXTRA_MODULES)
 
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
@@ -215,26 +229,20 @@ ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
 	gzclose gzlib gzread gzwrite infback inffast inflate inftrees trees uncompr zutil)
-C_FILES = $(addsuffix .c,$(C_MODULES))
-# C files that are not compiled (right now only zlib-related)
-C_EXTRAS = $(addprefix etc/c/zlib/, algorithm.txt ChangeLog crc32.h	\
-deflate.h example.c inffast.h inffixed.h inflate.h inftrees.h		\
-linux.mak minigzip.c osx.mak README trees.h win32.mak zconf.h		\
-win64.mak \
-gzguts.h zlib.3 zlib.h zutil.h)
-# Aggregate all C files over all OSs (this is for the zip file)
-ALL_C_FILES = $(C_FILES) $(C_EXTRAS)
 
 OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
 
 MAKEFILE = $(firstword $(MAKEFILE_LIST))
+
+# build with shared library support (defaults to true on supported platforms)
+SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 
 ################################################################################
 # Rules begin here
 ################################################################################
 
 # Main target (builds the dll on linux, too)
-ifeq (linux,$(OS))
+ifeq (1,$(SHARED))
 all : lib dll
 else
 all : lib
@@ -309,7 +317,7 @@ $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 	@rm $(@:.o=.deps.tmp)
 #	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
 
-ifneq (linux,$(OS))
+ifneq (1,$(SHARED))
 
 $(UT_D_OBJS): $(DRUNTIME)
 
@@ -366,14 +374,14 @@ clean :
 	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
 zip :
-	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) index.d win32.mak win64.mak osmodel.mak \
-	$(addsuffix /package.d,$(STD_PACKAGES))
+	-rm -f $(ZIPFILE)
+	zip -r $(ZIPFILE) . -x .git\* -x generated\*
 
 install2 : all
 	$(eval lib_dir=$(if $(filter $(OS),osx), lib, lib$(MODEL)))
 	mkdir -p $(INSTALL_DIR)/$(OS)/$(lib_dir)
 	cp $(LIB) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
-ifneq (,$(findstring $(OS),linux))
+ifeq (1,$(SHARED))
 	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 	ln -sf $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/$(lib_dir)/libphobos2.so
 endif
@@ -403,14 +411,12 @@ endif
 ###########################################################
 # html documentation
 
-# Package to html, e.g. std/algorithm -> std_algorithm.html
-P2HTML=$(addsuffix .html,$(subst /,_,$1))
 # D file to html, e.g. std/conv.d -> std_conv.html
-D2HTML=$(subst /,_,$(subst .d,.html,$1))
+# But "package.d" is special cased: std/range/package.d -> std_range.html
+D2HTML=$(foreach p,$1,$(if $(subst package.d,,$(notdir $p)),$(subst /,_,$(subst .d,.html,$p)),$(subst /,_,$(subst /package.d,.html,$p))))
 
 HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, \
-	$(call D2HTML, $(SRC_DOCUMENTABLES)) \
-	$(call P2HTML, $(STD_PACKAGES)))
+	$(call D2HTML, $(SRC_DOCUMENTABLES)))
 BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, \
 	$(call D2HTML, $(SRC_DOCUMENTABLES)))
 
@@ -423,16 +429,10 @@ $(foreach p,$(SRC_DOCUMENTABLES),$(eval \
 $(DOC_OUTPUT_DIR)/$(call D2HTML,$p) : $p $(STDDOC) ;\
   $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
-# For each package, define a rule e.g.:
-# ../web/phobos/std_algorithm.html : std/algorithm/package.d $(STDDOC) ; ...
-$(foreach p,$(STD_PACKAGES),$(eval \
-$(DOC_OUTPUT_DIR)/$(call P2HTML,$p) : $p/package.d $(STDDOC) ;\
-  $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
-
 html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
 
 allmod :
-	@echo $(SRC_DOCUMENTABLES) $(addsuffix /package.d,$(STD_PACKAGES))
+	@echo $(SRC_DOCUMENTABLES)
 
 rsync-prerelease : html
 	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/
@@ -451,7 +451,6 @@ changelog.html: changelog.dd
 #################### test for undesired white spaces ##########################
 CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
-CWS_TOCHECK += $(filter-out etc/c/zlib/ChangeLog,$(ALL_C_FILES))
 
 checkwhitespace: $(LIB)
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)

@@ -25,7 +25,7 @@ immutable
             $(D version(linux)), etc.
 
         See_Also:
-            <a href="../version.html#PredefinedVersions">Predefined Versions</a>
+            $(DDSUBLINK spec/version,PredefinedVersions, Predefined Versions)
       +/
     enum OS
     {
@@ -60,7 +60,7 @@ immutable
             $(D version(LittleEndian)).
 
         See_Also:
-            <a href="../version.html#PredefinedVersions">Predefined Versions</a>
+            $(DDSUBLINK spec/version,PredefinedVersions, Predefined Versions)
       +/
     enum Endian
     {

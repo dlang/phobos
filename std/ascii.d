@@ -28,9 +28,9 @@ module std.ascii;
 version (unittest)
 {
     // FIXME: When dmd bug #314 is fixed, make these selective.
+    import std.meta; // : AliasSeq;
     import std.range; // : chain;
     import std.traits; // : functionAttributes, FunctionAttribute, isSafe;
-    import std.typetuple; // : TypeTuple;
 }
 
 
@@ -531,7 +531,7 @@ auto toLower(C)(C c)
 @safe pure nothrow unittest
 {
 
-    foreach(C; TypeTuple!(char, wchar, dchar, immutable char, ubyte))
+    foreach(C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach(i, c; uppercase)
             assert(toLower(cast(C)c) == lowercase[i]);
@@ -592,7 +592,7 @@ auto toUpper(C)(C c)
 
 @safe pure nothrow unittest
 {
-    foreach(C; TypeTuple!(char, wchar, dchar, immutable char, ubyte))
+    foreach(C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach(i, c; lowercase)
             assert(toUpper(cast(C)c) == uppercase[i]);
@@ -631,7 +631,7 @@ unittest //Test both toUpper and toLower with non-builtin
     enum UDDE : UDD {a = UDD('a'), A = UDD('A')}
 
     //User defined types with implicit cast to dchar test.
-    foreach (Char; TypeTuple!(UDC, UDW, UDD))
+    foreach (Char; AliasSeq!(UDC, UDW, UDD))
     {
         assert(toLower(Char('a')) == 'a');
         assert(toLower(Char('A')) == 'a');
@@ -642,7 +642,7 @@ unittest //Test both toUpper and toLower with non-builtin
     }
 
     //Various enum tests.
-    foreach (Enum; TypeTuple!(CE, WE, DE, UDCE, UDWE, UDDE))
+    foreach (Enum; AliasSeq!(CE, WE, DE, UDCE, UDWE, UDDE))
     {
         assert(toLower(Enum.a) == 'a');
         assert(toLower(Enum.A) == 'a');
@@ -655,7 +655,7 @@ unittest //Test both toUpper and toLower with non-builtin
     }
 
     //Return value type tests for enum of non-UDT. These should be the original type.
-    foreach (T; TypeTuple!(CE, WE, DE))
+    foreach (T; AliasSeq!(CE, WE, DE))
     {
         alias C = OriginalType!T;
         static assert(is(typeof(toLower(T.init)) == C));
@@ -663,7 +663,7 @@ unittest //Test both toUpper and toLower with non-builtin
     }
 
     //Return value tests for UDT and enum of UDT. These should be dchar
-    foreach (T; TypeTuple!(UDC, UDW, UDD, UDCE, UDWE, UDDE))
+    foreach (T; AliasSeq!(UDC, UDW, UDD, UDCE, UDWE, UDDE))
     {
         static assert(is(typeof(toLower(T.init)) == dchar));
         static assert(is(typeof(toUpper(T.init)) == dchar));

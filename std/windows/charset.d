@@ -16,6 +16,41 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.windows.charset;
+
+version (StdDdoc)
+{
+    /******************************************
+     * Converts the UTF-8 string s into a null-terminated string in a Windows
+     * 8-bit character set.
+     *
+     * Params:
+     * s = UTF-8 string to convert.
+     * codePage = is the number of the target codepage, or
+     *   0 - ANSI,
+     *   1 - OEM,
+     *   2 - Mac
+     *
+     * Authors:
+     *      yaneurao, Walter Bright, Stewart Gordon
+     */
+    const(char)* toMBSz(in char[] s, uint codePage = 0);
+
+    /**********************************************
+     * Converts the null-terminated string s from a Windows 8-bit character set
+     * into a UTF-8 char array.
+     *
+     * Params:
+     * s = UTF-8 string to convert.
+     * codePage = is the number of the source codepage, or
+     *   0 - ANSI,
+     *   1 - OEM,
+     *   2 - Mac
+     * Authors: Stewart Gordon, Walter Bright
+     */
+    string fromMBSz(immutable(char)* s, int codePage = 0);
+}
+else:
+
 version (Windows):
 
 private import std.conv;
@@ -25,21 +60,6 @@ private import std.utf;
 private import std.string;
 
 import std.internal.cstring;
-
-/******************************************
- * Converts the UTF-8 string s into a null-terminated string in a Windows
- * 8-bit character set.
- *
- * Params:
- * s = UTF-8 string to convert.
- * codePage = is the number of the target codepage, or
- *   0 - ANSI,
- *   1 - OEM,
- *   2 - Mac
- *
- * Authors:
- *      yaneurao, Walter Bright, Stewart Gordon
- */
 
 const(char)* toMBSz(in char[] s, uint codePage = 0)
 {
@@ -71,20 +91,6 @@ const(char)* toMBSz(in char[] s, uint codePage = 0)
     }
     return std.string.toStringz(s);
 }
-
-
-/**********************************************
- * Converts the null-terminated string s from a Windows 8-bit character set
- * into a UTF-8 char array.
- *
- * Params:
- * s = UTF-8 string to convert.
- * codePage = is the number of the source codepage, or
- *   0 - ANSI,
- *   1 - OEM,
- *   2 - Mac
- * Authors: Stewart Gordon, Walter Bright
- */
 
 string fromMBSz(immutable(char)* s, int codePage = 0)
 {

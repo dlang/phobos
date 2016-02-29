@@ -14,7 +14,7 @@ Macros:
 
 WIKI = Phobos/StdGetopt
 
-Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
+Copyright: Copyright Andrei Alexandrescu 2008 - 2015.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
 Credits:   This module and its documentation are inspired by Perl's $(WEB
@@ -25,7 +25,7 @@ Credits:   This module and its documentation are inspired by Perl's $(WEB
 Source:    $(PHOBOSSRC std/_getopt.d)
 */
 /*
-         Copyright Andrei Alexandrescu 2008 - 2009.
+         Copyright Andrei Alexandrescu 2008 - 2015.
 Distributed under the Boost Software License, Version 1.0.
    (See accompanying file LICENSE_1_0.txt or copy at
          http://www.boost.org/LICENSE_1_0.txt)
@@ -33,6 +33,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.getopt;
 
 import std.traits;
+import std.exception;  // basicExceptionCtors
 
 /**
 Thrown on one of the following conditions:
@@ -45,16 +46,14 @@ $(UL
 */
 class GetOptException : Exception
 {
-    @safe pure nothrow
-    this(string msg, Exception next, string file = __FILE__,
-        size_t line = __LINE__)
-    {
-        super(msg, file, line, next);
-    }
+    mixin basicExceptionCtors;
 }
 
+static assert(is(typeof(new GetOptException("message"))));
+static assert(is(typeof(new GetOptException("message", Exception.init))));
+
 /**
-   Parse and remove command line options from an string array.
+   Parse and remove command line options from a string array.
 
    Synopsis:
 
@@ -88,7 +87,7 @@ void main(string[] args)
  The $(D getopt) function takes a reference to the command line
  (as received by $(D main)) as its first argument, and an
  unbounded number of pairs of strings and pointers. Each string is an
- option meant to "fill" the value pointed-to by the pointer to its
+ option meant to "fill" the value referenced by the pointer to its
  right (the "bound" pointer). The option string in the call to
  $(D getopt) should not start with a dash.
 
@@ -99,9 +98,9 @@ void main(string[] args)
  options are not touched, so a common idiom is to initialize options
  to their defaults and then invoke $(D getopt). If a
  command-line argument is recognized as an option with a parameter and
- the parameter cannot be parsed properly (e.g. a number is expected
+ the parameter cannot be parsed properly (e.g., a number is expected
  but not present), a $(D ConvException) exception is thrown.
- If $(D std.getopt.config.passThrough) was not passed to getopt
+ If $(D std.getopt.config.passThrough) was not passed to $(D getopt)
  and an unrecognized command-line argument is found, a $(D GetOptException)
  is thrown.
 
@@ -149,7 +148,7 @@ void main(string[] args)
 
     Invoking the program with "--paranoid --paranoid --paranoid" will set $(D
     paranoid) to 3. Note that an incremental option never expects a parameter,
-    e.g. in the command line "--paranoid 42 --paranoid", the "42" does not set
+    e.g., in the command line "--paranoid 42 --paranoid", the "42" does not set
     $(D paranoid) to 42; instead, $(D paranoid) is set to 2 and "42" is not
     considered as part of the normal program arguments.
     )
@@ -276,9 +275,10 @@ void main(string[] args)
         list.
 
 ---------
-void main(string[] args)
+int main(string[] args)
 {
   uint verbosityLevel = 1;
+  bool handlerFailed = false;
   void myHandler(string option, string value)
   {
     switch (value)
@@ -289,10 +289,12 @@ void main(string[] args)
       default :
         stderr.writeln("Dunno how verbose you want me to be by saying ",
           value);
-        exit(1);
+        handlerFailed = true;
+        break;
     }
   }
   getopt(args, "verbosity", &myHandler);
+  return handlerFailed ? 1 : 0;
 }
 ---------
         )
@@ -379,7 +381,7 @@ bundling can be turned off with $(D std.getopt.config.noBundling).
 
 Required:
 An option can be marked as required. If that option is not present in the
-arguments an exceptin will be thrown.
+arguments an exception will be thrown.
 
 ---------
 bool foo, bar;
@@ -389,7 +391,7 @@ getopt(args,
     "bar|b", &bar);
 ---------
 
-Only the option direclty following $(D std.getopt.config.required) is
+Only the option directly following $(D std.getopt.config.required) is
 required.
 
 Passing_unrecognized_options_through:
@@ -409,21 +411,20 @@ An unrecognized option such as "--baz" will be found untouched in
 $(D args) after $(D getopt) returns.
 
 Help_Information_Generation:
-If an option string is followed by another string, this string serves as an
-description for this option. The function $(D getopt) returns a struct of type
+If an option string is followed by another string, this string serves as a
+description for this option. The $(D getopt) function returns a struct of type
 $(D GetoptResult). This return value contains information about all passed options
-as well a bool indicating if information about these options where required by
-the passed arguments.
-
-The function also always adds an option for `--help|-h` to set the flag
-$(D GetoptResult.helpWanted) if seen on the command line.
+as well a $(D bool GetoptResult.helpWanted) flag indicating whether information
+about these options was requested. The $(getopt) function always adds an option for
+--help|-h` to set the flag if the option is seen on the command line.
 
 Options_Terminator:
-A lonesome double-dash terminates $(D getopt) gathering. It is used to
-separate program options from other parameters (e.g. options to be passed
+A lone double-dash terminates $(D getopt) gathering. It is used to
+separate program options from other parameters (e.g., options to be passed
 to another program). Invoking the example above with $(D "--foo -- --bar")
 parses foo but leaves "--bar" in $(D args). The double-dash itself is
-removed from the argument array.
+removed from the argument array unless the $(D std.getopt.config.keepEndOfOptions)
+directive is given.
 */
 GetoptResult getopt(T...)(ref string[] args, T opts)
 {
@@ -468,13 +469,13 @@ unittest
    string and its bound pointer.
 */
 enum config {
-    /// Turns case sensitivity on
+    /// Turn case sensitivity on
     caseSensitive,
-    /// Turns case sensitivity off
+    /// Turn case sensitivity off
     caseInsensitive,
-    /// Turns bundling on
+    /// Turn bundling on
     bundling,
-    /// Turns bundling off
+    /// Turn bundling off
     noBundling,
     /// Pass unrecognized arguments through
     passThrough,
@@ -484,7 +485,7 @@ enum config {
     stopOnFirstNonOption,
     /// Do not erase the endOfOptions separator from args
     keepEndOfOptions,
-    /// Makes the next option a required option
+    /// Make the next option a required option
     required
 }
 
@@ -497,7 +498,7 @@ struct GetoptResult {
     Option[] options; /// All possible options
 }
 
-/** The result of the $(D getoptHelp) function.
+/** Information about an option.
 */
 struct Option {
     string optShort; /// The short symbol for this option
@@ -526,9 +527,96 @@ private pure Option splitAndGet(string opt) @trusted nothrow
     return ret;
 }
 
-private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
-        ref GetoptResult rslt, ref GetOptException excep, T opts)
+/*
+This function verifies that the variadic parameters passed in getOpt
+follow this pattern:
+
+  [config override], option, [description], receiver,
+
+ - config override: a config value, optional
+ - option:          a string
+ - description:     a string, optional
+ - receiver:        a pointer or a callable
+*/
+private template optionValidator(A...)
 {
+    import std.typecons: staticIota;
+    import std.format: format;
+
+    enum fmt = "getopt validator: %s (at position %d)";
+    enum isReceiver(T) = isPointer!T || (is(T==function)) || (is(T==delegate));
+
+    auto validator()
+    {
+        string msg;
+        static if (A.length > 0)
+        {
+            static if (isReceiver!(A[0]))
+            {
+                msg = format(fmt, "first argument must be a string or a config", 0);
+            }
+            else static if (!isSomeString!(A[0]) && !is(A[0] == config))
+            {
+                msg = format(fmt, "invalid argument type " ~ A[0].stringof, 0);
+            }
+            else foreach(i; staticIota!(1, A.length))
+            {
+                static if (!isReceiver!(A[i]) && !isSomeString!(A[i]) &&
+                    !(is(A[i] == config)))
+                {
+                    msg = format(fmt, "invalid argument type " ~ A[i].stringof, i);
+                    break;
+                }
+                else static if (isReceiver!(A[i]) && !isSomeString!(A[i-1]))
+                {
+                    msg = format(fmt, "a receiver can not be preceeded by a receiver", i);
+                    break;
+                }
+                else static if (i > 1 && isSomeString!(A[i]) && isSomeString!(A[i-1])
+                    && isSomeString!(A[i-2]))
+                {
+                    msg = format(fmt, "a string can not be preceeded by two strings", i);
+                    break;
+                }
+            }
+            static if (!isReceiver!(A[$-1]) && !is(A[$-1] == config))
+            {
+                msg = format(fmt, "last argument must be a receiver or a config",
+                    A.length -1);
+            }
+        }
+        return msg;
+    }
+    enum message = validator;
+    alias optionValidator = message;
+}
+
+@safe pure unittest
+{
+    alias P = void*;
+    alias S = string;
+    alias C = config;
+    alias F = void function();
+
+    static assert(optionValidator!(C,S,S,P) == "");
+    static assert(optionValidator!(C,S,S,P,C,S,F) == "");
+    static assert(optionValidator!(C,S,S,P,C,S,F) == "");
+
+    static assert(optionValidator!(P,S,S) != "");
+    static assert(optionValidator!(P,P,S) != "");
+    static assert(optionValidator!(P,F,S,P) != "");
+    static assert(optionValidator!(C,C,S) != "");
+    static assert(optionValidator!(S,S,P,S,S,P,S) != "");
+    static assert(optionValidator!(S,S,P,P) != "");
+    static assert(optionValidator!(S,S,S,P) != "");
+}
+
+private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
+    ref GetoptResult rslt, ref GetOptException excep, T opts)
+{
+    enum validationMessage = optionValidator!T;
+    static assert(validationMessage == "", validationMessage);
+
     import std.algorithm : remove;
     import std.conv : to;
     static if (opts.length)
@@ -622,7 +710,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 }
 
 private bool handleOption(R)(string option, R receiver, ref string[] args,
-        ref configuration cfg, bool incremental)
+    ref configuration cfg, bool incremental)
 {
     import std.algorithm : map, splitter;
     import std.ascii : isAlpha;
@@ -649,6 +737,8 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                 // e.g. -j100 to work as "pass argument 100 to option -j".
                 if (!isAlpha(c))
                 {
+                    if (c == '=')
+                        j++;
                     expanded ~= a[j + 1 .. $];
                     break;
                 }
@@ -922,6 +1012,13 @@ private bool optMatch(string arg, string optPattern, ref string value,
     }
     else
     {
+        if (!isLong && eqPos==1)
+        {
+            // argument looks like -o=value
+            value = arg[2 .. $];
+            arg = arg[0 .. 1];
+        }
+        else
         if (!isLong && !cfg.bundling)
         {
             // argument looks like -ovalue and there's no bundling
@@ -1205,6 +1302,7 @@ unittest
     getopt(args, "t", &foo, "d", &bar);
     assert(foo == "hello");
     assert(bar == "bar=baz");
+
     // From bugzilla 5762
     string a;
     args = ["prog", "-a-0x12"];
@@ -1213,11 +1311,23 @@ unittest
     args = ["prog", "--addr=-0x12"];
     getopt(args, config.bundling, "a|addr", &a);
     assert(a == "-0x12");
+
     // From https://d.puremagic.com/issues/show_bug.cgi?id=11764
     args = ["main", "-test"];
     bool opt;
     args.getopt(config.passThrough, "opt", &opt);
     assert(args == ["main", "-test"]);
+
+    // From https://issues.dlang.org/show_bug.cgi?id=15220
+    args = ["main", "-o=str"];
+    string o;
+    args.getopt("o", &o);
+    assert(o == "str");
+
+    args = ["main", "-o=str"];
+    o = null;
+    args.getopt(config.bundling, "o", &o);
+    assert(o == "str");
 }
 
 unittest // 5228
@@ -1368,19 +1478,21 @@ unittest
     assert(args == ["program", "--option"]);
 }
 
-/** This function prints the passed $(D Option) and text in an aligned manner.
+/** This function prints the passed $(D Option)s and text in an aligned manner on $(D stdout).
 
-The passed text will be printed first, followed by a newline. Than the short
+The passed text will be printed first, followed by a newline, then the short
 and long version of every option will be printed. The short and long version
-will be aligned to the longest option of every $(D Option) passed. If a help
-message is present it will be printed after the long version of the
-$(D Option).
+will be aligned to the longest option of every $(D Option) passed. If the option
+is required, then "Required:" will be printed after the long version of the
+$(D Option). If a help message is present it will be printed next. The format is
+illustrated by this code:
 
 ------------
 foreach(it; opt)
 {
-    writefln("%*s %*s %s", lengthOfLongestShortOption, it.optShort,
-        lengthOfLongestLongOption, it.optLong, it.help);
+    writefln("%*s %*s%s%s", lengthOfLongestShortOption, it.optShort,
+        lengthOfLongestLongOption, it.optLong,
+        it.required ? " Required: " : " ", it.help);
 }
 ------------
 
@@ -1396,12 +1508,12 @@ void defaultGetoptPrinter(string text, Option[] opt)
 }
 
 /** This function writes the passed text and $(D Option) into an output range
-in the manner, described in the documentation of function
+in the manner described in the documentation of function
 $(D defaultGetoptPrinter).
 
 Params:
     output = The output range used to write the help information.
-    text = The text to printed at the beginning of the help output.
+    text = The text to print at the beginning of the help output.
     opt = The $(D Option) extracted from the $(D getopt) parameter.
 */
 void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)

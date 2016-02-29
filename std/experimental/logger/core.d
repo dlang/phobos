@@ -193,7 +193,7 @@ Params:
   condition = The condition must be $(D true) for the data to be logged.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 log(LogLevel.warning, true, "Hello World", 3.1415);
 --------------------
@@ -201,7 +201,7 @@ log(LogLevel.warning, true, "Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll,
-    lazy bool condition, lazy A args) @safe
+    lazy bool condition, lazy A args)
     if (args.length != 1)
 {
     static if (isLoggingActive)
@@ -238,7 +238,7 @@ Params:
   ll = The $(D LogLevel) used by this log call.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 log(LogLevel.warning, "Hello World", 3.1415);
 --------------------
@@ -283,7 +283,7 @@ Params:
   condition = The condition must be $(D true) for the data to be logged.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 log(true, "Hello World", 3.1415);
 --------------------
@@ -320,7 +320,7 @@ $(D sharedLog) must be greater or equal to the $(D defaultLogLevel).
 Params:
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 log("Hello World", 3.1415);
 --------------------
@@ -362,7 +362,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 logf(LogLevel.warning, true, "Hello World %f", 3.1415);
 --------------------
@@ -394,7 +394,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 logf(LogLevel.warning, "Hello World %f", 3.1415);
 --------------------
@@ -425,7 +425,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 logf(true, "Hello World %f", 3.1415);
 --------------------
@@ -451,7 +451,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 logf("Hello World %f", 3.1415);
 --------------------
@@ -479,7 +479,7 @@ template defaultLogFunction(LogLevel ll)
     void defaultLogFunction(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(lazy A args) @safe
+        string moduleName = __MODULE__, A...)(lazy A args)
         if ((args.length > 0 && !is(Unqual!(A[0]) : bool)) || args.length == 0)
     {
         static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
@@ -493,7 +493,6 @@ template defaultLogFunction(LogLevel ll)
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
-        @safe
     {
         static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
         {
@@ -517,7 +516,7 @@ Params:
   condition = The condition must be $(D true) for the data to be logged.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 trace(1337, "is number");
 info(1337, "is number");
@@ -555,7 +554,6 @@ template defaultLogFunctionf(LogLevel ll)
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
-        @safe
     {
         static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
         {
@@ -568,7 +566,7 @@ template defaultLogFunctionf(LogLevel ll)
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition,
-            lazy string msg, lazy A args) @safe
+            lazy string msg, lazy A args)
     {
         static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
         {
@@ -591,7 +589,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 tracef("is number %d", 1);
 infof("is number %d", 2);
@@ -614,7 +612,7 @@ Params:
   msg = The $(D printf)-style string.
   args = The data that should be logged.
 
-Examples:
+Example:
 --------------------
 tracef(false, "is number %d", 1);
 infof(false, "is number %d", 2);
@@ -759,8 +757,8 @@ abstract class Logger
         this.fatalHandler_ = delegate() {
             throw new Error("A fatal log message was logged");
         };
-        // TODO: remove lambda hack after relevant druntime PR gets merged
-        this.mutex = () @trusted { return new Mutex(); } ();
+
+        this.mutex = new Mutex();
     }
 
     /** A custom logger must implement this method in order to work in a
@@ -897,17 +895,11 @@ abstract class Logger
     */
     void forwardMsg(ref LogEntry payload) @trusted
     {
-        //writeln(payload);
         static if (isLoggingActive) synchronized (mutex)
         {
-            //writeln(__LINE__, " ",payload, this.logLevel_, " ", globalLogLevel);
-            //writeln(isLoggingEnabled(payload.logLevel, this.logLevel_,
-            //    globalLogLevel), payload.logLevel >= this.logLevel_,
-            //    payload.logLevel >= globalLogLevel);
             if (isLoggingEnabled(payload.logLevel, this.logLevel_,
                 globalLogLevel))
             {
-                //writeln(__LINE__, " ",payload);
                 this.writeLogMsg(payload);
 
                 if (payload.logLevel == LogLevel.fatal)
@@ -936,7 +928,7 @@ abstract class Logger
         Params:
           args = The data that should be logged.
 
-        Examples:
+        Example:
         --------------------
         auto s = new FileLogger(stdout);
         s.trace(1337, "is number");
@@ -983,7 +975,7 @@ abstract class Logger
           condition = The condition must be $(D true) for the data to be logged.
           args = The data that should be logged.
 
-        Examples:
+        Example:
         --------------------
         auto s = new FileLogger(stdout);
         s.trace(true, 1337, "is number");
@@ -997,7 +989,7 @@ abstract class Logger
             string funcName = __FUNCTION__,
             string prettyFuncName = __PRETTY_FUNCTION__,
             string moduleName = __MODULE__, A...)(lazy bool condition,
-                lazy A args) @safe
+                lazy A args)
         {
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
@@ -1032,7 +1024,7 @@ abstract class Logger
           msg = The $(D printf)-style string.
           args = The data that should be logged.
 
-        Examples:
+        Example:
         --------------------
         auto s = new FileLogger(stderr);
         s.tracef(true, "is number %d", 1);
@@ -1046,7 +1038,7 @@ abstract class Logger
             string funcName = __FUNCTION__,
             string prettyFuncName = __PRETTY_FUNCTION__,
             string moduleName = __MODULE__, A...)(lazy bool condition,
-                lazy string msg, lazy A args) @safe
+                lazy string msg, lazy A args)
         {
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
@@ -1079,7 +1071,7 @@ abstract class Logger
           msg = The $(D printf)-style string.
           args = The data that should be logged.
 
-        Examples:
+        Example:
         --------------------
         auto s = new FileLogger(stderr);
         s.tracef("is number %d", 1);
@@ -1093,7 +1085,6 @@ abstract class Logger
             string funcName = __FUNCTION__,
             string prettyFuncName = __PRETTY_FUNCTION__,
             string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
-            @safe
         {
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
@@ -1153,7 +1144,7 @@ abstract class Logger
 
     Returns: The logger used by the logging function as reference.
 
-    Examples:
+    Example:
     --------------------
     auto l = new StdioLogger();
     l.log(1337);
@@ -1163,7 +1154,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
-        lazy bool condition, lazy A args) @safe
+        lazy bool condition, lazy A args)
         if (args.length != 1)
     {
         static if (isLoggingActive) synchronized (mutex)
@@ -1188,7 +1179,7 @@ abstract class Logger
     final void log(T, string moduleName = __MODULE__)(const LogLevel ll,
         lazy bool condition, lazy T args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
-        string prettyFuncName = __PRETTY_FUNCTION__) @safe
+        string prettyFuncName = __PRETTY_FUNCTION__)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1219,7 +1210,7 @@ abstract class Logger
       ll = The specific $(D LogLevel) used for logging the log message.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.log(LogLevel.trace, 1337, "is number");
@@ -1233,7 +1224,6 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args)
-        @safe
         if ((args.length > 1 && !is(Unqual!(A[0]) : bool)) || args.length == 0)
     {
         static if (isLoggingActive) synchronized (mutex)
@@ -1258,7 +1248,7 @@ abstract class Logger
     final void log(T)(const LogLevel ll, lazy T args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__) @safe
+        string moduleName = __MODULE__)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1289,7 +1279,7 @@ abstract class Logger
       condition = The condition must be $(D true) for the data to be logged.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.log(true, 1337, "is number");
@@ -1303,7 +1293,6 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
-        @safe
         if (args.length != 1)
     {
         static if (isLoggingActive) synchronized (mutex)
@@ -1329,7 +1318,7 @@ abstract class Logger
     final void log(T)(lazy bool condition, lazy T args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__) @safe
+        string moduleName = __MODULE__)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1359,7 +1348,7 @@ abstract class Logger
     Params:
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.log(1337, "is number");
@@ -1373,7 +1362,6 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy A args)
-        @safe
         if ((args.length > 1
                 && !is(Unqual!(A[0]) : bool)
                 && !is(Unqual!(A[0]) == LogLevel))
@@ -1401,7 +1389,7 @@ abstract class Logger
     final void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__) @safe
+        string moduleName = __MODULE__)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1434,7 +1422,7 @@ abstract class Logger
       msg = The format string used for this log call.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.logf(LogLevel.trace, true ,"%d %s", 1337, "is number");
@@ -1448,7 +1436,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
-        lazy bool condition, lazy string msg, lazy A args) @safe
+        lazy bool condition, lazy string msg, lazy A args)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1480,7 +1468,7 @@ abstract class Logger
       msg = The format string used for this log call.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.logf(LogLevel.trace, "%d %s", 1337, "is number");
@@ -1494,7 +1482,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
-            lazy string msg, lazy A args) @safe
+            lazy string msg, lazy A args)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1527,7 +1515,7 @@ abstract class Logger
       msg = The format string used for this log call.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.logf(true ,"%d %s", 1337, "is number");
@@ -1541,15 +1529,13 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition,
-            lazy string msg, lazy A args) @safe
+            lazy string msg, lazy A args)
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            //writeln(msg, args, " ", line);
             if (isLoggingEnabled(this.logLevel_, this.logLevel_, globalLogLevel,
                 condition))
             {
-                //writeln(msg, args, " ", line);
                 this.beginLogMsg(file, line, funcName, prettyFuncName,
                     moduleName, this.logLevel_, thisTid, Clock.currTime, this);
 
@@ -1574,7 +1560,7 @@ abstract class Logger
       msg = The format string used for this log call.
       args = The data that should be logged.
 
-    Examples:
+    Example:
     --------------------
     auto s = new FileLogger(stdout);
     s.logf("%d %s", 1337, "is number");
@@ -1588,7 +1574,6 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
-        @safe
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -2115,7 +2100,7 @@ unittest // default logger
 unittest
 {
     import std.file : deleteme, remove;
-    import core.memory : destroy;
+
     string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";
     auto oldunspecificLogger = sharedLog;
 
@@ -3040,4 +3025,34 @@ unittest
     auto tl = cast(StdForwardLogger)stdThreadLocalLog;
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
+}
+
+// Issue 14940
+@safe unittest
+{
+    import std.typecons : Nullable;
+
+    Nullable!int a = 1;
+    auto l = new TestLogger();
+    l.infof("log: %s", a);
+    assert(l.msg == "log: 1");
+}
+
+// Ensure @system toString methods work
+unittest
+{
+    enum SystemToStringMsg = "SystemToString";
+    static struct SystemToString
+    {
+        string toString() @system
+        {
+            return SystemToStringMsg;
+        }
+    }
+
+    auto tl = new TestLogger();
+
+    SystemToString sts;
+    tl.logf("%s", sts);
+    assert(tl.msg == SystemToStringMsg);
 }

@@ -36,20 +36,14 @@ private import core.stdc.stdlib;
 private import std.utf;
 private import std.traits : isSomeChar;
 import core.exception : OutOfMemoryError;
-import std.exception : assumeUnique;
+import std.exception;
 
 /** This Exception is thrown if something goes wrong when encoding or
 decoding a URI.
 */
 class URIException : Exception
 {
-    import std.array : empty;
-    @safe pure nothrow this(string msg, string file = __FILE__,
-        size_t line = __LINE__, Throwable next = null)
-    {
-        super("URI Exception" ~ (!msg.empty ? ": " ~ msg : ""), file, line,
-            next);
-    }
+    mixin basicExceptionCtors;
 }
 
 private enum
@@ -541,8 +535,8 @@ unittest
     result = decode("%41%42%43");
     debug(uri) writeln(result);
 
-    import std.typetuple : TypeTuple;
-    foreach (StringType; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    import std.meta : AliasSeq;
+    foreach (StringType; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         import std.conv : to;
         StringType decoded1 = source.to!StringType;

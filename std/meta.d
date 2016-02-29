@@ -18,14 +18,14 @@
  *      Modern C++ Design),
  *   Andrei Alexandrescu (Addison-Wesley Professional, 2001)
  * Macros:
- *  WIKI = Phobos/StdTypeTuple
+ *  WIKI = Phobos/StdMeta
  *
  * Copyright: Copyright Digital Mars 2005 - 2015.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
- * Source:    $(PHOBOSSRC std/_typetuple.d)
+ * Source:    $(PHOBOSSRC std/_meta.d)
  */
 
 module std.meta;
@@ -58,6 +58,81 @@ unittest
 
     alias Types = AliasSeq!(TL, char);
     static assert(is(Types == AliasSeq!(int, double, char)));
+}
+
+/**
+ * Allows `alias`ing of any single symbol, type or compile-time expression.
+ *
+ * Not everything can be directly aliased. An alias cannot be declared
+ * of - for example - a literal:
+ *
+ * `alias a = 4; //Error`
+ *
+ * With this template any single entity can be aliased:
+ *
+ * `alias b = Alias!4; //OK`
+ *
+ * See_Also:
+ * To alias more than one thing at once, use $(LREF AliasSeq)
+ */
+template Alias(alias a)
+{
+    static if (__traits(compiles, { alias x = a; }))
+        alias Alias = a;
+    else static if (__traits(compiles, { enum x = a; }))
+        enum Alias = a;
+    else
+        static assert(0, "Cannot alias " ~ a.stringof);
+}
+
+/// Ditto
+template Alias(T)
+{
+    alias Alias = T;
+}
+
+///
+unittest
+{
+    // Without Alias this would fail if Args[0] was e.g. a value and
+    // some logic would be needed to detect when to use enum instead
+    alias Head(Args ...) = Alias!(Args[0]);
+    alias Tail(Args ...) = Args[1 .. $];
+
+    alias Blah = AliasSeq!(3, int, "hello");
+    static assert(Head!Blah == 3);
+    static assert(is(Head!(Tail!Blah) == int));
+    static assert((Tail!Blah)[1] == "hello");
+}
+
+///
+unittest
+{
+    alias a = Alias!(123);
+    static assert(a == 123);
+
+    enum abc = 1;
+    alias b = Alias!(abc);
+    static assert(b == 1);
+
+    alias c = Alias!(3 + 4);
+    static assert(c == 7);
+
+    alias concat = (s0, s1) => s0 ~ s1;
+    alias d = Alias!(concat("Hello", " World!"));
+    static assert(d == "Hello World!");
+
+    alias e = Alias!(int);
+    static assert(is(e == int));
+
+    alias f = Alias!(AliasSeq!(int));
+    static assert(!is(typeof(f[0]))); //not an AliasSeq
+    static assert(is(f == int));
+
+    auto g = 6;
+    alias h = Alias!g;
+    ++h;
+    assert(g == 7);
 }
 
 /**
@@ -863,38 +938,267 @@ unittest
     }
 }
 
-
-// : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
-package:
-
-/*
- * With the builtin alias declaration, you cannot declare
- * aliases of, for example, literal values. You can alias anything
- * including literal values via this template.
+/**
+ * Converts an input range $(D range) to an alias sequence.
  */
-// symbols and literal values
-template Alias(alias a)
+template aliasSeqOf(alias range)
 {
-    static if (__traits(compiles, { alias x = a; }))
-        alias Alias = a;
-    else static if (__traits(compiles, { enum x = a; }))
-        enum Alias = a;
+    import std.range : isInputRange;
+    import std.traits : isArray, isNarrowString;
+
+    alias ArrT = typeof(range);
+    static if (isArray!ArrT && !isNarrowString!ArrT)
+    {
+        static if (range.length == 0)
+        {
+            alias aliasSeqOf = AliasSeq!();
+        }
+        else static if (range.length == 1)
+        {
+            alias aliasSeqOf = AliasSeq!(range[0]);
+        }
+        else
+        {
+            alias aliasSeqOf = AliasSeq!(aliasSeqOf!(range[0 .. $/2]), aliasSeqOf!(range[$/2 .. $]));
+        }
+    }
+    else static if (isInputRange!ArrT)
+    {
+        import std.array : array;
+        alias aliasSeqOf = aliasSeqOf!(array(range));
+    }
     else
-        static assert(0, "Cannot alias " ~ a.stringof);
+    {
+        import std.string : format;
+        static assert(false, format("Cannot transform %s of type %s into a AliasSeq.", range, ArrT.stringof));
+    }
 }
-// types and tuples
-template Alias(a...)
+
+///
+unittest
 {
-    alias Alias = a;
+    import std.algorithm : map, sort;
+    import std.string : capitalize;
+
+    struct S
+    {
+        int a;
+        int c;
+        int b;
+    }
+
+    alias capMembers = aliasSeqOf!([__traits(allMembers, S)].sort().map!capitalize());
+    static assert(capMembers[0] == "A");
+    static assert(capMembers[1] == "B");
+    static assert(capMembers[2] == "C");
+}
+
+///
+unittest
+{
+    enum REF = [0, 1, 2, 3];
+    foreach(I, V; aliasSeqOf!([0, 1, 2, 3]))
+    {
+        static assert(V == I);
+        static assert(V == REF[I]);
+    }
 }
 
 unittest
 {
-    enum abc = 1;
-    static assert(__traits(compiles, { alias a = Alias!(123); }));
-    static assert(__traits(compiles, { alias a = Alias!(abc); }));
-    static assert(__traits(compiles, { alias a = Alias!(int); }));
-    static assert(__traits(compiles, { alias a = Alias!(1,abc,int); }));
+    import std.range : iota;
+    import std.conv : to, octal;
+    //Testing compile time octal
+    foreach (I2; aliasSeqOf!(iota(0, 8)))
+        foreach (I1; aliasSeqOf!(iota(0, 8)))
+        {
+            enum oct = I2 *  8 + I1;
+            enum dec = I2 * 10 + I1;
+            enum str = to!string(dec);
+            static assert(octal!dec == oct);
+            static assert(octal!str == oct);
+        }
+}
+
+unittest
+{
+    enum REF = "日本語"d;
+    foreach(I, V; aliasSeqOf!"日本語"c)
+    {
+        static assert(V == REF[I]);
+    }
+}
+
+/**
+  * $(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially applies)
+  * $(D_PARAM Template) by binding its first (left) or last (right) arguments
+  * to $(D_PARAM args).
+  *
+  * Behaves like the identity function when $(D_PARAM args) is empty.
+  * Params:
+  *    Template = template to partially apply
+  *    args     = arguments to bind
+  * Returns:
+  *    _Template with arity smaller than or equal to $(D_PARAM Template)
+  */
+template applyLeft(alias Template, args...)
+{
+    static if (args.length)
+    {
+        template applyLeft(right...)
+        {
+            static if (is(typeof(Template!(args, right))))
+                enum applyLeft = Template!(args, right); // values
+            else
+                alias applyLeft = Template!(args, right); // symbols
+        }
+    }
+    else
+        alias applyLeft = Template;
+}
+
+/// Ditto
+template applyRight(alias Template, args...)
+{
+    static if (args.length)
+    {
+        template applyRight(left...)
+        {
+            static if (is(typeof(Template!(left, args))))
+                enum applyRight = Template!(left, args); // values
+            else
+                alias applyRight = Template!(left, args); // symbols
+        }
+    }
+    else
+        alias applyRight = Template;
+}
+
+///
+unittest
+{
+    import std.traits : isImplicitlyConvertible;
+
+    static assert(allSatisfy!(
+        applyLeft!(isImplicitlyConvertible, ubyte),
+        short, ushort, int, uint, long, ulong));
+
+    static assert(is(Filter!(applyRight!(isImplicitlyConvertible, short),
+        ubyte, string, short, float, int) == AliasSeq!(ubyte, short)));
+}
+
+///
+unittest
+{
+    import std.traits : hasMember, ifTestable;
+
+    struct T1
+    {
+        bool foo;
+    }
+
+    struct T2
+    {
+        struct Test
+        {
+            bool opCast(T : bool)() { return true; }
+        }
+
+        Test foo;
+    }
+
+    static assert(allSatisfy!(applyRight!(hasMember, "foo"), T1, T2));
+    static assert(allSatisfy!(applyRight!(ifTestable, a => a.foo), T1, T2));
+}
+
+///
+unittest
+{
+    import std.traits : Largest;
+
+    alias Types = AliasSeq!(byte, short, int, long);
+
+    static assert(is(staticMap!(applyLeft!(Largest, short), Types) ==
+                AliasSeq!(short, short, int, long)));
+    static assert(is(staticMap!(applyLeft!(Largest, int), Types) ==
+                AliasSeq!(int, int, int, long)));
+}
+
+///
+unittest
+{
+    import std.traits : FunctionAttribute, SetFunctionAttributes;
+
+    static void foo() @system;
+    static int bar(int) @system;
+
+    alias SafeFunctions = AliasSeq!(
+        void function() @safe,
+        int function(int) @safe);
+
+    static assert(is(staticMap!(applyRight!(
+        SetFunctionAttributes, "D", FunctionAttribute.safe),
+        typeof(&foo), typeof(&bar)) == SafeFunctions));
+}
+
+/**
+ * Creates an `AliasSeq` which repeats a type or an `AliasSeq` exactly `n` times.
+ */
+template Repeat(size_t n, TList...) if (n > 0)
+{
+    static if (n == 1)
+    {
+        alias Repeat = AliasSeq!TList;
+    }
+    else static if (n == 2)
+    {
+        alias Repeat = AliasSeq!(TList, TList);
+    }
+    else
+    {
+        alias R = Repeat!((n - 1) / 2, TList);
+        static if ((n - 1) % 2 == 0)
+        {
+            alias Repeat = AliasSeq!(TList, R, R);
+        }
+        else
+        {
+            alias Repeat = AliasSeq!(TList, TList, R, R);
+        }
+    }
+}
+
+///
+unittest
+{
+    alias ImInt1 = Repeat!(1, immutable(int));
+    static assert(is(ImInt1 == AliasSeq!(immutable(int))));
+
+    alias Real3 = Repeat!(3, real);
+    static assert(is(Real3 == AliasSeq!(real, real, real)));
+
+    alias Real12 = Repeat!(4, Real3);
+    static assert(is(Real12 == AliasSeq!(real, real, real, real, real, real,
+        real, real, real, real, real, real)));
+
+    alias Composite = AliasSeq!(uint, int);
+    alias Composite2 = Repeat!(2, Composite);
+    static assert(is(Composite2 == AliasSeq!(uint, int, uint, int)));
+}
+
+
+///
+unittest
+{
+    auto staticArray(T, size_t n)(Repeat!(n, T) elems)
+    {
+        T[n] a = [elems];
+        return a;
+    }
+
+    auto a = staticArray!(long, 3)(3, 1, 4);
+    assert(is(typeof(a) == long[3]));
+    assert(a == [3, 1, 4]);
 }
 
 

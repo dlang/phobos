@@ -339,7 +339,7 @@ unittest
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value), if $(D !value) is false. Otherwise,
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
     $(D new Exception(msg)) is thrown.
 
     Note:
@@ -383,8 +383,8 @@ T enforce(T, string file, size_t line = __LINE__)
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value) if $(D !value) is false. Otherwise, the given delegate
-    is called.
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise, the given
+    delegate is called.
 
     The safety and purity of this function are inferred from $(D Dg)'s safety
     and purity.
@@ -442,13 +442,13 @@ unittest
 // purity and safety inference test
 unittest
 {
-    import std.typetuple;
+    import std.meta : AliasSeq;
 
-    foreach (EncloseSafe; TypeTuple!(false, true))
-    foreach (EnclosePure; TypeTuple!(false, true))
+    foreach (EncloseSafe; AliasSeq!(false, true))
+    foreach (EnclosePure; AliasSeq!(false, true))
     {
-        foreach (BodySafe; TypeTuple!(false, true))
-        foreach (BodyPure; TypeTuple!(false, true))
+        foreach (BodySafe; AliasSeq!(false, true))
+        foreach (BodyPure; AliasSeq!(false, true))
         {
             enum code =
                 "delegate void() " ~
@@ -543,7 +543,8 @@ unittest
         value = The value to test.
         ex = The exception to throw if the value evaluates to false.
 
-    Returns: $(D value) if $(D !value) is false. Otherwise, $(D ex) is thrown.
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise, $(D ex) is
+    thrown.
 
     Example:
     --------------------
@@ -572,9 +573,10 @@ unittest
         value = The value to test.
         msg = The message to include in the `ErrnoException` if it is thrown.
 
-    Returns: $(D value) if $(D !value) is false. Otherwise,
-    $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that
-    the last operation set $(D errno) to an error code.
+    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
+    $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
+    operation set $(D errno) to an error code corresponding with the failed
+    condition.
 
     Example:
     --------------------
@@ -1022,16 +1024,21 @@ unittest
 }
 
 /**
-The "pointsTo" functions, $(D doesPointTo) and $(D mayPointTo).
+Checks whether a given source object contains pointers or references to a given
+target object.
 
-Returns $(D true) if $(D source)'s representation embeds a pointer
+Params:
+    source = The source object
+    target = The target object
+
+Returns: $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
 it.
 
 If $(D source) is or contains a dynamic array, then, then these functions will check
 if there is overlap between the dynamic array and $(D target)'s representation.
 
-If $(D source) is a class, then pointsTo will handle it as a pointer.
+If $(D source) is a class, then it will be handled as a pointer.
 
 If $(D target) is a pointer, a dynamic array or a class, then these functions will only
 check if $(D source) points to $(D target), $(I not) what $(D target) references.
@@ -1049,7 +1056,7 @@ $(D source) does not point to $(D target). It may produce false positives, but n
 false negatives. This function should be prefered for defensively choosing a
 code path.
 
-Note: Evaluating $(D pointsTo(x, x)) checks whether $(D x) has
+Note: Evaluating $(D doesPointTo(x, x)) checks whether $(D x) has
 internal pointers. This should only be done as an assertive test,
 as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
@@ -1089,6 +1096,14 @@ bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target)
     }
 }
 
+// for shared objects
+/// ditto
+bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
+{
+    return doesPointTo!(shared S, shared T, void)(source, target);
+}
+
+/// ditto
 bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
     if (__traits(isRef, source) || isDynamicArray!S ||
         isPointer!S || is(S == class))
@@ -1124,70 +1139,10 @@ bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) 
 }
 
 // for shared objects
-bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
-{
-    return doesPointTo!(shared S, shared T, void)(source, target);
-}
+/// ditto
 bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
 {
     return mayPointTo!(shared S, shared T, void)(source, target);
-}
-
-deprecated ("pointsTo is ambiguous. Please use either of doesPointTo or mayPointTo")
-alias pointsTo = doesPointTo;
-
-/+
-Returns true if the field at index $(D i) in ($D T) shares its address with another field.
-
-Note: This does not merelly check if the field is a member of an union, but also that
-it is not a single child.
-+/
-package enum isUnionAliased(T, size_t i) = isUnionAliasedImpl!T(T.tupleof[i].offsetof);
-private bool isUnionAliasedImpl(T)(size_t offset)
-{
-    int count = 0;
-    foreach (i, U; typeof(T.tupleof))
-        if (T.tupleof[i].offsetof == offset)
-            ++count;
-    return count >= 2;
-}
-//
-unittest
-{
-    static struct S
-    {
-        int a0; //Not aliased
-        union
-        {
-            int a1; //Not aliased
-        }
-        union
-        {
-            int a2; //Aliased
-            int a3; //Aliased
-        }
-        union A4
-        {
-            int b0; //Not aliased
-        }
-        A4 a4;
-        union A5
-        {
-            int b0; //Aliased
-            int b1; //Aliased
-        }
-        A5 a5;
-    }
-
-    static assert(!isUnionAliased!(S, 0)); //a0;
-    static assert(!isUnionAliased!(S, 1)); //a1;
-    static assert( isUnionAliased!(S, 2)); //a2;
-    static assert( isUnionAliased!(S, 3)); //a3;
-    static assert(!isUnionAliased!(S, 4)); //a4;
-        static assert(!isUnionAliased!(S.A4, 0)); //a4.b0;
-    static assert(!isUnionAliased!(S, 5)); //a5;
-        static assert( isUnionAliased!(S.A5, 0)); //a5.b0;
-        static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
 }
 
 /// Pointers
@@ -1211,14 +1166,14 @@ unittest
     int i;
     auto s = S(0, &i);
 
-    //structs and unions "own" their members
-    //pointsTo will answer true if one of the members pointsTo.
+    // structs and unions "own" their members
+    // pointsTo will answer true if one of the members pointsTo.
     assert(!s.doesPointTo(s.v)); //s.v is just v member of s, so not pointed.
     assert( s.p.doesPointTo(i)); //i is pointed by s.p.
     assert( s  .doesPointTo(i)); //which means i is pointed by s itself.
 
-    //Unions will behave exactly the same. Points to will check each "member"
-    //individually, even if they share the same memory
+    // Unions will behave exactly the same. Points to will check each "member"
+    // individually, even if they share the same memory
 }
 
 /// Arrays (dynamic and static)
@@ -1230,20 +1185,23 @@ unittest
     int*[]  slicep = [&i];
     int*[1] arrp   = [&i];
 
-    //A slice points to all of its members:
+    // A slice points to all of its members:
     assert( slice.doesPointTo(slice[3]));
-    assert(!slice[0 .. 2].doesPointTo(slice[3])); //Object 3 is outside of the slice [0 .. 2]
+    assert(!slice[0 .. 2].doesPointTo(slice[3])); // Object 3 is outside of the
+                                                  // slice [0 .. 2]
 
-    //Note that a slice will not take into account what its members point to.
+    // Note that a slice will not take into account what its members point to.
     assert( slicep[0].doesPointTo(i));
     assert(!slicep   .doesPointTo(i));
 
-    //static arrays are objects that own their members, just like structs:
-    assert(!arr.doesPointTo(arr[0])); //arr[0] is just a member of arr, so not pointed.
-    assert( arrp[0].doesPointTo(i));  //i is pointed by arrp[0].
-    assert( arrp   .doesPointTo(i));  //which means i is pointed by arrp itslef.
+    // static arrays are objects that own their members, just like structs:
+    assert(!arr.doesPointTo(arr[0])); // arr[0] is just a member of arr, so not
+                                      // pointed.
+    assert( arrp[0].doesPointTo(i));  // i is pointed by arrp[0].
+    assert( arrp   .doesPointTo(i));  // which means i is pointed by arrp
+                                      // itself.
 
-    //Notice the difference between static and dynamic arrays:
+    // Notice the difference between static and dynamic arrays:
     assert(!arr  .doesPointTo(arr[0]));
     assert( arr[].doesPointTo(arr[0]));
     assert( arrp  .doesPointTo(i));
@@ -1261,23 +1219,25 @@ unittest
     int i;
     C a = new C(&i);
     C b = a;
-    //Classes are a bit particular, as they are treated like simple pointers
-    //to a class payload.
-    assert( a.p.doesPointTo(i)); //a.p points to i.
-    assert(!a  .doesPointTo(i)); //Yet a itself does not point i.
+
+    // Classes are a bit particular, as they are treated like simple pointers
+    // to a class payload.
+    assert( a.p.doesPointTo(i)); // a.p points to i.
+    assert(!a  .doesPointTo(i)); // Yet a itself does not point i.
 
     //To check the class payload itself, iterate on its members:
     ()
     {
-        foreach (index, _; FieldTypeTuple!C)
+        foreach (index, _; Fields!C)
             if (doesPointTo(a.tupleof[index], i))
                 return;
         assert(0);
     }();
 
-    //To check if a class points a specific payload, a direct memmory check can be done:
+    // To check if a class points a specific payload, a direct memmory check
+    // can be done:
     auto aLoc = cast(ubyte[__traits(classInstanceSize, C)]*) a;
-    assert(b.doesPointTo(*aLoc)); //b points to where a is pointing
+    assert(b.doesPointTo(*aLoc)); // b points to where a is pointing
 }
 
 unittest
@@ -1463,6 +1423,64 @@ unittest //more alias this opCast
     assert(!mayPointTo(A.init, p));
 }
 
+// Explicitly undocumented. It will be removed in May 2016. @@@DEPRECATED_2016-05@@@
+deprecated ("pointsTo is ambiguous. Please use either of doesPointTo or mayPointTo")
+alias pointsTo = doesPointTo;
+
+/+
+Returns true if the field at index $(D i) in ($D T) shares its address with another field.
+
+Note: This does not merelly check if the field is a member of an union, but also that
+it is not a single child.
++/
+package enum isUnionAliased(T, size_t i) = isUnionAliasedImpl!T(T.tupleof[i].offsetof);
+private bool isUnionAliasedImpl(T)(size_t offset)
+{
+    int count = 0;
+    foreach (i, U; typeof(T.tupleof))
+        if (T.tupleof[i].offsetof == offset)
+            ++count;
+    return count >= 2;
+}
+//
+unittest
+{
+    static struct S
+    {
+        int a0; //Not aliased
+        union
+        {
+            int a1; //Not aliased
+        }
+        union
+        {
+            int a2; //Aliased
+            int a3; //Aliased
+        }
+        union A4
+        {
+            int b0; //Not aliased
+        }
+        A4 a4;
+        union A5
+        {
+            int b0; //Aliased
+            int b1; //Aliased
+        }
+        A5 a5;
+    }
+
+    static assert(!isUnionAliased!(S, 0)); //a0;
+    static assert(!isUnionAliased!(S, 1)); //a1;
+    static assert( isUnionAliased!(S, 2)); //a2;
+    static assert( isUnionAliased!(S, 3)); //a3;
+    static assert(!isUnionAliased!(S, 4)); //a4;
+        static assert(!isUnionAliased!(S.A4, 0)); //a4.b0;
+    static assert(!isUnionAliased!(S, 5)); //a5;
+        static assert( isUnionAliased!(S.A5, 0)); //a5.b0;
+        static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
+}
+
 /*********************
  * Thrown if errors that set $(D errno) occur.
  */
@@ -1503,7 +1521,7 @@ class ErrnoException : Exception
         expression, if it does not throw. Otherwise, returns the result of
         errorHandler.
 
-    Examples:
+    Example:
     --------------------
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
@@ -1532,7 +1550,7 @@ class ErrnoException : Exception
     be implicitly casted to, and that type will be the type of the compound
     expression.
 
-    Examples:
+    Example:
     --------------------
     //null and new Object have a common type(Object).
     static assert(is(typeof(null.ifThrown(new Object())) == Object));
@@ -2129,4 +2147,110 @@ pure nothrow @safe unittest
         RangePrimitive.opSlice, (e, r) => Infinite())();
 
     auto infSlice = infinite[0 .. $]; // this would throw otherwise
+}
+
+
+/++
+    Convenience mixin for trivially sub-classing exceptions
+
+    Even trivially sub-classing an exception involves writing boilerplate code
+    for the constructor to: 1) correctly pass in the source file and line number
+    the exception was thrown from; 2) be usable with $(LREF enforce) which
+    expects exception constructors to take arguments in a fixed order. This
+    mixin provides that boilerplate code.
+
+    Note however that you need to mark the $(B mixin) line with at least a
+    minimal (i.e. just $(B ///)) DDoc comment if you want the mixed-in
+    constructors to be documented in the newly created Exception subclass.
+
+    $(RED Current limitation): Due to
+    $(LINK2 https://issues.dlang.org/show_bug.cgi?id=11500, bug #11500),
+    currently the constructors specified in this mixin cannot be overloaded with
+    any other custom constructors. Thus this mixin can currently only be used
+    when no such custom constructors need to be explicitly specified.
+ +/
+mixin template basicExceptionCtors()
+{
+    /++
+        Params:
+            msg  = The message for the exception.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+            next = The previous exception in the chain of exceptions, if any.
+    +/
+    this(string msg, string file = __FILE__, size_t line = __LINE__,
+         Throwable next = null) @nogc @safe pure nothrow
+    {
+        super(msg, file, line, next);
+    }
+
+    /++
+        Params:
+            msg  = The message for the exception.
+            next = The previous exception in the chain of exceptions.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+    +/
+    this(string msg, Throwable next, string file = __FILE__,
+         size_t line = __LINE__) @nogc @safe pure nothrow
+    {
+        super(msg, file, line, next);
+    }
+}
+
+///
+unittest
+{
+    class MeaCulpa: Exception
+    {
+        ///
+        mixin basicExceptionCtors;
+    }
+
+    try
+        throw new MeaCulpa("test");
+    catch (MeaCulpa e)
+    {
+        assert(e.msg == "test");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__ - 5);
+    }
+}
+
+@safe pure nothrow unittest
+{
+    class TestException : Exception { mixin basicExceptionCtors; }
+    auto e = new Exception("msg");
+    auto te1 = new TestException("foo");
+    auto te2 = new TestException("foo", e);
+}
+
+unittest
+{
+    class TestException : Exception { mixin basicExceptionCtors; }
+    auto e = new Exception("!!!");
+
+    auto te1 = new TestException("message", "file", 42, e);
+    assert(te1.msg == "message");
+    assert(te1.file == "file");
+    assert(te1.line == 42);
+    assert(te1.next is e);
+
+    auto te2 = new TestException("message", e, "file", 42);
+    assert(te2.msg == "message");
+    assert(te2.file == "file");
+    assert(te2.line == 42);
+    assert(te2.next is e);
+
+    auto te3 = new TestException("foo");
+    assert(te3.msg == "foo");
+    assert(te3.file == __FILE__);
+    assert(te3.line == __LINE__ - 3);
+    assert(te3.next is null);
+
+    auto te4 = new TestException("foo", e);
+    assert(te4.msg == "foo");
+    assert(te4.file == __FILE__);
+    assert(te4.line == __LINE__ - 3);
+    assert(te4.next is e);
 }

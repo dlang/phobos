@@ -3,7 +3,8 @@
 /** This module contains the $(LREF Complex) type, which is used to represent
     _complex numbers, along with related mathematical operations and functions.
 
-    $(LREF Complex) will eventually $(LINK2 ../deprecate.html, replace)
+    $(LREF Complex) will eventually
+    $(DDLINK deprecate, Deprecated Features, replace)
     the built-in types $(D cfloat), $(D cdouble), $(D creal), $(D ifloat),
     $(D idouble), and $(D ireal).
 
@@ -283,7 +284,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
         if (op == "^^" && isNumeric!R)
     {
-        import std.math : log, exp, PI;
+        import std.math : cos, exp, log, sin, PI;
         Unqual!(CommonType!(T, R)) ab = void, ar = void;
 
         if (lhs >= 0)
@@ -301,7 +302,7 @@ struct Complex(T)  if (isFloatingPoint!T)
             ar = PI * this.re + log(-lhs) * this.im;
         }
 
-        return typeof(return)(ab * std.math.cos(ar), ab * std.math.sin(ar));
+        return typeof(return)(ab * cos(ar), ab * sin(ar));
     }
 
     // OP-ASSIGN OPERATORS
@@ -355,14 +356,14 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
-        import std.math : exp, log;
+        import std.math: exp, log, cos, sin;
         immutable r = abs(this);
         immutable t = arg(this);
         immutable ab = r^^z.re * exp(-t*z.im);
         immutable ar = t*z.re + log(r)*z.im;
 
-        re = ab*std.math.cos(ar);
-        im = ab*std.math.sin(ar);
+        re = ab*cos(ar);
+        im = ab*sin(ar);
         return this;
     }
 
@@ -387,10 +388,11 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
     {
+        import std.math: cos, sin;
         immutable ab = abs(this)^^r;
         immutable ar = arg(this)*r;
-        re = ab*std.math.cos(ar);
-        im = ab*std.math.sin(ar);
+        re = ab*cos(ar);
+        im = ab*sin(ar);
         return this;
     }
 
@@ -649,15 +651,20 @@ unittest
 }
 
 
-/** Calculates the absolute value (or modulus) of a complex number. */
+/**
+   Params: z = A complex number.
+   Returns: The absolute value (or modulus) of `z`.
+*/
 T abs(T)(Complex!T z) @safe pure nothrow @nogc
 {
     import std.math : hypot;
     return hypot(z.re, z.im);
 }
 
+///
 unittest
 {
+    static import std.math;
     assert (abs(complex(1.0)) == 1.0);
     assert (abs(complex(0.0, 1.0)) == 1.0);
     assert (abs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
@@ -665,14 +672,18 @@ unittest
 
 
 /++
-   Calculates the squared modulus of a complex number.
-   For genericity, if called on a real number, $(D sqAbs) returns its square.
+   Params:
+    z = A complex number.
+    x = A real number.
+   Returns: The squared modulus of `z`.
+   For genericity, if called on a real number, returns its square.
 +/
 T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 {
     return z.re*z.re + z.im*z.im;
 }
 
+///
 unittest
 {
     import std.math;
@@ -701,13 +712,17 @@ unittest
 }
 
 
-/** Calculates the argument (or phase) of a complex number. */
+/**
+ Params: z = A complex number.
+ Returns: The argument (or phase) of `z`.
+ */
 T arg(T)(Complex!T z) @safe pure nothrow @nogc
 {
     import std.math : atan2;
     return atan2(z.im, z.re);
 }
 
+///
 unittest
 {
     import std.math;
@@ -717,12 +732,16 @@ unittest
 }
 
 
-/** Returns the complex conjugate of a complex number. */
+/**
+  Params: z = A complex number.
+  Returns: The complex conjugate of `z`.
+*/
 Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
 {
     return Complex!T(z.re, -z.im);
 }
 
+///
 unittest
 {
     assert (conj(complex(1.0)) == complex(1.0));
@@ -730,14 +749,22 @@ unittest
 }
 
 
-/** Constructs a complex number given its absolute value and argument. */
+/**
+  Constructs a complex number given its absolute value and argument.
+  Params:
+    modulus = The modulus
+    argument = The argument
+  Returns: The complex number with the given modulus and argument.
+*/
 Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
     @safe pure nothrow @nogc
 {
+    import std.math : sin, cos;
     return Complex!(CommonType!(T,U))
-        (modulus*std.math.cos(argument), modulus*std.math.sin(argument));
+        (modulus*cos(argument), modulus*sin(argument));
 }
 
+///
 unittest
 {
     import std.math;
@@ -747,7 +774,12 @@ unittest
 }
 
 
-/** Trigonometric functions. */
+/**
+    Trigonometric functions on complex numbers.
+
+    Params: z = A complex number.
+    Returns: The sine and cosine of `z`, respectively.
+*/
 Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     import std.math : expi, coshisinh;
@@ -756,10 +788,12 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
     return typeof(return)(cs.im * csh.re, cs.re * csh.im);
 }
 
+///
 unittest
 {
-  assert(sin(complex(0.0)) == 0.0);
-  assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
+    static import std.math;
+    assert(sin(complex(0.0)) == 0.0);
+    assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
 }
 
 
@@ -772,6 +806,7 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
     return typeof(return)(cs.re * csh.re, - cs.im * csh.im);
 }
 
+///
 unittest{
     import std.math;
     import std.complex;
@@ -781,7 +816,9 @@ unittest{
 }
 
 
-/** Calculates cos(y) + i sin(y).
+/**
+    Params: y = A real number.
+    Returns: The value of cos(y) + i sin(y).
 
     Note:
     $(D expi) is included here for convenience and for easy migration of code
@@ -795,8 +832,11 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
     return Complex!real(cos(y), sin(y));
 }
 
+///
 unittest
 {
+    static import std.math;
+
     assert(expi(1.3e5L) == complex(std.math.cos(1.3e5L), std.math.sin(1.3e5L)));
     assert(expi(0.0L) == 1.0L);
     auto z1 = expi(1.234);
@@ -805,10 +845,13 @@ unittest
 }
 
 
-/** Square root. */
+/**
+    Params: z = A complex number.
+    Returns: The square root of `z`.
+*/
 Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    import std.math : fabs;
+    static import std.math;
     typeof(return) c;
     real x,y,w,r;
 
@@ -821,8 +864,8 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
         real z_re = z.re;
         real z_im = z.im;
 
-        x = fabs(z_re);
-        y = fabs(z_im);
+        x = std.math.fabs(z_re);
+        y = std.math.fabs(z_im);
         if (x >= y)
         {
             r = y / x;
@@ -850,8 +893,10 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     return c;
 }
 
+///
 unittest
 {
+    static import std.math;
     assert (sqrt(complex(0.0)) == 0.0);
     assert (sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
     assert (sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));

@@ -17,13 +17,12 @@ Synopsis:
 
     //check a type
     long x;
-    if (j["code"].type() == JSON_TYPE.INTEGER)
+    if (const(JSONValue)* code = "code" in j)
     {
-        x = j["code"].integer;
-    }
-    else
-    {
-        x = to!int(j["code"].str);
+        if (code.type() == JSON_TYPE.INTEGER)
+            x = code.integer;
+        else
+            x = to!int(code.str);
     }
 
     // create a json struct
@@ -128,13 +127,7 @@ struct JSONValue
           assert(j["language"].type == JSON_TYPE.STRING);
     }
 
-    /**
-        $(RED Deprecated. Instead, please assign the value with the adequate
-              type to $(D JSONValue) directly. This will be removed in
-              June 2015.)
-
-        Sets the _type of this $(D JSONValue). Previous content is cleared.
-      */
+    // Explicitly undocumented. It will be removed in June 2016. @@@DEPRECATED_2016-06@@@
     deprecated("Please assign the value with the adequate type to JSONValue directly.")
     @property JSON_TYPE type(JSON_TYPE newType)
     {
@@ -172,7 +165,8 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.STRING).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
+    /// Throws: $(D JSONException) for read access if $(D type) is not
+    /// $(D JSON_TYPE.STRING).
     @property inout(string) str() inout pure
     {
         enforce!JSONException(type == JSON_TYPE.STRING,
@@ -199,7 +193,8 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.INTEGER).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.INTEGER).
+    /// Throws: $(D JSONException) for read access if $(D type) is not
+    /// $(D JSON_TYPE.INTEGER).
     @property inout(long) integer() inout pure @safe
     {
         enforce!JSONException(type == JSON_TYPE.INTEGER,
@@ -214,7 +209,8 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.UINTEGER).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.UINTEGER).
+    /// Throws: $(D JSONException) for read access if $(D type) is not
+    /// $(D JSON_TYPE.UINTEGER).
     @property inout(ulong) uinteger() inout pure @safe
     {
         enforce!JSONException(type == JSON_TYPE.UINTEGER,
@@ -229,7 +225,8 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.FLOAT).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.FLOAT).
+    /// Throws: $(D JSONException) for read access if $(D type) is not
+    /// $(D JSON_TYPE.FLOAT).
     @property inout(double) floating() inout pure @safe
     {
         enforce!JSONException(type == JSON_TYPE.FLOAT,
@@ -244,7 +241,8 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.OBJECT).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.OBJECT).
+    /// Throws: $(D JSONException) for read access if $(D type) is not
+    /// $(D JSON_TYPE.OBJECT).
     @property ref inout(JSONValue[string]) object() inout pure
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
@@ -259,7 +257,8 @@ struct JSONValue
     }
 
     /// Value getter/setter for $(D JSON_TYPE.ARRAY).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.ARRAY).
+    /// Throws: $(D JSONException) for read access if $(D type) is not
+    /// $(D JSON_TYPE.ARRAY).
     @property ref inout(JSONValue[]) array() inout pure
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
@@ -417,7 +416,7 @@ struct JSONValue
     }
 
     /// Array syntax for json arrays.
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
+    /// Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
     ref inout(JSONValue) opIndex(size_t i) inout pure
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
@@ -435,7 +434,7 @@ struct JSONValue
     }
 
     /// Hash syntax for json objects.
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
+    /// Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
     ref inout(JSONValue) opIndex(string k) inout pure
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
@@ -450,10 +449,12 @@ struct JSONValue
         assert( j["language"].str == "D" );
     }
 
-    /// Operator sets $(D value) for element of JSON object by $(D key)
+    /// Operator sets $(D value) for element of JSON object by $(D key).
+    ///
     /// If JSON value is null, then operator initializes it with object and then
     /// sets $(D value) for it.
-    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT)
+    ///
+    /// Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT)
     /// or $(D JSON_TYPE.NULL).
     void opIndexAssign(T)(auto ref T value, string key) pure
     {
@@ -533,6 +534,18 @@ struct JSONValue
         }
     }
 
+    /**
+     * Support for the $(D in) operator.
+     *
+     * Tests wether a key can be found in an object.
+     *
+     * Returns:
+     *      when found, the $(D const(JSONValue)*) that matches to the key,
+     *      otherwise $(D null).
+     *
+     * Throws: $(D JSONException) if the right hand side argument $(D JSON_TYPE)
+     * is not $(D OBJECT).
+     */
     auto opBinaryRight(string op : "in")(string k) const
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
@@ -613,6 +626,7 @@ struct JSONValue
     }
 
     /// Implicitly calls $(D toJSON) on this JSONValue.
+    ///
     /// $(I options) can be used to tweak the conversion behavior.
     string toString(in JSONOptions options = JSONOptions.none) const
     {
@@ -621,6 +635,7 @@ struct JSONValue
 
     /// Implicitly calls $(D toJSON) on this JSONValue, like $(D toString), but
     /// also passes $(I true) as $(I pretty) argument.
+    ///
     /// $(I options) can be used to tweak the conversion behavior
     string toPrettyString(in JSONOptions options = JSONOptions.none) const
     {
@@ -630,7 +645,7 @@ struct JSONValue
 
 /**
 Parses a serialized string and returns a tree of JSON values.
-Throws a $(XREF json,JSONException) if the depth exceeds the max depth.
+Throws: $(XREF json,JSONException) if the depth exceeds the max depth.
 Params:
     json = json-formatted string to parse
     maxDepth = maximum depth of nesting allowed, -1 disables depth checking
@@ -960,7 +975,7 @@ if(isInputRange!T)
 
 /**
 Parses a serialized string and returns a tree of JSON values.
-Throws a $(XREF json,JSONException) if the depth exceeds the max depth.
+Throws: $(XREF json,JSONException) if the depth exceeds the max depth.
 Params:
     json = json-formatted string to parse
     options = enable decoding string representations of NaN/Inf as float values
@@ -1153,8 +1168,19 @@ private void appendJSONChar(Appender!string* dst, dchar c,
     import std.uni : isControl;
 
     if(isControl(c))
-        error("Illegal control character.");
-    dst.put(c);
+    {
+        dst.put("\\u");
+        foreach_reverse (i; 0 .. 4)
+        {
+            char ch = (c >>> (4 * i)) & 0x0f;
+            ch += ch < 10 ? '0' : 'A' - 10;
+            dst.put(ch);
+        }
+    }
+    else
+    {
+        dst.put(c);
+    }
 }
 
 /**
@@ -1248,6 +1274,10 @@ unittest
     JSONValue jv2 = JSONValue("value");
     assert(jv2.type == JSON_TYPE.STRING);
     assert(jv2.str == "value");
+
+    JSONValue jv3 = JSONValue("\u001c");
+    assert(jv3.type == JSON_TYPE.STRING);
+    assert(jv3.str == "\u001C");
 }
 
 unittest
@@ -1389,7 +1419,9 @@ unittest
     assert(val.to!string() == "\"\&spades;\&diams;\"");
 
     //0x7F is a control character (see Unicode spec)
-    assertThrown(parseJSON(`{ "foo": "` ~ "\u007F" ~ `"}`));
+    val = parseJSON(`"\u007F"`);
+    assert(toJSON(&val) == "\"\\u007F\"");
+    assert(val.to!string() == "\"\\u007F\"");
 
     with(parseJSON(`""`))
         assert(str == "" && str !is null);

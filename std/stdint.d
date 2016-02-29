@@ -17,103 +17,104 @@
 
     The aliases are:
 
-    <table border=1 cellspacing=0 cellpadding=5>
-    <th>Exact Alias
-    <th>Description
-    <th>At Least Alias
-    <th>Description
-    <th>Fast Alias
-    <th>Description
-    <tr>
-    <td>int8_t
-    <td>exactly 8 bits signed
-    <td>int_least8_t
-    <td>at least 8 bits signed
-    <td>int_fast8_t
-    <td>fast 8 bits signed
-    <tr>
-    <td>uint8_t
-    <td>exactly 8 bits unsigned
-    <td>uint_least8_t
-    <td>at least 8 bits unsigned
-    <td>uint_fast8_t
-    <td>fast 8 bits unsigned
+    $(ATABLE $(TR
+    $(TH Exact Alias)
+    $(TH Description)
+    $(TH At Least Alias)
+    $(TH Description)
+    $(TH Fast Alias)
+    $(TH Description)
+    )$(TR
+    $(TD int8_t)
+    $(TD exactly 8 bits signed)
+    $(TD int_least8_t)
+    $(TD at least 8 bits signed)
+    $(TD int_fast8_t)
+    $(TD fast 8 bits signed)
+    )$(TR
+    $(TD uint8_t)
+    $(TD exactly 8 bits unsigned)
+    $(TD uint_least8_t)
+    $(TD at least 8 bits unsigned)
+    $(TD uint_fast8_t)
+    $(TD fast 8 bits unsigned)
 
-    <tr>
-    <td>int16_t
-    <td>exactly 16 bits signed
-    <td>int_least16_t
-    <td>at least 16 bits signed
-    <td>int_fast16_t
-    <td>fast 16 bits signed
-    <tr>
-    <td>uint16_t
-    <td>exactly 16 bits unsigned
-    <td>uint_least16_t
-    <td>at least 16 bits unsigned
-    <td>uint_fast16_t
-    <td>fast 16 bits unsigned
+    )$(TR
+    $(TD int16_t)
+    $(TD exactly 16 bits signed)
+    $(TD int_least16_t)
+    $(TD at least 16 bits signed)
+    $(TD int_fast16_t)
+    $(TD fast 16 bits signed)
+    )$(TR
+    $(TD uint16_t)
+    $(TD exactly 16 bits unsigned)
+    $(TD uint_least16_t)
+    $(TD at least 16 bits unsigned)
+    $(TD uint_fast16_t)
+    $(TD fast 16 bits unsigned)
 
-    <tr>
-    <td>int32_t
-    <td>exactly 32 bits signed
-    <td>int_least32_t
-    <td>at least 32 bits signed
-    <td>int_fast32_t
-    <td>fast 32 bits signed
-    <tr>
-    <td>uint32_t
-    <td>exactly 32 bits unsigned
-    <td>uint_least32_t
-    <td>at least 32 bits unsigned
-    <td>uint_fast32_t
-    <td>fast 32 bits unsigned
+    )$(TR
+    $(TD int32_t)
+    $(TD exactly 32 bits signed)
+    $(TD int_least32_t)
+    $(TD at least 32 bits signed)
+    $(TD int_fast32_t)
+    $(TD fast 32 bits signed)
+    )$(TR
+    $(TD uint32_t)
+    $(TD exactly 32 bits unsigned)
+    $(TD uint_least32_t)
+    $(TD at least 32 bits unsigned)
+    $(TD uint_fast32_t)
+    $(TD fast 32 bits unsigned)
 
-    <tr>
-    <td>int64_t
-    <td>exactly 64 bits signed
-    <td>int_least64_t
-    <td>at least 64 bits signed
-    <td>int_fast64_t
-    <td>fast 64 bits signed
-    <tr>
-    <td>uint64_t
-    <td>exactly 64 bits unsigned
-    <td>uint_least64_t
-    <td>at least 64 bits unsigned
-    <td>uint_fast64_t
-    <td>fast 64 bits unsigned
-    </table>
+    )$(TR
+    $(TD int64_t)
+    $(TD exactly 64 bits signed)
+    $(TD int_least64_t)
+    $(TD at least 64 bits signed)
+    $(TD int_fast64_t)
+    $(TD fast 64 bits signed)
+    )$(TR
+    $(TD uint64_t)
+    $(TD exactly 64 bits unsigned)
+    $(TD uint_least64_t)
+    $(TD at least 64 bits unsigned)
+    $(TD uint_fast64_t)
+    $(TD fast 64 bits unsigned)
+    ))
 
     The ptr aliases are integral types guaranteed to be large enough
     to hold a pointer without losing bits:
 
-    <table border=1 cellspacing=0 cellpadding=5>
-    <th>Alias
-    <th>Description
-    <tr>
-    <td>intptr_t
-    <td>signed integral type large enough to hold a pointer
-    <tr>
-    <td>uintptr_t
-    <td>unsigned integral type large enough to hold a pointer
-    </table>
+    $(ATABLE $(TR
+    $(TH Alias)
+    $(TH Description)
+    )$(TR
+    $(TD intptr_t)
+    $(TD signed integral type large enough to hold a pointer)
+    )$(TR
+    $(TD uintptr_t)
+    $(TD unsigned integral type large enough to hold a pointer)
+    ))
 
     The max aliases are the largest integral types:
 
-    <table border=1 cellspacing=0 cellpadding=5>
-    <th>Alias
-    <th>Description
-    <tr>
-    <td>intmax_t
-    <td>the largest signed integral type
-    <tr>
-    <td>uintmax_t
-    <td>the largest unsigned integral type
-    </table>
+    $(ATABLE $(TR
+    $(TH Alias)
+    $(TH Description)
+    )$(TR
+    $(TD intmax_t)
+    $(TD the largest signed integral type)
+    )$(TR
+    $(TD uintmax_t)
+    $(TD the largest unsigned integral type)
+    ))
 
  * Macros:
  *  WIKI=Phobos/StdStdint
+ *  ATABLE=<table border="1" cellspacing="0" cellpadding="5">$0</table>
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).

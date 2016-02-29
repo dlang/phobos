@@ -9,7 +9,7 @@ module std.regex.internal.ir;
 
 package(std.regex):
 
-import std.exception, std.uni, std.typetuple, std.traits, std.range;
+import std.exception, std.uni, std.meta, std.traits, std.range;
 
 // just a common trait, may be moved elsewhere
 alias BasicElementOf(Range) = Unqual!(ElementEncodingType!Range);
@@ -88,7 +88,7 @@ enum RegexOption: uint {
     singleline = 0x20
 }
 //do not reorder this list
-alias RegexOptionNames = TypeTuple!('g', 'i', 'x', 'U', 'm', 's');
+alias RegexOptionNames = AliasSeq!('g', 'i', 'x', 'U', 'm', 's');
 static assert( RegexOption.max < 0x80);
 // flags that allow guide execution of engine
 enum RegexInfo : uint { oneShot = 0x80 }
@@ -490,7 +490,7 @@ struct Regex(Char)
     }
 
 package(std.regex):
-    import std.regex.internal.kickstart; //TODO: get rid of this dependency
+    import std.regex.internal.kickstart : Kickstart; //TODO: get rid of this dependency
     NamedGroup[] dict;  //maps name -> user group number
     uint ngroup;        //number of internal groups
     uint maxCounterDepth; //max depth of nested {n,m} repetitions
@@ -741,9 +741,5 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
 ///Exception object thrown in case of errors during regex compilation.
 public class RegexException : Exception
 {
-    ///
-    @trusted this(string msg, string file = __FILE__, size_t line = __LINE__)
-    {//@@@BUG@@@ Exception constructor is not @safe
-        super(msg, file, line);
-    }
+    mixin basicExceptionCtors;
 }

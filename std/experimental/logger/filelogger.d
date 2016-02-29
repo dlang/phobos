@@ -19,7 +19,7 @@ class FileLogger : Logger
       fn = The filename of the output file of the $(D FileLogger). If that
       file can not be opened for writting an exception will be thrown.
       lv = The $(D LogLevel) for the $(D FileLogger). By default the
-      $(D LogLevel) for $(D FileLogger) is $(D LogLevel.info).
+      $(D LogLevel) for $(D FileLogger) is $(D LogLevel.all).
 
     Example:
     -------------
@@ -27,7 +27,7 @@ class FileLogger : Logger
     auto l2 = new FileLogger("logFile", "loggerName", LogLevel.fatal);
     -------------
     */
-    this(in string fn, const LogLevel lv = LogLevel.info) @safe
+    this(in string fn, const LogLevel lv = LogLevel.all) @safe
     {
         import std.exception : enforce;
         super(lv);
@@ -45,7 +45,7 @@ class FileLogger : Logger
     Params:
       file = The file used for logging.
       lv = The $(D LogLevel) for the $(D FileLogger). By default the
-      $(D LogLevel) for $(D FileLogger) is $(D LogLevel.info).
+      $(D LogLevel) for $(D FileLogger) is $(D LogLevel.all).
 
     Example:
     -------------
@@ -54,7 +54,7 @@ class FileLogger : Logger
     auto l2 = new FileLogger(file, "LoggerName", LogLevel.fatal);
     -------------
     */
-    this(File file, const LogLevel lv = LogLevel.info) @safe
+    this(File file, const LogLevel lv = LogLevel.all) @safe
     {
         super(lv);
         this.file_ = file;

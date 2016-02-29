@@ -165,12 +165,12 @@ import std.conv;
 import std.datetime;
 import std.encoding;
 import std.exception;
+import std.meta;
 import std.regex;
 import std.socket : InternetAddress;
 import std.string;
 import std.traits;
 import std.typecons;
-import std.typetuple;
 
 import std.internal.cstring;
 
@@ -183,7 +183,7 @@ version(unittest)
     import std.stdio;
     import std.range;
     import std.process : environment;
-    import std.file : tempDir;
+    import std.file : deleteme;
     import std.path : buildPath;
 
     import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
@@ -237,17 +237,52 @@ version(unittest)
         return initOnce!server(startServer());
     }
 
-    private immutable(T)[] recvAll(T=char)(Socket s)
+    private struct Request(T)
     {
-        ubyte[1024] buf=void;
-        ubyte[] res;
+        string hdrs;
+        immutable(T)[] bdy;
+    }
+
+    private Request!T recvReq(T=char)(Socket s)
+    {
+        ubyte[1024] tmp=void;
+        ubyte[] buf;
+
         while (true)
         {
-            auto nbytes = s.receive(buf[]);
+            auto nbytes = s.receive(tmp[]);
             assert(nbytes >= 0);
-            res ~= buf[0 .. nbytes];
-            if (nbytes < buf.length)
-                return cast(typeof(return))res;
+
+            immutable beg = buf.length > 3 ? buf.length - 3 : 0;
+            buf ~= tmp[0 .. nbytes];
+            auto bdy = buf[beg .. $].find(cast(ubyte[])"\r\n\r\n");
+            if (bdy.empty)
+                continue;
+
+            auto hdrs = cast(string)buf[0 .. $ - bdy.length];
+            bdy.popFrontN(4);
+            // no support for chunked transfer-encoding
+            if (auto m = hdrs.matchFirst(ctRegex!(`Content-Length: ([0-9]+)`, "i")))
+            {
+                import std.uni : asUpperCase;
+                if (hdrs.asUpperCase.canFind("EXPECT: 100-CONTINUE"))
+                    s.send(httpContinue);
+
+                size_t remain = m.captures[1].to!size_t - bdy.length;
+                while (remain)
+                {
+                    nbytes = s.receive(tmp[0 .. min(remain, $)]);
+                    assert(nbytes >= 0);
+                    buf ~= tmp[0 .. nbytes];
+                    remain -= nbytes;
+                }
+            }
+            else
+            {
+                assert(bdy.empty);
+            }
+            bdy = buf[hdrs.length + 4 .. $];
+            return typeof(return)(hdrs, cast(immutable(T)[])bdy);
         }
     }
 
@@ -384,13 +419,14 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 
 unittest
 {
+    static import std.file;
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            assert(s.recvAll.canFind("GET /"));
+            assert(s.recvReq.hdrs.canFind("GET /"));
             s.send(httpOK("Hello world"));
         });
-        auto fn = buildPath(tempDir(), "downloaded-http-file");
+        auto fn = std.file.deleteme;
         scope (exit) std.file.remove(fn);
         download(host, fn);
         assert(std.file.readText(fn) == "Hello world");
@@ -435,6 +471,7 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
+        import std.stdio : File;
         auto f = File(loadFromPath, "rb");
         conn.onSend = buf => f.rawRead(buf).length;
         auto sz = f.size;
@@ -446,18 +483,16 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 
 unittest
 {
+    static import std.file;
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        auto fn = buildPath(tempDir(), "downloaded-http-file");
+        auto fn = std.file.deleteme;
         scope (exit) std.file.remove(fn);
         std.file.write(fn, "upload data\n");
         testServer.handle((s) {
-            auto req = s.recvAll;
-            assert(req.canFind("PUT /path"));
-            if (req.canFind("100-continue")) s.send(httpContinue);
-            req = req.find("\r\n\r\n")[4 .. $];
-            if (req.empty) req = s.recvAll;
-            assert(req.canFind("upload data"));
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("PUT /path"));
+            assert(req.bdy.canFind("upload data"));
             s.send(httpOK());
         });
         upload(fn, host ~ "/path");
@@ -519,7 +554,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            assert(s.recvAll.canFind("GET /path"));
+            assert(s.recvReq.hdrs.canFind("GET /path"));
             s.send(httpOK("GETRESPONSE"));
         });
         auto res = get(host ~ "/path");
@@ -566,11 +601,9 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
-            assert(req.canFind("POST /path"));
-            req = req.find("\r\n\r\n")[4 .. $];
-            if (req.empty) req = s.recvAll;
-            assert(req.canFind("POSTBODY"));
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("POST /path"));
+            assert(req.bdy.canFind("POSTBODY"));
             s.send(httpOK("POSTRESPONSE"));
         });
         auto res = post(host ~ "/path", "POSTBODY");
@@ -585,11 +618,9 @@ unittest
         ub = cast(ubyte)i;
 
     testServer.handle((s) {
-        auto header = s.recvAll;
-        header = header.find("\r\n\r\n")[4 .. $];
-        auto req = header.empty ? s.recvAll!ubyte : cast(ubyte[])header;
-        assert(req.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
-        assert(req.canFind(cast(ubyte[])[253, 254, 255]));
+        auto req = s.recvReq!ubyte;
+        assert(req.bdy.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
+        assert(req.bdy.canFind(cast(ubyte[])[253, 254, 255]));
         s.send(httpOK(cast(ubyte[])[17, 27, 35, 41]));
     });
     auto res = post!ubyte(testServer.addr, data);
@@ -652,12 +683,9 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
-            assert(req.canFind("PUT /path"));
-            if (req.canFind("100-continue")) s.send(httpContinue);
-            req = req.find("\r\n\r\n")[4 .. $];
-            if (req.empty) req = s.recvAll;
-            assert(req.canFind("PUTBODY"));
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("PUT /path"));
+            assert(req.bdy.canFind("PUTBODY"));
             s.send(httpOK("PUTRESPONSE"));
         });
         auto res = put(host ~ "/path", "PUTBODY");
@@ -717,8 +745,8 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
-            assert(req.canFind("DELETE /path"));
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("DELETE /path"));
             s.send(httpOK());
         });
         del(host ~ "/path");
@@ -756,6 +784,7 @@ T[] options(T = char)(const(char)[] url, HTTP conn = HTTP())
     return _basicHTTP!(T)(url, null, conn);
 }
 
+// Explicitly undocumented. It will be removed in February 2017. @@@DEPRECATED_2017-02@@@
 deprecated("options does not send any data")
 T[] options(T = char, OptionsUnit)(const(char)[] url,
                                    const(OptionsUnit)[] optionsData = null,
@@ -768,8 +797,8 @@ T[] options(T = char, OptionsUnit)(const(char)[] url,
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("OPTIONS /path"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("OPTIONS /path"));
         s.send(httpOK("OPTIONSRESPONSE"));
     });
     auto res = options(testServer.addr ~ "/path");
@@ -808,8 +837,8 @@ T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("TRACE /path"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("TRACE /path"));
         s.send(httpOK("TRACERESPONSE"));
     });
     auto res = trace(testServer.addr ~ "/path");
@@ -847,8 +876,8 @@ T[] connect(T = char)(const(char)[] url, HTTP conn = HTTP())
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("CONNECT /path"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("CONNECT /path"));
         s.send(httpOK("CONNECTRESPONSE"));
     });
     auto res = connect(testServer.addr ~ "/path");
@@ -891,12 +920,9 @@ T[] patch(T = char, PatchUnit)(const(char)[] url, const(PatchUnit)[] patchData,
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("PATCH /path"));
-        if (req.canFind("100-continue")) s.send(httpContinue);
-        req = req.find("\r\n\r\n")[4 .. $];
-        if (req.empty) req = s.recvAll;
-        assert(req.canFind("PATCHBODY"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("PATCH /path"));
+        assert(req.bdy.canFind("PATCHBODY"));
         s.send(httpOK("PATCHRESPONSE"));
     });
     auto res = patch(testServer.addr ~ "/path", "PATCHBODY");
@@ -932,7 +958,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     }
     client.url = url;
     HTTP.StatusLine statusLine;
-    ubyte[] content;
+    import std.array : appender;
+    auto content = appender!(ubyte[])();
     string[string] headers;
     client.onReceive = (ubyte[] data)
     {
@@ -970,6 +997,10 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     client.onReceiveHeader = (in char[] key,
                               in char[] value)
     {
+        if (key == "content-length") {
+            import std.conv : to;
+            content.reserve(value.to!size_t);
+        }
         if (auto v = key in headers)
         {
             *v ~= ", ";
@@ -995,14 +1026,14 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         }
     }
 
-    return _decodeContent!T(content, charset);
+    return _decodeContent!T(content.data, charset);
 }
 
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("GET /path"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("GET /path"));
         s.send(httpNotFound());
     });
     auto e = collectException!CurlException(get(testServer.addr ~ "/path"));
@@ -1013,17 +1044,14 @@ unittest
 unittest
 {
     testServer.handle((s) {
-        auto req = s.recvAll;
-        assert(req.canFind("POST /"));
-        req = req.find("\r\n\r\n")[4 .. $];
-        if (req.empty) req = s.recvAll;
-        assert(req.canFind("POSTBODY"));
+        auto req = s.recvReq;
+        assert(req.hdrs.canFind("POST /"));
+        assert(req.bdy.canFind("POSTBODY"));
         s.send(httpOK("POSTRESPONSE"));
 
-        req = s.recvAll;
-        assert(req.canFind("TRACE /"));
-        req = req.find("\r\n\r\n")[4 .. $];
-        assert(req.empty);
+        req = s.recvReq;
+        assert(req.hdrs.canFind("TRACE /"));
+        assert(req.bdy.empty);
         s.blocking = false;
         ubyte[6] buf = void;
         assert(s.receive(buf[]) < 0);
@@ -1240,7 +1268,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
+            auto req = s.recvReq;
             s.send(httpOK("Line1\nLine2\nLine3"));
         });
         assert(byLine(host).equal(["Line1", "Line2", "Line3"]));
@@ -1312,7 +1340,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
+            auto req = s.recvReq;
             s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
         });
         assert(byChunk(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
@@ -1604,7 +1632,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
+            auto req = s.recvReq;
             s.send(httpOK("Line1\nLine2\nLine3"));
         });
         assert(byLineAsync(host).equal(["Line1", "Line2", "Line3"]));
@@ -1753,7 +1781,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
+            auto req = s.recvReq;
             s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
         });
         assert(byChunkAsync(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
@@ -2014,9 +2042,9 @@ private mixin template Protocol()
     unittest
     {
         testServer.handle((s) {
-            auto req = s.recvAll;
-            assert(req.canFind("GET /"));
-            assert(req.canFind("Basic dXNlcjpwYXNz"));
+            auto req = s.recvReq;
+            assert(req.hdrs.canFind("GET /"));
+            assert(req.hdrs.canFind("Basic dXNlcjpwYXNz"));
             s.send(httpOK());
         });
 
@@ -2932,12 +2960,10 @@ struct HTTP
     unittest
     {
         testServer.handle((s) {
-            auto header = s.recvAll;
-            assert(header.canFind("POST /path"));
-            header = header.find("\r\n\r\n")[4 .. $];
-            auto req = header.empty ? s.recvAll!ubyte : cast(ubyte[])header;
-            assert(req.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
-            assert(req.canFind(cast(ubyte[])[253, 254, 255]));
+            auto req = s.recvReq!ubyte;
+            assert(req.hdrs.canFind("POST /path"));
+            assert(req.bdy.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
+            assert(req.bdy.canFind(cast(ubyte[])[253, 254, 255]));
             s.send(httpOK(cast(ubyte[])[17, 27, 35, 41]));
         });
         auto data = new ubyte[](256);
@@ -3000,7 +3026,7 @@ struct HTTP
             p.method != Method.patch)
             p.method = Method.post;
 
-        if (p.method == Method.post)
+        if (p.method == Method.post || p.method == Method.patch)
             lenOpt = CurlOption.postfieldsize_large;
         else
             lenOpt = CurlOption.infilesize_large;
@@ -3046,7 +3072,7 @@ struct HTTP
         }
     }
 
-    /** <a name="HTTP.Method"/ >The standard HTTP methods :
+    /** <a name="HTTP.Method"/>The standard HTTP methods :
      *  $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
      */
     enum Method
@@ -3868,12 +3894,12 @@ private struct CurlAPI
             enforce!CurlException(handle !is null, "Failed to load curl, tried %(%s, %).".format(names));
         }
 
-        foreach (mem; __traits(allMembers, API))
+        foreach (i, FP; typeof(API.tupleof))
         {
-            void* p = loadSym(handle, "curl_"~mem);
-
-            __traits(getMember, _api, mem) = cast(typeof(__traits(getMember, _api, mem)))
-                enforce!CurlException(p, "Couldn't load curl_"~mem~" from libcurl.");
+            enum name = __traits(identifier, _api.tupleof[i]);
+            auto p = enforce!CurlException(loadSym(handle, "curl_"~name),
+                                           "Couldn't load curl_"~name~" from libcurl.");
+            _api.tupleof[i] = cast(FP) p;
         }
 
         enforce!CurlException(!_api.global_init(CurlGlobal.all),
@@ -3921,7 +3947,7 @@ struct Curl
     alias InData = ubyte[];
     bool stopped;
 
-    private static auto ref curl() @property { return CurlAPI.instance(); }
+    private static auto ref curl() @property { return CurlAPI.instance; }
 
     // A handle should not be used by two threads simultaneously
     private CURL* handle;
@@ -3965,7 +3991,7 @@ struct Curl
         copy.stopped = false;
 
         with (CurlOption) {
-            auto tt = TypeTuple!(file, writefunction, writeheader,
+            auto tt = AliasSeq!(file, writefunction, writeheader,
                 headerfunction, infile, readfunction, ioctldata, ioctlfunction,
                 seekdata, seekfunction, sockoptdata, sockoptfunction,
                 opensocketdata, opensocketfunction, progressdata,
@@ -4023,7 +4049,7 @@ struct Curl
 
         auto msgZ = curl.easy_strerror(code);
         // doing the following (instead of just using std.conv.to!string) avoids 1 allocation
-        return format("%s on handle %s", msgZ[0 .. core.stdc.string.strlen(msgZ)], handle);
+        return format("%s on handle %s", msgZ[0 .. strlen(msgZ)], handle);
     }
 
     private void throwOnStopped(string message = null)
@@ -4131,13 +4157,6 @@ struct Curl
         if (throwOnError)
             _check(code);
         return code;
-    }
-
-    // Explicitly undocumented. It will be removed in November 2015.
-    deprecated("Pass ThrowOnError.yes or .no instead of a boolean.")
-    CurlCode perform(bool throwOnError)
-    {
-        return perform(cast(ThrowOnError)throwOnError);
     }
 
     /**

@@ -17,9 +17,16 @@ $(T2 clamp,
 $(T2 cmp,
         $(D cmp("abc", "abcd")) is $(D -1), $(D cmp("abc", "aba")) is $(D 1),
         and $(D cmp("abc", "abc")) is $(D 0).)
+$(T2 either,
+        Return first parameter $(D p) that passes an $(D if (p)) test, e.g.
+        $(D either(0, 42, 43)) returns $(D 42).)
 $(T2 equal,
         Compares ranges for element-by-element equality, e.g.
         $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns $(D true).)
+$(T2 isPermutation,
+        $(D isPermutation([1, 2], [2, 1])) returns $(D true).)
+$(T2 isSameLength,
+        $(D isSameLength([1, 2, 3], [4, 5, 6])) returns $(D true).)
 $(T2 levenshteinDistance,
         $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
         the $(LUCKY Levenshtein distance _algorithm).)
@@ -52,10 +59,11 @@ module std.algorithm.comparison;
 
 // FIXME
 import std.functional; // : unaryFun, binaryFun;
-import std.range.primitives;
+import std.range;
 import std.traits;
 // FIXME
-import std.typecons; // : tuple, Tuple;
+import std.typecons; // : tuple, Tuple, Flag;
+import std.meta : allSatisfy;
 
 /**
 Find $(D value) _among $(D values), returning the 1-based index
@@ -132,7 +140,7 @@ efficient search, but one that only supports matching on equality:
 
 @safe unittest
 {
-    import std.typetuple : TypeTuple;
+    import std.meta : AliasSeq;
 
     if (auto pos = 3.among(1, 2, 3))
         assert(pos == 3);
@@ -144,7 +152,7 @@ efficient search, but one that only supports matching on equality:
     assert(position);
     assert(position == 1);
 
-    alias values = TypeTuple!("foo", "bar", "baz");
+    alias values = AliasSeq!("foo", "bar", "baz");
     auto arr = [values];
     assert(arr[0 .. "foo".among(values)] == ["foo"]);
     assert(arr[0 .. "bar".among(values)] == ["foo", "bar"]);
@@ -169,8 +177,8 @@ efficient search, but one that only supports matching on equality:
 // in a tuple.
 private template indexOfFirstOvershadowingChoiceOnLast(choices...)
 {
-    alias firstParameterTypes = ParameterTypeTuple!(choices[0]);
-    alias lastParameterTypes = ParameterTypeTuple!(choices[$ - 1]);
+    alias firstParameterTypes = Parameters!(choices[0]);
+    alias lastParameterTypes = Parameters!(choices[$ - 1]);
 
     static if (lastParameterTypes.length == 0)
     {
@@ -252,7 +260,7 @@ auto castSwitch(choices...)(Object switchObject)
             static assert(isCallable!choice,
                     "A choice handler must be callable");
 
-            alias choiceParameterTypes = ParameterTypeTuple!choice;
+            alias choiceParameterTypes = Parameters!choice;
             static assert(choiceParameterTypes.length <= 1,
                     "A choice handler can not have more than one argument.");
 
@@ -268,7 +276,7 @@ auto castSwitch(choices...)(Object switchObject)
                 static assert(indexOfOvershadowingChoice == index,
                         "choice number %d(type %s) is overshadowed by choice number %d(type %s)".format(
                             index + 1, CastClass.stringof, indexOfOvershadowingChoice + 1,
-                            ParameterTypeTuple!(choices[indexOfOvershadowingChoice])[0].stringof));
+                            Parameters!(choices[indexOfOvershadowingChoice])[0].stringof));
 
                 if (classInfo == typeid(CastClass))
                 {
@@ -295,7 +303,7 @@ auto castSwitch(choices...)(Object switchObject)
         // Checking for derived matches:
         foreach (choice; choices)
         {
-            alias choiceParameterTypes = ParameterTypeTuple!choice;
+            alias choiceParameterTypes = Parameters!choice;
             static if (choiceParameterTypes.length == 1)
             {
                 if (auto castedObject = cast(choiceParameterTypes[0]) switchObject)
@@ -325,7 +333,7 @@ auto castSwitch(choices...)(Object switchObject)
         // Checking for null matches:
         foreach (index, choice; choices)
         {
-            static if (ParameterTypeTuple!(choice).length == 0)
+            static if (Parameters!(choice).length == 0)
             {
                 immutable indexOfOvershadowingChoice =
                     indexOfFirstOvershadowingChoiceOnLast!(choices[0..index + 1]);
@@ -655,8 +663,8 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
         {
             if (i1 == r1.length) return threeWay(i2, r2.length);
             if (i2 == r2.length) return threeWay(r1.length, i1);
-            immutable c1 = std.utf.decode(r1, i1),
-                c2 = std.utf.decode(r2, i2);
+            immutable c1 = decode(r1, i1),
+                c2 = decode(r2, i2);
             if (c1 != c2) return threeWayInt(cast(int) c1, cast(int) c2);
         }
     }
@@ -1149,7 +1157,7 @@ size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     assert(levenshteinDistance("abcde", "abcde") == 0);
     assert(levenshteinDistance("abcde", "abCde") == 1);
     assert(levenshteinDistance("kitten", "sitting") == 3);
-    assert(levenshteinDistance!((a, b) => std.uni.toUpper(a) == std.uni.toUpper(b))
+    assert(levenshteinDistance!((a, b) => toUpper(a) == toUpper(b))
         ("parks", "SPARK") == 2);
     assert(levenshteinDistance("parks".filter!"true", "spark".filter!"true") == 2);
     assert(levenshteinDistance("ID", "I♥D") == 1);
@@ -1158,6 +1166,32 @@ size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
 @safe @nogc nothrow unittest
 {
     assert(levenshteinDistance("cat"d, "rat"d) == 1);
+}
+
+// compat overload for alias this strings
+size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
+    (auto ref Range1 s, auto ref Range2 t)
+    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+{
+    import std.meta : staticMap;
+    alias Types = staticMap!(convertToString, Range1, Range2);
+    return levenshteinDistance!(equals, Types)(s, t);
+}
+
+@safe unittest
+{
+    static struct S { string s; alias s this; }
+    assert(levenshteinDistance(S("cat"), S("rat")) == 1);
+    assert(levenshteinDistance("cat", S("rat")) == 1);
+    assert(levenshteinDistance(S("cat"), "rat") == 1);
+}
+
+@safe @nogc nothrow unittest
+{
+    static struct S { dstring s; alias s this; }
+    assert(levenshteinDistance(S("cat"d), S("rat"d)) == 1);
+    assert(levenshteinDistance("cat"d, S("rat"d)) == 1);
+    assert(levenshteinDistance(S("cat"d), "rat"d) == 1);
 }
 
 /**
@@ -1176,7 +1210,7 @@ Returns:
 Allocates GC memory for the returned EditOp[] array.
 */
 Tuple!(size_t, EditOp[])
-levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
+levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (Range1 s, Range2 t)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
@@ -1204,6 +1238,25 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
     assert(levenshteinDistance("aa", "abc") == 2);
     assert(levenshteinDistance("Saturday", "Sunday") == 3);
     assert(levenshteinDistance("kitten", "sitting") == 3);
+}
+
+// compat overload for alias this strings
+Tuple!(size_t, EditOp[])
+levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
+    (auto ref Range1 s, auto ref Range2 t)
+    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+{
+    import std.meta : staticMap;
+    alias Types = staticMap!(convertToString, Range1, Range2);
+    return levenshteinDistanceAndPath!(equals, Types)(s, t);
+}
+
+@safe unittest
+{
+    static struct S { string s; alias s this; }
+    assert(levenshteinDistanceAndPath(S("cat"), S("rat"))[0] == 1);
+    assert(levenshteinDistanceAndPath("cat", S("rat"))[0] == 1);
+    assert(levenshteinDistanceAndPath(S("cat"), "rat")[0] == 1);
 }
 
 // max
@@ -1324,7 +1377,11 @@ private template MinType(T...)
 
 // min
 /**
-Returns the minimum of the passed-in values.
+Iterates the passed arguments and returns the minimum value.
+
+Params: args = The values to select the minimum from. At least two arguments
+    must be passed, and they must be comparable with `<`.
+Returns: The minimum of the passed-in values.
 */
 MinType!T min(T...)(T args)
     if (T.length >= 2)
@@ -1353,10 +1410,9 @@ MinType!T min(T...)(T args)
     return cast(typeof(return)) (chooseA ? a : b);
 }
 
+///
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int a = 5;
     short b = 6;
     double c = 2;
@@ -1366,13 +1422,15 @@ MinType!T min(T...)(T args)
     auto e = min(a, b, c);
     static assert(is(typeof(e) == double));
     assert(e == 2);
-    // mixed signedness test
+
+    // With arguments of mixed signedness, the return type is the one that can
+    // store the lowest values.
     a = -10;
     uint f = 10;
     static assert(is(typeof(min(a, f)) == int));
     assert(min(a, f) == -10);
 
-    //Test user-defined types
+    // User-defined types that support comparison with < are supported.
     import std.datetime;
     assert(min(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(1982, 1, 4));
     assert(min(Date(1982, 1, 4), Date(2012, 12, 21)) == Date(1982, 1, 4));
@@ -1564,4 +1622,424 @@ unittest
                 1, {}(), //A void return expression that doesn't throw
                 2, "two",
                 ));
+}
+
+/**
+Checks if the two ranges have the same number of elements. This function is
+optimized to always take advantage of the $(D length) member of either range
+if it exists.
+
+If both ranges have a length member, this function is $(BIGOH 1). Otherwise,
+this function is $(BIGOH min(r1.length, r2.length)).
+
+Params:
+    r1 = a finite input range
+    r2 = a finite input range
+
+Returns:
+    $(D true) if both ranges have the same length, $(D false) otherwise.
+*/
+bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
+    if (isInputRange!Range1 &&
+        isInputRange!Range2 &&
+        !isInfinite!Range1 &&
+        !isInfinite!Range2)
+{
+    static if (hasLength!(Range1) && hasLength!(Range2))
+    {
+        return r1.length == r2.length;
+    }
+    else static if (hasLength!(Range1) && !hasLength!(Range2))
+    {
+        size_t length;
+
+        while (!r2.empty)
+        {
+            r2.popFront;
+
+            if (++length > r1.length)
+            {
+                return false;
+            }
+        }
+
+        return !(length < r1.length);
+    }
+    else static if (!hasLength!(Range1) && hasLength!(Range2))
+    {
+        size_t length;
+
+        while (!r1.empty)
+        {
+            r1.popFront;
+
+            if (++length > r2.length)
+            {
+                return false;
+            }
+        }
+
+        return !(length < r2.length);
+    }
+    else
+    {
+        while (!r1.empty)
+        {
+           if (r2.empty)
+           {
+              return false;
+           }
+
+           r1.popFront;
+           r2.popFront;
+        }
+
+        return r2.empty;
+    }
+}
+
+///
+@safe nothrow pure unittest
+{
+    assert(isSameLength([1, 2, 3], [4, 5, 6]));
+    assert(isSameLength([0.3, 90.4, 23.7, 119.2], [42.6, 23.6, 95.5, 6.3]));
+    assert(isSameLength("abc", "xyz"));
+
+    int[] a;
+    int[] b;
+    assert(isSameLength(a, b));
+
+    assert(!isSameLength([1, 2, 3], [4, 5]));
+    assert(!isSameLength([0.3, 90.4, 23.7], [42.6, 23.6, 95.5, 6.3]));
+    assert(!isSameLength("abcd", "xyz"));
+}
+
+// Test CTFE
+@safe pure unittest
+{
+    enum result1 = isSameLength([1, 2, 3], [4, 5, 6]);
+    static assert(result1);
+
+    enum result2 = isSameLength([0.3, 90.4, 23.7], [42.6, 23.6, 95.5, 6.3]);
+    static assert(!result2);
+}
+
+@safe nothrow pure unittest
+{
+    import std.internal.test.dummyrange;
+
+    auto r1 = new ReferenceInputRange!int([1, 2, 3]);
+    auto r2 = new ReferenceInputRange!int([4, 5, 6]);
+    assert(isSameLength(r1, r2));
+
+    auto r3 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input) r4;
+    assert(isSameLength(r3, r4));
+
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input) r5;
+    auto r6 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    assert(isSameLength(r5, r6));
+
+    auto r7 = new ReferenceInputRange!int([1, 2]);
+    auto r8 = new ReferenceInputRange!int([4, 5, 6]);
+    assert(!isSameLength(r7, r8));
+
+    auto r9 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6, 7, 8]);
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input) r10;
+    assert(!isSameLength(r9, r10));
+
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input) r11;
+    auto r12 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6, 7, 8]);
+    assert(!isSameLength(r11, r12));
+}
+
+/// For convenience
+alias AllocateGC = Flag!"allocateGC";
+
+/**
+Checks if both ranges are permutations of each other.
+
+This function can allocate if the $(D AllocateGC.yes) flag is passed. This has
+the benefit of have better complexity than the $(D AllocateGC.no) option. However,
+this option is only available for ranges whose equality can be determined via each
+element's $(D toHash) method. If customized equality is needed, then the $(D pred)
+template parameter can be passed, and the function will automatically switch to
+the non-allocating algorithm. See $(XREF functional,binaryFun) for more details on
+how to define $(D pred).
+
+Non-allocating forward range option: $(BIGOH n^2)
+Non-allocating forward range option with custom $(D pred): $(BIGOH n^2)
+Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.length)
+
+Params:
+    pred = an optional parameter to change how equality is defined
+    allocate_gc = AllocateGC.yes/no
+    r1 = A finite forward range
+    r2 = A finite forward range
+
+Returns:
+    $(D true) if all of the elements in $(D r1) appear the same number of times in $(D r2).
+    Otherwise, returns $(D false).
+*/
+
+bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
+(Range1 r1, Range2 r2)
+    if (allocate_gc == AllocateGC.yes &&
+        isForwardRange!Range1 &&
+        isForwardRange!Range2 &&
+        !isInfinite!Range1 &&
+        !isInfinite!Range2)
+{
+    alias E1 = Unqual!(ElementType!Range1);
+    alias E2 = Unqual!(ElementType!Range2);
+
+    if (!isSameLength(r1.save, r2.save))
+    {
+        return false;
+    }
+
+    // Skip the elements at the beginning where r1.front == r2.front,
+    // they are in the same order and don't need to be counted.
+    while (!r1.empty && !r2.empty && r1.front == r2.front)
+    {
+        r1.popFront();
+        r2.popFront();
+    }
+
+    if (r1.empty && r2.empty)
+    {
+        return true;
+    }
+
+    int[CommonType!(E1, E2)] counts;
+
+    foreach (item; r1)
+    {
+        ++counts[item];
+    }
+
+    foreach (item; r2)
+    {
+        if (--counts[item] < 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/// ditto
+bool isPermutation(alias pred = "a == b", Range1, Range2)
+(Range1 r1, Range2 r2)
+    if (is(typeof(binaryFun!(pred))) &&
+        isForwardRange!Range1 &&
+        isForwardRange!Range2 &&
+        !isInfinite!Range1 &&
+        !isInfinite!Range2)
+{
+    import std.algorithm.searching : count;
+
+    alias predEquals = binaryFun!(pred);
+    alias E1 = Unqual!(ElementType!Range1);
+    alias E2 = Unqual!(ElementType!Range2);
+
+    if (!isSameLength(r1.save, r2.save))
+    {
+        return false;
+    }
+
+    // Skip the elements at the beginning where r1.front == r2.front,
+    // they are in the same order and don't need to be counted.
+    while (!r1.empty && !r2.empty && predEquals(r1.front, r2.front))
+    {
+        r1.popFront();
+        r2.popFront();
+    }
+
+    if (r1.empty && r2.empty)
+    {
+        return true;
+    }
+
+    size_t r1_count;
+    size_t r2_count;
+
+    // At each element item, when computing the count of item, scan it while
+    // also keeping track of the scanning index. If the first occurrence
+    // of item in the scanning loop has an index smaller than the current index,
+    // then you know that the element has been seen before
+    outloop: foreach (index, item; r1.save.enumerate)
+    {
+        r1_count = 0;
+        r2_count = 0;
+
+        foreach (i, e; r1.save.enumerate)
+        {
+            if (predEquals(e, item) && i < index)
+            {
+                 continue outloop;
+            }
+            else if (predEquals(e, item))
+            {
+                ++r1_count;
+            }
+        }
+
+        r2_count = r2.save.count!pred(item);
+
+        if (r1_count != r2_count)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+///
+@safe pure unittest
+{
+    assert(isPermutation([1, 2, 3], [3, 2, 1]));
+    assert(isPermutation([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
+    assert(isPermutation("abc", "bca"));
+
+    assert(!isPermutation([1, 2], [3, 4]));
+    assert(!isPermutation([1, 1, 2, 3], [1, 2, 2, 3]));
+    assert(!isPermutation([1, 1], [1, 1, 1]));
+
+    // Faster, but allocates GC handled memory
+    assert(isPermutation!(AllocateGC.yes)([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
+    assert(!isPermutation!(AllocateGC.yes)([1, 2], [3, 4]));
+}
+
+// Test @nogc inference
+@safe @nogc pure unittest
+{
+    static immutable arr1 = [1, 2, 3];
+    static immutable arr2 = [3, 2, 1];
+    assert(isPermutation(arr1, arr2));
+
+    static immutable arr3 = [1, 1, 2, 3];
+    static immutable arr4 = [1, 2, 2, 3];
+    assert(!isPermutation(arr3, arr4));
+}
+
+@safe pure unittest
+{
+    import std.internal.test.dummyrange;
+
+    auto r1 = new ReferenceForwardRange!int([1, 2, 3, 4]);
+    auto r2 = new ReferenceForwardRange!int([1, 2, 4, 3]);
+    assert(isPermutation(r1, r2));
+
+    auto r3 = new ReferenceForwardRange!int([1, 2, 3, 4]);
+    auto r4 = new ReferenceForwardRange!int([4, 2, 1, 3]);
+    assert(isPermutation!(AllocateGC.yes)(r3, r4));
+
+    auto r5 = new ReferenceForwardRange!int([1, 2, 3]);
+    auto r6 = new ReferenceForwardRange!int([4, 2, 1, 3]);
+    assert(!isPermutation(r5, r6));
+
+    auto r7 = new ReferenceForwardRange!int([4, 2, 1, 3]);
+    auto r8 = new ReferenceForwardRange!int([1, 2, 3]);
+    assert(!isPermutation!(AllocateGC.yes)(r7, r8));
+
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r9;
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r10;
+    assert(isPermutation(r9, r10));
+
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r11;
+    DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r12;
+    assert(isPermutation!(AllocateGC.yes)(r11, r12));
+
+    alias mytuple = Tuple!(int, int);
+
+    assert(isPermutation!"a[0] == b[0]"(
+        [mytuple(1, 4), mytuple(2, 5)],
+        [mytuple(2, 3), mytuple(1, 2)]
+    ));
+}
+
+/**
+Get first parameter $(D p) that passes an $(D if (unaryFun!pred(p))) test.  If
+no parameter passes the test return the last.
+
+Similar to behaviour of `or` operator in dynamic languages such as Lisp's
+`(or ...)` and Python's `a or b or ...` except that the last argument is
+returned upon no match.
+
+Simplifies logic, for instance, in parsing rules where a set of alternative
+matchers are tried. The first one that matches returns it match result,
+typically as an abstract syntax tree (AST).
+
+NOTE: Lazy parameters are currently, too restrictively, inferred by DMD to
+always throw eventhough they don't need to be. This makes it impossible to
+currently mark $(D either) as $(D nothrow). See issue at
+https://issues.dlang.org/show_bug.cgi?id=12647
+
+Returns:
+    The first parameter that passes the test $(D pred).
+*/
+CommonType!(T, Ts) either(alias pred = a => a, T, Ts...)(T first, lazy Ts alternatives)
+    if (alternatives.length >= 1 &&
+        !is(CommonType!(T, Ts) == void) &&
+        allSatisfy!(ifTestable, T, Ts))
+{
+    alias predFun = unaryFun!pred;
+
+    if (predFun(first)) return first;
+
+    foreach (e; alternatives[0 .. $ - 1])
+        if (predFun(e)) return e;
+
+    return alternatives[$ - 1];
+}
+
+///
+@safe pure unittest
+{
+    const a = 1;
+    const b = 2;
+    auto ab = either(a, b);
+    static assert(is(typeof(ab) == const(int)));
+    assert(ab == a);
+
+    auto c = 2;
+    const d = 3;
+    auto cd = either!(a => a == 3)(c, d); // use predicate
+    static assert(is(typeof(cd) == int));
+    assert(cd == d);
+
+    auto e = 0;
+    const f = 2;
+    auto ef = either(e, f);
+    static assert(is(typeof(ef) == int));
+    assert(ef == f);
+
+    immutable p = 1;
+    immutable q = 2;
+    auto pq = either(p, q);
+    static assert(is(typeof(pq) == immutable(int)));
+    assert(pq == p);
+
+    assert(either(3, 4) == 3);
+    assert(either(0, 4) == 4);
+    assert(either(0, 0) == 0);
+    assert(either("", "a") == "");
+
+    string r = null;
+    assert(either(r, "a") == "a");
+    assert(either("a", "") == "a");
+
+    immutable s = [1, 2];
+    assert(either(s, s) == s);
+
+    assert(either([0, 1], [1, 2]) == [0, 1]);
+    assert(either([0, 1], [1]) == [0, 1]);
+    assert(either("a", "b") == "a");
+
+    static assert(!__traits(compiles, either(1, "a")));
+    static assert(!__traits(compiles, either(1.0, "a")));
+    static assert(!__traits(compiles, either('a', "a")));
 }

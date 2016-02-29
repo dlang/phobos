@@ -32,7 +32,7 @@ distribution in various ways. So far the uniform distribution for
 integers and real numbers have been implemented.
 
 Upgrading:
-        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand Phobos D1 $(D rand())) can
+        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand, Phobos D1 $(D rand())) can
         be replaced with $(D uniform!uint()).
 
 Source:    $(PHOBOSSRC std/_random.d)
@@ -66,9 +66,9 @@ import std.traits;
 
 version(unittest)
 {
-    static import std.typetuple;
-    package alias PseudoRngTypes = std.typetuple.TypeTuple!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
-                                              Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+    static import std.meta;
+    package alias PseudoRngTypes = std.meta.AliasSeq!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
+                                                      Xorshift96, Xorshift128, Xorshift160, Xorshift192);
 }
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
@@ -445,21 +445,21 @@ wikipedia.org/wiki/Park%E2%80%93Miller_random_number_generator,
 generator) that uses 16807 for the multiplier. $(D MinstdRand)
 implements a variant that has slightly better spectral behavior by
 using the multiplier 48271. Both generators are rather simplistic.
-
-Example:
-
-----
-// seed with a constant
-auto rnd0 = MinstdRand0(1);
-auto n = rnd0.front; // same for each run
-// Seed with an unpredictable value
-rnd0.seed(unpredictableSeed);
-n = rnd0.front; // different across runs
-----
  */
 alias MinstdRand0 = LinearCongruentialEngine!(uint, 16807, 0, 2147483647);
 /// ditto
 alias MinstdRand = LinearCongruentialEngine!(uint, 48271, 0, 2147483647);
+
+///
+unittest
+{
+    // seed with a constant
+    auto rnd0 = MinstdRand0(1);
+    auto n = rnd0.front; // same for each run
+    // Seed with an unpredictable value
+    rnd0.seed(unpredictableSeed);
+    n = rnd0.front; // different across runs
+}
 
 unittest
 {
@@ -515,7 +515,7 @@ unittest
     assert(rnd.front == 399268537);
 
     // Check .save works
-    foreach (Type; std.typetuple.TypeTuple!(MinstdRand0, MinstdRand))
+    foreach (Type; std.meta.AliasSeq!(MinstdRand0, MinstdRand))
     {
         auto rnd1 = Type(unpredictableSeed);
         auto rnd2 = rnd1.save;
@@ -613,12 +613,6 @@ Parameters for the generator.
    Throws:
    $(D Exception) if the InputRange didn't provide enough elements to seed the generator.
    The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
-
-   Examples:
-   ----------------
-   Mt19937 gen;
-   gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
-   ----------------
  */
     void seed(T)(T range) if(isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
     {
@@ -640,6 +634,16 @@ Parameters for the generator.
         }
 
         popFront();
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm.iteration : map;
+        import std.range : repeat;
+
+        Mt19937 gen;
+        gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
     }
 
 /**
@@ -725,22 +729,22 @@ MT19937), generating uniformly-distributed 32-bit numbers with a
 period of 2 to the power of 19937. Recommended for random number
 generation unless memory is severely restricted, in which case a $(D
 LinearCongruentialEngine) would be the generator of choice.
-
-Example:
-
-----
-// seed with a constant
-Mt19937 gen;
-auto n = gen.front; // same for each run
-// Seed with an unpredictable value
-gen.seed(unpredictableSeed);
-n = gen.front; // different across runs
-----
  */
 alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
                                        0x9908b0df, 11, 7,
                                        0x9d2c5680, 15,
                                        0xefc60000, 18);
+
+///
+unittest
+{
+    // seed with a constant
+    Mt19937 gen;
+    auto n = gen.front; // same for each run
+    // Seed with an unpredictable value
+    gen.seed(unpredictableSeed);
+    n = gen.front; // different across runs
+}
 
 nothrow unittest
 {
@@ -791,7 +795,7 @@ unittest
 {
     import std.range;
     // Check .save works
-    foreach(Type; std.typetuple.TypeTuple!(Mt19937))
+    foreach(Type; std.meta.AliasSeq!(Mt19937))
     {
         auto gen1 = Type(unpredictableSeed);
         auto gen2 = gen1.save;
@@ -809,7 +813,7 @@ unittest
                                                         0x9d2c5680, 15,
                                                         0xefc60000, 18);
 
-    foreach (R; std.typetuple.TypeTuple!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
+    foreach (R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
         auto a = R();
 }
 
@@ -1024,17 +1028,6 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 /**
  * Define $(D XorshiftEngine) generators with well-chosen parameters. See each bits examples of "Xorshift RNGs".
  * $(D Xorshift) is a Xorshift128's alias because 128bits implementation is mostly used.
- *
- * Example:
- * -----
- * // Seed with a constant
- * auto rnd = Xorshift(1);
- * auto num = rnd.front;  // same for each run
- *
- * // Seed with an unpredictable value
- * rnd.seed(unpredictableSeed());
- * num = rnd.front; // different across runs
- * -----
  */
 alias Xorshift32  = XorshiftEngine!(uint, 32,  13, 17, 15) ;
 alias Xorshift64  = XorshiftEngine!(uint, 64,  10, 13, 10); /// ditto
@@ -1044,6 +1037,17 @@ alias Xorshift160 = XorshiftEngine!(uint, 160, 2,  1,  4);  /// ditto
 alias Xorshift192 = XorshiftEngine!(uint, 192, 2,  1,  4);  /// ditto
 alias Xorshift    = Xorshift128;                            /// ditto
 
+///
+unittest
+{
+    // Seed with a constant
+    auto rnd = Xorshift(1);
+    auto num = rnd.front;  // same for each run
+
+    // Seed with an unpredictable value
+    rnd.seed(unpredictableSeed);
+    num = rnd.front; // different across rnd
+}
 
 unittest
 {
@@ -1064,7 +1068,7 @@ unittest
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
     ];
 
-    alias XorshiftTypes = std.typetuple.TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+    alias XorshiftTypes = std.meta.AliasSeq!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192);
 
     foreach (I, Type; XorshiftTypes)
     {
@@ -1094,24 +1098,13 @@ unittest
  * std.random.  This can be used to confirm that a given function or
  * object is compatible with all the pseudo-random number generators
  * available.  It is enabled only in unittest mode.
- *
- * Example:
- *
- * ----
- * foreach(Rng; PseudoRngTypes)
- * {
- *     static assert(isUniformRng!Rng);
- *     auto rng = Rng(unpredictableSeed);
- *     foo(rng);
- * }
- * ----
  */
-
 unittest
 {
     foreach(Rng; PseudoRngTypes)
     {
         static assert(isUniformRNG!Rng);
+        auto rng = Rng(unpredictableSeed);
     }
 }
 
@@ -1123,36 +1116,28 @@ random number sequences every run.
 
 Returns:
 A single unsigned integer seed value, different on each successive call
-
-Example:
-
-----
-auto rnd = Random(unpredictableSeed);
-auto n = rnd.front;
-...
-----
 */
-
 @property uint unpredictableSeed() @trusted
 {
-    import core.thread : Thread, getpid, TickDuration;
+    import core.thread : Thread, getpid, MonoTime;
     static bool seeded;
     static MinstdRand0 rand;
     if (!seeded)
     {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick.length);
+        rand.seed((getpid() + threadID) ^ cast(uint) MonoTime.currTime.ticks);
         seeded = true;
     }
     rand.popFront();
-    return cast(uint) (TickDuration.currSystemTick.length ^ rand.front);
+    return cast(uint) (MonoTime.currTime.ticks ^ rand.front);
 }
 
+///
 @safe unittest
 {
-    // not much to test here
-    auto a = unpredictableSeed;
-    static assert(is(typeof(a) == uint));
+    auto rnd = Random(unpredictableSeed);
+    auto n = rnd.front;
+    static assert(is(typeof(n) == uint));
 }
 
 /**
@@ -1217,21 +1202,21 @@ Returns:
     A single random variate drawn from the _uniform distribution
     between $(D a) and $(D b), whose type is the common type of
     these parameters
-
-Example:
-
-----
-auto gen = Random(unpredictableSeed);
-// Generate an integer in [0, 1023]
-auto a = uniform(0, 1024, gen);
-// Generate a float in [0, 1$(RPAREN)
-auto a = uniform(0.0f, 1.0f, gen);
-----
  */
 auto uniform(string boundaries = "[)", T1, T2)
 (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void))
 {
     return uniform!(boundaries, T1, T2, Random)(a, b, rndGen);
+}
+
+///
+unittest
+{
+    auto gen = Random(unpredictableSeed);
+    // Generate an integer in [0, 1023]
+    auto a = uniform(0, 1024, gen);
+    // Generate a float in [0, 1)
+    auto b = uniform(0.0f, 1.0f, gen);
 }
 
 @safe unittest
@@ -1439,7 +1424,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
 
-    foreach (T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong, float, double, real))
     {
         T lo = 0, hi = 100;
@@ -1493,7 +1478,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
 
     auto reproRng = Xorshift(239842);
 
-    foreach (T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short,
+    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short,
                           ushort, int, uint, long, ulong))
     {
         T lo = T.min + 10, hi = T.max - 10;
@@ -1612,7 +1597,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 
 @safe unittest
 {
-    foreach(T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach(T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong))
     {
         T init = uniform!T();
@@ -1759,11 +1744,11 @@ body
 
 @safe unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach (UniformRNG; PseudoRngTypes)
     {
 
-        foreach (T; std.typetuple.TypeTuple!(float, double, real))
+        foreach (T; std.meta.AliasSeq!(float, double, real))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             UniformRNG rng = UniformRNG(unpredictableSeed);
 
@@ -1959,15 +1944,6 @@ Returns:
     [0, ... $(D proportions.length) - 1], with the probability
     of getting an individual index value $(D i) being proportional to
     $(D proportions[i]).
-
-Example:
-
-----
-auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
-auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
-auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 20% of the time,
-                           // and 2 10% of the time
-----
 */
 size_t dice(Rng, Num)(ref Rng rnd, Num[] proportions...)
 if (isNumeric!Num && isForwardRange!Rng)
@@ -1994,6 +1970,15 @@ size_t dice(Num)(Num[] proportions...)
 if (isNumeric!Num)
 {
     return diceImpl(rndGen, proportions);
+}
+
+///
+unittest
+{
+    auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
+    auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
+    auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 20% of the time,
+                               // and 2 10% of the time
 }
 
 private size_t diceImpl(Rng, Range)(ref Rng rng, Range proportions)
@@ -2223,7 +2208,7 @@ unittest
     import std.algorithm;
     import std.conv;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
-    foreach (UniformRNG; std.typetuple.TypeTuple!(void, PseudoRngTypes))
+    foreach (UniformRNG; std.meta.AliasSeq!(void, PseudoRngTypes))
     {
         static if (is(UniformRNG == void))
         {
@@ -2453,6 +2438,7 @@ struct RandomSample(Range, UniformRNG = void)
         return _toSelect == 0;
     }
 
+/// Ditto
     @property auto ref front()
     {
         assert(!empty);
@@ -2780,7 +2766,7 @@ unittest
 
     foreach (UniformRNG; PseudoRngTypes)
     {
-        auto rng = UniformRNG(unpredictableSeed);
+        auto rng = UniformRNG(1234);
         /* First test the most general case: randomSample of input range, with and
          * without a specified random number generator.
          */
@@ -2981,7 +2967,7 @@ unittest
             size_t count0, count1, count99;
             foreach(_; 0 .. 100_000)
             {
-                auto sample = randomSample(iota(100), 5);
+                auto sample = randomSample(iota(100), 5, &rng);
                 sample.popFront();
                 foreach(s; sample)
                 {

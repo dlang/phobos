@@ -59,95 +59,111 @@ $(BOOKTABLE ,
     )
     $(LEADINGROW Data formats)
     $(TR
-        $(TDNW
-            $(LINK2 std_base64.html, std.base64)$(BR)
-            $(LINK2 std_csv.html, std.csv)$(BR)
-            $(LINK2 std_json.html, std.json)$(BR)
-            $(LINK2 std_xml.html, std.xml)$(BR)
-            $(LINK2 std_zip.html, std.zip)$(BR)
-            $(LINK2 std_zlib.html, std.zlib)$(BR)
-        )
-        $(TD
-            Encoding / decoding Base64 format.$(BR)
-            Read Comma Separated Values and its variants from an input range of $(CODE dchar).$(BR)
-            Read/write data in JSON format.$(BR)
-            Read/write data in XML format.$(BR)
-            Read/write data in the ZIP archive format.$(BR)
-            Compress/decompress data using the zlib library.$(BR)
-        )
+        $(TDNW $(LINK2 std_base64.html, std.base64))
+        $(TD Encoding / decoding Base64 format.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_csv.html, std.csv))
+        $(TD Read Comma Separated Values and its variants from an input range of $(CODE dchar).)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_json.html, std.json))
+        $(TD Read/write data in JSON format.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_xml.html, std.xml))
+        $(TD Read/write data in XML format.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_zip.html, std.zip))
+        $(TD Read/write data in the ZIP archive format.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_zlib.html, std.zlib))
+        $(TD Compress/decompress data using the zlib library.)
     )
     $(LEADINGROW Data integrity)
     $(TR
-        $(TDNW
-            $(LINK2 std_digest_crc.html, std.digest.crc)$(BR)
-            $(LINK2 std_digest_digest.html, std.digest.digest)$(BR)
-            $(LINK2 std_digest_hmac.html, std.digest.hmac)$(BR)
-            $(LINK2 std_digest_md.html, std.digest.md)$(BR)
-            $(LINK2 std_digest_ripemd.html, std.digest.ripemd)$(BR)
-            $(LINK2 std_digest_sha.html, std.digest.sha)$(BR)
-        )
-        $(TD
-            Cyclic Redundancy Check (32-bit) implementation.$(BR)
-            Compute digests such as md5, sha1 and crc32.$(BR)
-            Compute HMAC digests of arbitrary data.$(BR)
-            Compute MD5 hash of arbitrary data.$(BR)
-            Compute RIPEMD-160 hash of arbitrary data.$(BR)
-            Compute SHA1 and SHA2 hashes of arbitrary data.$(BR)
-        )
+        $(TDNW $(LINK2 std_digest_crc.html, std.digest.crc))
+        $(TD Cyclic Redundancy Check (32-bit) implementation.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_digest_digest.html, std.digest.digest))
+        $(TD Compute digests such as md5, sha1 and crc32.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_digest_hmac.html, std.digest.hmac))
+        $(TD Compute HMAC digests of arbitrary data.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_digest_md.html, std.digest.md))
+        $(TD Compute MD5 hash of arbitrary data.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_digest_ripemd.html, std.digest.ripemd))
+        $(TD Compute RIPEMD-160 hash of arbitrary data.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_digest_sha.html, std.digest.sha))
+        $(TD Compute SHA1 and SHA2 hashes of arbitrary data.)
     )
     $(LEADINGROW Date &amp; time)
     $(TR
-        $(TDNW
-            $(LINK2 std_datetime.html, std.datetime)$(BR)
-            $(LINK2 core_time.html, core.time)
-        )
-        $(TD
-            Provides convenient access to date and time representations.$(BR)
-            Implements low-level time primitives.
-        )
+        $(TDNW $(LINK2 std_datetime.html, std.datetime))
+        $(TD Provides convenient access to date and time representations.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_time.html, core.time))
+        $(TD Implements low-level time primitives.)
     )
     $(LEADINGROW Exception handling)
     $(TR
-        $(TDNW
-            $(LINK2 std_exception.html, std.exception)$(BR)
-            $(LINK2 core_exception.html, core.exception)
-        )
-        $(TD
-            Implements routines related to exceptions.$(BR)
-            Defines built-in exception types and low-level
-            language hooks required by the compiler.
-        )
+        $(TDNW $(LINK2 std_exception.html, std.exception))
+        $(TD Implements routines related to exceptions.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_exception.html, core.exception))
+        $(TD Defines built-in exception types and low-level
+            language hooks required by the compiler.)
     )
     $(LEADINGROW External library bindings)
     $(TR
-        $(TDNW
-            $(LINK2 etc_c_curl.html, etc.c.curl)$(BR)
-            $(LINK2 etc_c_odbc_sql.html, etc.c.odbc.sql)$(BR)
-            $(LINK2 etc_c_odbc_sqlext.html, etc.c.odbc.sqlext)$(BR)
-            $(LINK2 etc_c_odbc_sqltypes.html, etc.c.odbc.sqltypes)$(BR)
-            $(LINK2 etc_c_odbc_sqlucode.html, etc.c.odbc.sqlucode)$(BR)
-            $(LINK2 etc_c_sqlite3.html, etc.c.sqlite3)$(BR)
-            $(LINK2 etc_c_zlib.html, etc.c.zlib)$(BR)
-        )
-        $(TD Various bindings to external C libraries.
-            Interface to libcurl C library.$(BR)
-            Interface to ODBC C library.$(BR)$(BR)$(BR)$(BR)
-            Interface to SQLite C library.$(BR)
-            Interface to zlib C library.$(BR)
-        )
+        $(TDNW $(LINK2 etc_c_curl.html, etc.c.curl))
+        $(TD Interface to libcurl C library.)
+    )
+    $(TR
+        $(TDNW $(LINK2 etc_c_odbc_sql.html, etc.c.odbc.sql))
+        $(TD Interface to ODBC C library.)
+    )
+    $(TR
+        $(TDNW $(LINK2 etc_c_odbc_sqlext.html, etc.c.odbc.sqlext))
+    )
+    $(TR
+        $(TDNW $(LINK2 etc_c_odbc_sqltypes.html, etc.c.odbc.sqltypes))
+    )
+    $(TR
+        $(TDNW $(LINK2 etc_c_odbc_sqlucode.html, etc.c.odbc.sqlucode))
+    )
+    $(TR
+        $(TDNW $(LINK2 etc_c_sqlite3.html, etc.c.sqlite3))
+        $(TD Interface to SQLite C library.)
+    )
+    $(TR
+        $(TDNW $(LINK2 etc_c_zlib.html, etc.c.zlib))
+        $(TD Interface to zlib C library.)
     )
     $(LEADINGROW I/O &amp; File system)
     $(TR
-        $(TDNW
-            $(LINK2 std_file.html, std.file)$(BR)
-            $(LINK2 std_path.html, std.path)$(BR)
-            $(LINK2 std_stdio.html, std.stdio)
-        )
-        $(TD
-            Manipulate files and directories.$(BR)
-            Manipulate strings that represent filesystem paths.$(BR)
-            Perform buffered I/O.
-        )
+        $(TDNW $(LINK2 std_file.html, std.file))
+        $(TD Manipulate files and directories.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_path.html, std.path))
+        $(TD Manipulate strings that represent filesystem paths.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_stdio.html, std.stdio))
+        $(TD Perform buffered I/O.)
     )
     $(LEADINGROW Interoperability)
     $(TR
@@ -182,191 +198,254 @@ $(BOOKTABLE ,
     )
     $(LEADINGROW Memory management)
     $(TR
-        $(TDNW
-            $(LINK2 core_memory.html, core.memory)$(BR)
-            $(LINK2 std_typecons.html, std.typecons)$(BR)
-        )
-        $(TD
-            Control the built-in garbage collector.$(BR)
-            Build scoped variables and reference-counted types.
-        )
+        $(TDNW $(LINK2 core_memory.html, core.memory))
+        $(TD Control the built-in garbage collector.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_typecons.html, std.typecons))
+        $(TD Build scoped variables and reference-counted types.)
     )
     $(LEADINGROW Metaprogramming)
     $(TR
-        $(TDNW
-            $(LINK2 core_attribute.html, core.attribute)$(BR)
-            $(LINK2 core_demangle.html, core.demangle)$(BR)
-            $(LINK2 std_demangle.html, std.demangle)$(BR)
-            $(LINK2 std_meta.html, std.meta)$(BR)
-            $(LINK2 std_traits.html, std.traits)$(BR)
-            $(LINK2 std_typecons.html, std.typecons)$(BR)
-        )
-        $(TD
-            Definitions of special attributes recognized by the compiler.$(BR)
-            Convert $(I mangled) D symbol identifiers to source representation.$(BR)
-            A simple wrapper around core.demangle.$(BR)
-            Construct and manipulate template argument lists (aka type lists).$(BR)
-            Extract information about types and symbols at compile time.$(BR)
-            Construct new, useful general purpose types.$(BR)
-        )
+        $(TDNW $(LINK2 core_attribute.html, core.attribute))
+        $(TD Definitions of special attributes recognized by the compiler.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_demangle.html, core.demangle))
+        $(TD Convert $(I mangled) D symbol identifiers to source representation.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_demangle.html, std.demangle))
+        $(TD A simple wrapper around core.demangle.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_meta.html, std.meta))
+        $(TD Construct and manipulate template argument lists (aka type lists).)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_traits.html, std.traits))
+        $(TD Extract information about types and symbols at compile time.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_typecons.html, std.typecons))
+        $(TD Construct new, useful general purpose types.)
     )
     $(LEADINGROW Multitasking)
     $(TR
-        $(TDNW
-            $(LINK2 std_concurrency.html, std.concurrency)$(BR)
-            $(LINK2 std_parallelism.html, std.parallelism)$(BR)
-            $(LINK2 std_process.html, std.process)$(BR)
-            $(LINK2 core_atomic.html, core.atomic)$(BR)
-            $(LINK2 core_sync_barrier.html, core.sync.barrier)$(BR)
-            $(LINK2 core_sync_condition.html, core.sync.condition)$(BR)
-            $(LINK2 core_sync_exception.html, core.sync.exception)$(BR)
-            $(LINK2 core_sync_mutex.html, core.sync.mutex)$(BR)
-            $(LINK2 core_sync_rwmutex.html, core.sync.rwmutex)$(BR)
-            $(LINK2 core_sync_semaphore.html, core.sync.semaphore)$(BR)
-            $(LINK2 core_thread.html, core.thread)$(BR)
-        )
-        $(TD
-            Low level messaging API for threads.$(BR)
-            High level primitives for SMP parallelism.$(BR)
-            Starting and manipulating processes.$(BR)
-            Basic support for lock-free concurrent programming.$(BR)
-            Synchronize the progress of a group of threads.$(BR)
-            Synchronized condition checking.$(BR)
-            Base class for synchronization exceptions.$(BR)
-            Mutex for mutually exclusive access.$(BR)
-            Shared read access and mutually exclusive write access.$(BR)
-            General use synchronization semaphore.$(BR)
-            Thread creation and management.$(BR)
-        )
+        $(TDNW $(LINK2 std_concurrency.html, std.concurrency))
+        $(TD Low level messaging API for threads.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_parallelism.html, std.parallelism))
+        $(TD High level primitives for SMP parallelism.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_process.html, std.process))
+        $(TD Starting and manipulating processes.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_atomic.html, core.atomic))
+        $(TD Basic support for lock-free concurrent programming.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_sync_barrier.html, core.sync.barrier))
+        $(TD Synchronize the progress of a group of threads.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_sync_condition.html, core.sync.condition))
+        $(TD Synchronized condition checking.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_sync_exception.html, core.sync.exception))
+        $(TD Base class for synchronization exceptions.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_sync_mutex.html, core.sync.mutex))
+        $(TD Mutex for mutually exclusive access.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_sync_rwmutex.html, core.sync.rwmutex))
+        $(TD Shared read access and mutually exclusive write access.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_sync_semaphore.html, core.sync.semaphore))
+        $(TD General use synchronization semaphore.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_thread.html, core.thread))
+        $(TD Thread creation and management.)
     )
     $(LEADINGROW Networking)
     $(TR
-        $(TDNW
-            $(LINK2 std_socket.html, std.socket)$(BR)
-            $(LINK2 std_net_curl.html, std.net.curl)$(BR)
-            $(LINK2 std_net_isemail.html, std.net.isemail)$(BR)
-            $(LINK2 std_uri.html, std.uri)$(BR)
-        )
-        $(TD
-            Socket primitives.$(BR)
-            Networking client functionality as provided by libcurl.$(BR)
-            Validates an email address according to RFCs 5321, 5322 and others.$(BR)
-            Encode and decode Uniform Resource Identifiers (URIs).$(BR)
-        )
+        $(TDNW $(LINK2 std_socket.html, std.socket))
+        $(TD Socket primitives.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_net_curl.html, std.net.curl))
+        $(TD Networking client functionality as provided by libcurl.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_net_isemail.html, std.net.isemail))
+        $(TD Validates an email address according to RFCs 5321, 5322 and others.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_uri.html, std.uri))
+        $(TD Encode and decode Uniform Resource Identifiers (URIs).)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_uuid.html, std.uuid))
+        $(TD Universally-unique identifiers for resources in distributed
+        systems.)
     )
     $(LEADINGROW Numeric)
     $(TR
-        $(TDNW
-            $(LINK2 std_bigint.html, std.bigint)$(BR)
-            $(LINK2 std_complex.html, std.complex)$(BR)
-            $(LINK2 std_math.html, std.math)$(BR)
-            $(LINK2 std_mathspecial.html, std.mathspecial)$(BR)
-            $(LINK2 std_numeric.html, std.numeric)$(BR)
-            $(LINK2 std_random.html, std.random)$(BR)
-            $(LINK2 core_checkedint.html, core.checkedint)$(BR)
-            $(LINK2 core_math.html, core.math)$(BR)
-        )
-        $(TD
-            An arbitrary-precision integer type.$(BR)
-            A complex number type.$(BR)
-            Elementary mathematical functions (powers, roots, trigonometry).$(BR)
-            Families of transcendental functions.$(BR)
-            Floating point numerics functions.$(BR)
-            Pseudo-random number generators.$(BR)
-            Range-checking integral arithmetic primitives.$(BR)
-            Built-in mathematical intrinsics.$(BR)
-        )
+        $(TDNW $(LINK2 std_bigint.html, std.bigint))
+        $(TD An arbitrary-precision integer type.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_complex.html, std.complex))
+        $(TD A complex number type.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_math.html, std.math))
+        $(TD Elementary mathematical functions (powers, roots, trigonometry).)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_mathspecial.html, std.mathspecial))
+        $(TD Families of transcendental functions.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_numeric.html, std.numeric))
+        $(TD Floating point numerics functions.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_random.html, std.random))
+        $(TD Pseudo-random number generators.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_checkedint.html, core.checkedint))
+        $(TD Range-checking integral arithmetic primitives.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_math.html, core.math))
+        $(TD Built-in mathematical intrinsics.)
     )
     $(LEADINGROW Paradigms)
     $(TR
-        $(TDNW
-            $(LINK2 std_functional.html, std.functional)$(BR)
-            $(LINK2 std_algorithm.html, std.algorithm)$(BR)
-            $(LINK2 std_signals.html, std.signals)$(BR)
-        )
-        $(TD
-            Functions that manipulate other functions.$(BR)
-            Generic algorithms for processing sequences.$(BR)
-            Signal-and-slots framework for event-driven programming.$(BR)
-        )
+        $(TDNW $(LINK2 std_functional.html, std.functional))
+        $(TD Functions that manipulate other functions.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_algorithm.html, std.algorithm))
+        $(TD Generic algorithms for processing sequences.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_signals.html, std.signals))
+        $(TD Signal-and-slots framework for event-driven programming.)
     )
     $(LEADINGROW Runtime utilities)
     $(TR
-        $(TDNW
-            $(LINK2 object.html, object)$(BR)
-            $(LINK2 std_getopt.html, std.getopt)$(BR)
-            $(LINK2 std_compiler.html, std.compiler)$(BR)
-            $(LINK2 std_system.html, std.system)$(BR)
-            $(LINK2 core_cpuid.html, core.cpuid)$(BR)
-            $(LINK2 core_memory.html, core.memory)$(BR)
-            $(LINK2 core_runtime.html, core.runtime)$(BR)
-        )
-        $(TD
-            Core language definitions. Automatically imported.$(BR)
-            Parsing of command-line arguments.$(BR)
-            Host compiler vendor string and language version.$(BR)
-            Runtime environment, such as OS type and endianness.$(BR)
-            Capabilities of the CPU the program is running on.$(BR)
-            Control the built-in garbage collector.$(BR)
-            Control and configure the D runtime.$(BR)
-        )
+        $(TDNW $(LINK2 object.html, object))
+        $(TD Core language definitions. Automatically imported.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_getopt.html, std.getopt))
+        $(TD Parsing of command-line arguments.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_compiler.html, std.compiler))
+        $(TD Host compiler vendor string and language version.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_system.html, std.system))
+        $(TD Runtime environment, such as OS type and endianness.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_cpuid.html, core.cpuid))
+        $(TD Capabilities of the CPU the program is running on.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_memory.html, core.memory))
+        $(TD Control the built-in garbage collector.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_runtime.html, core.runtime))
+        $(TD Control and configure the D runtime.)
     )
     $(LEADINGROW String manipulation)
     $(TR
-        $(TDNW
-            $(LINK2 std_string.html, std.string)$(BR)
-            $(LINK2 std_array.html, std.array)$(BR)
-            $(LINK2 std_algorithm.html, std.algorithm)$(BR)
-            $(LINK2 std_uni.html, std.uni)$(BR)
-            $(LINK2 std_utf.html, std.utf)$(BR)
-            $(LINK2 std_format.html, std.format)$(BR)
-            $(LINK2 std_path.html, std.path)$(BR)
-            $(LINK2 std_regex.html, std.regex)$(BR)
-            $(LINK2 std_ascii.html, std.ascii)$(BR)
-            $(LINK2 std_encoding.html, std.encoding)$(BR)
-            $(LINK2 std_windows_charset.html, std.windows.charset)$(BR)
-            $(LINK2 std_outbuffer.html, std.outbuffer)$(BR)
-        )
-        $(TD
-            Algorithms that work specifically with strings.$(BR)
-            Manipulate builtin arrays.$(BR)
-            Generic algorithms for processing sequences.$(BR)
-            Fundamental Unicode algorithms and data structures.$(BR)
-            Encode and decode UTF-8, UTF-16 and UTF-32 strings.$(BR)
-            Format data into strings.$(BR)
-            Manipulate strings that represent filesystem paths.$(BR)
-            Regular expressions.$(BR)
-            Routines specific to the ASCII subset of Unicode.$(BR)
-            Handle and transcode between various text encodings.$(BR)
-            Windows specific character set support.$(BR)
-            Serialize data to $(CODE ubyte) arrays.$(BR)
-        )
+        $(TDNW $(LINK2 std_string.html, std.string))
+        $(TD Algorithms that work specifically with strings.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_array.html, std.array))
+        $(TD Manipulate builtin arrays.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_algorithm.html, std.algorithm))
+        $(TD Generic algorithms for processing sequences.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_uni.html, std.uni))
+        $(TD Fundamental Unicode algorithms and data structures.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_utf.html, std.utf))
+        $(TD Encode and decode UTF-8, UTF-16 and UTF-32 strings.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_format.html, std.format))
+        $(TD Format data into strings.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_path.html, std.path))
+        $(TD Manipulate strings that represent filesystem paths.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_regex.html, std.regex))
+        $(TD Regular expressions.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_ascii.html, std.ascii))
+        $(TD Routines specific to the ASCII subset of Unicode.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_encoding.html, std.encoding))
+        $(TD Handle and transcode between various text encodings.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_windows_charset.html, std.windows.charset))
+        $(TD Windows specific character set support.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_outbuffer.html, std.outbuffer))
+        $(TD Serialize data to $(CODE ubyte) arrays.)
     )
     $(LEADINGROW Type manipulations)
     $(TR
-        $(TDNW
-            $(LINK2 std_conv.html, std.conv)$(BR)
-            $(LINK2 std_typecons.html, std.typecons)$(BR)
-            $(LINK2 std_bitmanip.html, std.bitmanip)$(BR)
-            $(LINK2 std_variant.html, std.variant)$(BR)
-            $(LINK2 core_bitop.html, core.bitop)$(BR)
-        )
-        $(TD
-            Convert types from one type to another.$(BR)
-            Type constructors for scoped variables, ref counted types, etc.$(BR)
-            High level bit level manipulation, bit arrays, bit fields.$(BR)
-            Discriminated unions and algebraic types.$(BR)
-            Low level bit manipulation.$(BR)
-        )
+        $(TDNW $(LINK2 std_conv.html, std.conv))
+        $(TD Convert types from one type to another.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_typecons.html, std.typecons))
+        $(TD Type constructors for scoped variables, ref counted types, etc.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_bitmanip.html, std.bitmanip))
+        $(TD High level bit level manipulation, bit arrays, bit fields.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_variant.html, std.variant))
+        $(TD Discriminated unions and algebraic types.)
+    )
+    $(TR
+        $(TDNW $(LINK2 core_bitop.html, core.bitop))
+        $(TD Low level bit manipulation.)
     )
     $(LEADINGROW Vector programming)
     $(TR
-        $(TDNW
-            $(LINK2 core_simd.html, core.simd)$(BR)
-        )
-        $(TD
-             SIMD intrinsics
-        )
+        $(TDNW $(LINK2 core_simd.html, core.simd))
+        $(TD SIMD intrinsics)
     )
 
 $(COMMENT
@@ -414,11 +493,9 @@ $(COMMENT
     $(TR
         $(TDNW
             $(LINK2 std_cstream.html, std.cstream)$(BR)
-            $(LINK2 std_metastrings.html, std.metastrings)$(BR)
             $(LINK2 std_mmfile.html, std.mmfile)$(BR)
             $(LINK2 std_socketstream.html, std.socketstream)$(BR)
             $(LINK2 std_stream.html, std.stream)$(BR)
-            $(LINK2 std_syserror.html, std.syserror)$(BR)
             $(LINK2 std_typetuple.html, std.typetuple)$(BR)
         )
         $(TD

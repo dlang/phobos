@@ -37,18 +37,12 @@ version(unittest)
 }
 
 
-private string myToStringx(ulong n)
-{
-    enum s = "0123456789";
-    if (n < 10)
-        return s[cast(size_t)n..cast(size_t)n+1];
-    else
-        return myToStringx(n / 10) ~ myToStringx(n % 10);
-}
-
 private string myToString(ulong n)
 {
-    return myToStringx(n) ~ (n > uint.max ? "UL" : "U");
+    import core.internal.string;
+    UnsignedStringBuf buf;
+    auto s = unsignedToTempString(n, buf);
+    return cast(string)s ~ (n > uint.max ? "UL" : "U");
 }
 
 private template createAccessors(
@@ -94,7 +88,7 @@ private template createAccessors(
             // setter
                 ~"@property void " ~ name ~ "(bool v) @safe pure nothrow @nogc { "
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
-                ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
+                ~"else "~store~" &= ~cast(typeof("~store~"))"~myToString(maskAllElse)~";}\n";
         }
         else
         {
@@ -271,7 +265,8 @@ Following arguments works the same way as $(D bitfield)'s. The bitfield must fit
 bits known to be zero because of the pointer alignment.
 
 $(RED Warning: Don't use $(D taggedPointer) with pointers to garbage collected objects, as it will result in
-undefined behaviour. See $(LINK http://dlang.org/garbage.html) for details.)
+undefined behaviour. See
+$(DDLINK spec/garbage, Garbage Collection, Garbage Collection) for details.)
 */
 
 template taggedPointer(T : T*, string name, Ts...) {
@@ -306,7 +301,8 @@ The example above creates a tagged reference to an Object in the struct A. This 
 as $(D taggedPointer), except the first argument which must be a class type instead of a pointer type.
 
 $(RED Warning: Don't use $(D taggedClassRef) with references to garbage collected objects, as it will result in
-undefined behaviour. See $(LINK http://dlang.org/garbage.html) for details.)
+undefined behaviour. See
+$(DDLINK spec/garbage, Garbage Collection, Garbage Collection) for details.)
 */
 
 template taggedClassRef(T, string name, Ts...) if(is(T == class)) {
@@ -586,6 +582,7 @@ unittest
 // Issue 12477
 unittest
 {
+    import std.algorithm : canFind;
     import std.bitmanip : bitfields;
     import core.exception : AssertError;
 
@@ -600,11 +597,11 @@ unittest
 
     try { s.a = uint.max; assert(0); }
     catch (AssertError ae)
-    { assert(ae.msg == "Value is greater than the maximum value of bitfield 'a'", ae.msg); }
+    { assert(ae.msg.canFind("Value is greater than the maximum value of bitfield 'a'"), ae.msg); }
 
     try { s.b = int.min;  assert(0); }
     catch (AssertError ae)
-    { assert(ae.msg == "Value is smaller than the minimum value of bitfield 'b'", ae.msg); }
+    { assert(ae.msg.canFind("Value is smaller than the minimum value of bitfield 'b'"), ae.msg); }
 }
 
 /**
@@ -701,28 +698,56 @@ unittest
     }
 }
 
+unittest
+{
+    // Issue #15305
+    struct S {
+            mixin(bitfields!(
+                    bool, "alice", 1,
+                    ulong, "bob", 63,
+            ));
+    }
+
+    S s;
+    s.bob = long.max - 1;
+    s.alice = false;
+    assert(s.bob == long.max - 1);
+}
+
 /**
  * An array of bits.
  */
 
 struct BitArray
 {
+    // Explicitly undocumented. They will be removed in April 2016. @@@DEPRECATED_2016-04@@@
+    deprecated("Use the constructor instead.")
+    @property void ptr(size_t* p) pure nothrow @nogc { _ptr = p; }
+    deprecated("Use .opIndex instead.")
+    @property inout(size_t)* ptr() inout pure nothrow @nogc { return _ptr; }
+
+    deprecated("Use .length instead.")
+    @property void len(size_t v) pure nothrow @nogc { _len = v; }
+    deprecated("Use .length instead.")
+    @property size_t len() const pure nothrow @nogc { return _len; }
+
+private:
+
     import std.format : FormatSpec;
     import core.bitop: bts, btr, bsf, bt;
 
-    size_t len;
-    size_t* ptr;
+    size_t _len;
+    size_t* _ptr;
     enum bitsPerSizeT = size_t.sizeof * 8;
 
-private:
     @property size_t fullWords() const @nogc pure nothrow
     {
-        return len / bitsPerSizeT;
+        return _len / bitsPerSizeT;
     }
     // Number of bits after the last full word
     @property size_t endBits() const @nogc pure nothrow
     {
-        return len % bitsPerSizeT;
+        return _len % bitsPerSizeT;
     }
     // Bit mask to extract the bits after the last full word
     @property size_t endMask() const @nogc pure nothrow
@@ -740,7 +765,7 @@ public:
      */
     @property size_t dim() const @nogc pure nothrow
     {
-        return lenToDim(len);
+        return lenToDim(_len);
     }
 
     /**********************************************
@@ -748,7 +773,7 @@ public:
      */
     @property size_t length() const @nogc pure nothrow
     {
-        return len;
+        return _len;
     }
 
     /**********************************************
@@ -759,7 +784,7 @@ public:
      */
     @property size_t length(size_t newlen) pure nothrow
     {
-        if (newlen != len)
+        if (newlen != _len)
         {
             size_t olddim = dim;
             size_t newdim = lenToDim(newlen);
@@ -767,14 +792,14 @@ public:
             if (newdim != olddim)
             {
                 // Create a fake array so we can use D's realloc machinery
-                auto b = ptr[0 .. olddim];
+                auto b = _ptr[0 .. olddim];
                 b.length = newdim;                // realloc
-                ptr = b.ptr;
+                _ptr = b.ptr;
             }
 
-            len = newlen;
+            _len = newlen;
         }
-        return len;
+        return _len;
     }
 
     /**********************************************
@@ -783,11 +808,11 @@ public:
     bool opIndex(size_t i) const @nogc pure nothrow
     in
     {
-        assert(i < len);
+        assert(i < _len);
     }
     body
     {
-        return cast(bool) bt(ptr, i);
+        return cast(bool) bt(_ptr, i);
     }
 
     unittest
@@ -811,14 +836,14 @@ public:
     bool opIndexAssign(bool b, size_t i) @nogc pure nothrow
     in
     {
-        assert(i < len);
+        assert(i < _len);
     }
     body
     {
         if (b)
-            bts(ptr, i);
+            bts(_ptr, i);
         else
-            btr(ptr, i);
+            btr(_ptr, i);
         return b;
     }
 
@@ -829,9 +854,9 @@ public:
     {
         BitArray ba;
 
-        auto b = ptr[0 .. dim].dup;
-        ba.len = len;
-        ba.ptr = b.ptr;
+        auto b = _ptr[0 .. dim].dup;
+        ba._len = _len;
+        ba._ptr = b.ptr;
         return ba;
     }
 
@@ -860,7 +885,7 @@ public:
     {
         int result;
 
-        foreach (i; 0 .. len)
+        foreach (i; 0 .. _len)
         {
             bool b = opIndex(i);
             result = dg(b);
@@ -876,7 +901,7 @@ public:
     {
         int result;
 
-        foreach (i; 0 .. len)
+        foreach (i; 0 .. _len)
         {
             bool b = opIndex(i);
             result = dg(b);
@@ -891,7 +916,7 @@ public:
     {
         int result;
 
-        foreach (i; 0 .. len)
+        foreach (i; 0 .. _len)
         {
             bool b = opIndex(i);
             result = dg(i, b);
@@ -907,7 +932,7 @@ public:
     {
         int result;
 
-        foreach (i; 0 .. len)
+        foreach (i; 0 .. _len)
         {
             bool b = opIndex(i);
             result = dg(i, b);
@@ -961,13 +986,13 @@ public:
     }
     body
     {
-        if (len >= 2)
+        if (_len >= 2)
         {
             bool t;
             size_t lo, hi;
 
             lo = 0;
-            hi = len - 1;
+            hi = _len - 1;
             for (; lo < hi; lo++, hi--)
             {
                 t = this[lo];
@@ -1005,12 +1030,12 @@ public:
     }
     body
     {
-        if (len >= 2)
+        if (_len >= 2)
         {
             size_t lo, hi;
 
             lo = 0;
-            hi = len - 1;
+            hi = _len - 1;
             while (1)
             {
                 while (1)
@@ -1063,8 +1088,8 @@ public:
     {
         if (this.length != a2.length)
             return false;
-        auto p1 = this.ptr;
-        auto p2 = a2.ptr;
+        auto p1 = this._ptr;
+        auto p2 = a2._ptr;
 
         if (p1[0..fullWords] != p2[0..fullWords])
             return false;
@@ -1111,8 +1136,8 @@ public:
         auto lesser = this.length < a2.length ? &this : &a2;
         size_t fullWords = lesser.fullWords;
         size_t endBits = lesser.endBits;
-        auto p1 = this.ptr;
-        auto p2 = a2.ptr;
+        auto p1 = this._ptr;
+        auto p2 = a2._ptr;
 
         foreach (i; 0 .. fullWords)
         {
@@ -1210,13 +1235,13 @@ public:
     size_t toHash() const @nogc pure nothrow
     {
         size_t hash = 3557;
-        auto fullBytes = len / 8;
+        auto fullBytes = _len / 8;
         foreach (i; 0 .. fullBytes)
         {
             hash *= 3559;
-            hash += (cast(byte*)this.ptr)[i];
+            hash += (cast(byte*)this._ptr)[i];
         }
-        foreach (i; 8*fullBytes .. len)
+        foreach (i; 8*fullBytes .. _len)
         {
             hash *= 3571;
             hash += this[i];
@@ -1224,17 +1249,15 @@ public:
         return hash;
     }
 
-    deprecated("Please use the constructor instead. This function will be removed in Jan 2016.")
-    /***************************************
-     * $(RED Will be deprecated in 2.068. Please use the constructor instead.)
-     */
+    // Explicitly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
+    deprecated("Use the constructor instead.")
     void init(bool[] ba) pure nothrow
     {
         this = BitArray(ba);
     }
 
-    deprecated("Please use the constructor instead. This function will be removed in Jan 2016.")
-    /// ditto
+    // Explicitly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
+    deprecated("Use the constructor instead.")
     void init(void[] v, size_t numbits) pure nothrow
     {
         this = BitArray(v, numbits);
@@ -1253,10 +1276,10 @@ public:
     }
 
     // Deliberately undocumented: raw initialization of bit array.
-    this(size_t _len, size_t* _ptr)
+    this(size_t len, size_t* ptr)
     {
-        len = _len;
-        ptr = _ptr;
+        _len = len;
+        _ptr = ptr;
     }
 
     /***************************************
@@ -1275,12 +1298,12 @@ public:
     }
     body
     {
-        ptr = cast(size_t*)v.ptr;
-        len = numbits;
+        _ptr = cast(size_t*)v.ptr;
+        _len = numbits;
         if (endBits)
         {
             // Need to mask away extraneous bits from v.
-            ptr[dim - 1] &= endMask;
+            _ptr[dim - 1] &= endMask;
         }
     }
 
@@ -1313,7 +1336,7 @@ public:
      */
     void[] opCast(T : void[])() @nogc pure nothrow
     {
-        return cast(void[])ptr[0 .. dim];
+        return cast(void[])_ptr[0 .. dim];
     }
 
     /***************************************
@@ -1321,7 +1344,7 @@ public:
      */
     size_t[] opCast(T : size_t[])() @nogc pure nothrow
     {
-        return ptr[0 .. dim];
+        return _ptr[0 .. dim];
     }
 
     unittest
@@ -1344,14 +1367,14 @@ public:
         auto dim = this.dim;
 
         BitArray result;
-        result.length = len;
+        result.length = _len;
 
-        result.ptr[0..dim] = ~this.ptr[0..dim];
+        result._ptr[0..dim] = ~this._ptr[0..dim];
 
         // Avoid putting garbage in extra bits
         // Remove once we zero on length extension
         if (endBits)
-            result.ptr[dim - 1] &= endMask;
+            result._ptr[dim - 1] &= endMask;
 
         return result;
     }
@@ -1380,24 +1403,24 @@ public:
         if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
-        assert(len == e2.length);
+        assert(_len == e2.length);
     }
     body
     {
         auto dim = this.dim;
 
         BitArray result;
-        result.length = len;
+        result.length = _len;
 
         static if (op == "-")
-            result.ptr[0..dim] = this.ptr[0..dim] & ~e2.ptr[0..dim];
+            result._ptr[0..dim] = this._ptr[0..dim] & ~e2._ptr[0..dim];
         else
-            mixin("result.ptr[0..dim] = this.ptr[0..dim]"~op~" e2.ptr[0..dim];");
+            mixin("result._ptr[0..dim] = this._ptr[0..dim]"~op~" e2._ptr[0..dim];");
 
         // Avoid putting garbage in extra bits
         // Remove once we zero on length extension
         if (endBits)
-            result.ptr[dim - 1] &= endMask;
+            result._ptr[dim - 1] &= endMask;
 
         return result;
     }
@@ -1486,27 +1509,27 @@ public:
         if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
-        assert(len == e2.length);
+        assert(_len == e2.length);
     }
     body
     {
         foreach (i; 0 .. fullWords)
         {
             static if (op == "-")
-                ptr[i] &= ~e2.ptr[i];
+                _ptr[i] &= ~e2._ptr[i];
             else
-                mixin("ptr[i] "~op~"= e2.ptr[i];");
+                mixin("_ptr[i] "~op~"= e2._ptr[i];");
         }
         if (!endBits)
             return this;
 
         size_t i = fullWords;
-        size_t endWord = ptr[i];
+        size_t endWord = _ptr[i];
         static if (op == "-")
-            endWord &= ~e2.ptr[i];
+            endWord &= ~e2._ptr[i];
         else
-            mixin("endWord "~op~"= e2.ptr[i];");
-        ptr[i] = (ptr[i] & ~endMask) | (endWord & endMask);
+            mixin("endWord "~op~"= e2._ptr[i];");
+        _ptr[i] = (_ptr[i] & ~endMask) | (endWord & endMask);
 
         return this;
     }
@@ -1609,8 +1632,8 @@ public:
 
     BitArray opCatAssign(bool b) pure nothrow
     {
-        length = len + 1;
-        this[len - 1] = b;
+        length = _len + 1;
+        this[_len - 1] = b;
         return this;
     }
 
@@ -1640,9 +1663,9 @@ public:
 
     BitArray opCatAssign(BitArray b) pure nothrow
     {
-        auto istart = len;
-        length = len + b.length;
-        for (auto i = istart; i < len; i++)
+        auto istart = _len;
+        length = _len + b.length;
+        for (auto i = istart; i < _len; i++)
             this[i] = b[i - istart];
         return this;
     }
@@ -1677,8 +1700,8 @@ public:
         BitArray r;
 
         r = this.dup;
-        r.length = len + 1;
-        r[len] = b;
+        r.length = _len + 1;
+        r[_len] = b;
         return r;
     }
 
@@ -1687,9 +1710,9 @@ public:
     {
         BitArray r;
 
-        r.length = len + 1;
+        r.length = _len + 1;
         r[0] = b;
-        foreach (i; 0 .. len)
+        foreach (i; 0 .. _len)
             r[1 + i] = this[i];
         return r;
     }
@@ -1825,16 +1848,16 @@ public:
         {
             foreach_reverse (i; 1 .. dim - wordsToShift)
             {
-                ptr[i + wordsToShift] = rollLeft(ptr[i], ptr[i-1],
+                _ptr[i + wordsToShift] = rollLeft(_ptr[i], _ptr[i-1],
                                                  bitsToShift);
             }
-            ptr[wordsToShift] = rollLeft(ptr[0], 0, bitsToShift);
+            _ptr[wordsToShift] = rollLeft(_ptr[0], 0, bitsToShift);
         }
 
         import std.algorithm : min;
         foreach (i; 0 .. min(wordsToShift, dim))
         {
-            ptr[i] = 0;
+            _ptr[i] = 0;
         }
     }
 
@@ -1859,8 +1882,8 @@ public:
         {
             foreach (i; 0 .. dim - wordsToShift - 1)
             {
-                ptr[i] = rollRight(ptr[i + wordsToShift + 1],
-                                   ptr[i + wordsToShift], bitsToShift);
+                _ptr[i] = rollRight(_ptr[i + wordsToShift + 1],
+                                   _ptr[i + wordsToShift], bitsToShift);
             }
         }
 
@@ -1868,14 +1891,14 @@ public:
         // end of the array.
         if (wordsToShift < dim)
         {
-            ptr[dim - wordsToShift - 1] = rollRight(0, ptr[dim - 1] & endMask,
+            _ptr[dim - wordsToShift - 1] = rollRight(0, _ptr[dim - 1] & endMask,
                                                     bitsToShift);
         }
 
         import std.algorithm : min;
         foreach (i; 0 .. min(wordsToShift, dim))
         {
-            ptr[dim - i - 1] = 0;
+            _ptr[dim - i - 1] = 0;
         }
     }
 
@@ -2008,8 +2031,8 @@ public:
         import std.range : iota;
 
         return iota(dim).
-               filter!(i => ptr[i])().
-               map!(i => BitsSet!size_t(ptr[i], i * bitsPerSizeT))().
+               filter!(i => _ptr[i])().
+               map!(i => BitsSet!size_t(_ptr[i], i * bitsPerSizeT))().
                joiner();
     }
 
@@ -2056,22 +2079,22 @@ public:
         if (!length)
             return;
 
-        auto leftover = len % 8;
+        auto leftover = _len % 8;
         foreach (idx; 0 .. leftover)
         {
             char[1] res = cast(char)(this[idx] + '0');
             sink.put(res[]);
         }
 
-        if (leftover && len > 8)
+        if (leftover && _len > 8)
             sink.put("_");
 
         size_t count;
-        foreach (idx; leftover .. len)
+        foreach (idx; leftover .. _len)
         {
             char[1] res = cast(char)(this[idx] + '0');
             sink.put(res[]);
-            if (++count == 8 && idx != len - 1)
+            if (++count == 8 && idx != _len - 1)
             {
                 sink.put("_");
                 count = 0;
@@ -2082,11 +2105,11 @@ public:
     private void formatBitArray(scope void delegate(const(char)[]) sink) const
     {
         sink("[");
-        foreach (idx; 0 .. len)
+        foreach (idx; 0 .. _len)
         {
             char[1] res = cast(char)(this[idx] + '0');
             sink(res[]);
-            if (idx+1 < len)
+            if (idx+1 < _len)
                 sink(", ");
         }
         sink("]");
@@ -2166,8 +2189,8 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
+    import std.meta;
+    foreach(T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
         T val;
@@ -2282,9 +2305,9 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
-                          char, wchar, dchar
+    import std.meta;
+    foreach(T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                         char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
          * using a bit compare. There are two kinds of nans, quiet and signaling.
          * When a nan passes through the x87, it converts signaling to quiet.
@@ -2456,10 +2479,10 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
-                          char, wchar, dchar/*,
-                          float, double*/))
+    import std.meta;
+    foreach(T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                         char, wchar, dchar/*,
+                         float, double*/))
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
         T val;
@@ -2586,8 +2609,8 @@ private template isFloatOrDouble(T)
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(float, double))
+    import std.meta;
+    foreach(T; AliasSeq!(float, double))
     {
         static assert(isFloatOrDouble!(T));
         static assert(isFloatOrDouble!(const T));
@@ -2615,9 +2638,9 @@ private template canSwapEndianness(T)
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(bool, ubyte, byte, ushort, short, uint, int, ulong,
-                          long, char, wchar, dchar, float, double))
+    import std.meta;
+    foreach(T; AliasSeq!(bool, ubyte, byte, ushort, short, uint, int, ulong,
+                         long, char, wchar, dchar, float, double))
     {
         static assert(canSwapEndianness!(T));
         static assert(canSwapEndianness!(const T));
@@ -2628,7 +2651,7 @@ unittest
     }
 
     //!
-    foreach(T; TypeTuple!(real, string, wstring, dstring))
+    foreach(T; AliasSeq!(real, string, wstring, dstring))
     {
         static assert(!canSwapEndianness!(T));
         static assert(!canSwapEndianness!(const T));
@@ -3706,11 +3729,11 @@ unittest
 {
     import std.format : format;
     import std.array;
-    import std.typetuple;
-    foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
+    import std.meta;
+    foreach(endianness; AliasSeq!(Endian.bigEndian, Endian.littleEndian))
     {
         auto toWrite = appender!(ubyte[])();
-        alias Types = TypeTuple!(uint, int, long, ulong, short, ubyte, ushort, byte, uint);
+        alias Types = AliasSeq!(uint, int, long, ulong, short, ubyte, ushort, byte, uint);
         ulong[] values = [42, -11, long.max, 1098911981329L, 16, 255, 19012, 2, 17];
         assert(Types.length == values.length);
 
@@ -3753,21 +3776,8 @@ private uint countTrailingZeros(T)(T value) @nogc pure nothrow
     // bsf doesn't give the correct result for 0.
     if (!value)
         return 8 * T.sizeof;
-
-    static if (T.sizeof == 8 && size_t.sizeof == 4)
-    {
-        // bsf's parameter is size_t, so it doesn't work with 64-bit integers
-        // on a 32-bit machine. For this case, we call bsf on each 32-bit half.
-        uint lower = cast(uint)value;
-        if (lower)
-            return bsf(lower);
-        value >>>= 32;
-        return 32 + bsf(cast(uint)value);
-    }
     else
-    {
         return bsf(value);
-    }
 }
 
 ///
@@ -3781,8 +3791,8 @@ unittest
 
 unittest
 {
-    import std.typetuple;
-    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    import std.meta;
+    foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(countTrailingZeros(cast(T)0) == 8 * T.sizeof);
         assert(countTrailingZeros(cast(T)1) == 0);
@@ -3862,8 +3872,8 @@ unittest
 
 unittest
 {
-    import std.typetuple;
-    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    import std.meta;
+    foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(countBitsSet(cast(T)0) == 0);
         assert(countBitsSet(cast(T)1) == 1);
@@ -3963,8 +3973,8 @@ unittest
     import std.algorithm : equal;
     import std.range: iota;
 
-    import std.typetuple;
-    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    import std.meta;
+    foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(bitsSet(cast(T)0).empty);
         assert(bitsSet(cast(T)1).equal([0]));

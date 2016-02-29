@@ -119,7 +119,7 @@ SRC_STD_3= std\csv.d std\complex.d std\numeric.d std\bigint.d
 SRC_STD_3c= std\datetime.d std\bitmanip.d std\typecons.d
 
 SRC_STD_3a= std\uni.d std\base64.d std\ascii.d \
-	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
+	std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
 SRC_STD_3b= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\encoding.d std\xml.d \
@@ -148,11 +148,32 @@ SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogge
 	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
+SRC_STD_ALLOC_BB= std\experimental\allocator\building_blocks\affix_allocator.d \
+	std\experimental\allocator\building_blocks\allocator_list.d \
+	std\experimental\allocator\building_blocks\bitmapped_block.d \
+	std\experimental\allocator\building_blocks\bucketizer.d \
+	std\experimental\allocator\building_blocks\fallback_allocator.d \
+	std\experimental\allocator\building_blocks\free_list.d \
+	std\experimental\allocator\building_blocks\free_tree.d \
+	std\experimental\allocator\building_blocks\kernighan_ritchie.d \
+	std\experimental\allocator\building_blocks\null_allocator.d \
+	std\experimental\allocator\building_blocks\quantizer.d \
+	std\experimental\allocator\building_blocks\region.d \
+	std\experimental\allocator\building_blocks\scoped_allocator.d \
+	std\experimental\allocator\building_blocks\segregator.d \
+	std\experimental\allocator\building_blocks\stats_collector.d \
+	std\experimental\allocator\building_blocks\package.d
+
+SRC_STD_ALLOC= std\experimental\allocator\common.d std\experimental\allocator\gc_allocator.d \
+	std\experimental\allocator\mallocator.d std\experimental\allocator\mmap_allocator.d \
+	std\experimental\allocator\showcase.d std\experimental\allocator\typed.d \
+	std\experimental\allocator\package.d \
+	$(SRC_STD_ALLOC_BB)
+
 SRC_STD_5a=$(SRC_STD_ALGO_1)
 SRC_STD_5b=$(SRC_STD_ALGO_2)
 
 SRC_STD_6a=std\variant.d
-SRC_STD_6b=std\syserror.d
 SRC_STD_6c=std\zlib.d
 SRC_STD_6d=std\stream.d
 SRC_STD_6e=std\socket.d
@@ -172,7 +193,6 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_math) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_3c) $(SRC_STD_4) \
 	$(SRC_STD_6a) \
-	$(SRC_STD_6b) \
 	$(SRC_STD_6c) \
 	$(SRC_STD_6d) \
 	$(SRC_STD_6e) \
@@ -182,7 +202,8 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_6i) \
 	$(SRC_STD_6j) \
 	$(SRC_STD_7) \
-	$(SRC_STD_LOGGER)
+	$(SRC_STD_LOGGER) \
+	$(SRC_STD_ALLOC)
 
 SRC=	unittest.d index.d
 
@@ -190,8 +211,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
-	std\meta.d std\metastrings.d std\mmfile.d \
-	std\syserror.d \
+	std\meta.d std\mmfile.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
@@ -211,6 +231,12 @@ SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\pa
 
 SRC_STD_RANGE= std\range\package.d std\range\primitives.d \
 	std\range\interfaces.d
+
+SRC_STD_NDSLICE= std\experimental\ndslice\package.d \
+	std\experimental\ndslice\iteration.d \
+	std\experimental\ndslice\selection.d \
+	std\experimental\ndslice\slice.d \
+	std\experimental\ndslice\internal.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -266,6 +292,7 @@ SRC_TO_COMPILE_NOT_STD= \
 SRC_TO_COMPILE= $(SRC_STD_ALL) \
 	$(SRC_STD_ALGO) \
 	$(SRC_STD_RANGE) \
+	$(SRC_STD_NDSLICE) \
 	$(SRC_TO_COMPILE_NOT_STD)
 
 SRC_ZLIB= \
@@ -405,6 +432,31 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_experimental_logger_multilogger.html \
 	$(DOC)\std_experimental_logger_nulllogger.html \
 	$(DOC)\std_experimental_logger.html \
+	$(DOC)\std_experimental_allocator_building_blocks_affix_allocator.html \
+	$(DOC)\std_experimental_allocator_building_blocks_allocator_list.html \
+	$(DOC)\std_experimental_allocator_building_blocks_bitmapped_block.html \
+	$(DOC)\std_experimental_allocator_building_blocks_bucketizer.html \
+	$(DOC)\std_experimental_allocator_building_blocks_fallback_allocator.html \
+	$(DOC)\std_experimental_allocator_building_blocks_free_list.html \
+	$(DOC)\std_experimental_allocator_building_blocks_free_tree.html \
+	$(DOC)\std_experimental_allocator_building_blocks_kernighan_ritchie.html \
+	$(DOC)\std_experimental_allocator_building_blocks_null_allocator.html \
+	$(DOC)\std_experimental_allocator_building_blocks_quantizer.html \
+	$(DOC)\std_experimental_allocator_building_blocks_region.html \
+	$(DOC)\std_experimental_allocator_building_blocks_scoped_allocator.html \
+	$(DOC)\std_experimental_allocator_building_blocks_segregator.html \
+	$(DOC)\std_experimental_allocator_building_blocks_stats_collector.html \
+	$(DOC)\std_experimental_allocator_building_blocks.html \
+	$(DOC)\std_experimental_allocator_common.html \
+	$(DOC)\std_experimental_allocator_gc_allocator.html \
+	$(DOC)\std_experimental_allocator_mmap_allocator.html \
+	$(DOC)\std_experimental_allocator_showcase.html \
+	$(DOC)\std_experimental_allocator_typed.html \
+	$(DOC)\std_experimental_allocator.html \
+	$(DOC)\std_experimental_ndslice_iteration.html \
+	$(DOC)\std_experimental_ndslice_selection.html \
+	$(DOC)\std_experimental_ndslice_slice.html \
+	$(DOC)\std_experimental_ndslice.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -445,7 +497,6 @@ UNITTEST_OBJS= \
 		unittest5a.obj \
 		unittest5b.obj \
 		unittest6a.obj \
-		unittest6b.obj \
 		unittest6c.obj \
 		unittest6d.obj \
 		unittest6e.obj \
@@ -460,6 +511,7 @@ UNITTEST_OBJS= \
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_NDSLICE)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittestM.obj $(SRC_STD_math)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3.obj $(SRC_STD_3)
@@ -470,7 +522,6 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5a.obj $(SRC_STD_5a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_5b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6b.obj $(SRC_STD_6b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6d.obj $(SRC_STD_6d)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6e.obj $(SRC_STD_6e)
@@ -805,6 +856,99 @@ $(DOC)\std_experimental_logger_nulllogger.html : $(STDDOC) std\experimental\logg
 $(DOC)\std_experimental_logger.html : $(STDDOC) std\experimental\logger\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger.html $(STDDOC) std\experimental\logger\package.d
 
+$(DOC)\std_experimental_allocator_building_blocks_affix_allocator.html : $(STDDOC) std\experimental\allocator\building_blocks\affix_allocator.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_affix_allocator.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\affix_allocator.d
+
+$(DOC)\std_experimental_allocator_building_blocks_allocator_list.html : $(STDDOC) std\experimental\allocator\building_blocks\allocator_list.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_allocator_list.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\allocator_list.d
+
+$(DOC)\std_experimental_allocator_building_blocks_bitmapped_block.html : $(STDDOC) std\experimental\allocator\building_blocks\bitmapped_block.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_bitmapped_block.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\bitmapped_block.d
+
+$(DOC)\std_experimental_allocator_building_blocks_bucketizer.html : $(STDDOC) std\experimental\allocator\building_blocks\bucketizer.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_bucketizer.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\bucketizer.d
+
+$(DOC)\std_experimental_allocator_building_blocks_fallback_allocator.html : $(STDDOC) std\experimental\allocator\building_blocks\fallback_allocator.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_fallback_allocator.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\fallback_allocator.d
+
+$(DOC)\std_experimental_allocator_building_blocks_free_list.html : $(STDDOC) std\experimental\allocator\building_blocks\free_list.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_free_list.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\free_list.d
+
+$(DOC)\std_experimental_allocator_building_blocks_free_tree.html : $(STDDOC) std\experimental\allocator\building_blocks\free_tree.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_free_tree.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\free_tree.d
+
+$(DOC)\std_experimental_allocator_building_blocks_kernighan_ritchie.html : $(STDDOC) std\experimental\allocator\building_blocks\kernighan_ritchie.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_kernighan_ritchie.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\kernighan_ritchie.d
+
+$(DOC)\std_experimental_allocator_building_blocks_null_allocator.html : $(STDDOC) std\experimental\allocator\building_blocks\null_allocator.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_null_allocator.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\null_allocator.d
+
+$(DOC)\std_experimental_allocator_building_blocks_quantizer.html : $(STDDOC) std\experimental\allocator\building_blocks\quantizer.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_quantizer.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\quantizer.d
+
+$(DOC)\std_experimental_allocator_building_blocks_region.html : $(STDDOC) std\experimental\allocator\building_blocks\region.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_region.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\region.d
+
+$(DOC)\std_experimental_allocator_building_blocks_scoped_allocator.html : $(STDDOC) std\experimental\allocator\building_blocks\scoped_allocator.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_scoped_allocator.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\scoped_allocator.d
+
+$(DOC)\std_experimental_allocator_building_blocks_segregator.html : $(STDDOC) std\experimental\allocator\building_blocks\segregator.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_segregator.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\segregator.d
+
+$(DOC)\std_experimental_allocator_building_blocks_stats_collector.html : $(STDDOC) std\experimental\allocator\building_blocks\stats_collector.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks_stats_collector.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\stats_collector.d
+
+$(DOC)\std_experimental_allocator_building_blocks.html : $(STDDOC) std\experimental\allocator\building_blocks\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_building_blocks.html \
+		$(STDDOC) std\experimental\allocator\building_blocks\package.d
+
+$(DOC)\std_experimental_allocator_common.html : $(STDDOC) std\experimental\allocator\common.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_common.html $(STDDOC) std\experimental\allocator\common.d
+
+$(DOC)\std_experimental_allocator_gc_allocator.html : $(STDDOC) std\experimental\allocator\gc_allocator.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_gc_allocator.html $(STDDOC) std\experimental\allocator\gc_allocator.d
+
+$(DOC)\std_experimental_allocator_mallocator.html : $(STDDOC) std\experimental\allocator\mallocator.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_mallocator.html $(STDDOC) std\experimental\allocator\mallocator.d
+
+$(DOC)\std_experimental_allocator_mmap_allocator.html : $(STDDOC) std\experimental\allocator\mmap_allocator.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_mmap_allocator.html $(STDDOC) std\experimental\allocator\mmap_allocator.d
+
+$(DOC)\std_experimental_allocator_showcase.html : $(STDDOC) std\experimental\allocator\showcase.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_showcase.html $(STDDOC) std\experimental\allocator\showcase.d
+
+$(DOC)\std_experimental_allocator_typed.html : $(STDDOC) std\experimental\allocator\typed.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator_typed.html $(STDDOC) std\experimental\allocator\typed.d
+
+$(DOC)\std_experimental_allocator.html : $(STDDOC) std\experimental\allocator\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator.html $(STDDOC) std\experimental\allocator\package.d
+
+$(DOC)\std_experimental_ndslice_iteration.html : $(STDDOC) std\experimental\ndslice\iteration.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_iteration.html $(STDDOC) std\experimental\ndslice\iteration.d
+
+$(DOC)\std_experimental_ndslice_selection.html : $(STDDOC) std\experimental\ndslice\selection.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_selection.html $(STDDOC) std\experimental\ndslice\selection.d
+
+$(DOC)\std_experimental_ndslice_slice.html : $(STDDOC) std\experimental\ndslice\slice.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_slice.html $(STDDOC) std\experimental\ndslice\slice.d
+
+$(DOC)\std_experimental_ndslice.html : $(STDDOC) std\experimental\ndslice\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice.html $(STDDOC) std\experimental\ndslice\package.d
+
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d
 
@@ -888,42 +1032,15 @@ $(DOC)\etc_c_odbc_sql.html : $(STDDOC) etc\c\odbc\sql.d
 
 ######################################################
 
-zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
-	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
-	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
-	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_ALGO) \
-	$(SRC_STD_LOGGER)
+zip:
 	del phobos.zip
-	zip32 -u phobos win32.mak win64.mak posix.mak osmodel.mak $(STDDOC)
-	zip32 -u phobos $(SRC)
-	zip32 -u phobos $(SRC_STD)
-	zip32 -u phobos $(SRC_STD_C)
-	zip32 -u phobos $(SRC_STD_WIN)
-	zip32 -u phobos $(SRC_STD_C_WIN)
-	zip32 -u phobos $(SRC_STD_C_LINUX)
-	zip32 -u phobos $(SRC_STD_C_OSX)
-	zip32 -u phobos $(SRC_STD_C_FREEBSD)
-	zip32 -u phobos $(SRC_STD_INTERNAL)
-	zip32 -u phobos $(SRC_STD_INTERNAL_DIGEST)
-	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
-	zip32 -u phobos $(SRC_STD_INTERNAL_WINDOWS)
-	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
-	zip32 -u phobos $(SRC_ZLIB)
-	zip32 -u phobos $(SRC_STD_NET)
-	zip32 -u phobos $(SRC_STD_LOGGER)
-	zip32 -u phobos $(SRC_STD_DIGEST)
-	zip32 -u phobos $(SRC_STD_CONTAINER)
-	zip32 -u phobos $(SRC_STD_REGEX)
-	zip32 -u phobos $(SRC_STD_RANGE)
-	zip32 -u phobos $(SRC_STD_ALGO)
+	zip32 -r phobos.zip . -x .git\* -x \*.lib -x \*.obj
 
 phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	$(MAKE) -f win$(MODEL).mak clean
+	$(MAKE) -f win64.mak MODEL=$(MODEL) clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe

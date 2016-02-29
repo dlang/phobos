@@ -65,7 +65,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.functional;
 
-import std.traits, std.typetuple;
+import std.meta, std.traits;
 
 
 private template needOpCallAlias(alias fun)
@@ -87,10 +87,10 @@ private template needOpCallAlias(alias fun)
      */
     static if (is(typeof(fun.opCall) == function))
     {
-        import std.traits : ParameterTypeTuple;
+        import std.traits : Parameters;
 
         enum needOpCallAlias = !is(typeof(fun)) && __traits(compiles, () {
-            return fun(ParameterTypeTuple!fun.init);
+            return fun(Parameters!fun.init);
         });
     }
     else
@@ -110,7 +110,7 @@ template unaryFun(alias fun, string parmName = "a")
     {
         static if (!fun._ctfeMatchUnary(parmName))
         {
-            import std.traits, std.typecons, std.typetuple;
+            import std.traits, std.typecons, std.meta;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         }
         auto unaryFun(ElementType)(auto ref ElementType __a)
@@ -138,13 +138,6 @@ unittest
     assert(isEven(2) && !isEven(1));
 }
 
-/+ Undocumented, will be removed December 2014+/
-deprecated("Parameter byRef is obsolete. Please call unaryFun!(fun, parmName) directly.")
-template unaryFun(alias fun, bool byRef, string parmName = "a")
-{
-    alias unaryFun = unaryFun!(fun, parmName);
-}
-
 unittest
 {
     static int f1(int a) { return a + 1; }
@@ -157,7 +150,7 @@ unittest
     //assert(unaryFun!("return a + 1;")(41) == 42);
 
     int num = 41;
-    assert(unaryFun!("a + 1", true)(num) == 42);
+    assert(unaryFun!"a + 1"(num) == 42);
 
     // Issue 9906
     struct Seen
@@ -202,7 +195,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     {
         static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
         {
-            import std.traits, std.typecons, std.typetuple;
+            import std.traits, std.typecons, std.meta;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         }
         auto binaryFun(ElementType1, ElementType2)
@@ -490,6 +483,7 @@ unittest //check user defined types
 */
 alias lessThan = safeOp!"<";
 
+///
 pure @safe @nogc nothrow unittest
 {
     assert(lessThan(2, 3));
@@ -510,6 +504,7 @@ pure @safe @nogc nothrow unittest
 */
 alias greaterThan = safeOp!">";
 
+///
 unittest
 {
     assert(!greaterThan(2, 3));
@@ -530,6 +525,7 @@ unittest
 */
 alias equalTo = safeOp!"==";
 
+///
 unittest
 {
     assert(equalTo(0U, 0));
@@ -549,6 +545,7 @@ template reverseArgs(alias pred)
     }
 }
 
+///
 unittest
 {
     alias gt = reverseArgs!(binaryFun!("a < b"));
@@ -559,15 +556,27 @@ unittest
     foo(4, 5);
     alias zyx = reverseArgs!(foo);
     assert(zyx(5, 4) == foo(4, 5));
+}
 
+///
+unittest
+{
     int abc(int a, int b, int c) { return a * b + c; }
     alias cba = reverseArgs!abc;
     assert(abc(91, 17, 32) == cba(32, 17, 91));
+}
 
+///
+unittest
+{
     int a(int a) { return a * 2; }
     alias _a = reverseArgs!a;
     assert(a(2) == _a(2));
+}
 
+///
+unittest
+{
     int b() { return 4; }
     alias _b = reverseArgs!b;
     assert(b() == _b());
@@ -586,10 +595,16 @@ template binaryReverseArgs(alias pred)
     }
 }
 
+///
 unittest
 {
     alias gt = binaryReverseArgs!(binaryFun!("a < b"));
     assert(gt(2, 1) && !gt(1, 1));
+}
+
+///
+unittest
+{
     int x = 42;
     bool xyz(int a, int b) { return a * x < b / x; }
     auto foo = &xyz;
@@ -657,7 +672,7 @@ template partial(alias fun, alias arg)
 {
     static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
     {
-        ReturnType!fun partial(ParameterTypeTuple!fun[1..$] args2)
+        ReturnType!fun partial(Parameters!fun[1..$] args2)
         {
             return fun(arg, args2);
         }
@@ -687,10 +702,7 @@ template partial(alias fun, alias arg)
     }
 }
 
-/**
-Deprecated alias for $(D partial), kept for backwards compatibility
- */
-
+// Explicitly undocumented. It will be removed in March 2016. @@@DEPRECATED_2016-03@@@
 deprecated("Please use std.functional.partial instead")
 alias curry = partial;
 
@@ -856,7 +868,7 @@ unittest
 
 unittest
 {
-    import std.typetuple : staticMap;
+    import std.meta : staticMap;
     import std.typecons : Tuple, tuple;
     alias funs = staticMap!(unaryFun, "a", "a * 2", "a * 3", "a * a", "-a");
     alias afun = adjoin!funs;
@@ -974,11 +986,11 @@ is useful to memoize an impure function, too.
 */
 template memoize(alias fun)
 {
-    // alias Args = ParameterTypeTuple!fun; // Bugzilla 13580
+    // alias Args = Parameters!fun; // Bugzilla 13580
 
-    ReturnType!fun memoize(ParameterTypeTuple!fun args)
+    ReturnType!fun memoize(Parameters!fun args)
     {
-        alias Args = ParameterTypeTuple!fun;
+        alias Args = Parameters!fun;
         import std.typecons : Tuple;
 
         static ReturnType!fun[Tuple!Args] memo;
@@ -992,11 +1004,11 @@ template memoize(alias fun)
 /// ditto
 template memoize(alias fun, uint maxSize)
 {
-    // alias Args = ParameterTypeTuple!fun; // Bugzilla 13580
-    ReturnType!fun memoize(ParameterTypeTuple!fun args)
+    // alias Args = Parameters!fun; // Bugzilla 13580
+    ReturnType!fun memoize(Parameters!fun args)
     {
         import std.typecons : tuple;
-        static struct Value { ParameterTypeTuple!fun args; ReturnType!fun res; }
+        static struct Value { Parameters!fun args; ReturnType!fun res; }
         static Value[] memo;
         static size_t[] initialized;
 
@@ -1159,7 +1171,7 @@ private struct DelegateFaker(F)
      *--------------------
      * struct DelegateFaker(F) {
      *     extern(linkage)
-     *     [ref] ReturnType!F doIt(ParameterTypeTuple!F args) [@attributes]
+     *     [ref] ReturnType!F doIt(Parameters!F args) [@attributes]
      *     {
      *         auto fp = cast(F) &this;
      *         return fp(args);
@@ -1179,7 +1191,7 @@ private struct DelegateFaker(F)
         template generateFunctionBody(unused...)
         {
             enum generateFunctionBody =
-            // [ref] ReturnType doIt(ParameterTypeTuple args) @attributes
+            // [ref] ReturnType doIt(Parameters args) @attributes
             q{
                 // When this function gets called, the this pointer isn't
                 // really a this pointer (no instance even really exists), but
@@ -1203,7 +1215,7 @@ private struct DelegateFaker(F)
  * Convert a callable to a delegate with the same parameter list and
  * return type, avoiding heap allocations and use of auxiliary storage.
  *
- * Examples:
+ * Example:
  * ----
  * void doStuff() {
  *     writeln("Hello, world.");
@@ -1362,7 +1374,7 @@ Forwards function arguments with saving ref-ness.
 */
 template forward(args...)
 {
-    import std.typetuple;
+    import std.meta;
 
     static if (args.length)
     {
@@ -1373,10 +1385,10 @@ template forward(args...)
             alias fwd = arg;
         else
             @property fwd()(){ return move(arg); }
-        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
+        alias forward = AliasSeq!(fwd, forward!(args[1..$]));
     }
     else
-        alias forward = TypeTuple!();
+        alias forward = AliasSeq!();
 }
 
 ///

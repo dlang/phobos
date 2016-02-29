@@ -82,25 +82,6 @@ public enum CustomFloatFlags
     none = 0
 }
 
-// 64-bit version of core.bitop.bsr
-private int bsr64(ulong value)
-{
-    import core.bitop : bsr;
-
-    union Ulong
-    {
-        ulong raw;
-        struct
-        {
-            uint low;
-            uint high;
-        }
-    }
-    Ulong v;
-    v.raw = value;
-    return v.high==0 ? core.bitop.bsr(v.low) : core.bitop.bsr(v.high) + 32;
-}
-
 private template CustomFloatParams(uint bits)
 {
     enum CustomFloatFlags flags = CustomFloatFlags.ieee
@@ -114,9 +95,9 @@ private template CustomFloatParams(uint bits)
 
 private template CustomFloatParams(uint precision, uint exponentWidth, CustomFloatFlags flags)
 {
-    import std.typetuple : TypeTuple;
+    import std.meta : AliasSeq;
     alias CustomFloatParams =
-        TypeTuple!(
+        AliasSeq!(
             precision,
             exponentWidth,
             flags,
@@ -175,7 +156,7 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
         precision + exponentWidth > 0)
 {
     import std.bitmanip;
-    import std.typetuple;
+    import std.meta;
 private:
     // get the correct unsigned bitfield type to support > 32 bits
     template uType(uint bits)
@@ -264,7 +245,8 @@ private:
         {
             if(sig > 0)
             {
-                auto shift2 = precision - bsr64(sig);
+                import core.bitop : bsr;
+                auto shift2 = precision - bsr(sig);
                 exp  -= shift2-1;
                 shift += shift2;
             }
@@ -631,9 +613,9 @@ public:
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     alias FPTypes =
-        TypeTuple!(
+        AliasSeq!(
             CustomFloat!(5, 10),
             CustomFloat!(5, 11, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
             CustomFloat!(1, 15, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
@@ -1448,8 +1430,8 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    import std.meta : AliasSeq;
+    foreach(T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1538,8 +1520,8 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    import std.meta : AliasSeq;
+    foreach(T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1582,8 +1564,8 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    import std.meta : AliasSeq;
+    foreach(T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 3.0, ];
@@ -1732,8 +1714,8 @@ if (isInputRange!Range &&
 
 unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    import std.meta : AliasSeq;
+    foreach(T; AliasSeq!(double, const double, immutable double))
     {
         T[] p = [ 0.0, 0, 0, 1 ];
         assert(entropy(p) == 0);
@@ -3075,16 +3057,18 @@ void slowFourier4(Ret, R)(R range, Ret buf)
     buf[3] = range[0] + range[1] * C(0, 1) - range[2] - range[3] * C(0, 1);
 }
 
-bool isPowerOfTwo(size_t num)
+bool isPowerOfTwo(N)(N num)
+    if (isScalarType!N && !isFloatingPoint!N)
 {
     import core.bitop : bsf, bsr;
     return bsr(num) == bsf(num);
 }
 
-size_t roundDownToPowerOf2(size_t num)
+N roundDownToPowerOf2(N)(N num)
+    if (isScalarType!N && !isFloatingPoint!N)
 {
     import core.bitop : bsr;
-    return num & (1 << bsr(num));
+    return num & (cast(N) 1 << bsr(num));
 }
 
 unittest

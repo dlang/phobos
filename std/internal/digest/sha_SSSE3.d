@@ -142,11 +142,14 @@ version(USE_SSSE3)
     /** Simple version to produce numbers < 100 as string. */
     private nothrow pure string to_string(uint i)
     {
+        if (i < 10)
+            return "0123456789"[i .. i + 1];
+
         assert(i < 100);
-        string s;
-        if (i >= 10)
-            s ~= cast(char)('0' + (i / 10) % 10);
-        return s ~ cast(char)('0' + i % 10);
+        char[2] s;
+        s[0] = cast(char)(i / 10 + '0');
+        s[1] = cast(char)(i % 10 + '0');
+        return s.idup;
     }
 
     /** Returns the reference to constant used in round i. */
@@ -212,8 +215,6 @@ version(USE_SSSE3)
      */
     private nothrow pure string[] weave(string[] seq1, string[] seq2, uint dist = 1)
     {
-        import std.algorithm : min;
-
         string[] res = [];
         auto i1 = 0, i2 = 0;
         while (i1 < seq1.length || i2 < seq2.length)
@@ -225,7 +226,9 @@ version(USE_SSSE3)
             }
             if (i1 < seq1.length)
             {
-                res ~= seq1[i1..std.algorithm.min(i1+dist,$)];
+                import std.algorithm.comparison : min;
+
+                res ~= seq1[i1 .. min(i1+dist, $)];
                 i1 += dist;
             }
         }

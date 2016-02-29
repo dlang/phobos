@@ -76,11 +76,11 @@ private
     import core.sync.condition;
     import std.algorithm;
     import std.exception;
+    import std.meta;
     import std.range;
     import std.string;
     import std.traits;
     import std.typecons;
-    import std.typetuple;
     import std.concurrencybase;
 
     template hasLocalAliasing(T...)
@@ -150,7 +150,7 @@ private
 
         auto map(Op)( Op op )
         {
-            alias Args = ParameterTypeTuple!(Op);
+            alias Args = Parameters!(Op);
 
             static if( Args.length == 1 )
             {
@@ -171,7 +171,7 @@ private
         foreach( i, t1; T )
         {
             static assert( isFunctionPointer!t1 || isDelegate!t1 );
-            alias a1 = ParameterTypeTuple!(t1);
+            alias a1 = Parameters!(t1);
             alias r1 = ReturnType!(t1);
 
             static if( i < T.length - 1 && is( r1 == void ) )
@@ -183,7 +183,7 @@ private
                 foreach( t2; T[i+1 .. $] )
                 {
                     static assert( isFunctionPointer!t2 || isDelegate!t2 );
-                    alias a2 = ParameterTypeTuple!(t2);
+                    alias a2 = Parameters!(t2);
 
                     static assert( !is( a1 == a2 ),
                                    "function with arguments " ~ a1.stringof ~
@@ -299,10 +299,7 @@ class MailboxFull : Exception
  */
 class TidMissingException : Exception
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__)
-    {
-        super(msg, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 
@@ -337,9 +334,20 @@ public:
     void toString(scope void delegate(const(char)[]) sink)
     {
         import std.format;
-        formattedWrite(sink, "Tid(%x)", &mbox);
+        formattedWrite(sink, "Tid(%x)", cast(void*)mbox);
     }
 
+}
+
+unittest
+{
+    import std.conv : text;
+    Tid tid;
+    assert(text(tid) == "Tid(0)");
+    auto tid2 = thisTid;
+    assert(text(tid2) != "Tid(0)");
+    auto tid3 = tid2;
+    assert(text(tid2) == text(tid3));
 }
 
 
@@ -397,8 +405,8 @@ private template isSpawnable(F, T...)
 {
     template isParamsImplicitlyConvertible(F1, F2, int i=0)
     {
-        alias param1 = ParameterTypeTuple!F1;
-        alias param2 = ParameterTypeTuple!F2;
+        alias param1 = Parameters!F1;
+        alias param2 = Parameters!F2;
         static if (param1.length != param2.length)
             enum isParamsImplicitlyConvertible = false;
         else static if (param1.length == i)
@@ -460,6 +468,9 @@ private template isSpawnable(F, T...)
  *
  *     // Fails:  char[] has mutable aliasing.
  *     auto tid2 = spawn(&f2, str.dup);
+ *
+ *     // New thread with anonymous function
+ *     spawn({ writeln("This is so great!"); });
  * }
  * ---
  */
@@ -1193,7 +1204,7 @@ interface Scheduler
     @property ref ThreadInfo thisInfo() nothrow;
 
     /**
-     * Creates a Condition varialbe analog for signaling.
+     * Creates a Condition variable analog for signaling.
      *
      * Creates a new Condition variable analog which is used to check for and
      * to signal the addition of messages to a thread's message queue.  Like
@@ -1377,9 +1388,9 @@ private:
             import core.time;
             scope(exit) notified = false;
 
-            for( auto limit = TickDuration.currSystemTick + period;
+            for( auto limit = MonoTime.currTime + period;
                  !notified && !period.isNegative;
-                 period = limit - TickDuration.currSystemTick )
+                 period = limit - MonoTime.currTime )
             {
                 yield();
             }
@@ -1692,8 +1703,7 @@ void yield(T)(ref T value)
         cur.m_value = &value;
         return Fiber.yield();
     }
-    throw new Exception("yield(T) called with no active generator for the supplied type",
-                        __FILE__, __LINE__);
+    throw new Exception("yield(T) called with no active generator for the supplied type");
 }
 
 
@@ -1794,7 +1804,11 @@ private
             }
         }
 
-        ///
+    // @@@DEPRECATED_2016-03@@@
+    /++
+        $(RED Deprecated. isClosed can't be used with a const MessageBox.
+              It will be removed in March 2016).
+      +/
         deprecated("isClosed can't be used with a const MessageBox")
         final @property bool isClosed() const
         {
@@ -1905,7 +1919,7 @@ private
 
             static if( isImplicitlyConvertible!(T[0], Duration) )
             {
-                alias Ops = TypeTuple!(T[1 .. $]);
+                alias Ops = AliasSeq!(T[1 .. $]);
                 alias ops = vals[1 .. $];
                 assert( vals[0] >= msecs(0) );
                 enum timedWait = true;
@@ -1913,7 +1927,7 @@ private
             }
             else
             {
-                alias Ops = TypeTuple!(T);
+                alias Ops = AliasSeq!(T);
                 alias ops = vals[0 .. $];
                 enum timedWait = false;
             }
@@ -1922,7 +1936,7 @@ private
             {
                 foreach( i, t; Ops )
                 {
-                    alias Args = ParameterTypeTuple!(t);
+                    alias Args = Parameters!(t);
                     auto  op   = ops[i];
 
                     if( msg.convertsTo!(Args) )
@@ -2050,7 +2064,7 @@ private
             static if( timedWait )
             {
                 import core.time;
-                auto limit = TickDuration.currSystemTick + period;
+                auto limit = MonoTime.currTime + period;
             }
 
             while( true )
@@ -2098,7 +2112,7 @@ private
                     {
                         static if( timedWait )
                         {
-                            period = limit - TickDuration.currSystemTick;
+                            period = limit - MonoTime.currTime;
                         }
                         continue;
                     }
@@ -2246,19 +2260,19 @@ private
 
             @property ref T front()
             {
-                enforce( m_prev.next );
+                enforce( m_prev.next, "invalid list node" );
                 return m_prev.next.val;
             }
 
             @property void front( T val )
             {
-                enforce( m_prev.next );
+                enforce( m_prev.next, "invalid list node" );
                 m_prev.next.val = val;
             }
 
             void popFront()
             {
-                enforce( m_prev.next );
+                enforce( m_prev.next, "invalid list node" );
                 m_prev = m_prev.next;
             }
 
@@ -2322,7 +2336,7 @@ private
         {
             assert( m_count );
             Node* n = r.m_prev;
-            enforce( n && n.next );
+            enforce( n && n.next, "attempting to remove invalid list node" );
 
             if( m_last is m_first )
                 m_last = null;

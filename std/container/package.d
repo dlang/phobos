@@ -48,7 +48,7 @@ assert(secondArray[0] == 12);
 // secondArray now refers to an independent copy of originalArray
 secondArray = originalArray.dup;
 secondArray[0] = 1;
-// assert that originalArray has not been effected
+// assert that originalArray has not been affected
 assert(originalArray[0] == 12);
 ---
 
@@ -80,7 +80,7 @@ assert(array1.empty);
 
 // after initialization reference semantics work as expected
 array1 = array2;
-// now effects array2 as well
+// now affects array2 as well
 array1.removeBack();
 assert(array2.empty);
 ---
@@ -92,11 +92,9 @@ For example, to construct an $(D Array) of ten empty $(D Array)s, use
 the following that calls $(D make) ten times.
 
 ---
-import std.range, std.container, std.algorithm;
+import std.container, std.range;
 
-Array!(Array!int) arrayOfArrays = make!(Array!(Array!int))(
-    repeat(0, 10).map!(x => make!(Array!int))
-);
+auto arrOfArrs = make!Array(generate!(() => make!(Array!int)).take(10));
 ---
 
 Submodules:
@@ -141,7 +139,7 @@ its primary $(LINK2 std_range.html, range) type,
 which is aliased as $(D C.Range). For example, the primary range type of
 $(D Array!int) is $(D Array!int.Range).
 
-If the documentation of a member function of a _container takes a
+If the documentation of a member function of a _container takes
 a parameter of type $(D Range), then it refers to the primary range type of
 this _container. Oftentimes $(D Take!Range) will be used, in which case
 the range refers to a span of the elements in the _container. Arguments to
@@ -152,7 +150,7 @@ algorithms return the same range type as their input range.
 ---
 import std.algorithm : equal, find;
 import std.container;
-import std.range : takeOne;
+import std.range : take;
 
 auto array = make!Array(1, 2, 3);
 
@@ -165,7 +163,7 @@ array = make!Array(1, 2, 3);
 
 // the range given to `linearRemove` is a Take!(Array!int.Range)
 // spanning just the element "2"
-array.linearRemove(array[].find(2).takeOne());
+array.linearRemove(array[].find(2).take(1));
 
 assert(array[].equal([1, 3]));
 ---
@@ -197,13 +195,13 @@ independently of the _container implementation.
 
 For example the primitives $(D c.remove(r)) and $(D c.linearRemove(r)) both
 remove the sequence of elements in range $(D r) from the _container $(D c).
-The primitive $(D c.remove(r)) guarantees $(BIGOH 1) complexity and
-$(D c.linearRemove(r)) relaxes this guarantee to $(BIGOH n) (where $(D n)
-is the length of the _container $(D c)).
+The primitive $(D c.remove(r)) guarantees
+$(BIGOH n$(SUBSCRIPT r) log n$(SUBSCRIPT c)) complexity in the worst case and
+$(D c.linearRemove(r)) relaxes this guarantee to $(BIGOH n$(SUBSCRIPT c)).
 
 Since a sequence of elements can be removed from a $(LINK2 std_container_dlist.html, doubly linked list)
 in constant time, $(D DList) provides the primitive $(D c.remove(r))
-as well as $(D c.linearRemove(r)). On the other hand a
+as well as $(D c.linearRemove(r)). On the other hand
 $(LINK2 std_container_array.html, Array) only offers $(D c.linearRemove(r)).
 
 The following table describes the common set of primitives that containers
@@ -425,7 +423,7 @@ public import std.container.dlist;
 public import std.container.rbtree;
 public import std.container.slist;
 
-import std.typetuple;
+import std.meta;
 
 
 /* The following documentation and type $(D TotalContainer) are
@@ -470,7 +468,7 @@ the type of the $(D k)th key of the container.
 A container may define both $(D KeyType) and $(D KeyTypes), e.g. in
 the case it has the notion of primary/preferred key.
  */
-    alias KeyTypes = TypeTuple!T;
+    alias KeyTypes = AliasSeq!T;
 
 /**
 If the container has a notion of key-value mapping, $(D ValueType)

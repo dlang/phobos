@@ -68,15 +68,15 @@ to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
 */
 module std.range.interfaces;
 
+import std.meta;
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
 
 /**These interfaces are intended to provide virtual function-based wrappers
  * around input ranges with element type E.  This is useful where a well-defined
  * binary interface is required, such as when a DLL function or virtual function
- * needs to accept a generic range as a parameter.  Note that
- * $(LREF isInputRange) and friends check for conformance to structural
+ * needs to accept a generic range as a parameter. Note that
+ * $(LINK2 std_range_primitives.html#isInputRange, isInputRange) and friends check for conformance to structural
  * interfaces, not for implementation of these $(D interface) types.
  *
  * Limitations:

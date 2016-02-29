@@ -20,6 +20,7 @@ Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
 module std.container.rbtree;
 
 import std.functional : binaryFun;
+import std.format;
 
 public import std.container.util;
 
@@ -700,9 +701,9 @@ private struct RBRange(N)
 final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     if(is(typeof(binaryFun!less(T.init, T.init))))
 {
+    import std.meta : allSatisfy;
     import std.range.primitives;
     import std.range : Take;
-    import std.typetuple : allSatisfy;
     import std.traits;
 
     alias _less = binaryFun!less;
@@ -1347,7 +1348,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
        Complexity: $(BIGOH m log(n)) (where m is the number of elements to remove)
 
-       Examples:
+       Example:
 --------------------
 auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
 rbt.removeKey(1, 4, 7);
@@ -1670,6 +1671,16 @@ assert(equal(rbt[], [5]));
     }
 
     /**
+    Formats the RedBlackTree into a sink function. For more info see
+    $(D std.format.formatValue)
+    */
+    void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) const {
+        sink("RedBlackTree(");
+        sink.formatValue(this[], fmt);
+        sink(")");
+    }
+
+    /**
      * Constructor. Pass in an array of elements, or individual elements to
      * initialize the tree with.
      */
@@ -1825,6 +1836,7 @@ pure unittest
 pure unittest
 {
     import std.array : array;
+
     auto rt1 = redBlackTree(5, 4, 3, 2, 1);
     assert(rt1.length == 5);
     assert(array(rt1[]) == [1, 2, 3, 4, 5]);
@@ -1842,6 +1854,19 @@ pure unittest
     assert(array(rt4[]) == ["hello"]);
 }
 
+unittest {
+    import std.conv : to;
+
+    auto rt1 = redBlackTree!string();
+    assert(rt1.to!string == "RedBlackTree([])");
+
+    auto rt2 = redBlackTree!string("hello");
+    assert(rt2.to!string == "RedBlackTree([\"hello\"])");
+
+    auto rt3 = redBlackTree!string("hello", "world", "!");
+    assert(rt3.to!string == "RedBlackTree([\"!\", \"hello\", \"world\"])");
+}
+
 //constness checks
 unittest
 {
@@ -1849,7 +1874,7 @@ unittest
     static assert(is(typeof(rt1.length)));
     static assert(is(typeof(5 in rt1)));
 
-    static assert(is(typeof(rt1.upperBound(3).front()) == const(int)));
+    static assert(is(typeof(rt1.upperBound(3).front) == const(int)));
     import std.algorithm : equal;
     assert(rt1.upperBound(3).equal([4, 5]));
     assert(rt1.lowerBound(3).equal([1, 2]));
@@ -1863,7 +1888,7 @@ unittest
     immutable rt1 = redBlackTree(5,4,3,2,1);
     static assert(is(typeof(rt1.length)));
 
-    static assert(is(typeof(rt1.upperBound(3).front()) == immutable(int)));
+    static assert(is(typeof(rt1.upperBound(3).front) == immutable(int)));
     import std.algorithm : equal;
     assert(rt1.upperBound(2).equal([3, 4, 5]));
 }

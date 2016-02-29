@@ -196,13 +196,13 @@ private void doPut(R, E)(ref R r, auto ref E e)
     static if (usingPut)
     {
         static assert(is(typeof(r.put(e))),
-            "Cannot nativaly put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+            "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
         r.put(e);
     }
     else static if (isInputRange!R)
     {
         static assert(is(typeof(r.front = e)),
-            "Cannot nativaly put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+            "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
         r.front = e;
         r.popFront();
     }
@@ -213,7 +213,7 @@ private void doPut(R, E)(ref R r, auto ref E e)
     else
     {
         static assert (false,
-            "Cannot nativaly put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+            "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
@@ -444,14 +444,16 @@ unittest
 {
     int[] a = new int[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
-    static assert( __traits(compiles, put(a, 1)));
+    put(a, 1);
+    assert(a.length == 9);
     /*
      * a[0] = 65;       // OK
      * a[0] = 'A';      // OK
      * a[0] = "ABC"[0]; // OK
      * put(a, "ABC");   // OK
      */
-    static assert( __traits(compiles, put(a, "ABC")));
+    put(a, "ABC");
+    assert(a.length == 6);
 }
 
 unittest
@@ -466,11 +468,13 @@ unittest
 
 unittest
 {
-    int[][] a;
-    int[]   b;
+    int[][] a = new int[][10];
+    int[]   b = new int[10];
     int     c;
-    static assert( __traits(compiles, put(b, c)));
-    static assert( __traits(compiles, put(a, b)));
+    put(b, c);
+    assert(b.length == 9);
+    put(a, b);
+    assert(a.length == 9);
     static assert(!__traits(compiles, put(a, c)));
 }
 
@@ -511,8 +515,8 @@ unittest
 unittest
 {
     import std.conv : to;
+    import std.meta : AliasSeq;
     import std.typecons : tuple;
-    import std.typetuple;
 
     static struct PutC(C)
     {
@@ -538,7 +542,7 @@ unittest
     putChar(p, cast(dchar)'a');
 
     //Source Char
-    foreach (SC; TypeTuple!(char, wchar, dchar))
+    foreach (SC; AliasSeq!(char, wchar, dchar))
     {
         SC ch = 'I';
         dchar dh = '♥';
@@ -546,10 +550,10 @@ unittest
         immutable(SC)[][] ss = ["日本語", "が", "好き", "ですか", "？"];
 
         //Target Char
-        foreach (TC; TypeTuple!(char, wchar, dchar))
+        foreach (TC; AliasSeq!(char, wchar, dchar))
         {
             //Testing PutC and PutS
-            foreach (Type; TypeTuple!(PutC!TC, PutS!TC))
+            foreach (Type; AliasSeq!(PutC!TC, PutS!TC))
             (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
                 Type type;
                 auto sink = new Type();
@@ -609,7 +613,7 @@ unittest
 unittest
 {
     import std.format;
-    import std.typetuple;
+    import std.meta : AliasSeq;
     struct PutC(C)
     {
         void put(C){}
@@ -642,7 +646,7 @@ unittest
     }
     void foo()
     {
-        foreach(C; TypeTuple!(char, wchar, dchar))
+        foreach(C; AliasSeq!(char, wchar, dchar))
         {
             formattedWrite((C c){},        "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
             formattedWrite((const(C)[]){}, "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
@@ -792,7 +796,10 @@ template isForwardRange(R)
     static assert(!isForwardRange!(int));
     static assert( isForwardRange!(int[]));
     static assert( isForwardRange!(inout(int)[]));
+}
 
+@safe unittest
+{
     // BUG 14544
     struct R14544
     {
@@ -2087,9 +2094,9 @@ if (isNarrowString!(C[]))
 
 @safe pure unittest
 {
-    import std.typetuple;
+    import std.meta : AliasSeq;
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
         S s = "\xC2\xA9hello";
         s.popFront();
@@ -2154,15 +2161,16 @@ version(unittest)
 void popBack(T)(ref T[] a) @safe pure
 if (isNarrowString!(T[]))
 {
+    import std.utf: strideBack;
     assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
-    a = a[0 .. $ - std.utf.strideBack(a, $)];
+    a = a[0 .. $ - strideBack(a, $)];
 }
 
 @safe pure unittest
 {
-    import std.typetuple;
+    import std.meta : AliasSeq;
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; AliasSeq!(string, wstring, dstring))
     {
         S s = "hello\xE2\x89\xA0";
         s.popBack();
@@ -2266,8 +2274,8 @@ if (!isNarrowString!(T[]))
 // Specialization for strings
 @property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
-    import std.utf : decode;
+    import std.utf : decode, strideBack;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
-    size_t i = a.length - std.utf.strideBack(a, a.length);
+    size_t i = a.length - strideBack(a, a.length);
     return decode(a, i);
 }

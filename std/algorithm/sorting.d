@@ -93,6 +93,13 @@ exact strategy chosen depends on the relative sizes of $(D lhs) and
 $(D rhs).  Performs $(BIGOH lhs.length + rhs.length * log(rhs.length))
 (best case) to $(BIGOH (lhs.length + rhs.length) * log(lhs.length +
 rhs.length)) (worst-case) evaluations of $(D swap).
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    lhs = The sorted, left-hand side of the random access range to be sorted.
+    rhs = The unsorted, right-hand side of the random access range to be
+        sorted.
 */
 void completeSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(SortedRange!(Range1, less) lhs, Range2 rhs)
@@ -128,6 +135,12 @@ unittest
 Checks whether a forward range is sorted according to the comparison
 operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
 less).
+
+Params:
+    less = Predicate the range should be sorted by.
+    r = Forward range to check for sortedness.
+
+Returns: true if the range is sorted, false otherwise.
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
@@ -275,11 +288,10 @@ unittest
 
 // partition
 /**
-Partitions a range in two using $(D pred) as a
-predicate. Specifically, reorders the range $(D r = [left,
-right$(RPAREN)) using $(D swap) such that all elements $(D i) for
-which $(D pred(i)) is $(D true) come before all elements $(D j) for
-which $(D pred(j)) returns $(D false).
+Partitions a range in two using the given $(D predicate).
+Specifically, reorders the range $(D r = [left, right$(RPAREN)) using $(D swap)
+such that all elements $(D i) for which $(D predicate(i)) is $(D true) come
+before all elements $(D j) for which $(D predicate(j)) returns $(D false).
 
 Performs $(BIGOH r.length) (if unstable or semistable) or $(BIGOH
 r.length * log(r.length)) (if stable) evaluations of $(D less) and $(D
@@ -287,15 +299,20 @@ swap). The unstable version computes the minimum possible evaluations
 of $(D swap) (roughly half of those performed by the semistable
 version).
 
+Params:
+    predicate = The predicate to partition by.
+    ss = The swapping strategy to employ.
+    r = The random-access range to partition.
+
 Returns:
 
 The right part of $(D r) after partitioning.
 
-If $(D ss == SwapStrategy.stable), $(D partition) preserves the
-relative ordering of all elements $(D a), $(D b) in $(D r) for which
-$(D pred(a) == pred(b)). If $(D ss == SwapStrategy.semistable), $(D
-partition) preserves the relative ordering of all elements $(D a), $(D
-b) in the left part of $(D r) for which $(D pred(a) == pred(b)).
+If $(D ss == SwapStrategy.stable), $(D partition) preserves the relative
+ordering of all elements $(D a), $(D b) in $(D r) for which $(D predicate(a) ==
+predicate(b)). If $(D ss == SwapStrategy.semistable), $(D partition) preserves
+the relative ordering of all elements $(D a), $(D b) in the left part of $(D r)
+for which $(D predicate(a) == predicate(b)).
 
 See_Also:
     STL's $(WEB sgi.com/tech/stl/_partition.html, _partition)$(BR)
@@ -345,38 +362,66 @@ Range partition(alias predicate,
     {
         // Inspired from www.stepanovpapers.com/PAM3-partition_notes.pdf,
         // section "Bidirectional Partition Algorithm (Hoare)"
-        auto result = r;
-        for (;;)
+        static if (isDynamicArray!Range)
         {
+            // For dynamic arrays prefer index-based manipulation
+            if (!r.length) return r;
+            size_t lo = 0, hi = r.length - 1;
             for (;;)
             {
-                if (r.empty) return result;
-                if (!pred(r.front)) break;
+                for (;;)
+                {
+                    if (lo > hi) return r[lo .. $];
+                    if (!pred(r[lo])) break;
+                    ++lo;
+                }
+                // found the left bound
+                assert(lo <= hi);
+                for (;;)
+                {
+                    if (lo == hi) return r[lo .. $];
+                    if (pred(r[hi])) break;
+                    --hi;
+                }
+                // found the right bound, swap & make progress
+                swap(r[lo++], r[hi--]);
+            }
+        }
+        else
+        {
+            auto result = r;
+            for (;;)
+            {
+                for (;;)
+                {
+                    if (r.empty) return result;
+                    if (!pred(r.front)) break;
+                    r.popFront();
+                    result.popFront();
+                }
+                // found the left bound
+                assert(!r.empty);
+                for (;;)
+                {
+                    if (pred(r.back)) break;
+                    r.popBack();
+                    if (r.empty) return result;
+                }
+                // found the right bound, swap & make progress
+                static if (is(typeof(swap(r.front, r.back))))
+                {
+                    swap(r.front, r.back);
+                }
+                else
+                {
+                    auto t1 = moveFront(r), t2 = moveBack(r);
+                    r.front = t2;
+                    r.back = t1;
+                }
                 r.popFront();
                 result.popFront();
-            }
-            // found the left bound
-            assert(!r.empty);
-            for (;;)
-            {
-                if (pred(r.back)) break;
                 r.popBack();
-                if (r.empty) return result;
             }
-            // found the right bound, swap & make progress
-            static if (is(typeof(swap(r.front, r.back))))
-            {
-                swap(r.front, r.back);
-            }
-            else
-            {
-                auto t1 = moveFront(r), t2 = moveBack(r);
-                r.front = t2;
-                r.back = t1;
-            }
-            r.popFront();
-            result.popFront();
-            r.popBack();
         }
     }
 }
@@ -435,8 +480,10 @@ Range partition(alias predicate,
 }
 
 /**
-Returns $(D true) if $(D r) is partitioned according to predicate $(D
-pred).
+Params:
+    pred = The predicate that the range should be partitioned by.
+    r = The range to check.
+Returns: $(D true) if $(D r) is partitioned according to predicate $(D pred).
  */
 bool isPartitioned(alias pred, Range)(Range r)
     if (isForwardRange!(Range))
@@ -469,6 +516,16 @@ elements in $(D r) that are equal to $(D pivot). Finally, the third
 and rightmost range only contains elements in $(D r) that are greater
 than $(D pivot). The less-than test is defined by the binary function
 $(D less).
+
+Params:
+    less = The predicate to use for the rearrangement.
+    ss = The swapping strategy to use.
+    r = The random-access range to rearrange.
+    pivot = The pivot element.
+
+Returns:
+    A $(XREF typecons,Tuple) of the three resulting ranges. These ranges are
+    slices of the original range.
 
 BUGS: stable $(D partition3) has not been implemented yet.
  */
@@ -583,6 +640,12 @@ latter requires it to be a random-access range.
 
 $(D makeIndex) overwrites its second argument with the result, but
 never reallocates it.
+
+Params:
+    less = The comparison to use.
+    ss = The swapping strategy.
+    r = The range to index.
+    index = The resulting index.
 
 Returns: The pointer-based version returns a $(D SortedRange) wrapper
 over index, of type $(D SortedRange!(RangeIndex, (a, b) =>
@@ -933,6 +996,15 @@ $(D less(a,c)) (transitivity), and, conversely, $(D !less(a,b) && !less(b,c)) to
 imply $(D !less(a,c)). Note that the default predicate ($(D "a < b")) does not
 always satisfy these conditions for floating point types, because the expression
 will always be $(D false) when either $(D a) or $(D b) is NaN.
+Use $(XREF math, cmp) instead.
+
+If `less` involves expensive computations on the _sort key, it may be
+worthwhile to use $(LREF schwartzSort) instead.
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r = The range to sort.
 
 Returns: The initial range wrapped as a $(D SortedRange) with the predicate
 $(D binaryFun!less).
@@ -1008,6 +1080,21 @@ unittest
     string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
     sort!("toUpper(a) < toUpper(b)", SwapStrategy.stable)(words);
     assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
+}
+
+///
+unittest
+{
+    // Sorting floating-point numbers in presence of NaN
+    double[] numbers = [-0.0, 3.0, -2.0, double.nan, 0.0, -double.nan];
+
+    import std.math : cmp, isIdentical;
+    import std.algorithm.comparison : equal;
+
+    sort!((a, b) => cmp(a, b) < 0)(numbers);
+
+    double[] sorted = [-double.nan, -2.0, -0.0, 0.0, 3.0, double.nan];
+    assert(numbers.equal!isIdentical(sorted));
 }
 
 unittest
@@ -1186,59 +1273,104 @@ package(std) template HeapOps(alias less, Range)
     void heapSort()(Range r)
     {
         // If true, there is nothing to do
-        if(r.length < 2) return;
-
+        if (r.length < 2) return;
         // Build Heap
         buildHeap(r);
-
         // Sort
-        size_t i = r.length - 1;
-        while(i > 0)
+        for (size_t i = r.length - 1; i > 0; --i)
         {
-            swapAt(r, 0, i);
+            r.swapAt(0, i);
             percolate(r, 0, i);
-            --i;
         }
     }
 
     //template because of @@@12410@@@
     void buildHeap()(Range r)
     {
-        size_t i = r.length / 2;
-        while(i > 0) percolate(r, --i, r.length);
+        immutable n = r.length;
+        for (size_t i = n / 2; i-- > 0; )
+        {
+            siftDown(r, i, n);
+        }
+        assert(isHeap(r));
     }
 
+    bool isHeap()(Range r)
+    {
+        size_t parent = 0;
+        foreach (child; 1 .. r.length)
+        {
+            if (lessFun(r[parent], r[child])) return false;
+            // Increment parent every other pass
+            parent += !(child & 1);
+        }
+        return true;
+    }
+
+    // Sifts down r[parent] (which is initially assumed to be messed up) so the
+    // heap property is restored for r[parent .. end].
+    // template because of @@@12410@@@
+    void siftDown()(Range r, size_t parent, immutable size_t end)
+    {
+        for (;;)
+        {
+            auto child = (parent + 1) * 2;
+            if (child >= end)
+            {
+                // Leftover left child?
+                if (child == end && lessFun(r[parent], r[--child]))
+                    r.swapAt(parent, child);
+                break;
+            }
+            auto leftChild = child - 1;
+            if (lessFun(r[child], r[leftChild])) child = leftChild;
+            if (!lessFun(r[parent], r[child])) break;
+            r.swapAt(parent, child);
+            parent = child;
+        }
+    }
+
+    // Alternate version of siftDown that performs fewer comparisons, see
+    // https://en.wikipedia.org/wiki/Heapsort#Bottom-up_heapsort. The percolate
+    // process first sifts the parent all the way down (without comparing it
+    // against the leaves), and then a bit up until the heap property is
+    // restored. So there are more swaps but fewer comparisons. Gains are made
+    // when the final position is likely to end toward the bottom of the heap,
+    // so not a lot of sifts back are performed.
     //template because of @@@12410@@@
     void percolate()(Range r, size_t parent, immutable size_t end)
     {
         immutable root = parent;
-        size_t child = void;
 
         // Sift down
-        while(true)
+        for (;;)
         {
-            child = parent * 2 + 1;
+            auto child = (parent + 1) * 2;
 
-            if(child >= end) break;
+            if (child >= end)
+            {
+                if (child == end)
+                {
+                    // Leftover left node.
+                    --child;
+                    r.swapAt(parent, child);
+                    parent = child;
+                }
+                break;
+            }
 
-            if(child + 1 < end && lessFun(r[child], r[child + 1])) child += 1;
-
-            swapAt(r, parent, child);
+            auto leftChild = child - 1;
+            if (lessFun(r[child], r[leftChild])) child = leftChild;
+            r.swapAt(parent, child);
             parent = child;
         }
 
-        child = parent;
-
         // Sift up
-        while(child > root)
+        for (auto child = parent; child > root; child = parent)
         {
             parent = (child - 1) / 2;
-            if(lessFun(r[parent], r[child]))
-            {
-                swapAt(r, parent, child);
-                child = parent;
-            }
-            else break;
+            if (!lessFun(r[parent], r[child])) break;
+            r.swapAt(parent, child);
         }
     }
 }
@@ -1874,16 +2006,22 @@ unittest
 
 // schwartzSort
 /**
-Sorts a range using an algorithm akin to the $(WEB
-wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also
-known as the decorate-sort-undecorate pattern in Python and Lisp.
-This function is helpful when the sort comparison includes
-an expensive computation. The complexity is the same as that of the
-corresponding $(D sort), but $(D schwartzSort) evaluates $(D
-transform) only $(D r.length) times (less than half when compared to
-regular sorting). The usage can be best illustrated with an example.
+Alternative sorting method that should be used when comparing keys involves an
+expensive computation. Instead of using `less(a, b)` for comparing elements,
+`schwartzSort` uses `less(transform(a), transform(b))`. The values of the
+`transform` function are precomputed in a temporary array, thus saving on
+repeatedly computing it. Conversely, if the cost of `transform` is small
+compared to the cost of allocating and filling the precomputed array, `sort`
+may be faster and therefore preferable.
 
-Examples:
+This approach to sorting is akin to the $(WEB
+wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also known as
+the decorate-sort-undecorate pattern in Python and Lisp. The complexity is the
+same as that of the corresponding `sort`, but `schwartzSort` evaluates
+`transform` only `r.length` times (less than half when compared to regular
+sorting). The usage can be best illustrated with an example.
+
+Example:
 ----
 uint hashFun(string) { ... expensive computation ... }
 string[] array = ...;
@@ -1903,6 +2041,12 @@ To check whether an array was sorted and benefit of the speedup of
 Schwartz sorting, a function $(D schwartzIsSorted) is not provided
 because the effect can be achieved by calling $(D
 isSorted!less(map!transform(r))).
+
+Params:
+    transform = The transformation to apply.
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r = The range to sort.
 
 Returns: The initial range wrapped as a $(D SortedRange) with the
 predicate $(D (a, b) => binaryFun!less(transform(a),
@@ -2038,6 +2182,12 @@ the range $(D r[mid .. r.length]) in no particular order. Performs
 $(BIGOH r.length * log(mid)) evaluations of $(D pred). The
 implementation simply calls $(D topN!(less, ss)(r, n)) and then $(D
 sort!(less, ss)(r[0 .. n])).
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r = The random-access range to reorder.
+    n = The length of the initial segment of `r` to sort.
 */
 void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     Range)(Range r, size_t n)
@@ -2067,7 +2217,14 @@ $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
 $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
 (if stable) evaluations of $(D less) and $(D swap).
 
-If $(D n >= r.length), the algorithm has no effect.
+If $(D n >= r.length), the algorithm has no effect and returns `r[0 .. $]`.
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r = The random-access range to reorder.
+    nth = The index of the element that should be in sorted position after the
+        function is done.
 
 See_Also:
     $(LREF topNIndex),
@@ -2077,47 +2234,67 @@ BUGS:
 
 Stable topN has not been implemented yet.
 */
-void topN(alias less = "a < b",
+auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r, size_t nth)
-    if (isRandomAccessRange!(Range) && hasLength!Range)
+    if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
 {
-    import std.algorithm : swap; // FIXME
-    import std.random : uniform;
-
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
-    while (r.length > nth)
+
+    if (nth >= r.length) return r[0 .. $];
+
+    auto ret = r[0 .. nth];
+    for (;;)
     {
-        auto pivot = uniform(0, r.length);
+        assert(nth < r.length);
+        import std.algorithm.mutation : swap;
+        import std.algorithm.searching : minPos;
+        if (nth == 0)
+        {
+            // Special-case "min"
+            swap(r.front, r.minPos!less.front);
+            break;
+        }
+        if (nth + 1 == r.length)
+        {
+            // Special-case "max"
+            swap(r.back, r.minPos!((a, b) => binaryFun!less(b, a)).front);
+            break;
+        }
+        auto pivot = r.getPivot!less;
+        assert(!binaryFun!less(r[pivot], r[pivot]));
         swap(r[pivot], r.back);
-        assert(!binaryFun!(less)(r.back, r.back));
-        auto right = partition!((a) => binaryFun!less(a, r.back), ss)(r);
+        auto right = r.partition!(a => binaryFun!less(a, r.back), ss);
         assert(right.length >= 1);
-        swap(right.front, r.back);
         pivot = r.length - right.length;
-        if (pivot == nth)
+        if (pivot > nth)
         {
-            return;
-        }
-        if (pivot < nth)
-        {
-            ++pivot;
-            r = r[pivot .. $];
-            nth -= pivot;
-        }
-        else
-        {
+            // We don't care to swap the pivot back, won't be visited anymore
             assert(pivot < r.length);
             r = r[0 .. pivot];
+            continue;
         }
+        // Swap the pivot to where it should be
+        swap(right.front, r.back);
+        if (pivot == nth)
+        {
+            // Found Waldo!
+            break;
+        }
+        ++pivot; // skip the pivot
+        r = r[pivot .. $];
+        nth -= pivot;
     }
+    return ret;
 }
 
 ///
 @safe unittest
 {
     int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
+    topN!"a < b"(v, 100);
+    assert(v == [ 25, 7, 9, 2, 0, 5, 21 ]);
     auto n = 4;
     topN!"a < b"(v, n);
     assert(v[n] == 9);
@@ -2199,10 +2376,26 @@ void topN(alias less = "a < b",
     }
 }
 
+// bug 12987
+@safe unittest
+{
+    int[] a = [ 25, 7, 9, 2, 0, 5, 21 ];
+    auto n = 4;
+    auto t = topN(a, n);
+    sort(t);
+    assert(t == [0, 2, 5, 7]);
+}
+
 /**
 Stores the smallest elements of the two ranges in the left-hand range.
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r1 = The first range.
+    r2 = The second range.
  */
-void topN(alias less = "a < b",
+auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(Range1 r1, Range2 r2)
     if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
@@ -2212,11 +2405,12 @@ void topN(alias less = "a < b",
 
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
-    auto heap = BinaryHeap!Range1(r1);
+    auto heap = BinaryHeap!(Range1, less)(r1);
     for (; !r2.empty; r2.popFront())
     {
         heap.conditionalInsert(r2.front);
     }
+    return r1;
 }
 
 ///
@@ -2229,12 +2423,40 @@ unittest
     assert(a == [0, 1, 2, 2, 3]);
 }
 
+// bug 12987
+unittest
+{
+    int[] a = [ 5, 7, 2, 6, 7 ];
+    int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
+    auto t = topN(a, b);
+    sort(t);
+    assert(t == [ 0, 1, 2, 2, 3 ]);
+}
+
+// bug 15420
+unittest
+{
+    int[] a = [ 5, 7, 2, 6, 7 ];
+    int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
+    topN!"a > b"(a, b);
+    sort!"a > b"(a);
+    assert(a == [ 7, 7, 7, 6, 6 ]);
+}
+
 /**
 Copies the top $(D n) elements of the input range $(D source) into the
 random-access range $(D target), where $(D n =
 target.length). Elements of $(D source) are not touched. If $(D
 sorted) is $(D true), the target is sorted. Otherwise, the target
 respects the $(WEB en.wikipedia.org/wiki/Binary_heap, heap property).
+
+Params:
+    less = The predicate to sort by.
+    source = The source range.
+    target = The target range.
+    sorted = Whether to sort the elements copied into `target`.
+
+Returns: The slice of `target` containing the copied elements.
  */
 TRange topNCopy(alias less = "a < b", SRange, TRange)
     (SRange source, TRange target, SortOutput sorted = SortOutput.no)
@@ -2439,6 +2661,11 @@ do
     // proceed to the next permutation of the array.
 } while (nextPermutation(a));
 ----
+ * Params:
+ *  less = The ordering to be used to determine lexicographical ordering of the
+ *      permutations.
+ *  range = The range to permute.
+ *
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
@@ -2691,6 +2918,11 @@ do
  * permutations may fail to be generated. When the range has non-unique
  * elements, you should use $(MYREF nextPermutation) instead.
  *
+ * Params:
+ *  less = The ordering to be used to determine lexicographical ordering of the
+ *      permutations.
+ *  range = The range to permute.
+ *
  * Returns: false if the range was lexicographically the greatest, in which
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
@@ -2843,4 +3075,3 @@ shapes. Here's a non-trivial example:
     }
     assert(n == 60);
 }
-
