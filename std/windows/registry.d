@@ -1065,7 +1065,6 @@ public:
                 .getKey("Windows")
                 .getKey("CurrentVersion")
                 .getKey("Run", REGSAM.KEY_ALL_ACCESS);
-                
                 regKey.setValue("Calculator", "calc.exe");
             }
         ----
