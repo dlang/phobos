@@ -3064,8 +3064,6 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
                 _separatorLength = codeLength!(ElementEncodingType!Range)(separator);
             }
-            if (_input.empty)
-                _frontLength = _atEnd;
         }
 
         static if (isInfinite!Range)
@@ -3197,6 +3195,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    assert(equal(splitter("", ' '), [ "" ]));
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
     assert(equal(splitter("žlutoučkýřkůň", 'ř'), [ "žlutoučký", "kůň" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
@@ -3208,7 +3207,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     // }
     assert(equal(splitter(a, 0), w));
     a = null;
-    assert(equal(splitter(a, 0),  (int[][]).init));
+    assert(equal(splitter(a, 0), [ (int[]).init ][]));
     a = [ 0 ];
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ][]));
     a = [ 0, 1 ];
@@ -3311,17 +3310,17 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     private:
         Range _input;
         Separator _separator;
-        // _frontLength == size_t.max means empty
-        size_t _frontLength = size_t.max;
+        enum size_t _unComputed = size_t.max - 1, _atEnd = size_t.max;
+        // _frontLength == _atEnd means empty
+        size_t _frontLength = _unComputed;
         static if (isBidirectionalRange!Range)
-            size_t _backLength = size_t.max;
+            size_t _backLength = _unComputed;
 
         @property auto separatorLength() { return _separator.length; }
 
         void ensureFrontLength()
         {
-            if (_frontLength != _frontLength.max) return;
-            assert(!_input.empty);
+            if (_frontLength != _unComputed) return;
             // compute front length
             _frontLength = (_separator.empty) ? 1 :
                            _input.length - find!pred(_input, _separator).length;
@@ -3332,8 +3331,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         void ensureBackLength()
         {
             static if (isBidirectionalRange!Range)
-                if (_backLength != _backLength.max) return;
-            assert(!_input.empty);
+                if (_backLength != _unComputed) return;
             // compute back length
             static if (isBidirectionalRange!Range && isBidirectionalRange!Separator)
             {
@@ -3365,7 +3363,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         {
             @property bool empty()
             {
-                return _frontLength == size_t.max && _input.empty;
+                return _frontLength == _atEnd;
             }
         }
 
@@ -3377,9 +3375,9 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
             {
                 // done, there's no separator in sight
                 _input = _input[_frontLength .. _frontLength];
-                _frontLength = _frontLength.max;
+                _frontLength = _atEnd;
                 static if (isBidirectionalRange!Range)
-                    _backLength = _backLength.max;
+                    _backLength = _atEnd;
                 return;
             }
             if (_frontLength + separatorLength == _input.length)
@@ -3396,7 +3394,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
             // reading the next item
             _input = _input[_frontLength + separatorLength .. _input.length];
             // mark _frontLength as uninitialized
-            _frontLength = _frontLength.max;
+            _frontLength = _unComputed;
         }
 
         static if (isForwardRange!Range)
@@ -3446,6 +3444,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    assert(equal(splitter("", "  "), [ "" ]));
+
     auto s = ",abc, de, fg,hi,";
     auto sp0 = splitter(s, ',');
     // //foreach (e; sp0) writeln("[", e, "]");
@@ -3620,10 +3620,7 @@ private struct SplitterResult(alias isTerminator, Range)
         static if(!fullSlicing)
             _next = _input.save;
 
-        if (!_input.empty)
-            findTerminator();
-        else
-            _end = size_t.max;
+        findTerminator();
     }
 
     static if (isInfinite!Range)
@@ -3732,7 +3729,7 @@ private struct SplitterResult(alias isTerminator, Range)
             ["Mary", "", "has", "a", "little", "lamb.", "", "", ""]);
     compare("Mary  has a little lamb.",
             ["Mary", "", "has", "a", "little", "lamb."]);
-    compare("", (string[]).init);
+    compare("", [""]);
     compare(" ", ["", ""]);
 
     static assert(isForwardRange!(typeof(splitter!"a == ' '"("ABC"))));
@@ -3762,7 +3759,7 @@ private struct SplitterResult(alias isTerminator, Range)
         int[][] result;
     }
     Entry[] entries = [
-        Entry(0, 0, []),
+        Entry(0, 0, [[]]),
         Entry(0, 1, [[0]]),
         Entry(1, 2, [[], []]),
         Entry(2, 7, [[2], [4], [6]]),
