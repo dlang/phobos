@@ -9882,6 +9882,23 @@ public:
         static assert(!__traits(compiles, idate.day = 6));
     }
 
+    /**
+     * Returns:
+     *     Date that represents the current local date
+     */
+    static Date today() @safe
+    {
+        return cast(Date) Clock.currTime();
+    }
+
+    @safe unittest
+    {
+        auto today = Date.today();
+        auto today_systime = Clock.currTime();
+
+        assert(today.day() == today_systime.day());
+    }
+
 
     /++
         Adds the given number of years or months to this $(LREF Date). A negative
@@ -15670,6 +15687,24 @@ public:
         static assert(!__traits(compiles, idt.second = 27));
     }
 
+    /**
+     * Returns:
+     *     DateTime that represents the current local date and time
+     */
+    static DateTime now() @safe
+    {
+        return cast(DateTime) Clock.currTime();
+    }
+
+    @safe unittest
+    {
+        auto now = DateTime.now();
+        auto now_systime = Clock.currTime();
+
+        assert(now.day() == now_systime.day());
+        assert(now.hour() == now_systime.hour());
+        assert(now.minute() == now_systime.minute());
+    }
 
     /++
         Adds the given number of years or months to this $(LREF DateTime). A
