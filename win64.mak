@@ -189,6 +189,8 @@ SRC_STD_7= \
 	std\mathspecial.d \
 	std\process.d
 
+SRC_STD_9= $(SRC_STD_ALLOC)
+
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_math) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_3c) $(SRC_STD_4) \
@@ -203,7 +205,7 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_6j) \
 	$(SRC_STD_7) \
 	$(SRC_STD_LOGGER) \
-	$(SRC_STD_ALLOC)
+	$(SRC_STD_9)
 
 SRC=	unittest.d index.d
 
@@ -506,7 +508,8 @@ UNITTEST_OBJS= \
 		unittest6i.obj \
 		unittest6j.obj \
 		unittest7.obj \
-		unittest8.obj
+		unittest8.obj \
+		unittest9.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
@@ -532,6 +535,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_LOGGER)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9.obj $(SRC_STD_9)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
 	    $(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
