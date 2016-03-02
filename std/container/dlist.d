@@ -304,6 +304,7 @@ Complexity: $(BIGOH n).
     {
         return DList(this[]);
     }
+    alias save = dup;
 
 /**
 Returns a range that iterates over all elements of the container, in
@@ -514,6 +515,7 @@ Complexity: $(BIGOH 1).
 
     /// ditto
     alias stableRemoveFront = removeFront;
+    alias popFront = removeFront;
 
     /// ditto
     void removeBack()
@@ -525,6 +527,7 @@ Complexity: $(BIGOH 1).
 
     /// ditto
     alias stableRemoveBack = removeBack;
+    alias popBack = removeBack;
 
 /**
 Removes $(D howMany) values at the front or back of the
@@ -943,4 +946,13 @@ private:
     auto a = DList!int();
     a.insertFront(iota(0, 5)); // can insert range with non-ref front
     assert(a.front == 0 && a.back == 4);
+}
+
+unittest
+{
+    import std.range;
+    // should be an input, forward and bidirectional range
+    assert(isInputRange!(DList!int));
+    assert(isForwardRange!(DList!int));
+    assert(isBidirectionalRange!(DList!int));
 }
