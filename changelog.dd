@@ -8,6 +8,11 @@ $(BUGSTITLE Library Changes,
 
 $(LI $(REF GCAllocator.goodAllocSize, std,experimental,allocator,gc_allocator)
 was added.)
+$(LI High-level API of $(STDMODREF net_curl, std.net.curl) now uses $(XREF array, Appender)
+for received content. Which generally makes all calls slightly faster. Up to 200ms for large
+amounts of data.)
+$(LI $(XREF std_meta, Repeat) was added to obtain a repeating
+$(XREF std_meta, AliasSeq) consisting of template arguments.)
 
 )
 

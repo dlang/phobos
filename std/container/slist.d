@@ -1,5 +1,6 @@
 /**
 This module implements a singly-linked list container.
+It can be used as a stack.
 
 This module is a submodule of $(LINK2 std_container.html, std.container).
 
@@ -23,6 +24,7 @@ public import std.container.util;
 
 /**
    Implements a simple and fast singly-linked list.
+   It can be used as a stack.
 
    $(D SList) uses reference semantics.
  */
@@ -283,6 +285,27 @@ Complexity: $(BIGOH 1)
     {
         if (_root)
             _first = null;
+    }
+
+/**
+Reverses SList in-place. Performs no memory allocation.
+
+Complexity: $(BIGOH n)
+     */
+    void reverse()
+    {
+        if (!empty)
+        {
+            Node* prev;
+            while (_first)
+            {
+                auto next = _first._next;
+                _first._next = prev;
+                prev = _first;
+                _first = next;
+            }
+            _first = prev;
+        }
     }
 
 /**
@@ -681,13 +704,14 @@ unittest
 
 unittest
 {
-    import std.algorithm;
+    static import std.algorithm;
+    import std.range: take;
 
     // insertAfter documentation example
     auto sl = SList!string(["a", "b", "d"]);
     sl.insertAfter(sl[], "e"); // insert at the end (slowest)
     assert(std.algorithm.equal(sl[], ["a", "b", "d", "e"]));
-    sl.insertAfter(std.range.take(sl[], 2), "c"); // insert after "b"
+    sl.insertAfter(take(sl[], 2), "c"); // insert after "b"
     assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
 }
 
@@ -779,6 +803,23 @@ unittest
     // issue 15659
     SList!int s;
     s.clear();
+}
+
+unittest
+{
+    SList!int s;
+    s.reverse();
+}
+
+unittest
+{
+    import std.algorithm : equal;
+
+    auto s = SList!int([1, 2, 3]);
+    assert(s[].equal([1, 2, 3]));
+
+    s.reverse();
+    assert(s[].equal([3, 2, 1]));
 }
 
 unittest

@@ -168,7 +168,7 @@ body
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    assert(10000.iota
+    assert((3 * 4 * 5 * 6).iota
         .sliced(3, 4, 5, 6)
         .swapped!(3, 1)
         .shape == cast(size_t[4])[3, 6, 5, 4]);
@@ -179,7 +179,7 @@ body
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    assert(10000.iota
+    assert((3 * 4 * 5 * 6).iota
         .sliced(3, 4, 5, 6)
         .swapped(1, 3)
         .shape == cast(size_t[4])[3, 6, 5, 4]);
@@ -190,7 +190,7 @@ body
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    assert(10000.iota
+    assert(12.iota
         .sliced(3, 4)
         .swapped
         .shape == cast(size_t[2])[4, 3]);
@@ -280,7 +280,7 @@ body
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    auto slice = 10.iota.sliced(2, 3);
+    auto slice = 6.iota.sliced(2, 3);
 
     auto a = [[0, 1, 2],
               [3, 4, 5]];
@@ -347,7 +347,7 @@ Slice!(N, Range) everted(size_t N, Range)(auto ref Slice!(N, Range) slice)
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    assert(1000.iota
+    assert(60.iota
         .sliced(3, 4, 5)
         .everted
         .shape == cast(size_t[3])[5, 4, 3]);
@@ -462,7 +462,7 @@ Slice!(2, Range) transposed(Range)(auto ref Slice!(2, Range) slice)
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    assert(100000.iota
+    assert((3 * 4 * 5 * 6 * 7).iota
         .sliced(3, 4, 5, 6, 7)
         .transposed!(4, 1, 0)
         .shape == cast(size_t[5])[7, 4, 3, 5, 6]);
@@ -473,7 +473,7 @@ Slice!(2, Range) transposed(Range)(auto ref Slice!(2, Range) slice)
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    assert(100000.iota
+    assert((3 * 4 * 5 * 6 * 7).iota
         .sliced(3, 4, 5, 6, 7)
         .transposed(4, 1, 0)
         .shape == cast(size_t[5])[7, 4, 3, 5, 6]);
@@ -484,7 +484,7 @@ Slice!(2, Range) transposed(Range)(auto ref Slice!(2, Range) slice)
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    assert(100000.iota
+    assert((3 * 4 * 5 * 6 * 7).iota
         .sliced(3, 4, 5, 6, 7)
         .transposed(4)
         .shape == cast(size_t[5])[7, 3, 4, 5, 6]);
@@ -495,7 +495,7 @@ Slice!(2, Range) transposed(Range)(auto ref Slice!(2, Range) slice)
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    assert(100.iota
+    assert(12.iota
         .sliced(3, 4)
         .transposed
         .shape == cast(size_t[2])[4, 3]);
@@ -620,7 +620,7 @@ pure nothrow unittest
     auto i0 = iota(0,  4); auto r0 = i0.retro;
     auto i1 = iota(4,  8); auto r1 = i1.retro;
     auto i2 = iota(8, 12); auto r2 = i2.retro;
-    auto slice = 100.iota.sliced(3, 4);
+    auto slice = 12.iota.sliced(3, 4);
     assert(slice                   .byElement.equal(chain(i0, i1, i2)));
     // Template
     assert(slice.reversed!(0)      .byElement.equal(chain(i2, i1, i0)));
@@ -724,8 +724,8 @@ pure nothrow unittest
 @safe @nogc pure nothrow unittest
 {
     import std.range: iota;
-    static assert(1000.iota.sliced(13, 40).strided!(0, 1)(2, 5).shape == [7, 8]);
-    static assert(100.iota.sliced(93).strided!(0, 0)(7, 3).shape == [5]);
+    static assert(iota(13 * 40).sliced(13, 40).strided!(0, 1)(2, 5).shape == [7, 8]);
+    static assert(93.iota.sliced(93).strided!(0, 0)(7, 3).shape == [5]);
 }
 
 @safe @nogc pure nothrow unittest
@@ -737,7 +737,7 @@ pure nothrow unittest
     auto i0 = iota(0,  4); auto s0 = i0.stride(3);
     auto i1 = iota(4,  8); auto s1 = i1.stride(3);
     auto i2 = iota(8, 12); auto s2 = i2.stride(3);
-    auto slice = 100.iota.sliced(3, 4);
+    auto slice = 12.iota.sliced(3, 4);
     assert(slice              .byElement.equal(chain(i0, i1, i2)));
     // Template
     assert(slice.strided!0(2) .byElement.equal(chain(i0, i2)));
@@ -1215,7 +1215,7 @@ body
 {
     import std.experimental.ndslice.slice;
     import std.range: iota, retro;
-    assert(1000.iota
+    assert((5 * 3 * 6 * 7).iota
         .sliced(5, 3, 6, 7)
         .dropToHypercube
         .shape == cast(size_t[4])[3, 3, 3, 3]);

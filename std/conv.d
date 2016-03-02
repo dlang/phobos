@@ -1939,7 +1939,7 @@ Target parse(Target, Source)(ref Source s)
     }
     else
     {
-        // Larger than int types
+        // int or larger types
 
         static if (Target.min < 0)
             bool sign = 0;
@@ -1953,7 +1953,6 @@ Target parse(Target, Source)(ref Source s)
             goto Lerr;
 
         c = s.front;
-        s.popFront();
         static if (Target.min < 0)
         {
             switch (c)
@@ -1962,10 +1961,10 @@ Target parse(Target, Source)(ref Source s)
                     sign = true;
                     goto case '+';
                 case '+':
+                    s.popFront();
                     if (s.empty)
                         goto Lerr;
                     c = s.front;
-                    s.popFront();
                     break;
 
                 default:
@@ -1976,6 +1975,7 @@ Target parse(Target, Source)(ref Source s)
         if (c <= 9)
         {
             Target v = cast(Target)c;
+            s.popFront();
             while (!s.empty)
             {
                 c = cast(typeof(c)) (s.front - '0');
@@ -2180,6 +2180,36 @@ Lerr:
 
 @safe pure unittest
 {
+    void checkErrMsg(string input, dchar charInMsg, dchar charNotInMsg)
+    {
+        try
+        {
+            int x = input.to!int();
+            assert(false, "Invalid conversion did not throw");
+        }
+        catch(ConvException e)
+        {
+            // Ensure error message contains failing character, not the character
+            // beyond.
+            import std.algorithm.searching : canFind;
+            assert( e.msg.canFind(charInMsg) &&
+                   !e.msg.canFind(charNotInMsg));
+        }
+        catch(Exception e)
+        {
+            assert(false, "Did not throw ConvException");
+        }
+    }
+    checkErrMsg("@$", '@', '$');
+    checkErrMsg("@$123", '@', '$');
+    checkErrMsg("1@$23", '@', '$');
+    checkErrMsg("1@$", '@', '$');
+    checkErrMsg("1@$2", '@', '$');
+    checkErrMsg("12@$", '@', '$');
+}
+
+@safe pure unittest
+{
     import std.exception;
     assertCTFEable!({ string s =  "1234abc"; assert(parse! int(s) ==  1234 && s == "abc"); });
     assertCTFEable!({ string s = "-1234abc"; assert(parse! int(s) == -1234 && s == "abc"); });
@@ -2228,7 +2258,7 @@ body
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
     Target v = 0;
-    size_t atStart = true;
+    bool atStart = true;
 
     for (; !s.empty; s.popFront())
     {
@@ -4773,9 +4803,10 @@ unittest //@@@9559@@@
 {
     import std.algorithm : map;
     import std.typecons : Nullable;
+    import std.array: array;
     alias I = Nullable!int;
     auto ints = [0, 1, 2].map!(i => i & 1 ? I.init : I(i))();
-    auto asArray = std.array.array(ints);
+    auto asArray = array(ints);
 }
 
 unittest //http://forum.dlang.org/post/nxbdgtdlmwscocbiypjs@forum.dlang.org

@@ -5304,8 +5304,8 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
         import std.utf : encode;
         char[4] buf;
         wchar[2] buf16;
-        auto len = std.utf.encode(buf, ch);
-        auto len16 = std.utf.encode(buf16, ch);
+        auto len = encode(buf, ch);
+        auto len16 = encode(buf16, ch);
         auto c8 = buf[0..len].decoder;
         auto c16 = buf16[0..len16].decoder;
         assert(testAll(utf16, c16));
@@ -6952,15 +6952,14 @@ int sicmp(S1, S2)(S1 str1, S2 str2)
     if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
     && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
 {
-    import std.utf : decode;
-
     alias sTable = simpleCaseTable;
     size_t ridx=0;
     foreach(dchar lhs; str1)
     {
         if(ridx == str2.length)
             return 1;
-        dchar rhs = std.utf.decode(str2, ridx);
+        import std.utf : decode;
+        dchar rhs = decode(str2, ridx);
         int diff = lhs - rhs;
         if(!diff)
             continue;
@@ -7812,7 +7811,7 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
         dchar ch = br.back;
         if(combiningClass(ch) == 0 && allowedIn!norm(ch))
         {
-            region_start = br.length - std.utf.codeLength!C(ch);
+            region_start = br.length - codeLength!C(ch);
             break;
         }
         br.popFront();
@@ -8800,6 +8799,7 @@ S toLower(S)(S s) @trusted pure
 @trusted unittest //@@@BUG std.format is not @safe
 {
     import std.format : format;
+    static import std.ascii;
     foreach(ch; 0..0x80)
         assert(std.ascii.toLower(ch) == toLower(ch));
     assert(toLower('Я') == 'я');
@@ -8925,6 +8925,7 @@ unittest
 @trusted unittest
 {
     import std.format : format;
+    static import std.ascii;
     foreach(ch; 0..0x80)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');

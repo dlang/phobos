@@ -153,7 +153,7 @@ class CFile : Stream {
     import std.file : deleteme;
     import std.internal.cstring : tempCString;
 
-    auto stream_file = (std.file.deleteme ~ "-stream.txt").tempCString();
+    auto stream_file = (deleteme ~ "-stream.txt").tempCString();
     FILE* f = fopen(stream_file,"w");
     assert(f !is null);
     CFile file = new CFile(f,FileMode.Out);

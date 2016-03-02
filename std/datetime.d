@@ -28494,7 +28494,12 @@ public:
     }
 
 
-    version(Posix)
+    version(Android)
+    {
+        // Android concatenates all time zone data into a single file and stores it here.
+        enum defaultTZDatabaseDir = "/system/usr/share/zoneinfo/";
+    }
+    else version(Posix)
     {
         /++
             The default directory where the TZ Database files are. It's empty
@@ -28549,13 +28554,22 @@ public:
         enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
-        const file = asNormalizedPath(chainPath(tzDatabaseDir, name)).to!string;
+        version(Android)
+        {
+            auto tzfileOffset = name in tzdataIndex(tzDatabaseDir);
+            enforce(tzfileOffset, new DateTimeException(format("The time zone %s is not listed.", name)));
+            string tzFilename = separate_index ? "zoneinfo.dat" : "tzdata";
+            const file = asNormalizedPath(chainPath(tzDatabaseDir, tzFilename)).to!string;
+        }
+        else
+            const file = asNormalizedPath(chainPath(tzDatabaseDir, name)).to!string;
 
         enforce(file.exists(), new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
 
         auto tzFile = File(file);
-        immutable gmtZone = file.representation().canFind("GMT");
+        version(Android) tzFile.seek(*tzfileOffset);
+        immutable gmtZone = name.representation().canFind("GMT");
 
         try
         {
@@ -28739,8 +28753,16 @@ public:
 
             auto posixEnvStr = tzFile.readln().strip();
 
-            _enforceValidTZFile(tzFile.readln().strip().empty);
-            _enforceValidTZFile(tzFile.eof);
+            version(Android)
+            {
+                // Android uses a single file for all timezone data, so the file
+                // doesn't end here.
+            }
+            else
+            {
+                _enforceValidTZFile(tzFile.readln().strip().empty);
+                _enforceValidTZFile(tzFile.eof);
+            }
 
 
             auto transitionTypes = new TransitionType*[](tempTTInfos.length);
@@ -28889,20 +28911,31 @@ public:
 
         auto timezones = appender!(string[])();
 
-        foreach(DirEntry dentry; dirEntries(tzDatabaseDir, SpanMode.depth))
+        version(Android)
         {
-            if(dentry.isFile)
+            import std.algorithm : copy, filter;
+            tzdataIndex(tzDatabaseDir)
+            .byKey
+            .filter!(a => a.startsWith(subName))
+            .copy(timezones);
+        }
+        else
+        {
+            foreach(DirEntry dentry; dirEntries(tzDatabaseDir, SpanMode.depth))
             {
-                auto tzName = dentry.name[tzDatabaseDir.length .. $];
-
-                if(!tzName.extension().empty ||
-                   !tzName.startsWith(subName) ||
-                   tzName == "+VERSION")
+                if(dentry.isFile)
                 {
-                    continue;
-                }
+                    auto tzName = dentry.name[tzDatabaseDir.length .. $];
 
-                timezones.put(tzName);
+                    if(!tzName.extension().empty ||
+                       !tzName.startsWith(subName) ||
+                       tzName == "+VERSION")
+                    {
+                        continue;
+                    }
+
+                    timezones.put(tzName);
+                }
             }
         }
 
@@ -28932,6 +28965,8 @@ public:
         foreach(tzName; tzNames)
             assertNotThrown!DateTimeException(testPTZSuccess(tzName));
 
+        // No timezone directories on Android, just a single tzdata file
+        version(Android) {} else
         foreach(DirEntry dentry; dirEntries(defaultTZDatabaseDir, SpanMode.depth))
         {
             if(dentry.isFile)
@@ -29159,6 +29194,77 @@ private:
         _transitions = transitions;
         _leapSeconds = leapSeconds;
         _hasDST = hasDST;
+    }
+
+    // Android concatenates the usual timezone directories into a single file,
+    // tzdata, along with an index to jump to each timezone's offset.  In older
+    // versions of Android, the index was stored in a separate file, zoneinfo.idx,
+    // whereas now it's stored at the beginning of tzdata.
+    version(Android)
+    {
+        // Keep track of whether there's a separate index, zoneinfo.idx.  Only
+        // check this after calling tzdataIndex, as it's initialized there.
+        static shared bool separate_index;
+
+        // Extracts the name of each time zone and the offset where its data is
+        // located in the tzdata file from the index and caches it for later.
+        static const(uint[string]) tzdataIndex(string tzDir)
+        {
+            import std.concurrency : initOnce;
+
+            static __gshared uint[string] _tzIndex;
+
+            // _tzIndex is initialized once and then shared across all threads.
+            initOnce!_tzIndex(
+            {
+                import std.conv : to;
+                import std.format : format;
+                import std.path : asNormalizedPath, chainPath;
+
+                enum indexEntrySize = 52;
+                const combinedFile = asNormalizedPath(chainPath(tzDir, "tzdata")).to!string;
+                const indexFile = asNormalizedPath(chainPath(tzDir, "zoneinfo.idx")).to!string;
+                File tzFile;
+                uint indexEntries, dataOffset;
+                uint[string] initIndex;
+
+                // Check for the combined file tzdata, which stores the index
+                // and the time zone data together.
+                if(combinedFile.exists() && combinedFile.isFile)
+                {
+                    tzFile = File(combinedFile);
+                    _enforceValidTZFile(readVal!(char[])(tzFile, 6) == "tzdata");
+                    auto tzDataVersion = readVal!(char[])(tzFile, 6);
+                    _enforceValidTZFile(tzDataVersion[5] == '\0');
+
+                    uint indexOffset = readVal!uint(tzFile);
+                    dataOffset = readVal!uint(tzFile);
+                    readVal!uint(tzFile);
+
+                    indexEntries = (dataOffset - indexOffset)/indexEntrySize;
+                    separate_index = false;
+                }
+                else if(indexFile.exists() && indexFile.isFile)
+                {
+                    tzFile = File(indexFile);
+                    indexEntries = to!(uint)(tzFile.size/indexEntrySize);
+                    separate_index = true;
+                }
+                else
+                    throw new DateTimeException(format("Both timezone files %s and %s do not exist.",
+                        combinedFile, indexFile));
+
+                foreach(Unused; 0 .. indexEntries) {
+                    string tzName = to!string(readVal!(char[])(tzFile, 40).ptr);
+                    uint tzOffset = readVal!uint(tzFile);
+                    readVal!(uint[])(tzFile, 2);
+                    initIndex[tzName] = dataOffset + tzOffset;
+                }
+                initIndex.rehash;
+                return initIndex;
+            }());
+            return _tzIndex;
+        }
     }
 
     /// List of times when the utc offset changes.
@@ -29655,7 +29761,10 @@ else version(Posix)
         import core.sys.posix.stdlib : setenv;
         import core.sys.posix.time : tzset;
 
-        auto value = asNormalizedPath(chainPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName));
+        version(Android)
+            auto value = asNormalizedPath(tzDatabaseName);
+        else
+            auto value = asNormalizedPath(chainPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName));
         setenv("TZ", value.tempCString(), 1);
         tzset();
     }
@@ -31629,7 +31738,7 @@ SysTime parseRFC822DateTime(R)(R value) @safe
        (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
     import std.functional : not;
-    import std.ascii : isDigit;
+    import std.ascii : isDigit, isAlpha, isPrintable;
     import std.typecons : Rebindable;
     import std.string : capitalize, format;
     import std.conv : to;
@@ -31663,7 +31772,7 @@ SysTime parseRFC822DateTime(R)(R value) @safe
     }
 
     // day-of-week
-    if(std.ascii.isAlpha(value[0]))
+    if(isAlpha(value[0]))
     {
         auto dowStr = sliceAsString(value[0 .. 3]);
         switch(dowStr)
@@ -31683,7 +31792,7 @@ afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
     }
 
     // day
-    immutable digits = std.ascii.isDigit(value[1]) ? 2 : 1;
+    immutable digits = isDigit(value[1]) ? 2 : 1;
     immutable day = _convDigits!short(value[0 .. digits]);
     if(day == -1)
         throw new DateTimeException("Invalid day");
@@ -31817,7 +31926,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     // that if the next character is printable (and not part of CFWS), then it
     // might be part of the timezone and thus affect what the timezone was
     // supposed to be, so we'll throw, but otherwise, we'll just ignore it.
-    if(!value.empty && std.ascii.isPrintable(value[0]) && value[0] != ' ' && value[0] != '(')
+    if(!value.empty && isPrintable(value[0]) && value[0] != ' ' && value[0] != '(')
         throw new DateTimeException("Invalid timezone");
 
     try
@@ -33699,7 +33808,7 @@ T _convDigits(T, R)(R str)
     {
         if(i != 0)
             num *= 10;
-        if(!std.ascii.isDigit(str[i]))
+        if(!isDigit(str[i]))
             return -1;
         num += str[i] - '0';
     }

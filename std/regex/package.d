@@ -966,6 +966,7 @@ package void replaceFmt(R, Capt, OutR)
         isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
     import std.algorithm, std.conv;
+    import std.ascii: isDigit, isAlpha;
     enum State { Normal, Dollar }
     auto state = State.Normal;
     size_t offset;
@@ -988,7 +989,7 @@ L_Replace_Loop:
             format = format[offset .. $];
             break;
         case State.Dollar:
-            if(std.ascii.isDigit(format[0]))
+            if(isDigit(format[0]))
             {
                 uint digit = parse!uint(format);
                 enforce(ignoreBadSubs || digit < captures.length, text("invalid submatch number ", digit));
@@ -997,7 +998,7 @@ L_Replace_Loop:
             }
             else if(format[0] == '{')
             {
-                auto x = find!(a => !std.ascii.isAlpha(a))(format[1..$]);
+                auto x = find!(a => !isAlpha(a))(format[1..$]);
                 enforce(!x.empty && x[0] == '}', "no matching '}' in replacement format");
                 auto name = format[1 .. $ - x.length];
                 format = x[1..$];

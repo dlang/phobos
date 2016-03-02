@@ -102,7 +102,7 @@ template pack(K...)
     import std.range.primitives: ElementType;
     import std.range: iota;
     import std.algorithm.comparison: equal;
-    auto r = 100000000.iota;
+    auto r = (3 * 4 * 5 * 6 * 7 * 8 * 9 * 10 * 11).iota;
     auto a = r.sliced(3, 4, 5, 6, 7, 8, 9, 10, 11);
     auto b = a.pack!(2, 3); // same as `a.pack!2.pack!3`
     auto c = b[1, 2, 3, 4];
@@ -125,7 +125,7 @@ template pack(K...)
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.selection;
     import std.range: iota;
-    auto r = 100000000.iota;
+    auto r = (3 * 4 * 5 * 6 * 7 * 8 * 9 * 10 * 11).iota;
     auto a = r.sliced(3, 4, 5, 6, 7, 8, 9, 10, 11);
     auto b = a.pack!(2, 3);
     static assert(b.shape.length == 4);
@@ -164,7 +164,7 @@ pure nothrow unittest
     import std.experimental.ndslice.slice;
     import std.range: iota;
     import std.algorithm.comparison: equal;
-    auto r = 100000000.iota;
+    auto r = (3 * 4 * 5 * 6 * 7 * 8 * 9 * 10 * 11).iota;
     auto a = r.sliced(3, 4, 5, 6, 7, 8, 9, 10, 11);
     auto b = a.pack!(2, 3).unpack();
     static assert(is(typeof(a) == typeof(b)));
@@ -210,7 +210,8 @@ evertPack(size_t N, Range)(auto ref Slice!(N, Range) slice)
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration: transposed;
     import std.range: iota;
-    auto slice = 100000000.iota.sliced(3, 4, 5, 6, 7, 8, 9, 10, 11);
+    auto slice = (3 * 4 * 5 * 6 * 7 * 8 * 9 * 10 * 11).iota
+        .sliced(3, 4, 5, 6, 7, 8, 9, 10, 11);
     assert(slice
         .pack!2
         .evertPack
@@ -228,7 +229,7 @@ pure nothrow unittest
     import std.range.primitives: ElementType;
     import std.range: iota;
     import std.algorithm.comparison: equal;
-    auto r = 100000000.iota;
+    auto r = (3 * 4 * 5 * 6 * 7 * 8 * 9 * 10 * 11).iota;
     auto a = r.sliced(3, 4, 5, 6, 7, 8, 9, 10, 11);
     auto b = a
         .pack!(2, 3)
@@ -317,7 +318,7 @@ Slice!(1, Range) diagonal(size_t N, Range)(auto ref Slice!(N, Range) slice)
     //  -------
     //->
     // | 0 4 |
-    assert(10.iota
+    assert(6.iota
         .sliced(2, 3)
         .diagonal
         .equal(only(0, 4)));
@@ -351,7 +352,7 @@ pure nothrow unittest
     //  -------
     //->
     // | 1 5 |
-    assert(10.iota
+    assert(6.iota
         .sliced(2, 3)
         .dropOne!1
         .diagonal
@@ -371,7 +372,7 @@ pure nothrow unittest
     //  -------
     //->
     // | 1 3 |
-    assert(10.iota
+    assert(6.iota
         .sliced(2, 3)
         .dropToHypercube
         .reversed!1
@@ -394,7 +395,7 @@ pure nothrow unittest
     //  -----------
     //->
     // | 0 10 |
-    assert(100.iota
+    assert(12.iota
         .sliced(2, 2, 3)
         .diagonal
         .equal(only(0, 10)));
@@ -416,7 +417,7 @@ pure nothrow unittest
     //  -----------
     //->
     // | 1 11 |
-    assert(100.iota
+    assert(12.iota
         .sliced(2, 2, 3)
         .dropOne!2
         .diagonal
@@ -449,7 +450,7 @@ pure nothrow unittest
     // |  9  13 17 |
     // | 18  23 26 |
     //  -----------
-    auto slice = 100.iota
+    auto slice = 27.iota
         .sliced(3, 3, 3)
         .pack!2
         .evertPack
@@ -506,7 +507,7 @@ body
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[1000].sliced(5, 8);
+    auto slice = new int[40].sliced(5, 8);
     auto blocks = slice.blocks(2, 3);
     int i;
     foreach (block; blocks.byElement)
@@ -532,7 +533,7 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[1000].sliced(5, 8);
+    auto slice = new int[40].sliced(5, 8);
     auto blocks = slice.blocks(2, 3);
     auto diagonalBlocks = blocks.diagonal.unpack;
 
@@ -563,7 +564,7 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[1000].sliced(5, 13);
+    auto slice = new int[65].sliced(5, 13);
     auto blocks = slice
         .pack!1
         .evertPack
@@ -627,7 +628,7 @@ body
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[1000].sliced(5, 8);
+    auto slice = new int[40].sliced(5, 8);
     auto windows = slice.windows(2, 3);
     foreach (window; windows.byElement)
         window[] += 1;
@@ -646,7 +647,7 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[1000].sliced(5, 8);
+    auto slice = new int[40].sliced(5, 8);
     auto windows = slice.windows(2, 3);
     windows[1, 2][] = 1;
     windows[1, 2][0, 1] += 1;
@@ -666,7 +667,7 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[1000].sliced(8, 8);
+    auto slice = new int[64].sliced(8, 8);
     auto windows = slice.windows(3, 3);
 
     auto multidiagonal = windows
@@ -690,7 +691,7 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[1000].sliced(5, 8);
+    auto slice = new int[40].sliced(5, 8);
     auto windows = slice
         .pack!1
         .evertPack
@@ -807,7 +808,7 @@ Slice!(Lengths.length, Range)
     import std.experimental.ndslice.slice;
     import std.range: iota;
     import std.experimental.ndslice.iteration: allReversed;
-    auto slice = 100.iota
+    auto slice = 12.iota
         .sliced(3, 4)
         .allReversed
         .reshape(-1, 3);
@@ -855,7 +856,7 @@ pure unittest
     import std.experimental.ndslice.iteration: allReversed;
     import std.stdio;
     import std.range: iota;
-    auto slice = 100.iota.sliced(1, 1, 3, 2, 1, 2, 1).allReversed;
+    auto slice = 12.iota.sliced(1, 1, 3, 2, 1, 2, 1).allReversed;
     assert(slice.reshape(1, -1, 1, 1, 3, 1) ==
         [[[[[[11], [10], [9]]]],
           [[[[ 8], [ 7], [6]]]],
@@ -1127,7 +1128,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
     import std.experimental.ndslice.slice;
     import std.algorithm.comparison: equal;
     import std.range: iota;
-    assert(100.iota
+    assert(20.iota
         .sliced(4, 5)
         .byElement
         .equal(20.iota));
@@ -1140,7 +1141,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
     import std.experimental.ndslice.iteration;
     import std.range: iota, drop;
     import std.algorithm.comparison: equal;
-    assert(100000.iota
+    assert((3 * 4 * 5 * 6 * 7).iota
         .sliced(3, 4, 5, 6, 7)
         .pack!2
         .byElement()
@@ -1190,7 +1191,7 @@ Random access and slicing
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    auto elems = 100.iota.sliced(4, 5).byElement;
+    auto elems = 20.iota.sliced(4, 5).byElement;
 
     elems = elems[11 .. $ - 2];
 
@@ -1212,7 +1213,7 @@ Use $(SUBREF iteration, allReversed) in pipeline before
     import std.range: retro, iota;
     import std.experimental.ndslice.iteration: allReversed;
 
-    auto slice = 100.iota.sliced(3, 4, 5);
+    auto slice = 60.iota.sliced(3, 4, 5);
 
     /// Slow backward iteration #1
     foreach (ref e; slice.byElement.retro)
@@ -1237,7 +1238,7 @@ Use $(SUBREF iteration, allReversed) in pipeline before
 {
     import std.experimental.ndslice.slice;
     import std.range: iota, isRandomAccessRange, hasSlicing;
-    auto elems = 100.iota.sliced(4, 5).byElement;
+    auto elems = 20.iota.sliced(4, 5).byElement;
     static assert(isRandomAccessRange!(typeof(elems)));
     static assert(hasSlicing!(typeof(elems)));
 }
@@ -1248,7 +1249,7 @@ Use $(SUBREF iteration, allReversed) in pipeline before
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration;
     import std.range: iota, isRandomAccessRange;
-    auto elems = 100.iota.sliced(4, 5).everted.byElement;
+    auto elems = 20.iota.sliced(4, 5).everted.byElement;
     static assert(isRandomAccessRange!(typeof(elems)));
 
     elems = elems[11 .. $ - 2];
@@ -1267,7 +1268,7 @@ Use $(SUBREF iteration, allReversed) in pipeline before
     import std.range: iota, isForwardRange, hasLength;
     import std.algorithm.comparison: equal;
 
-    auto range = 100000.iota;
+    auto range = (3 * 4 * 5 * 6 * 7).iota;
     auto slice0 = range.sliced(3, 4, 5, 6, 7);
     auto slice1 = slice0.transposed!(2, 1).pack!2;
     auto elems0 = slice0.byElement;

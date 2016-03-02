@@ -419,13 +419,14 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 
 unittest
 {
+    static import std.file;
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
             assert(s.recvReq.hdrs.canFind("GET /"));
             s.send(httpOK("Hello world"));
         });
-        auto fn = deleteme;
+        auto fn = std.file.deleteme;
         scope (exit) std.file.remove(fn);
         download(host, fn);
         assert(std.file.readText(fn) == "Hello world");
@@ -482,9 +483,10 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 
 unittest
 {
+    static import std.file;
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        auto fn = deleteme;
+        auto fn = std.file.deleteme;
         scope (exit) std.file.remove(fn);
         std.file.write(fn, "upload data\n");
         testServer.handle((s) {
@@ -956,7 +958,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     }
     client.url = url;
     HTTP.StatusLine statusLine;
-    ubyte[] content;
+    import std.array : appender;
+    auto content = appender!(ubyte[])();
     string[string] headers;
     client.onReceive = (ubyte[] data)
     {
@@ -994,6 +997,10 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     client.onReceiveHeader = (in char[] key,
                               in char[] value)
     {
+        if (key == "content-length") {
+            import std.conv : to;
+            content.reserve(value.to!size_t);
+        }
         if (auto v = key in headers)
         {
             *v ~= ", ";
@@ -1019,7 +1026,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         }
     }
 
-    return _decodeContent!T(content, charset);
+    return _decodeContent!T(content.data, charset);
 }
 
 unittest
@@ -4042,7 +4049,7 @@ struct Curl
 
         auto msgZ = curl.easy_strerror(code);
         // doing the following (instead of just using std.conv.to!string) avoids 1 allocation
-        return format("%s on handle %s", msgZ[0 .. core.stdc.string.strlen(msgZ)], handle);
+        return format("%s on handle %s", msgZ[0 .. strlen(msgZ)], handle);
     }
 
     private void throwOnStopped(string message = null)

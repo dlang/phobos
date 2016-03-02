@@ -6539,7 +6539,8 @@ and to $(D T[1]) otherwise.
  */
 template Select(bool condition, T...) if (T.length == 2)
 {
-    alias Select = T[!condition];
+    import std.meta : Alias;
+    alias Select = Alias!(T[!condition]);
 }
 
 ///
@@ -6556,6 +6557,10 @@ unittest
     alias selB = Select!(false, a, b);
     assert(selA == 1);
     assert(selB == 2);
+
+    // can select (compile-time) expressions
+    enum val = Select!(false, -4, 9 - 6);
+    static assert(val == 3);
 }
 
 /**

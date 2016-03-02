@@ -9214,7 +9214,8 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 
     bool isVowel(dchar c)
     {
-        return std.string.indexOf("AaEeIiOoUu", c) != -1;
+        import std.string : indexOf;
+        return "AaEeIiOoUu".indexOf(c) != -1;
     }
 
     int vowelCount = 0;
