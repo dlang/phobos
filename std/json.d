@@ -973,7 +973,7 @@ if(isInputRange!T)
     return root;
 }
 
-version(unittest)
+unittest
 {
     enum issue15742objectOfObject = `{ "key1": { "key2": 1 }}`;
     static assert(parseJSON(issue15742objectOfObject).type == JSON_TYPE.OBJECT);
