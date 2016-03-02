@@ -2008,6 +2008,11 @@ static class VariantException : Exception
  * $(D visit) allows delegates and static functions to be passed
  * as parameters.
  *
+ * If a function with an untyped parameter is specified, this function is called
+ * when the variant contains a type that does not match any other function.
+ * This can be used to apply the same function across multiple possible types.
+ * Exactly one generic function is allowed.
+ *
  * If a function without parameters is specified, this function is called
  * when `variant` doesn't hold a value. Exactly one parameter-less function
  * is allowed.
@@ -2050,6 +2055,20 @@ if (Handlers.length > 0)
                           (int i)    => i,
                           () => -1)();
     assert(rslt == -1);
+
+    // Generic function usage
+    Algebraic!(int, float, real) number = 2;
+    assert(number.visit!(x => x += 1) == 3);
+
+    // Generic function for int/float with separate behavior for string
+    Algebraic!(int, float, string) something = 2;
+    assert(something.visit!((string s) => s.length, x => x) == 2); // generic
+    something = "asdf";
+    assert(something.visit!((string s) => s.length, x => x) == 4); // string
+
+    // Generic handler and empty handler
+    Algebraic!(int, float, real) empty2;
+    assert(empty2.visit!(x => x + 1, () => -1) == -1);
 }
 
 @system unittest
@@ -2087,8 +2106,8 @@ if (Handlers.length > 0)
     Algebraic!(int, float, string) variant2 = 5.0f;
     // Shouldn' t compile as float not handled by visitor.
     static assert(!__traits(compiles, variant2.visit!(
-                        (int) {},
-                        (string) {})()));
+                        (int _) {},
+                        (string _) {})()));
 
     Algebraic!(size_t, string, float) variant3;
     variant3 = 10.0f;
@@ -2109,6 +2128,29 @@ if (Handlers.length > 0)
     static assert(!__traits(compiles,
                             visit!(() => size_t.max, func, (float f) => cast(size_t) f, () => size_t.max)(variant4))
                  );
+}
+
+// disallow providing multiple generic handlers to visit
+// disallow a generic handler that does not apply to all types
+@system unittest
+{
+    Algebraic!(int, float) number = 2;
+    // ok, x + 1 valid for int and float
+    static assert( __traits(compiles, number.visit!(x => x + 1)));
+    // bad, two generic handlers
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x + 2)));
+    // bad, x ~ "a" does not apply to int or float
+    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    // bad, x ~ "a" does not apply to int or float
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
+
+    Algebraic!(int, string) maybenumber = 2;
+    // ok, x ~ "a" valid for string, x + 1 valid for int, only 1 generic
+    static assert( __traits(compiles, number.visit!((string x) => x ~ "a", x => x + 1)));
+    // bad, x ~ "a" valid for string but not int
+    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    // bad, two generics, each only applies in one case
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
 }
 
 /**
@@ -2212,6 +2254,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
         struct Result {
             int[AllowedTypes.length] indices;
             int exceptionFuncIdx = -1;
+            int generalFuncIdx = -1;
         }
 
         Result result;
@@ -2246,6 +2289,13 @@ if (isAlgebraic!VariantType && Handler.length > 0)
                         added = true;
                         result.indices[tidx] = dgidx;
                     }
+                }
+                else static if (isSomeFunction!(dg!T))
+                {
+                    assert(result.generalFuncIdx == -1 ||
+                           result.generalFuncIdx == dgidx,
+                           "Only one generic visitor function is allowed");
+                    result.generalFuncIdx = dgidx;
                 }
                 // Handle composite visitors with opCall overloads
                 else
@@ -2282,19 +2332,18 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
             static if (dgIdx == -1)
             {
-                static if (Strict)
+                static if (HandlerOverloadMap.generalFuncIdx >= 0)
+                    return Handler[HandlerOverloadMap.generalFuncIdx](*ptr);
+                else static if (Strict)
                     static assert(false, "overload for type '" ~ T.stringof ~ "' hasn't been specified");
+                else static if (HandlerOverloadMap.exceptionFuncIdx != -1)
+                    return Handler[HandlerOverloadMap.exceptionFuncIdx]();
                 else
-                {
-                    static if (HandlerOverloadMap.exceptionFuncIdx != -1)
-                        return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
-                    else
-                        throw new VariantException(
-                            "variant holds value of type '"
-                            ~ T.stringof ~
-                            "' but no visitor has been provided"
-                        );
-                }
+                    throw new VariantException(
+                        "variant holds value of type '"
+                        ~ T.stringof ~
+                        "' but no visitor has been provided"
+                    );
             }
             else
             {
