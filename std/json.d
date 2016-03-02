@@ -808,7 +808,7 @@ if(isInputRange!T)
         }
     }
 
-    void parseValue(JSONValue* value)
+    void parseValue(out JSONValue value)
     {
         depth++;
 
@@ -830,7 +830,7 @@ if(isInputRange!T)
                     string name = parseString();
                     checkChar(':');
                     JSONValue member = void;
-                    parseValue(&member);
+                    parseValue(member);
                     value.store.object[name] = member;
                 }
                 while(testChar(','));
@@ -852,7 +852,7 @@ if(isInputRange!T)
                 do
                 {
                     JSONValue element = void;
-                    parseValue(&element);
+                    parseValue(element);
                     value.store.array ~= element;
                 }
                 while(testChar(','));
@@ -969,8 +969,17 @@ if(isInputRange!T)
         depth--;
     }
 
-    parseValue(&root);
+    parseValue(root);
     return root;
+}
+
+unittest
+{
+    enum issue15742objectOfObject = `{ "key1": { "key2": 1 }}`;
+    static assert(parseJSON(issue15742objectOfObject).type == JSON_TYPE.OBJECT);
+
+    enum issue15742arrayOfArray = `[[1]]`;
+    static assert(parseJSON(issue15742arrayOfArray).type == JSON_TYPE.ARRAY);
 }
 
 /**
