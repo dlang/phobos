@@ -17,6 +17,7 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
 module std.stdio;
 
 public import core.stdc.stdio;
+public import std.exception : ErrnoException;
 import std.typecons;// Flag
 import std.stdiobase;
 import core.stdc.stddef;// wchar_t
@@ -285,8 +286,8 @@ public:
         {
             line = chomp(line);
             formattedRead(line, format, &current);
-            enforce(line.empty, text("Leftover characters in record: `",
-                            line, "'"));
+            enforce(line.empty, text("Leftover characters in record: ‘",
+                            line, "’"));
         }
     }
 }
@@ -391,8 +392,8 @@ Throws: $(D ErrnoException) if the file could not be opened.
         import std.exception : errnoEnforce;
 
         this(errnoEnforce(.fopen(name, stdioOpenmode),
-                        text("Cannot open file `", name, "' in mode `",
-                                stdioOpenmode, "'")),
+                        text("Cannot open file ‘", name, "’ in mode ‘",
+                                stdioOpenmode, "’")),
                 name);
 
         // MSVCRT workaround (issue 14422)
@@ -488,7 +489,7 @@ Throws: $(D ErrnoException) in case of error.
 
         detach();
         this = File(errnoEnforce(.popen(command, stdioOpenmode),
-                        "Cannot run command `"~command~"'"),
+                        "Cannot run command ‘" ~ command ~ "’"),
                 command, 1, true);
     }
 
@@ -708,14 +709,14 @@ Throws: $(D ErrnoException) on error.
             {
                 auto res = pclose(_p.handle);
                 errnoEnforce(res != -1,
-                        "Could not close pipe `"~_name~"'");
+                        "Could not close pipe ‘" ~ _name ~ "’");
                 errnoEnforce(res == 0, format("Command returned %d", res));
                 return;
             }
         }
-        //fprintf(core.stdc.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
+        //fprintf(core.stdc.stdio.stderr, ("Closing file ‘" ~ _name ~ "’\n\0").ptr);
         errnoEnforce(.fclose(_p.handle) == 0,
-                "Could not close file `"~_name~"'");
+                "Could not close file ‘" ~ _name ~ "’");
     }
 
 /**
@@ -886,8 +887,8 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
         if (result == result.max) result = 0;
         errnoEnforce(result == buffer.length,
                 text("Wrote ", result, " instead of ", buffer.length,
-                        " objects of type ", T.stringof, " to file `",
-                        _name, "'"));
+                        " objects of type ", T.stringof, " to file ‘",
+                        _name, "’"));
     }
 
     unittest
@@ -918,14 +919,14 @@ Throws: $(D Exception) if the file is not opened.
         version (Windows)
         {
             errnoEnforce(fseek(_p.handle, to!int(offset), origin) == 0,
-                    "Could not seek in file `"~_name~"'");
+                    "Could not seek in file ‘" ~ _name ~ "’");
         }
         else version (Posix)
         {
             import core.sys.posix.stdio : fseeko, off_t;
             //static assert(off_t.sizeof == 8);
             errnoEnforce(fseeko(_p.handle, cast(off_t) offset, origin) == 0,
-                    "Could not seek in file `"~_name~"'");
+                    "Could not seek in file ‘" ~ _name ~ "’");
         }
     }
 
@@ -983,7 +984,7 @@ Throws: $(D Exception) if the file is not opened.
             immutable result = ftello(cast(FILE*) _p.handle);
         }
         errnoEnforce(result != -1,
-                "Query ftell() failed for file `"~_name~"'");
+                "Query ftell() failed for file ‘" ~ _name ~ "’");
         return result;
     }
 
@@ -1028,7 +1029,7 @@ Throws: $(D Exception) if the file is not opened.
 
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
         errnoEnforce(.setvbuf(_p.handle, null, mode, size) == 0,
-                "Could not set buffering for file `"~_name~"'");
+                "Could not set buffering for file ‘" ~ _name ~ "’");
     }
 
 /**
@@ -1045,7 +1046,7 @@ Throws: $(D Exception) if the file is not opened.
         enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
         errnoEnforce(.setvbuf(_p.handle,
                         cast(char*) buf.ptr, mode, buf.length) == 0,
-                "Could not set buffering for file `"~_name~"'");
+                "Could not set buffering for file ‘" ~ _name ~ "’");
     }
 
 
@@ -1122,7 +1123,7 @@ $(UL
             immutable short type = lockType == LockType.readWrite
                 ? F_WRLCK : F_RDLCK;
             errnoEnforce(lockImpl(F_SETLKW, type, start, length) != -1,
-                    "Could not set lock for file `"~_name~"'");
+                    "Could not set lock for file ‘" ~ _name ~ "’");
         }
         else
         version(Windows)
@@ -1130,7 +1131,7 @@ $(UL
             immutable type = lockType == LockType.readWrite ?
                 LOCKFILE_EXCLUSIVE_LOCK : 0;
             wenforce(lockImpl!LockFileEx(start, length, type),
-                    "Could not set lock for file `"~_name~"'");
+                    "Could not set lock for file ‘" ~ _name ~ "’");
         }
         else
             static assert(false);
@@ -1157,7 +1158,7 @@ specified file segment was already locked.
             immutable res = lockImpl(F_SETLK, type, start, length);
             if (res == -1 && (errno == EACCES || errno == EAGAIN))
                 return false;
-            errnoEnforce(res != -1, "Could not set lock for file `"~_name~"'");
+            errnoEnforce(res != -1, "Could not set lock for file ‘" ~ _name ~ "’");
             return true;
         }
         else
@@ -1170,7 +1171,7 @@ specified file segment was already locked.
             if (!res && (GetLastError() == ERROR_IO_PENDING
                 || GetLastError() == ERROR_LOCK_VIOLATION))
                 return false;
-            wenforce(res, "Could not set lock for file `"~_name~"'");
+            wenforce(res, "Could not set lock for file ‘" ~ _name ~ "’");
             return true;
         }
         else
@@ -1189,13 +1190,13 @@ Removes the lock over the specified file segment.
         {
             import core.sys.posix.fcntl : F_SETLK, F_UNLCK;
             errnoEnforce(lockImpl(F_SETLK, F_UNLCK, start, length) != -1,
-                    "Could not remove lock for file `"~_name~"'");
+                    "Could not remove lock for file ‘" ~ _name ~ "’");
         }
         else
         version(Windows)
         {
             wenforce(lockImpl!UnlockFileEx(start, length),
-                "Could not remove lock for file `"~_name~"'");
+                "Could not remove lock for file ‘" ~ _name ~ "’");
         }
         else
             static assert(false);
@@ -1671,9 +1672,9 @@ is recommended if you want to process a complete file.
         string s;
         auto f = File(deleteme);
         f.readf("%s\n", &s);
-        assert(s == "hello", "["~s~"]");
+        assert(s == "hello", "[" ~ s ~ "]");
         f.readf("%s\n", &s);
-        assert(s == "world", "["~s~"]");
+        assert(s == "world", "[" ~ s ~ "]");
 
         // Issue 11698
         bool b1, b2;
@@ -3307,7 +3308,7 @@ unittest
     // version (Windows)
     //     assert(read == "Hello, nice world number 42!\r\n1\r\n1\r\n1\r\n", read);
     // else
-    //     assert(read == "Hello, nice world number 42!\n1\n1\n1\n", "["~read~"]");
+    //     assert(read == "Hello, nice world number 42!\n1\n1\n1\n", "[" ~ read ~ "]");
 }
 
 /**
@@ -3560,7 +3561,7 @@ struct lines
 {
     private File f;
     private dchar terminator = '\n';
-    // private string fileName;  // Curretly, no use
+    // private string fileName;  // Currently, no use
 
     /**
     Constructor.
@@ -3580,7 +3581,7 @@ struct lines
 //     static lines opCall(string fName, dchar terminator = '\n')
 //     {
 //         auto f = enforce(fopen(fName),
-//             new StdioException("Cannot open file `"~fName~"' for reading"));
+//             new StdioException("Cannot open file ‘" ~ fName ~ "’ for reading"));
 //         auto result = lines(f, terminator);
 //         result.fileName = fName;
 //         return result;
@@ -3590,7 +3591,7 @@ struct lines
     {
 //         scope(exit) {
 //             if (fileName.length && fclose(f))
-//                 StdioException("Could not close file `"~fileName~"'");
+//                 StdioException("Could not close file ‘" ~ fileName ~ "’");
 //         }
         import std.traits : Parameters;
         alias Parms = Parameters!(dg);
@@ -3842,7 +3843,7 @@ private struct ChunksImpl
 //     static chunks opCall(string fName, size_t size)
 //     {
 //         auto f = enforce(fopen(fName),
-//             new StdioException("Cannot open file `"~fName~"' for reading"));
+//             new StdioException("Cannot open file ‘" ~ fName ~ "’ for reading"));
 //         auto result = chunks(f, size);
 //         result.fileName  = fName;
 //         return result;
@@ -3949,7 +3950,6 @@ Initialize with a message and an error code.
         else
         {
             import core.stdc.string : strerror;
-
             auto s = core.stdc.string.strerror(errno);
         }
         auto sysmsg = to!string(s);
