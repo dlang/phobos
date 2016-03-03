@@ -13,6 +13,7 @@ for received content. Which generally makes all calls slightly faster. Up to 200
 amounts of data.)
 $(LI $(XREF std_meta, Repeat) was added to obtain a repeating
 $(XREF std_meta, AliasSeq) consisting of template arguments.)
+$(LI $(D fold) was added as an alternative to $(D reduce) with argument order swapped.)
 
 )
 
