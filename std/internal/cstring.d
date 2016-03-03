@@ -4,27 +4,6 @@ Helper functions for working with $(I C strings).
 This module is intended to provide fast, safe and garbage free
 way to work with $(I C strings).
 
-Example:
----
-version(Posix):
-
-import core.stdc.stdlib: free;
-import core.sys.posix.stdlib: setenv;
-import std.exception: enforce;
-
-void setEnvironment(in char[] name, in char[] value)
-{ enforce(setenv(name.tempCString(), value.tempCString(), 1) != -1); }
----
----
-version(Windows):
-
-import core.sys.windows.windows: SetEnvironmentVariableW;
-import std.exception: enforce;
-
-void setEnvironment(in char[] name, in char[] value)
-{ enforce(SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW())); }
----
-
 Copyright: Denis Shelomovskij 2013-2014
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -36,6 +15,28 @@ COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, $(D core.$1.$2))
 */
 module std.internal.cstring;
 
+///
+unittest
+{
+    version(Posix)
+    {
+        import core.stdc.stdlib: free;
+        import core.sys.posix.stdlib: setenv;
+        import std.exception: enforce;
+
+        void setEnvironment(in char[] name, in char[] value)
+        { enforce(setenv(name.tempCString(), value.tempCString(), 1) != -1); }
+    }
+
+    version(Windows)
+    {
+        import core.sys.windows.windows: SetEnvironmentVariableW;
+        import std.exception: enforce;
+
+        void setEnvironment(in char[] name, in char[] value)
+        { enforce(SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW())); }
+    }
+}
 
 import std.traits;
 import std.range;

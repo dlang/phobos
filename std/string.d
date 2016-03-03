@@ -6228,30 +6228,6 @@ unittest
  * in one of a known set of strings, and the program will helpfully
  * autocomplete the string once sufficient characters have been
  * entered that uniquely identify it.
- * Example:
- * ---
- * import std.stdio;
- * import std.string;
- *
- * void main()
- * {
- *    static string[] list = [ "food", "foxy" ];
- *
- *    auto abbrevs = std.string.abbrev(list);
- *
- *    foreach (key, value; abbrevs)
- *    {
- *       writefln("%s => %s", key, value);
- *    }
- * }
- * ---
- * produces the output:
- * <pre>
- * fox =&gt; foxy
- * food =&gt; food
- * foxy =&gt; foxy
- * foo =&gt; food
- * </pre>
  */
 
 string[string] abbrev(string[] values) @safe pure
@@ -6302,6 +6278,18 @@ string[string] abbrev(string[] values) @safe pure
 
     return result;
 }
+
+///
+unittest
+{
+    import std.string;
+
+    static string[] list = [ "food", "foxy" ];
+    auto abbrevs = std.string.abbrev(list);
+    assert(abbrevs == ["fox": "foxy", "food": "food",
+                       "foxy": "foxy", "foo": "food"]);
+}
+
 
 @trusted pure unittest
 {
