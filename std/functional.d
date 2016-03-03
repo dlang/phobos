@@ -655,18 +655,6 @@ unittest
 /**
 $(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially
 applies) $(D_PARAM fun) by tying its first argument to $(D_PARAM arg).
-
-Example:
-
-----
-int fun(int a, int b) { return a + b; }
-alias partial!(fun, 5) fun5;
-assert(fun5(6) == 11);
-----
-
-Note that in most cases you'd use an alias instead of a value
-assignment. Using an alias allows you to partially evaluate template
-functions without committing to a particular type of the function.
  */
 template partial(alias fun, alias arg)
 {
@@ -700,6 +688,17 @@ template partial(alias fun, alias arg)
             }
         }
     }
+}
+
+///
+unittest
+{
+    int fun(int a, int b) { return a + b; }
+    alias fun5 = partial!(fun, 5);
+    assert(fun5(6) == 11);
+    // Note that in most cases you'd use an alias instead of a value
+    // assignment. Using an alias allows you to partially evaluate template
+    // functions without committing to a particular type of the function.
 }
 
 // Explicitly undocumented. It will be removed in March 2016. @@@DEPRECATED_2016-03@@@
@@ -890,13 +889,6 @@ unittest
    function $(D f(x)) that in turn returns $(D
    fun[0](fun[1](...(x)))...). Each function can be a regular
    functions, a delegate, or a string.
-
-   Example:
-----
-// First split a string in whitespace-separated tokens and then
-// convert each token into an integer
-assert(compose!(map!(to!(int)), split)("1 2 3") == [1, 2, 3]);
-----
 */
 template compose(fun...)
 {
@@ -921,6 +913,18 @@ template compose(fun...)
         // protein: assembling operations
         alias compose = compose!(fun[0], compose!(fun[1 .. $]));
     }
+}
+
+///
+unittest
+{
+    import std.algorithm: equal, map;
+    import std.array: split;
+    import std.conv: to;
+
+    // First split a string in whitespace-separated tokens and then
+    // convert each token into an integer
+    assert(compose!(map!(to!(int)), split)("1 2 3").equal([1, 2, 3]));
 }
 
 /**

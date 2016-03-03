@@ -1726,13 +1726,6 @@ enum AsciiToken
 /*
  * Returns the maximum of the values in the given array.
  *
- * Example:
- * ---
- * assert([1, 2, 3, 4].max == 4);
- * assert([3, 5, 9, 2, 5].max == 9);
- * assert([7, 13, 9, 12, 0].max == 13);
- * ---
- *
  * Params:
  *     arr = the array containing the values to return the maximum of
  *
@@ -1750,6 +1743,7 @@ T max (T) (T[] arr)
     return max;
 }
 
+///
 unittest
 {
     assert([1, 2, 3, 4].max() == 4);
@@ -1760,13 +1754,6 @@ unittest
 /*
  * Returns the portion of string specified by the $(D_PARAM start) and
  * $(D_PARAM length) parameters.
- *
- * Example:
- * ---
- * assert("abcdef".substr(-1) == "f");
- * assert("abcdef".substr(-2) == "ef");
- * assert("abcdef".substr(-3, 1) == "d");
- * ---
  *
  * Params:
  *     str = the input string. Must be one character or longer.
@@ -1839,11 +1826,16 @@ T[] substr (T) (T[] str, ptrdiff_t start = 0, ptrdiff_t length = ptrdiff_t.min)
     return str[start .. end];
 }
 
+///
 unittest
 {
     assert("abcdef".substr(-1) == "f");
     assert("abcdef".substr(-2) == "ef");
     assert("abcdef".substr(-3, 1) == "d");
+}
+
+unittest
+{
     assert("abcdef".substr(0, -1) == "abcde");
     assert("abcdef".substr(2, -1) == "cde");
     assert("abcdef".substr(4, -4) == []);
@@ -1856,14 +1848,6 @@ unittest
  * Compare the two given strings lexicographically. An upper limit of the number of
  * characters, that will be used in the comparison, can be specified. Supports both
  * case-sensitive and case-insensitive comparison.
- *
- * Example:
- * ---
- * assert("abc".compareFirstN("abcdef", 3) == 0);
- * assert("abc".compareFirstN("Abc", 3, true) == 0);
- * assert("abc".compareFirstN("abcdef", 6) < 0);
- * assert("abcdef".compareFirstN("abc", 6) > 0);
- * ---
  *
  * Params:
  *     s1 = the first string to be compared
@@ -1894,6 +1878,7 @@ int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, b
     return caseInsensitive ? slice1.icmp(slice2) : slice1.cmp(slice2);
 }
 
+///
 unittest
 {
     assert("abc".compareFirstN("abcdef", 3) == 0);
@@ -1905,12 +1890,6 @@ unittest
 /*
  * Returns a range consisting of the elements of the $(D_PARAM input) range that
  * matches the given $(D_PARAM pattern).
- *
- * Example:
- * ---
- * assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
- * assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`(\w+)`), true), ["0123", "4567"]));
- * ---
  *
  * Params:
  *     input = the input range
@@ -1930,6 +1909,7 @@ auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
     return filter!(dg)(input);
 }
 
+///
 unittest
 {
     import std.algorithm : equal;
@@ -1940,15 +1920,6 @@ unittest
 
 /*
  * Pops the last element of the given range and returns the element.
- *
- * Example:
- * ---
- * auto array = [0, 1, 2, 3];
- * auto    result = array.pop();
- *
- * assert(array == [0, 1, 2]);
- * assert(result == 3);
- * ---
  *
  * Params:
  *     range = the range to pop the element from
@@ -1962,6 +1933,7 @@ ElementType!(A) pop (A) (ref A a) if (isDynamicArray!(A) && !isNarrowString!(A) 
     return e;
 }
 
+///
 unittest
 {
     auto array = [0, 1, 2, 3];
@@ -1975,12 +1947,6 @@ unittest
  * Returns the character at the given index as a string. The returned string will be a
  * slice of the original string.
  *
- * Example:
- * ---
- * assert("abc".get(1, 'b') == "b");
- * assert("löv".get(1, 'ö') == "ö");
- * ---
- *
  * Params:
  *     str = the string to get the character from
  *     index = the index of the character to get
@@ -1992,6 +1958,12 @@ const(T)[] get (T) (const(T)[] str, size_t index, dchar c)
 {
     import std.utf : codeLength;
     return str[index .. index + codeLength!(T)(c)];
+}
+
+unittest
+{
+    assert("abc".get(1, 'b') == "b");
+    assert("löv".get(1, 'ö') == "ö");
 }
 
 unittest
