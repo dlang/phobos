@@ -745,6 +745,172 @@ template Tuple(Specs...)
         }
 
         /**
+         * Renames the elements of a $(LREF Tuple).
+         *
+         * `rename` uses the passed `names` and returns a new
+         * $(LREF Tuple) using these names, with the content
+         * unchanged.
+         * If fewer names are passed than there are members
+         * of the $(LREF Tuple) then those trailing members are unchanged.
+         * An empty string will remove the name for that member.
+         * It is an compile-time error to pass more names than
+         * there are members of the $(LREF Tuple).
+         */
+        auto rename(names...)()
+        if (allSatisfy!(isSomeString, typeof(names)))
+        {
+            enum nT = Types.length;
+            enum nN = names.length;
+            static assert(nN <= nT, "Cannot have more names than tuple members");
+            alias allNames = AliasSeq!(names, fieldNames[nN .. $]);
+
+            template GetItem(size_t idx)
+            {
+                import std.array : empty;
+                static if (idx < nT)
+                    alias GetItem = Alias!(Types[idx]);
+                else static if (allNames[idx - nT].empty)
+                    alias GetItem = AliasSeq!();
+                else
+                    alias GetItem = Alias!(allNames[idx - nT]);
+            }
+
+            import std.range : roundRobin, iota;
+            return Tuple!(staticMap!(GetItem, aliasSeqOf!(
+                    roundRobin(iota(nT), iota(nT, 2*nT)))))(this);
+        }
+
+        ///
+        @safe unittest
+        {
+            auto t0 = tuple(4, "hello");
+
+            auto t0Named = t0.rename!("val", "tag");
+            assert(t0Named.val == 4);
+            assert(t0Named.tag == "hello");
+
+            Tuple!(float, "dat", size_t[2], "pos") t1;
+            t1.pos = [2, 1];
+            auto t1Named = t1.rename!"height";
+            t1Named.height = 3.4;
+            assert(t1Named.pos == [2, 1]);
+
+            Tuple!(int, "a", int, int, "c") t2;
+            t2 = tuple(3,4,5);
+            auto t2Named = t2.rename!("", "b");
+            // "a" no longer has a name
+            static assert(!hasMember!(typeof(t2Named), "a"));
+            assert(t2Named[0] == 3);
+            assert(t2Named.b == 4);
+            assert(t2Named.c == 5);
+
+            // not allowed to specify more names than the tuple has members
+            static assert(!__traits(compiles, t2.rename!("a","b","c","d")));
+        }
+
+        /**
+         * Overload of $(LREF rename) that takes an associative array
+         * `translate` as a template parameter, where the keys are
+         * either the names or indices of the members to be changed
+         * and the new names are the corresponding values.
+         * Every key in `translate` must be the name of a member of the
+         * $(LREF tuple).
+         * The same rules for empty strings apply as for the variadic
+         * template overload of $(LREF rename).
+        */
+        auto rename(alias translate)()
+        if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
+                (isSomeString!K || is(K : size_t)))
+        {
+            static if (is(typeof(translate) : V_[K_], V_, K_))
+            {
+                alias V = V_;
+                alias K = K_;
+            }
+            else static assert(false);
+
+            static if(isSomeString!K)
+            {
+                {
+                    import std.conv : to;
+                    import std.algorithm : filter, canFind;
+                    enum notFound = translate.keys
+                        .filter!(k => fieldNames.canFind(k) == -1);
+                    static assert(notFound.empty, "Cannot find members "
+                        ~ notFound.to!string ~ " in type "
+                        ~ typeof(this).stringof);
+                }
+                return this.rename!(aliasSeqOf!(
+                    {
+                        import std.array : empty;
+                        auto names = [fieldNames];
+                        foreach(ref n; names)
+                            if (!n.empty)
+                                if(auto p = n in translate)
+                                    n = *p;
+                        return names;
+                    }()));
+            }
+            else
+            {
+                {
+                    import std.algorithm : filter;
+                    import std.conv : to;
+                    enum invalid = translate.keys.
+                        filter!(k => k < 0 || k >= this.length);
+                    static assert(invalid.empty, "Indices " ~ invalid.to!string
+                        ~ " are out of bounds for tuple with length "
+                        ~ this.length.to!string);
+                }
+                return this.rename!(aliasSeqOf!(
+                    {
+                        auto names = [fieldNames];
+                        foreach(k, v; translate)
+                            names[k] = v;
+                        return names;
+                    }()));
+            }
+        }
+
+        ///
+        unittest
+        {
+            //replacing names by their current name
+
+            Tuple!(float, "dat", size_t[2], "pos") t1;
+            t1.pos = [2, 1];
+            auto t1Named = t1.rename!(["dat": "height"]);
+            t1Named.height = 3.4;
+            assert(t1Named.pos == [2, 1]);
+
+            Tuple!(int, "a", int, "b") t2;
+            t2 = tuple(3, 4);
+            auto t2Named = t2.rename!(["a": "b", "b": "c"]);
+            assert(t2Named.b == 3);
+            assert(t2Named.c == 4);
+        }
+
+        ///
+        unittest
+        {
+            //replace names by their position
+
+            Tuple!(float, "dat", size_t[2], "pos") t1;
+            t1.pos = [2, 1];
+            auto t1Named = t1.rename!([0: "height"]);
+            t1Named.height = 3.4;
+            assert(t1Named.pos == [2, 1]);
+
+            Tuple!(int, "a", int, "b", int, "c") t2;
+            t2 = tuple(3, 4, 5);
+            auto t2Named = t2.rename!([0: "c", 2: "a"]);
+            assert(t2Named.a == 5);
+            assert(t2Named.b == 4);
+            assert(t2Named.c == 3);
+        }
+
+
+        /**
          * Takes a slice of this `Tuple`.
          *
          * Params:
