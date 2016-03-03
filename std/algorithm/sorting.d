@@ -2228,7 +2228,7 @@ Params:
 
 See_Also:
     $(LREF topNIndex),
-    $(WEB sgi.com/tech/stl/nth_element.html, STL's nth_element)
+    $(LUCKY C++ nth_element, STL's nth_element)
 
 BUGS:
 
@@ -2245,26 +2245,50 @@ auto topN(alias less = "a < b",
     if (nth >= r.length) return r[0 .. $];
 
     auto ret = r[0 .. nth];
-    for (;;)
+    auto maxExpectedLength = r.length;
+    for (uint step = 1;; ++step)
     {
         assert(nth < r.length);
-        import std.algorithm.mutation : swap;
-        import std.algorithm.searching : minPos;
-        if (nth == 0)
+
+        import std.algorithm.mutation : swapAt;
+        import core.bitop : bsr;
+
+        // If nth <= n/log(n) we go with topNHeap. Say n is 1024, then we use
+        // topNHeap for n from 0 through 102 inclusive.
+        immutable logLength = bsr(r.length);
+        if (nth * logLength <= r.length)
         {
-            // Special-case "min"
-            swap(r.front, r.minPos!less.front);
+        heapSmallNth:
+            topNHeap!less(r, nth);
             break;
         }
-        if (nth + 1 == r.length)
+        // Do the same check for near-the-end nth
+        immutable delta = r.length - nth - 1;
+        if (delta * logLength <= r.length)
         {
-            // Special-case "max"
-            swap(r.back, r.minPos!((a, b) => binaryFun!less(b, a)).front);
+        heapLargeNth:
+            topNHeap!((a, b) => binaryFun!less(b, a))(r.retro, delta);
             break;
         }
+
+        // Performance tracking: we need to avoid the edge case of quadratic
+        // performance in quickselect. We want to make sure that after 3 steps
+        // or more, each step reduces the length by the arbitrary constant 1.0 /
+        // 8.0 (12.5%) or better on average. To track performance we manage
+        // maxExpectedLength, which is he upper bound for r.length.
+        if (step > 3 && r.length > maxExpectedLength)
+        {
+            // Performance has degraded, enough with this nonsense!
+            // Shameless goto is shameless.
+            if (nth * 2 <= r.length) goto heapSmallNth;
+            goto heapLargeNth;
+        }
+        maxExpectedLength = maxExpectedLength * 7 / 8;
+
+        // nth is close to median, take one quickselect step
         auto pivot = r.getPivot!less;
         assert(!binaryFun!less(r[pivot], r[pivot]));
-        swap(r[pivot], r.back);
+        r.swapAt(pivot, r.length - 1);
         auto right = r.partition!(a => binaryFun!less(a, r.back), ss);
         assert(right.length >= 1);
         pivot = r.length - right.length;
@@ -2276,7 +2300,7 @@ auto topN(alias less = "a < b",
             continue;
         }
         // Swap the pivot to where it should be
-        swap(right.front, r.back);
+        right.swapAt(0, right.length - 1);
         if (pivot == nth)
         {
             // Found Waldo!
@@ -2298,6 +2322,68 @@ auto topN(alias less = "a < b",
     auto n = 4;
     topN!"a < b"(v, n);
     assert(v[n] == 9);
+    foreach (i; 0 .. n) assert(v[i] <= v[n]);
+    foreach (i; n + 1 .. v.length) assert(v[i] >= v[n]);
+}
+
+// Alternative topN algorithm that uses two heaps. Build a max heap in r[0 ..
+// nth] and a min heap in r[nth .. $]. Then while less(r[nth], r[0]) swap them
+// and restore the heap property in both heaps. At the end we'll have r[nth] no
+// less than any element to its left. Works well when nth is relatively small
+// compared to r.length (worst case complexity is  O(n + k log(k) + k log(n))).
+private void topNHeap(alias less, Range)(Range r, size_t nth)
+{
+    assert(nth < r.length);
+
+    // If nth <= n/log(r.length)^^2 we go with topNSmallHeap. Otherwise we go
+    // with two heaps. Say r.length is 1024. Then for n between 0 and 10
+    // inclusive, we use topNSmallHeap. Otherwise, we build two heaps so we save
+    // on swapping.
+    import core.bitop : bsr;
+    immutable logLength = bsr(r.length);
+    if (nth * logLength * logLength <= r.length)
+    {
+        return topNSmallHeap!less(r, nth);
+    }
+
+    alias MaxHeap = HeapOps!(less, Range);
+    alias MinHeap = HeapOps!((a, b) => binaryFun!less(b, a), Range);
+    auto left = r[0 .. nth], right = r[nth .. $];
+
+    MaxHeap.buildHeap(left);
+    MinHeap.buildHeap(right);
+    while (binaryFun!less(right.front, left.front))
+    {
+        assert(!binaryFun!less(left.front, right.front),
+            "topN: incorrect predicate used, must be antireflexive");
+        import std.algorithm.mutation : swapAt;
+        r.swapAt(0, nth);
+        MaxHeap.siftDown(left, 0, nth);
+        MinHeap.siftDown(right, 0, right.length);
+    }
+}
+
+// Alternative topN algorithm that uses a heap. Build a max heap in the left
+// portion of the range, then progressively swaps into it whichever smaller
+// elements are on the right side. Works well when nth is relatively small
+// compared to r.length (worst case complexity is O(nth + (r.length - nth) *
+// log(nth))).
+//
+// Note: tolerates a non-antireflexive less predicate, e.g. "<=".
+private void topNSmallHeap(alias less, Range)(Range r, size_t nth)
+{
+    assert(nth < r.length);
+    alias H = HeapOps!(less, Range);
+    ++nth;
+    H.buildHeap(r[0 .. nth]);
+    import std.algorithm.mutation : swapAt;
+    foreach (i; nth .. r.length)
+    {
+        if (!binaryFun!less(r[i], r.front)) continue;
+        r.swapAt(0, i);
+        H.siftDown(r, 0, nth);
+    }
+    r.swapAt(0, --nth);
 }
 
 @safe unittest
