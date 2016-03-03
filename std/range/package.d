@@ -6167,16 +6167,17 @@ struct Indexed(Source, Indices)
         Returns the physical index into the source range corresponding to a
         given logical index.  This is useful, for example, when indexing
         an $(D Indexed) without adding another layer of indirection.
-
-        Example:
-        ---
-        auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
-        assert(ind.physicalIndex(0) == 1);
-        ---
         */
         size_t physicalIndex(size_t logicalIndex)
         {
             return _indices[logicalIndex];
+        }
+
+        ///
+        unittest
+        {
+            auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
+            assert(ind.physicalIndex(0) == 1);
         }
     }
 
@@ -7766,19 +7767,21 @@ if (isInputRange!Range)
    schedule and its complexity are documented in
    $(LREF SearchPolicy).  See also STL's
    $(WEB sgi.com/tech/stl/lower_bound.html, lower_bound).
-
-   Example:
-   ----
-   auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
-   auto p = a.lowerBound(4);
-   assert(equal(p, [ 0, 1, 2, 3 ]));
-   ----
 */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
          && hasSlicing!Range)
     {
         return this[0 .. getTransitionIndex!(sp, geq)(value)];
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm: equal;
+        auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+        auto p = a.lowerBound(4);
+        assert(equal(p, [ 0, 1, 2, 3 ]));
     }
 
 // upperBound
@@ -7795,13 +7798,6 @@ user code to unexpected inefficiencies). For random-access searches, all
 policies are allowed, and $(D SearchPolicy.binarySearch) is the default.
 
 See_Also: STL's $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
-
-Example:
-----
-auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
-auto p = a.upperBound(3);
-assert(equal(p, [4, 4, 5, 6]));
-----
 */
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
@@ -7823,6 +7819,16 @@ assert(equal(p, [4, 4, 5, 6]));
         }
     }
 
+    ///
+    unittest
+    {
+        import std.algorithm: equal;
+        auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
+        auto p = a.upperBound(3);
+        assert(equal(p, [4, 4, 5, 6]));
+    }
+
+
 // equalRange
 /**
    Returns the subrange containing all elements $(D e) for which both $(D
@@ -7836,13 +7842,6 @@ assert(equal(p, [4, 4, 5, 6]));
    to be near the first found value (i.e., equal ranges are relatively
    small). Completes the entire search in $(BIGOH log(n)) time. See also
    STL's $(WEB sgi.com/tech/stl/equal_range.html, equal_range).
-
-   Example:
-   ----
-   auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-   auto r = equalRange(a, 3);
-   assert(equal(r, [ 3, 3, 3 ]));
-   ----
 */
     auto equalRange(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
@@ -7883,6 +7882,15 @@ assert(equal(p, [4, 4, 5, 6]));
         return this.init;
     }
 
+    ///
+    unittest
+    {
+        import std.algorithm: equal;
+        auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+        auto r = a.assumeSorted.equalRange(3);
+        assert(equal(r, [ 3, 3, 3 ]));
+    }
+
 // trisect
 /**
 Returns a tuple $(D r) such that $(D r[0]) is the same as the result
@@ -7891,15 +7899,6 @@ equalRange(value)), and $(D r[2]) is the same as the result of $(D
 upperBound(value)). The call is faster than computing all three
 separately. Uses a search schedule similar to $(D
 equalRange). Completes the entire search in $(BIGOH log(n)) time.
-
-Example:
-----
-auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-auto r = assumeSorted(a).trisect(3);
-assert(equal(r[0], [ 1, 2 ]));
-assert(equal(r[1], [ 3, 3, 3 ]));
-assert(equal(r[2], [ 4, 4, 5, 6 ]));
-----
 */
     auto trisect(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
@@ -7941,6 +7940,17 @@ assert(equal(r[2], [ 4, 4, 5, 6 ]));
         }
         // No equal element was found
         return tuple(this[0 .. first], this.init, this[first .. length]);
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm: equal;
+        auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+        auto r = assumeSorted(a).trisect(3);
+        assert(equal(r[0], [ 1, 2 ]));
+        assert(equal(r[1], [ 3, 3, 3 ]));
+        assert(equal(r[2], [ 4, 4, 5, 6 ]));
     }
 
 // contains
