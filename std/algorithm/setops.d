@@ -557,31 +557,6 @@ Params:
     tgt = The target range to copy common elements to.
     sorted = Whether the elements copied should be in sorted order.
 
-Example:
-----
-// Figure which number can be found in most arrays of the set of
-// arrays below.
-double[][] a =
-[
-    [ 1, 4, 7, 8 ],
-    [ 1, 7 ],
-    [ 1, 7, 8],
-    [ 4 ],
-    [ 7 ],
-];
-auto b = new Tuple!(double, uint)[1];
-largestPartialIntersection(a, b);
-// First member is the item, second is the occurrence count
-assert(b[0] == tuple(7.0, 4u));
-----
-
-$(D 7.0) is the correct answer because it occurs in $(D 4) out of the
-$(D 5) inputs, more than any other number. The second member of the
-resulting tuple is indeed $(D 4) (recording the number of occurrences
-of $(D 7.0)). If more of the top-frequent numbers are needed, just
-create a larger $(D tgt) range. In the example above, creating $(D b)
-with length $(D 2) yields $(D tuple(1.0, 3u)) in the second position.
-
 The function $(D largestPartialIntersection) is useful for
 e.g. searching an $(LUCKY inverted index) for the documents most
 likely to contain some terms of interest. The complexity of the search
@@ -611,6 +586,36 @@ void largestPartialIntersection
             sorted);
 }
 
+///
+unittest
+{
+    import std.typecons : tuple, Tuple;
+
+    // Figure which number can be found in most arrays of the set of
+    // arrays below.
+    double[][] a =
+    [
+        [ 1, 4, 7, 8 ],
+        [ 1, 7 ],
+        [ 1, 7, 8],
+        [ 4 ],
+        [ 7 ],
+    ];
+    auto b = new Tuple!(double, uint)[1];
+    // it will modify the input range, hence we need to create a duplicate
+    largestPartialIntersection(a.dup, b);
+    // First member is the item, second is the occurrence count
+    assert(b[0] == tuple(7.0, 4u));
+    // 7.0 occurs in 4 out of 5 inputs, more than any other number
+
+    // If more of the top-frequent numbers are needed, just create a larger
+    // tgt range
+    auto c = new Tuple!(double, uint)[2];
+    largestPartialIntersection(a, c);
+    assert(c[0] == tuple(1.0, 3u));
+    // 1.0 occurs in 3 inputs
+}
+
 import std.algorithm.sorting : SortOutput; // FIXME
 
 // largestPartialIntersectionWeighted
@@ -625,30 +630,7 @@ Params:
     weights = An associative array mapping elements to weights.
     sorted = Whether the elements copied should be in sorted order.
 
-Example:
-----
-// Figure which number can be found in most arrays of the set of
-// arrays below, with specific per-element weights
-double[][] a =
-[
-    [ 1, 4, 7, 8 ],
-    [ 1, 7 ],
-    [ 1, 7, 8],
-    [ 4 ],
-    [ 7 ],
-];
-auto b = new Tuple!(double, uint)[1];
-double[double] weights = [ 1:1.2, 4:2.3, 7:1.1, 8:1.1 ];
-largestPartialIntersectionWeighted(a, b, weights);
-// First member is the item, second is the occurrence count
-assert(b[0] == tuple(4.0, 2u));
-----
-
-The correct answer in this case is $(D 4.0), which, although only
-appears two times, has a total weight $(D 4.6) (three times its weight
-$(D 2.3)). The value $(D 7) is weighted with $(D 1.1) and occurs four
-times for a total weight $(D 4.4).
- */
+*/
 void largestPartialIntersectionWeighted
 (alias less = "a < b", RangeOfRanges, Range, WeightsAA)
 (RangeOfRanges ror, Range tgt, WeightsAA weights, SortOutput sorted = SortOutput.no)
@@ -663,6 +645,30 @@ void largestPartialIntersectionWeighted
         return weights[a[0]] * a[1] > weights[b[0]] * b[1];
     }
     topNCopy!heapComp(group(nWayUnion!less(ror)), tgt, sorted);
+}
+
+///
+unittest
+{
+    import std.typecons : tuple, Tuple;
+
+    // Figure which number can be found in most arrays of the set of
+    // arrays below, with specific per-element weights
+    double[][] a =
+    [
+        [ 1, 4, 7, 8 ],
+        [ 1, 7 ],
+        [ 1, 7, 8],
+        [ 4 ],
+        [ 7 ],
+    ];
+    auto b = new Tuple!(double, uint)[1];
+    double[double] weights = [ 1:1.2, 4:2.3, 7:1.1, 8:1.1 ];
+    largestPartialIntersectionWeighted(a, b, weights);
+    // First member is the item, second is the occurrence count
+    assert(b[0] == tuple(4.0, 2u));
+    // 4.0 occurs 2 times -> 4.6 (2 * 2.3)
+    // 7.0 occurs 3 times -> 4.4 (3 * 1.1)
 }
 
 unittest
