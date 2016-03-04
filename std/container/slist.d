@@ -20,6 +20,33 @@ Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
 */
 module std.container.slist;
 
+///
+unittest
+{
+    import std.container: SList;
+    import std.algorithm: equal;
+
+    auto s = SList!int(1, 2, 3);
+    assert(equal(s[], [1, 2, 3]));
+
+    s.removeFront();
+    assert(equal(s[], [2, 3]));
+
+    s.insertFront([5, 6]);
+    assert(equal(s[], [5, 6, 2, 3]));
+
+    // If you want to apply range operations, simply slice it.
+    import std.algorithm: countUntil;
+    import std.range: popFrontN, walkLength;
+
+    auto sl = SList!int(1, 2, 3, 4, 5);
+    assert(countUntil(sl[], 2) == 1);
+
+    auto r = sl[];
+    popFrontN(r, 2);
+    assert(walkLength(r) == 3);
+}
+
 public import std.container.util;
 
 /**
