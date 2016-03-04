@@ -17931,7 +17931,7 @@ Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
     ///
     unittest
     {
-        assert(Interval!Date(Date(1996, 1, 2), dur!"years"(3)) ==
+        assert(Interval!Date(Date(1996, 1, 2), dur!"days"(1096)) ==
                Interval!Date(Date(1996, 1, 2), Date(1999, 1, 2)));
     }
 
@@ -18453,11 +18453,11 @@ Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
     ///
     unittest
     {
-        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
-                    PosInfInterval!Date(Date(1999, 5, 4))));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+            PosInfInterval!Date(Date(1999, 5, 4))));
 
-        assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
-                    PosInfInterval!Date(Date(2012, 3, 1))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+            PosInfInterval!Date(Date(2012, 3, 1))));
     }
 
     /++
@@ -19185,7 +19185,7 @@ Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
     unittest
     {
         auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-        auto func = (in Date date) //For iterating over even-numbered days.
+        auto func = (in Date date) const //For iterating over even-numbered days.
                     {
                         if((date.day & 1) == 0)
                             return date + dur!"days"(2);
@@ -19278,7 +19278,7 @@ Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
     unittest
     {
         auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-        auto func = (in Date date) //For iterating over even-numbered days.
+        auto func = (in Date date) const //For iterating over even-numbered days.
                     {
                         if((date.day & 1) == 0)
                             return date - dur!"days"(2);
@@ -21756,7 +21756,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
     unittest
     {
         auto interval = PosInfInterval!Date(Date(2010, 9, 1));
-        auto func = (in Date date) //For iterating over even-numbered days.
+        auto func = (in Date date) const //For iterating over even-numbered days.
                     {
                         if((date.day & 1) == 0)
                             return date + dur!"days"(2);
@@ -23965,7 +23965,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
     unittest
     {
         auto interval = NegInfInterval!Date(Date(2010, 9, 9));
-        auto func = (in Date date) //For iterating over even-numbered days.
+        auto func = (in Date date) const //For iterating over even-numbered days.
                     {
                         if((date.day & 1) == 0)
                             return date - dur!"days"(2);
