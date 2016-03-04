@@ -452,7 +452,12 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
     auto m = alloc.allocate(max(stateSize!T, 1));
     if (!m.ptr) return null;
     scope(failure) alloc.deallocate(m);
-    static if (is(T == class)) return emplace!T(m, args);
+    static if (is(T == class))
+    {
+        static assert(!isAbstractClass!T, "class " ~ T.stringof ~
+            " is abstract and can't be created with make()");
+        return emplace!T(m, args);
+    }
     else return emplace(cast(T*) m.ptr, args);
 }
 
@@ -488,6 +493,14 @@ unittest
     assert(cust.id == uint.max); // default initialized
     cust = theAllocator.make!Customer(42);
     assert(cust.id == 42);
+}
+
+unittest // bugzilla 15639
+{
+    abstract class Foo {}
+    class Bar: Foo {}
+    static assert(!is(typeof(theAllocator.make!Foo)));
+    static assert( is(typeof(theAllocator.make!Bar)));
 }
 
 unittest
