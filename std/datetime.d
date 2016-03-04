@@ -17920,8 +17920,8 @@ Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
 
         Example:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), dur!"years"(3)) ==
-       Interval!Date(Date(1996, 1, 2), Date(1999, 1, 2)));
+assert(Interval!Date(Date(1996, 1, 2), dur!"days"(3)) ==
+       Interval!Date(Date(1996, 1, 2), Date(1996, 1, 5)));
 --------------------
       +/
     this(D)(in TP begin, in D duration) pure
@@ -19158,7 +19158,7 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
         Example:
 --------------------
 auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-auto func = (in Date date) //For iterating over even-numbered days.
+auto func = delegate (in Date date) //For iterating over even-numbered days.
             {
                 if((date.day & 1) == 0)
                     return date + dur!"days"(2);
@@ -19251,7 +19251,7 @@ assert(range.empty);
         Example:
 --------------------
 auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-auto func = (in Date date) //For iterating over even-numbered days.
+auto func = delegate (in Date date) //For iterating over even-numbered days.
             {
                 if((date.day & 1) == 0)
                     return date - dur!"days"(2);
@@ -21728,7 +21728,7 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
         Example:
 --------------------
 auto interval = PosInfInterval!Date(Date(2010, 9, 1));
-auto func = (in Date date) //For iterating over even-numbered days.
+auto func = delegate (in Date date) //For iterating over even-numbered days.
             {
                 if((date.day & 1) == 0)
                     return date + dur!"days"(2);
@@ -23934,7 +23934,7 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
         Example:
 --------------------
 auto interval = NegInfInterval!Date(Date(2010, 9, 9));
-auto func = (in Date date) //For iterating over even-numbered days.
+auto func = delegate (in Date date) //For iterating over even-numbered days.
             {
                 if((date.day & 1) == 0)
                     return date - dur!"days"(2);
