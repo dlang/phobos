@@ -2094,20 +2094,21 @@ public:
 
     /**
         Get range that spans all of the $(CODEPOINT) intervals in this $(LREF InversionList).
+    */
+    @property auto byInterval()
+    {
+        return Intervals!(typeof(data))(data);
+    }
 
-        Example:
-        -----------
+    ///
+    unittest
+    {
         import std.algorithm.comparison : equal;
         import std.typecons : tuple;
 
         auto set = CodepointSet('A', 'D'+1, 'a', 'd'+1);
 
         assert(set.byInterval.equal([tuple('A','E'), tuple('a','e')]));
-        -----------
-    */
-    @property auto byInterval()
-    {
-        return Intervals!(typeof(data))(data);
     }
 
     /**
