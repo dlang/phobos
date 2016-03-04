@@ -3,6 +3,43 @@
 /**
  * Compress/decompress data using the $(WEB www._zlib.net, _zlib library).
  *
+ * Examples:
+ *
+ * If you have a small buffer you can use $(LREF compress) and
+ * $(LREF uncompress) directly.
+ *
+ * -------
+ * import std.zlib;
+ *
+ * auto src =
+ * "the quick brown fox jumps over the lazy dog\r
+ *  the quick brown fox jumps over the lazy dog\r";
+ *
+ * ubyte[] dst;
+ * ubyte[] result;
+ *
+ * dst = compress(src);
+ * result = cast(ubyte[])uncompress(dst);
+ * assert(result == src);
+ * -------
+ *
+ * When the data to be compressed doesn't fit in one buffer, use
+ * $(LREF Compress) and $(LREF UnCompress).
+ *
+ * -------
+ * import std.zlib;
+ * import std.stdio;
+ * import std.conv: to;
+ * import std.algorithm: map;
+ *
+ * UnCompress decmp = new UnCompress;
+ * foreach (chunk; stdin.byChunk(4096).map!(x => decmp.uncompress(x)))
+ * {
+ *     chunk.to!string.write;
+ * }
+
+ * -------
+ *
  * References:
  *  $(WEB en.wikipedia.org/wiki/Zlib, Wikipedia)
  *
@@ -86,6 +123,7 @@ uint adler32(uint adler, const(void)[] buf)
     return adler;
 }
 
+///
 unittest
 {
     static ubyte[] data = [1,2,3,4,5,6,7,8,9,10];
