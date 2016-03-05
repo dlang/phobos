@@ -40,11 +40,12 @@ $(T2 map,
 $(T2 permutations,
         Lazily computes all permutations using Heap's algorithm.)
 $(T2 reduce,
-        $(D reduce!((a, b) => a + b)([1, 2, 3, 4])) returns $(D 10).)
+        $(D reduce!((a, b) => a + b)([1, 2, 3, 4])) returns $(D 10).
+        This is the old implementation of `fold`.)
 $(T2 splitter,
         Lazily splits a range by a separator.)
 $(T2 sum,
-        Same as $(D reduce), but specialized for accurate summation.)
+        Same as $(D fold), but specialized for accurate summation.)
 $(T2 uniq,
         Iterates over the unique elements in a range, which is assumed sorted.)
 )
@@ -2447,11 +2448,13 @@ unittest
 /++
 Implements the homonym function (also known as $(D accumulate), $(D
 compress), $(D inject), or $(D foldl)) present in various programming
-languages of functional flavor. The call $(D reduce!(fun)(seed,
-range)) first assigns $(D seed) to an internal variable $(D result),
-also called the accumulator. Then, for each element $(D x) in $(D
-range), $(D result = fun(result, x)) gets evaluated. Finally, $(D
-result) is returned. The one-argument version $(D reduce!(fun)(range))
+languages of functional flavor. There is also $(LREF fold) which does
+the same thing but with the opposite parameter order.
+The call $(D reduce!(fun)(seed, range)) first assigns $(D seed) to
+an internal variable $(D result), also called the accumulator.
+Then, for each element $(D x) in $(D range), $(D result = fun(result, x))
+gets evaluated. Finally, $(D result) is returned.
+The one-argument version $(D reduce!(fun)(range))
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
 
@@ -2460,6 +2463,10 @@ Returns:
 
 See_Also:
     $(WEB en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
+
+    $(LREF fold) is functionally equivalent to $(LREF reduce) with the argument order reversed,
+    and without the need to use $(LREF tuple) for multiple seeds. This makes it easier
+    to use in UFCS chains.
 
     $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
     precise summing of floating point numbers.
@@ -3956,8 +3963,8 @@ if (isSomeChar!C)
 /**
 Sums elements of $(D r), which must be a finite
 $(XREF_PACK_NAMED range,primitives,isInputRange,input range). Although
-conceptually $(D sum(r)) is equivalent to $(LREF reduce)!((a, b) => a +
-b)(0, r), $(D sum) uses specialized algorithms to maximize accuracy,
+conceptually $(D sum(r)) is equivalent to $(LREF fold)!((a, b) => a +
+b)(r, 0), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
@@ -3977,7 +3984,7 @@ $(LI In all other cases, a simple element by element addition is done.)
 For floating point inputs, calculations are made in
 $(DDLINK spec/type, Types, $(D real))
 precision for $(D real) inputs and in $(D double) precision otherwise
-(Note this is a special case that deviates from $(D reduce)'s behavior,
+(Note this is a special case that deviates from $(D fold)'s behavior,
 which would have kept $(D float) precision for a $(D float) range).
 For all other types, the calculations are done in the same type obtained
 from from adding two elements of the range, which may be a different
@@ -3990,7 +3997,7 @@ and precision used for summation.
 
 Note that these specialized summing algorithms execute more primitive operations
 than vanilla summation. Therefore, if in certain cases maximum speed is required
-at expense of precision, one can use $(D reduce!((a, b) => a + b)(0, r)), which
+at expense of precision, one can use $(D fold!((a, b) => a + b)(r, 0)), which
 is not specialized for summation.
 
 Params:
