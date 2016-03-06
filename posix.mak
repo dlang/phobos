@@ -120,6 +120,9 @@ endif
 
 LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 
+# use timelimit to avoid deadlocks if available
+TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 60 ,)
+
 # Set VERSION, where the file is that contains the version string
 VERSION=../dmd/VERSION
 
@@ -344,7 +347,7 @@ moduleName=$(subst /,.,$(1))
 
 # target for batch unittests (using shared phobos library and test_runner)
 unittest/%.run : $(ROOT)/unittest/test_runner
-	$(QUIET)$(RUN) $< $(call moduleName,$*)
+	$(QUIET)$(TIMELIMIT)$(RUN) $< $(call moduleName,$*)
 
 # Target for quickly running a single unittest (using static phobos library).
 # For example: "make std/algorithm/mutation.test"
