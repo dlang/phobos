@@ -774,8 +774,54 @@ private template validPredicates(E, less...)
             && validPredicates!(E, less[1 .. $]);
 }
 
+struct MultiPred( preds... )
+if( preds.length >= 1 )
+{
+    private import std.functional : binaryFun;
+
+    static bool opCall( A, B )( A a, B b ) {
+        foreach( pred; preds[ 0 .. ( $ - 1 ) ] ) {
+            alias p = binaryFun!pred;
+            if( p( a, b ) ) return true;
+            if( p( b, a ) ) return false;
+        }
+        return binaryFun!( preds[ $ - 1 ] )( a, b );
+    }
+
+    template shrink( uint n )
+    if( preds.length > 1 && n >= 1 && n <= preds.length ) {
+        alias shrink = MultiPred!( preds[ 0 .. n ] );
+    }
+}
+
+@safe unittest {
+    struct Record {
+        string name;
+        int age;
+    }
+
+    alias mp = MultiPred!( ( a, b ) => a.name < b.name, "a.age < b.age" );
+
+    auto ra = Record( "Ewa", 10 );
+    auto rb = Record( "Ewa", 20 );
+
+    assert( !mp( ra, ra ) );
+    assert( mp( ra, rb ) );
+    assert( !mp( rb, ra ) );
+
+    assert( !mp.shrink!1( ra, ra ) );
+    assert( !mp.shrink!1( ra, rb ) );
+    assert( !mp.shrink!1( rb, ra ) );
+}
+
+@safe unittest {
+    auto es = [ 1, 10, 15, 22 ];
+    assert( es.isSorted!( MultiPred!( ( float a, float b ) => a < b ) ) );
+    assert( es.isSorted!( MultiPred!( "a < b" ) ) );
+}
+
 /**
-$(D void multiSort(Range)(Range r)
+$(D auto multiSort(Range)(Range r)
     if (validPredicates!(ElementType!Range, less));)
 
 Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
@@ -784,10 +830,13 @@ and sorts elements that have the same $(D id) by $(D date)
 descending. Such a call is equivalent to $(D sort!"a.id != b.id ? a.id
 < b.id : a.date > b.date"(r)), but $(D multiSort) is faster because it
 does fewer comparisons (in addition to being more convenient).
+
+Returns: The initial range wrapped as a $(D SortedRange) with the predicate
+$(D MultiPred!(less) ).
  */
 template multiSort(less...) //if (less.length > 1)
 {
-    void multiSort(Range)(Range r)
+    auto multiSort(Range)(Range r)
     if (validPredicates!(ElementType!Range, less))
     {
         static if (is(typeof(less[$ - 1]) == SwapStrategy))
@@ -800,32 +849,39 @@ template multiSort(less...) //if (less.length > 1)
             alias ss = SwapStrategy.unstable;
             alias funs = less;
         }
-        alias lessFun = binaryFun!(funs[0]);
 
-        static if (funs.length > 1)
+        static void doMultiSort( funs... )( Range r )
         {
-            while (r.length > 1)
+            alias fun = binaryFun!(funs[0]);
+
+            static if (funs.length > 1)
             {
-                auto p = getPivot!lessFun(r);
-                auto t = partition3!(less[0], ss)(r, r[p]);
-                if (t[0].length <= t[2].length)
+                while (r.length > 1)
                 {
-                    .multiSort!less(t[0]);
-                    .multiSort!(less[1 .. $])(t[1]);
-                    r = t[2];
-                }
-                else
-                {
-                    .multiSort!(less[1 .. $])(t[1]);
-                    .multiSort!less(t[2]);
-                    r = t[0];
+                    auto p = getPivot!fun(r);
+                    auto t = partition3!(funs[0], ss)(r, r[p]);
+                    if (t[0].length <= t[2].length)
+                    {
+                        doMultiSort!funs(t[0]);
+                        doMultiSort!(funs[1 .. $])(t[1]);
+                        r = t[2];
+                    }
+                    else
+                    {
+                        doMultiSort!(funs[1 .. $])(t[1]);
+                        doMultiSort!funs(t[2]);
+                        r = t[0];
+                    }
                 }
             }
+            else
+            {
+                sort!(fun, ss)(r);
+            }
         }
-        else
-        {
-            sort!(lessFun, ss)(r);
-        }
+
+        doMultiSort!funs( r );
+        return assumeSorted!( MultiPred!funs )( r );
     }
 }
 
@@ -835,8 +891,11 @@ template multiSort(less...) //if (less.length > 1)
     static struct Point { int x, y; }
     auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
     auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
-    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+    auto sr = multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
     assert(pts1 == pts2);
+    assert( sr.contains( Point(0, 2) ) );
+    assert( !sr.contains( Point(0, 5) ) );
+    assert( sr.shrinkPred!1.contains( Point(0, 5) ) );
 }
 
 @safe unittest
