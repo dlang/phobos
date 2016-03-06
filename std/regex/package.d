@@ -179,6 +179,7 @@
        as well as start and end of input.)
     $(REG_ROW s, Single-line mode, makes . match '\n' and '\r' as well. )
     $(REG_ROW x, Free-form syntax, ignores whitespace in pattern,
+      including inside character classes:
       useful for formatting complex regular expressions. )
   )
 
