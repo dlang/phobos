@@ -563,14 +563,8 @@ struct ThreadList(DataIndex)
                 }
                 static if(withInput)
                 {
-                    int test = quickTestFwd(pc1, front, re);
-                    if(test >= 0)
-                    {
-                        worklist.insertFront(fork(t, pc2, t.counter));
-                        t.pc = pc1;
-                    }
-                    else
-                        t.pc = pc2;
+                    worklist.insertFront(fork(t, pc2, t.counter));
+                    t.pc = pc1;
                 }
                 else
                 {
@@ -914,14 +908,13 @@ struct ThreadList(DataIndex)
     //dispose list of threads
     void recycle(ref ThreadList!DataIndex list)
     {
-        auto t = list.tip;
-        while(t)
+        if(list.tip)
         {
-            auto next = t.next;
-            recycle(t);
-            t = next;
+            // just put this head-tail list in front of freelist
+            list.toe.next = freelist;
+            freelist = list.tip;
+            list = list.init;
         }
-        list = list.init;
     }
 
     //creates a copy of master thread with given pc
