@@ -450,6 +450,7 @@ template map(fun...) if (fun.length >= 1)
     {
         import std.meta : AliasSeq, staticMap;
 
+        alias RE = ElementType!(Range);
         static if (fun.length > 1)
         {
             import std.functional : adjoin;
@@ -457,18 +458,21 @@ template map(fun...) if (fun.length >= 1)
 
             alias _funs = staticMap!(unaryFun, fun);
             alias _fun = adjoin!_funs;
+
+            // Once DMD issue #5710 is fixed, this validation loop can be moved into a template.
+            foreach(f; _funs)
+            {
+                static assert(!is(typeof(f(RE.init)) == void),
+                    "Mapping function(s) must not return void: " ~ _funs.stringof);
+            }
         }
         else
         {
             alias _fun = unaryFun!fun;
             alias _funs = AliasSeq!(_fun);
-        }
 
-        // Once DMD issue #5710 is fixed, this validation loop can be moved into a template.
-        alias RE = ElementType!(Range);
-        foreach(f; _funs)
-        {
-            static assert(!is(typeof(f(RE.init)) == void),
+            // Do the validation separately for single parameters due to DMD issue #15777.
+            static assert(!is(typeof(_fun(RE.init)) == void),
                 "Mapping function(s) must not return void: " ~ _funs.stringof);
         }
 
@@ -517,6 +521,17 @@ it separately:
 
     alias stringize = map!(to!string);
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
+}
+
+@safe unittest
+{
+    // Verify workaround for DMD #15777
+
+    import std.algorithm.mutation, std.string;
+    auto foo(string[] args)
+    {
+        return args.map!strip;
+    }
 }
 
 private struct MapResult(alias fun, Range)
@@ -656,6 +671,7 @@ unittest
     import std.internal.test.dummyrange;
     import std.ascii : toUpper;
     import std.range;
+    import std.typecons : tuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -754,6 +770,11 @@ unittest
 
     // Phobos issue #15480
     auto dd = map!(z => z * z, c => c * c * c)([ 1, 2, 3, 4 ]);
+    assert(dd[0] == tuple(1, 1));
+    assert(dd[1] == tuple(4, 8));
+    assert(dd[2] == tuple(9, 27));
+    assert(dd[3] == tuple(16, 64));
+    assert(dd.length == 4);
 }
 
 @safe unittest
