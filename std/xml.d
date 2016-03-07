@@ -1059,9 +1059,10 @@ class Tag
                 munch(s,whitespace);
                 reqc(s,'=');
                 munch(s,whitespace);
-                reqc(s,'"');
-                string val = decode(munch(s,"^\""), DecodeMode.LOOSE);
-                reqc(s,'"');
+                char quote = requireOneOf(s,"'\"");
+                char[2] notQuote = ['^', quote];
+                string val = decode(munch(s,notQuote[]), DecodeMode.LOOSE);
+                reqc(s,quote);
                 munch(s,whitespace);
                 attr[key] = val;
             }
@@ -2714,6 +2715,16 @@ EOS";
 
 unittest
 {
+    string test_xml = `<?xml version="1.0" encoding='UTF-8'?><stream:stream
+                        xmlns:stream="http://etherx.'jabber'.org/streams"
+                        xmlns="jabber:'client'" from='jid.pl' id="587a5767"
+                        xml:lang="en" version="1.0"></stream:stream>`;
+
+    DocumentParser parser = new DocumentParser(test_xml);
+}
+
+unittest
+{
     string s = q"EOS
 <?xml version="1.0" encoding="utf-8"?> <Tests>
     <Test thing="What &amp; Up">What &amp; Up Second</Test>
@@ -2858,6 +2869,15 @@ private
         s = s[1..$];
     }
 
+    char requireOneOf(ref string s, string chars)
+    {
+        if (s.length == 0 || indexOf(chars,s[0]) == -1)
+            throw new TagException("");
+        char ch = s[0];
+        s = s[1..$];
+        return ch;
+    }
+
     size_t hash(string s,size_t h=0) @trusted nothrow
     {
         return typeid(s).getHash(&s) + h;
@@ -2970,3 +2990,5 @@ private
         throw new XMLException(s);
     }
 }
+
+
