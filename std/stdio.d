@@ -145,6 +145,8 @@ else version (MICROSOFT_STDIO)
         int _setmode(int, int);
         int _fileno(FILE*);
         FILE* _fdopen(int, const (char)*);
+        int _fseeki64(FILE*, long, int);
+        long _ftelli64(FILE*);
     }
     alias FPUTC = _fputc_nolock;
     alias FPUTWC = _fputwc_nolock;
@@ -917,16 +919,24 @@ Throws: $(D Exception) if the file is not opened.
         enforce(isOpen, "Attempting to seek() in an unopened file");
         version (Windows)
         {
-            errnoEnforce(fseek(_p.handle, to!int(offset), origin) == 0,
-                    "Could not seek in file `"~_name~"'");
+            version (CRuntime_Microsoft)
+            {
+                alias fseekFun = _fseeki64;
+                alias off_t = long;
+            }
+            else
+            {
+                alias fseekFun = fseek;
+                alias off_t = int;
+            }
         }
         else version (Posix)
         {
             import core.sys.posix.stdio : fseeko, off_t;
-            //static assert(off_t.sizeof == 8);
-            errnoEnforce(fseeko(_p.handle, cast(off_t) offset, origin) == 0,
-                    "Could not seek in file `"~_name~"'");
+            alias fseekFun = fseeko;
         }
+        errnoEnforce(fseekFun(_p.handle, to!off_t(offset), origin) == 0,
+                "Could not seek in file `"~_name~"'");
     }
 
     unittest
@@ -939,26 +949,23 @@ Throws: $(D Exception) if the file is not opened.
         f.rawWrite("abcdefghijklmnopqrstuvwxyz");
         f.seek(7);
         assert(f.readln() == "hijklmnopqrstuvwxyz");
-        version (Windows)
-        {
-            // No test for large files yet
-        }
-        else
-        {
-            import std.conv : text;
 
-            version (CRuntime_Bionic)
-                auto bigOffset = int.max - 100;
-            else
-                auto bigOffset = cast(ulong) int.max + 100;
-            f.seek(bigOffset);
-            assert(f.tell == bigOffset, text(f.tell));
-            // Uncomment the tests below only if you want to wait for
-            // a long time
-            // f.rawWrite("abcdefghijklmnopqrstuvwxyz");
-            // f.seek(-3, SEEK_END);
-            // assert(f.readln() == "xyz");
-        }
+        import std.conv : text;
+
+        version (CRuntime_DigitalMars)
+            auto bigOffset = int.max - 100;
+        else
+        version (CRuntime_Bionic)
+            auto bigOffset = int.max - 100;
+        else
+            auto bigOffset = cast(ulong) int.max + 100;
+        f.seek(bigOffset);
+        assert(f.tell == bigOffset, text(f.tell));
+        // Uncomment the tests below only if you want to wait for
+        // a long time
+        // f.rawWrite("abcdefghijklmnopqrstuvwxyz");
+        // f.seek(-3, SEEK_END);
+        // assert(f.readln() == "xyz");
     }
 
 /**
@@ -975,7 +982,10 @@ Throws: $(D Exception) if the file is not opened.
         enforce(isOpen, "Attempting to tell() in an unopened file");
         version (Windows)
         {
-            immutable result = ftell(cast(FILE*) _p.handle);
+            version (CRuntime_Microsoft)
+                immutable result = _ftelli64(cast(FILE*) _p.handle);
+            else
+                immutable result = ftell(cast(FILE*) _p.handle);
         }
         else version (Posix)
         {
