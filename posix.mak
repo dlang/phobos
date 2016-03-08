@@ -26,7 +26,7 @@
 # OS can be linux, win32, win32wine, osx, or freebsd. The system will be
 # determined by using uname
 
-QUIET:=@
+QUIET:=
 
 include osmodel.mak
 
