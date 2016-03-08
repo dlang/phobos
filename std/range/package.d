@@ -9045,7 +9045,7 @@ struct NullSink
   in the case of the version of $(D tee) that takes a function, the function
   will not actually be executed until the range is "walked" using functions
   that evaluate ranges, such as $(XREF array,array) or
-  $(XREF_PACK algorithm,iteration,reduce).
+  $(XREF_PACK algorithm,iteration,fold).
 
   Params:
   pipeOnPop = If `Yes.pipeOnPop`, simply iterating the range without ever
