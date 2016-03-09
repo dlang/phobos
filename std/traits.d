@@ -6044,15 +6044,17 @@ unittest
  *     $(LI $(D immutable))
  *     $(LI $(D shared))
  * )
- * Example:
- * ---
- * static assert(is(CopyTypeQualifiers!(inout const real, int) == inout const int));
- * ---
  */
 template CopyTypeQualifiers(FromType, ToType)
 {
     alias T(U) = ToType;
     alias CopyTypeQualifiers = ModifyTypePreservingTQ!(T, FromType);
+}
+
+///
+unittest
+{
+    static assert(is(CopyTypeQualifiers!(inout const real, int) == inout const int));
 }
 
 unittest
