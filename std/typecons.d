@@ -7310,3 +7310,194 @@ unittest
     assert(~Ternary.no == Ternary.yes);
     assert(~Ternary.unknown == Ternary.unknown);
 }
+
+/**
+ * Get a field or property member function by `ref`. Allows getting fields
+ * via runtime information rather than requiring it at compile-time.
+ *
+ * Params:
+ *     obj = the struct or class to access
+ *     name = the name of the field or property method
+ * Returns:
+ *     The value of the field
+ */
+auto getFeild(Field, Obj)(auto ref Obj obj, string name)
+{
+    enum refObj = !is(Obj == class) && (Obj.sizeof > 16);
+    return rtPropDispatch!(false, Field, false, Obj, refObj)(obj, name);
+}
+
+///
+@safe @nogc nothrow pure unittest
+{
+    struct Foo
+    {
+        int bar = 42;
+    }
+
+    Foo foo;
+    int val = foo.getFeild!int("bar");
+    assert(val == 42);
+}
+
+@safe nothrow pure unittest
+{
+    class A
+    {
+        int bar = 42;
+    }
+
+    auto a = new A();
+    int val = a.getFeild!int("bar");
+    assert(val == 42);
+
+    struct B
+    {
+        auto bar() @property { return 42; }
+    }
+
+    B b;
+    int val2 = b.getFeild!int("bar");
+    assert(val == 42);
+}
+
+/**
+ * Get a field or property member function. Allows getting fields
+ * via runtime information rather than requiring it at compile-time.
+ *
+ * Params:
+ *     obj = the struct or class to access
+ *     name = the name of the field or property method
+ * Returns:
+ *     The value of the field or property method by reference
+ */
+ref Field refGetFeild(Field, Obj)(Obj obj, string name) if (is(Obj == class))
+{
+    return rtPropDispatch!(false, Field, true, Obj, false)(obj, name);
+}
+
+/// ditto
+ref Field refGetFeild(Field, Obj)(return ref Obj obj, string name) if (!is(Obj == class))
+{
+    return rtPropDispatch!(false, Field, true, Obj, true)(obj, name);
+}
+
+///
+@safe @nogc nothrow pure unittest
+{
+    struct Foo
+    {
+        int bar = 42;
+    }
+
+    Foo foo;
+    int val = foo.refGetFeild!int("bar");
+    assert(val == 42);
+}
+
+@safe nothrow pure unittest
+{
+    class A
+    {
+        int bar = 42;
+    }
+
+    auto a = new A();
+    int val = a.refGetFeild!int("bar");
+    assert(val == 42);
+
+    struct B
+    {
+        private int b = 42;
+        ref auto bar() @property { return b; }
+    }
+
+    B b;
+    int val2 = b.refGetFeild!int("bar");
+    assert(val == 42);
+}
+
+/**
+ * Set a field or property member function. Allows setting fields
+ * via runtime information rather than requiring it at compile-time.
+ *
+ * Params:
+ *     obj = the struct or class to access
+ *     name = the name of the field or property method
+ */
+void setFeild(Field, Obj)(auto ref Obj obj, string name, auto ref Field value)
+{
+    enum refProp = !is(Field == class) || (Field.sizeof > 16);
+    enum refObj = !is(Obj == class) || (Obj.sizeof > 16);
+    rtPropDispatch!(true, Field, refProp, Obj, refObj)(obj, name, value);
+}
+
+///
+@safe @nogc nothrow pure unittest
+{
+    struct Foo
+    {
+        int bar = 42;
+    }
+
+    Foo foo;
+    foo.setFeild("bar", 24);
+    assert(foo.bar == 24);
+}
+
+@safe nothrow pure unittest
+{
+    class A
+    {
+        int bar = 42;
+    }
+
+    auto a = new A();
+    a.setFeild("bar", 24);
+    assert(a.bar == 24);
+
+    struct B
+    {
+        private int b = 42;
+        auto bar() @property { return b; }
+        auto bar(int val) @property { b = val; }
+    }
+
+    B b;
+    b.setFeild("bar", 24);
+    assert(b.getFeild!int("bar") == 24);
+}
+
+// mixin template for the get/setField functions
+private template rtFieldDispatch(bool set, Field, bool refProp, Obj, bool refObj)
+{
+    private enum propMix = (set ? `` : `return `) ~ `mixin("obj." ~ mName)` ~ (
+        set ? ` = value; return;` : `;`);
+    private enum errorMessage = Obj.stringof ~ " has no " ~
+        (set ? "assignable" : (refProp ? "lvalue " : "")) ~ "property matching " ~ Field.stringof;
+    private enum dispMix = (set ? `void` : (refProp ? `ref Field` : `Field`)) ~ ` rtPropDispatch(` ~ (
+            refObj ? (!set && refProp ? `return ` : ``) ~ `ref ` : ``) ~ `Obj obj, string name` ~ (
+            set ? `, ` ~ (refProp ? `ref ` : ``) ~ `Field value` : ``) ~ `)
+    {
+        ` ~ (
+            set ? `void` : (refProp ? `ref ` : ``) ~ `Field`) ~ ` checkType(string mName)()
+        {
+            if (!__ctfe) assert (0);
+            ` ~ propMix ~ `
+        }
+
+        foreach (mName; __traits (allMembers, Obj))
+        {
+            static if (__traits(compiles, checkType!mName()))
+            {
+                if (mName == name)
+                {
+                    ` ~ propMix ~ `
+                }
+            }
+        }
+
+        assert (0, "`~ errorMessage ~`");
+    } `;
+    mixin(dispMix);
+}
