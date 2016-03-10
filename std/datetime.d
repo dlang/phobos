@@ -8013,10 +8013,20 @@ public:
 
         If this $(LREF SysTime)'s time zone is $(LREF LocalTime), then TZ is empty.
         If its time zone is $(D UTC), then it is "Z". Otherwise, it is the
-        offset from UTC (e.g. +1:00 or -7:00). Note that the offset from UTC
+        offset from UTC (e.g. +0100 or -0700). Note that the offset from UTC
         is $(I not) enough to uniquely identify the time zone.
 
-        Time zone offsets will be in the form +HH:MM or -HH:MM.
+        Time zone offsets will be in the form +HHMM or -HHMM.
+
+        $(RED Warning:
+            Previously, toISOString did the same as $(LREF toISOExtString) and
+            generated +HH:MM or -HH:MM for the time zone when it was not
+            $(LREF LocalTime) or $(LREF UTC), which is not in conformance with
+            ISO 9601 for the non-extended string format. This has now been
+            fixed. However, for now, fromISOString will continue to accept the
+            extended format for the time zone so that any code which has been
+            writing out the result of toISOString to read in later will continue
+            to work.)
       +/
     string toISOString() @safe const nothrow
     {
@@ -8052,7 +8062,7 @@ public:
             return format("%s%s%s",
                           dateTime.toISOString(),
                           fracSecsToISOString(cast(int)hnsecs),
-                          SimpleTimeZone.toISOString(utcOffset));
+                          SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch(Exception e)
             assert(0, "format() threw.");
@@ -8143,7 +8153,7 @@ public:
 
         If this $(LREF SysTime)'s time zone is $(LREF LocalTime), then TZ is empty. If
         its time zone is $(D UTC), then it is "Z". Otherwise, it is the offset
-        from UTC (e.g. +1:00 or -7:00). Note that the offset from UTC is
+        from UTC (e.g. +01:00 or -07:00). Note that the offset from UTC is
         $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
@@ -8182,7 +8192,7 @@ public:
             return format("%s%s%s",
                           dateTime.toISOExtString(),
                           fracSecsToISOString(cast(int)hnsecs),
-                          SimpleTimeZone.toISOString(utcOffset));
+                          SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch(Exception e)
             assert(0, "format() threw.");
@@ -8277,7 +8287,7 @@ public:
 
         If this $(LREF SysTime)'s time zone is $(LREF LocalTime), then TZ is empty. If
         its time zone is $(D UTC), then it is "Z". Otherwise, it is the offset
-        from UTC (e.g. +1:00 or -7:00). Note that the offset from UTC is
+        from UTC (e.g. +01:00 or -07:00). Note that the offset from UTC is
         $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
@@ -8316,7 +8326,7 @@ public:
             return format("%s%s%s",
                           dateTime.toSimpleString(),
                           fracSecsToISOString(cast(int)hnsecs),
-                          SimpleTimeZone.toISOString(utcOffset));
+                          SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch(Exception e)
             assert(0, "format() threw.");
@@ -8429,16 +8439,26 @@ public:
         all zeroes. However, a decimal point with nothing following it is
         invalid.
 
-        If there is no time zone in the string, then $(LREF LocalTime) is used. If
-        the time zone is "Z", then $(D UTC) is used. Otherwise, a
+        If there is no time zone in the string, then $(LREF LocalTime) is used.
+        If the time zone is "Z", then $(D UTC) is used. Otherwise, a
         $(LREF SimpleTimeZone) which corresponds to the given offset from UTC is
         used. To get the returned $(LREF SysTime) to be a particular time
         zone, pass in that time zone and the $(LREF SysTime) to be returned
         will be converted to that time zone (though it will still be read in as
         whatever time zone is in its string).
 
-        The accepted formats for time zone offsets
-        are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
+        The accepted formats for time zone offsets are +HH, -HH, +HHMM, and
+        -HHMM.
+
+        $(RED Warning:
+            Previously, $(LREF toISOString) did the same as
+            $(LREF toISOExtString) and generated +HH:MM or -HH:MM for the time
+            zone when it was not $(LREF LocalTime) or $(LREF UTC), which is not
+            in conformance with ISO 9601 for the non-extended string format.
+            This has now been fixed. However, for now, fromISOString will
+            continue to accept the extended format for the time zone so that any
+            code which has been writing out the result of toISOString to read in
+            later will continue to work.)
 
         Params:
             isoString = A string formatted in the ISO format for dates and times.
@@ -8446,8 +8466,8 @@ public:
                         conversion occurs if null).
 
         Throws:
-            $(LREF DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(LREF SysTime) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the ISO
+            format or if the resulting $(LREF SysTime) would not be valid.
       +/
     static SysTime fromISOString(S)(in S isoString, immutable TimeZone tz = null) @safe
         if(isSomeString!S)
@@ -8495,7 +8515,12 @@ public:
             else if(zoneStr == "Z")
                 parsedZone = UTC();
             else
-                parsedZone = SimpleTimeZone.fromISOString(zoneStr);
+            {
+                try
+                    parsedZone = SimpleTimeZone.fromISOString(zoneStr);
+                catch(DateTimeException dte)
+                    parsedZone = SimpleTimeZone.fromISOExtString(zoneStr);
+            }
 
             auto retval = SysTime(dateTime, fracSec, parsedZone);
 
@@ -8513,129 +8538,142 @@ public:
     {
         assert(SysTime.fromISOString("20100704T070612") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+
         assert(SysTime.fromISOString("19981225T021500.007") ==
                SysTime(DateTime(1998, 12, 25, 2, 15, 0), msecs(7)));
+
         assert(SysTime.fromISOString("00000105T230959.00002") ==
                SysTime(DateTime(0, 1, 5, 23, 9, 59), usecs(20)));
+
         assert(SysTime.fromISOString("-00040105T000002") ==
                SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+
         assert(SysTime.fromISOString(" 20100704T070612 ") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
         assert(SysTime.fromISOString("20100704T070612Z") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-        assert(SysTime.fromISOString("20100704T070612-8:00") ==
+
+        assert(SysTime.fromISOString("20100704T070612-0800") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-                       new immutable SimpleTimeZone(dur!"hours"(-8))));
-        assert(SysTime.fromISOString("20100704T070612+8:00") ==
+                       new immutable SimpleTimeZone(hours(-8))));
+
+        assert(SysTime.fromISOString("20100704T070612+0800") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-                       new immutable SimpleTimeZone(dur!"hours"(8))));
+                       new immutable SimpleTimeZone(hours(8))));
     }
 
     unittest
     {
-        assertThrown!DateTimeException(SysTime.fromISOString(""));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704000000"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704 000000"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704t000000"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000."));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000.A"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000.Z"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000.00000000"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000.00000000"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000+"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000-"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000:"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000-:"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000+:"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000-1:"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000+1:"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000+1:0"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000-24.00"));
-        assertThrown!DateTimeException(SysTime.fromISOString("20100704T000000+24.00"));
+        import std.format: format;
 
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-07-0400:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-07-04 00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-07-04t00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-07-04T00:00:00."));
+        foreach(str; ["", "20100704000000", "20100704 000000", "20100704t000000",
+                      "20100704T000000.", "20100704T000000.A", "20100704T000000.Z",
+                      "20100704T000000.00000000", "20100704T000000.00000000",
+                      "20100704T000000+", "20100704T000000-", "20100704T000000:",
+                      "20100704T000000-:", "20100704T000000+:", "20100704T000000-1:",
+                      "20100704T000000+1:", "20100704T000000+1:0",
+                      "20100704T000000-12.00", "20100704T000000+12.00",
+                      "20100704T000000-8", "20100704T000000+8",
+                      "20100704T000000-800", "20100704T000000+800",
+                      "20100704T000000-080", "20100704T000000+080",
+                      "20100704T000000-2400", "20100704T000000+2400",
+                      "20100704T000000-1260", "20100704T000000+1260",
+                      "20100704T000000.0-8", "20100704T000000.0+8",
+                      "20100704T000000.0-800", "20100704T000000.0+800",
+                      "20100704T000000.0-080", "20100704T000000.0+080",
+                      "20100704T000000.0-2400", "20100704T000000.0+2400",
+                      "20100704T000000.0-1260", "20100704T000000.0+1260",
+                      "20100704T000000-8:00", "20100704T000000+8:00",
+                      "20100704T000000-08:0", "20100704T000000+08:0",
+                      "20100704T000000-24:00", "20100704T000000+24:00",
+                      "20100704T000000-12:60", "20100704T000000+12:60",
+                      "20100704T000000.0-8:00", "20100704T000000.0+8:00",
+                      "20100704T000000.0-08:0", "20100704T000000.0+08:0",
+                      "20100704T000000.0-24:00", "20100704T000000.0+24:00",
+                      "20100704T000000.0-12:60", "20100704T000000.0+12:60",
+                      "2010-07-0400:00:00", "2010-07-04 00:00:00",
+                      "2010-07-04t00:00:00", "2010-07-04T00:00:00.",
+                      "2010-Jul-0400:00:00", "2010-Jul-04 00:00:00", "2010-Jul-04t00:00:00",
+                      "2010-Jul-04T00:00:00", "2010-Jul-04 00:00:00.",
+                      "2010-12-22T172201", "2010-Dec-22 17:22:01"])
+        {
+            assertThrown!DateTimeException(SysTime.fromISOString(str), format("[%s]", str));
+        }
 
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-Jul-0400:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-Jul-04 00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-Jul-04t00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-Jul-04T00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-Jul-04 00:00:00."));
+        static void test(string str, SysTime st, size_t line = __LINE__)
+        {
+            if(SysTime.fromISOString(str) != st)
+                throw new AssertError("unittest failure", __FILE__, line);
+        }
 
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-12-22T172201"));
-        assertThrown!DateTimeException(SysTime.fromISOString("2010-Dec-22 17:22:01"));
+        test("20101222T172201", SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
+        test("19990706T123033", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test("-19990706T123033", SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
+        test("+019990706T123033", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test("19990706T123033 ", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test(" 19990706T123033", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test(" 19990706T123033 ", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
 
-        assert(SysTime.fromISOString("20101222T172201") == SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
-        assert(SysTime.fromISOString("19990706T123033") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromISOString("-19990706T123033") == SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromISOString("+019990706T123033") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromISOString("19990706T123033 ") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromISOString(" 19990706T123033") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromISOString(" 19990706T123033 ") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test("19070707T121212.0", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+        test("19070707T121212.0000000", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+        test("19070707T121212.0000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
+        test("19070707T121212.000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
+        test("19070707T121212.0000010", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
+        test("19070707T121212.001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
+        test("19070707T121212.0010000", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
 
-        assert(SysTime.fromISOString("19070707T121212.0") == SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        assert(SysTime.fromISOString("19070707T121212.0000000") == SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        assert(SysTime.fromISOString("19070707T121212.0000001") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
-        assert(SysTime.fromISOString("19070707T121212.000001") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        assert(SysTime.fromISOString("19070707T121212.0000010") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        assert(SysTime.fromISOString("19070707T121212.001") == SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
-        assert(SysTime.fromISOString("19070707T121212.0010000") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
+        auto west60 = new immutable SimpleTimeZone(hours(-1));
+        auto west90 = new immutable SimpleTimeZone(minutes(-90));
+        auto west480 = new immutable SimpleTimeZone(hours(-8));
+        auto east60 = new immutable SimpleTimeZone(hours(1));
+        auto east90 = new immutable SimpleTimeZone(minutes(90));
+        auto east480 = new immutable SimpleTimeZone(hours(8));
 
-        assert(SysTime.fromISOString("20101222T172201Z") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
-        assert(SysTime.fromISOString("20101222T172201-1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromISOString("20101222T172201-1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromISOString("20101222T172201-1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-90))));
-        assert(SysTime.fromISOString("20101222T172201-8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-480))));
-        assert(SysTime.fromISOString("20101222T172201+1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromISOString("20101222T172201+1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromISOString("20101222T172201+1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(90))));
-        assert(SysTime.fromISOString("20101222T172201+8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(480))));
+        test("20101222T172201Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
+        test("20101222T172201-0100", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
+        test("20101222T172201-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
+        test("20101222T172201-0130", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west90));
+        test("20101222T172201-0800", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west480));
+        test("20101222T172201+0100", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
+        test("20101222T172201+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
+        test("20101222T172201+0130", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
+        test("20101222T172201+0800", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east480));
 
-        assert(SysTime.fromISOString("20101103T065106.57159Z") ==
-               SysTime(DateTime(2010, 11, 3, 6, 51, 6), hnsecs(5715900), UTC()));
+        test("20101103T065106.57159Z", SysTime(DateTime(2010, 11, 3, 6, 51, 6), hnsecs(5715900), UTC()));
+        test("20101222T172201.23412Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_341_200), UTC()));
+        test("20101222T172201.23112-0100", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200), west60));
+        test("20101222T172201.45-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), west60));
+        test("20101222T172201.1-0130", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000), west90));
+        test("20101222T172201.55-0800", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000), west480));
+        test("20101222T172201.1234567+0100", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567), east60));
+        test("20101222T172201.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
+        test("20101222T172201.0000000+0130", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
+        test("20101222T172201.45+0800", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
 
-        assert(SysTime.fromISOString("20101222T172201.23412Z") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_341_200), UTC()));
-        assert(SysTime.fromISOString("20101222T172201.23112-1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200),
-                       new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromISOString("20101222T172201.45-1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromISOString("20101222T172201.1-1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(-90))));
-        assert(SysTime.fromISOString("20101222T172201.55-8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(-480))));
-        assert(SysTime.fromISOString("20101222T172201.1234567+1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567),
-                       new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromISOString("20101222T172201.0+1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01),
-                       new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromISOString("20101222T172201.0000000+1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01),
-                       new immutable SimpleTimeZone(dur!"minutes"(90))));
-        assert(SysTime.fromISOString("20101222T172201.45+8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(480))));
+        // @@@DEPRECATED_2017-07@@@
+        // This isn't deprecated per se, but that text will make it so that it
+        // pops up when deprecations are moved along around July 2017. At that
+        // time, the notice on the documentation should be removed, and we may
+        // or may not change the behavior of fromISOString to no longer accept
+        // ISO extended time zones (the concern being that programs will have
+        // written out strings somewhere to read in again that they'll still be
+        // reading in for years to come and may not be able to fix, even if the
+        // code is fixed). If/when we do change the behavior, these tests will
+        // start failing and will need to be updated accordingly.
+        test("20101222T172201-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
+        test("20101222T172201-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west90));
+        test("20101222T172201-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west480));
+        test("20101222T172201+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
+        test("20101222T172201+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
+        test("20101222T172201+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east480));
+
+        test("20101222T172201.23112-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200), west60));
+        test("20101222T172201.1-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000), west90));
+        test("20101222T172201.55-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000), west480));
+        test("20101222T172201.1234567+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567), east60));
+        test("20101222T172201.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
+        test("20101222T172201.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
     }
 
 
@@ -8649,26 +8687,26 @@ public:
         seconds with all zeroes. However, a decimal point with nothing following
         it is invalid.
 
-        If there is no time zone in the string, then $(LREF LocalTime) is used. If
-        the time zone is "Z", then $(D UTC) is used. Otherwise, a
+        If there is no time zone in the string, then $(LREF LocalTime) is used.
+        If the time zone is "Z", then $(D UTC) is used. Otherwise, a
         $(LREF SimpleTimeZone) which corresponds to the given offset from UTC is
         used. To get the returned $(LREF SysTime) to be a particular time
         zone, pass in that time zone and the $(LREF SysTime) to be returned
         will be converted to that time zone (though it will still be read in as
         whatever time zone is in its string).
 
-        The accepted formats for time zone offsets
-        are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
+        The accepted formats for time zone offsets are +HH, -HH, +HH:MM, and
+        -HH:MM.
 
         Params:
-            isoExtString = A string formatted in the ISO Extended format for dates
-                           and times.
+            isoExtString = A string formatted in the ISO Extended format for
+                           dates and times.
             tz           = The time zone to convert the given time to (no
                            conversion occurs if null).
 
         Throws:
-            $(LREF DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(LREF SysTime) would not be valid.
+            $(LREF DateTimeException) if the given string is not in the ISO
+            format or if the resulting $(LREF SysTime) would not be valid.
       +/
     static SysTime fromISOExtString(S)(in S isoExtString, immutable TimeZone tz = null) @safe
         if(isSomeString!(S))
@@ -8718,7 +8756,7 @@ public:
             else if(zoneStr == "Z")
                 parsedZone = UTC();
             else
-                parsedZone = SimpleTimeZone.fromISOString(zoneStr);
+                parsedZone = SimpleTimeZone.fromISOExtString(zoneStr);
 
             auto retval = SysTime(dateTime, fracSec, parsedZone);
 
@@ -8736,131 +8774,119 @@ public:
     {
         assert(SysTime.fromISOExtString("2010-07-04T07:06:12") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+
         assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") ==
                SysTime(DateTime(1998, 12, 25, 2, 15, 0), msecs(7)));
+
         assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") ==
                SysTime(DateTime(0, 1, 5, 23, 9, 59), usecs(20)));
+
         assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") ==
                SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+
         assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
         assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-        assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") ==
+
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12-08:00") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-                       new immutable SimpleTimeZone(dur!"hours"(-8))));
-        assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
+                       new immutable SimpleTimeZone(hours(-8))));
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12+08:00") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-                       new immutable SimpleTimeZone(dur!"hours"(8))));
+                       new immutable SimpleTimeZone(hours(8))));
     }
 
     unittest
     {
-        assertThrown!DateTimeException(SysTime.fromISOExtString(""));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("20100704000000"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("20100704 000000"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("20100704t000000"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("20100704T000000."));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("20100704T000000.0"));
+        import std.format : format;
 
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07:0400:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04 00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04 00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04t00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00."));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.A"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.Z"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.00000000"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.00000000"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00:"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-:"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+:"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-1:"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+1:"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+1:0"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-24.00"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+24.00"));
+        foreach(str; ["", "20100704000000", "20100704 000000",
+                      "20100704t000000", "20100704T000000.", "20100704T000000.0",
+                      "2010-07:0400:00:00", "2010-07-04 00:00:00",
+                      "2010-07-04 00:00:00", "2010-07-04t00:00:00",
+                      "2010-07-04T00:00:00.", "2010-07-04T00:00:00.A", "2010-07-04T00:00:00.Z",
+                      "2010-07-04T00:00:00.00000000", "2010-07-04T00:00:00.00000000",
+                      "2010-07-04T00:00:00+", "2010-07-04T00:00:00-",
+                      "2010-07-04T00:00:00:", "2010-07-04T00:00:00-:", "2010-07-04T00:00:00+:",
+                      "2010-07-04T00:00:00-1:", "2010-07-04T00:00:00+1:", "2010-07-04T00:00:00+1:0",
+                      "2010-07-04T00:00:00-12.00", "2010-07-04T00:00:00+12.00",
+                      "2010-07-04T00:00:00-8", "2010-07-04T00:00:00+8",
+                      "20100704T000000-800", "20100704T000000+800",
+                      "20100704T000000-080", "20100704T000000+080",
+                      "20100704T000000-2400", "20100704T000000+2400",
+                      "20100704T000000-1260", "20100704T000000+1260",
+                      "20100704T000000.0-800", "20100704T000000.0+800",
+                      "20100704T000000.0-8", "20100704T000000.0+8",
+                      "20100704T000000.0-080", "20100704T000000.0+080",
+                      "20100704T000000.0-2400", "20100704T000000.0+2400",
+                      "20100704T000000.0-1260", "20100704T000000.0+1260",
+                      "2010-07-04T00:00:00-8:00", "2010-07-04T00:00:00+8:00",
+                      "2010-07-04T00:00:00-24:00", "2010-07-04T00:00:00+24:00",
+                      "2010-07-04T00:00:00-12:60", "2010-07-04T00:00:00+12:60",
+                      "2010-07-04T00:00:00.0-8:00", "2010-07-04T00:00:00.0+8:00",
+                      "2010-07-04T00:00:00.0-8", "2010-07-04T00:00:00.0+8",
+                      "2010-07-04T00:00:00.0-24:00", "2010-07-04T00:00:00.0+24:00",
+                      "2010-07-04T00:00:00.0-12:60", "2010-07-04T00:00:00.0+12:60",
+                      "2010-Jul-0400:00:00", "2010-Jul-04t00:00:00",
+                      "2010-Jul-04 00:00:00.", "2010-Jul-04 00:00:00.0",
+                      "20101222T172201", "2010-Dec-22 17:22:01"])
+        {
+            assertThrown!DateTimeException(SysTime.fromISOExtString(str), format("[%s]", str));
+        }
 
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-0400:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-04t00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-04 00:00:00."));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-04 00:00:00.0"));
+        static void test(string str, SysTime st, size_t line = __LINE__)
+        {
+            if(SysTime.fromISOExtString(str) != st)
+                throw new AssertError("unittest failure", __FILE__, line);
+        }
 
-        assertThrown!DateTimeException(SysTime.fromISOExtString("20101222T172201"));
-        assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Dec-22 17:22:01"));
+        test("2010-12-22T17:22:01", SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
+        test("1999-07-06T12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test("-1999-07-06T12:30:33", SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
+        test("+01999-07-06T12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test("1999-07-06T12:30:33 ", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test(" 1999-07-06T12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test(" 1999-07-06T12:30:33 ", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
 
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01") == SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
-        assert(SysTime.fromISOExtString("1999-07-06T12:30:33") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromISOExtString("-1999-07-06T12:30:33") == SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromISOExtString("+01999-07-06T12:30:33") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromISOExtString("1999-07-06T12:30:33 ") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromISOExtString(" 1999-07-06T12:30:33") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromISOExtString(" 1999-07-06T12:30:33 ") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test("1907-07-07T12:12:12.0", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+        test("1907-07-07T12:12:12.0000000", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+        test("1907-07-07T12:12:12.0000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
+        test("1907-07-07T12:12:12.000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
+        test("1907-07-07T12:12:12.0000010", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
+        test("1907-07-07T12:12:12.001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
+        test("1907-07-07T12:12:12.0010000", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
 
-        assert(SysTime.fromISOExtString("1907-07-07T12:12:12.0") == SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        assert(SysTime.fromISOExtString("1907-07-07T12:12:12.0000000") == SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        assert(SysTime.fromISOExtString("1907-07-07T12:12:12.0000001") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
-        assert(SysTime.fromISOExtString("1907-07-07T12:12:12.000001") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        assert(SysTime.fromISOExtString("1907-07-07T12:12:12.0000010") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        assert(SysTime.fromISOExtString("1907-07-07T12:12:12.001") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
-        assert(SysTime.fromISOExtString("1907-07-07T12:12:12.0010000") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
+        auto west60 = new immutable SimpleTimeZone(hours(-1));
+        auto west90 = new immutable SimpleTimeZone(minutes(-90));
+        auto west480 = new immutable SimpleTimeZone(hours(-8));
+        auto east60 = new immutable SimpleTimeZone(hours(1));
+        auto east90 = new immutable SimpleTimeZone(minutes(90));
+        auto east480 = new immutable SimpleTimeZone(hours(8));
 
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01Z") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01-1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01-1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01-1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-90))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01-8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-480))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01+1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01+1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01+1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(90))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01+8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(480))));
+        test("2010-12-22T17:22:01Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
+        test("2010-12-22T17:22:01-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
+        test("2010-12-22T17:22:01-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
+        test("2010-12-22T17:22:01-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west90));
+        test("2010-12-22T17:22:01-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west480));
+        test("2010-12-22T17:22:01+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
+        test("2010-12-22T17:22:01+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
+        test("2010-12-22T17:22:01+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
+        test("2010-12-22T17:22:01+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east480));
 
-        assert(SysTime.fromISOExtString("2010-11-03T06:51:06.57159Z") ==
-               SysTime(DateTime(2010, 11, 3, 6, 51, 6), hnsecs(5715900), UTC()));
-
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01.23412Z") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_341_200), UTC()));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01.23112-1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200),
-                       new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01.45-1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01.1-1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(-90))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01.55-8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(-480))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01.1234567+1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567),
-                       new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01.0+1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01),
-                       new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01.0000000+1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01),
-                       new immutable SimpleTimeZone(dur!"minutes"(90))));
-        assert(SysTime.fromISOExtString("2010-12-22T17:22:01.45+8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(480))));
+        test("2010-11-03T06:51:06.57159Z", SysTime(DateTime(2010, 11, 3, 6, 51, 6), hnsecs(5715900), UTC()));
+        test("2010-12-22T17:22:01.23412Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_341_200), UTC()));
+        test("2010-12-22T17:22:01.23112-01:00",
+             SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200), west60));
+        test("2010-12-22T17:22:01.45-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), west60));
+        test("2010-12-22T17:22:01.1-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000), west90));
+        test("2010-12-22T17:22:01.55-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000), west480));
+        test("2010-12-22T17:22:01.1234567+01:00",
+             SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567), east60));
+        test("2010-12-22T17:22:01.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
+        test("2010-12-22T17:22:01.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
+        test("2010-12-22T17:22:01.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
     }
 
 
@@ -8882,9 +8908,8 @@ public:
         will be converted to that time zone (though it will still be read in as
         whatever time zone is in its string).
 
-        The accepted formats for time zone offsets
-        are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
-
+        The accepted formats for time zone offsets are +HH, -HH, +HH:MM, and
+        -HH:MM.
 
         Params:
             simpleString = A string formatted in the way that
@@ -8944,7 +8969,7 @@ public:
             else if(zoneStr == "Z")
                 parsedZone = UTC();
             else
-                parsedZone = SimpleTimeZone.fromISOString(zoneStr);
+                parsedZone = SimpleTimeZone.fromISOExtString(zoneStr);
 
             auto retval = SysTime(dateTime, fracSec, parsedZone);
 
@@ -8962,131 +8987,122 @@ public:
     {
         assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+
         assert(SysTime.fromSimpleString("1998-Dec-25 02:15:00.007") ==
                SysTime(DateTime(1998, 12, 25, 2, 15, 0), msecs(7)));
+
         assert(SysTime.fromSimpleString("0000-Jan-05 23:09:59.00002") ==
                SysTime(DateTime(0, 1, 5, 23, 9, 59), usecs(20)));
+
         assert(SysTime.fromSimpleString("-0004-Jan-05 00:00:02") ==
                SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+
         assert(SysTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
         assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12Z") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12-8:00") ==
+
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12-08:00") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-                       new immutable SimpleTimeZone(dur!"hours"(-8))));
-        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
+                       new immutable SimpleTimeZone(hours(-8))));
+
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+08:00") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-                       new immutable SimpleTimeZone(dur!"hours"(8))));
+                       new immutable SimpleTimeZone(hours(8))));
     }
 
     unittest
     {
-        assertThrown!DateTimeException(SysTime.fromSimpleString(""));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("20100704000000"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("20100704 000000"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("20100704t000000"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("20100704T000000."));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("20100704T000000.0"));
+        import std.format : format;
 
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-07-0400:00:00"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-07-04 00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-07-04t00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-07-04T00:00:00."));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-07-04T00:00:00.0"));
+        foreach(str; ["", "20100704000000", "20100704 000000",
+                      "20100704t000000", "20100704T000000.", "20100704T000000.0",
+                      "2010-07-0400:00:00", "2010-07-04 00:00:00", "2010-07-04t00:00:00",
+                      "2010-07-04T00:00:00.", "2010-07-04T00:00:00.0",
+                      "2010-Jul-0400:00:00", "2010-Jul-04t00:00:00", "2010-Jul-04T00:00:00",
+                      "2010-Jul-04 00:00:00.", "2010-Jul-04 00:00:00.A", "2010-Jul-04 00:00:00.Z",
+                      "2010-Jul-04 00:00:00.00000000", "2010-Jul-04 00:00:00.00000000",
+                      "2010-Jul-04 00:00:00+", "2010-Jul-04 00:00:00-",
+                      "2010-Jul-04 00:00:00:", "2010-Jul-04 00:00:00-:",
+                      "2010-Jul-04 00:00:00+:", "2010-Jul-04 00:00:00-1:",
+                      "2010-Jul-04 00:00:00+1:", "2010-Jul-04 00:00:00+1:0",
+                      "2010-Jul-04 00:00:00-12.00", "2010-Jul-04 00:00:00+12.00",
+                      "2010-Jul-04 00:00:00-8", "2010-Jul-04 00:00:00+8",
+                      "20100704T000000-800", "20100704T000000+800",
+                      "20100704T000000-080", "20100704T000000+080",
+                      "20100704T000000-2400", "20100704T000000+2400",
+                      "20100704T000000-1260", "20100704T000000+1260",
+                      "20100704T000000.0-800", "20100704T000000.0+800",
+                      "20100704T000000.0-8", "20100704T000000.0+8",
+                      "20100704T000000.0-080", "20100704T000000.0+080",
+                      "20100704T000000.0-2400", "20100704T000000.0+2400",
+                      "20100704T000000.0-1260", "20100704T000000.0+1260",
+                      "2010-Jul-04 00:00:00-8:00", "2010-Jul-04 00:00:00+8:00",
+                      "2010-Jul-04 00:00:00-08:0", "2010-Jul-04 00:00:00+08:0",
+                      "2010-Jul-04 00:00:00-24:00", "2010-Jul-04 00:00:00+24:00",
+                      "2010-Jul-04 00:00:00-12:60", "2010-Jul-04 00:00:00+24:60",
+                      "2010-Jul-04 00:00:00.0-8:00", "2010-Jul-04 00:00:00+8:00",
+                      "2010-Jul-04 00:00:00.0-8", "2010-Jul-04 00:00:00.0+8",
+                      "2010-Jul-04 00:00:00.0-08:0", "2010-Jul-04 00:00:00.0+08:0",
+                      "2010-Jul-04 00:00:00.0-24:00", "2010-Jul-04 00:00:00.0+24:00",
+                      "2010-Jul-04 00:00:00.0-12:60", "2010-Jul-04 00:00:00.0+24:60",
+                      "20101222T172201", "2010-12-22T172201"])
+        {
+            assertThrown!DateTimeException(SysTime.fromSimpleString(str), format("[%s]", str));
+        }
 
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-0400:00:00"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04t00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04T00:00:00"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00."));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00.A"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00.Z"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00.00000000"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00.00000000"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00+"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00-"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00:"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00-:"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00+:"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00-1:"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00+1:"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00+1:0"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00-24.00"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-Jul-04 00:00:00+24.00"));
+        static void test(string str, SysTime st, size_t line = __LINE__)
+        {
+            if(SysTime.fromSimpleString(str) != st)
+                throw new AssertError("unittest failure", __FILE__, line);
+        }
 
-        assertThrown!DateTimeException(SysTime.fromSimpleString("20101222T172201"));
-        assertThrown!DateTimeException(SysTime.fromSimpleString("2010-12-22T172201"));
+        test("2010-Dec-22 17:22:01", SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
+        test("1999-Jul-06 12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test("-1999-Jul-06 12:30:33", SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
+        test("+01999-Jul-06 12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test("1999-Jul-06 12:30:33 ", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test(" 1999-Jul-06 12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test(" 1999-Jul-06 12:30:33 ", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
 
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01") == SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
-        assert(SysTime.fromSimpleString("1999-Jul-06 12:30:33") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromSimpleString("-1999-Jul-06 12:30:33") == SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromSimpleString("+01999-Jul-06 12:30:33") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromSimpleString("1999-Jul-06 12:30:33 ") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromSimpleString(" 1999-Jul-06 12:30:33") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-        assert(SysTime.fromSimpleString(" 1999-Jul-06 12:30:33 ") == SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+        test("1907-Jul-07 12:12:12.0", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+        test("1907-Jul-07 12:12:12.0000000", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+        test("1907-Jul-07 12:12:12.0000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
+        test("1907-Jul-07 12:12:12.000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
+        test("1907-Jul-07 12:12:12.0000010", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
+        test("1907-Jul-07 12:12:12.001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
+        test("1907-Jul-07 12:12:12.0010000", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
 
-        assert(SysTime.fromSimpleString("1907-Jul-07 12:12:12.0") == SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        assert(SysTime.fromSimpleString("1907-Jul-07 12:12:12.0000000") == SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        assert(SysTime.fromSimpleString("1907-Jul-07 12:12:12.0000001") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
-        assert(SysTime.fromSimpleString("1907-Jul-07 12:12:12.000001") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        assert(SysTime.fromSimpleString("1907-Jul-07 12:12:12.0000010") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        assert(SysTime.fromSimpleString("1907-Jul-07 12:12:12.001") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
-        assert(SysTime.fromSimpleString("1907-Jul-07 12:12:12.0010000") ==
-               SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
+        auto west60 = new immutable SimpleTimeZone(hours(-1));
+        auto west90 = new immutable SimpleTimeZone(minutes(-90));
+        auto west480 = new immutable SimpleTimeZone(hours(-8));
+        auto east60 = new immutable SimpleTimeZone(hours(1));
+        auto east90 = new immutable SimpleTimeZone(minutes(90));
+        auto east480 = new immutable SimpleTimeZone(hours(8));
 
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01Z") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01-1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01-1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01-1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-90))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01-8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(-480))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01+1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01+1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01+1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(90))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01+8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), new immutable SimpleTimeZone(dur!"minutes"(480))));
+        test("2010-Dec-22 17:22:01Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
+        test("2010-Dec-22 17:22:01-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
+        test("2010-Dec-22 17:22:01-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
+        test("2010-Dec-22 17:22:01-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west90));
+        test("2010-Dec-22 17:22:01-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west480));
+        test("2010-Dec-22 17:22:01+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
+        test("2010-Dec-22 17:22:01+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
+        test("2010-Dec-22 17:22:01+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
+        test("2010-Dec-22 17:22:01+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east480));
 
-        assert(SysTime.fromSimpleString("2010-Nov-03 06:51:06.57159Z") ==
-               SysTime(DateTime(2010, 11, 3, 6, 51, 6), hnsecs(5715900), UTC()));
-
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01.23412Z") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_341_200), UTC()));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01.23112-1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200),
-                       new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01.45-1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(-60))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01.1-1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(-90))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01.55-8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(-480))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01.1234567+1:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567),
-                       new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01.0+1") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01),
-                       new immutable SimpleTimeZone(dur!"minutes"(60))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01.0000000+1:30") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01),
-                       new immutable SimpleTimeZone(dur!"minutes"(90))));
-        assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01.45+8:00") ==
-               SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000),
-                       new immutable SimpleTimeZone(dur!"minutes"(480))));
+        test("2010-Nov-03 06:51:06.57159Z", SysTime(DateTime(2010, 11, 3, 6, 51, 6), hnsecs(5715900), UTC()));
+        test("2010-Dec-22 17:22:01.23412Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_341_200), UTC()));
+        test("2010-Dec-22 17:22:01.23112-01:00",
+             SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200), west60));
+        test("2010-Dec-22 17:22:01.45-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), west60));
+        test("2010-Dec-22 17:22:01.1-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000), west90));
+        test("2010-Dec-22 17:22:01.55-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000), west480));
+        test("2010-Dec-22 17:22:01.1234567+01:00",
+            SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567), east60));
+        test("2010-Dec-22 17:22:01.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
+        test("2010-Dec-22 17:22:01.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
+        test("2010-Dec-22 17:22:01.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
     }
 
 
@@ -28119,7 +28135,7 @@ private:
     /+
         Returns a time zone as a string with an offset from UTC.
 
-        Time zone offsets will be in the form +HH:MM or -HH:MM.
+        Time zone offsets will be in the form +HHMM or -HHMM.
 
         Params:
             utcOffset = The number of minutes offset from UTC (negative means
@@ -28128,14 +28144,13 @@ private:
     static string toISOString(Duration utcOffset) @safe pure
     {
         import std.format : format;
-
         immutable absOffset = abs(utcOffset);
         enforce!DateTimeException(absOffset < dur!"minutes"(1440),
-                                    "Offset from UTC must be within range (-24:00 - 24:00).");
+                                  "Offset from UTC must be within range (-24:00 - 24:00).");
         int hours;
         int minutes;
         absOffset.split!("hours", "minutes")(hours, minutes);
-        return format(utcOffset < Duration.zero ? "-%02d:%02d" : "+%02d:%02d", hours, minutes);
+        return format(utcOffset < Duration.zero ? "-%02d%02d" : "+%02d%02d", hours, minutes);
     }
 
     unittest
@@ -28148,24 +28163,77 @@ private:
         assertThrown!DateTimeException(testSTZInvalid(dur!"minutes"(1440)));
         assertThrown!DateTimeException(testSTZInvalid(dur!"minutes"(-1440)));
 
-        assert(toISOString(dur!"minutes"(0)) == "+00:00");
-        assert(toISOString(dur!"minutes"(1)) == "+00:01");
-        assert(toISOString(dur!"minutes"(10)) == "+00:10");
-        assert(toISOString(dur!"minutes"(59)) == "+00:59");
-        assert(toISOString(dur!"minutes"(60)) == "+01:00");
-        assert(toISOString(dur!"minutes"(90)) == "+01:30");
-        assert(toISOString(dur!"minutes"(120)) == "+02:00");
-        assert(toISOString(dur!"minutes"(480)) == "+08:00");
-        assert(toISOString(dur!"minutes"(1439)) == "+23:59");
+        assert(toISOString(dur!"minutes"(0)) == "+0000");
+        assert(toISOString(dur!"minutes"(1)) == "+0001");
+        assert(toISOString(dur!"minutes"(10)) == "+0010");
+        assert(toISOString(dur!"minutes"(59)) == "+0059");
+        assert(toISOString(dur!"minutes"(60)) == "+0100");
+        assert(toISOString(dur!"minutes"(90)) == "+0130");
+        assert(toISOString(dur!"minutes"(120)) == "+0200");
+        assert(toISOString(dur!"minutes"(480)) == "+0800");
+        assert(toISOString(dur!"minutes"(1439)) == "+2359");
 
-        assert(toISOString(dur!"minutes"(-1)) == "-00:01");
-        assert(toISOString(dur!"minutes"(-10)) == "-00:10");
-        assert(toISOString(dur!"minutes"(-59)) == "-00:59");
-        assert(toISOString(dur!"minutes"(-60)) == "-01:00");
-        assert(toISOString(dur!"minutes"(-90)) == "-01:30");
-        assert(toISOString(dur!"minutes"(-120)) == "-02:00");
-        assert(toISOString(dur!"minutes"(-480)) == "-08:00");
-        assert(toISOString(dur!"minutes"(-1439)) == "-23:59");
+        assert(toISOString(dur!"minutes"(-1)) == "-0001");
+        assert(toISOString(dur!"minutes"(-10)) == "-0010");
+        assert(toISOString(dur!"minutes"(-59)) == "-0059");
+        assert(toISOString(dur!"minutes"(-60)) == "-0100");
+        assert(toISOString(dur!"minutes"(-90)) == "-0130");
+        assert(toISOString(dur!"minutes"(-120)) == "-0200");
+        assert(toISOString(dur!"minutes"(-480)) == "-0800");
+        assert(toISOString(dur!"minutes"(-1439)) == "-2359");
+    }
+
+
+    /+
+        Returns a time zone as a string with an offset from UTC.
+
+        Time zone offsets will be in the form +HH:MM or -HH:MM.
+
+        Params:
+            utcOffset = The number of minutes offset from UTC (negative means
+                        west).
+      +/
+    static string toISOExtString(Duration utcOffset) @safe pure
+    {
+        import std.format : format;
+
+        immutable absOffset = abs(utcOffset);
+        enforce!DateTimeException(absOffset < dur!"minutes"(1440),
+                                  "Offset from UTC must be within range (-24:00 - 24:00).");
+        int hours;
+        int minutes;
+        absOffset.split!("hours", "minutes")(hours, minutes);
+        return format(utcOffset < Duration.zero ? "-%02d:%02d" : "+%02d:%02d", hours, minutes);
+    }
+
+    unittest
+    {
+        static string testSTZInvalid(Duration offset)
+        {
+            return SimpleTimeZone.toISOExtString(offset);
+        }
+
+        assertThrown!DateTimeException(testSTZInvalid(dur!"minutes"(1440)));
+        assertThrown!DateTimeException(testSTZInvalid(dur!"minutes"(-1440)));
+
+        assert(toISOExtString(dur!"minutes"(0)) == "+00:00");
+        assert(toISOExtString(dur!"minutes"(1)) == "+00:01");
+        assert(toISOExtString(dur!"minutes"(10)) == "+00:10");
+        assert(toISOExtString(dur!"minutes"(59)) == "+00:59");
+        assert(toISOExtString(dur!"minutes"(60)) == "+01:00");
+        assert(toISOExtString(dur!"minutes"(90)) == "+01:30");
+        assert(toISOExtString(dur!"minutes"(120)) == "+02:00");
+        assert(toISOExtString(dur!"minutes"(480)) == "+08:00");
+        assert(toISOExtString(dur!"minutes"(1439)) == "+23:59");
+
+        assert(toISOExtString(dur!"minutes"(-1)) == "-00:01");
+        assert(toISOExtString(dur!"minutes"(-10)) == "-00:10");
+        assert(toISOExtString(dur!"minutes"(-59)) == "-00:59");
+        assert(toISOExtString(dur!"minutes"(-60)) == "-01:00");
+        assert(toISOExtString(dur!"minutes"(-90)) == "-01:30");
+        assert(toISOExtString(dur!"minutes"(-120)) == "-02:00");
+        assert(toISOExtString(dur!"minutes"(-480)) == "-08:00");
+        assert(toISOExtString(dur!"minutes"(-1439)) == "-23:59");
     }
 
 
@@ -28173,8 +28241,8 @@ private:
         Takes a time zone as a string with an offset from UTC and returns a
         $(LREF SimpleTimeZone) which matches.
 
-        The accepted formats for time zone offsets
-        are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
+        The accepted formats for time zone offsets are +HH, -HH, +HHMM, and
+        -HHMM.
 
         Params:
             isoString = A string which represents a time zone in the ISO format.
@@ -28183,19 +28251,163 @@ private:
         if(isSomeString!S)
     {
         import std.ascii : isDigit;
-        import std.string : strip;
         import std.conv : to;
         import std.algorithm : startsWith, countUntil, all;
         import std.format : format;
 
-        auto dstr = to!dstring(strip(isoString));
+        auto dstr = to!dstring(isoString);
 
-        enforce(dstr.startsWith('-', '+'), new DateTimeException("Invalid ISO String"));
+        enforce!DateTimeException(dstr.startsWith('-', '+'), "Invalid ISO String");
 
         auto sign = dstr.startsWith('-') ? -1 : 1;
 
         dstr.popFront();
-        enforce(!dstr.empty, new DateTimeException("Invalid ISO String"));
+        enforce!DateTimeException(all!isDigit(dstr), format("Invalid ISO String: %s", dstr));
+
+        int hours;
+        int minutes;
+
+        if(dstr.length == 2)
+            hours = to!int(dstr);
+        else if(dstr.length == 4)
+        {
+            hours = to!int(dstr[0 .. 2]);
+            minutes = to!int(dstr[2 .. 4]);
+        }
+        else
+            throw new DateTimeException(format("Invalid ISO String: %s", dstr));
+
+        enforce!DateTimeException(hours < 24 && minutes < 60, format("Invalid ISO String: %s", dstr));
+
+        return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
+    }
+
+    unittest
+    {
+        import std.format : format;
+
+        foreach(str; ["", "Z", "-", "+", "-:", "+:", "-1:", "+1:", "+1", "-1",
+                      "-24:00", "+24:00", "-24", "+24", "-2400", "+2400",
+                      "1", "+1", "-1", "+9", "-9",
+                      "+1:0", "+01:0", "+1:00", "+01:000", "+01:60",
+                      "-1:0", "-01:0", "-1:00", "-01:000", "-01:60",
+                      "000", "00000", "0160", "-0160",
+                      " +08:00", "+ 08:00", "+08 :00", "+08: 00", "+08:00 ",
+                      " -08:00", "- 08:00", "-08 :00", "-08: 00", "-08:00 ",
+                      " +0800", "+ 0800", "+08 00", "+08 00", "+0800 ",
+                      " -0800", "- 0800", "-08 00", "-08 00", "-0800 ",
+                      "+ab:cd", "+abcd", "+0Z:00", "+Z", "+00Z",
+                      "-ab:cd", "+abcd", "-0Z:00", "-Z", "-00Z",
+                      "01:00", "12:00", "23:59"])
+        {
+            assertThrown!DateTimeException(SimpleTimeZone.fromISOString(str), format("[%s]", str));
+        }
+
+        static void test(string str, Duration utcOffset, size_t line = __LINE__)
+        {
+            if(SimpleTimeZone.fromISOString(str).utcOffset !=
+               (new immutable SimpleTimeZone(utcOffset)).utcOffset)
+            {
+                throw new AssertError("unittest failure", __FILE__, line);
+            }
+        }
+
+        test("+0000", Duration.zero);
+        test("+0001", minutes(1));
+        test("+0010", minutes(10));
+        test("+0059", minutes(59));
+        test("+0100", hours(1));
+        test("+0130", hours(1) + minutes(30));
+        test("+0200", hours(2));
+        test("+0800", hours(8));
+        test("+2359", hours(23) + minutes(59));
+
+        test("-0001", minutes(-1));
+        test("-0010", minutes(-10));
+        test("-0059", minutes(-59));
+        test("-0100", hours(-1));
+        test("-0130", hours(-1) - minutes(30));
+        test("-0200", hours(-2));
+        test("-0800", hours(-8));
+        test("-2359", hours(-23) - minutes(59));
+
+        test("+00", Duration.zero);
+        test("+01", hours(1));
+        test("+02", hours(2));
+        test("+12", hours(12));
+        test("+23", hours(23));
+
+        test("-00", Duration.zero);
+        test("-01", hours(-1));
+        test("-02", hours(-2));
+        test("-12", hours(-12));
+        test("-23", hours(-23));
+    }
+
+    unittest
+    {
+        import std.format : format;
+
+        static void test(in string isoString, int expectedOffset, size_t line = __LINE__)
+        {
+            auto stz = SimpleTimeZone.fromISOExtString(isoString);
+            if(stz.utcOffset != dur!"minutes"(expectedOffset))
+                throw new AssertError(format("unittest failure: wrong offset [%s]", stz.utcOffset), __FILE__, line);
+
+            auto result = SimpleTimeZone.toISOExtString(stz.utcOffset);
+            if(result != isoString)
+                throw new AssertError(format("unittest failure: [%s] != [%s]", result, isoString), __FILE__, line);
+        }
+
+        test("+00:00", 0);
+        test("+00:01", 1);
+        test("+00:10", 10);
+        test("+00:59", 59);
+        test("+01:00", 60);
+        test("+01:30", 90);
+        test("+02:00", 120);
+        test("+08:00", 480);
+        test("+08:00", 480);
+        test("+23:59", 1439);
+
+        test("-00:01", -1);
+        test("-00:10", -10);
+        test("-00:59", -59);
+        test("-01:00", -60);
+        test("-01:30", -90);
+        test("-02:00", -120);
+        test("-08:00", -480);
+        test("-08:00", -480);
+        test("-23:59", -1439);
+    }
+
+
+    /+
+        Takes a time zone as a string with an offset from UTC and returns a
+        $(LREF SimpleTimeZone) which matches.
+
+        The accepted formats for time zone offsets are +HH, -HH, +HH:MM, and
+        -HH:MM.
+
+        Params:
+            isoExtString = A string which represents a time zone in the ISO format.
+      +/
+    static immutable(SimpleTimeZone) fromISOExtString(S)(S isoExtString) @safe pure
+        if(isSomeString!S)
+    {
+        import std.ascii : isDigit;
+        import std.conv : to;
+        import std.algorithm : startsWith, countUntil, all;
+        import std.format : format;
+
+        auto dstr = to!dstring(isoExtString);
+
+        enforce!DateTimeException(dstr.startsWith('-', '+'), "Invalid ISO String");
+
+        auto sign = dstr.startsWith('-') ? -1 : 1;
+
+        dstr.popFront();
+        enforce!DateTimeException(!dstr.empty, "Invalid ISO String");
 
         immutable colon = dstr.countUntil(':');
 
@@ -28206,141 +28418,119 @@ private:
         {
             hoursStr = dstr[0 .. colon];
             minutesStr = dstr[colon + 1 .. $];
-            enforce(minutesStr.length == 2, new DateTimeException(format("Invalid ISO String: %s", dstr)));
+            enforce!DateTimeException(minutesStr.length == 2, format("Invalid ISO String: %s", dstr));
         }
         else
             hoursStr = dstr;
 
-        enforce(all!isDigit(hoursStr), new DateTimeException(format("Invalid ISO String: %s", dstr)));
-        enforce(all!isDigit(minutesStr), new DateTimeException(format("Invalid ISO String: %s", dstr)));
+        enforce!DateTimeException(hoursStr.length == 2, format("Invalid ISO String: %s", dstr));
+        enforce!DateTimeException(all!isDigit(hoursStr), format("Invalid ISO String: %s", dstr));
+        enforce!DateTimeException(all!isDigit(minutesStr), format("Invalid ISO String: %s", dstr));
 
         immutable hours = to!int(hoursStr);
         immutable minutes = minutesStr.empty ? 0 : to!int(minutesStr);
+        enforce!DateTimeException(hours < 24 && minutes < 60, format("Invalid ISO String: %s", dstr));
 
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
 
     unittest
     {
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString(""));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("Z"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("-"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("+"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("-:"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("+:"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("-1:"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("+1:"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("1"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("-24:00"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("+24:00"));
-        assertThrown!DateTimeException(SimpleTimeZone.fromISOString("+1:0"));
+        import std.format : format;
 
-        assert(SimpleTimeZone.fromISOString("+00:00").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(0))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+00:01").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(1))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+00:10").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(10))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+00:59").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(59))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+01:00").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+01:30").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(90))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+02:00").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(120))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+08:00").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(480))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+23:59").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(1439))).utcOffset);
-
-        assert(SimpleTimeZone.fromISOString("-00:01").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-1))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-00:10").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-10))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-00:59").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-59))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-01:00").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-01:30").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-90))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-02:00").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-120))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-08:00").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-480))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-23:59").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-1439))).utcOffset);
-
-        assert(SimpleTimeZone.fromISOString("+0").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(0))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+1").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+2").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(120))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+23").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(1380))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+2").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(120))).utcOffset);
-
-        assert(SimpleTimeZone.fromISOString("+0").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(0))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+1").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+2").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(120))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+23").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(1380))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+1:00").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("+1:01").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(61))).utcOffset);
-
-        assert(SimpleTimeZone.fromISOString("-0").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(0))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-1").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-2").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-120))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-23").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-1380))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-1:00").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-60))).utcOffset);
-        assert(SimpleTimeZone.fromISOString("-1:01").utcOffset ==
-               (new immutable SimpleTimeZone(dur!"minutes"(-61))).utcOffset);
-    }
-
-    //Test that converting from an ISO string to a SimpleTimeZone to an ISO String works properly.
-    unittest
-    {
-        static void testSTZ(in string isoString, int expectedOffset, size_t line = __LINE__)
+        foreach(str; ["", "Z", "-", "+", "-:", "+:", "-1:", "+1:", "+1", "-1",
+                      "-24:00", "+24:00", "-24", "+24", "-2400", "-2400",
+                      "1", "+1", "-1", "+9", "-9",
+                      "+1:0", "+01:0", "+1:00", "+01:000", "+01:60",
+                      "-1:0", "-01:0", "-1:00", "-01:000", "-01:60",
+                      "000", "00000", "0160", "-0160",
+                      " +08:00", "+ 08:00", "+08 :00", "+08: 00", "+08:00 ",
+                      " -08:00", "- 08:00", "-08 :00", "-08: 00", "-08:00 ",
+                      " +0800", "+ 0800", "+08 00", "+08 00", "+0800 ",
+                      " -0800", "- 0800", "-08 00", "-08 00", "-0800 ",
+                      "+ab:cd", "abcd", "+0Z:00", "+Z", "+00Z",
+                      "-ab:cd", "abcd", "-0Z:00", "-Z", "-00Z",
+                      "0100", "1200", "2359"])
         {
-            auto stz = SimpleTimeZone.fromISOString(isoString);
-            assert(stz.utcOffset == dur!"minutes"(expectedOffset));
-
-            auto result = SimpleTimeZone.toISOString(stz.utcOffset);
-            assert(result == isoString);
+            assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString(str), format("[%s]", str));
         }
 
-        testSTZ("+00:00", 0);
-        testSTZ("+00:01", 1);
-        testSTZ("+00:10", 10);
-        testSTZ("+00:59", 59);
-        testSTZ("+01:00", 60);
-        testSTZ("+01:30", 90);
-        testSTZ("+02:00", 120);
-        testSTZ("+08:00", 480);
-        testSTZ("+08:00", 480);
-        testSTZ("+23:59", 1439);
+        static void test(string str, Duration utcOffset, size_t line = __LINE__)
+        {
+            if(SimpleTimeZone.fromISOExtString(str).utcOffset !=
+               (new immutable SimpleTimeZone(utcOffset)).utcOffset)
+            {
+                throw new AssertError("unittest failure", __FILE__, line);
+            }
+        }
 
-        testSTZ("-00:01", -1);
-        testSTZ("-00:10", -10);
-        testSTZ("-00:59", -59);
-        testSTZ("-01:00", -60);
-        testSTZ("-01:30", -90);
-        testSTZ("-02:00", -120);
-        testSTZ("-08:00", -480);
-        testSTZ("-08:00", -480);
-        testSTZ("-23:59", -1439);
+        test("+00:00", Duration.zero);
+        test("+00:01", minutes(1));
+        test("+00:10", minutes(10));
+        test("+00:59", minutes(59));
+        test("+01:00", hours(1));
+        test("+01:30", hours(1) + minutes(30));
+        test("+02:00", hours(2));
+        test("+08:00", hours(8));
+        test("+23:59", hours(23) + minutes(59));
+
+        test("-00:01", minutes(-1));
+        test("-00:10", minutes(-10));
+        test("-00:59", minutes(-59));
+        test("-01:00", hours(-1));
+        test("-01:30", hours(-1) - minutes(30));
+        test("-02:00", hours(-2));
+        test("-08:00", hours(-8));
+        test("-23:59", hours(-23) - minutes(59));
+
+        test("+00", Duration.zero);
+        test("+01", hours(1));
+        test("+02", hours(2));
+        test("+12", hours(12));
+        test("+23", hours(23));
+
+        test("-00", Duration.zero);
+        test("-01", hours(-1));
+        test("-02", hours(-2));
+        test("-12", hours(-12));
+        test("-23", hours(-23));
+    }
+
+    unittest
+    {
+        import std.format : format;
+
+        static void test(in string isoExtString, int expectedOffset, size_t line = __LINE__)
+        {
+            auto stz = SimpleTimeZone.fromISOExtString(isoExtString);
+            if(stz.utcOffset != dur!"minutes"(expectedOffset))
+                throw new AssertError(format("unittest failure: wrong offset [%s]", stz.utcOffset), __FILE__, line);
+
+            auto result = SimpleTimeZone.toISOExtString(stz.utcOffset);
+            if(result != isoExtString)
+                throw new AssertError(format("unittest failure: [%s] != [%s]", result, isoExtString), __FILE__, line);
+        }
+
+        test("+00:00", 0);
+        test("+00:01", 1);
+        test("+00:10", 10);
+        test("+00:59", 59);
+        test("+01:00", 60);
+        test("+01:30", 90);
+        test("+02:00", 120);
+        test("+08:00", 480);
+        test("+08:00", 480);
+        test("+23:59", 1439);
+
+        test("-00:01", -1);
+        test("-00:10", -10);
+        test("-00:59", -59);
+        test("-01:00", -60);
+        test("-01:30", -90);
+        test("-02:00", -120);
+        test("-08:00", -480);
+        test("-08:00", -480);
+        test("-23:59", -1439);
     }
 
 
