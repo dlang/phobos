@@ -683,8 +683,10 @@ unittest // Issue 14994, 14995
     import std.file : deleteme;
     import std.typecons : scoped;
 
-    // Zero-length map may or may not be valid on OSX
+    // Zero-length map may or may not be valid on OSX and NetBSD
     version (OSX)
+        import std.exception : verifyThrown = collectException;
+    version (NetBSD)
         import std.exception : verifyThrown = collectException;
     else
         import std.exception : verifyThrown = assertThrown;
