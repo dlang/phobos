@@ -620,7 +620,7 @@ it has no name.*/
     }
 
 /**
-If the file is not opened, returns $(D false). Otherwise, returns
+If the file is not opened, returns $(D true). Otherwise, returns
 $(WEB cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
 the file handle.
  */
