@@ -28,22 +28,28 @@ struct GCAllocator
     }
 
     /// Ditto
-    @trusted bool expand(ref void[] b, size_t delta) shared
+    @system bool expand(ref void[] b, size_t delta) shared
     {
         if (delta == 0) return true;
         if (b is null)
         {
             b = allocate(delta);
-            return b.length == delta;
+            return b.ptr != null; // we assume allocate will achieve the correct size.
         }
+        immutable curLength = GC.sizeOf(b.ptr);
+        assert(curLength != 0); // we have a valid GC pointer here
         immutable desired = b.length + delta;
-        immutable newSize = GC.extend(b.ptr, desired, desired);
-        if (newSize == 0)
+        if(desired > curLength) // check to see if the current block can't hold the data
         {
-            // expansion unsuccessful
-            return false;
+            immutable sizeRequest = desired - curLength;
+            immutable newSize = GC.extend(b.ptr, sizeRequest, sizeRequest);
+            if (newSize == 0)
+            {
+                // expansion unsuccessful
+                return false;
+            }
+            assert(newSize >= desired);
         }
-        assert(newSize >= desired);
         b = b.ptr[0 .. desired];
         return true;
     }
@@ -125,8 +131,7 @@ unittest
 unittest
 {
     auto b = GCAllocator.instance.allocate(10_000);
-    version (Windows) { /* FIXME:, TODO: test fails on win32 auto-tester */ }
-    else assert(GCAllocator.instance.expand(b, 1));
+    assert(GCAllocator.instance.expand(b, 1));
 }
 
 unittest
