@@ -41,7 +41,7 @@ struct GCAllocator
         immutable desired = b.length + delta;
         if(desired > curLength) // check to see if the current block can't hold the data
         {
-            immutable sizeRequest = curLength - desired;
+            immutable sizeRequest = desired - curLength;
             immutable newSize = GC.extend(b.ptr, sizeRequest, sizeRequest);
             if (newSize == 0)
             {
