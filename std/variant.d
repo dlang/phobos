@@ -286,18 +286,19 @@ private:
             foreach (T ; AllTypes)
             {
                 if (targetType != typeid(T))
-                {
                     continue;
-                }
 
                 static if (is(typeof(*cast(T*) target = *src)))
                 {
+                    import std.conv : emplaceRef;
+
                     auto zat = cast(T*) target;
                     if (src)
                     {
                         static if (T.sizeof > 0)
                             assert(target, "target must be non-null");
-                        *zat = *src;
+
+                        emplaceRef(*cast(Unqual!T*) zat, *cast(UA*) src);
                     }
                 }
                 else static if (is(T == const(U), U) ||
@@ -305,18 +306,22 @@ private:
                                 is(T == shared const(U), U) ||
                                 is(T == immutable(U), U))
                 {
-                    auto zat = cast(U*) target;
+                    import std.conv : emplaceRef;
+
+                    auto zat = cast(T*) target;
                     if (src)
                     {
                         static if (U.sizeof > 0)
                             assert(target, "target must be non-null");
-                        *zat = *(cast(UA*) (src));
+
+                        emplaceRef(*cast(Unqual!T*) zat, *cast(UA*) src);
                     }
                 }
                 else
                 {
-                    // type is not assignable
-                    if (src) assert(false, A.stringof);
+                    // type T is not constructible from A
+                    if (src)
+                        assert(false, A.stringof);
                 }
                 return true;
             }
@@ -356,7 +361,8 @@ private:
                 // cool! Same type!
                 auto rhsPA = getPtr(&rhsP.store);
                 return compare(rhsPA, zis, selector);
-            } else if (rhsType == typeid(void))
+            }
+            else if (rhsType == typeid(void))
             {
                 // No support for ordering comparisons with
                 // uninitialized vars
@@ -749,17 +755,18 @@ public:
      */
     @property inout(T) get(T)() inout
     {
+        inout(T) result = void;
         static if (is(T == shared))
-            shared Unqual!T result;
+            alias R = shared Unqual!T;
         else
-            Unqual!T result;
-        auto buf = tuple(typeid(T), &result);
+            alias R = Unqual!T;
+        auto buf = tuple(typeid(T), cast(R*)&result);
 
         if (fptr(OpID.get, cast(ubyte[size]*) &store, &buf))
         {
             throw new VariantException(type, typeid(T));
         }
-        return * cast(inout T*) &result;
+        return result;
     }
 
     /// Ditto
@@ -2617,4 +2624,18 @@ unittest
         (IntTypedef x) => {},
         (Obj[] x) => {},
     );
+}
+
+unittest
+{
+    // Bugzilla 15791
+    int n = 3;
+    struct NS1 { int foo() { return n + 10; } }
+    struct NS2 { int foo() { return n * 10; } }
+
+    Variant v;
+    v = NS1();
+    assert(v.get!NS1.foo() == 13);
+    v = NS2();
+    assert(v.get!NS2.foo() == 30);
 }
