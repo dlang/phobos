@@ -192,7 +192,7 @@ struct MD5
 
             version(BigEndian)
             {
-                import std.bitmanip : nativeToLittleEndian;
+                import std.bitmanip : littleEndianToNative;
 
                 for(size_t i = 0; i < 16; i++)
                 {
