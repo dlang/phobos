@@ -3511,12 +3511,17 @@ private alias lengthType(R) = typeof(R.init.length.init);
    Iterate several ranges in lockstep. The element type is a proxy tuple
    that allows accessing the current element in the $(D n)th range by
    using $(D e[n]).
+
+   `zip` is similar to $(LREF lockstep), but `lockstep` doesn't
+   bundle its elements and uses the `opApply` protocol.
+   `lockstep` allows reference access to the elements in
+   `foreach` iterations.
+
    $(D Zip) offers the lowest range facilities of all components, e.g. it
    offers random access iff all ranges offer random access, and also
    offers mutation and swapping if all ranges offer it. Due to this, $(D
    Zip) is extremely powerful because it allows manipulating several
-   ranges in lockstep. For example, the following code sorts two arrays
-   in parallel:
+   ranges in lockstep.
 */
 struct Zip(Ranges...)
     if (Ranges.length && allSatisfy!(isInputRange, Ranges))
@@ -3869,27 +3874,51 @@ auto zip(Ranges...)(Ranges ranges)
 ///
 pure unittest
 {
-    import std.algorithm : sort;
-    int[] a = [ 1, 2, 3 ];
-    string[] b = [ "a", "b", "c" ];
-    sort!((c, d) => c[0] > d[0])(zip(a, b));
-    assert(a == [ 3, 2, 1 ]);
-    assert(b == [ "c", "b", "a" ]);
+    import std.algorithm : equal, map;
+
+    // pairwise sum
+    auto arr = [0, 1, 2];
+    assert(zip(arr, arr.dropOne).map!"a[0] + a[1]".equal([1, 3]));
 }
 
 ///
-unittest
+pure unittest
 {
-   int[] a = [ 1, 2, 3 ];
-   string[] b = [ "a", "b", "c" ];
+    import std.conv: to;
 
-   size_t idx = 0;
-   foreach (e; zip(a, b))
-   {
-       assert(e[0] == a[idx]);
-       assert(e[1] == b[idx]);
-       ++idx;
-   }
+    int[] a = [ 1, 2, 3 ];
+    string[] b = [ "a", "b", "c" ];
+    string[] result;
+
+    foreach (tup; zip(a, b))
+    {
+        result ~= tup[0].to!string ~ tup[1];
+    }
+
+    assert(result == [ "1a", "2b", "3c" ]);
+
+    size_t idx = 0;
+    // unpacking tuple elements with foreach
+    foreach (e1, e2; zip(a, b))
+    {
+        assert(e1 == a[idx]);
+        assert(e2 == b[idx]);
+        ++idx;
+    }
+}
+
+/// $(D zip) is powerful - the following code sorts two arrays in parallel:
+pure unittest
+{
+    import std.algorithm : sort;
+
+    int[] a = [ 1, 2, 3 ];
+    string[] b = [ "a", "c", "b" ];
+    zip(a, b).sort!((t1, t2) => t1[0] > t2[0]);
+
+    assert(a == [ 3, 2, 1 ]);
+    // b is sorted according to a's sorting
+    assert(b == [ "b", "c", "a" ]);
 }
 
 /// Ditto
@@ -4143,7 +4172,8 @@ private string lockstepMixin(Ranges...)(bool withIndex)
 }
 
 /**
-   Iterate multiple ranges in lockstep using a $(D foreach) loop.  If only a single
+   Iterate multiple ranges in lockstep using a $(D foreach) loop. In contrast to
+   $(LREF zip) it allows reference access to its elements. If only a single
    range is passed in, the $(D Lockstep) aliases itself away.  If the
    ranges are of different lengths and $(D s) == $(D StoppingPolicy.shortest)
    stop after the shortest range is empty.  If the ranges are of different
@@ -4153,13 +4183,12 @@ private string lockstepMixin(Ranges...)(bool withIndex)
 
    By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
 
-   Lockstep also supports iterating with an index variable:
-   -------
-   foreach (index, a, b; lockstep(arr1, arr2))
-   {
-       writefln("Index %s:  a = %s, b = %s", index, a, b);
-   }
-   -------
+   See_Also: $(LREF zip)
+
+       `lockstep` is similar to $(LREF zip), but `zip` bundles its
+       elements and returns a range.
+       `lockstep` also supports reference access.
+       Use `zip` if you want to pass the result to a range function.
 */
 struct Lockstep(Ranges...)
     if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
@@ -4209,15 +4238,22 @@ Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
 ///
 unittest
 {
-   auto arr1 = [1,2,3,4,5];
+   auto arr1 = [1,2,3,4,5,100];
    auto arr2 = [6,7,8,9,10];
 
-   foreach (ref a, ref b; lockstep(arr1, arr2))
+   foreach (ref a, b; lockstep(arr1, arr2))
    {
        a += b;
    }
 
-   assert(arr1 == [7,9,11,13,15]);
+   assert(arr1 == [7,9,11,13,15,100]);
+
+   /// Lockstep also supports iterating with an index variable:
+   foreach (index, a, b; lockstep(arr1, arr2))
+   {
+       assert(arr1[index] == a);
+       assert(arr2[index] == b);
+   }
 }
 
 unittest
