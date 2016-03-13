@@ -832,21 +832,19 @@ $(D rawRead) always reads in binary mode on Windows.
         return buffer;
     }
 
+    ///
     unittest
     {
         static import std.file;
 
-        auto deleteme = testFilename();
-        std.file.write(deleteme, "\r\n\n\r\n");
-        scope(exit) std.file.remove(deleteme);
-        auto f = File(deleteme, "r");
+        auto testFile = testFilename();
+        std.file.write(testFile, "\r\n\n\r\n");
+        scope(exit) std.file.remove(testFile);
+
+        auto f = File(testFile, "r");
         auto buf = f.rawRead(new char[5]);
         f.close();
         assert(buf == "\r\n\n\r\n");
-        /+
-        buf = stdin.rawRead(new char[5]);
-        assert(buf == "\r\n\n\r\n");
-        +/
     }
 
 /**
@@ -890,16 +888,18 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
                         _name, "'"));
     }
 
+    ///
     unittest
     {
         static import std.file;
 
-        auto deleteme = testFilename();
-        auto f = File(deleteme, "w");
-        scope(exit) std.file.remove(deleteme);
+        auto testFile = testFilename();
+        auto f = File(testFile, "w");
+        scope(exit) std.file.remove(testFile);
+
         f.rawWrite("\r\n\n\r\n");
         f.close();
-        assert(std.file.read(deleteme) == "\r\n\n\r\n");
+        assert(std.file.read(testFile) == "\r\n\n\r\n");
     }
 
 /**
@@ -987,15 +987,17 @@ Throws: $(D Exception) if the file is not opened.
         return result;
     }
 
+    ///
     unittest
     {
         static import std.file;
         import std.conv : text;
 
-        auto deleteme = testFilename();
-        std.file.write(deleteme, "abcdefghijklmnopqrstuvwqxyz");
-        scope(exit) { std.file.remove(deleteme); }
-        auto f = File(deleteme);
+        auto testFile = testFilename();
+        std.file.write(testFile, "abcdefghijklmnopqrstuvwqxyz");
+        scope(exit) { std.file.remove(testFile); }
+
+        auto f = File(testFile);
         auto a = new ubyte[4];
         f.rawRead(a);
         assert(f.tell == 4, text(f.tell));
@@ -1661,6 +1663,7 @@ is recommended if you want to process a complete file.
         return formattedRead(input, format, data);
     }
 
+    ///
     unittest
     {
         static import std.file;
