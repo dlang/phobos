@@ -807,6 +807,21 @@ Throws: $(D Exception) if $(D buffer) is empty.
         $(D ErrnoException) if the file is not opened or the call to $(D fread) fails.
 
 $(D rawRead) always reads in binary mode on Windows.
+
+Example:
+---------------------
+import std.file: write;
+
+// prepare "your file" so that it has at least two lines
+// with line breaks and carriage returns
+string yourFile = "your-File";
+yourFile.write("1\r\n2\r\nfoobar");
+
+auto f = File(yourFile, "r");
+auto buf = f.rawRead(new char[6]);
+f.close();
+assert(buf == "1\r\n2\r\n");
+---------------------
  */
     T[] rawRead(T)(T[] buffer)
     {
@@ -851,10 +866,6 @@ $(D rawRead) always reads in binary mode on Windows.
         auto buf = f.rawRead(new char[5]);
         f.close();
         assert(buf == "\r\n\n\r\n");
-        /+
-        buf = stdin.rawRead(new char[5]);
-        assert(buf == "\r\n\n\r\n");
-        +/
     }
 
 /**
@@ -866,6 +877,18 @@ error is thrown if the buffer could not be written in its entirety.
 $(D rawWrite) always writes in binary mode on Windows.
 
 Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwrite) fails.
+
+Example:
+---------------------
+import std.file: read;
+
+string yourFile = "your-File";
+auto f = File(yourFile, "w");
+f.rawWrite("1\r\n2\r\n");
+f.close();
+
+assert(yourFile.read == "1\r\n2\r\n");
+---------------------
  */
     void rawWrite(T)(in T[] buffer)
     {
@@ -916,6 +939,17 @@ for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $(D fseek) fails.
+
+Example:
+---------------------
+auto f = File("your-File", "w+");
+
+// prepare "your file"
+f.rawWrite("abcdefghijklmnopqrstuvwxyz");
+
+f.seek(7);
+assert(f.readln() == "hijklmnopqrstuvwxyz");
+---------------------
  */
     void seek(long offset, int origin = SEEK_SET) @trusted
     {
@@ -980,6 +1014,22 @@ managed file handle.
 
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $(D ftell) fails.
+
+
+Example:
+---------------------
+import std.file: write;
+import std.conv : text;
+
+// prepare "your file"
+string yourFile = "your-File";
+yourFile.write("abcdefghijklmnopqrstuvwqxyz");
+
+auto f = File(yourFile);
+auto a = new ubyte[4];
+f.rawRead(a);
+assert(f.tell == 4, text(f.tell));
+---------------------
  */
     @property ulong tell() const @trusted
     {
@@ -1667,6 +1717,28 @@ is recommended if you want to process a complete file.
      * Read data from the file according to the specified
      * $(LINK2 std_format.html#_format-string, format specifier) using
      * $(XREF _format,formattedRead).
+     *
+     * Example:
+     * ---------------------
+     *  import std.file: write;
+     *
+     *  string yourFile = "your-File";
+     *
+     *  // Prepare input file
+     *  write(yourFile, "hello\nworld\ntrue\nfalse\n");
+     *
+     *  string s;
+     *  auto f = File(yourFile);
+     *  f.readf("%s\n", &s);
+     *  assert(s == "hello");
+     *  f.readf("%s\n", &s);
+     *  assert(s == "world");
+     *
+     *  // Issue 11698
+     *  bool b1, b2;
+     *  f.readf("%s\n%s\n", &b1, &b2);
+     *  assert(b1 == true && b2 == false);
+     * ---------------------
      */
     uint readf(Data...)(in char[] format, Data data)
     {
