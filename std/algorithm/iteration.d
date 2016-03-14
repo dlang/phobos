@@ -4306,56 +4306,6 @@ unittest
 }
 
 /**
-Computes the $(WEB en.wikipedia.org/wiki/Binomial_coefficient, binomial coefficient)
-of n and k.
-It is also known as "n choose k" or more formally as $(D _n!/_k!(_n-_k)).
-
-Params:
-    n = non negative integer
-    k = non negative integer, k <= n
-
-Returns:
-    binomial coefficient
-*/
-
-size_t binomial(size_t n, size_t k) pure nothrow @safe @nogc
-in
-{
-    assert(n > 0, "binomial: n must be > 0.");
-}
-body
-{
-    if (k < 0 || k > n)
-        return 0;
-    if (k == n)
-        return 1;
-    if (k > (n / 2))
-        k = n - k;
-    size_t result = 1;
-    for (size_t i = 1, m = n; i <= k; i++, m--)
-        result = result * m / i;
-    return result;
-}
-
-///
-pure nothrow @safe @nogc unittest
-{
-    assert(binomial(5, 2) == 10);
-    assert(binomial(6, 4) == 15);
-    assert(binomial(3, 1) == 3);
-}
-
-pure nothrow @safe @nogc unittest
-{
-    assert(binomial(5, 1) == 5);
-    assert(binomial(5, 0) == 1);
-    assert(binomial(1, 2) == 0);
-    assert(binomial(1, 0) == 1);
-    assert(binomial(1, 1) == 1);
-    assert(binomial(2, 1) == 2);
-}
-
-/**
 Lazily computes the Cartesian power of $(D r) with itself
 for a number of repetitions $(D repeat).
 If the input is sorted, the product is in lexicographic order.
@@ -4381,10 +4331,9 @@ body
     {
     private:
         Range _r;
-        size_t[] _state, _stateBack;
+        size_t[] _state;
 
-        size_t _max_states;
-        size_t _pos, _posBack;
+        size_t _max_states, _pos;
 
     public:
         this(Range r, size_t repeat)
@@ -4398,8 +4347,6 @@ body
             {
                 _max_states = pow(r.length, repeat);
                 _state = new size_t[](repeat);
-                _stateBack = new size_t[](repeat);
-                _stateBack[] = r.length -1;
             }
         }
 
@@ -4418,8 +4365,7 @@ body
 
         void popFront()
         {
-            // check whether we have reached the end
-            if (empty) return;
+            assert(!empty);
             _pos++;
 
             immutable nrElements = _r.length;
@@ -4442,38 +4388,15 @@ body
                 el = 0;
             }
         }
-        @property Indexed!(Range, size_t[]) back()
-        {
-            import std.range : indexed;
-            return _r.indexed(_stateBack);
-        }
-
-        void popBack()
-        {
-            // check whether we have reached the end
-            if (empty) return;
-            _posBack++;
-
-            foreach_reverse (i, ref el; _stateBack)
-            {
-                if (el == 0)
-                    el = _r.length - 1;
-                else
-                {
-                    --el;
-                    break;
-                }
-            }
-        }
 
         @property size_t length()
         {
-            return _max_states - _pos - _posBack;
+            return _max_states - _pos;
         }
 
         @property bool empty()
         {
-            return _pos + _posBack == _max_states;
+            return _pos == _max_states;
         }
     }
     return CartesianPower(r, repeat);
@@ -4521,26 +4444,6 @@ pure nothrow @safe unittest
     assert(d.length == 1);
 }
 
-pure nothrow @safe unittest
-{
-    // check backwards traversal
-    import std.algorithm: equal;
-    import std.range: iota;
-    auto c = iota(3).cartesianPower(2);
-    auto expected = [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]];
-    size_t i = c.length - 1;
-    foreach_reverse (el; c)
-    {
-        assert(el.equal(expected[i--]));
-    }
-
-    // test length shrinking
-    auto d = iota(2).cartesianPower;
-    assert(d.length == 2);
-    d.popBack;
-    assert(d.length == 1);
-}
-
 /**
 Lazily computes all k-combinations of $(D r).
 Imagine this as the $(LREF cartesianPower) filtered for only strictly ordered items.
@@ -4575,6 +4478,8 @@ body
         this(Range r, size_t repeat)
         {
             import std.array: array;
+            import std.numeric: binomial;
+
             _r = r;
 
             // set initial state and calculate max possibilities
@@ -4605,8 +4510,7 @@ body
 
         void popFront()
         {
-            // check whether we have reached the end
-            if (empty) return;
+            assert(!empty);
             _pos++;
             // we might have bumped into the end state now
             if (empty) return;
@@ -4782,6 +4686,7 @@ body
     public:
         this(Range r, size_t repeat)
         {
+            import std.numeric: binomial;
             _r = r;
 
             // set initial state and calculate max possibilities
@@ -4807,8 +4712,7 @@ body
 
         void popFront()
         {
-            // check whether we have reached the end
-            if (empty) return;
+            assert(!empty);
             _pos++;
 
             immutable nrElements = _r.length;
