@@ -2445,6 +2445,90 @@ unittest
     assert(str == "abcd");
 }
 
+/**
+Implements the function known as $(D flatMap) or $(D bind) in many functional languages.
+The call $(D mapJoiner!(fun)(range)) returns a range resulting from joining the ranges
+obtained by applying $(D fun(a)) left to right for all elements $(D a) in $(D range).
+The original ranges are not changed. Evaluation is done lazily.
+
+Equivalent to $(D r.map!(fun).cache.joiner).
+
+Note that the results of calling $(D fun) on the elements of $(D r) are cached to
+avoid multiple invocations.
+
+Params:
+    fun = a function that transforms elements of $(D r) into input ranges.
+    r = an input range
+
+Returns:
+    a range that iterates over the elements of each range returned by applying
+    $(D fun) to element of the input range.
+ */
+template mapJoiner(alias fun) {
+    auto mapJoiner(Range)(Range r) if (isInputRange!Range &&
+                                       isInputRange!(ElementType!(typeof(map!(fun)(r)))))
+    {
+        return r.map!(fun).cache.joiner;
+    }
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
+    int[] myfun(int x) { return [x, x*x, x*x*x];}
+    auto r = iota(1,4).mapJoiner!(myfun);
+    assert(equal(r, [1, 1, 1, 2, 4, 8, 3, 9, 27]));
+}
+
+/**
+$(D mapJoiner) can be used to simultaneously map and filter by return an empty range for
+elements that should be filtered.
+ */
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    int[] mapFilter(int x)
+    {
+        if (x % 2 == 0) {
+            return [x / 2];
+        } else {
+            return [];
+        }
+    }
+    auto r = [1, 3, 8, 2, 10, 12, 9, 20].mapJoiner!(mapFilter);
+    assert(equal(r, [4, 1, 5, 6, 10]));
+}
+
+// test that fun is only called once for each element
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
+    int counter;
+    int[] countingMapper(int x) {
+        return [x, counter++];
+    }
+    auto r = iota(5).mapJoiner!(countingMapper);
+    assert(equal(r, [0, 0, 1, 1, 2, 2, 3, 3, 4, 4]));
+
+}
+
+// test that fun it is evaluated lazily
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    int count = 0;
+    int[] mapper(int x)
+    {
+        count++;
+        return [x, count];
+    }
+    auto r = [0, 1, 2].mapJoiner!(mapper);
+    assert(equal(r, [0, 1, 1, 2, 2, 3]));
+}
+
 /++
 Implements the homonym function (also known as $(D accumulate), $(D
 compress), $(D inject), or $(D foldl)) present in various programming
