@@ -17,7 +17,8 @@ $(TR $(TDNW Constants) $(TD
     $(MYREF SQRT2) $(MYREF SQRT1_2)
 ))
 $(TR $(TDNW Classics) $(TD
- $(MYREF abs) $(MYREF fabs) $(MYREF sqrt) $(MYREF cbrt) $(MYREF hypot) $(MYREF poly)
+    $(MYREF abs) $(MYREF fabs) $(MYREF sqrt) $(MYREF cbrt) $(MYREF hypot)
+    $(MYREF poly) $(MYREF nextPow2) $(MYREF truncPow2)
 ))
 $(TR $(TDNW Trigonometry) $(TD
     $(MYREF sin) $(MYREF cos) $(MYREF tan) $(MYREF asin) $(MYREF acos)
@@ -7290,5 +7291,288 @@ unittest
             }
             assert(cmp(x, x) == 0);
         }
+    }
+}
+
+private enum PowType
+{
+    floor,
+    ceil
+}
+
+pragma(inline, true)
+private T powIntegralImpl(PowType type, T)(T val)
+{
+    import core.bitop : bsr;
+
+    Unqual!T x = val;
+
+    static if (isSigned!T)
+    if (x < 0)
+        x = abs(x);
+
+    if (x == 0)
+        return x;
+
+    static if (type == PowType.ceil)
+        x = cast(Unqual!T) (Unqual!T(1) << bsr(x) + 1);
+    else
+        x = cast(Unqual!T) (Unqual!T(1) << bsr(x));
+
+    static if (isSigned!T)
+    if (val < 0)
+        return -x;
+
+    return x;
+}
+
+pragma(inline, true)
+private T powFloatingPointImpl(PowType type, T)(T x)
+{
+    if (!x.isFinite)
+        return x;
+
+    if (!x)
+        return x;
+
+    int exp;
+    auto y = frexp(x, exp);
+
+    static if (type == PowType.ceil)
+        y = ldexp(cast(T) 0.5, exp + 1);
+    else
+        y = ldexp(cast(T) 0.5, exp);
+
+    if (!y.isFinite)
+        return cast(T) 0.0;
+
+    y = copysign(y, x);
+
+    return y;
+}
+
+/**
+ * Gives the next power of two after $(D val). $(T) can be any built-in
+ * numerical type.
+ *
+ * Params:
+ *     val = any number
+ *
+ * Returns:
+ *     the next power of two after $(D val)
+ */
+T nextPow2(T)(const T val) if (isIntegral!T)
+{
+    return powIntegralImpl!(PowType.ceil)(val);
+}
+
+/// ditto
+T nextPow2(T)(const T val) if (isFloatingPoint!T)
+{
+    return powFloatingPointImpl!(PowType.ceil)(val);
+}
+
+///
+@safe @nogc pure nothrow unittest
+{
+    assert(nextPow2(2) == 4);
+    assert(nextPow2(10) == 16);
+    assert(nextPow2(4000) == 4096);
+
+    assert(nextPow2(-2) == -4);
+    assert(nextPow2(-10) == -16);
+
+    assert(nextPow2(uint.max) == 1);
+    assert(nextPow2(uint.min) == 0);
+    assert(nextPow2(size_t.max) == 1);
+    assert(nextPow2(size_t.min) == 0);
+
+    assert(nextPow2(int.max) == int.min);
+    assert(nextPow2(int.min) == -1);
+    assert(nextPow2(long.max) == long.min);
+    assert(nextPow2(long.min) == -1);
+}
+
+///
+@safe @nogc pure nothrow unittest
+{
+    assert(nextPow2(2.1) == 4.0);
+    assert(nextPow2(-2.0) == -4.0);
+    assert(nextPow2(0.25) == 0.5);
+    assert(nextPow2(-4.0) == -8.0);
+
+    assert(nextPow2(double.max) == 0.0);
+    assert(nextPow2(double.infinity) == double.infinity);
+}
+
+@safe @nogc pure nothrow unittest
+{
+    assert(nextPow2(ubyte(2)) == 4);
+    assert(nextPow2(ubyte(10)) == 16);
+
+    assert(nextPow2(byte(2)) == 4);
+    assert(nextPow2(byte(10)) == 16);
+
+    assert(nextPow2(short(2)) == 4);
+    assert(nextPow2(short(10)) == 16);
+    assert(nextPow2(short(4000)) == 4096);
+
+    assert(nextPow2(ushort(2)) == 4);
+    assert(nextPow2(ushort(10)) == 16);
+    assert(nextPow2(ushort(4000)) == 4096);
+}
+
+@safe @nogc pure nothrow unittest
+{
+    foreach (ulong i; 1 .. 62)
+    {
+        assert(nextPow2(1UL<<i) == 2UL<<i);
+        assert(nextPow2((1UL<<i) - 1) == 1UL<<i);
+        assert(nextPow2((1UL<<i) + 1) == 2UL<<i);
+        assert(nextPow2((1UL<<i) + (1UL<<(i-1))) == 2UL<<i);
+    }
+}
+
+@safe @nogc pure nothrow unittest
+{
+    import std.meta: AliasSeq;
+
+    foreach(T; AliasSeq!(float, double, real))
+    {
+        enum T subNormal = T.min_normal / 2;
+
+        static if (subNormal) assert(nextPow2(subNormal) == T.min_normal);
+
+        assert(nextPow2(T(0.0)) == 0.0);
+
+        assert(nextPow2(T(2.0)) == 4.0);
+        assert(nextPow2(T(2.1)) == 4.0);
+        assert(nextPow2(T(3.1)) == 4.0);
+        assert(nextPow2(T(4.0)) == 8.0);
+        assert(nextPow2(T(0.25)) == 0.5);
+
+        assert(nextPow2(T(-2.0)) == -4.0);
+        assert(nextPow2(T(-2.1)) == -4.0);
+        assert(nextPow2(T(-3.1)) == -4.0);
+        assert(nextPow2(T(-4.0)) == -8.0);
+        assert(nextPow2(T(-0.25)) == -0.5);
+
+        assert(nextPow2(T.max) == 0);
+        assert(nextPow2(-T.max) == 0);
+
+        assert(nextPow2(T.infinity) == T.infinity);
+        assert(nextPow2(T.init).isNaN);
+    }
+}
+
+/**
+ * Gives the last power of two before $(D val). $(T) can be any built-in
+ * numerical type.
+ *
+ * Params:
+ *     val = any number
+ *
+ * Returns:
+ *     the last power of two before $(D val)
+ */
+T truncPow2(T)(const T val) if (isIntegral!T)
+{
+    return powIntegralImpl!(PowType.floor)(val);
+}
+
+/// ditto
+T truncPow2(T)(const T val) if (isFloatingPoint!T)
+{
+    return powFloatingPointImpl!(PowType.floor)(val);
+}
+
+///
+@safe @nogc pure nothrow unittest
+{
+    assert(truncPow2(3) == 2);
+    assert(truncPow2(4) == 4);
+    assert(truncPow2(10) == 8);
+    assert(truncPow2(4000) == 2048);
+
+    assert(truncPow2(-5) == -4);
+    assert(truncPow2(-20) == -16);
+
+    assert(truncPow2(uint.max) == int.max + 1);
+    assert(truncPow2(uint.min) == 0);
+    assert(truncPow2(ulong.max) == long.max + 1);
+    assert(truncPow2(ulong.min) == 0);
+
+    assert(truncPow2(int.max) == (int.max / 2) + 1);
+    assert(truncPow2(int.min) == int.min);
+    assert(truncPow2(long.max) == (long.max / 2) + 1);
+    assert(truncPow2(long.min) == long.min);
+}
+
+///
+@safe @nogc pure nothrow unittest
+{
+    assert(truncPow2(2.1) == 2.0);
+    assert(truncPow2(7.0) == 4.0);
+    assert(truncPow2(-1.9) == -1.0);
+    assert(truncPow2(0.24) == 0.125);
+    assert(truncPow2(-7.0) == -4.0);
+
+    assert(truncPow2(double.infinity) == double.infinity);
+}
+
+@safe @nogc pure nothrow unittest
+{
+    assert(truncPow2(ubyte(3)) == 2);
+    assert(truncPow2(ubyte(4)) == 4);
+    assert(truncPow2(ubyte(10)) == 8);
+
+    assert(truncPow2(byte(3)) == 2);
+    assert(truncPow2(byte(4)) == 4);
+    assert(truncPow2(byte(10)) == 8);
+
+    assert(truncPow2(ushort(3)) == 2);
+    assert(truncPow2(ushort(4)) == 4);
+    assert(truncPow2(ushort(10)) == 8);
+    assert(truncPow2(ushort(4000)) == 2048);
+
+    assert(truncPow2(short(3)) == 2);
+    assert(truncPow2(short(4)) == 4);
+    assert(truncPow2(short(10)) == 8);
+    assert(truncPow2(short(4000)) == 2048);
+}
+
+@safe @nogc pure nothrow unittest
+{
+    foreach (ulong i; 1 .. 62)
+    {
+        assert(truncPow2(2UL<<i) == 2UL<<i);
+        assert(truncPow2((2UL<<i) + 1) == 2UL<<i);
+        assert(truncPow2((2UL<<i) - 1) == 1UL<<i);
+        assert(truncPow2((2UL<<i) - (2UL<<(i-1))) == 1UL<<i);
+    }
+}
+
+@safe @nogc pure nothrow unittest
+{
+    import std.meta: AliasSeq;
+
+    foreach(T; AliasSeq!(float, double, real))
+    {
+        assert(truncPow2(T(0.0)) == 0.0);
+
+        assert(truncPow2(T(4.0)) == 4.0);
+        assert(truncPow2(T(2.1)) == 2.0);
+        assert(truncPow2(T(3.5)) == 2.0);
+        assert(truncPow2(T(7.0)) == 4.0);
+        assert(truncPow2(T(0.24)) == 0.125);
+
+        assert(truncPow2(T(-2.0)) == -2.0);
+        assert(truncPow2(T(-2.1)) == -2.0);
+        assert(truncPow2(T(-3.1)) == -2.0);
+        assert(truncPow2(T(-7.0)) == -4.0);
+        assert(truncPow2(T(-0.24)) == -0.125);
+
+        assert(truncPow2(T.infinity) == T.infinity);
+        assert(truncPow2(T.init).isNaN);
     }
 }
