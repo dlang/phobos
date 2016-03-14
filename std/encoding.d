@@ -57,8 +57,11 @@ module std.encoding;
 
 import std.traits;
 import std.range.primitives;
+import std.array;
 
-unittest
+@safe {
+
+@system unittest
 {
     static ubyte[][] validStrings =
     [
@@ -504,7 +507,13 @@ template EncoderFunctions()
         e.encode(c);
     }
 
-    void encode(dchar c, void delegate(E) dg)
+    void encode(dchar c, void delegate(E) @safe dg)
+    {
+        mixin EncodeToDelegate e;
+        e.encode(c);
+    }
+
+    void encode(dchar c, void delegate(E) @system dg) @system
     {
         mixin EncodeToDelegate e;
         e.encode(c);
@@ -537,11 +546,11 @@ template EncoderFunctions()
 
 //=========================================================================
 
-struct CodePoints(E)
+@system struct CodePoints(E)
 {
     const(E)[] s;
 
-    this(const(E)[] s)
+    this(const(E)[] s) @safe
     in
     {
         assert(isValid(s));
@@ -619,27 +628,7 @@ struct CodeUnits(E)
         s = encode!(E)(d);
     }
 
-    int opApply(scope int delegate(ref E) dg)
-    {
-        int result = 0;
-        foreach(E c;s)
-        {
-            result = dg(c);
-            if (result != 0) break;
-        }
-        return result;
-    }
-
-    int opApplyReverse(scope int delegate(ref E) dg)
-    {
-        int result = 0;
-        foreach_reverse(E c;s)
-        {
-            result = dg(c);
-            if (result != 0) break;
-        }
-        return result;
-    }
+    alias s this;
 }
 
 //=============================================================================
@@ -652,7 +641,7 @@ template EncoderInstance(E)
 
 private template GenericEncoder()
 {
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe
     {
         if (c < m_charMapStart || (c > m_charMapEnd && c < 0x100)) return true;
         if (c >= 0xFFFD) return false;
@@ -673,7 +662,7 @@ private template GenericEncoder()
         return charMap[c-m_charMapStart] != 0xFFFD;
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe
     in
     {
         assert(canEncode(c));
@@ -728,7 +717,7 @@ private template GenericEncoder()
         return (c >= m_charMapStart && c <= m_charMapEnd) ? charMap[c-m_charMapStart] : c;
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @trusted  // @@@BUG@@@ 15762
     {
         return cast(EString)("?");
     }
@@ -755,7 +744,7 @@ template EncoderInstance(CharType : AsciiChar)
         return "ASCII";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe
     {
         return c < 0x80;
     }
@@ -765,7 +754,7 @@ template EncoderInstance(CharType : AsciiChar)
         return c < 0x80;
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe
     in
     {
         assert(canEncode(c));
@@ -808,7 +797,7 @@ template EncoderInstance(CharType : AsciiChar)
         return read();
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @trusted  // @@@BUG@@@ 15762
     {
         return cast(EString)("?");
     }
@@ -838,7 +827,7 @@ template EncoderInstance(CharType : Latin1Char)
         return "ISO-8859-1";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe
     {
         return c < 0x100;
     }
@@ -848,7 +837,7 @@ template EncoderInstance(CharType : Latin1Char)
         return true;
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe
     in
     {
         assert(canEncode(c));
@@ -884,7 +873,7 @@ template EncoderInstance(CharType : Latin1Char)
         return read();
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @trusted  // @@@BUG@@@ 15762
     {
         return cast(EString)("?");
     }
@@ -1128,7 +1117,7 @@ template EncoderInstance(CharType : char)
         return "UTF-8";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe
     {
         return isValidCodePoint(c);
     }
@@ -1160,7 +1149,7 @@ template EncoderInstance(CharType : char)
         return tailTable[c-0x80];
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe
     in
     {
         assert(canEncode(c));
@@ -1294,7 +1283,7 @@ template EncoderInstance(CharType : wchar)
         return "UTF-16";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe
     {
         return isValidCodePoint(c);
     }
@@ -1304,7 +1293,7 @@ template EncoderInstance(CharType : wchar)
         return true;
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe
     in
     {
         assert(canEncode(c));
@@ -1391,7 +1380,7 @@ template EncoderInstance(CharType : dchar)
         return "UTF-32";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe
     {
         return isValidCodePoint(c);
     }
@@ -1401,7 +1390,7 @@ template EncoderInstance(CharType : dchar)
         return isValidCodePoint(c);
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe
     in
     {
         assert(canEncode(c));
@@ -1464,7 +1453,7 @@ Returns true if c is a valid code point
  Params:
     c = the code point to be tested
  */
-bool isValidCodePoint(dchar c)
+bool isValidCodePoint(dchar c) @safe
 {
     return c < 0xD800 || (c >= 0xE000 && c < 0x110000);
 }
@@ -1506,7 +1495,7 @@ unittest
  Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
  WINDOWS-1252
  */
-bool canEncode(E)(dchar c)
+bool canEncode(E)(dchar c) @safe
 {
     return EncoderInstance!(E).canEncode(c);
 }
@@ -1643,23 +1632,21 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
     }
 
     // Now do the write
-    E[] array = new E[len];
-    array[0..n] = s[0..n];
-    size_t offset = n;
+    Appender!(immutable(E)[]) array;
+    array.reserve(len);
+    array ~= s[0..n];
 
     t = s[n..$];
     while (t.length != 0)
     {
         dchar c = EncoderInstance!(E).safeDecode(t);
         assert(c == INVALID_SEQUENCE);
-        array[offset..offset+repSeq.length] = repSeq[];
-        offset += repSeq.length;
+        array ~= repSeq[];
         n = validLength(t);
-        array[offset..offset+n] = t[0..n];
-        offset += n;
+        array ~= t[0..n];
         t = t[n..$];
     }
-    return cast(immutable(E)[])array[0..offset];
+    return array.data;
 }
 
 ///
@@ -1867,7 +1854,7 @@ body
  Params:
     c = the code point to be encoded
  */
-size_t encodedLength(E)(dchar c)
+size_t encodedLength(E)(dchar c) @safe
 in
 {
     assert(isValidCodePoint(c));
@@ -1979,130 +1966,6 @@ body
 //     EncoderInstance!(E).encode(c,buffer);
 // }
 
-/*
-Encodes $(D c) in units of type $(D E) and writes the result to the
-output range $(D R). Returns the number of $(D E)s written.
- */
-size_t encode(E, R)(dchar c, auto ref R range)
-if (isNativeOutputRange!(R, E))
-{
-    static if (is(Unqual!E == char))
-    {
-        if (c <= 0x7F)
-        {
-            put(range, cast(char) c);
-            return 1;
-        }
-        if (c <= 0x7FF)
-        {
-            put(range, cast(char)(0xC0 | (c >> 6)));
-            put(range, cast(char)(0x80 | (c & 0x3F)));
-            return 2;
-        }
-        if (c <= 0xFFFF)
-        {
-            put(range, cast(char)(0xE0 | (c >> 12)));
-            put(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            put(range, cast(char)(0x80 | (c & 0x3F)));
-            return 3;
-        }
-        if (c <= 0x10FFFF)
-        {
-            put(range, cast(char)(0xF0 | (c >> 18)));
-            put(range, cast(char)(0x80 | ((c >> 12) & 0x3F)));
-            put(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            put(range, cast(char)(0x80 | (c & 0x3F)));
-            return 4;
-        }
-        else
-        {
-            assert(0);
-        }
-    }
-    else static if (is(Unqual!E == wchar))
-    {
-        if (c <= 0xFFFF)
-        {
-            range.put(cast(wchar) c);
-            return 1;
-        }
-        range.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
-        range.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
-        return 2;
-    }
-    else static if (is(Unqual!E == dchar))
-    {
-        range.put(c);
-        return 1;
-    }
-    else
-    {
-        static assert(0);
-    }
-}
-
-unittest
-{
-    import std.array;
-    Appender!(char[]) r;
-    assert(encode!(char)('T', r) == 1);
-    assert(encode!(wchar)('T', r) == 1);
-    assert(encode!(dchar)('T', r) == 1);
-}
-
-/**
- Encodes a single code point to a delegate.
-
- This function encodes a single code point into one or more code units.
- The code units are passed one at a time to the supplied delegate.
-
- The input to this function MUST be a valid code point.
- This is enforced by the function's in-contract.
-
- The type of the output cannot be deduced. Therefore, it is necessary to
- explicitly specify the encoding as a template parameter.
-
- Supersedes:
- This function supersedes std.utf.encode(), however, note that the
- function codeUnits() supersedes it more conveniently.
-
- Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
- WINDOWS-1252
-
- Params:
-    c  = the code point to be encoded
-    dg = the delegate to invoke for each code unit
- */
-void encode(E)(dchar c, void delegate(E) dg)
-in
-{
-    assert(isValidCodePoint(c));
-}
-body
-{
-    EncoderInstance!(E).encode(c,dg);
-}
-
-/**
-Encodes the contents of $(D s) in units of type $(D Tgt), writing the result to an
-output range.
-
-Returns: The number of $(D Tgt) elements written.
-Params:
-Tgt = Element type of $(D range).
-s = Input array.
-range = Output range.
- */
-size_t encode(Tgt, Src, R)(in Src[] s, R range)
-{
-    size_t result;
-    foreach (c; s)
-    {
-        result += encode!(Tgt)(c, range);
-    }
-    return result;
-}
-
 /**
  Returns a foreachable struct which can bidirectionally iterate over all
  code points in a string.
@@ -2147,7 +2010,7 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     string s = "hello";
     string t;
@@ -2201,6 +2064,11 @@ unittest
     assert(a[2] == 0xAC);
 }
 
+private void transcodeFromAscii(Dst)(immutable(AsciiChar)[] s, out immutable(Dst)[] r) @trusted  // @@@BUG@@@ 15762
+{
+    return transcode!(char, Dst)(cast(string)s, r);
+}
+
 /**
  Convert a string from one encoding to another.
 
@@ -2233,7 +2101,7 @@ body
     }
     else static if(is(Src==AsciiChar))
     {
-        transcode!(char,Dst)(cast(string)s,r);
+        transcodeFromAscii(s, r);
     }
     else
     {
@@ -2250,22 +2118,20 @@ body
             immutable minReservePlace = 6;
         }
 
-        Dst[] buffer = new Dst[s.length];
-        Dst[] tmpBuffer = buffer;
+        Appender!(immutable(Dst)[]) array;
+        array.reserve(s.length);
+        Dst[] buffer = new Dst[minReservePlace];
         const(Src)[] t = s;
 
         while (t.length != 0)
         {
-            if(tmpBuffer.length < minReservePlace)
-            {
-                size_t prevLength = buffer.length;
-                buffer.length += t.length + minReservePlace;
-                tmpBuffer = buffer[prevLength - tmpBuffer.length .. $];
-            }
+            import std.stdio;
+            Dst[] tmpBuffer = buffer;
             EncoderInstance!(Dst).encode(decode(t), tmpBuffer);
+            array ~= buffer[0..(buffer.length - tmpBuffer.length)];
         }
 
-        r = cast(immutable)buffer[0 .. buffer.length - tmpBuffer.length];
+        r = array.data;
     }
 }
 
@@ -2354,7 +2220,7 @@ abstract class EncodingScheme
      * }
      * ----------------------------------------------
      */
-    static void register(string className)
+    static void register(string className) @system
     {
         auto scheme = cast(EncodingScheme)ClassInfo.find(className).create();
         if (scheme is null)
@@ -2377,7 +2243,7 @@ abstract class EncodingScheme
      * auto scheme = EncodingScheme.create("Amiga-1251");
      * ---------------------------------------------------
      */
-    static EncodingScheme create(string encodingName)
+    static EncodingScheme create(string encodingName) @system
     {
         auto p = toLower(encodingName) in supported;
         if (p is null)
@@ -2544,23 +2410,24 @@ abstract class EncodingScheme
         }
 
         // Now do the write
-        ubyte[] array = new ubyte[len];
-        array[0..n] = s[0..n];
-        auto offset = n;
+        Appender!(immutable(ubyte)[]) array;
+        array.reserve(len);
+        array ~= s[0..n];
+        //auto offset = n;
 
         t = s[n..$];
         while (t.length != 0)
         {
             dchar c = safeDecode(t);
             assert(c == INVALID_SEQUENCE);
-            array[offset..offset+repSeq.length] = repSeq[];
-            offset += repSeq.length;
+            array ~= repSeq[];
+            //offset += repSeq.length;
             n = validLength(t);
-            array[offset..offset+n] = t[0..n];
-            offset += n;
+            array ~= t[0..n];
+            //offset += n;
             t = t[n..$];
         }
-        return cast(immutable(ubyte)[])array[0..offset];
+        return array.data;
     }
 
     /**
@@ -2655,7 +2522,7 @@ abstract class EncodingScheme
  */
 class EncodingSchemeASCII : EncodingScheme
 {
-    shared static this()
+    shared static this() @system
     {
         EncodingScheme.register("std.encoding.EncodingSchemeASCII");
     }
@@ -2701,7 +2568,7 @@ class EncodingSchemeASCII : EncodingScheme
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(AsciiChar)[]) s;
             dchar c = std.encoding.decode(t);
@@ -2709,7 +2576,7 @@ class EncodingSchemeASCII : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(AsciiChar)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -2740,7 +2607,7 @@ class EncodingSchemeASCII : EncodingScheme
  */
 class EncodingSchemeLatin1 : EncodingScheme
 {
-    shared static this()
+    shared static this() @system
     {
         EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
     }
@@ -2784,7 +2651,7 @@ class EncodingSchemeLatin1 : EncodingScheme
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(Latin1Char)[]) s;
             dchar c = std.encoding.decode(t);
@@ -2792,8 +2659,10 @@ class EncodingSchemeLatin1 : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
+            // Trusted because of this cast.
+            // A cast from one value type to another is safe; we're not casting to a pointer type.
             auto t = cast(const(Latin1Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
             s = s[$-t.length..$];
@@ -2819,7 +2688,7 @@ class EncodingSchemeLatin1 : EncodingScheme
  */
 class EncodingSchemeLatin2 : EncodingScheme
 {
-    shared static this()
+    shared static this() @system
     {
         EncodingScheme.register("std.encoding.EncodingSchemeLatin2");
     }
@@ -2859,7 +2728,7 @@ class EncodingSchemeLatin2 : EncodingScheme
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(Latin2Char)[]) s;
             dchar c = std.encoding.decode(t);
@@ -2867,7 +2736,7 @@ class EncodingSchemeLatin2 : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(Latin2Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -2890,7 +2759,7 @@ class EncodingSchemeLatin2 : EncodingScheme
  */
 class EncodingSchemeWindows1250 : EncodingScheme
 {
-    shared static this()
+    shared static this() @system
     {
         EncodingScheme.register("std.encoding.EncodingSchemeWindows1250");
     }
@@ -2920,13 +2789,13 @@ class EncodingSchemeWindows1250 : EncodingScheme
             return std.encoding.encodedLength!(Windows1250Char)(c);
         }
 
-        override size_t encode(dchar c, ubyte[] buffer)
+        override size_t encode(dchar c, ubyte[] buffer) @trusted  // @@@BUG@@@ 15762
         {
             auto r = cast(Windows1250Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(Windows1250Char)[]) s;
             dchar c = std.encoding.decode(t);
@@ -2934,7 +2803,7 @@ class EncodingSchemeWindows1250 : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(Windows1250Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -2957,7 +2826,7 @@ class EncodingSchemeWindows1250 : EncodingScheme
  */
 class EncodingSchemeWindows1252 : EncodingScheme
 {
-    shared static this()
+    shared static this() @system
     {
         EncodingScheme.register("std.encoding.EncodingSchemeWindows1252");
     }
@@ -2987,13 +2856,13 @@ class EncodingSchemeWindows1252 : EncodingScheme
             return std.encoding.encodedLength!(Windows1252Char)(c);
         }
 
-        override size_t encode(dchar c, ubyte[] buffer)
+        override size_t encode(dchar c, ubyte[] buffer) @trusted  // @@@BUG@@@ 15762
         {
             auto r = cast(Windows1252Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(Windows1252Char)[]) s;
             dchar c = std.encoding.decode(t);
@@ -3001,7 +2870,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(Windows1252Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -3024,7 +2893,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
  */
 class EncodingSchemeUtf8 : EncodingScheme
 {
-    shared static this()
+    shared static this() @system
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf8");
     }
@@ -3060,7 +2929,7 @@ class EncodingSchemeUtf8 : EncodingScheme
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(char)[]) s;
             dchar c = std.encoding.decode(t);
@@ -3068,7 +2937,7 @@ class EncodingSchemeUtf8 : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @trusted  // @@@BUG@@@ 15762
         {
             auto t = cast(const(char)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -3092,7 +2961,7 @@ class EncodingSchemeUtf8 : EncodingScheme
  */
 class EncodingSchemeUtf16Native : EncodingScheme
 {
-    shared static this()
+    shared static this() @system
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf16Native");
     }
@@ -3160,7 +3029,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         }
     }
 }
-unittest
+@system unittest
 {
     version(LittleEndian)
     {
@@ -3187,7 +3056,7 @@ unittest
  */
 class EncodingSchemeUtf32Native : EncodingScheme
 {
-    shared static this()
+    shared static this() @system
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf32Native");
     }
@@ -3255,7 +3124,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         }
     }
 }
-unittest
+@system unittest
 {
     version(LittleEndian)
     {
@@ -3279,7 +3148,7 @@ unittest
 // Helper functions
 version(unittest)
 {
-    void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
+    void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r) @system
     {
         static if(is(Src==Dst))
         {
@@ -3379,4 +3248,129 @@ version(unittest)
     {
         return "0123456789ABCDEF"[n & 0xF];
     }
+}
+}
+
+/*
+Encodes $(D c) in units of type $(D E) and writes the result to the
+output range $(D R). Returns the number of $(D E)s written.
+ */
+size_t encode(E, R)(dchar c, auto ref R range)
+if (isNativeOutputRange!(R, E))  // @safe / @system inferred
+{
+    static if (is(Unqual!E == char))
+    {
+        if (c <= 0x7F)
+        {
+            put(range, cast(char) c);
+            return 1;
+        }
+        if (c <= 0x7FF)
+        {
+            put(range, cast(char)(0xC0 | (c >> 6)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
+            return 2;
+        }
+        if (c <= 0xFFFF)
+        {
+            put(range, cast(char)(0xE0 | (c >> 12)));
+            put(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
+            return 3;
+        }
+        if (c <= 0x10FFFF)
+        {
+            put(range, cast(char)(0xF0 | (c >> 18)));
+            put(range, cast(char)(0x80 | ((c >> 12) & 0x3F)));
+            put(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
+            return 4;
+        }
+        else
+        {
+            assert(0);
+        }
+    }
+    else static if (is(Unqual!E == wchar))
+    {
+        if (c <= 0xFFFF)
+        {
+            range.put(cast(wchar) c);
+            return 1;
+        }
+        range.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
+        range.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
+        return 2;
+    }
+    else static if (is(Unqual!E == dchar))
+    {
+        range.put(c);
+        return 1;
+    }
+    else
+    {
+        static assert(0);
+    }
+}
+
+unittest
+{
+    import std.array;
+    Appender!(char[]) r;
+    assert(encode!(char)('T', r) == 1);
+    assert(encode!(wchar)('T', r) == 1);
+    assert(encode!(dchar)('T', r) == 1);
+}
+
+/**
+ Encodes a single code point to a delegate.
+
+ This function encodes a single code point into one or more code units.
+ The code units are passed one at a time to the supplied delegate.
+
+ The input to this function MUST be a valid code point.
+ This is enforced by the function's in-contract.
+
+ The type of the output cannot be deduced. Therefore, it is necessary to
+ explicitly specify the encoding as a template parameter.
+
+ Supersedes:
+ This function supersedes std.utf.encode(), however, note that the
+ function codeUnits() supersedes it more conveniently.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
+
+ Params:
+    c  = the code point to be encoded
+    dg = the delegate to invoke for each code unit
+ */
+void encode(E)(dchar c, void delegate(E) dg)
+in
+{
+    assert(isValidCodePoint(c));
+}
+body
+{
+    EncoderInstance!(E).encode(c,dg);
+}
+
+/**
+Encodes the contents of $(D s) in units of type $(D Tgt), writing the result to an
+output range.
+
+Returns: The number of $(D Tgt) elements written.
+Params:
+Tgt = Element type of $(D range).
+s = Input array.
+range = Output range.
+ */
+size_t encode(Tgt, Src, R)(in Src[] s, R range)  // @safe / @system inferred
+{
+    size_t result;
+    foreach (c; s)
+    {
+        result += encode!(Tgt)(c, range);
+    }
+    return result;
 }
