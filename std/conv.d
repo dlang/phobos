@@ -3940,6 +3940,8 @@ if (is(UT == Unqual!T))
     {
         static assert (is(typeof({static T i;})),
             convFormat("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
+        static if (is(T == class)) static assert (!isAbstractClass!T,
+            T.stringof ~ " is abstract and it can't be emplaced");
         emplaceInitializer(chunk);
     }
     else static if (
@@ -4089,8 +4091,11 @@ $(D T) is $(D @safe).
 Returns: A pointer to the newly constructed object.
  */
 T emplace(T, Args...)(void[] chunk, auto ref Args args)
-    if (is(T == class))
+if (is(T == class))
 {
+    static assert (!isAbstractClass!T, T.stringof ~
+        " is abstract and it can't be emplaced");
+
     enum classSize = __traits(classInstanceSize, T);
     testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
     auto result = cast(T) chunk.ptr;
@@ -4228,6 +4233,19 @@ version(unittest) private class __conv_EmplaceTestClass
         this.i = i;
         ++j;
     }
+}
+
+unittest // bugzilla 15772
+{
+    abstract class Foo {}
+    class Bar: Foo {}
+    void[] memory;
+    // test in emplaceInitializer
+    static assert(!is(typeof(emplace!Foo(cast(Foo*) memory.ptr))));
+    static assert( is(typeof(emplace!Bar(cast(Bar*) memory.ptr))));
+    // test in the emplace overload that takes void[]
+    static assert(!is(typeof(emplace!Foo(memory))));
+    static assert( is(typeof(emplace!Bar(memory))));
 }
 
 unittest
@@ -4433,7 +4451,7 @@ unittest
     static struct S2
     {
         int* p;
-        this(const S2){};
+        this(const S2){}
     }
     static assert(!is(immutable S2 : S2));
     S2 s2 = void;
@@ -5778,3 +5796,4 @@ unittest
         assert(s.retro.array == "01");
     }
 }
+
