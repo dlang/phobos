@@ -560,6 +560,178 @@ unittest
     test(theAllocator);
 }
 
+// the class repository used in factory()
+__gshared package TypeInfo_Class[string] _factoryClasses;
+
+/**
+Registers a class to be available in the $(LREF factory) function.
+
+This function is usually called in the static constructor of the module
+that contains the declaration of a class to register.
+
+Params:
+    T = The type of the class to register. It must not be abstract and it must
+        either implement a default constructor or no constructor at all.
+    className = An identifier for the class type. When not specified, the unqualified
+        class name is used (without its parent module). In case of name conflict,
+        the priority is given to the last `TypeInfo_Class` that's registered.
+*/
+void registerFactoryClass(T)(string className = "") nothrow
+if (is (T == class) && !isAbstractClass!T &&
+    (__traits(hasMember, T, "__ctor") && (Parameters!(T.__ctor)).length == 0)
+    | (!__traits(hasMember, T, "__ctor")))
+{
+    if (className.length == 0)
+        className = T.stringof;
+    _factoryClasses[className] = typeid(T);
+}
+///
+unittest
+{
+    class MyClass { this() {} }
+    registerFactoryClass!MyClass;
+    // check the presence
+    assert("MyClass" in factoryClasses);
+    // but actually an invalid class stops the compilation
+    abstract class MyOtherClass {}
+    static assert(!is(typeof(registerFactoryClass!MyOtherClass)));
+}
+
+unittest
+{
+    class Foo {}
+    class Bar { this(){} }
+    class Baz { this(uint a) {} }
+    // check that the registration is conform with Object.factory
+    static assert( is(typeof(registerFactoryClass!Foo)));
+    static assert( is(typeof(registerFactoryClass!Bar("DefCtor"))));
+    static assert(!is(typeof(registerFactoryClass!Baz("CtorButNotDef"))));
+}
+
+/**
+Read-only access to the classes registered in $(LREF registerFactoryClass).
+
+Returns:
+    An associative array of `TypeInfo_Class` by `string`.
+*/
+const(TypeInfo_Class[string]) factoryClasses()
+{
+    return _factoryClasses;
+}
+
+/**
+Creates an instance of the class identified by $(D_PARAM className) and using
+a custom allocator.
+
+This function replaces the factory implemented in `Object` since it always
+allocates the results in the GC heap.
+
+Params:
+    alloc = The allocator used for getting the needed memory. It may be an object
+        implementing the static interface for allocators, or an $(LREF IAllocator)
+        reference.
+    className = The name used to identify the class to create. It must match to one
+        of the name used to register a `TypeInfo_Class` in $(LREF registerFactoryClass).
+
+Returns:
+    If $(D_PARAM className) is registered an object instance that can be casted
+    to the original class type, otherwise `null`.
+    Note that the requisites dynamically checked in $(LREF dynamicMake) are already
+    ensured by $(LREF registerFactoryClass), which grants the result not to be null
+    as long as $(D_PARAM className) is registered.
+*/
+Object factory(Allocator)(auto ref Allocator alloc, string className)
+in
+{
+    assert(alloc);
+    assert(className.length);
+}
+body
+{
+    TypeInfo_Class* ti = className in _factoryClasses;
+    if (!ti)
+        return null;
+    else
+        return dynamicMake!Allocator(alloc, *ti);
+}
+///
+unittest
+{
+    class Foo {uint a; this() {a = 1;}}
+    // make Foo available
+    registerFactoryClass!Foo("TestFoo");
+    // make
+    Foo foo = cast(Foo) factory(theAllocator, "TestFoo");
+    assert(foo);
+    assert(foo.a == 1);
+    // unregistered class
+    Object obj = factory(theAllocator, "noModule.NoType");
+    assert(obj is null);
+}
+
+/**
+Makes a class instance whose the type is determined arbitrarily at run-time.
+
+This function is mainly a routine dedicated to the $(LREF factory) function but
+it can also be used with custom class repository systems.
+
+Params:
+    alloc = The allocator used for getting the needed memory. It may be an object
+        implementing the static interface for allocators, or an $(LREF IAllocator)
+        reference.
+    ti = The `TypeInfo_Class` for the object to make. This parameter is obtained
+        with the `typeid` expression on a class type.
+
+Returns:
+    `null` if the class pointed by `ti` has no default constructor
+    (but other constructors) or if it's abstract
+    otherwise an object instance that can be casted to the original class type.
+*/
+Object dynamicMake(Allocator)(auto ref Allocator alloc, in TypeInfo_Class ti)
+in
+{
+    assert(alloc);
+    assert(ti);
+}
+body
+{
+    // see object.d, Object.create
+    if (ti.m_flags & 8 && !ti.defaultConstructor)
+        return null;
+    if (ti.m_flags & 64)
+        return null;
+
+    // chunk to emplace
+    size_t len = ti.initializer.length;
+    void[] mem = alloc.allocate(len);
+    if (!mem.ptr) return null;
+    scope(failure) alloc.deallocate(mem);
+
+    // emplace the static layout + ctor
+    mem[0 .. len] = ti.initializer[0 .. len];
+    Object result = cast(Object) mem.ptr;
+    if (ti.m_flags & 8 && ti.defaultConstructor)
+        ti.defaultConstructor(result);
+
+    return result;
+}
+///
+unittest
+{
+    // straight usage
+    class Foo {uint a; this() {a = 1;}}
+    Foo foo = cast(Foo) dynamicMake(theAllocator, typeid(Foo));
+    assert(foo);
+    // check the ctor
+    assert(foo.a == 1);
+
+    // abstract classes are not allowed
+    abstract class Bar {}
+    Bar bar = cast(Bar) dynamicMake(theAllocator, typeid(Bar));
+    assert(bar is null);
+}
+
+
 private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
 {
     import core.stdc.string : memcpy;
