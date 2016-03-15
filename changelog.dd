@@ -15,7 +15,13 @@ $(LI $(XREF std_meta, Repeat) was added to obtain a repeating
 $(XREF std_meta, AliasSeq) consisting of template arguments.)
 $(LI $(D fold) was added as an alternative to $(D reduce) with argument order swapped.)
 $(LI $(RELATIVE_LINK2 nextPow2, Added nextPow2 and truncPow2 to std.math.))
-
+$(LI $(REF bsf core,bitop), $(REF bsr core,bitop), and $(REF popcnt, core,bitop) now
+work with ulongs on 32 bit systems.)
+$(LI $(REF topN std,algorithm,sorting) is now 5% - 7% faster.)
+$(LI $(RELATIVE_LINK2 unary, Unary overloads of $(REF startsWith std,algorithm,searching) and
+$(REF endsWith std,algorithm,searching) were added.))
+$(LI $(RELATIVE_LINK2 maxCount, $(REF maxCount std,algorithm,searching) and
+$(REF maxPos std,algorithm,searching) were added.))
 )
 
 $(BUGSTITLE Library Changes,
@@ -32,6 +38,27 @@ assert(nextPow2(4000) == 4096);
 assert(truncPow2(10) == 8);
 assert(truncPow2(4000) == 2048);
 ------
+)
+
+$(LI $(LNAME2 unary, Unary overloads of $(REF startsWith std,algorithm,searching) and
+$(REF endsWith std,algorithm,searching) were added.)
+------
+import std.algorithm.searching;
+import std.ascii : isAlpha;
+
+assert("abc".endsWith!isAlpha);
+assert(!"ab1".endsWith!(a => a.isAlpha));
+
+assert("abc".startsWith!isAlpha);
+assert(!"1ab".startsWith!isAlpha);
+------
+)
+
+$(LI $(LNAME2 maxPos, $(REF maxCount std,algorithm,searching) and
+$(REF maxPos std,algorithm,searching) were added.)
+$(P Previous to this addition, in order to get the number of the greatest
+elements, you had to use `minCount!"a > b"`, which was very confusing.
+This change adds convenience functions to fix this issue.)
 )
 
 )
