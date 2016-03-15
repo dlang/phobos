@@ -614,6 +614,7 @@ struct CodePoints(E)
 }
 
 deprecated("use encode!E(dchar) and const(E[]) instead")
+// This will be removed in March 2017.
 struct CodeUnits(E)
 {
     E[] s;
@@ -2069,6 +2070,7 @@ unittest
     c = the code point to be encoded
  */
 deprecated("use encode instead")
+// This will be removed in March 2017.
 CodeUnits!E codeUnits(E)(dchar c) @safe
 in
 {
@@ -2091,11 +2093,6 @@ unittest
     assert(a[0] == 0xE2);
     assert(a[1] == 0x82);
     assert(a[2] == 0xAC);
-}
-
-private void transcode(Src : AsciiChar, Dst)(immutable(Src)[] s, out immutable(Dst)[] r) @trusted  // @@@BUG@@@ 15762
-{
-    return transcode!(char, Dst)(cast(string)s, r);
 }
 
 /**
@@ -2128,10 +2125,6 @@ body
     {
         r = s;
     }
-    else static if(is(Src==AsciiChar))
-    {
-        transcodeFromAscii(s, r);
-    }
     else
     {
         static if(is(Dst == wchar))
@@ -2163,6 +2156,11 @@ body
         r = array.data;
     }
 }
+void transcode(Src : AsciiChar, Dst)(immutable(Src)[] s, out immutable(Dst)[] r) @trusted  // @@@BUG@@@ 15762
+{
+    return transcode!(char, Dst)(cast(string)s, r);
+}
+
 
 ///
 unittest
