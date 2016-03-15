@@ -2064,8 +2064,6 @@ unittest
  Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
  WINDOWS-1252
 
- Deprecated: 
-
  Params:
     c = the code point to be encoded
  */
