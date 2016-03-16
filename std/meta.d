@@ -1041,37 +1041,37 @@ unittest
   * Returns:
   *    _Template with arity smaller than or equal to $(D_PARAM Template)
   */
-template applyLeft(alias Template, args...)
+template ApplyLeft(alias Template, args...)
 {
     static if (args.length)
     {
-        template applyLeft(right...)
+        template ApplyLeft(right...)
         {
             static if (is(typeof(Template!(args, right))))
-                enum applyLeft = Template!(args, right); // values
+                enum ApplyLeft = Template!(args, right); // values
             else
-                alias applyLeft = Template!(args, right); // symbols
+                alias ApplyLeft = Template!(args, right); // symbols
         }
     }
     else
-        alias applyLeft = Template;
+        alias ApplyLeft = Template;
 }
 
 /// Ditto
-template applyRight(alias Template, args...)
+template ApplyRight(alias Template, args...)
 {
     static if (args.length)
     {
-        template applyRight(left...)
+        template ApplyRight(left...)
         {
             static if (is(typeof(Template!(left, args))))
-                enum applyRight = Template!(left, args); // values
+                enum ApplyRight = Template!(left, args); // values
             else
-                alias applyRight = Template!(left, args); // symbols
+                alias ApplyRight = Template!(left, args); // symbols
         }
     }
     else
-        alias applyRight = Template;
+        alias ApplyRight = Template;
 }
 
 ///
@@ -1080,10 +1080,10 @@ unittest
     import std.traits : isImplicitlyConvertible;
 
     static assert(allSatisfy!(
-        applyLeft!(isImplicitlyConvertible, ubyte),
+        ApplyLeft!(isImplicitlyConvertible, ubyte),
         short, ushort, int, uint, long, ulong));
 
-    static assert(is(Filter!(applyRight!(isImplicitlyConvertible, short),
+    static assert(is(Filter!(ApplyRight!(isImplicitlyConvertible, short),
         ubyte, string, short, float, int) == AliasSeq!(ubyte, short)));
 }
 
@@ -1107,8 +1107,8 @@ unittest
         Test foo;
     }
 
-    static assert(allSatisfy!(applyRight!(hasMember, "foo"), T1, T2));
-    static assert(allSatisfy!(applyRight!(ifTestable, a => a.foo), T1, T2));
+    static assert(allSatisfy!(ApplyRight!(hasMember, "foo"), T1, T2));
+    static assert(allSatisfy!(ApplyRight!(ifTestable, a => a.foo), T1, T2));
 }
 
 ///
@@ -1118,9 +1118,9 @@ unittest
 
     alias Types = AliasSeq!(byte, short, int, long);
 
-    static assert(is(staticMap!(applyLeft!(Largest, short), Types) ==
+    static assert(is(staticMap!(ApplyLeft!(Largest, short), Types) ==
                 AliasSeq!(short, short, int, long)));
-    static assert(is(staticMap!(applyLeft!(Largest, int), Types) ==
+    static assert(is(staticMap!(ApplyLeft!(Largest, int), Types) ==
                 AliasSeq!(int, int, int, long)));
 }
 
@@ -1136,7 +1136,7 @@ unittest
         void function() @safe,
         int function(int) @safe);
 
-    static assert(is(staticMap!(applyRight!(
+    static assert(is(staticMap!(ApplyRight!(
         SetFunctionAttributes, "D", FunctionAttribute.safe),
         typeof(&foo), typeof(&bar)) == SafeFunctions));
 }
