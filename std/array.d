@@ -60,6 +60,9 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(D $(LREF split)))
         $(TD Eagerly split a range or string into an _array.
     ))
+    $(TR $(TD $(D $(LREF staticArray)))
+        $(TD Create a static array from an array literal or range
+    ))
     $(TR $(TD $(D $(LREF uninitializedArray)))
         $(TD Returns a new _array of type $(D T) without initializing its elements.
     ))
@@ -329,6 +332,131 @@ unittest
     static assert(!is(typeof(
         repeat(1).array()
     )));
+}
+
+/**
+ * Initializes a static array of the given size from the range `r`.
+ *
+ * If `r` has more than `n` elements, only the first `n` are copied.
+ * If `r` has less than `n` elements, the remaining spaces in the static array
+ * will have default values.
+ *
+ * Params:
+ *      r = range (or aggregate with $(D opApply) function) whose elements are
+ *      copied into the static array.
+ *
+ * Returns:
+ *      A static array of size `n` initialized from `r`
+ */
+ForeachType!Iterable[n] staticArray(size_t n, Iterable)(Iterable r)
+if (isIterable!Iterable)
+{
+    import std.conv : emplaceRef;
+
+    alias E = ForeachType!Iterable;
+
+    // need mutable elements while the array is built
+    Unqual!E[n] result = void;
+
+    // manually count our index instead of using foreach(i, e; r) because:
+    // 1. for a range, we would need to use enumerate
+    // 2. for opApply with no indexed overload, we would need to count anyways
+    size_t i;
+    foreach (e; r)
+    {
+        if (i >= n) break; // array is full, ignore remaining elements of r
+        emplaceRef!E(result[i++], e);
+    }
+
+    // result was uninitialized, so initialize remaining elements
+    while (i < n)
+        emplaceRef!E(result[i++], E.init);
+
+    // the type qualifiers are implicitly re-applied
+    return result;
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.range : only;
+    int[3] arr = only(1, 2, 3).staticArray!3;
+    assert(arr == [ 1, 2, 3 ]);
+}
+
+/// `staticArray!n` only takes `n` elements, even if the range has (infinitely) more.
+@safe pure nothrow unittest
+{
+    import std.range : repeat;
+    int[4] arr = repeat(5).staticArray!4;
+    assert(arr == [ 5, 5, 5, 5 ]);
+}
+
+/// `staticArray!n` leaves remaining elements default if the range is smaller than `n`
+@safe pure nothrow unittest
+{
+    import std.range : only;
+    int[5] arr = only(1,2,3).staticArray!5;
+    assert(arr == [ 1, 2, 3, 0, 0 ]);
+}
+
+/// `staticArray!n` works with `opApply` as well as a range interface
+unittest
+{
+    static struct OpApply
+    {
+        int opApply(int delegate(ref int) dg)
+        {
+            int res;
+            foreach(i; 0..10)
+            {
+                res = dg(i);
+                if(res) break;
+            }
+
+            return res;
+        }
+    }
+
+    int[5] arr = OpApply().staticArray!5;
+    assert(arr== [ 0, 1, 2, 3, 4 ]);
+}
+
+// immutable element support for staticArray
+@safe pure nothrow unittest
+{
+    import std.range : only;
+
+    immutable int i = 1;
+    auto arr0 = i.only.staticArray!1;
+    static assert(is(typeof(arr0) == immutable(int)[1]));
+    assert(arr0 == [ 1 ]);
+
+    immutable struct S { int i ; }
+    auto arr1 = S(1).only.staticArray!1;
+    static assert(is(typeof(arr1) == S[1]));
+    assert(arr1 == [ S(1) ]);
+}
+
+/**
+ * Converts an array literal to a static array.
+ *
+ * Params:
+ *      arr = an array literal
+ *
+ * Returns: static array of size `arr.length`
+ */
+T[n] staticArray(T, size_t n)(T[n] arr)
+{
+    return arr;
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto arr = [1,2,3,4].staticArray;         // no need to declare size
+    static assert(is(typeof(arr) == int[4])); // i is a static array
+    assert(arr == [1,2,3,4]);
 }
 
 /**
