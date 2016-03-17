@@ -80,63 +80,6 @@ extern (C) void  rt_detachDisposeEvent( Object obj, DisposeEvt evt );
  * Mixin to create a signal within a class object.
  *
  * Different signals can be added to a class by naming the mixins.
- *
- * Example:
----
-import std.signals;
-import std.stdio;
-
-class Observer
-{   // our slot
-    void watch(string msg, int i)
-    {
-        writefln("Observed msg '%s' and value %s", msg, i);
-    }
-}
-
-class Foo
-{
-    int value() { return _value; }
-
-    int value(int v)
-    {
-        if (v != _value)
-        {   _value = v;
-            // call all the connected slots with the two parameters
-            emit("setting new value", v);
-        }
-        return v;
-    }
-
-    // Mix in all the code we need to make Foo into a signal
-    mixin Signal!(string, int);
-
-  private :
-    int _value;
-}
-
-void main()
-{
-    Foo a = new Foo;
-    Observer o = new Observer;
-
-    a.value = 3;                // should not call o.watch()
-    a.connect(&o.watch);        // o.watch is the slot
-    a.value = 4;                // should call o.watch()
-    a.disconnect(&o.watch);     // o.watch is no longer a slot
-    a.value = 5;                // so should not call o.watch()
-    a.connect(&o.watch);        // connect again
-    a.value = 6;                // should call o.watch()
-    destroy(o);                 // destroying o should automatically disconnect it
-    a.value = 7;                // should not call o.watch()
-}
----
- * which should print:
- * <pre>
- * Observed msg 'setting new value' and value 4
- * Observed msg 'setting new value' and value 6
- * </pre>
- *
  */
 
 mixin template Signal(T1...)
@@ -269,6 +212,70 @@ mixin template Signal(T1...)
   private:
     slot_t[] slots;             // the slots to call from emit()
     size_t slots_idx;           // used length of slots[]
+}
+
+///
+unittest
+{
+    import std.signals;
+
+    int observedMessageCounter = 0;
+
+    class Observer
+    {   // our slot
+        void watch(string msg, int value)
+        {
+            switch(observedMessageCounter++)
+            {
+                case 0:
+                    assert(msg == "setting new value");
+                    assert(value == 4);
+                    break;
+                case 1:
+                    assert(msg == "setting new value");
+                    assert(value == 6);
+                    break;
+                default:
+                    assert(0, "Unknown observation");
+            }
+        }
+    }
+
+    class Foo
+    {
+        int value() { return _value; }
+
+        int value(int v)
+        {
+            if (v != _value)
+            {   _value = v;
+                // call all the connected slots with the two parameters
+                emit("setting new value", v);
+            }
+            return v;
+        }
+
+        // Mix in all the code we need to make Foo into a signal
+        mixin Signal!(string, int);
+
+      private :
+        int _value;
+    }
+
+    Foo a = new Foo;
+    Observer o = new Observer;
+
+    a.value = 3;                // should not call o.watch()
+    a.connect(&o.watch);        // o.watch is the slot
+    a.value = 4;                // should call o.watch()
+    a.disconnect(&o.watch);     // o.watch is no longer a slot
+    a.value = 5;                // so should not call o.watch()
+    a.connect(&o.watch);        // connect again
+    a.value = 6;                // should call o.watch()
+    destroy(o);                 // destroying o should automatically disconnect it
+    a.value = 7;                // should not call o.watch()
+
+    assert(observedMessageCounter == 2);
 }
 
 // A function whose sole purpose is to get this module linked in

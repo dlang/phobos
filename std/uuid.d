@@ -75,27 +75,6 @@ $(TR $(TDNW UUID namespaces)
  * boost._uuid) from the Boost project with some minor additions and API
  * changes for a more D-like API.
  *
- * Example:
- * ------------------------
- * UUID[] ids;
- * ids ~= randomUUID();
- * ids ~= md5UUID("test.name.123");
- * ids ~= sha1UUID("test.name.123");
- *
- * foreach(entry; ids)
- * {
- *     assert(entry.variant == UUID.Variant.rfc4122);
- * }
- *
- * assert(ids[0].uuidVersion == UUID.Version.randomNumberBased);
- * assert(ids[1].toString() == "22390768-cced-325f-8f0f-cfeaa19d0ccd");
- * assert(ids[1].data == [34, 57, 7, 104, 204, 237, 50, 95, 143, 15, 207,
- *     234, 161, 157, 12, 205]);
- *
- * UUID id;
- * assert(id.empty);
- *
- * ------------------------
  * Standards:
  * $(LINK2 http://www.ietf.org/rfc/rfc4122.txt, RFC 4122)
  *
@@ -117,6 +96,28 @@ $(TR $(TDNW UUID namespaces)
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.uuid;
+
+///
+unittest
+{
+    import std.uuid;
+
+    UUID[] ids;
+    ids ~= randomUUID();
+    ids ~= md5UUID("test.name.123");
+    ids ~= sha1UUID("test.name.123");
+
+    foreach(entry; ids)
+    {
+        assert(entry.variant == UUID.Variant.rfc4122);
+    }
+    assert(ids[0].uuidVersion == UUID.Version.randomNumberBased);
+    assert(ids[1].toString() == "22390768-cced-325f-8f0f-cfeaa19d0ccd");
+    assert(ids[1].data == [34, 57, 7, 104, 204, 237, 50, 95, 143, 15, 207,
+        234, 161, 157, 12, 205]);
+    UUID id;
+    assert(id.empty);
+}
 
 import std.range.primitives;
 import std.traits;
@@ -329,18 +330,6 @@ public struct UUID
          * hyphens exactly like above.
          *
          * For a less strict parser, see $(LREF parseUUID)
-         *
-         * Example:
-         * -------------------------
-         * id = UUID("8AB3060E-2cba-4f23-b74c-b52db3bdfb46");
-         * assert(id.data == [138, 179, 6, 14, 44, 186, 79, 35, 183, 76,
-         *    181, 45, 179, 189, 251, 70]);
-         * assert(id.toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
-         *
-         * //Can also be used in CTFE, for example as UUID literals:
-         * enum ctfeID = UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
-         * //here parsing is done at compile time, no runtime overhead!
-         * -------------------------
          */
         this(T)(in T[] uuid) if(isSomeChar!(Unqual!T))
         {
@@ -396,6 +385,19 @@ public struct UUID
 
         Lerr: throw new UUIDParsingException(to!string(uuid), pos,
                 UUIDParsingException.Reason.invalidChar, "Couldn't parse ubyte");
+        }
+
+        ///
+        @safe pure unittest
+        {
+            auto id = UUID("8AB3060E-2cba-4f23-b74c-b52db3bdfb46");
+            assert(id.data == [138, 179, 6, 14, 44, 186, 79, 35, 183, 76,
+               181, 45, 179, 189, 251, 70]);
+            assert(id.toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
+
+            //Can also be used in CTFE, for example as UUID literals:
+            enum ctfeID = UUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
+            //here parsing is done at compile time, no runtime overhead!
         }
 
         @safe pure unittest
