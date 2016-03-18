@@ -1928,11 +1928,11 @@ if (is(Unqual!T == bool))
             // Fits within the current array
             if (stuff)
             {
-                data[$ - 1] |= (1u << rem);
+                data[$ - 1] |= (cast(size_t)1 << rem);
             }
             else
             {
-                data[$ - 1] &= ~(1u << rem);
+                data[$ - 1] &= ~(cast(size_t)1 << rem);
             }
         }
         else
@@ -1958,6 +1958,15 @@ if (is(Unqual!T == bool))
     }
     /// ditto
     alias stableInsertBack = insertBack;
+
+    unittest
+    {
+        Array!bool a;
+        for (int i = 0; i < 100; ++i)
+            a.insertBack(true);
+        foreach (e; a)
+            assert(e);
+    }
 
     /**
        Removes the value at the front or back of the container. The
