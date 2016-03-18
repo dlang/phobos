@@ -288,7 +288,11 @@ private:
                 if (targetType != typeid(T))
                     continue;
 
-                static if (is(typeof(*cast(T*) target = *src)))
+                static if (is(typeof(*cast(T*) target = *src)) ||
+                           is(T ==        const(U), U) ||
+                           is(T ==       shared(U), U) ||
+                           is(T == shared const(U), U) ||
+                           is(T ==    immutable(U), U))
                 {
                     import std.conv : emplaceRef;
 
@@ -296,22 +300,6 @@ private:
                     if (src)
                     {
                         static if (T.sizeof > 0)
-                            assert(target, "target must be non-null");
-
-                        emplaceRef(*cast(Unqual!T*) zat, *cast(UA*) src);
-                    }
-                }
-                else static if (is(T == const(U), U) ||
-                                is(T == shared(U), U) ||
-                                is(T == shared const(U), U) ||
-                                is(T == immutable(U), U))
-                {
-                    import std.conv : emplaceRef;
-
-                    auto zat = cast(T*) target;
-                    if (src)
-                    {
-                        static if (U.sizeof > 0)
                             assert(target, "target must be non-null");
 
                         emplaceRef(*cast(Unqual!T*) zat, *cast(UA*) src);
