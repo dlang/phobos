@@ -406,12 +406,20 @@ Throws: $(D ErrnoException) if the file could not be opened.
     {
         import std.conv : text;
         import std.exception : errnoEnforce;
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 544a6b95ce2e8bace69fed2a7f12e0661ba55404
         initMembers(errnoEnforce(.fopen(name, stdioOpenmode),
                 text("Cannot open file `", name, "' in mode `",
                     stdioOpenmode, "'")),
             name);
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 544a6b95ce2e8bace69fed2a7f12e0661ba55404
         // MSVCRT workaround (issue 14422)
         version (MICROSOFT_STDIO)
         {
@@ -467,6 +475,21 @@ Throws: $(D ErrnoException) if the file could not be opened.
     }
 
 /**
+<<<<<<< HEAD
+=======
+Assigns a file to another. The target of the assignment gets detached
+from whatever file it was attached to, and attaches itself to the new
+file.
+ */
+//    void opAssign(File rhs) @safe
+//    {
+//        import std.algorithm : swap;
+//
+//        swap(this, rhs);
+//    }
+
+/**
+>>>>>>> 544a6b95ce2e8bace69fed2a7f12e0661ba55404
 First calls $(D detach) (throwing on failure), and then attempts to
 _open file $(D name) with mode $(D stdioOpenmode). The mode has the
 same semantics as in the C standard library $(WEB
