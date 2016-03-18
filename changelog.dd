@@ -22,6 +22,8 @@ $(LI $(RELATIVE_LINK2 unary, Unary overloads of $(REF startsWith std,algorithm,s
 $(REF endsWith std,algorithm,searching) were added.))
 $(LI $(RELATIVE_LINK2 maxCount, $(REF maxCount std,algorithm,searching) and
 $(REF maxPos std,algorithm,searching) were added.))
+$(LI $(LNAME2 range support for the convenience wrapper $(REF redBlackTree std,container,rbtree)
+was added))
 )
 
 $(BUGSTITLE Library Changes,
