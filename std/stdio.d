@@ -363,11 +363,15 @@ struct File
 
     package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted
     {
+        initMembers(handle, name, refs, isPopened);
+    }
+
+    private void initMembers(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted
+    {
         import core.stdc.stdlib : malloc;
         import std.exception : enforce;
 
-        assert(!_p);
-        _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+        if (!_p) _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         _p.handle = handle;
         _p.refs = refs;
         _p.isPopened = isPopened;
@@ -395,14 +399,27 @@ Throws: $(D ErrnoException) if the file could not be opened.
  */
     this(string name, in char[] stdioOpenmode = "rb") @safe
     {
+        initMembers(name, stdioOpenmode);
+    }
+
+    private void initMembers(string name, in char[] stdioOpenmode = "rb") @safe
+    {
         import std.conv : text;
         import std.exception : errnoEnforce;
+<<<<<<< HEAD
 
-        this(errnoEnforce(.fopen(name, stdioOpenmode),
-                        text("Cannot open file `", name, "' in mode `",
-                                stdioOpenmode, "'")),
-                name);
+=======
+        
+>>>>>>> 544a6b95ce2e8bace69fed2a7f12e0661ba55404
+        initMembers(errnoEnforce(.fopen(name, stdioOpenmode),
+                text("Cannot open file `", name, "' in mode `",
+                    stdioOpenmode, "'")),
+            name);
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 544a6b95ce2e8bace69fed2a7f12e0661ba55404
         // MSVCRT workaround (issue 14422)
         version (MICROSOFT_STDIO)
         {
@@ -458,18 +475,21 @@ Throws: $(D ErrnoException) if the file could not be opened.
     }
 
 /**
+<<<<<<< HEAD
+=======
 Assigns a file to another. The target of the assignment gets detached
 from whatever file it was attached to, and attaches itself to the new
 file.
  */
-    void opAssign(File rhs) @safe
-    {
-        import std.algorithm : swap;
-
-        swap(this, rhs);
-    }
+//    void opAssign(File rhs) @safe
+//    {
+//        import std.algorithm : swap;
+//
+//        swap(this, rhs);
+//    }
 
 /**
+>>>>>>> 544a6b95ce2e8bace69fed2a7f12e0661ba55404
 First calls $(D detach) (throwing on failure), and then attempts to
 _open file $(D name) with mode $(D stdioOpenmode). The mode has the
 same semantics as in the C standard library $(WEB
@@ -479,8 +499,19 @@ Throws: $(D ErrnoException) in case of error.
  */
     void open(string name, in char[] stdioOpenmode = "rb") @safe
     {
-        detach();
-        this = File(name, stdioOpenmode);
+        if (_p)
+        {
+            if (_p.refs == 1)
+                closeWithoutFree();
+            else
+            {
+                assert(_p.refs);
+                --_p.refs;
+                _p = null;
+            }
+
+        }
+        initMembers(name, stdioOpenmode);
     }
 
 /**
@@ -694,18 +725,23 @@ Throws: $(D ErrnoException) on error.
     void close() @trusted
     {
         import core.stdc.stdlib : free;
-        import std.exception : errnoEnforce;
 
         if (!_p) return; // succeed vacuously
-        scope(exit)
-        {
-            assert(_p.refs);
-            if(!--_p.refs)
-                free(_p);
-            _p = null; // start a new life
-        }
-        if (!_p.handle) return; // Impl is closed by another File
 
+        closeWithoutFree();
+
+        if(!--_p.refs) {
+            free(_p);
+        }
+        _p = null; // start a new life
+    }
+
+    private void closeWithoutFree() @trusted
+    {
+        import std.exception : errnoEnforce;
+
+        if (!_p.handle) return; // Impl is closed by another File
+        
         scope(exit) _p.handle = null; // nullify the handle anyway
         version (Posix)
         {
