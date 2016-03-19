@@ -131,11 +131,10 @@ module std.regex.internal.generator;
                         pc += IRL!(IR.RepeatEnd);
                     }
                     break;
-                case IR.InfiniteStart, IR.InfiniteQStart:
+                case IR.InfiniteStart, IR.InfiniteBloomStart, IR.InfiniteQStart:
                     pc += re.ir[pc].data + IRL!(IR.InfiniteStart);
                     goto case IR.InfiniteEnd; //both Q and non-Q
-                case IR.InfiniteEnd:
-                case IR.InfiniteQEnd:
+                case IR.InfiniteEnd, IR.InfiniteBloomEnd, IR.InfiniteQEnd:
                     uint len = re.ir[pc].data;
                     if(app.data.length == dataLenOld)
                     {
@@ -146,7 +145,7 @@ module std.regex.internal.generator;
                     if(app.data.length < limit && rand(3) > 0)
                         pc = pc - len;
                     else
-                        pc = pc + IRL!(IR.InfiniteEnd);
+                        pc = pc + re.ir[pc].length;
                     break;
                 case IR.GroupStart, IR.GroupEnd:
                     pc += IRL!(IR.GroupStart);

@@ -381,7 +381,7 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.InfiniteStart, IR.InfiniteQStart:
                         trackers[infiniteNesting+1] = index;
                         pc += re.ir[pc].data + IRL!(IR.InfiniteStart);
-                        //now pc is at end IR.Infininite(Q)End
+                        //now pc is at end IR.Infinite(Q)End
                         uint len = re.ir[pc].data;
                         int test;
                         if(re.ir[pc].code == IR.InfiniteEnd)
@@ -403,6 +403,17 @@ template BacktrackingMatcher(bool CTregex)
                             }
                             pc += IRL!(IR.InfiniteEnd);
                         }
+                        break;
+                    case IR.InfiniteBloomStart:
+                        trackers[infiniteNesting+1] = index;
+                        pc += re.ir[pc].data + IRL!(IR.InfiniteBloomStart);
+                        //now pc is at end IR.InfiniteBloomEnd
+                        uint len = re.ir[pc].data;
+                        uint filterIdx = re.ir[pc+2].raw;
+                        if(re.filters[filterIdx][front])
+                            pushState(pc+IRL!(IR.InfiniteBloomEnd), counter);
+                        infiniteNesting++;
+                        pc -= len;
                         break;
                     case IR.RepeatStart, IR.RepeatQStart:
                         pc += re.ir[pc].data + IRL!(IR.RepeatStart);
@@ -474,6 +485,28 @@ template BacktrackingMatcher(bool CTregex)
                             pc += IRL!(IR.InfiniteEnd);
                             infiniteNesting--;
                         }
+                        break;
+                    case IR.InfiniteBloomEnd:
+                        uint len = re.ir[pc].data;
+                        debug(std_regex_matcher) writeln("Infinited nesting:", infiniteNesting);
+                        assert(infiniteNesting < trackers.length);
+
+                        if(trackers[infiniteNesting] == index)
+                        {//source not consumed
+                            pc += IRL!(IR.InfiniteBloomEnd);
+                            infiniteNesting--;
+                            break;
+                        }
+                        else
+                            trackers[infiniteNesting] = index;
+                        uint filterIdx = re.ir[pc+2].raw;
+                        if(re.filters[filterIdx][front])
+                        {
+                            infiniteNesting--;
+                            pushState(pc + IRL!(IR.InfiniteBloomEnd), counter);
+                            infiniteNesting++;
+                        }
+                        pc -= len;
                         break;
                     case IR.OrEnd:
                         pc += IRL!(IR.OrEnd);
@@ -862,9 +895,10 @@ struct CtContext
         assert(!ir.empty);
         switch(ir[0].code)
         {
-        case IR.InfiniteStart, IR.InfiniteQStart, IR.RepeatStart, IR.RepeatQStart:
+        case IR.InfiniteStart,  IR.InfiniteBloomStart,IR.InfiniteQStart, IR.RepeatStart, IR.RepeatQStart:
             bool infLoop =
-                ir[0].code == IR.InfiniteStart || ir[0].code == IR.InfiniteQStart;
+                ir[0].code == IR.InfiniteStart || ir[0].code == IR.InfiniteQStart || 
+                ir[0].code == IR.InfiniteBloomStart;
             infNesting = infNesting || infLoop;
             if(infLoop)
             {
@@ -1014,7 +1048,7 @@ struct CtContext
                     addr, addr);
         switch(ir[0].code)
         {
-        case IR.InfiniteStart, IR.InfiniteQStart:
+        case IR.InfiniteStart, IR.InfiniteQStart, IR.InfiniteBloomStart:
             r ~= ctSub( `
                     trackers[$$] = DataIndex.max;
                     goto case $$;`, curInfLoop, fixup);
@@ -1022,6 +1056,28 @@ struct CtContext
             break;
         case IR.InfiniteEnd:
             testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd) .. $],addr + 1);
+            r ~= ctSub( `
+                    if(trackers[$$] == index)
+                    {//source not consumed
+                        goto case $$;
+                    }
+                    trackers[$$] = index;
+
+                    $$
+                    {
+                        $$
+                    }
+                    goto case $$;
+                case $$: //restore state and go out of loop
+                    $$
+                    goto case;`, curInfLoop, addr+2,
+                    curInfLoop, testCode, saveCode(addr+1),
+                    fixup, addr+1, restoreCode());
+            ir = ir[ir[0].length..$];
+            break;
+        case IR.InfiniteBloomEnd:
+            //TODO: check bloom filter and skip on failure
+            testCode = ctQuickTest(ir[IRL!(IR.InfiniteBloomEnd) .. $],addr + 1);
             r ~= ctSub( `
                     if(trackers[$$] == index)
                     {//source not consumed
