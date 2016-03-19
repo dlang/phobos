@@ -94,6 +94,7 @@ module std.csv;
 import std.conv;
 import std.range.primitives;
 import std.traits;
+import std.exception;  // basicExceptionCtors
 
 /**
  * Exception containing the row and column for when an exception was thrown.
@@ -111,20 +112,22 @@ class CSVException : Exception
     ///
     size_t row, col;
 
+    // FIXME: Use std.exception.basicExceptionCtors here once bug #11500 is fixed
+
     this(string msg, string file = __FILE__, size_t line = __LINE__,
-         Throwable next = null) @safe pure
+         Throwable next = null) @nogc @safe pure nothrow
     {
         super(msg, file, line, next);
     }
 
     this(string msg, Throwable next, string file = __FILE__,
-         size_t line = __LINE__) @safe pure
+         size_t line = __LINE__) @nogc @safe pure nothrow
     {
         super(msg, file, line, next);
     }
 
     this(string msg, size_t row, size_t col, Throwable next = null,
-         string file = __FILE__, size_t line = __LINE__) @safe pure
+         string file = __FILE__, size_t line = __LINE__) @nogc @safe pure nothrow
     {
         super(msg, next, file, line);
         this.row = row;
@@ -171,17 +174,7 @@ class IncompleteCellException : CSVException
     /// already been fed to the output range.
     dstring partialData;
 
-    this(string msg, string file = __FILE__, size_t line = __LINE__,
-        Throwable next = null) @safe pure
-    {
-        super(msg, file, line);
-    }
-
-    this(string msg, Throwable next, string file = __FILE__, size_t line =
-        __LINE__) @safe pure
-    {
-        super(msg, next, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 @safe pure unittest
@@ -213,17 +206,7 @@ class IncompleteCellException : CSVException
  */
 class HeaderMismatchException : CSVException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__,
-        Throwable next = null) @safe pure
-    {
-        super(msg, file, line);
-    }
-
-    this(string msg, Throwable next, string file = __FILE__,
-        size_t line = __LINE__) @safe pure
-    {
-        super(msg, next, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 @safe pure unittest
@@ -1013,14 +996,14 @@ public:
 
         if (!_input.range.empty)
         {
-           if (_input.range.front == '\r')
-           {
-               _input.range.popFront();
-               if (_input.range.front == '\n')
-                   _input.range.popFront();
-           }
-           else if (_input.range.front == '\n')
-               _input.range.popFront();
+            if (_input.range.front == '\r')
+            {
+                _input.range.popFront();
+                if (!_input.range.empty && _input.range.front == '\n')
+                    _input.range.popFront();
+            }
+            else if (_input.range.front == '\n')
+                _input.range.popFront();
         }
 
         if (_input.range.empty)
@@ -1125,6 +1108,19 @@ public:
     {
         assert(equal(record, ans));
     }
+}
+
+// Bugzilla 15545
+pure unittest
+{
+    enum failData =
+    "name, surname, age
+    Joe, Joker, 99\r";
+    bool pass = true;
+    auto r = csvReader(failData);
+    try foreach(entry; r){}
+    catch pass = false;
+    assert(pass);
 }
 
 /*

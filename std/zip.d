@@ -283,7 +283,6 @@ final class ZipArchive
     import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
     import std.algorithm : max;
     import std.conv : to;
-    import std.zlib : compress;
     import std.datetime : DosFileTime;
 
     string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
@@ -400,7 +399,8 @@ final class ZipArchive
                         break;
 
                     case CompressionMethod.deflate:
-                        de._compressedData = cast(ubyte[])std.zlib.compress(cast(void[])de._expandedData);
+                        import std.zlib : compress;
+                        de._compressedData = cast(ubyte[])compress(cast(void[])de._expandedData);
                         de._compressedData = de._compressedData[2 .. de._compressedData.length - 4];
                         break;
 
@@ -409,7 +409,8 @@ final class ZipArchive
                 }
 
                 de._compressedSize = to!uint(de._compressedData.length);
-                de._crc32 = std.zlib.crc32(0, cast(void[])de._expandedData);
+                import std.zlib : crc32;
+                de._crc32 = crc32(0, cast(void[])de._expandedData);
             }
             assert(de._compressedData.length == de._compressedSize);
 
@@ -763,7 +764,8 @@ final class ZipArchive
                 // -15 is a magic value used to decompress zip files.
                 // It has the effect of not requiring the 2 byte header
                 // and 4 byte trailer.
-                de._expandedData = cast(ubyte[])std.zlib.uncompress(cast(void[])de.compressedData, de.expandedSize, -15);
+                import std.zlib : uncompress;
+                de._expandedData = cast(ubyte[])uncompress(cast(void[])de.compressedData, de.expandedSize, -15);
                 return de.expandedData;
 
             default:

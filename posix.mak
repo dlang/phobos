@@ -26,7 +26,7 @@
 # OS can be linux, win32, win32wine, osx, or freebsd. The system will be
 # determined by using uname
 
-QUIET:=@
+QUIET:=
 
 include osmodel.mak
 
@@ -120,6 +120,9 @@ endif
 
 LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 
+# use timelimit to avoid deadlocks if available
+TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 60 ,)
+
 # Set VERSION, where the file is that contains the version string
 VERSION=../dmd/VERSION
 
@@ -161,9 +164,9 @@ STD_PACKAGES = std $(addprefix std/,\
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   concurrencybase conv cstream csv datetime demangle encoding exception file format \
-  functional getopt json math mathspecial meta metastrings mmfile numeric \
+  functional getopt json math mathspecial meta mmfile numeric \
   outbuffer parallelism path process random signals socket socketstream stdint \
-  stdio stdiobase stream string syserror system traits typecons typetuple uni \
+  stdio stdiobase stream string system traits typecons typetuple uni \
   uri utf uuid variant xml zip zlib
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
@@ -199,11 +202,7 @@ EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
   odbc/sqltypes odbc/sqlucode sqlite3 zlib) $(addprefix std/c/,fenv locale \
   math process stdarg stddef stdio stdlib string time wcharh)
 
-ifeq (,$(findstring win,$(OS)))
-	EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_COMMON)
-else
-	EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
-endif
+EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
 
 EXTRA_MODULES_INTERNAL := $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
@@ -233,15 +232,6 @@ ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
 	gzclose gzlib gzread gzwrite infback inffast inflate inftrees trees uncompr zutil)
-C_FILES = $(addsuffix .c,$(C_MODULES))
-# C files that are not compiled (right now only zlib-related)
-C_EXTRAS = $(addprefix etc/c/zlib/, algorithm.txt ChangeLog crc32.h	\
-deflate.h example.c inffast.h inffixed.h inflate.h inftrees.h		\
-linux.mak minigzip.c osx.mak README trees.h win32.mak zconf.h		\
-win64.mak \
-gzguts.h zlib.3 zlib.h zutil.h)
-# Aggregate all C files over all OSs (this is for the zip file)
-ALL_C_FILES = $(C_FILES) $(C_EXTRAS)
 
 OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
 
@@ -357,7 +347,7 @@ moduleName=$(subst /,.,$(1))
 
 # target for batch unittests (using shared phobos library and test_runner)
 unittest/%.run : $(ROOT)/unittest/test_runner
-	$(QUIET)$(RUN) $< $(call moduleName,$*)
+	$(QUIET)$(TIMELIMIT)$(RUN) $< $(call moduleName,$*)
 
 # Target for quickly running a single unittest (using static phobos library).
 # For example: "make std/algorithm/mutation.test"
@@ -387,7 +377,8 @@ clean :
 	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
 zip :
-	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) index.d win32.mak win64.mak osmodel.mak
+	-rm -f $(ZIPFILE)
+	zip -r $(ZIPFILE) . -x .git\* -x generated\*
 
 install2 : all
 	$(eval lib_dir=$(if $(filter $(OS),osx), lib, lib$(MODEL)))
@@ -463,7 +454,6 @@ changelog.html: changelog.dd
 #################### test for undesired white spaces ##########################
 CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
-CWS_TOCHECK += $(filter-out etc/c/zlib/ChangeLog,$(ALL_C_FILES))
 
 checkwhitespace: $(LIB)
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)

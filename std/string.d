@@ -43,6 +43,7 @@ $(TR $(TDNW Pruning and Filling)
          $(MYREF detabber)
          $(MYREF detab)
          $(MYREF entab)
+         $(MYREF entabber)
          $(MYREF leftJustify)
          $(MYREF outdent)
          $(MYREF rightJustify)
@@ -97,6 +98,7 @@ $(LEADINGROW Publicly imported functions)
          $(SHORTXREF array, replace)
          $(SHORTXREF array, replaceInPlace)
          $(SHORTXREF array, split)
+         $(SHORTXREF array, empty)
     ))
     $(TR $(TD std.format)
         $(TD
@@ -172,7 +174,18 @@ private:
 
     bool testAliasedString(alias func, Args...)(string s, Args args)
     {
-        return func(TestAliasedString(s), args) == func(s, args);
+        import std.algorithm.comparison : equal;
+        auto a = func(TestAliasedString(s), args);
+        auto b = func(s, args);
+        static if (is(typeof(equal(a, b))))
+        {
+            // For ranges, compare contents instead of object identity.
+            return equal(a, b);
+        }
+        else
+        {
+            return a == b;
+        }
     }
 }
 
@@ -186,7 +199,7 @@ import std.traits;
 
 //public imports for backward compatibility
 public import std.algorithm : startsWith, endsWith, cmp, count;
-public import std.array : join, replace, replaceInPlace, split;
+public import std.array : join, replace, replaceInPlace, split, empty;
 
 /* ************* Exceptions *************** */
 
@@ -382,8 +395,8 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         !isConvertibleToString!Range)
 {
-    import std.ascii : toLower, isASCII;
-    import std.uni : toLower;
+    static import std.ascii;
+    static import std.uni;
     import std.utf : byDchar, byCodeUnit, UTFException, codeLength;
     alias Char = Unqual!(ElementEncodingType!Range);
 
@@ -718,12 +731,12 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
         const(Char1)[] balance;
         if (cs == CaseSensitive.yes)
         {
-            balance = std.algorithm.find(s, sub);
+            balance = find(s, sub);
         }
         else
         {
-            balance = std.algorithm.find!
-                ((a, b) => std.uni.toLower(a) == std.uni.toLower(b))
+            balance = find!
+                ((a, b) => toLower(a) == toLower(b))
                 (s, sub);
         }
         return balance.empty ? -1 : balance.ptr - s.ptr;
@@ -977,7 +990,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
-    import std.ascii : isASCII, toLower;
+    static import std.ascii, std.uni;
     import std.utf : canSearchInCodeUnits;
     if (cs == CaseSensitive.yes)
     {
@@ -1466,20 +1479,21 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
     }
     else
     {
+        import std.uni: toLower;
         if (needles.length <= 16 && needles.walkLength(17))
         {
             size_t si = 0;
             dchar[16] scratch = void;
             foreach ( dchar c; needles)
             {
-                scratch[si++] = std.uni.toLower(c);
+                scratch[si++] = toLower(c);
             }
 
             static if (forward)
             {
                 foreach (i, dchar c; haystack)
                 {
-                    if (canFind(scratch[0 .. si], std.uni.toLower(c)) == any)
+                    if (canFind(scratch[0 .. si], toLower(c)) == any)
                     {
                         return i;
                     }
@@ -1489,7 +1503,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
             {
                 foreach_reverse (i, dchar c; haystack)
                 {
-                    if (canFind(scratch[0 .. si], std.uni.toLower(c)) == any)
+                    if (canFind(scratch[0 .. si], toLower(c)) == any)
                     {
                         return i;
                     }
@@ -1500,14 +1514,14 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
         {
             static bool f(dchar a, dchar b)
             {
-                return std.uni.toLower(a) == b;
+                return toLower(a) == b;
             }
 
             static if (forward)
             {
                 foreach (i, dchar c; haystack)
                 {
-                    if (canFind!f(needles, std.uni.toLower(c)) == any)
+                    if (canFind!f(needles, toLower(c)) == any)
                     {
                         return i;
                     }
@@ -1517,7 +1531,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
             {
                 foreach_reverse (i, dchar c; haystack)
                 {
-                    if (canFind!f(needles, std.uni.toLower(c)) == any)
+                    if (canFind!f(needles, toLower(c)) == any)
                     {
                         return i;
                     }
@@ -2278,44 +2292,16 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  *     The capitalized string.
  *
  * See_Also:
- *      $(XREF uni, toCapitalized) for a lazy range version that doesn't allocate memory
+ *      $(XREF uni, asCapitalized) for a lazy range version that doesn't allocate memory
  */
 S capitalize(S)(S input) @trusted pure
     if (isSomeString!S)
 {
-    import std.utf : encode;
+    import std.uni : asCapitalized;
+    import std.conv: to;
+    import std.array;
 
-    Unqual!(typeof(input[0]))[] retval;
-    bool changed = false;
-
-    foreach (i, dchar c; input)
-    {
-        dchar c2;
-
-        if (i == 0)
-        {
-            c2 = std.uni.toUpper(c);
-            if (c != c2)
-                changed = true;
-        }
-        else
-        {
-            c2 = std.uni.toLower(c);
-            if (c != c2)
-            {
-                if (!changed)
-                {
-                    changed = true;
-                    retval = input[0 .. i].dup;
-                }
-            }
-        }
-
-        if (changed)
-            std.utf.encode(retval, c2);
-    }
-
-    return changed ? cast(S)retval : input;
+    return input.asCapitalized.array.to!S;
 }
 
 ///
@@ -2331,12 +2317,12 @@ auto capitalize(S)(auto ref S s)
     return capitalize!(StringTypeOf!S)(s);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!capitalize("hello"));
 }
 
-@trusted pure unittest
+@safe pure unittest
 {
     import std.conv : to;
     import std.algorithm : cmp;
@@ -2355,7 +2341,6 @@ unittest
 
         s2 = capitalize(s1[0 .. 2]);
         assert(cmp(s2, "Fo") == 0);
-        assert(s2.ptr == s1.ptr);
 
         s1 = to!S("fOl");
         s2 = capitalize(s1);
@@ -2363,7 +2348,7 @@ unittest
         assert(s2 !is s1);
         s1 = to!S("\u0131 \u0130");
         s2 = capitalize(s1);
-        assert(cmp(s2, "\u0049 \u0069") == 0);
+        assert(cmp(s2, "\u0049 i\u0307") == 0);
         assert(s2 !is s1);
 
         s1 = to!S("\u017F \u0049");
@@ -2838,15 +2823,10 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref R
 
 unittest
 {
-    import std.file : DirEntry;
     import std.algorithm.comparison : equal;
-
     auto s = "std/string.d";
-    auto de = DirEntry(s);
-    auto i = de.lineSplitter();
-    auto j = s.lineSplitter();
-
-    assert(equal(i, j));
+    auto as = TestAliasedString(s);
+    assert(equal(s.lineSplitter(), as.lineSplitter()));
 }
 
 /++
@@ -2859,13 +2839,16 @@ unittest
 
     Postconditions: $(D input) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
+
+    See_Also:
+        Generic stripping on ranges: $(REF _stripLeft, std, algorithm, mutation)
   +/
 auto stripLeft(Range)(Range input)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         !isConvertibleToString!Range)
 {
-    import std.ascii : isASCII, isWhite;
-    import std.uni : isWhite;
+    static import std.ascii;
+    static import std.uni;
     import std.utf : decodeFront;
 
     while (!input.empty)
@@ -2928,6 +2911,9 @@ unittest
 
     Returns:
         slice of $(D str) stripped of trailing whitespace.
+
+    See_Also:
+        Generic stripping on ranges: $(REF _stripRight, std, algorithm, mutation)
   +/
 auto stripRight(Range)(Range str)
     if (isSomeString!Range ||
@@ -2935,14 +2921,16 @@ auto stripRight(Range)(Range str)
         !isConvertibleToString!Range &&
         isSomeChar!(ElementEncodingType!Range))
 {
+    import std.uni : isWhite;
     alias C = Unqual!(ElementEncodingType!(typeof(str)));
 
     static if (isSomeString!(typeof(str)))
     {
         import std.utf : codeLength;
+
         foreach_reverse (i, dchar c; str)
         {
-            if (!std.uni.isWhite(c))
+            if (!isWhite(c))
                 return str[0 .. i + codeLength!C(c)];
         }
 
@@ -2955,7 +2943,7 @@ auto stripRight(Range)(Range str)
         {
             static if (C.sizeof == 4)
             {
-                if (std.uni.isWhite(str[i]))
+                if (isWhite(str[i]))
                     continue;
                 break;
             }
@@ -2964,7 +2952,7 @@ auto stripRight(Range)(Range str)
                 auto c2 = str[i];
                 if (c2 < 0xD800 || c2 >= 0xE000)
                 {
-                    if (std.uni.isWhite(c2))
+                    if (isWhite(c2))
                         continue;
                 }
                 else if (c2 >= 0xDC00)
@@ -2975,7 +2963,7 @@ auto stripRight(Range)(Range str)
                         if (c1 >= 0xD800 && c1 < 0xDC00)
                         {
                             dchar c = ((c1 - 0xD7C0) << 10) + (c2 - 0xDC00);
-                            if (std.uni.isWhite(c))
+                            if (isWhite(c))
                             {
                                 --i;
                                 continue;
@@ -2992,7 +2980,7 @@ auto stripRight(Range)(Range str)
                 char cx = str[i];
                 if (cx <= 0x7F)
                 {
-                    if (std.uni.isWhite(cx))
+                    if (isWhite(cx))
                         continue;
                     break;
                 }
@@ -3011,7 +2999,7 @@ auto stripRight(Range)(Range str)
                         --i;
                     }
 
-                    if (!std.uni.isWhite(str[i .. i + stride].byDchar.front))
+                    if (!str[i .. i + stride].byDchar.front.isWhite)
                         return str[0 .. i + stride];
                 }
             }
@@ -3085,6 +3073,9 @@ unittest
 
     Returns:
         slice of $(D str) stripped of leading and trailing whitespace.
+
+    See_Also:
+        Generic stripping on ranges: $(REF _strip, std, algorithm, mutation)
   +/
 auto strip(Range)(Range str)
     if (isSomeString!Range ||
@@ -5111,9 +5102,9 @@ in
     assert(from.length == to.length);
     assert(from.length <= 256);
     foreach (char c; from)
-        assert(std.ascii.isASCII(c));
+        assert(isASCII(c));
     foreach (char c; to)
-        assert(std.ascii.isASCII(c));
+        assert(isASCII(c));
 }
 body
 {
@@ -5368,7 +5359,7 @@ S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
         }
         if (changed)
         {
-            std.utf.encode(r, c);
+            encode(r, c);
         }
     }
     if (changed)
@@ -5402,7 +5393,7 @@ S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
 
 S squeeze(S)(S s, in S pattern = null)
 {
-    import std.utf : encode;
+    import std.utf : encode, stride;
 
     Unqual!(typeof(s[0]))[] r;
     dchar lastc;
@@ -5423,10 +5414,10 @@ S squeeze(S)(S s, in S pattern = null)
             {
                 if (r is null)
                     r = s[0 .. lasti].dup;
-                std.utf.encode(r, c);
+                encode(r, c);
             }
             else
-                lasti = i + std.utf.stride(s, i);
+                lasti = i + stride(s, i);
             lastc = c;
         }
         else
@@ -5436,7 +5427,7 @@ S squeeze(S)(S s, in S pattern = null)
             {
                 if (r is null)
                     r = s[0 .. lasti].dup;
-                std.utf.encode(r, c);
+                encode(r, c);
             }
         }
     }
@@ -5525,7 +5516,7 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
 {
     import std.ascii : isAlphaNum;
 
-    if (s.length && std.ascii.isAlphaNum(s[$ - 1]))
+    if (s.length && isAlphaNum(s[$ - 1]))
     {
         auto r = s.dup;
         size_t i = r.length - 1;
@@ -5558,7 +5549,7 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
                 break;
 
             default:
-                if (std.ascii.isAlphaNum(c))
+                if (isAlphaNum(c))
                     r[i]++;
                 return r;
             }
@@ -5672,10 +5663,10 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
         for (size_t i = 0; i < from.length; )
         {
-            dchar f = std.utf.decode(from, i);
+            dchar f = decode(from, i);
             if (f == '-' && lastf != dchar.init && i < from.length)
             {
-                dchar nextf = std.utf.decode(from, i);
+                dchar nextf = decode(from, i);
                 if (lastf <= c && c <= nextf)
                 {
                     n += c - lastf - 1;
@@ -5705,10 +5696,10 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
         // Find the nth character in to[]
         dchar nextt;
         for (size_t i = 0; i < to.length; )
-        {   dchar t = std.utf.decode(to, i);
+        {   dchar t = decode(to, i);
             if (t == '-' && lastt != dchar.init && i < to.length)
             {
-                nextt = std.utf.decode(to, i);
+                nextt = decode(to, i);
                 n -= nextt - lastt;
                 if (n < 0)
                 {
@@ -6237,30 +6228,6 @@ unittest
  * in one of a known set of strings, and the program will helpfully
  * autocomplete the string once sufficient characters have been
  * entered that uniquely identify it.
- * Example:
- * ---
- * import std.stdio;
- * import std.string;
- *
- * void main()
- * {
- *    static string[] list = [ "food", "foxy" ];
- *
- *    auto abbrevs = std.string.abbrev(list);
- *
- *    foreach (key, value; abbrevs)
- *    {
- *       writefln("%s => %s", key, value);
- *    }
- * }
- * ---
- * produces the output:
- * <pre>
- * fox =&gt; foxy
- * food =&gt; food
- * foxy =&gt; foxy
- * foo =&gt; food
- * </pre>
  */
 
 string[string] abbrev(string[] values) @safe pure
@@ -6292,7 +6259,9 @@ string[string] abbrev(string[] values) @safe pure
                 break;
         }
 
-        for (size_t j = 0; j < value.length; j += std.utf.stride(value, j))
+        import std.utf : stride;
+
+        for (size_t j = 0; j < value.length; j += stride(value, j))
         {
             string v = value[0 .. j];
 
@@ -6309,6 +6278,18 @@ string[string] abbrev(string[] values) @safe pure
 
     return result;
 }
+
+///
+unittest
+{
+    import std.string;
+
+    static string[] list = [ "food", "foxy" ];
+    auto abbrevs = std.string.abbrev(list);
+    assert(abbrevs == ["fox": "foxy", "food": "food",
+                       "foxy": "foxy", "foo": "food"]);
+}
+
 
 @trusted pure unittest
 {
@@ -6492,6 +6473,7 @@ unittest
 S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
         S indent = null, in size_t tabsize = 8) if (isSomeString!S)
 {
+    import std.uni: isWhite;
     typeof(s.dup) result;
     bool inword;
     bool first = true;
@@ -6505,7 +6487,7 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
     auto col = column(firstindent, tabsize);
     foreach (size_t i, dchar c; s)
     {
-        if (std.uni.isWhite(c))
+        if (isWhite(c))
         {
             if (inword)
             {
@@ -6871,3 +6853,4 @@ pure unittest
         assert(equal(jt, hti));
     }
 }
+

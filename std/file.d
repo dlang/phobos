@@ -1074,7 +1074,7 @@ version(Windows) unittest
  +/
 void setTimes(R)(R name,
               SysTime accessTime,
-              SysTime modificationTime) @safe
+              SysTime modificationTime)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
@@ -1146,13 +1146,13 @@ void setTimes(R)(R name,
 
 void setTimes(R)(auto ref R name,
               SysTime accessTime,
-              SysTime modificationTime) @safe
+              SysTime modificationTime)
     if (isConvertibleToString!R)
 {
     setTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, setTimes(TestAliasedString("foo"), SysTime.init, SysTime.init)));
 }
@@ -1317,7 +1317,7 @@ unittest
  * Params:
  *    name = string or range of characters representing the file name
  * Returns:
- *    true if it exists
+ *    true if the filename specified as input exists
  */
 bool exists(R)(R name)
     if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1383,8 +1383,8 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  Returns the attributes of the given file.
 
  Note that the file attributes on Windows and Posix systems are
- completely different. On Windows, they're what is returned by $(WEB
- msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
+ completely different. On Windows, they're what is returned by
+ $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
  GetFileAttributes), whereas on Posix systems, they're the $(LUCKY
  st_mode) value which is part of the $(D stat struct) gotten by
  calling the $(WEB en.wikipedia.org/wiki/Stat_%28Unix%29, $(D stat))
@@ -2206,18 +2206,17 @@ unittest
 /++
     $(BLUE This function is Posix-Only.)
 
-    Creates a symlink.
+    Creates a symbolic _link (_symlink).
 
     Params:
-        original = The file to link from.
-        link     = The symlink to create.
-
-    Note:
-        Relative paths are relative to the current working directory,
-        not the files being linked to or from.
+        original = The file that is being linked. This is the target path that's
+            stored in the _symlink. A relative path is relative to the created
+            _symlink.
+        link = The _symlink to create. A relative path is relative to the
+            current working directory.
 
     Throws:
-        $(D FileException) on error (which includes if the symlink already
+        $(D FileException) on error (which includes if the _symlink already
         exists).
   +/
 version(StdDdoc) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe;
@@ -2395,6 +2394,9 @@ version (OSX)
 else version (FreeBSD)
     private extern (C) int sysctl (const int* name, uint namelen, void* oldp,
         size_t* oldlenp, const void* newp, size_t newlen);
+else version (NetBSD)
+    private extern (C) int sysctl (const int* name, uint namelen, void* oldp,
+        size_t* oldlenp, const void* newp, size_t newlen);
 
 /**
  * Returns the full path of the current executable.
@@ -2463,6 +2465,10 @@ else version (FreeBSD)
         errnoEnforce(result == 0);
 
         return buffer.assumeUnique;
+    }
+    else version (NetBSD)
+    {
+        return readLink("/proc/self/exe");
     }
     else version (Solaris)
     {
@@ -3093,7 +3099,7 @@ void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve 
 
 unittest // issue 15319
 {
-    import std.path: dirEntries;
+    import std.file : dirEntries;
     auto fs = dirEntries(getcwd, SpanMode.depth);
     assert(__traits(compiles, copy(fs.front, fs.front)));
 }
@@ -3119,6 +3125,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     else version(Posix)
     {
         import core.stdc.stdio;
+        static import std.conv;
 
         immutable fd = core.sys.posix.fcntl.open(fromz, O_RDONLY);
         cenforce(fd != -1, f, fromz);
@@ -3159,7 +3166,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
                 size -= toxfer;
             }
             if (preserve)
-                cenforce(fchmod(fdw, statbuf.st_mode) == 0, f, fromz);
+                cenforce(fchmod(fdw, std.conv.to!mode_t(statbuf.st_mode)) == 0, f, fromz);
         }
 
         cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
@@ -3268,6 +3275,7 @@ version(Windows) unittest
 
 version(Posix) unittest
 {
+    import std.process: executeShell;
     collectException(rmdirRecurse(deleteme));
     auto d = deleteme~"/a/b/c/d/e/f/g";
     enforce(collectException(mkdir(d)));
@@ -3283,7 +3291,7 @@ version(Posix) unittest
     mkdirRecurse(d);
     version(Android) string link_cmd = "ln -s ";
     else string link_cmd = "ln -sf ";
-    std.process.executeShell(link_cmd~deleteme~"/a/b/c "~deleteme~"/link");
+    executeShell(link_cmd~deleteme~"/a/b/c "~deleteme~"/link");
     rmdirRecurse(deleteme);
     enforce(!exists(deleteme));
 }
@@ -3902,6 +3910,11 @@ string tempDir() @trusted
             wchar[MAX_PATH + 2] buf;
             DWORD len = GetTempPathW(buf.length, buf.ptr);
             if (len) cache = toUTF8(buf[0 .. len]);
+        }
+        else version(Android)
+        {
+            // Don't check for a global temporary directory as
+            // Android doesn't have one.
         }
         else version(Posix)
         {

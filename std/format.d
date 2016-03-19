@@ -1074,7 +1074,8 @@ struct FormatSpec(Char)
     //--------------------------------------------------------------------------
     private bool readUpToNextSpec(R)(ref R r)
     {
-        import std.ascii : isLower;
+        import std.ascii : isLower, isWhite;
+        import std.utf : stride;
 
         // Reset content
         if (__ctfe)
@@ -1120,8 +1121,8 @@ struct FormatSpec(Char)
             {
                 if (trailing.ptr[0] == ' ')
                 {
-                    while (!r.empty && std.ascii.isWhite(r.front)) r.popFront();
-                    //r = std.algorithm.find!(not!(std.ascii.isWhite))(r);
+                    while (!r.empty && isWhite(r.front)) r.popFront();
+                    //r = std.algorithm.find!(not!(isWhite))(r);
                 }
                 else
                 {
@@ -1131,7 +1132,7 @@ struct FormatSpec(Char)
                     if (r.front != trailing.front) break;
                     r.popFront();
                 }
-                trailing = trailing[std.utf.stride(trailing, 0) .. $];
+                trailing = trailing[stride(trailing, 0) .. $];
             }
         }
         return false;
@@ -1435,7 +1436,6 @@ Params:
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    import std.system : Endian;
     alias U = IntegralTypeOf!T;
     U val = obj;    // Extracting alias this may be impure/system/may-throw
 
@@ -1445,10 +1445,8 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         auto raw = (ref val)@trusted{
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
-        if (std.system.endian == Endian.littleEndian && f.flPlus
-            || std.system.endian == Endian.bigEndian && f.flDash)
+        if (needToSwapEndianess(f))
         {
-            // must swap bytes
             foreach_reverse (c; raw)
                 put(w, c);
         }
@@ -1562,7 +1560,8 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
     }
     // adjust precision to print a '0' for octal if alternate format is on
     else if (base == 8 && fs.flHash &&
-             (precision <= 1 || precision <= digits.length)) // too low precision
+             (precision <= 1 || precision <= digits.length) && // too low precision
+             digits.length > 0)
         prefix1 = '0';
 
     size_t zerofill = precision > digits.length ? precision - digits.length : 0;
@@ -1674,7 +1673,6 @@ void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import core.stdc.stdio : snprintf;
-    import std.system : Endian;
     import std.algorithm : find, min;
     FormatSpec!Char fs = f; // fs is copy for change its values.
     FloatingPointTypeOf!T val = obj;
@@ -1685,10 +1683,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         auto raw = (ref val)@trusted{
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
-        if (std.system.endian == Endian.littleEndian && f.flPlus
-            || std.system.endian == Endian.bigEndian && f.flDash)
+        if (needToSwapEndianess(f))
         {
-            // must swap bytes
             foreach_reverse (c; raw)
                 put(w, c);
         }
@@ -1793,9 +1789,7 @@ unittest
         formatTest( to!(    const T)(5.5), "5.5" );
         formatTest( to!(immutable T)(5.5), "5.5" );
 
-        // bionic doesn't support lower-case string formatting of nan yet
-        version(CRuntime_Bionic) { formatTest( T.nan, "NaN" ); }
-        else { formatTest( T.nan, "nan" ); }
+        formatTest( T.nan, "nan" );
     }
 }
 
@@ -2501,7 +2495,7 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
     import std.uni : isGraphical;
 
     string fmt;
-    if (std.uni.isGraphical(c))
+    if (isGraphical(c))
     {
         if (c == quote || c == '\\')
             put(w, '\\');
@@ -2551,7 +2545,9 @@ if (is(StringTypeOf!T) && !is(T == enum))
             put(app, '\"');
             for (size_t i = 0; i < str.length; )
             {
-                auto c = std.utf.decode(str, i);
+                import std.utf : decode;
+
+                auto c = decode(str, i);
                 // \uFFFE and \uFFFF are considered valid by isValidDchar,
                 // so need checking for interchange.
                 if (c == 0xFFFE || c == 0xFFFF)
@@ -3722,13 +3718,6 @@ unittest
             || stream.data == "1.67 -0X1.47AE147AE147BP+0 nan", // MSVCRT 14+ (VS 2015)
                 stream.data);
     }
-    else version (CRuntime_Bionic)
-    {
-        // bionic doesn't support hex formatting of floating point numbers
-        // or lower-case string formatting of nan yet, but it was committed
-        // recently (April 2014):
-        // https://code.google.com/p/android/issues/detail?id=64886
-    }
     else
     {
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
@@ -3757,12 +3746,6 @@ unittest
     version (CRuntime_Microsoft)
         assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2"
             || stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB860000000P+2"); // MSVCRT 14+ (VS 2015)
-    else version (CRuntime_Bionic)
-    {
-        // bionic doesn't support hex formatting of floating point numbers,
-        // but it was committed recently (April 2014):
-        // https://code.google.com/p/android/issues/detail?id=64886
-    }
     else
         assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
     stream.clear();
@@ -5993,7 +5976,8 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
                     if (c > 0x7F)        // if UTF sequence
                     {
                         i--;                // back up and decode UTF sequence
-                        c = std.utf.decode(fmt, i);
+                        import std.utf : decode;
+                        c = decode(fmt, i);
                     }
                   Lputc:
                     putc(c);
@@ -6089,6 +6073,15 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
     throw new FormatException();
 }
 
+
+private bool needToSwapEndianess(Char)(ref FormatSpec!Char f)
+{
+    import std.system : endian, Endian;
+
+    return endian == Endian.littleEndian && f.flPlus
+        || endian == Endian.bigEndian && f.flDash;
+}
+
 /* ======================== Unit Tests ====================================== */
 
 unittest
@@ -6118,13 +6111,6 @@ unittest
     else version (CRuntime_Microsoft)
         assert(s == "1.67 -0X1.47AE14P+0 nan"
             || s == "1.67 -0X1.47AE147AE147BP+0 nan", s); // MSVCRT 14+ (VS 2015)
-    else version (CRuntime_Bionic)
-    {
-        // bionic doesn't support hex formatting of floating point numbers
-        // or lower-case string formatting of nan yet, but it was committed
-        // recently (April 2014):
-        // https://code.google.com/p/android/issues/detail?id=64886
-    }
     else
         assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 
@@ -6308,6 +6294,8 @@ unittest
     assert(r == "012345");
     r = format("%o", 9);
     assert(r == "11");
+    r = format("%#o", 0);   // issue 15663
+    assert(r == "0");
 
     r = format("%+d", 123);
     assert(r == "+123");

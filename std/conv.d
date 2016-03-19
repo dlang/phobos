@@ -1939,7 +1939,7 @@ Target parse(Target, Source)(ref Source s)
     }
     else
     {
-        // Larger than int types
+        // int or larger types
 
         static if (Target.min < 0)
             bool sign = 0;
@@ -1953,7 +1953,6 @@ Target parse(Target, Source)(ref Source s)
             goto Lerr;
 
         c = s.front;
-        s.popFront();
         static if (Target.min < 0)
         {
             switch (c)
@@ -1962,10 +1961,10 @@ Target parse(Target, Source)(ref Source s)
                     sign = true;
                     goto case '+';
                 case '+':
+                    s.popFront();
                     if (s.empty)
                         goto Lerr;
                     c = s.front;
-                    s.popFront();
                     break;
 
                 default:
@@ -1976,6 +1975,7 @@ Target parse(Target, Source)(ref Source s)
         if (c <= 9)
         {
             Target v = cast(Target)c;
+            s.popFront();
             while (!s.empty)
             {
                 c = cast(typeof(c)) (s.front - '0');
@@ -2180,6 +2180,36 @@ Lerr:
 
 @safe pure unittest
 {
+    void checkErrMsg(string input, dchar charInMsg, dchar charNotInMsg)
+    {
+        try
+        {
+            int x = input.to!int();
+            assert(false, "Invalid conversion did not throw");
+        }
+        catch(ConvException e)
+        {
+            // Ensure error message contains failing character, not the character
+            // beyond.
+            import std.algorithm.searching : canFind;
+            assert( e.msg.canFind(charInMsg) &&
+                   !e.msg.canFind(charNotInMsg));
+        }
+        catch(Exception e)
+        {
+            assert(false, "Did not throw ConvException");
+        }
+    }
+    checkErrMsg("@$", '@', '$');
+    checkErrMsg("@$123", '@', '$');
+    checkErrMsg("1@$23", '@', '$');
+    checkErrMsg("1@$", '@', '$');
+    checkErrMsg("1@$2", '@', '$');
+    checkErrMsg("12@$", '@', '$');
+}
+
+@safe pure unittest
+{
     import std.exception;
     assertCTFEable!({ string s =  "1234abc"; assert(parse! int(s) ==  1234 && s == "abc"); });
     assertCTFEable!({ string s = "-1234abc"; assert(parse! int(s) == -1234 && s == "abc"); });
@@ -2228,7 +2258,7 @@ body
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
     Target v = 0;
-    size_t atStart = true;
+    bool atStart = true;
 
     for (; !s.empty; s.popFront())
     {
@@ -2832,7 +2862,21 @@ unittest
 
     // min and max
     real r = to!real(to!string(real.min_normal));
-    assert(to!string(r) == to!string(real.min_normal));
+    version(NetBSD)
+    {
+        // NetBSD notice
+        // to!string returns 3.3621e-4932L. It is less than real.min_normal and it is subnormal value
+        // Simple C code
+        //     long double rd = 3.3621e-4932L;
+        //     printf("%Le\n", rd);
+        // has unexpected result: 1.681050e-4932
+        //
+        // Bug report: http://gnats.netbsd.org/cgi-bin/query-pr-single.pl?number=50937
+    }
+    else
+    {
+        assert(to!string(r) == to!string(real.min_normal));
+    }
     r = to!real(to!string(real.max));
     assert(to!string(r) == to!string(real.max));
 }
@@ -3896,6 +3940,8 @@ if (is(UT == Unqual!T))
     {
         static assert (is(typeof({static T i;})),
             convFormat("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
+        static if (is(T == class)) static assert (!isAbstractClass!T,
+            T.stringof ~ " is abstract and it can't be emplaced");
         emplaceInitializer(chunk);
     }
     else static if (
@@ -4045,14 +4091,17 @@ $(D T) is $(D @safe).
 Returns: A pointer to the newly constructed object.
  */
 T emplace(T, Args...)(void[] chunk, auto ref Args args)
-    if (is(T == class))
+if (is(T == class))
 {
+    static assert (!isAbstractClass!T, T.stringof ~
+        " is abstract and it can't be emplaced");
+
     enum classSize = __traits(classInstanceSize, T);
     testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
     auto result = cast(T) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
-    chunk[0 .. classSize] = typeid(T).init[];
+    chunk[0 .. classSize] = typeid(T).initializer[];
 
     // Call the ctor if any
     static if (is(typeof(result.__ctor(args))))
@@ -4184,6 +4233,19 @@ version(unittest) private class __conv_EmplaceTestClass
         this.i = i;
         ++j;
     }
+}
+
+unittest // bugzilla 15772
+{
+    abstract class Foo {}
+    class Bar: Foo {}
+    void[] memory;
+    // test in emplaceInitializer
+    static assert(!is(typeof(emplace!Foo(cast(Foo*) memory.ptr))));
+    static assert( is(typeof(emplace!Bar(cast(Bar*) memory.ptr))));
+    // test in the emplace overload that takes void[]
+    static assert(!is(typeof(emplace!Foo(memory))));
+    static assert( is(typeof(emplace!Bar(memory))));
 }
 
 unittest
@@ -4389,7 +4451,7 @@ unittest
     static struct S2
     {
         int* p;
-        this(const S2){};
+        this(const S2){}
     }
     static assert(!is(immutable S2 : S2));
     S2 s2 = void;
@@ -4773,9 +4835,10 @@ unittest //@@@9559@@@
 {
     import std.algorithm : map;
     import std.typecons : Nullable;
+    import std.array: array;
     alias I = Nullable!int;
     auto ints = [0, 1, 2].map!(i => i & 1 ? I.init : I(i))();
-    auto asArray = std.array.array(ints);
+    auto asArray = array(ints);
 }
 
 unittest //http://forum.dlang.org/post/nxbdgtdlmwscocbiypjs@forum.dlang.org
@@ -5515,26 +5578,38 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
          * ulong.max is 1844_6744_0737_0955_1615
          *  long.max is  922_3372_0368_5477_5807
          */
-        struct Result
+        static struct Result
         {
-            this(UT value)
+            void initialize(UT value)
             {
                 bool neg = false;
-                if (value < 0)
+                if (value < 10)
                 {
+                    if (value >= 0)
+                    {
+                        lwr = 0;
+                        upr = 1;
+                        buf[0] = cast(char)(cast(uint)value + '0');
+                        return;
+                    }
                     value = -value;
                     neg = true;
                 }
-                size_t i = buf.length;
-                do
+                auto i = cast(uint)buf.length - 1;
+                while (cast(Unsigned!UT)value >= 10)
                 {
-                    buf[--i] = cast(ubyte)('0' + cast(Unsigned!UT)value % 10);
-                    value = cast(Unsigned!UT)value / 10;
-                } while (value);
+                    buf[i] = cast(ubyte)('0' + cast(Unsigned!UT)value % 10);
+                    value = unsigned(value) / 10;
+                    --i;
+                }
+                buf[i] = cast(char)(cast(uint)value + '0');
                 if (neg)
-                    buf[--i] = '-';
-                lwr = cast(ubyte)i;
-                upr = cast(ubyte)buf.length;
+                {
+                    buf[i - 1] = '-';
+                    --i;
+                }
+                lwr = i;
+                upr = cast(uint)buf.length;
             }
 
             @property size_t length() { return upr - lwr; }
@@ -5557,17 +5632,19 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
             {
                 Result result = void;
                 result.buf = buf;
-                result.lwr = cast(ubyte)(this.lwr + lwr);
-                result.upr = cast(ubyte)(this.lwr + upr);
+                result.lwr = cast(uint)(this.lwr + lwr);
+                result.upr = cast(uint)(this.lwr + upr);
                 return result;
             }
 
           private:
-            char[(UT.sizeof == 4) ? 10 + isSigned!T : 20] buf;
-            ubyte lwr, upr;
+            uint lwr = void, upr = void;
+            char[(UT.sizeof == 4) ? 10 + isSigned!T : 20] buf = void;
         }
 
-        return Result(value);
+        Result result = void;
+        result.initialize(value);
+        return result;
     }
     else
     {
@@ -5719,3 +5796,4 @@ unittest
         assert(s.retro.array == "01");
     }
 }
+

@@ -113,7 +113,7 @@ SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\ut
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 	std\bitmanip.d std\typecons.d \
 	std\uni.d std\base64.d std\ascii.d \
-	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
+	std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
 SRC_STD_3a= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\encoding.d std\xml.d \
@@ -167,8 +167,7 @@ SRC_STD_ALLOC= std\experimental\allocator\common.d std\experimental\allocator\gc
 	std\experimental\allocator\package.d \
 	$(SRC_STD_ALLOC_BB)
 
-SRC_STD_6= std\variant.d \
-	std\syserror.d std\zlib.d \
+SRC_STD_6= std\variant.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\conv.d std\zip.d std\cstream.d \
 	$(SRC_STD_CONTAINER) $(SRC_STD_LOGGER) $(SRC_STD_ALLOC)
@@ -189,8 +188,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
-	std\meta.d std\metastrings.d std\mmfile.d \
-	std\syserror.d \
+	std\meta.d std\mmfile.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
@@ -555,7 +553,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\setops.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\sorting.d
 	$(DMD) -conf= -cov=83 -unittest -main -run std\variant.d
-	$(DMD) -conf= -cov=0  -unittest -main -run std\syserror.d
 	$(DMD) -conf= -cov=58 -unittest -main -run std\zlib.d
 	$(DMD) -conf= -cov=54 -unittest -main -run std\stream.d
 	$(DMD) -conf= -cov=53 -unittest -main -run std\socket.d
@@ -1058,38 +1055,9 @@ $(DOC)\etc_c_odbc_sql.html : $(STDDOC) etc\c\odbc\sql.d
 
 ######################################################
 
-zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
-	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
-	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
-	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_NDSLICE) $(SRC_STD_ALGO) \
-	$(SRC_STD_LOGGER) $(SRC_STD_ALLOC)
+zip:
 	del phobos.zip
-	zip32 -u phobos win32.mak win64.mak posix.mak osmodel.mak $(STDDOC)
-	zip32 -u phobos $(SRC)
-	zip32 -u phobos $(SRC_STD)
-	zip32 -u phobos $(SRC_STD_C)
-	zip32 -u phobos $(SRC_STD_WIN)
-	zip32 -u phobos $(SRC_STD_C_WIN)
-	zip32 -u phobos $(SRC_STD_C_LINUX)
-	zip32 -u phobos $(SRC_STD_C_OSX)
-	zip32 -u phobos $(SRC_STD_C_FREEBSD)
-	zip32 -u phobos $(SRC_STD_INTERNAL)
-	zip32 -u phobos $(SRC_STD_INTERNAL_DIGEST)
-	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
-	zip32 -u phobos $(SRC_STD_INTERNAL_WINDOWS)
-	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
-	zip32 -u phobos $(SRC_ZLIB)
-	zip32 -u phobos $(SRC_STD_NET)
-	zip32 -u phobos $(SRC_STD_LOGGER)
-	zip32 -u phobos $(SRC_STD_ALLOC)
-	zip32 -u phobos $(SRC_STD_DIGEST)
-	zip32 -u phobos $(SRC_STD_CONTAINER)
-	zip32 -u phobos $(SRC_STD_REGEX)
-	zip32 -u phobos $(SRC_STD_RANGE)
-	zip32 -u phobos $(SRC_STD_NDSLICE)
-	zip32 -u phobos $(SRC_STD_ALGO)
+	zip32 -r phobos.zip . -x .git\* -x \*.lib -x \*.obj
 
 phobos.zip : zip
 

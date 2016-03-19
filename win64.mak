@@ -119,7 +119,7 @@ SRC_STD_3= std\csv.d std\complex.d std\numeric.d std\bigint.d
 SRC_STD_3c= std\datetime.d std\bitmanip.d std\typecons.d
 
 SRC_STD_3a= std\uni.d std\base64.d std\ascii.d \
-	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
+	std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
 SRC_STD_3b= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\encoding.d std\xml.d \
@@ -174,7 +174,6 @@ SRC_STD_5a=$(SRC_STD_ALGO_1)
 SRC_STD_5b=$(SRC_STD_ALGO_2)
 
 SRC_STD_6a=std\variant.d
-SRC_STD_6b=std\syserror.d
 SRC_STD_6c=std\zlib.d
 SRC_STD_6d=std\stream.d
 SRC_STD_6e=std\socket.d
@@ -190,11 +189,12 @@ SRC_STD_7= \
 	std\mathspecial.d \
 	std\process.d
 
+SRC_STD_9= $(SRC_STD_ALLOC)
+
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_math) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_3c) $(SRC_STD_4) \
 	$(SRC_STD_6a) \
-	$(SRC_STD_6b) \
 	$(SRC_STD_6c) \
 	$(SRC_STD_6d) \
 	$(SRC_STD_6e) \
@@ -205,7 +205,7 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_6j) \
 	$(SRC_STD_7) \
 	$(SRC_STD_LOGGER) \
-	$(SRC_STD_ALLOC)
+	$(SRC_STD_9)
 
 SRC=	unittest.d index.d
 
@@ -213,8 +213,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
-	std\meta.d std\metastrings.d std\mmfile.d \
-	std\syserror.d \
+	std\meta.d std\mmfile.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
@@ -500,7 +499,6 @@ UNITTEST_OBJS= \
 		unittest5a.obj \
 		unittest5b.obj \
 		unittest6a.obj \
-		unittest6b.obj \
 		unittest6c.obj \
 		unittest6d.obj \
 		unittest6e.obj \
@@ -510,7 +508,8 @@ UNITTEST_OBJS= \
 		unittest6i.obj \
 		unittest6j.obj \
 		unittest7.obj \
-		unittest8.obj
+		unittest8.obj \
+		unittest9.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
@@ -526,7 +525,6 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5a.obj $(SRC_STD_5a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_5b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6b.obj $(SRC_STD_6b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6d.obj $(SRC_STD_6d)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6e.obj $(SRC_STD_6e)
@@ -537,6 +535,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_LOGGER)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9.obj $(SRC_STD_9)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
 	    $(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
@@ -1037,38 +1036,9 @@ $(DOC)\etc_c_odbc_sql.html : $(STDDOC) etc\c\odbc\sql.d
 
 ######################################################
 
-zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
-	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
-	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
-	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_NDSLICE) $(SRC_STD_ALGO) \
-	$(SRC_STD_LOGGER) $(SRC_STD_ALLOC)
+zip:
 	del phobos.zip
-	zip32 -u phobos win32.mak win64.mak posix.mak osmodel.mak $(STDDOC)
-	zip32 -u phobos $(SRC)
-	zip32 -u phobos $(SRC_STD)
-	zip32 -u phobos $(SRC_STD_C)
-	zip32 -u phobos $(SRC_STD_WIN)
-	zip32 -u phobos $(SRC_STD_C_WIN)
-	zip32 -u phobos $(SRC_STD_C_LINUX)
-	zip32 -u phobos $(SRC_STD_C_OSX)
-	zip32 -u phobos $(SRC_STD_C_FREEBSD)
-	zip32 -u phobos $(SRC_STD_INTERNAL)
-	zip32 -u phobos $(SRC_STD_INTERNAL_DIGEST)
-	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
-	zip32 -u phobos $(SRC_STD_INTERNAL_WINDOWS)
-	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
-	zip32 -u phobos $(SRC_ZLIB)
-	zip32 -u phobos $(SRC_STD_NET)
-	zip32 -u phobos $(SRC_STD_LOGGER)
-	zip32 -u phobos $(SRC_STD_ALLOC)
-	zip32 -u phobos $(SRC_STD_DIGEST)
-	zip32 -u phobos $(SRC_STD_CONTAINER)
-	zip32 -u phobos $(SRC_STD_REGEX)
-	zip32 -u phobos $(SRC_STD_RANGE)
-	zip32 -u phobos $(SRC_STD_NDSLICE)
-	zip32 -u phobos $(SRC_STD_ALGO)
+	zip32 -r phobos.zip . -x .git\* -x \*.lib -x \*.obj
 
 phobos.zip : zip
 

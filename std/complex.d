@@ -284,7 +284,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
         if (op == "^^" && isNumeric!R)
     {
-        import std.math : log, exp, PI;
+        import std.math : cos, exp, log, sin, PI;
         Unqual!(CommonType!(T, R)) ab = void, ar = void;
 
         if (lhs >= 0)
@@ -302,7 +302,7 @@ struct Complex(T)  if (isFloatingPoint!T)
             ar = PI * this.re + log(-lhs) * this.im;
         }
 
-        return typeof(return)(ab * std.math.cos(ar), ab * std.math.sin(ar));
+        return typeof(return)(ab * cos(ar), ab * sin(ar));
     }
 
     // OP-ASSIGN OPERATORS
@@ -356,14 +356,14 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
-        import std.math : exp, log;
+        import std.math: exp, log, cos, sin;
         immutable r = abs(this);
         immutable t = arg(this);
         immutable ab = r^^z.re * exp(-t*z.im);
         immutable ar = t*z.re + log(r)*z.im;
 
-        re = ab*std.math.cos(ar);
-        im = ab*std.math.sin(ar);
+        re = ab*cos(ar);
+        im = ab*sin(ar);
         return this;
     }
 
@@ -388,10 +388,11 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
     {
+        import std.math: cos, sin;
         immutable ab = abs(this)^^r;
         immutable ar = arg(this)*r;
-        re = ab*std.math.cos(ar);
-        im = ab*std.math.sin(ar);
+        re = ab*cos(ar);
+        im = ab*sin(ar);
         return this;
     }
 
@@ -663,6 +664,7 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
 ///
 unittest
 {
+    static import std.math;
     assert (abs(complex(1.0)) == 1.0);
     assert (abs(complex(0.0, 1.0)) == 1.0);
     assert (abs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
@@ -757,8 +759,9 @@ unittest
 Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
     @safe pure nothrow @nogc
 {
+    import std.math : sin, cos;
     return Complex!(CommonType!(T,U))
-        (modulus*std.math.cos(argument), modulus*std.math.sin(argument));
+        (modulus*cos(argument), modulus*sin(argument));
 }
 
 ///
@@ -788,8 +791,9 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 ///
 unittest
 {
-  assert(sin(complex(0.0)) == 0.0);
-  assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
+    static import std.math;
+    assert(sin(complex(0.0)) == 0.0);
+    assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
 }
 
 
@@ -831,6 +835,8 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
 ///
 unittest
 {
+    static import std.math;
+
     assert(expi(1.3e5L) == complex(std.math.cos(1.3e5L), std.math.sin(1.3e5L)));
     assert(expi(0.0L) == 1.0L);
     auto z1 = expi(1.234);
@@ -845,7 +851,7 @@ unittest
 */
 Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    import std.math : fabs;
+    static import std.math;
     typeof(return) c;
     real x,y,w,r;
 
@@ -858,8 +864,8 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
         real z_re = z.re;
         real z_im = z.im;
 
-        x = fabs(z_re);
-        y = fabs(z_im);
+        x = std.math.fabs(z_re);
+        y = std.math.fabs(z_im);
         if (x >= y)
         {
             r = y / x;
@@ -890,6 +896,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 ///
 unittest
 {
+    static import std.math;
     assert (sqrt(complex(0.0)) == 0.0);
     assert (sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
     assert (sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));

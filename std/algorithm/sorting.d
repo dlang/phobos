@@ -362,38 +362,66 @@ Range partition(alias predicate,
     {
         // Inspired from www.stepanovpapers.com/PAM3-partition_notes.pdf,
         // section "Bidirectional Partition Algorithm (Hoare)"
-        auto result = r;
-        for (;;)
+        static if (isDynamicArray!Range)
         {
+            // For dynamic arrays prefer index-based manipulation
+            if (!r.length) return r;
+            size_t lo = 0, hi = r.length - 1;
             for (;;)
             {
-                if (r.empty) return result;
-                if (!pred(r.front)) break;
+                for (;;)
+                {
+                    if (lo > hi) return r[lo .. $];
+                    if (!pred(r[lo])) break;
+                    ++lo;
+                }
+                // found the left bound
+                assert(lo <= hi);
+                for (;;)
+                {
+                    if (lo == hi) return r[lo .. $];
+                    if (pred(r[hi])) break;
+                    --hi;
+                }
+                // found the right bound, swap & make progress
+                swap(r[lo++], r[hi--]);
+            }
+        }
+        else
+        {
+            auto result = r;
+            for (;;)
+            {
+                for (;;)
+                {
+                    if (r.empty) return result;
+                    if (!pred(r.front)) break;
+                    r.popFront();
+                    result.popFront();
+                }
+                // found the left bound
+                assert(!r.empty);
+                for (;;)
+                {
+                    if (pred(r.back)) break;
+                    r.popBack();
+                    if (r.empty) return result;
+                }
+                // found the right bound, swap & make progress
+                static if (is(typeof(swap(r.front, r.back))))
+                {
+                    swap(r.front, r.back);
+                }
+                else
+                {
+                    auto t1 = moveFront(r), t2 = moveBack(r);
+                    r.front = t2;
+                    r.back = t1;
+                }
                 r.popFront();
                 result.popFront();
-            }
-            // found the left bound
-            assert(!r.empty);
-            for (;;)
-            {
-                if (pred(r.back)) break;
                 r.popBack();
-                if (r.empty) return result;
             }
-            // found the right bound, swap & make progress
-            static if (is(typeof(swap(r.front, r.back))))
-            {
-                swap(r.front, r.back);
-            }
-            else
-            {
-                auto t1 = moveFront(r), t2 = moveBack(r);
-                r.front = t2;
-                r.back = t1;
-            }
-            r.popFront();
-            result.popFront();
-            r.popBack();
         }
     }
 }
@@ -970,6 +998,9 @@ always satisfy these conditions for floating point types, because the expression
 will always be $(D false) when either $(D a) or $(D b) is NaN.
 Use $(XREF math, cmp) instead.
 
+If `less` involves expensive computations on the _sort key, it may be
+worthwhile to use $(LREF schwartzSort) instead.
+
 Params:
     less = The predicate to sort by.
     ss = The swapping strategy to use.
@@ -1242,59 +1273,104 @@ package(std) template HeapOps(alias less, Range)
     void heapSort()(Range r)
     {
         // If true, there is nothing to do
-        if(r.length < 2) return;
-
+        if (r.length < 2) return;
         // Build Heap
         buildHeap(r);
-
         // Sort
-        size_t i = r.length - 1;
-        while(i > 0)
+        for (size_t i = r.length - 1; i > 0; --i)
         {
-            swapAt(r, 0, i);
+            r.swapAt(0, i);
             percolate(r, 0, i);
-            --i;
         }
     }
 
     //template because of @@@12410@@@
     void buildHeap()(Range r)
     {
-        size_t i = r.length / 2;
-        while(i > 0) percolate(r, --i, r.length);
+        immutable n = r.length;
+        for (size_t i = n / 2; i-- > 0; )
+        {
+            siftDown(r, i, n);
+        }
+        assert(isHeap(r));
     }
 
+    bool isHeap()(Range r)
+    {
+        size_t parent = 0;
+        foreach (child; 1 .. r.length)
+        {
+            if (lessFun(r[parent], r[child])) return false;
+            // Increment parent every other pass
+            parent += !(child & 1);
+        }
+        return true;
+    }
+
+    // Sifts down r[parent] (which is initially assumed to be messed up) so the
+    // heap property is restored for r[parent .. end].
+    // template because of @@@12410@@@
+    void siftDown()(Range r, size_t parent, immutable size_t end)
+    {
+        for (;;)
+        {
+            auto child = (parent + 1) * 2;
+            if (child >= end)
+            {
+                // Leftover left child?
+                if (child == end && lessFun(r[parent], r[--child]))
+                    r.swapAt(parent, child);
+                break;
+            }
+            auto leftChild = child - 1;
+            if (lessFun(r[child], r[leftChild])) child = leftChild;
+            if (!lessFun(r[parent], r[child])) break;
+            r.swapAt(parent, child);
+            parent = child;
+        }
+    }
+
+    // Alternate version of siftDown that performs fewer comparisons, see
+    // https://en.wikipedia.org/wiki/Heapsort#Bottom-up_heapsort. The percolate
+    // process first sifts the parent all the way down (without comparing it
+    // against the leaves), and then a bit up until the heap property is
+    // restored. So there are more swaps but fewer comparisons. Gains are made
+    // when the final position is likely to end toward the bottom of the heap,
+    // so not a lot of sifts back are performed.
     //template because of @@@12410@@@
     void percolate()(Range r, size_t parent, immutable size_t end)
     {
         immutable root = parent;
-        size_t child = void;
 
         // Sift down
-        while(true)
+        for (;;)
         {
-            child = parent * 2 + 1;
+            auto child = (parent + 1) * 2;
 
-            if(child >= end) break;
+            if (child >= end)
+            {
+                if (child == end)
+                {
+                    // Leftover left node.
+                    --child;
+                    r.swapAt(parent, child);
+                    parent = child;
+                }
+                break;
+            }
 
-            if(child + 1 < end && lessFun(r[child], r[child + 1])) child += 1;
-
-            swapAt(r, parent, child);
+            auto leftChild = child - 1;
+            if (lessFun(r[child], r[leftChild])) child = leftChild;
+            r.swapAt(parent, child);
             parent = child;
         }
 
-        child = parent;
-
         // Sift up
-        while(child > root)
+        for (auto child = parent; child > root; child = parent)
         {
             parent = (child - 1) / 2;
-            if(lessFun(r[parent], r[child]))
-            {
-                swapAt(r, parent, child);
-                child = parent;
-            }
-            else break;
+            if (!lessFun(r[parent], r[child])) break;
+            r.swapAt(parent, child);
         }
     }
 }
@@ -1930,14 +2006,20 @@ unittest
 
 // schwartzSort
 /**
-Sorts a range using an algorithm akin to the $(WEB
-wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also
-known as the decorate-sort-undecorate pattern in Python and Lisp.
-This function is helpful when the sort comparison includes
-an expensive computation. The complexity is the same as that of the
-corresponding $(D sort), but $(D schwartzSort) evaluates $(D
-transform) only $(D r.length) times (less than half when compared to
-regular sorting). The usage can be best illustrated with an example.
+Alternative sorting method that should be used when comparing keys involves an
+expensive computation. Instead of using `less(a, b)` for comparing elements,
+`schwartzSort` uses `less(transform(a), transform(b))`. The values of the
+`transform` function are precomputed in a temporary array, thus saving on
+repeatedly computing it. Conversely, if the cost of `transform` is small
+compared to the cost of allocating and filling the precomputed array, `sort`
+may be faster and therefore preferable.
+
+This approach to sorting is akin to the $(WEB
+wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also known as
+the decorate-sort-undecorate pattern in Python and Lisp. The complexity is the
+same as that of the corresponding `sort`, but `schwartzSort` evaluates
+`transform` only `r.length` times (less than half when compared to regular
+sorting). The usage can be best illustrated with an example.
 
 Example:
 ----
@@ -2135,7 +2217,7 @@ $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
 $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
 (if stable) evaluations of $(D less) and $(D swap).
 
-If $(D n >= r.length), the algorithm has no effect.
+If $(D n >= r.length), the algorithm has no effect and returns `r[0 .. $]`.
 
 Params:
     less = The predicate to sort by.
@@ -2157,36 +2239,52 @@ auto topN(alias less = "a < b",
         Range)(Range r, size_t nth)
     if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
 {
-    import std.algorithm : swap; // FIXME
-    import std.random : uniform;
-
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
+
+    if (nth >= r.length) return r[0 .. $];
+
     auto ret = r[0 .. nth];
-    while (r.length > nth)
+    for (;;)
     {
-        auto pivot = uniform(0, r.length);
+        assert(nth < r.length);
+        import std.algorithm.mutation : swap;
+        import std.algorithm.searching : minPos;
+        if (nth == 0)
+        {
+            // Special-case "min"
+            swap(r.front, r.minPos!less.front);
+            break;
+        }
+        if (nth + 1 == r.length)
+        {
+            // Special-case "max"
+            swap(r.back, r.minPos!((a, b) => binaryFun!less(b, a)).front);
+            break;
+        }
+        auto pivot = r.getPivot!less;
+        assert(!binaryFun!less(r[pivot], r[pivot]));
         swap(r[pivot], r.back);
-        assert(!binaryFun!(less)(r.back, r.back));
-        auto right = partition!((a) => binaryFun!less(a, r.back), ss)(r);
+        auto right = r.partition!(a => binaryFun!less(a, r.back), ss);
         assert(right.length >= 1);
-        swap(right.front, r.back);
         pivot = r.length - right.length;
-        if (pivot == nth)
+        if (pivot > nth)
         {
-            return ret;
-        }
-        if (pivot < nth)
-        {
-            ++pivot;
-            r = r[pivot .. $];
-            nth -= pivot;
-        }
-        else
-        {
+            // We don't care to swap the pivot back, won't be visited anymore
             assert(pivot < r.length);
             r = r[0 .. pivot];
+            continue;
         }
+        // Swap the pivot to where it should be
+        swap(right.front, r.back);
+        if (pivot == nth)
+        {
+            // Found Waldo!
+            break;
+        }
+        ++pivot; // skip the pivot
+        r = r[pivot .. $];
+        nth -= pivot;
     }
     return ret;
 }
@@ -2195,6 +2293,8 @@ auto topN(alias less = "a < b",
 @safe unittest
 {
     int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
+    topN!"a < b"(v, 100);
+    assert(v == [ 25, 7, 9, 2, 0, 5, 21 ]);
     auto n = 4;
     topN!"a < b"(v, n);
     assert(v[n] == 9);
@@ -2975,4 +3075,3 @@ shapes. Here's a non-trivial example:
     }
     assert(n == 60);
 }
-

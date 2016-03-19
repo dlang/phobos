@@ -155,7 +155,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     this(void[] data)
     {
         immutable a = data.ptr.effectiveAlignment;
-        assert(a >= ulong.alignof || !data.ptr,
+        assert(a >= size_t.alignof || !data.ptr,
             "Data must be aligned properly");
 
         immutable ulong totalBits = data.length * 8;

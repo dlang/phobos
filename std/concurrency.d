@@ -299,10 +299,7 @@ class MailboxFull : Exception
  */
 class TidMissingException : Exception
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__)
-    {
-        super(msg, file, line);
-    }
+    mixin basicExceptionCtors;
 }
 
 
@@ -337,9 +334,20 @@ public:
     void toString(scope void delegate(const(char)[]) sink)
     {
         import std.format;
-        formattedWrite(sink, "Tid(%x)", &mbox);
+        formattedWrite(sink, "Tid(%x)", cast(void*)mbox);
     }
 
+}
+
+unittest
+{
+    import std.conv : text;
+    Tid tid;
+    assert(text(tid) == "Tid(0)");
+    auto tid2 = thisTid;
+    assert(text(tid2) != "Tid(0)");
+    auto tid3 = tid2;
+    assert(text(tid2) == text(tid3));
 }
 
 
@@ -460,6 +468,9 @@ private template isSpawnable(F, T...)
  *
  *     // Fails:  char[] has mutable aliasing.
  *     auto tid2 = spawn(&f2, str.dup);
+ *
+ *     // New thread with anonymous function
+ *     spawn({ writeln("This is so great!"); });
  * }
  * ---
  */
@@ -1692,8 +1703,7 @@ void yield(T)(ref T value)
         cur.m_value = &value;
         return Fiber.yield();
     }
-    throw new Exception("yield(T) called with no active generator for the supplied type",
-                        __FILE__, __LINE__);
+    throw new Exception("yield(T) called with no active generator for the supplied type");
 }
 
 

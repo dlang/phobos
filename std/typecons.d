@@ -291,6 +291,18 @@ unittest
     assert(!uf2.isEmpty);
 }
 
+// Used in Tuple.toString
+private template sharedToString(alias field)
+    if(is(typeof(field) == shared))
+{
+    static immutable sharedToString = typeof(field).stringof;
+}
+
+private template sharedToString(alias field)
+    if(!is(typeof(field) == shared))
+{
+    alias sharedToString = field;
+}
 
 /**
 Tuple of values, for example $(D Tuple!(int, string)) is a record that
@@ -759,43 +771,136 @@ template Tuple(Specs...)
             return h;
         }
 
-        void toString(DG)(scope DG sink)
+        ///
+        template toString()
         {
-            enum header = typeof(this).stringof ~ "(",
-                 footer = ")",
-                 separator = ", ";
-            sink(header);
-            foreach (i, Type; Types)
+            /**
+             * Converts to string.
+             *
+             * Returns:
+             *     The string representation of this `Tuple`.
+             */
+            string toString()() const
             {
-                static if (i > 0)
+                import std.array : appender;
+                auto app = appender!string();
+                this.toString((const(char)[] chunk) => app ~= chunk);
+                return app.data;
+            }
+
+            import std.format : FormatSpec;
+
+            /**
+             * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
+             *
+             * $(TABLE2 Formats supported by Tuple,
+             * $(THEAD Format, Description)
+             * $(TROW $(P `%s`), $(P Format like `Tuple!(types)(elements formatted with %s each)`.))
+             * $(TROW $(P `%(inner%)`), $(P The format `inner` is applied the expanded `Tuple`, so
+             *      it may contain as many formats as the `Tuple` has fields.))
+             * $(TROW $(P `%(inner%|sep%)`), $(P The format `inner` is one format, that is applied
+             *      on all fields of the `Tuple`. The inner format must be compatible to all
+             *      of them.)))
+             * ---
+             *  Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
+             *
+             *  // Default format
+             *  assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
+             *
+             *  // One Format for each individual component
+             *  assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
+             *  assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
+             *
+             *  // One Format for all components
+             *  assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
+             *
+             *  // Array of Tuples
+             *  assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
+             *
+             *
+             *  // Error: %( %) missing.
+             *  assertThrown!FormatException(
+             *      format("%d, %f", tuple(1, 2.0)) == `1, 2.0`
+             *  );
+             *
+             *  // Error: %( %| %) missing.
+             *  assertThrown!FormatException(
+             *      format("%d", tuple(1, 2)) == `1, 2`
+             *  );
+             *
+             *  // Error: %d inadequate for double.
+             *  assertThrown!FormatException(
+             *      format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
+             *  );
+             * ---
+             */
+            void toString(DG)(scope DG sink) const
+            {
+                toString(sink, FormatSpec!char());
+            }
+
+            /// ditto
+            void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
+            {
+                import std.format : formatElement, formattedWrite, FormatException;
+                if (fmt.nested)
                 {
-                    sink(separator);
+                    if (fmt.sep)
+                    {
+                        foreach (i, Type; Types)
+                        {
+                            static if (i > 0)
+                            {
+                                sink(fmt.sep);
+                            }
+                            // TODO: Change this once formattedWrite() works for shared objects.
+                            static if (is(Type == class) && is(Type == shared))
+                            {
+                                sink(Type.stringof);
+                            }
+                            else
+                            {
+                                formattedWrite(sink, fmt.nested, this.field[i]);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
+                    }
                 }
-                // TODO: Change this once toString() works for shared objects.
-                static if (is(Type == class) && is(typeof(Type.init) == shared))
+                else if (fmt.spec == 's')
                 {
-                    sink(Type.stringof);
+                    enum header = Unqual!(typeof(this)).stringof ~ "(",
+                         footer = ")",
+                         separator = ", ";
+                    sink(header);
+                    foreach (i, Type; Types)
+                    {
+                        static if (i > 0)
+                        {
+                            sink(separator);
+                        }
+                        // TODO: Change this once formatElement() works for shared objects.
+                        static if (is(Type == class) && is(Type == shared))
+                        {
+                            sink(Type.stringof);
+                        }
+                        else
+                        {
+                            FormatSpec!Char f;
+                            formatElement(sink, field[i], f);
+                        }
+                    }
+                    sink(footer);
                 }
                 else
                 {
-                    import std.format : FormatSpec, formatElement;
-                    FormatSpec!char f;
-                    formatElement(sink, field[i], f);
+                    throw new FormatException(
+                        "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
+                            Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
                 }
             }
-            sink(footer);
-        }
-
-        /**
-         * Converts to string.
-         *
-         * Returns:
-         *     The string representation of this `Tuple`.
-         */
-        string toString()()
-        {
-            import std.conv : to;
-            return this.to!string;
         }
     }
 }
@@ -1294,6 +1399,46 @@ unittest
     x = T.init;
 }
 
+@safe unittest
+{
+    import std.format : format, FormatException;
+    import std.exception : assertThrown;
+
+    // enum tupStr = tuple(1, 1.0).toString; // toString is *impure*.
+    //static assert (tupStr == `Tuple!(int, double)(1, 1)`);
+
+    Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
+
+    // Default format
+    assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
+
+    // One Format for each individual component
+    assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
+    assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
+
+    // One Format for all components
+    assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
+
+    // Array of Tuples
+    assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
+
+
+    // Error: %( %) missing.
+    assertThrown!FormatException(
+        format("%d, %f", tuple(1, 2.0)) == `1, 2.0`
+    );
+
+    // Error: %( %| %) missing.
+    assertThrown!FormatException(
+        format("%d", tuple(1, 2)) == `1, 2`
+    );
+
+    // Error: %d inadequate for double
+    assertThrown!FormatException(
+        format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
+    );
+}
+
 /**
     Constructs a $(D Tuple) object instantiated and initialized according to
     the given arguments.
@@ -1714,7 +1859,7 @@ unittest
   Returns:
       A string to be mixed in to an aggregate, such as a `struct` or `class`.
 */
-string alignForSize(E...)(string[] names...)
+string alignForSize(E...)(const char[][] names...)
 {
     // Sort all of the members by .alignof.
     // BUG: Alignment is not always optimal for align(1) structs
@@ -1765,6 +1910,16 @@ unittest
 
     static assert(passNormalX || passAbnormalX && double.alignof <= (int[]).alignof);
     static assert(passNormalY || passAbnormalY && double.alignof <= int.alignof);
+}
+
+// Issue 12914
+unittest
+{
+    immutable string[] fieldNames = ["x", "y"];
+    struct S
+    {
+        mixin(alignForSize!(byte, int)(fieldNames));
+    }
 }
 
 /**
@@ -4618,7 +4773,7 @@ if (!is(T == class) && !(is(T == interface)))
                 else
                     enum sz = T.sizeof;
 
-                auto init = typeid(T).init();
+                auto init = typeid(T).initializer();
                 if (init.ptr is null) // null ptr means initialize to 0s
                     memset(&source, 0, sz);
                 else
@@ -5044,8 +5199,10 @@ mixin template Proxy(alias a)
                 return a.opCmp(b);
             else static if (is(typeof(b.opCmp(a))))
                 return -b.opCmp(a);
+            else static if (isFloatingPoint!ValueType || isFloatingPoint!B)
+                return a < b ? -1 : a > b ? +1 : a == b ? 0 : float.nan;
             else
-                return a < b ? -1 : a > b ? +1 : 0;
+                return a < b ? -1 : (a > b);
         }
 
         static if (accessibleFrom!(const typeof(this)))
@@ -5586,6 +5743,54 @@ unittest
     assert(s + 1 == 13);
     C c = new C();
     assert(s * 2 == 24);
+}
+
+// Check all floating point comparisons for both Proxy and Typedef,
+// also against int and a Typedef!int, to be as regression-proof
+// as possible. bug 15561
+unittest
+{
+    static struct MyFloatImpl
+    {
+        float value;
+        mixin Proxy!value;
+    }
+    static void allFail(T0, T1)(T0 a, T1 b)
+    {
+        assert(!(a==b));
+        assert(!(a<b));
+        assert(!(a<=b));
+        assert(!(a>b));
+        assert(!(a>=b));
+    }
+    foreach (T1; AliasSeq!(MyFloatImpl, Typedef!float, Typedef!double,
+        float, real, Typedef!int, int))
+    {
+        foreach (T2; AliasSeq!(MyFloatImpl, Typedef!float))
+        {
+            T1 a;
+            T2 b;
+
+            static if (isFloatingPoint!T1 || isFloatingPoint!(TypedefType!T1))
+                allFail(a, b);
+            a = 3;
+            allFail(a, b);
+
+            b = 4;
+            assert(a!=b);
+            assert(a<b);
+            assert(a<=b);
+            assert(!(a>b));
+            assert(!(a>=b));
+
+            a = 4;
+            assert(a==b);
+            assert(!(a<b));
+            assert(a<=b);
+            assert(!(a>b));
+            assert(a>=b);
+        }
+    }
 }
 
 /**
@@ -6256,8 +6461,14 @@ string getLine(Flag!"keepTerminator" keepTerminator)
     ...
 }
 ...
-auto line = getLine(Flag!"keepTerminator".yes);
+auto line = getLine(Yes.keepTerminator);
 ----
+
+The structs $(D Yes) and $(D No) are provided as shorthand for
+$(D Flag!"Name".yes) and $(D Flag!"Name".no) and are preferred for brevity and
+readability. These convenience structs mean it is usually unnecessary and
+counterproductive to create an alias of a $(D Flag) as a way of avoiding typing
+out the full type while specifying the affirmative or negative options.
 
 Passing categorical data by means of unstructured $(D bool)
 parameters is classified under "simple-data coupling" by Steve
@@ -6265,20 +6476,6 @@ McConnell in the $(LUCKY Code Complete) book, along with three other
 kinds of coupling. The author argues citing several studies that
 coupling has a negative effect on code quality. $(D Flag) offers a
 simple structuring method for passing yes/no flags to APIs.
-
-An alias can be used to reduce the verbosity of the flag's type:
-----
-alias KeepTerminator = Flag!"keepTerminator";
-string getline(KeepTerminator keepTerminator)
-{
-    ...
-    if (keepTerminator) ...
-    ...
-}
-...
-// Code calling getLine can now refer to flag values using the shorter name:
-auto line = getLine(KeepTerminator.yes);
-----
  */
 template Flag(string name) {
     ///

@@ -20,10 +20,11 @@
    +/
 module std.utf;
 
-import std.meta;    // AliasSeq
+import std.meta;       // AliasSeq
 import std.range.primitives;
-import std.traits;  // isSomeChar, isSomeString
-import std.typecons : Flag;
+import std.traits;     // isSomeChar, isSomeString
+import std.typecons;   // Flag
+import std.exception;  // basicExceptionCtors
 
 //debug=utf;           // uncomment to turn on debugging printf's
 
@@ -51,14 +52,16 @@ class UTFException : Exception
         return this;
     }
 
-    @safe pure nothrow
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    // FIXME: Use std.exception.basicExceptionCtors here once bug #11500 is fixed
+
+    this(string msg, string file = __FILE__, size_t line = __LINE__,
+         Throwable next = null) @nogc @safe pure nothrow
     {
         super(msg, file, line, next);
     }
 
-    @safe pure
-    this(string msg, size_t index, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    this(string msg, size_t index, string file = __FILE__,
+         size_t line = __LINE__, Throwable next = null) @safe pure nothrow
     {
         UnsignedStringBuf buf = void;
         msg ~= " (at index " ~ unsignedToTempString(index, buf, 10) ~ ")";
@@ -306,7 +309,7 @@ unittest
 {
     import std.conv : to;
     import std.exception;
-    import std. string : format;
+    import std.string : format;
     import core.exception : AssertError;
     static void test(string s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
@@ -414,7 +417,7 @@ unittest
 {
     import std.conv : to;
     import std.exception;
-    import std. string : format;
+    import std.string : format;
     import core.exception : AssertError;
     static void test(wstring s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
@@ -493,7 +496,7 @@ unittest
 {
     import std.conv : to;
     import std.exception;
-    import std. string : format;
+    import std.string : format;
     import core.exception : AssertError;
     static void test(dstring s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
@@ -639,7 +642,7 @@ unittest
 {
     import std.conv : to;
     import std.exception;
-    import std. string : format;
+    import std.string : format;
     import core.exception : AssertError;
     static void test(string s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
@@ -736,7 +739,7 @@ unittest
 {
     import std.conv : to;
     import std.exception;
-    import std. string : format;
+    import std.string : format;
     import core.exception : AssertError;
     static void test(wstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
@@ -821,7 +824,7 @@ unittest
 {
     import std.conv : to;
     import std.exception;
-    import std. string : format;
+    import std.string : format;
     import core.exception : AssertError;
     static void test(dstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
@@ -1579,7 +1582,7 @@ version(unittest) private void testDecode(R)(R range,
                                              size_t line = __LINE__)
 {
     import std.exception;
-    import std. string : format;
+    import std.string : format;
     import core.exception : AssertError;
 
     static if (hasLength!R)
@@ -1608,7 +1611,7 @@ version(unittest) private void testDecodeFront(R)(ref R range,
                                                   size_t line = __LINE__)
 {
     import std.exception;
-    import std. string : format;
+    import std.string : format;
     import core.exception : AssertError;
 
     static if (hasLength!R)
@@ -1640,7 +1643,7 @@ version(unittest) private void testBothDecode(R)(R range,
 version(unittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
 {
     import std.exception;
-    import std. string : format;
+    import std.string : format;
     import core.exception : AssertError;
 
     immutable initialIndex = index;
@@ -2423,11 +2426,6 @@ pure
 {
 
 char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe
-in
-{
-    assert(isValidDchar(c));
-}
-body
 {
     if (c <= 0x7F)
     {
@@ -2442,23 +2440,30 @@ body
     }
     else if (c <= 0xFFFF)
     {
+        if (c >= 0xD800 && c <= 0xDFFF)
+            c = replacementDchar;
+
+    L3:
         buf[0] = cast(char)(0xE0 | (c >> 12));
         buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
         buf[2] = cast(char)(0x80 | (c & 0x3F));
         return buf[0 .. 3];
     }
-    else if (c <= 0x10FFFF)
+    else
     {
+        if (c > 0x10FFFF)
+        {
+            c = replacementDchar;
+            goto L3;
+        }
+
         buf[0] = cast(char)(0xF0 | (c >> 18));
         buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
         buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
         buf[3] = cast(char)(0x80 | (c & 0x3F));
         return buf[0 .. 4];
     }
-
-    assert(0);
 }
-
 
 /*******************
  * Encodes string $(D_PARAM s) into UTF-8 and returns the encoded string.
@@ -2815,7 +2820,7 @@ private P toUTFzImpl(P, S)(S str) @safe pure
 {
     import std.conv : to;
     import std.exception;
-    import std. string : format;
+    import std.string : format;
     import core.exception : AssertError;
     import std.algorithm;
 

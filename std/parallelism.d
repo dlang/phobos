@@ -98,6 +98,11 @@ else version(FreeBSD)
 {
     version = useSysctlbyname;
 }
+else version(NetBSD)
+{
+    version = useSysctlbyname;
+}
+
 
 version(Windows)
 {
@@ -143,6 +148,10 @@ else version(useSysctlbyname)
             auto nameStr = "machdep.cpu.core_count\0".ptr;
         }
         else version(FreeBSD)
+        {
+            auto nameStr = "hw.ncpu\0".ptr;
+        }
+        else version(NetBSD)
         {
             auto nameStr = "hw.ncpu\0".ptr;
         }
@@ -3366,10 +3375,12 @@ private void submitAndExecute(
 
     foreach(ref t; tasks)
     {
+        import core.stdc.string : memcpy;
+
         // This silly looking code is necessary to prevent d'tors from being
         // called on uninitialized objects.
         auto temp = scopedTask(doIt);
-        core.stdc.string.memcpy(&t, &temp, PTask.sizeof);
+        memcpy(&t, &temp, PTask.sizeof);
 
         // This has to be done to t after copying, not temp before copying.
         // Otherwise, temp's destructor will sit here and wait for the
@@ -4138,7 +4149,7 @@ unittest
     {
         import std.file : deleteme;
 
-        string temp_file = std.file.deleteme ~ "-tempDelMe.txt";
+        string temp_file = deleteme ~ "-tempDelMe.txt";
         auto file = File(temp_file, "wb");
         scope(exit)
         {

@@ -34,7 +34,9 @@ $(TR $(TDNW Searching)
         $(SUBREF searching, findSplitAfter)
         $(SUBREF searching, findSplitBefore)
         $(SUBREF searching, minCount)
+        $(SUBREF searching, maxCount)
         $(SUBREF searching, minPos)
+        $(SUBREF searching, maxPos)
         $(SUBREF searching, skipOver)
         $(SUBREF searching, startsWith)
         $(SUBREF searching, until)
@@ -47,6 +49,7 @@ $(TR $(TDNW Comparison)
         $(SUBREF comparison, castSwitch)
         $(SUBREF comparison, clamp)
         $(SUBREF comparison, cmp)
+        $(SUBREF comparison, either)
         $(SUBREF comparison, equal)
         $(SUBREF comparison, isPermutation)
         $(SUBREF comparison, isSameLength)
@@ -67,6 +70,7 @@ $(TR $(TDNW Iteration)
         $(SUBREF iteration, each)
         $(SUBREF iteration, filter)
         $(SUBREF iteration, filterBidirectional)
+        $(SUBREF iteration, fold)
         $(SUBREF iteration, group)
         $(SUBREF iteration, joiner)
         $(SUBREF iteration, map)
@@ -182,5 +186,6 @@ public import std.algorithm.searching;
 public import std.algorithm.sorting;
 
 static import std.functional;
+// Explicitly undocumented. It will be removed in March 2017. @@@DEPRECATED_2017-03@@@
 deprecated("Please use std.functional.forward instead.")
 alias forward = std.functional.forward;

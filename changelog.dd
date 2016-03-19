@@ -1,29 +1,66 @@
 Ddoc
 
-$(COMMENT Pending changelog for 2.069. This will get copied to dlang.org and
-    cleared when master gets merged into stable prior to 2.069.
+$(COMMENT Pending changelog for 2.071. This will get copied to dlang.org and
+    cleared when master gets merged into stable prior to 2.071.
 )
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(RELATIVE_LINK2 json-encode-control-characters, `std.json` encodes string control characters.))
-$(LI The package $(STDMODREF experimental_ndslice, std.experimental.ndslice) was added.
-It is also available as part of the $(LINK2 https://github.com/DlangScience/mir, Mir library).)
-$(LI Default LogLevel of FileLogger was changed to LogLevel.all.)
-$(LI Access to the internal `ptr` and `len` fields of $(XREF bitmanip, BitArray) was deprecated.)
+$(LI $(REF GCAllocator.goodAllocSize, std,experimental,allocator,gc_allocator)
+was added.)
+$(LI High-level API of $(STDMODREF net_curl, std.net.curl) now uses $(XREF array, Appender)
+for received content. Which generally makes all calls slightly faster. Up to 200ms for large
+amounts of data.)
+$(LI $(XREF std_meta, Repeat) was added to obtain a repeating
+$(XREF std_meta, AliasSeq) consisting of template arguments.)
+$(LI $(D fold) was added as an alternative to $(D reduce) with argument order swapped.)
+$(LI $(RELATIVE_LINK2 nextPow2, Added nextPow2 and truncPow2 to std.math.))
+$(LI $(REF bsf core,bitop), $(REF bsr core,bitop), and $(REF popcnt, core,bitop) now
+work with ulongs on 32 bit systems.)
+$(LI $(REF topN std,algorithm,sorting) is now 5% - 7% faster.)
+$(LI $(RELATIVE_LINK2 unary, Unary overloads of $(REF startsWith std,algorithm,searching) and
+$(REF endsWith std,algorithm,searching) were added.))
+$(LI $(RELATIVE_LINK2 maxCount, $(REF maxCount std,algorithm,searching) and
+$(REF maxPos std,algorithm,searching) were added.))
+$(LI $(LNAME2 range support for the convenience wrapper $(REF redBlackTree std,container,rbtree)
+was added))
 )
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(LNAME2 json-encode-control-characters, `std.json` encodes string control characters.)
+$(LI $(LNAME2 nextPow2, Added nextPow2 and truncPow2 to std.math.)
+    $(P $(REF nextPow2, std,math) and $(REF truncPow2, std,math) are functions for
+    rounding numbers to powers of two.)
+------
+import std.math;
 
-    $(P Instead of throwing a $(XREF json, JSONException), $(XREF json, toJSON)
-        encodes now the control characters of a string.
-    )
+assert(nextPow2(10) == 16);
+assert(nextPow2(4000) == 4096);
 
-    ------
-    assert(toJSON(JSONValue("foo\u007fbar") == `"foo\u007Fbar"`);
-    ------
+assert(truncPow2(10) == 8);
+assert(truncPow2(4000) == 2048);
+------
+)
+
+$(LI $(LNAME2 unary, Unary overloads of $(REF startsWith std,algorithm,searching) and
+$(REF endsWith std,algorithm,searching) were added.)
+------
+import std.algorithm.searching;
+import std.ascii : isAlpha;
+
+assert("abc".endsWith!isAlpha);
+assert(!"ab1".endsWith!(a => a.isAlpha));
+
+assert("abc".startsWith!isAlpha);
+assert(!"1ab".startsWith!isAlpha);
+------
+)
+
+$(LI $(LNAME2 maxPos, $(REF maxCount std,algorithm,searching) and
+$(REF maxPos std,algorithm,searching) were added.)
+$(P Previous to this addition, in order to get the number of the greatest
+elements, you had to use `minCount!"a > b"`, which was very confusing.
+This change adds convenience functions to fix this issue.)
 )
 
 )

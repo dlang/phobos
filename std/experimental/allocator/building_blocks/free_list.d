@@ -747,12 +747,13 @@ $(D expand) is defined to forward to $(ParentAllocator.expand) (it must be also
 $(D shared)).
 */
 struct SharedFreeList(ParentAllocator,
-    size_t minSize, size_t maxSize = minSize)
+    size_t minSize, size_t maxSize = minSize, size_t approxMaxNodes = unbounded)
 {
     import std.conv : text;
     import std.exception : enforce;
     import std.traits : hasMember;
 
+    static assert(approxMaxNodes, "approxMaxNodes must not be null.");
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
     static assert(maxSize >= (void*).sizeof,
         "Maximum size must accommodate a pointer.");
@@ -829,29 +830,40 @@ struct SharedFreeList(ParentAllocator,
         else return !tooSmall(n) && !tooLarge(n);
     }
 
-    //static if (maxNodes != unbounded)
-    //{
-    //    private shared size_t nodes;
-    //    private void incNodes() shared
-    //    {
-    //        atomicOp!("+=")(nodes, 1);
-    //    }
-    //    private void decNodes() shared
-    //    {
-    //        assert(nodes);
-    //        atomicOp!("-=")(nodes, 1);
-    //    }
-    //    private bool nodesFull() shared
-    //    {
-    //        return nodes >= maxNodes;
-    //    }
-    //}
-    //else
-    //{
+    static if (approxMaxNodes != chooseAtRuntime)
+    {
+        alias approxMaxLength = approxMaxNodes;
+    }
+    else
+    {
+        private shared size_t _approxMaxLength = chooseAtRuntime;
+        @property size_t approxMaxLength() const shared { return _approxMaxLength; }
+        @property void approxMaxLength(size_t x) shared { _approxMaxLength = enforce(x); }
+    }
+
+    static if (approxMaxNodes != unbounded)
+    {
+        private shared size_t nodes;
+        private void incNodes() shared
+        {
+            atomicOp!("+=")(nodes, 1);
+        }
+        private void decNodes() shared
+        {
+            assert(nodes);
+            atomicOp!("-=")(nodes, 1);
+        }
+        private bool nodesFull() shared
+        {
+            return nodes >= approxMaxLength;
+        }
+    }
+    else
+    {
         private static void incNodes() { }
         private static void decNodes() { }
         private enum bool nodesFull = false;
-    //}
+    }
 
     version (StdDdoc)
     {
@@ -872,13 +884,32 @@ struct SharedFreeList(ParentAllocator,
         ///
         unittest
         {
-            FreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
+            SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
             // Set the maxSize first so setting the minSize doesn't throw
             a.max = 128;
             a.min = 64;
             a.setBounds(64, 128); // equivalent
             assert(a.max == 128);
             assert(a.min == 64);
+        }
+
+        /**
+        Properties for getting (and possibly setting) the approximate maximum length of a shared freelist.
+        */
+        @property size_t approxMaxLength() const shared;
+        /// ditto
+        @property void approxMaxLength(size_t x) shared;
+        ///
+        unittest
+        {
+            SharedFreeList!(Mallocator, 50, 50, chooseAtRuntime) a;
+            // Set the maxSize first so setting the minSize doesn't throw
+            a.approxMaxLength = 128;
+            assert(a.approxMaxLength  == 128);
+            a.approxMaxLength = 1024;
+            assert(a.approxMaxLength  == 1024);
+            a.approxMaxLength = 1;
+            assert(a.approxMaxLength  == 1);
         }
     }
 
@@ -997,7 +1028,7 @@ unittest
     import std.range : repeat;
     import std.experimental.allocator.mallocator : Mallocator;
 
-    static shared SharedFreeList!(Mallocator, 64, 128) a;
+    static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
 
     assert(a.goodAllocSize(1) == platformAlignment);
 
@@ -1030,5 +1061,26 @@ unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
+    a.allocate(64);
+}
+
+unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime, chooseAtRuntime) a;
+    a.allocate(64);
+}
+
+unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    shared SharedFreeList!(Mallocator, 30, 40) a;
+    a.allocate(64);
+}
+
+unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    shared SharedFreeList!(Mallocator, 30, 40, chooseAtRuntime) a;
     a.allocate(64);
 }

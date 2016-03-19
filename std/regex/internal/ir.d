@@ -490,7 +490,7 @@ struct Regex(Char)
     }
 
 package(std.regex):
-    import std.regex.internal.kickstart; //TODO: get rid of this dependency
+    import std.regex.internal.kickstart : Kickstart; //TODO: get rid of this dependency
     NamedGroup[] dict;  //maps name -> user group number
     uint ngroup;        //number of internal groups
     uint maxCounterDepth; //max depth of nested {n,m} repetitions
@@ -741,9 +741,5 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
 ///Exception object thrown in case of errors during regex compilation.
 public class RegexException : Exception
 {
-    ///
-    @trusted this(string msg, string file = __FILE__, size_t line = __LINE__)
-    {//@@@BUG@@@ Exception constructor is not @safe
-        super(msg, file, line);
-    }
+    mixin basicExceptionCtors;
 }

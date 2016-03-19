@@ -215,8 +215,6 @@ version(USE_SSSE3)
      */
     private nothrow pure string[] weave(string[] seq1, string[] seq2, uint dist = 1)
     {
-        import std.algorithm : min;
-
         string[] res = [];
         auto i1 = 0, i2 = 0;
         while (i1 < seq1.length || i2 < seq2.length)
@@ -228,7 +226,9 @@ version(USE_SSSE3)
             }
             if (i1 < seq1.length)
             {
-                res ~= seq1[i1..std.algorithm.min(i1+dist,$)];
+                import std.algorithm.comparison : min;
+
+                res ~= seq1[i1 .. min(i1+dist, $)];
                 i1 += dist;
             }
         }

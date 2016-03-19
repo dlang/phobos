@@ -1,5 +1,6 @@
 /**
 This module implements a generic doubly-linked list container.
+It can be used as a queue, dequeue or stack.
 
 This module is a submodule of $(LINK2 std_container.html, std.container).
 
@@ -18,6 +19,39 @@ boost.org/LICENSE_1_0.txt)).
 Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
 */
 module std.container.dlist;
+
+///
+unittest
+{
+    import std.container: DList;
+    import std.algorithm: equal;
+
+    auto s = DList!int(1, 2, 3);
+    assert(equal(s[], [1, 2, 3]));
+
+    s.removeFront();
+    assert(equal(s[], [2, 3]));
+    s.removeBack();
+    assert(equal(s[], [2]));
+
+    s.insertFront([4, 5]);
+    assert(equal(s[], [4, 5, 2]));
+    s.insertBack([6, 7]);
+    assert(equal(s[], [4, 5, 2, 6, 7]));
+
+    // If you want to apply range operations, simply slice it.
+    import std.algorithm: countUntil;
+    import std.range: popFrontN, popBackN, walkLength;
+
+    auto sl = DList!int([1, 2, 3, 4, 5]);
+    assert(countUntil(sl[], 2) == 1);
+
+    auto r = sl[];
+    popFrontN(r, 2);
+    popBackN(r, 2);
+    assert(r.equal([3]));
+    assert(walkLength(r) == 1);
+}
 
 import std.range.primitives;
 import std.traits;

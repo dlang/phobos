@@ -42,7 +42,6 @@ public import std.stdint;
 public import std.stdio;
 public import std.stream;
 public import std.string;
-public import std.syserror;
 public import std.system;
 public import std.traits;
 public import std.typetuple;

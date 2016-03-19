@@ -203,13 +203,13 @@ Returns:
 +/
 T median(Range, T)(Range r, T[] buf)
 {
-    import std.algorithm.sorting: sort;
+    import std.algorithm.sorting: topN;
     size_t n;
     foreach (e; r)
         buf[n++] = e;
-    buf[0 .. n].sort();
-    immutable m = n >> 1;
-    return n & 1 ? buf[m] : cast(T)((buf[m - 1] + buf[m]) / 2);
+    auto m = n >> 1;
+    buf[0 .. n].topN(m);
+    return buf[m];
 }
 -------
 
@@ -328,13 +328,13 @@ unittest
 
     static T median(Range, T)(Range r, T[] buf)
     {
-        import std.algorithm.sorting: sort;
+        import std.algorithm.sorting: topN;
         size_t n;
         foreach (e; r)
             buf[n++] = e;
-        buf[0 .. n].sort();
-        immutable m = n >> 1;
-        return n & 1 ? buf[m] : cast(T)((buf[m - 1] + buf[m]) / 2);
+        auto m = n >> 1;
+        buf[0 .. n].topN(m);
+        return buf[m];
     }
 
     import std.conv: to;
@@ -370,7 +370,7 @@ unittest
 {
     import std.algorithm.comparison: equal;
     import std.range: iota;
-    immutable r = 1_000_000.iota;
+    immutable r = 1000.iota;
 
     auto t0 = r.sliced(1000);
     assert(t0.front == 0);
@@ -400,7 +400,7 @@ pure nothrow unittest
     import std.algorithm.comparison: equal;
     import std.array: array;
     import std.range: iota;
-    auto r = 1_000.iota.array;
+    auto r = 1000.iota.array;
 
     auto t0 = r.sliced(1000);
     assert(t0.length == 1000);
@@ -526,7 +526,7 @@ pure nothrow unittest
 
 pure nothrow unittest
 {
-    auto tensor = new int[100].sliced(3, 4, 8);
+    auto tensor = new int[3 * 4 * 8].sliced(3, 4, 8);
     assert(&(tensor.back.back.back()) is &tensor[2, 3, 7]);
     assert(&(tensor.front.front.front()) is &tensor[0, 0, 0]);
 }

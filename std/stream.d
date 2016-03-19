@@ -1433,11 +1433,11 @@ class Stream : InputStream, OutputStream {
   unittest { // unit test for Issue 3363
     import std.stdio;
     immutable fileName = std.file.deleteme ~ "-issue3363.txt";
-    auto w = File(fileName, "w");
+    auto w = std.stdio.File(fileName, "w");
     scope (exit) remove(fileName.ptr);
     w.write("one two three");
     w.close();
-    auto r = File(fileName, "r");
+    auto r = std.stdio.File(fileName, "r");
     const(char)[] constChar;
     string str;
     char[] chars;
@@ -2137,6 +2137,7 @@ class File: Stream {
   // run a few tests
   unittest {
     import std.internal.cstring : tempCString;
+    import core.stdc.stdio : remove;
 
     File file = new File;
     int i = 666;
@@ -2257,6 +2258,7 @@ class BufferedFile: BufferedStream {
   // run a few tests same as File
   unittest {
     import std.internal.cstring : tempCString;
+    import core.stdc.stdio : remove;
 
     BufferedFile file = new BufferedFile;
     int i = 666;

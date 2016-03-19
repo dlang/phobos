@@ -120,6 +120,10 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF stride)))
         $(TD Iterates a _range with stride $(I n).
     ))
+    $(TR $(TD $(D $(LREF tail)))
+        $(TD Return a _range advanced to within $(D n) elements of the end of
+        the given _range.
+    ))
     $(TR $(TD $(D $(LREF take)))
         $(TD Creates a sub-_range consisting of only up to the first $(I n)
         elements of the given _range.
@@ -2557,6 +2561,118 @@ auto takeNone(R)(R range)
 }
 
 /++
+ + Return a _range advanced to within $(D _n) elements of the end of
+ + $(D _range).
+ +
+ + Intended as the _range equivalent of the Unix
+ + $(WEB en.wikipedia.org/wiki/Tail_%28Unix%29, _tail) utility. When the length
+ + of $(D _range) is less than or equal to $(D _n), $(D _range) is returned
+ + as-is.
+ +
+ + Completes in $(BIGOH 1) steps for ranges that support slicing and have
+ + length. Completes in $(BIGOH _range.length) time for all other ranges.
+ +
+ + Params:
+ +    range = _range to get _tail of
+ +    n = maximum number of elements to include in _tail
+ +
+ + Returns:
+ +    Returns the _tail of $(D _range) augmented with length information
+ +/
+auto tail(Range)(Range range, size_t n)
+    if (isInputRange!Range && !isInfinite!Range &&
+        (hasLength!Range || isForwardRange!Range))
+{
+    static if (hasLength!Range)
+    {
+        immutable length = range.length;
+        if (n >= length)
+            return range.takeExactly(length);
+        else
+            return range.drop(length - n).takeExactly(n);
+    }
+    else
+    {
+        Range scout = range.save;
+        foreach (immutable i; 0 .. n)
+        {
+            if (scout.empty)
+                return range.takeExactly(i);
+            scout.popFront();
+        }
+
+        auto tail = range.save;
+        while (!scout.empty)
+        {
+            assert(!tail.empty);
+            scout.popFront();
+            tail.popFront();
+        }
+
+        return tail.takeExactly(n);
+    }
+}
+
+///
+pure @safe unittest
+{
+    // tail -c n
+    assert([1, 2, 3].tail(1) == [3]);
+    assert([1, 2, 3].tail(2) == [2, 3]);
+    assert([1, 2, 3].tail(3) == [1, 2, 3]);
+    assert([1, 2, 3].tail(4) == [1, 2, 3]);
+    assert([1, 2, 3].tail(0).length == 0);
+
+    // tail --lines=n
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : joiner;
+    import std.string : lineSplitter;
+
+    assert("one\ntwo\nthree"
+            .lineSplitter
+            .tail(2)
+            .joiner("\n")
+            .equal("two\nthree"));
+}
+
+// @nogc prevented by @@@BUG@@@ 15408
+pure nothrow @safe /+@nogc+/ unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
+
+    static immutable cheatsheet = [6, 7, 8, 9, 10];
+
+    foreach (R; AllDummyRanges)
+    {
+        static if (isInputRange!R && !isInfinite!R &&
+                   (hasLength!R || isForwardRange!R))
+        {
+            assert(R.init.tail(5).equal(cheatsheet));
+            static assert(R.init.tail(5).equal(cheatsheet));
+
+            assert(R.init.tail(0).length == 0);
+            assert(R.init.tail(10).equal(R.init));
+            assert(R.init.tail(11).equal(R.init));
+        }
+    }
+
+    // Infinite ranges are not supported
+    static assert(!__traits(compiles, repeat(0).tail(0)));
+
+    // Neither are non-forward ranges without length
+    static assert(!__traits(compiles, DummyRange!(ReturnBy.Value, Length.No,
+        RangeType.Input).init.tail(5)));
+}
+
+@nogc unittest
+{
+    static immutable input = [1, 2, 3];
+    static immutable expectedOutput = [2, 3];
+    assert(input.tail(2) == expectedOutput);
+}
+
+/++
     Convenience function which calls
     $(D range.$(LREF popFrontN)(n)) and returns $(D range). $(D drop)
     makes it easier to pop elements from a range
@@ -3395,12 +3511,17 @@ private alias lengthType(R) = typeof(R.init.length.init);
    Iterate several ranges in lockstep. The element type is a proxy tuple
    that allows accessing the current element in the $(D n)th range by
    using $(D e[n]).
+
+   `zip` is similar to $(LREF lockstep), but `lockstep` doesn't
+   bundle its elements and uses the `opApply` protocol.
+   `lockstep` allows reference access to the elements in
+   `foreach` iterations.
+
    $(D Zip) offers the lowest range facilities of all components, e.g. it
    offers random access iff all ranges offer random access, and also
    offers mutation and swapping if all ranges offer it. Due to this, $(D
    Zip) is extremely powerful because it allows manipulating several
-   ranges in lockstep. For example, the following code sorts two arrays
-   in parallel:
+   ranges in lockstep.
 */
 struct Zip(Ranges...)
     if (Ranges.length && allSatisfy!(isInputRange, Ranges))
@@ -3753,27 +3874,51 @@ auto zip(Ranges...)(Ranges ranges)
 ///
 pure unittest
 {
-    import std.algorithm : sort;
-    int[] a = [ 1, 2, 3 ];
-    string[] b = [ "a", "b", "c" ];
-    sort!((c, d) => c[0] > d[0])(zip(a, b));
-    assert(a == [ 3, 2, 1 ]);
-    assert(b == [ "c", "b", "a" ]);
+    import std.algorithm : equal, map;
+
+    // pairwise sum
+    auto arr = [0, 1, 2];
+    assert(zip(arr, arr.dropOne).map!"a[0] + a[1]".equal([1, 3]));
 }
 
 ///
-unittest
+pure unittest
 {
-   int[] a = [ 1, 2, 3 ];
-   string[] b = [ "a", "b", "c" ];
+    import std.conv: to;
 
-   size_t idx = 0;
-   foreach (e; zip(a, b))
-   {
-       assert(e[0] == a[idx]);
-       assert(e[1] == b[idx]);
-       ++idx;
-   }
+    int[] a = [ 1, 2, 3 ];
+    string[] b = [ "a", "b", "c" ];
+    string[] result;
+
+    foreach (tup; zip(a, b))
+    {
+        result ~= tup[0].to!string ~ tup[1];
+    }
+
+    assert(result == [ "1a", "2b", "3c" ]);
+
+    size_t idx = 0;
+    // unpacking tuple elements with foreach
+    foreach (e1, e2; zip(a, b))
+    {
+        assert(e1 == a[idx]);
+        assert(e2 == b[idx]);
+        ++idx;
+    }
+}
+
+/// $(D zip) is powerful - the following code sorts two arrays in parallel:
+pure unittest
+{
+    import std.algorithm : sort;
+
+    int[] a = [ 1, 2, 3 ];
+    string[] b = [ "a", "c", "b" ];
+    zip(a, b).sort!((t1, t2) => t1[0] > t2[0]);
+
+    assert(a == [ 3, 2, 1 ]);
+    // b is sorted according to a's sorting
+    assert(b == [ "b", "c", "a" ]);
 }
 
 /// Ditto
@@ -4027,7 +4172,8 @@ private string lockstepMixin(Ranges...)(bool withIndex)
 }
 
 /**
-   Iterate multiple ranges in lockstep using a $(D foreach) loop.  If only a single
+   Iterate multiple ranges in lockstep using a $(D foreach) loop. In contrast to
+   $(LREF zip) it allows reference access to its elements. If only a single
    range is passed in, the $(D Lockstep) aliases itself away.  If the
    ranges are of different lengths and $(D s) == $(D StoppingPolicy.shortest)
    stop after the shortest range is empty.  If the ranges are of different
@@ -4037,13 +4183,12 @@ private string lockstepMixin(Ranges...)(bool withIndex)
 
    By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
 
-   Lockstep also supports iterating with an index variable:
-   -------
-   foreach (index, a, b; lockstep(arr1, arr2))
-   {
-       writefln("Index %s:  a = %s, b = %s", index, a, b);
-   }
-   -------
+   See_Also: $(LREF zip)
+
+       `lockstep` is similar to $(LREF zip), but `zip` bundles its
+       elements and returns a range.
+       `lockstep` also supports reference access.
+       Use `zip` if you want to pass the result to a range function.
 */
 struct Lockstep(Ranges...)
     if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
@@ -4093,15 +4238,22 @@ Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
 ///
 unittest
 {
-   auto arr1 = [1,2,3,4,5];
+   auto arr1 = [1,2,3,4,5,100];
    auto arr2 = [6,7,8,9,10];
 
-   foreach (ref a, ref b; lockstep(arr1, arr2))
+   foreach (ref a, b; lockstep(arr1, arr2))
    {
        a += b;
    }
 
-   assert(arr1 == [7,9,11,13,15]);
+   assert(arr1 == [7,9,11,13,15,100]);
+
+   /// Lockstep also supports iterating with an index variable:
+   foreach (index, a, b; lockstep(arr1, arr2))
+   {
+       assert(arr1[index] == a);
+       assert(arr2[index] == b);
+   }
 }
 
 unittest
@@ -6051,16 +6203,17 @@ struct Indexed(Source, Indices)
         Returns the physical index into the source range corresponding to a
         given logical index.  This is useful, for example, when indexing
         an $(D Indexed) without adding another layer of indirection.
-
-        Example:
-        ---
-        auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
-        assert(ind.physicalIndex(0) == 1);
-        ---
         */
         size_t physicalIndex(size_t logicalIndex)
         {
             return _indices[logicalIndex];
+        }
+
+        ///
+        unittest
+        {
+            auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
+            assert(ind.physicalIndex(0) == 1);
         }
     }
 
@@ -7650,19 +7803,21 @@ if (isInputRange!Range)
    schedule and its complexity are documented in
    $(LREF SearchPolicy).  See also STL's
    $(WEB sgi.com/tech/stl/lower_bound.html, lower_bound).
-
-   Example:
-   ----
-   auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
-   auto p = a.lowerBound(4);
-   assert(equal(p, [ 0, 1, 2, 3 ]));
-   ----
 */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
          && hasSlicing!Range)
     {
         return this[0 .. getTransitionIndex!(sp, geq)(value)];
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm: equal;
+        auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+        auto p = a.lowerBound(4);
+        assert(equal(p, [ 0, 1, 2, 3 ]));
     }
 
 // upperBound
@@ -7679,13 +7834,6 @@ user code to unexpected inefficiencies). For random-access searches, all
 policies are allowed, and $(D SearchPolicy.binarySearch) is the default.
 
 See_Also: STL's $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
-
-Example:
-----
-auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
-auto p = a.upperBound(3);
-assert(equal(p, [4, 4, 5, 6]));
-----
 */
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
@@ -7707,6 +7855,16 @@ assert(equal(p, [4, 4, 5, 6]));
         }
     }
 
+    ///
+    unittest
+    {
+        import std.algorithm: equal;
+        auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
+        auto p = a.upperBound(3);
+        assert(equal(p, [4, 4, 5, 6]));
+    }
+
+
 // equalRange
 /**
    Returns the subrange containing all elements $(D e) for which both $(D
@@ -7720,13 +7878,6 @@ assert(equal(p, [4, 4, 5, 6]));
    to be near the first found value (i.e., equal ranges are relatively
    small). Completes the entire search in $(BIGOH log(n)) time. See also
    STL's $(WEB sgi.com/tech/stl/equal_range.html, equal_range).
-
-   Example:
-   ----
-   auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-   auto r = equalRange(a, 3);
-   assert(equal(r, [ 3, 3, 3 ]));
-   ----
 */
     auto equalRange(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
@@ -7767,6 +7918,15 @@ assert(equal(p, [4, 4, 5, 6]));
         return this.init;
     }
 
+    ///
+    unittest
+    {
+        import std.algorithm: equal;
+        auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+        auto r = a.assumeSorted.equalRange(3);
+        assert(equal(r, [ 3, 3, 3 ]));
+    }
+
 // trisect
 /**
 Returns a tuple $(D r) such that $(D r[0]) is the same as the result
@@ -7775,15 +7935,6 @@ equalRange(value)), and $(D r[2]) is the same as the result of $(D
 upperBound(value)). The call is faster than computing all three
 separately. Uses a search schedule similar to $(D
 equalRange). Completes the entire search in $(BIGOH log(n)) time.
-
-Example:
-----
-auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-auto r = assumeSorted(a).trisect(3);
-assert(equal(r[0], [ 1, 2 ]));
-assert(equal(r[1], [ 3, 3, 3 ]));
-assert(equal(r[2], [ 4, 4, 5, 6 ]));
-----
 */
     auto trisect(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
@@ -7825,6 +7976,17 @@ assert(equal(r[2], [ 4, 4, 5, 6 ]));
         }
         // No equal element was found
         return tuple(this[0 .. first], this.init, this[first .. length]);
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm: equal;
+        auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+        auto r = assumeSorted(a).trisect(3);
+        assert(equal(r[0], [ 1, 2 ]));
+        assert(equal(r[1], [ 3, 3, 3 ]));
+        assert(equal(r[2], [ 4, 4, 5, 6 ]));
     }
 
 // contains
@@ -8919,7 +9081,7 @@ struct NullSink
   in the case of the version of $(D tee) that takes a function, the function
   will not actually be executed until the range is "walked" using functions
   that evaluate ranges, such as $(XREF array,array) or
-  $(XREF_PACK algorithm,iteration,reduce).
+  $(XREF_PACK algorithm,iteration,fold).
 
   Params:
   pipeOnPop = If `Yes.pipeOnPop`, simply iterating the range without ever
@@ -9098,7 +9260,8 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 
     bool isVowel(dchar c)
     {
-        return std.string.indexOf("AaEeIiOoUu", c) != -1;
+        import std.string : indexOf;
+        return "AaEeIiOoUu".indexOf(c) != -1;
     }
 
     int vowelCount = 0;

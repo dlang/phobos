@@ -57,9 +57,15 @@ $(T2 findSplitBefore,
         and $(D "defg").)
 $(T2 minCount,
         $(D minCount([2, 1, 1, 4, 1])) returns $(D tuple(1, 3)).)
+$(T2 maxCount,
+        $(D maxCount([2, 4, 1, 4, 1])) returns $(D tuple(4, 2)).)
 $(T2 minPos,
         $(D minPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [1, 3, 4, 1]),
         i.e., positions the range at the first occurrence of its minimal
+        element.)
+$(T2 maxPos,
+        $(D maxPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [4, 1]),
+        i.e., positions the range at the first occurrence of its maximal
         element.)
 $(T2 mismatch,
         $(D mismatch("parakeet", "parachute")) returns the two ranges
@@ -467,7 +473,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
         immutable limit = min(r1.length, r2.length);
         for (size_t i = 0; i < limit;)
         {
-            immutable codeLen = std.utf.stride(r1, i);
+            immutable codeLen = stride(r1, i);
             size_t j = 0;
 
             for (; j < codeLen && i < limit; ++i, ++j)
@@ -968,7 +974,10 @@ Returns:
 otherwise the position of the matching needle, that is, 1 if the range ends
 with $(D withOneOfThese[0]), 2 if it ends with $(D withOneOfThese[1]), and so
 on.
- */
+
+In the case when no needle parameters are given, return $(D true) iff back of
+$(D doesThisStart) fulfils predicate $(D pred).
+*/
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
 if (isBidirectionalRange!Range && Needles.length > 1 &&
     is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
@@ -1073,9 +1082,30 @@ if (isBidirectionalRange!R &&
         : binaryFun!pred(doesThisEnd.back, withThis);
 }
 
+/// Ditto
+bool endsWith(alias pred, R)(R doesThisEnd)
+    if (isInputRange!R &&
+        ifTestable!(typeof(doesThisEnd.front), unaryFun!pred))
+{
+    return !doesThisEnd.empty && unaryFun!pred(doesThisEnd.back);
+}
+
 ///
 @safe unittest
 {
+    import std.ascii : isAlpha;
+    assert("abc".endsWith!(a => a.isAlpha));
+    assert("abc".endsWith!isAlpha);
+
+    assert(!"ab1".endsWith!(a => a.isAlpha));
+
+    assert(!"ab1".endsWith!isAlpha);
+    assert(!"".endsWith!(a => a.isAlpha));
+
+    import std.algorithm.comparison : among;
+    assert("abc".endsWith!(a => a.among('c', 'd') != 0));
+    assert(!"abc".endsWith!(a => a.among('a', 'b') != 0));
+
     assert(endsWith("abc", ""));
     assert(!endsWith("abc", "b"));
     assert(endsWith("abc", "a", 'c') == 2);
@@ -2177,6 +2207,21 @@ template canFind(alias pred="a == b")
     assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
+/**
+ * Example using a custom predicate.
+ * Note that the needle appears as the second argument of the predicate.
+ */
+@safe unittest
+{
+    auto words = [
+        "apple",
+        "beeswax",
+        "cardboard"
+    ];
+    assert(!canFind(words, "bees"));
+    assert( canFind!((string a, string b) => a.startsWith(b))(words, "bees"));
+}
+
 @safe unittest
 {
     import std.algorithm.internal : rndstuff;
@@ -2367,36 +2412,33 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 /**
-These functions find the first occurrence of $(D needle) in $(D
-haystack) and then split $(D haystack) as follows.
+These functions find the first occurrence of `needle` in `haystack` and then
+split `haystack` as follows.
 
-$(D findSplit) returns a tuple $(D result) containing $(I three)
-ranges. $(D result[0]) is the portion of $(D haystack) before $(D
-needle), $(D result[1]) is the portion of $(D haystack) that matches
-$(D needle), and $(D result[2]) is the portion of $(D haystack) after
-the match. If $(D needle) was not found, $(D result[0])
-comprehends $(D haystack) entirely and $(D result[1]) and $(D result[2])
-are empty.
+`findSplit` returns a tuple `result` containing $(I three) ranges. `result[0]`
+is the portion of `haystack` before `needle`, `result[1]` is the portion of
+`haystack` that matches `needle`, and `result[2]` is the portion of `haystack`
+after the match. If `needle` was not found, `result[0]` comprehends `haystack`
+entirely and `result[1]` and `result[2]` are empty.
 
-$(D findSplitBefore) returns a tuple $(D result) containing two
-ranges. $(D result[0]) is the portion of $(D haystack) before $(D
-needle), and $(D result[1]) is the balance of $(D haystack) starting
-with the match. If $(D needle) was not found, $(D result[0])
-comprehends $(D haystack) entirely and $(D result[1]) is empty.
+`findSplitBefore` returns a tuple `result` containing two ranges. `result[0]` is
+the portion of `haystack` before `needle`, and `result[1]` is the balance of
+`haystack` starting with the match. If `needle` was not found, `result[0]`
+comprehends `haystack` entirely and `result[1]` is empty.
 
-$(D findSplitAfter) returns a tuple $(D result) containing two ranges.
-$(D result[0]) is the portion of $(D haystack) up to and including the
-match, and $(D result[1]) is the balance of $(D haystack) starting
-after the match. If $(D needle) was not found, $(D result[0]) is empty
-and $(D result[1]) is $(D haystack).
+`findSplitAfter` returns a tuple `result` containing two ranges.
+`result[0]` is the portion of `haystack` up to and including the
+match, and `result[1]` is the balance of `haystack` starting
+after the match. If `needle` was not found, `result[0]` is empty
+and `result[1]` is `haystack`.
 
 In all cases, the concatenation of the returned ranges spans the
-entire $(D haystack).
+entire `haystack`.
 
-If $(D haystack) is a random-access range, all three components of the
-tuple have the same type as $(D haystack). Otherwise, $(D haystack)
-must be a forward range and the type of $(D result[0]) and $(D
-result[1]) is the same as $(XREF range,takeExactly).
+If `haystack` is a random-access range, all three components of the tuple have
+the same type as `haystack`. Otherwise, `haystack` must be a forward range and
+the type of `result[0]` and `result[1]` is the same as $(XREF
+range,takeExactly).
 
 Params:
     pred = Predicate to use for comparing needle against haystack.
@@ -2405,11 +2447,11 @@ Params:
 
 Returns:
 
-A sub-type of Tuple!() of the split portions of `haystack` (see above for
-details).  This sub-type of Tuple!() has opCast defined for bool.  This opCast
-returns $(D true) when the separating $(D needle) was found (!result[1].empty)
-and $(D false) otherwise.  This enables the convenient idiom shown in the
-following example.
+A sub-type of `Tuple!()` of the split portions of `haystack` (see above for
+details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
+`opCast` returns `true` when the separating `needle` was found
+(`!result[1].empty`) and `false` otherwise.  This enables the convenient idiom
+shown in the following example.
 
 Example:
 ---
@@ -2694,20 +2736,37 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(equal(r2[1], a[4 .. $]));
 }
 
+// minCount
 /**
+
+Computes the minimum (respectively maximum) of `range` along with its number of
+occurrences. Formally, the minimum is a value `x` in `range` such that $(D
+pred(a, x)) is `false` for all values `a` in `range`. Conversely, the maximum is
+a value `x` in `range` such that $(D pred(x, a)) is `false` for all values `a`
+in `range` (note the swapped arguments to `pred`).
+
+These functions may be used for computing arbitrary extrema by choosing `pred`
+appropriately. For corrrect functioning, `pred` must be a strict partial order,
+i.e. transitive (if $(D pred(a, b) && pred(b, c)) then $(D pred(a, c))) and
+irreflexive ($(D pred(a, a)) is `false`). The $(LUCKY trichotomy property of
+inequality) is not required: these algoritms consider elements `a` and `b` equal
+(for the purpose of counting) if `pred` puts them in the same equivalence class,
+i.e. $(D !pred(a, b) && !pred(b, a)).
+
 Params:
-    pred = The ordering predicate to use to determine the minimal element.
+    pred = The ordering predicate to use to determine the extremum (minimum
+        or maximum).
     range = The input range to count.
 
-Returns: The minimum element of a range together with the number of
-occurrences. The function can actually be used for counting the
-maximum or any other ordering predicate (that's why $(D maxCount) is
-not provided).
+Returns: The minimum, respectively maximum element of a range together with the
+number it occurs in the range.
+
+Throws: `Exception` if `range.empty`.
  */
 Tuple!(ElementType!Range, size_t)
 minCount(alias pred = "a < b", Range)(Range range)
-    if (isInputRange!Range && !isInfinite!Range &&
-        is(typeof(binaryFun!pred(range.front, range.front))))
+if (isInputRange!Range && !isInfinite!Range &&
+    is(typeof(binaryFun!pred(range.front, range.front))))
 {
     import std.algorithm.internal : algoFormat;
     import std.exception : enforce;
@@ -2728,7 +2787,12 @@ minCount(alias pred = "a < b", Range)(Range range)
         Range least = range.save;
         for (range.popFront(); !range.empty; range.popFront())
         {
-            if (binaryFun!pred(least.front, range.front)) continue;
+            if (binaryFun!pred(least.front, range.front))
+            {
+                assert(!binaryFun!pred(range.front, least.front),
+                    "min/maxPos: predicate must be a strict partial order.");
+                continue;
+            }
             if (binaryFun!pred(range.front, least.front))
             {
                 // change the min
@@ -2785,6 +2849,15 @@ minCount(alias pred = "a < b", Range)(Range range)
                    "to keep track of the smallest %s element.", Range.stringof, T.stringof));
 }
 
+/// Ditto
+Tuple!(ElementType!Range, size_t)
+maxCount(alias pred = "a < b", Range)(Range range)
+if (isInputRange!Range && !isInfinite!Range &&
+    is(typeof(binaryFun!pred(range.front, range.front))))
+{
+    return range.minCount!((a, b) => binaryFun!pred(b, a));
+}
+
 ///
 unittest
 {
@@ -2795,9 +2868,9 @@ unittest
 
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
     // Minimum is 1 and occurs 3 times
-    assert(minCount(a) == tuple(1, 3));
+    assert(a.minCount == tuple(1, 3));
     // Maximum is 4 and occurs 2 times
-    assert(minCount!("a > b")(a) == tuple(4, 2));
+    assert(a.maxCount == tuple(4, 2));
 }
 
 unittest
@@ -2889,33 +2962,71 @@ unittest
 
 // minPos
 /**
+Computes a subrange of `range` starting at the first occurrence of `range`'s
+minimum (respectively maximum) and with the same ending as `range`, or the
+empty range if `range` itself is empty.
+
+Formally, the minimum is a value `x` in `range` such that $(D pred(a, x)) is
+`false` for all values `a` in `range`. Conversely, the maximum is a value `x` in
+`range` such that $(D pred(x, a)) is `false` for all values `a` in `range` (note
+the swapped arguments to `pred`).
+
+These functions may be used for computing arbitrary extrema by choosing `pred`
+appropriately. For corrrect functioning, `pred` must be a strict partial order,
+i.e. transitive (if $(D pred(a, b) && pred(b, c)) then $(D pred(a, c))) and
+irreflexive ($(D pred(a, a)) is `false`).
+
 Params:
-    pred = The ordering predicate to use to determine the minimal element.
+    pred = The ordering predicate to use to determine the extremum (minimum or
+        maximum) element.
     range = The input range to search.
 
-Returns: The position of the minimum element of forward range $(D range), i.e.
-a subrange of $(D range) starting at the position of its smallest element and
-with the same ending as $(D range). The function can actually be used for
-finding the maximum or any other ordering predicate (that's why $(D maxPos) is
-not provided).
- */
+Returns: The position of the minimum (respectively maximum) element of forward
+range `range`, i.e. a subrange of `range` starting at the position of  its
+smallest (respectively largest) element and with the same ending as `range`.
+
+*/
 Range minPos(alias pred = "a < b", Range)(Range range)
     if (isForwardRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
-    if (range.empty) return range;
-    auto result = range.save;
-
-    for (range.popFront(); !range.empty; range.popFront())
+    static if (hasSlicing!Range && isRandomAccessRange!Range && hasLength!Range)
     {
-        //Note: Unlike minCount, we do not care to find equivalence, so a single pred call is enough
-        if (binaryFun!pred(range.front, result.front))
+        // Prefer index-based access
+        size_t pos = 0;
+        foreach (i; 1 .. range.length)
         {
-            // change the min
-            result = range.save;
+            if (binaryFun!pred(range[i], range[pos]))
+            {
+                pos = i;
+            }
         }
+        return range[pos .. $];
     }
-    return result;
+    else
+    {
+        auto result = range.save;
+        if (range.empty) return result;
+        for (range.popFront(); !range.empty; range.popFront())
+        {
+            // Note: Unlike minCount, we do not care to find equivalence, so a
+            // single pred call is enough.
+            if (binaryFun!pred(range.front, result.front))
+            {
+                // change the min
+                result = range.save;
+            }
+        }
+        return result;
+    }
+}
+
+/// Ditto
+Range maxPos(alias pred = "a < b", Range)(Range range)
+if (isForwardRange!Range && !isInfinite!Range &&
+    is(typeof(binaryFun!pred(range.front, range.front))))
+{
+    return range.minPos!((a, b) => binaryFun!pred(b, a));
 }
 
 ///
@@ -2923,9 +3034,9 @@ Range minPos(alias pred = "a < b", Range)(Range range)
 {
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
     // Minimum is 1 and first occurs in position 3
-    assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
+    assert(a.minPos == [ 1, 2, 4, 1, 1, 2 ]);
     // Maximum is 4 and first occurs in position 2
-    assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
+    assert(a.maxPos == [ 4, 1, 2, 4, 1, 1, 2 ]);
 }
 
 @safe unittest
@@ -3111,12 +3222,13 @@ bool skipOver(alias pred, R, E)(ref R r, E e)
 /**
 Checks whether the given
 $(XREF_PACK_NAMED range,primitives,isInputRange,input range) starts with (one
-of) the given needle(s).
+of) the given needle(s) or, if no needles are given,
+if its front element fulfils predicate $(D pred).
 
 Params:
 
     pred = Predicate to use in comparing the elements of the haystack and the
-        needle(s).
+        needle(s). Mandatory if no needles are given.
 
     doesThisStart = The input range to check.
 
@@ -3138,6 +3250,9 @@ elements in $(D withOneOfThese), then the shortest one matches (if there are
 two which match which are of the same length (e.g. $(D "a") and $(D 'a')), then
 the left-most of them in the argument
 list matches).
+
+In the case when no needle parameters are given, return $(D true) iff front of
+$(D doesThisStart) fulfils predicate $(D pred).
  */
 uint startsWith(alias pred = "a == b", Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
 if (isInputRange!Range && Needles.length > 1 &&
@@ -3282,17 +3397,36 @@ if (isInputRange!R1 &&
 
 /// Ditto
 bool startsWith(alias pred = "a == b", R, E)(R doesThisStart, E withThis)
-if (isInputRange!R &&
-    is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
+    if (isInputRange!R &&
+        is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
     return doesThisStart.empty
         ? false
         : binaryFun!pred(doesThisStart.front, withThis);
 }
 
+/// Ditto
+bool startsWith(alias pred, R)(R doesThisStart)
+    if (isInputRange!R &&
+        ifTestable!(typeof(doesThisStart.front), unaryFun!pred))
+{
+    return !doesThisStart.empty && unaryFun!pred(doesThisStart.front);
+}
+
 ///
 @safe unittest
 {
+    import std.ascii : isAlpha;
+
+    assert("abc".startsWith!(a => a.isAlpha));
+    assert("abc".startsWith!isAlpha);
+    assert(!"1ab".startsWith!(a => a.isAlpha));
+    assert(!"".startsWith!(a => a.isAlpha));
+
+    import std.algorithm.comparison : among;
+    assert("abc".startsWith!(a => a.among('a', 'b') != 0));
+    assert(!"abc".startsWith!(a => a.among('b', 'c') != 0));
+
     assert(startsWith("abc", ""));
     assert(startsWith("abc", "a"));
     assert(!startsWith("abc", "b"));

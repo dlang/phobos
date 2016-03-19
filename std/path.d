@@ -3767,8 +3767,7 @@ string expandTilde(string inputPath) nothrow
 {
     version(Posix)
     {
-        import core.stdc.string : strlen;
-        import core.stdc.stdlib : getenv, malloc, free, realloc;
+        import core.stdc.stdlib : malloc, free, realloc;
         import core.exception : onOutOfMemoryError;
         import core.stdc.errno : errno, ERANGE;
 
@@ -3780,12 +3779,14 @@ string expandTilde(string inputPath) nothrow
         */
         static string combineCPathWithDPath(char* c_path, string path, size_t char_pos) nothrow
         {
+            import core.stdc.string : strlen;
+
             assert(c_path != null);
             assert(path.length > 0);
             assert(char_pos >= 0);
 
             // Search end of C string
-            size_t end = core.stdc.string.strlen(c_path);
+            size_t end = strlen(c_path);
 
             // Remove trailing path separator, if any
             if (end && isDirSeparator(c_path[end - 1]))
@@ -3806,11 +3807,13 @@ string expandTilde(string inputPath) nothrow
         // Replaces the tilde from path with the environment variable HOME.
         static string expandFromEnvironment(string path) nothrow
         {
+            import core.stdc.stdlib : getenv;
+
             assert(path.length >= 1);
             assert(path[0] == '~');
 
             // Get HOME and use that to replace the tilde.
-            auto home = core.stdc.stdlib.getenv("HOME");
+            auto home = getenv("HOME");
             if (home == null)
                 return path;
 
@@ -3838,10 +3841,10 @@ string expandTilde(string inputPath) nothrow
                 auto last_char = indexOf(path, dirSeparator[0]);
 
                 size_t username_len = (last_char == -1) ? path.length : last_char;
-                char* username = cast(char*)core.stdc.stdlib.malloc(username_len * char.sizeof);
+                char* username = cast(char*)malloc(username_len * char.sizeof);
                 if (!username)
                     onOutOfMemoryError();
-                scope(exit) core.stdc.stdlib.free(username);
+                scope(exit) free(username);
 
                 if (last_char == -1)
                 {
@@ -3859,12 +3862,12 @@ string expandTilde(string inputPath) nothrow
                 // Reserve C memory for the getpwnam_r() function.
                 int extra_memory_size = 5 * 1024;
                 char* extra_memory;
-                scope(exit) core.stdc.stdlib.free(extra_memory);
+                scope(exit) free(extra_memory);
 
                 passwd result;
                 while (1)
                 {
-                    extra_memory = cast(char*)core.stdc.stdlib.realloc(extra_memory, extra_memory_size * char.sizeof);
+                    extra_memory = cast(char*)realloc(extra_memory, extra_memory_size * char.sizeof);
                     if (extra_memory == null)
                         onOutOfMemoryError();
 

@@ -720,6 +720,7 @@ unittest
 
 struct BitArray
 {
+    // Explicitly undocumented. They will be removed in April 2016. @@@DEPRECATED_2016-04@@@
     deprecated("Use the constructor instead.")
     @property void ptr(size_t* p) pure nothrow @nogc { _ptr = p; }
     deprecated("Use .opIndex instead.")
@@ -1248,14 +1249,14 @@ public:
         return hash;
     }
 
-    // Explictly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
+    // Explicitly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
     deprecated("Use the constructor instead.")
     void init(bool[] ba) pure nothrow
     {
         this = BitArray(ba);
     }
 
-    // Explictly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
+    // Explicitly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
     deprecated("Use the constructor instead.")
     void init(void[] v, size_t numbits) pure nothrow
     {
@@ -3775,21 +3776,8 @@ private uint countTrailingZeros(T)(T value) @nogc pure nothrow
     // bsf doesn't give the correct result for 0.
     if (!value)
         return 8 * T.sizeof;
-
-    static if (T.sizeof == 8 && size_t.sizeof == 4)
-    {
-        // bsf's parameter is size_t, so it doesn't work with 64-bit integers
-        // on a 32-bit machine. For this case, we call bsf on each 32-bit half.
-        uint lower = cast(uint)value;
-        if (lower)
-            return bsf(lower);
-        value >>>= 32;
-        return 32 + bsf(cast(uint)value);
-    }
     else
-    {
         return bsf(value);
-    }
 }
 
 ///

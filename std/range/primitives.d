@@ -2161,8 +2161,9 @@ version(unittest)
 void popBack(T)(ref T[] a) @safe pure
 if (isNarrowString!(T[]))
 {
+    import std.utf: strideBack;
     assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
-    a = a[0 .. $ - std.utf.strideBack(a, $)];
+    a = a[0 .. $ - strideBack(a, $)];
 }
 
 @safe pure unittest
@@ -2273,8 +2274,8 @@ if (!isNarrowString!(T[]))
 // Specialization for strings
 @property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
-    import std.utf : decode;
+    import std.utf : decode, strideBack;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
-    size_t i = a.length - std.utf.strideBack(a, a.length);
+    size_t i = a.length - strideBack(a, a.length);
     return decode(a, i);
 }

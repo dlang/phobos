@@ -168,7 +168,7 @@ void fun(size_t n)
     // Use a stack-installed allocator for up to 64KB
     StackFront!65536 myAllocator;
     int[] a2 = myAllocator.makeArray!int(n);
-    scope(exit) theAllocator.dispose(a2);
+    scope(exit) myAllocator.dispose(a2);
     ...
 }
 ----
@@ -452,7 +452,8 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
     auto m = alloc.allocate(max(stateSize!T, 1));
     if (!m.ptr) return null;
     scope(failure) alloc.deallocate(m);
-    static if (is(T == class)) return emplace!T(m, args);
+    static if (is(T == class))
+        return emplace!T(m, args);
     else return emplace(cast(T*) m.ptr, args);
 }
 
@@ -488,6 +489,14 @@ unittest
     assert(cust.id == uint.max); // default initialized
     cust = theAllocator.make!Customer(42);
     assert(cust.id == 42);
+}
+
+unittest // bugzilla 15639 & 15772
+{
+    abstract class Foo {}
+    class Bar: Foo {}
+    static assert(!is(typeof(theAllocator.make!Foo)));
+    static assert( is(typeof(theAllocator.make!Bar)));
 }
 
 unittest
@@ -573,9 +582,20 @@ unittest
 
 private T[] uninitializedFillDefault(T)(T[] array) nothrow
 {
-    static immutable __gshared T t;
+    T t = T.init;
     fillWithMemcpy(array, t);
     return array;
+}
+
+pure nothrow @nogc
+unittest
+{
+    static struct S { int x = 42; @disable this(this); }
+
+    int[5] expected = [42, 42, 42, 42, 42];
+    S[5] arr = void;
+    uninitializedFillDefault(arr);
+    assert ((cast(int*)arr.ptr)[0 .. arr.length] == expected);
 }
 
 unittest
@@ -614,7 +634,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
 
 unittest
 {
-    void test(A)(auto ref A alloc)
+    void test1(A)(auto ref A alloc)
     {
         int[] a = alloc.makeArray!int(0);
         assert(a.length == 0 && a.ptr is null);
@@ -622,9 +642,20 @@ unittest
         assert(a.length == 5);
         assert(a == [ 0, 0, 0, 0, 0]);
     }
+
+    void test2(A)(auto ref A alloc)
+    {
+        static struct S { int x = 42; @disable this(this); }
+        S[] arr = alloc.makeArray!S(5);
+        assert(arr.length == 5);
+        assert((cast(int*)arr.ptr)[0 .. 5] == [ 42, 42, 42, 42, 42]);
+    }
+
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
-    test(theAllocator);
+    test1(GCAllocator.instance);
+    test1(theAllocator);
+    test2(GCAllocator.instance);
+    test2(theAllocator);
 }
 
 /// Ditto
@@ -863,7 +894,7 @@ unittest
 }
 
 /// Ditto
-bool expandArray(T, Allocator)(auto ref Allocator alloc, T[] array,
+bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     size_t delta, auto ref T init)
 {
     if (!delta) return true;
@@ -875,6 +906,19 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, T[] array,
     import std.algorithm : uninitializedFill;
     array[oldLength .. $].uninitializedFill(init);
     return true;
+}
+
+unittest
+{
+    void test(A)(auto ref A alloc)
+    {
+        auto arr = alloc.makeArray!int([1, 2, 3]);
+        assert(alloc.expandArray(arr, 3, 1));
+        assert(arr == [1, 2, 3, 1, 1, 1]);
+    }
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test(GCAllocator.instance);
+    test(theAllocator);
 }
 
 /// Ditto
@@ -1064,7 +1108,19 @@ void dispose(A, T)(auto ref A alloc, T p)
 if (is(T == class) || is(T == interface))
 {
     if (!p) return;
-    auto support = (cast(void*) p)[0 .. typeid(p).init.length];
+    static if (is(T == interface))
+    {
+        version(Windows)
+        {
+            import core.sys.windows.unknwn;
+            static assert(!is(T: IUnknown), "COM interfaces can't be destroyed in "
+                ~ __PRETTY_FUNCTION__);
+        }
+        auto ob = cast(Object) p;
+    }
+    else
+        alias ob = p;
+    auto support = (cast(void*) ob)[0 .. typeid(ob).initializer.length];
     destroy(p);
     alloc.deallocate(support);
 }
@@ -1118,6 +1174,20 @@ unittest
 
     int[] arr = theAllocator.makeArray!int(43);
     theAllocator.dispose(arr);
+}
+
+unittest //bugzilla 15721
+{
+    import std.experimental.allocator.mallocator: Mallocator;
+
+    interface Foo {}
+    class Bar: Foo {}
+
+    Bar bar;
+    Foo foo;
+    bar = Mallocator.instance.make!Bar;
+    foo = cast(Foo) bar;
+    Mallocator.instance.dispose(foo);
 }
 
 /**

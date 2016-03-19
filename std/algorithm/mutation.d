@@ -734,7 +734,7 @@ void initializeAll(Range)(Range range)
         //We avoid calling emplace here, because our goal is to initialize to
         //the static state of T.init,
         //So we want to avoid any un-necassarilly CC'ing of T.init
-        auto p = typeid(T).init().ptr;
+        auto p = typeid(T).initializer().ptr;
         if (p)
             for ( ; !range.empty ; range.popFront() )
                 memcpy(addressOf(range.front), p, T.sizeof);
@@ -824,10 +824,10 @@ unittest
     static assert (!hasElaborateAssign!S2);
     static assert ( hasElaborateAssign!S3);
     static assert ( hasElaborateAssign!S4);
-    assert (!typeid(S1).init().ptr);
-    assert ( typeid(S2).init().ptr);
-    assert (!typeid(S3).init().ptr);
-    assert ( typeid(S4).init().ptr);
+    assert (!typeid(S1).initializer().ptr);
+    assert ( typeid(S2).initializer().ptr);
+    assert (!typeid(S3).initializer().ptr);
+    assert ( typeid(S4).initializer().ptr);
 
     foreach(S; AliasSeq!(S1, S2, S3, S4))
     {
@@ -1221,7 +1221,7 @@ void moveEmplace(T)(ref T source, ref T target) @system
             else
                 enum sz = T.sizeof;
 
-            auto init = typeid(T).init();
+            auto init = typeid(T).initializer();
             if (init.ptr is null) // null ptr means initialize to 0s
                 memset(&source, 0, sz);
             else
@@ -1530,7 +1530,7 @@ offsets can be passed in.
 
 ----
 int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-assert(remove(a, 1, tuple(3, 5), 9) == [ 0, 2, 6, 7, 8, 10 ]);
+assert(remove(a, 1, tuple(3, 5), 9) == [ 0, 2, 5, 6, 7, 8, 10 ]);
 ----
 
 In this case, the slots at positions 1, 3, 4, and 9 are removed from
@@ -1960,7 +1960,7 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
     auto r = representation(s);
     for (size_t i = 0; i < s.length; )
     {
-        immutable step = std.utf.stride(s, i);
+        immutable step = stride(s, i);
         if (step > 1)
         {
             .reverse(r[i .. i + step]);
