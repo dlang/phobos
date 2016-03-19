@@ -2140,7 +2140,7 @@ body
 
         Appender!(immutable(Dst)[]) array;
         array.reserve(s.length);
-        Dst[] buffer = new Dst[minReservePlace];
+        Dst[minReservePlace] buffer;
         const(Src)[] t = s;
 
         while (t.length != 0)
