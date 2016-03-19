@@ -6551,6 +6551,8 @@ unittest
     // can select types
     static assert(is(Select!(true, int, long) == int));
     static assert(is(Select!(false, int, long) == long));
+    static struct Foo {}
+    static assert(is(Select!(false, const(int), const(Foo)) == const(Foo)));
 
     // can select symbols
     int a = 1;
