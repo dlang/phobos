@@ -739,3 +739,7 @@ unittest // by Artem Rebrov
     assert( output[] == input[] );
 }
 
+unittest
+{
+    static assert(__traits(compiles, etc.c.zlib.gzclose(null)));        // bugzilla 15457
+}
