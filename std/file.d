@@ -278,9 +278,9 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
     stat_t statbuf = void;
     cenforce(fstat(fd, &statbuf) == 0, name, namez);
 
-    immutable initialAlloc = to!size_t(statbuf.st_size
+    immutable initialAlloc = min(upTo, to!size_t(statbuf.st_size
         ? min(statbuf.st_size + 1, maxInitialAlloc)
-        : minInitialAlloc);
+        : minInitialAlloc));
     void[] result = uninitializedArray!(ubyte[])(initialAlloc);
     scope(failure) delete result;
     size_t size = 0;
@@ -292,6 +292,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
         cenforce(actual != -1, name, namez);
         if (actual == 0) break;
         size += actual;
+        if (size >= upTo) break;
         if (size < result.length) continue;
         immutable newAlloc = size + sizeIncrement;
         result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)[0 .. newAlloc];
