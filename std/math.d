@@ -6248,7 +6248,7 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
         if (iy == y && fabs(y) < 32768.0)
             return pow(x, iy);
 
-        double sign = 1.0;
+        real sign = 1.0;
         if (x < 0)
         {
             // Result is real only if y is an integer
