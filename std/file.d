@@ -2097,6 +2097,9 @@ private bool ensureDirExists(in char[] pathname)
 /****************************************************
  * Make directory and all parent directories as needed.
  *
+ * Does nothing if the directory specified by
+ * $(D pathname) already exists.
+ *
  * Throws: $(D FileException) on error.
  */
 
