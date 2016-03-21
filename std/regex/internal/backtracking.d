@@ -386,21 +386,15 @@ template BacktrackingMatcher(bool CTregex)
                         int test;
                         if(re.ir[pc].code == IR.InfiniteEnd)
                         {
-                            test = quickTestFwd(pc+IRL!(IR.InfiniteEnd), front, re);
-                            if(test >= 0)
-                                pushState(pc+IRL!(IR.InfiniteEnd), counter);
+                            pushState(pc+IRL!(IR.InfiniteEnd), counter);
                             infiniteNesting++;
                             pc -= len;
                         }
                         else
                         {
-                            test = quickTestFwd(pc - len, front, re);
-                            if(test >= 0)
-                            {
-                                infiniteNesting++;
-                                pushState(pc - len, counter);
-                                infiniteNesting--;
-                            }
+                            infiniteNesting++;
+                            pushState(pc - len, counter);
+                            infiniteNesting--;
                             pc += IRL!(IR.InfiniteEnd);
                         }
                         break;
@@ -468,20 +462,14 @@ template BacktrackingMatcher(bool CTregex)
                         int test;
                         if(re.ir[pc].code == IR.InfiniteEnd)
                         {
-                            test = quickTestFwd(pc+IRL!(IR.InfiniteEnd), front, re);
-                            if(test >= 0)
-                            {
-                                infiniteNesting--;
-                                pushState(pc + IRL!(IR.InfiniteEnd), counter);
-                                infiniteNesting++;
-                            }
+                            infiniteNesting--;
+                            pushState(pc + IRL!(IR.InfiniteEnd), counter);
+                            infiniteNesting++;
                             pc -= len;
                         }
                         else
                         {
-                            test = quickTestFwd(pc-len, front, re);
-                            if(test >= 0)
-                                pushState(pc-len, counter);
+                            pushState(pc-len, counter);
                             pc += IRL!(IR.InfiniteEnd);
                             infiniteNesting--;
                         }
@@ -897,7 +885,7 @@ struct CtContext
         {
         case IR.InfiniteStart,  IR.InfiniteBloomStart,IR.InfiniteQStart, IR.RepeatStart, IR.RepeatQStart:
             bool infLoop =
-                ir[0].code == IR.InfiniteStart || ir[0].code == IR.InfiniteQStart || 
+                ir[0].code == IR.InfiniteStart || ir[0].code == IR.InfiniteQStart ||
                 ir[0].code == IR.InfiniteBloomStart;
             infNesting = infNesting || infLoop;
             if(infLoop)

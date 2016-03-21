@@ -1476,7 +1476,7 @@ struct Parser(R)
 void fixupBytecode()(Bytecode[] ir)
 {
     Stack!uint fixups;
-   
+
     with(IR) for(uint i=0; i<ir.length; i+= ir[i].length)
     {
         if(ir[i].isStart || ir[i].code == Option)
@@ -1523,10 +1523,10 @@ void optimize(Char)(ref Regex!Char zis)
     {
         CodepointSet set;
         with(zis) with(IR)
-    Outer: 
+    Outer:
         for(uint i = idx; i < ir.length; i += ir[i].length)
         {
-            switch(ir[i].code) 
+            switch(ir[i].code)
             {
                 case Char:
                     set.add(ir[i].data, ir[i].data+1);
@@ -1543,7 +1543,7 @@ void optimize(Char)(ref Regex!Char zis)
         }
         return set;
     }
-   
+
     with(zis) with(IR) for(uint i = 0; i < ir.length; i += ir[i].length)
     {
         if(ir[i].code == InfiniteEnd)

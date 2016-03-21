@@ -145,7 +145,7 @@ enum IR:uint {
     RepeatEnd          = 0b1_00100_10, //end of x{n,m} repetition (length,step,minRep,maxRep)
     RepeatQStart       = 0b1_00101_01, //start of a non eager x{n,m}? repetition (length)
     RepeatQEnd         = 0b1_00101_10, //end of non eager x{n,m}? repetition (length,step,minRep,maxRep)
-    
+
     //
     LookaheadStart     = 0b1_00110_01, //begin of the lookahead group (length)
     LookaheadEnd       = 0b1_00110_10, //end of a lookahead group (length)
@@ -170,7 +170,7 @@ int immediateParamsIR(IR i){
     case IR.OrEnd,IR.InfiniteEnd,IR.InfiniteQEnd:
         return 1;  // merge table index
     case IR.InfiniteBloomEnd:
-        return 2;  // bloom filter index + merge table index 
+        return 2;  // bloom filter index + merge table index
     case IR.RepeatEnd, IR.RepeatQEnd:
         return 4;
     case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
@@ -384,7 +384,7 @@ struct Group(DataIndex)
     case IR.OrChar:
         formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar)irb[pc].data, irb[pc].data, irb[pc].sequence);
         break;
-    case IR.RepeatStart, IR.InfiniteStart, IR.InfiniteBloomStart, 
+    case IR.RepeatStart, IR.InfiniteStart, IR.InfiniteBloomStart,
     IR.Option, IR.GotoEndOr, IR.OrStart:
         //forward-jump instructions
         uint len = irb[pc].data;
@@ -704,51 +704,6 @@ bool startOfLine()(dchar back, bool seenNl)
 {
     return ((back == '\r') ^ seenNl) || back == '\n'
     || back == NEL || back == LS || back == PS;
-}
-
-//Test if bytecode starting at pc in program 're' can match given codepoint
-//Returns: 0 - can't tell, -1 if doesn't match
-int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
-{
-    static assert(IRL!(IR.OrChar) == 1);//used in code processing IR.OrChar
-    for(;;)
-        switch(re.ir[pc].code)
-        {
-        case IR.OrChar:
-            uint len = re.ir[pc].sequence;
-            uint end = pc + len;
-            if(re.ir[pc].data != front && re.ir[pc+1].data != front)
-            {
-                for(pc = pc+2; pc < end; pc++)
-                    if(re.ir[pc].data == front)
-                        break;
-                if(pc == end)
-                    return -1;
-            }
-            return 0;
-        case IR.Char:
-            if(front == re.ir[pc].data)
-                return 0;
-            else
-                return -1;
-        case IR.Any:
-            return 0;
-        case IR.CodepointSet:
-            if(re.charsets[re.ir[pc].data].scanFor(front))
-                return 0;
-            else
-                return -1;
-        case IR.GroupStart, IR.GroupEnd:
-            pc += IRL!(IR.GroupStart);
-            break;
-        case IR.Trie:
-            if(re.tries[re.ir[pc].data][front])
-                return 0;
-            else
-                return -1;
-        default:
-            return 0;
-        }
 }
 
 ///Exception object thrown in case of errors during regex compilation.
