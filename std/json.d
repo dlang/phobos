@@ -808,7 +808,7 @@ if(isInputRange!T)
         }
     }
 
-    void parseValue(out JSONValue value)
+    void parseValue(ref JSONValue value)
     {
         depth++;
 
