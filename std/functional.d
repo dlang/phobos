@@ -1471,3 +1471,218 @@ template forward(args...)
     auto x2 = bar(value); // case of OK
 }
 
+/**
+Create a wrapper for `_func` called `arvName` that allows rvalue arguments to be passed
+to `ref` parameters (unless the parameter is marked `return`).
+
+$(P Default arugments, function attributes, and parameter storage classes are retained.)
+*/
+mixin template acceptRVals(string arvName, alias _func)
+{
+    private enum mixStr = function() pure
+    {
+        if (!__ctfe)
+            assert(0);
+
+        import std.traits;
+        alias FA = FunctionAttribute,
+             STC = ParameterStorageClass;
+
+        alias fas   = functionAttributes!_func;
+        alias names = ParameterIdentifierTuple!_func;
+
+        // CTFE string append generates too much grabage
+        char[] retBuff = new char[112];
+        char[] ret;
+        void append(string str)
+        {
+            const size_t newLen = (ret.length + str.length);
+            while (newLen > retBuff.length)
+                retBuff.length *= 2;
+
+            ret = retBuff[0 .. newLen];
+            ret[($ - str.length) .. $] = str;
+        }
+
+        // function attributes
+        append("pragma(inline, true) ");
+        /* Whether this function is made final or virtual should not be
+           determined by the attributes of _func. */
+        if (fas & FA.property)
+            append("@property ");
+        if (fas & FA.ref_)
+            append("ref ");
+
+        append("auto ");
+        append(arvName);
+        append("()(");
+
+        // parameter list
+        static if (names.length > 0)
+        {
+            alias types = Parameters!_func;
+            alias stcs  = ParameterStorageClassTuple!_func;
+            alias dflts = ParameterDefaults!_func;
+
+            foreach (p, name; names)
+            {
+                if (p > 0)
+                    append(", ");
+
+                // storage classes
+                if ((stcs[p] & STC.lazy_) != 0)
+                    append("lazy ");
+                if ((stcs[p] & STC.scope_) != 0)
+                    append("scope ");
+                if ((stcs[p] & STC.out_) != 0)
+                    append("out ");
+
+                if ((stcs[p] & STC.return_) != 0)
+                    append("return ref ");
+                else if ((stcs[p] & STC.ref_) != 0)
+                    append("auto ref ");
+
+                // type
+                append(types[p].stringof);
+                append(" ");
+
+                // identifier
+                if (name.length > 0)
+                    append(name);
+                else
+                {
+                    append("a");
+                    append(p.stringof);
+                }
+
+                // default value
+                static if (! is(dflts[p] == void))
+                {
+                    append(" = ");
+                    append(dflts[p].stringof);
+                }
+            }
+        }
+        append(") ");
+
+        // more function attributes
+        if (fas & FA.const_)
+            append("const ");
+        if (fas & FA.shared_)
+            append("shared ");
+
+        // forwarding
+        append("{ return _func(");
+        static if (names.length > 0)
+        {
+            foreach (p, name; names)
+            {
+                if (p > 0)
+                    append(", ");
+
+                if (name.length > 0)
+                    append(name);
+                else
+                {
+                    append("a");
+                    append(p.stringof);
+                }
+            }
+        }
+        append("); }");
+
+        return ret.idup;
+    }();
+
+    //pragma(msg, mixStr);
+    mixin(mixStr);
+}
+
+///
+@safe unittest
+{
+    int addLVals(ref int a, ref int b)
+    {
+        const ret = a + b;
+        a = 0;
+        return ret;
+    }
+
+    // This will not compile, because 1 and 2 are rvalues:
+    static assert(! __traits(compiles, addLVals(1, 2)));
+
+    // This *does* compile:
+    mixin acceptRVals!("addAny", addLVals);
+    assert(addAny(1, 2) == 3);
+
+    // lvalues are still passed by reference:
+    int x = 5, y = 3;
+    assert(addAny(x, y) == 8);
+    assert(x == 0);
+}
+
+///
+@safe unittest
+{
+    // The wrapped function can be anonymous:
+    mixin acceptRVals!("mul", function(ref const(int) a, ref const(int) b)
+    {
+        return a * b;
+    });
+    int x = 3;
+    assert(mul(7, x) == 21);
+}
+
+///
+@safe unittest
+{
+    ref int divLVal(return ref int a, ref int b)
+    {
+        return (a /= b);
+    }
+    mixin acceptRVals!("divAny", divLVal);
+
+    // This will not work, because `return ref` really does need an lvalue:
+    static assert(! __traits(compiles, divAny(-6, 3) += 1));
+
+    // But this will:
+    int z = -6;
+    divAny(z, 3) += 10;
+    assert(z == 8);
+}
+
+///
+@safe unittest
+{
+    // Class methods can be wrapped, as well:
+    class Example
+    {
+        int base;
+        this(int base)
+        {
+            this.base = base;
+        }
+
+        private int powImpl(ref int exp) const
+        {
+            return base ^^ exp;
+        }
+        mixin acceptRVals!("pow", powImpl);
+    }
+    const e = new Example(3);
+    assert(e.pow(4) == 81);
+}
+
+/**
+Get a wrapped version of `_func` that allows rvalue arguments to be passed
+to `ref` parameters.
+
+$(P $(B Note:) The `mixin template` version must be used when wrapping member functions.)
+
+$(P Default arugments, function attributes, and parameter storage classes are retained.)
+*/
+template acceptRVals(alias _func)
+{
+    mixin acceptRVals!("_impl", func);
+    alias acceptRVals = _impl;
+}
