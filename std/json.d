@@ -265,6 +265,15 @@ struct JSONValue
 
     /// Value getter for $(D JSON_TYPE.OBJECT).
     /// Unlike $(D object), this retrieves the object by value and can be used in @safe code.
+    ///
+    /// A caveat is that, if the returned value is null, modifications will not be visible:
+    /// ---
+    /// JSONValue json;
+    /// json.object = null;
+    /// json.objectNoRef["hello"] = JSONValue("world");
+    /// assert("hello" !in json.object);
+    /// ---
+    ///
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.OBJECT).
     @property inout(JSONValue[string]) objectNoRef() inout pure @trusted
@@ -299,6 +308,16 @@ struct JSONValue
 
     /// Value getter for $(D JSON_TYPE.ARRAY).
     /// Unlike $(D array), this retrieves the array by value and can be used in @safe code.
+    ///
+    /// A caveat is that, if you append to the returned array, the new values aren't visible in the
+    /// JSONValue:
+    /// ---
+    /// JSONValue json;
+    /// json.array = [JSONValue("hello")];
+    /// json.arrayNoRef ~= JSONValue("world");
+    /// assert(json.array.length == 1);
+    /// ---
+    ///
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.ARRAY).
     @property inout(JSONValue[]) arrayNoRef() inout pure @trusted
@@ -621,8 +640,6 @@ struct JSONValue
     /// Implements the foreach $(D opApply) interface for json arrays.
     int opApply(int delegate(size_t index, ref JSONValue) dg) @system
     {
-        enforce!JSONException(type == JSON_TYPE.ARRAY,
-                                "JSONValue is not an array");
         int result;
 
         foreach(size_t index, ref value; array)
