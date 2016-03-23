@@ -23,6 +23,8 @@ $(BUGSTITLE Library Changes,
         $(XREF algorithm_searching, maxPos) were added.))
     $(LI Range support for the convenience wrapper $(XREF container_rbtree, redBlackTree)
         was added.)
+    $(LI $(RELATIVE_LINK2 process, Process creation in
+        $(STDMODREF process, std.process) was sped up on Posix.))
 )
 
 $(BUGSTITLE Library Changes,
@@ -63,6 +65,15 @@ $(LI $(LNAME2 maxPos, $(XREF algorithm_searching, maxCount) and
 $(P Previous to this addition, in order to get the number of the greatest
     elements, you had to use `minCount!"a > b"`, which was very confusing.
     This change adds convenience functions to fix this issue.)
+)
+
+$(LI $(RELATIVE_LINK2 process, Process creation in
+    $(STDMODREF process, std.process) was sped up on Posix.)
+Previously, Posix systems would attempt to close every file descriptor from 3
+    to the maximum file descriptor number if `inheritFDs` was not specified
+    with `spawnProcess`, `pipeProcess`, etc.
+    $(STDMODREF process, std.process) now uses `poll()` to determine which
+    descriptors need closing.
 )
 
 )

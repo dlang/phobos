@@ -450,17 +450,62 @@ private Pid spawnProcessImpl(in char[][] args,
         setCLOEXEC(STDERR_FILENO, false);
         if (!(config & Config.inheritFDs))
         {
+            import core.sys.posix.poll;
             import core.sys.posix.sys.resource;
-            rlimit r;
-            getrlimit(RLIMIT_NOFILE, &r);
-            foreach (i; 3 .. cast(int) r.rlim_cur) close(i);
-        }
 
-        // Close the old file descriptors, unless they are
-        // either of the standard streams.
-        if (stdinFD  > STDERR_FILENO)  close(stdinFD);
-        if (stdoutFD > STDERR_FILENO)  close(stdoutFD);
-        if (stderrFD > STDERR_FILENO)  close(stderrFD);
+            // Get the maximum number of file descriptors that could be open.
+            rlimit r;
+            errnoEnforce(getrlimit(RLIMIT_NOFILE, &r) == 0);
+            immutable maxDescriptors = cast(int)r.rlim_cur;
+
+            // The above, less stdin, stdout, and stderr
+            immutable maxToClose = maxDescriptors - 3;
+
+            // Call poll() to see which ones are actually open:
+            // Done as an internal function because MacOS won't allow
+            // alloca and exceptions to mix.
+            @nogc nothrow
+            static bool pollClose(int maxToClose)
+            {
+                import core.stdc.stdlib : alloca;
+
+                pollfd* pfds = cast(pollfd*)alloca(pollfd.sizeof * maxToClose);
+                foreach (i; 0 .. maxToClose)
+                {
+                    pfds[i].fd = i + 3;
+                    pfds[i].events = 0;
+                    pfds[i].revents = 0;
+                }
+                if (poll(pfds, maxToClose, 0) >= 0)
+                {
+                    foreach (i; 0 .. maxToClose)
+                    {
+                        // POLLNVAL will be set if the file descriptor is invalid.
+                        if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                    }
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            if (!pollClose(maxToClose))
+            {
+                // Fall back to closing everything.
+                foreach (i; 3 .. maxDescriptors) close(i);
+            }
+        }
+        else
+        { // This is already done if we don't inherit descriptors.
+
+            // Close the old file descriptors, unless they are
+            // either of the standard streams.
+            if (stdinFD  > STDERR_FILENO)  close(stdinFD);
+            if (stdoutFD > STDERR_FILENO)  close(stdoutFD);
+            if (stderrFD > STDERR_FILENO)  close(stderrFD);
+        }
 
         // Execute program.
         core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
