@@ -1,17 +1,14 @@
 // Written in the D programming language.
 
 /**
-This module implements a experimental additions/modifications to std.typecons.
+This module implements experimental additions/modifications to $(MREF std, _typecons).
 
-Use this module to test out new functionality of wrap which allows for a struct
-to be wrapped against an interface. The implementation in std.typecons only
-allows for classes to use the wrap functionality.
+Use this module to test out new functionality for $(REF wrap, std, _typecons)
+which allows for a struct to be wrapped against an interface; the
+implementation in $(MREF std, _typecons) only allows for classes to use the wrap
+functionality.
 
 Source:    $(PHOBOSSRC std/experimental/_typecons.d)
-
-Macros:
-
-WIKI = Phobos/StdVariant
 
 Copyright: Copyright the respective authors, 2008-
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -88,7 +85,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
     import std.meta : staticMap;
 
     // strict upcast
-    bool implementsInterface()() @safe pure nothrow
+    bool implementsInterface()()
     if (Targets.length == 1 && is(Source : Targets[0]))
     {
         return true;
@@ -180,42 +177,64 @@ unittest {
     static assert(!implementsInterface!(B, FooBar));
 }
 
-private template isInterface(ConceptType) {
-    enum isInterface = is(ConceptType == interface);
-}
+private enum isInterface(ConceptType) = is(ConceptType == interface);
 
-/**
- * Supports structural based typesafe conversion.
- *
- * If `Source` has structural conformance with the `interface`
- * `Targets`, wrap creates internal wrapper class which inherits
- * `Targets` and wrap `src` object, then return it.
- *
- * If `Source` is a structure then wrapping/unwrapping will create
- * a copy, it is not possible to affect the original with a wrapped structure.
- *
- *
- * Bugs:
- * $(D wrap) does not support interfaces which take or return their interface type.
- */
+///
 template wrap(Targets...)
 if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
 {
-    import std.meta : staticMap;
+    import std.meta : ApplyLeft, staticMap;
 
-    static if (!allSatisfy!(isMutable, Targets)) {
+    version(StdDdoc)
+    {
+        /**
+         * Wrap src in an anonymous class implementing $(D_PARAM Targets).
+         *
+         * wrap creates an internal wrapper class which implements the
+         * interfaces in `Targets` using the methods of `src`, then returns a
+         * GC-allocated instance of it.
+         *
+         * $(D_PARAM Source) can be either a `class` or a `struct`, but it must
+         * $(I structurally conform) with all the $(D_PARAM Targets)
+         * interfaces; i.e. it must provide concrete methods with compatible
+         * signatures of those in $(D_PARAM Targets).
+         *
+         * If $(D_PARAM Source) is a `struct` then wrapping/unwrapping will
+         * create a copy; it is not possible to affect the original `struct`
+         * through the wrapper.
+         *
+         * The returned object additionally supports $(LREF unwrap).
+         *
+         * Note:
+         * If $(D_PARAM Targets) has only one entry and $(D_PARAM Source) is a
+         * class which explicitly implements it, wrap simply returns src
+         * upcasted to `Targets[0]`.
+         *
+         * Bugs:
+         * wrap does not support interfaces which take their own type as either
+         * a parameter type or return type in any of its methods.
+         *
+         * See_Also: $(LREF unwrap) for examples
+         */
+        auto wrap(Source)(inout Source src)
+            if (implementsInterface!(Source, Targets));
+    }
+
+    static if (!allSatisfy!(isMutable, Targets))
         alias wrap = .wrap!(staticMap!(Unqual, Targets));
-    } else {
+    else
+    {
         // strict upcast
-        auto wrap(Source)(inout Source src) @trusted pure nothrow
+        auto wrap(Source)(inout Source src)
         if (Targets.length == 1 && is(Source : Targets[0]))
         {
             alias T = Select!(is(Source == shared), shared Targets[0], Targets[0]);
             return dynamicCast!(inout T)(src);
         }
+
         // structural upcast
         template wrap(Source)
-        if (!allSatisfy!(Bind!(isImplicitlyConvertible, Source), Targets))
+        if (!allSatisfy!(ApplyLeft!(isImplicitlyConvertible, Source), Targets))
         {
             auto wrap(inout Source src)
             {
@@ -388,37 +407,149 @@ private string unwrapExceptionText(Source, Target)()
     return Target.stringof~ " not wrapped into "~ Source.stringof;
 }
 
-/**
- * Extract object which wrapped by $(D wrap).
- *
- * Params:
- *     Target = Type to unwrap $(D src) to.
- *     src = Item originally wrapped with a call to $(D wrap).
- *
- * Returns: The $(D Target) type from the wrapped type.
- * If the type was not wrapped and is a class $(D null) is returned.
- *
- * Throws: ConvException when attempting to unwrap a struct
- * which is not the target type.
- */
+version(StdDdoc)
+{
+    /**
+     * Extract object previously wrapped by $(LREF wrap).
+     *
+     * Params:
+     *     Target = type of wrapped object
+     *     src = wrapper object returned by $(LREF wrap)
+     *
+     * Returns: the wrapped object, or null if src is not a wrapper created
+     * by $(LREF wrap) and $(D_PARAM Target) is a class
+     *
+     * Throws: $(REF ConvException, std, conv) when attempting to extract a
+     * struct which is not the wrapped type
+     *
+     * See_also: $(LREF wrap)
+     */
+    public inout(Target) unwrap(Target, Source)(inout Source src);
+}
+
+///
+unittest
+{
+    interface Quack
+    {
+        int quack();
+        @property int height();
+    }
+    interface Flyer
+    {
+        @property int height();
+    }
+    class Duck : Quack
+    {
+        int quack() { return 1; }
+        @property int height() { return 10; }
+    }
+    class Human
+    {
+        int quack() { return 2; }
+        @property int height() { return 20; }
+    }
+    struct HumanStructure
+    {
+        int quack() { return 3; }
+        @property int height() { return 30; }
+    }
+
+    Duck d1 = new Duck();
+    Human h1 = new Human();
+    HumanStructure hs1;
+
+    interface Refreshable
+    {
+        int refresh();
+    }
+    // does not have structural conformance
+    static assert(!__traits(compiles, d1.wrap!Refreshable));
+    static assert(!__traits(compiles, h1.wrap!Refreshable));
+    static assert(!__traits(compiles, hs1.wrap!Refreshable));
+
+    // strict upcast
+    Quack qd = d1.wrap!Quack;
+    assert(qd is d1);
+    assert(qd.quack() == 1);    // calls Duck.quack
+    // strict downcast
+    Duck d2 = qd.unwrap!Duck;
+    assert(d2 is d1);
+
+    // structural upcast
+    Quack qh = h1.wrap!Quack;
+    Quack qhs = hs1.wrap!Quack;
+    assert(qh.quack() == 2);    // calls Human.quack
+    assert(qhs.quack() == 3);    // calls HumanStructure.quack
+    // structural downcast
+    Human h2 = qh.unwrap!Human;
+    HumanStructure hs2 = qhs.unwrap!HumanStructure;
+    assert(h2 is h1);
+    assert(hs2 is hs1);
+
+    // structural upcast (two steps)
+    Quack qx = h1.wrap!Quack;   // Human -> Quack
+    Quack qxs = hs1.wrap!Quack;   // HumanStructure -> Quack
+    Flyer fx = qx.wrap!Flyer;   // Quack -> Flyer
+    Flyer fxs = qxs.wrap!Flyer;   // Quack -> Flyer
+    assert(fx.height == 20);    // calls Human.height
+    assert(fxs.height == 30);    // calls HumanStructure.height
+    // strucural downcast (two steps)
+    Quack qy = fx.unwrap!Quack; // Flyer -> Quack
+    Quack qys = fxs.unwrap!Quack; // Flyer -> Quack
+    Human hy = qy.unwrap!Human; // Quack -> Human
+    HumanStructure hys = qys.unwrap!HumanStructure; // Quack -> HumanStructure
+    assert(hy is h1);
+    assert(hys is hs1);
+    // strucural downcast (one step)
+    Human hz = fx.unwrap!Human; // Flyer -> Human
+    HumanStructure hzs = fxs.unwrap!HumanStructure; // Flyer -> HumanStructure
+    assert(hz is h1);
+    assert(hzs is hs1);
+}
+
+///
+unittest
+{
+    interface A { int run(); }
+    interface B { int stop(); @property int status(); }
+    class X
+    {
+        int run() { return 1; }
+        int stop() { return 2; }
+        @property int status() { return 3; }
+    }
+
+    auto x = new X();
+    auto ab = x.wrap!(A, B);
+    A a = ab;
+    B b = ab;
+    assert(a.run() == 1);
+    assert(b.stop() == 2);
+    assert(b.status == 3);
+    static assert(functionAttributes!(typeof(ab).status) & FunctionAttribute.property);
+}
+
 template unwrap(Target)
 {
-    static if (!isMutable!Target) {
+    static if (!isMutable!Target)
         alias unwrap = .unwrap!(Unqual!Target);
-    } else {
+    else
+    {
         // strict downcast
-        auto unwrap(Source)(inout Source src) @trusted pure nothrow
+        auto unwrap(Source)(inout Source src)
         if (is(Target : Source))
         {
             alias T = Select!(is(Source == shared), shared Target, Target);
             return dynamicCast!(inout T)(src);
         }
+
         // structural downcast for struct target
         auto unwrap(Source)(inout Source src)
         if (is(Target == struct))
         {
             alias T = Select!(is(Source == shared), shared Target, Target);
-            Object upCastSource = dynamicCast!(Object)(src);   // remove qualifier
+            auto upCastSource = dynamicCast!Object(src);   // remove qualifier
             do
             {
                 if (auto a = dynamicCast!(Structural!Object)(upCastSource))
@@ -478,107 +609,6 @@ template unwrap(Target)
     }
 }
 
-///
-unittest
-{
-    interface Quack
-    {
-        int quack();
-        @property int height();
-    }
-    interface Flyer
-    {
-        @property int height();
-    }
-    class Duck : Quack
-    {
-        int quack() { return 1; }
-        @property int height() { return 10; }
-    }
-    class Human
-    {
-        int quack() { return 2; }
-        @property int height() { return 20; }
-    }
-    struct HumanStructure
-    {
-        int quack() { return 3; }
-        @property int height() { return 30; }
-    }
-
-    Duck d1 = new Duck();
-    Human h1 = new Human();
-    HumanStructure hs1;
-
-    interface Refleshable
-    {
-        int reflesh();
-    }
-    // does not have structural conformance
-    static assert(!__traits(compiles, d1.wrap!Refleshable));
-    static assert(!__traits(compiles, h1.wrap!Refleshable));
-    static assert(!__traits(compiles, hs1.wrap!Refleshable));
-
-    // strict upcast
-    Quack qd = d1.wrap!Quack;
-    assert(qd is d1);
-    assert(qd.quack() == 1);    // calls Duck.quack
-    // strict downcast
-    Duck d2 = qd.unwrap!Duck;
-    assert(d2 is d1);
-
-    // structural upcast
-    Quack qh = h1.wrap!Quack;
-    Quack qhs = hs1.wrap!Quack;
-    assert(qh.quack() == 2);    // calls Human.quack
-    assert(qhs.quack() == 3);    // calls HumanStructure.quack
-    // structural downcast
-    Human h2 = qh.unwrap!Human;
-    HumanStructure hs2 = qhs.unwrap!HumanStructure;
-    assert(h2 is h1);
-    assert(hs2 is hs1);
-
-    // structural upcast (two steps)
-    Quack qx = h1.wrap!Quack;   // Human -> Quack
-    Quack qxs = hs1.wrap!Quack;   // HumanStructure -> Quack
-    Flyer fx = qx.wrap!Flyer;   // Quack -> Flyer
-    Flyer fxs = qxs.wrap!Flyer;   // Quack -> Flyer
-    assert(fx.height == 20);    // calls Human.height
-    assert(fxs.height == 30);    // calls HumanStructure.height
-    // strucural downcast (two steps)
-    Quack qy = fx.unwrap!Quack; // Flyer -> Quack
-    Quack qys = fxs.unwrap!Quack; // Flyer -> Quack
-    Human hy = qy.unwrap!Human; // Quack -> Human
-    HumanStructure hys = qys.unwrap!HumanStructure; // Quack -> HumanStructure
-    assert(hy is h1);
-    assert(hys is hs1);
-    // strucural downcast (one step)
-    Human hz = fx.unwrap!Human; // Flyer -> Human
-    HumanStructure hzs = fxs.unwrap!HumanStructure; // Flyer -> HumanStructure
-    assert(hz is h1);
-    assert(hzs is hs1);
-}
-///
-unittest
-{
-    interface A { int run(); }
-    interface B { int stop(); @property int status(); }
-    class X
-    {
-        int run() { return 1; }
-        int stop() { return 2; }
-        @property int status() { return 3; }
-    }
-
-    auto x = new X();
-    auto ab = x.wrap!(A, B);
-    A a = ab;
-    B b = ab;
-    assert(a.run() == 1);
-    assert(b.stop() == 2);
-    assert(b.status == 3);
-    static assert(functionAttributes!(typeof(ab).status) & FunctionAttribute.property);
-}
 unittest
 {
     // Validate const/immutable
