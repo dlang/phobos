@@ -589,10 +589,12 @@ struct Input(Char)
     bool nextChar(ref dchar res, ref size_t pos)
     {
         pos = _index;
+        // DMD's inliner hates multiple return functions
+        // but can live with single statement if/else bodies
         if(_index == _origin.length)
             return false;
-        res = std.utf.decode(_origin, _index);
-        return true;
+        else
+            return res = std.utf.decode(_origin, _index), true;
     }
     @property bool atEnd(){
         return _index == _origin.length;
