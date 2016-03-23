@@ -161,7 +161,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
     }
     else
     {
-        auto ahead = r;
+        auto ahead = r.save;
         ahead.popFront();
         size_t i;
 
