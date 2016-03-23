@@ -167,7 +167,7 @@ struct JSONValue
     /// Value getter/setter for $(D JSON_TYPE.STRING).
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.STRING).
-    @property inout(string) str() inout pure @trusted
+    @property string str() const pure @trusted
     {
         enforce!JSONException(type == JSON_TYPE.STRING,
                                 "JSONValue is not a string");
