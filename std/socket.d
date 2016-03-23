@@ -3479,19 +3479,6 @@ class UdpSocket: Socket
  * The two sockets are indistinguishable.
  *
  * Throws: $(D SocketException) if creation of the sockets fails.
- *
- * Example:
- * ---
- * immutable ubyte[] data = [1, 2, 3, 4];
- * auto pair = socketPair();
- * scope(exit) foreach (s; pair) s.close();
- *
- * pair[0].send(data);
- *
- * auto buf = new ubyte[data.length];
- * pair[1].receive(buf);
- * assert(buf == data);
- * ---
  */
 Socket[2] socketPair() @trusted
 {
@@ -3533,6 +3520,7 @@ Socket[2] socketPair() @trusted
         static assert(false);
 }
 
+///
 unittest
 {
     immutable ubyte[] data = [1, 2, 3, 4];
