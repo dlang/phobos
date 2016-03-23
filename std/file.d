@@ -1741,7 +1741,13 @@ assert(!"/usr/share/include".isFile);
 @property bool isFile(R)(auto ref R name)
     if (isConvertibleToString!R)
 {
-    return name.isFile!(StringTypeOf!R);
+    return isFile!(StringTypeOf!R)(name);
+}
+
+unittest // bugzilla 15658
+{
+    DirEntry e = DirEntry(".");
+    static assert(is(typeof(isFile(e))));
 }
 
 unittest
