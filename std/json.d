@@ -786,7 +786,7 @@ if(isInputRange!T)
         return true;
     }
 
-    string parseString() @safe
+    string parseString()
     {
         auto str = appender!string();
 
@@ -852,7 +852,7 @@ if(isInputRange!T)
         }
     }
 
-    void parseValue(out JSONValue value) @safe
+    void parseValue(out JSONValue value)
     {
         depth++;
 
@@ -1030,10 +1030,28 @@ unittest
 @safe unittest
 {
     // Ensure we can parse and use JSON from @safe code
-    enum randomJSON = `{ "key1": { "key2": 1 }}`;
     auto a = `{ "key1": { "key2": 1 }}`.parseJSON;
     assert(a["key1"]["key2"].integer == 1);
     assert(a.toString == `{"key1":{"key2":1}}`);
+}
+
+unittest
+{
+    // Ensure we can parse JSON from a @system range.
+    struct Range
+    {
+        string s;
+        size_t index;
+        @system
+        {
+            bool empty() { return index >= s.length; }
+            void popFront() { index++; }
+            char front() { return s[index]; }
+        }
+    }
+    auto s = Range(`{ "key1": { "key2": 1 }}`);
+    auto json = parseJSON(s);
+    assert(json["key1"]["key2"].integer == 1);
 }
 
 /**
