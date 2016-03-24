@@ -674,7 +674,7 @@ struct JSONValue
     /// $(I options) can be used to tweak the conversion behavior.
     string toString(in JSONOptions options = JSONOptions.none) const @safe
     {
-        return toJSON(&this, false, options);
+        return toJSON(this, false, options);
     }
 
     /// Implicitly calls $(D toJSON) on this JSONValue, like $(D toString), but
@@ -683,7 +683,7 @@ struct JSONValue
     /// $(I options) can be used to tweak the conversion behavior
     string toPrettyString(in JSONOptions options = JSONOptions.none) const @safe
     {
-        return toJSON(&this, true, options);
+        return toJSON(this, true, options);
     }
 }
 
@@ -1049,6 +1049,14 @@ if(isInputRange!T)
     return parseJSON!T(json, -1, options);
 }
 
+deprecated(
+    "Please use the overload that takes a ref JSONValue rather than a pointer. This overload will "
+    ~ "be removed in November 2017.")
+string toJSON(in JSONValue* root, in bool pretty = false, in JSONOptions options = JSONOptions.none) @safe
+{
+    return toJSON(*root, pretty, options);
+}
+
 /**
 Takes a tree of JSON values and returns the serialized string.
 
@@ -1058,7 +1066,7 @@ If $(D pretty) is false no whitespaces are generated.
 If $(D pretty) is true serialized string is formatted to be human-readable.
 Set the $(specialFloatLiterals) flag is set in $(D options) to encode NaN/Infinity as strings.
 */
-string toJSON(in JSONValue* root, in bool pretty = false, in JSONOptions options = JSONOptions.none) @safe
+string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions options = JSONOptions.none) @safe
 {
     auto json = appender!string();
 
@@ -1232,7 +1240,7 @@ string toJSON(in JSONValue* root, in bool pretty = false, in JSONOptions options
         }
     }
 
-    toValue(*root, 0);
+    toValue(root, 0);
     return json.data;
 }
 
@@ -1471,7 +1479,7 @@ unittest
         {
             val = parseJSON(json);
             enum pretty = false;
-            result = toJSON(&val, pretty);
+            result = toJSON(val, pretty);
             assert(result == json, text(result, " should be ", json));
         }
         catch (JSONException e)
@@ -1483,18 +1491,18 @@ unittest
 
     // Should be able to correctly interpret unicode entities
     val = parseJSON(`"\u003C\u003E"`);
-    assert(toJSON(&val) == "\"\&lt;\&gt;\"");
+    assert(toJSON(val) == "\"\&lt;\&gt;\"");
     assert(val.to!string() == "\"\&lt;\&gt;\"");
     val = parseJSON(`"\u0391\u0392\u0393"`);
-    assert(toJSON(&val) == "\"\&Alpha;\&Beta;\&Gamma;\"");
+    assert(toJSON(val) == "\"\&Alpha;\&Beta;\&Gamma;\"");
     assert(val.to!string() == "\"\&Alpha;\&Beta;\&Gamma;\"");
     val = parseJSON(`"\u2660\u2666"`);
-    assert(toJSON(&val) == "\"\&spades;\&diams;\"");
+    assert(toJSON(val) == "\"\&spades;\&diams;\"");
     assert(val.to!string() == "\"\&spades;\&diams;\"");
 
     //0x7F is a control character (see Unicode spec)
     val = parseJSON(`"\u007F"`);
-    assert(toJSON(&val) == "\"\\u007F\"");
+    assert(toJSON(val) == "\"\\u007F\"");
     assert(val.to!string() == "\"\\u007F\"");
 
     with(parseJSON(`""`))
@@ -1504,7 +1512,7 @@ unittest
 
     // Formatting
     val = parseJSON(`{"a":[null,{"x":1},{},[]]}`);
-    assert(toJSON(&val, true) == `{
+    assert(toJSON(val, true) == `{
     "a": [
         null,
         {
