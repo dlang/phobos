@@ -4022,7 +4022,7 @@ private void emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
 /**
 Given a pointer $(D chunk) to uninitialized memory (but already typed
 as $(D T)), constructs an object of non-$(D class) type $(D T) at that
-address.
+address. If `T` is a class, initializes the class reference to null.
 
 Returns: A pointer to the newly constructed object (which is the same
 as $(D chunk)).
@@ -4045,10 +4045,26 @@ unittest
     assert(s2[0].i == 42 && s2[1].i == 42);
 }
 
+///
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = void;
+    emplace(&k);
+    assert(k is null);
+
+    I i = void;
+    emplace(&i);
+    assert(i is null);
+}
+
 /**
 Given a pointer $(D chunk) to uninitialized memory (but already typed
 as a non-class type $(D T)), constructs an object of type $(D T) at
-that address from arguments $(D args).
+that address from arguments $(D args). If `T` is a class, initializes
+the class reference to `args[0]`.
 
 This function can be $(D @trusted) if the corresponding constructor of
 $(D T) is $(D @safe).
@@ -4080,15 +4096,19 @@ private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignmen
 /**
 Given a raw memory area $(D chunk), constructs an object of $(D class)
 type $(D T) at that address. The constructor is passed the arguments
-$(D Args). The $(D chunk) must be as least as large as $(D T) needs
+$(D Args).
+
+Preconditions:
+$(D chunk) must be at least as large as $(D T) needs
 and should have an alignment multiple of $(D T)'s alignment. (The size
 of a $(D class) instance is obtained by using $(D
 __traits(classInstanceSize, T))).
 
+Note:
 This function can be $(D @trusted) if the corresponding constructor of
 $(D T) is $(D @safe).
 
-Returns: A pointer to the newly constructed object.
+Returns: The newly constructed object.
  */
 T emplace(T, Args...)(void[] chunk, auto ref Args args)
 if (is(T == class))
@@ -4122,16 +4142,14 @@ if (is(T == class))
 ///
 unittest
 {
-    interface I {}
-    class K : I {}
-
-    K k = void;
-    emplace(&k);
-    assert(k is null);
-
-    I i = void;
-    emplace(&i);
-    assert(i is null);
+    static class C
+    {
+        int i;
+        this(int i){this.i = i;}
+    }
+    auto buf = new void[__traits(classInstanceSize, C)];
+    auto c = emplace!C(buf, 5);
+    assert(c.i == 5);
 }
 
 @nogc pure nothrow unittest
@@ -4146,10 +4164,14 @@ unittest
 /**
 Given a raw memory area $(D chunk), constructs an object of non-$(D
 class) type $(D T) at that address. The constructor is passed the
-arguments $(D args), if any. The $(D chunk) must be as least as large
+arguments $(D args), if any.
+
+Preconditions:
+$(D chunk) must be at least as large
 as $(D T) needs and should have an alignment multiple of $(D T)'s
 alignment.
 
+Note:
 This function can be $(D @trusted) if the corresponding constructor of
 $(D T) is $(D @safe).
 
@@ -4170,11 +4192,11 @@ unittest
     {
         int a, b;
     }
-    auto p = new void[S.sizeof];
+    auto buf = new void[S.sizeof];
     S s;
     s.a = 42;
     s.b = 43;
-    auto s1 = emplace!S(p, s);
+    auto s1 = emplace!S(buf, s);
     assert(s1.a == 42 && s1.b == 43);
 }
 
