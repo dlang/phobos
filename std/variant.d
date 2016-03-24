@@ -1074,10 +1074,10 @@ public:
      * VariantN) contains an (associative) array, it can be indexed
      * into. Otherwise, an exception is thrown.
      */
-    Variant opIndex(K)(K i)
+    inout(Variant) opIndex(K)(K i) inout
     {
         auto result = Variant(i);
-        fptr(OpID.index, &store, &result) == 0 || assert(false);
+        fptr(OpID.index, cast(ubyte[size]*) &store, &result) == 0 || assert(false);
         return result;
     }
 
@@ -1087,6 +1087,7 @@ public:
         auto a = Variant(new int[10]);
         a[5] = 42;
         assert(a[5] == 42);
+        assert((cast(const Variant) a)[5] == 42);
         int[int] hash = [ 42:24 ];
         a = hash;
         assert(a[42] == 24);
