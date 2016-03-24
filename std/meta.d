@@ -135,6 +135,39 @@ unittest
     assert(g == 7);
 }
 
+package template OldAlias(alias a)
+{
+    static if (__traits(compiles, { alias x = a; }))
+        alias OldAlias = a;
+    else static if (__traits(compiles, { enum x = a; }))
+        enum OldAlias = a;
+    else
+        static assert(0, "Cannot alias " ~ a.stringof);
+}
+
+import std.traits : isAggregateType, Unqual;
+
+package template OldAlias(T) if (!isAggregateType!T || is(Unqual!T == T))
+{
+    alias OldAlias = T;
+}
+
+deprecated("Alias will stop to unqualify user defined types.")
+package template OldAlias(T) if (isAggregateType!T && !is(Unqual!T == T))
+{
+    alias OldAlias = Unqual!T;
+}
+
+unittest
+{
+    static struct Foo {}
+    static assert(is(OldAlias!(const(Foo)) == Foo));
+    static assert(is(OldAlias!(const(int)) == const(int)));
+    static assert(OldAlias!123 == 123);
+    enum abc = 123;
+    static assert(OldAlias!abc == 123);
+}
+
 /**
  * Returns the index of the first occurrence of type T in the
  * sequence of zero or more types TList.
@@ -168,12 +201,12 @@ unittest
 private template genericIndexOf(args...)
     if (args.length >= 1)
 {
-    alias e     = Alias!(args[0]);
+    alias e     = OldAlias!(args[0]);
     alias tuple = args[1 .. $];
 
     static if (tuple.length)
     {
-        alias head = Alias!(tuple[0]);
+        alias head = OldAlias!(tuple[0]);
         alias tail = tuple[1 .. $];
 
         static if (isSame!(e, head))
@@ -244,12 +277,12 @@ unittest
 private template GenericErase(args...)
     if (args.length >= 1)
 {
-    alias e     = Alias!(args[0]);
+    alias e     = OldAlias!(args[0]);
     alias tuple = args[1 .. $] ;
 
     static if (tuple.length)
     {
-        alias head = Alias!(tuple[0]);
+        alias head = OldAlias!(tuple[0]);
         alias tail = tuple[1 .. $];
 
         static if (isSame!(e, head))
@@ -303,12 +336,12 @@ unittest
 private template GenericEraseAll(args...)
     if (args.length >= 1)
 {
-    alias e     = Alias!(args[0]);
+    alias e     = OldAlias!(args[0]);
     alias tuple = args[1 .. $];
 
     static if (tuple.length)
     {
-        alias head = Alias!(tuple[0]);
+        alias head = OldAlias!(tuple[0]);
         alias tail = tuple[1 .. $];
         alias next = GenericEraseAll!(e, tail).result;
 
@@ -406,13 +439,13 @@ unittest
 private template GenericReplace(args...)
     if (args.length >= 2)
 {
-    alias from  = Alias!(args[0]);
-    alias to    = Alias!(args[1]);
+    alias from  = OldAlias!(args[0]);
+    alias to    = OldAlias!(args[1]);
     alias tuple = args[2 .. $];
 
     static if (tuple.length)
     {
-        alias head = Alias!(tuple[0]);
+        alias head = OldAlias!(tuple[0]);
         alias tail = tuple[1 .. $];
 
         static if (isSame!(from, head))
@@ -486,13 +519,13 @@ unittest
 private template GenericReplaceAll(args...)
     if (args.length >= 2)
 {
-    alias from  = Alias!(args[0]);
-    alias to    = Alias!(args[1]);
+    alias from  = OldAlias!(args[0]);
+    alias to    = OldAlias!(args[1]);
     alias tuple = args[2 .. $];
 
     static if (tuple.length)
     {
-        alias head = Alias!(tuple[0]);
+        alias head = OldAlias!(tuple[0]);
         alias tail = tuple[1 .. $];
         alias next = GenericReplaceAll!(from, to, tail).result;
 

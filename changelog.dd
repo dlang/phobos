@@ -5,32 +5,32 @@ $(COMMENT Pending changelog for 2.071. This will get copied to dlang.org and
 )
 
 $(BUGSTITLE Library Changes,
-
-$(LI $(REF GCAllocator.goodAllocSize, std,experimental,allocator,gc_allocator)
-was added.)
-$(LI High-level API of $(STDMODREF net_curl, std.net.curl) now uses $(XREF array, Appender)
-for received content. Which generally makes all calls slightly faster. Up to 200ms for large
-amounts of data.)
-$(LI $(XREF std_meta, Repeat) was added to obtain a repeating
-$(XREF std_meta, AliasSeq) consisting of template arguments.)
-$(LI $(D fold) was added as an alternative to $(D reduce) with argument order swapped.)
-$(LI $(RELATIVE_LINK2 nextPow2, Added nextPow2 and truncPow2 to std.math.))
-$(LI $(REF bsf core,bitop), $(REF bsr core,bitop), and $(REF popcnt, core,bitop) now
-work with ulongs on 32 bit systems.)
-$(LI $(REF topN std,algorithm,sorting) is now 5% - 7% faster.)
-$(LI $(RELATIVE_LINK2 unary, Unary overloads of $(REF startsWith std,algorithm,searching) and
-$(REF endsWith std,algorithm,searching) were added.))
-$(LI $(RELATIVE_LINK2 maxCount, $(REF maxCount std,algorithm,searching) and
-$(REF maxPos std,algorithm,searching) were added.))
-$(LI $(LNAME2 range support for the convenience wrapper $(REF redBlackTree std,container,rbtree)
-was added))
+    $(LI $(NXREF experimental_allocator_gc_allocator, GCAllocator.goodAllocSize)
+        was added.)
+    $(LI High-level API of $(STDMODREF net_curl, std.net.curl) now uses $(XREF array, Appender)
+        for received content. Which generally makes all calls slightly faster. Up to 200ms for large
+        amounts of data.)
+    $(LI $(XREF meta, Repeat) was added to obtain a repeating
+    $(XREF meta, AliasSeq) consisting of template arguments.)
+    $(LI $(XREF algorithm_iteration, fold) was added as an alternative to $(XREF algorithm_iteration, reduce)
+        with argument order swapped.)
+    $(LI $(RELATIVE_LINK2 nextPow2, Added nextPow2 and truncPow2 to std.math.))
+    $(LI $(CXREF bitop, bsf), $(CXREF bitop, bsr), and $(CXREF bitop, popcnt) now
+        work with ulongs on 32 bit systems.)
+    $(LI $(XREF algorithm_sorting, topN) is now 5% - 7% faster.)
+    $(LI $(RELATIVE_LINK2 unary, Unary overloads of `startsWith` and `endsWith` were added.))
+    $(LI $(RELATIVE_LINK2 maxCount, $(XREF algorithm_searching, maxCount) and
+        $(XREF algorithm_searching, maxPos) were added.))
+    $(LI Range support for the convenience wrapper $(XREF container_rbtree, redBlackTree)
+        was added.)
 )
 
 $(BUGSTITLE Library Changes,
 
 $(LI $(LNAME2 nextPow2, Added nextPow2 and truncPow2 to std.math.)
-    $(P $(REF nextPow2, std,math) and $(REF truncPow2, std,math) are functions for
-    rounding numbers to powers of two.)
+    $(P $(XREF math, nextPow2) and $(XREF math, truncPow2) are functions for
+        rounding numbers to powers of two.
+    )
 ------
 import std.math;
 
@@ -42,8 +42,10 @@ assert(truncPow2(4000) == 2048);
 ------
 )
 
-$(LI $(LNAME2 unary, Unary overloads of $(REF startsWith std,algorithm,searching) and
-$(REF endsWith std,algorithm,searching) were added.)
+$(LI $(LNAME2 unary, Unary overloads of `startsWith` and `endsWith` were added.)
+    $(P $(XREF algorithm_searching, startsWith) and $(XREF algorithm_searching, endsWith)
+        can now be used just with a predicate.
+    )
 ------
 import std.algorithm.searching;
 import std.ascii : isAlpha;
@@ -56,11 +58,11 @@ assert(!"1ab".startsWith!isAlpha);
 ------
 )
 
-$(LI $(LNAME2 maxPos, $(REF maxCount std,algorithm,searching) and
-$(REF maxPos std,algorithm,searching) were added.)
+$(LI $(LNAME2 maxPos, $(XREF algorithm_searching, maxCount) and
+     $(XREF algorithm_searching, maxPos) were added.)
 $(P Previous to this addition, in order to get the number of the greatest
-elements, you had to use `minCount!"a > b"`, which was very confusing.
-This change adds convenience functions to fix this issue.)
+    elements, you had to use `minCount!"a > b"`, which was very confusing.
+    This change adds convenience functions to fix this issue.)
 )
 
 )
@@ -76,5 +78,9 @@ Macros:
     STDMODREF = <a href="phobos/std_$1.html">$2</a>
     XREF = <a href="phobos/std_$1.html#$2">$2</a>
     CXREF = <a href="phobos/core_$1.html#$2">$2</a>
+    OXREF = <a href="phobos/object.html#$2">$2</a>
+    NXREF = <a href="phobos/std_$1.html#.$2">$2</a>
+    NCXREF = <a href="phobos/core_$1.html#.$2">$2</a>
+    NOXREF = <a href="phobos/object.html#.$2">$2</a>
 
     BOOKTABLE = <table><caption>$1</caption>$+</table>
