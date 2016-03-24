@@ -3208,24 +3208,23 @@ unittest
 }
 
 /**
-   True if $(D S) or any type directly embedded in the representation
-   of $(D S) defines an elaborate destructor. Elaborate destructors
-   are introduced by defining $(D ~this()) for a $(D
-   struct).
+   True if `T` or any type directly embedded in the representation
+   of `T` defines an elaborate destructor. Elaborate destructors
+   are introduced by defining `~this()`.
 
-   Classes and unions never have elaborate destructors, even
-   though classes may define $(D ~this()).
+   Note: Previously hasElaborateDestructor worked only for strusts, but
+   starting with DMD 2.072 it was extended to support classes.
  */
-template hasElaborateDestructor(S)
+template hasElaborateDestructor(T)
 {
-    static if (isStaticArray!S && S.length)
+    static if (isStaticArray!T && T.length)
     {
-        enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(S.init[0]));
+        enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(T.init[0]));
     }
-    else static if (is(S == struct))
+    else static if (is(T == struct) || is(T == class))
     {
-        enum hasElaborateDestructor = hasMember!(S, "__dtor")
-            || anySatisfy!(.hasElaborateDestructor, FieldTypeTuple!S);
+        enum hasElaborateDestructor = hasMember!(T, "__dtor")
+            || anySatisfy!(.hasElaborateDestructor, FieldTypeTuple!T);
     }
     else
     {
@@ -3245,6 +3244,8 @@ unittest
     static struct S5 { S3[] field; }
     static struct S6 { S3[0] field; }
     static struct S7 { @disable this(); S3 field; }
+    static class C1 { }
+    static class C2 { ~this() {} }
     static assert(!hasElaborateDestructor!S1);
     static assert( hasElaborateDestructor!S2);
     static assert( hasElaborateDestructor!(immutable S2));
@@ -3255,6 +3256,8 @@ unittest
     static assert(!hasElaborateDestructor!S5);
     static assert(!hasElaborateDestructor!S6);
     static assert( hasElaborateDestructor!S7);
+    static assert(!hasElaborateDestructor!C1);
+    static assert( hasElaborateDestructor!C2);
 }
 
 alias Identity(alias A) = A;
