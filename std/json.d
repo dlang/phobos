@@ -695,7 +695,7 @@ Params:
     maxDepth = maximum depth of nesting allowed, -1 disables depth checking
     options = enable decoding string representations of NaN/Inf as float values
 */
-JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none) @safe
+JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none)
 if(isInputRange!T)
 {
     import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
