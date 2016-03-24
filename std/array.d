@@ -2844,6 +2844,19 @@ if (isDynamicArray!A)
         }
     }
 
+    // emplace an item onto an array.
+    void emplacePut(Args...)(Args args) {
+        import std.conv : emplaceRef;
+
+        ensureAddable(1);
+        immutable len = _data.arr.length;
+
+        auto bigData = (() @trusted => _data.arr.ptr[0..len + 1])();
+        emplaceRef!(Unqual!T)(bigData[len], args);
+        // don't set this back until we're sure we have the item initialized.
+        _data.arr = bigData;
+    }
+
     // Const fixing hack.
     void put(Range)(Range items) if (canPutConstRange!Range)
     {
@@ -3005,6 +3018,23 @@ if (isDynamicArray!A)
     app.put(2);
     app.put(3);
     assert("%s".format(app) == "Appender!(int[])(%s)".format([1,2,3]));
+}
+
+@safe pure nothrow unittest
+{
+    struct Uncopyable {
+        @disable this(this);
+        int foo;
+        this(int foo) {
+            this.foo = foo;
+        }
+    }
+
+    auto a = appender!(Uncopyable[])();
+    a.emplacePut(1);
+    a.emplacePut(2);
+    a.emplacePut(3);
+    assert(a.data == [Uncopyable(1), Uncopyable(2), Uncopyable(3)]);
 }
 
 //Calculates an efficient growth scheme based on the old capacity
