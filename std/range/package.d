@@ -92,6 +92,14 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF only)))
         $(TD Creates a _range that iterates over the given arguments.
     ))
+    $(TR $(TD $(D $(LREF padLeft)))
+        $(TD Pads a _range to a specified length by adding a given element to
+        the front of the _range. Is lazy if the range has a known length.
+    ))
+    $(TR $(TD $(D $(LREF padRight)))
+        $(TD Lazily pads a _range to a specified length by adding a given element to
+        the back of the _range.
+    ))
     $(TR $(TD $(D $(LREF radial)))
         $(TD Given a random-access _range and a starting point, creates a
         _range that alternately returns the next left and next right element to
@@ -175,8 +183,8 @@ Copyright: Copyright by authors 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu), David Simcha,
-and Jonathan M Davis. Credit for some of the ideas in building this module goes
+Authors: $(WEB erdani.com, Andrei Alexandrescu), David Simcha, Jonathan M Davis,
+and Jack Stouffer. Credit for some of the ideas in building this module goes
 to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
  */
 module std.range;
@@ -9359,4 +9367,294 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     void func2(int x) {}
 
     auto r = [1, 2, 3, 4].tee!func1.tee!func2;
+}
+
+/**
+Extends the length of the input range `r` by padding out the start of the
+range with the element `e`. The element `e` must be of a common type with
+the element type of the range `r` as defined by $(REF CommonType, std, traits).
+If `n` is less than the length of of `r`, then `r` is returned unmodified.
+
+If `r` is a string with Unicode characters in it, `padLeft` follows D's rules
+about length for strings, which is not the number of characters, or
+graphemes, but instead the number of encoding units. If you want to treat each
+grapheme as only one encoding unit long, then call
+$(REF byGrapheme, std, uni) before calling this function.
+
+If `r` has a length, then this is $(BIGOH 1). Otherwise, it's $(BIGOH r.length).
+
+Params:
+    r = an input range with a length, or a forward range
+    e = element to pad the range with
+    n = the length to pad to
+
+Returns:
+    A range containing the elements of the original range with the extra padding
+
+See Also:
+    $(REF leftJustifier, std, string)
+*/
+auto padLeft(R, E)(R r, E e, size_t n)
+if (
+    ((isInputRange!R && hasLength!R) || isForwardRange!R) &&
+    !is(CommonType!(ElementType!R, E) == void)
+)
+{
+    static if (hasLength!R)
+        auto dataLength = r.length;
+    else
+        auto dataLength = r.save.walkLength(n);
+
+    return e.repeat(n > dataLength ? n - dataLength : 0).chain(r);
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert([1, 2, 3, 4].padLeft(0, 6).equal([0, 0, 1, 2, 3, 4]));
+    assert([1, 2, 3, 4].padLeft(0, 3).equal([1, 2, 3, 4]));
+
+    assert("abc".padLeft('_', 6).equal("___abc"));
+}
+
+@safe pure nothrow unittest
+{
+    import std.internal.test.dummyrange;
+    import std.algorithm.comparison : equal;
+    import std.meta : AliasSeq;
+
+    alias DummyRanges = AliasSeq!(
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input),
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
+        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Forward),
+        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Input),
+        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward),
+        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Bidirectional),
+        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random),
+        DummyRange!(ReturnBy.Value, Length.No, RangeType.Forward)
+    );
+
+    foreach (Range; DummyRanges)
+    {
+        Range r;
+        assert(r
+            .padLeft(0, 12)
+            .equal([0, 0, 1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U])
+        );
+    }
+}
+
+// Test nogc inference
+@safe @nogc pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static immutable r1 = [1, 2, 3, 4];
+    static immutable r2 = [0, 0, 1, 2, 3, 4];
+    assert(r1.padLeft(0, 6).equal(r2));
+}
+
+/**
+Extend the length of the input range `r` by padding out the end of the range
+with the element `e`. The element `e` must be of a common type with the
+element type of the range `r` as defined by $(REF CommonType, std, traits).
+If `n` is less than the length of of `r`, then the contents of `r` are
+returned.
+
+The range primitives that the resulting range provides depends whether or not `r`
+provides them. Except the functions `back` and `popBack`, which also require
+the range to have a length as well as `back` and `popBack`
+
+Params:
+    r = an input range with a length
+    e = element to pad the range with
+    n = the length to pad to
+
+Returns:
+    A range containing the elements of the original range with the extra padding
+
+See Also:
+    $(REF rightJustifier, std, string)
+*/
+auto padRight(R, E)(R r, E e, size_t n) if (
+    isInputRange!R &&
+    !isInfinite!R &&
+    !is(CommonType!(ElementType!R, E) == void))
+{
+    static struct Result
+    {
+        private:
+        R data;
+        E element;
+        size_t counter;
+        static if (isBidirectionalRange!R && hasLength!R) size_t backPosition;
+        size_t maxSize;
+
+        public:
+        bool empty() @property
+        {
+            return data.empty && counter >= maxSize;
+        }
+
+        auto front() @property
+        {
+            return data.empty ? element : data.front;
+        }
+
+        void popFront()
+        {
+            ++counter;
+
+            if (!data.empty)
+            {
+                data.popFront;
+            }
+        }
+
+        static if (hasLength!R)
+        {
+            inout(size_t) length() inout @property
+            {
+                import std.algorithm.comparison : max;
+                return max(data.length, maxSize);
+            }
+        }
+
+        static if (isForwardRange!R)
+        {
+            auto save() @property
+            {
+                typeof(this) result = this;
+                data = data.save;
+                return result;
+            }
+        }
+
+        static if (isBidirectionalRange!R && hasLength!R)
+        {
+            auto back() @property
+            {
+                return backPosition > data.length ? element : data.back;
+            }
+
+            void popBack()
+            {
+                if (backPosition > data.length)
+                {
+                    --backPosition;
+                    --maxSize;
+                }
+                else
+                {
+                    data.popBack;
+                }
+            }
+        }
+
+        static if (isRandomAccessRange!R)
+        {
+            inout(E) opIndex(size_t index) inout
+            {
+                assert(index <= this.length, "Index out of bounds");
+                return (index > data.length && index <= maxSize) ? element :
+                    data[index];
+            }
+        }
+
+        static if (hasSlicing!R)
+        {
+            auto opSlice(size_t a, size_t b)
+            {
+                return Result((b <= data.length) ? data[a .. b] : data[a .. $],
+                    element, b - a);
+            }
+
+            alias opDollar = length;
+        }
+
+        this(R r, E e, size_t max)
+        {
+            data = r;
+            element = e;
+            maxSize = max;
+            static if (isBidirectionalRange!R && hasLength!R)
+                backPosition = max;
+        }
+
+        @disable this();
+    }
+
+    return Result(r, e, n);
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert([1, 2, 3, 4].padRight(0, 6).equal([1, 2, 3, 4, 0, 0]));
+    assert([1, 2, 3, 4].padRight(0, 4).equal([1, 2, 3, 4]));
+
+    assert("abc".padRight('_', 6).equal("abc___"));
+}
+
+pure unittest
+{
+    import std.internal.test.dummyrange;
+    import std.algorithm.comparison : equal;
+    import std.meta : AliasSeq;
+
+    auto string_input_range = new ReferenceInputRange!dchar(['a', 'b', 'c']);
+    dchar padding = '_';
+    assert(string_input_range.padRight(padding, 6).equal("abc___"));
+
+    foreach (RangeType; AllDummyRanges)
+    {
+        RangeType r1;
+        assert(r1
+            .padRight(0, 12)
+            .equal([1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U, 0, 0])
+        );
+
+        // test if Result properly uses random access ranges
+        static if (isRandomAccessRange!RangeType)
+        {
+            RangeType r3;
+            assert(r3.padRight(0, 12)[0] == 1);
+            assert(r3.padRight(0, 12)[2] == 3);
+            assert(r3.padRight(0, 12)[11] == 0);
+        }
+
+        // test if Result properly uses slicing and opDollar
+        static if (hasSlicing!RangeType)
+        {
+            RangeType r4;
+            assert(r4
+                .padRight(0, 12)[0 .. 3]
+                .equal([1, 2, 3])
+            );
+            assert(r4
+                .padRight(0, 12)[2 .. $]
+                .equal([3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U, 0, 0])
+            );
+            assert(r4
+                .padRight(0, 12)[0 .. $]
+                .equal([1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U, 0, 0])
+            );
+        }
+    }
+}
+
+// Test nogc inference
+@safe @nogc pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static immutable r1 = [1, 2, 3, 4];
+    static immutable r2 = [1, 2, 3, 4, 0, 0];
+    assert(r1.padRight(0, 6).equal(r2));
 }
