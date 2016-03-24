@@ -263,10 +263,6 @@ argument.
 
 Following arguments works the same way as $(D bitfield)'s. The bitfield must fit into the
 bits known to be zero because of the pointer alignment.
-
-$(RED Warning: Don't use $(D taggedPointer) with pointers to garbage collected objects, as it will result in
-undefined behaviour. See
-$(DDLINK spec/garbage, Garbage Collection, Garbage Collection) for details.)
 */
 
 template taggedPointer(T : T*, string name, Ts...) {
@@ -299,10 +295,6 @@ One can store a 2-bit integer there.
 
 The example above creates a tagged reference to an Object in the struct A. This expects the same parameters
 as $(D taggedPointer), except the first argument which must be a class type instead of a pointer type.
-
-$(RED Warning: Don't use $(D taggedClassRef) with references to garbage collected objects, as it will result in
-undefined behaviour. See
-$(DDLINK spec/garbage, Garbage Collection, Garbage Collection) for details.)
 */
 
 template taggedClassRef(T, string name, Ts...) if(is(T == class)) {
