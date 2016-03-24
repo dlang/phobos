@@ -509,7 +509,7 @@ struct JSONValue
     ///
     /// Throws: $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT)
     /// or $(D JSON_TYPE.NULL).
-    void opIndexAssign(T)(auto ref T value, string key) pure @safe
+    void opIndexAssign(T)(auto ref T value, string key) pure
     {
         enforceEx!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
                                 "JSONValue must be object or null");
@@ -530,7 +530,7 @@ struct JSONValue
             assert( j["language"].str == "Perl" );
     }
 
-    void opIndexAssign(T)(T arg, size_t i) pure @safe
+    void opIndexAssign(T)(T arg, size_t i) pure
     {
         auto a = this.arrayNoRef;
         enforceEx!JSONException(i < a.length,
