@@ -127,31 +127,36 @@ private template createStoreName(Ts...)
         enum createStoreName = "_" ~ Ts[1] ~ createStoreName!(Ts[3 .. $]);
 }
 
-private template createFields(string store, size_t offset, Ts...)
+private template createStorageAndFields(Ts...)
 {
-    static if (!Ts.length)
-    {
-        static if (offset == ubyte.sizeof * 8)
-            alias StoreType = ubyte;
-        else static if (offset == ushort.sizeof * 8)
-            alias StoreType = ushort;
-        else static if (offset == uint.sizeof * 8)
-            alias StoreType = uint;
-        else static if (offset == ulong.sizeof * 8)
-            alias StoreType = ulong;
-        else
-        {
-            static assert(false, "Field widths must sum to 8, 16, 32, or 64");
-            alias StoreType = ulong; // just to avoid another error msg
-        }
-        enum result = "private " ~ StoreType.stringof ~ " " ~ store ~ ";";
-    }
+    enum Name = createStoreName!Ts;
+    enum Size = sizeOfBitField!Ts;
+    static if (Size == ubyte.sizeof * 8)
+        alias StoreType = ubyte;
+    else static if (Size == ushort.sizeof * 8)
+        alias StoreType = ushort;
+    else static if (Size == uint.sizeof * 8)
+        alias StoreType = uint;
+    else static if (Size == ulong.sizeof * 8)
+        alias StoreType = ulong;
     else
     {
+        static assert(false, "Field widths must sum to 8, 16, 32, or 64");
+        alias StoreType = ulong; // just to avoid another error msg
+    }
+    enum result
+        = "private " ~ StoreType.stringof ~ " " ~ Name ~ ";"
+        ~ createFields!(Name, 0, Ts).result;
+}
+
+private template createFields(string store, size_t offset, Ts...)
+{
+    static if (Ts.length > 0)
         enum result
             = createAccessors!(store, Ts[0], Ts[1], Ts[2], offset).result
             ~ createFields!(store, offset + Ts[2], Ts[3 .. $]).result;
-    }
+    else
+        enum result = "";
 }
 
 private ulong getBitsForAlign(ulong a)
@@ -169,17 +174,25 @@ private ulong getBitsForAlign(ulong a)
 
 private template createReferenceAccessor(string store, T, ulong bits, string name)
 {
+    enum storage = "private void* " ~ store ~ "_ptr;\n";
+    enum storage_accessor = "@property ref size_t " ~ store ~ "() @trusted pure nothrow @nogc const { "
+        ~ "return *cast(size_t*) &" ~ store ~ "_ptr;}\n"
+        ~ "@property void " ~ store ~ "(size_t v) @trusted pure nothrow @nogc { "
+        ~ "" ~ store ~ "_ptr = cast(void*) v;}\n";
+
     enum mask = (1UL << bits) - 1;
     // getter
-    enum result = "@property "~T.stringof~" "~name~"() @trusted pure nothrow @nogc const { auto result = "
-        ~ "("~store~" & "~myToString(~mask)~");"
-        ~ " return cast("~T.stringof~") cast(void*) result;}\n"
+    enum ref_accessor = "@property "~T.stringof~" "~name~"() @trusted pure nothrow @nogc const { auto result = "
+        ~ "("~store~" & "~myToString(~mask)~"); "
+        ~ "return cast("~T.stringof~") cast(void*) result;}\n"
     // setter
         ~"@property void "~name~"("~T.stringof~" v) @trusted pure nothrow @nogc { "
         ~"assert(((cast(typeof("~store~")) cast(void*) v) & "~myToString(mask)~`) == 0, "Value not properly aligned for '`~name~`'"); `
         ~store~" = cast(typeof("~store~"))"
         ~" (("~store~" & (cast(typeof("~store~")) "~myToString(mask)~"))"
         ~" | ((cast(typeof("~store~")) cast(void*) v) & (cast(typeof("~store~")) "~myToString(~mask)~")));}\n";
+
+    enum result = storage ~ storage_accessor ~ ref_accessor;
 }
 
 private template sizeOfBitField(T...)
@@ -190,12 +203,13 @@ private template sizeOfBitField(T...)
         enum sizeOfBitField = T[2] + sizeOfBitField!(T[3 .. $]);
 }
 
-private template createTaggedReference(string store, T, ulong a, string name, Ts...)
+private template createTaggedReference(T, ulong a, string name, Ts...)
 {
     static assert(sizeOfBitField!Ts <= getBitsForAlign(a), "Fields must fit in the bits know to be zero because of alignment.");
+    enum StoreName = createStoreName!(T, name, 0, Ts);
     enum result
-        = createReferenceAccessor!(store, T, sizeOfBitField!Ts, name).result
-        ~ createFields!(store, 0, Ts, size_t, "", T.sizeof * 8 - sizeOfBitField!Ts).result;
+        = createReferenceAccessor!(StoreName, T, sizeOfBitField!Ts, name).result
+        ~ createFields!(StoreName, 0, Ts, size_t, "", T.sizeof * 8 - sizeOfBitField!Ts).result;
 }
 
 /**
@@ -247,7 +261,7 @@ bool), followed by unsigned types, followed by signed types.
 
 template bitfields(T...)
 {
-    enum { bitfields = createFields!(createStoreName!(T), 0, T).result }
+    enum { bitfields = createStorageAndFields!T.result }
 }
 
 /**
@@ -266,7 +280,7 @@ bits known to be zero because of the pointer alignment.
 */
 
 template taggedPointer(T : T*, string name, Ts...) {
-    enum taggedPointer = createTaggedReference!(createStoreName!(T, name, 0, Ts), T*, T.alignof, name, Ts).result;
+    enum taggedPointer = createTaggedReference!(T*, T.alignof, name, Ts).result;
 }
 
 ///
@@ -298,7 +312,7 @@ as $(D taggedPointer), except the first argument which must be a class type inst
 */
 
 template taggedClassRef(T, string name, Ts...) if(is(T == class)) {
-    enum taggedClassRef = createTaggedReference!(createStoreName!(T, name, 0, Ts), T, 8, name, Ts).result;
+    enum taggedClassRef = createTaggedReference!(T, 8, name, Ts).result;
 }
 
 ///
@@ -434,6 +448,17 @@ unittest
         taggedClassRef!(
             Object, "a",
             uint, "b", 4)));
+
+    struct S {
+        mixin(taggedClassRef!(
+            Object, "a",
+            bool, "b", 1));
+    }
+
+    const S s;
+    void bar(S s) {}
+
+    static assert(!__traits(compiles, bar(s)));
 }
 
 unittest
