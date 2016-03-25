@@ -627,42 +627,56 @@ struct Input(Char)
 
     String opSlice(size_t start, size_t end){   return _origin[start..end]; }
 
-    struct BackLooper
-    {
-        alias DataIndex = size_t;
-        enum { isLoopback = true };
-        String _origin;
-        size_t _index;
-        this(Input input, size_t index)
-        {
-            _origin = input._origin;
-            _index = index;
-        }
-        @trusted bool nextChar(ref dchar res,ref size_t pos)
-        {
-            pos = _index;
-            if(_index == 0)
-                return false;
-
-            res = _origin[0.._index].back;
-            _index -= std.utf.strideBack(_origin, _index);
-
-            return true;
-        }
-        @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
-        auto loopBack(size_t index){   return Input(_origin, index); }
-
-        //support for backtracker engine, might not be present
-        //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
-        void reset(size_t index){   _index = index;  }
-
-        String opSlice(size_t start, size_t end){   return _origin[end..start]; }
-        //index of at End position
-        @property size_t lastIndex(){   return 0; }
-    }
-    auto loopBack(size_t index){   return BackLooper(this, index); }
+    auto loopBack(size_t index){   return BackLooper!Input(this, index); }
 }
 
+struct BackLooperImpl(Input)
+{
+    import std.utf;
+    alias DataIndex = size_t;
+    alias String = Input.String;
+    enum { isLoopback = true };
+    String _origin;
+    size_t _index;
+    this(Input input, size_t index)
+    {
+        _origin = input._origin;
+        _index = index;
+    }
+    @trusted bool nextChar(ref dchar res,ref size_t pos)
+    {
+        pos = _index;
+        if(_index == 0)
+            return false;
+
+        res = _origin[0.._index].back;
+        _index -= std.utf.strideBack(_origin, _index);
+
+        return true;
+    }
+    @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
+    auto loopBack(size_t index){   return Input(_origin, index); }
+
+    //support for backtracker engine, might not be present
+    //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
+    void reset(size_t index){   _index = index;  }
+
+    String opSlice(size_t start, size_t end){   return _origin[end..start]; }
+    //index of at End position
+    @property size_t lastIndex(){   return 0; }
+}
+
+template BackLooper(E)
+{
+    static if(is(E : BackLooperImpl!U, U))
+    {
+        alias BackLooper = U;
+    }
+    else
+    {
+        alias BackLooper = BackLooperImpl!E;
+    }
+}
 
 //both helpers below are internal, on its own are quite "explosive"
 //unsafe, no initialization of elements
