@@ -886,10 +886,7 @@ struct Slice(size_t _N, _Range)
             size_t stride;
             foreach (i; Iota!(0, N)) //static
             {
-                assert(_indexes[0][i] < _lengths[i],
-                    "indexStride: index at position "
-                    ~ i.stringof ~ " (from range [0 .." ~ N.stringof ~ ")) "
-                    ~ " must be less than corresponding length");
+                assert(_indexes[0][i] < _lengths[i], indexStrideAssertMsg!(i, N) ~ tailErrorMessage!());
                 stride += _strides[i] * _indexes[0][i];
             }
             return stride;
@@ -899,11 +896,33 @@ struct Slice(size_t _N, _Range)
             size_t stride;
             foreach (i, index; _indexes) //static
             {
-                assert(index < _lengths[i],
-                    "indexStride: index at position "
-                    ~ i.stringof ~ " (from range [0 .." ~ N.stringof ~ ")) "
-                    ~ " must be less than corresponding length");
+                assert(index < _lengths[i], indexStrideAssertMsg!(i, N) ~ tailErrorMessage!());
                 stride += _strides[i] * index;
+            }
+            return stride;
+        }
+    }
+
+    size_t mathIndexStride(Indexes...)(Indexes _indexes)
+        if (isFullPureIndex!Indexes)
+    {
+        static if (isStaticArray!(Indexes[0]))
+        {
+            size_t stride;
+            foreach_reverse (i; Iota!(0, N)) //static
+            {
+                assert(_indexes[0][i] < _lengths[N - 1 - i], indexStrideAssertMsg!(i, N) ~ tailErrorMessage!());
+                stride += _strides[N - 1 - i] * _indexes[0][i];
+            }
+            return stride;
+        }
+        else
+        {
+            size_t stride;
+            foreach_reverse (i, index; _indexes) //static
+            {
+                assert(index < _lengths[N - 1 - i], indexStrideAssertMsg!(i, N) ~ tailErrorMessage!());
+                stride += _strides[N - 1 - i] * index;
             }
             return stride;
         }
@@ -1451,18 +1470,33 @@ struct Slice(size_t _N, _Range)
             return DeepElemType(_lengths[N .. $], _strides[N .. $], _ptr + indexStride(_indexes));
     }
 
+    ///ditto
+    auto ref opCall(Indexes...)(Indexes _indexes)
+        if (isFullPureIndex!Indexes)
+    {
+        static if (PureN == N)
+            return _ptr[mathIndexStride(_indexes)];
+        else
+            return DeepElemType(_lengths[N .. $], _strides[N .. $], _ptr + mathIndexStride(_indexes));
+    }
+
     static if (doUnittest)
     ///
     pure nothrow unittest
     {
         auto slice = new int[10].sliced(5, 2);
 
-        auto p = &slice[1, 1];
-        *p = 3;
-        assert(slice[1, 1] == 3);
+        auto q = &slice[3, 1];      // D & C order
+        auto p = &slice(1, 3);      // Math & Fortran order
+        assert(p is q);
+        *q = 4;
+        assert(slice[3, 1] == 4);   // D & C order
+        assert(slice(1, 3) == 4);   // Math & Fortran order
 
-        size_t[2] index = [1, 1];
-        assert(slice[index] == 3);
+        size_t[2] indexP = [1, 3];
+        size_t[2] indexQ = [3, 1];
+        assert(slice[indexQ] == 4);  // D & C order
+        assert(slice(indexP) == 4);  // Math & Fortran order
     }
 
     /++

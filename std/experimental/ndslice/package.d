@@ -57,6 +57,12 @@ Multidimensional view is presented by $(SUBREF slice, Slice) type.
 ------
 auto matrix = new double[12].sliced(3, 4);
 matrix[] = 0;
+matrix.diagonal[] = 1;
+
+auto raw = matrix[2];
+raw[3] = 6;
+assert(matrix[2, 3] == 6); // D & C index order
+assert(matrix(3, 2) == 6); // Math & Fortran index order
 ------
 
 Note:
@@ -304,6 +310,18 @@ module std.experimental.ndslice;
 public import std.experimental.ndslice.slice;
 public import std.experimental.ndslice.iteration;
 public import std.experimental.ndslice.selection;
+
+unittest
+{
+    auto matrix = new double[12].sliced(3, 4);
+    matrix[] = 0;
+    matrix.diagonal[] = 1;
+
+    auto raw = matrix[2];
+    raw[3] = 6;
+    assert(matrix[2, 3] == 6); // D & C index order
+    assert(matrix(3, 2) == 6); // Math & Fortran index order
+}
 
 // relaxed example
 unittest
