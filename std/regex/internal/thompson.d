@@ -476,6 +476,9 @@ struct ThreadList(DataIndex)
             case IR.InfiniteStart, IR.InfiniteQStart:
                 t.pc += re.ir[t.pc].data + IRL!(IR.InfiniteStart);
                 goto case IR.InfiniteEnd; //both Q and non-Q
+            case IR.InfiniteBloomStart:
+                t.pc += re.ir[t.pc].data + IRL!(IR.InfiniteBloomStart);
+                goto case IR.InfiniteBloomEnd;
             case IR.RepeatStart, IR.RepeatQStart:
                 t.pc += re.ir[t.pc].data + IRL!(IR.RepeatStart);
                 goto case IR.RepeatEnd; //both Q and non-Q
@@ -569,6 +572,41 @@ struct ThreadList(DataIndex)
                 else
                 {
                     worklist.insertFront(fork(t, pc2, t.counter));
+                    t.pc = pc1;
+                }
+                break;
+            case IR.InfiniteBloomEnd:
+                if(merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
+                {
+                    debug(std_regex_matcher) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                    merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
+                }
+                else
+                {
+                    debug(std_regex_matcher) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                }
+                uint len = re.ir[t.pc].data;
+                uint pc1, pc2; //branches to take in priority order
+                pc1 = t.pc - len;
+                pc2 = t.pc + IRL!(IR.InfiniteBloomEnd);
+                static if(withInput)
+                {
+                    uint filterIdx = re.ir[t.pc+2].raw;
+                    if(re.filters[filterIdx][front])
+                        worklist.insertFront(fork(t, pc2, t.counter));
+                    t.pc = pc1;
+                }
+                else
+                {
+                    // Since it has filter then going out of loop needs a char
+                    // thus only go inside of loop
                     t.pc = pc1;
                 }
                 break;

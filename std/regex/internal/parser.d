@@ -449,7 +449,7 @@ struct Parser(R)
         while(!empty)
         {
             debug(std_regex_parser)
-                writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.stack.data);
+                writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.data);
             switch(current)
             {
             case '(':
@@ -1469,7 +1469,98 @@ struct Parser(R)
         if(!(flags & RegexInfo.oneShot))
             kickstart = Kickstart!Char(zis, new uint[](256));
         debug(std_regex_allocation) writefln("IR processed, max threads: %d", threadCount);
+        optimize(zis);
     }
+}
+
+void fixupBytecode()(Bytecode[] ir)
+{
+    Stack!uint fixups;
+
+    with(IR) for(uint i=0; i<ir.length; i+= ir[i].length)
+    {
+        if(ir[i].isStart || ir[i].code == Option)
+            fixups.push(i);
+        else if(ir[i].code == OrEnd)
+        {
+            // Alternatives need more care
+            auto j = fixups.pop(); // last Option
+            ir[j].data = i -  j - ir[j].length;
+            j = fixups.pop(); // OrStart
+            ir[j].data = i - j - ir[j].length;
+            ir[i].data = ir[j].data;
+
+            // fixup all GotoEndOrs
+            j = j + IRL!(OrStart);
+            assert(ir[j].code == Option);
+            for(;;)
+            {
+                auto next = j + ir[j].data + IRL!(Option);
+                if(ir[next].code == IR.OrEnd)
+                    break;
+                ir[next - IRL!(GotoEndOr)].data = i - next;
+                j = next;
+            }
+        }
+        else if(ir[i].code == GotoEndOr)
+        {
+            auto j = fixups.pop(); // Option
+            ir[j].data = i - j + IRL!(GotoEndOr)- IRL!(Option); // to the next option
+        }
+        else if(ir[i].isEnd)
+        {
+            auto j = fixups.pop();
+            ir[i].data = i - j - ir[j].length;
+            ir[j].data = ir[i].data;
+        }
+    }
+    assert(fixups.empty);
+}
+
+void optimize(Char)(ref Regex!Char zis)
+{
+    CodepointSet nextSet(uint idx)
+    {
+        CodepointSet set;
+        with(zis) with(IR)
+    Outer:
+        for(uint i = idx; i < ir.length; i += ir[i].length)
+        {
+            switch(ir[i].code)
+            {
+                case Char:
+                    set.add(ir[i].data, ir[i].data+1);
+                    goto default;
+                //TODO: OrChar
+                case Trie, CodepointSet:
+                    set = zis.charsets[ir[i].data];
+                    goto default;
+                case GroupStart,GroupEnd:
+                    break;
+                default:
+                    break Outer;
+            }
+        }
+        return set;
+    }
+
+    with(zis) with(IR) for(uint i = 0; i < ir.length; i += ir[i].length)
+    {
+        if(ir[i].code == InfiniteEnd)
+        {
+            auto set = nextSet(i+IRL!(InfiniteEnd));
+            if(!set.empty && set.length < 10_000)
+            {
+                ir[i] = Bytecode(InfiniteBloomEnd, ir[i].data);
+                ir[i - ir[i].data - IRL!(InfiniteStart)] =
+                    Bytecode(InfiniteBloomStart, ir[i].data);
+                ir.insertInPlace(i+IRL!(InfiniteEnd),
+                    Bytecode.fromRaw(cast(uint)zis.filters.length));
+                zis.filters ~= BloomFilter(set);
+            }
+        }
+    }
+    fixupBytecode(zis.ir);
 }
 
 //IR code validator - proper nesting, illegal instructions, etc.

@@ -11,6 +11,7 @@ package(std.regex):
 
 import std.exception, std.uni, std.meta, std.traits, std.range;
 
+debug(std_regex_parser) import std.stdio;
 // just a common trait, may be moved elsewhere
 alias BasicElementOf(Range) = Unqual!(ElementEncodingType!Range);
 
@@ -116,41 +117,44 @@ enum IR:uint {
     //OrChar holds in upper two bits of data total number of OrChars in this _sequence_
     //the drawback of this representation is that it is difficult
     // to detect a jump in the middle of it
-    OrChar            = 0b1_00100_00,
-    Nop               = 0b1_00101_00, //no operation (padding)
-    End               = 0b1_00110_00, //end of program
-    Bol               = 0b1_00111_00, //beginning of a string ^
-    Eol               = 0b1_01000_00, //end of a string $
-    Wordboundary      = 0b1_01001_00, //boundary of a word
-    Notwordboundary   = 0b1_01010_00, //not a word boundary
-    Backref           = 0b1_01011_00, //backreference to a group (that has to be pinned, i.e. locally unique) (group index)
-    GroupStart        = 0b1_01100_00, //start of a group (x) (groupIndex+groupPinning(1bit))
-    GroupEnd          = 0b1_01101_00, //end of a group (x) (groupIndex+groupPinning(1bit))
-    Option            = 0b1_01110_00, //start of an option within an alternation x | y (length)
-    GotoEndOr         = 0b1_01111_00, //end of an option (length of the rest)
+    OrChar             = 0b1_00100_00,
+    Nop                = 0b1_00101_00, //no operation (padding)
+    End                = 0b1_00110_00, //end of program
+    Bol                = 0b1_00111_00, //beginning of a string ^
+    Eol                = 0b1_01000_00, //end of a string $
+    Wordboundary       = 0b1_01001_00, //boundary of a word
+    Notwordboundary    = 0b1_01010_00, //not a word boundary
+    Backref            = 0b1_01011_00, //backreference to a group (that has to be pinned, i.e. locally unique) (group index)
+    GroupStart         = 0b1_01100_00, //start of a group (x) (groupIndex+groupPinning(1bit))
+    GroupEnd           = 0b1_01101_00, //end of a group (x) (groupIndex+groupPinning(1bit))
+    Option             = 0b1_01110_00, //start of an option within an alternation x | y (length)
+    GotoEndOr          = 0b1_01111_00, //end of an option (length of the rest)
     //... any additional atoms here
 
-    OrStart           = 0b1_00000_01, //start of alternation group  (length)
-    OrEnd             = 0b1_00000_10, //end of the or group (length,mergeIndex)
+    OrStart            = 0b1_00000_01, //start of alternation group  (length)
+    OrEnd              = 0b1_00000_10, //end of the or group (length,mergeIndex)
     //with this instruction order
     //bit mask 0b1_00001_00 could be used to test/set greediness
-    InfiniteStart     = 0b1_00001_01, //start of an infinite repetition x* (length)
-    InfiniteEnd       = 0b1_00001_10, //end of infinite repetition x* (length,mergeIndex)
-    InfiniteQStart    = 0b1_00010_01, //start of a non eager infinite repetition x*? (length)
-    InfiniteQEnd      = 0b1_00010_10, //end of non eager infinite repetition x*? (length,mergeIndex)
-    RepeatStart       = 0b1_00011_01, //start of a {n,m} repetition (length)
-    RepeatEnd         = 0b1_00011_10, //end of x{n,m} repetition (length,step,minRep,maxRep)
-    RepeatQStart      = 0b1_00100_01, //start of a non eager x{n,m}? repetition (length)
-    RepeatQEnd        = 0b1_00100_10, //end of non eager x{n,m}? repetition (length,step,minRep,maxRep)
+    InfiniteStart      = 0b1_00001_01, //start of an infinite repetition x* (length)
+    InfiniteEnd        = 0b1_00001_10, //end of infinite repetition x* (length,mergeIndex)
+    InfiniteQStart     = 0b1_00010_01, //start of a non eager infinite repetition x*? (length)
+    InfiniteQEnd       = 0b1_00010_10, //end of non eager infinite repetition x*? (length,mergeIndex)
+    InfiniteBloomStart = 0b1_00011_01, //start of an filtered infinite repetition x* (length)
+    InfiniteBloomEnd   = 0b1_00011_10, //end of filtered infinite repetition x* (length,mergeIndex)
+    RepeatStart        = 0b1_00100_01, //start of a {n,m} repetition (length)
+    RepeatEnd          = 0b1_00100_10, //end of x{n,m} repetition (length,step,minRep,maxRep)
+    RepeatQStart       = 0b1_00101_01, //start of a non eager x{n,m}? repetition (length)
+    RepeatQEnd         = 0b1_00101_10, //end of non eager x{n,m}? repetition (length,step,minRep,maxRep)
+
     //
-    LookaheadStart    = 0b1_00101_01, //begin of the lookahead group (length)
-    LookaheadEnd      = 0b1_00101_10, //end of a lookahead group (length)
-    NeglookaheadStart = 0b1_00110_01, //start of a negative lookahead (length)
-    NeglookaheadEnd   = 0b1_00110_10, //end of a negative lookahead (length)
-    LookbehindStart   = 0b1_00111_01, //start of a lookbehind (length)
-    LookbehindEnd     = 0b1_00111_10, //end of a lookbehind (length)
-    NeglookbehindStart= 0b1_01000_01, //start of a negative lookbehind (length)
-    NeglookbehindEnd  = 0b1_01000_10, //end of negative lookbehind (length)
+    LookaheadStart     = 0b1_00110_01, //begin of the lookahead group (length)
+    LookaheadEnd       = 0b1_00110_10, //end of a lookahead group (length)
+    NeglookaheadStart  = 0b1_00111_01, //start of a negative lookahead (length)
+    NeglookaheadEnd    = 0b1_00111_10, //end of a negative lookahead (length)
+    LookbehindStart    = 0b1_01000_01, //start of a lookbehind (length)
+    LookbehindEnd      = 0b1_01000_10, //end of a lookbehind (length)
+    NeglookbehindStart = 0b1_01001_01, //start of a negative lookbehind (length)
+    NeglookbehindEnd   = 0b1_01001_10, //end of negative lookbehind (length)
 }
 
 //a shorthand for IR length - full length of specific opcode evaluated at compile time
@@ -164,11 +168,13 @@ static assert (IRL!(IR.LookaheadStart) == 3);
 int immediateParamsIR(IR i){
     switch (i){
     case IR.OrEnd,IR.InfiniteEnd,IR.InfiniteQEnd:
-        return 1;
+        return 1;  // merge table index
+    case IR.InfiniteBloomEnd:
+        return 2;  // bloom filter index + merge table index
     case IR.RepeatEnd, IR.RepeatQEnd:
         return 4;
     case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
-        return 2;
+        return 2;  // start-end of captures used
     default:
         return 0;
     }
@@ -250,6 +256,11 @@ struct Bytecode
     //bit twiddling helpers
     //0-arg template due to @@@BUG@@@ 10985
     @property uint data()() const { return raw & 0x003f_ffff; }
+
+    @property void data()(uint val)
+    {
+        raw = (raw & ~0x003f_ffff) | (val & 0x003f_ffff);
+    }
 
     //ditto
     //0-arg template due to @@@BUG@@@ 10985
@@ -373,7 +384,8 @@ struct Group(DataIndex)
     case IR.OrChar:
         formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar)irb[pc].data, irb[pc].data, irb[pc].sequence);
         break;
-    case IR.RepeatStart, IR.InfiniteStart, IR.Option, IR.GotoEndOr, IR.OrStart:
+    case IR.RepeatStart, IR.InfiniteStart, IR.InfiniteBloomStart,
+    IR.Option, IR.GotoEndOr, IR.OrStart:
         //forward-jump instructions
         uint len = irb[pc].data;
         formattedWrite(output, " pc=>%u", pc+len+IRL!(IR.RepeatStart));
@@ -383,7 +395,7 @@ struct Group(DataIndex)
         formattedWrite(output, " pc=>%u min=%u max=%u step=%u",
             pc - len, irb[pc + 3].raw, irb[pc + 4].raw, irb[pc + 2].raw);
         break;
-    case IR.InfiniteEnd, IR.InfiniteQEnd, IR.OrEnd: //ditto
+    case IR.InfiniteEnd, IR.InfiniteQEnd, IR.InfiniteBloomEnd, IR.OrEnd: //ditto
         uint len = irb[pc].data;
         formattedWrite(output, " pc=>%u", pc-len);
         break;
@@ -498,6 +510,7 @@ package(std.regex):
     uint threadCount;
     uint flags;         //global regex flags
     public const(Trie)[]  tries; //
+    public const(BloomFilter)[] filters; // bloom filters for conditional loops
     uint[] backrefed; //bit array of backreferenced submatches
     Kickstart!Char kickstart;
 
@@ -695,53 +708,34 @@ bool startOfLine()(dchar back, bool seenNl)
     || back == NEL || back == LS || back == PS;
 }
 
-//Test if bytecode starting at pc in program 're' can match given codepoint
-//Returns: 0 - can't tell, -1 if doesn't match
-int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
-{
-    static assert(IRL!(IR.OrChar) == 1);//used in code processing IR.OrChar
-    for(;;)
-        switch(re.ir[pc].code)
-        {
-        case IR.OrChar:
-            uint len = re.ir[pc].sequence;
-            uint end = pc + len;
-            if(re.ir[pc].data != front && re.ir[pc+1].data != front)
-            {
-                for(pc = pc+2; pc < end; pc++)
-                    if(re.ir[pc].data == front)
-                        break;
-                if(pc == end)
-                    return -1;
-            }
-            return 0;
-        case IR.Char:
-            if(front == re.ir[pc].data)
-                return 0;
-            else
-                return -1;
-        case IR.Any:
-            return 0;
-        case IR.CodepointSet:
-            if(re.charsets[re.ir[pc].data].scanFor(front))
-                return 0;
-            else
-                return -1;
-        case IR.GroupStart, IR.GroupEnd:
-            pc += IRL!(IR.GroupStart);
-            break;
-        case IR.Trie:
-            if(re.tries[re.ir[pc].data][front])
-                return 0;
-            else
-                return -1;
-        default:
-            return 0;
-        }
-}
-
 ///Exception object thrown in case of errors during regex compilation.
 public class RegexException : Exception
 {
     mixin basicExceptionCtors;
+}
+
+
+struct BloomFilter {
+    uint[4] filter;
+
+    this(CodepointSet set){
+        foreach(iv; set.byInterval){
+            foreach(v; iv.a..iv.b)
+                add(v);
+        }
+    }
+
+    void add()(dchar ch){
+        immutable i = index(ch);
+        filter[i >> 5]  |=  1<<(i & 31);
+    }
+    // non-zero -> might be present, 0 -> absent
+    uint opIndex()(dchar ch) const{
+        immutable i = index(ch);
+        return filter[i >> 5] & (1<<(i & 31));
+    }
+
+    static uint index()(dchar ch){
+        return ((ch >> 7) ^ ch) & 0x7F;
+    }
 }
