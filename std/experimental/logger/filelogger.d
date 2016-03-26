@@ -29,7 +29,6 @@ class FileLogger : Logger
     */
     this(in string fn, const LogLevel lv = LogLevel.all) @safe
     {
-        import std.exception : enforce;
         super(lv);
         this.filename = fn;
         this.file_.open(this.filename, "a");
