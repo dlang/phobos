@@ -3687,7 +3687,7 @@ version(StdDdoc)
     /****************************************
      * Start up the browser and set it to viewing the page at url.
      */
-    void browse(string url);
+    void browse(const(char)[] url);
 }
 else
 version (Windows)
@@ -3696,7 +3696,7 @@ version (Windows)
 
     pragma(lib,"shell32.lib");
 
-    void browse(string url)
+    void browse(const(char)[] url)
     {
         ShellExecuteW(null, "open", url.tempCStringW(), null, null, SW_SHOWNORMAL);
     }
@@ -3707,7 +3707,7 @@ else version (OSX)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-    void browse(string url)
+    void browse(const(char)[] url)
     {
         const(char)*[5] args;
 
@@ -3743,7 +3743,7 @@ else version (Posix)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-    void browse(string url)
+    void browse(const(char)[] url)
     {
         const(char)*[3] args;
 
