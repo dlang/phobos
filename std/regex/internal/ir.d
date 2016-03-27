@@ -507,10 +507,10 @@ package(std.regex):
     uint ngroup;                           // number of internal groups
     uint maxCounterDepth;                  // max depth of nested {n,m} repetitions
     uint hotspotTableSize;                 // number of entries in merge table
-    uint threadCount;                      // upper bound on number of Thompson VM threads 
+    uint threadCount;                      // upper bound on number of Thompson VM threads
     uint flags;                            // global regex flags
     public const(CharMatcher)[]  matchers; // tables that represent character sets
-    public const(BitTable)[] filters;   // bloom filters for conditional loops
+    public const(BitTable)[] filters;      // bloom filters for conditional loops
     uint[] backrefed;                      // bit array of backreferenced submatches
     Kickstart!Char kickstart;
 

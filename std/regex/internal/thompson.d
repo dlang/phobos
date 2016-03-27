@@ -986,7 +986,7 @@ template ThompsonOps(E,S, bool withInput:false)
         }
         if(!matched)
         {
-        	state.t = createStart(index);
+            state.t = createStart(index);
             eval!false(&state);//new thread starting at end of input
         }
         if(matched)
