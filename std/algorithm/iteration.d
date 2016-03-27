@@ -11,11 +11,21 @@ $(T2 cache,
         Eagerly evaluates and caches another range's $(D front).)
 $(T2 cacheBidirectional,
         As above, but also provides $(D back) and $(D popBack).)
+$(T2 cartesianPower,
+        Lazily computes the Cartesian product of $(D r) with itself
+        for a number of repetitions $(D repeat).
+        $(D"AB".cartesianPower(2)) returns $(D["AA", "AB", "BA", "BB"]))
 $(T2 chunkBy,
         $(D chunkBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
         returns a range containing 3 subranges: the first with just
         $(D [1, 1]); the second with the elements $(D [1, 2]) and $(D [2, 2]);
         and the third with just $(D [2, 1]).)
+$(T2 combinations,
+        Lazily computes all k-combinations of $(D r).
+        $(D"AB".combinations(2)) returns $(D["AB"]))
+$(T2 combinationsRepeat,
+        Lazily computes all k-combinations of $(D r) with repetitions.
+        $(D"AB".combinationsRepeat(2)) returns $(D["AA", "AB", "BB"]))
 $(T2 each,
         $(D each!writeln([1, 2, 3])) eagerly prints the numbers $(D 1), $(D 2)
         and $(D 3) on their own lines.)
@@ -4326,10 +4336,10 @@ struct Permutations(Range)
         this.r = r;
         state = r.length ? new size_t[r.length-1] : null;
         indices = iota(size_t(r.length)).array;
-        empty = r.length == 0;
+        _empty = r.length == 0;
     }
 
-    bool empty;
+    private bool _empty;
 
     @property auto front()
     {
@@ -4345,7 +4355,7 @@ struct Permutations(Range)
 
             if (n > indices.length)
             {
-                empty = true;
+                _empty = true;
                 return;
             }
 
@@ -4362,6 +4372,11 @@ struct Permutations(Range)
         }
 
         next(2);
+    }
+
+    @property bool empty()
+    {
+        return _empty;
     }
 }
 
@@ -4394,4 +4409,544 @@ unittest
          [0, 2, 1],
          [1, 2, 0],
          [2, 1, 0]]));
+}
+
+/**
+Lazily computes the Cartesian power of $(D r) with itself
+for a number of repetitions $(D repeat).
+If the input is sorted, the product is in lexicographic order.
+For example $(D"AB".cartesianPower(2).array) returns $(D["AA", "AB", "BA", "BB"])
+
+Params:
+    r = $(REF_ALTTEXT Random access range, isRandomAccessRange, std, range, primitives)
+    repeat = number of repetitions
+
+Returns:
+    Forward range which yields the product items
+*/
+auto cartesianPower(Range)(Range r, size_t repeat = 1)
+if (isRandomAccessRange!Range && hasLength!Range)
+in
+{
+    assert(repeat >= 1, "Invalid number of repetitions");
+}
+body
+{
+    import std.range: Indexed;
+    static struct CartesianPower
+    {
+    private:
+        Range _r;
+        size_t[] _state;
+
+        size_t _max_states, _pos;
+
+    public:
+        this(Range r, size_t repeat)
+        {
+            import std.math: pow;
+
+            _r = r;
+
+            // set initial state and calculate max possibilities
+            if (r.length > 0)
+            {
+                _max_states = pow(r.length, repeat);
+                _state = new size_t[](repeat);
+            }
+        }
+
+        @property typeof(this) save()
+        {
+            typeof(this) c = this;
+            c._state = _state.dup;
+            return c;
+        }
+
+        @property Indexed!(Range, size_t[]) front()
+        {
+            import std.range : indexed;
+            return _r.indexed(_state);
+        }
+
+        void popFront()
+        {
+            assert(!empty);
+            _pos++;
+
+            immutable nrElements = _r.length;
+
+            /*
+            * Bitwise increment - starting from back
+            * It works like adding 1 in primary school arithmetic.
+            * If a block has reached the number of elements, we reset it to
+            * 0, and continue to increment, e.g. for n = 2:
+            *
+            * [0, 0, 0] -> [0, 0, 1]
+            * [0, 1, 1] -> [1, 0, 0]
+            */
+            foreach_reverse (i, ref el; _state)
+            {
+                ++el;
+                if (el < nrElements)
+                    break;
+
+                el = 0;
+            }
+        }
+
+        @property size_t length()
+        {
+            return _max_states - _pos;
+        }
+
+        @property bool empty()
+        {
+            return _pos == _max_states;
+        }
+    }
+    return CartesianPower(r, repeat);
+}
+
+///
+pure nothrow @safe unittest
+{
+    import std.algorithm: equal;
+    import std.range: iota;
+    assert(iota(2).cartesianPower.equal!equal([[0], [1]]));
+    assert(iota(2).cartesianPower(2).equal!equal([[0, 0], [0, 1], [1, 0], [1, 1]]));
+    assert(iota(3).cartesianPower(2).equal!equal([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]]));
+    assert("AB"d.cartesianPower(2).equal!equal(["AA"d, "AB"d, "BA"d, "BB"d]));
+}
+
+pure nothrow @safe unittest
+{
+    import std.algorithm: equal;
+    import std.array: array;
+    import std.range: iota, dropOne;
+
+    assert(iota(0).cartesianPower.length == 0);
+    assert("AB"d.cartesianPower(3).equal!equal(["AAA"d, "AAB"d, "ABA"d, "ABB"d, "BAA"d, "BAB"d, "BBA"d, "BBB"d]));
+    auto expected = ["AA"d, "AB"d, "AC"d, "AD"d,
+                     "BA"d, "BB"d, "BC"d, "BD"d,
+                     "CA"d, "CB"d, "CC"d, "CD"d,
+                     "DA"d, "DB"d, "DC"d, "DD"d];
+    assert("ABCD"d.cartesianPower(2).equal!equal(expected));
+    // verify with array too
+    assert("ABCD"d.cartesianPower(2).map!array.array == expected);
+
+    assert(iota(2).cartesianPower.front.equal([0]));
+
+    // is copyable?
+    auto a = iota(2).cartesianPower;
+    assert(a.front.equal([0]));
+    assert(a.save.dropOne.front.equal([1]));
+    assert(a.front.equal([0]));
+
+    // test length shrinking
+    auto d = iota(2).cartesianPower;
+    assert(d.length == 2);
+    d.popFront;
+    assert(d.length == 1);
+}
+
+/**
+Lazily computes all k-combinations of $(D r).
+Imagine this as the $(LREF cartesianPower) filtered for only strictly ordered items.
+
+For example $(D"AB".combinations(2).array) returns $(D["AB"]).
+
+Params:
+    r = $(REF_ALTTEXT Random access range, isRandomAccessRange, std, range, primitives)
+    k = number of combinations
+
+Returns:
+    Forward range which yields the k-combinations items
+*/
+auto combinations(Range)(Range r, size_t k = 1)
+if (isRandomAccessRange!Range && hasLength!Range)
+in
+{
+    assert(k >= 1, "Invalid number of combinations");
+}
+body
+{
+    import std.range: Indexed;
+    import std.range: iota;
+    static struct Combination
+    {
+    private:
+        Range _r;
+        size_t[] _state;
+        size_t _max_states, _pos;
+
+    public:
+        this(Range r, size_t repeat)
+        {
+            import std.array: array;
+            import std.numeric: binomial;
+
+            _r = r;
+
+            // set initial state and calculate max possibilities
+            if (r.length > 0)
+            {
+                _max_states = binomial(r.length, repeat);
+                _state = new size_t[](repeat);
+                // skip first duplicate
+                if (r.length > 1 && repeat > 1)
+                {
+                    _state = iota(repeat).array;
+                }
+            }
+        }
+
+        @property typeof(this) save()
+        {
+            typeof(this) c = this;
+            c._state = _state.dup;
+            return c;
+        }
+
+        @property Indexed!(Range, size_t[]) front()
+        {
+            import std.range : indexed;
+            return _r.indexed(_state);
+        }
+
+        void popFront()
+        {
+            assert(!empty);
+            _pos++;
+            // we might have bumped into the end state now
+            if (empty) return;
+
+            immutable nrElements = _r.length;
+            immutable repeat = _state.length;
+
+            // Behaves like: do _getNextState();  while(!_state.isStrictlySorted);
+            size_t i = repeat - 1;
+            /* Go from the back to next settable block
+            * - A must block must be lower than it's previous
+            * - A state i is not settable if it's maximum height is reached
+            *
+            * Think of it as a backwords search on state with
+            * iota(_repeat + d, _repeat + d) as search mask.
+            * (d = _nrElements -_repeat)
+            *
+            * As an example n = 3, r = 2, iota is [1, 2] and hence:
+            * [0, 1] -> i = 2
+            * [0, 2] -> i = 1
+            */
+            while (_state[i] == nrElements - repeat + i)
+            {
+                i--;
+            }
+            _state[i] = _state[i] + 1;
+
+            /* Starting from our changed block, we need to take the change back
+            * to the end of the state array and update them by their new diff.
+            * [0, 1, 4] -> [0, 2, 3]
+            * [0, 3, 4] -> [1, 2, 3]
+            */
+            for (size_t j = i + 1; j < repeat; j++)
+            {
+                _state[j] = _state[i] + j - i;
+            }
+        }
+
+        @property size_t length()
+        {
+            return _max_states - _pos;
+        }
+
+        @property bool empty()
+        {
+            return _pos == _max_states;
+        }
+    }
+    return Combination(r, k);
+}
+
+///
+pure nothrow @safe unittest
+{
+    import std.algorithm: equal;
+    import std.range: iota;
+    assert(iota(3).combinations(2).equal!equal([[0, 1], [0, 2], [1, 2]]));
+    assert("AB"d.combinations(2).equal!equal(["AB"d]));
+    assert("ABC"d.combinations(2).equal!equal(["AB"d, "AC"d, "BC"d]));
+}
+
+pure nothrow @safe unittest
+{
+    import std.algorithm: equal;
+    import std.array: array;
+    import std.range: iota, dropOne;
+
+    assert(iota(0).combinations.length == 0);
+    assert(iota(2).combinations.equal!equal([[0], [1]]));
+
+    auto expected = ["AB"d, "AC"d, "AD"d, "BC"d, "BD"d, "CD"d];
+    assert("ABCD"d.combinations(2).equal!equal(expected));
+    // verify with array too
+    assert("ABCD"d.combinations(2).map!array.array == expected);
+    assert(iota(2).combinations.front.equal([0]));
+
+    // is copyable?
+    auto a = iota(2).combinations;
+    assert(a.front.equal([0]));
+    assert(a.save.dropOne.front.equal([1]));
+    assert(a.front.equal([0]));
+
+    // test length shrinking
+    auto d = iota(2).combinations;
+    assert(d.length == 2);
+    d.popFront;
+    assert(d.length == 1);
+
+    // test larger combinations
+    auto expected5 = [[0, 1, 2], [0, 1, 3], [0, 1, 4],
+                      [0, 2, 3], [0, 2, 4], [0, 3, 4],
+                      [1, 2, 3], [1, 2, 4], [1, 3, 4],
+                      [2, 3, 4]];
+    assert(iota(5).combinations(3).equal!equal(expected5));
+    assert(iota(4).combinations(3).equal!equal([[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]]));
+    assert(iota(3).combinations(3).equal!equal([[0, 1, 2]]));
+    assert(iota(2).combinations(3).length == 0);
+    assert(iota(1).combinations(3).length == 0);
+
+    assert(iota(3).combinations(2).equal!equal([[0, 1], [0, 2], [1, 2]]));
+    assert(iota(2).combinations(2).equal!equal([[0, 1]]));
+    assert(iota(1).combinations(2).length == 0);
+
+    assert(iota(1).combinations(1).equal!equal([[0]]));
+}
+
+pure nothrow @safe unittest
+{
+    // test larger combinations
+    import std.algorithm: equal;
+    import std.range: iota;
+
+    auto expected6r4 = [[0, 1, 2, 3], [0, 1, 2, 4], [0, 1, 2, 5],
+                        [0, 1, 3, 4], [0, 1, 3, 5], [0, 1, 4, 5],
+                        [0, 2, 3, 4], [0, 2, 3, 5], [0, 2, 4, 5],
+                        [0, 3, 4, 5], [1, 2, 3, 4], [1, 2, 3, 5],
+                        [1, 2, 4, 5], [1, 3, 4, 5], [2, 3, 4, 5]];
+    assert(iota(6).combinations(4).equal!equal(expected6r4));
+
+    auto expected6r3 = [[0, 1, 2], [0, 1, 3], [0, 1, 4], [0, 1, 5],
+                        [0, 2, 3], [0, 2, 4], [0, 2, 5], [0, 3, 4],
+                        [0, 3, 5], [0, 4, 5], [1, 2, 3], [1, 2, 4],
+                        [1, 2, 5], [1, 3, 4], [1, 3, 5], [1, 4, 5],
+                        [2, 3, 4], [2, 3, 5], [2, 4, 5], [3, 4, 5]];
+    assert(iota(6).combinations(3).equal!equal(expected6r3));
+
+    auto expected6r2 = [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5],
+                        [1, 2], [1, 3], [1, 4], [1, 5], [2, 3],
+                        [2, 4], [2, 5], [3, 4], [3, 5], [4, 5]];
+    assert(iota(6).combinations(2).equal!equal(expected6r2));
+
+    auto expected7r5 = [[0, 1, 2, 3, 4], [0, 1, 2, 3, 5], [0, 1, 2, 3, 6],
+                        [0, 1, 2, 4, 5], [0, 1, 2, 4, 6], [0, 1, 2, 5, 6],
+                        [0, 1, 3, 4, 5], [0, 1, 3, 4, 6], [0, 1, 3, 5, 6],
+                        [0, 1, 4, 5, 6], [0, 2, 3, 4, 5], [0, 2, 3, 4, 6],
+                        [0, 2, 3, 5, 6], [0, 2, 4, 5, 6], [0, 3, 4, 5, 6],
+                        [1, 2, 3, 4, 5], [1, 2, 3, 4, 6], [1, 2, 3, 5, 6],
+                        [1, 2, 4, 5, 6], [1, 3, 4, 5, 6], [2, 3, 4, 5, 6]];
+    assert(iota(7).combinations(5).equal!equal(expected7r5));
+}
+
+/**
+Lazily computes all k-combinations of $(D r) with repetitions.
+A k-combination with repetitions, or k-multicombination, or multisubset of size k from a set S is given by a sequence of k not necessarily distinct elements of S, where order is not taken into account.
+Imagine this as the cartesianPower filtered for only ordered items.
+
+For example $(D"AB".combinationsRepeat(2).array) returns $(D["AA", "AB", "BB"]).
+
+Params:
+    r = $(REF_ALTTEXT Random access range, isRandomAccessRange, std, range, primitives)
+    k = number of combinations
+
+Returns:
+    Forward range which yields the k-multicombinations items
+*/
+auto combinationsRepeat(Range)(Range r, size_t k = 1)
+if (isRandomAccessRange!Range && hasLength!Range)
+in
+{
+    assert(k >= 1, "Invalid number of combinations");
+}
+body
+{
+    import std.range: Indexed;
+    static struct CombinationRepeat
+    {
+    private:
+        Range _r;
+        size_t[] _state;
+
+        size_t _max_states, _pos;
+
+    public:
+        this(Range r, size_t repeat)
+        {
+            import std.numeric: binomial;
+            _r = r;
+
+            // set initial state and calculate max possibilities
+            if (r.length > 0)
+            {
+                _max_states = binomial(r.length + repeat  - 1, repeat);
+                _state = new size_t[](repeat);
+            }
+        }
+
+        @property typeof(this) save()
+        {
+            typeof(this) c = this;
+            c._state = _state.dup;
+            return c;
+        }
+
+        @property Indexed!(Range, size_t[]) front()
+        {
+            import std.range : indexed;
+            return _r.indexed(_state);
+        }
+
+        void popFront()
+        {
+            assert(!empty);
+            _pos++;
+
+            immutable nrElements = _r.length;
+            immutable repeat = _state.length;
+
+            // behaves like: do _getNextState();  while(!_state.isSorted);
+            size_t i = repeat - 1;
+            // go to next settable block
+            // a block is settable if its not in the end state (=nrElements - 1)
+            while (_state[i] == nrElements - 1 && i != 0)
+            {
+                i--;
+            }
+            _state[i] = _state[i] + 1;
+
+            // if we aren't at the last block, we need to set all blocks
+            // to equal the current one
+            // e.g. [0, 2] -> (upper block: [1, 2]) -> [1, 1]
+            if (i != repeat - 1)
+            {
+                for (size_t j = i + 1; j < repeat; j++)
+                    _state[j] = _state[i];
+            }
+        }
+
+        @property size_t length()
+        {
+            return _max_states - _pos;
+        }
+
+        @property bool empty()
+        {
+            return _pos == _max_states;
+        }
+    }
+    return CombinationRepeat(r, k);
+}
+
+///
+pure nothrow @safe unittest
+{
+    import std.algorithm: equal;
+    import std.range: iota;
+
+    assert(iota(2).combinationsRepeat.equal!equal([[0], [1]]));
+    assert(iota(2).combinationsRepeat(2).equal!equal([[0, 0], [0, 1], [1, 1]]));
+    assert(iota(3).combinationsRepeat(2).equal!equal([[0, 0], [0, 1], [0, 2], [1, 1], [1, 2], [2, 2]]));
+    assert("AB"d.combinationsRepeat(2).equal!equal(["AA"d, "AB"d,  "BB"d]));
+}
+
+unittest
+{
+    import std.algorithm: equal;
+    import std.array: array;
+    import std.range: iota, dropOne;
+
+    assert(iota(0).combinationsRepeat.length == 0);
+    assert("AB"d.combinationsRepeat(3).equal!equal(["AAA"d, "AAB"d, "ABB"d,"BBB"d]));
+
+    auto expected = ["AA"d, "AB"d, "AC"d, "AD"d, "BB"d, "BC"d, "BD"d, "CC"d, "CD"d, "DD"d];
+    assert("ABCD"d.combinationsRepeat(2).equal!equal(expected));
+    // verify with array too
+    assert("ABCD"d.combinationsRepeat(2).map!array.array == expected);
+
+    assert(iota(2).combinationsRepeat.front.equal([0]));
+
+    // is copyable?
+    auto a = iota(2).combinationsRepeat;
+    assert(a.front.equal([0]));
+    assert(a.save.dropOne.front.equal([1]));
+    assert(a.front.equal([0]));
+
+    // test length shrinking
+    auto d = iota(2).combinationsRepeat;
+    assert(d.length == 2);
+    d.popFront;
+    assert(d.length == 1);
+}
+
+pure nothrow @safe unittest
+{
+    // test larger combinations
+    import std.algorithm: equal;
+    import std.range: iota;
+
+    auto expected3r1 = [[0], [1], [2]];
+    assert(iota(3).combinationsRepeat(1).equal!equal(expected3r1));
+
+    auto expected3r2 = [[0, 0], [0, 1], [0, 2], [1, 1], [1, 2], [2, 2]];
+    assert(iota(3).combinationsRepeat(2).equal!equal(expected3r2));
+
+    auto expected3r3 = [[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 1, 1],
+                        [0, 1, 2], [0, 2, 2], [1, 1, 1], [1, 1, 2],
+                        [1, 2, 2], [2, 2, 2]];
+    assert(iota(3).combinationsRepeat(3).equal!equal(expected3r3));
+
+    auto expected3r4 = [[0, 0, 0, 0], [0, 0, 0, 1], [0, 0, 0, 2],
+                        [0, 0, 1, 1], [0, 0, 1, 2], [0, 0, 2, 2],
+                        [0, 1, 1, 1], [0, 1, 1, 2], [0, 1, 2, 2],
+                        [0, 2, 2, 2], [1, 1, 1, 1], [1, 1, 1, 2],
+                        [1, 1, 2, 2], [1, 2, 2, 2], [2, 2, 2, 2]];
+    assert(iota(3).combinationsRepeat(4).equal!equal(expected3r4));
+
+    auto expected4r3 = [[0, 0, 0], [0, 0, 1], [0, 0, 2],
+                        [0, 0, 3], [0, 1, 1], [0, 1, 2],
+                        [0, 1, 3], [0, 2, 2], [0, 2, 3],
+                        [0, 3, 3], [1, 1, 1], [1, 1, 2],
+                        [1, 1, 3], [1, 2, 2], [1, 2, 3],
+                        [1, 3, 3], [2, 2, 2], [2, 2, 3],
+                        [2, 3, 3], [3, 3, 3]];
+    assert(iota(4).combinationsRepeat(3).equal!equal(expected4r3));
+
+    auto expected4r2 = [[0, 0], [0, 1], [0, 2], [0, 3],
+                         [1, 1], [1, 2], [1, 3], [2, 2],
+                         [2, 3], [3, 3]];
+    assert(iota(4).combinationsRepeat(2).equal!equal(expected4r2));
+
+    auto expected5r3 = [[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 0, 3], [0, 0, 4],
+                        [0, 1, 1], [0, 1, 2], [0, 1, 3], [0, 1, 4], [0, 2, 2],
+                        [0, 2, 3], [0, 2, 4], [0, 3, 3], [0, 3, 4], [0, 4, 4],
+                        [1, 1, 1], [1, 1, 2], [1, 1, 3], [1, 1, 4], [1, 2, 2],
+                        [1, 2, 3], [1, 2, 4], [1, 3, 3], [1, 3, 4], [1, 4, 4],
+                        [2, 2, 2], [2, 2, 3], [2, 2, 4], [2, 3, 3], [2, 3, 4],
+                        [2, 4, 4], [3, 3, 3], [3, 3, 4], [3, 4, 4], [4, 4, 4]];
+    assert(iota(5).combinationsRepeat(3).equal!equal(expected5r3));
+
+    auto expected5r2 = [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4],
+                        [1, 1], [1, 2], [1, 3], [1, 4], [2, 2],
+                        [2, 3], [2, 4], [3, 3], [3, 4], [4, 4]];
+    assert(iota(5).combinationsRepeat(2).equal!equal(expected5r2));
 }

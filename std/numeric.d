@@ -3088,3 +3088,56 @@ unittest
     static assert(isComplexLike!(Complex!double));
     static assert(!isComplexLike!(uint));
 }
+
+/**
+Computes the $(WEB en.wikipedia.org/wiki/Binomial_coefficient, binomial coefficient)
+of n and k.
+It is also known as "n choose k" or more formally as $(D _n!/_k!(_n-_k)).
+
+Params:
+    n = non negative integer
+    k = non negative integer, k <= n
+
+Returns:
+    Computed binomial coefficient
+*/
+
+public:
+size_t binomial(size_t n, size_t k) pure nothrow @safe @nogc
+in
+{
+    assert(n >= 0, "binomial: n must be non-negative");
+}
+body
+{
+    if (k < 0 || k > n)
+        return 0;
+    if (k == n)
+        return 1;
+    if (k > (n / 2))
+        k = n - k;
+    size_t result = 1;
+    for (size_t i = 1, m = n; i <= k; i++, m--)
+        result = result * m / i;
+    return result;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    assert(binomial(5, 2) == 10);
+    assert(binomial(6, 4) == 15);
+    assert(binomial(3, 1) == 3);
+}
+
+pure nothrow @safe @nogc unittest
+{
+    assert(binomial(5, 1) == 5);
+    assert(binomial(5, 0) == 1);
+    assert(binomial(1, 2) == 0);
+    assert(binomial(1, 0) == 1);
+    assert(binomial(1, 1) == 1);
+    assert(binomial(2, 1) == 2);
+}
+
+
