@@ -112,21 +112,21 @@ template ThompsonOps(E, S, bool withInput:true)
             dchar back;
             DataIndex bi;
             //at start & end of input
-            if(atStart && wordTrie[front])
+            if(atStart && wordMatcher[front])
             {
                 t.pc += IRL!(IR.Wordboundary);
                 return true;
             }
             else if(atEnd && s.loopBack(index).nextChar(back, bi)
-                    && wordTrie[back])
+                    && wordMatcher[back])
             {
                 t.pc += IRL!(IR.Wordboundary);
                 return true;
             }
             else if(s.loopBack(index).nextChar(back, bi))
             {
-                bool af = wordTrie[front];
-                bool ab = wordTrie[back];
+                bool af = wordMatcher[front];
+                bool ab = wordMatcher[back];
                 if(af ^ ab)
                 {
                     t.pc += IRL!(IR.Wordboundary);
@@ -144,19 +144,19 @@ template ThompsonOps(E, S, bool withInput:true)
             dchar back;
             DataIndex bi;
             //at start & end of input
-            if(atStart && wordTrie[front])
+            if(atStart && wordMatcher[front])
             {
                 return popState(e);
             }
             else if(atEnd && s.loopBack(index).nextChar(back, bi)
-                    && wordTrie[back])
+                    && wordMatcher[back])
             {
                 return popState(e);
             }
             else if(s.loopBack(index).nextChar(back, bi))
             {
-                bool af = wordTrie[front];
-                bool ab = wordTrie[back]  != 0;
+                bool af = wordMatcher[front];
+                bool ab = wordMatcher[back]  != 0;
                 if(af ^ ab)
                 {
                     return popState(e);
@@ -630,7 +630,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            if(re.tries[re.ir[t.pc].data][front])
+            if(re.matchers[re.ir[t.pc].data][front])
             {
                 t.pc += IRL!(IR.Trie);
                 nlist.insertBack(t);
