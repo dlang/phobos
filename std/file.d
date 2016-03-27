@@ -442,6 +442,8 @@ Params:
     buffer = data to be written to file
 
 Throws: $(D FileException) on error.
+
+See_also: $(XREF stdio,toFile)
  */
 void write(R)(R name, const void[] buffer)
     if ((isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&

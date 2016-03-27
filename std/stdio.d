@@ -2483,8 +2483,13 @@ $(D Range) that locks the file and allows fast writing to it.
     {
     private:
         import std.range.primitives : ElementType, isInfinite, isInputRange;
-        FILE* fps_;          // the shared file handle
-        _iobuf* handle_;     // the unshared version of fps
+        // the shared file handle
+        FILE* fps_;
+
+        // the unshared version of fps
+        @property _iobuf* handle_() @trusted { return cast(_iobuf*) fps_; }
+
+        // the file's orientation (byte- or wide-oriented)
         int orientation_;
     public:
 
@@ -2497,7 +2502,6 @@ $(D Range) that locks the file and allows fast writing to it.
             fps_ = f._p.handle;
             orientation_ = fwide(fps_, 0);
             FLOCK(fps_);
-            handle_ = cast(_iobuf*)fps_;
         }
 
         ~this() @trusted
@@ -2506,7 +2510,6 @@ $(D Range) that locks the file and allows fast writing to it.
             {
                 FUNLOCK(fps_);
                 fps_ = null;
-                handle_ = null;
             }
         }
 
@@ -2655,6 +2658,213 @@ See $(LREF byChunk) for an example.
     auto lockingTextWriter() @safe
     {
         return LockingTextWriter(this);
+    }
+
+    // An output range which optionally locks the file and puts it into
+    // binary mode (similar to rawWrite). Because it needs to restore
+    // the file mode on destruction, it is RefCounted on Windows.
+    struct BinaryWriterImpl(bool locking)
+    {
+    private:
+        FILE* fps;
+        string name;
+
+        version (Windows)
+        {
+            int fd, oldMode;
+            version (DIGITAL_MARS_STDIO)
+                ubyte oldInfo;
+        }
+
+    package:
+        this(ref File f)
+        {
+            import std.exception : enforce;
+
+            enforce(f._p && f._p.handle);
+            name = f._name;
+            fps = f._p.handle;
+            static if (locking)
+                FLOCK(fps);
+
+            version (Windows)
+            {
+                .fflush(fps); // before changing translation mode
+                fd = ._fileno(fps);
+                oldMode = ._setmode(fd, _O_BINARY);
+                version (DIGITAL_MARS_STDIO)
+                {
+                    import core.atomic;
+
+                    // @@@BUG@@@ 4243
+                    oldInfo = __fhnd_info[fd];
+                    atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
+                }
+            }
+        }
+
+    public:
+        ~this()
+        {
+            if (!fps)
+                return;
+
+            version (Windows)
+            {
+                .fflush(fps); // before restoring translation mode
+                version (DIGITAL_MARS_STDIO)
+                {
+                    // @@@BUG@@@ 4243
+                    __fhnd_info[fd] = oldInfo;
+                }
+                ._setmode(fd, oldMode);
+            }
+
+            FUNLOCK(fps);
+            fps = null;
+        }
+
+        void rawWrite(T)(in T[] buffer)
+        {
+            import std.conv : text;
+            import std.exception : errnoEnforce;
+
+            auto result =
+                .fwrite(buffer.ptr, T.sizeof, buffer.length, fps);
+            if (result == result.max) result = 0;
+            errnoEnforce(result == buffer.length,
+                    text("Wrote ", result, " instead of ", buffer.length,
+                            " objects of type ", T.stringof, " to file `",
+                            name, "'"));
+        }
+
+        version (Windows)
+        {
+            @disable this(this);
+        }
+        else
+        {
+            this(this)
+            {
+                if (fps)
+                {
+                    FLOCK(fps);
+                }
+            }
+        }
+
+        void put(T)(auto ref in T value)
+        if (!hasIndirections!T &&
+            !isInputRange!T)
+        {
+            rawWrite((&value)[0..1]);
+        }
+
+        void put(T)(in T[] array)
+        if (!hasIndirections!T &&
+            !isInputRange!T)
+        {
+            rawWrite(array);
+        }
+    }
+
+/** Returns an output range that locks the file and allows fast writing to it.
+
+Example:
+Produce a grayscale image of the $(LUCKY Mandelbrot set)
+in binary $(LUCKY Netpbm format) to standard output.
+---
+import std.algorithm, std.range, std.stdio;
+
+void main()
+{
+    enum size = 500;
+    writef("P5\n%d %d %d\n", size, size, ubyte.max);
+
+    iota(-1, 3, 2.0/size).map!(y =>
+        iota(-1.5, 0.5, 2.0/size).map!(x =>
+            cast(ubyte)(1+
+                recurrence!((a, n) => x + y*1i + a[n-1]^^2)(0+0i)
+                .take(ubyte.max)
+                .countUntil!(z => z.re^^2 + z.im^^2 > 4))
+        )
+    )
+    .copy(stdout.lockingBinaryWriter);
+}
+---
+*/
+    auto lockingBinaryWriter()
+    {
+        alias LockingBinaryWriterImpl = BinaryWriterImpl!true;
+
+        version (Windows)
+        {
+            import std.typecons : RefCounted;
+            alias LockingBinaryWriter = RefCounted!LockingBinaryWriterImpl;
+        }
+        else
+            alias LockingBinaryWriter = LockingBinaryWriterImpl;
+
+        return LockingBinaryWriter(this);
+    }
+
+    unittest
+    {
+        import std.algorithm : copy, reverse;
+        static import std.file;
+        import std.exception : collectException;
+        import std.range : only, retro, put;
+        import std.string : format;
+
+        auto deleteme = testFilename();
+        scope(exit) collectException(std.file.remove(deleteme));
+        auto output = File(deleteme, "wb");
+        auto writer = output.lockingBinaryWriter();
+        auto input = File(deleteme, "rb");
+
+        T[] readExact(T)(T[] buf)
+        {
+            auto result = input.rawRead(buf);
+            assert(result.length == buf.length,
+                "Read %d out of %d bytes"
+                .format(result.length, buf.length));
+            return result;
+        }
+
+        // test raw values
+        ubyte byteIn = 42;
+        byteIn.only.copy(writer); output.flush();
+        ubyte byteOut = readExact(new ubyte[1])[0];
+        assert(byteIn == byteOut);
+
+        // test arrays
+        ubyte[] bytesIn = [1, 2, 3, 4, 5];
+        bytesIn.copy(writer); output.flush();
+        ubyte[] bytesOut = readExact(new ubyte[bytesIn.length]);
+        scope(failure) .writeln(bytesOut);
+        assert(bytesIn == bytesOut);
+
+        // test ranges of values
+        bytesIn.retro.copy(writer); output.flush();
+        bytesOut = readExact(bytesOut);
+        bytesOut.reverse();
+        assert(bytesIn == bytesOut);
+
+        // test string
+        "foobar".copy(writer); output.flush();
+        char[] charsOut = readExact(new char[6]);
+        assert(charsOut == "foobar");
+
+        // test ranges of arrays
+        only("foo", "bar").copy(writer); output.flush();
+        charsOut = readExact(charsOut);
+        assert(charsOut == "foobar");
+
+        // test that we are writing arrays as is,
+        // without UTF-8 transcoding
+        "foo"d.copy(writer); output.flush();
+        dchar[] dcharsOut = readExact(new dchar[3]);
+        assert(dcharsOut == "foo");
     }
 
 /// Get the size of the file, ulong.max if file is not searchable, but still throws if an actual error occurs.
@@ -3931,6 +4141,32 @@ unittest
         ++i;
     }
     f.close();
+}
+
+
+/**
+Writes an array or range to a file.
+Shorthand for $(D data.copy(File(fileName, "wb").lockingBinaryWriter)).
+Similar to $(XREF file,write), strings are written as-is,
+rather than encoded according to the $(D File)'s $(WEB
+en.cppreference.com/w/c/io#Narrow_and_wide_orientation,
+orientation).
+*/
+void toFile(T)(T data, string fileName)
+    if (is(typeof(std.algorithm.mutation.copy(data, stdout.lockingBinaryWriter))))
+{
+    std.algorithm.mutation.copy(data, File(fileName, "wb").lockingBinaryWriter);
+}
+
+unittest
+{
+    static import std.file;
+
+    auto deleteme = testFilename();
+    scope(exit) { std.file.remove(deleteme); }
+
+    "Test".toFile(deleteme);
+    assert(std.file.readText(deleteme) == "Test");
 }
 
 /*********************
