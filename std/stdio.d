@@ -2427,7 +2427,7 @@ $(D Range) that locks the file and allows fast writing to it.
         FILE* fps_;
 
         // the unshared version of fps
-        @property _iobuf* handle_() @trusted { return cast(_iobuf*)fps_; }
+        @property _iobuf* handle_() @trusted { return cast(_iobuf*) fps_; }
 
         // the file's orientation (byte- or wide-oriented)
         int orientation_;
@@ -2615,10 +2615,10 @@ See $(LREF byChunk) for an example.
         FILE* fps;
         string name;
 
-        version(Windows)
+        version (Windows)
         {
             int fd, oldMode;
-            version(DIGITAL_MARS_STDIO)
+            version (DIGITAL_MARS_STDIO)
                 ubyte oldInfo;
         }
 
@@ -2633,12 +2633,12 @@ See $(LREF byChunk) for an example.
             static if (locking)
                 FLOCK(fps);
 
-            version(Windows)
+            version (Windows)
             {
                 .fflush(fps); // before changing translation mode
                 fd = ._fileno(fps);
                 oldMode = ._setmode(fd, _O_BINARY);
-                version(DIGITAL_MARS_STDIO)
+                version (DIGITAL_MARS_STDIO)
                 {
                     import core.atomic;
 
@@ -2652,22 +2652,22 @@ See $(LREF byChunk) for an example.
     public:
         ~this()
         {
-            if(fps)
-            {
-                version(Windows)
-                {
-                    .fflush(fps); // before restoring translation mode
-                    version(DIGITAL_MARS_STDIO)
-                    {
-                        // @@@BUG@@@ 4243
-                        __fhnd_info[fd] = oldInfo;
-                    }
-                    ._setmode(fd, oldMode);
-                }
+            if (!fps)
+                return;
 
-                FUNLOCK(fps);
-                fps = null;
+            version (Windows)
+            {
+                .fflush(fps); // before restoring translation mode
+                version (DIGITAL_MARS_STDIO)
+                {
+                    // @@@BUG@@@ 4243
+                    __fhnd_info[fd] = oldInfo;
+                }
+                ._setmode(fd, oldMode);
             }
+
+            FUNLOCK(fps);
+            fps = null;
         }
 
         void rawWrite(T)(in T[] buffer)
@@ -2692,7 +2692,7 @@ See $(LREF byChunk) for an example.
         {
             this(this)
             {
-                if(fps)
+                if (fps)
                 {
                     FLOCK(fps);
                 }
@@ -2700,15 +2700,15 @@ See $(LREF byChunk) for an example.
         }
 
         void put(T)(auto ref in T value)
-            if (!hasIndirections!T
-             && !isInputRange!T)
+        if (!hasIndirections!T &&
+            !isInputRange!T)
         {
             rawWrite((&value)[0..1]);
         }
 
         void put(T)(in T[] array)
-            if (!hasIndirections!T
-             && !isInputRange!T)
+        if (!hasIndirections!T &&
+            !isInputRange!T)
         {
             rawWrite(array);
         }
@@ -2743,7 +2743,7 @@ void main()
     {
         alias LockingBinaryWriterImpl = BinaryWriterImpl!true;
 
-        version(Windows)
+        version (Windows)
         {
             import std.typecons : RefCounted;
             alias LockingBinaryWriter = RefCounted!LockingBinaryWriterImpl;
