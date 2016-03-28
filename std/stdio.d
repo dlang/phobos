@@ -2245,6 +2245,24 @@ $(XREF file,readText)
         assert(blc.front is blc.front);
     }
 
+    /**
+    Creates an input range set up to parse one line at a time from the file
+    into a tuple.
+
+    Range primitives may throw $(D StdioException) on I/O error.
+
+    Params:
+        file = file handle to parse from
+        format = tuple record $(REF_ALTTEXT _format, formattedRead, std, _format)
+
+    Returns:
+        The input range set up to parse one line at a time into a record tuple.
+
+    See_Also:
+
+        It is similar to $(LREF byLine) and uses
+        $(REF_ALTTEXT _format, formattedRead, std, _format) under the hood.
+    */
     template byRecord(Fields...)
     {
         ByRecord!(Fields) byRecord(string format)
@@ -2253,24 +2271,26 @@ $(XREF file,readText)
         }
     }
 
+    ///
     unittest
     {
-        // static import std.file;
-        //
-        // auto deleteme = testFilename();
-        // rndGen.popFront();
-        // scope(failure) printf("Failed test at line %d\n", __LINE__);
-        // std.file.write(deleteme, "1 2\n4 1\n5 100");
-        // scope(exit) std.file.remove(deleteme);
-        // File f = File(deleteme);
-        // scope(exit) f.close();
-        // auto t = [ tuple(1, 2), tuple(4, 1), tuple(5, 100) ];
-        // uint i;
-        // foreach (e; f.byRecord!(int, int)("%s %s"))
-        // {
-        //     //.writeln(e);
-        //     assert(e == t[i++]);
-        // }
+         static import std.file;
+
+         // prepare test file
+         auto testFile = testFilename();
+         scope(failure) printf("Failed test at line %d\n", __LINE__);
+         std.file.write(testFile, "1 2\n4 1\n5 100");
+         scope(exit) std.file.remove(testFile);
+
+         File f = File(testFile);
+         scope(exit) f.close();
+
+         auto expected = [tuple(1, 2), tuple(4, 1), tuple(5, 100)];
+         uint i;
+         foreach (e; f.byRecord!(int, int)("%s %s"))
+         {
+             assert(e == expected[i++]);
+         }
     }
 
     // Note: This was documented until 2013/08
