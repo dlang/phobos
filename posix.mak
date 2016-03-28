@@ -376,6 +376,9 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 clean :
 	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
+gitzip:
+	git archive --format=zip HEAD > $(ZIPFILE)
+
 zip :
 	-rm -f $(ZIPFILE)
 	zip -r $(ZIPFILE) . -x .git\* -x generated\*
