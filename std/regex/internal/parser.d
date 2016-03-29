@@ -21,7 +21,7 @@ auto makeRegex(S)(Parser!S p)
         maxCounterDepth = p.counterDepth;
         flags = p.re_flags;
         charsets = p.charsets;
-        tries = p.tries;
+        matchers = p.matchers;
         backrefed = p.backrefed;
         re.lightPostprocess();
         debug(std_regex_parser)
@@ -198,36 +198,6 @@ dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
       .canFind("invalid codepoint"));
 }
 
-//heuristic value determines maximum CodepointSet length suitable for linear search
-enum maxCharsetUsed = 6;
-
-enum maxCachedTries = 8;
-
-alias Trie = CodepointSetTrie!(13, 8);
-alias makeTrie = codepointSetTrie!(13, 8);
-
-Trie[CodepointSet] trieCache;
-
-//accessor with caching
-@trusted Trie getTrie(CodepointSet set)
-{// @@@BUG@@@ 6357 almost all properties of AA are not @safe
-    if(__ctfe || maxCachedTries == 0)
-        return makeTrie(set);
-    else
-    {
-        auto p = set in trieCache;
-        if(p)
-            return *p;
-        if(trieCache.length == maxCachedTries)
-        {
-            // flush entries in trieCache
-            trieCache = null;
-        }
-        return (trieCache[set] = makeTrie(set));
-    }
-}
-
-
 auto caseEnclose(CodepointSet set)
 {
     auto cased = set & unicode.LC;
@@ -305,7 +275,7 @@ struct Parser(R)
     uint lookaroundNest = 0;
     uint counterDepth = 0; //current depth of nested counted repetitions
     CodepointSet[] charsets;  //
-    const(Trie)[] tries; //
+    const(CharMatcher)[] matchers; //
     uint[] backrefed; //bitarray for groups
 
     @trusted this(S)(R pattern, S flags)
@@ -1248,18 +1218,18 @@ struct Parser(R)
             }
             if(ivals.length*2 > maxCharsetUsed)
             {
-                auto t  = getTrie(set);
-                put(Bytecode(IR.Trie, cast(uint)tries.length));
-                tries ~= t;
+                auto t  = getMatcher(set);
+                put(Bytecode(IR.Trie, cast(uint)matchers.length));
+                matchers ~= t;
                 debug(std_regex_allocation) writeln("Trie generated");
             }
             else
             {
                 put(Bytecode(IR.CodepointSet, cast(uint)charsets.length));
-                tries ~= Trie.init;
+                matchers ~= CharMatcher.init;
             }
             charsets ~= set;
-            assert(charsets.length == tries.length);
+            assert(charsets.length == matchers.length);
         }
     }
 
@@ -1556,7 +1526,7 @@ void optimize(Char)(ref Regex!Char zis)
                     Bytecode(InfiniteBloomStart, ir[i].data);
                 ir.insertInPlace(i+IRL!(InfiniteEnd),
                     Bytecode.fromRaw(cast(uint)zis.filters.length));
-                zis.filters ~= BloomFilter(set);
+                zis.filters ~= BitTable(set);
             }
         }
     }

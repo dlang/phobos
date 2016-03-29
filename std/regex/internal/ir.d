@@ -19,29 +19,29 @@ alias BasicElementOf(Range) = Unqual!(ElementEncodingType!Range);
 enum maxCharsetUsed = 6;
 
 // another variable to tweak behavior of caching generated Tries for character classes
-enum maxCachedTries = 8;
+enum maxCachedMatchers = 8;
 
 alias Trie = CodepointSetTrie!(13, 8);
 alias makeTrie = codepointSetTrie!(13, 8);
 
-Trie[CodepointSet] trieCache;
+CharMatcher[CodepointSet] matcherCache;
 
 //accessor with caching
-@trusted Trie getTrie(CodepointSet set)
+@trusted CharMatcher getMatcher(CodepointSet set)
 {// @@@BUG@@@ 6357 almost all properties of AA are not @safe
-    if(__ctfe || maxCachedTries == 0)
-        return makeTrie(set);
+    if(__ctfe || maxCachedMatchers == 0)
+        return CharMatcher(set);
     else
     {
-        auto p = set in trieCache;
+        auto p = set in matcherCache;
         if(p)
             return *p;
-        if(trieCache.length == maxCachedTries)
+        if(matcherCache.length == maxCachedMatchers)
         {
-            // flush entries in trieCache
-            trieCache = null;
+            // flush enmatchers in trieCache
+            matcherCache = null;
         }
-        return (trieCache[set] = makeTrie(set));
+        return (matcherCache[set] = CharMatcher(set));
     }
 }
 
@@ -67,9 +67,9 @@ Trie[CodepointSet] trieCache;
         | unicode.Me | unicode.Nd | unicode.Pc")();
 }
 
-@property Trie wordTrie()
+@property CharMatcher wordMatcher()
 {
-    return memoizeExpr!("makeTrie(wordCharacter)")();
+    return memoizeExpr!("CharMatcher(wordCharacter)")();
 }
 
 // some special Unicode white space characters
@@ -503,15 +503,15 @@ struct Regex(Char)
 
 package(std.regex):
     import std.regex.internal.kickstart : Kickstart; //TODO: get rid of this dependency
-    NamedGroup[] dict;  //maps name -> user group number
-    uint ngroup;        //number of internal groups
-    uint maxCounterDepth; //max depth of nested {n,m} repetitions
-    uint hotspotTableSize; //number of entries in merge table
-    uint threadCount;
-    uint flags;         //global regex flags
-    public const(Trie)[]  tries; //
-    public const(BloomFilter)[] filters; // bloom filters for conditional loops
-    uint[] backrefed; //bit array of backreferenced submatches
+    NamedGroup[] dict;                     // maps name -> user group number
+    uint ngroup;                           // number of internal groups
+    uint maxCounterDepth;                  // max depth of nested {n,m} repetitions
+    uint hotspotTableSize;                 // number of entries in merge table
+    uint threadCount;                      // upper bound on number of Thompson VM threads
+    uint flags;                            // global regex flags
+    public const(CharMatcher)[]  matchers; // tables that represent character sets
+    public const(BitTable)[] filters;      // bloom filters for conditional loops
+    uint[] backrefed;                      // bit array of backreferenced submatches
     Kickstart!Char kickstart;
 
     //bit access helper
@@ -627,42 +627,56 @@ struct Input(Char)
 
     String opSlice(size_t start, size_t end){   return _origin[start..end]; }
 
-    struct BackLooper
-    {
-        alias DataIndex = size_t;
-        enum { isLoopback = true };
-        String _origin;
-        size_t _index;
-        this(Input input, size_t index)
-        {
-            _origin = input._origin;
-            _index = index;
-        }
-        @trusted bool nextChar(ref dchar res,ref size_t pos)
-        {
-            pos = _index;
-            if(_index == 0)
-                return false;
-
-            res = _origin[0.._index].back;
-            _index -= std.utf.strideBack(_origin, _index);
-
-            return true;
-        }
-        @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
-        auto loopBack(size_t index){   return Input(_origin, index); }
-
-        //support for backtracker engine, might not be present
-        //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
-        void reset(size_t index){   _index = index;  }
-
-        String opSlice(size_t start, size_t end){   return _origin[end..start]; }
-        //index of at End position
-        @property size_t lastIndex(){   return 0; }
-    }
-    auto loopBack(size_t index){   return BackLooper(this, index); }
+    auto loopBack(size_t index){   return BackLooper!Input(this, index); }
 }
 
+struct BackLooperImpl(Input)
+{
+    import std.utf;
+    alias DataIndex = size_t;
+    alias String = Input.String;
+    enum { isLoopback = true };
+    String _origin;
+    size_t _index;
+    this(Input input, size_t index)
+    {
+        _origin = input._origin;
+        _index = index;
+    }
+    @trusted bool nextChar(ref dchar res,ref size_t pos)
+    {
+        pos = _index;
+        if(_index == 0)
+            return false;
+
+        res = _origin[0.._index].back;
+        _index -= std.utf.strideBack(_origin, _index);
+
+        return true;
+    }
+    @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
+    auto loopBack(size_t index){   return Input(_origin, index); }
+
+    //support for backtracker engine, might not be present
+    //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
+    void reset(size_t index){   _index = index;  }
+
+    String opSlice(size_t start, size_t end){   return _origin[end..start]; }
+    //index of at End position
+    @property size_t lastIndex(){   return 0; }
+}
+
+template BackLooper(E)
+{
+    static if(is(E : BackLooperImpl!U, U))
+    {
+        alias BackLooper = U;
+    }
+    else
+    {
+        alias BackLooper = BackLooperImpl!E;
+    }
+}
 
 //both helpers below are internal, on its own are quite "explosive"
 //unsafe, no initialization of elements
@@ -714,8 +728,8 @@ public class RegexException : Exception
     mixin basicExceptionCtors;
 }
 
-
-struct BloomFilter {
+// simple 128-entry bit-table used with a hash function
+struct BitTable {
     uint[4] filter;
 
     this(CodepointSet set){
@@ -730,12 +744,32 @@ struct BloomFilter {
         filter[i >> 5]  |=  1<<(i & 31);
     }
     // non-zero -> might be present, 0 -> absent
-    uint opIndex()(dchar ch) const{
+    bool opIndex()(dchar ch) const{
         immutable i = index(ch);
-        return filter[i >> 5] & (1<<(i & 31));
+        return (filter[i >> 5]>>(i & 31)) & 1;
     }
 
     static uint index()(dchar ch){
         return ((ch >> 7) ^ ch) & 0x7F;
+    }
+}
+
+struct CharMatcher {
+    BitTable ascii; // fast path for ASCII
+    Trie trie;      // slow path for Unicode
+
+    this(CodepointSet set)
+    {
+        auto asciiSet = set & unicode.ASCII;
+        ascii = BitTable(asciiSet);
+        trie = makeTrie(set);
+    }
+
+    bool opIndex()(dchar ch) const
+    {
+        if (ch < 0x80)
+            return ascii[ch];
+        else
+            return trie[ch];
     }
 }

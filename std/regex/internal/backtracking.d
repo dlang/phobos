@@ -301,7 +301,7 @@ template BacktrackingMatcher(bool CTregex)
                         pc += IRL!(IR.CodepointSet);
                         break;
                     case IR.Trie:
-                        if(atEnd || !re.tries[re.ir[pc].data][front])
+                        if(atEnd || !re.matchers[re.ir[pc].data][front])
                             goto L_backtrack;
                         next();
                         pc += IRL!(IR.Trie);
@@ -310,21 +310,21 @@ template BacktrackingMatcher(bool CTregex)
                         dchar back;
                         DataIndex bi;
                         //at start & end of input
-                        if(atStart && wordTrie[front])
+                        if(atStart && wordMatcher[front])
                         {
                             pc += IRL!(IR.Wordboundary);
                             break;
                         }
                         else if(atEnd && s.loopBack(index).nextChar(back, bi)
-                                && wordTrie[back])
+                                && wordMatcher[back])
                         {
                             pc += IRL!(IR.Wordboundary);
                             break;
                         }
                         else if(s.loopBack(index).nextChar(back, bi))
                         {
-                            bool af = wordTrie[front];
-                            bool ab = wordTrie[back];
+                            bool af = wordMatcher[front];
+                            bool ab = wordMatcher[back];
                             if(af ^ ab)
                             {
                                 pc += IRL!(IR.Wordboundary);
@@ -336,15 +336,15 @@ template BacktrackingMatcher(bool CTregex)
                         dchar back;
                         DataIndex bi;
                         //at start & end of input
-                        if(atStart && wordTrie[front])
+                        if(atStart && wordMatcher[front])
                             goto L_backtrack;
                         else if(atEnd && s.loopBack(index).nextChar(back, bi)
-                                && wordTrie[back])
+                                && wordMatcher[back])
                             goto L_backtrack;
                         else if(s.loopBack(index).nextChar(back, bi))
                         {
-                            bool af = wordTrie[front];
-                            bool ab = wordTrie[back];
+                            bool af = wordMatcher[front];
+                            bool ab = wordMatcher[back];
                             if(af ^ ab)
                                 goto L_backtrack;
                         }
@@ -1276,7 +1276,7 @@ struct CtContext
             break;
         case IR.Trie:
             code ~= ctSub( `
-                    if(atEnd || !re.tries[$$][front])
+                    if(atEnd || !re.matchers[$$][front])
                         $$
                     $$
                 $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
@@ -1285,19 +1285,19 @@ struct CtContext
             code ~= ctSub( `
                     dchar back;
                     DataIndex bi;
-                    if(atStart && wordTrie[front])
+                    if(atStart && wordMatcher[front])
                     {
                         $$
                     }
                     else if(atEnd && s.loopBack(index).nextChar(back, bi)
-                            && wordTrie[back])
+                            && wordMatcher[back])
                     {
                         $$
                     }
                     else if(s.loopBack(index).nextChar(back, bi))
                     {
-                        bool af = wordTrie[front];
-                        bool ab = wordTrie[back];
+                        bool af = wordMatcher[front];
+                        bool ab = wordMatcher[back];
                         if(af ^ ab)
                         {
                             $$
@@ -1310,15 +1310,15 @@ struct CtContext
                     dchar back;
                     DataIndex bi;
                     //at start & end of input
-                    if(atStart && wordTrie[front])
+                    if(atStart && wordMatcher[front])
                         $$
                     else if(atEnd && s.loopBack(index).nextChar(back, bi)
-                            && wordTrie[back])
+                            && wordMatcher[back])
                         $$
                     else if(s.loopBack(index).nextChar(back, bi))
                     {
-                        bool af = wordTrie[front];
-                        bool ab = wordTrie[back];
+                        bool af = wordMatcher[front];
+                        bool ab = wordMatcher[back];
                         if(af ^ ab)
                             $$
                     }
