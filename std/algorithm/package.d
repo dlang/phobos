@@ -155,9 +155,9 @@ static bool greater(int a, int b)
 {
     return a > b;
 }
-sort!(greater)(a);         // predicate as alias
+sort!greater(a);           // predicate as alias
 sort!((a, b) => a > b)(a); // predicate as a lambda.
-sort!("a > b")(a);         // predicate as string
+sort!"a > b"(a);           // predicate as string
                            // (no ambiguity with array name)
 sort(a);                   // no predicate, "a < b" is implicit
 ----
