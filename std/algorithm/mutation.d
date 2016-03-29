@@ -51,6 +51,8 @@ $(T2 stripRight,
         $(D stripRight!(e => e == 1)(a)) returns $(D [1, 1, 0]).)
 $(T2 swap,
         Swaps two values.)
+$(T2 swapAt,
+        Swaps two values by indices.)
 $(T2 swapRanges,
         Swaps all elements of two ranges.)
 $(T2 uninitializedFill,
@@ -2009,23 +2011,6 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
     test("hello\U00010143\u0100\U00010143", "\U00010143\u0100\U00010143olleh");
 }
 
-//private
-void swapAt(R)(R r, size_t i1, size_t i2)
-{
-    static if (is(typeof(&r[i1])))
-    {
-        swap(r[i1], r[i2]);
-    }
-    else
-    {
-        if (i1 == i2) return;
-        auto t1 = moveAt(r, i1);
-        auto t2 = moveAt(r, i2);
-        r[i2] = t1;
-        r[i1] = t2;
-    }
-}
-
 /**
     The strip group of functions allow stripping of either leading, trailing,
     or both leading and trailing elements.
@@ -2305,6 +2290,10 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     //Bug# 4789
     int[1] s = [1];
     swap(s, s);
+
+    int[3] a = [1, 2, 3];
+    swap(a[1], a[2]);
+    assert(a == [1, 3, 2]);
 }
 
 @safe unittest
@@ -2395,6 +2384,121 @@ unittest
 void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
 {
     lhs.proxySwap(rhs);
+}
+
+/**
+Swaps two elements in-place of a range `r`,
+specified by their indices `i1` and `i2`.
+
+Params:
+    r  = a range with swappable elements
+    i1 = first index
+    i2 = second index
+*/
+void swapAt(R)(auto ref R r, size_t i1, size_t i2)
+{
+    static if (is(typeof(&r.swapAt))) {
+        r.swapAt(i1, i2);
+    }
+    else static if (is(typeof(&r[i1])))
+    {
+        swap(r[i1], r[i2]);
+    }
+    else
+    {
+        if (i1 == i2) return;
+        auto t1 = moveAt(r, i1);
+        auto t2 = moveAt(r, i2);
+        r[i2] = t1;
+        r[i1] = t2;
+    }
+}
+
+///
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison: equal;
+    auto a = [1, 2, 3];
+    a.swapAt(1, 2);
+    assert(a.equal([1, 3, 2]));
+}
+
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison: equal;
+    auto a = [4, 5, 6];
+    a.swapAt(1, 1);
+    assert(a.equal([4, 5, 6]));
+}
+
+pure @safe nothrow unittest
+{
+    // test non random access ranges
+    import std.algorithm.comparison: equal;
+    import std.array: array;
+
+    char[] b = ['a', 'b', 'c'];
+    b.swapAt(1, 2);
+    assert(b.equal(['a', 'c', 'b']));
+
+    int[3] c = [1, 2, 3];
+    c.swapAt(1, 2);
+    assert(c.array.equal([1, 3, 2]));
+
+    // opIndex returns lvalue
+    struct RandomIndexType(T)
+    {
+        T payload;
+
+        @property ref auto opIndex(size_t i)
+        {
+           return payload[i];
+        }
+
+    }
+    auto d = RandomIndexType!(int[])([4, 5, 6]);
+    d.swapAt(1, 2);
+    assert(d.payload.equal([4, 6, 5]));
+
+    // custom moveAt and opIndexAssign
+    struct RandomMoveAtType(T)
+    {
+        T payload;
+
+        // needed for ElementType
+        auto init()
+        {
+            return payload.init;
+        }
+
+        ElementType!T moveAt(size_t i)
+        {
+           return payload.moveAt(i);
+        }
+
+        void opIndexAssign(ElementType!T val, size_t idx)
+        {
+            payload[idx] = val;
+        }
+    }
+    auto e = RandomMoveAtType!(int[])([7, 8, 9]);
+    e.swapAt(1, 2);
+    assert(e.payload.equal([7, 9, 8]));
+
+
+    // custom swapAt
+    struct RandomSwapAtType(T)
+    {
+        T payload;
+
+        void swapAt(size_t i)
+        {
+           return payload.swapAt(i);
+        }
+    }
+    auto f = RandomMoveAtType!(int[])([10, 11, 12]);
+    swapAt(f, 1, 2);
+    assert(f.payload.equal([10, 12, 11]));
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
