@@ -5114,7 +5114,7 @@ mixin template Proxy(alias a)
 {
     private alias ValueType = typeof({ return a; }());
     private enum bool accessibleFrom(T) =
-        is(typeof((ref T self){ cast(void)mixin("self." ~ a.stringof); }));
+        is(typeof((ref T self){ cast(void)mixin("self."~__traits(identifier, a)); }));
 
     static if (is(typeof(this) == class))
     {
@@ -5122,9 +5122,7 @@ mixin template Proxy(alias a)
         {
             if (auto b = cast(typeof(this))o)
             {
-                import std.algorithm : startsWith;
-                static assert(startsWith(a.stringof, "this."));
-                return a == mixin("b."~a.stringof[5..$]); // remove "this."
+                return a == mixin("b."~__traits(identifier, a));
             }
             return false;
         }
@@ -5144,10 +5142,8 @@ mixin template Proxy(alias a)
         {
             if (auto b = cast(typeof(this))o)
             {
-                import std.algorithm : startsWith;
-                static assert(startsWith(a.stringof, "this."));  // remove "this."
-                return a < mixin("b."~a.stringof[5..$]) ? -1
-                     : a > mixin("b."~a.stringof[5..$]) ? +1 : 0;
+                return a < mixin("b."~__traits(identifier, a)) ? -1
+                     : a > mixin("b."~__traits(identifier, a)) ? +1 : 0;
             }
             static if (is(ValueType == class))
                 return a.opCmp(o);
@@ -5184,9 +5180,7 @@ mixin template Proxy(alias a)
         {
             static if (is(immutable B == immutable typeof(this)))
             {
-                import std.algorithm : startsWith;
-                static assert(startsWith(a.stringof, "this."));
-                return a == mixin("b."~a.stringof[5..$]);   // remove "this."
+                return a == mixin("b."~__traits(identifier, a));
             }
             else
                 return a == b;
@@ -5245,7 +5239,7 @@ mixin template Proxy(alias a)
         {
             auto ref opAssign(this X)(auto ref typeof(this) v)
             {
-                a = mixin("v."~a.stringof[5..$]);   // remove "this."
+                a = mixin("v."~__traits(identifier, a));
                 return this;
             }
         }
