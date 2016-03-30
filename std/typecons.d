@@ -6076,7 +6076,16 @@ therefore avoiding the overhead of $(D new). This facility is unsafe;
 it is the responsibility of the user to not escape a reference to the
 object outside the scope.
 
-Note: it's illegal to move a class reference even if you are sure there
+The class destructor will be called when the result of `scoped()` is
+itself destroyed.
+
+Scoped class instances can be embedded in a parent `class` or `struct`,
+just like a child struct instance. Scoped member variables must have
+type `typeof(scoped!Class(args))`, and be initialized with a call to
+scoped. See below for an example.
+
+Note:
+It's illegal to move a class instance even if you are sure there
 are no pointers to it. As such, it is illegal to move a scoped object.
  */
 template scoped(T)
@@ -6119,7 +6128,9 @@ template scoped(T)
         }
     }
 
-    /// Returns the scoped object
+    /** Returns the _scoped object.
+    Params: args = Arguments to pass to $(D T)'s constructor.
+    */
     @system auto scoped(Args...)(auto ref Args args)
     {
         import std.conv : emplace;
@@ -6132,6 +6143,7 @@ template scoped(T)
         return result;
     }
 }
+
 ///
 unittest
 {
@@ -6140,34 +6152,78 @@ unittest
         int x;
         this()     {x = 0;}
         this(int i){x = i;}
+        ~this()    {}
     }
 
-    // Standard usage
+    // Standard usage, constructing A on the stack
     auto a1 = scoped!A();
-    auto a2 = scoped!A(1);
     a1.x = 42;
-    assert(a1.x == 42);
-    assert(a2.x ==  1);
+
+    // Result of `scoped` call implicitly converts to a class reference
+    A aRef = a1;
+    assert(aRef.x == 42);
+
+    // Scoped destruction
+    {
+        auto a2 = scoped!A(1);
+        assert(a2.x == 1);
+        aRef = a2;
+        // a2 is destroyed here, calling A's destructor
+    }
+    // aRef is now an invalid reference
+
+    // Here the temporary scoped A is immediately destroyed.
+    // This means the reference is then invalid.
+    version(Bug)
+    {
+        // Wrong, should use `auto`
+        A invalid = scoped!A();
+    }
 
     // Restrictions
+    version(Bug)
+    {
+        import std.algorithm : move;
+        auto invalid = a1.move; // illegal, scoped objects can't be moved
+    }
     static assert(!is(typeof({
         auto e1 = a1; // illegal, scoped objects can't be copied
-        assert([a2][0].x == 42); // ditto
-        alias ScopedObject = typeof(a1);
-        auto e2 = ScopedObject();  //Illegal, must be built via scoped!A
-        auto e3 = ScopedObject(1); //Illegal, must be built via scoped!A
+        assert([a1][0].x == 42); // ditto
     })));
+    static assert(!is(typeof({
+        alias ScopedObject = typeof(a1);
+        auto e2 = ScopedObject();  // illegal, must be built via scoped!A
+        auto e3 = ScopedObject(1); // ditto
+    })));
+
+    // Use with alias
+    alias makeScopedA = scoped!A;
+    auto a3 = makeScopedA();
+    auto a4 = makeScopedA(1);
 
     // Use as member variable
     struct B
     {
         typeof(scoped!A()) a; // note the trailing parentheses
+
+        this(int i)
+        {
+            // construct member
+            a = scoped!A(i);
+        }
     }
 
-    // Use with alias
-    alias makeScopedA = scoped!A;
-    auto a6 = makeScopedA();
-    auto a7 = makeScopedA();
+    // Stack-allocate
+    auto b1 = B(5);
+    aRef = b1.a;
+    assert(aRef.x == 5);
+    destroy(b1); // calls A's destructor for b1.a
+    // aRef is now an invalid reference
+
+    // Heap-allocate
+    auto b2 = new B(6);
+    assert(b2.a.x == 6);
+    destroy(*b2); // calls A's destructor for b2.a
 }
 
 private size_t _alignUp(size_t alignment)(size_t n)
