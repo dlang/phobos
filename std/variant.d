@@ -612,7 +612,7 @@ public:
             }
             else
             {
-                static if (__traits(compiles, {new T(rhs);}))
+                static if (__traits(compiles, {new T(T.init);}))
                 {
                     auto p = new T(rhs);
                 }
@@ -2627,4 +2627,11 @@ unittest
     assert(v.get!NS1.foo() == 13);
     v = NS2();
     assert(v.get!NS2.foo() == 30);
+}
+
+unittest
+{
+    // Bugzilla 15827
+    static struct Foo15827 { Variant v; this(Foo15827 v) {} }
+    Variant v = Foo15827.init;
 }
