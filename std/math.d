@@ -5460,7 +5460,7 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
     }
 }
 
-@safe pure nothrow @nogc unittest
+pure nothrow @nogc unittest
 {
     static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
     {
