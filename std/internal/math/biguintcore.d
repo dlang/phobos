@@ -1581,7 +1581,7 @@ size_t biguintToOctal(char[] buff, const(BigDigit)[] data)
     size_t penPos = buff.length - 1;
     size_t lastNonZero = buff.length - 1;
 
-    pragma(inline) void output(int digit) @nogc nothrow
+    pragma(inline) void output(uint digit) @nogc nothrow
     {
         if (digit != 0)
             lastNonZero = penPos;
