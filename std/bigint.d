@@ -786,6 +786,7 @@ public:
      *
      * $(TABLE  Available output formats:,
      * $(TR $(TD "d") $(TD  Decimal))
+     * $(TR $(TD "o") $(TD  Octal))
      * $(TR $(TD "x") $(TD  Hexadecimal, lower case))
      * $(TR $(TD "X") $(TD  Hexadecimal, upper case))
      * $(TR $(TD "s") $(TD  Default formatting (same as "d") ))
@@ -803,7 +804,7 @@ public:
     void toString(scope void delegate(const(char)[]) sink, ref FormatSpec!char f) const
     {
         auto hex = (f.spec == 'x' || f.spec == 'X');
-        if (!(f.spec == 's' || f.spec == 'd' || hex))
+        if (!(f.spec == 's' || f.spec == 'd' || f.spec =='o' || hex))
             throw new FormatException("Format specifier not understood: %" ~ f.spec);
 
         char[] buff;
@@ -814,6 +815,10 @@ public:
         else if (f.spec == 'x')
         {
             buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.lower);
+        }
+        else if (f.spec == 'o')
+        {
+            buff = data.toOctalString();
         }
         else
         {
@@ -873,6 +878,7 @@ public:
         assert(format("%d", x) == "12345000000");
         assert(format("%x", x) == "2_dfd1c040");
         assert(format("%X", x) == "2_DFD1C040");
+        assert(format("%o", x) == "133764340100");
     }
 
     // Implement toHash so that BigInt works properly as an AA key.
