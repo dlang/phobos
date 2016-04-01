@@ -357,7 +357,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
 Constructs a $(D_PARAM LinearCongruentialEngine) generator seeded with
 $(D x0).
  */
-    this(UIntType x0) @safe pure
+    this(UIntType x0) @safe @nogc pure nothrow
     {
         seed(x0);
     }
@@ -365,12 +365,11 @@ $(D x0).
 /**
    (Re)seeds the generator.
 */
-    void seed(UIntType x0 = 1) @safe pure
+    void seed(UIntType x0 = 1) @safe @nogc pure nothrow
     {
         static if (c == 0)
         {
-            import std.exception : enforce;
-            enforce(x0, "Invalid (zero) seed for "
+            x0 || assert(0, "Invalid (zero) seed for "
                     ~ LinearCongruentialEngine.stringof);
         }
         _x = modulus ? (x0 % modulus) : x0;
@@ -422,7 +421,7 @@ $(D x0).
     }
 
 ///
-    @property typeof(this) save() @safe pure nothrow @nogc
+    @property typeof(this) save() const @safe pure nothrow @nogc
     {
         return this;
     }
@@ -530,6 +529,21 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
         version(none) { assert(rnd1 !is rnd2); }
         assert(rnd1.take(100).array() == rnd2.take(100).array());
     }
+}
+
+@safe @nogc pure nothrow
+unittest
+{
+    // test for https://issues.dlang.org/show_bug.cgi?id=15853
+    import std.range : take;
+    import std.algorithm : equal;
+
+    auto gen1 = const MinstdRand(42);
+    MinstdRand gen2 = gen1.save;
+
+    assert (equal(
+       gen1.take(100),
+       gen2.take(100)));
 }
 
 /**
@@ -814,7 +828,7 @@ Parameters for the generator.
     }
 
 ///
-    @property typeof(this) save() @safe pure nothrow @nogc
+    @property typeof(this) save() const @safe pure nothrow @nogc
     {
         return this;
     }
@@ -984,6 +998,20 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     }
 }
 
+@safe @nogc pure nothrow
+unittest
+{
+    // test for https://issues.dlang.org/show_bug.cgi?id=15853
+    import std.range : take;
+    import std.algorithm : equal;
+
+    auto gen1 = const Mt19937(42);
+    Mt19937 gen2 = gen1.save;
+
+    assert (equal(
+       gen1.take(100),
+       gen2.take(100)));
+}
 
 /**
  * Xorshift generator using 32bit algorithm.
@@ -1148,7 +1176,7 @@ if (isUnsigned!UIntType)
      * Captures a range state.
      */
     @property
-    typeof(this) save() @safe pure nothrow @nogc
+    typeof(this) save() const @safe pure nothrow @nogc
     {
         return this;
     }
@@ -1262,6 +1290,20 @@ alias Xorshift    = Xorshift128;                            /// ditto
     }
 }
 
+@safe @nogc pure nothrow
+unittest
+{
+    // test for https://issues.dlang.org/show_bug.cgi?id=15853
+    import std.range : take;
+    import std.algorithm : equal;
+
+    auto gen1 = const Xorshift(42);
+    Xorshift gen2 = gen1.save;
+
+    assert (equal(
+       gen1.take(100),
+       gen2.take(100)));
+}
 
 /* A complete list of all pseudo-random number generators implemented in
  * std.random.  This can be used to confirm that a given function or
