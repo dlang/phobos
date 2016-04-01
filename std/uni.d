@@ -9108,7 +9108,15 @@ bool isMark(dchar c)
 @safe pure nothrow @nogc
 bool isNumber(dchar c)
 {
-    return numberTrie[c];
+    // optimization
+    if (c < 0xAA)
+    {
+        return c >= 48 && c <= 57;
+    }
+    else
+    {
+        return numberTrie[c];
+    }
 }
 
 @safe unittest
