@@ -25,7 +25,7 @@ $(T2 initializeAll,
         $(D a = [double.init, double.init]).)
 $(T2 move,
         $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a)
-        destructively.)
+        destructively when necessary.)
 $(T2 moveAll,
         Moves all elements from one range to another.)
 $(T2 moveSome,
@@ -863,13 +863,18 @@ unittest
 
 // move
 /**
-Moves $(D source) into $(D target) via a destructive copy.
+Moves `source` into `target`, via a destructive copy when necessary.
+
+If `T` is a struct with a destructor or postblit defined, source is reset
+to its `.init` value after it is moved into target, otherwise it is
+left unchanged.
+
+Preconditions:
+If source has internal pointers that point to itself, it cannot be moved, and
+will trigger an assertion failure.
 
 Params:
-    source = Data to copy. If a destructor or postblit is defined, it is reset
-        to its $(D .init) value after it is moved into target.  Note that data
-        with internal pointers that point to itself cannot be moved, and will
-        trigger an assertion failure.
+    source = Data to copy.
     target = Where to copy into. The destructor, if any, is invoked before the
         copy is performed.
 */
@@ -882,7 +887,7 @@ void move(T)(ref T source, ref T target)
         moveImpl(source, target);
 }
 
-///
+/// For non-struct types, `move` just performs `target = source`:
 unittest
 {
     Object obj1 = new Object;
@@ -891,6 +896,8 @@ unittest
 
     move(obj2, obj3);
     assert(obj3 is obj1);
+    // obj2 unchanged
+    assert(obj2 is obj1);
 }
 
 ///
@@ -907,8 +914,8 @@ pure nothrow @safe @nogc unittest
 
     move(s11, s12);
 
-    assert(s11.a == 10 && s11.b == 11 &&
-           s12.a == 10 && s12.b == 11);
+    assert(s12 == S1(10, 11));
+    assert(s11 == s12);
 
     // But structs with destructors or postblits are reset to their .init value
     // after copying to the target.
@@ -924,8 +931,8 @@ pure nothrow @safe @nogc unittest
 
     move(s21, s22);
 
-    assert(s21.a == 1 && s21.b == 2 &&
-           s22.a == 3 && s22.b == 4);
+    assert(s21 == S2(1, 2));
+    assert(s22 == S2(3, 4));
 }
 
 unittest
@@ -1000,7 +1007,7 @@ T move(T)(ref T source)
         return moveImpl(source);
 }
 
-///
+/// Non-copyable structs can still be moved:
 pure nothrow @safe @nogc unittest
 {
     struct S
@@ -1250,21 +1257,24 @@ pure nothrow @nogc unittest
     int val;
     Foo foo1 = void; // uninitialized
     auto foo2 = Foo(&val); // initialized
-
-    // Using `move(foo2, foo1)` has an undefined effect because it destroys the uninitialized foo1.
-    // MoveEmplace directly overwrites foo1 without destroying or initializing it first.
     assert(foo2._ptr is &val);
+
+    // Using `move(foo2, foo1)` would have an undefined effect because it would destroy
+    // the uninitialized foo1.
+    // moveEmplace directly overwrites foo1 without destroying or initializing it first.
     moveEmplace(foo2, foo1);
-    assert(foo1._ptr is &val && foo2._ptr is null);
+    assert(foo1._ptr is &val);
+    assert(foo2._ptr is null);
+    assert(val == 0);
 }
 
 // moveAll
 /**
-For each element $(D a) in $(D src) and each element $(D b) in $(D
-tgt) in lockstep in increasing order, calls $(D move(a, b)).
+Calls `move(a, b)` for each element `a` in `src` and the corresponding
+element `b` in `tgt`, in increasing order.
 
 Preconditions:
-$(D walkLength(src) <= walkLength(tgt)).
+`walkLength(src) <= walkLength(tgt)`.
 This precondition will be asserted. If you cannot ensure there is enough room in
 `tgt` to accommodate all of `src` use $(LREF moveSome) instead.
 
@@ -1296,9 +1306,9 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Similar to $(LREF moveAll) but assumes all elements in `target` are
+ * Similar to $(LREF moveAll) but assumes all elements in `tgt` are
  * uninitialized. Uses $(LREF moveEmplace) to move elements from
- * `source` over elements from `target`.
+ * `src` over elements from `tgt`.
  */
 Range2 moveEmplaceAll(Range1, Range2)(Range1 src, Range2 tgt) @system
 if (isInputRange!Range1 && isInputRange!Range2
@@ -1371,9 +1381,9 @@ private Range2 moveAllImpl(alias moveOp, Range1, Range2)(
 
 // moveSome
 /**
-For each element $(D a) in $(D src) and each element $(D b) in $(D
-tgt) in lockstep in increasing order, calls $(D move(a, b)). Stops
-when either $(D src) or $(D tgt) have been exhausted.
+Calls `move(a, b)` for each element `a` in `src` and the corresponding
+element `b` in `tgt`, in increasing order, stopping when either range has been
+exhausted.
 
 Params:
     src = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
@@ -1402,9 +1412,9 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Same as $(LREF moveSome) but assumes all elements in `target` are
+ * Same as $(LREF moveSome) but assumes all elements in `tgt` are
  * uninitialized. Uses $(LREF moveEmplace) to move elements from
- * `source` over elements from `target`.
+ * `src` over elements from `tgt`.
  */
 Tuple!(Range1, Range2) moveEmplaceSome(Range1, Range2)(Range1 src, Range2 tgt) @system
 if (isInputRange!Range1 && isInputRange!Range2
