@@ -3547,8 +3547,9 @@ unittest
     Generally, this function checks that $(D path) is not empty, and that
     each component of the path either satisfies $(LREF isValidFilename)
     or is equal to $(D ".") or $(D "..").
-    It does $(I not) check whether the _path points to an existing file
-    or directory; use $(XREF file,exists) for this purpose.
+
+    $(B It does $(I not) check whether the _path points to an existing file
+    or directory; use $(XREF file,exists) for this purpose.)
 
     On Windows, some special rules apply:
     $(UL
