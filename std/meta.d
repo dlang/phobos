@@ -169,6 +169,57 @@ unittest
 }
 
 /**
+ * Creates a template, that ignores its parameters and returns a given alias(es).
+ */
+template Const(T...)
+{
+    static if (T.length == 1)
+        alias Const(S...) = T[0];
+    else
+        alias Const(S...) = T;
+}
+
+///
+unittest
+{
+    alias X = Const!int;
+    static assert(is(X!uint == int));
+
+    alias Y = Const!(uint, uint);
+    static assert(is(Y!(int, uint) == AliasSeq!(uint, uint)));
+}
+
+/**
+ * Returns $(D F!(F!(...(F!(X))...))) with n iterations of F.
+ */
+template Iterate(alias F, size_t n, X...)
+{
+    static if (n == 0)
+    {
+        static if (X.length == 1)
+            alias Iterate = X[0];
+        else
+            alias Iterate = X;
+    }
+    else
+        alias Iterate = Iterate!(F, n-1, F!X);
+}
+
+///
+unittest
+{
+    alias Array(T) = T[];
+    static assert(is(Iterate!(Array, 0, int) == int));
+    static assert(is(Iterate!(Array, 1, int) == int[]));
+    static assert(is(Iterate!(Array, 3, int) == int[][][]));
+
+    alias Arrays(T...) = staticMap!(Array, T);
+    static assert(is(Iterate!(Arrays, 0, int, uint) == AliasSeq!(int, uint)));
+    static assert(is(Iterate!(Arrays, 1, int, uint) == AliasSeq!(int[], uint[])));
+    static assert(is(Iterate!(Arrays, 3, int, uint) == AliasSeq!(int[][][], uint[][][])));
+}
+
+/**
  * Returns the index of the first occurrence of type T in the
  * sequence of zero or more types TList.
  * If not found, -1 is returned.
@@ -1177,9 +1228,13 @@ unittest
 /**
  * Creates an `AliasSeq` which repeats a type or an `AliasSeq` exactly `n` times.
  */
-template Repeat(size_t n, TList...) if (n > 0)
+template Repeat(size_t n, TList...)
 {
-    static if (n == 1)
+    static if (n == 0)
+    {
+        alias Repeat = AliasSeq!();
+    }
+    else static if (n == 1)
     {
         alias Repeat = AliasSeq!TList;
     }
@@ -1204,6 +1259,9 @@ template Repeat(size_t n, TList...) if (n > 0)
 ///
 unittest
 {
+    alias EL = Repeat!(0, int);
+    static assert(is(EL == AliasSeq!()));
+
     alias ImInt1 = Repeat!(1, immutable(int));
     static assert(is(ImInt1 == AliasSeq!(immutable(int))));
 
@@ -1218,7 +1276,6 @@ unittest
     alias Composite2 = Repeat!(2, Composite);
     static assert(is(Composite2 == AliasSeq!(uint, int, uint, int)));
 }
-
 
 ///
 unittest
