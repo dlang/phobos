@@ -103,7 +103,7 @@ function. The string must either use symbol name $(D a) as
 the parameter or provide the symbol via the $(D parmName) argument.
 If $(D fun) is not a string, $(D unaryFun) aliases itself away to $(D fun).
 */
-alias unaryFun(alias fun, string parmName = "a") = stringLambda!(fun, 1, parmName);
+alias unaryFun(alias fun, string parmName = "a") = stringLambda!(fun, parmName);
 
 ///
 unittest
@@ -163,7 +163,7 @@ If $(D fun) is not a string, $(D binaryFun) aliases itself away to
 $(D fun).
 */
 alias binaryFun(alias fun, string parm1Name = "a", string parm2Name = "b") =
-    stringLambda!(fun, 2, parm1Name, parm2Name);
+    stringLambda!(fun, parm1Name, parm2Name);
 
 ///
 unittest
@@ -211,40 +211,29 @@ unittest
 /**
 Transforms a string representing an expression into a n-ary function.
 $(UL
-    $(LI The number of parameters is given by `argc`. If no explicit
-        `argc` is given, it is inferred to be `paramNames.length`.)
-    $(LI Explicit names for the function parameters may be given as
-        `paramNames`. If more than `argc` names are supplied, the
-        extras will be ignored.)
-    $(LI The letters (`a` through `z`) are used as default names
-        for up to the first 26 function parameters.)
-    $(LI `args[index]` can always be used to access any parameter by index,
-        regardless of whether it has been given a name.))
+    $(LI `paramNames` is a list of function parameter names.)
+    $(LI `args[index]` can also be used to access any parameter by index)
+ )
 
 If `fun` is not a `string`,  `stringLambda` aliases itself to `fun`.
 In such cases, `stringLambda` does $(B not) verify that `fun` accepts
 the specified number of arguments. (Try $(XREF traits, arity) instead.)
 */
-template stringLambda(alias fun, size_t argc, paramNames...)
-    if (paramNames.length == 0 || allSatisfy!(isSomeString, typeof(paramNames)))
+template stringLambda(alias fun, paramNames...)
+    if (paramNames.length > 0 && allSatisfy!(isSomeString, typeof(paramNames)))
 {
-    static if(paramNames.length > argc)
-        private alias usedNames = paramNames[0 .. argc];
-    else
-        private alias usedNames = paramNames;
-
     static if (is(typeof(fun) : string))
     {
-        static if (fun.strLambdaNeedsImports(usedNames))
+        static if (fun.strLambdaNeedsImports(paramNames))
         {
             import std.traits, std.typecons, std.typetuple;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         }
 
         auto stringLambda(ArgTypes...)(auto ref ArgTypes args)
-            if (ArgTypes.length == argc)
+            if (ArgTypes.length == paramNames.length)
         {
-            mixin(strLambdaAliases!(argc, usedNames));
+            mixin(strLambdaAliases!paramNames);
             return mixin(fun);
         }
     }
@@ -259,141 +248,102 @@ template stringLambda(alias fun, size_t argc, paramNames...)
     }
 }
 
-/// ditto
-template stringLambda(alias fun, paramNames...)
-    if (allSatisfy!(isSomeString, typeof(paramNames)))
-{
-    alias stringLambda = stringLambda!(fun, paramNames.length, paramNames);
-}
-
 /*
  * This generates the string of aliases used by stringLamda.
- * The stringLambda parameter aliases mixin depends only on argc and paramNames,
- * not fun. Therefore, compilation can be sped up by generating it at global
- * scope and memoizing it as a template, instead of regenerating it with every
+ * The stringLambda parameter aliases mixin depends only on paramNames, not fun.
+ * Therefore, compilation can be sped up by generating it at global scope and
+ * memoizing it as a template, instead of regenerating it with every
  * stringLambda instantiation.
  */
-private template strLambdaAliases(size_t argc, paramNames...)
+private template strLambdaAliases(paramNames...) if (paramNames.length > 0)
 {
-    static assert(paramNames.length <= argc);
+    enum strLambdaAliases = function()
+    {
+        // NO IMPORTS
+        if (!__ctfe) assert(false);
 
-    private enum alphas = ('z' - 'a') + 1;
-    static if(argc > paramNames.length && argc > alphas)
-    {
-        // there are no default aliases after "z"
-        enum strLambdaAliases = strLambdaAliases!(
-            alphas > paramNames.length? alphas : paramNames.length,
-            paramNames);
-    }
-    else
-    {
-        enum strLambdaAliases = function()
+        char[20] iStr_buff;
+        auto iStr = iStr_buff[($-1) .. $];
+        iStr[0] = '0';
+        void incIdx(ref char[] iStr)
         {
-            // NO IMPORTS
-            if (!__ctfe) assert(false);
-
-            char[20] iStr_buff;
-            auto iStr = iStr_buff[($-1) .. $];
-            iStr[0] = '0';
-            void incIdx(ref char[] iStr)
+            ptrdiff_t x = iStr.length - 1;
+            while(true)
             {
-                ptrdiff_t x = iStr.length - 1;
-                while(true)
+                ++(iStr[x]);
+                if(iStr[x] <= '9')
+                    return;
+
+                iStr[x] = '0';
+                --x;
+
+                if(x < 0)
                 {
-                    ++(iStr[x]);
-                    if(iStr[x] <= '9')
-                        return;
-
-                    iStr[x] = '0';
-                    --x;
-
-                    if(x < 0)
-                    {
-                        iStr = iStr_buff[($ - (iStr.length + 1)) .. $];
-                        iStr[0] = '1';
-                        return;
-                    }
+                    iStr = iStr_buff[($ - (iStr.length + 1)) .. $];
+                    iStr[0] = '1';
+                    return;
                 }
             }
+        }
 
-            // minimize reallocations by guessing how big the buffer needs to be
-            enum line = "alias  = args[];\n".length;
-            auto ret_buff = new char[argc * (line + 8)];
-            auto ret = ret_buff[0 .. 0];
-            void put(in char[] append)
-            {
-                ret = ret_buff[0 .. (ret.length + append.length)];
-                ret[($ - append.length) .. $] = append;
-            }
-            void addName(in char[] name, in char[] i)
-            {
-                while(ret_buff.length < (ret.length + line + name.length + i.length))
-                    ret_buff.length *= 2;
+        // minimize reallocations by guessing how big the buffer needs to be
+        enum line = "alias  = args[];\n".length;
+        auto ret_buff = new char[paramNames.length * (line + 8)];
+        auto ret = ret_buff[0 .. 0];
+        void put(in char[] append)
+        {
+            ret = ret_buff[0 .. (ret.length + append.length)];
+            ret[($ - append.length) .. $] = append;
+        }
+        void addName(in char[] name, in char[] i)
+        {
+            while(ret_buff.length < (ret.length + line + name.length + i.length))
+                ret_buff.length *= 2;
 
-                put("alias ");
-                put(name);
-                put(" = args[");
-                put(i);
-                put("];\n");
-            }
+            put("alias ");
+            put(name);
+            put(" = args[");
+            put(i);
+            put("];\n");
+        }
 
-            // first create aliases from the specified param names
-            foreach(i, name; paramNames)
-            {
-                addName(name, iStr);
-                incIdx(iStr);
-            }
-            size_t i = paramNames.length;
+        // first create aliases from the specified param names
+        foreach(name; paramNames)
+        {
+            addName(name, iStr);
+            incIdx(iStr);
+        }
 
-            // use a letter for each unspecified param, stopping at 'z'
-            while(i < argc)
-            {
-                char[1] name = void;
-                name[0] = cast(char)('a' + i);
-                addName(name, iStr);
-
-                ++i;
-                incIdx(iStr);
-            }
-            return cast(string) ret;
-        }();
-    }
+        return cast(string) ret;
+    }();
 }
+
 unittest
 {
-    static assert(strLambdaAliases!(0) == "");
-
     // default names
-    enum defUn = "alias a = args[0];\n";
-    static assert(strLambdaAliases!(1) == defUn);
-    static assert(strLambdaAliases!(1, "a") == defUn);
+    static assert(strLambdaAliases!("a") == "alias a = args[0];\n");
 
-    enum defBin = "alias a = args[0];\nalias b = args[1];\n";
-    static assert(strLambdaAliases!(2) == defBin);
-    static assert(strLambdaAliases!(2, "a") == defBin);
-    static assert(strLambdaAliases!(2, "a", "b") == defBin);
+    static assert(strLambdaAliases!("a", "b")
+        == "alias a = args[0];\nalias b = args[1];\n");
 
-    // custom names
-    static assert(strLambdaAliases!(2, "foo")
-        == "alias foo = args[0];\nalias b = args[1];\n");
-    static assert(strLambdaAliases!(2, "foo", "ping")
+    // longer names
+    static assert(strLambdaAliases!("foo")
+        == "alias foo = args[0];\n");
+    static assert(strLambdaAliases!("foo", "ping")
         == "alias foo = args[0];\nalias ping = args[1];\n");
 
     // reallocation
-    static assert(strLambdaAliases!(1, "a123456789b123456789")
+    static assert(strLambdaAliases!("a123456789b123456789")
         == "alias a123456789b123456789 = args[0];\n");
-    static assert(strLambdaAliases!(1, "a123456789b123456789c123456789d123456789")
+    static assert(strLambdaAliases!("a123456789b123456789c123456789d123456789")
         == "alias a123456789b123456789c123456789d123456789 = args[0];\n");
-
-    // large argc
-    static assert(strLambdaAliases!(63) == strLambdaAliases!(35));
 }
 
 ///
 unittest
 {
     // generated param names
-    alias sum = stringLambda!("a + b + c", 3);
+    alias sum = stringLambda!("a + b + c", "a", "b", "c");
     assert(sum(1, 2, 3) == 6);
 
     // explicit param names
@@ -401,29 +351,19 @@ unittest
     assert(prod(2,3,4,5) == 120);
 
     // library function invocation
-    alias least = stringLambda!("min(a,b,c)", 3);
+    alias least = stringLambda!("min(a,b,c)", "a", "b", "c");
     assert(least(5, 3, 7) == 3);
-}
 
-// stringLambda edge cases
-unittest
-{
-    import std.typecons : staticIota;
-
-    // use all 26 generated params
-    alias many = stringLambda!("[a,b,y,z]", 26);
+    // use all 26 lowercase characters as params
+    /++ no support for char arguments yet
+    import std.meta : aliasSeqOf;
+    import std.ascii : lowercase;
+    alias many = stringLambda!("[a,b,y,z]", aliasSeqOf!(lowercase[]));
     assert(many(staticIota!(0, 26)) == [0,1,24,25]);
+    ++/
 
-    // use all 26 generated params plus a 27'th 'unnamed' param
-    alias more = stringLambda!("[a,b,y,z,args[26]]", 27);
-    assert(more(staticIota!(0, 27)) == [0,1,24,25,26]);
-
-    // use a mix of explicit params and args[n]
-    alias mix = stringLambda!("[x,y,args[2],args[3]]", 4, "x", "y");
-    assert(mix(1,2,3,4) == [1,2,3,4]);
-
-    // use a mix of explicit and implicit params
-    alias mix2 = stringLambda!("[x,y,c,d]", 4, "x", "y");
+    // use args[n] to refer to a parameter by index
+    alias mix = stringLambda!("[w,x,args[2],args[3]]", "w", "x", "y", "z");
     assert(mix(1,2,3,4) == [1,2,3,4]);
 }
 
