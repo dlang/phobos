@@ -354,13 +354,18 @@ unittest
     alias least = stringLambda!("min(a,b,c)", "a", "b", "c");
     assert(least(5, 3, 7) == 3);
 
-    // use all 26 lowercase characters as params
-    /++ no support for char arguments yet
+    // aliasSeqOf can be useful to generate many param names.
+    // here, a..z are used as param names.
+    import std.conv : to;
     import std.meta : aliasSeqOf;
+    import std.range : iota;
     import std.ascii : lowercase;
-    alias many = stringLambda!("[a,b,y,z]", aliasSeqOf!(lowercase[]));
-    assert(many(staticIota!(0, 26)) == [0,1,24,25]);
-    ++/
+    import std.algorithm : map;
+
+    // many(0, 1, 2, ..., 24, 25) -> a = 0, b = 1, y = 24, z = 25
+    alias paramNames = aliasSeqOf!(lowercase[].map!(x => x.to!string));
+    alias many = stringLambda!("[a,b,y,z]", paramNames);
+    assert(many(aliasSeqOf!(0.iota(26))) == [0,1,24,25]);
 
     // use args[n] to refer to a parameter by index
     alias mix = stringLambda!("[w,x,args[2],args[3]]", "w", "x", "y", "z");
