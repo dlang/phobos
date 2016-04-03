@@ -415,8 +415,8 @@ If an option string is followed by another string, this string serves as a
 description for this option. The $(D getopt) function returns a struct of type
 $(D GetoptResult). This return value contains information about all passed options
 as well a $(D bool GetoptResult.helpWanted) flag indicating whether information
-about these options was requested. The $(getopt) function always adds an option for
---help|-h` to set the flag if the option is seen on the command line.
+about these options was requested. The $(D getopt) function always adds an option for
+`--help|-h` to set the flag if the option is seen on the command line.
 
 Options_Terminator:
 A lone double-dash terminates $(D getopt) gathering. It is used to
