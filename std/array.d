@@ -337,9 +337,10 @@ unittest
 /**
  * Initializes a static array of the given size from the range `r`.
  *
- * If `r` has more than `n` elements, only the first `n` are copied.
- * If `r` has less than `n` elements, the remaining spaces in the static array
- * will have default values.
+ * If `r` has less than `n` elements, only the first `n` are copied, and the
+ * remaining elements are default-initialized.
+ *
+ * A range violation will occur if `r` has more than `n` elements.
  *
  * Params:
  *      r = range (or aggregate with $(D opApply) function) whose elements are
@@ -363,10 +364,7 @@ if (isIterable!Iterable)
     // 2. for opApply with no indexed overload, we would need to count anyways
     size_t i;
     foreach (e; r)
-    {
-        if (i >= n) break; // array is full, ignore remaining elements of r
         emplaceRef!E(result[i++], e);
-    }
 
     // result was uninitialized, so initialize remaining elements
     while (i < n)
@@ -384,11 +382,11 @@ if (isIterable!Iterable)
     assert(arr == [ 1, 2, 3 ]);
 }
 
-/// `staticArray!n` only takes `n` elements, even if the range has (infinitely) more.
+/// You must limit the length of an infinite range to use it with `staticArray`.
 @safe pure nothrow unittest
 {
-    import std.range : repeat;
-    int[4] arr = repeat(5).staticArray!4;
+    import std.range : take, repeat;
+    int[4] arr = repeat(5).take(4).staticArray!4; // will fail without `take`
     assert(arr == [ 5, 5, 5, 5 ]);
 }
 
@@ -408,7 +406,7 @@ unittest
         int opApply(int delegate(ref int) dg)
         {
             int res;
-            foreach(i; 0..10)
+            foreach(i; 0..5)
             {
                 res = dg(i);
                 if(res) break;
