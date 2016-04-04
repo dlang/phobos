@@ -3139,20 +3139,31 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
         import core.stdc.stdio;
         static import std.conv;
 
-        immutable fd = core.sys.posix.fcntl.open(fromz, O_RDONLY);
-        cenforce(fd != -1, f, fromz);
-        scope(exit) core.sys.posix.unistd.close(fd);
+        immutable fdr = core.sys.posix.fcntl.open(fromz, O_RDONLY);
+        cenforce(fdr != -1, f, fromz);
+        scope(exit) core.sys.posix.unistd.close(fdr);
 
-        stat_t statbuf = void;
-        cenforce(fstat(fd, &statbuf) == 0, f, fromz);
-        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, f, fromz);
+        stat_t statbufr = void;
+        cenforce(fstat(fdr, &statbufr) == 0, f, fromz);
+        //cenforce(core.sys.posix.sys.stat.fstat(fdr, &statbufr) == 0, f, fromz);
 
         immutable fdw = core.sys.posix.fcntl.open(toz,
-                O_CREAT | O_WRONLY | O_TRUNC, octal!666);
+                O_CREAT | O_WRONLY, octal!666);
         cenforce(fdw != -1, t, toz);
+        {
+            scope(failure) core.sys.posix.unistd.close(fdw);
+
+            stat_t statbufw = void;
+            cenforce(fstat(fdw, &statbufw) == 0, t, toz);
+            if (statbufr.st_dev == statbufw.st_dev && statbufr.st_ino == statbufw.st_ino)
+                throw new FileException(t, "Source and destination are the same file");
+        }
+
         scope(failure) core.stdc.stdio.remove(toz);
         {
             scope(failure) core.sys.posix.unistd.close(fdw);
+            cenforce(ftruncate(fdw, 0) == 0, t, toz);
+
             auto BUFSIZ = 4096u * 16;
             auto buf = core.stdc.stdlib.malloc(BUFSIZ);
             if (!buf)
@@ -3167,25 +3178,25 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
             }
             scope(exit) core.stdc.stdlib.free(buf);
 
-            for (auto size = statbuf.st_size; size; )
+            for (auto size = statbufr.st_size; size; )
             {
                 immutable toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
                 cenforce(
-                    core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
+                    core.sys.posix.unistd.read(fdr, buf, toxfer) == toxfer
                     && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
                     f, fromz);
                 assert(size >= toxfer);
                 size -= toxfer;
             }
             if (preserve)
-                cenforce(fchmod(fdw, std.conv.to!mode_t(statbuf.st_mode)) == 0, f, fromz);
+                cenforce(fchmod(fdw, std.conv.to!mode_t(statbufr.st_mode)) == 0, f, fromz);
         }
 
         cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
 
         utimbuf utim = void;
-        utim.actime = cast(time_t)statbuf.st_atime;
-        utim.modtime = cast(time_t)statbuf.st_mtime;
+        utim.actime = cast(time_t)statbufr.st_atime;
+        utim.modtime = cast(time_t)statbufr.st_mtime;
 
         cenforce(utime(toz, &utim) != -1, f, fromz);
     }
@@ -3196,9 +3207,9 @@ unittest
     import std.algorithm, std.file; // issue 14817
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
-    write(t1, "1");
+    write(t1, "11");
     copy(t1, t2);
-    assert(readText(t2) == "1");
+    assert(readText(t2) == "11");
     write(t1, "2");
     copy(t1, t2);
     assert(readText(t2) == "2");
@@ -3217,6 +3228,15 @@ version(Posix) unittest //issue 11434
     copy(t1, t2, Yes.preserveAttributes);
     assert(readText(t2) == "1");
     assert(getAttributes(t2) == octal!100767);
+}
+
+unittest // issue 15865
+{
+    auto t = deleteme;
+    write(t, "a");
+    scope(exit) t.remove();
+    assertThrown!FileException(copy(t, t));
+    assert(readText(t) == "a");
 }
 
 /++
