@@ -59,9 +59,12 @@ template BacktrackingMatcher(bool CTregex)
                     mask |= 1UL<<d;
                     return p != 0;
                 }
-                offset = idx;
-                mask = 1;
-                return false;
+                else
+                {
+                    offset = idx;
+                    mask = 1;
+                    return false;
+                }
             }
         }
         //local slice of matches, global for backref
@@ -635,16 +638,19 @@ template BacktrackingMatcher(bool CTregex)
 
         bool prevStack()
         {
-            import core.stdc.stdlib;
             size_t* prev = memory.ptr-1;
             prev = cast(size_t*)*prev;//take out hidden pointer
             if(!prev)
                 return false;
-            free(memory.ptr);//last segment is freed in RegexMatch
-            immutable size = initialStack*(stateSize + 2*re.ngroup);
-            memory = prev[0..size];
-            lastState = size;
-            return true;
+            else
+            {
+                import core.stdc.stdlib;
+                free(memory.ptr);//last segment is freed in RegexMatch
+                immutable size = initialStack*(stateSize + 2*re.ngroup);
+                memory = prev[0..size];
+                lastState = size;
+                return true;
+            }
         }
 
         void stackPush(T)(T val)
