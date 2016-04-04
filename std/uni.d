@@ -9108,10 +9108,10 @@ bool isMark(dchar c)
 @safe pure nothrow @nogc
 bool isNumber(dchar c)
 {
-    // optimization
-    if (c < 0xAA)
+    // optimization for ascii case
+    if (c <= 0x7F)
     {
-        return c >= 48 && c <= 57;
+        return c >= '0' && c <= '9';
     }
     else
     {
