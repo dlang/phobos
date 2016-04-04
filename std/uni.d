@@ -9136,7 +9136,17 @@ bool isNumber(dchar c)
 @safe pure nothrow @nogc
 bool isPunctuation(dchar c)
 {
-    return punctuationTrie[c];
+    static import std.ascii;
+
+    // optimization for ascii case
+    if (c <= 0x7F)
+    {
+        return std.ascii.isPunctuation(c);
+    }
+    else
+    {
+        return punctuationTrie[c];
+    }
 }
 
 unittest
