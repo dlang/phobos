@@ -775,10 +775,11 @@ struct CtContext
     //to mark the portion of matches to save
     int match, total_matches;
     int reserved;
+    CodepointSet[] charsets;
 
 
     //state of codegenerator
-    struct CtState
+    static struct CtState
     {
         string code;
         int addr;
@@ -789,6 +790,7 @@ struct CtContext
         match = 1;
         reserved = 1; //first match is skipped
         total_matches = re.ngroup;
+        charsets = re.charsets;
     }
 
     CtContext lookaround(uint s, uint e)
@@ -1248,13 +1250,27 @@ struct CtContext
                     $$`, bailOut, addr >= 0 ? "next();" :"",nextInstr);
             break;
         case IR.CodepointSet:
-            code ~= ctSub( `
+            if(charsets.length)
+            {
+                string name = `func_`~to!string(addr+1);
+                string funcCode = charsets[ir[0].data].toSourceCode(name);
+                code ~= ctSub( `
+                    static $$
+                    if(atEnd || !$$(front))
+                        $$
+                    $$
+                $$`, funcCode, name, bailOut, addr >= 0 ? "next();" :"", nextInstr);
+            }
+            else
+                code ~= ctSub( `
                     if(atEnd || !re.charsets[$$].scanFor(front))
                         $$
                     $$
                 $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
             break;
         case IR.Trie:
+            if(charsets.length && charsets[ir[0].data].byInterval.length  <= 8)
+                goto case IR.CodepointSet;
             code ~= ctSub( `
                     if(atEnd || !re.matchers[$$][front])
                         $$
