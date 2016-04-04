@@ -458,6 +458,14 @@ T[n] staticArray(T, size_t n)(T[n] arr)
     auto arr = [1,2,3,4].staticArray;         // no need to declare size
     static assert(is(typeof(arr) == int[4])); // i is a static array
     assert(arr == [1,2,3,4]);
+
+    version(Bug)
+    {
+        // Note that you should _not_ assign staticArray to a dynamic array.
+        // `invalid` will point to memory in an expiring stack.
+        // In general, assign to `auto` as shown above.
+        int[] invalid = [1,2,3,4].staticArray;
+    }
 }
 
 /**
