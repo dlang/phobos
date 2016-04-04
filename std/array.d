@@ -444,7 +444,7 @@ unittest
  *
  * Returns: static array of size `arr.length`
  */
-T[n] staticArray(T, size_t n)(T[n] arr)
+@nogc T[n] staticArray(T, size_t n)(T[n] arr)
 {
     pragma(inline, true);
     return arr;
