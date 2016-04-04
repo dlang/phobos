@@ -350,7 +350,7 @@ unittest
  *      A static array of size `n` initialized from `r`
  */
 ForeachType!Iterable[n] staticArray(size_t n, Iterable)(Iterable r)
-if (isIterable!Iterable)
+if (isIterable!Iterable && !isInfinite!Iterable)
 {
     import std.conv : emplaceRef;
 
