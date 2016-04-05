@@ -350,7 +350,7 @@ unittest
  *      A static array of size `n` initialized from `r`
  */
 ForeachType!Iterable[n] staticArray(size_t n, Iterable)(Iterable r)
-if (isIterable!Iterable && !isInfinite!Iterable)
+if (isIterable!Iterable)
 {
     import std.conv : emplaceRef;
 
@@ -361,14 +361,27 @@ if (isIterable!Iterable && !isInfinite!Iterable)
 
     // manually count our index instead of using foreach(i, e; r) because:
     // 1. for a range, we would need to use enumerate
-    // 2. for opApply with no indexed overload, we would need to count anyways
-    size_t i;
-    foreach (e; r)
-        emplaceRef!E(result[i++], e);
-
-    // result was uninitialized, so initialize remaining elements
-    while (i < n)
-        emplaceRef!E(result[i++], E.init);
+    static if (isInputRange!Iterable)
+    {
+        // we cannot foreach over r, it may have too many elements
+        foreach(i; 0..n)
+        {
+            assert(!r.empty, "r had less than n elements");
+            emplaceRef!E(result[i], r.front);
+            r.popFront();
+        }
+    }
+    else // opApply
+    {
+        // we may not have an indexed overload, so we need to count
+        size_t i;
+        foreach(e; r)
+        {
+            if (i == n) break; // got all the elements we need
+            emplaceRef!E(result[i++], e);
+        }
+        assert(i == n, "r had less than n elements");
+    }
 
     // the type qualifiers are implicitly re-applied
     return result;
@@ -382,19 +395,22 @@ if (isIterable!Iterable && !isInfinite!Iterable)
     assert(arr == [ 1, 2, 3 ]);
 }
 
-/// You must limit the length of an infinite range to use it with `staticArray`.
+/// If the range has more than `n` elements, `staticArray` takes only `n`
 @safe pure nothrow unittest
 {
     import std.range : take, repeat;
-    int[4] arr = repeat(5).take(4).staticArray!4; // will fail without `take`
+    int[4] arr = repeat(5).staticArray!4;
     assert(arr == [ 5, 5, 5, 5 ]);
 }
 
-/// `staticArray!n` leaves remaining elements default if the range is smaller than `n`
+/// `staticArray!n` will fail if given a range with more than `n` elements
 @safe pure nothrow unittest
 {
-    import std.range : only;
-    int[5] arr = only(1,2,3).staticArray!5;
+    import std.range : only, chain;
+    // int[5] arr = only(1,2,3).staticArray!5; -- this will fail!
+
+    // extend the range to the desired length before handing it to staticArray
+    int[5] arr = only(1,2,3).chain(only(0, 0)).staticArray!5;
     assert(arr == [ 1, 2, 3, 0, 0 ]);
 }
 
@@ -417,7 +433,7 @@ unittest
     }
 
     int[5] arr = OpApply().staticArray!5;
-    assert(arr== [ 0, 1, 2, 3, 4 ]);
+    assert(arr == [ 0, 1, 2, 3, 4 ]);
 }
 
 // immutable element support for staticArray
