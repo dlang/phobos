@@ -93,6 +93,7 @@ T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
 module std.experimental.ndslice.iteration;
 
 import std.traits;
+import std.meta;
 
 import std.experimental.ndslice.internal;
 import std.experimental.ndslice.slice; //: Slice;
@@ -664,7 +665,7 @@ Returns:
 template strided(Dimensions...)
     if (Dimensions.length)
 {
-    auto strided(size_t N, Range)(Slice!(N, Range) slice, Repeat!(size_t, Dimensions.length) factors)
+    auto strided(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) factors)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -1027,7 +1028,7 @@ Returns:
 template dropExactly(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(size_t, Dimensions.length) ns)
+    Slice!(N, Range) dropExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -1055,7 +1056,7 @@ body
 template dropBackExactly(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropBackExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(size_t, Dimensions.length) ns)
+    Slice!(N, Range) dropBackExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -1116,7 +1117,7 @@ Returns:
 template drop(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) drop(size_t N, Range)(Slice!(N, Range) slice, Repeat!(size_t, Dimensions.length) ns)
+    Slice!(N, Range) drop(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -1144,7 +1145,7 @@ body
 template dropBack(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropBack(size_t N, Range)(Slice!(N, Range) slice, Repeat!(size_t, Dimensions.length) ns)
+    Slice!(N, Range) dropBack(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
