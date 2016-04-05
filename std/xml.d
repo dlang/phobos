@@ -599,11 +599,9 @@ class Document : Element
         override bool opEquals(Object o)
         {
             const doc = toType!(const Document)(o);
-            return
-                (prolog != doc.prolog            ) ? false : (
-                (super  != cast(const Element)doc) ? false : (
-                (epilog != doc.epilog            ) ? false : (
-            true )));
+            return prolog == doc.prolog
+                && (cast()this).Element.opEquals(cast()doc)
+                && epilog == doc.epilog;
         }
 
         /**
@@ -621,14 +619,13 @@ class Document : Element
         override int opCmp(Object o)
         {
             const doc = toType!(const Document)(o);
-            return
-                ((prolog != doc.prolog            )
-                    ? ( prolog < doc.prolog             ? -1 : 1 ) :
-                ((super  != cast(const Element)doc)
-                    ? ( cast()super  < cast()cast(const Element)doc ? -1 : 1 ) :
-                ((epilog != doc.epilog            )
-                    ? ( epilog < doc.epilog             ? -1 : 1 ) :
-            0 )));
+            if (prolog != doc.prolog)
+                return prolog < doc.prolog ? -1 : 1;
+            if (int cmp = (cast()this).Element.opCmp(cast()doc))
+                return cmp;
+            if (epilog != doc.epilog)
+                return epilog < doc.epilog ? -1 : 1;
+            return 0;
         }
 
         /**
@@ -639,7 +636,7 @@ class Document : Element
          */
         override size_t toHash() @trusted
         {
-            return hash(prolog, hash(epilog, (cast()super).toHash()));
+            return hash(prolog, hash(epilog, (cast()this).Element.toHash()));
         }
 
         /**
@@ -651,6 +648,24 @@ class Document : Element
             return prolog ~ super.toString() ~ epilog;
         }
     }
+}
+
+unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=14966
+    auto xml = `<?xml version="1.0" encoding="UTF-8"?><foo></foo>`;
+
+    auto a = new Document(xml);
+    auto b = new Document(xml);
+    assert(a == b);
+    assert(!(a < b));
+    int[Document] aa;
+    aa[a] = 1;
+    assert(aa[b] == 1);
+
+    b ~= new Element("b");
+    assert(a < b);
+    assert(b > a);
 }
 
 /**
