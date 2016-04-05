@@ -61,7 +61,7 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Eagerly split a range or string into an _array.
     ))
     $(TR $(TD $(D $(LREF staticArray)))
-        $(TD Create a static array from an array literal or range
+        $(TD Create a static _array from an _array literal or range.
     ))
     $(TR $(TD $(D $(LREF uninitializedArray)))
         $(TD Returns a new _array of type $(D T) without initializing its elements.
@@ -437,12 +437,12 @@ unittest
 }
 
 /**
- * Converts an array literal to a static array.
+ * Interprets an array literal as a static array.
  *
  * Params:
- *      arr = an array literal
+ *      arr = An array literal.
  *
- * Returns: static array of size `arr.length`
+ * Returns: A static array of size `arr.length`.
  */
 @nogc T[n] staticArray(T, size_t n)(T[n] arr)
 {
@@ -451,17 +451,17 @@ unittest
 }
 
 ///
-@safe pure nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     auto arr = [1,2,3,4].staticArray;         // no need to declare size
-    static assert(is(typeof(arr) == int[4])); // i is a static array
+    static assert(is(typeof(arr) == int[4])); // arr is a static array
     assert(arr == [1,2,3,4]);
 
     version(Bug)
     {
-        // Note that you should _not_ assign staticArray to a dynamic array.
-        // `invalid` will point to memory in an expiring stack.
-        // In general, assign to `auto` as shown above.
+        // Do not initialize a dynamic array with a call to staticArray.
+        // `invalid` will be a slice to stack memory no longer in use.
+        // Instead use type inference (or int[4]).
         int[] invalid = [1,2,3,4].staticArray;
     }
 }
