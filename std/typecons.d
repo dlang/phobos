@@ -7312,19 +7312,21 @@ unittest
 }
 
 /**
- * Get a field or property member function by `ref`. Allows getting fields
- * via runtime information rather than requiring it at compile-time.
+ * Get the value of a field or property member. The member's name
+ * is resolved at runtime, rather than at compile-time.
+ *
+ * Note that currently only `pure @safe` property methods are supported.
  *
  * Params:
- *     obj = the struct or class to access
- *     name = the name of the field or property method
+ *     obj = the struct or class instance to access
+ *     name = the name of the field or property member
  * Returns:
- *     The value of the field
+ *     The current value of the field or property
  */
-auto getFeild(Field, Obj)(auto ref Obj obj, string name)
+Field getField(Field, Obj)(auto ref Obj obj, string name)
 {
     enum refObj = !is(Obj == class) && (Obj.sizeof > 16);
-    return rtPropDispatch!(false, Field, false, Obj, refObj)(obj, name);
+    return rtFieldDispatch!(false, Field, false, Obj, refObj)(obj, name);
 }
 
 ///
@@ -7336,7 +7338,7 @@ auto getFeild(Field, Obj)(auto ref Obj obj, string name)
     }
 
     Foo foo;
-    int val = foo.getFeild!int("bar");
+    int val = foo.getField!int("bar");
     assert(val == 42);
 }
 
@@ -7348,38 +7350,37 @@ auto getFeild(Field, Obj)(auto ref Obj obj, string name)
     }
 
     auto a = new A();
-    int val = a.getFeild!int("bar");
+    int val = a.getField!int("bar");
     assert(val == 42);
 
     struct B
     {
-        auto bar() @property { return 42; }
+        auto bar() @property { return 27; }
     }
 
     B b;
-    int val2 = b.getFeild!int("bar");
-    assert(val == 42);
+    int val2 = b.getField!int("bar");
+    assert(val2 == 27);
 }
 
 /**
- * Get a field or property member function. Allows getting fields
- * via runtime information rather than requiring it at compile-time.
+ * Get the value of a field or property member. The member's name
+ * is resolved at runtime, rather than at compile-time.
+ *
+ * This overload can infer `Field` from the type of `value`.
+ *
+ * Note that currently only `pure @safe` property methods are supported.
  *
  * Params:
- *     obj = the struct or class to access
- *     name = the name of the field or property method
- * Returns:
- *     The value of the field or property method by reference
+ *     obj = the struct or class instance to access
+ *     name = the name of the field or property member
+ *     value = will be set to the current value of the field or property
  */
-ref Field refGetFeild(Field, Obj)(Obj obj, string name) if (is(Obj == class))
+void getField(Field, Obj)(auto ref Obj obj, string name, out Field value)
 {
-    return rtPropDispatch!(false, Field, true, Obj, false)(obj, name);
-}
-
-/// ditto
-ref Field refGetFeild(Field, Obj)(return ref Obj obj, string name) if (!is(Obj == class))
-{
-    return rtPropDispatch!(false, Field, true, Obj, true)(obj, name);
+    enum refField = !is(Field == class) && (Field.sizeof > 16);
+    enum refObj = !is(Obj == class) && (Obj.sizeof > 16);
+    value = rtFieldDispatch!(false, Field, refField, Obj, refObj)(obj, name);
 }
 
 ///
@@ -7391,7 +7392,8 @@ ref Field refGetFeild(Field, Obj)(return ref Obj obj, string name) if (!is(Obj =
     }
 
     Foo foo;
-    int val = foo.refGetFeild!int("bar");
+    int val;
+    foo.getField("bar", val);
     assert(val == 42);
 }
 
@@ -7403,33 +7405,102 @@ ref Field refGetFeild(Field, Obj)(return ref Obj obj, string name) if (!is(Obj =
     }
 
     auto a = new A();
-    int val = a.refGetFeild!int("bar");
+    int val;
+    a.getField("bar", val);
     assert(val == 42);
 
     struct B
     {
-        private int b = 42;
+        auto bar() @property { return 27; }
+    }
+
+    B b;
+    int val2;
+    b.getField("bar", val2);
+    assert(val2 == 27);
+}
+
+/**
+ * Access a field or property by reference. The member's name
+ * is resolved at runtime, rather than at compile-time.
+ *
+ * Note that currently only `pure @safe` property methods are supported.
+ *
+ * Params:
+ *     obj = the struct or class instance to access
+ *     name = the name of the field or property member
+ * Returns:
+ *     A reference to the field, or to the property's current value
+ */
+ref Field refField(Field, Obj)(Obj obj, string name) if (is(Obj == class))
+{
+    return rtFieldDispatch!(false, Field, true, Obj, false)(obj, name);
+}
+
+/// ditto
+ref Field refField(Field, Obj)(return ref Obj obj, string name) if (!is(Obj == class))
+{
+    return rtFieldDispatch!(false, Field, true, Obj, true)(obj, name);
+}
+
+///
+@safe @nogc nothrow pure unittest
+{
+    struct Foo
+    {
+        int bar = 42;
+    }
+
+    Foo foo;
+    int val = foo.refField!int("bar");
+    assert(val == 42);
+
+    foo.refField!int("bar") = 27;
+    assert(foo.bar == 27);
+}
+
+@safe nothrow pure unittest
+{
+    class A
+    {
+        int bar = 42;
+    }
+
+    auto a = new A();
+    int val = a.refField!int("bar");
+    assert(val == 42);
+    a.refField!int("bar") = 24;
+    assert(a.bar == 24);
+
+    struct B
+    {
+        int b = 27;
         ref auto bar() @property { return b; }
     }
 
     B b;
-    int val2 = b.refGetFeild!int("bar");
-    assert(val == 42);
+    int val2 = b.refField!int("bar");
+    assert(val2 == 27);
+    b.refField!int("bar") = 38;
+    assert(b.b == 38);
 }
 
 /**
- * Set a field or property member function. Allows setting fields
- * via runtime information rather than requiring it at compile-time.
+ * Set the value of a field or property member. The member's name
+ * is resolved at runtime, rather than at compile-time.
+ *
+ * Note that currently only `pure @safe` property methods are supported.
  *
  * Params:
- *     obj = the struct or class to access
- *     name = the name of the field or property method
+ *     obj = the struct or class instance to access
+ *     name = the name of the field or property member
+ *     value = the new value to assign to the member
  */
-void setFeild(Field, Obj)(auto ref Obj obj, string name, auto ref Field value)
+void setField(Field, Obj)(auto ref Obj obj, string name, auto ref Field value)
 {
-    enum refProp = !is(Field == class) || (Field.sizeof > 16);
+    enum refField = !is(Field == class) || (Field.sizeof > 16);
     enum refObj = !is(Obj == class) || (Obj.sizeof > 16);
-    rtPropDispatch!(true, Field, refProp, Obj, refObj)(obj, name, value);
+    rtFieldDispatch!(true, Field, refField, Obj, refObj)(obj, name, value);
 }
 
 ///
@@ -7441,7 +7512,7 @@ void setFeild(Field, Obj)(auto ref Obj obj, string name, auto ref Field value)
     }
 
     Foo foo;
-    foo.setFeild("bar", 24);
+    foo.setField("bar", 24);
     assert(foo.bar == 24);
 }
 
@@ -7453,34 +7524,34 @@ void setFeild(Field, Obj)(auto ref Obj obj, string name, auto ref Field value)
     }
 
     auto a = new A();
-    a.setFeild("bar", 24);
+    a.setField("bar", 24);
     assert(a.bar == 24);
 
     struct B
     {
-        private int b = 42;
+        private int b = 27;
         auto bar() @property { return b; }
         auto bar(int val) @property { b = val; }
     }
 
     B b;
-    b.setFeild("bar", 24);
-    assert(b.getFeild!int("bar") == 24);
+    b.setField("bar", 38);
+    assert(b.getField!int("bar") == 38);
 }
 
 // mixin template for the get/setField functions
-private template rtFieldDispatch(bool set, Field, bool refProp, Obj, bool refObj)
+private template rtFieldDispatch(bool set, Field, bool refField, Obj, bool refObj)
 {
     private enum propMix = (set ? `` : `return `) ~ `mixin("obj." ~ mName)` ~ (
         set ? ` = value; return;` : `;`);
-    private enum errorMessage = Obj.stringof ~ " has no " ~
-        (set ? "assignable" : (refProp ? "lvalue " : "")) ~ "property matching " ~ Field.stringof;
-    private enum dispMix = (set ? `void` : (refProp ? `ref Field` : `Field`)) ~ ` rtPropDispatch(` ~ (
-            refObj ? (!set && refProp ? `return ` : ``) ~ `ref ` : ``) ~ `Obj obj, string name` ~ (
-            set ? `, ` ~ (refProp ? `ref ` : ``) ~ `Field value` : ``) ~ `)
+    private enum errorMessage = Obj.stringof ~ ` has no ` ~
+        (set ? `assignable` : (refField ? `lvalue ` : ``)) ~ `property with the specified name matching ` ~ Field.stringof;
+    private enum dispMix = (set ? `void` : (refField ? `ref Field` : `Field`)) ~ ` rtFieldDispatch(` ~ (
+            refObj ? (!set && refField ? `return ` : ``) ~ `ref ` : ``) ~ `Obj obj, string name` ~ (
+            set ? `, ` ~ (refField ? `ref ` : ``) ~ `Field value` : ``) ~ `)
     {
         ` ~ (
-            set ? `void` : (refProp ? `ref ` : ``) ~ `Field`) ~ ` checkType(string mName)()
+            set ? `void` : (refField ? `ref ` : ``) ~ `Field`) ~ ` checkType(string mName)() pure @safe
         {
             if (!__ctfe) assert (0);
             ` ~ propMix ~ `
