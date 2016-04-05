@@ -9120,6 +9120,48 @@ bool isNumber(dchar c)
         assert((ch in n) == isNumber(ch));
 }
 
+/++
+    Returns whether $(D c) is a Unicode alphabetic $(CHARACTER) or number.
+    (general Unicode category: Alphabetic, Nd, Nl, No).
+
+    Params:
+        c = any Unicode character
+    Returns:
+        `true` if the character is in the Alphabetic, Nd, Nl, or No Unicode
+        categories
++/
+@safe pure nothrow @nogc
+bool isAlphaNum(dchar c)
+{
+    static import std.ascii;
+
+    // optimization for ascii case
+    if (std.ascii.isASCII(c))
+    {
+        return std.ascii.isAlphaNum(c);
+    }
+    else
+    {
+        return isAlpha(c) || isNumber(c);
+    }
+}
+
+@safe unittest
+{
+    auto n = unicode("N");
+    auto alpha = unicode("Alphabetic");
+
+    foreach(ch; n.byCodepoint)
+        assert(isAlphaNum(ch));
+
+    foreach(ch; alpha.byCodepoint)
+        assert(isAlphaNum(ch));
+
+    foreach(ch; 0..0x4000)
+    {
+        assert(((ch in n) || (ch in alpha)) == isAlphaNum(ch));
+    }
+}
 
 /++
     Returns whether $(D c) is a Unicode punctuation $(CHARACTER)
