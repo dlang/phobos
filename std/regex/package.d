@@ -32,8 +32,18 @@
   assert(c2[1] == "bar");   // Captures is a range of submatches: 0 = full match.
 
   ...
+  // multi-pattern regex
+  auto multi = regex([`\d+,\d+`,`(a-z]+):(\d+)`]);
+  auto m = "abc:43 12,34".matchAll(multi);
+  assert(m.front.whichPattern == 2);
+  assert(m.front[1] == "abc");
+  assert(m.front[2] == "43");
+  m.popFront();
+  assert(m.front.whichPattern == 1);
+  assert(m.front[1] == "12");
+  ...
 
-  // The result of the $(D matchAll) is directly testable with if/assert/while.
+  // The result of the $(D matchAll/matchFirst) is directly testable with if/assert/while.
   // e.g. test if a string consists of letters:
   assert(matchFirst("Letter", `^\p{L}+$`));
 
@@ -305,19 +315,58 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
     the same character width as $(D pattern).
 
     Params:
-    pattern = Regular expression
+    pattern(s) = Regular expression(s) to match
     flags = The _attributes (g, i, m and x accepted)
 
     Throws: $(D RegexException) if there were any errors during compilation.
 +/
-@trusted public auto regex(S)(S pattern, const(char)[] flags="")
+@trusted public auto regex(S)(S[] patterns, const(char)[] flags="")
     if(isSomeString!(S))
 {
     import std.functional;
     enum cacheSize = 8; //TODO: invent nice interface to control regex caching
+    S pat;
+    if(patterns.length > 1)
+    {
+        auto app = appender!S();
+        foreach(i, p; patterns){
+            if(i != 0)
+                app.put("|");
+            app.put("(?:");
+            app.put(patterns[i]);
+            app.put("\\");
+            app.put(cast(dchar)(privateUseStart+i)); // special end marker
+            app.put(")");
+        }
+        pat = app.data;
+    }
+    else
+        pat = patterns[0];
+
     if(__ctfe)
-        return regexImpl(pattern, flags);
-    return memoize!(regexImpl!S, cacheSize)(pattern, flags);
+        return regexImpl(pat, flags);
+    return memoize!(regexImpl!S, cacheSize)(pat, flags);
+}
+
+///ditto
+@trusted public auto regex(S)(S pattern, const(char)[] flags="")
+    if(isSomeString!(S))
+{
+    return regex([pattern], flags);
+}
+
+///
+unittest
+{
+    // multi-pattern regex example
+    auto multi = regex([`([a-z]+):(\d+)`, `(\d+),\d+`]); // multi regex
+    auto m = "abc:43 12,34".matchAll(multi);
+    assert(m.front.whichPattern == 1);
+    assert(m.front[1] == "abc");
+    assert(m.front[2] == "43");
+    m.popFront();
+    assert(m.front.whichPattern == 2);
+    assert(m.front[1] == "12");
 }
 
 public auto regexImpl(S)(S pattern, const(char)[] flags="")
@@ -375,7 +424,7 @@ enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
 private:
     import std.conv;
     R _input;
-    bool _empty;
+    int _nMatch;
     enum smallString = 3;
     union
     {
@@ -421,33 +470,33 @@ public:
     ///Slice of input prior to the match.
     @property R pre()
     {
-        return _empty ? _input[] : _input[0 .. matches[0].begin];
+        return _nMatch == 0 ? _input[] : _input[0 .. matches[0].begin];
     }
 
     ///Slice of input immediately after the match.
     @property R post()
     {
-        return _empty ? _input[] : _input[matches[0].end .. $];
+        return _nMatch == 0 ? _input[] : _input[matches[0].end .. $];
     }
 
     ///Slice of matched portion of input.
     @property R hit()
     {
-        assert(!_empty);
+        assert(_nMatch);
         return _input[matches[0].begin .. matches[0].end];
     }
 
     ///Range interface.
     @property R front()
     {
-        assert(!empty);
+        assert(_nMatch);
         return _input[matches[_f].begin .. matches[_f].end];
     }
 
     ///ditto
     @property R back()
     {
-        assert(!empty);
+        assert(_nMatch);
         return _input[matches[_b - 1].begin .. matches[_b - 1].end];
     }
 
@@ -466,7 +515,7 @@ public:
     }
 
     ///ditto
-    @property bool empty() const { return _empty || _f >= _b; }
+    @property bool empty() const { return _nMatch == 0 || _f >= _b; }
 
     ///ditto
     R opIndex()(size_t i) /*const*/ //@@@BUG@@@
@@ -488,7 +537,21 @@ public:
         ---
     +/
 
-    @safe bool opCast(T:bool)() const nothrow { return !empty; }
+    @safe bool opCast(T:bool)() const nothrow { return _nMatch != 0; }
+
+    /++
+        Number of pattern matched counting, where 1 - the first pattern.
+        Returns 0 on no match.
+    +/
+
+    @safe @property int whichPattern() const nothrow { return _nMatch; }
+
+    ///
+    unittest
+    {
+        import std.regex;
+        assert(matchFirst("abc", "[0-9]+", "[a-z]+").whichPattern == 2);
+    }
 
     /++
         Lookup named submatch.
@@ -514,7 +577,7 @@ public:
     }
 
     ///Number of matches in this object.
-    @property size_t length() const { return _empty ? 0 : _b - _f;  }
+    @property size_t length() const { return _nMatch == 0 ? 0 : _b - _f;  }
 
     ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
@@ -572,7 +635,7 @@ private:
         static if(is(RegEx == StaticRegex!(BasicElementOf!R)))
             _engine.nativeFn = prog.nativeFn;
         _captures = Captures!(R,EngineType.DataIndex)(this);
-        _captures._empty = !_engine.match(_captures.matches);
+        _captures._nMatch = _engine.match(_captures.matches);
         debug(std_regex_allocation) writefln("RefCount (ctor): %x %d", _memory.ptr, counter);
     }
 
@@ -647,14 +710,14 @@ public:
         }
         //previous _captures can have escaped references from Capture object
         _captures.newMatches();
-        _captures._empty = !_engine.match(_captures.matches);
+        _captures._nMatch = _engine.match(_captures.matches);
     }
 
     ///ditto
     auto save(){ return this; }
 
     ///Test if this match object is empty.
-    @property bool empty(){ return _captures._empty; }
+    @property bool empty(){ return _captures._nMatch == 0; }
 
     ///Same as !(x.empty), provided for its convenience  in conditional statements.
     T opCast(T:bool)(){ return !empty; }
@@ -677,7 +740,7 @@ private @trusted auto matchOnce(alias Engine, RegEx, R)(R input, RegEx re)
     auto engine = EngineType(re, Input!Char(input), memory);
     static if(is(RegEx == StaticRegex!(BasicElementOf!R)))
         engine.nativeFn = re.nativeFn;
-    captures._empty = !engine.match(captures.matches);
+    captures._nMatch = engine.match(captures.matches);
     return captures;
 }
 
@@ -810,7 +873,7 @@ public auto match(R, RegEx)(R input, RegEx re)
 
     $(D re) parameter can be one of three types:
     $(UL
-      $(LI Plain string, in which case it's compiled to bytecode before matching. )
+      $(LI Plain string(s), in which case it's compiled to bytecode before matching. )
       $(LI Regex!char (wchar/dchar) that contains a pattern in the form of
         compiled  bytecode. )
       $(LI StaticRegex!char (wchar/dchar) that contains a pattern in the form of
@@ -836,6 +899,14 @@ public auto matchFirst(R, String)(R input, String re)
     return matchOnce!ThompsonMatcher(input, regex(re));
 }
 
+///ditto
+public auto matchFirst(R, String)(R input, String[] re...)
+    if(isSomeString!R && isSomeString!String)
+{
+    import std.regex.internal.thompson;
+    return matchOnce!ThompsonMatcher(input, regex(re));
+}
+
 public auto matchFirst(R, RegEx)(R input, RegEx re)
     if(isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
@@ -853,7 +924,7 @@ public auto matchFirst(R, RegEx)(R input, RegEx re)
 
     $(D re) parameter can be one of three types:
     $(UL
-      $(LI Plain string, in which case it's compiled to bytecode before matching. )
+      $(LI Plain string(s), in which case it's compiled to bytecode before matching. )
       $(LI Regex!char (wchar/dchar) that contains a pattern in the form of
         compiled  bytecode. )
       $(LI StaticRegex!char (wchar/dchar) that contains a pattern in the form of
@@ -873,6 +944,14 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
 
 ///ditto
 public auto matchAll(R, String)(R input, String re)
+    if(isSomeString!R && isSomeString!String)
+{
+    import std.regex.internal.thompson;
+    return matchMany!ThompsonMatcher(input, regex(re));
+}
+
+///ditto
+public auto matchAll(R, String)(R input, String[] re...)
     if(isSomeString!R && isSomeString!String)
 {
     import std.regex.internal.thompson;
@@ -903,7 +982,7 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
             ([["blah".to!String()], ["bleh".to!String()]]));
 
         auto str2 = "1/03/12 - 3/03/12".to!String();
-        auto pat2 = regex(r"(\d+)/(\d+)/(\d+)".to!String());
+        auto pat2 = regex([r"(\d+)/(\d+)/(\d+)".to!String(), "abc".to!String]);
         auto mf2 = matchFirst(str2, pat2);
         assert(mf2.equal(["1/03/12", "1", "03", "12"].map!(to!String)()));
         auto mAll2 = matchAll(str2, pat2);

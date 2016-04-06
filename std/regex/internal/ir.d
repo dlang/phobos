@@ -15,6 +15,8 @@ debug(std_regex_parser) import std.stdio;
 // just a common trait, may be moved elsewhere
 alias BasicElementOf(Range) = Unqual!(ElementEncodingType!Range);
 
+enum privateUseStart = '\U000F0000', privateUseEnd ='\U000FFFFD';
+
 // heuristic value determines maximum CodepointSet length suitable for linear search
 enum maxCharsetUsed = 6;
 
