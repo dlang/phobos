@@ -1,81 +1,30 @@
 Ddoc
 
-$(COMMENT Pending changelog for 2.071. This will get copied to dlang.org and
-    cleared when master gets merged into stable prior to 2.071.
+$(COMMENT Pending changelog for 2.072. This will get copied to dlang.org and
+    cleared when master gets merged into stable prior to 2.072.
 )
 
 $(BUGSTITLE Library Changes,
-    $(LI $(NXREF experimental_allocator_gc_allocator, GCAllocator.goodAllocSize)
+    $(LI $(XREF range, padLeft) and $(XREF range, padRight) were added.)
+    $(LI $(XREF uni, isAlphaNum), which is analogous to $(XREF ascii, isAlphaNum)
         was added.)
-    $(LI High-level API of $(STDMODREF net_curl, std.net.curl) now uses $(XREF array, Appender)
-        for received content. Which generally makes all calls slightly faster. Up to 200ms for large
-        amounts of data.)
-    $(LI $(XREF meta, Repeat) was added to obtain a repeating
-    $(XREF meta, AliasSeq) consisting of template arguments.)
-    $(LI $(XREF algorithm_iteration, fold) was added as an alternative to $(XREF algorithm_iteration, reduce)
-        with argument order swapped.)
-    $(LI $(RELATIVE_LINK2 nextPow2, Added nextPow2 and truncPow2 to std.math.))
-    $(LI $(CXREF bitop, bsf), $(CXREF bitop, bsr), and $(CXREF bitop, popcnt) now
-        work with ulongs on 32 bit systems.)
-    $(LI $(XREF algorithm_sorting, topN) is now 5% - 7% faster.)
-    $(LI $(RELATIVE_LINK2 unary, Unary overloads of `startsWith` and `endsWith` were added.))
-    $(LI $(RELATIVE_LINK2 maxCount, $(XREF algorithm_searching, maxCount) and
-        $(XREF algorithm_searching, maxPos) were added.))
-    $(LI Range support for the convenience wrapper $(XREF container_rbtree, redBlackTree)
-        was added.)
-    $(LI $(RELATIVE_LINK2 process, Process creation in
-        $(STDMODREF process, std.process) was sped up on Posix.))
 )
 
 $(BUGSTITLE Library Changes,
 
 $(LI $(LNAME2 nextPow2, Added nextPow2 and truncPow2 to std.math.)
-    $(P $(XREF math, nextPow2) and $(XREF math, truncPow2) are functions for
-        rounding numbers to powers of two.
+    $(P $(XREF range, padLeft) and $(XREF range, padRight) are functions for
+        padding ranges to a specified length using the given element.
     )
-------
-import std.math;
 
-assert(nextPow2(10) == 16);
-assert(nextPow2(4000) == 4096);
+-------
+import std.range;
+import std.algorithm.comparison;
 
-assert(truncPow2(10) == 8);
-assert(truncPow2(4000) == 2048);
-------
-)
+assert([1, 2, 3, 4, 5].padLeft(0, 7).equal([0, 0, 1, 2, 3, 4, 5]));
 
-$(LI $(LNAME2 unary, Unary overloads of `startsWith` and `endsWith` were added.)
-    $(P $(XREF algorithm_searching, startsWith) and $(XREF algorithm_searching, endsWith)
-        can now be used just with a predicate.
-    )
-------
-import std.algorithm.searching;
-import std.ascii : isAlpha;
-
-assert("abc".endsWith!isAlpha);
-assert(!"ab1".endsWith!(a => a.isAlpha));
-
-assert("abc".startsWith!isAlpha);
-assert(!"1ab".startsWith!isAlpha);
-------
-)
-
-$(LI $(LNAME2 maxPos, $(XREF algorithm_searching, maxCount) and
-     $(XREF algorithm_searching, maxPos) were added.)
-$(P Previous to this addition, in order to get the number of the greatest
-    elements, you had to use `minCount!"a > b"`, which was very confusing.
-    This change adds convenience functions to fix this issue.)
-)
-
-$(LI $(RELATIVE_LINK2 process, Process creation in
-    $(STDMODREF process, std.process) was sped up on Posix.)
-Previously, Posix systems would attempt to close every file descriptor from 3
-    to the maximum file descriptor number if `inheritFDs` was not specified
-    with `spawnProcess`, `pipeProcess`, etc.
-    $(STDMODREF process, std.process) now uses `poll()` to determine which
-    descriptors need closing.
-)
-
+assert("Hello World!".padRight('!', 15).equal("Hello World!!!!"));
+-------
 )
 
 Macros:
