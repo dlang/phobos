@@ -7496,11 +7496,17 @@ ref Field refField(Field, Obj)(return ref Obj obj, string name) if (!is(Obj == c
  *     name = the name of the field or property member
  *     value = the new value to assign to the member
  */
-void setField(Field, Obj)(auto ref Obj obj, string name, auto ref Field value)
+void setField(Field, Obj)(Obj obj, string name, auto ref Field value) if (is(Obj == class))
 {
-    enum refField = !is(Field == class) || (Field.sizeof > 16);
-    enum refObj = !is(Obj == class) || (Obj.sizeof > 16);
-    rtFieldDispatch!(true, Field, refField, Obj, refObj)(obj, name, value);
+    enum refField = !is(Field == class) && (Field.sizeof > 16);
+    rtFieldDispatch!(true, Field, refField, Obj, false)(obj, name, value);
+}
+
+/// ditto
+void setField(Field, Obj)(ref Obj obj, string name, auto ref Field value) if (!is(Obj == class))
+{
+    enum refField = !is(Field == class) && (Field.sizeof > 16);
+    rtFieldDispatch!(true, Field, refField, Obj, true)(obj, name, value);
 }
 
 ///
