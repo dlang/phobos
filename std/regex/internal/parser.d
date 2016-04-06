@@ -432,6 +432,20 @@ struct Parser(R)
                     next();
                     switch(current)
                     {
+                    case '#':
+                        nesting--;
+                        fixupStack.pop();
+                        for(;;)
+                        {
+                            if(!next())
+                                error("Unexpected end of pattern");
+                            if(current == ')')
+                            {
+                                next();
+                                break;
+                            }
+                        }
+                        break;
                     case ':':
                         put(Bytecode(IR.Nop, 0));
                         next();

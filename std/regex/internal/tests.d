@@ -1003,3 +1003,10 @@ unittest
     auto rx = regex("[c d]", "x");
     assert("a b".matchFirst(rx));
 }
+
+unittest
+{
+    auto r = regex("(?# comment)abc(?# comment2)");
+    assert("abc".matchFirst(r));
+    assertThrown(regex("(?#..."));
+}
