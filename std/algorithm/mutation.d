@@ -1926,7 +1926,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     immutable steps = r.length/2;
     for (size_t i = 0; i < steps; i++)
     {
-        swapAt(r, i, last-i);
+        r.swapAt(i, last-i);
     }
 }
 

@@ -897,21 +897,21 @@ private size_t getPivot(alias less, Range)(Range r)
 
     switch(result) {
         case 0b001:
-            swapAt(r, 0, len - 1);
-            swapAt(r, 0, mid);
+            r.swapAt(0, len - 1);
+            r.swapAt(0, mid);
             break;
         case 0b110:
-            swapAt(r, mid, len - 1);
+            r.swapAt(mid, len - 1);
             break;
         case 0b011:
-            swapAt(r, 0, mid);
+            r.swapAt(0, mid);
             break;
         case 0b100:
-            swapAt(r, mid, len - 1);
-            swapAt(r, 0, mid);
+            r.swapAt(mid, len - 1);
+            r.swapAt(0, mid);
             break;
         case 0b000:
-            swapAt(r, 0, len - 1);
+            r.swapAt(0, len - 1);
             break;
         case 0b111:
             break;
@@ -952,7 +952,7 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
         {
             for (; j < maxJ && pred(r[j + 1], r[j]); ++j)
             {
-                swapAt(r, j, j + 1);
+                r.swapAt(j, j + 1);
             }
         }
     }
@@ -1225,7 +1225,7 @@ private void quickSortImpl(alias less, Range)(Range r, size_t depth)
         alias pred = binaryFun!(less);
 
         // partition
-        swapAt(r, pivotIdx, r.length - 1);
+        r.swapAt(pivotIdx, r.length - 1);
         size_t lessI = size_t.max, greaterI = r.length - 1;
 
         while (true)
@@ -1237,10 +1237,10 @@ private void quickSortImpl(alias less, Range)(Range r, size_t depth)
             {
                 break;
             }
-            swapAt(r, lessI, greaterI);
+            r.swapAt(lessI, greaterI);
         }
 
-        swapAt(r, r.length - 1, lessI);
+        r.swapAt(r.length - 1, lessI);
         auto right = r[lessI + 1 .. r.length];
 
         auto left = r[0 .. min(lessI, greaterI + 1)];
