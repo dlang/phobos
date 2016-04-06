@@ -6723,8 +6723,8 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
     // translate a list of strings into symbols. mixing in the entire alias
     // avoids trying to access the symbol, which could cause a privacy violation
     template toSymbols(names...) {
-        static if (names.length == 1)
-            mixin("alias toSymbols = AliasSeq!(symbol.%s);".format(names[0]));
+        static if (names.length == 0)
+            alias toSymbols = AliasSeq!();
         else
             mixin("alias toSymbols = AliasSeq!(symbol.%s, toSymbols!(names[1..$]));"
                   .format(names[0]));
@@ -6796,6 +6796,14 @@ unittest
     static assert(getSymbolsByUDA!(C, UDA).length == 2);
     static assert(getSymbolsByUDA!(C, UDA)[0].stringof == "C");
     static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
+
+    static struct D
+    {
+        int x;
+    }
+
+    //Finds nothing if there is no member with specific UDA
+    static assert(getSymbolsByUDA!(D,UDA).length == 0);
 }
 
 // #15335: getSymbolsByUDA fails if type has private members
