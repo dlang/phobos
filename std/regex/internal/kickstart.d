@@ -132,6 +132,16 @@ public:
         import std.conv;
         assert(memory.length == 256);
         fChar = uint.max;
+        // FNV-1a flavored hash (uses 32bits at a time)
+        ulong hash(uint[] tab)
+        {
+            ulong h = 0xcbf29ce484222325;
+            foreach(v; tab){
+                h ^= v;
+                h *= 0x100000001b3;
+            }
+            return h;
+        }
     L_FindChar:
         for(size_t i = 0;;)
         {
@@ -159,6 +169,9 @@ public:
         }
         table = memory;
         table[] =  uint.max;
+        alias MergeTab = bool[ulong];
+        // use reasonably complex hash to identify equivalent tables
+        auto merge = new MergeTab[re.hotspotTableSize];
         ShiftThread[] trs;
         ShiftThread t = ShiftThread(0, 0, table);
         //locate first fixed char if any
@@ -271,6 +284,11 @@ public:
                     assert(re.ir[t.pc].code == IR.OrEnd);
                     goto case;
                 case IR.OrEnd:
+                    auto slot = re.ir[t.pc+1].raw+t.counter;
+                    auto val = hash(t.tab);
+                    if(val in merge[slot])
+                        goto L_StopThread; // merge equivalent
+                    merge[slot][val] = true;
                     t.pc += IRL!(IR.OrEnd);
                     break;
                 case IR.OrStart:
@@ -290,6 +308,11 @@ public:
                     goto case IR.RepeatEnd;
                 case IR.RepeatEnd:
                 case IR.RepeatQEnd:
+                    auto slot = re.ir[t.pc+1].raw+t.counter;
+                    auto val = hash(t.tab);
+                    if(val in merge[slot])
+                        goto L_StopThread; // merge equivalent
+                    merge[slot][val] = true;
                     uint len = re.ir[t.pc].data;
                     uint step = re.ir[t.pc+2].raw;
                     uint min = re.ir[t.pc+3].raw;
@@ -317,6 +340,11 @@ public:
                     goto case IR.InfiniteEnd; //both Q and non-Q
                 case IR.InfiniteEnd:
                 case IR.InfiniteQEnd:
+                    auto slot = re.ir[t.pc+1].raw+t.counter;
+                    auto val = hash(t.tab);
+                    if(val in merge[slot])
+                        goto L_StopThread; // merge equivalent
+                    merge[slot][val] = true;
                     uint len = re.ir[t.pc].data;
                     uint pc1, pc2; //branches to take in priority order
                     if(++t.hops == 32)
@@ -533,7 +561,7 @@ unittest
             assert(kick.length == 0);
             auto rN = regex(to!String(`a(b+|c+)x`));
             kick = Kick!Char(rN, new uint[256]);
-            assert(kick.length == 3);
+            assert(kick.length == 3, to!string(kick.length));
             assert(kick.search("ababx",0) == 2);
             assert(kick.search("abaacba",0) == 3);//expected inexact
 
