@@ -1326,7 +1326,6 @@ private template staticMerge(alias cmp, int half, Seq...)
  */
 template staticSubset(alias range, T...)
 {
-	import std.range : isInputRange;
 	import std.traits : isArray, isNarrowString;
 
 	alias ArrT = typeof(range);
@@ -1341,14 +1340,18 @@ template staticSubset(alias range, T...)
 			alias staticSubset = AliasSeq!(T[range[0]], staticSubset!(range[1 .. $], T));
 		}
 	}
-	else static if (isInputRange!ArrT)
-	{
-		import std.array : array;
-		alias staticSubset = staticSubset!(array(range));
-	}
 	else
 	{
-		static assert(false, "Cannot transform " ~ range.stringof ~ " of type " ~ ArrT.stringof ~ " into a AliasSeq.");
+        import std.range.primitives : isInputRange;
+        static if(isInputRange!ArrT)
+        {
+            import std.array : array;
+            alias staticSubset = staticSubset!(array(range));
+        }
+        else
+        {
+            static assert(false, "Cannot index range of type " ~ ArrT.stringof ~ ".");
+        }
 	}
 }
 
@@ -1356,7 +1359,7 @@ template staticSubset(alias range, T...)
 unittest
 {
 	alias T1 = staticSubset!([0, 2, 1, 1, 2, 0], int, char, double);
-	static assert(is (T1 == AliasSeq!(int)));
+	static assert(is (T1 == AliasSeq!(int, double, char, char, double, int)));
 
 	alias T2 = staticSubset!([0, 2], int, char, double);
 	static assert(is (T2 == AliasSeq!(int, double)));
