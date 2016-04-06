@@ -1426,3 +1426,62 @@ public @trusted String[] split(String, RegEx)(String input, RegEx rx)
 
 ///Exception object thrown in case of errors during regex compilation.
 public alias RegexException = std.regex.internal.ir.RegexException;
+
+/++
+  A range that lazily produces a string output escaped
+  to be used inside of a regular expression.
++/
+auto escaper(Range)(Range r)
+{
+    import std.algorithm.searching : find;
+    static immutable escapables = [Escapables];
+    static struct Escaper // template to deduce attributes
+    {
+        Range r;
+        bool escaped;
+
+        @property ElementType!Range front(){
+          if(escaped)
+              return '\\';
+          else
+              return r.front;
+        }
+
+        @property bool empty(){ return r.empty; }
+
+        void popFront(){
+          if(escaped) escaped = false;
+          else
+          {
+              r.popFront();
+              if(!r.empty && !escapables.find(r.front).empty)
+                  escaped = true;
+          }
+        }
+
+        @property auto save(){ return Escaper(r.save, escaped); }
+    }
+
+    bool escaped = !r.empty && !escapables.find(r.front).empty;
+    return Escaper(r, escaped);
+}
+
+///
+unittest
+{
+    import std.regex, std.algorithm;
+    string s = `This is {unfriendly} to *regex*`;
+    assert(s.escaper.equal(`This is \{unfriendly\} to \*regex\*`));
+}
+
+unittest
+{
+    import std.conv, std.algorithm;
+    foreach(S; AliasSeq!(string, wstring, dstring))
+    {
+      auto s = "^".to!S;
+      assert(s.escaper.equal(`\^`));
+      auto s2 = "";
+      assert(s2.escaper.equal(""));
+    }
+}
