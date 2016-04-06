@@ -702,6 +702,11 @@ private @trusted void replaceCapturesInto(alias output, Sink, R, T)
         (ref Sink sink, R input, T captures)
     if(isOutputRange!(Sink, dchar) && isSomeString!R)
 {
+    if(captures.empty)
+    {
+        sink.put(input);
+        return;
+    }
     sink.put(captures.pre);
     // a hack to get around bogus errors, should be simply output(captures, sink)
     // "is a nested function and cannot be accessed from"
