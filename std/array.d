@@ -364,7 +364,7 @@ if (isIterable!Iterable)
     static if (isInputRange!Iterable)
     {
         // we cannot foreach over r, it may have too many elements
-        foreach(i; 0..n)
+        foreach (i; 0..n)
         {
             assert(!r.empty, "r had less than n elements");
             emplaceRef!E(result[i], r.front);
@@ -375,7 +375,7 @@ if (isIterable!Iterable)
     {
         // we may not have an indexed overload, so we need to count
         size_t i;
-        foreach(e; r)
+        foreach (e; r)
         {
             if (i == n) break; // got all the elements we need
             emplaceRef!E(result[i++], e);
