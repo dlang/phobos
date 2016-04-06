@@ -1143,9 +1143,20 @@ struct Parser(R)
                     opstack.push(Operator.Negate);
                     enforce(next(), "unexpected end of character class");
                 }
-                //[] is prohibited
-                enforce(current != ']', "wrong character class");
-                goto default;
+                else if (current == ']') // []...] is special cased
+                {
+                    enforce(next(), "wrong character set");
+                    auto pair = parseCharTerm();
+                    pair[0].add(']', ']'+1);
+                    if(pair[1] != Operator.None)
+                    {
+                        if(opstack.top == Operator.Union)
+                            unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
+                        opstack.push(pair[1]);
+                    }
+                    vstack.push(pair[0]);
+                }
+                break;
             case ']':
                 enforce(unrollWhile!(unaryFun!"a != a.Open")(vstack, opstack),
                     "character class syntax error");

@@ -968,3 +968,12 @@ unittest
         assert(matchAll(v, ctPat2).front.hit == v);
 }
 
+// bugzilla 7551
+unittest
+{
+    auto r = regex("[]abc]*");
+    assert("]ab".matchFirst(r).hit == "]ab");
+    assertThrown(regex("[]"));
+    auto r2 = regex("[]abc--ab]*");
+    assert("]ac".matchFirst(r2).hit == "]");
+}
