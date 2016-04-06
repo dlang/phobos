@@ -403,14 +403,17 @@ if (isIterable!Iterable)
     assert(arr == [ 5, 5, 5, 5 ]);
 }
 
-/// `staticArray!n` will fail if given a range with more than `n` elements
-@safe pure nothrow unittest
+/// `staticArray!n` will fail if given a range with less than `n` elements
+pure unittest
 {
-    import std.range : only, chain;
-    // int[5] arr = only(1,2,3).staticArray!5; -- this will fail!
+    import std.range : only, chain, repeat;
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    assertThrown!AssertError(only(1,2,3).staticArray!5);
 
     // extend the range to the desired length before handing it to staticArray
-    int[5] arr = only(1,2,3).chain(only(0, 0)).staticArray!5;
+    int[5] arr = only(1,2,3).chain(0.repeat).staticArray!5;
     assert(arr == [ 1, 2, 3, 0, 0 ]);
 }
 
