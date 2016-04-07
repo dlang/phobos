@@ -59,7 +59,7 @@ module std.algorithm.comparison;
 
 // FIXME
 import std.functional; // : unaryFun, binaryFun;
-import std.range;
+import std.range.primitives;
 import std.traits;
 // FIXME
 import std.typecons; // : tuple, Tuple, Flag;
@@ -1869,13 +1869,17 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
     // also keeping track of the scanning index. If the first occurrence
     // of item in the scanning loop has an index smaller than the current index,
     // then you know that the element has been seen before
-    outloop: foreach (index, item; r1.save.enumerate)
+    size_t index;
+    outloop: for(auto r1s1 = r1.save; !r1s1.empty; r1s1.popFront, index++)
     {
+        auto item = r1s1.front;
         r1_count = 0;
         r2_count = 0;
 
-        foreach (i, e; r1.save.enumerate)
+        size_t i;
+        for(auto r1s2 = r1.save; !r1s2.empty; r1s2.popFront, i++)
         {
+            auto e = r1s2.front;
             if (predEquals(e, item) && i < index)
             {
                  continue outloop;

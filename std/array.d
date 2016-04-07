@@ -78,7 +78,7 @@ module std.array;
 import std.meta;
 import std.traits;
 import std.functional;
-static import std.algorithm; // FIXME, remove with alias of splitter
+static import std.algorithm.iteration; // FIXME, remove with alias of splitter
 
 import std.range.primitives;
 public import std.range.primitives : save, empty, popFront, popBack, front, back;

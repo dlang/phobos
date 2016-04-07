@@ -75,9 +75,6 @@ import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
-// FIXME: somehow deleting this breaks the bringToFront() unittests.
-import std.range;
-
 // bringToFront
 /**
 The $(D bringToFront) function has considerable flexibility and
@@ -114,7 +111,8 @@ See_Also:
 size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
     if (isInputRange!Range1 && isForwardRange!Range2)
 {
-    import std.range: Take, take;
+    import std.range: take, Take;
+    import std.array: sameHead;
     enum bool sameHeadExists = is(typeof(front.sameHead(back)));
     size_t result;
     for (bool semidone; !front.empty && !back.empty; )
