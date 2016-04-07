@@ -7342,27 +7342,6 @@ Field getField(Field, Obj)(auto ref Obj obj, string name)
     assert(val == 42);
 }
 
-@safe nothrow pure unittest
-{
-    class A
-    {
-        int bar = 42;
-    }
-
-    auto a = new A();
-    int val = a.getField!int("bar");
-    assert(val == 42);
-
-    struct B
-    {
-        auto bar() @property { return 27; }
-    }
-
-    B b;
-    int val2 = b.getField!int("bar");
-    assert(val2 == 27);
-}
-
 /**
  * Get the value of a field or property member. The member's name
  * is resolved at runtime, rather than at compile-time.
@@ -7395,29 +7374,6 @@ void getField(Field, Obj)(auto ref Obj obj, string name, out Field value)
     int val;
     foo.getField("bar", val);
     assert(val == 42);
-}
-
-@safe nothrow pure unittest
-{
-    class A
-    {
-        int bar = 42;
-    }
-
-    auto a = new A();
-    int val;
-    a.getField("bar", val);
-    assert(val == 42);
-
-    struct B
-    {
-        auto bar() @property { return 27; }
-    }
-
-    B b;
-    int val2;
-    b.getField("bar", val2);
-    assert(val2 == 27);
 }
 
 /**
@@ -7459,32 +7415,6 @@ ref Field refField(Field, Obj)(return ref Obj obj, string name) if (!is(Obj == c
     assert(foo.bar == 27);
 }
 
-@safe nothrow pure unittest
-{
-    class A
-    {
-        int bar = 42;
-    }
-
-    auto a = new A();
-    int val = a.refField!int("bar");
-    assert(val == 42);
-    a.refField!int("bar") = 24;
-    assert(a.bar == 24);
-
-    struct B
-    {
-        int b = 27;
-        ref auto bar() @property { return b; }
-    }
-
-    B b;
-    int val2 = b.refField!int("bar");
-    assert(val2 == 27);
-    b.refField!int("bar") = 38;
-    assert(b.b == 38);
-}
-
 /**
  * Set the value of a field or property member. The member's name
  * is resolved at runtime, rather than at compile-time.
@@ -7522,42 +7452,18 @@ void setField(Field, Obj)(ref Obj obj, string name, auto ref Field value) if (!i
     assert(foo.bar == 24);
 }
 
-@safe nothrow pure unittest
-{
-    class A
-    {
-        int bar = 42;
-    }
-
-    auto a = new A();
-    a.setField("bar", 24);
-    assert(a.bar == 24);
-
-    struct B
-    {
-        private int b = 27;
-        auto bar() @property { return b; }
-        auto bar(int val) @property { b = val; }
-    }
-
-    B b;
-    b.setField("bar", 38);
-    assert(b.getField!int("bar") == 38);
-}
-
 // mixin template for the get/setField functions
 private template rtFieldDispatch(bool set, Field, bool refField, Obj, bool refObj)
 {
-    private enum propMix = (set ? `` : `return `) ~ `mixin("obj." ~ mName)` ~ (
-        set ? ` = value; return;` : `;`);
-    private enum errorMessage = Obj.stringof ~ ` has no ` ~
-        (set ? `assignable` : (refField ? `lvalue ` : ``)) ~ `property with the specified name matching ` ~ Field.stringof;
-    private enum dispMix = (set ? `void` : (refField ? `ref Field` : `Field`)) ~ ` rtFieldDispatch(` ~ (
-            refObj ? (!set && refField ? `return ` : ``) ~ `ref ` : ``) ~ `Obj obj, string name` ~ (
-            set ? `, ` ~ (refField ? `ref ` : ``) ~ `Field value` : ``) ~ `)
+private:
+    enum propMix = (set ? `` : `return `) ~ `mixin("obj." ~ mName)` ~ (set ? ` = value; return;` : `;`);
+    enum rtMix = set ? `void` : (refField ? `ref Field` : `Field`);
+    enum objMix = (refObj ? (!set && refField ? `return ` : ``) ~ `ref ` : ``) ~ `Obj obj`;
+    enum fldMix = set ? `, ` ~ (refField ? `ref ` : ``) ~ `Field value` : ``;
+
+    enum dispMix = rtMix ~ ` rtFieldDispatch(` ~ objMix ~ `, string name` ~ fldMix ~ `)
     {
-        ` ~ (
-            set ? `void` : (refField ? `ref ` : ``) ~ `Field`) ~ ` checkType(string mName)() pure @safe
+        ` ~ rtMix ~ ` checkType(string mName)() pure @safe
         {
             if (!__ctfe) assert (0);
             ` ~ propMix ~ `
@@ -7574,7 +7480,89 @@ private template rtFieldDispatch(bool set, Field, bool refField, Obj, bool refOb
             }
         }
 
-        assert (0, "`~ errorMessage ~`");
+        assert (0, "` ~ Obj.stringof ~ ` has no ` ~ (set ? `assignable` : (refField ? `lvalue ` : ``)) ~ `
+            property or field with the specified name matching ` ~ Field.stringof ~ `");
     } `;
+
+public:
     mixin(dispMix);
+}
+
+@safe nothrow pure unittest
+{
+    enum A =
+`   @safe: @nogc: nothrow: pure:
+    private:
+        int _valProp = 31;
+        int _refProp = -78;
+
+    public:
+        int field = 564;
+        
+    @property:
+        int valProp() const
+        {
+            return _valProp;
+        }
+        void valProp(int val)
+        {
+            _valProp = val;
+        }
+        
+        ref inout(int) refProp() inout
+        {
+            return _refProp;
+        }`;
+
+    static struct S
+    {
+        mixin(A);
+    }
+
+    static class C
+    {
+        mixin(A);
+    }
+
+    static void testRead(Obj)(const Obj obj) @nogc
+    {
+        assert(obj.getField!int("valProp") == 31);
+        assert(obj.getField!int("refProp") == -78);
+        assert(obj.getField!int("field") == 564);
+        
+        int got1, got2, got3;
+        obj.getField("valProp", got1);
+        assert(got1 == 31);
+        obj.getField("refProp", got2);
+        assert(got2 == -78);
+        obj.getField("field", got3);
+        assert(got3 == 564);
+        
+        //assertThrown(obj.refField!(const int)("valProp"));
+        assert(obj.refField!(const int)("refProp") == -78);
+        assert(obj.refField!(const int)("field") == 564);
+    }
+    static void testWrite(Obj)(Obj obj) @nogc
+    {
+        //assertThrown(obj.refField!int("valProp"));
+        obj.refField!int("refProp") = 22;
+        assert(obj.refProp == 22);
+        obj.refField!int("field") = -100;
+        assert(obj.field == -100);
+        
+        obj.setField("valProp", 50);
+        assert(obj.valProp == 50);
+        obj.setField("refProp", -191);
+        assert(obj.refProp == -191);
+        obj.setField("field", -81320);
+        assert(obj.field == -81320);
+    }
+    
+    S s;
+    testRead(s);
+    testWrite(s);
+
+    C c = new C();
+    testRead(c);
+    testWrite(c);
 }
