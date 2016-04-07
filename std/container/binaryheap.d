@@ -115,8 +115,8 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     {
         assert(!store.empty, "Cannot pop an empty store.");
         if (store.length == 1) return;
-        auto t1 = moveFront(store[]);
-        auto t2 = moveBack(store[]);
+        auto t1 = store[].moveFront();
+        auto t2 = store[].moveBack();
         store.front = move(t2);
         store.back = move(t1);
         percolate(store[], 0, store.length - 1);
@@ -293,8 +293,8 @@ Removes the largest element from the heap.
         enforce(!empty, "Cannot call removeFront on an empty heap.");
         if (_length > 1)
         {
-            auto t1 = moveFront(_store[]);
-            auto t2 = moveAt(_store[], _length - 1);
+            auto t1 = _store[].moveFront();
+            auto t2 = _store[].moveAt(_length - 1);
             _store.front = move(t2);
             _store[_length - 1] = move(t1);
         }

@@ -243,19 +243,19 @@ if (isBidirectionalRange!(Unqual!Range))
             @property auto ref back() { return source.front; }
             void popBack() { source.popFront(); }
 
-            static if(is(typeof(.moveBack(source))))
+            static if(is(typeof(source.moveBack())))
             {
                 ElementType!R moveFront()
                 {
-                    return .moveBack(source);
+                    return source.moveBack();
                 }
             }
 
-            static if(is(typeof(.moveFront(source))))
+            static if(is(typeof(source.moveFront())))
             {
                 ElementType!R moveBack()
                 {
-                    return .moveFront(source);
+                    return source.moveFront();
                 }
             }
 
@@ -284,11 +284,11 @@ if (isBidirectionalRange!(Unqual!Range))
                     }
                 }
 
-                static if (is(typeof(.moveAt(source, 0))))
+                static if (is(typeof(source.moveAt(0))))
                 {
                     ElementType!R moveAt(IndexType index)
                     {
-                        return .moveAt(source, retroIndex(index));
+                        return source.moveAt(retroIndex(index));
                     }
                 }
 
@@ -516,7 +516,7 @@ body
             {
                 ElementType!R moveFront()
                 {
-                    return .moveFront(source);
+                    return source.moveFront();
                 }
             }
 
@@ -572,7 +572,7 @@ body
                     ElementType!R moveBack()
                     {
                         eliminateSlackElements();
-                        return .moveBack(source);
+                        return source.moveBack();
                     }
                 }
 
@@ -596,11 +596,11 @@ body
                 /**
                    Forwards to $(D moveAt(source, n)).
                 */
-                static if (is(typeof(.moveAt(source, 0))))
+                static if (is(typeof(source.moveAt(0))))
                 {
                     ElementType!R moveAt(size_t n)
                     {
-                        return .moveAt(source, _n * n);
+                        return source.moveAt(_n * n);
                     }
                 }
 
@@ -947,7 +947,7 @@ if (Ranges.length > 0 &&
                     foreach (i, Unused; R)
                     {
                         if (source[i].empty) continue;
-                        return .moveFront(source[i]);
+                        return source[i].moveFront();
                     }
                     assert(false);
                 }
@@ -982,7 +982,7 @@ if (Ranges.length > 0 &&
                         foreach_reverse (i, Unused; R)
                         {
                             if (source[i].empty) continue;
-                            return .moveBack(source[i]);
+                            return source[i].moveBack();
                         }
                         assert(false);
                     }
@@ -1046,12 +1046,12 @@ if (Ranges.length > 0 &&
                         {
                             static if (isInfinite!(Range))
                             {
-                                return .moveAt(source[i], index);
+                                return source[i].moveAt(index);
                             }
                             else
                             {
                                 immutable length = source[i].length;
-                                if (index < length) return .moveAt(source[i], index);
+                                if (index < length) return source[i].moveAt(index);
                                 index -= length;
                             }
                         }
@@ -1830,7 +1830,7 @@ if (isInputRange!(Unqual!Range) &&
             assert(!empty,
                 "Attempting to move the front of an empty "
                 ~ Take.stringof);
-            return .moveFront(source);
+            return source.moveFront();
         }
     }
 
@@ -1918,7 +1918,7 @@ if (isInputRange!(Unqual!Range) &&
                 assert(!empty,
                     "Attempting to move the back of an empty "
                     ~ Take.stringof);
-                return .moveAt(source, this.length - 1);
+                return source.moveAt(this.length - 1);
             }
 
             auto moveAt(size_t index)
@@ -1926,7 +1926,7 @@ if (isInputRange!(Unqual!Range) &&
                 assert(index < length,
                     "Attempting to index out of the bounds of a "
                     ~ Take.stringof);
-                return .moveAt(source, index);
+                return source.moveAt(index);
             }
         }
     }
@@ -2175,7 +2175,7 @@ if (isInputRange!R)
                     assert(!empty,
                         "Attempting to move the front of an empty "
                         ~ typeof(this).stringof);
-                    return .moveFront(_input);
+                    return _input.moveFront();
                 }
             }
 
@@ -3655,7 +3655,7 @@ struct Zip(Ranges...)
     {
         ElementType moveFront()
         {
-            @property tryMoveFront(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
+            @property tryMoveFront(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].moveFront();}
             //ElementType(tryMoveFront!0, tryMoveFront!1, ...)
             return mixin(q{ElementType(%(tryMoveFront!%s, %))}.format(iota(0, R.length)));
         }
@@ -3684,7 +3684,7 @@ struct Zip(Ranges...)
             {
                 //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
 
-                @property tryMoveBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
+                @property tryMoveBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].moveFront();}
                 //ElementType(tryMoveBack!0, tryMoveBack!1, ...)
                 return mixin(q{ElementType(%(tryMoveBack!%s, %))}.format(iota(0, R.length)));
             }
@@ -3865,8 +3865,8 @@ struct Zip(Ranges...)
                 //TODO: Fixme! This may create an out of bounds access
                 //for StoppingPolicy.longest
 
-                //ElementType(.moveAt(ranges[0], n), .moveAt(ranges[1], n), ..., )
-                return mixin (q{ElementType(%(.moveAt(ranges[%s], n)%|, %))}.format(iota(0, R.length)));
+                //ElementType(ranges[0].moveAt(n), ranges[1].moveAt(n), ..., )
+                return mixin (q{ElementType(%(ranges[%s].moveAt(n)%|, %))}.format(iota(0, R.length)));
             }
         }
     }
@@ -5388,7 +5388,7 @@ struct FrontTransversal(Ror,
     {
         ElementType moveFront()
         {
-            return .moveFront(_input.front);
+            return _input.front.moveFront();
         }
     }
 
@@ -5445,7 +5445,7 @@ struct FrontTransversal(Ror,
         {
             ElementType moveBack()
             {
-                return .moveFront(_input.back);
+                return _input.back.moveFront();
             }
         }
 
@@ -5478,7 +5478,7 @@ struct FrontTransversal(Ror,
         {
             ElementType moveAt(size_t n)
             {
-                return .moveFront(_input[n]);
+                return _input[n].moveFront();
             }
         }
         /// Ditto
@@ -5670,7 +5670,7 @@ struct Transversal(Ror,
     {
         E moveFront()
         {
-            return .moveAt(_input.front, _n);
+            return _input.front.moveAt(_n);
         }
     }
 
@@ -5727,7 +5727,7 @@ struct Transversal(Ror,
         {
             E moveBack()
             {
-                return .moveAt(_input.back, _n);
+                return _input.back.moveAt(_n);
             }
         }
 
@@ -5762,7 +5762,7 @@ struct Transversal(Ror,
         {
             E moveAt(size_t n)
             {
-                return .moveAt(_input[n], _n);
+                return _input[n].moveAt(_n);
             }
         }
 
@@ -6098,7 +6098,7 @@ struct Indexed(Source, Indices)
         auto moveFront()
         {
             assert(!empty);
-            return .moveAt(_source, _indices.front);
+            return _source.moveAt(_indices.front);
         }
     }
 
@@ -6135,7 +6135,7 @@ struct Indexed(Source, Indices)
             auto moveBack()
             {
                 assert(!empty);
-                return .moveAt(_source, _indices.back);
+                return _source.moveAt(_indices.back);
             }
         }
     }
@@ -6181,7 +6181,7 @@ struct Indexed(Source, Indices)
             /// Ditto
             auto moveAt(size_t index)
             {
-                return .moveAt(_source, _indices[index]);
+                return _source.moveAt(_indices[index]);
             }
         }
     }

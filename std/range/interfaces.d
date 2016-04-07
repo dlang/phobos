@@ -332,7 +332,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
             @property E front() { return _range.front; }
 
             E moveFront() {
-                return .moveFront(_range);
+                return _range.moveFront();
             }
 
             void popFront() { _range.popFront(); }
@@ -354,7 +354,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                 @property E back() { return _range.back; }
 
                 E moveBack() {
-                    return .moveBack(_range);
+                    return _range.moveBack();
                 }
 
                 void popBack() { return _range.popBack(); }
@@ -372,7 +372,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                 }
 
                 E moveAt(size_t index) {
-                    return .moveAt(_range, index);
+                    return _range.moveAt(index);
                 }
 
                 static if (hasAssignableElements!R) {

@@ -414,7 +414,7 @@ Range partition(alias predicate,
                 }
                 else
                 {
-                    auto t1 = moveFront(r), t2 = moveBack(r);
+                    auto t1 = r.moveFront(), t2 = r.moveBack();
                     r.front = t2;
                     r.back = t1;
                 }
@@ -1530,11 +1530,11 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-    import std.algorithm : move; // FIXME
+        import std.algorithm.mutation : move;
 
         for (; sortedLen < range.length; ++sortedLen)
         {
-            T item = moveAt(range, sortedLen);
+            T item = range.moveAt(sortedLen);
             size_t lower = 0;
             size_t upper = sortedLen;
             while (upper != lower)
@@ -1548,8 +1548,8 @@ private template TimSortImpl(alias pred, R)
             //11 instructions vs 7 in the innermost loop [checked on Win32]
             //moveAll(retro(range[lower .. sortedLen]),
             //            retro(range[lower+1 .. sortedLen+1]));
-            for(upper=sortedLen; upper>lower; upper--)
-                range[upper] = moveAt(range, upper-1);
+            for(upper=sortedLen; upper > lower; upper--)
+                range[upper] = range.moveAt(upper - 1);
             range[lower] = move(item);
         }
     }

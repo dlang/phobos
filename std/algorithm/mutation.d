@@ -2407,8 +2407,8 @@ void swapAt(R)(auto ref R r, size_t i1, size_t i2)
     else
     {
         if (i1 == i2) return;
-        auto t1 = moveAt(r, i1);
-        auto t2 = moveAt(r, i2);
+        auto t1 = r.moveAt(i1);
+        auto t2 = r.moveAt(i2);
         r[i2] = t1;
         r[i1] = t2;
     }
