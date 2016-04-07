@@ -189,6 +189,7 @@ to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
  */
 module std.range;
 
+import std.algorithm.mutation: hasMobileElements, moveFront, moveBack, moveAt;
 public import std.range.primitives;
 public import std.range.interfaces;
 public import std.array;

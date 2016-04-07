@@ -20,6 +20,8 @@ Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
 */
 module std.container.binaryheap;
 
+
+import std.algorithm.mutation: moveFront, moveBack, moveAt;
 import std.range.primitives;
 import std.traits;
 
