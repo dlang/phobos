@@ -41,10 +41,29 @@ template BacktrackingMatcher(bool CTregex)
         //backtracking machine state
         uint pc, counter;
         DataIndex lastState = 0;    //top of state stack
-        DataIndex[] trackers;
         static if(!CTregex)
             uint infiniteNesting;
         size_t[] memory;
+        Trace[]  merge;
+        static struct Trace
+        {
+            ulong mask;
+            size_t offset;
+
+            bool mark(size_t idx)
+            {
+                auto d = idx - offset;
+                if(d < 64) // including overflow
+                {
+                    auto p = mask & (1UL<<d);
+                    mask |= 1UL<<d;
+                    return p != 0;
+                }
+                offset = idx;
+                mask = 1;
+                return false;
+            }
+        }
         //local slice of matches, global for backref
         Group!DataIndex[] matches, backrefed;
 
@@ -57,8 +76,7 @@ template BacktrackingMatcher(bool CTregex)
 
         static size_t initialMemory(const ref RegEx re)
         {
-            return (re.ngroup+1)*DataIndex.sizeof //trackers
-                + stackSize(re)*size_t.sizeof;
+            return stackSize(re)*size_t.sizeof + re.hotspotTableSize*Trace.sizeof;
         }
 
         static size_t stackSize(const ref RegEx re)
@@ -99,7 +117,8 @@ template BacktrackingMatcher(bool CTregex)
 
         void initExternalMemory(void[] memBlock)
         {
-            trackers = arrayInChunk!(DataIndex)(re.ngroup+1, memBlock);
+            merge = arrayInChunk!(Trace)(re.hotspotTableSize, memBlock);
+            merge[] = Trace.init;
             memory = cast(size_t[])memBlock;
             memory[0] = 0; //hidden pointer
             memory = memory[1..$];
@@ -253,7 +272,6 @@ template BacktrackingMatcher(bool CTregex)
                 pc = 0;
                 counter = 0;
                 lastState = 0;
-                infiniteNesting = -1;//intentional
                 auto start = s._index;
                 debug(std_regex_matcher)
                     writeln("Try match starting at ", s[index..s.lastIndex]);
@@ -379,7 +397,6 @@ template BacktrackingMatcher(bool CTregex)
                             goto L_backtrack;
                         break;
                     case IR.InfiniteStart, IR.InfiniteQStart:
-                        trackers[infiniteNesting+1] = index;
                         pc += re.ir[pc].data + IRL!(IR.InfiniteStart);
                         //now pc is at end IR.Infinite(Q)End
                         uint len = re.ir[pc].data;
@@ -387,26 +404,21 @@ template BacktrackingMatcher(bool CTregex)
                         if(re.ir[pc].code == IR.InfiniteEnd)
                         {
                             pushState(pc+IRL!(IR.InfiniteEnd), counter);
-                            infiniteNesting++;
                             pc -= len;
                         }
                         else
                         {
-                            infiniteNesting++;
                             pushState(pc - len, counter);
-                            infiniteNesting--;
                             pc += IRL!(IR.InfiniteEnd);
                         }
                         break;
                     case IR.InfiniteBloomStart:
-                        trackers[infiniteNesting+1] = index;
                         pc += re.ir[pc].data + IRL!(IR.InfiniteBloomStart);
                         //now pc is at end IR.InfiniteBloomEnd
                         uint len = re.ir[pc].data;
                         uint filterIdx = re.ir[pc+2].raw;
                         if(re.filters[filterIdx][front])
                             pushState(pc+IRL!(IR.InfiniteBloomEnd), counter);
-                        infiniteNesting++;
                         pc -= len;
                         break;
                     case IR.RepeatStart, IR.RepeatQStart:
@@ -414,6 +426,11 @@ template BacktrackingMatcher(bool CTregex)
                         break;
                     case IR.RepeatEnd:
                     case IR.RepeatQEnd:
+                        if(merge[re.ir[pc + 1].raw+counter].mark(index))
+                        {
+                            // merged!
+                            goto L_backtrack;
+                        }
                         //len, step, min, max
                         uint len = re.ir[pc].data;
                         uint step =  re.ir[pc+2].raw;
@@ -447,46 +464,33 @@ template BacktrackingMatcher(bool CTregex)
                         break;
                     case IR.InfiniteEnd:
                     case IR.InfiniteQEnd:
-                        uint len = re.ir[pc].data;
                         debug(std_regex_matcher) writeln("Infinited nesting:", infiniteNesting);
-                        assert(infiniteNesting < trackers.length);
-
-                        if(trackers[infiniteNesting] == index)
-                        {//source not consumed
-                            pc += IRL!(IR.InfiniteEnd);
-                            infiniteNesting--;
-                            break;
+                        if(merge[re.ir[pc + 1].raw+counter].mark(index))
+                        {
+                            // merged!
+                            goto L_backtrack;
                         }
-                        else
-                            trackers[infiniteNesting] = index;
+                        uint len = re.ir[pc].data;
                         int test;
                         if(re.ir[pc].code == IR.InfiniteEnd)
                         {
-                            infiniteNesting--;
                             pushState(pc + IRL!(IR.InfiniteEnd), counter);
-                            infiniteNesting++;
                             pc -= len;
                         }
                         else
                         {
                             pushState(pc-len, counter);
                             pc += IRL!(IR.InfiniteEnd);
-                            infiniteNesting--;
                         }
                         break;
                     case IR.InfiniteBloomEnd:
-                        uint len = re.ir[pc].data;
                         debug(std_regex_matcher) writeln("Infinited nesting:", infiniteNesting);
-                        assert(infiniteNesting < trackers.length);
-
-                        if(trackers[infiniteNesting] == index)
-                        {//source not consumed
-                            pc += IRL!(IR.InfiniteBloomEnd);
-                            infiniteNesting--;
-                            break;
+                        if(merge[re.ir[pc + 1].raw+counter].mark(index))
+                        {
+                            // merged!
+                            goto L_backtrack;
                         }
-                        else
-                            trackers[infiniteNesting] = index;
+                        uint len = re.ir[pc].data;
                         uint filterIdx = re.ir[pc+2].raw;
                         if(re.filters[filterIdx][front])
                         {
@@ -497,6 +501,11 @@ template BacktrackingMatcher(bool CTregex)
                         pc -= len;
                         break;
                     case IR.OrEnd:
+                        if(merge[re.ir[pc + 1].raw+counter].mark(index))
+                        {
+                            // merged!
+                            goto L_backtrack;
+                        }
                         pc += IRL!(IR.OrEnd);
                         break;
                     case IR.OrStart:
@@ -681,7 +690,7 @@ template BacktrackingMatcher(bool CTregex)
             //helper function, saves engine state
             void pushState(uint pc, uint counter)
             {
-                if(stateSize + trackers.length + matches.length > stackAvail)
+                if(stateSize + matches.length > stackAvail)
                 {
                     newStack();
                     lastState = 0;
@@ -691,11 +700,6 @@ template BacktrackingMatcher(bool CTregex)
                 lastState += stateSize;
                 memory[lastState .. lastState + 2 * matches.length] = (cast(size_t[])matches)[];
                 lastState += 2*matches.length;
-                if(trackers.length)
-                {
-                    memory[lastState .. lastState + trackers.length] = trackers[];
-                    lastState += trackers.length;
-                }
                 debug(std_regex_matcher)
                     writefln("Saved(pc=%s) front: %s src: %s",
                         pc, front, s[index..s.lastIndex]);
@@ -706,11 +710,6 @@ template BacktrackingMatcher(bool CTregex)
             {
                 if(!lastState)
                     return prevStack();
-                if (trackers.length)
-                {
-                    lastState -= trackers.length;
-                    trackers[] = memory[lastState .. lastState + trackers.length];
-                }
                 lastState -= 2*matches.length;
                 auto pm = cast(size_t[])matches;
                 pm[] = memory[lastState .. lastState + 2 * matches.length];
@@ -772,9 +771,7 @@ struct CtContext
 {
     import std.conv;
     //dirty flags
-    bool counter, infNesting;
-    // to make a unique advancement counter per nesting level of loops
-    int curInfLoop, nInfLoops;
+    bool counter;
     //to mark the portion of matches to save
     int match, total_matches;
     int reserved;
@@ -812,12 +809,6 @@ struct CtContext
                     stackPop(counter);"
             : "
                     counter = 0;";
-        if(infNesting)
-        {
-            text ~= ctSub(`
-                    stackPop(trackers[0..$$]);
-                    `, curInfLoop + 1);
-        }
         if(match < total_matches)
         {
             text ~= ctSub("
@@ -835,7 +826,7 @@ struct CtContext
     string saveCode(uint pc, string count_expr="counter")
     {
         string text = ctSub("
-                    if(stackAvail < $$*(Group!(DataIndex)).sizeof/size_t.sizeof + trackers.length + $$)
+                    if(stackAvail < $$*(Group!(DataIndex)).sizeof/size_t.sizeof + $$)
                     {
                         newStack();
                         lastState = 0;
@@ -846,12 +837,6 @@ struct CtContext
         else
             text ~= ctSub("
                     stackPush(matches[$$..$]);", reserved);
-        if(infNesting)
-        {
-            text ~= ctSub(`
-                    stackPush(trackers[0..$$]);
-                    `, curInfLoop + 1);
-        }
         text ~= counter ? ctSub("
                     stackPush($$);", count_expr) : "";
         text ~= ctSub("
@@ -887,19 +872,12 @@ struct CtContext
             bool infLoop =
                 ir[0].code == IR.InfiniteStart || ir[0].code == IR.InfiniteQStart ||
                 ir[0].code == IR.InfiniteBloomStart;
-            infNesting = infNesting || infLoop;
-            if(infLoop)
-            {
-                curInfLoop++;
-                nInfLoops = max(nInfLoops, curInfLoop+1);
-            }
+
             counter = counter ||
                 ir[0].code == IR.RepeatStart || ir[0].code == IR.RepeatQStart;
             uint len = ir[0].data;
             auto nir = ir[ir[0].length .. ir[0].length+len];
             r = ctGenBlock(nir, addr+1);
-            if(infLoop)
-                curInfLoop--;
             //start/end codegen
             //r.addr is at last test+ jump of loop, addr+1 is body of loop
             nir = ir[ir[0].length + len .. $];
@@ -1038,18 +1016,17 @@ struct CtContext
         {
         case IR.InfiniteStart, IR.InfiniteQStart, IR.InfiniteBloomStart:
             r ~= ctSub( `
-                    trackers[$$] = DataIndex.max;
-                    goto case $$;`, curInfLoop, fixup);
+                    goto case $$;`, fixup);
             ir = ir[ir[0].length..$];
             break;
         case IR.InfiniteEnd:
             testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd) .. $],addr + 1);
             r ~= ctSub( `
-                    if(trackers[$$] == index)
-                    {//source not consumed
-                        goto case $$;
+                    if(merge[$$+counter].mark(index))
+                    {
+                        // merged!
+                        goto L_backtrack;
                     }
-                    trackers[$$] = index;
 
                     $$
                     {
@@ -1058,20 +1035,19 @@ struct CtContext
                     goto case $$;
                 case $$: //restore state and go out of loop
                     $$
-                    goto case;`, curInfLoop, addr+2,
-                    curInfLoop, testCode, saveCode(addr+1),
-                    fixup, addr+1, restoreCode());
+                    goto case;`, ir[1].raw, testCode, saveCode(addr+1), fixup,
+                    addr+1, restoreCode());
             ir = ir[ir[0].length..$];
             break;
         case IR.InfiniteBloomEnd:
             //TODO: check bloom filter and skip on failure
             testCode = ctQuickTest(ir[IRL!(IR.InfiniteBloomEnd) .. $],addr + 1);
             r ~= ctSub( `
-                    if(trackers[$$] == index)
-                    {//source not consumed
-                        goto case $$;
+                    if(merge[$$+counter].mark(index))
+                    {
+                        // merged!
+                        goto L_backtrack;
                     }
-                    trackers[$$] = index;
 
                     $$
                     {
@@ -1080,20 +1056,19 @@ struct CtContext
                     goto case $$;
                 case $$: //restore state and go out of loop
                     $$
-                    goto case;`, curInfLoop, addr+2,
-                    curInfLoop, testCode, saveCode(addr+1),
-                    fixup, addr+1, restoreCode());
+                    goto case;`, ir[1].raw, testCode, saveCode(addr+1), fixup,
+                    addr+1, restoreCode());
             ir = ir[ir[0].length..$];
             break;
         case IR.InfiniteQEnd:
             testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd) .. $],addr + 1);
             auto altCode = testCode.length ? ctSub("else goto case $$;", fixup) : "";
             r ~= ctSub( `
-                    if(trackers[$$] == index)
-                    {//source not consumed
-                        goto case $$;
+                    if(merge[$$+counter].mark(index))
+                    {
+                        // merged!
+                        goto L_backtrack;
                     }
-                    trackers[$$] = index;
 
                     $$
                     {
@@ -1103,9 +1078,9 @@ struct CtContext
                     $$
                 case $$://restore state and go inside loop
                     $$
-                    goto case $$;`, curInfLoop, addr+2,
-                    curInfLoop, testCode, saveCode(addr+1),
-                    addr+2, altCode, addr+1, restoreCode(), fixup);
+                    goto case $$;`, ir[1].raw,
+                    testCode, saveCode(addr+1), addr+2, altCode,
+                    addr+1, restoreCode(), fixup);
             ir = ir[ir[0].length..$];
             break;
         case IR.RepeatStart, IR.RepeatQStart:
@@ -1120,12 +1095,17 @@ struct CtContext
             uint min = ir[3].raw;
             uint max = ir[4].raw;
             r ~= ctSub(`
+                    if(merge[$$+counter].mark(index))
+                    {
+                        // merged!
+                        goto L_backtrack;
+                    }
                     if(counter < $$)
                     {
                         debug(std_regex_matcher) writeln("RepeatEnd min case pc=", $$);
                         counter += $$;
                         goto case $$;
-                    }`,  min, addr, step, fixup);
+                    }`,  ir[1].raw, min, addr, step, fixup);
             if(ir[0].code == IR.RepeatEnd)
             {
                 string counter_expr = ctSub("counter % $$", step);
