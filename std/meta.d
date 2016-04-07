@@ -1309,6 +1309,66 @@ private template staticMerge(alias cmp, int half, Seq...)
     }
 }
 
+/**
+ * Allows subsetting of alias sequence that are not
+ * necessarily adjacent to each other, i.e. cannot be sliced.
+ *
+ * Params:
+ *  range = a range object preferably an unsigned array to index T
+ *  T = a set of types to be indexed
+ *
+ * Returns:
+ *  alias sequence of selected types and evaluates to
+ *  `AliasSeq!(T[range[0]], T[range[1]], ..., T[range[n]])`.
+ *
+ */
+template staticSubset(alias range, T...)
+{
+    import std.traits : isArray, isNarrowString;
+
+    alias ArrT = typeof(range);
+    static if (isArray!ArrT && !isNarrowString!ArrT)
+    {
+        static if (range.length == 0)
+        {
+            alias staticSubset = AliasSeq!();
+        }
+        else
+        {
+            alias staticSubset = AliasSeq!(T[range[0]], staticSubset!(range[1 .. $], T));
+        }
+    }
+    else
+    {
+        import std.range.primitives : isInputRange;
+        static if (isInputRange!ArrT)
+        {
+            import std.array : array;
+            alias staticSubset = staticSubset!(array(range), T);
+        }
+        else
+        {
+            static assert(false, "Cannot index range of type " ~ ArrT.stringof ~ ".");
+        }
+    }
+}
+
+///
+unittest
+{
+    alias T1 = staticSubset!([0, 2, 1, 1, 2, 0], int, char, double);
+    static assert(is (T1 == AliasSeq!(int, double, char, char, double, int)));
+
+    alias T2 = staticSubset!([0, 2], int, char, double);
+    static assert(is (T2 == AliasSeq!(int, double)));
+
+    alias T3 = staticSubset!([1, 3, 5], int, char, double, string, ulong, dchar, size_t);
+    static assert(is (T3 == AliasSeq!(char, string, dchar)));
+    import std.range : iota;
+    alias T4 = staticSubset!(iota(0, 4), int, char, double, string, ulong, dchar, size_t);
+    static assert(is (T4 == AliasSeq!(int, char, double, string)));
+}
+
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
 private:
 
