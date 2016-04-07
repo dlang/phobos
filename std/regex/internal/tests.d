@@ -745,6 +745,16 @@ unittest
     assert(!match("a"d, "aa"d));
 }
 
+// bugzilla 7551
+unittest
+{
+    auto r = regex("[]abc]*");
+    assert("]ab".matchFirst(r).hit == "]ab");
+    assertThrown(regex("[]"));
+    auto r2 = regex("[]abc--ab]*");
+    assert("]ac".matchFirst(r2).hit == "]");
+}
+
 unittest
 {//bugzilla 7674
     assert("1234".replace(regex("^"), "$$") == "$1234");
@@ -968,12 +978,22 @@ unittest
         assert(matchAll(v, ctPat2).front.hit == v);
 }
 
-// bugzilla 7551
+// bugzilla 14615
 unittest
 {
-    auto r = regex("[]abc]*");
-    assert("]ab".matchFirst(r).hit == "]ab");
-    assertThrown(regex("[]"));
-    auto r2 = regex("[]abc--ab]*");
-    assert("]ac".matchFirst(r2).hit == "]");
+    import std.stdio : writeln;
+    import std.regex : replaceFirst, replaceFirstInto, regex;
+    import std.array : appender;
+
+    auto example = "Hello, world!";
+    auto pattern = regex("^Hello, (bug)");  // won't find this one
+    auto result = replaceFirst(example, pattern, "$1 Sponge Bob");
+    assert(result == "Hello, world!");  // Ok.
+
+    auto sink = appender!string;
+    replaceFirstInto(sink, example, pattern, "$1 Sponge Bob");
+    assert(sink.data == "Hello, world!");
+    replaceAllInto(sink, example, pattern, "$1 Sponge Bob");
+    assert(sink.data == "Hello, world!Hello, world!");
 }
+
