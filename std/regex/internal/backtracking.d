@@ -59,9 +59,12 @@ template BacktrackingMatcher(bool CTregex)
                     mask |= 1UL<<d;
                     return p != 0;
                 }
-                offset = idx;
-                mask = 1;
-                return false;
+                else
+                {
+                    offset = idx;
+                    mask = 1;
+                    return false;
+                }
             }
         }
         //local slice of matches, global for backref
@@ -635,16 +638,19 @@ template BacktrackingMatcher(bool CTregex)
 
         bool prevStack()
         {
-            import core.stdc.stdlib;
             size_t* prev = memory.ptr-1;
             prev = cast(size_t*)*prev;//take out hidden pointer
             if(!prev)
                 return false;
-            free(memory.ptr);//last segment is freed in RegexMatch
-            immutable size = initialStack*(stateSize + 2*re.ngroup);
-            memory = prev[0..size];
-            lastState = size;
-            return true;
+            else
+            {
+                import core.stdc.stdlib;
+                free(memory.ptr);//last segment is freed in RegexMatch
+                immutable size = initialStack*(stateSize + 2*re.ngroup);
+                memory = prev[0..size];
+                lastState = size;
+                return true;
+            }
         }
 
         void stackPush(T)(T val)
@@ -775,10 +781,11 @@ struct CtContext
     //to mark the portion of matches to save
     int match, total_matches;
     int reserved;
+    CodepointSet[] charsets;
 
 
     //state of codegenerator
-    struct CtState
+    static struct CtState
     {
         string code;
         int addr;
@@ -789,6 +796,7 @@ struct CtContext
         match = 1;
         reserved = 1; //first match is skipped
         total_matches = re.ngroup;
+        charsets = re.charsets;
     }
 
     CtContext lookaround(uint s, uint e)
@@ -1248,13 +1256,27 @@ struct CtContext
                     $$`, bailOut, addr >= 0 ? "next();" :"",nextInstr);
             break;
         case IR.CodepointSet:
-            code ~= ctSub( `
+            if(charsets.length)
+            {
+                string name = `func_`~to!string(addr+1);
+                string funcCode = charsets[ir[0].data].toSourceCode(name);
+                code ~= ctSub( `
+                    static $$
+                    if(atEnd || !$$(front))
+                        $$
+                    $$
+                $$`, funcCode, name, bailOut, addr >= 0 ? "next();" :"", nextInstr);
+            }
+            else
+                code ~= ctSub( `
                     if(atEnd || !re.charsets[$$].scanFor(front))
                         $$
                     $$
                 $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
             break;
         case IR.Trie:
+            if(charsets.length && charsets[ir[0].data].byInterval.length  <= 8)
+                goto case IR.CodepointSet;
             code ~= ctSub( `
                     if(atEnd || !re.matchers[$$][front])
                         $$
