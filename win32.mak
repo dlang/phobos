@@ -263,11 +263,8 @@ SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_STD_C_WIN) \
 	$(SRC_STD_INTERNAL) \
 	$(SRC_STD_INTERNAL_DIGEST) \
-	$(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS) \
-	$(SRC_ETC) \
-	$(SRC_ETC_C) \
-	$(SRC_EXPERIMENTAL)
+	$(SRC_ETC)
 
 SRC_TO_COMPILE= $(SRC_STD_ALL) \
 	$(SRC_STD_ALGO) \
@@ -475,7 +472,10 @@ UNITTEST_OBJS= \
 		unittest5.obj \
 		unittest6.obj \
 		unittest7.obj \
-		unittest8.obj
+		unittest8.obj \
+		unittest9.obj \
+		unittest10.obj \
+		unittest11.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
@@ -489,7 +489,10 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_6)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_STD_REST)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8.obj $(SRC_ETC_C)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9.obj $(SRC_EXPERIMENTAL)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest10.obj $(SRC_STD_INTERNAL_MATH)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest11.obj $(SRC_TO_COMPILE_NOT_STD)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
