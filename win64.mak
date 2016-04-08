@@ -276,11 +276,15 @@ SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 SRC_ETC=
 
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d \
-    etc\c\odbc\sql.d etc\c\odbc\sqlext.d etc\c\odbc\sqltypes.d etc\c\odbc\sqlucode.d
+	etc\c\odbc\sql.d etc\c\odbc\sqlext.d etc\c\odbc\sqltypes.d etc\c\odbc\sqlucode.d
 
 SRC_EXPERIMENTAL= std\experimental\typecons.d
 
-SRC_TO_COMPILE_NOT_STD= \
+SRC_TO_COMPILE= \
+	$(SRC_STD_ALL) \
+	$(SRC_STD_ALGO) \
+	$(SRC_STD_RANGE) \
+	$(SRC_STD_NDSLICE) \
 	$(SRC_STD_REGEX) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_C) \
@@ -293,12 +297,6 @@ SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_ETC) \
 	$(SRC_ETC_C) \
 	$(SRC_EXPERIMENTAL)
-
-SRC_TO_COMPILE= $(SRC_STD_ALL) \
-	$(SRC_STD_ALGO) \
-	$(SRC_STD_RANGE) \
-	$(SRC_STD_NDSLICE) \
-	$(SRC_TO_COMPILE_NOT_STD)
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
@@ -512,7 +510,12 @@ UNITTEST_OBJS= \
 		unittest6i.obj \
 		unittest6j.obj \
 		unittest7.obj \
-		unittest8.obj \
+		unittest8a.obj \
+		unittest8b.obj \
+		unittest8c.obj \
+		unittest8d.obj \
+		unittest8e.obj \
+		unittest8f.obj \
 		unittest9.obj
 
 unittest : $(LIB)
@@ -538,7 +541,12 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6i.obj $(SRC_STD_6i)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_LOGGER)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8a.obj $(SRC_STD_REGEX)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8b.obj $(SRC_STD_NET)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8f.obj $(SRC_EXPERIMENTAL)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9.obj $(SRC_STD_9)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
 	    $(ZLIB) $(DRUNTIMELIB)
