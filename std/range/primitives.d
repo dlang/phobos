@@ -1253,7 +1253,7 @@ static if (isRandomAccessRange!R) swap(r[], r.front);
  */
 template hasSwappableElements(R)
 {
-    import std.algorithm : swap;
+    import std.algorithm.mutation : swap;
     enum bool hasSwappableElements = isInputRange!R && is(typeof(
     (inout int = 0)
     {
@@ -1862,7 +1862,7 @@ ElementType!R moveFront(R)(R r)
     } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
         return r.front;
     } else static if (is(typeof(&(r.front())) == ElementType!R*)) {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
         return move(r.front);
     } else {
         static assert(0,
@@ -1911,7 +1911,7 @@ ElementType!R moveBack(R)(R r)
     } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
         return r.back;
     } else static if (is(typeof(&(r.back())) == ElementType!R*)) {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
         return move(r.back);
     } else {
         static assert(0,
@@ -1950,7 +1950,7 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
     } else static if (!hasElaborateCopyConstructor!(ElementType!(R))) {
         return r[i];
     } else static if (is(typeof(&r[i]) == ElementType!R*)) {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
         return move(r[i]);
     } else {
         static assert(0,
