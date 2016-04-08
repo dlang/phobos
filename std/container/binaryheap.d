@@ -277,7 +277,7 @@ and $(D length == capacity), throws an exception.
             auto parentIdx = (n - 1) / 2;
             if (!comp(_store[parentIdx], _store[n])) break; // done!
             // must swap and continue
-            swapAt(_store, parentIdx, n);
+            _store.swapAt(parentIdx, n);
             n = parentIdx;
         }
         ++_length;
