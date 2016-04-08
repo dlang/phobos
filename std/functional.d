@@ -1067,7 +1067,7 @@ unittest
 {
     ulong fib(ulong n)
     {
-        return n < 2 ? 1 : memoize!fib(n - 2) + memoize!fib(n - 1);
+        return n <= 2 ? 1 : memoize!fib(n - 2) + memoize!fib(n - 1);
     }
     assert(fib(10) == 89);
 }
