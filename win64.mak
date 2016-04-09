@@ -106,49 +106,104 @@ test.exe : test.obj $(LIB)
 #	ti_bit.obj ti_Abit.obj
 
 # The separation is a workaround for bug 4904 (optlink bug 3372).
-# SRCS_1 is the heavyweight modules which are most likely to trigger the bug.
-# Do not add any more modules to SRCS_1.
-SRC_STD_1_HEAVY= std\stdio.d std\stdiobase.d \
-	std\string.d std\format.d \
+SRC_STD_1_HEAVY= \
+	std\stdio.d \
+	std\stdiobase.d \
+	std\string.d \
+	std\format.d \
 	std\file.d
 
-SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
+SRC_STD_2a_HEAVY= \
+	std\array.d \
+	std\functional.d \
+	std\path.d \
+	std\outbuffer.d \
+	std\utf.d
 
-SRC_STD_math=std\math.d
-SRC_STD_3= std\csv.d std\complex.d std\numeric.d std\bigint.d
-SRC_STD_3c= std\datetime.d std\bitmanip.d std\typecons.d
+SRC_STD_math= \
+	std\math.d
 
-SRC_STD_3a= std\uni.d std\base64.d std\ascii.d \
-	std\demangle.d std\uri.d std\mmfile.d std\getopt.d
+SRC_STD_3= \
+	std\csv.d \
+	std\complex.d \
+	std\numeric.d \
+	std\bigint.d
 
-SRC_STD_3b= std\signals.d std\meta.d std\typetuple.d std\traits.d \
-	std\encoding.d std\xml.d \
+SRC_STD_3c= \
+	std\datetime.d \
+	std\bitmanip.d \
+	std\typecons.d
+
+SRC_STD_3a= \
+	std\uni.d \
+	std\base64.d \
+	std\ascii.d \
+	std\demangle.d \
+	std\uri.d \
+	std\mmfile.d \
+	std\getopt.d
+
+SRC_STD_3b= \
+	std\signals.d \
+	std\meta.d \
+	std\typetuple.d \
+	std\traits.d \
+	std\encoding.d \
+	std\xml.d \
 	std\random.d \
 	std\exception.d \
 	std\compiler.d \
-	std\system.d std\concurrency.d std\concurrencybase.d
+	std\system.d \
+	std\concurrency.d \
+	std\concurrencybase.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
-SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
-	std\digest\ripemd.d std\digest\digest.d std\digest\hmac.d
+SRC_STD_DIGEST= \
+	std\digest\crc.d \
+	std\digest\sha.d \
+	std\digest\md.d \
+	std\digest\ripemd.d \
+	std\digest\digest.d \
+	std\digest\hmac.d
 
-SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
-	std\container\dlist.d std\container\rbtree.d std\container\slist.d \
-	std\container\util.d std\container\package.d
+SRC_STD_CONTAINER= \
+	std\container\array.d \
+	std\container\binaryheap.d \
+	std\container\dlist.d \
+	std\container\rbtree.d \
+	std\container\slist.d \
+	std\container\util.d \
+	std\container\package.d
 
-SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
+SRC_STD_4= \
+	std\uuid.d \
+	$(SRC_STD_DIGEST)
 
-SRC_STD_ALGO_1=std\algorithm\package.d std\algorithm\comparison.d \
-	std\algorithm\iteration.d std\algorithm\mutation.d
-SRC_STD_ALGO_2=std\algorithm\searching.d std\algorithm\setops.d \
-	std\algorithm\sorting.d std\algorithm\internal.d
-SRC_STD_ALGO=$(SRC_STD_ALGO_1) $(SRC_STD_ALGO_2)
+SRC_STD_ALGO_1= \
+	std\algorithm\package.d \
+	std\algorithm\comparison.d \
+	std\algorithm\iteration.d \
+	std\algorithm\mutation.d
 
-SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
-	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
+SRC_STD_ALGO_2= \
+	std\algorithm\searching.d \
+	std\algorithm\setops.d \
+	std\algorithm\sorting.d \
+	std\algorithm\internal.d
+
+SRC_STD_ALGO= \
+	$(SRC_STD_ALGO_1) \
+	$(SRC_STD_ALGO_2)
+
+SRC_STD_LOGGER= \
+	std\experimental\logger\core.d \
+	std\experimental\logger\filelogger.d \
+	std\experimental\logger\multilogger.d \
+	std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
-SRC_STD_ALLOC_BB= std\experimental\allocator\building_blocks\affix_allocator.d \
+SRC_STD_ALLOC_BB= \
+	std\experimental\allocator\building_blocks\affix_allocator.d \
 	std\experimental\allocator\building_blocks\allocator_list.d \
 	std\experimental\allocator\building_blocks\bitmapped_block.d \
 	std\experimental\allocator\building_blocks\bucketizer.d \
@@ -164,9 +219,13 @@ SRC_STD_ALLOC_BB= std\experimental\allocator\building_blocks\affix_allocator.d \
 	std\experimental\allocator\building_blocks\stats_collector.d \
 	std\experimental\allocator\building_blocks\package.d
 
-SRC_STD_ALLOC= std\experimental\allocator\common.d std\experimental\allocator\gc_allocator.d \
-	std\experimental\allocator\mallocator.d std\experimental\allocator\mmap_allocator.d \
-	std\experimental\allocator\showcase.d std\experimental\allocator\typed.d \
+SRC_STD_ALLOC= \
+	std\experimental\allocator\common.d \
+	std\experimental\allocator\gc_allocator.d \
+	std\experimental\allocator\mallocator.d \
+	std\experimental\allocator\mmap_allocator.d \
+	std\experimental\allocator\showcase.d \
+	std\experimental\allocator\typed.d \
 	std\experimental\allocator\package.d \
 	$(SRC_STD_ALLOC_BB)
 
@@ -189,11 +248,18 @@ SRC_STD_7= \
 	std\mathspecial.d \
 	std\process.d
 
-SRC_STD_9= $(SRC_STD_ALLOC)
+SRC_STD_9= \
+	$(SRC_STD_ALLOC)
 
-SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
+SRC_STD_ALL= \
+	$(SRC_STD_1_HEAVY) \
+	$(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_math) \
-	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_3c) $(SRC_STD_4) \
+	$(SRC_STD_3) \
+	$(SRC_STD_3a) \
+	$(SRC_STD_3b) \
+	$(SRC_STD_3c) \
+	$(SRC_STD_4) \
 	$(SRC_STD_6a) \
 	$(SRC_STD_6c) \
 	$(SRC_STD_6d) \
@@ -207,78 +273,164 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_LOGGER) \
 	$(SRC_STD_9)
 
-SRC=	unittest.d index.d
+SRC= \
+	unittest.d \
+	index.d
 
-SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
-	std\math.d std\string.d std\path.d std\datetime.d \
-	std\csv.d std\file.d std\compiler.d std\system.d \
-	std\outbuffer.d std\base64.d \
-	std\meta.d std\mmfile.d \
-	std\random.d std\stream.d std\process.d \
-	std\socket.d std\socketstream.d std\format.d \
-	std\stdio.d std\uni.d std\uuid.d \
-	std\cstream.d std\demangle.d \
-	std\signals.d std\typetuple.d std\traits.d \
+SRC_STD= \
+	std\zlib.d \
+	std\zip.d \
+	std\stdint.d \
+	std\conv.d \
+	std\utf.d \
+	std\uri.d \
+	std\math.d \
+	std\string.d \
+	std\path.d \
+	std\datetime.d \
+	std\csv.d \
+	std\file.d \
+	std\compiler.d \
+	std\system.d \
+	std\outbuffer.d \
+	std\base64.d \
+	std\meta.d \
+	std\mmfile.d \
+	std\random.d \
+	std\stream.d \
+	std\process.d \
+	std\socket.d \
+	std\socketstream.d \
+	std\format.d \
+	std\stdio.d \
+	std\uni.d \
+	std\uuid.d \
+	std\cstream.d \
+	std\demangle.d \
+	std\signals.d \
+	std\typetuple.d \
+	std\traits.d \
 	std\getopt.d \
-	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
-	std\functional.d std\array.d std\typecons.d \
-	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
-	std\concurrencybase.d std\stdiobase.d std\parallelism.d \
-	std\exception.d std\ascii.d
+	std\variant.d \
+	std\numeric.d \
+	std\bitmanip.d \
+	std\complex.d \
+	std\mathspecial.d \
+	std\functional.d \
+	std\array.d \
+	std\typecons.d \
+	std\json.d \
+	std\xml.d \
+	std\encoding.d \
+	std\bigint.d \
+	std\concurrency.d \
+	std\concurrencybase.d \
+	std\stdiobase.d \
+	std\parallelism.d \
+	std\exception.d \
+	std\ascii.d
 
-SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\parser.d \
-	std\regex\internal\tests.d std\regex\internal\backtracking.d \
-	std\regex\internal\thompson.d std\regex\internal\kickstart.d \
+SRC_STD_REGEX= \
+	std\regex\internal\ir.d \
+	std\regex\package.d \
+	std\regex\internal\parser.d \
+	std\regex\internal\tests.d \
+	std\regex\internal\backtracking.d \
+	std\regex\internal\thompson.d \
+	std\regex\internal\kickstart.d \
 	std\regex\internal\generator.d
 
-SRC_STD_RANGE= std\range\package.d std\range\primitives.d \
+SRC_STD_RANGE= \
+	std\range\package.d \
+	std\range\primitives.d \
 	std\range\interfaces.d
 
-SRC_STD_NDSLICE= std\experimental\ndslice\package.d \
+SRC_STD_NDSLICE= \
+	std\experimental\ndslice\package.d \
 	std\experimental\ndslice\iteration.d \
 	std\experimental\ndslice\selection.d \
 	std\experimental\ndslice\slice.d \
 	std\experimental\ndslice\internal.d
 
-SRC_STD_NET= std\net\isemail.d std\net\curl.d
+SRC_STD_NET= \
+	std\net\isemail.d \
+	std\net\curl.d
 
-SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
-	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
-	std\c\locale.d std\c\wcharh.d
+SRC_STD_C= \
+	std\c\process.d \
+	std\c\stdlib.d \
+	std\c\time.d \
+	std\c\stdio.d \
+	std\c\math.d \
+	std\c\stdarg.d \
+	std\c\stddef.d \
+	std\c\fenv.d \
+	std\c\string.d \
+	std\c\locale.d \
+	std\c\wcharh.d
 
-SRC_STD_WIN= std\windows\registry.d \
-	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
+SRC_STD_WIN= \
+	std\windows\registry.d \
+	std\windows\iunknown.d \
+	std\windows\syserror.d \
+	std\windows\charset.d
 
-SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
-	std\c\windows\winsock.d std\c\windows\stat.d
+SRC_STD_C_WIN= \
+	std\c\windows\windows.d \
+	std\c\windows\com.d \
+	std\c\windows\winsock.d \
+	std\c\windows\stat.d
 
-SRC_STD_C_LINUX= std\c\linux\linux.d \
-	std\c\linux\socket.d std\c\linux\pthread.d std\c\linux\termios.d \
+SRC_STD_C_LINUX= \
+	std\c\linux\linux.d \
+	std\c\linux\socket.d \
+	std\c\linux\pthread.d \
+	std\c\linux\termios.d \
 	std\c\linux\tipc.d
 
-SRC_STD_C_OSX= std\c\osx\socket.d
+SRC_STD_C_OSX= \
+	std\c\osx\socket.d
 
-SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
+SRC_STD_C_FREEBSD= \
+	std\c\freebsd\socket.d
 
-SRC_STD_INTERNAL= std\internal\cstring.d std\internal\processinit.d \
-	std\internal\unicode_tables.d std\internal\unicode_comp.d std\internal\unicode_decomp.d \
-	std\internal\unicode_grapheme.d std\internal\unicode_norm.d std\internal\scopebuffer.d \
+SRC_STD_INTERNAL= \
+	std\internal\cstring.d \
+	std\internal\processinit.d \
+	std\internal\unicode_tables.d \
+	std\internal\unicode_comp.d \
+	std\internal\unicode_decomp.d \
+	std\internal\unicode_grapheme.d \
+	std\internal\unicode_norm.d \
+	std\internal\scopebuffer.d \
 	std\internal\test\dummyrange.d
 
-SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
+SRC_STD_INTERNAL_DIGEST= \
+	std\internal\digest\sha_SSSE3.d
 
-SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
-	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
-	std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+SRC_STD_INTERNAL_MATH= \
+	std\internal\math\biguintcore.d \
+	std\internal\math\biguintnoasm.d \
+	std\internal\math\biguintx86.d \
+	std\internal\math\gammafunction.d \
+	std\internal\math\errorfunction.d
 
-SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
+SRC_STD_INTERNAL_WINDOWS= \
+	std\internal\windows\advapi32.d
 
 SRC_ETC=
 
-SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d \
-	etc\c\odbc\sql.d etc\c\odbc\sqlext.d etc\c\odbc\sqltypes.d etc\c\odbc\sqlucode.d
+SRC_ETC_C= \
+	etc\c\zlib.d \
+	etc\c\curl.d \
+	etc\c\sqlite3.d \
+	etc\c\odbc\sql.d \
+	etc\c\odbc\sqlext.d \
+	etc\c\odbc\sqltypes.d \
+	etc\c\odbc\sqlucode.d
 
-SRC_EXPERIMENTAL= std\experimental\typecons.d
+SRC_EXPERIMENTAL= \
+	std\experimental\typecons.d
 
 SRC_TO_COMPILE= \
 	$(SRC_STD_ALL) \
@@ -337,7 +489,8 @@ SRC_ZLIB= \
 	etc\c\zlib\osx.mak
 
 
-DOCS=	$(DOC)\object.html \
+DOCS= \
+	$(DOC)\object.html \
 	$(DOC)\core_atomic.html \
 	$(DOC)\core_bitop.html \
 	$(DOC)\core_exception.html \
