@@ -173,7 +173,7 @@ SRC_STD_7= \
 	std\mathspecial.d \
 	std\process.d
 
-SRC_STD_ALL= \
+SRC_STD= \
 	$(SRC_STD_1) \
 	$(SRC_STD_2a) \
 	$(SRC_STD_3) \
@@ -182,59 +182,6 @@ SRC_STD_ALL= \
 	$(SRC_STD_4) \
 	$(SRC_STD_6) \
 	$(SRC_STD_7)
-
-SRC_STD= \
-	std\zlib.d \
-	std\zip.d \
-	std\stdint.d \
-	std\conv.d \
-	std\utf.d \
-	std\uri.d \
-	std\math.d \
-	std\string.d \
-	std\path.d \
-	std\datetime.d \
-	std\csv.d \
-	std\file.d \
-	std\compiler.d \
-	std\system.d \
-	std\outbuffer.d \
-	std\base64.d \
-	std\meta.d \
-	std\mmfile.d \
-	std\random.d \
-	std\stream.d \
-	std\process.d \
-	std\socket.d \
-	std\socketstream.d \
-	std\format.d \
-	std\stdio.d \
-	std\uni.d \
-	std\uuid.d \
-	std\cstream.d \
-	std\demangle.d \
-	std\signals.d \
-	std\typetuple.d \
-	std\traits.d \
-	std\getopt.d \
-	std\variant.d \
-	std\numeric.d \
-	std\bitmanip.d \
-	std\complex.d \
-	std\mathspecial.d \
-	std\functional.d \
-	std\array.d \
-	std\typecons.d \
-	std\json.d \
-	std\xml.d \
-	std\encoding.d \
-	std\bigint.d \
-	std\concurrency.d \
-	std\concurrencybase.d \
-	std\stdiobase.d \
-	std\parallelism.d \
-	std\exception.d \
-	std\ascii.d
 
 SRC_STD_ALGO= \
 	std\algorithm\package.d \
@@ -400,7 +347,7 @@ SRC_ETC_C= \
 	etc\c\odbc\sqlucode.d
 
 SRC_TO_COMPILE= \
-	$(SRC_STD_ALL) \
+	$(SRC_STD) \
 	$(SRC_STD_ALGO) \
 	$(SRC_STD_CONTAINER) \
 	$(SRC_STD_DIGEST) \
