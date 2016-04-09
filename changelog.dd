@@ -5,12 +5,23 @@ $(COMMENT Pending changelog for 2.072. This will get copied to dlang.org and
 )
 
 $(BUGSTITLE Library Changes,
+    $(LI $(RELATIVE_LINK2 process, Process creation in
+        $(STDMODREF process, std.process) was sped up on Posix.))
     $(LI $(XREF range, padLeft) and $(XREF range, padRight) were added.)
     $(LI $(XREF uni, isAlphaNum), which is analogous to $(XREF ascii, isAlphaNum)
         was added.)
 )
 
 $(BUGSTITLE Library Changes,
+
+$(LI $(RELATIVE_LINK2 process, Process creation in
+    $(STDMODREF process, std.process) was sped up on Posix.)
+Previously, Posix systems would attempt to close every file descriptor from 3
+    to the maximum file descriptor number if `inheritFDs` was not specified
+    with `spawnProcess`, `pipeProcess`, etc.
+    $(STDMODREF process, std.process) now uses `poll()` to determine which
+    descriptors need closing.
+)
 
 $(LI $(LNAME2 nextPow2, Added nextPow2 and truncPow2 to std.math.)
     $(P $(XREF range, padLeft) and $(XREF range, padRight) are functions for
