@@ -3388,6 +3388,7 @@ assert(rank(Mode.map  ) == 2);
 template EnumMembers(E)
     if (is(E == enum))
 {
+    import std.meta : AliasSeq;
     // Supply the specified identifier to an constant value.
     template WithIdentifier(string ident)
     {
@@ -3409,18 +3410,24 @@ template EnumMembers(E)
 
     template EnumSpecificMembers(names...)
     {
-        static if (names.length > 0)
+        static if (names.length == 1)
+        {
+            alias EnumSpecificMembers = AliasSeq!(WithIdentifier!(names[0])
+                        .Symbolize!(__traits(getMember, E, names[0])));
+        }
+        else static if (names.length > 0)
         {
             alias EnumSpecificMembers =
-                TypeTuple!(
+                AliasSeq!(
                     WithIdentifier!(names[0])
                         .Symbolize!(__traits(getMember, E, names[0])),
-                    EnumSpecificMembers!(names[1 .. $])
+                    EnumSpecificMembers!(names[1 .. $/2]),
+                    EnumSpecificMembers!(names[$/2..$])
                 );
         }
         else
         {
-            alias EnumSpecificMembers = TypeTuple!();
+            alias EnumSpecificMembers = AliasSeq!();
         }
     }
 
@@ -3457,6 +3464,31 @@ unittest    // duplicated values
         c = 1, d = 1, e
     }
     static assert([ EnumMembers!A ] == [ A.a, A.b, A.c, A.d, A.e ]);
+}
+
+unittest // Bugzilla 14561: huge enums
+{
+    string genEnum()
+    {
+        string result = "enum TLAs {";
+        foreach(c0; '0'..'2'+1)
+            foreach(c1; '0'..'9'+1)
+                foreach(c2; '0'..'9'+1)
+                    foreach(c3; '0'..'9'+1)
+        {
+            result ~= '_';
+            result ~= c0;
+            result ~= c1;
+            result ~= c2;
+            result ~= c3;
+            result ~= ',';
+        }
+        result ~= '}';
+        return result;
+    }
+    mixin(genEnum);
+    static assert(EnumMembers!TLAs[0] == TLAs._0000);
+    static assert(EnumMembers!TLAs[$-1] == TLAs._2999);
 }
 
 unittest

@@ -343,7 +343,10 @@ private template GenericEraseAll(args...)
     {
         alias head = OldAlias!(tuple[0]);
         alias tail = tuple[1 .. $];
-        alias next = GenericEraseAll!(e, tail).result;
+        alias next = AliasSeq!(
+            GenericEraseAll!(e, tail[0..$/2]).result,
+            GenericEraseAll!(e, tail[$/2..$]).result
+            );
 
         static if (isSame!(e, head))
             alias result = next;
@@ -374,11 +377,32 @@ unittest
  */
 template NoDuplicates(TList...)
 {
-    static if (TList.length == 0)
+    template EraseAllN(uint N, T...)
+    {
+        static if (N <= 1)
+        {
+            alias EraseAllN = T;
+        }
+        else
+        {
+            alias EraseAllN = EraseAllN!(N-1, T[1..N], EraseAll!(T[0], T[N..$]));
+        }
+    }
+    static if (TList.length > 500)
+    {
+        enum steps = 16;
+        alias first = NoDuplicates!(TList[0..steps]);
+        alias NoDuplicates = NoDuplicates!(EraseAllN!(first.length, first, TList[steps..$]));
+    }
+    else static if (TList.length == 0)
+    {
         alias NoDuplicates = TList;
+    }
     else
+    {
         alias NoDuplicates =
             AliasSeq!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
+    }
 }
 
 ///
@@ -388,6 +412,10 @@ unittest
 
     alias TL = NoDuplicates!(Types);
     static assert(is(TL == AliasSeq!(int, long, float)));
+
+    // Bugzilla 14561: huge enums
+    alias LongList = Repeat!(1500, int);
+    static assert(NoDuplicates!LongList.length == 1);
 }
 
 unittest
