@@ -1082,6 +1082,14 @@ struct Parser(R)
     //parse and store IR for CodepointSet
     void parseCharset()
     {
+        auto save = re_flags;
+        re_flags &= ~RegexOption.freeform; // stop ignoring whitespace if we did
+        parseCharsetImpl();
+        re_flags = save;
+    }
+
+    void parseCharsetImpl()
+    {
         ValStack vstack;
         OpStack opstack;
         import std.functional : unaryFun;

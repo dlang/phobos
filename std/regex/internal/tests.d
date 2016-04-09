@@ -997,3 +997,9 @@ unittest
     assert(sink.data == "Hello, world!Hello, world!");
 }
 
+// bugzilla 15573
+unittest
+{
+    auto rx = regex("[c d]", "x");
+    assert("a b".matchFirst(rx));
+}
