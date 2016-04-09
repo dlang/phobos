@@ -101,6 +101,10 @@ test.exe : test.obj $(LIB)
 
 #	ti_bit.obj ti_Abit.obj
 
+SRC= \
+	unittest.d \
+	index.d
+
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 SRC_STD_1= \
 	std\stdio.d \
@@ -149,72 +153,8 @@ SRC_STD_3a= \
 SRC_STD_3b= \
 	std\datetime.d
 
-SRC_STD_DIGEST= \
-	std\digest\crc.d \
-	std\digest\sha.d \
-	std\digest\md.d \
-	std\digest\ripemd.d \
-	std\digest\digest.d \
-	std\digest\hmac.d
-
-SRC_STD_CONTAINER= \
-	std\container\array.d \
-	std\container\binaryheap.d \
-	std\container\dlist.d \
-	std\container\rbtree.d \
-	std\container\slist.d \
-	std\container\util.d \
-	std\container\package.d
-
 SRC_STD_4= \
 	std\uuid.d
-
-SRC_STD_ALGO= \
-	std\algorithm\package.d \
-	std\algorithm\comparison.d \
-	std\algorithm\iteration.d \
-	std\algorithm\mutation.d \
-	std\algorithm\searching.d \
-	std\algorithm\setops.d \
-	std\algorithm\sorting.d \
-	std\algorithm\internal.d
-
-SRC_STD_5= \
-	$(SRC_STD_ALGO)
-
-SRC_STD_EXP_LOGGER= \
-	std\experimental\logger\core.d \
-	std\experimental\logger\filelogger.d \
-	std\experimental\logger\multilogger.d \
-	std\experimental\logger\nulllogger.d \
-	std\experimental\logger\package.d
-
-SRC_STD_EXP_ALLOC_BB= \
-	std\experimental\allocator\building_blocks\affix_allocator.d \
-	std\experimental\allocator\building_blocks\allocator_list.d \
-	std\experimental\allocator\building_blocks\bitmapped_block.d \
-	std\experimental\allocator\building_blocks\bucketizer.d \
-	std\experimental\allocator\building_blocks\fallback_allocator.d \
-	std\experimental\allocator\building_blocks\free_list.d \
-	std\experimental\allocator\building_blocks\free_tree.d \
-	std\experimental\allocator\building_blocks\kernighan_ritchie.d \
-	std\experimental\allocator\building_blocks\null_allocator.d \
-	std\experimental\allocator\building_blocks\quantizer.d \
-	std\experimental\allocator\building_blocks\region.d \
-	std\experimental\allocator\building_blocks\scoped_allocator.d \
-	std\experimental\allocator\building_blocks\segregator.d \
-	std\experimental\allocator\building_blocks\stats_collector.d \
-	std\experimental\allocator\building_blocks\package.d
-
-SRC_STD_EXP_ALLOC= \
-	std\experimental\allocator\common.d \
-	std\experimental\allocator\gc_allocator.d \
-	std\experimental\allocator\mallocator.d \
-	std\experimental\allocator\mmap_allocator.d \
-	std\experimental\allocator\showcase.d \
-	std\experimental\allocator\typed.d \
-	std\experimental\allocator\package.d \
-	$(SRC_STD_EXP_ALLOC_BB)
 
 SRC_STD_6= \
 	std\variant.d \
@@ -241,15 +181,7 @@ SRC_STD_ALL= \
 	$(SRC_STD_3b) \
 	$(SRC_STD_4) \
 	$(SRC_STD_6) \
-	$(SRC_STD_7) \
-	$(SRC_STD_DIGEST) \
-	$(SRC_STD_CONTAINER) \
-	$(SRC_STD_EXP_ALLOC) \
-	$(SRC_STD_EXP_LOGGER)
-
-SRC= \
-	unittest.d \
-	index.d
+	$(SRC_STD_7)
 
 SRC_STD= \
 	std\zlib.d \
@@ -304,6 +236,42 @@ SRC_STD= \
 	std\exception.d \
 	std\ascii.d
 
+SRC_STD_ALGO= \
+	std\algorithm\package.d \
+	std\algorithm\comparison.d \
+	std\algorithm\iteration.d \
+	std\algorithm\mutation.d \
+	std\algorithm\searching.d \
+	std\algorithm\setops.d \
+	std\algorithm\sorting.d \
+	std\algorithm\internal.d
+
+SRC_STD_CONTAINER= \
+	std\container\array.d \
+	std\container\binaryheap.d \
+	std\container\dlist.d \
+	std\container\rbtree.d \
+	std\container\slist.d \
+	std\container\util.d \
+	std\container\package.d
+
+SRC_STD_DIGEST= \
+	std\digest\crc.d \
+	std\digest\sha.d \
+	std\digest\md.d \
+	std\digest\ripemd.d \
+	std\digest\digest.d \
+	std\digest\hmac.d
+
+SRC_STD_NET= \
+	std\net\isemail.d \
+	std\net\curl.d
+
+SRC_STD_RANGE= \
+	std\range\package.d \
+	std\range\primitives.d \
+	std\range\interfaces.d
+
 SRC_STD_REGEX= \
 	std\regex\internal\ir.d \
 	std\regex\package.d \
@@ -313,22 +281,6 @@ SRC_STD_REGEX= \
 	std\regex\internal\thompson.d \
 	std\regex\internal\kickstart.d \
 	std\regex\internal\generator.d
-
-SRC_STD_RANGE= \
-	std\range\package.d \
-	std\range\primitives.d \
-	std\range\interfaces.d
-
-SRC_STD_EXP_NDSLICE= \
-	std\experimental\ndslice\package.d \
-	std\experimental\ndslice\iteration.d \
-	std\experimental\ndslice\selection.d \
-	std\experimental\ndslice\slice.d \
-	std\experimental\ndslice\internal.d
-
-SRC_STD_NET= \
-	std\net\isemail.d \
-	std\net\curl.d
 
 SRC_STD_C= \
 	std\c\process.d \
@@ -392,6 +344,50 @@ SRC_STD_INTERNAL_MATH= \
 SRC_STD_INTERNAL_WINDOWS= \
 	std\internal\windows\advapi32.d
 
+SRC_STD_EXP= \
+	std\experimental\typecons.d
+
+SRC_STD_EXP_ALLOC_BB= \
+	std\experimental\allocator\building_blocks\affix_allocator.d \
+	std\experimental\allocator\building_blocks\allocator_list.d \
+	std\experimental\allocator\building_blocks\bitmapped_block.d \
+	std\experimental\allocator\building_blocks\bucketizer.d \
+	std\experimental\allocator\building_blocks\fallback_allocator.d \
+	std\experimental\allocator\building_blocks\free_list.d \
+	std\experimental\allocator\building_blocks\free_tree.d \
+	std\experimental\allocator\building_blocks\kernighan_ritchie.d \
+	std\experimental\allocator\building_blocks\null_allocator.d \
+	std\experimental\allocator\building_blocks\quantizer.d \
+	std\experimental\allocator\building_blocks\region.d \
+	std\experimental\allocator\building_blocks\scoped_allocator.d \
+	std\experimental\allocator\building_blocks\segregator.d \
+	std\experimental\allocator\building_blocks\stats_collector.d \
+	std\experimental\allocator\building_blocks\package.d
+
+SRC_STD_EXP_ALLOC= \
+	std\experimental\allocator\common.d \
+	std\experimental\allocator\gc_allocator.d \
+	std\experimental\allocator\mallocator.d \
+	std\experimental\allocator\mmap_allocator.d \
+	std\experimental\allocator\showcase.d \
+	std\experimental\allocator\typed.d \
+	std\experimental\allocator\package.d \
+	$(SRC_STD_EXP_ALLOC_BB)
+
+SRC_STD_EXP_LOGGER= \
+	std\experimental\logger\core.d \
+	std\experimental\logger\filelogger.d \
+	std\experimental\logger\multilogger.d \
+	std\experimental\logger\nulllogger.d \
+	std\experimental\logger\package.d
+
+SRC_STD_EXP_NDSLICE= \
+	std\experimental\ndslice\package.d \
+	std\experimental\ndslice\iteration.d \
+	std\experimental\ndslice\selection.d \
+	std\experimental\ndslice\slice.d \
+	std\experimental\ndslice\internal.d
+
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -403,16 +399,14 @@ SRC_ETC_C= \
 	etc\c\odbc\sqltypes.d \
 	etc\c\odbc\sqlucode.d
 
-SRC_STD_EXP= \
-	std\experimental\typecons.d
-
 SRC_TO_COMPILE= \
 	$(SRC_STD_ALL) \
 	$(SRC_STD_ALGO) \
-	$(SRC_STD_RANGE) \
-	$(SRC_STD_EXP_NDSLICE) \
-	$(SRC_STD_REGEX) \
+	$(SRC_STD_CONTAINER) \
+	$(SRC_STD_DIGEST) \
 	$(SRC_STD_NET) \
+	$(SRC_STD_RANGE) \
+	$(SRC_STD_REGEX) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) \
@@ -420,9 +414,12 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_INTERNAL_DIGEST) \
 	$(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS) \
+	$(SRC_STD_EXP) \
+	$(SRC_STD_EXP_ALLOC) \
+	$(SRC_STD_EXP_LOGGER) \
+	$(SRC_STD_EXP_NDSLICE) \
 	$(SRC_ETC) \
-	$(SRC_ETC_C) \
-	$(SRC_STD_EXP)
+	$(SRC_ETC_C)
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
@@ -641,7 +638,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_ALGO)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_6) $(SRC_STD_CONTAINER) $(SRC_STD_EXP_ALLOC) $(SRC_STD_EXP_LOGGER)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_STD_7)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8a.obj $(SRC_STD_REGEX)
