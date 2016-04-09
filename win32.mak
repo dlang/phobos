@@ -167,8 +167,7 @@ SRC_STD_CONTAINER= \
 	std\container\package.d
 
 SRC_STD_4= \
-	std\uuid.d \
-	$(SRC_STD_DIGEST)
+	std\uuid.d
 
 SRC_STD_ALGO= \
 	std\algorithm\package.d \
@@ -225,10 +224,7 @@ SRC_STD_6= \
 	std\socketstream.d \
 	std\conv.d \
 	std\zip.d \
-	std\cstream.d \
-	$(SRC_STD_CONTAINER) \
-	$(SRC_STD_EXP_LOGGER) \
-	$(SRC_STD_EXP_ALLOC)
+	std\cstream.d
 
 SRC_STD_7= \
 	std\stdint.d \
@@ -245,7 +241,11 @@ SRC_STD_ALL= \
 	$(SRC_STD_3b) \
 	$(SRC_STD_4) \
 	$(SRC_STD_6) \
-	$(SRC_STD_7)
+	$(SRC_STD_7) \
+	$(SRC_STD_DIGEST) \
+	$(SRC_STD_CONTAINER) \
+	$(SRC_STD_EXP_ALLOC) \
+	$(SRC_STD_EXP_LOGGER)
 
 SRC= \
 	unittest.d \
@@ -640,9 +640,9 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_6)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_6) $(SRC_STD_CONTAINER) $(SRC_STD_EXP_ALLOC) $(SRC_STD_EXP_LOGGER)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_STD_7)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8a.obj $(SRC_STD_REGEX)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8b.obj $(SRC_STD_NET)

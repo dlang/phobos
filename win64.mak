@@ -175,8 +175,7 @@ SRC_STD_CONTAINER= \
 	std\container\package.d
 
 SRC_STD_4= \
-	std\uuid.d \
-	$(SRC_STD_DIGEST)
+	std\uuid.d
 
 SRC_STD_ALGO_1= \
 	std\algorithm\package.d \
@@ -259,6 +258,7 @@ SRC_STD_ALL= \
 	$(SRC_STD_3b) \
 	$(SRC_STD_3c) \
 	$(SRC_STD_4) \
+	$(SRC_STD_DIGEST) \
 	$(SRC_STD_6a) \
 	$(SRC_STD_6c) \
 	$(SRC_STD_6d) \
@@ -680,7 +680,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3c.obj $(SRC_STD_3c)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5a.obj $(SRC_STD_5a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_5b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
