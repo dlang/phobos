@@ -124,21 +124,16 @@ SRC_STD_2a= \
 	std\outbuffer.d \
 	std\utf.d
 
-SRC_STD_math= \
-	std\math.d
-
 SRC_STD_3= \
 	std\csv.d \
 	std\complex.d \
 	std\numeric.d \
 	std\bigint.d
 
-SRC_STD_3c= \
-	std\datetime.d \
-	std\bitmanip.d \
-	std\typecons.d
-
 SRC_STD_3a= \
+	std\math.d
+
+SRC_STD_3b= \
 	std\uni.d \
 	std\base64.d \
 	std\ascii.d \
@@ -147,7 +142,7 @@ SRC_STD_3a= \
 	std\mmfile.d \
 	std\getopt.d
 
-SRC_STD_3b= \
+SRC_STD_3c= \
 	std\signals.d \
 	std\meta.d \
 	std\typetuple.d \
@@ -160,6 +155,11 @@ SRC_STD_3b= \
 	std\system.d \
 	std\concurrency.d \
 	std\concurrencybase.d
+
+SRC_STD_3d= \
+	std\datetime.d \
+	std\bitmanip.d \
+	std\typecons.d
 
 SRC_STD_4= \
 	std\uuid.d
@@ -183,11 +183,11 @@ SRC_STD_7= \
 SRC_STD_ALL= \
 	$(SRC_STD_1) \
 	$(SRC_STD_2a) \
-	$(SRC_STD_math) \
 	$(SRC_STD_3) \
 	$(SRC_STD_3a) \
 	$(SRC_STD_3b) \
 	$(SRC_STD_3c) \
+	$(SRC_STD_3d) \
 	$(SRC_STD_4) \
 	$(SRC_STD_6a) \
 	$(SRC_STD_6c) \
@@ -638,11 +638,11 @@ UNITTEST_OBJS= \
 		unittest1.obj \
 		unittest2.obj \
 		unittest2a.obj \
-		unittestM.obj \
 		unittest3.obj \
 		unittest3a.obj \
 		unittest3b.obj \
 		unittest3c.obj \
+		unittest3d.obj \
 		unittest4.obj \
 		unittest5a.obj \
 		unittest5b.obj \
@@ -669,11 +669,11 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_EXP_NDSLICE)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2a.obj $(SRC_STD_2a)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittestM.obj $(SRC_STD_math)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3c.obj $(SRC_STD_3c)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3d.obj $(SRC_STD_3d)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5a.obj $(SRC_STD_ALGO_1)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_ALGO_2)
