@@ -791,25 +791,46 @@ template Tuple(Specs...)
             import std.format : FormatSpec;
 
             /**
-             * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
+             * Formats Tuple with either `%s`, `%t`, `%r`, `%(`inner`%)` or `%(`inner`%|`sep`%)`.
              *
              * $(TABLE2 Formats supported by Tuple,
              * $(THEAD Format, Description)
-             * $(TROW $(P `%s`), $(P Format like `Tuple!(types)(elements formatted with %s each)`.))
-             * $(TROW $(P `%(inner%)`), $(P The format `inner` is applied the expanded `Tuple`, so
-             *      it may contain as many formats as the `Tuple` has fields.))
-             * $(TROW $(P `%(inner%|sep%)`), $(P The format `inner` is one format, that is applied
-             *      on all fields of the `Tuple`. The inner format must be compatible to all
-             *      of them.)))
+             * $(TROW $(P `%s`), $(P Format like `Tuple!(`types`)(`elements formatted with `%s` each`)`.))
+             * $(TROW %(P `%t`), $(P Format like `(`elements formatted with `%s` each`)`.))
+             * $(TROW %(P `%r`), $(P Format like `%t`. Nested tuples are formatted like `%t` recursively.))
+             * $(TROW $(P `%(`inner`%)`), $(P The format `inner` is applied the expanded Tuple, so it may
+             *      contain as many formats as the Tuple has fields.))
+             * $(TROW $(P `%(`inner`%|`sep`%)`), $(P The inner format is applied on all fields of the Tuple
+             *      and must be compatible to all of them.)))
+             * For printing simple but user-friendly representations of `Tuple`s, `%r` is recommended.
+             * The behavior of `%s` has not been changed to the one of `%t` or `%r` for compatibility reasons.
+             * `%s` is also kept as it is useful in debugging and unit tests.
              * ---
              *  Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
              *
              *  // Default format
              *  assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
              *
+             *  // Tuple formats %t and %r
+             *  assert(format("%t", tuple("a", 1)) == `("a", 1)`);
+             *  assert(format("%r", tuple("a", 1)) == `("a", 1)`);
+             *
              *  // One Format for each individual component
              *  assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
              *  assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
+             *
+             *  // Nested Tuples
+             *  auto it = tuple(1, tuple(2, 3));
+             *  auto tt = tuple(tuple(0, 1), tuple(2, 3));
+             *  assert(format("%s", it) == `Tuple!(int, Tuple!(int, int))(1, Tuple!(int, int)(2, 3))`);
+             *  assert(format("%s", tt) ==
+             *      `Tuple!(Tuple!(int, int), Tuple!(int, int))(Tuple!(int, int)(0, 1), Tuple!(int, int)(2, 3))`);
+             *  assert(format("%t", it) == `(1, Tuple!(int, int)(2, 3))`);
+             *  assert(format("%t", tt) == `(Tuple!(int, int)(0, 1), Tuple!(int, int)(2, 3))`);
+             *  assert(format("%r", it) == `(1, (2, 3))`);
+             *  assert(format("%r", tt) == `((0, 1), (2, 3))`);
+             *  assert(format("%(%s -> %t%)", tt) == `1 -> (2, 3)`);
+             *  assert(format("%(%t -> %t%)", tt) == `(0, 1) -> (2, 3)`);
              *
              *  // One Format for all components
              *  assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
@@ -843,8 +864,9 @@ template Tuple(Specs...)
             void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
             {
                 import std.format : formatElement, formattedWrite, FormatException;
-                if (fmt.nested)
+                switch (fmt.spec)
                 {
+                case '(':
                     if (fmt.sep)
                     {
                         foreach (i, Type; Types)
@@ -868,18 +890,18 @@ template Tuple(Specs...)
                     {
                         formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
                     }
-                }
-                else if (fmt.spec == 's')
-                {
-                    enum header = Unqual!(typeof(this)).stringof ~ "(",
-                         footer = ")",
-                         separator = ", ";
-                    sink(header);
+                    break;
+                case 's':
+                    sink(Unqual!(typeof(this)).stringof);
+                    goto case;
+                case 't':
+                case 'r':
+                    sink("(");
                     foreach (i, Type; Types)
                     {
                         static if (i > 0)
                         {
-                            sink(separator);
+                            sink(", ");
                         }
                         // TODO: Change this once formatElement() works for shared objects.
                         static if (is(Type == class) && is(Type == shared))
@@ -889,16 +911,20 @@ template Tuple(Specs...)
                         else
                         {
                             FormatSpec!Char f;
+                            static if (isTuple!Type)
+                            {
+                                if (fmt.spec == 'r')
+                                    f.spec = 'r';
+                            }
                             formatElement(sink, field[i], f);
                         }
                     }
-                    sink(footer);
-                }
-                else
-                {
+                    sink(")");
+                    break;
+                default:
                     throw new FormatException(
-                        "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
-                            Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
+                        "Expected '%s' or '%t' or '%r' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
+                        Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
                 }
             }
         }
@@ -1412,9 +1438,25 @@ unittest
     // Default format
     assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
 
+    // Tuple formats %t and %r
+    assert(format("%t", tuple("a", 1)) == `("a", 1)`);
+    assert(format("%r", tuple("a", 1)) == `("a", 1)`);
+
     // One Format for each individual component
     assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
     assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
+
+    // Nested Tuples
+    auto it = tuple(1, tuple(2, 3));
+    auto tt = tuple(tuple(0, 1), tuple(2, 3));
+    assert(format("%s", it) == `Tuple!(int, Tuple!(int, int))(1, Tuple!(int, int)(2, 3))`);
+    assert(format("%s", tt) == `Tuple!(Tuple!(int, int), Tuple!(int, int))(Tuple!(int, int)(0, 1), Tuple!(int, int)(2, 3))`);
+    assert(format("%t", it) == `(1, Tuple!(int, int)(2, 3))`);
+    assert(format("%t", tt) == `(Tuple!(int, int)(0, 1), Tuple!(int, int)(2, 3))`);
+    assert(format("%r", it) == `(1, (2, 3))`);
+    assert(format("%r", tt) == `((0, 1), (2, 3))`);
+    assert(format("%(%s -> %t%)", it) == `1 -> (2, 3)`, format("%(%s -> %t%)", tt));
+    assert(format("%(%t -> %t%)", tt) == `(0, 1) -> (2, 3)`);
 
     // One Format for all components
     assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
@@ -1423,17 +1465,17 @@ unittest
     assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
 
 
-    // Error: %( %) missing.
+    // Error: %( %) is missing.
     assertThrown!FormatException(
         format("%d, %f", tuple(1, 2.0)) == `1, 2.0`
     );
 
-    // Error: %( %| %) missing.
+    // Error: %( %| %) is missing.
     assertThrown!FormatException(
         format("%d", tuple(1, 2)) == `1, 2`
     );
 
-    // Error: %d inadequate for double
+    // Error: %d is not adequate for double.
     assertThrown!FormatException(
         format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
     );
