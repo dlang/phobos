@@ -70,9 +70,11 @@ enum JSONFloatLiteral : string
 /**
 Flags that control how json is encoded and parsed.
 */
-enum JSONOptions {
+enum JSONOptions
+{
     none,                       /// standard parsing
     specialFloatLiterals = 0x1, /// encode NaN and Inf float values as strings
+    escapeNonAsciiChars = 0x2   /// encode non ascii characters with an unicode escape sequence
 }
 
 /**
@@ -829,7 +831,7 @@ if(isInputRange!T)
 
             default:
                 auto c = getChar();
-                appendJSONChar(str, c, &error);
+                appendJSONChar(str, c, options, &error);
                 goto Next;
         }
 
@@ -1105,7 +1107,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 case '\r':      json.put("\\r");        break;
                 case '\t':      json.put("\\t");        break;
                 default:
-                    appendJSONChar(json, c,
+                    appendJSONChar(json, c, options,
                                    (msg) { throw new JSONException(msg); });
             }
         }
@@ -1262,12 +1264,13 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
     return json.data;
 }
 
-private void appendJSONChar(ref Appender!string dst, dchar c,
+private void appendJSONChar(ref Appender!string dst, dchar c, JSONOptions opts,
                             scope void delegate(string) error) @safe
 {
     import std.uni : isControl;
 
-    if(isControl(c))
+    with (JSONOptions) if (isControl(c) ||
+        ((opts & escapeNonAsciiChars) >= escapeNonAsciiChars && c >= 0x80))
     {
         dst.put("\\u");
         foreach_reverse (i; 0 .. 4)
@@ -1281,6 +1284,20 @@ private void appendJSONChar(ref Appender!string dst, dchar c,
     {
         dst.put(c);
     }
+}
+
+@safe unittest // bugzilla 12897
+{
+    JSONValue jv0 = JSONValue("test测试");
+    assert(toJSON(jv0, false, JSONOptions.escapeNonAsciiChars) == `"test\u6D4B\u8BD5"`);
+    JSONValue jv00 = JSONValue("test\u6D4B\u8BD5");
+    assert(toJSON(jv00, false, JSONOptions.none) == `"test测试"`);
+    assert(toJSON(jv0, false, JSONOptions.none) == `"test测试"`);
+    JSONValue jv1 = JSONValue("été");
+    assert(toJSON(jv1, false, JSONOptions.escapeNonAsciiChars) == `"\u00E9t\u00E9"`);
+    JSONValue jv11 = JSONValue("\u00E9t\u00E9");
+    assert(toJSON(jv11, false, JSONOptions.none) == `"été"`);
+    assert(toJSON(jv1, false, JSONOptions.none) == `"été"`);
 }
 
 /**
