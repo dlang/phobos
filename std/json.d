@@ -344,6 +344,11 @@ struct JSONValue
             type_tag = JSON_TYPE.STRING;
             store.str = arg;
         }
+        else static if(is(T : char[]))
+        {
+            type_tag = JSON_TYPE.STRING;
+            store.str = arg.idup;
+        }
         else static if(is(T : bool))
         {
             type_tag = arg ? JSON_TYPE.TRUE : JSON_TYPE.FALSE;
@@ -1674,4 +1679,11 @@ pure nothrow @safe @nogc unittest
     testVal = JSONValue[].init;
     testVal = null;
     assert(testVal.isNull);
+}
+
+pure nothrow @safe unittest // issue 15884
+{
+    char[] str = "a".dup;
+    JSONValue testVal = str;
+    assert(testVal.type == JSON_TYPE.STRING);
 }
