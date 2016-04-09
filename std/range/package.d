@@ -222,9 +222,7 @@ if (isBidirectionalRange!(Unqual!Range))
 
             static if (hasLength!R)
             {
-                private alias IndexType = CommonType!(size_t, typeof(source.length));
-
-                IndexType retroIndex(IndexType n)
+                size_t retroIndex(size_t n)
                 {
                     return source.length - n - 1;
                 }
@@ -274,11 +272,11 @@ if (isBidirectionalRange!(Unqual!Range))
 
             static if (isRandomAccessRange!(R) && hasLength!(R))
             {
-                auto ref opIndex(IndexType n) { return source[retroIndex(n)]; }
+                auto ref opIndex(size_t n) { return source[retroIndex(n)]; }
 
                 static if (hasAssignableElements!R)
                 {
-                    void opIndexAssign(ElementType!R val, IndexType n)
+                    void opIndexAssign(ElementType!R val, size_t n)
                     {
                         source[retroIndex(n)] = val;
                     }
@@ -286,14 +284,14 @@ if (isBidirectionalRange!(Unqual!Range))
 
                 static if (is(typeof(.moveAt(source, 0))))
                 {
-                    ElementType!R moveAt(IndexType index)
+                    ElementType!R moveAt(size_t index)
                     {
                         return .moveAt(source, retroIndex(index));
                     }
                 }
 
                 static if (hasSlicing!R)
-                    typeof(this) opSlice(IndexType a, IndexType b)
+                    typeof(this) opSlice(size_t a, size_t b)
                     {
                         return typeof(this)(source[source.length - b .. source.length - a]);
                     }
@@ -4800,16 +4798,22 @@ body
                                             cast(Value)(pastLast - (length - upper) * step),
                                             step);
         }
-        @property IndexType length() const
+        @property size_t length() const
         {
+            IndexType ret;
             if (step > 0)
             {
-                return unsigned((pastLast - current) / step);
+                ret = unsigned((pastLast - current) / step);
             }
             else
             {
-                return unsigned((current - pastLast) / -step);
+                ret = unsigned((current - pastLast) / -step);
             }
+            static if (!is(IndexType : size_t))
+            {
+                assert(ret <= size_t.max);
+            }
+            return cast(size_t) ret;
         }
 
         alias opDollar = length;
@@ -4861,7 +4865,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
         @property auto save() { return this; }
 
-        inout(Value) opIndex(ulong n) inout
+        inout(Value) opIndex(size_t n) inout
         {
             assert(n < this.length);
 
@@ -4877,9 +4881,14 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             return cast(inout Result)Result(cast(Value)(current + lower),
                                             cast(Value)(pastLast - (length - upper)));
         }
-        @property IndexType length() const
+        @property size_t length() const
         {
-            return unsigned(pastLast - current);
+            immutable ret = unsigned(pastLast - current);
+            static if (!is(IndexType : size_t))
+            {
+                assert(ret <= size_t.max);
+            }
+            return cast(size_t) ret;
         }
 
         alias opDollar = length;
@@ -8552,8 +8561,7 @@ public:
         Only defined if $(D hasMobileElements!R) and $(D isRandomAccessRange!R)
         are $(D true).
       +/
-    static if(hasMobileElements!R && isRandomAccessRange!R) auto moveAt(IndexType)(IndexType index)
-        if(is(typeof((*_range).moveAt(index))))
+    static if(hasMobileElements!R && isRandomAccessRange!R) auto moveAt(size_t index)
     {
         return (*_range).moveAt(index);
     }
@@ -9557,7 +9565,7 @@ auto padRight(R, E)(R r, E e, size_t n) if (
 
         static if (isRandomAccessRange!R)
         {
-            inout(E) opIndex(size_t index) inout
+            E opIndex(size_t index)
             {
                 assert(index <= this.length, "Index out of bounds");
                 return (index > data.length && index <= maxSize) ? element :
