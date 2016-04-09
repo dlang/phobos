@@ -106,14 +106,14 @@ test.exe : test.obj $(LIB)
 #	ti_bit.obj ti_Abit.obj
 
 # The separation is a workaround for bug 4904 (optlink bug 3372).
-SRC_STD_1_HEAVY= \
+SRC_STD_1= \
 	std\stdio.d \
 	std\stdiobase.d \
 	std\string.d \
 	std\format.d \
 	std\file.d
 
-SRC_STD_2a_HEAVY= \
+SRC_STD_2a= \
 	std\array.d \
 	std\functional.d \
 	std\path.d \
@@ -157,7 +157,6 @@ SRC_STD_3b= \
 	std\concurrency.d \
 	std\concurrencybase.d
 
-#can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= \
 	std\digest\crc.d \
 	std\digest\sha.d \
@@ -195,14 +194,14 @@ SRC_STD_ALGO= \
 	$(SRC_STD_ALGO_1) \
 	$(SRC_STD_ALGO_2)
 
-SRC_STD_LOGGER= \
+SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\core.d \
 	std\experimental\logger\filelogger.d \
 	std\experimental\logger\multilogger.d \
 	std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
-SRC_STD_ALLOC_BB= \
+SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\affix_allocator.d \
 	std\experimental\allocator\building_blocks\allocator_list.d \
 	std\experimental\allocator\building_blocks\bitmapped_block.d \
@@ -219,7 +218,7 @@ SRC_STD_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\stats_collector.d \
 	std\experimental\allocator\building_blocks\package.d
 
-SRC_STD_ALLOC= \
+SRC_STD_EXP_ALLOC= \
 	std\experimental\allocator\common.d \
 	std\experimental\allocator\gc_allocator.d \
 	std\experimental\allocator\mallocator.d \
@@ -227,7 +226,7 @@ SRC_STD_ALLOC= \
 	std\experimental\allocator\showcase.d \
 	std\experimental\allocator\typed.d \
 	std\experimental\allocator\package.d \
-	$(SRC_STD_ALLOC_BB)
+	$(SRC_STD_EXP_ALLOC_BB)
 
 SRC_STD_5a=$(SRC_STD_ALGO_1)
 SRC_STD_5b=$(SRC_STD_ALGO_2)
@@ -249,11 +248,11 @@ SRC_STD_7= \
 	std\process.d
 
 SRC_STD_9= \
-	$(SRC_STD_ALLOC)
+	$(SRC_STD_EXP_ALLOC)
 
 SRC_STD_ALL= \
-	$(SRC_STD_1_HEAVY) \
-	$(SRC_STD_2a_HEAVY) \
+	$(SRC_STD_1) \
+	$(SRC_STD_2a) \
 	$(SRC_STD_math) \
 	$(SRC_STD_3) \
 	$(SRC_STD_3a) \
@@ -270,7 +269,7 @@ SRC_STD_ALL= \
 	$(SRC_STD_6i) \
 	$(SRC_STD_6j) \
 	$(SRC_STD_7) \
-	$(SRC_STD_LOGGER) \
+	$(SRC_STD_EXP_LOGGER) \
 	$(SRC_STD_9)
 
 SRC= \
@@ -345,7 +344,7 @@ SRC_STD_RANGE= \
 	std\range\primitives.d \
 	std\range\interfaces.d
 
-SRC_STD_NDSLICE= \
+SRC_STD_EXP_NDSLICE= \
 	std\experimental\ndslice\package.d \
 	std\experimental\ndslice\iteration.d \
 	std\experimental\ndslice\selection.d \
@@ -429,14 +428,14 @@ SRC_ETC_C= \
 	etc\c\odbc\sqltypes.d \
 	etc\c\odbc\sqlucode.d
 
-SRC_EXPERIMENTAL= \
+SRC_STD_EXP= \
 	std\experimental\typecons.d
 
 SRC_TO_COMPILE= \
 	$(SRC_STD_ALL) \
 	$(SRC_STD_ALGO) \
 	$(SRC_STD_RANGE) \
-	$(SRC_STD_NDSLICE) \
+	$(SRC_STD_EXP_NDSLICE) \
 	$(SRC_STD_REGEX) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_C) \
@@ -448,7 +447,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_INTERNAL_WINDOWS) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C) \
-	$(SRC_EXPERIMENTAL)
+	$(SRC_STD_EXP)
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
@@ -672,10 +671,10 @@ UNITTEST_OBJS= \
 		unittest9.obj
 
 unittest : $(LIB)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_NDSLICE)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_EXP_NDSLICE)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2a.obj $(SRC_STD_2a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittestM.obj $(SRC_STD_math)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
@@ -693,13 +692,13 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6h.obj $(SRC_STD_6h)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6i.obj $(SRC_STD_6i)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_LOGGER)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_EXP_LOGGER)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8a.obj $(SRC_STD_REGEX)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8b.obj $(SRC_STD_NET)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8f.obj $(SRC_EXPERIMENTAL)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9.obj $(SRC_STD_9)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
 	    $(ZLIB) $(DRUNTIMELIB)
