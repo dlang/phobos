@@ -6643,7 +6643,7 @@ struct EvenChunks(Source)
     }
 
     /// Length
-    @property size_t length()
+    @property size_t length() const
     {
         return _chunkCount;
     }
@@ -6827,7 +6827,7 @@ private struct OnlyResult(T, size_t arity)
         return this;
     }
 
-    size_t length() @property
+    size_t length() const @property
     {
         return backIndex - frontIndex;
     }
@@ -6918,7 +6918,7 @@ private struct OnlyResult(T, size_t arity : 0)
     private static struct EmptyElementType {}
 
     bool empty() @property { return true; }
-    size_t length() @property { return 0; }
+    size_t length() const @property { return 0; }
     alias opDollar = length;
     EmptyElementType front() @property { assert(false); }
     void popFront() { assert(false); }
@@ -9133,7 +9133,7 @@ if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
 
         static if (hasLength!R1)
         {
-            @property length()
+            @property auto length()
             {
                 return _input.length;
             }
@@ -9525,7 +9525,7 @@ auto padRight(R, E)(R r, E e, size_t n) if (
 
         static if (hasLength!R)
         {
-            inout(size_t) length() inout @property
+            size_t length() @property
             {
                 import std.algorithm.comparison : max;
                 return max(data.length, maxSize);
