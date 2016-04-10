@@ -857,7 +857,7 @@ pure unittest
     import std.experimental.ndslice.iteration: allReversed;
     import std.stdio;
     import std.range: iota;
-    auto slice = 12.iota.sliced(1, 1, 3, 2, 1, 2, 1).allReversed;
+    auto slice = iotaSlice(1, 1, 3, 2, 1, 2, 1).allReversed;
     assert(slice.reshape(1, -1, 1, 1, 3, 1) ==
         [[[[[[11], [10], [9]]]],
           [[[[ 8], [ 7], [6]]]],
@@ -1179,16 +1179,13 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration;
-    import std.range: iota, drop;
-    import std.algorithm.comparison: equal;
-    assert((3 * 4 * 5 * 6 * 7).iota
-        .sliced(3, 4, 5, 6, 7)
+    import std.range: drop;
+    assert(iotaSlice(3, 4, 5, 6, 7)
         .pack!2
         .byElement()
         .drop(1)
         .front
-        .byElement
-        .equal(iota(6 * 7, 6 * 7 * 2)));
+         == iotaSlice([6, 7], 6 * 7));
 }
 
 /// Properties
@@ -1196,7 +1193,7 @@ pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    auto elems = 12.iota.sliced(3, 4).byElement;
+    auto elems = iotaSlice(3, 4).byElement;
     elems.popFrontExactly(2);
     assert(elems.front == 2);
     assert(elems.index == [0, 2]);
@@ -1268,10 +1265,10 @@ Use $(SUBREF iteration, allReversed) in pipeline before
 +/
 @safe @nogc pure nothrow unittest
 {
-    import std.range: retro, iota;
+    import std.range: retro;
     import std.experimental.ndslice.iteration: allReversed;
 
-    auto slice = 60.iota.sliced(3, 4, 5);
+    auto slice = iotaSlice(3, 4, 5);
 
     /// Slow backward iteration #1
     foreach (ref e; slice.byElement.retro)
@@ -1295,8 +1292,8 @@ Use $(SUBREF iteration, allReversed) in pipeline before
 @safe @nogc pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    import std.range: iota, isRandomAccessRange, hasSlicing;
-    auto elems = 20.iota.sliced(4, 5).byElement;
+    import std.range.primitives: isRandomAccessRange, hasSlicing;
+    auto elems = iotaSlice(4, 5).byElement;
     static assert(isRandomAccessRange!(typeof(elems)));
     static assert(hasSlicing!(typeof(elems)));
 }
@@ -1307,7 +1304,7 @@ Use $(SUBREF iteration, allReversed) in pipeline before
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration;
     import std.range: iota, isRandomAccessRange;
-    auto elems = 20.iota.sliced(4, 5).everted.byElement;
+    auto elems = iotaSlice.sliced(4, 5).everted.byElement;
     static assert(isRandomAccessRange!(typeof(elems)));
 
     elems = elems[11 .. $ - 2];
@@ -1366,7 +1363,7 @@ unittest
 {
     import std.range: iota;
     import std.range.primitives;
-    alias A = typeof(10.iota.sliced(2, 5).sliced(1, 1, 1, 1));
+    alias A = typeof(iotaSlice(2, 5).sliced(1, 1, 1, 1));
     static assert(isRandomAccessRange!A);
     static assert(hasLength!A);
     static assert(hasSlicing!A);
@@ -1522,7 +1519,7 @@ pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
     import std.range: iota;
-    auto elems = 12.iota.sliced(3, 4).byElementInStandardSimplex;
+    auto elems = iotaSlice(3, 4).byElementInStandardSimplex;
     elems.popFront;
     assert(elems.front == 1);
     assert(elems.index == cast(size_t[2])[0, 1]);
