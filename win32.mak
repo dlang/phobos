@@ -531,6 +531,7 @@ DOCS= \
 	$(DOC)\std_experimental_ndslice_selection.html \
 	$(DOC)\std_experimental_ndslice_slice.html \
 	$(DOC)\std_experimental_ndslice.html \
+	$(DOC)\std_experimental_typecons.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
