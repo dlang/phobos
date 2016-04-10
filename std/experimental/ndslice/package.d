@@ -66,7 +66,7 @@ assert(matrix(3, 2) == 6); // Math & Fortran index order
 ------
 
 Note:
-In many examples $(LINK2 std_range.html#iota, std.range.iota) is used
+In many examples $(LINK2 std_experimental_ndslice_selection.html#iotaSice, iotaSice) is used
 instead of a regular array, which makes it
 possible to carry out tests without memory allocation.
 
@@ -82,9 +82,10 @@ $(TR $(TDNW Basic Level
      $(TD
         $(SUBREF slice, sliced)
         $(SUBREF slice, Slice)
-        $(SUBREF slice, createSlice)
+        $(SUBREF slice, slice)
         $(SUBREF slice, makeSlice)
         $(SUBREF slice, ndarray)
+        $(SUBREF slice, makeNdarray)
         $(SUBREF slice, shape)
         $(SUBREF slice, Slice)
         $(SUBREF slice, assumeSameStructure)

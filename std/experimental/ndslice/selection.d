@@ -252,23 +252,19 @@ pure nothrow unittest
 @safe @nogc pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    static assert(is(typeof(new int[20]
-        .sliced(20)
+    static assert(is(typeof(slice!int(20)
         .evertPack)
          == Slice!(1LU, int*)));
-    static assert(is(typeof(new int[20]
-        .sliced(20)
+    static assert(is(typeof(slice!int(20)
         .sliced(3)
         .evertPack)
          == Slice!(2LU, int*)));
-    static assert(is(typeof(new int[20]
-        .sliced(20)
+    static assert(is(typeof(slice!int(20)
         .sliced(1,2,3)
         .sliced(3)
         .evertPack)
          == Slice!(3LU, Slice!(2LU, int*))));
-    static assert(is(typeof(new int[20]
-        .sliced(20)
+    static assert(is(typeof(slice!int(20)
         .sliced(1,2,3)
         .evertPack)
          == Slice!(4LU, int*)));
@@ -330,7 +326,7 @@ pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
 
-    auto slice = new int[9].sliced(3, 3);
+    auto slice = slice!int(3, 3);
     int i;
     foreach (ref e; slice.diagonal)
         e = ++i;
@@ -508,7 +504,7 @@ body
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[40].sliced(5, 8);
+    auto slice = slice!int(5, 8);
     auto blocks = slice.blocks(2, 3);
     int i;
     foreach (block; blocks.byElement)
@@ -534,7 +530,7 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[40].sliced(5, 8);
+    auto slice = slice!int(5, 8);
     auto blocks = slice.blocks(2, 3);
     auto diagonalBlocks = blocks.diagonal.unpack;
 
@@ -565,7 +561,7 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[65].sliced(5, 13);
+    auto slice = slice!int(5, 13);
     auto blocks = slice
         .pack!1
         .evertPack
@@ -629,7 +625,7 @@ body
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[40].sliced(5, 8);
+    auto slice = slice!int(5, 8);
     auto windows = slice.windows(2, 3);
     foreach (window; windows.byElement)
         window[] += 1;
@@ -648,7 +644,7 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[40].sliced(5, 8);
+    auto slice = slice!int(5, 8);
     auto windows = slice.windows(2, 3);
     windows[1, 2][] = 1;
     windows[1, 2][0, 1] += 1;
@@ -668,7 +664,7 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[64].sliced(8, 8);
+    auto slice = slice!int(8, 8);
     auto windows = slice.windows(3, 3);
 
     auto multidiagonal = windows
@@ -692,7 +688,7 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[40].sliced(5, 8);
+    auto slice = slice!int(5, 8);
     auto windows = slice
         .pack!1
         .evertPack
@@ -1304,7 +1300,7 @@ Use $(SUBREF iteration, allReversed) in pipeline before
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration;
     import std.range: iota, isRandomAccessRange;
-    auto elems = iotaSlice.sliced(4, 5).everted.byElement;
+    auto elems = iotaSlice(4, 5).everted.byElement;
     static assert(isRandomAccessRange!(typeof(elems)));
 
     elems = elems[11 .. $ - 2];
@@ -1367,7 +1363,7 @@ unittest
     static assert(isRandomAccessRange!A);
     static assert(hasLength!A);
     static assert(hasSlicing!A);
-    alias B = typeof(new double[10].sliced(2, 5).sliced(1, 1, 1, 1));
+    alias B = typeof(slice!double(2, 5).sliced(1, 1, 1, 1));
     static assert(isRandomAccessRange!B);
     static assert(hasLength!B);
     static assert(hasSlicing!B);
@@ -1481,7 +1477,7 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    auto slice = new int[20].sliced(4, 5);
+    auto slice = slice!int(4, 5);
     auto elems = slice
         .byElementInStandardSimplex;
     int i;
@@ -1499,7 +1495,7 @@ pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration;
-    auto slice = new int[20].sliced(4, 5);
+    auto slice = slice!int(4, 5);
     auto elems = slice
         .transposed
         .allReversed
@@ -1559,8 +1555,8 @@ IndexSlice!N indexSlice(size_t N)(auto ref size_t[N] lengths)
 @safe pure nothrow @nogc unittest
 {
     auto slice = indexSlice(2, 3);
-    static immutable array = 
-        [[[0, 0], [0, 1], [0, 2]], 
+    static immutable array =
+        [[[0, 0], [0, 1], [0, 2]],
          [[1, 0], [1, 1], [1, 2]]];
 
     assert(slice == array);
@@ -1593,7 +1589,7 @@ template IndexSlice(size_t N)
     {
         private size_t[N-1] _lengths;
 
-        auto save() @property const
+        IndexMap save() @property const
         {
             pragma(inline, true);
             return this;
@@ -1618,6 +1614,8 @@ template IndexSlice(size_t N)
 unittest
 {
     auto r = indexSlice(1);
+    import std.range.primitives: isRandomAccessRange;
+    static assert(isRandomAccessRange!(typeof(r)));
 }
 
 /++
@@ -1649,8 +1647,8 @@ IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
 @safe pure nothrow @nogc unittest
 {
     auto slice = iotaSlice(2, 3);
-    static immutable array = 
-        [[0, 1, 2], 
+    static immutable array =
+        [[0, 1, 2],
          [3, 4, 5]];
 
     assert(slice == array);
@@ -1680,17 +1678,17 @@ See_also: $(LREF iotaSlice)
 template IotaSlice(size_t N)
     if (N)
 {
-    alias IotaSlice = Slice!(N, IotaMap);
+    alias IotaSlice = Slice!(N, IotaMap!());
 }
 
 // undocumented
 // zero cost variant of `std.range.iota`
-struct IotaMap
+struct IotaMap()
 {
     enum bool empty = false;
     enum IotaMap save = IotaMap.init;
 
-    static size_t opIndex(size_t index) @safe pure nothrow @nogc @property 
+    static size_t opIndex()(size_t index) @safe pure nothrow @nogc @property
     {
         pragma(inline, true);
         return index;
