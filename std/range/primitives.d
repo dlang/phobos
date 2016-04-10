@@ -1943,7 +1943,7 @@ ElementType!R moveBack(R)(R r)
    r.front) in a destroyable state that does not allocate any resources
    (usually equal to its $(D .init) value).
 */
-ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
+ElementType!R moveAt(R)(R r, size_t i)
 {
     static if (is(typeof(&r.moveAt))) {
         return r.moveAt(i);

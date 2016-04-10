@@ -3029,10 +3029,9 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         Range _input;
         Separator _separator;
         // Do we need hasLength!Range? popFront uses _input.length...
-        alias IndexType = typeof(unsigned(_input.length));
-        enum IndexType _unComputed = IndexType.max - 1, _atEnd = IndexType.max;
-        IndexType _frontLength = _unComputed;
-        IndexType _backLength = _unComputed;
+        enum size_t _unComputed = size_t.max - 1, _atEnd = size_t.max;
+        size_t _frontLength = _unComputed;
+        size_t _backLength = _unComputed;
 
         static if (isNarrowString!Range)
         {
@@ -3045,7 +3044,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
         static if (isBidirectionalRange!Range)
         {
-            static IndexType lastIndexOf(Range haystack, Separator needle)
+            static size_t lastIndexOf(Range haystack, Separator needle)
             {
                 import std.range : retro;
                 auto r = haystack.retro().find!pred(needle);
@@ -3312,11 +3311,10 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     private:
         Range _input;
         Separator _separator;
-        alias RIndexType = typeof(unsigned(_input.length));
         // _frontLength == size_t.max means empty
-        RIndexType _frontLength = RIndexType.max;
+        size_t _frontLength = size_t.max;
         static if (isBidirectionalRange!Range)
-            RIndexType _backLength = RIndexType.max;
+            size_t _backLength = size_t.max;
 
         @property auto separatorLength() { return _separator.length; }
 
@@ -3367,7 +3365,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         {
             @property bool empty()
             {
-                return _frontLength == RIndexType.max && _input.empty;
+                return _frontLength == size_t.max && _input.empty;
             }
         }
 
