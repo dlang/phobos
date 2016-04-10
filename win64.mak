@@ -609,12 +609,12 @@ UNITTEST_OBJS= \
 		unittest8d.obj \
 		unittest8e.obj \
 		unittest8f.obj \
-		unittest9.obj
+		unittest9.obj \
+		unittest9a.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_EXP_NDSLICE)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2a.obj $(SRC_STD_2a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
@@ -641,6 +641,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9.obj $(SRC_STD_EXP_ALLOC)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_NDSLICE)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
 	    $(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
