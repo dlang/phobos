@@ -10,23 +10,23 @@ All operators return slice of the same type as the type of the argument.
 $(BOOKTABLE $(H2 Transpose operators),
 
 $(TR $(TH Function Name) $(TH Descriprottion))
-$(T2 transposed, `(3*4*5*6*7).iota.sliced(3, 4, 5, 6, 7).transposed!(4, 0, 1).shape` returns `[7, 3, 4, 5, 6]`.)
-$(T2 swapped, `60.iota.sliced(3, 4, 5).swapped!(1, 2).shape` returns `[3, 5, 4]`.)
-$(T2 everted, `60.iota.sliced(3, 4, 5).everted.shape` returns `[5, 4, 3]`.)
+$(T2 transposed, `iotaSlice(3, 4, 5, 6, 7).transposed!(4, 0, 1).shape` returns `[7, 3, 4, 5, 6]`.)
+$(T2 swapped, `iotaSlice(3, 4, 5).swapped!(1, 2).shape` returns `[3, 5, 4]`.)
+$(T2 everted, `iotaSlice(3, 4, 5).everted.shape` returns `[5, 4, 3]`.)
 )
 See also $(SUBREF selection, evertPack).
 
 $(BOOKTABLE $(H2 Iteration operators),
 
 $(TR $(TH Function Name) $(TH Description))
-$(T2 strided, `520.iota.sliced(13, 40).strided!(0, 1)(2, 5).shape` equals to `[7, 8]`.)
+$(T2 strided, `iotaSlice(13, 40).strided!(0, 1)(2, 5).shape` equals to `[7, 8]`.)
 $(T2 reversed, `slice.reversed!0` returns the slice with reversed direction of iteration for top level dimension.)
-$(T2 allReversed, `20.iota.sliced(4, 5).allReversed` equals to `20.iota.retro.sliced(4, 5)`.)
+$(T2 allReversed, `iotaSlice(4, 5).allReversed` equals to `20.iota.retro.sliced(4, 5)`.)
 )
 
 $(BOOKTABLE $(H2 Other operators),
 $(TR $(TH Function Name) $(TH Description))
-$(T2 rotated, `6.iota.sliced(2, 3).rotated` equals to `[[2, 5], [1, 4], [0, 3]]`.)
+$(T2 rotated, `iotaSlice(2, 3).rotated` equals to `[[2, 5], [1, 4], [0, 3]]`.)
 )
 
 $(H4 Drop operators)
