@@ -280,93 +280,6 @@ pure nothrow unittest
     assert(equal(alpha, beta));
 }
 
-/++
-Creates an array and an n-dimensional slice over it.
-+/
-pure nothrow unittest
-{
-    auto createSlice(T, Lengths...)(Lengths lengths)
-    {
-        return createSlice2!(T, Lengths.length)(cast(size_t[Lengths.length])[lengths]);
-    }
-
-    ///ditto
-    auto createSlice2(T, size_t N)(auto ref size_t[N] lengths)
-    {
-        size_t length = lengths[0];
-        foreach (len; lengths[1 .. N])
-                length *= len;
-        return new T[length].sliced(lengths);
-    }
-
-    auto slice = createSlice!int(5, 6, 7);
-    assert(slice.length == 5);
-    assert(slice.elementsCount == 5 * 6 * 7);
-    static assert(is(typeof(slice) == Slice!(3, int*)));
-
-    auto duplicate = createSlice2!int(slice.shape);
-    duplicate[] = slice;
-}
-
-/++
-Creates a common n-dimensional array.
-+/
-pure nothrow unittest
-{
-    auto ndarray(size_t N, Range)(auto ref Slice!(N, Range) slice)
-    {
-        import std.array: array;
-        static if (N == 1)
-        {
-            return slice.array;
-        }
-        else
-        {
-            import std.algorithm.iteration: map;
-            return slice.map!(a => ndarray(a)).array;
-        }
-    }
-
-    import std.range: iota;
-    auto ar = ndarray(12.iota.sliced(3, 4));
-    static assert(is(typeof(ar) == int[][]));
-    assert(ar == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]);
-}
-
-/++
-Allocates an array through a specified allocator and creates an n-dimensional slice over it.
-See also $(LINK2 std_experimental_allocator.html, std.experimental.allocator).
-+/
-unittest
-{
-    import std.experimental.allocator;
-
-
-    // `theAllocator.makeSlice(3, 4)` allocates an array with length equal to `12`
-    // and returns this array and a `2`-dimensional slice-shell over it.
-    auto makeSlice(T, Allocator, Lengths...)(auto ref Allocator alloc, Lengths lengths)
-    {
-        enum N = Lengths.length;
-        struct Result { T[] array; Slice!(N, T*) slice; }
-        size_t length = lengths[0];
-        foreach (len; lengths[1 .. N])
-                length *= len;
-        T[] a = alloc.makeArray!T(length);
-        return Result(a, a.sliced(lengths));
-    }
-
-    auto tup = makeSlice!int(theAllocator, 2, 3, 4);
-
-    static assert(is(typeof(tup.array) == int[]));
-    static assert(is(typeof(tup.slice) == Slice!(3, int*)));
-
-    assert(tup.array.length           == 24);
-    assert(tup.slice.elementsCount    == 24);
-    assert(tup.array.ptr == &tup.slice[0, 0, 0]);
-
-    theAllocator.dispose(tup.array);
-}
-
 /// Input range primitives for slices over user defined types
 pure nothrow @nogc unittest
 {
@@ -579,6 +492,314 @@ pure nothrow unittest
                    3, 4].sliced!(No.replaceArrayWithPointer)(2, 2);
     ///Сompile time function evaluation
     static assert(maxAvg(matrix) == 3);
+}
+
+///
+@safe @nogc pure nothrow unittest
+{
+    import std.algorithm.iteration: map, sum, reduce;
+    import std.algorithm.comparison: max;
+    import std.experimental.ndslice.iteration: transposed;
+    /// Returns maximal column average.
+    auto maxAvg(S)(S matrix) {
+        return matrix.transposed.map!sum.reduce!max
+             / matrix.length;
+    }
+    enum matrix = [1, 2,
+                   3, 4].sliced!(No.replaceArrayWithPointer)(2, 2);
+    ///Сompile time function evaluation
+    static assert(maxAvg(matrix) == 3);
+}
+
+/++
+Creates an array and an n-dimensional slice over it.
+Params:
+    lengths = list of lengths for each dimension
+    slice = slice to copy shape and data from
+Returns:
+    n-dimensional slice
++/
+Slice!(Lengths.length, Select!(replaceArrayWithPointer, T*, T[]))
+createSlice(T,
+    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Lengths...)(Lengths lengths)
+    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
+{
+    return .createSlice!(T, replaceArrayWithPointer)([lengths]);
+}
+
+/// ditto
+Slice!(N, Select!(replaceArrayWithPointer, T*, T[]))
+createSlice(T,
+    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    size_t N)(auto ref in size_t[N] lengths)
+{
+    immutable len = lengthsProduct(lengths);
+    return new T[len].sliced!replaceArrayWithPointer(lengths);
+}
+
+/// ditto
+auto createSlice(
+    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    size_t N, Range)(auto ref Slice!(N, Range) slice)
+{
+    import std.array: array;
+    import std.experimental.ndslice.selection: byElement;
+    return slice.byElement.array.sliced!replaceArrayWithPointer(slice.shape);
+}
+
+///
+pure nothrow unittest
+{
+    auto slice = createSlice!int(5, 6, 7);
+    assert(slice.length == 5);
+    assert(slice.elementsCount == 5 * 6 * 7);
+    static assert(is(typeof(slice) == Slice!(3, int*)));
+
+    // creates duplicate using `createSlice`
+    auto dup = createSlice(slice);
+    assert(dup == slice);
+}
+
+/++
+Allocates an array through a specified allocator and creates an n-dimensional slice over it.
+See also $(LINK2 std_experimental_allocator.html, std.experimental.allocator).
+Params:
+    alloc = allocator
+    lengths = list of lengths for each dimension
+    init = default value for array initialization
+    slice = slice to copy shape and data from
+Returns:
+    a structure with fields `array` and `slice`
++/
+auto makeSlice(T,
+    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Allocator,
+    Lengths...)(auto ref Allocator alloc, Lengths lengths)
+    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
+{
+    return .makeSlice!(T, replaceArrayWithPointer, Allocator)(alloc, [lengths]);
+}
+
+/// ditto
+auto makeSlice(T,
+    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Allocator,
+    size_t N)(auto ref Allocator alloc, auto ref in size_t[N] lengths)
+{
+    import std.experimental.allocator: makeArray;
+    static struct Result { T[] array; Slice!(N, Select!(replaceArrayWithPointer, T*, T[])) slice; }
+    immutable len = lengthsProduct(lengths);
+    auto array = alloc.makeArray!T(len);
+    auto slice = array.sliced!replaceArrayWithPointer(lengths);
+    return Result(array, slice);
+}
+
+/// ditto
+auto makeSlice(T,
+    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Allocator,
+    size_t N)(auto ref Allocator alloc, auto ref in size_t[N] lengths, auto ref T init)
+{
+    import std.experimental.allocator: makeArray;
+    static struct Result { T[] array; Slice!(N, Select!(replaceArrayWithPointer, T*, T[])) slice; }
+    immutable len = lengthsProduct(lengths);
+    auto array = alloc.makeArray!T(len, init);
+    auto slice = array.sliced!replaceArrayWithPointer(lengths);
+    return Result(array, slice);
+}
+
+/// ditto
+auto makeSlice(T,
+    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Allocator,
+    size_t N, Range)(auto ref Allocator alloc, auto ref Slice!(N, Range) slice)
+{
+    import std.experimental.allocator: makeArray;
+    import std.experimental.ndslice.selection: byElement;
+    static struct Result { T[] array; Slice!(N, Select!(replaceArrayWithPointer, T*, T[])) slice; }
+    auto array = alloc.makeArray!T(slice.byElement);
+    auto _slice = array.sliced!replaceArrayWithPointer(slice.shape);
+    return Result(array, _slice);
+}
+
+///
+@nogc unittest
+{
+    import std.experimental.allocator;
+    import std.experimental.allocator.mallocator;
+
+    auto tup = makeSlice!int(Mallocator.instance, 2, 3, 4);
+
+    static assert(is(typeof(tup.array) == int[]));
+    static assert(is(typeof(tup.slice) == Slice!(3, int*)));
+
+    assert(tup.array.length           == 24);
+    assert(tup.slice.elementsCount    == 24);
+    assert(tup.array.ptr == &tup.slice[0, 0, 0]);
+
+    // makes duplicate using `createSlice`
+    tup.slice[0, 0, 0] = 3;
+    auto dup = makeSlice!int(Mallocator.instance, tup.slice);
+    assert(dup.slice == tup.slice);
+
+    Mallocator.instance.dispose(tup.array);
+    Mallocator.instance.dispose(dup.array);
+}
+
+/// Initialization with default value
+@nogc unittest
+{
+    import std.experimental.allocator;
+    import std.experimental.allocator.mallocator;
+
+    auto tup = makeSlice!int(Mallocator.instance, [2, 3, 4], 10);
+    auto slice = tup.slice;
+    assert(slice[1, 1, 1] == 10);
+    Mallocator.instance.dispose(tup.array);
+}
+
+/++
+Creates a common n-dimensional array from a slice.
+Params:
+    slice = slice
+Returns:
+    multidimensional D array
++/
+auto ndarray(size_t N, Range)(auto ref Slice!(N, Range) slice)
+{
+    import std.array: array;
+    static if (N == 1)
+    {
+        return array(slice);
+    }
+    else
+    {
+        import std.algorithm.iteration: map;
+        return array(slice.map!(a => .ndarray(a)));
+    }
+}
+
+///
+pure nothrow unittest
+{
+    import std.range: iota;
+    auto slice = 12.iota.sliced(3, 4);
+    auto m = slice.ndarray;
+    static assert(is(typeof(m) == int[][]));
+    assert(m == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]);
+}
+
+/++
+Allocates a common n-dimensional array using data from a slice.
+Params:
+    alloc = allocator (optional)
+    slice = slice
+Returns:
+    multidimensional D array
++/
+auto makeNdarray(T, Allocator, size_t N, Range)( Allocator alloc,  Slice!(N, Range) slice)
+{
+    import std.experimental.allocator: makeArray;
+    static if (N == 1)
+    {
+        return makeArray!T(alloc, slice);
+    }
+    else
+    {
+        import std.algorithm.iteration: map;
+        return makeArray!(typeof(makeNdarray!T(alloc, slice.front)))(alloc, slice.map!(a => makeNdarray!T(alloc, a)));
+    }
+}
+
+///
+unittest
+{
+    import std.experimental.allocator;
+    import std.experimental.allocator.mallocator;
+    import std.range: iota;
+    auto slice = 12.iota.sliced(3, 4);
+    auto m = Mallocator.instance.makeNdarray!int(slice);
+    static assert(is(typeof(m) == int[][]));
+    assert(m == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]);
+    foreach(ref row; m)
+        Mallocator.instance.dispose(row);
+    Mallocator.instance.dispose(m);
+}
+
+/++
+Shape of a common n-dimensional array.
+Params:
+    array = common n-dimensional array
+Returns:
+    static array of dimensions type of `size_t[n]`
+Throws:
+    $(LREF SliceException) if the array is not an n-dimensional parallelotope.
++/
+auto shape(T)(T[] array) @property
+{
+    static if (isDynamicArray!T)
+    {
+        size_t[1 + typeof(shape(T.init)).length] ret;
+        if (array.length)
+        {
+            ret[0] = array.length;
+            ret[1..$] = shape(array[0]);
+            foreach (ar; array)
+                if (shape(ar) != ret[1..$])
+                    throw new SliceException("ndarray should be an n-dimensional parallelotope.");
+        }
+        return ret;
+    }
+    else
+    {
+        size_t[1] ret = void;
+        ret[0] = array.length;
+        return ret;
+    }
+}
+
+///
+@safe pure unittest
+{
+    size_t[2] shape = [[1, 2, 3], [4, 5, 6]].shape;
+    assert(shape == [2, 3]);
+
+    import std.exception: assertThrown;
+    assertThrown([[1, 2], [4, 5, 6]].shape);
+}
+
+/// Slice from ndarray
+unittest
+{
+    auto array = [[1, 2, 3], [4, 5, 6]];
+    auto slice = array.shape.createSlice!int;
+    slice[] = [[1, 2, 3], [4, 5, 6]];
+    assert(slice == array);
+}
+
+@safe pure unittest
+{
+    size_t[2] shape = (int[][]).init.shape;
+    assert(shape[0] == 0);
+    assert(shape[1] == 0);
+}
+
+/++
+Base Exception class for $(LINK2 std_experimental_ndslice.html, std.experimental.ndslice).
++/
+class SliceException: Exception
+{
+    ///
+    this(
+        string msg,
+        string file = __FILE__,
+        uint line = cast(uint)__LINE__,
+        Throwable next = null
+        ) pure nothrow @nogc @safe
+    {
+        super(msg, file, line, next);
+    }
 }
 
 /++

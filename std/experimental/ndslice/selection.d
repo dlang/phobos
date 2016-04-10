@@ -865,7 +865,7 @@ pure unittest
 }
 
 /// See_also: $(LREF reshape)
-class ReshapeException: Exception
+class ReshapeException: SliceException
 {
     /// Old lengths
     size_t[] lengths;
