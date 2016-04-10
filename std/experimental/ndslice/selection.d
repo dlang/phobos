@@ -30,7 +30,8 @@ $(TR $(TH Function Name) $(TH Description))
 $(T2 byElement, a random access range of all elements with `index` property)
 $(T2 byElementInStandardSimplex, an input range of all elements in standard simplex of hypercube with `index` property.
     If the slice has two dimensions, it is a range of all elements of upper left triangular matrix.)
-$(T2 indexSlice, returns a slice with elements equal to the initial index)
+$(T2 indexSlice, returns a lazy slice with elements equal to the initial multidimensional index)
+$(T2 iotaSlice, returns a lazy slice with elements equal to the initial flattened (continuous) index)
 $(T2 reshape, returns a new slice for the same data)
 $(T2 diagonal, 1-dimensional slice composed of diagonal elements)
 $(T2 blocks, n-dimensional slice composed of n-dimensional non-overlapping blocks.
@@ -1533,7 +1534,9 @@ pure nothrow unittest
 }
 
 /++
-Returns a slice, the elements of which are equal to the initial index value.
+Returns a slice, the elements of which are equal to the initial multidimensional index value.
+This is multidimensional analog of $(LINK2 std_range.html#iota, std.range.iota).
+For a flattened (continuous) index, see $(LREF iotaSlice).
 
 Params:
     N = dimension count
@@ -1556,18 +1559,30 @@ IndexSlice!N indexSlice(size_t N)(auto ref size_t[N] lengths)
 }
 
 ///
-@safe @nogc pure nothrow unittest
+@safe pure nothrow @nogc unittest
+{
+    auto slice = indexSlice(2, 3);
+    static immutable array = 
+        [[[0, 0], [0, 1], [0, 2]], 
+         [[1, 0], [1, 1], [1, 2]]];
+
+    assert(slice == array);
+
+
+    static assert(is(IndexSlice!2 : Slice!(2, Range), Range));
+    static assert(is(DeepElementType!(IndexSlice!2) == size_t[2]));
+}
+
+///
+@safe pure nothrow unittest
 {
     auto im = indexSlice(7, 9);
 
-    assert(im[2, 1] == cast(size_t[2])[2, 1]);
-
-    for (auto elems = im.byElement; !elems.empty; elems.popFront)
-        assert(elems.front == elems.index);
+    assert(im[2, 1] == [2, 1]);
 
     //slicing works correctly
-    auto cm = im[1 .. $ - 3, 4 .. $ - 1];
-    assert(cm[2, 1] == cast(size_t[2])[3, 5]);
+    auto cm = im[1 .. $, 4 .. $];
+    assert(cm[2, 1] == [3, 5]);
 }
 
 /++
@@ -1581,7 +1596,8 @@ template IndexSlice(size_t N)
     {
         private size_t[N-1] _lengths;
 
-        auto save() @property const {
+        auto save() @property const
+        {
             pragma(inline, true);
             return this;
         }
@@ -1602,14 +1618,84 @@ template IndexSlice(size_t N)
     alias IndexSlice = Slice!(N, IndexMap);
 }
 
-///
-@safe @nogc pure nothrow unittest
-{
-    alias IS4 = IndexSlice!4;
-    static assert(is(IS4 == Slice!(4, Range), Range));
-}
-
 unittest
 {
     auto r = indexSlice(1);
+}
+
+/++
+Returns a slice, the elements of which are equal to the initial flattened index value.
+For a multidimensional index, see $(LREF indexSlice).
+
+Params:
+    N = dimension count
+    lengths = list of dimension lengths
+    shift = value of the first element in a slice
+Returns:
+    `N`-dimensional slice composed of indexes
+See_also: $(LREF IotaSlice)
++/
+IotaSlice!(Lengths.length) iotaSlice(Lengths...)(Lengths lengths)
+    if (allSatisfy!(isIndex, Lengths))
+{
+    return .iotaSlice!(Lengths.length)([lengths]);
+}
+
+///ditto
+IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
+{
+    import std.experimental.ndslice.slice: sliced;
+    with (typeof(return)) return Range.init.sliced(lengths, shift);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    auto slice = iotaSlice(2, 3);
+    static immutable array = 
+        [[0, 1, 2], 
+         [3, 4, 5]];
+
+    assert(slice == array);
+
+    import std.range.primitives: isRandomAccessRange;
+    static assert(isRandomAccessRange!(IotaSlice!2));
+    static assert(is(IotaSlice!2 : Slice!(2, Range), Range));
+    static assert(is(DeepElementType!(IotaSlice!2) == size_t));
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto im = iotaSlice([10, 5], 100);
+
+    assert(im[2, 1] == 111); // 100 + 2 * 5 + 1
+
+    //slicing works correctly
+    auto cm = im[1 .. $, 3 .. $];
+    assert(cm[2, 1] == 119); // 119 = 100 + (1 + 2) * 5 + (3 + 1)
+}
+
+/++
+Slice composed of flattened indexes.
+See_also: $(LREF iotaSlice)
++/
+template IotaSlice(size_t N)
+    if (N)
+{
+    alias IotaSlice = Slice!(N, IotaMap);
+}
+
+// undocumented
+// zero cost variant of `std.range.iota`
+struct IotaMap
+{
+    enum bool empty = false;
+    enum IotaMap save = IotaMap.init;
+
+    static size_t opIndex(size_t index) @safe pure nothrow @nogc @property 
+    {
+        pragma(inline, true);
+        return index;
+    }
 }
