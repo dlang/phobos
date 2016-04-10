@@ -1004,6 +1004,12 @@ unittest
     assert("a b".matchFirst(rx));
 }
 
+// bugzilla 15864
+unittest
+{
+    regex(`(<a (?:(?:\w+=\"[^"]*\")?\s*)*href="\.\.?)"`);
+}
+
 unittest
 {
     auto r = regex("(?# comment)abc(?# comment2)");
