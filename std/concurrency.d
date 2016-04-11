@@ -1907,7 +1907,6 @@ private
             {
                 alias Ops = AliasSeq!(T[1 .. $]);
                 alias ops = vals[1 .. $];
-                assert( vals[0] >= msecs(0) );
                 enum timedWait = true;
                 Duration period = vals[0];
             }
@@ -2078,7 +2077,7 @@ private
                             m_notFull.notifyAll();
                         static if( timedWait )
                         {
-                            if( period.isNegative || !m_putMsg.wait( period ) )
+                            if( period <= Duration.zero || !m_putMsg.wait( period ) )
                                 return false;
                         }
                         else
