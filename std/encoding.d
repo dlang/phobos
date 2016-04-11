@@ -1960,37 +1960,6 @@ body
     return array.length - t.length;
 }
 
-// /**
-//  * Encodes a single code point into a Buffer.
-//  *
-//  * This function encodes a single code point into one or more code units
-//  * The code units are stored in a growable buffer.
-//  *
-//  * The input to this function MUST be a valid code point.
-//  * This is enforced by the function's in-contract.
-//  *
-//  * The type of the output cannot be deduced. Therefore, it is necessary to
-//  * explicitly specify the encoding as a template parameter.
-//  *
-//  * Supersedes:
-//  * This function supersedes std.utf.encode(), however, note that the
-//  * function codeUnits() supersedes it more conveniently.
-//  *
-//  * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
-//  *
-//  * Params:
-//  *    c = the code point to be encoded
-//  */
-// deprecated void encode(E)(dchar c, ref Buffer!(E) buffer)
-// in
-// {
-//     assert(isValidCodePoint(c));
-// }
-// body
-// {
-//     EncoderInstance!(E).encode(c,buffer);
-// }
-
 /*
 Encodes $(D c) in units of type $(D E) and writes the result to the
 output range $(D R). Returns the number of $(D E)s written.
