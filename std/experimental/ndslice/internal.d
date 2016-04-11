@@ -5,10 +5,46 @@ import std.meta; //: AliasSeq, anySatisfy, Filter, Reverse;
 
 package:
 
-enum string indexStrideAssertMsg(size_t i, size_t N) =
-    "index at position "
-    ~ i.stringof ~ " (from the range [0 .." ~ N.stringof ~ ")) "
+enum indexError(size_t pos, size_t N) =
+    "index at position " ~ pos.stringof
+    ~ " from the range [0 .." ~ N.stringof ~ ")"
     ~ " must be less than corresponding length.";
+
+enum indexStrideCode = q{
+    static if(_indexes.length)
+    {
+        size_t stride = _strides[0] * _indexes[0];
+        assert(_indexes[0] < _lengths[0], indexError!(0, N));
+        foreach (i; Iota!(1, N)) //static
+        {
+            assert(_indexes[i] < _lengths[i], indexError!(i, N));
+            stride += _strides[i] * _indexes[i];
+        }
+        return stride;
+    }
+    else
+    {
+        return 0;
+    }
+};
+
+enum mathIndexStrideCode = q{
+    static if(_indexes.length)
+    {
+        size_t stride = _strides[0] * _indexes[N - 1];
+        assert(_indexes[N - 1] < _lengths[0], indexError!(N - 1, N));
+        foreach_reverse (i; Iota!(0, N - 1)) //static
+        {
+            assert(_indexes[i] < _lengths[N - 1 - i], indexError!(i, N));
+            stride += _strides[N - 1 - i] * _indexes[i];
+        }
+        return stride;
+    }
+    else
+    {
+        return 0;
+    }
+};
 
 enum string tailErrorMessage(
     string fun = __FUNCTION__,
@@ -106,7 +142,7 @@ template SliceFromSeq(Range, Seq...)
 
 template DynamicArrayDimensionsCount(T)
 {
-    static if(isDynamicArray!T)
+    static if (isDynamicArray!T)
         enum size_t DynamicArrayDimensionsCount = 1 + DynamicArrayDimensionsCount!(typeof(T.init[0]));
     else
         enum size_t DynamicArrayDimensionsCount = 0;
@@ -145,6 +181,7 @@ private bool isValidPartialPermutationImpl(size_t N)(in size_t[] perm, ref int[N
 }
 
 enum isIndex(I) = is(I : size_t);
+enum is_Slice(S) = is(S : _Slice);
 
 private enum isReference(P) =
     hasIndirections!P
@@ -163,14 +200,6 @@ template Iota(size_t i, size_t j)
         alias Iota = AliasSeq!();
     else
         alias Iota = AliasSeq!(i, Iota!(i + 1, j));
-}
-
-template Repeat(T, size_t N)
-{
-    static if (N)
-        alias Repeat = AliasSeq!(Repeat!(T, N - 1), T);
-    else
-        alias Repeat = AliasSeq!();
 }
 
 size_t lengthsProduct(size_t N)(auto ref in size_t[N] lengths)
