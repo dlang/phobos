@@ -128,6 +128,7 @@
     $(REG_TITLE Other, Subexpressions $(AMP) alternations )
     $(REG_ROW (regex),  Matches subexpression regex,
       saving matched portion of text for later retrieval. )
+    $(REG_ROW (?#comment), An inline comment that is ignored while matching.)
     $(REG_ROW (?:regex), Matches subexpression regex,
       $(U not) saving matched portion of text. Useful to speed up matching. )
     $(REG_ROW A|B, Matches subexpression A, or failing that, matches B. )

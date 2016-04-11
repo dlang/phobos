@@ -10,6 +10,7 @@ $(BUGSTITLE Library Changes,
     $(LI $(XREF range, padLeft) and $(XREF range, padRight) were added.)
     $(LI $(XREF uni, isAlphaNum), which is analogous to $(XREF ascii, isAlphaNum)
         was added.)
+    $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.
 )
 
 $(BUGSTITLE Library Changes,
