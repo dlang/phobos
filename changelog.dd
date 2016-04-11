@@ -8,6 +8,8 @@ $(BUGSTITLE Library Changes,
     $(LI $(RELATIVE_LINK2 process, Process creation in
         $(STDMODREF process, std.process) was sped up on Posix.))
     $(LI $(XREF range, padLeft) and $(XREF range, padRight) were added.)
+    $(LI $(XREF uni, isNumber) and $(XREF uni, isPunctuation) now use a separate,
+    optimized path for ASCII inputs.)
     $(LI $(XREF uni, isAlphaNum), which is analogous to $(XREF ascii, isAlphaNum)
         was added.)
     $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.
