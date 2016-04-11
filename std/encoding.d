@@ -1528,6 +1528,18 @@ unittest
     assert(!canEncode!(char)(cast(dchar)0x110000));
 }
 
+/// How to check an entire string
+unittest
+{
+    import std.algorithm.searching : find;
+    import std.utf : byDchar;
+
+    assert("The quick brown fox"
+        .byDchar
+        .find!(x => !canEncode!AsciiChar(x))
+        .empty);
+}
+
 /**
  Returns true if the code unit is legal. For example, the byte 0x80 would
  not be legal in ASCII, because ASCII code units must always be in the range
