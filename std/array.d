@@ -1952,9 +1952,11 @@ E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         && (hasLength!R2 || isSomeString!R2))
 {
+    import std.algorithm.searching : find;
+
     if (from.empty) return subject;
 
-    auto balance = std.algorithm.find(subject, from.save);
+    auto balance = find(subject, from.save);
     if (balance.empty)
         return subject;
 
@@ -1982,6 +1984,8 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     && isForwardRange!R1 && isForwardRange!R2
     && (hasLength!R2 || isSomeString!R2))
 {
+    import std.algorithm.searching : find;
+
     if (from.empty)
     {
         sink.put(subject);
@@ -1989,7 +1993,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     }
     for (;;)
     {
-        auto balance = std.algorithm.find(subject, from.save);
+        auto balance = find(subject, from.save);
         if (balance.empty)
         {
             sink.put(subject);

@@ -1217,7 +1217,8 @@ unittest
 {
     string baz(Captures!(string) m)
     {
-        return std.string.toUpper(m.hit);
+        import std.string : toUpper;
+        return toUpper(m.hit);
     }
     // Capitalize the letters 'a' and 'r':
     auto s = replaceAll!(baz)("Strap a rocket engine on a chicken.",
