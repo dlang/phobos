@@ -16,3 +16,7 @@ bin/
 obj/
 
 *.html
+
+compile_commands.json
+.reggae
+build
