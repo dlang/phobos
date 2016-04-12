@@ -76,7 +76,7 @@ Build _getBuild() {
         enum BUILD_WAS_SPECIFIED = true;
     }
 
-    enum PIC = "PIC" in userVars ? "-fPIC" : "";
+    auto PIC = "PIC" in userVars ? "-fPIC" : "";
     enum INSTALL_DIR = userVars.get("INSTALL_DIR", "../install");
     enum DRUNTIME_PATH = userVars.get("DRUNTIME_PATH", "../druntime");
     enum ZIPFILE = userVars.get("ZIPFILE", "phobos.zip");
@@ -107,7 +107,7 @@ Build _getBuild() {
         DRUNTIME = DRUNTIME_PATH ~ "/lib/druntime.lib";
     else {
         DRUNTIME = DRUNTIME_PATH ~ "/generated/" ~ OS ~ "/" ~ BUILD ~ "/" ~ MODEL ~ "/libdruntime.a";
-        DRUNTIMESO = stripExtension(DRUNTIME ~ ".so.a");
+        DRUNTIMESO = stripExtension(DRUNTIME) ~ ".so.a";
     }
 
     string CC, RUN;
@@ -282,13 +282,25 @@ Build _getBuild() {
                              DMD ~ " " ~ DFLAGS ~ " -lib -of$out " ~ DRUNTIME ~ " " ~ chain(D_FILES, OBJS).join(" "),
                              target_OBJS ~
                              chain(ALL_D_FILES, [DRUNTIME]).map!(a => Target(a)).array);
+
+    // the makefile here rewrites PIC for the dll rule, which we can't do, so add it to the flags
+    auto target_LIBSO = Target("$project/" ~ LIBSO,
+                               DMD ~ " " ~ DFLAGS ~ " -fPIC -shared -debuglib= -defaultlib= -of$out -L-soname=" ~
+                               chain([SONAME, DRUNTIMESO, LINKDL], D_FILES, OBJS).join(" "),
+                               target_OBJS ~
+                               chain(ALL_D_FILES, [DRUNTIMESO]).map!(a => Target(a)).array);
+
+    auto target_SONAME = Target("$project/" ~ ROOT ~ "/" ~ SONAME,
+                                "ln -sf " ~ baseName(LIBSO) ~ " $out",
+                                target_LIBSO);
+
     auto target_DLL = Target("$project/" ~ ROOT ~ "/libphobos2.so",
                              "ln -sf " ~ baseName(LIBSO) ~ " $out",
-                             Target(ROOT ~ "/" ~ SONAME));
+                             target_SONAME);
 
-    auto lib = Target.phony("lib", "", [target_LIB]);
-    auto dll = Target.phony("dll", "", [target_DLL]);
-
+    // the equivalent of all: lib dll
+    alias lib = target_LIB;
+    alias dll = target_DLL;
 
     return SHARED ? Build(lib, dll) : Build(lib);
 }
