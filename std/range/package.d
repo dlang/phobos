@@ -1847,9 +1847,9 @@ if (isInputRange!(Unqual!Range) &&
         if (hasSlicing!R)
         {
             assert(i <= j, "Invalid slice bounds");
-            assert(j - i <= length, "Attempting to slice past the end of a "
+            assert(j <= length, "Attempting to slice past the end of a "
                 ~ Take.stringof);
-            return source[i .. j - i];
+            return source[i .. j];
         }
     }
     else static if (hasLength!R)
@@ -2058,6 +2058,16 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
 
     immutable myRepeat = repeat(1);
     static assert(is(Take!(typeof(myRepeat))));
+}
+
+@safe nothrow @nogc unittest
+{
+    //check for correct slicing of Take on an infinite range
+    import std.algorithm : equal;
+    foreach (start; 0 .. 4)
+        foreach (stop; start .. 4)
+            assert(iota(4).cycle.take(4)[start .. stop]
+                .equal(iota(start, stop)));
 }
 
 @safe unittest
