@@ -66,7 +66,7 @@ import std.algorithm;
 
 
 Build _getBuild() {
-    enum QUIET = userVars.get("QUIET", false);
+    enum QUIET = userVars.get("QUIET", "");
 
     // Default to a release built, override with BUILD=debug
     static if("BUILD" in userVars) {
@@ -298,9 +298,86 @@ Build _getBuild() {
                              "ln -sf " ~ baseName(LIBSO) ~ " $out",
                              target_SONAME);
 
+    version(OSX) {
+        // TODO: fat library for OSX
+        throw new Exception("TODO: support OSX fat library");
+//         # Build fat library that combines the 32 bit and the 64 bit libraries
+// libphobos2.a: $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a
+// $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
+// 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=32 BUILD=release
+// 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=64 BUILD=release
+// 	lipo $(ROOT_OF_THEM_ALL)/osx/release/32/libphobos2.a \
+// 		$(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
+// 		-create -output $@
+    }
+
     // the equivalent of all: lib dll
     alias lib = target_LIB;
     alias dll = target_DLL;
 
-    return SHARED ? Build(lib, dll) : Build(lib);
+
+    // Unittests
+    auto UT_D_OBJS = D_MODULES.map!(a => ROOT ~ "/unittest/" ~ a ~ ".o").array;
+    auto target_DRUNTIME = SHARED ? Target(DRUNTIMESO) : Target(DRUNTIME);
+
+    string UT_LIBSO;
+    Target test_runner, target_UT_LIBSO;
+    Target[] target_UT_D_OBJS;
+
+    if(!SHARED) {
+        target_UT_D_OBJS = D_MODULES.
+            map!(a => Target(ROOT ~ "/unittest/" ~ a ~ ".o",
+                             DMD ~ " " ~ DFLAGS ~ " -unittest -c -of$out $in",
+                             [Target(a ~ ".d"), target_DRUNTIME])).array;
+
+        test_runner = Target("$project/" ~ ROOT ~ "/unittest/test_runner",
+                             DMD ~ " " ~ DFLAGS ~ " -unittest -of$out " ~ DRUNTIME_PATH ~ "/src/test_runner.d " ~
+                             chain(UT_D_OBJS, OBJS, [DRUNTIME, LINKDL]).join(" ") ~ " -defaultlib= -debuglib=",
+                             target_UT_D_OBJS ~
+                             Target(DRUNTIME_PATH ~ "/src/test_runner.d") ~
+                             target_OBJS ~
+                             target_DRUNTIME
+                               );
+    } else {
+        target_UT_D_OBJS = D_MODULES.
+            map!(a => Target(ROOT ~ "/unittest/" ~ a ~ ".o",
+                             DMD ~ " " ~ DFLAGS ~ " -fPIC -unittest -c -of$out $in",
+                             [Target(a ~ ".d"), target_DRUNTIME])).array;
+
+        UT_LIBSO = "$project/" ~ ROOT ~ "/unittest/libphobos2-ut.so";
+        target_UT_LIBSO = Target(UT_LIBSO,
+                                 DMD ~ " " ~ DFLAGS ~ " -fPIC -shared -unittest -of$out " ~
+                                 chain(UT_D_OBJS, OBJS, [DRUNTIMESO, LINKDL]).join(" ") ~
+                                 " -defaultlib= -debuglib=",
+                                 target_UT_D_OBJS ~ target_OBJS ~ target_DRUNTIME
+            );
+
+        test_runner = Target("$project/" ~ ROOT ~ "/unittest/test_runner",
+                             DMD ~ " " ~ DFLAGS ~ " -of$out $in -L" ~ UT_LIBSO ~ " -defaultlib= -debuglib=",
+                             [target_UT_LIBSO, Target(DRUNTIME_PATH ~ "/src/test_runner.d")]);
+    }
+
+    string moduleName(in string fileName) { return fileName.replace("/", "."); }
+
+    import std.stdio;
+    auto unittests = D_MODULES.
+        map!(a => Target.phony("unittest/" ~ a ~ ".run",
+                               QUIET ~ TIMELIMIT ~ RUN ~ " $in " ~ moduleName(a),
+                               [test_runner])).array;
+    Target unittest_;
+
+    if(BUILD_WAS_SPECIFIED) {
+        unittest_ = Target.phony("unittest", "", unittests);
+    } else {
+        // TODO: should do both release and debug builds here then run the tests
+        throw new Exception("unittest run for both debug and release builds not supported yet");
+    }
+
+    //TODO: single unit test and testing by package/module
+
+    auto defaults = SHARED ? [lib, dll] : [lib];
+    auto allTargets = chain(defaults.map!createTopLevelTarget,
+                            chain([unittest_], unittests).map!(a => optional(a))).array;
+
+    return Build(allTargets.array);
 }
