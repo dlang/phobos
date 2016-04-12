@@ -1532,3 +1532,11 @@ unittest // Issue 14724
 
     assert(rslt.helpWanted);
 }
+
+
+unittest // Issue 15914
+{
+    bool opt;
+    string[] args;
+    getopt(args, config.passThrough, 'a', &opt);
+}
