@@ -254,6 +254,7 @@ module std.regex;
 import std.regex.internal.ir;
 import std.regex.internal.thompson; //TODO: get rid of this dependency
 import std.exception, std.traits, std.range;
+import std.typecons; // : Flag, Yes, No;
 
 /++
     $(D Regex) object holds regular expression pattern in compiled form.
@@ -1327,11 +1328,17 @@ public R replace(alias fun, R, RegEx)(R input, RegEx re)
     return replaceAllWith!(fun, match)(input, re);
 }
 
-/++
-Range that splits a string using a regular expression as a
-separator.
-+/
-public struct Splitter(Range, alias RegEx = Regex)
+/**
+Splits a string `r` using a regular expression `pat` as a separator.
+
+Params:
+    keepSeparators = flag to specify if the matches should be in the resulting range
+    r = the string to split
+    pat = the pattern to split on
+Returns:
+    A lazy range of strings
+*/
+public struct Splitter(Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, alias RegEx = Regex)
     if(isSomeString!Range && isRegexFor!(RegEx, Range))
 {
 private:
@@ -1339,6 +1346,8 @@ private:
     size_t _offset;
     alias Rx = typeof(match(Range.init,RegEx.init));
     Rx _match;
+
+    static if (keepSeparators) bool onMatch = false;
 
     @trusted this(Range input, RegEx separator)
     {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted
@@ -1352,6 +1361,10 @@ private:
         else
         {
             _match = Rx(_input, separator);
+
+            static if (keepSeparators)
+                if (_match.pre.empty)
+                    popFront();
         }
     }
 
@@ -1368,13 +1381,27 @@ public:
 
         assert(!empty && _offset <= _match.pre.length
                 && _match.pre.length <= _input.length);
-        return _input[_offset .. min($, _match.pre.length)];
+
+        static if (keepSeparators)
+        {
+            if (!onMatch)
+                return _input[_offset .. min($, _match.pre.length)];
+            else
+                return _match.hit();
+        }
+        else
+        {
+            return _input[_offset .. min($, _match.pre.length)];
+        }
     }
 
     ///ditto
     @property bool empty()
     {
-        return _offset > _input.length;
+        static if (keepSeparators)
+            return _offset >= _input.length;
+        else
+            return _offset > _input.length;
     }
 
     ///ditto
@@ -1388,9 +1415,27 @@ public:
         }
         else
         {
-            //skip past the separator
-            _offset = _match.pre.length + _match.hit.length;
-            _match.popFront();
+            static if (keepSeparators)
+            {
+                if (!onMatch)
+                {
+                    //skip past the separator
+                    _offset = _match.pre.length;
+                }
+                else
+                {
+                    _offset += _match.hit.length;
+                    _match.popFront();
+                }
+
+                onMatch = !onMatch;
+            }
+            else
+            {
+                //skip past the separator
+                _offset = _match.pre.length + _match.hit.length;
+                _match.popFront();
+            }
         }
     }
 
@@ -1401,14 +1446,12 @@ public:
     }
 }
 
-/**
-    A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat).
-    Captured subexpressions have no effect on the resulting range.
-*/
-public Splitter!(Range, RegEx) splitter(Range, RegEx)(Range r, RegEx pat)
-    if(is(BasicElementOf!Range : dchar) && isRegexFor!(RegEx, Range))
+/// ditto
+public Splitter!(keepSeparators, Range, RegEx) splitter(
+    Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, RegEx)(Range r, RegEx pat) if (
+        is(BasicElementOf!Range : dchar) && isRegexFor!(RegEx, Range))
 {
-    return Splitter!(Range, RegEx)(r, pat);
+    return Splitter!(keepSeparators, Range, RegEx)(r, pat);
 }
 
 ///
@@ -1418,6 +1461,22 @@ unittest
     auto s1 = ", abc, de,  fg, hi, ";
     assert(equal(splitter(s1, regex(", *")),
         ["", "abc", "de", "fg", "hi", ""]));
+}
+
+/// Split on a pattern, but keep the matches in the resulting range
+unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto pattern = regex(`([\.,])`);
+
+    assert("2003.04.05"
+        .splitter!(Yes.keepSeparators)(pattern)
+        .equal(["2003", ".", "04", ".", "05"]));
+
+    assert(",1,2,3"
+        .splitter!(Yes.keepSeparators)(pattern)
+        .equal([",", "1", ",", "2", ",", "3"]));
 }
 
 ///An eager version of $(D splitter) that creates an array with splitted slices of $(D input).
