@@ -2107,19 +2107,13 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     import std.algorithm.comparison : equal;
     import std.conv : text;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
-    static assert(isInputRange!(typeof(joiner([""], ""))));
-    static assert(isForwardRange!(typeof(joiner([""], ""))));
-    assert(equal(joiner([""], "xyz"), ""), text(joiner([""], "xyz")));
-    assert(equal(joiner(["", ""], "xyz"), "xyz"), text(joiner(["", ""], "xyz")));
-    assert(equal(joiner(["", "abc"], "xyz"), "xyzabc"));
-    assert(equal(joiner(["abc", ""], "xyz"), "abcxyz"));
-    assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
-    assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
-                    "Mary...has...a...little...lamb"));
-    assert(equal(joiner(["abc", "def"]), "abcdef"));
+    assert(["abc", "def"].joiner.equal("abcdef"));
+    assert(["Mary", "has", "a", "little", "lamb"]
+        .joiner("...")
+        .equal("Mary...has...a...little...lamb"));
+    assert(["", "abc"].joiner("xyz").equal("xyzabc"));
+    assert([""].joiner("xyz").equal(""));
+    assert(["", ""].joiner("xyz").equal("xyz"));
 }
 
 unittest
@@ -2226,6 +2220,12 @@ unittest
     // Test consecutive trailing empty elements
     auto tr5 = TransientRange([[1,2], [3,4], [], []]);
     assert(equal(joiner(tr5, [0,1]), [1,2,0,1,3,4,0,1,0,1]));
+}
+
+unittest
+{
+    static assert(isInputRange!(typeof(joiner([""], ""))));
+    static assert(isForwardRange!(typeof(joiner([""], ""))));
 }
 
 /// Ditto
