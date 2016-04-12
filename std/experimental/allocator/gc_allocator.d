@@ -20,7 +20,7 @@ struct GCAllocator
     deallocate) and $(D reallocate) methods are $(D @system) because they may
     move memory around, leaving dangling pointers in user code.
     */
-    @trusted void[] allocate(size_t bytes) shared
+    @trusted void[] allocate(size_t bytes) shared nothrow pure
     {
         if (!bytes) return null;
         auto p = GC.malloc(bytes);
@@ -28,7 +28,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool expand(ref void[] b, size_t delta) shared
+    @trusted bool expand(ref void[] b, size_t delta) shared nothrow pure
     {
         if (delta == 0) return true;
         if (b is null)
@@ -55,7 +55,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool reallocate(ref void[] b, size_t newSize) shared
+    @trusted bool reallocate(ref void[] b, size_t newSize) shared nothrow pure
     {
         import core.exception : OutOfMemoryError;
         try
@@ -80,14 +80,14 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool deallocate(void[] b) shared
+    @trusted bool deallocate(void[] b) shared nothrow pure
     {
         GC.free(b.ptr);
         return true;
     }
 
     /// Ditto
-    size_t goodAllocSize(size_t n) shared
+    size_t goodAllocSize(size_t n) shared nothrow pure @safe @nogc
     {
         if(n == 0)
             return 0;
@@ -158,4 +158,16 @@ unittest
 
     // anything above a page is simply rounded up to next page
     assert(GCAllocator.instance.goodAllocSize(4096 * 4 + 1) == 4096 * 5);
+}
+
+pure @safe nothrow unittest
+{
+    auto dummyAllloc(Allocator = shared GCAllocator)()
+    {
+        Allocator alloc;
+        auto a = alloc.allocate(4096);
+        alloc.expand(a, 4096);
+        alloc.deallocate(a);
+    }
+    dummyAllloc();
 }
