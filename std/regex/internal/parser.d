@@ -4,7 +4,7 @@
 */
 module std.regex.internal.parser;
 
-import std.regex.internal.ir;
+import std.regex.internal.ir, std.regex.internal.shiftor;
 import std.range.primitives, std.uni, std.meta,
     std.traits, std.typecons, std.exception;
 static import std.ascii;

@@ -463,6 +463,114 @@ interface Kickstart(Char){
     @property bool empty() const;
 }
 
+//basic stack, just in case it gets used anywhere else then Parser
+@trusted struct Stack(T)
+{
+    T[] data;
+    @property bool empty(){ return data.empty; }
+
+    @property size_t length(){ return data.length; }
+
+    void push(T val){ data ~= val;  }
+
+    T pop()
+    {
+        assert(!empty);
+        auto val = data[$ - 1];
+        data = data[0 .. $ - 1];
+        if(!__ctfe)
+            cast(void)data.assumeSafeAppend();
+        return val;
+    }
+
+    @property ref T top()
+    {
+        assert(!empty);
+        return data[$ - 1];
+    }
+}
+
+@trusted void reverseBytecode()(Bytecode[] code)
+{
+    import std.typecons;
+    Bytecode[] rev = new Bytecode[code.length];
+    uint revPc = cast(uint)rev.length;
+    Stack!(Tuple!(uint, uint, uint)) stack;
+    uint start = 0;
+    uint end = cast(uint)code.length;
+    for(;;)
+    {
+        for(uint pc = start; pc < end; )
+        {
+            uint len = code[pc].length;
+            if(code[pc].code == IR.GotoEndOr)
+                break; //pick next alternation branch
+            if(code[pc].isAtom)
+            {
+                rev[revPc - len .. revPc] = code[pc .. pc + len];
+                revPc -= len;
+                pc += len;
+            }
+            else if(code[pc].isStart || code[pc].isEnd)
+            {
+                //skip over other embedded lookbehinds they are reversed
+                if(code[pc].code == IR.LookbehindStart
+                    || code[pc].code == IR.NeglookbehindStart)
+                {
+                    uint blockLen = len + code[pc].data
+                         + code[pc].pairedLength;
+                    rev[revPc - blockLen .. revPc] = code[pc .. pc + blockLen];
+                    pc += blockLen;
+                    revPc -= blockLen;
+                    continue;
+                }
+                uint second = code[pc].indexOfPair(pc);
+                uint secLen = code[second].length;
+                rev[revPc - secLen .. revPc] = code[second .. second + secLen];
+                revPc -= secLen;
+                if(code[pc].code == IR.OrStart)
+                {
+                    //we pass len bytes forward, but secLen in reverse
+                    uint revStart = revPc - (second + len - secLen - pc);
+                    uint r = revStart;
+                    uint i = pc + IRL!(IR.OrStart);
+                    while(code[i].code == IR.Option)
+                    {
+                        if(code[i - 1].code != IR.OrStart)
+                        {
+                            assert(code[i - 1].code == IR.GotoEndOr);
+                            rev[r - 1] = code[i - 1];
+                        }
+                        rev[r] = code[i];
+                        auto newStart = i + IRL!(IR.Option);
+                        auto newEnd = newStart + code[i].data;
+                        auto newRpc = r + code[i].data + IRL!(IR.Option);
+                        if(code[newEnd].code != IR.OrEnd)
+                        {
+                            newRpc--;
+                        }
+                        stack.push(tuple(newStart, newEnd, newRpc));
+                        r += code[i].data + IRL!(IR.Option);
+                        i += code[i].data + IRL!(IR.Option);
+                    }
+                    pc = i;
+                    revPc = revStart;
+                    assert(code[pc].code == IR.OrEnd);
+                }
+                else
+                    pc += len;
+            }
+        }
+        if(stack.empty)
+            break;
+        start = stack.top[0];
+        end = stack.top[1];
+        revPc = stack.top[2];
+        stack.pop();
+    }
+    code[] = rev[];
+}
+
 /++
     $(D Regex) object holds regular expression pattern in compiled form.
     Instances of this object are constructed via calls to $(D regex).
