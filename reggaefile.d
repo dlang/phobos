@@ -71,9 +71,10 @@ Build _getBuild() {
     // Default to a release built, override with BUILD=debug
     static if("BUILD" in userVars) {
         enum BUILD = userVars["BUILD"];
+        enum BUILD_WAS_SPECIFIED = true;
     } else {
         enum BUILD = "release";
-        enum BUILD_WAS_SPECIFIED = true;
+        enum BUILD_WAS_SPECIFIED = false;
     }
 
     auto PIC = "PIC" in userVars ? "-fPIC" : "";
@@ -368,12 +369,12 @@ Build _getBuild() {
                                [test_runner])).array;
     Target unittest_;
 
-    if(BUILD_WAS_SPECIFIED) {
+    static if(BUILD_WAS_SPECIFIED) {
         // target for the batch unittests (using shared phobos library and test_runner)
         unittest_ = Target.phony("unittest", "", unittests);
     } else {
+        static assert(false, "Error: unittest run for both debug and release builds not supported yet");
         // TODO: should do both release and debug builds here then run the tests
-        throw new Exception("unittest run for both debug and release builds not supported yet");
     }
 
     // Target for quickly running a single unittest (using static phobos library).
@@ -449,7 +450,7 @@ Build _getBuild() {
     static assert(D2HTML("std/range/package.d") == "std_range.html");
 
     auto HTMLS = SRC_DOCUMENTABLES.map!(a => DOC_OUTPUT_DIR ~ "/" ~ D2HTML(a)).array;
-    auto BIG_HTMLS = SRC_DOCUMENTABLES.map!(a => BIGDOC_OUTPUT_DIR ~ "/" ~ D2HTML(a)).array;
+    auto BIGHTMLS = SRC_DOCUMENTABLES.map!(a => BIGDOC_OUTPUT_DIR ~ "/" ~ D2HTML(a)).array;
 
     auto doc_output_dir = Target(DOC_OUTPUT_DIR ~ "/.", "mkdir -p $in", []);
     // For each module, define a rule e.g.:
@@ -458,6 +459,11 @@ Build _getBuild() {
                                                     DDOC ~ " project.ddoc " ~ STDDOC.join(" ") ~ " -Df$out $in",
                                                     [Target(a)] ~ STDDOC.map!(a => Target(a)).array)).
         array;
+    auto big_htmls = SRC_DOCUMENTABLES.map!(a => Target(BIGDOC_OUTPUT_DIR ~ "/" ~ D2HTML(a),
+                                                        DDOC ~ " project.ddoc " ~ BIGSTDDOC.join(" ") ~ " -Df$out $in",
+                                                        [Target(a)] ~ STDDOC.map!(a => Target(a)).array)).
+        array;
+
 
     auto html = Target.phony("html",
                              "",
@@ -472,13 +478,17 @@ Build _getBuild() {
                                          "rsync -avz " ~ WEBSITE_DIR ~
                                          "/ d-programming@digitalmars.com:data/phobos-prerelease/",
                                          [html]);
-    // TODO: figure out call to make
     auto html_consolidated = Target.phony("html_consolidated",
-                                          "$(DDOC) -Df$(DOCSRC)/std_consolidated_header.html $(DOCSRC)/std_consolidated_header.dd; " ~
-                                          "$(DDOC) -Df$(DOCSRC)/std_consolidated_footer.html $(DOCSRC)/std_consolidated_footer.dd; " ~
-                                          "$(MAKE) -f $(MAKEFILE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8; " ~
-                                          "cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS) " ~
-                                          "$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html"
+
+                                          DDOC ~ " -Df" ~ DOCSRC ~ "/std_consolidated_header.html " ~
+                                          DOCSRC ~ "/std_consolidated_header.dd; " ~
+
+                                          DDOC ~ " -Df" ~ DOCSRC ~ "/std_consolidated_footer.html " ~
+                                          DOCSRC ~ "/std_consolidated_footer.dd; " ~
+
+                                          "cat " ~ DOCSRC ~ "/std_consolidated_header.html " ~ BIGHTMLS.join(" ") ~ " " ~
+                                          DOCSRC ~ "/std_consolidated_footer.html > " ~ DOC_OUTPUT_DIR ~ "/std_consolidated.html",
+                                          big_htmls
                                           );
     auto changelog_html = Target("changelog.html", DMD ~ " -Df$out $in", Target("changelog.dd"));
 
