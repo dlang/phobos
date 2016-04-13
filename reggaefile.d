@@ -10,7 +10,7 @@ import std.path;
 import std.range;
 
 
-string OS, uname_S, uname_M, MODEL, MODEL_FLAG;
+string OS, uname_S, uname_M, MODEL;
 
 static this() {
     if(userVars.get("OS", "") == "") {
@@ -54,10 +54,11 @@ static this() {
         if(MODEL == "")
             throw new Exception("Cannot figure 32/64 model from uname -m: " ~ uname_M);
     }
-
-    MODEL_FLAG = "-m" ~ MODEL;
 }
 
+string MODEL_FLAG(string model = MODEL) {
+    return "-m" ~ model;
+}
 
 
 import reggae;
@@ -83,8 +84,8 @@ Build _getBuild() {
     enum ZIPFILE = userVars.get("ZIPFILE", "phobos.zip");
     enum ROOT_OF_THEM_ALL = userVars.get("ROOT_OF_THEM_ALL", "generated");
     // ROOT is a variable in posix.mak, but is a function here so the build can vary
-    string ROOT(string build = BUILD) {
-        return userVars.get("ROOT", ROOT_OF_THEM_ALL ~ "/" ~ OS ~ "/" ~ build ~ "/" ~ MODEL);
+    string ROOT(string build = BUILD, string model = MODEL) {
+        return userVars.get("ROOT", ROOT_OF_THEM_ALL ~ "/" ~ OS ~ "/" ~ build ~ "/" ~ model);
     }
     // Documentation-related stuff
     enum DOCSRC = userVars.get("DOCSRC", "../dlang.org");
@@ -98,17 +99,19 @@ Build _getBuild() {
     enum BIGSTDDOC = ["std_consolidated.ddoc", "macros.ddoc"].map!(a => DOCSRC ~ "/" ~ a).array;
     string DMD, DMDEXTRAFLAGS;
 
-    string DRUNTIMESO;
     enum CUSTOM_DRUNTIME = userVars.get("DRUNTIME", "") != "";
 
-    version(Windows)
-        auto DRUNTIME = DRUNTIME_PATH ~ "/lib/druntime.lib";
-    else {
+    version(Windows) {
+        string DRUNTIME(string build = BUILD) { return DRUNTIME_PATH ~ "/lib/druntime.lib"; }
+        string DRUNTIMESO(string build = BUILD) { return ""; }
+    } else {
         // DRUNTIME is a variable in posix.mak
-        string DRUNTIME(string build = BUILD) {
-            return DRUNTIME_PATH ~ "/generated/" ~ OS ~ "/" ~ build ~ "/" ~ MODEL ~ "/libdruntime.a";
+        string DRUNTIME(string build = BUILD, string model = MODEL) {
+            return DRUNTIME_PATH ~ "/generated/" ~ OS ~ "/" ~ build ~ "/" ~ model ~ "/libdruntime.a";
         }
-        DRUNTIMESO = stripExtension(DRUNTIME) ~ ".so.a";
+        string DRUNTIMESO(string build = BUILD) {
+            return stripExtension(DRUNTIME(build)) ~ ".so.a";
+        }
     }
 
     string CC, RUN;
@@ -128,12 +131,12 @@ Build _getBuild() {
     auto DDOC = DMD ~ " -conf= " ~ MODEL_FLAG ~ " -w -c -o- -version=StdDdoc -I" ~
         DRUNTIME_PATH ~ "/import " ~ DMDEXTRAFLAGS;
 
-    string CFLAGS(string build = BUILD) {
-        return MODEL_FLAG ~ " -fPIC -DHAVE_UNISTD_H" ~ (build == "debug" ? " -g" : " -O3");
+    string CFLAGS(string build = BUILD, string model = MODEL) {
+        return MODEL_FLAG(model) ~ " -fPIC -DHAVE_UNISTD_H" ~ (build == "debug" ? " -g" : " -O3");
     }
 
-    string DFLAGS(string build = BUILD) {
-        auto flags = "-conf= -I" ~ DRUNTIME_PATH ~ "/import " ~ DMDEXTRAFLAGS ~ " -w -dip25 " ~ MODEL_FLAG ~ " " ~ PIC;
+    string DFLAGS(string build = BUILD, string model = MODEL) {
+        auto flags = "-conf= -I" ~ DRUNTIME_PATH ~ "/import " ~ DMDEXTRAFLAGS ~ " -w -dip25 " ~ MODEL_FLAG(model) ~ " " ~ PIC;
         flags ~= build == "debug" ? " -g -debug" : " -O -release";
         return flags;
     }
@@ -285,25 +288,28 @@ Build _getBuild() {
     // Rules begin here
 
     // C objects, a pattern rule in the original makefile
-    Target[] target_OBJS(string build = BUILD) {
+    Target[] target_OBJS(string build = BUILD, string model = MODEL) {
         return C_MODULES.
-            map!(a => Target(ROOT(build) ~ "/" ~ a ~ DOTOBJ,
-                             CC ~ " -c " ~ CFLAGS(build) ~ " $in -o $out",
+            map!(a => Target(ROOT(build, model) ~ "/" ~ a ~ DOTOBJ,
+                             CC ~ " -c " ~ CFLAGS(build, model) ~ " $in -o $out",
                              Target(a ~ ".c"))).
             array;
     }
 
-    auto target_LIB = Target("$project/" ~ LIB,
-                             DMD ~ " " ~ DFLAGS ~ " -lib -of$out " ~ DRUNTIME ~ " " ~ chain(D_FILES, OBJS).join(" "),
-                             target_OBJS ~
-                             chain(ALL_D_FILES, [DRUNTIME]).map!(a => Target(a)).array);
+    Target target_LIB(string build = BUILD, string model = MODEL) {
+        return Target("$project/" ~ LIB,
+                      DMD ~ " " ~ DFLAGS(build, model) ~ " -lib -of$out " ~ DRUNTIME(build, model) ~ " " ~
+                      chain(D_FILES, OBJS).join(" "),
+                      target_OBJS(build, model) ~
+                      chain(ALL_D_FILES, [DRUNTIME(build)]).map!(a => Target(a)).array);
+    }
 
     // the makefile here rewrites PIC for the dll rule, which we can't do, so add it to the flags
     auto target_LIBSO = Target("$project/" ~ LIBSO,
-                               DMD ~ " " ~ DFLAGS ~ " -fPIC -shared -debuglib= -defaultlib= -of$out -L-soname=" ~
-                               chain([SONAME, DRUNTIMESO, LINKDL], D_FILES, OBJS).join(" "),
-                               target_OBJS ~
-                               chain(ALL_D_FILES, [DRUNTIMESO]).map!(a => Target(a)).array);
+                               DMD ~ " " ~ DFLAGS(BUILD) ~ " -fPIC -shared -debuglib= -defaultlib= -of$out -L-soname=" ~
+                               chain([SONAME, DRUNTIMESO(BUILD), LINKDL], D_FILES, OBJS).join(" "),
+                               target_OBJS(BUILD) ~
+                               chain(ALL_D_FILES, [DRUNTIMESO(BUILD)]).map!(a => Target(a)).array);
 
     auto target_SONAME = Target("$project/" ~ ROOT ~ "/" ~ SONAME,
                                 "ln -sf " ~ baseName(LIBSO) ~ " $out",
@@ -314,16 +320,15 @@ Build _getBuild() {
                              target_SONAME);
 
     version(OSX) {
-        // TODO: fat library for OSX
-        throw new Exception("TODO: support OSX fat library");
-//         # Build fat library that combines the 32 bit and the 64 bit libraries
-// libphobos2.a: $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a
-// $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
-// 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=32 BUILD=release
-// 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=64 BUILD=release
-// 	lipo $(ROOT_OF_THEM_ALL)/osx/release/32/libphobos2.a \
-// 		$(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
-// 		-create -output $@
+        // Build fat library that combines the 32 bit and the 64 bit libraries
+        auto fat = [Target("libphobos2.a",
+                          "lipo " ~
+                           ROOT_OF_THEM_ALL ~ "/osx/release/32/libphobos2.a \\\n" ~
+                           ROOT_OF_THEM_ALL ~ "/osx/release/64/libphobos2.a \\\n" ~
+                          "-create -output $out",
+                           [target_LIB(BUILD, "32"), target_LIB(BUILD, "64")])];
+    } else {
+        Target[] fat;
     }
 
     // the equivalent of all: lib dll
@@ -334,7 +339,7 @@ Build _getBuild() {
     // Unittests
     Target[] createUnitTests(string build) {
         auto UT_D_OBJS = D_MODULES.map!(a => ROOT(build) ~ "/unittest/" ~ a ~ ".o").array;
-        auto target_DRUNTIME = SHARED ? Target(DRUNTIMESO) : Target(DRUNTIME(build));
+        auto target_DRUNTIME = SHARED ? Target(DRUNTIMESO(build)) : Target(DRUNTIME(build));
 
         Target test_runner;
 
@@ -517,7 +522,8 @@ Build _getBuild() {
     auto auto_tester_test  = Target.phony("auto-tester-test",  "", [unittest_]);
 
     auto targets = chain(all.map!createTopLevelTarget,
-                         chain([unittest_, unittest_debug, unittest_release, gitzip, zip, install], druntimes,
+                         chain(fat,
+                               [unittest_, unittest_debug, unittest_release, gitzip, zip, install], druntimes,
                                [html], htmls,
                                [allmod, rsync_prerelease, html_consolidated, changelog_html],
                                [checkwhitespace, auto_tester_build, auto_tester_test], unittestsModule, unittestsPackage).
