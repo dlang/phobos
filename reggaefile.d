@@ -279,7 +279,9 @@ Build _getBuild() {
                       "gzread", "gzwrite", "infback", "inffast", "inflate", "inftrees", "trees",
                       "uncompr", "zutil"].map!(a => "etc/c/zlib/" ~ a);
 
-    auto OBJS = C_MODULES.map!(a => ROOT ~ "/" ~ a ~ DOTOBJ).array;
+    string[] OBJS(string build = BUILD, string model = MODEL) {
+        return C_MODULES.map!(a => ROOT(build, model) ~ "/" ~ a ~ DOTOBJ).array;
+    }
 
     // build with shared library support (default to true on supported platforms)
     auto SHARED = userVars.get("SHARED", ["linux", "freebsd"].canFind(OS) ? true : false);
@@ -289,7 +291,7 @@ Build _getBuild() {
     // C objects, a pattern rule in the original makefile
     Target[] target_OBJS(string build = BUILD, string model = MODEL) {
         return C_MODULES.
-            map!(a => Target(ROOT(build, model) ~ "/" ~ a ~ DOTOBJ,
+            map!(a => Target("$project/" ~ ROOT(build, model) ~ "/" ~ a ~ DOTOBJ,
                              CC ~ " -c " ~ CFLAGS(build, model) ~ " $in -o $out",
                              Target(a ~ ".c"))).
             array;
@@ -337,20 +339,20 @@ Build _getBuild() {
 
     // Unittests
     Target[] createUnitTests(string build) {
-        auto UT_D_OBJS = D_MODULES.map!(a => ROOT(build) ~ "/unittest/" ~ a ~ ".o").array;
+        auto UT_D_OBJS = D_MODULES.map!(a => "$project/" ~ ROOT(build) ~ "/unittest/" ~ a ~ ".o").array;
         auto target_DRUNTIME = SHARED ? Target(DRUNTIMESO(build)) : Target(DRUNTIME(build));
 
         Target test_runner;
 
         if(!SHARED) {
             auto target_UT_D_OBJS = D_MODULES.
-                map!(a => Target(ROOT(build) ~ "/unittest/" ~ a ~ ".o",
+                map!(a => Target("$project/" ~ ROOT(build) ~ "/unittest/" ~ a ~ ".o",
                                  DMD ~ " " ~ DFLAGS(build) ~ " -unittest -c -of$out $in",
                                  [Target(a ~ ".d"), target_DRUNTIME])).array;
 
             test_runner = Target("$project/" ~ ROOT(build) ~ "/unittest/test_runner",
                                  DMD ~ " " ~ DFLAGS(build) ~ " -unittest -of$out " ~ DRUNTIME_PATH ~ "/src/test_runner.d " ~
-                                 chain(UT_D_OBJS, OBJS, [DRUNTIME(build), LINKDL]).join(" ") ~ " -defaultlib= -debuglib=",
+                                 chain(UT_D_OBJS, OBJS(build), [DRUNTIME(build), LINKDL]).join(" ") ~ " -defaultlib= -debuglib=",
                                  target_UT_D_OBJS ~
                                  Target(DRUNTIME_PATH ~ "/src/test_runner.d") ~
                                  target_OBJS(build) ~
@@ -358,14 +360,14 @@ Build _getBuild() {
                 );
         } else {
             auto target_UT_D_OBJS = D_MODULES.
-                map!(a => Target(ROOT(build) ~ "/unittest/" ~ a ~ ".o",
+                map!(a => Target("$project/" ~ ROOT(build) ~ "/unittest/" ~ a ~ ".o",
                                  DMD ~ " " ~ DFLAGS(build) ~ " -fPIC -unittest -c -of$out $in",
                                  [Target(a ~ ".d"), target_DRUNTIME])).array;
 
             auto UT_LIBSO = "$project/" ~ ROOT(build) ~ "/unittest/libphobos2-ut.so";
             auto target_UT_LIBSO = Target(UT_LIBSO,
                                           DMD ~ " " ~ DFLAGS(build) ~ " -fPIC -shared -unittest -of$out " ~
-                                          chain(UT_D_OBJS, OBJS, [DRUNTIMESO, LINKDL]).join(" ") ~
+                                          chain(UT_D_OBJS, OBJS(build), [DRUNTIMESO(build), LINKDL]).join(" ") ~
                                           " -defaultlib= -debuglib=",
                                           target_UT_D_OBJS ~ target_OBJS(build) ~ target_DRUNTIME
                 );

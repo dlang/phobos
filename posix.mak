@@ -403,7 +403,7 @@ else
 # to always invoke druntime's make. Use FORCE instead of .PHONY to
 # avoid rebuilding phobos when $(DRUNTIME) didn't change.
 $(DRUNTIME): FORCE
-	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS) BUILD=$(BUILD)
+	$(MAKE) -C $(DRUNTIME_PATH) -f Makefile MODEL=$(MODEL) DMD=$(DMD) OS=$(OS) BUILD=$(BUILD)
 
 ifeq (,$(findstring win,$(OS)))
 $(DRUNTIMESO): $(DRUNTIME)
@@ -459,7 +459,7 @@ changelog.html: changelog.dd
 	$(DMD) -Df$@ $<
 
 #################### test for undesired white spaces ##########################
-CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
+CWS_TOCHECK = Makefile win32.mak win64.mak osmodel.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 
 checkwhitespace: $(LIB)
