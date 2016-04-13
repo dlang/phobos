@@ -675,7 +675,7 @@ are:
 2: if $(D E) is a non $(empty) $(D InputRange), then placing $(D e) is
 guaranteed to not overflow the range.
  +/
-package template isNativeOutputRange(R, E)
+package(std) template isNativeOutputRange(R, E)
 {
     enum bool isNativeOutputRange = is(typeof(
     (inout int = 0)
