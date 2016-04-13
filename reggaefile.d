@@ -99,9 +99,7 @@ Build _getBuild() {
         DRUNTIME_PATH ~ "/import " ~ DMDEXTRAFLAGS;
 
     string DRUNTIME, DRUNTIMESO;
-    static if(userVars.get("DRUNTIME", "") != "") {
-        enum CUSTOM_RUNTIME = true;
-    }
+    enum CUSTOM_DRUNTIME = userVars.get("DRUNTIME", "") != "";
 
     version(Windows)
         DRUNTIME = DRUNTIME_PATH ~ "/lib/druntime.lib";
@@ -317,7 +315,7 @@ Build _getBuild() {
     // the equivalent of all: lib dll
     alias lib = target_LIB;
     alias dll = target_DLL;
-
+    auto all = SHARED ? [lib, dll] : [lib]; // the Makefile "all" targets
 
     // Unittests
     auto UT_D_OBJS = D_MODULES.map!(a => ROOT ~ "/unittest/" ~ a ~ ".o").array;
@@ -401,10 +399,48 @@ Build _getBuild() {
                                    unittestsModule.filter!(a => targetNames.canFind(a.rawOutputs[0])).array);
     }
 
-    auto defaults = SHARED ? [lib, dll] : [lib];
-    auto allTargets = chain(defaults.map!createTopLevelTarget,
-                            chain([unittest_], unittestsModule, unittestsPackage).
-                            map!(a => optional(a))).array;
+    // More stuff
+    auto gitzip = Target.phony("gitzip", "git archive --format=zip HEAD > " ~ ZIPFILE);
+    auto zip = Target.phony("zip", "rm -f " ~ ZIPFILE ~ "; zip -r " ~ ZIPFILE ~ " . -x .git\\* -x generated\\*");
 
-    return Build(allTargets.array);
+    version(OSX)
+        auto lib_dir = "lib" ~ MODEL;
+    else
+        auto lib_dir = "lib";
+
+    Target install;
+    auto installCommonCmd = "mkdir -p " ~ [INSTALL_DIR, OS, lib_dir].join("/") ~ "; " ~
+        "cp " ~ LIB ~ " " ~ [INSTALL_DIR, OS, lib_dir].join("/") ~ "/; ";
+    if(SHARED)
+        install = Target.phony("install",
+                               installCommonCmd ~
+                               "cp -P " ~ LIBSO ~ " " ~ [INSTALL_DIR, OS, lib_dir].join("/") ~ "/; " ~
+                               "ln -sf " ~ baseName(LIBSO) ~ [INSTALL_DIR, OS, lib_dir, "libphobos2.so"].join("/"));
+    else
+        install = Target.phony("install",
+                               installCommonCmd ~
+                               "mkdir -p " ~ INSTALL_DIR ~ "/src/phobos/etc; " ~
+                               "mkdir -p " ~ INSTALL_DIR ~ "/src/phobos/std; " ~
+                               "cp -r std/* " ~ INSTALL_DIR ~ "/src/phobos/std; " ~
+                               "cp -r etc/* " ~ INSTALL_DIR ~ "/src/phobos/etc; " ~
+                               "cp LICENSE_1_0.TXT " ~ INSTALL_DIR ~ "/phobos-LICENSE.txt");
+
+    Target[] druntimes;
+    if(CUSTOM_DRUNTIME) {
+        // We consider a custom-set DRUNTIME a sign they build druntime themselves
+    } else
+        // This rule additionally produces $(DRUNTIMESO). Add a fake dependency
+        // to always invoke druntime's make. Use FORCE instead of .PHONY to
+        // avoid rebuilding phobos when $(DRUNTIME) didn't change.
+        druntimes ~= Target.phony(DRUNTIME, "make -C " ~ DRUNTIME_PATH ~ " -f posix.mak MODEL=" ~ MODEL ~
+                                  " DMD=" ~ DMD ~ " OS=" ~ OS ~ " BUILD=" ~ BUILD);
+
+    version(Windows)
+        druntimes ~= Target.phony(DRUNTIMESO, "", [druntime]);
+
+    auto targets = chain(all.map!createTopLevelTarget,
+                         chain([unittest_, gitzip, zip, install], druntimes, unittestsModule, unittestsPackage).
+                         map!(a => optional(a))).array;
+
+    return Build(targets);
 }
