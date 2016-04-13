@@ -63,7 +63,7 @@ static this() {
 import reggae;
 //import osmodel;
 import std.algorithm;
-
+import std.file;
 
 Build _getBuild() {
     enum QUIET = userVars.get("QUIET", "");
@@ -380,7 +380,7 @@ Build _getBuild() {
     // Target for quickly running a single unittest (using static phobos library).
     // For example: "make std/algorithm/mutation.test"
     // The mktemp business is needed so .o files don't clash in concurrent unittesting.
-    auto unittestsSingle = D_MODULES.
+    auto unittestsModule = D_MODULES.
         map!(a => Target.phony(a ~ ".test",
                                "T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` && \\\n" ~
                                DMD ~ " " ~ DFLAGS ~ " -main -unittest " ~ LIB ~ " -defaultlib= -debuglib= " ~
@@ -392,12 +392,19 @@ Build _getBuild() {
 
     // Target for quickly unittesting all modules and packages within a package,
     // transitively. For example: "make std/algorithm.test"
-    //TODO: package unit testing
-
+    Target[] unittestsPackage;
+    foreach(package_; STD_PACKAGES ~ ["etc", "etc/c"]) {
+        auto entries = dirEntries(package_, SpanMode.breadth);
+        auto targetNames = entries.map!(a => a.stripExtension ~ ".test").array;
+        unittestsPackage ~= Target(package_ ~ ".test",
+                                   "",
+                                   unittestsModule.filter!(a => targetNames.canFind(a.rawOutputs[0])).array);
+    }
 
     auto defaults = SHARED ? [lib, dll] : [lib];
     auto allTargets = chain(defaults.map!createTopLevelTarget,
-                            chain([unittest_], unittestsSingle).map!(a => optional(a))).array;
+                            chain([unittest_], unittestsModule, unittestsPackage).
+                            map!(a => optional(a))).array;
 
     return Build(allTargets.array);
 }
