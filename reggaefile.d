@@ -88,15 +88,11 @@ Build _getBuild() {
     enum DOC_OUTPUT_DIR = userVars.get("DOC_OUTPUT_DIR", WEBSITE_DIR ~ "/phobos-prerelease");
     enum BIGDOC_OUTPUT_DIR = userVars.get("BIGDOC_OUTPUT_DIR", "/tmp");
     string[] STD_MODULES, EXTRA_DOCUMENTABLES;
-    auto SRC_DOCUMENTABLES = userVars.get("SRC_DOCUMENTABLES",
-                                          ["index.d"] ~ STD_MODULES.map!(a => a ~ ".d").array ~ EXTRA_DOCUMENTABLES);
     enum STDDOC = ["html.ddoc", "dlang.org.ddoc", "std_navbar-prerelease.ddoc",
                    "std.ddoc", "macros.ddoc", ".generated/modlist-prerelease.ddoc"].
         map!(a => DOCSRC ~ "/" ~ a).array;
     enum BIGSTDDOC = ["std_consolidated.ddoc", "macros.ddoc"].map!(a => DOCSRC ~ "/" ~ a).array;
     string DMD, DMDEXTRAFLAGS;
-    auto DDOC = DMD ~ " -conf= " ~ MODEL_FLAG ~ " -w -c -o- -version=StdDdoc -I" ~
-        DRUNTIME_PATH ~ "/import " ~ DMDEXTRAFLAGS;
 
     string DRUNTIME, DRUNTIMESO;
     enum CUSTOM_DRUNTIME = userVars.get("DRUNTIME", "") != "";
@@ -121,6 +117,9 @@ Build _getBuild() {
             CC = "cc";
         }
     }
+
+    auto DDOC = DMD ~ " -conf= " ~ MODEL_FLAG ~ " -w -c -o- -version=StdDdoc -I" ~
+        DRUNTIME_PATH ~ "/import " ~ DMDEXTRAFLAGS;
 
     auto CFLAGS = MODEL_FLAG ~ " -fPIC -DHAVE_UNISTD_H";
     CFLAGS ~= BUILD == "debug" ? " -g" : " -O3";
@@ -172,7 +171,6 @@ Build _getBuild() {
     string[] P2MODULES(string[] packages)() {
         import std.meta;
 
-        pragma(msg, packages);
         string[] ret;
         foreach(p; aliasSeqOf!packages) {
             mixin(`ret ~= PACKAGE_` ~ p.replace("/", "_") ~ `.map!(a => "` ~ p ~ `/" ~ a).array;`);
@@ -237,6 +235,9 @@ Build _getBuild() {
          "stdio", "stdlib", "string", "time", "wcharh"].map!(a => "std/c/" ~ a).array;
 
     EXTRA_DOCUMENTABLES = EXTRA_MODULES_LINUX ~ EXTRA_MODULES_WIN32 ~ EXTRA_MODULES_COMMON;
+    auto SRC_DOCUMENTABLES = userVars.get("SRC_DOCUMENTABLES",
+                                          ["index.d"] ~ STD_MODULES.map!(a => a ~ ".d").array ~ EXTRA_DOCUMENTABLES);
+
 
     enum EXTRA_MODULES_INTERNAL = ["std/internal/digest/sha_SSSE3"] ~
         ["biguintcore", "biguintnoasm", "biguintx86", "gammafunction", "errorfunction"].map!(a => "std/internal/math/" ~ a).array ~
@@ -434,12 +435,67 @@ Build _getBuild() {
         // avoid rebuilding phobos when $(DRUNTIME) didn't change.
         druntimes ~= Target.phony(DRUNTIME, "make -C " ~ DRUNTIME_PATH ~ " -f posix.mak MODEL=" ~ MODEL ~
                                   " DMD=" ~ DMD ~ " OS=" ~ OS ~ " BUILD=" ~ BUILD);
-
     version(Windows)
         druntimes ~= Target.phony(DRUNTIMESO, "", [druntime]);
 
+    // html documentation
+    // D file to html, e.g. std/conv.d -> std_conv.html
+    // But "package.d" is special cased: std/range/package.d -> std_range.html
+    string D2HTML(string str) {
+        str = str.baseName == "package.d" ? str.dirName : str.stripExtension;
+        return str.replace("/", "_") ~ ".html";
+    }
+    static assert(D2HTML("std/conv.d") == "std_conv.html");
+    static assert(D2HTML("std/range/package.d") == "std_range.html");
+
+    auto HTMLS = SRC_DOCUMENTABLES.map!(a => DOC_OUTPUT_DIR ~ "/" ~ D2HTML(a)).array;
+    auto BIG_HTMLS = SRC_DOCUMENTABLES.map!(a => BIGDOC_OUTPUT_DIR ~ "/" ~ D2HTML(a)).array;
+
+    auto doc_output_dir = Target(DOC_OUTPUT_DIR ~ "/.", "mkdir -p $in", []);
+    // For each module, define a rule e.g.:
+    //  ../web/phobos/std_conv.html : std/conv.d $(STDDOC) ; ...
+    auto htmls = SRC_DOCUMENTABLES.map!(a => Target(DOC_OUTPUT_DIR ~ "/" ~ D2HTML(a),
+                                                    DDOC ~ " project.ddoc " ~ STDDOC.join(" ") ~ " -Df$out $in",
+                                                    [Target(a)] ~ STDDOC.map!(a => Target(a)).array)).
+        array;
+
+    auto html = Target.phony("html",
+                             "",
+                             [doc_output_dir] ~
+                             htmls ~
+                             ("STYLECSS_TGT" in userVars ? [Target(userVars["STYLECSS_TGT"])] : []));
+    auto allmod = Target.phony("allmod", "echo " ~ SRC_DOCUMENTABLES.join(" "));
+
+    auto rsync_prerelease = Target.phony("rsync-prerelease",
+                                         "rsync -avz " ~ DOC_OUTPUT_DIR ~
+                                         "/ d-programming@digitalmars.com:data/phobos-prerelease/; " ~
+                                         "rsync -avz " ~ WEBSITE_DIR ~
+                                         "/ d-programming@digitalmars.com:data/phobos-prerelease/",
+                                         [html]);
+    // TODO: figure out call to make
+    auto html_consolidated = Target.phony("html_consolidated",
+                                          "$(DDOC) -Df$(DOCSRC)/std_consolidated_header.html $(DOCSRC)/std_consolidated_header.dd; " ~
+                                          "$(DDOC) -Df$(DOCSRC)/std_consolidated_footer.html $(DOCSRC)/std_consolidated_footer.dd; " ~
+                                          "$(MAKE) -f $(MAKEFILE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8; " ~
+                                          "cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS) " ~
+                                          "$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html"
+                                          );
+    auto changelog_html = Target("changelog.html", DMD ~ " -Df$out $in", Target("changelog.dd"));
+
+    // test for undersired white spaces
+    auto CWS_TOCHECK = ["posix.mak", "win32.mak", "win64.mak", "osmodel.mak"] ~ ALL_D_FILES ~ "index.d";
+    auto checkwhitespace = Target.phony("checkwhitespace",
+                                        DMD ~ " " ~ DFLAGS ~ " -defaultlib= -debuglib= " ~ LIB ~
+                                        " -run ../dmd/src/checkwhitespace.d " ~ CWS_TOCHECK.join(" "),
+                                        [target_LIB]);
+    auto auto_tester_build = Target.phony("auto-tester-build", "", all ~ checkwhitespace);
+    auto auto_tester_test  = Target.phony("auto-tester-test",  "", [unittest_]);
+
     auto targets = chain(all.map!createTopLevelTarget,
-                         chain([unittest_, gitzip, zip, install], druntimes, unittestsModule, unittestsPackage).
+                         chain([unittest_, gitzip, zip, install], druntimes,
+                               [html], htmls,
+                               [allmod, rsync_prerelease, html_consolidated, changelog_html],
+                               [checkwhitespace, auto_tester_build, auto_tester_test], unittestsModule, unittestsPackage).
                          map!(a => optional(a))).array;
 
     return Build(targets);
