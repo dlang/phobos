@@ -78,7 +78,7 @@ Build _getBuild() {
         enum BUILD_WAS_SPECIFIED = false;
     }
 
-    auto PIC = "PIC" in userVars ? "-fPIC" : "";
+    enum PIC = "PIC" in userVars ? "-fPIC" : "";
     enum INSTALL_DIR = userVars.get("INSTALL_DIR", "../install");
     enum DRUNTIME_PATH = userVars.get("DRUNTIME_PATH", "../druntime");
     enum ZIPFILE = userVars.get("ZIPFILE", "phobos.zip");
@@ -92,12 +92,10 @@ Build _getBuild() {
     enum WEBSITE_DIR = userVars.get("WEBSITE_DIR", "../web");
     enum DOC_OUTPUT_DIR = userVars.get("DOC_OUTPUT_DIR", WEBSITE_DIR ~ "/phobos-prerelease");
     enum BIGDOC_OUTPUT_DIR = userVars.get("BIGDOC_OUTPUT_DIR", "/tmp");
-    string[] STD_MODULES, EXTRA_DOCUMENTABLES;
     enum STDDOC = ["html.ddoc", "dlang.org.ddoc", "std_navbar-prerelease.ddoc",
                    "std.ddoc", "macros.ddoc", ".generated/modlist-prerelease.ddoc"].
         map!(a => DOCSRC ~ "/" ~ a).array;
     enum BIGSTDDOC = ["std_consolidated.ddoc", "macros.ddoc"].map!(a => DOCSRC ~ "/" ~ a).array;
-    string DMD, DMDEXTRAFLAGS;
 
     enum CUSTOM_DRUNTIME = userVars.get("DRUNTIME", "") != "";
 
@@ -114,6 +112,7 @@ Build _getBuild() {
         }
     }
 
+    string DMD, DMDEXTRAFLAGS;
     string CC, RUN;
     if(OS == "win32wine") {
         CC = "wine dmc.exe";
@@ -142,18 +141,18 @@ Build _getBuild() {
     }
 
     version(Windows) {
-        auto DOTOBJ = ".obj";
-        auto DOTEXE = ".exe";
-        auto PATHSEP = `\`;
+        enum DOTOBJ = ".obj";
+        enum DOTEXE = ".exe";
+        enum PATHSEP = `\`;
     } else {
-        auto DOTOBJ = ".o";
-        auto PATHSEP = "/";
+        enum DOTOBJ = ".o";
+        enum PATHSEP = "/";
     }
 
     version(Linux)
-        auto LINKDL = "-L-ldl";
+        enum LINKDL = "-L-ldl";
     else
-        auto LINKDL = "";
+        enum LINKDL = "";
 
     auto TIMELIMIT = executeShell("which timelimit 2>/dev/null || true").output.chomp != "" ? "timelimit -t 60" : "";
 
@@ -233,7 +232,7 @@ Build _getBuild() {
         map!(a => "internal/" ~ a).array;
 
     // Modules in std (including those in packages)
-    STD_MODULES = P2MODULES!STD_PACKAGES;
+    auto STD_MODULES = P2MODULES!STD_PACKAGES;
 
     // OS-specific D modules
     enum EXTRA_MODULES_LINUX = ["linux", "socket"].map!(a => "std/c/linux/" ~ a).array;
@@ -248,7 +247,7 @@ Build _getBuild() {
         ["fenv", "locale", "math", "process", "stdarg", "stddef",
          "stdio", "stdlib", "string", "time", "wcharh"].map!(a => "std/c/" ~ a).array;
 
-    EXTRA_DOCUMENTABLES = EXTRA_MODULES_LINUX ~ EXTRA_MODULES_WIN32 ~ EXTRA_MODULES_COMMON;
+    auto EXTRA_DOCUMENTABLES = EXTRA_MODULES_LINUX ~ EXTRA_MODULES_WIN32 ~ EXTRA_MODULES_COMMON;
     auto SRC_DOCUMENTABLES = userVars.get("SRC_DOCUMENTABLES",
                                           ["index.d"] ~ STD_MODULES.map!(a => a ~ ".d").array ~ EXTRA_DOCUMENTABLES);
 
