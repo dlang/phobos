@@ -1887,6 +1887,9 @@ Use bitwise OR to combine flags.
 */
 enum Redirect
 {
+    /// Redirect nothing.
+    none = 0,
+
     /// Redirect the standard input, output or error streams, respectively.
     stdin = 1,
     stdout = 2,                             /// ditto
