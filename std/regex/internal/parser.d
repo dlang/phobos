@@ -1354,11 +1354,14 @@ struct Parser(R)
                 put(Bytecode(IR.End, current - privateUseStart + 1));
                 ngroup = max(ngroup, groupStack.top);
                 groupStack.top = 1; // reset group counter
-                break;
+                next();
             }
-            auto op = Bytecode(IR.Char, current);
-            next();
-            put(op);
+            else
+            {
+                auto op = Bytecode(IR.Char, current);
+                next();
+                put(op);
+            }
         }
     }
 
