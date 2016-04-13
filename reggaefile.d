@@ -174,6 +174,7 @@ Build _getBuild() {
     string[] P2MODULES(string[] packages)() {
         import std.meta;
 
+        pragma(msg, packages);
         string[] ret;
         foreach(p; aliasSeqOf!packages) {
             mixin(`ret ~= PACKAGE_` ~ p.replace("/", "_") ~ `.map!(a => "` ~ p ~ `/" ~ a).array;`);
@@ -184,22 +185,23 @@ Build _getBuild() {
     // Packages in std. Just mention the package name here. The contents of package
     // xy/zz is in variable PACKAGE_xy_zz. This allows automation in iterating
     // packages and their modules.
-    enum STD_PACKAGES = ["algorithm", "container", "digest", "experimental/allocator",
-                         "experimental/allocator/building_blocks", "experimental/logger",
-                         "experimental/ndslice", "net", "experimental", "range", "regex"].
+    enum STD_PACKAGES = ["std"] ~
+        ["algorithm", "container", "digest", "experimental/allocator",
+         "experimental/allocator/building_blocks", "experimental/logger",
+         "experimental/ndslice", "net", "experimental", "range", "regex"].
         map!(a => "std/" ~ a).array;
 
     // Modules broken down per package
     enum PACKAGE_std = ["array", "ascii", "base64", "bigint", "bitmanip",
-                        "compiler", "complex", "concurrency"
+                        "compiler", "complex", "concurrency",
                         "concurrencybase", "conv", "cstream", "csv",
                         "datetime", "demangle", "encoding", "exception",
-                        "file", "format" "functional", "getopt", "json", "math",
-                        "mathspecial", "meta", "mmfile", "numeric"
+                        "file", "format", "functional", "getopt", "json", "math",
+                        "mathspecial", "meta", "mmfile", "numeric",
                         "outbuffer", "parallelism", "path", "process",
-                        "random", "signals", "socket", "socketstream", "stdint"
+                        "random", "signals", "socket", "socketstream", "stdint",
                         "stdio", "stdiobase", "stream", "string", "system",
-                        "traits", "typecons", "typetuple", "uni"
+                        "traits", "typecons", "typetuple", "uni",
                         "uri", "utf", "uuid", "variant", "xml", "zip", "zlib"];
 
     enum PACKAGE_std_experimental = ["typecons"];
@@ -216,7 +218,8 @@ Build _getBuild() {
     enum PACKAGE_std_experimental_ndslice = ["package", "iteration", "selection", "slice"];
     enum PACKAGE_std_net = ["curl", "isemail"];
     enum PACKAGE_std_range = ["interfaces", "package", "primitives"];
-    enum PACKAGE_std_regex = ["generator", "ir", "parser", "backtracking", "kickstart", "tests", "thompson"].
+    enum PACKAGE_std_regex = ["package"] ~
+        ["generator", "ir", "parser", "backtracking", "kickstart", "tests", "thompson"].
         map!(a => "internal/" ~ a).array;
 
     // Modules in std (including those in packages)
@@ -357,9 +360,9 @@ Build _getBuild() {
                              [target_UT_LIBSO, Target(DRUNTIME_PATH ~ "/src/test_runner.d")]);
     }
 
+    // returns the module name given the src path
     string moduleName(in string fileName) { return fileName.replace("/", "."); }
 
-    import std.stdio;
     auto unittests = D_MODULES.
         map!(a => Target.phony("unittest/" ~ a ~ ".run",
                                QUIET ~ TIMELIMIT ~ RUN ~ " $in " ~ moduleName(a),
@@ -367,17 +370,34 @@ Build _getBuild() {
     Target unittest_;
 
     if(BUILD_WAS_SPECIFIED) {
+        // target for the batch unittests (using shared phobos library and test_runner)
         unittest_ = Target.phony("unittest", "", unittests);
     } else {
         // TODO: should do both release and debug builds here then run the tests
         throw new Exception("unittest run for both debug and release builds not supported yet");
     }
 
-    //TODO: single unit test and testing by package/module
+    // Target for quickly running a single unittest (using static phobos library).
+    // For example: "make std/algorithm/mutation.test"
+    // The mktemp business is needed so .o files don't clash in concurrent unittesting.
+    auto unittestsSingle = D_MODULES.
+        map!(a => Target.phony(a ~ ".test",
+                               "T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` && \\\n" ~
+                               DMD ~ " " ~ DFLAGS ~ " -main -unittest " ~ LIB ~ " -defaultlib= -debuglib= " ~
+                               LINKDL ~ " -cov -run $in && \\\n" ~
+                               "rm -rf $T",
+                               [Target(a ~ ".d")],
+                               [lib])).
+        array;
+
+    // Target for quickly unittesting all modules and packages within a package,
+    // transitively. For example: "make std/algorithm.test"
+    //TODO: package unit testing
+
 
     auto defaults = SHARED ? [lib, dll] : [lib];
     auto allTargets = chain(defaults.map!createTopLevelTarget,
-                            chain([unittest_], unittests).map!(a => optional(a))).array;
+                            chain([unittest_], unittestsSingle).map!(a => optional(a))).array;
 
     return Build(allTargets.array);
 }
