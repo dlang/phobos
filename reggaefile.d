@@ -82,7 +82,10 @@ Build _getBuild() {
     enum DRUNTIME_PATH = userVars.get("DRUNTIME_PATH", "../druntime");
     enum ZIPFILE = userVars.get("ZIPFILE", "phobos.zip");
     enum ROOT_OF_THEM_ALL = userVars.get("ROOT_OF_THEM_ALL", "generated");
-    auto ROOT = userVars.get("ROOT", ROOT_OF_THEM_ALL ~ "/" ~ OS ~ "/" ~ BUILD ~ "/" ~ MODEL);
+    // ROOT is a variable in posix.mak, but is a function here so the build can vary
+    string ROOT(string build = BUILD) {
+        return userVars.get("ROOT", ROOT_OF_THEM_ALL ~ "/" ~ OS ~ "/" ~ build ~ "/" ~ MODEL);
+    }
     // Documentation-related stuff
     enum DOCSRC = userVars.get("DOCSRC", "../dlang.org");
     enum WEBSITE_DIR = userVars.get("WEBSITE_DIR", "../web");
@@ -95,13 +98,16 @@ Build _getBuild() {
     enum BIGSTDDOC = ["std_consolidated.ddoc", "macros.ddoc"].map!(a => DOCSRC ~ "/" ~ a).array;
     string DMD, DMDEXTRAFLAGS;
 
-    string DRUNTIME, DRUNTIMESO;
+    string DRUNTIMESO;
     enum CUSTOM_DRUNTIME = userVars.get("DRUNTIME", "") != "";
 
     version(Windows)
-        DRUNTIME = DRUNTIME_PATH ~ "/lib/druntime.lib";
+        auto DRUNTIME = DRUNTIME_PATH ~ "/lib/druntime.lib";
     else {
-        DRUNTIME = DRUNTIME_PATH ~ "/generated/" ~ OS ~ "/" ~ BUILD ~ "/" ~ MODEL ~ "/libdruntime.a";
+        // DRUNTIME is a variable in posix.mak
+        string DRUNTIME(string build = BUILD) {
+            return DRUNTIME_PATH ~ "/generated/" ~ OS ~ "/" ~ build ~ "/" ~ MODEL ~ "/libdruntime.a";
+        }
         DRUNTIMESO = stripExtension(DRUNTIME) ~ ".so.a";
     }
 
@@ -122,11 +128,15 @@ Build _getBuild() {
     auto DDOC = DMD ~ " -conf= " ~ MODEL_FLAG ~ " -w -c -o- -version=StdDdoc -I" ~
         DRUNTIME_PATH ~ "/import " ~ DMDEXTRAFLAGS;
 
-    auto CFLAGS = MODEL_FLAG ~ " -fPIC -DHAVE_UNISTD_H";
-    CFLAGS ~= BUILD == "debug" ? " -g" : " -O3";
+    string CFLAGS(string build = BUILD) {
+        return MODEL_FLAG ~ " -fPIC -DHAVE_UNISTD_H" ~ (build == "debug" ? " -g" : " -O3");
+    }
 
-    auto DFLAGS = "-conf= -I" ~ DRUNTIME_PATH ~ "/import " ~ DMDEXTRAFLAGS ~ " -w -dip25 " ~ MODEL_FLAG ~ " " ~ PIC;
-    DFLAGS ~= BUILD == "debug" ? " -g -debug" : " -O -release";
+    string DFLAGS(string build = BUILD) {
+        auto flags = "-conf= -I" ~ DRUNTIME_PATH ~ "/import " ~ DMDEXTRAFLAGS ~ " -w -dip25 " ~ MODEL_FLAG ~ " " ~ PIC;
+        flags ~= build == "debug" ? " -g -debug" : " -O -release";
+        return flags;
+    }
 
     version(Windows) {
         auto DOTOBJ = ".obj";
@@ -275,11 +285,13 @@ Build _getBuild() {
     // Rules begin here
 
     // C objects, a pattern rule in the original makefile
-    auto target_OBJS = C_MODULES.
-        map!(a => Target(ROOT ~ "/" ~ a ~ DOTOBJ,
-                         CC ~ " -c " ~ CFLAGS ~ " $in -o $out",
-                         Target(a ~ ".c"))).
-        array;
+    Target[] target_OBJS(string build = BUILD) {
+        return C_MODULES.
+            map!(a => Target(ROOT(build) ~ "/" ~ a ~ DOTOBJ,
+                             CC ~ " -c " ~ CFLAGS(build) ~ " $in -o $out",
+                             Target(a ~ ".c"))).
+            array;
+    }
 
     auto target_LIB = Target("$project/" ~ LIB,
                              DMD ~ " " ~ DFLAGS ~ " -lib -of$out " ~ DRUNTIME ~ " " ~ chain(D_FILES, OBJS).join(" "),
@@ -320,62 +332,65 @@ Build _getBuild() {
     auto all = SHARED ? [lib, dll] : [lib]; // the Makefile "all" targets
 
     // Unittests
-    auto UT_D_OBJS = D_MODULES.map!(a => ROOT ~ "/unittest/" ~ a ~ ".o").array;
-    auto target_DRUNTIME = SHARED ? Target(DRUNTIMESO) : Target(DRUNTIME);
+    Target[] createUnitTests(string build) {
+        auto UT_D_OBJS = D_MODULES.map!(a => ROOT(build) ~ "/unittest/" ~ a ~ ".o").array;
+        auto target_DRUNTIME = SHARED ? Target(DRUNTIMESO) : Target(DRUNTIME(build));
 
-    string UT_LIBSO;
-    Target test_runner, target_UT_LIBSO;
-    Target[] target_UT_D_OBJS;
+        Target test_runner;
 
-    if(!SHARED) {
-        target_UT_D_OBJS = D_MODULES.
-            map!(a => Target(ROOT ~ "/unittest/" ~ a ~ ".o",
-                             DMD ~ " " ~ DFLAGS ~ " -unittest -c -of$out $in",
-                             [Target(a ~ ".d"), target_DRUNTIME])).array;
+        if(!SHARED) {
+            auto target_UT_D_OBJS = D_MODULES.
+                map!(a => Target(ROOT(build) ~ "/unittest/" ~ a ~ ".o",
+                                 DMD ~ " " ~ DFLAGS(build) ~ " -unittest -c -of$out $in",
+                                 [Target(a ~ ".d"), target_DRUNTIME])).array;
 
-        test_runner = Target("$project/" ~ ROOT ~ "/unittest/test_runner",
-                             DMD ~ " " ~ DFLAGS ~ " -unittest -of$out " ~ DRUNTIME_PATH ~ "/src/test_runner.d " ~
-                             chain(UT_D_OBJS, OBJS, [DRUNTIME, LINKDL]).join(" ") ~ " -defaultlib= -debuglib=",
-                             target_UT_D_OBJS ~
-                             Target(DRUNTIME_PATH ~ "/src/test_runner.d") ~
-                             target_OBJS ~
-                             target_DRUNTIME
-                               );
-    } else {
-        target_UT_D_OBJS = D_MODULES.
-            map!(a => Target(ROOT ~ "/unittest/" ~ a ~ ".o",
-                             DMD ~ " " ~ DFLAGS ~ " -fPIC -unittest -c -of$out $in",
-                             [Target(a ~ ".d"), target_DRUNTIME])).array;
+            test_runner = Target("$project/" ~ ROOT(build) ~ "/unittest/test_runner",
+                                 DMD ~ " " ~ DFLAGS(build) ~ " -unittest -of$out " ~ DRUNTIME_PATH ~ "/src/test_runner.d " ~
+                                 chain(UT_D_OBJS, OBJS, [DRUNTIME(build), LINKDL]).join(" ") ~ " -defaultlib= -debuglib=",
+                                 target_UT_D_OBJS ~
+                                 Target(DRUNTIME_PATH ~ "/src/test_runner.d") ~
+                                 target_OBJS(build) ~
+                                 target_DRUNTIME
+                );
+        } else {
+            auto target_UT_D_OBJS = D_MODULES.
+                map!(a => Target(ROOT(build) ~ "/unittest/" ~ a ~ ".o",
+                                 DMD ~ " " ~ DFLAGS(build) ~ " -fPIC -unittest -c -of$out $in",
+                                 [Target(a ~ ".d"), target_DRUNTIME])).array;
 
-        UT_LIBSO = "$project/" ~ ROOT ~ "/unittest/libphobos2-ut.so";
-        target_UT_LIBSO = Target(UT_LIBSO,
-                                 DMD ~ " " ~ DFLAGS ~ " -fPIC -shared -unittest -of$out " ~
-                                 chain(UT_D_OBJS, OBJS, [DRUNTIMESO, LINKDL]).join(" ") ~
-                                 " -defaultlib= -debuglib=",
-                                 target_UT_D_OBJS ~ target_OBJS ~ target_DRUNTIME
-            );
+            auto UT_LIBSO = "$project/" ~ ROOT(build) ~ "/unittest/libphobos2-ut.so";
+            auto target_UT_LIBSO = Target(UT_LIBSO,
+                                          DMD ~ " " ~ DFLAGS(build) ~ " -fPIC -shared -unittest -of$out " ~
+                                          chain(UT_D_OBJS, OBJS, [DRUNTIMESO, LINKDL]).join(" ") ~
+                                          " -defaultlib= -debuglib=",
+                                          target_UT_D_OBJS ~ target_OBJS(build) ~ target_DRUNTIME
+                );
 
-        test_runner = Target("$project/" ~ ROOT ~ "/unittest/test_runner",
-                             DMD ~ " " ~ DFLAGS ~ " -of$out $in -L" ~ UT_LIBSO ~ " -defaultlib= -debuglib=",
-                             [target_UT_LIBSO, Target(DRUNTIME_PATH ~ "/src/test_runner.d")]);
+            test_runner = Target("$project/" ~ ROOT(build) ~ "/unittest/test_runner",
+                                 DMD ~ " " ~ DFLAGS(build) ~ " -of$out $in -L" ~ UT_LIBSO ~ " -defaultlib= -debuglib=",
+                                 [target_UT_LIBSO, Target(DRUNTIME_PATH ~ "/src/test_runner.d")]);
+        }
+
+        // returns the module name given the src path
+        string moduleName(in string fileName) { return fileName.replace("/", "."); }
+
+        return D_MODULES.
+            map!(a => Target.phony("unittest/" ~ a ~ ".run",
+                                   QUIET ~ TIMELIMIT ~ RUN ~ " $in " ~ moduleName(a),
+                                   [test_runner])).array;
+
     }
 
-    // returns the module name given the src path
-    string moduleName(in string fileName) { return fileName.replace("/", "."); }
-
-    auto unittests = D_MODULES.
-        map!(a => Target.phony("unittest/" ~ a ~ ".run",
-                               QUIET ~ TIMELIMIT ~ RUN ~ " $in " ~ moduleName(a),
-                               [test_runner])).array;
-    Target unittest_;
+    auto unittest_debug = Target.phony("unittest-debug", "", createUnitTests("debug"));
+    auto unittest_release = Target.phony("unittest-release", "", createUnitTests("release")) ;
 
     static if(BUILD_WAS_SPECIFIED) {
         // target for the batch unittests (using shared phobos library and test_runner)
-        unittest_ = Target.phony("unittest", "", unittests);
+        auto unittest_ = Target.phony("unittest", "", createUnitTests(BUILD));
     } else {
-        static assert(false, "Error: unittest run for both debug and release builds not supported yet");
-        // TODO: should do both release and debug builds here then run the tests
+        auto unittest_ = Target.phony("unittest", "", [unittest_debug, unittest_release]);
     }
+
 
     // Target for quickly running a single unittest (using static phobos library).
     // For example: "make std/algorithm/mutation.test"
@@ -502,7 +517,7 @@ Build _getBuild() {
     auto auto_tester_test  = Target.phony("auto-tester-test",  "", [unittest_]);
 
     auto targets = chain(all.map!createTopLevelTarget,
-                         chain([unittest_, gitzip, zip, install], druntimes,
+                         chain([unittest_, unittest_debug, unittest_release, gitzip, zip, install], druntimes,
                                [html], htmls,
                                [allmod, rsync_prerelease, html_consolidated, changelog_html],
                                [checkwhitespace, auto_tester_build, auto_tester_test], unittestsModule, unittestsPackage).
