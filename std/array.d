@@ -335,12 +335,9 @@ unittest
 }
 
 /**
- * Initializes a static array of the given size from the range `r`.
+ * Initializes a static array from the first `n` elements of the range `r`.
  *
- * If `r` has less than `n` elements, only the first `n` are copied, and the
- * remaining elements are default-initialized.
- *
- * A range violation will occur if `r` has more than `n` elements.
+ * Preconditions: `r` has at least `n` elements.
  *
  * Params:
  *      r = range (or aggregate with $(D opApply) function) whose elements are
