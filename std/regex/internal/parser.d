@@ -155,10 +155,6 @@ unittest
     code[] = rev[];
 }
 
-
-alias Escapables = AliasSeq!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
-    ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~');
-
 //test if a given string starts with hex number of maxDigit that's a valid codepoint
 //returns it's value and skips these maxDigit chars on success, throws on failure
 dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)

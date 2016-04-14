@@ -75,6 +75,10 @@ CharMatcher[CodepointSet] matcherCache;
 // some special Unicode white space characters
 private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
 
+// Characters that need escaping in string posed as regular expressions
+alias Escapables = AliasSeq!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
+    ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~');
+
 //Regular expression engine/parser options:
 // global - search  all nonoverlapping matches in input
 // casefold - case insensitive matching, do casefolding on match in unicode mode
