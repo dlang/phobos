@@ -335,6 +335,47 @@ unittest
 }
 
 /**
+ * Interprets an array literal as a static array.
+ *
+ * Params:
+ *      arr = An array literal.
+ *
+ * Returns: A static array of size `arr.length`.
+ *
+ * Warning:
+ * Do not initialize a dynamic array with a call to staticArray.
+ * The dynamic array slice would point to stack memory no longer in use.
+ * Instead define the static array first using type inference (or `int[4]`).
+ * ---
+ * int[] invalid = [1,2,3,4].staticArray; // Wrong
+ * ---
+ * See $(LINK2 http://issues.dlang.org/show_bug.cgi?id=12625, Issue 12625).
+ */
+@nogc T[n] staticArray(T, size_t n)(T[n] arr)
+{
+    pragma(inline, true);
+    return arr;
+}
+
+/// Array size and type can be inferred:
+@safe @nogc pure nothrow unittest
+{
+    auto arr = [1,2,3,4].staticArray;
+    static assert(is(typeof(arr) == int[4])); // arr is a static array
+    assert(arr == [1,2,3,4]);
+}
+
+// dmd doesn't support inference of n, but not T for staticArray!immutable
+// http://issues.dlang.org/show_bug.cgi?id=15890
+/// The element type can also be supplied:
+@safe @nogc pure nothrow unittest
+{
+    auto arr = [1,2].staticArray!(immutable int, 2);
+    static assert(is(typeof(arr) == immutable(int)[2]));
+    assert(arr == [1,2].staticArray);
+}
+
+/**
  * Initializes a static array from the first `n` elements of the range `r`.
  *
  * Preconditions: `r` has at least `n` elements.
@@ -450,47 +491,6 @@ unittest
     auto arr1 = S(1).only.staticArray!1;
     static assert(is(typeof(arr1) == S[1]));
     assert(arr1 == [ S(1) ]);
-}
-
-/**
- * Interprets an array literal as a static array.
- *
- * Params:
- *      arr = An array literal.
- *
- * Returns: A static array of size `arr.length`.
- *
- * Warning:
- * Do not initialize a dynamic array with a call to staticArray.
- * The dynamic array slice would point to stack memory no longer in use.
- * Instead define the static array first using type inference (or `int[4]`).
- * ---
- * int[] invalid = [1,2,3,4].staticArray; // Wrong
- * ---
- * See $(LINK2 http://issues.dlang.org/show_bug.cgi?id=12625, Issue 12625).
- */
-@nogc T[n] staticArray(T, size_t n)(T[n] arr)
-{
-    pragma(inline, true);
-    return arr;
-}
-
-/// Array size and type can be inferred:
-@safe @nogc pure nothrow unittest
-{
-    auto arr = [1,2,3,4].staticArray;
-    static assert(is(typeof(arr) == int[4])); // arr is a static array
-    assert(arr == [1,2,3,4]);
-}
-
-// dmd doesn't support inference of n, but not T for staticArray!immutable
-// http://issues.dlang.org/show_bug.cgi?id=15890
-/// The element type can also be supplied:
-@safe @nogc pure nothrow unittest
-{
-    auto arr = [1,2].staticArray!(immutable int, 2);
-    static assert(is(typeof(arr) == immutable(int)[2]));
-    assert(arr == [1,2].staticArray);
 }
 
 /**
