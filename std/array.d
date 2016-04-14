@@ -2840,18 +2840,18 @@ if (isDynamicArray!A)
         }
     }
 
-  // emplace an item onto an array.
-  void emplacePut(Args...)(Args args) {
-	import std.conv: emplaceRef;
+	// emplace an item onto an array.
+	void emplacePut(Args...)(Args args) {
+		import std.conv: emplaceRef;
 
-	ensureAddable(1);
-	immutable len = _data.arr.length;
+		ensureAddable(1);
+		immutable len = _data.arr.length;
 
-	auto bigData = (() @trusted => _data.arr.ptr[0..len + 1])();
-	emplaceRef!(Unqual!T)(bigData[len], args);
-	// don't set this back until we're sure we have the item initialized.
-	_data.arr = bigData;
-  }
+		auto bigData = (() @trusted => _data.arr.ptr[0..len + 1])();
+		emplaceRef!(Unqual!T)(bigData[len], args);
+		// don't set this back until we're sure we have the item initialized.
+		_data.arr = bigData;
+	}
 
 
     // Const fixing hack.
@@ -3017,21 +3017,21 @@ unittest
 }
 
 unittest {
-  struct Uncopyable {
-	@disable this(this);
-	int foo;
-	this(int foo) {
-	  this.foo = foo;
+	struct Uncopyable {
+		@disable this(this);
+		int foo;
+		this(int foo) {
+			this.foo = foo;
+		}
 	}
-  }
 
-  auto a = appender!(Uncopyable[])();
-  a.emplacePut(1);
-  a.emplacePut(2);
-  a.emplacePut(3);
-  import std.stdio;
-  writeln(a.data[0].foo);
-  assert(a.data == [Uncopyable(1),Uncopyable(2),Uncopyable(3)]);
+	auto a = appender!(Uncopyable[])();
+	a.emplacePut(1);
+	a.emplacePut(2);
+	a.emplacePut(3);
+	import std.stdio;
+	writeln(a.data[0].foo);
+	assert(a.data == [Uncopyable(1),Uncopyable(2),Uncopyable(3)]);
 }
 
 
