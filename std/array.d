@@ -391,8 +391,7 @@ if (isIterable!Iterable)
 @safe pure nothrow unittest
 {
     import std.range : only;
-    auto arr = only(1, 2, 3).staticArray!3;
-    static assert(is(typeof(arr) == int[3]));
+    int[3] arr = only(1, 2, 3).staticArray!3;
     assert(arr == [ 1, 2, 3 ]);
 }
 
@@ -400,8 +399,7 @@ if (isIterable!Iterable)
 @safe pure nothrow unittest
 {
     import std.range : take, repeat;
-    auto arr = repeat(5).staticArray!4;
-    static assert(is(typeof(arr) == int[4]));
+    int[4] arr = repeat(5).staticArray!4;
     assert(arr == [ 5, 5, 5, 5 ]);
 }
 
@@ -415,7 +413,7 @@ pure unittest
     assertThrown!AssertError(only(1,2,3).staticArray!5);
 
     // extend the range to the desired length before handing it to staticArray
-    auto arr = only(1,2,3).chain(0.repeat).staticArray!5;
+    int[5] arr = only(1,2,3).chain(0.repeat).staticArray!5;
     assert(arr == [ 1, 2, 3, 0, 0 ]);
 }
 
@@ -437,8 +435,7 @@ unittest
         }
     }
 
-    auto arr = OpApply().staticArray!5;
-    static assert(is(typeof(arr) == int[5]));
+    int[5] arr = OpApply().staticArray!5;
     assert(arr == [ 0, 1, 2, 3, 4 ]);
 }
 
