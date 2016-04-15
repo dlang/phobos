@@ -720,12 +720,10 @@ equal), $(D overlap) only compares the pointers in the ranges, not the
 values referred by them. If $(D r1) and $(D r2) have an overlapping
 slice, returns that slice. Otherwise, returns the null slice.
 */
-inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
+auto overlap(T, U)(T[] r1, U[] r2) @trusted pure nothrow
+if (is(typeof(r1.ptr < r2.ptr) == bool))
 {
-    alias U = inout(T);
-    static U* max(U* a, U* b) nothrow { return a > b ? a : b; }
-    static U* min(U* a, U* b) nothrow { return a < b ? a : b; }
-
+    import std.algorithm : min, max;
     auto b = max(r1.ptr, r2.ptr);
     auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
     return b < e ? b[0 .. e - b] : null;
