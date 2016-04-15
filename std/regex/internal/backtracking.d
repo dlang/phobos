@@ -174,10 +174,11 @@ template BacktrackingMatcher(bool CTregex)
         }
 
         //
-        bool matchFinalize()
+        int matchFinalize()
         {
             size_t start = index;
-            if(matchImpl())
+            int val = matchImpl();
+            if(val)
             {//stream is updated here
                 matches[0].begin = start;
                 matches[0].end = index;
@@ -185,14 +186,14 @@ template BacktrackingMatcher(bool CTregex)
                     exhausted = true;
                 if(start == index)//empty match advances input
                     next();
-                return true;
+                return val;
             }
             else
-                return false;
+                return 0;
         }
 
         //lookup next match, fill matches with indices into input
-        bool match(Group!DataIndex[] matches)
+        int match(Group!DataIndex[] matches)
         {
             debug(std_regex_matcher)
             {
@@ -219,9 +220,9 @@ template BacktrackingMatcher(bool CTregex)
                 {
                     for(;;)
                     {
-
-                        if(matchFinalize())
-                            return true;
+                        int val = matchFinalize();
+                        if(val)
+                            return val;
                         else
                         {
                             if(atEnd)
@@ -235,14 +236,15 @@ template BacktrackingMatcher(bool CTregex)
                         }
                     }
                     exhausted = true;
-                    return false; //early return
+                    return 0; //early return
                 }
             }
             //no search available - skip a char at a time
             for(;;)
             {
-                if(matchFinalize())
-                    return true;
+                int val = matchFinalize();
+                if(val)
+                    return val;
                 else
                 {
                     if(atEnd)
@@ -256,14 +258,14 @@ template BacktrackingMatcher(bool CTregex)
                 }
             }
             exhausted = true;
-            return false;
+            return 0;
         }
 
         /+
             match subexpression against input,
             results are stored in matches
         +/
-        bool matchImpl()
+        int matchImpl()
         {
             static if(CTregex && is(typeof(nativeFn(this))))
             {
@@ -555,7 +557,7 @@ template BacktrackingMatcher(bool CTregex)
                         matcher.matches = matches[ms .. me];
                         matcher.backrefed = backrefed.empty ? matches : backrefed;
                         matcher.re.ir = re.ir[pc+IRL!(IR.LookaheadStart) .. pc+IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd)];
-                        bool match = matcher.matchImpl() ^ (re.ir[pc].code == IR.NeglookaheadStart);
+                        bool match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookaheadStart);
                         s.reset(save);
                         next();
                         if(!match)
@@ -584,7 +586,7 @@ template BacktrackingMatcher(bool CTregex)
                         matcher.matches = matches[ms .. me];
                         matcher.re.ir = re.ir[pc + IRL!(IR.LookbehindStart) .. pc + IRL!(IR.LookbehindStart) + len + IRL!(IR.LookbehindEnd)];
                         matcher.backrefed  = backrefed.empty ? matches : backrefed;
-                        bool match = matcher.matchImpl() ^ (re.ir[pc].code == IR.NeglookbehindStart);
+                        bool match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookbehindStart);
                         if(!match)
                             goto L_backtrack;
                         else
@@ -615,7 +617,7 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.LookbehindEnd:
                     case IR.NeglookbehindEnd:
                     case IR.End:
-                        return true;
+                        return re.ir[pc].data;
                     default:
                         debug printBytecode(re.ir[0..$]);
                         assert(0);
@@ -623,7 +625,7 @@ template BacktrackingMatcher(bool CTregex)
                         if(!popState())
                         {
                             s.reset(start);
-                            return false;
+                            return 0;
                         }
                     }
                 }
@@ -939,7 +941,7 @@ struct CtContext
                     lookaround.matches = matches[$$..$$];
                     lookaround.backrefed = backrefed.empty ? matches : backrefed;
                     lookaround.nativeFn = &matcher_$$; //hookup closure's binary code
-                    bool match = $$;
+                    int match = $$;
                     s.reset(save);
                     next();
                     if(match)

@@ -93,9 +93,9 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            finish(t, matches);
+            finish(t, matches, re.ir[t.pc].data);
             //fix endpoint of the whole match
-            matches[0].end = e.index;
+            matches[0].end = index;
             recycle(t);
             //cut off low priority threads
             recycle(clist);
@@ -495,7 +495,7 @@ template ThompsonOps(E, S, bool withInput:true)
             auto mRes = matcher.matchOneShot(t.matches.ptr[ms .. me], IRL!(IR.LookbehindStart));
             freelist = matcher.freelist;
             subCounters[t.pc] = matcher.genCounter;
-            if((mRes == MatchResult.Match) ^ positive)
+            if((mRes != 0 ) ^ positive)
             {
                 return popState(e);
             }
@@ -525,7 +525,7 @@ template ThompsonOps(E, S, bool withInput:true)
             subCounters[t.pc] = matcher.genCounter;
             s.reset(index);
             next();
-            if((mRes == MatchResult.Match) ^ positive)
+            if((mRes != 0) ^ positive)
             {
                 return popState(e);
             }
@@ -540,7 +540,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-                finish(t, matches.ptr[0 .. re.ngroup]);
+                finish(t, matches.ptr[0 .. re.ngroup], re.ir[t.pc].data);
                 recycle(t);
                 //cut off low priority threads
                 recycle(clist);
@@ -711,7 +711,7 @@ template ThompsonOps(E,S, bool withInput:false)
     OpBackFunc[] opCacheBackTrue;   // ditto
     OpBackFunc[] opCacheBackFalse;  // ditto
     size_t threadSize;
-    bool matched;
+    int matched;
     bool exhausted;
 
     static struct State
@@ -881,13 +881,7 @@ template ThompsonOps(E,S, bool withInput:false)
         return tmp;
     }
 
-    enum MatchResult{
-        NoMatch,
-        PartialMatch,
-        Match,
-    }
-
-    bool match(Group!DataIndex[] matches)
+    int match(Group!DataIndex[] matches)
     {
         debug(std_regex_matcher)
             writeln("------------------------------------------");
@@ -899,7 +893,7 @@ template ThompsonOps(E,S, bool withInput:false)
         {
             next();
             exhausted = true;
-            return matchOneShot(matches)==MatchResult.Match;
+            return matchOneShot(matches);
         }
         static if(kicked)
             if(!re.kickstart.empty)
@@ -908,7 +902,7 @@ template ThompsonOps(E,S, bool withInput:false)
     }
 
     //match the input and fill matches
-    bool matchImpl(bool withSearch)(Group!DataIndex[] matches)
+    int matchImpl(bool withSearch)(Group!DataIndex[] matches)
     {
         if(!matched && clist.empty)
         {
@@ -919,7 +913,7 @@ template ThompsonOps(E,S, bool withInput:false)
         }
         else//char in question is  fetched in prev call to match
         {
-            matched = false;
+            matched = 0;
         }
         State state;
         state.matches = matches;
@@ -1006,7 +1000,7 @@ template ThompsonOps(E,S, bool withInput:false)
     /+
         handle succesful threads
     +/
-    void finish(const(Thread!DataIndex)* t, Group!DataIndex[] matches)
+    void finish(const(Thread!DataIndex)* t, Group!DataIndex[] matches, int code)
     {
         matches.ptr[0..re.ngroup] = t.matches.ptr[0..re.ngroup];
         debug(std_regex_matcher)
@@ -1018,7 +1012,7 @@ template ThompsonOps(E,S, bool withInput:false)
             foreach(v; matches)
                 writefln("%d .. %d", v.begin, v.end);
         }
-        matched = true;
+        matched = code;
     }
 
     alias Ops(bool withInput) =  ThompsonOps!(ThompsonMatcher, State, withInput);
@@ -1038,7 +1032,7 @@ template ThompsonOps(E,S, bool withInput:false)
     }
     enum uint RestartPc = uint.max;
     //match the input, evaluating IR without searching
-    MatchResult matchOneShot(Group!DataIndex[] matches, uint startPc = 0)
+    int matchOneShot(Group!DataIndex[] matches, uint startPc = 0)
     {
         debug(std_regex_matcher)
         {
@@ -1084,10 +1078,7 @@ template ThompsonOps(E,S, bool withInput:false)
                 clist = nlist;
                 nlist = (ThreadList!DataIndex).init;
                 if(!next())
-                {
-                    if (!atEnd) return MatchResult.PartialMatch;
                     break;
-                }
                 debug(std_regex_matcher) writeln("-- Ended iteration of main cycle\n");
             }
         }
@@ -1103,8 +1094,7 @@ template ThompsonOps(E,S, bool withInput:false)
             state.t = createStart(index, startPc);
             evalFn!false(&state);
         }
-
-        return (matched?MatchResult.Match:MatchResult.NoMatch);
+        return matched;
     }
 
     //get a dirty recycled Thread

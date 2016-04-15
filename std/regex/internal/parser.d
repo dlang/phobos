@@ -17,7 +17,7 @@ auto makeRegex(S)(Parser!S p)
     {
         ir = p.ir;
         dict = p.dict;
-        ngroup = p.groupStack.top;
+        ngroup = p.ngroup;
         maxCounterDepth = p.counterDepth;
         flags = p.re_flags;
         charsets = p.charsets;
@@ -26,7 +26,7 @@ auto makeRegex(S)(Parser!S p)
         re.lightPostprocess();
         debug(std_regex_parser)
         {
-            print();
+            __ctfe || print();
         }
         //@@@BUG@@@ (not reduced)
         //somehow just using validate _collides_ with std.utf.validate (!)
@@ -273,6 +273,7 @@ struct Parser(R)
     CodepointSet[] charsets;  //
     const(CharMatcher)[] matchers; //
     uint[] backrefed; //bitarray for groups
+    uint ngroup;          // final number of groups (of all patterns)
 
     @trusted this(S)(R pattern, S flags)
         if(isSomeString!S)
@@ -292,7 +293,8 @@ struct Parser(R)
         {
             error(e.msg);//also adds pattern location
         }
-        put(Bytecode(IR.End, 0));
+        put(Bytecode(IR.End, 1));
+        ngroup = max(ngroup, groupStack.top);
     }
 
     //mark referenced groups for latter processing
@@ -415,7 +417,7 @@ struct Parser(R)
         while(!empty)
         {
             debug(std_regex_parser)
-                writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.data);
+                __ctfe || writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.data);
             switch(current)
             {
             case '(':
@@ -1347,6 +1349,13 @@ struct Parser(R)
             markBackref(nref);
             break;
         default:
+            if(current >= privateUseStart && current <= privateUseEnd)
+            {
+                put(Bytecode(IR.End, current - privateUseStart + 1));
+                ngroup = max(ngroup, groupStack.top);
+                groupStack.top = 1; // reset group counter
+                break;
+            }
             auto op = Bytecode(IR.Char, current);
             next();
             put(op);
