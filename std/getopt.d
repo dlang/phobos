@@ -534,7 +534,7 @@ follow this pattern:
   [config override], option, [description], receiver,
 
  - config override: a config value, optional
- - option:          a string
+ - option:          a string or a char
  - description:     a string, optional
  - receiver:        a pointer or a callable
 */
@@ -545,6 +545,7 @@ private template optionValidator(A...)
 
     enum fmt = "getopt validator: %s (at position %d)";
     enum isReceiver(T) = isPointer!T || (is(T==function)) || (is(T==delegate));
+    enum isOptionStr(T) = isSomeString!T || isSomeChar!T;
 
     auto validator()
     {
@@ -555,24 +556,24 @@ private template optionValidator(A...)
             {
                 msg = format(fmt, "first argument must be a string or a config", 0);
             }
-            else static if (!isSomeString!(A[0]) && !is(A[0] == config))
+            else static if (!isOptionStr!(A[0]) && !is(A[0] == config))
             {
-                msg = format(fmt, "invalid argument type " ~ A[0].stringof, 0);
+                msg = format(fmt, "invalid argument type: " ~ A[0].stringof, 0);
             }
             else foreach(i; staticIota!(1, A.length))
             {
-                static if (!isReceiver!(A[i]) && !isSomeString!(A[i]) &&
+                static if (!isReceiver!(A[i]) && !isOptionStr!(A[i]) &&
                     !(is(A[i] == config)))
                 {
-                    msg = format(fmt, "invalid argument type " ~ A[i].stringof, i);
+                    msg = format(fmt, "invalid argument type: " ~ A[i].stringof, i);
                     break;
                 }
-                else static if (isReceiver!(A[i]) && !isSomeString!(A[i-1]))
+                else static if (isReceiver!(A[i]) && !isOptionStr!(A[i-1]))
                 {
                     msg = format(fmt, "a receiver can not be preceeded by a receiver", i);
                     break;
                 }
-                else static if (i > 1 && isSomeString!(A[i]) && isSomeString!(A[i-1])
+                else static if (i > 1 && isOptionStr!(A[i]) && isOptionStr!(A[i-1])
                     && isSomeString!(A[i-2]))
                 {
                     msg = format(fmt, "a string can not be preceeded by two strings", i);
@@ -595,12 +596,31 @@ private template optionValidator(A...)
 {
     alias P = void*;
     alias S = string;
+    alias A = char;
     alias C = config;
     alias F = void function();
 
+    static assert(optionValidator!(S,P) == "");
+    static assert(optionValidator!(S,F) == "");
+    static assert(optionValidator!(A,P) == "");
+    static assert(optionValidator!(A,F) == "");
+
+    static assert(optionValidator!(C,S,P) == "");
+    static assert(optionValidator!(C,S,F) == "");
+    static assert(optionValidator!(C,A,P) == "");
+    static assert(optionValidator!(C,A,F) == "");
+
+    static assert(optionValidator!(C,S,S,P) == "");
+    static assert(optionValidator!(C,S,S,F) == "");
+    static assert(optionValidator!(C,A,S,P) == "");
+    static assert(optionValidator!(C,A,S,F) == "");
+
     static assert(optionValidator!(C,S,S,P) == "");
     static assert(optionValidator!(C,S,S,P,C,S,F) == "");
-    static assert(optionValidator!(C,S,S,P,C,S,F) == "");
+    static assert(optionValidator!(C,S,P,C,S,S,F) == "");
+
+    static assert(optionValidator!(C,A,P,A,S,F) == "");
+    static assert(optionValidator!(C,A,P,C,A,S,F) == "");
 
     static assert(optionValidator!(P,S,S) != "");
     static assert(optionValidator!(P,P,S) != "");
@@ -609,6 +629,29 @@ private template optionValidator(A...)
     static assert(optionValidator!(S,S,P,S,S,P,S) != "");
     static assert(optionValidator!(S,S,P,P) != "");
     static assert(optionValidator!(S,S,S,P) != "");
+
+    static assert(optionValidator!(C,A,S,P,C,A,F) == "");
+    static assert(optionValidator!(C,A,P,C,A,S,F) == "");
+}
+
+unittest // bugzilla 15914
+{
+    bool opt;
+    string[] args = ["program", "-a"];
+    getopt(args, config.passThrough, 'a', &opt);
+    assert(opt);
+    opt = false;
+    args = ["program", "-a"];
+    getopt(args, 'a', &opt);
+    assert(opt);
+    opt = false;
+    args = ["program", "-a"];
+    getopt(args, 'a', "help string", &opt);
+    assert(opt);
+    opt = false;
+    args = ["program", "-a"];
+    getopt(args, config.caseSensitive, 'a', "help string", &opt);
+    assert(opt);
 }
 
 private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
