@@ -351,9 +351,9 @@ unittest
  * ---
  * See $(LINK2 http://issues.dlang.org/show_bug.cgi?id=12625, Issue 12625).
  */
+pragma(inline, true)
 @nogc T[n] staticArray(T, size_t n)(T[n] arr)
 {
-    pragma(inline, true);
     return arr;
 }
 
