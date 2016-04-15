@@ -528,28 +528,7 @@ body
 
             void popFront()
             {
-                static if (isRandomAccessRange!R && hasLength!R && hasSlicing!R)
-                {
-                    source = source[min(_n, source.length) .. source.length];
-                }
-                else
-                {
-                    static if (hasLength!R)
-                    {
-                        foreach (i; 0 .. min(source.length, _n))
-                        {
-                            source.popFront();
-                        }
-                    }
-                    else
-                    {
-                        foreach (i; 0 .. _n)
-                        {
-                            source.popFront();
-                            if (source.empty) break;
-                        }
-                    }
-                }
+                source.popFrontN(_n);
             }
 
             static if (isBidirectionalRange!R && hasLength!R)
