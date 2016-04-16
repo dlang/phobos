@@ -9,7 +9,7 @@
     to non-ASCII characters.
 
     For functions which operate on Unicode characters, see
-    $(LINK2 std_uni.html, std.uni).
+    $(MREF std, uni).
 
     References:
         $(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),

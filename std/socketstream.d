@@ -31,7 +31,7 @@
  *      See $(SAMPLESRC htmlget.d)
  * Authors: Christopher E. Miller
  * References:
- *      $(LINK2 std_stream.html, std.stream)
+ *      $(MREF std, stream)
  * Source:    $(PHOBOSSRC std/_socketstream.d)
  * Macros: WIKI=Phobos/StdSocketstream
  */

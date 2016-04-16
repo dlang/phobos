@@ -866,7 +866,7 @@ public:
 
     /**
         $(D toString) is rarely directly invoked; the usual way of using it is via
-        $(LINK2 std_format.html#format, std.format.format):
+        $(REF format, std, format):
      */
     unittest
     {

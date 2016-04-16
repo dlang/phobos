@@ -39,8 +39,8 @@ $(TR $(TH Function Name) $(TH Description)
     ))
 )
 
-   These two functions are publicly imported by $(LINK2 std_string.html,
-   std.string) to be easily available.
+   These two functions are publicly imported by $(MREF std, string) to be
+   easily available.
 
    The functions $(D $(LREF formatValue)) and $(D $(LREF unformatValue)) are
    used for the plumbing.

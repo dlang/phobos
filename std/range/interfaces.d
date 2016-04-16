@@ -1,5 +1,5 @@
 /**
-This module is a submodule of $(LINK2 std_range.html, std.range).
+This module is a submodule of $(MREF std, range).
 
 The main $(D std.range) module provides template-based tools for working with
 ranges, but sometimes an object-based interface for ranges is needed, such as
