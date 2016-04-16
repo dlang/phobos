@@ -792,8 +792,8 @@ Slice!(Lengths.length, Range)
     }
     foreach (i; Iota!(ret.N, ret.PureN))
     {
-        ret._lengths[i] = slice._lengths[i + slcie.N - ret.N];
-        ret._strides[i] = slice._strides[i + slcie.N - ret.N];
+        ret._lengths[i] = slice._lengths[i + slice.N - ret.N];
+        ret._strides[i] = slice._strides[i + slice.N - ret.N];
     }
     ret._ptr = slice._ptr;
     return ret;
@@ -859,6 +859,12 @@ pure unittest
           [[[[ 8], [ 7], [6]]]],
           [[[[ 5], [ 4], [3]]]],
           [[[[ 2], [ 1], [0]]]]]]);
+}
+
+// Issue 15919
+unittest
+{
+    assert(iotaSlice(3, 4, 5, 6, 7).pack!2.reshape(4, 3, 5)[0, 0, 0].shape == cast(size_t[2])[6, 7]);
 }
 
 /// See_also: $(LREF reshape)

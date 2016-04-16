@@ -66,7 +66,7 @@ assert(matrix(3, 2) == 6); // Math & Fortran index order
 ------
 
 Note:
-In many examples $(LINK2 std_experimental_ndslice_selection.html#iotaSice, iotaSice) is used
+In many examples $(LINK2 std_experimental_ndslice_selection.html#iotaSlice, iotaSlice) is used
 instead of a regular array, which makes it
 possible to carry out tests without memory allocation.
 
