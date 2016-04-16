@@ -827,6 +827,7 @@ $(UL
        If pointer is $(D char*), treat it as C-style strings.
        In that case, this function is $(D @system).))
 */
+
 T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
           !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
@@ -875,11 +876,21 @@ T toImpl(T, S)(S value)
         ()@trusted{ memcpy(result.ptr, value.ptr, value.length); }();
         return cast(T) result;
     }
-    else static if (isPointer!S && is(S : const(char)*))
+    else static if (isPointer!S && isSomeChar!(PointerTarget!S))
     {
-        import core.stdc.string : strlen;
-        // It is unsafe because we cannot guarantee that the pointer is null terminated.
-        return value ? cast(T) value[0 .. strlen(value)].dup : null;
+        // This is unsafe because we cannot guarantee that the pointer is null terminated.
+        return () @system {
+            static if (is(S : const(char)*))
+                import core.stdc.string : strlen;
+            else
+                size_t strlen(S s) nothrow
+                {
+                    S p = s;
+                    while (*p++) {}
+                    return p-s-1;
+                }
+            return toImpl!T(value ? value[0 .. strlen(value)].dup : null);
+        }();
     }
     else static if (isSomeString!T && is(S == enum))
     {
@@ -929,6 +940,35 @@ unittest
 {
     immutable(char)* ptr = "hello".ptr;
     auto result = ptr.to!(char[]);
+}
+// Bugzilla 8384
+unittest
+{
+    void test1(T)(T lp, string cmp)
+    {
+        foreach (e; AliasSeq!(char, wchar, dchar))
+        {
+            test2!(e[])(lp, cmp);
+            test2!(const(e)[])(lp, cmp);
+            test2!(immutable(e)[])(lp, cmp);
+        }
+    }
+
+    void test2(D, S)(S lp, string cmp)
+    {
+        assert(to!string(to!D(lp)) == cmp);
+    }
+
+    foreach (e; AliasSeq!("Hello, world!", "Hello, world!"w, "Hello, world!"d))
+    {
+        test1(e, "Hello, world!");
+        test1(e.ptr, "Hello, world!");
+    }
+    foreach (e; AliasSeq!("", ""w, ""d))
+    {
+        test1(e, "");
+        test1(e.ptr, "");
+    }
 }
 
 /*

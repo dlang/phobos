@@ -29929,7 +29929,7 @@ else version(Windows)
         }
 
 
-        this(string name, TIME_ZONE_INFORMATION tzInfo) @safe immutable pure
+        this(string name, TIME_ZONE_INFORMATION tzInfo) @trusted immutable pure
         {
             super(name, to!string(tzInfo.StandardName.ptr), to!string(tzInfo.DaylightName.ptr));
             _tzInfo = tzInfo;
