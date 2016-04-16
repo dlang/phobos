@@ -339,7 +339,17 @@ private:
             static if (target.size < A.sizeof)
             {
                 if (target.type.tsize < A.sizeof)
-                    *cast(A**)&target.store = new A;
+                {
+                    static if (is(A == U[n], U, size_t n))
+                    {
+                        A* p = cast(A*)(new U[n]).ptr;
+                    }
+                    else
+                    {
+                        A* p = new A;
+                    }
+                    *cast(A**)&target.store = p;
+                }
             }
             tryPutting(zis, typeid(A), cast(void*) getPtr(&target.store))
                 || assert(false);
@@ -634,6 +644,11 @@ public:
                 static if (__traits(compiles, {new T(T.init);}))
                 {
                     auto p = new T(rhs);
+                }
+                else static if (is(T == U[n], U, size_t n))
+                {
+                    auto p = cast(T*)(new U[n]).ptr;
+                    *p = rhs;
                 }
                 else
                 {
@@ -1243,6 +1258,32 @@ public:
 
     static assert(!__traits(compiles, (v[1] = null)));
     assertThrown!VariantException(v[1] = Variant(null));
+}
+
+//Issue# 10879
+@system unittest
+{
+    int[10] arr = [1,2,3,4,5,6,7,8,9,10];
+    Variant v1 = arr;
+    Variant v2;
+    v2 = arr;
+    assert(v1 == arr);
+    assert(v2 == arr);
+    foreach (i, e; arr)
+    {
+        assert(v1[i] == e);
+        assert(v2[i] == e);
+    }
+    static struct LargeStruct
+    {
+        int[100] data;
+    }
+    LargeStruct ls;
+    ls.data[] = 4;
+    v1 = ls;
+    Variant v3 = ls;
+    assert(v1 == ls);
+    assert(v3 == ls);
 }
 
 //Issue# 8195
