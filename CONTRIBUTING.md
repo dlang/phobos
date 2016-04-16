@@ -8,7 +8,7 @@ Have a look at [Starting as a Contributor](http://wiki.dlang.org/Starting_as_a_C
 More Links
 ----------
 
-* Fork [on Github](https://github.com/D-Programming-Language/phobos)
+* Fork [on Github](https://github.com/dlang/phobos)
 * Use our [Bugzilla bug tracker](http://d.puremagic.com/issues/)
 * Follow the [D style](http://dlang.org/dstyle.html)
 * Participate in [our forum](http://forum.dlang.org/)
