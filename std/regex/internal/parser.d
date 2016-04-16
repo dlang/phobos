@@ -1565,10 +1565,10 @@ void optimize(Char)(ref Regex!Char zis)
                 ir.insertInPlace(i+IRL!(InfiniteEnd),
                     Bytecode.fromRaw(cast(uint)zis.filters.length));
                 zis.filters ~= BitTable(set);
+                fixupBytecode(ir);
             }
         }
     }
-    fixupBytecode(zis.ir);
 }
 
 //IR code validator - proper nesting, illegal instructions, etc.
