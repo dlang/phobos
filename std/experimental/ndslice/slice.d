@@ -310,12 +310,15 @@ pure nothrow @nogc unittest
     }
 
     alias S = Slice!(3, MyIota);
-    auto slice = MyIota().sliced(20, 10);
 
     import std.range.primitives;
     static assert(hasLength!S);
     static assert(isInputRange!S);
     static assert(isForwardRange!S == false);
+
+    auto slice = MyIota().sliced(20, 10);
+    assert(slice[1, 2] == 12);
+
 }
 
 /// Random access range primitives for slices over user defined types
@@ -336,14 +339,17 @@ pure nothrow @nogc unittest
     }
 
     alias S = Slice!(3, MyIota);
-    auto slice = MyIota().sliced(20, 10);
-
     import std.range.primitives;
     static assert(hasLength!S);
     static assert(hasSlicing!S);
     static assert(isForwardRange!S);
     static assert(isBidirectionalRange!S);
     static assert(isRandomAccessRange!S);
+
+    auto slice = MyIota().sliced(20, 10);
+    assert(slice[1, 2] == 12);
+    auto sCopy = slice.save;
+    assert(slice[1, 2] == 12);
 }
 
 /// Slice tuple and flags

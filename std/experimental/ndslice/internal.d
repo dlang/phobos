@@ -159,6 +159,20 @@ bool isPermutation(size_t N)(auto ref in size_t[N] perm)
     return true;
 }
 
+unittest
+{
+    assert(isPermutation([0, 1]));
+    // all numbers 0..N-1 need to be part of the permutation
+    assert(!isPermutation([1, 2]));
+    assert(!isPermutation([0, 2]));
+    // duplicates are not allowed
+    assert(!isPermutation([0, 1, 1]));
+
+    size_t[0] emptyArr;
+    // empty permutations are not allowed either
+    assert(!isPermutation(emptyArr));
+}
+
 bool isValidPartialPermutation(size_t N)(in size_t[] perm)
 {
     int[N] mask;

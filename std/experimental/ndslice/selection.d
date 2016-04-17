@@ -134,6 +134,11 @@ template pack(K...)
         .byElement.front
         .byElement.front
         .shape.length == 2);
+    // test save
+    b.byElement.save.popFront;
+    static assert(b
+        .byElement.front
+        .shape.length == 3);
 }
 
 /++
@@ -301,6 +306,24 @@ Slice!(1, Range) diagonal(size_t N, Range)(auto ref Slice!(N, Range) slice)
     // | 0 4 |
     static immutable d = [0, 4];
     assert(iotaSlice(2, 3).diagonal == d);
+}
+
+@safe @nogc pure nothrow unittest
+{
+    import std.algorithm.comparison: equal;
+    import std.range: only;
+
+    //  -------
+    // | 0 1 |
+    // | 2 3 |
+    // | 4 5 |
+    //  -------
+    //->
+    // | 0 3 |
+
+    assert(iotaSlice(3, 2)
+        .diagonal
+        .equal(only(0, 3)));
 }
 
 /// ditto
@@ -819,6 +842,20 @@ unittest
     assert(iotaSlice(3, 4, 5, 6, 7).pack!2.reshape(4, 3, 5)[0, 0, 0].shape == cast(size_t[2])[6, 7]);
 }
 
+@safe pure unittest
+{
+    import std.experimental.ndslice.slice;
+    import std.range: iota;
+    import std.exception: assertThrown;
+
+    auto e = 1.iotaSlice(1);
+    // resize to the wrong dimension
+    assertThrown!ReshapeException(e.reshape(2));
+    e.popFront;
+    // test with an empty slice
+    assertThrown!ReshapeException(e.reshape(1));
+}
+
 /// See_also: $(LREF reshape)
 class ReshapeException: SliceException
 {
@@ -1173,6 +1210,18 @@ pure nothrow unittest
          [40, 43, 46, 49]]);
 }
 
+pure nothrow unittest
+{
+    // test save
+    import std.range: dropOne;
+    import std.range: iota;
+
+    auto elems = 12.iota.sliced(3, 4).byElement;
+    assert(elems.front == 0);
+    assert(elems.save.dropOne.front == 1);
+    assert(elems.front == 0);
+}
+
 /++
 Random access and slicing
 +/
@@ -1478,6 +1527,17 @@ pure nothrow unittest
 
     elems.popFrontN(3);
     assert(elems.front == 5);
+}
+
+/// Save
+@safe @nogc pure nothrow unittest
+{
+    auto elems = iotaSlice(3, 4).byElementInStandardSimplex;
+    import std.range: dropOne, popFrontN;
+    elems.popFrontN(4);
+
+    assert(elems.save.dropOne.front == 8);
+    assert(elems.front == 5);
     assert(elems.index == cast(size_t[2])[1, 1]);
     assert(elems.length == 2);
 }
@@ -1532,6 +1592,18 @@ IndexSlice!N indexSlice(size_t N)(auto ref size_t[N] lengths)
     //slicing works correctly
     auto cm = im[1 .. $, 4 .. $];
     assert(cm[2, 1] == [3, 5]);
+}
+
+@safe pure nothrow unittest
+{
+    // test save
+    import std.range: dropOne;
+
+    auto im = indexSlice(7, 9);
+    auto imByElement = im.byElement;
+    assert(imByElement.front == [0, 0]);
+    assert(imByElement.save.dropOne.front == [0, 1]);
+    assert(imByElement.front == [0, 0]);
 }
 
 /++
