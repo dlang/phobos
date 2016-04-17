@@ -1,7 +1,7 @@
 /**
 $(SCRIPT inhibitQuickIndex = 1;)
 
-This is a submodule of $(LINK2 std_experimental_ndslice.html, std.experimental.ndslice).
+This is a submodule of $(LINK2 sci_ndslice.html, sci.ndslice).
 
 Operators only change strides and lengths of a slice.
 The range of a slice remains unmodified.
@@ -82,21 +82,21 @@ License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   Ilya Yaroshenko
 
-Source:    $(PHOBOSSRC std/_experimental/_ndslice/_iteration.d)
+Source:    $(PHOBOSSRC sci/_ndslice/_iteration.d)
 
 Macros:
-SUBMODULE = $(LINK2 std_experimental_ndslice_$1.html, std.experimental.ndslice.$1)
-SUBREF = $(LINK2 std_experimental_ndslice_$1.html#.$2, $(TT $2))$(NBSP)
+SUBMODULE = $(LINK2 sci_ndslice_$1.html, sci.ndslice.$1)
+SUBREF = $(LINK2 sci_ndslice_$1.html#.$2, $(TT $2))$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
 */
-module std.experimental.ndslice.iteration;
+module sci.ndslice.iteration;
 
 import std.traits;
 import std.meta;
 
-import std.experimental.ndslice.internal;
-import std.experimental.ndslice.slice; //: Slice;
+import sci.ndslice.internal;
+import sci.ndslice.slice; //: Slice;
 
 private enum _swappedCode = q{
     with (slice)
@@ -167,8 +167,8 @@ body
 /// Template
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     assert(iotaSlice(3, 4, 5, 6)
         .swapped!(3, 1)
         .shape == cast(size_t[4])[3, 6, 5, 4]);
@@ -177,8 +177,8 @@ body
 /// Function
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     assert(iotaSlice(3, 4, 5, 6)
         .swapped(1, 3)
         .shape == cast(size_t[4])[3, 6, 5, 4]);
@@ -187,8 +187,8 @@ body
 /// 2D
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     assert(iotaSlice(3, 4)
         .swapped
         .shape == cast(size_t[2])[4, 3]);
@@ -276,8 +276,8 @@ body
 /// Template
 @safe pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     auto slice = iotaSlice(2, 3);
 
     auto a = [[0, 1, 2],
@@ -343,8 +343,8 @@ Slice!(N, Range) everted(size_t N, Range)(auto ref Slice!(N, Range) slice)
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     assert(iotaSlice(3, 4, 5)
         .everted
         .shape == cast(size_t[3])[5, 4, 3]);
@@ -457,8 +457,8 @@ Slice!(2, Range) transposed(Range)(auto ref Slice!(2, Range) slice)
 /// Template
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     assert(iotaSlice(3, 4, 5, 6, 7)
         .transposed!(4, 1, 0)
         .shape == cast(size_t[5])[7, 4, 3, 5, 6]);
@@ -467,8 +467,8 @@ Slice!(2, Range) transposed(Range)(auto ref Slice!(2, Range) slice)
 /// Function
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     assert(iotaSlice(3, 4, 5, 6, 7)
         .transposed(4, 1, 0)
         .shape == cast(size_t[5])[7, 4, 3, 5, 6]);
@@ -477,8 +477,8 @@ Slice!(2, Range) transposed(Range)(auto ref Slice!(2, Range) slice)
 /// Single-argument function
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     assert(iotaSlice(3, 4, 5, 6, 7)
         .transposed(4)
         .shape == cast(size_t[5])[7, 3, 4, 5, 6]);
@@ -487,8 +487,8 @@ Slice!(2, Range) transposed(Range)(auto ref Slice!(2, Range) slice)
 /// `2`-dimensional transpose
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     assert(iotaSlice(3, 4)
         .transposed
         .shape == cast(size_t[2])[4, 3]);
@@ -522,7 +522,7 @@ Slice!(N, Range) allReversed(size_t N, Range)(Slice!(N, Range) slice)
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
+    import sci.ndslice.slice;
     import std.range: iota, retro;
     auto a = 20.iota.sliced(4, 5).allReversed;
     auto b = 20.iota.retro.sliced(4, 5);
@@ -583,7 +583,7 @@ body
 ///
 pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
+    import sci.ndslice.slice;
     auto slice = [1, 2, 3, 4].sliced(2, 2);
     assert(slice                    == [[1, 2], [3, 4]]);
 
@@ -606,8 +606,8 @@ pure nothrow unittest
 
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection;
     import std.algorithm.comparison: equal;
     import std.range: iota, retro, chain;
     auto i0 = iota(0,  4); auto r0 = i0.retro;
@@ -685,7 +685,7 @@ body
 ///
 pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
+    import sci.ndslice.slice;
     auto slice
          = [0,1,2,3,    4,5,6,7,   8,9,10,11].sliced(3, 4);
 
@@ -716,15 +716,15 @@ pure nothrow unittest
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.selection: iotaSlice;
     static assert(iotaSlice(13, 40).strided!(0, 1)(2, 5).shape == [7, 8]);
     static assert(iotaSlice(93).strided!(0, 0)(7, 3).shape == [5]);
 }
 
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection;
     import std.algorithm.comparison: equal;
     import std.range: iota, stride, chain;
     auto i0 = iota(0,  4); auto s0 = i0.stride(3);
@@ -770,8 +770,8 @@ Slice!(N, Range) allDropBackOne(size_t N, Range)(Slice!(N, Range) slice)
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     auto a = iotaSlice(4, 5);
 
     assert(a.allDropOne[0, 0] == 6);
@@ -815,8 +815,8 @@ Slice!(N, Range) allDropBackExactly(size_t N, Range)(Slice!(N, Range) slice, siz
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     auto a = iotaSlice(4, 5);
 
     assert(a.allDropExactly(2)[0, 0] == 12);
@@ -857,8 +857,8 @@ Slice!(N, Range) allDropBack(size_t N, Range)(Slice!(N, Range) slice, size_t n)
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     auto a = iotaSlice(4, 5);
 
     assert(a.allDrop(2)[0, 0] == 12);
@@ -965,8 +965,8 @@ body
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     auto a = iotaSlice(4, 5);
 
     assert(a.dropOne!(1, 0)[0, 0] == 6);
@@ -990,8 +990,8 @@ body
 
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     auto a = iotaSlice(4, 5);
 
     assert(a.dropOne(0).dropOne(0)[0, 0] == 10);
@@ -1075,8 +1075,8 @@ body
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     auto a = iotaSlice(4, 5);
 
     assert(a.dropExactly    !(1, 0)(2, 3)[0, 0] == 17);
@@ -1165,8 +1165,8 @@ body
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.selection: iotaSlice;
+    import sci.ndslice.slice;
+    import sci.ndslice.selection: iotaSlice;
     auto a = iotaSlice(4, 5);
 
     assert(a.drop    !(1, 0)(2, 3)[0, 0] == 17);
@@ -1206,7 +1206,7 @@ body
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
+    import sci.ndslice.slice;
     import std.range: iota, retro;
     assert((5 * 3 * 6 * 7).iota
         .sliced(5, 3, 6, 7)

@@ -66,7 +66,7 @@ assert(matrix(3, 2) == 6); // Math & Fortran index order
 ------
 
 Note:
-In many examples $(LINK2 std_experimental_ndslice_selection.html#iotaSlice, iotaSlice) is used
+In many examples $(LINK2 sci_ndslice_selection.html#iotaSlice, iotaSlice) is used
 instead of a regular array, which makes it
 possible to carry out tests without memory allocation.
 
@@ -306,19 +306,19 @@ Authors:   Ilya Yaroshenko
 
 Acknowledgements:   John Loughran Colvin
 
-Source:    $(PHOBOSSRC std/_experimental/_ndslice/_package.d)
+Source:    $(PHOBOSSRC sci/_ndslice/_package.d)
 
 Macros:
-SUBMODULE = $(LINK2 std_experimental_ndslice_$1.html, std.experimental.ndslice.$1)
-SUBREF = $(LINK2 std_experimental_ndslice_$1.html#.$2, $(TT $2))$(NBSP)
+SUBMODULE = $(LINK2 sci_ndslice_$1.html, sci.ndslice.$1)
+SUBREF = $(LINK2 sci_ndslice_$1.html#.$2, $(TT $2))$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
 */
-module std.experimental.ndslice;
+module sci.ndslice;
 
-public import std.experimental.ndslice.slice;
-public import std.experimental.ndslice.iteration;
-public import std.experimental.ndslice.selection;
+public import sci.ndslice.slice;
+public import sci.ndslice.iteration;
+public import sci.ndslice.selection;
 
 unittest
 {
@@ -529,7 +529,7 @@ pure nothrow unittest
 
 pure nothrow unittest
 {
-    import std.experimental.ndslice.internal: Iota;
+    import sci.ndslice.internal: Iota;
     import std.meta: AliasSeq;
     import std.range;
     import std.typecons: Tuple;
@@ -560,7 +560,7 @@ pure nothrow unittest
 
 pure nothrow unittest
 {
-    import std.experimental.ndslice.selection: pack;
+    import sci.ndslice.selection: pack;
     auto slice = new int[24].sliced(2, 3, 4);
     auto r0 = slice.pack!1[1, 2];
     slice.pack!1[1, 2][] = 4;
