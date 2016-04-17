@@ -361,7 +361,7 @@ template to(T)
 If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
  */
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if (isImplicitlyConvertible!(S, T) &&
         !isEnumStrToStr!(S, T) && !isNullToStr!(S, T))
 {
@@ -475,7 +475,7 @@ T toImpl(T, S)(S value)
 /*
   Converting static arrays forwards to their dynamic counterparts.
  */
-T toImpl(T, S)(ref S s)
+private T toImpl(T, S)(ref S s)
     if (isRawStaticArray!S)
 {
     return toImpl!(T, typeof(s[0])[])(s);
@@ -491,7 +491,7 @@ T toImpl(T, S)(ref S s)
 /**
 When source type supports member template function opCast, it is used.
 */
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         is(typeof(S.init.opCast!T()) : T) &&
         !isExactSomeString!T &&
@@ -542,7 +542,7 @@ When target type supports 'converting construction', it is used.
 $(UL $(LI If target type is struct, $(D T(value)) is used.)
      $(LI If target type is class, $(D new T(value)) is used.))
 */
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         is(T == struct) && is(typeof(T(value))))
 {
@@ -591,7 +591,7 @@ T toImpl(T, S)(S value)
 }
 
 /// ditto
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         is(T == class) && is(typeof(new T(value))))
 {
@@ -664,7 +664,7 @@ T toImpl(T, S)(S value)
 Object-to-object conversions by dynamic casting throw exception when the source is
 non-null and the target is null.
  */
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         (is(S == class) || is(S == interface)) && !is(typeof(value.opCast!T()) : T) &&
         (is(T == class) || is(T == interface)) && !is(typeof(new T(value))))
@@ -827,8 +827,7 @@ $(UL
        If pointer is $(D char*), treat it as C-style strings.
        In that case, this function is $(D @system).))
 */
-
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
           !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
         !isInfinite!S && isExactSomeString!T)
@@ -1258,8 +1257,8 @@ unittest
     }
 }
 
-/// ditto
-@trusted pure T toImpl(T, S)(S value, uint radix, LetterCase letterCase = LetterCase.upper)
+// ditto
+@trusted pure private T toImpl(T, S)(S value, uint radix, LetterCase letterCase = LetterCase.upper)
     if (isIntegral!S &&
         isExactSomeString!T)
 in
@@ -1339,7 +1338,7 @@ body
 Narrowing numeric-numeric conversions throw when the value does not
 fit in the narrower type.
  */
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         (isNumeric!S || isSomeChar!S || isBoolean!S) &&
         (isNumeric!T || isSomeChar!T || isBoolean!T) && !is(T == enum))
@@ -1432,7 +1431,7 @@ unittest
 Array-to-array conversion (except when target is a string type)
 converts each element in turn by using $(D to).
  */
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         !isSomeString!S && isDynamicArray!S &&
         !isExactSomeString!T && isArray!T)
@@ -1516,7 +1515,7 @@ T toImpl(T, S)(S value)
 Associative array to associative array conversion converts each key
 and each value in turn.
  */
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if (isAssociativeArray!S &&
         isAssociativeArray!T && !is(T == enum))
 {
@@ -1749,7 +1748,7 @@ $(UL
        string and then parsed.)
   $(LI When the source is a narrow string, normal text parsing occurs.))
 */
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if ( isExactSomeString!S && isDynamicArray!S &&
         !isExactSomeString!T && is(typeof(parse!T(value))))
 {
@@ -1764,7 +1763,7 @@ T toImpl(T, S)(S value)
 }
 
 /// ditto
-T toImpl(T, S)(S value, uint radix)
+private T toImpl(T, S)(S value, uint radix)
     if ( isExactSomeString!S && isDynamicArray!S &&
         !isExactSomeString!T && is(typeof(parse!T(value, radix))))
 {
@@ -1805,7 +1804,7 @@ into an Enum value. If the value does not match any enum member values
 a ConvException is thrown.
 Enums with floating-point or string base types are not supported.
 */
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
     if (is(T == enum) && !is(S == enum)
         && is(typeof(value == OriginalType!T.init))
         && !isFloatingPoint!(OriginalType!T) && !isSomeString!(OriginalType!T))
