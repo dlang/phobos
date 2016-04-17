@@ -346,10 +346,14 @@ struct JSONValue
             type_tag = JSON_TYPE.STRING;
             store.str = arg;
         }
-        else static if(is(T : char[]))
+        else static if(isSomeString!T) // issue 15884
         {
             type_tag = JSON_TYPE.STRING;
-            store.str = arg.idup;
+            // FIXME: std.array.array(Range) is not deduced as 'pure'
+            () @trusted {
+                import std.utf : byUTF;
+                store.str = cast(immutable)(arg.byUTF!char.array);
+            }();
         }
         else static if(is(T : bool))
         {
@@ -1700,7 +1704,16 @@ pure nothrow @safe @nogc unittest
 
 pure nothrow @safe unittest // issue 15884
 {
-    char[] str = "a".dup;
-    JSONValue testVal = str;
-    assert(testVal.type == JSON_TYPE.STRING);
+    import std.typecons;
+    void Test(C)() {
+        C[] a = ['x'];
+        JSONValue testVal = a;
+        assert(testVal.type == JSON_TYPE.STRING);
+        testVal = a.idup;
+        assert(testVal.type == JSON_TYPE.STRING);
+    }
+    Test!char();
+    Test!wchar();
+    Test!dchar();
 }
+
