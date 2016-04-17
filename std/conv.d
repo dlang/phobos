@@ -166,73 +166,19 @@ class ConvOverflowException : ConvException
 }
 
 /**
+The `to` template converts a value from one type _to another.
+The source type is deduced and the target type must be specified, for example the
+expression `to!int(42.0)` converts the number 42 from
+`double` _to `int`. The conversion is "safe", i.e.,
+it checks for overflow; `to!int(4.2e10)` would throw the
+`ConvOverflowException` exception. Overflow checks are only
+inserted when necessary, e.g., `to!double(42)` does not do
+any checking because any `int` fits in a `double`.
 
-The $(D_PARAM to) family of functions converts a value from type
-$(D_PARAM Source) to type $(D_PARAM Target). The source type is
-deduced and the target type must be specified, for example the
-expression $(D_PARAM to!int(42.0)) converts the number 42 from
-$(D_PARAM double) to $(D_PARAM int). The conversion is "safe", i.e.,
-it checks for overflow; $(D_PARAM to!int(4.2e10)) would throw the
-$(D_PARAM ConvOverflowException) exception. Overflow checks are only
-inserted when necessary, e.g., $(D_PARAM to!double(42)) does not do
-any checking because any int fits in a double.
+Conversions from string _to numeric types differ from the C equivalents
+`atoi()` and `atol()` by checking for overflow and not allowing whitespace.
 
-Converting a value to its own type (useful mostly for generic code)
-simply returns its argument.
-
-Example:
--------------------------
-int a = 42;
-auto b = to!int(a); // b is int with value 42
-auto c = to!double(3.14); // c is double with value 3.14
--------------------------
-
-Converting among numeric types is a safe way to cast them around.
-
-Conversions from floating-point types to integral types allow loss of
-precision (the fractional part of a floating-point number). The
-conversion is truncating towards zero, the same way a cast would
-truncate. (To round a floating point value when casting to an
-integral, use $(D_PARAM roundTo).)
-
-Example:
--------------------------
-int a = 420;
-auto b = to!long(a); // same as long b = a;
-auto c = to!byte(a / 10); // fine, c = 42
-auto d = to!byte(a); // throw ConvOverflowException
-double e = 4.2e6;
-auto f = to!int(e); // f == 4200000
-e = -3.14;
-auto g = to!uint(e); // fails: floating-to-integral negative overflow
-e = 3.14;
-auto h = to!uint(e); // h = 3
-e = 3.99;
-h = to!uint(a); // h = 3
-e = -3.99;
-f = to!int(a); // f = -3
--------------------------
-
-Conversions from integral types to floating-point types always
-succeed, but might lose accuracy. The largest integers with a
-predecessor representable in floating-point format are 2^24-1 for
-float, 2^53-1 for double, and 2^64-1 for $(D_PARAM real) (when
-$(D_PARAM real) is 80-bit, e.g. on Intel machines).
-
-Example:
--------------------------
-int a = 16_777_215; // 2^24 - 1, largest proper integer representable as float
-assert(to!int(to!float(a)) == a);
-assert(to!int(to!float(-a)) == -a);
-a += 2;
-assert(to!int(to!float(a)) == a); // fails!
--------------------------
-
-Conversions from string to numeric types differ from the C equivalents
-$(D_PARAM atoi()) and $(D_PARAM atol()) by checking for overflow and
-not allowing whitespace.
-
-For conversion of strings to signed types, the grammar recognized is:
+For conversion of strings _to signed types, the grammar recognized is:
 <pre>
 $(I Integer): $(I Sign UnsignedInteger)
 $(I UnsignedInteger)
@@ -241,54 +187,12 @@ $(I Sign):
     $(B -)
 </pre>
 
-For conversion to unsigned types, the grammar recognized is:
+For conversion _to unsigned types, the grammar recognized is:
 <pre>
 $(I UnsignedInteger):
     $(I DecimalDigit)
     $(I DecimalDigit) $(I UnsignedInteger)
 </pre>
-
-Converting an array to another array type works by converting each
-element in turn. Associative arrays can be converted to associative
-arrays as long as keys and values can in turn be converted.
-
-Example:
--------------------------
-int[] a = [1, 2, 3];
-auto b = to!(float[])(a);
-assert(b == [1.0f, 2, 3]);
-string str = "1 2 3 4 5 6";
-auto numbers = to!(double[])(split(str));
-assert(numbers == [1.0, 2, 3, 4, 5, 6]);
-int[string] c;
-c["a"] = 1;
-c["b"] = 2;
-auto d = to!(double[wstring])(c);
-assert(d["a"w] == 1 && d["b"w] == 2);
--------------------------
-
-Conversions operate transitively, meaning that they work on arrays and
-associative arrays of any complexity:
-
--------------------------
-int[string][double[int[]]] a;
-...
-auto b = to!(short[wstring][string[double[]]])(a);
--------------------------
-
-This conversion works because $(D_PARAM to!short) applies to an
-$(D_PARAM int), $(D_PARAM to!wstring) applies to a $(D_PARAM
-string), $(D_PARAM to!string) applies to a $(D_PARAM double), and
-$(D_PARAM to!(double[])) applies to an $(D_PARAM int[]). The
-conversion might throw an exception because $(D_PARAM to!short)
-might fail the range check.
-
- */
-
-/**
-   Entry point that dispatches to the appropriate conversion
-   primitive. Client code normally calls $(D _to!TargetType(value))
-   (and not some variant of $(D toImpl)).
  */
 template to(T)
 {
@@ -304,6 +208,181 @@ template to(T)
     {
         return toImpl!T(arg);
     }
+}
+
+/**
+ * Converting a value to its own type (useful mostly for generic code)
+ * simply returns its argument.
+ */
+@safe pure unittest
+{
+    int a = 42;
+    int b = to!int(a);
+    double c = to!double(3.14); // c is double with value 3.14
+}
+
+/**
+ * Converting among numeric types is a safe way to cast them around.
+ *
+ * Conversions from floating-point types _to integral types allow loss of
+ * precision (the fractional part of a floating-point number). The
+ * conversion is truncating towards zero, the same way a cast would
+ * truncate. (To round a floating point value when casting _to an
+ * integral, use `roundTo`.)
+ */
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    int a = 420;
+    assert(to!long(a) == a);
+    assertThrown!ConvOverflowException(to!byte(a));
+
+    assert(to!int(4.2e6) == 4200000);
+    assertThrown!ConvOverflowException(to!uint(-3.14));
+    assert(to!uint(3.14) == 3);
+    assert(to!uint(3.99) == 3);
+    assert(to!int(-3.99) == -3);
+}
+
+/**
+ * When converting strings to numeric types, note that the D hexadecimal and binary
+ * literals are not handled. Neither the prefixes that indicate the base, nor the
+ * horizontal bar used to separate groups of digits are recognized. This also
+ * applies to the suffixes that indicate the type.
+ *
+ * To work around this, you can specify a radix for conversions involving numbers.
+ */
+@safe pure unittest
+{
+    auto str = to!string(42, 16);
+    assert(str == "2A");
+    auto i = to!int(str, 16);
+    assert(i == 42);
+}
+
+/**
+ * Conversions from integral types _to floating-point types always
+ * succeed, but might lose accuracy. The largest integers with a
+ * predecessor representable in floating-point format are `2^24-1` for
+ * `float`, `2^53-1` for `double`, and `2^64-1` for `real` (when
+ * `real` is 80-bit, e.g. on Intel machines).
+ */
+@safe pure unittest
+{
+    // 2^24 - 1, largest proper integer representable as float
+    int a = 16_777_215;
+    assert(to!int(to!float(a)) == a);
+    assert(to!int(to!float(-a)) == -a);
+}
+
+/**
+ * Converting an array _to another array type works by converting each
+ * element in turn. Associative arrays can be converted _to associative
+ * arrays as long as keys and values can in turn be converted.
+ */
+@safe pure unittest
+{
+    import std.string : split;
+
+    int[] a = [1, 2, 3];
+    auto b = to!(float[])(a);
+    assert(b == [1.0f, 2, 3]);
+    string str = "1 2 3 4 5 6";
+    auto numbers = to!(double[])(split(str));
+    assert(numbers == [1.0, 2, 3, 4, 5, 6]);
+    int[string] c;
+    c["a"] = 1;
+    c["b"] = 2;
+    auto d = to!(double[wstring])(c);
+    assert(d["a"w] == 1 && d["b"w] == 2);
+}
+
+/**
+ * Conversions operate transitively, meaning that they work on arrays and
+ * associative arrays of any complexity.
+ *
+ * This conversion works because `to!short` applies _to an `int`, `to!wstring`
+ * applies _to a `string`, `to!string` applies _to a `double`, and
+ * `to!(double[])` applies _to an `int[]`. The conversion might throw an
+ * exception because `to!short` might fail the range check.
+ */
+unittest
+{
+    int[string][double[int[]]] a;
+    auto b = to!(short[wstring][string[double[]]])(a);
+}
+
+/**
+ * Object-to-object conversions by dynamic casting throw exception when
+ * the source is non-null and the target is null.
+ */
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    // Testing object conversions
+    class A {}
+    class B : A {}
+    class C : A {}
+    A a1 = new A, a2 = new B, a3 = new C;
+    assert(to!B(a2) is a2);
+    assert(to!C(a3) is a3);
+    assertThrown!ConvException(to!B(a3));
+}
+
+/**
+ * Stringize conversion from all types is supported.
+ * $(UL
+ *   $(LI String _to string conversion works for any two string types having
+ *        ($(D char), $(D wchar), $(D dchar)) character widths and any
+ *        combination of qualifiers (mutable, $(D const), or $(D immutable)).)
+ *   $(LI Converts array (other than strings) to string.
+ *        Each element is converted by calling $(D to!T).)
+ *   $(LI Associative array to string conversion.
+ *        Each element is printed by calling $(D to!T).)
+ *   $(LI Object to string conversion calls $(D toString) against the object or
+ *        returns $(D "null") if the object is null.)
+ *   $(LI Struct to string conversion calls $(D toString) against the struct if
+ *        it is defined.)
+ *   $(LI For structs that do not define $(D toString), the conversion to string
+ *        produces the list of fields.)
+ *   $(LI Enumerated types are converted to strings as their symbolic names.)
+ *   $(LI Boolean values are printed as $(D "true") or $(D "false").)
+ *   $(LI $(D char), $(D wchar), $(D dchar) to a string type.)
+ *   $(LI Unsigned or signed integers to strings.
+ *        $(DL $(DT [special case])
+ *             $(DD Convert integral value to string in $(D_PARAM radix) radix.
+ *             radix must be a value from 2 to 36.
+ *             value is treated as a signed value only if radix is 10.
+ *             The characters A through Z are used to represent values 10 through 36
+ *             and their case is determined by the $(D_PARAM letterCase) parameter.)))
+ *   $(LI All floating point types to all string types.)
+ *   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
+ *        If pointer is $(D char*), treat it as C-style strings.
+ *        In that case, this function is $(D @system).))
+ */
+pure unittest
+{
+    // Conversion representing dynamic/static array with string
+    long[] a = [ 1, 3, 5 ];
+    assert(to!string(a) == "[1, 3, 5]");
+
+    // Conversion representing associative array with string
+    int[string] associativeArray = ["0":1, "1":2];
+    assert(to!string(associativeArray) == `["0":1, "1":2]` ||
+           to!string(associativeArray) == `["1":2, "0":1]`);
+
+    // char* to string conversion
+    assert(to!string(cast(char*) null) == "");
+    assert(to!string("foo\0".ptr) == "foo");
+
+    // Conversion reinterpreting void array to string
+    auto w = "abcx"w;
+    const(void)[] b = w;
+    assert(b.length == 8);
+
+    auto c = to!(wchar[])(b);
+    assert(c == "abcx");
 }
 
 // Tests for issue 6175
@@ -715,19 +794,6 @@ private T toImpl(T, S)(S value)
     return result;
 }
 
-@safe pure unittest
-{
-    import std.exception;
-    // Testing object conversions
-    class A {}
-    class B : A {}
-    class C : A {}
-    A a1 = new A, a2 = new B, a3 = new C;
-    assert(to!B(a2) is a2);
-    assert(to!C(a3) is a3);
-    assertThrown!ConvException(to!B(a3));
-}
-
 // Unittest for 6288
 @safe pure unittest
 {
@@ -797,35 +863,7 @@ private T toImpl(T, S)(S value)
 }
 
 /**
-Stringize conversion from all types is supported.
-$(UL
-  $(LI String _to string conversion works for any two string types having
-       ($(D char), $(D wchar), $(D dchar)) character widths and any
-       combination of qualifiers (mutable, $(D const), or $(D immutable)).)
-  $(LI Converts array (other than strings) to string.
-       Each element is converted by calling $(D to!T).)
-  $(LI Associative array to string conversion.
-       Each element is printed by calling $(D to!T).)
-  $(LI Object to string conversion calls $(D toString) against the object or
-       returns $(D "null") if the object is null.)
-  $(LI Struct to string conversion calls $(D toString) against the struct if
-       it is defined.)
-  $(LI For structs that do not define $(D toString), the conversion to string
-       produces the list of fields.)
-  $(LI Enumerated types are converted to strings as their symbolic names.)
-  $(LI Boolean values are printed as $(D "true") or $(D "false").)
-  $(LI $(D char), $(D wchar), $(D dchar) to a string type.)
-  $(LI Unsigned or signed integers to strings.
-       $(DL $(DT [special case])
-            $(DD Convert integral value to string in $(D_PARAM radix) radix.
-            radix must be a value from 2 to 36.
-            value is treated as a signed value only if radix is 10.
-            The characters A through Z are used to represent values 10 through 36
-            and their case is determined by the $(D_PARAM letterCase) parameter.)))
-  $(LI All floating point types to all string types.)
-  $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
-       If pointer is $(D char*), treat it as C-style strings.
-       In that case, this function is $(D @system).))
+Handles type _to string conversions
 */
 private T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
@@ -1042,24 +1080,6 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     assertCTFEable!dg;
 }
 
-@safe pure unittest
-{
-    // Conversion reinterpreting void array to string
-    auto a = "abcx"w;
-    const(void)[] b = a;
-    assert(b.length == 8);
-
-    auto c = to!(wchar[])(b);
-    assert(c == "abcx");
-}
-
-@system pure nothrow unittest
-{
-    // char* to string conversion
-    assert(to!string(cast(char*) null) == "");
-    assert(to!string("foo\0".ptr) == "foo");
-}
-
 @safe pure /+nothrow+/ unittest
 {
     // Conversion representing bool value with string
@@ -1132,25 +1152,10 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     });
 }
 
-@safe pure /+nothrow+/ unittest
-{
-    // Conversion representing dynamic/static array with string
-    long[] b = [ 1, 3, 5 ];
-    auto s = to!string(b);
-    assert(to!string(b) == "[1, 3, 5]", s);
-}
 /*@safe pure */unittest // sprintf issue
 {
     double[2] a = [ 1.5, 2.5 ];
     assert(to!string(a) == "[1.5, 2.5]");
-}
-
-/*@safe pure */unittest
-{
-    // Conversion representing associative array with string
-    int[string] a = ["0":1, "1":2];
-    assert(to!string(a) == `["0":1, "1":2]` ||
-           to!string(a) == `["1":2, "0":1]`);
 }
 
 unittest
