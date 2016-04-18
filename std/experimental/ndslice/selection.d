@@ -856,6 +856,15 @@ unittest
     assertThrown!ReshapeException(e.reshape(1));
 }
 
+unittest
+{
+    auto pElements = iotaSlice(3, 4, 5, 6, 7)
+        .pack!2
+        .byElement();
+    assert(pElements[0][0] == iotaSlice(7));
+    assert(pElements[$-1][$-1] == iotaSlice([7], 2513));
+}
+
 /// See_also: $(LREF reshape)
 class ReshapeException: SliceException
 {
@@ -1058,7 +1067,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
                 else with (_slice)
                 {
                     alias M = DeepElemType.PureN;
-                    return DeepElemType(_lengths[$ - M .. $], _strides[$ - M .. $], _ptr);
+                    return DeepElemType(_lengths[$ - M .. $], _strides[$ - M .. $], _ptr + getShift(index));
                 }
             }
 
@@ -1292,7 +1301,6 @@ Use $(SUBREF iteration, allReversed) in pipeline before
 
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
     import std.range.primitives: isRandomAccessRange, hasSlicing;
     auto elems = iotaSlice(4, 5).byElement;
     static assert(isRandomAccessRange!(typeof(elems)));
@@ -1302,7 +1310,6 @@ Use $(SUBREF iteration, allReversed) in pipeline before
 // Checks strides
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration;
     import std.range: isRandomAccessRange;
     auto elems = iotaSlice(4, 5).everted.byElement;
