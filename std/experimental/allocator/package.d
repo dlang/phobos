@@ -213,6 +213,8 @@ module std.experimental.allocator;
 public import std.experimental.allocator.common,
     std.experimental.allocator.typed;
 
+import std.experimental.allocator.gc_allocator;
+
 // Example in the synopsis above
 unittest
 {
@@ -625,6 +627,7 @@ overloads that involve copy initialization deallocate memory and propagate the
 exception if the copy operation throws.
 */
 T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
+if (!isGCSafeAllocator!Allocator)
 {
     if (!length) return null;
     auto m = alloc.allocate(T.sizeof * length);
@@ -661,6 +664,7 @@ unittest
 /// Ditto
 T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     auto ref T init)
+if (!isGCSafeAllocator!Allocator)
 {
     if (!length) return null;
     auto m = alloc.allocate(T.sizeof * length);
@@ -722,7 +726,7 @@ unittest
 
 /// Ditto
 T[] makeArray(T, Allocator, R)(auto ref Allocator alloc, R range)
-if (isInputRange!R)
+if (isInputRange!R && !isGCSafeAllocator!Allocator)
 {
     static if (isForwardRange!R)
     {

@@ -1,6 +1,10 @@
 module std.experimental.allocator.gc_allocator;
 import std.experimental.allocator.common;
 
+public import std.experimental.allocator: makeArray;
+import std.range.primitives;
+import std.traits;
+
 /**
 D's built-in garbage-collected allocator.
  */
@@ -158,4 +162,95 @@ unittest
 
     // anything above a page is simply rounded up to next page
     assert(GCAllocator.instance.goodAllocSize(4096 * 4 + 1) == 4096 * 5);
+}
+
+/**
+A useful stub that only uses D builtin operations and can be used to built a
+`@safe`, `nothrow` and `pure` API with D's default garbage collector.
+At the moment it only can only be used to allocate arrays via `makeArray`.
+*/
+struct GCSafeAllocator
+{
+    enum uint alignment = platformAlignment;
+
+    void[] allocate(size_t bytes) const
+    {
+        assert(0, "stub - should not be called");
+    }
+
+    bool expand(ref void[] b, size_t delta)
+    {
+        assert(0, "stub - should not be called");
+    }
+
+    bool reallocate(ref void[] b, size_t newSize)
+    {
+        assert(0, "stub - should not be called");
+    }
+
+    bool deallocate(T)(T[] b) immutable
+    {
+        return true;
+    }
+
+    immutable static GCSafeAllocator instance;
+}
+
+///
+pure @safe nothrow unittest
+{
+    import std.experimental.allocator: dispose;
+    auto dummyAllloc(Allocator = GCSafeAllocator)()
+    {
+        return Allocator.instance.makeArray!int(2);
+    }
+    auto arr = dummyAllloc();
+    assert(arr == [0, 0]);
+    GCSafeAllocator.instance.dispose(arr);
+}
+
+package enum bool isGCSafeAllocator(T) = is(Unqual!T == GCSafeAllocator);
+
+unittest
+{
+    static assert(isGCSafeAllocator!(typeof(GCSafeAllocator.instance)));
+}
+
+T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
+if (isGCSafeAllocator!Allocator)
+{
+    return new T[length];
+}
+
+T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
+    auto ref T init)
+if (isGCSafeAllocator!Allocator)
+{
+    T[] arr = makeArray!T(alloc, length);
+    foreach (ref el; arr)
+    {
+        el = init;
+    }
+    return arr;
+}
+
+T[] makeArray(T, Allocator, R)(auto ref Allocator alloc, R range)
+if (isInputRange!R && isGCSafeAllocator!Allocator)
+{
+    import std.array: array;
+    return range.array;
+}
+
+pure @safe nothrow unittest
+{
+    import std.experimental.allocator.gc_allocator: GCSafeAllocator;
+    int[] arr = makeArray!int(GCSafeAllocator.instance, 2);
+    assert(arr == [0, 0]);
+
+    int[] arr2 = makeArray!int(GCSafeAllocator.instance, 2, 1);
+    assert(arr2 == [1, 1]);
+
+    import std.range: iota;
+    int[] arr3 = makeArray!int(GCSafeAllocator.instance, 2.iota);
+    assert(arr3 == [0, 1]);
 }
