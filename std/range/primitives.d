@@ -1875,16 +1875,18 @@ ElementType!R moveFront(R)(R r)
 {
     auto a = [ 1, 2, 3 ];
     assert(moveFront(a) == 1);
+    assert(a.length == 3);
 
     // define a perfunctory input range
     struct InputRange
     {
-        @property bool empty() { return false; }
-        @property int front() { return 42; }
+        enum bool empty = false;
+        enum int front = 7;
         void popFront() {}
         int moveFront() { return 43; }
     }
     InputRange r;
+    // calls r.moveFront
     assert(moveFront(r) == 43);
 }
 
