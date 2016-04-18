@@ -976,15 +976,17 @@ extern (C) void std_concurrency_static_this()
 
 private void unregisterMe()
 {
-    auto me = thisTid;
-
-    synchronized( registryLock )
+    auto me = thisInfo.ident;
+    if (thisInfo.ident != Tid.init)
     {
-        if( auto allNames = me in namesByTid )
+        synchronized( registryLock )
         {
-            foreach( name; *allNames )
-                tidByName.remove( name );
-            namesByTid.remove( me );
+            if( auto allNames = me in namesByTid )
+            {
+                foreach( name; *allNames )
+                    tidByName.remove( name );
+                namesByTid.remove( me );
+            }
         }
     }
 }
