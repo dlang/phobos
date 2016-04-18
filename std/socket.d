@@ -955,7 +955,7 @@ private string formatGaiError(int err) @trusted
  *     AddressFamily.INET6);
  * ---
  */
-AddressInfo[] getAddressInfo(T...)(in char[] node, T options) @trusted
+AddressInfo[] getAddressInfo(T...)(in char[] node, T options)
 {
     const(char)[] service = null;
     addrinfo hints;
@@ -981,7 +981,23 @@ AddressInfo[] getAddressInfo(T...)(in char[] node, T options) @trusted
             static assert(0, "Unknown getAddressInfo option type: " ~ typeof(option).stringof);
     }
 
-    return getAddressInfoImpl(node, service, &hints);
+    return () @trusted { return getAddressInfoImpl(node, service, &hints); }();
+}
+
+@system unittest
+{
+    struct Oops
+    {
+        const(char[]) breakSafety()
+        {
+            *cast(int*) 0xcafebabe = 0xdeadbeef;
+            return null;
+        }
+        alias breakSafety this;
+    }
+    assert(!__traits(compiles, () {
+        getAddressInfo("", Oops.init);
+    }), "getAddressInfo breaks @safe");
 }
 
 private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addrinfo* hints) @system
@@ -1019,7 +1035,7 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
 }
 
 
-unittest
+@safe unittest
 {
     softUnittest({
         if (getaddrinfoPointer)
