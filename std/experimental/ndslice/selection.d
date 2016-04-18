@@ -272,7 +272,7 @@ Params:
     N = dimension count
     slice = input slice
 Returns:
-    packed `1`-dimensional composed of `N`-dimensional slices
+    1-dimensional slice composed of diagonal elements
 +/
 Slice!(1, Range) diagonal(size_t N, Range)(auto ref Slice!(N, Range) slice)
 {
