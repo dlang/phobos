@@ -4125,7 +4125,7 @@ pure unittest
     Generate lockstep's opApply function as a mixin string.
     If withIndex is true prepend a size_t index to the delegate.
 */
-private string lockstepMixin(Ranges...)(bool withIndex)
+private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
 {
     import std.format : format;
 
@@ -4133,24 +4133,52 @@ private string lockstepMixin(Ranges...)(bool withIndex)
     string[] emptyChecks;
     string[] dgArgs;
     string[] popFronts;
+    string indexDef;
+    string indexInc;
 
     if (withIndex)
     {
         params ~= "size_t";
         dgArgs ~= "index";
+        if (reverse)
+        {
+            indexDef = q{
+                size_t index = ranges[0].length-1;
+                enforce(_stoppingPolicy == StoppingPolicy.requireSameLength, "lockstep can only be used with foreach_reverse when stoppingPolicy == requireSameLength");
+
+                foreach(range; ranges[1..$])
+                    enforce(range.length == ranges[0].length);
+                };
+            indexInc = "--index;";
+        }
+        else
+        {
+            indexDef = "size_t index = 0;";
+            indexInc = "++index;";
+        }
     }
 
     foreach (idx, Range; Ranges)
     {
         params ~= format("%sElementType!(Ranges[%s])", hasLvalueElements!Range ? "ref " : "", idx);
         emptyChecks ~= format("!ranges[%s].empty", idx);
-        dgArgs ~= format("ranges[%s].front", idx);
-        popFronts ~= format("ranges[%s].popFront();", idx);
+        if (reverse)
+        {
+            dgArgs ~= format("ranges[%s].back", idx);
+            popFronts ~= format("ranges[%s].popBack();", idx);
+        }
+        else
+        {
+            dgArgs ~= format("ranges[%s].front", idx);
+            popFronts ~= format("ranges[%s].popFront();", idx);
+        }
     }
+
+    string name = reverse ? "opApplyReverse" : "opApply";
 
     return format(
     q{
-        int opApply(scope int delegate(%s) dg)
+        int %s(scope int delegate(%s) dg)
         {
             import std.exception : enforce;
 
@@ -4173,10 +4201,10 @@ private string lockstepMixin(Ranges...)(bool withIndex)
             }
             return res;
         }
-    }, params.join(", "), withIndex ? "size_t index = 0;" : "",
+    }, name, params.join(", "), indexDef,
        emptyChecks.join(" && "), dgArgs.join(", "),
        popFronts.join("\n                "),
-       withIndex ? "index++;" : "");
+       indexInc);
 }
 
 /**
@@ -4188,6 +4216,11 @@ private string lockstepMixin(Ranges...)(bool withIndex)
    lengths and $(D s) == $(D StoppingPolicy.requireSameLength), throw an
    exception.  $(D s) may not be $(D StoppingPolicy.longest), and passing this
    will throw an exception.
+
+   Iterating over $(D Lockstep) in reverse and with an index is only possible
+   when $(D s) == $(D StoppingPolicy.requireSameLength), in order to preserve
+   indexes. If an attempt is made at iterating in reverse when $(D s) ==
+   $(D StoppingPolicy.shortest), an exception will be thrown.
 
    By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
 
@@ -4211,13 +4244,64 @@ struct Lockstep(Ranges...)
         _stoppingPolicy = sp;
     }
 
-    mixin(lockstepMixin!Ranges(false));
-    mixin(lockstepMixin!Ranges(true));
+    mixin(lockstepMixin!Ranges(false, false));
+    mixin(lockstepMixin!Ranges(true, false));
+    static if (allSatisfy!(isBidirectionalRange, Ranges))
+    {
+        mixin(lockstepMixin!Ranges(false, true));
+        static if (allSatisfy!(hasLength, Ranges))
+        {
+            mixin(lockstepMixin!Ranges(true, true));
+        }
+        else
+        {
+            mixin(lockstepReverseFailMixin!Ranges(true));
+        }
+    }
+    else
+    {
+        mixin(lockstepReverseFailMixin!Ranges(false));
+        mixin(lockstepReverseFailMixin!Ranges(true));
+    }
 
 private:
     alias R = Ranges;
     R _ranges;
     StoppingPolicy _stoppingPolicy;
+}
+
+string lockstepReverseFailMixin(Ranges...)(bool withIndex)
+{
+    import std.format : format;
+    string[] params;
+    string message;
+
+    if (withIndex)
+    {
+        message = "Indexed reverse iteration with lockstep is only supported if all ranges are bidirectional and have a length.\n";
+    }
+    else
+    {
+        message = "Reverse iteration with lockstep is only supported if all ranges are bidirectional.\n";
+    }
+
+    if (withIndex)
+    {
+        params ~= "size_t";
+    }
+
+    foreach (idx, Range; Ranges)
+    {
+        params ~= format("%sElementType!(Ranges[%s])", hasLvalueElements!Range ? "ref " : "", idx);
+    }
+
+    return format(
+    q{
+        int opApplyReverse()(scope int delegate(%s) dg)
+        {
+            static assert(false, "%s");
+        }
+    }, params.join(", "), message);
 }
 
 // For generic programming, make sure Lockstep!(Range) is well defined for a
@@ -4262,6 +4346,30 @@ unittest
        assert(arr1[index] == a);
        assert(arr2[index] == b);
    }
+}
+
+unittest // Bugzilla 15860: foreach_reverse on lockstep
+{
+    auto arr1 = [0, 1, 2, 3];
+    auto arr2 = [4, 5, 6, 7];
+
+    size_t n = arr1.length -1;
+    foreach_reverse (index, a, b; lockstep(arr1, arr2, StoppingPolicy.requireSameLength))
+    {
+        assert(n == index);
+        assert(index == a);
+        assert(arr1[index] == a);
+        assert(arr2[index] == b);
+        n--;
+    }
+
+    auto arr3 = [4, 5];
+    n = 1;
+    foreach_reverse (a, b; lockstep(arr1, arr3))
+    {
+        assert(a == arr1[$-n] && b == arr3[$-n]);
+        n++;
+    }
 }
 
 unittest
