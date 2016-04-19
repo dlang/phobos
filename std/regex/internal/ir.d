@@ -452,6 +452,17 @@ struct Group(DataIndex)
         writeln("\t", disassemble(slice, pc, dict));
 }
 
+/+
+    Generic interface for kickstart engine components.
+    The goal of kickstart is to advance input to the next potential match,
+    the more accurate & fast the better.
++/
+interface Kickstart(Char){
+@trusted:
+    bool opCall(ref Input!Char input);
+    @property bool empty() const;
+}
+
 /++
     $(D Regex) object holds regular expression pattern in compiled form.
     Instances of this object are constructed via calls to $(D regex).
@@ -513,7 +524,6 @@ struct Regex(Char)
     }
 
 package(std.regex):
-    import std.regex.internal.kickstart : Kickstart; //TODO: get rid of this dependency
     NamedGroup[] dict;                     // maps name -> user group number
     uint ngroup;                           // number of internal groups
     uint maxCounterDepth;                  // max depth of nested {n,m} repetitions
@@ -622,10 +632,10 @@ struct Input(Char)
     @property bool atEnd(){
         return _index == _origin.length;
     }
+
     bool search(Kickstart)(ref Kickstart kick, ref dchar res, ref size_t pos)
     {
-        size_t idx = kick.search(_origin, _index);
-        _index = idx;
+        kick(this);
         return nextChar(res, pos);
     }
 

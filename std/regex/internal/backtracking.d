@@ -216,7 +216,7 @@ template BacktrackingMatcher(bool CTregex)
             }
             static if (kicked)
             {
-                if (!re.kickstart.empty)
+                if (re.kickstart)
                 {
                     for (;;)
                     {

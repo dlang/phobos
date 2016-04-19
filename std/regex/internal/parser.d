@@ -1604,7 +1604,11 @@ struct Parser(R, Generator)
         }
         checkIfOneShot();
         if (!(flags & RegexInfo.oneShot))
-            kickstart = Kickstart!Char(zis, new uint[](256));
+        {
+            kickstart = new ShiftOr!Char(zis);
+            if(kickstart.empty)
+                kickstart = null;
+        }
         debug(std_regex_allocation) writefln("IR processed, max threads: %d", threadCount);
         optimize(zis);
     }
