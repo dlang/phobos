@@ -2,13 +2,13 @@
 
 /**
  * Implements functionality to read Comma Separated Values and its variants
- * from a input range of $(D dchar).
+ * from an input range of $(D dchar).
  *
  * Comma Separated Values provide a simple means to transfer and store
  * tabular data. It has been common for programs to use their own
  * variant of the CSV format. This parser will loosely follow the
- * $(WEB tools.ietf.org/html/rfc4180, RFC-4180). CSV input should adhered
- * to the following criteria, differences from RFC-4180 in parentheses.
+ * $(WEB tools.ietf.org/html/rfc4180, RFC-4180). CSV input should adhere
+ * to the following criteria (differences from RFC-4180 in parentheses):
  *
  * $(UL
  *     $(LI A record is separated by a new line (CRLF,LF,CR))
