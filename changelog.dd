@@ -13,6 +13,9 @@ $(BUGSTITLE Library Changes,
     $(LI $(XREF uni, isAlphaNum), which is analogous to $(XREF ascii, isAlphaNum)
         was added.)
     $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.
+    $(LI std.regex had numerous optimization applied, compile-time $(XREF regex, ctRegex)
+    should now be generally faster then the run-time version.)
+    $(LI $(XREF regex, regex) now supports matching multiple patterns in one go.)
 )
 
 $(BUGSTITLE Library Changes,
@@ -26,8 +29,7 @@ Previously, Posix systems would attempt to close every file descriptor from 3
     descriptors need closing.
 )
 
-$(LI $(LNAME2 nextPow2, Added nextPow2 and truncPow2 to std.math.)
-    $(P $(XREF range, padLeft) and $(XREF range, padRight) are functions for
+$(LI $(P $(XREF range, padLeft) and $(XREF range, padRight) are functions for
         padding ranges to a specified length using the given element.
     )
 
@@ -38,6 +40,21 @@ import std.algorithm.comparison;
 assert([1, 2, 3, 4, 5].padLeft(0, 7).equal([0, 0, 1, 2, 3, 4, 5]));
 
 assert("Hello World!".padRight('!', 15).equal("Hello World!!!!"));
+-------
+)
+
+$(LI $(XREF regex, regex) now supports matching multiple patterns in one go.
+-------
+import std.regex;
+// multi-pattern regex
+auto multi = regex([`\d+,\d+`,`(a-z]+):(\d+)`]);
+auto m = "abc:43 12,34".matchAll(multi);
+assert(m.front.whichPattern == 2);
+assert(m.front[1] == "abc");
+assert(m.front[2] == "43");
+m.popFront();
+assert(m.front.whichPattern == 1);
+assert(m.front[1] == "12");
 -------
 )
 
