@@ -2,7 +2,7 @@
     Kickstart is a coarse-grained "filter" engine that finds likely matches
     to be verified by full-blown matcher.
 */
-module std.regex.internal.kickstart;
+module std.regex.internal.shiftor;
 
 package(std.regex):
 
@@ -26,7 +26,7 @@ uint effectiveSize(Char)()
     Kickstart engine using ShiftOr algorithm,
     a bit parallel technique for inexact string searching.
 */
-struct ShiftOr(Char)
+class ShiftOr(Char) : Kickstart!Char
 {
 private:
     uint[] table;
@@ -127,10 +127,10 @@ private:
     }
 
 public:
-    @trusted this(ref Regex!Char re, uint[] memory)
+    @trusted this(ref Regex!Char re)
     {
         import std.conv;
-        assert(memory.length == 256);
+        uint[] memory = new uint[256];
         fChar = uint.max;
         // FNV-1a flavored hash (uses 32bits at a time)
         ulong hash(uint[] tab)
@@ -381,21 +381,22 @@ public:
         }
     }
 
-    @property bool empty() const {  return n_length == 0; }
+    final @property bool empty() const {  return n_length == 0; }
 
-    @property uint length() const{ return n_length/charSize; }
+    final @property uint length() const{ return n_length/charSize; }
 
     // lookup compatible bit pattern in haystack, return starting index
     // has a useful trait: if supplied with valid UTF indexes,
     // returns only valid UTF indexes
     // (that given the haystack in question is valid UTF string)
-    @trusted size_t search(const(Char)[] haystack, size_t idx)
+    final @trusted bool opCall(ref Input!Char s)
     {//@BUG: apparently assumes little endian machines
         import std.conv, core.stdc.string;
         assert(!empty);
-        auto p = cast(const(ubyte)*)(haystack.ptr+idx);
+        auto haystack = s._origin;
         uint state = uint.max;
         uint limit = 1u<<(n_length - 1u);
+        auto p = cast(const(ubyte)*)(haystack.ptr+s._index);
         debug(std_regex_search) writefln("Limit: %32b",limit);
         if(fChar != uint.max)
         {
@@ -409,12 +410,17 @@ public:
                     {
                         assert(p <= end, text(p," vs ", end));
                         p = cast(ubyte*)memchr(p, fChar, end - p);
-                        if(!p)
-                            return haystack.length;
+                        if(!p){
+                            s._index = haystack.length;
+                            return false;
+                        }
                         if((cast(size_t)p & (Char.sizeof-1)) == orginalAlign)
                             break;
                         if(++p == end)
-                            return haystack.length;
+                        {
+                            s._index = haystack.length;
+                            return false;
+                        }
                     }
                     state = ~1u;
                     assert((cast(size_t)p & (Char.sizeof-1)) == orginalAlign);
@@ -428,8 +434,10 @@ public:
                         p++;
                     //first char is tested, see if that's all
                     if(!(state & limit))
-                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
-                            -length;
+                    {
+                        s._index =  (p-cast(ubyte*)haystack.ptr)/Char.sizeof-length;
+                        return true;
+                    }
                 }
                 else
                 {//have some bits/states for possible matches,
@@ -447,8 +455,10 @@ public:
                         p++;
                     }
                     if(!(state & limit))
-                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
-                            -length;
+                    {
+                        s._index = (p-cast(ubyte*)haystack.ptr)/Char.sizeof-length;
+                        return true;
+                    }
                 }
                 debug(std_regex_search) writefln("State: %32b", state);
             }
@@ -466,8 +476,10 @@ public:
                     state = (state<<1) | table[p[2]];
                     p += 4;
                     if(!(state & limit))//division rounds down for dchar
-                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
-                        -length;
+                    {
+                        s._index = (p-cast(ubyte*)haystack.ptr)/Char.sizeof-length;
+                        return true;
+                    }
                 }
             }
             else
@@ -478,23 +490,31 @@ public:
                 {
                     state = (state<<1) | table[p[i++]];
                     if(!(state & limit))
-                        return idx+i/Char.sizeof-length;
+                    {
+                        s._index += i/Char.sizeof-length;
+                        return true;
+                    }
                 }
                 while(i < len)
                 {
                     state = (state<<1) | table[p[i++]];
                     if(!(state & limit))
-                        return idx+i/Char.sizeof
-                            -length;
+                    {
+                        s._index += i/Char.sizeof-length;
+                        return true;
+                    }
                     state = (state<<1) | table[p[i++]];
                     if(!(state & limit))
-                        return idx+i/Char.sizeof
-                            -length;
+                    {
+                        s._index += i/Char.sizeof-length;
+                        return true;
+                    }
                     debug(std_regex_search) writefln("State: %32b", state);
                 }
             }
         }
-        return haystack.length;
+        s._index = haystack.length;
+        return false;
     }
 
     @system debug static void dump(uint[] table)
@@ -510,65 +530,59 @@ public:
 unittest
 {
     import std.conv, std.regex;
-    @trusted void test_fixed(alias Kick)()
+    auto shiftOrLength(C)(const(C)[] pat, uint length)
     {
-        foreach(i, v; AliasSeq!(char, wchar, dchar))
+        auto r = regex(pat);
+        auto kick = new ShiftOr!C(r);
+        assert(kick.length == length, text(C.stringof, " == ", kick.length));
+        return kick;
+    }
+    auto searches(C)(const (C)[] source, ShiftOr!C kick, uint[] results...)
+    {
+        auto inp = Input!C(source);
+        foreach(r; results)
         {
-            alias Char = v;
-            alias String = immutable(v)[];
-            auto r = regex(to!String(`abc$`));
-            auto kick = Kick!Char(r, new uint[256]);
-            assert(kick.length == 3, text(Kick.stringof," ",v.stringof, " == ", kick.length));
-            auto r2 = regex(to!String(`(abc){2}a+`));
-            kick = Kick!Char(r2, new uint[256]);
-            assert(kick.length == 7, text(Kick.stringof,v.stringof," == ", kick.length));
-            auto r3 = regex(to!String(`\b(a{2}b{3}){2,4}`));
-            kick = Kick!Char(r3, new uint[256]);
-            assert(kick.length == 10, text(Kick.stringof,v.stringof," == ", kick.length));
-            auto r4 = regex(to!String(`\ba{2}c\bxyz`));
-            kick = Kick!Char(r4, new uint[256]);
-            assert(kick.length == 6, text(Kick.stringof,v.stringof, " == ", kick.length));
-            auto r5 = regex(to!String(`\ba{2}c\b`));
-            kick = Kick!Char(r5, new uint[256]);
-            size_t x = kick.search("aabaacaa", 0);
-            assert(x == 3, text(Kick.stringof,v.stringof," == ", kick.length));
-            x = kick.search("aabaacaa", x+1);
-            assert(x == 8, text(Kick.stringof,v.stringof," == ", kick.length));
+            kick(inp);
+            dchar ch;
+            size_t idx;
+            assert(inp._index == r, text(inp._index, " vs ", r));
+            inp.nextChar(ch, idx);
         }
     }
-    @trusted void test_flex(alias Kick)()
+
+    foreach(i, Char; AliasSeq!(char, wchar, dchar))
     {
-        foreach(i, v; AliasSeq!(char, wchar, dchar))
-        {
-            alias Char = v;
-            alias String = immutable(v)[];
-            auto r = regex(to!String(`abc[a-z]`));
-            auto kick = Kick!Char(r, new uint[256]);
-            auto x = kick.search(to!String("abbabca"), 0);
-            assert(x == 3, text("real x is ", x, " ",v.stringof));
-
-            auto r2 = regex(to!String(`(ax|bd|cdy)`));
-            String s2 = to!String("abdcdyabax");
-            kick = Kick!Char(r2, new uint[256]);
-            x = kick.search(s2, 0);
-            assert(x == 1, text("real x is ", x));
-            x = kick.search(s2, x+1);
-            assert(x == 3, text("real x is ", x));
-            x = kick.search(s2, x+1);
-            assert(x == 8, text("real x is ", x));
-            auto rdot = regex(to!String(`...`));
-            kick = Kick!Char(rdot, new uint[256]);
-            assert(kick.length == 0);
-            auto rN = regex(to!String(`a(b+|c+)x`));
-            kick = Kick!Char(rN, new uint[256]);
-            assert(kick.length == 3, to!string(kick.length));
-            assert(kick.search("ababx",0) == 2);
-            assert(kick.search("abaacba",0) == 3);//expected inexact
-
-        }
+        alias String = immutable(Char)[];
+        shiftOrLength(`abc`.to!String, 3);
+        shiftOrLength(`abc$`.to!String, 3);
+        shiftOrLength(`(abc){2}a+`.to!String, 7);
+        shiftOrLength(`\b(a{2}b{3}){2,4}`.to!String, 10);
+        shiftOrLength(`\ba{2}c\bxyz`.to!String, 6);
+        auto kick = shiftOrLength(`\ba{2}c\b`.to!String, 3);
+        auto inp = Input!Char("aabaacaa");
+        assert(kick(inp));
+        assert(inp._index == 3, text(Char.stringof," == ", kick.length));
+        dchar ch;
+        size_t idx;
+        inp.nextChar(ch, idx);
+        assert(!kick(inp));
+        assert(inp._index == 8, text(Char.stringof," == ", kick.length));
     }
-    test_fixed!(ShiftOr)();
-    test_flex!(ShiftOr)();
+
+    foreach(i, v; AliasSeq!(char, wchar, dchar))
+    {
+        alias Char = v;
+        alias String = immutable(v)[];
+        auto kick = shiftOrLength(`abc[a-z]`.to!String, 4);
+        searches("abbabca".to!String, kick, 3);
+        kick = shiftOrLength(`(ax|bd|cdy)`.to!String, 2);
+        searches("abdcdyabax".to!String, kick, 1, 3, 8);
+
+        shiftOrLength(`...`.to!String, 0);
+        kick = shiftOrLength(`a(b+|c+)x`.to!String, 3);
+        searches("ababx".to!String, kick, 2);
+        searches("abaacba".to!String, kick, 3); //expected inexact
+
+    }
 }
 
-alias Kickstart = ShiftOr;

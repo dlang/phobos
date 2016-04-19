@@ -4,7 +4,7 @@
 */
 module std.regex.internal.parser;
 
-import std.regex.internal.ir;
+import std.regex.internal.ir, std.regex.internal.shiftor;
 import std.algorithm, std.range, std.uni, std.meta,
     std.traits, std.typecons, std.exception;
 static import std.ascii;
@@ -1475,7 +1475,11 @@ struct Parser(R)
         }
         checkIfOneShot();
         if(!(flags & RegexInfo.oneShot))
-            kickstart = Kickstart!Char(zis, new uint[](256));
+        {
+            kickstart = new ShiftOr!Char(zis);
+            if(kickstart.empty)
+                kickstart = null;
+        }
         debug(std_regex_allocation) writefln("IR processed, max threads: %d", threadCount);
         optimize(zis);
     }
