@@ -4717,17 +4717,13 @@ unittest
 auto iota(B, E, S)(B begin, E end, S step)
 if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         && isIntegral!S)
-in
-{
-    assert(!(step == 0 && begin != end));
-}
-body
 {
     import std.conv : unsigned;
 
     alias Value = CommonType!(Unqual!B, Unqual!E);
     alias StepType = Unqual!S;
-    alias IndexType = typeof(unsigned((end - begin) / step));
+
+    assert(step != 0 || begin == end);
 
     static struct Result
     {
@@ -4743,11 +4739,16 @@ body
                 this.current = current;
                 if (step > 0)
                 {
+                    assert(unsigned((pastLast - current) / step) <= size_t.max);
+
                     this.pastLast = pastLast - 1;
                     this.pastLast -= (this.pastLast - current) % step;
                 }
                 else
                 {
+                    if (step < 0)
+                        assert(unsigned((current - pastLast) / -step) <= size_t.max);
+
                     this.pastLast = pastLast + 1;
                     this.pastLast += (current - this.pastLast) % -step;
                 }
@@ -4789,20 +4790,14 @@ body
         }
         @property size_t length() const
         {
-            IndexType ret;
             if (step > 0)
             {
-                ret = unsigned((pastLast - current) / step);
+                return cast(size_t)((pastLast - current) / step);
             }
             else
             {
-                ret = unsigned((current - pastLast) / -step);
+                return cast(size_t)((current - pastLast) / -step);
             }
-            static if (!is(IndexType : size_t))
-            {
-                assert(ret <= size_t.max);
-            }
-            return cast(size_t) ret;
         }
 
         alias opDollar = length;
@@ -4825,7 +4820,6 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
     import std.conv : unsigned;
 
     alias Value = CommonType!(Unqual!B, Unqual!E);
-    alias IndexType = typeof(unsigned(end - begin));
 
     static struct Result
     {
@@ -4835,6 +4829,8 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         {
             if (current < pastLast)
             {
+                assert(unsigned(pastLast - current) <= size_t.max);
+
                 this.current = current;
                 this.pastLast = pastLast;
             }
@@ -4872,12 +4868,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         }
         @property size_t length() const
         {
-            immutable ret = unsigned(pastLast - current);
-            static if (!is(IndexType : size_t))
-            {
-                assert(ret <= size_t.max);
-            }
-            return cast(size_t) ret;
+            return cast(size_t)(pastLast - current);
         }
 
         alias opDollar = length;
@@ -5019,6 +5010,19 @@ unittest
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
     assert(r1.front == a.ptr);
     assert(r1.back == a.ptr + a.length - 1);
+}
+
+unittest
+{
+    import std.parallelism;
+
+    assert(__traits(compiles, { foreach (i; iota(0, 100UL).parallel) {} }));
+    assert(iota(1UL, 0UL).length == 0);
+    assert(iota(1UL, 0UL, 1).length == 0);
+    assert(iota(0, 1, 1).length == 1);
+    assert(iota(1, 0, -1).length == 1);
+    assert(iota(0, 1, -1).length == 0);
+    assert(iota(ulong.max, 0).length == 0);
 }
 
 @safe unittest
