@@ -680,7 +680,10 @@ on very many factors.
 template FPTemporary(F)
     if (isFloatingPoint!F)
 {
-    alias FPTemporary = real;
+    version(X86)
+        alias FPTemporary = real;
+    else
+        alias FPTemporary = Unqual!F;
 }
 
 ///
