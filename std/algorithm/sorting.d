@@ -1062,17 +1062,20 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 @safe pure nothrow unittest
 {
     int[] array = [ 1, 2, 3, 4 ];
+
     // sort in descending order
-    sort!("a > b")(array);
+    array.sort!("a > b");
     assert(array == [ 4, 3, 2, 1 ]);
+
     // sort in ascending order
-    sort(array);
+    array.sort();
     assert(array == [ 1, 2, 3, 4 ]);
-    // sort with a delegate
-    bool myComp(int x, int y) @safe pure nothrow { return x > y; }
-    sort!(myComp)(array);
-    assert(array == [ 4, 3, 2, 1 ]);
+
+    // sort with reusable comparator and chain
+    alias myComp = (x, y) => x > y;
+    assert(array.sort!(myComp).release == [ 4, 3, 2, 1 ]);
 }
+
 ///
 unittest
 {
