@@ -19,6 +19,8 @@ $(T2 isPartitioned,
         afterwards.)
 $(T2 isSorted,
         $(D isSorted([1, 1, 2, 3])) returns $(D true).)
+$(T2 isStrictlyMonotonic,
+        $(D isStrictlyMonotonic([1, 1, 2, 3])) returns $(D false).)
 $(T2 ordered,
         $(D ordered(1, 1, 2, 3)) returns $(D true).)
 $(T2 strictlyOrdered,
@@ -136,11 +138,20 @@ Checks whether a forward range is sorted according to the comparison
 operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
 less).
 
+Unlike $(LREF isSorted), $(LREF isStrictlyMonotonic) does not allow for equal values,
+i.e. values for which both `less(a, b)` and `less(b, a)` are false.
+
+With either function, the predicate must be a strict ordering just like with
+$(LREF isSorted). For example, using `"a <= b"` instead of `"a < b"` is
+incorrect and will cause failed assertions.
+
 Params:
     less = Predicate the range should be sorted by.
     r = Forward range to check for sortedness.
 
-Returns: true if the range is sorted, false otherwise.
+Returns:
+    `true` if the range is sorted, false otherwise. $(LREF isSorted) allows
+    duplicates, $(LREF isStrictlyMonotonic) not.
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
@@ -182,12 +193,20 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 ///
 @safe unittest
 {
+    assert([1, 1, 2].isSorted);
+    // strictly monotonic doesn't allow duplicates
+    assert(![1, 1, 2].isStrictlyMonotonic);
+
     int[] arr = [4, 3, 2, 1];
     assert(!isSorted(arr));
+    assert(!isStrictlyMonotonic(arr));
+
+    assert(isSorted!"a > b"(arr));
+    assert(isStrictlyMonotonic!"a > b"(arr));
+
     sort(arr);
     assert(isSorted(arr));
-    sort!("a > b")(arr);
-    assert(isSorted!("a > b")(arr));
+    assert(isStrictlyMonotonic(arr));
 }
 
 @safe unittest
@@ -205,11 +224,61 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
     int[] b = [1, 3, 2];
     assert(!isSorted(b));
 
+    // ignores duplicates
+    int[] c = [1, 1, 2];
+    assert(isSorted(c));
+
     dchar[] ds = "コーヒーが好きです"d.dup;
     sort(ds);
     string s = to!string(ds);
     assert(isSorted(ds));  // random-access
     assert(isSorted(s));   // bidirectional
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable a = [1, 2, 3];
+    assert(a.isSorted);
+}
+
+/// ditto
+bool isStrictlyMonotonic(alias less = "a < b", Range)(Range r)
+if (isForwardRange!Range)
+{
+    import std.algorithm.searching : findAdjacent;
+    return findAdjacent!((a,b) => !binaryFun!less(a,b))(r).empty;
+}
+
+@safe unittest
+{
+    import std.conv : to;
+
+    assert("abcd".isStrictlyMonotonic);
+    assert(!"aacd".isStrictlyMonotonic);
+    assert(!"acb".isStrictlyMonotonic);
+
+    assert([1, 2, 3].isStrictlyMonotonic);
+    assert(![1, 3, 2].isStrictlyMonotonic);
+    assert(![1, 1, 2].isStrictlyMonotonic);
+
+    // ー occurs twice -> can't be strict
+    dchar[] ds = "コーヒーが好きです"d.dup;
+    sort(ds);
+    string s = to!string(ds);
+    assert(!isStrictlyMonotonic(ds));  // random-access
+    assert(!isStrictlyMonotonic(s));   // bidirectional
+
+    dchar[] ds2 = "コーヒが好きです"d.dup;
+    sort(ds2);
+    string s2 = to!string(ds2);
+    assert(isStrictlyMonotonic(ds2));  // random-access
+    assert(isStrictlyMonotonic(s2));   // bidirectional
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable a = [1, 2, 3];
+    assert(a.isStrictlyMonotonic);
 }
 
 /**
@@ -221,8 +290,8 @@ $(D ordered) allows repeated values, e.g. $(D ordered(1, 1, 2)) is $(D true). To
 that the values are ordered strictly monotonically, use $(D strictlyOrdered);
 $(D strictlyOrdered(1, 1, 2)) is $(D false).
 
-With either function, the predicate must be a strict ordering just like with $(D isSorted). For
-example, using $(D "a <= b") instead of $(D "a < b") is incorrect and will cause failed
+With either function, the predicate must be a strict ordering. For example,
+using $(D "a <= b") instead of $(D "a < b") is incorrect and will cause failed
 assertions.
 
 Params:

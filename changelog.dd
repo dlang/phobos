@@ -21,6 +21,8 @@ $(BUGSTITLE Library Changes,
     arguments.)
     $(LI $(XREF range, iota)'s `.length` property is fixed to `size_t` instead
     of the type being iterated)
+    $(LI $(XREF algorithm, sorting, isStrictlyMonotonic) which doesn't allow
+    equal values was added.)
 )
 
 $(BUGSTITLE Library Changes,
