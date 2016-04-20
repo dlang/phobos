@@ -16,6 +16,11 @@ $(BUGSTITLE Library Changes,
     $(LI std.regex had numerous optimization applied, compile-time $(XREF regex, ctRegex)
     should now be generally faster then the run-time version.)
     $(LI $(XREF regex, regex) now supports matching multiple patterns in one go.)
+    $(LI $(XREF algorithm, mutation, swapAt) was exposed)
+    $(LI $(XREF range, primitives, moveAt) accepts only `size_t` for its index
+    arguments.)
+    $(LI $(XREF range, iota)'s `.length` property is fixed to `size_t` instead
+    of the type being iterated)
 )
 
 $(BUGSTITLE Library Changes,
@@ -57,6 +62,17 @@ assert(m.front.whichPattern == 1);
 assert(m.front[1] == "12");
 -------
 )
+
+$(LI $(P $(XREF algorithm, mutation, swapAt) allows to swap elements
+		of a RandomAccessRange by their indices.
+    )
+
+$(LI $(P $(XREF range, iota)'s `.length` property is now always returned as
+		`size_t`.  This means if you are on a 32-bit CPU and you are using
+		iota to iterate 64-bit types, the length will be truncated to `size_t`.
+		In non-release mode, you will get an exception if the length exceeds
+		`size_t.max` in your call to `iota`.
+	)
 
 Macros:
     TITLE=Change Log
