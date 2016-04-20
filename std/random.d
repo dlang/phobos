@@ -20,20 +20,20 @@ Example:
 ----
 // Generate a uniformly-distributed integer in the range [0, 14]
 auto i = uniform(0, 15);
+
 // Generate a uniformly-distributed real in the range [0, 100)
 // using a specific random generator
 Random gen;
 auto r = uniform(0.0L, 100.0L, gen);
+
+// Generate a 32-bit random number
+auto l = uniform!uint();
 ----
 
 In addition to random number generators, this module features
 distributions, which skew a generator's output statistical
 distribution in various ways. So far the uniform distribution for
 integers and real numbers have been implemented.
-
-Upgrading:
-        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand, Phobos D1 $(D rand())) can
-        be replaced with $(D uniform!uint()).
 
 Source:    $(PHOBOSSRC std/_random.d)
 
