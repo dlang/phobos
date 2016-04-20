@@ -471,6 +471,7 @@ unittest
     Returns: Whether or not $(D c) is in the ASCII character set - i.e. in the
     range 0..0x7F.
   +/
+pragma(inline, true)
 bool isASCII(dchar c) @safe pure nothrow @nogc
 {
     return c <= 0x7F;
