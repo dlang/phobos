@@ -40,8 +40,8 @@ struct HashTab
                 grow();
                 p = locate(key, table);
             }
-            p.occupied = true;
-            p.key = key;
+            p.key_ = key;
+            p.setOccupied();
         }
         p.value = value;
     }
@@ -76,9 +76,12 @@ private:
 
     struct Node
     {
-        uint key;
+        uint key_;
         uint value;
-        bool occupied;
+        @property uint key()(){ return key_ & 0x7fff_ffff; }
+        @property bool occupied()(){ return (key_ & 0x8000_0000) != 0; }
+        void setOccupied(){ key_ |= 0x8000_0000; }
+
     }
     Node[] table;
     size_t items;
