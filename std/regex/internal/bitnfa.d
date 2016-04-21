@@ -14,7 +14,7 @@ package(std.regex):
 import std.regex.internal.ir;
 
 debug(std_regex_bitnfa) import std.stdio;
-
+import std.algorithm;
 
 
 struct HashTab()
@@ -118,12 +118,14 @@ private:
 // and ref count is decreased
 struct UIntTrie2
 {
-    ushort[] index;             // pages --> blocks
-    ushort[] refCounts;         // ref counts for each block
-    uint[]   hashes;            // hashes of blocks
-    uint[]   blocks;            // linear array with blocks
-    uint[]   scratch;           // temporary block
-    enum     blockSize = 2<<8;  // size of block
+    ushort[] index;                       // pages --> blocks
+    ushort[] refCounts;                   // ref counts for each block
+    uint[]   hashes;                      // hashes of blocks
+    uint[]   blocks;                      // linear array with blocks
+    uint[]   scratch;                     // temporary block
+    enum     blockBits = 8;               // size of block in bits
+    enum     blockSize = 1<<blockBits;    // size of block
+
 
     static uint hash(uint[] data)
     {
@@ -149,20 +151,94 @@ struct UIntTrie2
         return ut;
     }
 
-    bool opIndex(dchar ch)
+    uint opIndex(dchar ch)
     {
-        return false; // TODO: stub
+        immutable blk = index[ch>>blockBits];
+        //writeln(">blk = ", blk);
+        return blocks.ptr[blk*blockSize + (ch & (blockSize-1))];
+    }
+
+    void setPageRange(string op)(uint val, uint low, uint high)
+    {
+        immutable blk = index[low>>blockBits];
+        //writeln("<blk = ", blk);
+        if(refCounts[blk] == 1) // modify in-place
+        {
+            immutable lowIdx = blk*blockSize + (low & (blockSize-1));
+            immutable highIdx = high - low + lowIdx;
+            mixin("blocks[lowIdx..highIdx] "~op~"= val;");
+        }
+        else        
+        {
+            // create a new page
+            refCounts[blk]--;
+            immutable lowIdx = low & (blockSize-1);
+            immutable highIdx = high - low + lowIdx;
+            scratch[] = blocks[blk*blockSize..(blk+1)*blockSize];
+            mixin("scratch[lowIdx..highIdx] "~op~"= val;");
+            uint h = hash(scratch);
+            bool found = false;
+            foreach(i,_; hashes.enumerate.filter!(x => x[1] == h))
+            {
+                if(scratch[] == blocks[i*blockSize .. (i+1)*blockSize])
+                {
+                    // re-route to existing page
+                    index[low>>blockBits] = cast(ushort)i;
+                    refCounts[i]++; // inc refs
+                    found = true;
+                    break;
+                }
+            }
+            if(!found)
+            {
+                index[low>>blockBits] = cast(ushort)hashes.length;
+                blocks ~= scratch[];
+                refCounts ~= 1;
+                hashes ~= h;
+            }
+        }
     }
 
     void opIndexOpAssign(string op)(uint val, dchar ch)
     {
-        // TODO: stub
+        setPageRange!op(val, ch, ch+1);
     }
 
     void opSliceOpAssign(string op)(uint val, uint start, uint end)
     {
-        // TODO: stub
+        uint startBlk  = start >> blockBits;
+        uint endBlk = end >> blockBits;
+        uint first = min(startBlk*blockSize+blockSize, end);
+        setPageRange!op(val, start, first);
+        foreach(blk; startBlk..endBlk)
+            setPageRange!op(val, blk*blockSize, (blk+1)*blockSize);
+        if(first != end)
+        {
+            setPageRange!op(val, endBlk*blockSize, end);
+        }
     }
+}
+
+unittest
+{
+    UIntTrie2 trie = UIntTrie2();
+    trie['d'] &= 3;
+    assert(trie['d'] == 3);
+    trie['\u0280'] &= 1;
+    assert(trie['\u0280'] == 1);
+    import std.uni;
+    UIntTrie2 trie2 = UIntTrie2();
+    auto letters = unicode("L");
+    foreach(r; letters.byInterval)
+        trie2[r.a..r.b] &= 1;
+    foreach(ch; letters.byCodepoint)
+        assert(trie2[ch] == 1);
+    auto space = unicode("WhiteSpace");
+    auto trie3 = UIntTrie2();
+    foreach(r; space.byInterval)
+        trie3[r.a..r.b] &= 2;
+    foreach(ch; space.byCodepoint)
+        assert(trie3[ch] == 2);
 }
 
 // Since there is no way to mark a starting position
