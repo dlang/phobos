@@ -1069,6 +1069,9 @@ $(DOC)\std_experimental_allocator_typed.html : $(STDDOC) std\experimental\alloca
 $(DOC)\std_experimental_allocator.html : $(STDDOC) std\experimental\allocator\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator.html $(STDDOC) std\experimental\allocator\package.d
 
+$(DOC)\std_experimental_typecons.html : $(STDDOC) std\experimental\typecons.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_typecons.html $(STDDOC) std\experimental\typecons.d
+
 $(DOC)\std_experimental_ndslice_iteration.html : $(STDDOC) std\experimental\ndslice\iteration.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_iteration.html $(STDDOC) std\experimental\ndslice\iteration.d
 
