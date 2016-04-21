@@ -17,11 +17,11 @@ debug(std_regex_bitnfa) import std.stdio;
 import std.algorithm;
 
 
-struct HashTab()
+struct HashTab
 {
     @disable this(this);
 
-    uint opIndex(uint key)
+    uint opIndex()(uint key)
     {
         auto p = locate(key, table);
         assert(p.occupied);
@@ -69,7 +69,7 @@ struct HashTab()
     }
 
 private:
-    static uint hashOf(uint val)
+    static uint hashOf()(uint val)
     {
         return (val >> 20) ^ (val>>8) ^ val;
     }
@@ -83,12 +83,12 @@ private:
     Node[] table;
     size_t items;
 
-    static Node* locate(uint key, Node[] table)
+    static Node* locate()(uint key, Node[] table)
     {
         size_t slot = hashOf(key) & (table.length-1);
-        while(table.ptr[slot].occupied)
+        while(table[slot].occupied)
         {
-            if(table.ptr[slot].key == key)
+            if(table[slot].key == key)
                 break;
             slot += 1;
             if(slot == table.length)
@@ -108,6 +108,7 @@ private:
                 *p = v;
             }
         }
+        table = newTable;
     }
 }
 
@@ -248,7 +249,7 @@ struct BitNfa
 {
     uint[128]   asciiTab;         // state mask for ascii characters
     UIntTrie2   uniTab;           // state mask for unicode characters
-    uint[uint]  controlFlow;      // maps each bit pattern to resulting jumps pattern
+    HashTab     controlFlow;      // maps each bit pattern to resulting jumps pattern
     uint        controlFlowMask;  // masks all control flow bits
     uint        finalMask;        // marks final states terminating the NFA
     bool        empty;            // if this engine is empty
@@ -609,6 +610,7 @@ unittest
     // stop on repetition
     "abcdef1".checkBit("a[a-z]{5}", 1);
     "ads@email.com".checkBit(`\S+@\S+`);
+    //"abc".checkBit(`([^ ]*)?`);
 }
 
 unittest
