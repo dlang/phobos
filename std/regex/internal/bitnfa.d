@@ -182,8 +182,9 @@ struct UIntTrie2
             mixin("scratch[lowIdx..highIdx] "~op~"= val;");
             uint h = hash(scratch);
             bool found = false;
-            foreach(i,_; hashes.enumerate.filter!(x => x[1] == h))
+            foreach(i,x; hashes)
             {
+                if(x != h) continue;
                 if(scratch[] == blocks[i*blockSize .. (i+1)*blockSize])
                 {
                     // re-route to existing page
@@ -423,6 +424,11 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
                 break;
             case End:
                 finalMask |= 1u<<bitMapping[i];
+                break;
+            case Any:
+                uint mask = 1u<<bitMapping[i];
+                asciiTab[0..0x80] &= ~mask;
+                uniTab[0..0x11_0000] &= ~mask;
                 break;
             case Char:
                 uint mask = 1u<<bitMapping[i];
