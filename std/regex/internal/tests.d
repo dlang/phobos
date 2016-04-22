@@ -417,7 +417,7 @@ unittest
             alias Tests = Sequence!(220, tv.length);
         }
         else
-            alias Tests = AliasSeq!(Sequence!(0, 30), Sequence!(235, tv.length-5));
+            alias Tests = AliasSeq!(Sequence!(0, 25), Sequence!(238, tv.length-5));
         foreach(a, v; Tests)
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum tvd = tv[v];
