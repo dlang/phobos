@@ -339,25 +339,6 @@ public:
                         t.pc += IRL!(IR.RepeatEnd);
                     }
                     break;
-                case IR.InfiniteStart, IR.InfiniteQStart:
-                    t.pc += re.ir[t.pc].data + IRL!(IR.InfiniteStart);
-                    goto case IR.InfiniteEnd; //both Q and non-Q
-                case IR.InfiniteEnd:
-                case IR.InfiniteQEnd:
-                    auto slot = re.ir[t.pc+1].raw+t.counter;
-                    auto val = hash(t.tab);
-                    if (val in merge[slot])
-                        goto L_StopThread; // merge equivalent
-                    merge[slot][val] = true;
-                    uint len = re.ir[t.pc].data;
-                    uint pc1, pc2; //branches to take in priority order
-                    if (++t.hops == 32)
-                        goto L_StopThread;
-                    pc1 = t.pc + IRL!(IR.InfiniteEnd);
-                    pc2 = t.pc - len;
-                    trs ~= fork(t, pc2, t.counter);
-                    t.pc = pc1;
-                    break;
                 case IR.GroupStart, IR.GroupEnd:
                     t.pc += IRL!(IR.GroupStart);
                     break;
@@ -385,7 +366,7 @@ public:
         }
     }
 
-    final @property bool empty() const {  return n_length == 0; }
+    final @property bool empty() const {  return n_length < 3 && fChar == uint.max; }
 
     final @property uint length() const{ return n_length/charSize; }
 
@@ -584,7 +565,7 @@ unittest
         searches("abdcdyabax".to!String, kick, 1, 3, 8);
 
         shiftOrLength(`...`.to!String, 0);
-        kick = shiftOrLength(`a(b+|c+)x`.to!String, 3);
+        kick = shiftOrLength(`a(b{1,2}|c{1,2})x`.to!String, 3);
         searches("ababx".to!String, kick, 2);
         searches("abaacba".to!String, kick, 3); //expected inexact
 
