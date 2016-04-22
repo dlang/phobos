@@ -4,7 +4,8 @@
 */
 module std.regex.internal.parser;
 
-import std.regex.internal.ir, std.regex.internal.shiftor;
+import std.regex.internal.ir, std.regex.internal.shiftor,
+    std.regex.internal.bitnfa;
 import std.range.primitives, std.uni, std.meta,
     std.traits, std.typecons, std.exception;
 static import std.ascii;
@@ -181,7 +182,7 @@ dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
     return val;
 }
 
-@system unittest //BUG canFind is system
+@safe unittest
 {
     import std.algorithm.searching : canFind;
     string[] non_hex = [ "000j", "000z", "FffG", "0Z"];
@@ -1607,7 +1608,11 @@ struct Parser(R, Generator)
         {
             kickstart = new ShiftOr!Char(zis);
             if(kickstart.empty)
-                kickstart = null;
+            {
+                kickstart = new BitMatcher!Char(zis);
+                if(kickstart.empty)
+                    kickstart = null;
+            }
         }
         debug(std_regex_allocation) writefln("IR processed, max threads: %d", threadCount);
         optimize(zis);
