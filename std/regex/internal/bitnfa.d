@@ -255,7 +255,9 @@ struct BitNfa
     HashTab     controlFlow;      // maps each bit pattern to resulting jumps pattern
     uint        controlFlowMask;  // masks all control flow bits
     uint        finalMask;        // marks final states terminating the NFA
-    bool        empty;            // if this engine is empty
+    uint        length;            // if this engine is empty
+
+    @property bool empty() const { return length == 0; }
 
     void combineControlFlow()
     {
@@ -391,12 +393,10 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
                     break outer;
             }
         }
-        if(bitCount == 0)
-            empty = true;
         debug(std_regex_bitnfa) writeln("LEN:", lastNonnested);
         // the total processable length
-        uint length=lastNonnested;
-        finalMask |= 1u<<bitMapping[length];
+        finalMask |= 1u<<bitMapping[lastNonnested];
+        length = lastNonnested;
         with(re)
         for(uint i=0; i<length; i += ir[i].length)
         {
@@ -468,6 +468,7 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
                 assert(0, "Unexpected instruction in BitNFA: "~ir[i].mnemonic);
             }
         }
+        length += re.ir[lastNonnested].length;
         combineControlFlow();
     }
 
@@ -509,19 +510,23 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
     }
 }
 
-final class BitMatcher
+final class BitMatcher(Char) : Kickstart!(Char)
+    if(is(Char : dchar))
 {
+@trusted:
     BitNfa forward, backward;
 
-    this(Char)(auto ref Regex!Char re)
+    this()(auto ref Regex!Char re)
     {
         forward = BitNfa(re);
         //reverse Bytecode
         auto re2 = re;
         re2.ir = re2.ir.dup;
         // keep the end where it belongs
-        reverseBytecode(re2.ir[0..$-1]);
+        uint len = forward.length - 1;
+        reverseBytecode(re2.ir[0..len]);
         // check for the case of multiple patterns as one alternation
+        if(len == re2.ir.length-IRL!(IR.End))
         with(IR) with(re2) if(ir[0].code == OrStart)
         {
             size_t pc = IRL!OrStart;
@@ -544,7 +549,7 @@ final class BitMatcher
         backward = BitNfa(re2);
     }
 
-    bool opCall(Input)(ref Input r)
+    final bool opCall(ref Input!Char r)
     {
         bool res = forward(r);
         if(res){
@@ -554,6 +559,8 @@ final class BitMatcher
         }
         return res;
     }
+
+    final @property bool empty() const{ return forward.empty; }
 }
 
 version(unittest)
@@ -588,7 +595,7 @@ version(unittest)
 
     alias checkBit = check!BitNfa;
     alias checkBitFail = checkFail!BitNfa;
-    auto makeMatcher(R)(R regex){ return new BitMatcher(regex); }
+    auto makeMatcher(Char)(Regex!Char regex){ return new BitMatcher!(Char)(regex); }
     alias checkM = check!makeMatcher;
     alias checkMFail = checkFail!makeMatcher;
 }
@@ -617,4 +624,5 @@ unittest
 {
     "xxabcy".checkM("abc", 2);
     "_10bcy".checkM([`\d+`, `[a-z]+`], 1);
+    "abc@email.com".checkM(`\S+@\S?1`, 0);
 }
