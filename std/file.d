@@ -825,6 +825,28 @@ unittest
 }
 
 
+// Reads a time field from a stat_t with full precision.
+version(Posix)
+private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
+{
+    auto unixTime = mixin(`statbuf.st_` ~ which ~ `time`);
+    long stdTime = unixTimeToStdTime(unixTime);
+
+    static if (is(typeof(mixin(`statbuf.st_` ~ which ~ `tim`))))
+        stdTime += mixin(`statbuf.st_` ~ which ~ `tim.tv_nsec`) / 100;
+    else
+    static if (is(typeof(mixin(`statbuf.st_` ~ which ~ `timensec`))))
+        stdTime += mixin(`statbuf.st_` ~ which ~ `timensec`) / 100;
+    else
+    static if (is(typeof(mixin(`statbuf.st_` ~ which ~ `time_nsec`))))
+        stdTime += mixin(`statbuf.st_` ~ which ~ `time_nsec`) / 100;
+    else
+    static if (is(typeof(mixin(`statbuf.__st_` ~ which ~ `timensec`))))
+        stdTime += mixin(`statbuf.__st_` ~ which ~ `timensec`) / 100;
+
+    return SysTime(stdTime);
+}
+
 /++
     Get the access and modified times of file or folder $(D name).
 
@@ -866,8 +888,8 @@ void getTimes(R)(R name,
             string names = null;
         cenforce(trustedStat(namez, statbuf) == 0, names, namez);
 
-        accessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
-        modificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
+        accessTime = statTimeToStdTime!'a'(statbuf);
+        modificationTime = statTimeToStdTime!'m'(statbuf);
     }
 }
 
@@ -1130,20 +1152,40 @@ void setTimes(R)(R name,
     else version(Posix)
     {
         auto namez = name.tempCString!FSChar();
-        static auto trustedUtimes(const(FSChar)* namez, const ref timeval[2] times) @trusted
+        static if (is(typeof(&utimensat)))
         {
-            return utimes(namez, times);
+            static auto trustedUtimensat(int fd, const(FSChar)* namez, const ref timespec[2] times, int flags) @trusted
+            {
+                return utimensat(fd, namez, times, flags);
+            }
+            timespec[2] t = void;
+
+            t[0] = accessTime.toTimeSpec();
+            t[1] = modificationTime.toTimeSpec();
+
+            static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+                alias names = name;
+            else
+                string names = null;
+            cenforce(trustedUtimensat(AT_FDCWD, namez, t, 0) == 0, names, namez);
         }
-        timeval[2] t = void;
-
-        t[0] = accessTime.toTimeVal();
-        t[1] = modificationTime.toTimeVal();
-
-        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
-            alias names = name;
         else
-            string names = null;
-        cenforce(trustedUtimes(namez, t) == 0, names, namez);
+        {
+            static auto trustedUtimes(const(FSChar)* namez, const ref timeval[2] times) @trusted
+            {
+                return utimes(namez, times);
+            }
+            timeval[2] t = void;
+
+            t[0] = accessTime.toTimeVal();
+            t[1] = modificationTime.toTimeVal();
+
+            static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+                alias names = name;
+            else
+                string names = null;
+            cenforce(trustedUtimes(namez, t) == 0, names, namez);
+        }
     }
 }
 
@@ -1157,7 +1199,8 @@ void setTimes(R)(auto ref R name,
 
 @safe unittest
 {
-    static assert(__traits(compiles, setTimes(TestAliasedString("foo"), SysTime.init, SysTime.init)));
+    if (false) // Test instatiation
+        setTimes(TestAliasedString("foo"), SysTime.init, SysTime.init);
 }
 
 unittest
@@ -1170,18 +1213,25 @@ unittest
     if (!exists(dir)) mkdirRecurse(dir);
     { auto f = File(file, "w"); }
 
-    foreach (path; [file, dir])  // test file and dir
+    void testTimes(int hnsecValue)
     {
-        SysTime atime = SysTime(DateTime(2010, 10, 4, 0, 0, 30));
-        SysTime mtime = SysTime(DateTime(2011, 10, 4, 0, 0, 30));
-        setTimes(path, atime, mtime);
+        foreach (path; [file, dir])  // test file and dir
+        {
+            SysTime atime = SysTime(DateTime(2010, 10, 4, 0, 0, 30), hnsecs(hnsecValue));
+            SysTime mtime = SysTime(DateTime(2011, 10, 4, 0, 0, 30), hnsecs(hnsecValue));
+            setTimes(path, atime, mtime);
 
-        SysTime atime_res;
-        SysTime mtime_res;
-        getTimes(path, atime_res, mtime_res);
-        assert(atime == atime_res);
-        assert(mtime == mtime_res);
+            SysTime atime_res;
+            SysTime mtime_res;
+            getTimes(path, atime_res, mtime_res);
+            assert(atime == atime_res);
+            assert(mtime == mtime_res);
+        }
     }
+
+    testTimes(0);
+    version (linux)
+        testTimes(123_456_7);
 
     rmdirRecurse(newdir);
 }
@@ -1220,7 +1270,7 @@ SysTime timeLastModified(R)(R name)
             string names = null;
         cenforce(trustedStat(namez, statbuf) == 0, names, namez);
 
-        return SysTime(unixTimeToStdTime(statbuf.st_mtime));
+        return statTimeToStdTime!'m'(statbuf);
     }
 }
 
@@ -1291,7 +1341,7 @@ SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
 
         return trustedStat(namez, statbuf) != 0 ?
                returnIfMissing :
-               SysTime(unixTimeToStdTime(statbuf.st_mtime));
+               statTimeToStdTime!'m'(statbuf);
     }
 }
 
@@ -1312,6 +1362,35 @@ unittest
     // assert(lastModified("deleteme") >
     //         lastModified("this file does not exist", SysTime.min));
     //assert(lastModified("deleteme") > lastModified(__FILE__));
+}
+
+
+// Tests sub-second precision of querying file times.
+// Should pass on most modern systems running on modern filesystems.
+// Exceptions:
+// - FreeBSD, where one would need to first set the
+//   vfs.timestamp_precision sysctl to a value greater than zero.
+// - OS X, where the native filesystem (HFS+) stores filesystem
+//   timestamps with 1-second precision.
+version (FreeBSD) {} else
+version (OSX) {} else
+unittest
+{
+    import core.thread;
+
+    if(exists(deleteme))
+        remove(deleteme);
+
+    SysTime lastTime;
+    foreach (n; 0..3)
+    {
+        write(deleteme, "a");
+        auto time = timeLastModified(deleteme);
+        remove(deleteme);
+        assert(time != lastTime);
+        lastTime = time;
+        Thread.sleep(10.msecs);
+    }
 }
 
 
@@ -2856,21 +2935,21 @@ else version(Posix)
         {
             _ensureStatDone();
 
-            return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
+            return statTimeToStdTime!'c'(_statBuf);
         }
 
         @property SysTime timeLastAccessed()
         {
             _ensureStatDone();
 
-            return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
+            return statTimeToStdTime!'a'(_statBuf);
         }
 
         @property SysTime timeLastModified()
         {
             _ensureStatDone();
 
-            return SysTime(unixTimeToStdTime(_statBuf.st_mtime));
+            return statTimeToStdTime!'m'(_statBuf);
         }
 
         @property uint attributes()
