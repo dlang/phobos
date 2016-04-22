@@ -352,7 +352,6 @@ struct BitNfa
         // pc -> bit number
         uint[] bitMapping = new uint[re.ir.length];
         uint bitCount = 0, nesting=0, lastNonnested=0;
-        bool stop = false;
         with(re)
 outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
         {
@@ -375,7 +374,7 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
                 break;
             // unsupported instructions
             case RepeatStart, RepeatQStart, Backref:
-                stop = true;
+                bitMapping[i] = bitCount;
                 break outer;
             case OrChar:
                 uint s = ir[i].sequence;
@@ -398,8 +397,6 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
         // the total processable length
         uint length=lastNonnested;
         finalMask |= 1u<<bitMapping[length];
-        if(stop)
-            finalMask <<= 1;
         with(re)
         for(uint i=0; i<length; i += ir[i].length)
         {
@@ -613,7 +610,7 @@ unittest
     // stop on repetition
     "abcdef1".checkBit("a[a-z]{5}", 1);
     "ads@email.com".checkBit(`\S+@\S+`);
-    //"abc".checkBit(`([^ ]*)?`);
+    "abc@email.com".checkBit(`\S+@\S?1`, 4);
 }
 
 unittest
