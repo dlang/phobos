@@ -172,7 +172,7 @@ struct UIntTrie2
             immutable highIdx = high - low + lowIdx;
             mixin("blocks[lowIdx..highIdx] "~op~"= val;");
         }
-        else        
+        else
         {
             // create a new page
             refCounts[blk]--;
