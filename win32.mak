@@ -226,7 +226,8 @@ SRC_STD_REGEX= \
 	std\regex\internal\tests.d \
 	std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d \
-	std\regex\internal\kickstart.d \
+	std\regex\internal\shiftor.d \
+	std\regex\internal\bitnfa.d \
 	std\regex\internal\generator.d
 
 SRC_STD_C= \

@@ -772,7 +772,6 @@ template ThompsonOps(E,S, bool withInput:false)
     {
         bool search()
         {
-
             if(!s.search(re.kickstart, front, index))
             {
                 index = s.lastIndex;
@@ -896,7 +895,7 @@ template ThompsonOps(E,S, bool withInput:false)
             return matchOneShot(matches);
         }
         static if(kicked)
-            if(!re.kickstart.empty)
+            if(re.kickstart)
                 return matchImpl!(true)(matches);
         return matchImpl!(false)(matches);
     }
