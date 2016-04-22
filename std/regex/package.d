@@ -373,7 +373,7 @@ public auto regexImpl(S)(S pattern, const(char)[] flags="")
     if(isSomeString!(S))
 {
     import std.regex.internal.parser;
-    auto parser = Parser!(Unqual!(typeof(pattern)))(pattern, flags);
+    auto parser = Parser!(Unqual!(typeof(pattern)), CodeGen)(pattern, flags);
     auto r = parser.program;
     return r;
 }

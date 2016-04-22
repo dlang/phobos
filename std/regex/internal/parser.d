@@ -10,20 +10,21 @@ import std.algorithm, std.range, std.uni, std.meta,
 static import std.ascii;
 
 // package relevant info from parser into a regex object
-auto makeRegex(S)(Parser!S p)
+auto makeRegex(S, CG)(Parser!(S, CG) p)
 {
     Regex!(BasicElementOf!S) re;
+    auto g = p.g;
     with(re)
     {
-        ir = p.ir;
-        dict = p.dict;
-        ngroup = p.ngroup;
-        maxCounterDepth = p.counterDepth;
+        ir = g.ir;
+        dict = g.dict;
+        ngroup = g.ngroup;
+        maxCounterDepth = g.counterDepth;
         flags = p.re_flags;
-        charsets = p.charsets;
-        matchers = p.matchers;
-        backrefed = p.backrefed;
-        re.lightPostprocess();
+        charsets = g.charsets;
+        matchers = g.matchers;
+        backrefed = g.backrefed;
+        re.postprocess();
         debug(std_regex_parser)
         {
             __ctfe || print();
@@ -39,7 +40,7 @@ auto makeRegex(S)(Parser!S p)
 auto makeRegex(S)(S arg)
     if(isSomeString!S)
 {
-    return makeRegex(Parser!S(arg, ""));
+    return makeRegex(Parser!(S, CodeGen)(arg, ""));
 }
 
 unittest
@@ -246,55 +247,26 @@ auto caseEnclose(CodepointSet set)
     }
 }
 
-//safety limits
-enum maxGroupNumber = 2^^19;
-enum maxLookaroundDepth = 16;
-// *Bytecode.sizeof, i.e. 1Mb of bytecode alone
-enum maxCompiledLength = 2^^18;
-//amounts to up to 4 Mb of auxilary table for matching
-enum maxCumulativeRepetitionLength = 2^^20;
-
-struct Parser(R)
-    if (isForwardRange!R && is(ElementType!R : dchar))
+struct CodeGen
 {
-    enum infinite = ~0u;
-    dchar _current;
-    bool empty;
-    R pat, origin;       //keep full pattern for pretty printing error messages
-    Bytecode[] ir;       //resulting bytecode
-    uint re_flags = 0;   //global flags e.g. multiline + internal ones
-    Stack!(uint) fixupStack;  //stack of opened start instructions
-    NamedGroup[] dict;   //maps name -> user group number
-    //current num of group, group nesting level and repetitions step
-    Stack!(uint) groupStack;
-    uint nesting = 0;
-    uint lookaroundNest = 0;
-    uint counterDepth = 0; //current depth of nested counted repetitions
-    CodepointSet[] charsets;  //
-    const(CharMatcher)[] matchers; //
-    uint[] backrefed; //bitarray for groups
-    uint ngroup;          // final number of groups (of all patterns)
+    Bytecode[] ir;                 // resulting bytecode
+    Stack!(uint) fixupStack;       // stack of opened start instructions
+    NamedGroup[] dict;             // maps name -> user group number
+    Stack!(uint) groupStack;       // stack of current number of group
+    uint nesting = 0;              // group nesting level and repetitions step
+    uint lookaroundNest = 0;       // nesting of lookaround
+    uint counterDepth = 0;         // current depth of nested counted repetitions
+    CodepointSet[] charsets;       // sets for char classes
+    const(CharMatcher)[] matchers; // matchers for char classes
+    uint[] backrefed;              // bitarray for groups refered by backref
+    uint ngroup;                   // final number of groups (of all patterns)
 
-    @trusted this(S)(R pattern, S flags)
-        if(isSomeString!S)
+    void start(uint length)
     {
-        pat = origin = pattern;
-        //reserve slightly more then avg as sampled from unittests
         if(!__ctfe)
-            ir.reserve((pat.length*5+2)/4);
-        parseFlags(flags);
-        _current = ' ';//a safe default for freeform parsing
-        next();
-        try
-        {
-            parseRegex();
-        }
-        catch(Exception e)
-        {
-            error(e.msg);//also adds pattern location
-        }
-        put(Bytecode(IR.End, 1));
-        ngroup = max(ngroup, groupStack.top);
+            ir.reserve((length*5+2)/4);
+        fixupStack.push(0);
+        groupStack.push(1);//0 - whole match
     }
 
     //mark referenced groups for latter processing
@@ -313,37 +285,6 @@ struct Parser(R)
             canFind!(fix => ir[fix].code == IR.GroupStart && ir[fix].data == n)();
     }
 
-    @property dchar current(){ return _current; }
-
-    bool _next()
-    {
-        if(pat.empty)
-        {
-            empty =  true;
-            return false;
-        }
-        _current = pat.front;
-        pat.popFront();
-        return true;
-    }
-
-    void skipSpace()
-    {
-        while(isWhite(current) && _next()){ }
-    }
-
-    bool next()
-    {
-        if(re_flags & RegexOption.freeform)
-        {
-            bool r = _next();
-            skipSpace();
-            return r;
-        }
-        else
-            return _next();
-    }
-
     void put(Bytecode code)
     {
         enforce(ir.length < maxCompiledLength,
@@ -358,319 +299,139 @@ struct Parser(R)
         ir ~= Bytecode.fromRaw(number);
     }
 
-    //parsing number with basic overflow check
-    uint parseDecimal()
-    {
-        uint r = 0;
-        while(std.ascii.isDigit(current))
+    //try to generate optimal IR code for this CodepointSet
+    @trusted void charsetToIr(CodepointSet set)
+    {//@@@BUG@@@ writeln is @system
+        uint chars = cast(uint)set.length;
+        if(chars < Bytecode.maxSequence)
         {
-            if(r >= (uint.max/10))
-                error("Overflow in decimal number");
-            r = 10*r + cast(uint)(current-'0');
-            if(!next())
-                break;
-        }
-        return r;
-    }
-
-    //parse control code of form \cXXX, c assumed to be the current symbol
-    dchar parseControlCode()
-    {
-        enforce(next(), "Unfinished escape sequence");
-        enforce(('a' <= current && current <= 'z') || ('A' <= current && current <= 'Z'),
-            "Only letters are allowed after \\c");
-        return current & 0x1f;
-    }
-
-    //
-    @trusted void parseFlags(S)(S flags)
-    {//@@@BUG@@@ text is @system
-        import std.conv;
-        foreach(ch; flags)//flags are ASCII anyway
-        {
-        L_FlagSwitch:
-            switch(ch)
+            switch(chars)
             {
-
-                foreach(i, op; __traits(allMembers, RegexOption))
-                {
-                    case RegexOptionNames[i]:
-                            if(re_flags & mixin("RegexOption."~op))
-                                throw new RegexException(text("redundant flag specified: ",ch));
-                            re_flags |= mixin("RegexOption."~op);
-                            break L_FlagSwitch;
-                }
+                case 1:
+                    put(Bytecode(IR.Char, set.byCodepoint.front));
+                    break;
+                case 0:
+                    throw new RegexException("empty CodepointSet not allowed");
                 default:
-                    throw new RegexException(text("unknown regex flag '",ch,"'"));
+                    foreach(ch; set.byCodepoint)
+                        put(Bytecode(IR.OrChar, ch, chars));
             }
         }
-    }
-
-    //parse and store IR for regex pattern
-    @trusted void parseRegex()
-    {
-        fixupStack.push(0);
-        groupStack.push(1);//0 - whole match
-        auto maxCounterDepth = counterDepth;
-        uint fix;//fixup pointer
-
-        while(!empty)
+        else
         {
-            debug(std_regex_parser)
-                __ctfe || writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.data);
-            switch(current)
+            import std.algorithm : countUntil;
+            auto ivals = set.byInterval;
+            auto n = charsets.countUntil(set);
+            if(n >= 0)
             {
-            case '(':
-                next();
-                nesting++;
-                uint nglob;
-                fixupStack.push(cast(uint)ir.length);
-                if(current == '?')
-                {
-                    next();
-                    switch(current)
-                    {
-                    case '#':
-                        nesting--;
-                        fixupStack.pop();
-                        for(;;)
-                        {
-                            if(!next())
-                                error("Unexpected end of pattern");
-                            if(current == ')')
-                            {
-                                next();
-                                break;
-                            }
-                        }
-                        break;
-                    case ':':
-                        put(Bytecode(IR.Nop, 0));
-                        next();
-                        break;
-                    case '=':
-                        genLookaround(IR.LookaheadStart);
-                        next();
-                        break;
-                    case '!':
-                        genLookaround(IR.NeglookaheadStart);
-                        next();
-                        break;
-                    case 'P':
-                        next();
-                        if(current != '<')
-                            error("Expected '<' in named group");
-                        string name;
-                        if(!next() || !(isAlpha(current) || current == '_'))
-                            error("Expected alpha starting a named group");
-                        name ~= current;
-                        while(next() && (isAlpha(current) ||
-                            current == '_' || std.ascii.isDigit(current)))
-                        {
-                            name ~= current;
-                        }
-                        if(current != '>')
-                            error("Expected '>' closing named group");
-                        next();
-                        nglob = groupStack.top++;
-                        enforce(groupStack.top <= maxGroupNumber, "limit on submatches is exceeded");
-                        auto t = NamedGroup(name, nglob);
-                        auto d = assumeSorted!"a.name < b.name"(dict);
-                        auto ind = d.lowerBound(t).length;
-                        insertInPlace(dict, ind, t);
-                        put(Bytecode(IR.GroupStart, nglob));
-                        break;
-                    case '<':
-                        next();
-                        if(current == '=')
-                            genLookaround(IR.LookbehindStart);
-                        else if(current == '!')
-                            genLookaround(IR.NeglookbehindStart);
-                        else
-                            error("'!' or '=' expected after '<'");
-                        next();
-                        break;
-                    default:
-                        error(" ':', '=', '<', 'P' or '!' expected after '(?' ");
-                    }
-                }
+                if(ivals.length*2 > maxCharsetUsed)
+                    put(Bytecode(IR.Trie, cast(uint)n));
                 else
-                {
-                    nglob = groupStack.top++;
-                    enforce(groupStack.top <= maxGroupNumber, "limit on number of submatches is exceeded");
-                    put(Bytecode(IR.GroupStart, nglob));
-                }
-                break;
-            case ')':
-                enforce(nesting, "Unmatched ')'");
-                nesting--;
-                next();
-                fix = fixupStack.pop();
-                switch(ir[fix].code)
-                {
-                case IR.GroupStart:
-                    put(Bytecode(IR.GroupEnd,ir[fix].data));
-                    parseQuantifier(fix);
-                    break;
-                case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
-                    assert(lookaroundNest);
-                    fixLookaround(fix);
-                    lookaroundNest--;
-                    break;
-                case IR.Option: //| xxx )
-                    //two fixups: last option + full OR
-                    finishAlternation(fix);
-                    fix = fixupStack.top;
-                    switch(ir[fix].code)
-                    {
-                    case IR.GroupStart:
-                        fixupStack.pop();
-                        put(Bytecode(IR.GroupEnd,ir[fix].data));
-                        parseQuantifier(fix);
-                        break;
-                    case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
-                        assert(lookaroundNest);
-                        lookaroundNest--;
-                        fix = fixupStack.pop();
-                        fixLookaround(fix);
-                        break;
-                    default://(?:xxx)
-                        fixupStack.pop();
-                        parseQuantifier(fix);
-                    }
-                    break;
-                default://(?:xxx)
-                    parseQuantifier(fix);
-                }
-                break;
-            case '|':
-                next();
-                fix = fixupStack.top;
-                if(ir.length > fix && ir[fix].code == IR.Option)
-                {
-                    ir[fix] = Bytecode(ir[fix].code, cast(uint)ir.length - fix);
-                    put(Bytecode(IR.GotoEndOr, 0));
-                    fixupStack.top = cast(uint)ir.length; //replace latest fixup for Option
-                    put(Bytecode(IR.Option, 0));
-                    break;
-                }
-                uint len, orStart;
-                //start a new option
-                if(fixupStack.length == 1)
-                {//only root entry, effectively no fixup
-                    len = cast(uint)ir.length + IRL!(IR.GotoEndOr);
-                    orStart = 0;
-                }
-                else
-                {//IR.lookahead, etc. fixups that have length > 1, thus check ir[x].length
-                    len = cast(uint)ir.length - fix - (ir[fix].length - 1);
-                    orStart = fix + ir[fix].length;
-                }
-                insertInPlace(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
-                assert(ir[orStart].code == IR.OrStart);
-                put(Bytecode(IR.GotoEndOr, 0));
-                fixupStack.push(orStart); //fixup for StartOR
-                fixupStack.push(cast(uint)ir.length); //for second Option
-                put(Bytecode(IR.Option, 0));
-                break;
-            default://no groups or whatever
-                uint start = cast(uint)ir.length;
-                parseAtom();
-                parseQuantifier(start);
+                    put(Bytecode(IR.CodepointSet, cast(uint)n));
+                return;
             }
-        }
-
-        if(fixupStack.length != 1)
-        {
-            fix = fixupStack.pop();
-            enforce(ir[fix].code == IR.Option, "no matching ')'");
-            finishAlternation(fix);
-            enforce(fixupStack.length == 1, "no matching ')'");
-        }
-    }
-
-    //helper function, finalizes IR.Option, fix points to the first option of sequence
-    void finishAlternation(uint fix)
-    {
-        enforce(ir[fix].code == IR.Option, "no matching ')'");
-        ir[fix] = Bytecode(ir[fix].code, cast(uint)ir.length - fix - IRL!(IR.OrStart));
-        fix = fixupStack.pop();
-        enforce(ir[fix].code == IR.OrStart, "no matching ')'");
-        ir[fix] = Bytecode(IR.OrStart, cast(uint)ir.length - fix - IRL!(IR.OrStart));
-        put(Bytecode(IR.OrEnd, cast(uint)ir.length - fix - IRL!(IR.OrStart)));
-        uint pc = fix + IRL!(IR.OrStart);
-        while(ir[pc].code == IR.Option)
-        {
-            pc = pc + ir[pc].data;
-            if(ir[pc].code != IR.GotoEndOr)
-                break;
-            ir[pc] = Bytecode(IR.GotoEndOr, cast(uint)(ir.length - pc - IRL!(IR.OrEnd)));
-            pc += IRL!(IR.GotoEndOr);
-        }
-        put(Bytecode.fromRaw(0));
-    }
-
-    //parse and store IR for atom-quantifier pair
-    @trusted void parseQuantifier(uint offset)
-    {//copy is @system
-        uint replace = ir[offset].code == IR.Nop;
-        if(empty && !replace)
-            return;
-        uint min, max;
-        switch(current)
-        {
-        case '*':
-            min = 0;
-            max = infinite;
-            break;
-        case '?':
-            min = 0;
-            max = 1;
-            break;
-        case '+':
-            min = 1;
-            max = infinite;
-            break;
-        case '{':
-            enforce(next(), "Unexpected end of regex pattern");
-            enforce(std.ascii.isDigit(current), "First number required in repetition");
-            min = parseDecimal();
-            if(current == '}')
-                max = min;
-            else if(current == ',')
+            if(ivals.length*2 > maxCharsetUsed)
             {
-                next();
-                if(std.ascii.isDigit(current))
-                    max = parseDecimal();
-                else if(current == '}')
-                    max = infinite;
-                else
-                    error("Unexpected symbol in regex pattern");
-                skipSpace();
-                if(current != '}')
-                    error("Unmatched '{' in regex pattern");
+                auto t  = getMatcher(set);
+                put(Bytecode(IR.Trie, cast(uint)matchers.length));
+                matchers ~= t;
+                debug(std_regex_allocation) writeln("Trie generated");
             }
             else
-                error("Unexpected symbol in regex pattern");
-            if(min > max)
-                error("Illegal {n,m} quantifier");
-            break;
-        default:
-            if(replace)
             {
-                copy(ir[offset + 1 .. $], ir[offset .. $ - 1]);
-                ir.length -= 1;
+                put(Bytecode(IR.CodepointSet, cast(uint)charsets.length));
+                matchers ~= CharMatcher.init;
             }
-            return;
+            charsets ~= set;
+            assert(charsets.length == matchers.length);
         }
-        uint len = cast(uint)ir.length - offset - replace;
-        bool greedy = true;
-        //check only if we managed to get new symbol
-        if(next() && current == '?')
+    }
+
+    void genLogicGroup()
+    {
+        nesting++;
+        pushFixup(length);
+        put(Bytecode(IR.Nop, 0));
+    }
+
+    void genGroup()
+    {
+        nesting++;
+        pushFixup(length);
+        uint nglob = groupStack.top++;
+        enforce(groupStack.top <= maxGroupNumber, "limit on number of submatches is exceeded");
+        put(Bytecode(IR.GroupStart, nglob));
+    }
+
+    void genNamedGroup(string name)
+    {
+        nesting++;
+        pushFixup(length);
+        uint nglob = groupStack.top++;
+        enforce(groupStack.top <= maxGroupNumber, "limit on submatches is exceeded");
+        auto t = NamedGroup(name, nglob);
+        auto d = assumeSorted!"a.name < b.name"(dict);
+        auto ind = d.lowerBound(t).length;
+        insertInPlace(dict, ind, t);
+        put(Bytecode(IR.GroupStart, nglob));
+    }
+
+        //generate code for start of lookaround: (?= (?! (?<= (?<!
+    void genLookaround(IR opcode)
+    {
+        nesting++;
+        pushFixup(length);
+        put(Bytecode(opcode, 0));
+        put(Bytecode.fromRaw(0));
+        put(Bytecode.fromRaw(0));
+        groupStack.push(0);
+        lookaroundNest++;
+        enforce(lookaroundNest <= maxLookaroundDepth,
+            "maximum lookaround depth is exceeded");
+    }
+
+    void endPattern(uint num)
+    {
+        put(Bytecode(IR.End, num));
+        ngroup = max(ngroup, groupStack.top);
+        groupStack.top = 1; // reset group counter
+    }
+
+    //fixup lookaround with start at offset fix and append a proper *-End opcode
+    void fixLookaround(uint fix)
+    {
+        lookaroundNest--;
+        ir[fix] = Bytecode(ir[fix].code,
+            cast(uint)ir.length - fix - IRL!(IR.LookaheadStart));
+        auto g = groupStack.pop();
+        assert(!groupStack.empty);
+        ir[fix+1] = Bytecode.fromRaw(groupStack.top);
+        //groups are cumulative across lookarounds
+        ir[fix+2] = Bytecode.fromRaw(groupStack.top+g);
+        groupStack.top += g;
+        if(ir[fix].code == IR.LookbehindStart || ir[fix].code == IR.NeglookbehindStart)
         {
-            greedy = false;
-            next();
+            reverseBytecode(ir[fix + IRL!(IR.LookbehindStart) .. $]);
         }
+        put(ir[fix].paired);
+    }
+
+    // repetition of {1,1}
+    void fixRepetition(uint offset)
+    {
+        bool replace = ir[offset].code == IR.Nop;
+        if(replace)
+        {
+            copy(ir[offset + 1 .. $], ir[offset .. $ - 1]);
+            ir.length -= 1;
+        }
+    }
+
+    // repetition of {x,y}
+    void fixRepetition(uint offset, uint min, uint max, bool greedy)
+    {
+        bool replace = ir[offset].code == IR.Nop;
+        uint len = cast(uint)ir.length - offset - replace;
         if(max != infinite)
         {
             if(min != 1 || max != 1)
@@ -727,8 +488,390 @@ struct Parser(R)
             //IR.InfinteX is always a hotspot
             put(Bytecode(greedy ? IR.InfiniteEnd : IR.InfiniteQEnd, len));
             put(Bytecode.init); //merge index
-
         }
+    }
+
+    void fixAlternation()
+    {
+        uint fix = fixupStack.top;
+        if(ir.length > fix && ir[fix].code == IR.Option)
+        {
+            ir[fix] = Bytecode(ir[fix].code, cast(uint)ir.length - fix);
+            put(Bytecode(IR.GotoEndOr, 0));
+            fixupStack.top = cast(uint)ir.length; //replace latest fixup for Option
+            put(Bytecode(IR.Option, 0));
+            return;
+        }
+        uint len, orStart;
+        //start a new option
+        if(fixupStack.length == 1)
+        {//only root entry, effectively no fixup
+            len = cast(uint)ir.length + IRL!(IR.GotoEndOr);
+            orStart = 0;
+        }
+        else
+        {//IR.lookahead, etc. fixups that have length > 1, thus check ir[x].length
+            len = cast(uint)ir.length - fix - (ir[fix].length - 1);
+            orStart = fix + ir[fix].length;
+        }
+        insertInPlace(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
+        assert(ir[orStart].code == IR.OrStart);
+        put(Bytecode(IR.GotoEndOr, 0));
+        fixupStack.push(orStart); //fixup for StartOR
+        fixupStack.push(cast(uint)ir.length); //for second Option
+        put(Bytecode(IR.Option, 0));
+    }
+
+    // finalizes IR.Option, fix points to the first option of sequence
+    void finishAlternation(uint fix)
+    {
+        enforce(ir[fix].code == IR.Option, "no matching ')'");
+        ir[fix] = Bytecode(ir[fix].code, cast(uint)ir.length - fix - IRL!(IR.OrStart));
+        fix = fixupStack.pop();
+        enforce(ir[fix].code == IR.OrStart, "no matching ')'");
+        ir[fix] = Bytecode(IR.OrStart, cast(uint)ir.length - fix - IRL!(IR.OrStart));
+        put(Bytecode(IR.OrEnd, cast(uint)ir.length - fix - IRL!(IR.OrStart)));
+        uint pc = fix + IRL!(IR.OrStart);
+        while(ir[pc].code == IR.Option)
+        {
+            pc = pc + ir[pc].data;
+            if(ir[pc].code != IR.GotoEndOr)
+                break;
+            ir[pc] = Bytecode(IR.GotoEndOr, cast(uint)(ir.length - pc - IRL!(IR.OrEnd)));
+            pc += IRL!(IR.GotoEndOr);
+        }
+        put(Bytecode.fromRaw(0));
+    }
+
+    // returns: (flag - repetition possible?, fixup of the start of this "group")
+    Tuple!(bool, uint) onClose()
+    {
+        nesting--;
+        uint fix = popFixup();
+        switch(ir[fix].code)
+        {
+        case IR.GroupStart:
+            put(Bytecode(IR.GroupEnd, ir[fix].data));
+            return tuple(true, fix);
+        case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
+            assert(lookaroundNest);
+            fixLookaround(fix);
+            return tuple(false, 0u);
+        case IR.Option: //| xxx )
+            //two fixups: last option + full OR
+            finishAlternation(fix);
+            fix = topFixup;
+            switch(ir[fix].code)
+            {
+            case IR.GroupStart:
+                popFixup();
+                put(Bytecode(IR.GroupEnd, ir[fix].data));
+                return tuple(true, fix);
+            case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
+                assert(lookaroundNest);
+                fix = popFixup();
+                fixLookaround(fix);
+                return tuple(false, 0u);
+            default://(?:xxx)
+                popFixup();
+                return tuple(true, fix);
+            }
+        default://(?:xxx)
+            return tuple(true, fix);
+        }
+    }
+
+    uint popFixup(){ return fixupStack.pop(); }
+
+    void pushFixup(uint val){ return fixupStack.push(val); }
+
+    @property uint topFixup(){ return fixupStack.top; }
+
+    @property size_t fixupLength(){ return fixupStack.data.length; }
+
+    @property uint length(){ return cast(uint)ir.length; }
+}
+
+// safety limits
+enum maxGroupNumber = 2^^19;
+enum maxLookaroundDepth = 16;
+// *Bytecode.sizeof, i.e. 1Mb of bytecode alone
+enum maxCompiledLength = 2^^18;
+// amounts to up to 4 Mb of auxilary table for matching
+enum maxCumulativeRepetitionLength = 2^^20;
+// marker to indicate infinite repetition
+enum infinite = ~0u;
+
+struct Parser(R, Generator)
+    if (isForwardRange!R && is(ElementType!R : dchar))
+{
+    dchar _current;
+    bool empty;
+    R pat, origin;       //keep full pattern for pretty printing error messages
+    uint re_flags = 0;   //global flags e.g. multiline + internal ones
+    Generator g;
+
+    @trusted this(S)(R pattern, S flags)
+        if(isSomeString!S)
+    {
+        pat = origin = pattern;
+        //reserve slightly more then avg as sampled from unittests
+        parseFlags(flags);
+        _current = ' ';//a safe default for freeform parsing
+        next();
+        g.start(cast(uint)pat.length);
+        try
+        {
+            parseRegex();
+        }
+        catch(Exception e)
+        {
+            error(e.msg);//also adds pattern location
+        }
+        g.endPattern(1);
+    }
+
+    @property dchar current(){ return _current; }
+
+    bool _next()
+    {
+        if(pat.empty)
+        {
+            empty =  true;
+            return false;
+        }
+        _current = pat.front;
+        pat.popFront();
+        return true;
+    }
+
+    void skipSpace()
+    {
+        while(isWhite(current) && _next()){ }
+    }
+
+    bool next()
+    {
+        if(re_flags & RegexOption.freeform)
+        {
+            bool r = _next();
+            skipSpace();
+            return r;
+        }
+        else
+            return _next();
+    }
+
+    //parsing number with basic overflow check
+    uint parseDecimal()
+    {
+        uint r = 0;
+        while(std.ascii.isDigit(current))
+        {
+            if(r >= (uint.max/10))
+                error("Overflow in decimal number");
+            r = 10*r + cast(uint)(current-'0');
+            if(!next())
+                break;
+        }
+        return r;
+    }
+
+    //parse control code of form \cXXX, c assumed to be the current symbol
+    dchar parseControlCode()
+    {
+        enforce(next(), "Unfinished escape sequence");
+        enforce(('a' <= current && current <= 'z') || ('A' <= current && current <= 'Z'),
+            "Only letters are allowed after \\c");
+        return current & 0x1f;
+    }
+
+    //
+    @trusted void parseFlags(S)(S flags)
+    {//@@@BUG@@@ text is @system
+        import std.conv;
+        foreach(ch; flags)//flags are ASCII anyway
+        {
+        L_FlagSwitch:
+            switch(ch)
+            {
+
+                foreach(i, op; __traits(allMembers, RegexOption))
+                {
+                    case RegexOptionNames[i]:
+                            if(re_flags & mixin("RegexOption."~op))
+                                throw new RegexException(text("redundant flag specified: ",ch));
+                            re_flags |= mixin("RegexOption."~op);
+                            break L_FlagSwitch;
+                }
+                default:
+                    throw new RegexException(text("unknown regex flag '",ch,"'"));
+            }
+        }
+    }
+
+    //parse and store IR for regex pattern
+    @trusted void parseRegex()
+    {
+        uint fix;//fixup pointer
+
+        while(!empty)
+        {
+            debug(std_regex_parser)
+                __ctfe || writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.data);
+            switch(current)
+            {
+            case '(':
+                next();
+                if(current == '?')
+                {
+                    next();
+                    switch(current)
+                    {
+                    case '#':
+                        for(;;)
+                        {
+                            if(!next())
+                                error("Unexpected end of pattern");
+                            if(current == ')')
+                            {
+                                next();
+                                break;
+                            }
+                        }
+                        break;
+                    case ':':
+                        g.genLogicGroup();
+                        next();
+                        break;
+                    case '=':
+                        g.genLookaround(IR.LookaheadStart);
+                        next();
+                        break;
+                    case '!':
+                        g.genLookaround(IR.NeglookaheadStart);
+                        next();
+                        break;
+                    case 'P':
+                        next();
+                        if(current != '<')
+                            error("Expected '<' in named group");
+                        string name;
+                        if(!next() || !(isAlpha(current) || current == '_'))
+                            error("Expected alpha starting a named group");
+                        name ~= current;
+                        while(next() && (isAlpha(current) ||
+                            current == '_' || std.ascii.isDigit(current)))
+                        {
+                            name ~= current;
+                        }
+                        if(current != '>')
+                            error("Expected '>' closing named group");
+                        next();
+                        g.genNamedGroup(name);
+                        break;
+                    case '<':
+                        next();
+                        if(current == '=')
+                            g.genLookaround(IR.LookbehindStart);
+                        else if(current == '!')
+                            g.genLookaround(IR.NeglookbehindStart);
+                        else
+                            error("'!' or '=' expected after '<'");
+                        next();
+                        break;
+                    default:
+                        error(" ':', '=', '<', 'P' or '!' expected after '(?' ");
+                    }
+                }
+                else
+                {
+                    g.genGroup();
+                }
+                break;
+            case ')':
+                enforce(g.nesting, "Unmatched ')'");
+                next();
+                auto pair = g.onClose();
+                if(pair[0])
+                    parseQuantifier(pair[1]);
+                break;
+            case '|':
+                next();
+                g.fixAlternation();
+                break;
+            default://no groups or whatever
+                uint start = g.length;
+                parseAtom();
+                parseQuantifier(start);
+            }
+        }
+
+        if(g.fixupLength != 1)
+        {
+            fix = g.popFixup();
+            g.finishAlternation(fix);
+            enforce(g.fixupLength == 1, "no matching ')'");
+        }
+    }
+
+
+    //parse and store IR for atom-quantifier pair
+    @trusted void parseQuantifier(uint offset)
+    {//copy is @system
+        if(empty)
+            return g.fixRepetition(offset);
+        uint min, max;
+        switch(current)
+        {
+        case '*':
+            min = 0;
+            max = infinite;
+            break;
+        case '?':
+            min = 0;
+            max = 1;
+            break;
+        case '+':
+            min = 1;
+            max = infinite;
+            break;
+        case '{':
+            enforce(next(), "Unexpected end of regex pattern");
+            enforce(std.ascii.isDigit(current), "First number required in repetition");
+            min = parseDecimal();
+            if(current == '}')
+                max = min;
+            else if(current == ',')
+            {
+                next();
+                if(std.ascii.isDigit(current))
+                    max = parseDecimal();
+                else if(current == '}')
+                    max = infinite;
+                else
+                    error("Unexpected symbol in regex pattern");
+                skipSpace();
+                if(current != '}')
+                    error("Unmatched '{' in regex pattern");
+            }
+            else
+                error("Unexpected symbol in regex pattern");
+            if(min > max)
+                error("Illegal {n,m} quantifier");
+            break;
+        default:
+            g.fixRepetition(offset);
+            return;
+        }
+        bool greedy = true;
+        //check only if we managed to get new symbol
+        if(next() && current == '?')
+        {
+            greedy = false;
+            next();
+        }
+        g.fixRepetition(offset, min, max, greedy);
     }
 
     //parse and store IR for atom
@@ -742,7 +885,7 @@ struct Parser(R)
             error("'*', '+', '?', '{', '}' not allowed in atom");
             break;
         case '.':
-            put(Bytecode(IR.Any, 0));
+            g.put(Bytecode(IR.Any, 0));
             next();
             break;
         case '[':
@@ -753,11 +896,11 @@ struct Parser(R)
             parseEscape();
             break;
         case '^':
-            put(Bytecode(IR.Bol, 0));
+            g.put(Bytecode(IR.Bol, 0));
             next();
             break;
         case '$':
-            put(Bytecode(IR.Eol, 0));
+            g.put(Bytecode(IR.Eol, 0));
             next();
             break;
         default:
@@ -767,46 +910,18 @@ struct Parser(R)
                 auto range = simpleCaseFoldings(current);
                 assert(range.length <= 5);
                 if(range.length == 1)
-                    put(Bytecode(IR.Char, range.front));
+                    g.put(Bytecode(IR.Char, range.front));
                 else
                     foreach(v; range)
-                        put(Bytecode(IR.OrChar, v, cast(uint)range.length));
+                        g.put(Bytecode(IR.OrChar, v, cast(uint)range.length));
             }
             else
-                put(Bytecode(IR.Char, current));
+                g.put(Bytecode(IR.Char, current));
             next();
         }
     }
 
-    //generate code for start of lookaround: (?= (?! (?<= (?<!
-    void genLookaround(IR opcode)
-    {
-        put(Bytecode(opcode, 0));
-        put(Bytecode.fromRaw(0));
-        put(Bytecode.fromRaw(0));
-        groupStack.push(0);
-        lookaroundNest++;
-        enforce(lookaroundNest <= maxLookaroundDepth,
-            "maximum lookaround depth is exceeded");
-    }
 
-    //fixup lookaround with start at offset fix and append a proper *-End opcode
-    void fixLookaround(uint fix)
-    {
-        ir[fix] = Bytecode(ir[fix].code,
-            cast(uint)ir.length - fix - IRL!(IR.LookaheadStart));
-        auto g = groupStack.pop();
-        assert(!groupStack.empty);
-        ir[fix+1] = Bytecode.fromRaw(groupStack.top);
-        //groups are cumulative across lookarounds
-        ir[fix+2] = Bytecode.fromRaw(groupStack.top+g);
-        groupStack.top += g;
-        if(ir[fix].code == IR.LookbehindStart || ir[fix].code == IR.NeglookbehindStart)
-        {
-            reverseBytecode(ir[fix + IRL!(IR.LookbehindStart) .. $]);
-    }
-        put(ir[fix].paired);
-    }
 
     //CodepointSet operations relatively in order of priority
     enum Operator:uint {
@@ -1213,55 +1328,7 @@ struct Parser(R)
         while(!opstack.empty)
             apply(opstack.pop(),vstack);
         assert(vstack.length == 1);
-        charsetToIr(vstack.top);
-    }
-    //try to generate optimal IR code for this CodepointSet
-    @trusted void charsetToIr(CodepointSet set)
-    {//@@@BUG@@@ writeln is @system
-        uint chars = cast(uint)set.length;
-        if(chars < Bytecode.maxSequence)
-        {
-            switch(chars)
-            {
-                case 1:
-                    put(Bytecode(IR.Char, set.byCodepoint.front));
-                    break;
-                case 0:
-                    error("empty CodepointSet not allowed");
-                    break;
-                default:
-                    foreach(ch; set.byCodepoint)
-                        put(Bytecode(IR.OrChar, ch, chars));
-            }
-        }
-        else
-        {
-            import std.algorithm : countUntil;
-            auto ivals = set.byInterval;
-            auto n = charsets.countUntil(set);
-            if(n >= 0)
-            {
-                if(ivals.length*2 > maxCharsetUsed)
-                    put(Bytecode(IR.Trie, cast(uint)n));
-                else
-                    put(Bytecode(IR.CodepointSet, cast(uint)n));
-                return;
-            }
-            if(ivals.length*2 > maxCharsetUsed)
-            {
-                auto t  = getMatcher(set);
-                put(Bytecode(IR.Trie, cast(uint)matchers.length));
-                matchers ~= t;
-                debug(std_regex_allocation) writeln("Trie generated");
-            }
-            else
-            {
-                put(Bytecode(IR.CodepointSet, cast(uint)charsets.length));
-                matchers ~= CharMatcher.init;
-            }
-            charsets ~= set;
-            assert(charsets.length == matchers.length);
-        }
+        g.charsetToIr(vstack.top);
     }
 
     //parse and generate IR for escape stand alone escape sequence
@@ -1270,64 +1337,64 @@ struct Parser(R)
 
         switch(current)
         {
-        case 'f':   next(); put(Bytecode(IR.Char, '\f')); break;
-        case 'n':   next(); put(Bytecode(IR.Char, '\n')); break;
-        case 'r':   next(); put(Bytecode(IR.Char, '\r')); break;
-        case 't':   next(); put(Bytecode(IR.Char, '\t')); break;
-        case 'v':   next(); put(Bytecode(IR.Char, '\v')); break;
+        case 'f':   next(); g.put(Bytecode(IR.Char, '\f')); break;
+        case 'n':   next(); g.put(Bytecode(IR.Char, '\n')); break;
+        case 'r':   next(); g.put(Bytecode(IR.Char, '\r')); break;
+        case 't':   next(); g.put(Bytecode(IR.Char, '\t')); break;
+        case 'v':   next(); g.put(Bytecode(IR.Char, '\v')); break;
 
         case 'd':
             next();
-            charsetToIr(unicode.Nd);
+            g.charsetToIr(unicode.Nd);
             break;
         case 'D':
             next();
-            charsetToIr(unicode.Nd.inverted);
+            g.charsetToIr(unicode.Nd.inverted);
             break;
-        case 'b':   next(); put(Bytecode(IR.Wordboundary, 0)); break;
-        case 'B':   next(); put(Bytecode(IR.Notwordboundary, 0)); break;
+        case 'b':   next(); g.put(Bytecode(IR.Wordboundary, 0)); break;
+        case 'B':   next(); g.put(Bytecode(IR.Notwordboundary, 0)); break;
         case 's':
             next();
-            charsetToIr(unicode.White_Space);
+            g.charsetToIr(unicode.White_Space);
             break;
         case 'S':
             next();
-            charsetToIr(unicode.White_Space.inverted);
+            g.charsetToIr(unicode.White_Space.inverted);
             break;
         case 'w':
             next();
-            charsetToIr(wordCharacter);
+            g.charsetToIr(wordCharacter);
             break;
         case 'W':
             next();
-            charsetToIr(wordCharacter.inverted);
+            g.charsetToIr(wordCharacter.inverted);
             break;
         case 'p': case 'P':
             auto CodepointSet = parseUnicodePropertySpec(current == 'P');
-            charsetToIr(CodepointSet);
+            g.charsetToIr(CodepointSet);
             break;
         case 'x':
             uint code = parseUniHex(pat, 2);
             next();
-            put(Bytecode(IR.Char,code));
+            g.put(Bytecode(IR.Char,code));
             break;
         case 'u': case 'U':
             uint code = parseUniHex(pat, current == 'u' ? 4 : 8);
             next();
-            put(Bytecode(IR.Char, code));
+            g.put(Bytecode(IR.Char, code));
             break;
         case 'c': //control codes
             Bytecode code = Bytecode(IR.Char, parseControlCode());
             next();
-            put(code);
+            g.put(code);
             break;
         case '0':
             next();
-            put(Bytecode(IR.Char, 0));//NUL character
+            g.put(Bytecode(IR.Char, 0));//NUL character
             break;
         case '1': .. case '9':
             uint nref = cast(uint)current - '0';
-            uint maxBackref = sum(groupStack.data);
+            uint maxBackref = sum(g.groupStack.data);
             enforce(nref < maxBackref, "Backref to unseen group");
             //perl's disambiguation rule i.e.
             //get next digit only if there is such group number
@@ -1337,28 +1404,26 @@ struct Parser(R)
             }
             if(nref >= maxBackref)
                 nref /= 10;
-            enforce(!isOpenGroup(nref), "Backref to open group");
-            uint localLimit = maxBackref - groupStack.top;
+            enforce(!g.isOpenGroup(nref), "Backref to open group");
+            uint localLimit = maxBackref - g.groupStack.top;
             if(nref >= localLimit)
             {
-                put(Bytecode(IR.Backref, nref-localLimit));
-                ir[$-1].setLocalRef();
+                g.put(Bytecode(IR.Backref, nref-localLimit));
+                g.ir[$-1].setLocalRef();
             }
             else
-                put(Bytecode(IR.Backref, nref));
-            markBackref(nref);
+                g.put(Bytecode(IR.Backref, nref));
+            g.markBackref(nref);
             break;
         default:
             if(current >= privateUseStart && current <= privateUseEnd)
             {
-                put(Bytecode(IR.End, current - privateUseStart + 1));
-                ngroup = max(ngroup, groupStack.top);
-                groupStack.top = 1; // reset group counter
+                g.endPattern(current - privateUseStart + 1);
                 break;
             }
             auto op = Bytecode(IR.Char, current);
             next();
-            put(op);
+            g.put(op);
         }
     }
 
@@ -1395,7 +1460,6 @@ struct Parser(R)
     {
         import std.format;
         auto app = appender!string();
-        ir = null;
         formattedWrite(app, "%s\nPattern with error: `%s` <--HERE-- `%s`",
                        msg, origin[0..$-pat.length], pat);
         throw new RegexException(app.data);
@@ -1410,10 +1474,9 @@ struct Parser(R)
 }
 
 /+
-    lightweight post process step,
-    only essentials
+    Postproces the IR, then optimize.
 +/
-@trusted void lightPostprocess(Char)(ref Regex!Char zis)
+@trusted void postprocess(Char)(ref Regex!Char zis)
 {//@@@BUG@@@ write is @system
     with(zis)
     {
