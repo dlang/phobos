@@ -145,8 +145,6 @@ endif
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
-# Given one or more packages, returns their respective libraries
-P2LIB=$(addprefix $(ROOT)/libphobos2_,$(addsuffix $(DOTLIB),$(subst /,_,$1)))
 # Given one or more packages, returns the modules they contain
 P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 
