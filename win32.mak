@@ -1195,7 +1195,7 @@ install: phobos.zip
 	+rd/s/q $(DIR)\src\phobos
 	unzip -o phobos.zip -d $(DIR)\src\phobos
 
-auto-tester-build: targets
+auto-tester-build: targets html
 
 auto-tester-test: unittest
 
