@@ -781,7 +781,49 @@ struct Parser(R, Generator)
                         next();
                         break;
                     default:
-                        error(" ':', '=', '<', 'P' or '!' expected after '(?' ");
+                        uint enableFlags, disableFlags;
+                        bool enable = true;
+                        do
+                        {
+                            switch(current)
+                            {
+                            case 's':
+                                if (enable)
+                                    enableFlags |= RegexOption.singleline;
+                                else
+                                    disableFlags |= RegexOption.singleline;
+                                break;
+                            case 'x':
+                                if (enable)
+                                    enableFlags |= RegexOption.freeform;
+                                else
+                                    disableFlags |= RegexOption.freeform;
+                                break;
+                            case 'i':
+                                if (enable)
+                                    enableFlags |= RegexOption.casefold;
+                                else
+                                    disableFlags |= RegexOption.casefold;
+                                break;
+                            case 'm':
+                                if (enable)
+                                    enableFlags |= RegexOption.multiline;
+                                else
+                                    disableFlags |= RegexOption.multiline;
+                                break;
+                            case '-':
+                                if (!enable)
+                                    error(" unexpected second '-' in flags");
+                                enable = false;
+                                break;
+                            default:
+                                error(" 's', 'x', 'i', 'm' or '-' expected after '(?' ");
+                            }
+                            next();
+                        }while (current != ')');
+                        next();
+                        re_flags |= enableFlags;
+                        re_flags &= ~disableFlags;
                     }
                 }
                 else
@@ -885,7 +927,13 @@ struct Parser(R, Generator)
             error("'*', '+', '?', '{', '}' not allowed in atom");
             break;
         case '.':
-            g.put(Bytecode(IR.Any, 0));
+            if (re_flags & RegexOption.singleline)
+                g.put(Bytecode(IR.Any, 0));
+            else
+            {
+                CodepointSet set;
+                g.charsetToIr(set.add('\n','\n'+1).add('\r', '\r'+1).inverted);
+            }
             next();
             break;
         case '[':
@@ -896,11 +944,17 @@ struct Parser(R, Generator)
             parseEscape();
             break;
         case '^':
-            g.put(Bytecode(IR.Bol, 0));
+            if (re_flags & RegexOption.multiline)
+                g.put(Bytecode(IR.Bol, 0));
+            else
+                g.put(Bytecode(IR.Bof, 0));
             next();
             break;
         case '$':
-            g.put(Bytecode(IR.Eol, 0));
+            if (re_flags & RegexOption.multiline)
+                g.put(Bytecode(IR.Eol, 0));
+            else
+                g.put(Bytecode(IR.Eof, 0));
             next();
             break;
         default:

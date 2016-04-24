@@ -126,8 +126,8 @@ enum IR:uint {
     OrChar             = 0b1_00100_00,
     Nop                = 0b1_00101_00, //no operation (padding)
     End                = 0b1_00110_00, //end of program
-    Bol                = 0b1_00111_00, //beginning of a string ^
-    Eol                = 0b1_01000_00, //end of a string $
+    Bol                = 0b1_00111_00, //beginning of a line ^
+    Eol                = 0b1_01000_00, //end of a line $
     Wordboundary       = 0b1_01001_00, //boundary of a word
     Notwordboundary    = 0b1_01010_00, //not a word boundary
     Backref            = 0b1_01011_00, //backreference to a group (that has to be pinned, i.e. locally unique) (group index)
@@ -135,6 +135,8 @@ enum IR:uint {
     GroupEnd           = 0b1_01101_00, //end of a group (x) (groupIndex+groupPinning(1bit))
     Option             = 0b1_01110_00, //start of an option within an alternation x | y (length)
     GotoEndOr          = 0b1_01111_00, //end of an option (length of the rest)
+    Bof                = 0b1_10000_00, //begining of "file" (string) ^
+    Eof                = 0b1_10001_00, //end of "file" (string) $
     //... any additional atoms here
 
     OrStart            = 0b1_00000_01, //start of alternation group  (length)
@@ -531,17 +533,16 @@ package(std.regex):
     //check if searching is not needed
     void checkIfOneShot()
     {
-        if (flags & RegexOption.multiline)
-            return;
     L_CheckLoop:
         for (uint i = 0; i < ir.length; i += ir[i].length)
         {
             switch (ir[i].code)
             {
-                case IR.Bol:
+                case IR.Bof:
                     flags |= RegexInfo.oneShot;
                     break L_CheckLoop;
-                case IR.GroupStart, IR.GroupEnd, IR.Eol, IR.Wordboundary, IR.Notwordboundary:
+                case IR.GroupStart, IR.GroupEnd, IR.Bol, IR.Eol, IR.Eof,
+                IR.Wordboundary, IR.Notwordboundary:
                     break;
                 default:
                     break L_CheckLoop;

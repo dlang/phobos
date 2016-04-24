@@ -311,8 +311,7 @@ template BacktrackingMatcher(bool CTregex)
                         next();
                     break;
                     case IR.Any:
-                        if (atEnd || (!(re.flags & RegexOption.singleline)
-                                && (front == '\r' || front == '\n')))
+                        if (atEnd)
                             goto L_backtrack;
                         pc += IRL!(IR.Any);
                         next();
@@ -373,17 +372,28 @@ template BacktrackingMatcher(bool CTregex)
                         }
                         pc += IRL!(IR.Wordboundary);
                         break;
+                    case IR.Bof:
+                        if (atStart)
+                            pc += IRL!(IR.Bol);
+                        else
+                            goto L_backtrack;
+                        break;
                     case IR.Bol:
                         dchar back;
                         DataIndex bi;
                         if (atStart)
                             pc += IRL!(IR.Bol);
-                        else if ((re.flags & RegexOption.multiline)
-                            && s.loopBack(index).nextChar(back,bi)
+                        else if (s.loopBack(index).nextChar(back,bi)
                             && endOfLine(back, front == '\n'))
                         {
                             pc += IRL!(IR.Bol);
                         }
+                        else
+                            goto L_backtrack;
+                        break;
+                    case IR.Eof:
+                        if (atEnd)
+                            pc += IRL!(IR.Eol);
                         else
                             goto L_backtrack;
                         break;
@@ -392,8 +402,7 @@ template BacktrackingMatcher(bool CTregex)
                         DataIndex bi;
                         debug(std_regex_matcher) writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
                         //no matching inside \r\n
-                        if (atEnd || ((re.flags & RegexOption.multiline)
-                            && endOfLine(front, s.loopBack(index).nextChar(back,bi)
+                        if (atEnd || (endOfLine(front, s.loopBack(index).nextChar(back,bi)
                                 && back == '\r')))
                         {
                             pc += IRL!(IR.Eol);
@@ -1333,8 +1342,7 @@ struct CtContext
             code ~= ctSub(`
                     dchar back;
                     DataIndex bi;
-                    if (atStart || ((re.flags & RegexOption.multiline)
-                        && s.loopBack(index).nextChar(back,bi)
+                    if (atStart || (s.loopBack(index).nextChar(back,bi)
                         && endOfLine(back, front == '\n')))
                     {
                         debug(std_regex_matcher) writeln("BOL matched");
@@ -1344,14 +1352,23 @@ struct CtContext
                         $$`, nextInstr, bailOut);
 
             break;
+        case IR.Bof:
+            code ~= ctSub(`
+                    if (atStart)
+                    {
+                        debug(std_regex_matcher) writeln("BOF matched");
+                        $$
+                    }
+                    else
+                        $$`, nextInstr, bailOut);
+            break;
         case IR.Eol:
             code ~= ctSub(`
                     dchar back;
                     DataIndex bi;
                     debug(std_regex_matcher) writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
                     //no matching inside \r\n
-                    if (atEnd || ((re.flags & RegexOption.multiline)
-                            && endOfLine(front, s.loopBack(index).nextChar(back,bi)
+                    if (atEnd || (endOfLine(front, s.loopBack(index).nextChar(back,bi)
                              && back == '\r')))
                     {
                         debug(std_regex_matcher) writeln("EOL matched");
@@ -1359,7 +1376,16 @@ struct CtContext
                     }
                     else
                         $$`, nextInstr, bailOut);
-
+            break;
+        case IR.Eof:
+            code ~= ctSub(`
+                    if (atEnd)
+                    {
+                        debug(std_regex_matcher) writeln("BOF matched");
+                        $$
+                    }
+                    else
+                        $$`, nextInstr, bailOut);
             break;
         case IR.GroupStart:
             code ~= ctSub(`

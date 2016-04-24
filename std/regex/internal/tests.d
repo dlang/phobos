@@ -337,6 +337,11 @@ unittest
 //mixed lookaround
         TestVectors(   `a(?<=a(?=b))b`,    "ab", "y",      "$&", "ab"),
         TestVectors(   `a(?<=a(?!b))c`,    "ac", "y",      "$&", "ac"),
+        TestVectors(   `a(?i)bc`,         "aBc", "y",      "$&", "aBc"),
+        TestVectors(   `a(?i)bc`,         "Abc", "n",      "$&", "-"),
+        TestVectors(   `(?i)a(?-i)bc`, "aBcAbc", "y",      "$&", "Abc"),
+        TestVectors(   `(?s).(?-s).`, "\n\n\na", "y",      "$&", "\na"),
+        TestVectors(   `(?m)^a(?-m)$`,  "\na",   "y",      "$&", "a")
         ];
     string produceExpected(M,String)(auto ref M m, String fmt)
     {

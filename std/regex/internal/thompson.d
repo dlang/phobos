@@ -167,6 +167,22 @@ template ThompsonOps(E, S, bool withInput:true)
         return true;
     }
 
+    static bool op(IR code:IR.Bof)(E* e, S* state)
+    {
+        with(e) with(state)
+        {
+            if (atStart)
+            {
+                t.pc += IRL!(IR.Bof);
+                return true;
+            }
+            else
+            {
+                return popState(e);
+            }
+        }
+    }
+
     static bool op(IR code:IR.Bol)(E* e, S* state)
     {
         with(e) with(state)
@@ -174,11 +190,26 @@ template ThompsonOps(E, S, bool withInput:true)
             dchar back;
             DataIndex bi;
             if (atStart
-                ||( (re.flags & RegexOption.multiline)
-                && s.loopBack(index).nextChar(back,bi)
+                ||(s.loopBack(index).nextChar(back,bi)
                 && startOfLine(back, front == '\n')))
             {
                 t.pc += IRL!(IR.Bol);
+                return true;
+            }
+            else
+            {
+                return popState(e);
+            }
+        }
+    }
+
+    static bool op(IR code:IR.Eof)(E* e, S* state)
+    {
+        with(e) with(state)
+        {
+            if (atEnd)
+            {
+                t.pc += IRL!(IR.Eol);
                 return true;
             }
             else
@@ -192,12 +223,10 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            debug(std_regex_matcher) writefln("EOL (front 0x%x) %s",  front, s[index..s.lastIndex]);
             dchar back;
             DataIndex bi;
             //no matching inside \r\n
-            if (atEnd || ((re.flags & RegexOption.multiline)
-                && endOfLine(front, s.loopBack(index).nextChar(back, bi)
+            if (atEnd || (endOfLine(front, s.loopBack(index).nextChar(back, bi)
                     && back == '\r')))
             {
                 t.pc += IRL!(IR.Eol);
@@ -598,11 +627,7 @@ template ThompsonOps(E, S, bool withInput:true)
         with(e) with(state)
         {
             t.pc += IRL!(IR.Any);
-            if (!(re.flags & RegexOption.singleline)
-                  && (front == '\r' || front == '\n'))
-              recycle(t);
-            else
-              nlist.insertBack(t);
+            nlist.insertBack(t);
             t = worklist.fetch();
             return t != null;
         }
