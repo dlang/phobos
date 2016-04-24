@@ -723,7 +723,7 @@ slice, returns that slice. Otherwise, returns the null slice.
 auto overlap(T, U)(T[] r1, U[] r2) @trusted pure nothrow
 if (is(typeof(r1.ptr < r2.ptr) == bool))
 {
-    import std.algorithm : min, max;
+    import std.algorithm.comparison : min, max;
     auto b = max(r1.ptr, r2.ptr);
     auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
     return b < e ? b[0 .. e - b] : null;
