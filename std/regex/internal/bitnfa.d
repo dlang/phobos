@@ -158,14 +158,12 @@ struct UIntTrie2
     uint opIndex(dchar ch)
     {
         immutable blk = index[ch>>blockBits];
-        //writeln(">blk = ", blk);
         return blocks.ptr[blk*blockSize + (ch & (blockSize-1))];
     }
 
     void setPageRange(string op)(uint val, uint low, uint high)
     {
         immutable blk = index[low>>blockBits];
-        //writeln("<blk = ", blk);
         if(refCounts[blk] == 1) // modify in-place
         {
             immutable lowIdx = blk*blockSize + (low & (blockSize-1));
@@ -394,7 +392,7 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
                     break outer;
             }
         }
-        debug(std_regex_bitnfa) writeln("LEN:", lastNonnested);
+        debug(std_regex_bitnfa) __ctfe || writeln("LEN:", lastNonnested);
         // the total processable length
         finalMask |= 1u<<bitMapping[lastNonnested];
         length = lastNonnested;
@@ -409,7 +407,7 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
                 // collect stops across all paths
                 auto rets = collectControlFlow(ir, i);
                 uint mask = 0;
-                debug(std_regex_bitnfa) writeln(rets);
+                debug(std_regex_bitnfa) __ctfe || writeln(rets);
                 foreach(pc; rets) mask |= 1u<<bitMapping[pc];
                 // map this individual c-f to all possible stops
                 controlFlow[1u<<bitMapping[i]] = mask;
@@ -492,7 +490,7 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
             uint cflow = ~word  & controlFlowMask;
             word = word | controlFlowMask; // kill cflow
             word &= ~controlFlow[cflow]; // map normal ops
-            debug(std_regex_bitnfa) writefln("%b %b %b %b", word, finalMask, cflow, controlFlowMask);
+            debug(std_regex_bitnfa) __ctfe || writefln("%b %b %b %b", word, finalMask, cflow, controlFlowMask);
             if((word & finalMask) != finalMask)
             {
                 matched = true; // keep running to see if there is longer match
@@ -533,25 +531,32 @@ final class BitMatcher(Char) : Kickstart!(Char)
         reverseBytecode(re2.ir[0..len]);
         // check for the case of multiple patterns as one alternation
         if(len == re2.ir.length-IRL!(IR.End))
-        with(IR) with(re2) if(ir[0].code == OrStart)
         {
-            size_t pc = IRL!OrStart;
-            while(ir[pc].code == Option)
+            debug(std_regex_bitnfa) __ctfe || writeln("Reverse!");
+            with(IR) with(re2) if(ir[0].code == OrStart)
             {
-                size_t size = ir[pc].data;
-                if(ir[pc+size-IRL!GotoEndOr].code == GotoEndOr)
-                    size -= IRL!GotoEndOr;
-                size_t j = pc + IRL!Option;
-                if(ir[j].code == End)
+                size_t pc = IRL!OrStart;
+                while(ir[pc].code == Option)
                 {
-                    auto save = ir[j];
-                    foreach(k; j+1..j+size)
-                        ir[k-1] = ir[k];
-                    ir[j+size-1] = save;
+                    size_t size = ir[pc].data;
+                    if(ir[pc+size-IRL!GotoEndOr].code == GotoEndOr)
+                    {
+                        ir[pc+size-IRL!(GotoEndOr)].data = ir[pc+size-IRL!(GotoEndOr)].data+1;
+                        size -= IRL!GotoEndOr;
+                    }
+                    size_t j = pc + IRL!Option;
+                    if(ir[j].code == End)
+                    {
+                        auto save = ir[j];
+                        foreach(k; j+1..j+size)
+                            ir[k-1] = ir[k];
+                        ir[j+size-1] = save;
+                    }
+                    pc = j + ir[pc].data;
                 }
-                pc = j + ir[pc].data;
             }
         }
+        debug(std_regex_bitnfa) __ctfe || re2.print();
         backward = BitNfa(re2);
     }
 
@@ -630,5 +635,6 @@ unittest
 {
     "xxabcy".checkM("abc", 2);
     "_10bcy".checkM([`\d+`, `[a-z]+`], 1);
+    "1/03/12 - 3/03/12".checkM([r"(\d+)/(\d+)/(\d+)", "abc"],0);
     "abc@email.com".checkM(`\S+@\S?1`, 0);
 }
