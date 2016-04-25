@@ -211,7 +211,7 @@ template to(T)
 }
 
 /**
- * Converting a value to its own type (useful mostly for generic code)
+ * Converting a value _to its own type (useful mostly for generic code)
  * simply returns its argument.
  */
 @safe pure unittest
@@ -222,12 +222,12 @@ template to(T)
 }
 
 /**
- * Converting among numeric types is a safe way to cast them around.
+ * Converting among numeric types is a safe way _to cast them around.
  *
  * Conversions from floating-point types _to integral types allow loss of
  * precision (the fractional part of a floating-point number). The
  * conversion is truncating towards zero, the same way a cast would
- * truncate. (To round a floating point value when casting _to an
+ * truncate. (_To round a floating point value when casting _to an
  * integral, use `roundTo`.)
  */
 @safe pure unittest
@@ -246,12 +246,12 @@ template to(T)
 }
 
 /**
- * When converting strings to numeric types, note that the D hexadecimal and binary
+ * When converting strings _to numeric types, note that the D hexadecimal and binary
  * literals are not handled. Neither the prefixes that indicate the base, nor the
- * horizontal bar used to separate groups of digits are recognized. This also
+ * horizontal bar used _to separate groups of digits are recognized. This also
  * applies to the suffixes that indicate the type.
  *
- * To work around this, you can specify a radix for conversions involving numbers.
+ * _To work around this, you can specify a radix for conversions involving numbers.
  */
 @safe pure unittest
 {
@@ -336,27 +336,27 @@ unittest
  *   $(LI String _to string conversion works for any two string types having
  *        ($(D char), $(D wchar), $(D dchar)) character widths and any
  *        combination of qualifiers (mutable, $(D const), or $(D immutable)).)
- *   $(LI Converts array (other than strings) to string.
+ *   $(LI Converts array (other than strings) _to string.
  *        Each element is converted by calling $(D to!T).)
- *   $(LI Associative array to string conversion.
+ *   $(LI Associative array _to string conversion.
  *        Each element is printed by calling $(D to!T).)
- *   $(LI Object to string conversion calls $(D toString) against the object or
+ *   $(LI Object _to string conversion calls $(D toString) against the object or
  *        returns $(D "null") if the object is null.)
- *   $(LI Struct to string conversion calls $(D toString) against the struct if
+ *   $(LI Struct _to string conversion calls $(D toString) against the struct if
  *        it is defined.)
- *   $(LI For structs that do not define $(D toString), the conversion to string
+ *   $(LI For structs that do not define $(D toString), the conversion _to string
  *        produces the list of fields.)
- *   $(LI Enumerated types are converted to strings as their symbolic names.)
+ *   $(LI Enumerated types are converted _to strings as their symbolic names.)
  *   $(LI Boolean values are printed as $(D "true") or $(D "false").)
- *   $(LI $(D char), $(D wchar), $(D dchar) to a string type.)
- *   $(LI Unsigned or signed integers to strings.
+ *   $(LI $(D char), $(D wchar), $(D dchar) _to a string type.)
+ *   $(LI Unsigned or signed integers _to strings.
  *        $(DL $(DT [special case])
- *             $(DD Convert integral value to string in $(D_PARAM radix) radix.
+ *             $(DD Convert integral value _to string in $(D_PARAM radix) radix.
  *             radix must be a value from 2 to 36.
  *             value is treated as a signed value only if radix is 10.
  *             The characters A through Z are used to represent values 10 through 36
  *             and their case is determined by the $(D_PARAM letterCase) parameter.)))
- *   $(LI All floating point types to all string types.)
+ *   $(LI All floating point types _to all string types.)
  *   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
  *        If pointer is $(D char*), treat it as C-style strings.
  *        In that case, this function is $(D @system).))

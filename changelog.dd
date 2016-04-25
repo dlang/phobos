@@ -27,6 +27,8 @@ $(BUGSTITLE Library Changes,
     equal values was added.)
     $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
         rangified.)
+    $(LI All overloads of `std.conv.toImpl` has been made private. Please use
+        $(XREF conv, to) instead.)
 )
 
 $(BUGSTITLE Library Changes,
