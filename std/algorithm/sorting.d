@@ -847,7 +847,7 @@ private template validPredicates(E, less...)
 }
 
 /**
-$(D void multiSort(Range)(Range r)
+$(D auto multiSort(Range)(Range r)
     if (validPredicates!(ElementType!Range, less));)
 
 Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
@@ -856,12 +856,18 @@ and sorts elements that have the same $(D id) by $(D date)
 descending. Such a call is equivalent to $(D sort!"a.id != b.id ? a.id
 < b.id : a.date > b.date"(r)), but $(D multiSort) is faster because it
 does fewer comparisons (in addition to being more convenient).
+
+Returns:
+    The initial range wrapped as a $(D SortedRange) with its predicates
+    converted to an equivalent single predicate.
  */
 template multiSort(less...) //if (less.length > 1)
 {
-    void multiSort(Range)(Range r)
+    auto multiSort(Range)(Range r)
     if (validPredicates!(ElementType!Range, less))
     {
+        import std.range : assumeSorted;
+        import std.meta: AliasSeq;
         static if (is(typeof(less[$ - 1]) == SwapStrategy))
         {
             enum ss = less[$ - 1];
@@ -872,31 +878,56 @@ template multiSort(less...) //if (less.length > 1)
             alias ss = SwapStrategy.unstable;
             alias funs = less;
         }
-        alias lessFun = binaryFun!(funs[0]);
 
-        static if (funs.length > 1)
+        static if (funs.length == 0)
+            assert("No sorting predicate provided");
+        else
+        static if (funs.length == 1)
+            return sort!(funs[0], ss, Range)(r);
+        else
         {
-            while (r.length > 1)
+            static void multiSortImpl(funs...)(Range r) @safe
             {
-                auto p = getPivot!lessFun(r);
-                auto t = partition3!(less[0], ss)(r, r[p]);
-                if (t[0].length <= t[2].length)
+                alias lessFun = binaryFun!(funs[0]);
+
+                static if (funs.length > 1)
                 {
-                    .multiSort!less(t[0]);
-                    .multiSort!(less[1 .. $])(t[1]);
-                    r = t[2];
+                    while (r.length > 1)
+                    {
+                        auto p = getPivot!lessFun(r);
+                        auto t = partition3!(funs[0], ss)(r, r[p]);
+                        if (t[0].length <= t[2].length)
+                        {
+                            multiSortImpl!funs(t[0]);
+                            multiSortImpl!(funs[1 .. $])(t[1]);
+                            r = t[2];
+                        }
+                        else
+                        {
+                            multiSortImpl!(funs[1 .. $])(t[1]);
+                            multiSortImpl!funs(t[2]);
+                            r = t[0];
+                        }
+                    }
                 }
                 else
                 {
-                    .multiSort!(less[1 .. $])(t[1]);
-                    .multiSort!less(t[2]);
-                    r = t[0];
+                    sort!(lessFun, ss)(r);
                 }
             }
-        }
-        else
-        {
-            sort!(lessFun, ss)(r);
+
+            static bool predFun(ElementType!Range a, ElementType!Range b)
+            {
+                foreach (f; AliasSeq!(funs))
+                {
+                    alias lessFun = binaryFun!(f);
+                    if (lessFun(a, b)) return true;
+                    if (lessFun(b, a)) return false;
+                }
+                return false;
+            }
+            multiSortImpl!funs(r);
+            return assumeSorted!predFun(r);
         }
     }
 }
@@ -924,8 +955,10 @@ template multiSort(less...) //if (less.length > 1)
     assert(pts1 == pts2);
 
     auto pts3 = indexed(pts1, iota(pts1.length));
-    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts3);
-    assert(equal(pts3, pts2));
+    assert(pts3.multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable).release.equal(pts2));
+
+    auto pts4 = iota(10).array;
+    assert(pts4.multiSort!("a > b").release.equal(iota(10).retro));
 }
 
 @safe unittest //issue 9160 (L-value only comparators)
