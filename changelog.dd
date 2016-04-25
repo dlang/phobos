@@ -23,6 +23,8 @@ $(BUGSTITLE Library Changes,
     of the type being iterated)
     $(LI $(XREF algorithm, sorting, isStrictlyMonotonic) which doesn't allow
     equal values was added.)
+    $(LI $(XREF meta, Apply) was added to instantiate templates which would
+    otherwise be disallowed by D's grammar.)
 )
 
 $(BUGSTITLE Library Changes,

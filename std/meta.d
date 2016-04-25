@@ -874,8 +874,8 @@ unittest
 {
     foreach (T; AliasSeq!(int, staticMap, 42))
     {
-        static assert(!Instantiate!(templateNot!testAlways, T));
-        static assert(Instantiate!(templateNot!testNever, T));
+        static assert(!Apply!(templateNot!testAlways, T));
+        static assert(Apply!(templateNot!testNever, T));
     }
 }
 
@@ -899,8 +899,8 @@ template templateAnd(Preds...)
         }
         else
         {
-            static if (Instantiate!(Preds[0], T))
-                alias templateAnd = Instantiate!(.templateAnd!(Preds[1 .. $]), T);
+            static if (Apply!(Preds[0], T))
+                alias templateAnd = Apply!(.templateAnd!(Preds[1 .. $]), T);
             else
                 enum templateAnd = false;
         }
@@ -925,15 +925,15 @@ unittest
 {
     foreach (T; AliasSeq!(int, staticMap, 42))
     {
-        static assert( Instantiate!(templateAnd!(), T));
-        static assert( Instantiate!(templateAnd!(testAlways), T));
-        static assert( Instantiate!(templateAnd!(testAlways, testAlways), T));
-        static assert(!Instantiate!(templateAnd!(testNever), T));
-        static assert(!Instantiate!(templateAnd!(testAlways, testNever), T));
-        static assert(!Instantiate!(templateAnd!(testNever, testAlways), T));
+        static assert( Apply!(templateAnd!(), T));
+        static assert( Apply!(templateAnd!(testAlways), T));
+        static assert( Apply!(templateAnd!(testAlways, testAlways), T));
+        static assert(!Apply!(templateAnd!(testNever), T));
+        static assert(!Apply!(templateAnd!(testAlways, testNever), T));
+        static assert(!Apply!(templateAnd!(testNever, testAlways), T));
 
-        static assert(!Instantiate!(templateAnd!(testNever, testError), T));
-        static assert(!is(typeof(Instantiate!(templateAnd!(testAlways, testError), T))));
+        static assert(!Apply!(templateAnd!(testNever, testError), T));
+        static assert(!is(typeof(Apply!(templateAnd!(testAlways, testError), T))));
     }
 }
 
@@ -957,10 +957,10 @@ template templateOr(Preds...)
         }
         else
         {
-            static if (Instantiate!(Preds[0], T))
+            static if (Apply!(Preds[0], T))
                 enum templateOr = true;
             else
-                alias templateOr = Instantiate!(.templateOr!(Preds[1 .. $]), T);
+                alias templateOr = Apply!(.templateOr!(Preds[1 .. $]), T);
         }
     }
 }
@@ -983,19 +983,19 @@ unittest
 {
     foreach (T; AliasSeq!(int, staticMap, 42))
     {
-        static assert( Instantiate!(templateOr!(testAlways), T));
-        static assert( Instantiate!(templateOr!(testAlways, testAlways), T));
-        static assert( Instantiate!(templateOr!(testAlways, testNever), T));
-        static assert( Instantiate!(templateOr!(testNever, testAlways), T));
-        static assert(!Instantiate!(templateOr!(), T));
-        static assert(!Instantiate!(templateOr!(testNever), T));
+        static assert( Apply!(templateOr!(testAlways), T));
+        static assert( Apply!(templateOr!(testAlways, testAlways), T));
+        static assert( Apply!(templateOr!(testAlways, testNever), T));
+        static assert( Apply!(templateOr!(testNever, testAlways), T));
+        static assert(!Apply!(templateOr!(), T));
+        static assert(!Apply!(templateOr!(testNever), T));
 
-        static assert( Instantiate!(templateOr!(testAlways, testError), T));
-        static assert( Instantiate!(templateOr!(testNever, testAlways, testError), T));
+        static assert( Apply!(templateOr!(testAlways, testError), T));
+        static assert( Apply!(templateOr!(testNever, testAlways, testError), T));
         // DMD @@BUG@@: Assertion fails for int, seems like a error gagging
         // problem. The bug goes away when removing some of the other template
         // instantiations in the module.
-        // static assert(!is(typeof(Instantiate!(templateOr!(testNever, testError), T))));
+        // static assert(!is(typeof(Apply!(templateOr!(testNever, testError), T))));
     }
 }
 
@@ -1089,6 +1089,34 @@ unittest
         static assert(V == REF[I]);
     }
 }
+
+
+deprecated("Use Apply instead")
+alias Instantiate = Apply;
+
+/**
+ * Instantiates the given template with the supplied list of arguments.
+ *
+ * Used to work around syntactic limitations of D with regard to instantiating
+ * a template from an alias sequence (e.g. `Seq[0]!(Args)` is not valid) or a template
+ * returning another template (e.g. `Foo!(Bar)!(Args)` is not allowed).
+ */
+alias Apply(alias Template, Args...) = Template!Args;
+
+///
+unittest
+{
+    enum size(T) = T.sizeof;
+    alias Seq = AliasSeq!(size);
+    // enum s1 = Seq[0]!byte; // error: semicolon expected, not '!'
+    enum s1 = Apply!(Seq[0], byte);
+    static assert(s1 == 1);
+
+    // enum s2 = Alias!size!byte; // error: multiple ! arguments not allowed
+    enum s2 = Apply!(Alias!size, byte);
+    static assert(s2 == 1);
+}
+
 
 /**
   * $(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially applies)
@@ -1452,14 +1480,3 @@ unittest
     static assert( Pack!(1, int, "abc").equals!(1, int, "abc"));
     static assert(!Pack!(1, int, "abc").equals!(1, int, "cba"));
 }
-
-/*
- * Instantiates the given template with the given list of parameters.
- *
- * Used to work around syntactic limitations of D with regard to instantiating
- * a template from an alias sequence (e.g. T[0]!(...) is not valid) or a template
- * returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
- */
-// TODO: Consider publicly exposing this, maybe even if only for better
-// understandability of error messages.
-alias Instantiate(alias Template, Params...) = Template!Params;
