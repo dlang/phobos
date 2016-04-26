@@ -42,8 +42,8 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(D $(LREF toDelegate)))
         $(TD Converts a callable to a delegate.
     ))
-    $(TR $(TD $(D $(LREF unaryFun)), $(D $(LREF binaryFun)))
-        $(TD Create a unary or binary function from a string. Most often
+    $(TR $(TD `$(LREF unaryFun)`, `$(LREF binaryFun)`, `$(LREF stringLambda)`)
+        $(TD Create a function from a string. Most often
         used when defining algorithms on ranges.
     ))
 )
@@ -103,32 +103,7 @@ function. The string must either use symbol name $(D a) as
 the parameter or provide the symbol via the $(D parmName) argument.
 If $(D fun) is not a string, $(D unaryFun) aliases itself away to $(D fun).
 */
-
-template unaryFun(alias fun, string parmName = "a")
-{
-    static if (is(typeof(fun) : string))
-    {
-        static if (!fun._ctfeMatchUnary(parmName))
-        {
-            import std.traits, std.typecons, std.meta;
-            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
-        }
-        auto unaryFun(ElementType)(auto ref ElementType __a)
-        {
-            mixin("alias " ~ parmName ~ " = __a ;");
-            return mixin(fun);
-        }
-    }
-    else static if (needOpCallAlias!fun)
-    {
-        // Issue 9906
-        alias unaryFun = fun.opCall;
-    }
-    else
-    {
-        alias unaryFun = fun;
-    }
-}
+alias unaryFun(alias fun, string parmName = "a") = stringLambda!(fun, parmName);
 
 ///
 unittest
@@ -187,35 +162,8 @@ provide the symbols via the $(D parm1Name) and $(D parm2Name) arguments.
 If $(D fun) is not a string, $(D binaryFun) aliases itself away to
 $(D fun).
 */
-
-template binaryFun(alias fun, string parm1Name = "a",
-        string parm2Name = "b")
-{
-    static if (is(typeof(fun) : string))
-    {
-        static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
-        {
-            import std.traits, std.typecons, std.meta;
-            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
-        }
-        auto binaryFun(ElementType1, ElementType2)
-            (auto ref ElementType1 __a, auto ref ElementType2 __b)
-        {
-            mixin("alias "~parm1Name~" = __a ;");
-            mixin("alias "~parm2Name~" = __b ;");
-            return mixin(fun);
-        }
-    }
-    else static if (needOpCallAlias!fun)
-    {
-        // Issue 9906
-        alias binaryFun = fun.opCall;
-    }
-    else
-    {
-        alias binaryFun = fun;
-    }
-}
+alias binaryFun(alias fun, string parm1Name = "a", string parm2Name = "b") =
+    stringLambda!(fun, parm1Name, parm2Name);
 
 ///
 unittest
@@ -260,165 +208,287 @@ unittest
     static assert(!is(typeof(binaryFun!FuncObj)));
 }
 
-// skip all ASCII chars except a..z, A..Z, 0..9, '_' and '.'.
-private uint _ctfeSkipOp(ref string op)
-{
-    if (!__ctfe) assert(false);
-    import std.ascii : isASCII, isAlphaNum;
-    immutable oldLength = op.length;
-    while (op.length)
-    {
-        immutable front = op[0];
-        if(front.isASCII() && !(front.isAlphaNum() || front == '_' || front == '.'))
-            op = op[1..$];
-        else
-            break;
-    }
-    return oldLength != op.length;
-}
+/**
+Transforms a string representing an expression into a n-ary function.
+$(UL
+    $(LI `paramNames` is a list of function parameter names.)
+    $(LI `args[index]` can also be used to access any parameter by index)
+ )
 
-// skip all digits
-private uint _ctfeSkipInteger(ref string op)
+If `fun` is not a `string`,  `stringLambda` aliases itself to `fun`.
+In such cases, `stringLambda` does $(B not) verify that `fun` accepts
+the specified number of arguments. (Try $(XREF traits, arity) instead.)
+*/
+template stringLambda(alias fun, paramNames...)
+    if (paramNames.length > 0 && allSatisfy!(isSomeString, typeof(paramNames)))
 {
-    if (!__ctfe) assert(false);
-    import std.ascii : isDigit;
-    immutable oldLength = op.length;
-    while (op.length)
+    static if (is(typeof(fun) : string))
     {
-        immutable front = op[0];
-        if(front.isDigit())
-            op = op[1..$];
-        else
-            break;
-    }
-    return oldLength != op.length;
-}
-
-// skip name
-private uint _ctfeSkipName(ref string op, string name)
-{
-    if (!__ctfe) assert(false);
-    if (op.length >= name.length && op[0..name.length] == name)
-    {
-        op = op[name.length..$];
-        return 1;
-    }
-    return 0;
-}
-
-// returns 1 if $(D fun) is trivial unary function
-private uint _ctfeMatchUnary(string fun, string name)
-{
-    if (!__ctfe) assert(false);
-    import std.stdio;
-    fun._ctfeSkipOp();
-    for (;;)
-    {
-        immutable h = fun._ctfeSkipName(name) + fun._ctfeSkipInteger();
-        if (h == 0)
+        static if (fun.strLambdaNeedsImports(paramNames))
         {
-            fun._ctfeSkipOp();
-            break;
+            import std.traits, std.typecons, std.typetuple;
+            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         }
-        else if (h == 1)
+
+        auto stringLambda(ArgTypes...)(auto ref ArgTypes args)
+            if (ArgTypes.length == paramNames.length)
         {
-            if(!fun._ctfeSkipOp())
-                break;
+            mixin(strLambdaAliases!paramNames);
+            return mixin(fun);
         }
-        else
-            return 0;
     }
-    return fun.length == 0;
+    else static if (needOpCallAlias!fun)
+    {
+        // Issue 9906
+        alias stringLambda = fun.opCall;
+    }
+    else
+    {
+        alias stringLambda = fun;
+    }
+}
+
+/*
+ * This generates the string of aliases used by stringLamda.
+ * The stringLambda parameter aliases mixin depends only on paramNames, not fun.
+ * Therefore, compilation can be sped up by generating it at global scope and
+ * memoizing it as a template, instead of regenerating it with every
+ * stringLambda instantiation.
+ */
+private template strLambdaAliases(paramNames...) if (paramNames.length > 0)
+{
+    enum strLambdaAliases = function()
+    {
+        // NO IMPORTS
+        if (!__ctfe) assert(false);
+
+        char[20] iStr_buff;
+        auto iStr = iStr_buff[($-1) .. $];
+        iStr[0] = '0';
+        void incIdx(ref char[] iStr)
+        {
+            ptrdiff_t x = iStr.length - 1;
+            while(true)
+            {
+                ++(iStr[x]);
+                if(iStr[x] <= '9')
+                    return;
+
+                iStr[x] = '0';
+                --x;
+
+                if(x < 0)
+                {
+                    iStr = iStr_buff[($ - (iStr.length + 1)) .. $];
+                    iStr[0] = '1';
+                    return;
+                }
+            }
+        }
+
+        // minimize reallocations by guessing how big the buffer needs to be
+        enum line = "alias  = args[];\n".length;
+        auto ret_buff = new char[paramNames.length * (line + 8)];
+        auto ret = ret_buff[0 .. 0];
+        void put(in char[] append)
+        {
+            ret = ret_buff[0 .. (ret.length + append.length)];
+            ret[($ - append.length) .. $] = append;
+        }
+        void addName(in char[] name, in char[] i)
+        {
+            while(ret_buff.length < (ret.length + line + name.length + i.length))
+                ret_buff.length *= 2;
+
+            put("alias ");
+            put(name);
+            put(" = args[");
+            put(i);
+            put("];\n");
+        }
+
+        // first create aliases from the specified param names
+        foreach(name; paramNames)
+        {
+            addName(name, iStr);
+            incIdx(iStr);
+        }
+
+        return cast(string) ret;
+    }();
 }
 
 unittest
 {
-    static assert(!_ctfeMatchUnary("sqrt(ё)", "ё"));
-    static assert(!_ctfeMatchUnary("ё.sqrt", "ё"));
-    static assert(!_ctfeMatchUnary(".ё+ё", "ё"));
-    static assert(!_ctfeMatchUnary("_ё+ё", "ё"));
-    static assert(!_ctfeMatchUnary("ёё", "ё"));
-    static assert(_ctfeMatchUnary("a+a", "a"));
-    static assert(_ctfeMatchUnary("a + 10", "a"));
-    static assert(_ctfeMatchUnary("4 == a", "a"));
-    static assert(_ctfeMatchUnary("2==a", "a"));
-    static assert(_ctfeMatchUnary("1 != a", "a"));
-    static assert(_ctfeMatchUnary("a!=4", "a"));
-    static assert(_ctfeMatchUnary("a< 1", "a"));
-    static assert(_ctfeMatchUnary("434 < a", "a"));
-    static assert(_ctfeMatchUnary("132 > a", "a"));
-    static assert(_ctfeMatchUnary("123 >a", "a"));
-    static assert(_ctfeMatchUnary("a>82", "a"));
-    static assert(_ctfeMatchUnary("ё>82", "ё"));
-    static assert(_ctfeMatchUnary("ё[ё(ё)]", "ё"));
-    static assert(_ctfeMatchUnary("ё[21]", "ё"));
+    // default names
+    static assert(strLambdaAliases!("a") == "alias a = args[0];\n");
+
+    static assert(strLambdaAliases!("a", "b")
+        == "alias a = args[0];\nalias b = args[1];\n");
+
+    // longer names
+    static assert(strLambdaAliases!("foo")
+        == "alias foo = args[0];\n");
+    static assert(strLambdaAliases!("foo", "ping")
+        == "alias foo = args[0];\nalias ping = args[1];\n");
+
+    // reallocation
+    static assert(strLambdaAliases!("a123456789b123456789")
+        == "alias a123456789b123456789 = args[0];\n");
+    static assert(strLambdaAliases!("a123456789b123456789c123456789d123456789")
+        == "alias a123456789b123456789c123456789d123456789 = args[0];\n");
 }
 
-// returns 1 if $(D fun) is trivial binary function
-private uint _ctfeMatchBinary(string fun, string name1, string name2)
+///
+unittest
+{
+    // generated param names
+    alias sum = stringLambda!("a + b + c", "a", "b", "c");
+    assert(sum(1, 2, 3) == 6);
+
+    // explicit param names
+    alias prod = stringLambda!("x * y * z * w", "x", "y", "z", "w");
+    assert(prod(2,3,4,5) == 120);
+
+    // library function invocation
+    alias least = stringLambda!("min(a,b,c)", "a", "b", "c");
+    assert(least(5, 3, 7) == 3);
+
+    // aliasSeqOf can be useful to generate many param names.
+    // here, a..z are used as param names.
+    import std.conv : to;
+    import std.meta : aliasSeqOf;
+    import std.range : iota;
+    import std.ascii : lowercase;
+    import std.algorithm : map;
+
+    // many(0, 1, 2, ..., 24, 25) -> a = 0, b = 1, y = 24, z = 25
+    alias paramNames = aliasSeqOf!(lowercase[].map!(x => x.to!string));
+    alias many = stringLambda!("[a,b,y,z]", paramNames);
+    assert(many(aliasSeqOf!(0.iota(26))) == [0,1,24,25]);
+
+    // use args[n] to refer to a parameter by index
+    alias mix = stringLambda!("[w,x,args[2],args[3]]", "w", "x", "y", "z");
+    assert(mix(1,2,3,4) == [1,2,3,4]);
+}
+
+// returns true if `fun` contains symbols other than its parameters
+private bool strLambdaNeedsImports(string fun, const(string[]) names...)
 {
     if (!__ctfe) assert(false);
-    fun._ctfeSkipOp();
-    for (;;)
-    {
-        immutable h = fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger();
-        if (h == 0)
-        {
-            fun._ctfeSkipOp();
-            break;
-        }
-        else if (h == 1)
-        {
-            if(!fun._ctfeSkipOp())
-                break;
-        }
-        else
-            return 0;
+
+    size_t maxSym = ".length".length;
+    bool[string] known = [
+        "args"    : true,
+        ".length" : true
+    ];
+    foreach(name; names) {
+        if(name.length > maxSym)
+            maxSym = name.length;
+
+        known[name] = true;
     }
-    return fun.length == 0;
+    known = known.rehash;
+
+    char[] symBuff = new char[maxSym];
+    char[] sym;
+    bool inSym =  false;
+    foreach(char ch; fun)
+    {
+        const alphish = (ch >= 'A' && ch <= 'z')?
+            (ch >= '_' && ch != '`') || (ch <= 'Z') :
+            (ch > 0x7F);
+        /* Non-ASCII (ch > 0x7F) are probably part of an identifier.
+           Worst case, we'll just waste a little time importing stuff we don't need. */
+
+        if(inSym)
+        {
+            if(sym[$ - 1] == '.')
+            {
+                import std.ascii : isWhite;
+                if(isWhite(ch))
+                    continue;
+            }
+
+            if(alphish || (ch >= '0' && ch <= '9'))
+            {
+                if(sym.length < maxSym)
+                {
+                    sym = symBuff[0 .. (sym.length + 1)];
+                    sym[$ - 1] = ch;
+                } else
+                    return true;
+            }
+            else
+            {
+                if(!(sym in known))
+                    return true;
+
+                inSym = false;
+            }
+        }
+
+        if(!inSym)
+        {
+            if(alphish || ch == '.')
+            {
+                inSym = true;
+                sym = symBuff[0 .. 1];
+                sym[0] = ch;
+            }
+        }
+    }
+
+    return inSym? !(sym in known) : false;
 }
 
+
 unittest {
+    static assert( strLambdaNeedsImports("sqrt(ё)", "ё", "b"));
+    static assert( strLambdaNeedsImports("ё.sqrt", "ё", "b"));
+    static assert( strLambdaNeedsImports(".ё+ё", "ё", "b"));
+    static assert( strLambdaNeedsImports("_ё+ё", "ё", "b"));
+    static assert( strLambdaNeedsImports("ёё", "ё", "b"));
+    static assert(!strLambdaNeedsImports("a+a", "a", "b"));
+    static assert(!strLambdaNeedsImports("a + 10", "a", "b"));
+    static assert(!strLambdaNeedsImports("4 == a", "a", "b"));
+    static assert(!strLambdaNeedsImports("2==a", "a", "b"));
+    static assert(!strLambdaNeedsImports("1 != a", "a", "b"));
+    static assert(!strLambdaNeedsImports("a!=4", "a", "b"));
+    static assert(!strLambdaNeedsImports("a< 1", "a", "b"));
+    static assert(!strLambdaNeedsImports("434 < a", "a", "b"));
+    static assert(!strLambdaNeedsImports("132 > a", "a", "b"));
+    static assert(!strLambdaNeedsImports("123 >a", "a", "b"));
+    static assert(!strLambdaNeedsImports("a>82", "a", "b"));
+    static assert(!strLambdaNeedsImports("ё>82", "ё", "q"));
+    static assert(!strLambdaNeedsImports("ё[ё(10)]", "ё", "q"));
+    static assert(!strLambdaNeedsImports("ё[21]", "ё", "q"));
 
-    static assert(!_ctfeMatchBinary("sqrt(ё)", "ё", "b"));
-    static assert(!_ctfeMatchBinary("ё.sqrt", "ё", "b"));
-    static assert(!_ctfeMatchBinary(".ё+ё", "ё", "b"));
-    static assert(!_ctfeMatchBinary("_ё+ё", "ё", "b"));
-    static assert(!_ctfeMatchBinary("ёё", "ё", "b"));
-    static assert(_ctfeMatchBinary("a+a", "a", "b"));
-    static assert(_ctfeMatchBinary("a + 10", "a", "b"));
-    static assert(_ctfeMatchBinary("4 == a", "a", "b"));
-    static assert(_ctfeMatchBinary("2==a", "a", "b"));
-    static assert(_ctfeMatchBinary("1 != a", "a", "b"));
-    static assert(_ctfeMatchBinary("a!=4", "a", "b"));
-    static assert(_ctfeMatchBinary("a< 1", "a", "b"));
-    static assert(_ctfeMatchBinary("434 < a", "a", "b"));
-    static assert(_ctfeMatchBinary("132 > a", "a", "b"));
-    static assert(_ctfeMatchBinary("123 >a", "a", "b"));
-    static assert(_ctfeMatchBinary("a>82", "a", "b"));
-    static assert(_ctfeMatchBinary("ё>82", "ё", "q"));
-    static assert(_ctfeMatchBinary("ё[ё(10)]", "ё", "q"));
-    static assert(_ctfeMatchBinary("ё[21]", "ё", "q"));
+    static assert( strLambdaNeedsImports("sqrt(ё)+b", "b", "ё"));
+    static assert( strLambdaNeedsImports("ё.sqrt-b", "b", "ё"));
+    static assert( strLambdaNeedsImports(".ё+b", "b", "ё"));
+    static assert( strLambdaNeedsImports("_b+ё", "b", "ё"));
+    static assert( strLambdaNeedsImports("ba", "b", "a"));
+    static assert(!strLambdaNeedsImports("a+b", "b", "a"));
+    static assert(!strLambdaNeedsImports("a + b", "b", "a"));
+    static assert(!strLambdaNeedsImports("b == a", "b", "a"));
+    static assert(!strLambdaNeedsImports("b==a", "b", "a"));
+    static assert(!strLambdaNeedsImports("b != a", "b", "a"));
+    static assert(!strLambdaNeedsImports("a!=b", "b", "a"));
+    static assert(!strLambdaNeedsImports("a< b", "b", "a"));
+    static assert(!strLambdaNeedsImports("b < a", "b", "a"));
+    static assert(!strLambdaNeedsImports("b > a", "b", "a"));
+    static assert(!strLambdaNeedsImports("b >a", "b", "a"));
+    static assert(!strLambdaNeedsImports("a>b", "b", "a"));
+    static assert(!strLambdaNeedsImports("ё>b", "b", "ё"));
+    static assert(!strLambdaNeedsImports("b[ё(-1)]", "b", "ё"));
+    static assert(!strLambdaNeedsImports("ё[-21]", "b", "ё"));
 
-    static assert(!_ctfeMatchBinary("sqrt(ё)+b", "b", "ё"));
-    static assert(!_ctfeMatchBinary("ё.sqrt-b", "b", "ё"));
-    static assert(!_ctfeMatchBinary(".ё+b", "b", "ё"));
-    static assert(!_ctfeMatchBinary("_b+ё", "b", "ё"));
-    static assert(!_ctfeMatchBinary("ba", "b", "a"));
-    static assert(_ctfeMatchBinary("a+b", "b", "a"));
-    static assert(_ctfeMatchBinary("a + b", "b", "a"));
-    static assert(_ctfeMatchBinary("b == a", "b", "a"));
-    static assert(_ctfeMatchBinary("b==a", "b", "a"));
-    static assert(_ctfeMatchBinary("b != a", "b", "a"));
-    static assert(_ctfeMatchBinary("a!=b", "b", "a"));
-    static assert(_ctfeMatchBinary("a< b", "b", "a"));
-    static assert(_ctfeMatchBinary("b < a", "b", "a"));
-    static assert(_ctfeMatchBinary("b > a", "b", "a"));
-    static assert(_ctfeMatchBinary("b >a", "b", "a"));
-    static assert(_ctfeMatchBinary("a>b", "b", "a"));
-    static assert(_ctfeMatchBinary("ё>b", "b", "ё"));
-    static assert(_ctfeMatchBinary("b[ё(-1)]", "b", "ё"));
-    static assert(_ctfeMatchBinary("ё[-21]", "b", "ё"));
+    static assert( strLambdaNeedsImports("sqrt(a)+b-c", "a", "b", "c"));
+    static assert( strLambdaNeedsImports("a.sqrt-c+b", "a", "b", "c"));
+    static assert(!strLambdaNeedsImports("a+b+c", "a", "b", "c"));
+    static assert(!strLambdaNeedsImports("args.length + args[1] + args[0] + a + b", "b", "a"));
+    static assert(!strLambdaNeedsImports("args    .  length"));
 }
 
 //undocumented
