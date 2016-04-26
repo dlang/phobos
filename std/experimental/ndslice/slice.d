@@ -414,7 +414,10 @@ private template _Range_Values(Names...)
 private template _Range_DeclarationList(Names...)
 {
     static if (Names.length)
-        enum string _Range_DeclarationList = "Range_" ~ Names[0] ~ " range_" ~ Names[0] ~ ", " ~ _Range_DeclarationList!(Names[1..$]);
+    {
+        enum string _Range_DeclarationList = "Range_" ~ Names[0] ~ " range_"
+             ~ Names[0] ~ ", " ~ _Range_DeclarationList!(Names[1..$]);
+    }
     else
         enum string _Range_DeclarationList = "";
 }
@@ -422,7 +425,10 @@ private template _Range_DeclarationList(Names...)
 private template _Slice_DeclarationList(Names...)
 {
     static if (Names.length)
-        enum string _Slice_DeclarationList = "Slice!(N, Range_" ~ Names[0] ~ ") slice_" ~ Names[0] ~ ", " ~ _Slice_DeclarationList!(Names[1..$]);
+    {
+        enum string _Slice_DeclarationList = "Slice!(N, Range_" ~ Names[0] ~ ") slice_"
+             ~ Names[0] ~ ", " ~ _Slice_DeclarationList!(Names[1..$]);
+    }
     else
         enum string _Slice_DeclarationList = "";
 }
@@ -1141,19 +1147,6 @@ struct Slice(size_t _N, _Range)
         mixin(mathIndexStrideCode);
     }
 
-    this(ref in size_t[PureN] lengths, ref in sizediff_t[PureN] strides, PureRange range)
-    {
-        foreach (i; Iota!(0, PureN))
-            _lengths[i] = lengths[i];
-        foreach (i; Iota!(0, PureN))
-            _strides[i] = strides[i];
-        static if (hasPtrBehavior!PureRange)
-            _ptr = range;
-        else
-            _ptr._range = range;
-
-    }
-
     static if (!hasPtrBehavior!PureRange)
     this(ref in size_t[PureN] lengths, ref in sizediff_t[PureN] strides, PtrShell!PureRange shell)
     {
@@ -1165,6 +1158,49 @@ struct Slice(size_t _N, _Range)
     }
 
     public:
+
+    /++
+    This constructor should be used only for integration with other languages or libraries such as Julia and numpy.
+    Params:
+        lengths = lengths
+        strides = strides
+        range = range or pointer to iterate on
+    +/
+    this(ref in size_t[PureN] lengths, ref in sizediff_t[PureN] strides, PureRange range)
+    {
+        foreach (i; Iota!(0, PureN))
+            _lengths[i] = lengths[i];
+        foreach (i; Iota!(0, PureN))
+            _strides[i] = strides[i];
+        static if (hasPtrBehavior!PureRange)
+            _ptr = range;
+        else
+            _ptr._range = range;
+    }
+
+    /++
+    Returns:
+        pointer to the first element of a slice if slice is defined as `Slice!(N, T*)` or
+        plain structure with two fields `shift` and `range` otherwise. In second case the expression `range[shift]`
+        refers to the first element. For slices with named elements the type of a return value has the same behavior like a pointer.
+    Note:
+        `ptr` is defined only for not packed slices.
+    Attention:
+        `ptr` refers to the first element in the memory representation if and only if all strides are positive.
+    +/
+    static if (is(PureRange == Range))
+    auto ptr() @property
+    {
+        static if (hasPtrBehavior!PureRange)
+        {
+            return _ptr;
+        }
+        else
+        {
+            static struct Ptr { size_t shift; Range range; }
+            return Ptr(_ptr._shift, _ptr._range);
+        }
+    }
 
     /++
     Returns: static array of lengths
@@ -1452,7 +1488,8 @@ struct Slice(size_t _N, _Range)
         if (dimension < N)
     {
         pragma(inline, true);
-        assert(n <= _lengths[dimension], __FUNCTION__ ~ ": n should be less than or equal to length!" ~ dimension.stringof);
+        assert(n <= _lengths[dimension],
+            __FUNCTION__ ~ ": n should be less than or equal to length!" ~ dimension.stringof);
         _lengths[dimension] -= n;
         _ptr += _strides[dimension] * n;
     }
@@ -1462,7 +1499,8 @@ struct Slice(size_t _N, _Range)
         if (dimension < N)
     {
         pragma(inline, true);
-        assert(n <= _lengths[dimension], __FUNCTION__ ~ ": n should be less than or equal to length!" ~ dimension.stringof);
+        assert(n <= _lengths[dimension],
+            __FUNCTION__ ~ ": n should be less than or equal to length!" ~ dimension.stringof);
         _lengths[dimension] -= n;
     }
 
@@ -1650,9 +1688,10 @@ struct Slice(size_t _N, _Range)
     in   {
         assert(i <= j,
             "Slice.opSlice!" ~ dimension.stringof ~ ": the left bound must be less than or equal to the right bound.");
+        enum errorMsg = ": difference between the right and the left bounds"
+                        ~ " must be less than or equal to the length of the given dimension.";
         assert(j - i <= _lengths[dimension],
-            "Slice.opSlice!" ~ dimension.stringof ~
-            ": difference between the right and the left bounds must be less than or equal to the length of the given dimension.");
+              "Slice.opSlice!" ~ dimension.stringof ~ errorMsg);
     }
     body
     {
@@ -1715,6 +1754,24 @@ struct Slice(size_t _N, _Range)
         size_t[2] indexQ = [3, 1];
         assert(slice[indexQ] == 4);  // D & C order
         assert(slice(indexP) == 4);  // Math & Fortran order
+    }
+
+    static if (doUnittest)
+    pure nothrow unittest
+    {
+        // check with different PureN
+        import std.experimental.ndslice.selection: pack, iotaSlice;
+        auto pElements = iotaSlice(2, 3, 4, 5).pack!2;
+        import std.range: iota;
+        import std.algorithm.comparison: equal;
+
+        // D & C order
+        assert(pElements[$-1, $-1][$-1].equal([5].iotaSlice(115)));
+        assert(pElements[[1, 2]][$-1].equal([5].iotaSlice(115)));
+
+        // Math & Fortran
+        assert(pElements(2, 1)[$-1].equal([5].iotaSlice(115)));
+        assert(pElements([2, 1])[$-1].equal([5].iotaSlice(115)));
     }
 
     /++
@@ -1799,7 +1856,8 @@ struct Slice(size_t _N, _Range)
                 && RN <= ReturnType!(opIndex!Slices).N)
         {
             auto slice = this[slices];
-            assert(slice._lengths[$ - RN .. $] == value._lengths, __FUNCTION__ ~ ": argument must have the corresponding shape.");
+            assert(slice._lengths[$ - RN .. $] == value._lengths,
+                __FUNCTION__ ~ ": argument must have the corresponding shape.");
             version(none) //future optimization
             static if ((isPointer!Range || isDynamicArray!Range) && (isPointer!RRange || isDynamicArray!RRange))
             {
@@ -2751,6 +2809,12 @@ private auto ptrShell(Range)(Range range, sizediff_t shift = 0)
         assert(ptr[0] == save0 + 11);
         (ptr + 5)[2] = 333;
         assert(range[7] == 333);
+
+        auto ptrCopy = ptr.save;
+        ptrCopy._range.popFront;
+        ptr[1] = 2;
+        assert(ptr[0] == save0 + 11);
+        assert(ptrCopy[0] == 2);
     }
 }
 
@@ -2771,6 +2835,17 @@ pure nothrow unittest
         slice[5 .. $][2] = 333;
         assert(range[7] == 333);
     }
+}
+
+unittest
+{
+    int[] arr = [1, 2, 3];
+    auto ptr = arr.ptrShell;
+    assert(ptr[0] == 1);
+    auto ptrCopy = ptr.save;
+    ptrCopy._range.popFront;
+    assert(ptr[0] == 1);
+    assert(ptrCopy[0] == 2);
 }
 
 private enum isSlicePointer(T) = isPointer!T || is(T : PtrShell!R, R);
@@ -2850,7 +2925,6 @@ private template PtrTuple(Names...)
 pure nothrow unittest
 {
     auto a = new int[20], b = new int[20];
-    import std.stdio;
     alias T = PtrTuple!("a", "b");
     alias S = T!(int*, int*);
     auto t = S(a.ptr, b.ptr);
@@ -2902,12 +2976,14 @@ private enum bool isType(T) = true;
 
 private enum isStringValue(alias T) = is(typeof(T) : string);
 
-private void _indexAssign(bool lastStrideEquals1, string op, size_t N, size_t RN, Range, RRange)(Slice!(N, Range) slice, Slice!(RN, RRange) value)
+private void _indexAssign(bool lastStrideEquals1, string op, size_t N, size_t RN, Range, RRange)
+                         (Slice!(N, Range) slice, Slice!(RN, RRange) value)
     if (N >= RN)
 {
     static if (N == 1)
     {
-        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range) && (isPointer!RRange || isDynamicArray!RRange))
+        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range)
+                   && (isPointer!RRange || isDynamicArray!RRange))
         {
             static if (isPointer!Range)
                 auto l = slice._ptr;
