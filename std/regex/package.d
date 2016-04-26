@@ -426,47 +426,80 @@ private:
     R _input;
     int _nMatch;
     enum smallString = 3;
+    enum SMALL_MASK = 0x8000_0000, REF_MASK= 0x1FFF_FFFF;
     union
     {
         Group!DataIndex[] big_matches;
         Group!DataIndex[smallString] small_matches;
     }
     uint _f, _b;
-    uint _ngroup;
+    uint _refcount; // ref count or SMALL MASK + num groups
     NamedGroup[] _names;
 
-    this()(R input, uint ngroups, NamedGroup[] named)
+    this()(R input, uint n, NamedGroup[] named)
     {
         _input = input;
-        _ngroup = ngroups;
         _names = named;
-        newMatches();
-        _b = _ngroup;
+        newMatches(n);
+        _b = n;
         _f = 0;
     }
 
     this(alias Engine)(ref RegexMatch!(R,Engine) rmatch)
     {
         _input = rmatch._input;
-        _ngroup = rmatch._engine.re.ngroup;
         _names = rmatch._engine.re.dict;
-        newMatches();
-        _b = _ngroup;
+        immutable n = rmatch._engine.re.ngroup;
+        newMatches(n);
+        _b = n;
         _f = 0;
     }
 
     @property Group!DataIndex[] matches()
     {
-       return _ngroup > smallString ? big_matches : small_matches[0 .. _ngroup];
+       return (_refcount & SMALL_MASK)  ? small_matches[0 .. _refcount & 0xFF] : big_matches;
     }
 
-    void newMatches()
+    void newMatches(uint n)
     {
-        if(_ngroup > smallString)
-            big_matches = new Group!DataIndex[_ngroup];
+        import core.stdc.stdlib;
+        if(n > smallString)
+        {
+            auto p = cast(Group!DataIndex*)enforce(calloc(Group!DataIndex.sizeof,n), "Failed to allocate Captures struct");
+            big_matches = p[0..n];
+            _refcount = 1;
+        }
+        else
+        {
+            _refcount = SMALL_MASK | n;
+        }
+    }
+
+    bool unique()
+    {
+        return (_refcount & SMALL_MASK) || _refcount == 1;
     }
 
 public:
+    this(this)
+    {
+        if(!(_refcount & SMALL_MASK))
+        {
+            _refcount++;
+        }
+    }
+    ~this()
+    {
+        import core.stdc.stdlib;
+        if(!(_refcount & SMALL_MASK))
+        {
+            if(--_refcount == 0)
+            {
+                free(big_matches.ptr);
+                big_matches = null;
+            }
+        }
+    }
     ///Slice of input prior to the match.
     @property R pre()
     {
@@ -708,8 +741,12 @@ public:
             _engine = _engine.dupTo(_memory[size_t.sizeof..size]);
             counter = 1;//points to new chunk
         }
-        //previous _captures can have escaped references from Capture object
-        _captures.newMatches();
+
+        if(!_captures.unique)
+        {
+            // has external references - allocate new space
+            _captures.newMatches(_engine.re.ngroup);
+        }
         _captures._nMatch = _engine.match(_captures.matches);
     }
 
