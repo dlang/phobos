@@ -319,6 +319,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
     } else static if (!is(Unqual!R == R)) {
         alias InputRangeObject = InputRangeObject!(Unqual!R);
     } else {
+        import std.algorithm.mutation: moveFront, moveBack, moveAt;
 
         ///
         class InputRangeObject : MostDerivedInputRange!(R) {
@@ -465,6 +466,7 @@ unittest
     import std.internal.test.dummyrange;
     import std.algorithm : equal;
     import std.array;
+    import std.algorithm.mutation: moveFront, moveBack, moveAt;
 
     static void testEquality(R)(iInputRange r1, R r2) {
         assert(equal(r1, r2));

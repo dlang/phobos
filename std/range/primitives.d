@@ -36,18 +36,11 @@ $(BOOKTABLE ,
 It also provides number of templates that test for various _range capabilities:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF hasMobileElements)))
-        $(TD Tests if a given _range's elements can be moved around using the
-        primitives $(D moveFront), $(D moveBack), or $(D moveAt).
-    ))
     $(TR $(TD $(D $(LREF ElementType)))
         $(TD Returns the element type of a given _range.
     ))
     $(TR $(TD $(D $(LREF ElementEncodingType)))
         $(TD Returns the encoding element type of a given _range.
-    ))
-    $(TR $(TD $(D $(LREF hasSwappableElements)))
-        $(TD Tests if a _range is a forward _range with swappable elements.
     ))
     $(TR $(TD $(D $(LREF hasAssignableElements)))
         $(TD Tests if a _range is a forward _range with mutable elements.
@@ -85,15 +78,6 @@ $(BOOKTABLE ,
         $(TD Advances a given bidirectional _range from the right by exactly
         $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF moveFront)))
-        $(TD Removes the front element of a _range.
-    ))
-    $(TR $(TD $(D $(LREF moveBack)))
-        $(TD Removes the back element of a bidirectional _range.
-    ))
-    $(TR $(TD $(D $(LREF moveAt)))
-        $(TD Removes the $(I i)'th element of a random-access _range.
-    ))
     $(TR $(TD $(D $(LREF walkLength)))
         $(TD Computes the length of any _range in O(n) time.
     ))
@@ -116,6 +100,9 @@ to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
 module std.range.primitives;
 
 import std.traits;
+
+// Remove in May 2018. @@@DEPRECATED_2018-05@@@
+static import std.algorithm.mutation;
 
 /**
 Returns $(D true) if $(D R) is an input range. An input range must
@@ -1029,62 +1016,9 @@ unittest
     static assert(isOutputRange!(R, int));
 }
 
-/**
-Returns $(D true) iff $(D R) is an input range that supports the
-$(D moveFront) primitive, as well as $(D moveBack) and $(D moveAt) if it's a
-bidirectional or random access range. These may be explicitly implemented, or
-may work via the default behavior of the module level functions $(D moveFront)
-and friends. The following code should compile for any range
-with mobile elements.
-
-----
-alias E = ElementType!R;
-R r;
-static assert(isInputRange!R);
-static assert(is(typeof(moveFront(r)) == E));
-static if (isBidirectionalRange!R)
-    static assert(is(typeof(moveBack(r)) == E));
-static if (isRandomAccessRange!R)
-    static assert(is(typeof(moveAt(r, 0)) == E));
-----
- */
-template hasMobileElements(R)
-{
-    enum bool hasMobileElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        alias E = ElementType!R;
-        R r = R.init;
-        static assert(is(typeof(moveFront(r)) == E));
-        static if (isBidirectionalRange!R)
-            static assert(is(typeof(moveBack(r)) == E));
-        static if (isRandomAccessRange!R)
-            static assert(is(typeof(moveAt(r, 0)) == E));
-    }));
-}
-
-///
-@safe unittest
-{
-    import std.algorithm : map;
-    import std.range : iota, repeat;
-
-    static struct HasPostblit
-    {
-        this(this) {}
-    }
-
-    auto nonMobile = map!"a"(repeat(HasPostblit.init));
-    static assert(!hasMobileElements!(typeof(nonMobile)));
-    static assert( hasMobileElements!(int[]));
-    static assert( hasMobileElements!(inout(int)[]));
-    static assert( hasMobileElements!(typeof(iota(1000))));
-
-    static assert( hasMobileElements!( string));
-    static assert( hasMobileElements!(dstring));
-    static assert( hasMobileElements!( char[]));
-    static assert( hasMobileElements!(dchar[]));
-}
+// Explicitly undocumented. It will be removed in May 2018. @@@DEPRECATED_2018-05@@@
+deprecated("Please use std.algorithm.mutation.hasMobileElements instead.")
+alias hasMobileElements = std.algorithm.mutation.hasMobileElements;
 
 /**
 The element type of $(D R). $(D R) does not have to be a range. The
@@ -1238,45 +1172,8 @@ template ElementEncodingType(R)
     static assert(is(ElementEncodingType!(char[0]) == char));
 }
 
-/**
-Returns $(D true) if $(D R) is an input range and has swappable
-elements. The following code should compile for any range
-with swappable elements.
-
-----
-R r;
-static assert(isInputRange!R);
-swap(r.front, r.front);
-static if (isBidirectionalRange!R) swap(r.back, r.front);
-static if (isRandomAccessRange!R) swap(r[], r.front);
-----
- */
-template hasSwappableElements(R)
-{
-    import std.algorithm.mutation : swap;
-    enum bool hasSwappableElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        swap(r.front, r.front);
-        static if (isBidirectionalRange!R) swap(r.back, r.front);
-        static if (isRandomAccessRange!R) swap(r[0], r.front);
-    }));
-}
-
-///
-@safe unittest
-{
-    static assert(!hasSwappableElements!(const int[]));
-    static assert(!hasSwappableElements!(const(int)[]));
-    static assert(!hasSwappableElements!(inout(int)[]));
-    static assert( hasSwappableElements!(int[]));
-
-    static assert(!hasSwappableElements!( string));
-    static assert(!hasSwappableElements!(dstring));
-    static assert(!hasSwappableElements!( char[]));
-    static assert( hasSwappableElements!(dchar[]));
-}
+deprecated("Please use std.algorithm.mutation.hasSwappableElements instead.")
+alias hasSwappableElements = std.algorithm.mutation.hasSwappableElements;
 
 /**
 Returns $(D true) if $(D R) is an input range and has mutable
@@ -1850,143 +1747,17 @@ void popBackExactly(Range)(ref Range r, size_t n)
     assert(bd.equal([2]));
 }
 
-/**
-   Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
-   destroyable state that does not allocate any resources (usually equal
-   to its $(D .init) value).
-*/
-ElementType!R moveFront(R)(R r)
-{
-    static if (is(typeof(&r.moveFront))) {
-        return r.moveFront();
-    } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
-        return r.front;
-    } else static if (is(typeof(&(r.front())) == ElementType!R*)) {
-        import std.algorithm.mutation : move;
-        return move(r.front);
-    } else {
-        static assert(0,
-                "Cannot move front of a range with a postblit and an rvalue front.");
-    }
-}
+// Explicitly undocumented. It will be removed in May 2018. @@@DEPRECATED_2018-05@@@
+deprecated("Please use std.algorithm.mutation.moveFront instead.")
+alias moveFront = std.algorithm.mutation.moveFront;
+// Explicitly undocumented. It will be removed in May 2018. @@@DEPRECATED_2018-05@@@
+deprecated("Please use std.algorithm.mutation.moveBack instead.")
+alias moveBack = std.algorithm.mutation.moveBack;
+// Explicitly undocumented. It will be removed in May 2018. @@@DEPRECATED_2018-05@@@
+deprecated("Please use std.algorithm.mutation.moveAt instead.")
+alias moveAt= std.algorithm.mutation.moveAt;
 
-///
-@safe unittest
-{
-    auto a = [ 1, 2, 3 ];
-    assert(moveFront(a) == 1);
-    assert(a.length == 3);
 
-    // define a perfunctory input range
-    struct InputRange
-    {
-        enum bool empty = false;
-        enum int front = 7;
-        void popFront() {}
-        int moveFront() { return 43; }
-    }
-    InputRange r;
-    // calls r.moveFront
-    assert(moveFront(r) == 43);
-}
-
-@safe unittest
-{
-    struct R
-    {
-        @property ref int front() { static int x = 42; return x; }
-        this(this){}
-    }
-    R r;
-    assert(moveFront(r) == 42);
-}
-
-/**
-   Moves the back of $(D r) out and returns it. Leaves $(D r.back) in a
-   destroyable state that does not allocate any resources (usually equal
-   to its $(D .init) value).
-*/
-ElementType!R moveBack(R)(R r)
-{
-    static if (is(typeof(&r.moveBack))) {
-        return r.moveBack();
-    } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
-        return r.back;
-    } else static if (is(typeof(&(r.back())) == ElementType!R*)) {
-        import std.algorithm.mutation : move;
-        return move(r.back);
-    } else {
-        static assert(0,
-                "Cannot move back of a range with a postblit and an rvalue back.");
-    }
-}
-
-///
-@safe unittest
-{
-    struct TestRange
-    {
-        int payload = 5;
-        @property bool empty() { return false; }
-        @property TestRange save() { return this; }
-        @property ref int front() return { return payload; }
-        @property ref int back() return { return payload; }
-        void popFront() { }
-        void popBack() { }
-    }
-    static assert(isBidirectionalRange!TestRange);
-    TestRange r;
-    auto x = moveBack(r);
-    assert(x == 5);
-}
-
-/**
-   Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
-   r.front) in a destroyable state that does not allocate any resources
-   (usually equal to its $(D .init) value).
-*/
-ElementType!R moveAt(R)(R r, size_t i)
-{
-    static if (is(typeof(&r.moveAt))) {
-        return r.moveAt(i);
-    } else static if (!hasElaborateCopyConstructor!(ElementType!(R))) {
-        return r[i];
-    } else static if (is(typeof(&r[i]) == ElementType!R*)) {
-        import std.algorithm.mutation : move;
-        return move(r[i]);
-    } else {
-        static assert(0,
-                "Cannot move element of a range with a postblit and rvalue elements.");
-    }
-}
-
-///
-@safe unittest
-{
-    auto a = [1,2,3,4];
-    foreach(idx, it; a)
-    {
-        assert(it == moveAt(a, idx));
-    }
-}
-
-@safe unittest
-{
-    import std.internal.test.dummyrange;
-
-    foreach(DummyType; AllDummyRanges) {
-        auto d = DummyType.init;
-        assert(moveFront(d) == 1);
-
-        static if (isBidirectionalRange!DummyType) {
-            assert(moveBack(d) == 10);
-        }
-
-        static if (isRandomAccessRange!DummyType) {
-            assert(moveAt(d, 2) == 3);
-        }
-    }
-}
 
 /**
 Implements the range interface primitive $(D empty) for built-in

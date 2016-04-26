@@ -1602,7 +1602,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-        import std.algorithm.mutation : move;
+        import std.algorithm.mutation: move, moveAt;
 
         for (; sortedLen < range.length; ++sortedLen)
         {
