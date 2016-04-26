@@ -157,7 +157,7 @@ version (Windows)
             import std.c.stdlib: free;
             import std.c.string: memcpy;
 
-            if(!ptr) return _aligned_malloc(size, alignment);
+            if (!ptr) return _aligned_malloc(size, alignment);
 
             // gets the header from the exising pointer
             AlignInfo* head = AlignInfo(ptr);
