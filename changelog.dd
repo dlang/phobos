@@ -68,16 +68,16 @@ assert(m.front[1] == "12");
 )
 
 $(LI $(P $(XREF algorithm, mutation, swapAt) allows to swap elements
-		of a RandomAccessRange by their indices.
+        of a RandomAccessRange by their indices.
     )
 )
 
 $(LI $(P $(XREF range, iota)'s `.length` property is now always returned as
-		`size_t`.  This means if you are on a 32-bit CPU and you are using
-		iota to iterate 64-bit types, the length will be truncated to `size_t`.
-		In non-release mode, you will get an exception if the length exceeds
-		`size_t.max` in your call to `iota`.
-	)
+        `size_t`.  This means if you are on a 32-bit CPU and you are using
+        iota to iterate 64-bit types, the length will be truncated to `size_t`.
+        In non-release mode, you will get an exception if the length exceeds
+        `size_t.max` in your call to `iota`.
+    )
 )
 
 )
