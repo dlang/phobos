@@ -9,6 +9,11 @@ $(BUGSTITLE Library Changes,
         on Posix.))
     $(LI $(RELATIVE_LINK2 padLeft-padRight, `std.range.padLeft` and
         `std.range.padRight` were added.))
+    $(LI $(RELATIVE_LINK2 regex-multiple-patterns, `std.regex.regex` now
+        supports matching multiple patterns in one go.))
+    $(LI $(RELATIVE_LINK2 mutation, `std.algorithm.mutation` was exposed))
+    $(LI $(RELATIVE_LINK2 iota-length-size_t, `std.range.iota's `.length`
+        property is fixed to `size_t` instead of the type being iterated))
     $(LI $(XREF uni, isNumber) and $(XREF uni, isPunctuation) now use a separate,
     optimized path for ASCII inputs.)
     $(LI $(XREF uni, isAlphaNum), which is analogous to $(XREF ascii, isAlphaNum)
@@ -16,13 +21,8 @@ $(BUGSTITLE Library Changes,
     $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.)
     $(LI std.regex had numerous optimization applied, compile-time $(XREF regex, ctRegex)
     should now be generally faster then the run-time version.)
-    $(LI $(RELATIVE_LINK2 regex-multiple-patterns, `std.regex.regex` now
-        supports matching multiple patterns in one go.))
-    $(LI $(RELATIVE_LINK2 mutation, `std.algorithm.mutation` was exposed))
     $(LI $(XREF range, primitives, moveAt) accepts only `size_t` for its index
     arguments.)
-    $(LI $(RELATIVE_LINK2 iota-length-size_t, `std.range.iota's `.length`
-        property is fixed to `size_t` instead of the type being iterated))
     $(LI $(XREF algorithm, sorting, isStrictlyMonotonic) which doesn't allow
     equal values was added.)
     $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
