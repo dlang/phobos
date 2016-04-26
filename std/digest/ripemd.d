@@ -586,7 +586,7 @@ unittest
 unittest
 {
     //Let's use the template features:
-    void doSomething(T)(ref T hash) if(isDigest!T)
+    void doSomething(T)(ref T hash) if (isDigest!T)
     {
         hash.put(cast(ubyte)0);
     }

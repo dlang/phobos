@@ -252,7 +252,7 @@ unittest
 {
     //Let's use the template features:
     //Note: When passing a CRC32 to a function, it must be passed by reference!
-    void doSomething(T)(ref T hash) if(isDigest!T)
+    void doSomething(T)(ref T hash) if (isDigest!T)
     {
       hash.put(cast(ubyte)0);
     }
