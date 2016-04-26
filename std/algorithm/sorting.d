@@ -105,7 +105,7 @@ void completeSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(SortedRange!(Range1, less) lhs, Range2 rhs)
 if (hasLength!(Range2) && hasSlicing!(Range2))
 {
-    import std.algorithm : bringToFront; // FIXME
+    import std.algorithm.mutation : bringToFront;
     import std.range : chain, assumeSorted;
     // Probably this algorithm can be optimized by using in-place
     // merge
@@ -323,11 +323,11 @@ Range partition(alias predicate,
     if ((ss == SwapStrategy.stable && isRandomAccessRange!(Range))
             || (ss != SwapStrategy.stable && isForwardRange!(Range)))
 {
-    import std.algorithm : bringToFront, swap; // FIXME;
     alias pred = unaryFun!(predicate);
     if (r.empty) return r;
     static if (ss == SwapStrategy.stable)
     {
+        import std.algorithm.mutation : bringToFront;
         if (r.length == 1)
         {
             if (pred(r.front)) r.popFront();
@@ -342,6 +342,7 @@ Range partition(alias predicate,
     }
     else static if (ss == SwapStrategy.semistable)
     {
+        import std.algorithm.mutation : swap;
         for (; !r.empty; r.popFront())
         {
             // skip the initial portion of "correct" elements
@@ -364,6 +365,7 @@ Range partition(alias predicate,
         // section "Bidirectional Partition Algorithm (Hoare)"
         static if (isDynamicArray!Range)
         {
+            import std.algorithm.mutation : swapAt;
             // For dynamic arrays prefer index-based manipulation
             if (!r.length) return r;
             size_t lo = 0, hi = r.length - 1;
@@ -384,11 +386,12 @@ Range partition(alias predicate,
                     --hi;
                 }
                 // found the right bound, swap & make progress
-                swap(r[lo++], r[hi--]);
+                r.swapAt(lo++, hi--);
             }
         }
         else
         {
+            import std.algorithm.mutation : swap;
             auto result = r;
             for (;;)
             {
@@ -429,7 +432,7 @@ Range partition(alias predicate,
 ///
 @safe unittest
 {
-    import std.algorithm : count, find; // FIXME
+    import std.algorithm.searching : count, find;
     import std.conv : text;
 
     auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -540,7 +543,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
     // The algorithm is described in "Engineering a sort function" by
     // Jon Bentley et al, pp 1257.
 
-    import std.algorithm : swap, swapRanges; // FIXME
+    import std.algorithm.mutation : swap, swapAt, swapRanges;
     import std.algorithm.comparison : min;
     import std.typecons : tuple;
 
@@ -556,7 +559,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
             assert(j < r.length);
             if (lessFun(r[j], pivot)) continue;
             if (lessFun(pivot, r[j])) break;
-            swap(r[i++], r[j]);
+            r.swapAt(i++, j);
         }
         assert(j < k);
         for (;;)
@@ -565,12 +568,12 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
             if (!lessFun(pivot, r[--k]))
             {
                 if (lessFun(r[k], pivot)) break;
-                swap(r[k], r[--l]);
+                r.swapAt(k, --l);
             }
             if (j == k) break bigloop;
         }
         // Here we know r[j] > pivot && r[k] < pivot
-        swap(r[j++], r[k]);
+        r.swapAt(j++, k);
     }
 
     // Swap the equal ranges from the extremes into the middle
@@ -1100,7 +1103,7 @@ unittest
 unittest
 {
     import std.algorithm.internal : rndstuff;
-    import std.algorithm : swapRanges; // FIXME
+    import std.algorithm.mutation : swapRanges;
     import std.random : Random, unpredictableSeed, uniform;
     import std.uni : toUpper;
 
@@ -1179,7 +1182,7 @@ unittest
     }
 
     {
-        import std.algorithm : swap; // FIXME
+        import std.algorithm.mutation : swap;
 
         bool proxySwapCalled;
         struct S
@@ -1201,8 +1204,7 @@ unittest
 
 private void quickSortImpl(alias less, Range)(Range r, size_t depth)
 {
-    import std.algorithm : swap; // FIXME
-    import std.algorithm.mutation : swapAt;
+    import std.algorithm.mutation : swap, swapAt;
     import std.algorithm.comparison : min;
 
     alias Elem = ElementType!(Range);
@@ -1505,7 +1507,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-        import std.algorithm : reverse; // FIXME
+        import std.algorithm.mutation : reverse;
 
         if (range.length < 2) return range.length;
 
@@ -1640,7 +1642,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-    import std.algorithm : copy; // FIXME
+        import std.algorithm.mutation : copy;
 
         assert(mid <= range.length);
         assert(temp.length >= mid);
@@ -1723,7 +1725,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-    import std.algorithm : copy; // FIXME
+        import std.algorithm.mutation : copy;
 
         assert(mid <= range.length);
         assert(temp.length >= range.length - mid);
@@ -1912,7 +1914,7 @@ unittest
     // Generates data especially for testing sorting with Timsort
     static E[] genSampleData(uint seed)
     {
-    import std.algorithm : swap, swapRanges; // FIXME
+        import std.algorithm.mutation : swap, swapRanges;
 
         auto rnd = Random(seed);
 
@@ -2677,7 +2679,8 @@ bool nextPermutation(alias less="a < b", BidirectionalRange)
     if (isBidirectionalRange!BidirectionalRange &&
         hasSwappableElements!BidirectionalRange)
 {
-    import std.algorithm : find, reverse, swap; // FIXME
+    import std.algorithm.mutation : reverse, swap;
+    import std.algorithm.searching : find;
     import std.range : retro, takeExactly;
     // Ranges of 0 or 1 element have no distinct permutations.
     if (range.empty) return false;
@@ -2932,7 +2935,8 @@ bool nextEvenPermutation(alias less="a < b", BidirectionalRange)
     if (isBidirectionalRange!BidirectionalRange &&
         hasSwappableElements!BidirectionalRange)
 {
-    import std.algorithm : find, reverse, swap; // FIXME
+    import std.algorithm.mutation : reverse, swap;
+    import std.algorithm.searching : find;
     import std.range : retro, takeExactly;
     // Ranges of 0 or 1 element have no distinct permutations.
     if (range.empty) return false;
