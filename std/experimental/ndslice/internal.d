@@ -11,7 +11,7 @@ enum indexError(size_t pos, size_t N) =
     ~ " must be less than corresponding length.";
 
 enum indexStrideCode = q{
-    static if(_indexes.length)
+    static if (_indexes.length)
     {
         size_t stride = _strides[0] * _indexes[0];
         assert(_indexes[0] < _lengths[0], indexError!(0, N));
@@ -29,7 +29,7 @@ enum indexStrideCode = q{
 };
 
 enum mathIndexStrideCode = q{
-    static if(_indexes.length)
+    static if (_indexes.length)
     {
         size_t stride = _strides[0] * _indexes[N - 1];
         assert(_indexes[N - 1] < _lengths[0], indexError!(N - 1, N));
