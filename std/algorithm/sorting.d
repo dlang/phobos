@@ -964,7 +964,7 @@ private size_t getPivot(alias less, Range)(Range r)
                             ((cast(uint) (pred(r[0], r[len - 1]))) << 1) |
                             (cast(uint) (pred(r[mid], r[len - 1])));
 
-    switch(result) {
+    switch (result) {
         case 0b001:
             r.swapAt(0, len - 1);
             r.swapAt(0, mid);
@@ -1243,7 +1243,7 @@ unittest
         size_t[] arr;
         arr.length = 1024;
 
-        foreach(k; 0..arr.length) arr[k] = k;
+        foreach (k; 0..arr.length) arr[k] = k;
         swapRanges(arr[0..$/2], arr[$/2..$]);
 
         sort!(pred, SwapStrategy.unstable)(arr);
@@ -1538,7 +1538,7 @@ private template TimSortImpl(alias pred, R)
                 if (stackLen == 2) assert(stack[0].length > stack[1].length);
                 else if (stackLen > 2)
                 {
-                    foreach(k; 2 .. stackLen)
+                    foreach (k; 2 .. stackLen)
                     {
                         assert(stack[k - 2].length > stack[k - 1].length + stack[k].length);
                         assert(stack[k - 1].length > stack[k].length);
@@ -1729,7 +1729,7 @@ private template TimSortImpl(alias pred, R)
         immutable lef_end = temp.length - 1;
 
         if (lef < lef_end && rig < range.length)
-        outer: while(true)
+        outer: while (true)
         {
             count_lef = 0;
             count_rig = 0;
@@ -1740,14 +1740,14 @@ private template TimSortImpl(alias pred, R)
                 if (lessEqual(temp[lef], range[rig]))
                 {
                     range[i++] = temp[lef++];
-                    if(lef >= lef_end) break outer;
+                    if (lef >= lef_end) break outer;
                     ++count_lef;
                     count_rig = 0;
                 }
                 else
                 {
                     range[i++] = range[rig++];
-                    if(rig >= range.length) break outer;
+                    if (rig >= range.length) break outer;
                     count_lef = 0;
                     ++count_rig;
                 }
@@ -1758,14 +1758,14 @@ private template TimSortImpl(alias pred, R)
             {
                 count_lef = gallopForwardUpper(temp[lef .. $], range[rig]);
                 foreach (j; 0 .. count_lef) range[i++] = temp[lef++];
-                if(lef >= temp.length) break outer;
+                if (lef >= temp.length) break outer;
 
                 count_rig = gallopForwardLower(range[rig .. range.length], temp[lef]);
                 foreach (j; 0 .. count_rig) range[i++] = range[rig++];
-                if (rig >= range.length) while(true)
+                if (rig >= range.length) while (true)
                 {
                     range[i++] = temp[lef++];
-                    if(lef >= temp.length) break outer;
+                    if (lef >= temp.length) break outer;
                 }
 
                 if (minGallop > 0) --minGallop;
@@ -1811,24 +1811,24 @@ private template TimSortImpl(alias pred, R)
         size_t count_lef, count_rig;
 
         outer:
-        while(true)
+        while (true)
         {
             count_lef = 0;
             count_rig = 0;
 
             // Linear merge
-            while((count_lef | count_rig) < minGallop)
+            while ((count_lef | count_rig) < minGallop)
             {
-                if(greaterEqual(temp[rig], range[lef]))
+                if (greaterEqual(temp[rig], range[lef]))
                 {
                     range[i--] = temp[rig];
-                    if(rig == 1)
+                    if (rig == 1)
                     {
                         // Move remaining elements from left
-                        while(true)
+                        while (true)
                         {
                             range[i--] = range[lef];
-                            if(lef == 0) break;
+                            if (lef == 0) break;
                             --lef;
                         }
 
@@ -1844,10 +1844,10 @@ private template TimSortImpl(alias pred, R)
                 else
                 {
                     range[i--] = range[lef];
-                    if(lef == 0) while(true)
+                    if (lef == 0) while (true)
                     {
                         range[i--] = temp[rig];
-                        if(rig == 0) break outer;
+                        if (rig == 0) break outer;
                         --rig;
                     }
                     --lef;
@@ -1860,29 +1860,29 @@ private template TimSortImpl(alias pred, R)
             do
             {
                 count_rig = rig - gallopReverseLower(temp[0 .. rig], range[lef]);
-                foreach(j; 0 .. count_rig)
+                foreach (j; 0 .. count_rig)
                 {
                     range[i--] = temp[rig];
-                    if(rig == 0) break outer;
+                    if (rig == 0) break outer;
                     --rig;
                 }
 
                 count_lef = lef - gallopReverseUpper(range[0 .. lef], temp[rig]);
-                foreach(j; 0 .. count_lef)
+                foreach (j; 0 .. count_lef)
                 {
                     range[i--] = range[lef];
-                    if(lef == 0) while(true)
+                    if (lef == 0) while (true)
                     {
                         range[i--] = temp[rig];
-                        if(rig == 0) break outer;
+                        if (rig == 0) break outer;
                         --rig;
                     }
                     --lef;
                 }
 
-                if(minGallop > 0) --minGallop;
+                if (minGallop > 0) --minGallop;
             }
-            while(count_lef >= minimalGallop || count_rig >= minimalGallop);
+            while (count_lef >= minimalGallop || count_rig >= minimalGallop);
 
             minGallop += 2;
         }
@@ -1992,7 +1992,7 @@ unittest
         arr.length = 64 * 64;
 
         // We want duplicate values for testing stability
-        foreach(i, ref v; arr) v.value = i / 64;
+        foreach (i, ref v; arr) v.value = i / 64;
 
         // Swap ranges at random middle point (test large merge operation)
         immutable mid = uniform(arr.length / 4, arr.length / 4 * 3, rnd);
@@ -2002,7 +2002,7 @@ unittest
         randomShuffle(arr[$ / 8 * 7 .. $], rnd);
 
         // Swap few random elements (test galloping mode)
-        foreach(i; 0 .. arr.length / 64)
+        foreach (i; 0 .. arr.length / 64)
         {
             immutable a = uniform(0, arr.length, rnd), b = uniform(0, arr.length, rnd);
             swap(arr[a], arr[b]);
@@ -2010,7 +2010,7 @@ unittest
 
         // Now that our test array is prepped, store original index value
         // This will allow us to confirm the array was sorted stably
-        foreach(i, ref v; arr) v.index = i;
+        foreach (i, ref v; arr) v.index = i;
 
         return arr;
     }
@@ -2032,9 +2032,9 @@ unittest
         assert(isSorted!comp(arr));
 
         // Test that the array was sorted stably
-        foreach(i; 0 .. arr.length - 1)
+        foreach (i; 0 .. arr.length - 1)
         {
-            if(arr[i].value == arr[i + 1].value) assert(arr[i].index < arr[i + 1].index);
+            if (arr[i].value == arr[i + 1].value) assert(arr[i].index < arr[i + 1].index);
         }
 
         return true;
@@ -3047,7 +3047,7 @@ bool nextEvenPermutation(alias less="a < b", BidirectionalRange)
         reverse(takeExactly(retro(range), n));
         if ((n / 2) % 2 == 1)
             oddParity = !oddParity;
-    } while(oddParity);
+    } while (oddParity);
 
     return ret;
 }
