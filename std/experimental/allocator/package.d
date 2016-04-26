@@ -629,7 +629,8 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     if (!length) return null;
     auto m = alloc.allocate(T.sizeof * length);
     if (!m.ptr) return null;
-    return uninitializedFillDefault(cast(T[]) m);
+    alias U = Unqual!T;
+    return cast(T[]) uninitializedFillDefault(cast(U[]) m);
 }
 
 unittest
@@ -656,6 +657,24 @@ unittest
     test1(theAllocator);
     test2(GCAllocator.instance);
     test2(theAllocator);
+}
+
+unittest
+{
+    auto a = theAllocator.makeArray!(shared int)(5);
+    static assert(is(typeof(a) == shared(int)[]));
+    assert(a.length == 5);
+    assert(a.equal([0, 0, 0, 0, 0]));
+
+    auto b = theAllocator.makeArray!(const int)(5);
+    static assert(is(typeof(b) == const(int)[]));
+    assert(b.length == 5);
+    assert(b.equal([0, 0, 0, 0, 0]));
+
+    auto c = theAllocator.makeArray!(immutable int)(5);
+    static assert(is(typeof(c) == immutable(int)[]));
+    assert(c.length == 5);
+    assert(c.equal([0, 0, 0, 0, 0]));
 }
 
 /// Ditto
@@ -688,7 +707,8 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     }
     else
     {
-        fillWithMemcpy(result, init);
+        alias U = Unqual!T;
+        fillWithMemcpy(cast(U[]) result, *(cast(U*) &init));
     }
     return result;
 }
@@ -696,13 +716,20 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
 ///
 unittest
 {
-    int[] a = theAllocator.makeArray!int(2);
-    assert(a == [0, 0]);
-    a = theAllocator.makeArray!int(3, 42);
-    assert(a == [42, 42, 42]);
-    import std.range : only;
-    a = theAllocator.makeArray!int(only(42, 43, 44));
-    assert(a == [42, 43, 44]);
+    static void test(T)()
+    {
+        T[] a = theAllocator.makeArray!T(2);
+        assert(a.equal([0, 0]));
+        a = theAllocator.makeArray!T(3, 42);
+        assert(a.equal([42, 42, 42]));
+        import std.range : only;
+        a = theAllocator.makeArray!T(only(42, 43, 44));
+        assert(a.equal([42, 43, 44]));
+    }
+    test!int();
+    test!(shared int)();
+    test!(const int)();
+    test!(immutable int)();
 }
 
 unittest
@@ -737,7 +764,7 @@ if (isInputRange!R)
         {
             foreach (j; 0 .. i)
             {
-                destroy(result[j]);
+                destroy(*cast(Unqual!T*) (result.ptr + j));
             }
             alloc.deallocate(m);
         }
@@ -745,7 +772,7 @@ if (isInputRange!R)
         for (; !range.empty; range.popFront, ++i)
         {
             import std.conv : emplace;
-            emplace!T(result.ptr + i, range.front);
+            cast(void) emplace!T(result.ptr + i, range.front);
         }
 
         return result;

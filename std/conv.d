@@ -3934,7 +3934,6 @@ the type we want to build. This helps to build qualified objects on mutable
 buffer, without breaking the type system with unsafe casts.
 +/
 package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
-if (is(UT == Unqual!T))
 {
     static if (args.length == 0)
     {
@@ -4085,6 +4084,13 @@ unittest
     int a;
     int b = 42;
     assert(*emplace!int(&a, b) == 42);
+}
+
+unittest
+{
+    shared int i;
+    emplace(&i, 42);
+    assert(i == 42);
 }
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow

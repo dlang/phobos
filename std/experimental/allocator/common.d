@@ -409,7 +409,7 @@ unittest
 Returns `true` if `ptr` is aligned at `alignment`.
 */
 @nogc nothrow pure
-package bool alignedAt(void* ptr, uint alignment)
+package bool alignedAt(T)(T* ptr, uint alignment)
 {
     return cast(size_t) ptr % alignment == 0;
 }
