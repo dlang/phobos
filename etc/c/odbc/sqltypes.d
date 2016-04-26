@@ -78,7 +78,7 @@ struct DATE_STRUCT
     SQLSMALLINT    year;
     SQLUSMALLINT   month;
     SQLUSMALLINT   day;
-};
+}
 
 alias DATE_STRUCT SQL_DATE_STRUCT;
 
@@ -87,7 +87,7 @@ struct TIME_STRUCT
     SQLUSMALLINT hour;
     SQLUSMALLINT minute;
     SQLUSMALLINT second;
-};
+}
 
 alias TIME_STRUCT SQL_TIME_STRUCT;
 
@@ -100,7 +100,7 @@ struct TIMESTAMP_STRUCT
     SQLUSMALLINT   minute;
     SQLUSMALLINT   second;
     SQLUINTEGER    fraction;
-};
+}
 
 alias TIMESTAMP_STRUCT SQL_TIMESTAMP_STRUCT;
 
@@ -129,7 +129,7 @@ struct SQL_YEAR_MONTH_STRUCT
 {
     SQLUINTEGER year;
     SQLUINTEGER month;
-};
+}
 
 struct SQL_DAY_SECOND_STRUCT
 {
@@ -138,7 +138,7 @@ struct SQL_DAY_SECOND_STRUCT
     SQLUINTEGER minute;
     SQLUINTEGER second;
     SQLUINTEGER fraction;
-};
+}
 
 struct SQL_INTERVAL_STRUCT
 {
@@ -148,8 +148,8 @@ struct SQL_INTERVAL_STRUCT
     union  intval {
         SQL_YEAR_MONTH_STRUCT year_month;
         SQL_DAY_SECOND_STRUCT day_second;
-    };
-};
+    }
+}
 
 // * internal representation of numeric data type *
 const int SQL_MAX_NUMERIC_LEN = 16;
@@ -159,7 +159,7 @@ struct SQL_NUMERIC_STRUCT
     SQLSCHAR scale;
     SQLCHAR  sign;    /* 1 if positive, 0 if negative */
     SQLCHAR[ SQL_MAX_NUMERIC_LEN ]  val;
-};
+}
 
 /* size is 16 */
 struct SQLGUID
@@ -168,7 +168,7 @@ struct SQLGUID
     WORD Data2;
     WORD Data3;
     ubyte[ 8 ] Data4;
-};
+}
 
 alias SQLGUID GUID;
 alias uint    BOOKMARK;

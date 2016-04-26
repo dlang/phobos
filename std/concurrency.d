@@ -1947,7 +1947,7 @@ private
                 assert( msg.convertsTo!(Tid) );
                 auto tid = msg.get!(Tid);
 
-                if ( bool* pDepends = (tid in thisInfo.links) )
+                if ( bool* pDepends = tid in thisInfo.links )
                 {
                     auto depends = *pDepends;
                     thisInfo.links.remove( tid );

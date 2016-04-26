@@ -1613,8 +1613,9 @@ unittest // Issue 14724
     }
     catch(Exception e)
     {
-        assert(false, "If the request for help was passed required options"
-                "must not be set.");
+        enum errorMsg = "If the request for help was passed required options" ~
+                "must not be set.";
+        assert(false, errorMsg);
     }
 
     assert(rslt.helpWanted);

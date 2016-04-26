@@ -5056,7 +5056,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         long*   ps = cast(long *)&x;
         return (e == 0 &&
-          (((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) != 0));
+          ((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF)) != 0));
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {

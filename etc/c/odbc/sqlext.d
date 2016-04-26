@@ -1565,7 +1565,7 @@ int SQL_POSITION_TO()
 )
 {
     return SQLSetPos( hstmt, irow, SQL_POSITION, SQL_LOCK_NO_CHANGE );
-};
+}
 
 int SQL_LOCK_RECORD()
 (

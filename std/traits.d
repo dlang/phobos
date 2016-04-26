@@ -214,7 +214,7 @@ private
     /* Demangles mstr as FuncAttrs. */
     Demangle!uint demangleFunctionAttributes(string mstr)
     {
-        enum LOOKUP_ATTRIBUTE =
+        immutable LOOKUP_ATTRIBUTE =
         [
             'a': FunctionAttribute.pure_,
             'b': FunctionAttribute.nothrow_,
@@ -1916,7 +1916,7 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
             !(attrs & FunctionAttribute.safe),
             "Cannot have a function/delegate that is both trusted and safe.");
 
-        enum linkages = ["D", "C", "Windows", "Pascal", "C++", "System"];
+        static immutable linkages = ["D", "C", "Windows", "Pascal", "C++", "System"];
         static assert(canFind(linkages, linkage), "Invalid linkage '" ~
             linkage ~ "', must be one of " ~ linkages.stringof ~ ".");
 
@@ -5651,7 +5651,7 @@ unittest
 {
     void foo();
     static int bar() { return 42; }
-    enum aa = [ 1: -1 ];
+    immutable aa = [ 1: -1 ];
     alias myint = int;
 
     static assert( isExpressionTuple!(42));

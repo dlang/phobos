@@ -3329,7 +3329,7 @@ private void toAStringz(in string[] a, const(char)**az)
 
 // Incorporating idea (for spawnvp() on Posix) from Dave Fladebo
 
-enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY };
+enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY }
 version(Windows) extern(C) int spawnvp(int, in char *, in char **);
 alias P_WAIT = _P_WAIT;
 alias P_NOWAIT = _P_NOWAIT;

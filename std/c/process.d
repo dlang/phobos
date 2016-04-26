@@ -31,7 +31,7 @@ int execlpe(in char *, in char *,...);
 
 //These constants are undefined elsewhere and only used in the deprecated part
 //of std.process.
-enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY };
+enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY }
 
 //These declarations are defined for Posix in core.sys.posix.unistd but unused
 //from here.
