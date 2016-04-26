@@ -21,9 +21,9 @@ $(BUGSTITLE Library Changes,
     $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.)
     $(LI std.regex had numerous optimization applied, compile-time $(XREF regex, ctRegex)
     should now be generally faster then the run-time version.)
-    $(LI $(XREF range, primitives, moveAt) accepts only `size_t` for its index
+    $(LI $(REF moveAt, std,range,primitives) accepts only `size_t` for its index
     arguments.)
-    $(LI $(XREF algorithm, sorting, isStrictlyMonotonic) which doesn't allow
+    $(LI $(REF isStrictlyMonotonic, std,algorithm,sorting) which doesn't allow
     equal values was added.)
     $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
         rangified.)
@@ -72,7 +72,7 @@ assert(m.front[1] == "12");
 )
 
 $(LI $(LNAME2 mutation, `std.algorithm.mutation` was exposed)
-    $(P $(XREF algorithm, mutation, swapAt) allows to swap elements
+    $(P $(REF swapAt, std,algorithm,mutation) allows to swap elements
         of a RandomAccessRange by their indices.
     )
 )
