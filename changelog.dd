@@ -12,7 +12,7 @@ $(BUGSTITLE Library Changes,
     optimized path for ASCII inputs.)
     $(LI $(XREF uni, isAlphaNum), which is analogous to $(XREF ascii, isAlphaNum)
         was added.)
-    $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.
+    $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.)
     $(LI std.regex had numerous optimization applied, compile-time $(XREF regex, ctRegex)
     should now be generally faster then the run-time version.)
     $(LI $(XREF regex, regex) now supports matching multiple patterns in one go.)
@@ -70,6 +70,7 @@ assert(m.front[1] == "12");
 $(LI $(P $(XREF algorithm, mutation, swapAt) allows to swap elements
 		of a RandomAccessRange by their indices.
     )
+)
 
 $(LI $(P $(XREF range, iota)'s `.length` property is now always returned as
 		`size_t`.  This means if you are on a 32-bit CPU and you are using
@@ -77,6 +78,9 @@ $(LI $(P $(XREF range, iota)'s `.length` property is now always returned as
 		In non-release mode, you will get an exception if the length exceeds
 		`size_t.max` in your call to `iota`.
 	)
+)
+
+)
 
 Macros:
     TITLE=Change Log
