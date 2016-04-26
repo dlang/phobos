@@ -1004,7 +1004,6 @@ unittest
  */
 template aliasSeqOf(alias range)
 {
-    import std.range : isInputRange;
     import std.traits : isArray, isNarrowString;
 
     alias ArrT = typeof(range);
@@ -1023,15 +1022,18 @@ template aliasSeqOf(alias range)
             alias aliasSeqOf = AliasSeq!(aliasSeqOf!(range[0 .. $/2]), aliasSeqOf!(range[$/2 .. $]));
         }
     }
-    else static if (isInputRange!ArrT)
-    {
-        import std.array : array;
-        alias aliasSeqOf = aliasSeqOf!(array(range));
-    }
     else
     {
-        import std.string : format;
-        static assert(false, format("Cannot transform %s of type %s into a AliasSeq.", range, ArrT.stringof));
+        import std.range.primitives : isInputRange;
+        static if (isInputRange!ArrT)
+        {
+            import std.array : array;
+            alias aliasSeqOf = aliasSeqOf!(array(range));
+        }
+        else
+        {
+            static assert(false, "Cannot transform range of type " ~ ArrT.stringof ~ " into a AliasSeq.");
+        }
     }
 }
 
