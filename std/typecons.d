@@ -1483,13 +1483,13 @@ template tuple(Names...)
             {
                 template and(B...) if (B.length == 1)
                 {
-                    alias AliasSeq!(A[0], B[0]) and;
+                    alias and = AliasSeq!(A[0], B[0]);
                 }
 
                 template and(B...) if (B.length != 1)
                 {
-                    alias AliasSeq!(A[0], B[0],
-                        Interleave!(A[1..$]).and!(B[1..$])) and;
+                    alias and = AliasSeq!(A[0], B[0],
+                        Interleave!(A[1..$]).and!(B[1..$]));
                 }
             }
             return Tuple!(Interleave!(Args).and!(Names))(args);
