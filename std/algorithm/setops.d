@@ -1001,7 +1001,7 @@ private:
                     do {
                         next.popFront();
                         if (next.empty) return;
-                    } while(comp(next.front, r.front));
+                    } while (comp(next.front, r.front));
                     done = Rs.length;
                 }
                 if (--done == 0) return;

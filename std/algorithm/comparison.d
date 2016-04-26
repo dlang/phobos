@@ -280,7 +280,7 @@ auto castSwitch(choices...)(Object switchObject)
 
                 if (classInfo == typeid(CastClass))
                 {
-                    static if(is(ReturnType!(choice) == void))
+                    static if (is(ReturnType!(choice) == void))
                     {
                         choice(cast(CastClass) switchObject);
                         static if (areAllHandlersVoidResult)
@@ -308,7 +308,7 @@ auto castSwitch(choices...)(Object switchObject)
             {
                 if (auto castedObject = cast(choiceParameterTypes[0]) switchObject)
                 {
-                    static if(is(ReturnType!(choice) == void))
+                    static if (is(ReturnType!(choice) == void))
                     {
                         choice(castedObject);
                         static if (areAllHandlersVoidResult)
@@ -345,7 +345,7 @@ auto castSwitch(choices...)(Object switchObject)
 
                 if (switchObject is null)
                 {
-                    static if(is(ReturnType!(choice) == void))
+                    static if (is(ReturnType!(choice) == void))
                     {
                         choice();
                         static if (areAllHandlersVoidResult)

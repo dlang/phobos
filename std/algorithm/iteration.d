@@ -461,7 +461,7 @@ template map(fun...) if (fun.length >= 1)
             alias _fun = adjoin!_funs;
 
             // Once DMD issue #5710 is fixed, this validation loop can be moved into a template.
-            foreach(f; _funs)
+            foreach (f; _funs)
             {
                 static assert(!is(typeof(f(RE.init)) == void),
                     "Mapping function(s) must not return void: " ~ _funs.stringof);
@@ -4263,7 +4263,7 @@ unittest
 @safe pure nothrow @nogc unittest
 {
     import std.range;
-    foreach(n; iota(50))
+    foreach (n; iota(50))
         assert(repeat(1.0, n).sum == n);
 }
 
