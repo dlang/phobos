@@ -39,7 +39,7 @@ struct GCAllocator
         immutable curLength = GC.sizeOf(b.ptr);
         assert(curLength != 0); // we have a valid GC pointer here
         immutable desired = b.length + delta;
-        if(desired > curLength) // check to see if the current block can't hold the data
+        if (desired > curLength) // check to see if the current block can't hold the data
         {
             immutable sizeRequest = desired - curLength;
             immutable newSize = GC.extend(b.ptr, sizeRequest, sizeRequest);
@@ -89,9 +89,9 @@ struct GCAllocator
     /// Ditto
     size_t goodAllocSize(size_t n) shared
     {
-        if(n == 0)
+        if (n == 0)
             return 0;
-        if(n <= 16)
+        if (n <= 16)
             return 16;
 
         import core.bitop: bsr;
