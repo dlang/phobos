@@ -176,11 +176,6 @@ Build _getBuild() {
 
     auto MAIN = ROOT ~ "/emptymain.d";
 
-    // unused
-    // string[] P2LIB(string package_) {
-    //     return package_.replace("/", "_").split.map!(a => a ~ DOTLIB).map!(a => ROOT ~ "/libphobos2_a" ~ a).array;
-    // }
-
     string[] P2MODULES(string[] packages)() {
         import std.meta;
 
