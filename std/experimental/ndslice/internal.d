@@ -151,12 +151,7 @@ template DynamicArrayDimensionsCount(T)
 bool isPermutation(size_t N)(auto ref in size_t[N] perm)
 {
     int[N] mask;
-    if (isValidPartialPermutationImpl(perm, mask) == false)
-        return false;
-    foreach (e; mask)
-        if (e == false)
-            return false;
-    return true;
+    return isValidPartialPermutationImpl(perm, mask);
 }
 
 unittest
