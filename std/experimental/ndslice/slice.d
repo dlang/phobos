@@ -1147,19 +1147,6 @@ struct Slice(size_t _N, _Range)
         mixin(mathIndexStrideCode);
     }
 
-    this(ref in size_t[PureN] lengths, ref in sizediff_t[PureN] strides, PureRange range)
-    {
-        foreach (i; Iota!(0, PureN))
-            _lengths[i] = lengths[i];
-        foreach (i; Iota!(0, PureN))
-            _strides[i] = strides[i];
-        static if (hasPtrBehavior!PureRange)
-            _ptr = range;
-        else
-            _ptr._range = range;
-
-    }
-
     static if (!hasPtrBehavior!PureRange)
     this(ref in size_t[PureN] lengths, ref in sizediff_t[PureN] strides, PtrShell!PureRange shell)
     {
@@ -1171,6 +1158,26 @@ struct Slice(size_t _N, _Range)
     }
 
     public:
+
+    /++
+    This constructor should be used only for integration with other languages or libraries such as Julia and numpy.
+    Params:
+        lengths = lengths
+        strides = strides
+        range = range or pointer to iterate on
+    +/
+    this(ref in size_t[PureN] lengths, ref in sizediff_t[PureN] strides, PureRange range)
+    {
+        foreach (i; Iota!(0, PureN))
+            _lengths[i] = lengths[i];
+        foreach (i; Iota!(0, PureN))
+            _strides[i] = strides[i];
+        static if (hasPtrBehavior!PureRange)
+            _ptr = range;
+        else
+            _ptr._range = range;
+    }
+
 
     /++
     Returns: static array of lengths
