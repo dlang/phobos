@@ -211,7 +211,7 @@ public:
     }
 
     ///
-    int opCmp(Tulong)(Tulong y) pure nothrow @nogc const @safe if(is (Tulong == ulong))
+    int opCmp(Tulong)(Tulong y) pure nothrow @nogc const @safe if (is (Tulong == ulong))
     {
         if (data.length > maxBigDigits!Tulong)
             return 1;
@@ -847,14 +847,14 @@ public:
             BigDigit [] r2;
 
             int shifts = 63; // num bits in a long
-            while(!(y & 0x8000_0000_0000_0000L))
+            while (!(y & 0x8000_0000_0000_0000L))
             {
                 y <<= 1;
                 --shifts;
             }
             y <<=1;
 
-            while(y!=0)
+            while (y!=0)
             {
                 // For each bit of y: Set r1 =  r1 * r1
                 // If the bit is 1, set r1 = r1 * x
@@ -913,7 +913,7 @@ public:
                 r1[$ - 1] = carry;
             }
         }
-        while(r1[$ - 1]==0)
+        while (r1[$ - 1]==0)
         {
             r1=r1[0 .. $ - 1];
         }
@@ -946,7 +946,7 @@ public:
 inout(BigDigit) [] removeLeadingZeros(inout(BigDigit) [] x) pure nothrow @safe
 {
     size_t k = x.length;
-    while(k>1 && x[k - 1]==0) --k;
+    while (k>1 && x[k - 1]==0) --k;
     return x[0 .. k];
 }
 
@@ -1642,7 +1642,7 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data) pure nothrow
     // Might be better to divide by (10^38/2^32) since that gives 38 digits for
     // the price of 3 divisions and a shr; this version only gives 27 digits
     // for 3 divisions.
-    while(data.length>1)
+    while (data.length>1)
     {
         uint rem = multibyteDivAssign(data, 10_0000_0000, 0);
         itoaZeroPadded(buff[sofar-9 .. sofar], rem);
@@ -1655,7 +1655,7 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data) pure nothrow
     itoaZeroPadded(buff[sofar-10 .. sofar], data[0]);
     sofar -= 10;
     // and strip off the leading zeros
-    while(sofar!= buff.length-1 && buff[sofar] == '0')
+    while (sofar!= buff.length-1 && buff[sofar] == '0')
         sofar++;
     return sofar;
 }
@@ -1924,7 +1924,7 @@ bool less(const(BigDigit)[] x, const(BigDigit)[] y) pure nothrow
 {
     assert(x.length >= y.length);
     auto k = x.length-1;
-    while(x[k]==0 && k>=y.length)
+    while (x[k]==0 && k>=y.length)
         --k;
     if (k>=y.length)
         return false;
@@ -2427,7 +2427,7 @@ void adjustRemainder(BigDigit[] quot, BigDigit[] rem, const(BigDigit)[] v,
         carry = scratch[$-1] + subAssignSimple(rem, scratch[0..$-1]);
     else
         carry = subAssignSimple(rem, scratch);
-    while(carry)
+    while (carry)
     {
         multibyteIncrementAssign!('-')(quot, 1); // quot--
         carry -= multibyteAdd(rem, rem, v, 0);

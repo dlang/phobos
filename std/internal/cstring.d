@@ -43,12 +43,12 @@ import std.range;
 
 version(unittest)
 @property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc @trusted
-if(isSomeChar!C)
+if (isSomeChar!C)
 in { assert(cstr); }
 body
 {
     size_t length = 0;
-    while(cstr[length])
+    while (cstr[length])
         ++length;
     return cstr[0 .. length];
 }

@@ -65,7 +65,7 @@ package @property string deleteme() @safe
     static _deleteme = "deleteme.dmd.unittest.pid";
     static _first = true;
 
-    if(_first)
+    if (_first)
     {
         _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(thisProcessID);
         _first = false;
@@ -115,7 +115,7 @@ class FileException : Exception
      +/
     this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__) @safe pure
     {
-        if(msg.empty)
+        if (msg.empty)
             super(name.idup, file, line);
         else
             super(text(name, ": ", msg), file, line);
@@ -1305,7 +1305,7 @@ unittest
 
 Example:
 --------------------
-if(timeLastModified(source) >= timeLastModified(target, SysTime.min))
+if (timeLastModified(source) >= timeLastModified(target, SysTime.min))
 {
     // must (re)build
 }
@@ -1348,7 +1348,7 @@ SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
 unittest
 {
     //std.process.system("echo a > deleteme") == 0 || assert(false);
-    if(exists(deleteme))
+    if (exists(deleteme))
         remove(deleteme);
 
     write(deleteme, "a\n");
@@ -1378,7 +1378,7 @@ unittest
 {
     import core.thread;
 
-    if(exists(deleteme))
+    if (exists(deleteme))
         remove(deleteme);
 
     SysTime lastTime;
@@ -1688,18 +1688,18 @@ unittest
 {
     version(Windows)
     {
-        if("C:\\Program Files\\".exists)
+        if ("C:\\Program Files\\".exists)
             assert("C:\\Program Files\\".isDir);
 
-        if("C:\\Windows\\system.ini".exists)
+        if ("C:\\Windows\\system.ini".exists)
             assert(!"C:\\Windows\\system.ini".isDir);
     }
     else version(Posix)
     {
-        if(system_directory.exists)
+        if (system_directory.exists)
             assert(system_directory.isDir);
 
-        if(system_file.exists)
+        if (system_file.exists)
             assert(!system_file.isDir);
     }
 }
@@ -1750,13 +1750,13 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
 {
     version(Windows)
     {
-        if("C:\\Program Files\\".exists)
+        if ("C:\\Program Files\\".exists)
         {
             assert(attrIsDir(getAttributes("C:\\Program Files\\")));
             assert(attrIsDir(getLinkAttributes("C:\\Program Files\\")));
         }
 
-        if("C:\\Windows\\system.ini".exists)
+        if ("C:\\Windows\\system.ini".exists)
         {
             assert(!attrIsDir(getAttributes("C:\\Windows\\system.ini")));
             assert(!attrIsDir(getLinkAttributes("C:\\Windows\\system.ini")));
@@ -1764,13 +1764,13 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
     }
     else version(Posix)
     {
-        if(system_directory.exists)
+        if (system_directory.exists)
         {
             assert(attrIsDir(getAttributes(system_directory)));
             assert(attrIsDir(getLinkAttributes(system_directory)));
         }
 
-        if(system_file.exists)
+        if (system_file.exists)
         {
             assert(!attrIsDir(getAttributes(system_file)));
             assert(!attrIsDir(getLinkAttributes(system_file)));
@@ -1840,18 +1840,18 @@ unittest
 {
     version(Windows)
     {
-        if("C:\\Program Files\\".exists)
+        if ("C:\\Program Files\\".exists)
             assert(!"C:\\Program Files\\".isFile);
 
-        if("C:\\Windows\\system.ini".exists)
+        if ("C:\\Windows\\system.ini".exists)
             assert("C:\\Windows\\system.ini".isFile);
     }
     else version(Posix)
     {
-        if(system_directory.exists)
+        if (system_directory.exists)
             assert(!system_directory.isFile);
 
-        if(system_file.exists)
+        if (system_file.exists)
             assert(system_file.isFile);
     }
 }
@@ -1899,13 +1899,13 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
 {
     version(Windows)
     {
-        if("C:\\Program Files\\".exists)
+        if ("C:\\Program Files\\".exists)
         {
             assert(!attrIsFile(getAttributes("C:\\Program Files\\")));
             assert(!attrIsFile(getLinkAttributes("C:\\Program Files\\")));
         }
 
-        if("C:\\Windows\\system.ini".exists)
+        if ("C:\\Windows\\system.ini".exists)
         {
             assert(attrIsFile(getAttributes("C:\\Windows\\system.ini")));
             assert(attrIsFile(getLinkAttributes("C:\\Windows\\system.ini")));
@@ -1913,13 +1913,13 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
     }
     else version(Posix)
     {
-        if(system_directory.exists)
+        if (system_directory.exists)
         {
             assert(!attrIsFile(getAttributes(system_directory)));
             assert(!attrIsFile(getLinkAttributes(system_directory)));
         }
 
-        if(system_file.exists)
+        if (system_file.exists)
         {
             assert(attrIsFile(getAttributes(system_file)));
             assert(attrIsFile(getLinkAttributes(system_file)));
@@ -1968,14 +1968,14 @@ unittest
 {
     version(Windows)
     {
-        if("C:\\Program Files\\".exists)
+        if ("C:\\Program Files\\".exists)
             assert(!"C:\\Program Files\\".isSymlink);
 
-        if("C:\\Users\\".exists && "C:\\Documents and Settings\\".exists)
+        if ("C:\\Users\\".exists && "C:\\Documents and Settings\\".exists)
             assert("C:\\Documents and Settings\\".isSymlink);
 
         enum fakeSymFile = "C:\\Windows\\system.ini";
-        if(fakeSymFile.exists)
+        if (fakeSymFile.exists)
         {
             assert(!fakeSymFile.isSymlink);
 
@@ -1993,12 +1993,12 @@ unittest
     }
     else version(Posix)
     {
-        if(system_directory.exists)
+        if (system_directory.exists)
         {
             assert(!system_directory.isSymlink);
 
             immutable symfile = deleteme ~ "_slink\0";
-            scope(exit) if(symfile.exists) symfile.remove();
+            scope(exit) if (symfile.exists) symfile.remove();
 
             core.sys.posix.unistd.symlink(system_directory, symfile.ptr);
 
@@ -2013,12 +2013,12 @@ unittest
             assert(!attrIsFile(getLinkAttributes(symfile)));
         }
 
-        if(system_file.exists)
+        if (system_file.exists)
         {
             assert(!system_file.isSymlink);
 
             immutable symfile = deleteme ~ "_slink\0";
-            scope(exit) if(symfile.exists) symfile.remove();
+            scope(exit) if (symfile.exists) symfile.remove();
 
             core.sys.posix.unistd.symlink(system_file, symfile.ptr);
 
@@ -2339,10 +2339,10 @@ else version(Posix) void symlink(RO, RL)(RO original, RL link)
 
 version(Posix) @safe unittest
 {
-    if(system_directory.exists)
+    if (system_directory.exists)
     {
         immutable symfile = deleteme ~ "_slink\0";
-        scope(exit) if(symfile.exists) symfile.remove();
+        scope(exit) if (symfile.exists) symfile.remove();
 
         symlink(system_directory, symfile);
 
@@ -2358,12 +2358,12 @@ version(Posix) @safe unittest
         assert(!attrIsFile(getLinkAttributes(symfile)));
     }
 
-    if(system_file.exists)
+    if (system_file.exists)
     {
         assert(!system_file.isSymlink);
 
         immutable symfile = deleteme ~ "_slink\0";
-        scope(exit) if(symfile.exists) symfile.remove();
+        scope(exit) if (symfile.exists) symfile.remove();
 
         symlink(system_file, symfile);
 
@@ -2421,12 +2421,12 @@ else version(Posix) string readLink(R)(R link)
         } ();
         cenforce(size != -1, to!string(link));
 
-        if(size <= bufferLen - maxCodeUnits)
+        if (size <= bufferLen - maxCodeUnits)
             return to!string(buffer[0 .. size]);
 
         auto dynamicBuffer = new char[](bufferLen * 3 / 2);
 
-        foreach(i; 0 .. 10)
+        foreach (i; 0 .. 10)
         {
             size = () @trusted {
                 return posixReadlink(linkz, dynamicBuffer.ptr,
@@ -2434,7 +2434,7 @@ else version(Posix) string readLink(R)(R link)
             } ();
             cenforce(size != -1, to!string(link));
 
-            if(size <= dynamicBuffer.length - maxCodeUnits)
+            if (size <= dynamicBuffer.length - maxCodeUnits)
             {
                 dynamicBuffer.length = size;
                 return () @trusted {
@@ -2452,12 +2452,12 @@ else version(Posix) string readLink(R)(R link)
 version(Posix) @safe unittest
 {
     import std.string;
-    foreach(file; [system_directory, system_file])
+    foreach (file; [system_directory, system_file])
     {
-        if(file.exists)
+        if (file.exists)
         {
             immutable symfile = deleteme ~ "_slink\0";
-            scope(exit) if(symfile.exists) symfile.remove();
+            scope(exit) if (symfile.exists) symfile.remove();
 
             symlink(file, symfile);
             assert(readLink(symfile) == file, format("Failed file: %s", file));
@@ -2475,7 +2475,7 @@ version(Posix) @safe unittest
 version(Posix) unittest // input range of dchars
 {
     mkdirRecurse(deleteme);
-    scope(exit) if(deleteme.exists) rmdirRecurse(deleteme);
+    scope(exit) if (deleteme.exists) rmdirRecurse(deleteme);
     write(deleteme ~ "/f", "");
     import std.range.interfaces: InputRange, inputRangeObject;
     import std.utf: byChar;
@@ -2507,7 +2507,7 @@ version(Windows) string getcwd()
     immutable n = cenforce(GetCurrentDirectoryW(to!DWORD(buffW.length), buffW.ptr),
             "getcwd");
     // we can do it because toUTFX always produces a fresh string
-    if(n < buffW.length)
+    if (n < buffW.length)
     {
         return toUTF8(buffW[0 .. n]);
     }
@@ -2808,7 +2808,7 @@ else version(Windows)
 
         this(string path)
         {
-            if(!path.exists())
+            if (!path.exists())
                 throw new FileException(path, "File does not exist");
 
             _name = path;
@@ -2910,7 +2910,7 @@ else version(Posix)
 
         this(string path)
         {
-            if(!path.exists)
+            if (!path.exists)
                 throw new FileException(path, "File does not exist");
 
             _name = path;
@@ -2938,7 +2938,7 @@ else version(Posix)
             //cost of calling lstat).
             static if (__traits(compiles, fd.d_type != DT_UNKNOWN))
             {
-                if(fd.d_type != DT_UNKNOWN)
+                if (fd.d_type != DT_UNKNOWN)
                 {
                     _dType = fd.d_type;
                     _dTypeSet = true;
@@ -3038,7 +3038,7 @@ else version(Posix)
             {
                 return stat(path.tempCString(), buf);
             }
-            if(_didStat)
+            if (_didStat)
                 return;
 
             enforce(trustedStat(_name, &_statBuf) == 0,
@@ -3056,10 +3056,10 @@ else version(Posix)
          +/
         void _ensureStatOrLStatDone()
         {
-            if(_didStat)
+            if (_didStat)
                 return;
 
-            if( stat(_name.tempCString(), &_statBuf) != 0 )
+            if ( stat(_name.tempCString(), &_statBuf) != 0 )
             {
                 _ensureLStatDone();
 
@@ -3078,7 +3078,7 @@ else version(Posix)
          +/
         void _ensureLStatDone()
         {
-            if(_didLStat)
+            if (_didLStat)
                 return;
 
             stat_t statbuf = void;
@@ -3108,7 +3108,7 @@ unittest
 {
     version(Windows)
     {
-        if("C:\\Program Files\\".exists)
+        if ("C:\\Program Files\\".exists)
         {
             auto de = DirEntry("C:\\Program Files\\");
             assert(!de.isFile);
@@ -3116,13 +3116,13 @@ unittest
             assert(!de.isSymlink);
         }
 
-        if("C:\\Users\\".exists && "C:\\Documents and Settings\\".exists)
+        if ("C:\\Users\\".exists && "C:\\Documents and Settings\\".exists)
         {
             auto de = DirEntry("C:\\Documents and Settings\\");
             assert(de.isSymlink);
         }
 
-        if("C:\\Windows\\system.ini".exists)
+        if ("C:\\Windows\\system.ini".exists)
         {
             auto de = DirEntry("C:\\Windows\\system.ini");
             assert(de.isFile);
@@ -3132,7 +3132,7 @@ unittest
     }
     else version(Posix)
     {
-        if(system_directory.exists)
+        if (system_directory.exists)
         {
             {
                 auto de = DirEntry(system_directory);
@@ -3142,7 +3142,7 @@ unittest
             }
 
             immutable symfile = deleteme ~ "_slink\0";
-            scope(exit) if(symfile.exists) symfile.remove();
+            scope(exit) if (symfile.exists) symfile.remove();
 
             core.sys.posix.unistd.symlink(system_directory, symfile.ptr);
 
@@ -3174,7 +3174,7 @@ unittest
             }
         }
 
-        if(system_file.exists)
+        if (system_file.exists)
         {
             auto de = DirEntry(system_file);
             assert(de.isFile);
@@ -3397,7 +3397,7 @@ void rmdirRecurse(in char[] pathname)
  +/
 void rmdirRecurse(ref DirEntry de)
 {
-    if(!de.isDir)
+    if (!de.isDir)
         throw new FileException(de.name, "Not a directory");
 
     if (de.isSymlink)
@@ -3410,7 +3410,7 @@ void rmdirRecurse(ref DirEntry de)
     else
     {
         // all children, recursively depth-first
-        foreach(DirEntry e; dirEntries(de.name, SpanMode.depth, false))
+        foreach (DirEntry e; dirEntries(de.name, SpanMode.depth, false))
         {
             attrIsDir(e.linkAttributes) ? rmdir(e.name) : remove(e.name);
         }
@@ -3545,7 +3545,7 @@ private struct DirIteratorImpl
 
         bool next()
         {
-            if(_stack.data.empty)
+            if (_stack.data.empty)
                 return false;
             WIN32_FIND_DATAW findinfo;
             return toNext(true, &findinfo);
@@ -3555,17 +3555,17 @@ private struct DirIteratorImpl
         {
             import core.stdc.wchar_ : wcscmp;
 
-            if(fetch)
+            if (fetch)
             {
-                if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                if (FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
                 }
             }
-            while( wcscmp(findinfo.cFileName.ptr, ".") == 0
+            while ( wcscmp(findinfo.cFileName.ptr, ".") == 0
                     || wcscmp(findinfo.cFileName.ptr, "..") == 0)
-                if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                if (FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
@@ -3583,7 +3583,7 @@ private struct DirIteratorImpl
 
         void releaseDirStack()
         {
-            foreach( d;  _stack.data)
+            foreach ( d;  _stack.data)
                 FindClose(d.h);
         }
 
@@ -3610,12 +3610,12 @@ private struct DirIteratorImpl
 
         bool next()
         {
-            if(_stack.data.empty)
+            if (_stack.data.empty)
                 return false;
             for(dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
             {
                 // Skip "." and ".."
-                if(core.stdc.string.strcmp(fdata.d_name.ptr, ".")  &&
+                if (core.stdc.string.strcmp(fdata.d_name.ptr, ".")  &&
                    core.stdc.string.strcmp(fdata.d_name.ptr, "..") )
                 {
                     _cur = DirEntry(_stack.data[$-1].dirpath, fdata);
@@ -3635,7 +3635,7 @@ private struct DirIteratorImpl
 
         void releaseDirStack()
         {
-            foreach( d;  _stack.data)
+            foreach ( d;  _stack.data)
                 closedir(d.h);
         }
 
@@ -3663,11 +3663,11 @@ private struct DirIteratorImpl
         }
         if (stepIn(pathnameStr))
         {
-            if(_mode == SpanMode.depth)
-                while(mayStepIn())
+            if (_mode == SpanMode.depth)
+                while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if(stepIn(_cur.name))
+                    if (stepIn(_cur.name))
                     {
                         pushExtra(thisDir);
                     }
@@ -3680,15 +3680,15 @@ private struct DirIteratorImpl
     @property DirEntry front(){ return _cur; }
     void popFront()
     {
-        switch(_mode)
+        switch (_mode)
         {
         case SpanMode.depth:
-            if(next())
+            if (next())
             {
-                while(mayStepIn())
+                while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if(stepIn(_cur.name))
+                    if (stepIn(_cur.name))
                     {
                         pushExtra(thisDir);
                     }
@@ -3696,17 +3696,17 @@ private struct DirIteratorImpl
                         break;
                 }
             }
-            else if(hasExtra())
+            else if (hasExtra())
                 _cur = popExtra();
             break;
         case SpanMode.breadth:
-            if(mayStepIn())
+            if (mayStepIn())
             {
-                if(!stepIn(_cur.name))
-                    while(!empty && !next()){}
+                if (!stepIn(_cur.name))
+                    while (!empty && !next()){}
             }
             else
-                while(!empty && !next()){}
+                while (!empty && !next()){}
             break;
         default:
             next();
@@ -3773,10 +3773,10 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 }
 // Iterate over all *.d files in current directory and all its subdirectories
 auto dFiles = dirEntries("", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
-foreach(d; dFiles)
+foreach (d; dFiles)
     writeln(d.name);
 // Hook it up with std.parallelism to compile them all in parallel:
-foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
+foreach (d; parallel(dFiles, 1)) //passes by 1 file to each thread
 {
     string cmd = "dmd -c "  ~ d.name;
     writeln(cmd);
@@ -3871,7 +3871,7 @@ unittest
 
     // issue 11392
     auto dFiles = dirEntries(testdir, SpanMode.shallow);
-    foreach(d; dFiles){}
+    foreach (d; dFiles){}
 
     // issue 15146
     dirEntries("", SpanMode.shallow).walkLength();
@@ -3900,7 +3900,7 @@ Example:
 // Iterate over all D source files in current directory and all its
 // subdirectories
 auto dFiles = dirEntries("","*.{d,di}",SpanMode.depth);
-foreach(d; dFiles)
+foreach (d; dFiles)
     writeln(d.name);
 --------------------
  +/

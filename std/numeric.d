@@ -161,14 +161,14 @@ private:
     // get the correct unsigned bitfield type to support > 32 bits
     template uType(uint bits)
     {
-        static if(bits <= size_t.sizeof*8)  alias uType = size_t;
+        static if (bits <= size_t.sizeof*8)  alias uType = size_t;
         else                                alias uType = ulong ;
     }
 
     // get the correct signed   bitfield type to support > 32 bits
     template sType(uint bits)
     {
-        static if(bits <= ptrdiff_t.sizeof*8-1) alias sType = ptrdiff_t;
+        static if (bits <= ptrdiff_t.sizeof*8-1) alias sType = ptrdiff_t;
         else                                    alias sType = long;
     }
 
@@ -243,7 +243,7 @@ private:
             // Convert denormalized form to normalized form
             ((flags&Flags.allowDenorm) && exp==0))
         {
-            if(sig > 0)
+            if (sig > 0)
             {
                 import core.bitop : bsr;
                 auto shift2 = precision - bsr(sig);
@@ -465,7 +465,7 @@ public:
         static if (flags & Flags.signed)
         value.sign        = 0;
         value.exponent    = 1;
-        static if(flags&Flags.storeNormalized)
+        static if (flags&Flags.storeNormalized)
             value.significand = 0;
         else
             value.significand = cast(T_sig) 1uL << (precision - 1);
@@ -792,17 +792,17 @@ public:
  */
 T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
     scope DT tolerance) //= (T a, T b) => false)
-    if(
+    if (
         isFloatingPoint!T &&
         is(typeof(tolerance(T.init, T.init)) : bool) &&
         is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
     )
 {
     immutable fa = f(a);
-    if(fa == 0)
+    if (fa == 0)
         return a;
     immutable fb = f(b);
-    if(fb == 0)
+    if (fb == 0)
         return b;
     immutable r = findRoot(f, a, b, fa, fb, tolerance);
     // Return the first value if it is smaller or NaN
@@ -850,7 +850,7 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  */
 Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx,
     scope DT tolerance) // = (T a, T b) => false)
-    if(
+    if (
         isFloatingPoint!T &&
         is(typeof(tolerance(T.init, T.init)) : bool) &&
         is(typeof(f(T.init)) == R) && isFloatingPoint!R
@@ -1434,7 +1434,7 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1524,7 +1524,7 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1568,7 +1568,7 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 3.0, ];
@@ -1718,7 +1718,7 @@ if (isInputRange!Range &&
 unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] p = [ 0.0, 0, 0, 1 ];
         assert(entropy(p) == 0);
@@ -2410,7 +2410,7 @@ private:
         auto recurseRange = range;
         recurseRange.doubleSteps();
 
-        if(buf.length > 4)
+        if (buf.length > 4)
         {
             fftImpl(recurseRange, buf[0..$ / 2]);
             recurseRange.popHalf();
@@ -2445,7 +2445,7 @@ private:
 
         // Converts odd indices of range to the imaginary components of
         // a range half the size.  The even indices become the real components.
-        static if(isArray!R && isFloatingPoint!E)
+        static if (isArray!R && isFloatingPoint!E)
         {
             // Then the memory layout of complex numbers provides a dirt
             // cheap way to convert.  This is a common case, so take advantage.
@@ -2627,7 +2627,7 @@ private:
          * inefficient, but having all the lookups be next to each other in
          * memory at every level of iteration is a huge win performance-wise.
          */
-        if(size == 0)
+        if (size == 0)
         {
             return;
         }
@@ -2732,7 +2732,7 @@ public:
      * property that can be both read and written and are floating point numbers.
      */
     void fft(Ret, R)(R range, Ret buf) const
-        if(isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+        if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
     {
         enforce(buf.length == range.length);
         enforceSize(range);

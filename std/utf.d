@@ -382,7 +382,7 @@ unittest // invalid start bytes
         0b1111_1111, // 8
         0b1000_0000, // continuation byte
     ];
-    foreach(c; invalidStartBytes)
+    foreach (c; invalidStartBytes)
         assertThrown!UTFException(stride([c]));
 }
 

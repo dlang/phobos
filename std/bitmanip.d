@@ -197,7 +197,7 @@ private template createReferenceAccessor(string store, T, ulong bits, string nam
 
 private template sizeOfBitField(T...)
 {
-    static if(T.length < 2)
+    static if (T.length < 2)
         enum sizeOfBitField = 0;
     else
         enum sizeOfBitField = T[2] + sizeOfBitField!(T[3 .. $]);
@@ -311,7 +311,7 @@ The example above creates a tagged reference to an Object in the struct A. This 
 as $(D taggedPointer), except the first argument which must be a class type instead of a pointer type.
 */
 
-template taggedClassRef(T, string name, Ts...) if(is(T == class)) {
+template taggedClassRef(T, string name, Ts...) if (is(T == class)) {
     enum taggedClassRef = createTaggedReference!(T, 8, name, Ts).result;
 }
 
@@ -2013,7 +2013,7 @@ public:
     void toString(scope void delegate(const(char)[]) sink,
                   FormatSpec!char fmt) const
     {
-        switch(fmt.spec)
+        switch (fmt.spec)
         {
             case 'b':
                 return formatBitString(sink);
@@ -2169,17 +2169,17 @@ unittest
     Swaps the endianness of the given integral value or character.
   +/
 T swapEndian(T)(T val) @safe pure nothrow @nogc
-    if(isIntegral!T || isSomeChar!T || isBoolean!T)
+    if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
-    static if(val.sizeof == 1)
+    static if (val.sizeof == 1)
         return val;
-    else static if(isUnsigned!T)
+    else static if (isUnsigned!T)
         return swapEndianImpl(val);
-    else static if(isIntegral!T)
+    else static if (isIntegral!T)
         return cast(T)swapEndianImpl(cast(Unsigned!T) val);
-    else static if(is(Unqual!T == wchar))
+    else static if (is(Unqual!T == wchar))
         return cast(T)swapEndian(cast(ushort)val);
-    else static if(is(Unqual!T == dchar))
+    else static if (is(Unqual!T == dchar))
         return cast(T)swapEndian(cast(uint)val);
     else
         static assert(0, T.stringof ~ " unsupported by swapEndian.");
@@ -2207,7 +2207,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 unittest
 {
     import std.meta;
-    foreach(T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
+    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
         T val;
@@ -2220,22 +2220,22 @@ unittest
         assert(swapEndian(swapEndian(T.min)) == T.min);
         assert(swapEndian(swapEndian(T.max)) == T.max);
 
-        foreach(i; 2 .. 10)
+        foreach (i; 2 .. 10)
         {
             immutable T maxI = cast(T)(T.max / i);
             immutable T minI = cast(T)(T.min / i);
 
             assert(swapEndian(swapEndian(maxI)) == maxI);
 
-            static if(isSigned!T)
+            static if (isSigned!T)
                 assert(swapEndian(swapEndian(minI)) == minI);
         }
 
-        static if(isSigned!T)
+        static if (isSigned!T)
             assert(swapEndian(swapEndian(cast(T)0)) == 0);
 
         // used to trigger BUG6354
-        static if(T.sizeof > 1 && isUnsigned!T)
+        static if (T.sizeof > 1 && isUnsigned!T)
         {
             T left = 0xffU;
             left <<= (T.sizeof - 1) * 8;
@@ -2254,14 +2254,14 @@ unittest
 
 
 private union EndianSwapper(T)
-    if(canSwapEndianness!T)
+    if (canSwapEndianness!T)
 {
     Unqual!T value;
     ubyte[T.sizeof] array;
 
-    static if(is(FloatingPointTypeOf!T == float))
+    static if (is(FloatingPointTypeOf!T == float))
         uint  intValue;
-    else static if(is(FloatingPointTypeOf!T == double))
+    else static if (is(FloatingPointTypeOf!T == double))
         ulong intValue;
 
 }
@@ -2281,7 +2281,7 @@ private union EndianSwapper(T)
     unusable if you tried to transfer it to another machine).
   +/
 auto nativeToBigEndian(T)(T val) @safe pure nothrow @nogc
-    if(canSwapEndianness!T)
+    if (canSwapEndianness!T)
 {
     return nativeToBigEndianImpl(val);
 }
@@ -2299,7 +2299,7 @@ unittest
 }
 
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if(isIntegral!T || isSomeChar!T || isBoolean!T)
+    if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     EndianSwapper!T es = void;
 
@@ -2312,7 +2312,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
 }
 
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if(isFloatOrDouble!T)
+    if (isFloatOrDouble!T)
 {
     version(LittleEndian)
         return floatEndianImpl!(T, true)(val);
@@ -2323,7 +2323,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
 unittest
 {
     import std.meta;
-    foreach(T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                          char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
          * using a bit compare. There are two kinds of nans, quiet and signaling.
@@ -2348,28 +2348,28 @@ unittest
         assert(bigEndianToNative!T(nativeToBigEndian(T.min)) == T.min);
         assert(bigEndianToNative!T(nativeToBigEndian(T.max)) == T.max);
 
-        static if(isSigned!T)
+        static if (isSigned!T)
             assert(bigEndianToNative!T(nativeToBigEndian(cast(T)0)) == 0);
 
-        static if(!is(T == bool))
+        static if (!is(T == bool))
         {
-            foreach(i; [2, 4, 6, 7, 9, 11])
+            foreach (i; [2, 4, 6, 7, 9, 11])
             {
                 immutable T maxI = cast(T)(T.max / i);
                 immutable T minI = cast(T)(T.min / i);
 
                 assert(bigEndianToNative!T(nativeToBigEndian(maxI)) == maxI);
 
-                static if(T.sizeof > 1)
+                static if (T.sizeof > 1)
                     assert(nativeToBigEndian(maxI) != nativeToLittleEndian(maxI));
                 else
                     assert(nativeToBigEndian(maxI) == nativeToLittleEndian(maxI));
 
-                static if(isSigned!T)
+                static if (isSigned!T)
                 {
                     assert(bigEndianToNative!T(nativeToBigEndian(minI)) == minI);
 
-                    static if(T.sizeof > 1)
+                    static if (T.sizeof > 1)
                         assert(nativeToBigEndian(minI) != nativeToLittleEndian(minI));
                     else
                         assert(nativeToBigEndian(minI) == nativeToLittleEndian(minI));
@@ -2377,12 +2377,12 @@ unittest
             }
         }
 
-        static if(isUnsigned!T || T.sizeof == 1 || is(T == wchar))
+        static if (isUnsigned!T || T.sizeof == 1 || is(T == wchar))
             assert(nativeToBigEndian(T.max) == nativeToLittleEndian(T.max));
         else
             assert(nativeToBigEndian(T.max) != nativeToLittleEndian(T.max));
 
-        static if(isUnsigned!T || T.sizeof == 1 || isSomeChar!T)
+        static if (isUnsigned!T || T.sizeof == 1 || isSomeChar!T)
             assert(nativeToBigEndian(T.min) == nativeToLittleEndian(T.min));
         else
             assert(nativeToBigEndian(T.min) != nativeToLittleEndian(T.min));
@@ -2403,7 +2403,7 @@ unittest
     can't actually have swapped floating point values as floating point values).
   +/
 T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if(canSwapEndianness!T && n == T.sizeof)
+    if (canSwapEndianness!T && n == T.sizeof)
 {
     return bigEndianToNativeImpl!(T, n)(val);
 }
@@ -2421,7 +2421,7 @@ unittest
 }
 
 private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if((isIntegral!T || isSomeChar!T || isBoolean!T) &&
+    if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
        n == T.sizeof)
 {
     EndianSwapper!T es = void;
@@ -2436,7 +2436,7 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @n
 }
 
 private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if(isFloatOrDouble!T && n == T.sizeof)
+    if (isFloatOrDouble!T && n == T.sizeof)
 {
     version(LittleEndian)
         return cast(T) floatEndianImpl!(n, true)(val);
@@ -2455,7 +2455,7 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @n
     can't actually have swapped floating point values as floating point values).
   +/
 auto nativeToLittleEndian(T)(T val) @safe pure nothrow @nogc
-    if(canSwapEndianness!T)
+    if (canSwapEndianness!T)
 {
     return nativeToLittleEndianImpl(val);
 }
@@ -2473,7 +2473,7 @@ unittest
 }
 
 private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if(isIntegral!T || isSomeChar!T || isBoolean!T)
+    if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     EndianSwapper!T es = void;
 
@@ -2486,7 +2486,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
 }
 
 private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if(isFloatOrDouble!T)
+    if (isFloatOrDouble!T)
 {
     version(BigEndian)
         return floatEndianImpl!(T, true)(val);
@@ -2497,7 +2497,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
 unittest
 {
     import std.meta;
-    foreach(T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                          char, wchar, dchar/*,
                          float, double*/))
     {
@@ -2513,19 +2513,19 @@ unittest
         assert(littleEndianToNative!T(nativeToLittleEndian(T.min)) == T.min);
         assert(littleEndianToNative!T(nativeToLittleEndian(T.max)) == T.max);
 
-        static if(isSigned!T)
+        static if (isSigned!T)
             assert(littleEndianToNative!T(nativeToLittleEndian(cast(T)0)) == 0);
 
-        static if(!is(T == bool))
+        static if (!is(T == bool))
         {
-            foreach(i; 2 .. 10)
+            foreach (i; 2 .. 10)
             {
                 immutable T maxI = cast(T)(T.max / i);
                 immutable T minI = cast(T)(T.min / i);
 
                 assert(littleEndianToNative!T(nativeToLittleEndian(maxI)) == maxI);
 
-                static if(isSigned!T)
+                static if (isSigned!T)
                     assert(littleEndianToNative!T(nativeToLittleEndian(minI)) == minI);
             }
         }
@@ -2550,7 +2550,7 @@ unittest
     unusable if you tried to transfer it to another machine).
   +/
 T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if(canSwapEndianness!T && n == T.sizeof)
+    if (canSwapEndianness!T && n == T.sizeof)
 {
     return littleEndianToNativeImpl!T(val);
 }
@@ -2568,7 +2568,7 @@ unittest
 }
 
 private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if((isIntegral!T || isSomeChar!T || isBoolean!T) &&
+    if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
        n == T.sizeof)
 {
     EndianSwapper!T es = void;
@@ -2583,7 +2583,7 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
 }
 
 private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if(((isFloatOrDouble!T) &&
+    if (((isFloatOrDouble!T) &&
        n == T.sizeof))
 {
     version(BigEndian)
@@ -2593,26 +2593,26 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
 }
 
 private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow @nogc
-    if(isFloatOrDouble!T)
+    if (isFloatOrDouble!T)
 {
     EndianSwapper!T es = void;
     es.value = val;
 
-    static if(swap)
+    static if (swap)
         es.intValue = swapEndian(es.intValue);
 
     return es.array;
 }
 
 private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothrow @nogc
-    if(n == 4 || n == 8)
+    if (n == 4 || n == 8)
 {
-    static if(n == 4)       EndianSwapper!float es = void;
-    else static if(n == 8)  EndianSwapper!double es = void;
+    static if (n == 4)       EndianSwapper!float es = void;
+    else static if (n == 8)  EndianSwapper!double es = void;
 
     es.array = val;
 
-    static if(swap)
+    static if (swap)
         es.intValue = swapEndian(es.intValue);
 
     return es.value;
@@ -2627,7 +2627,7 @@ private template isFloatOrDouble(T)
 unittest
 {
     import std.meta;
-    foreach(T; AliasSeq!(float, double))
+    foreach (T; AliasSeq!(float, double))
     {
         static assert(isFloatOrDouble!(T));
         static assert(isFloatOrDouble!(const T));
@@ -2656,7 +2656,7 @@ private template canSwapEndianness(T)
 unittest
 {
     import std.meta;
-    foreach(T; AliasSeq!(bool, ubyte, byte, ushort, short, uint, int, ulong,
+    foreach (T; AliasSeq!(bool, ubyte, byte, ushort, short, uint, int, ulong,
                          long, char, wchar, dchar, float, double))
     {
         static assert(canSwapEndianness!(T));
@@ -2668,7 +2668,7 @@ unittest
     }
 
     //!
-    foreach(T; AliasSeq!(real, string, wstring, dstring))
+    foreach (T; AliasSeq!(real, string, wstring, dstring))
     {
         static assert(!canSwapEndianness!(T));
         static assert(!canSwapEndianness!(const T));
@@ -2699,7 +2699,7 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
         isForwardRange!R &&
         is(ElementType!R : const ubyte))
 {
-    static if(hasSlicing!R)
+    static if (hasSlicing!R)
         const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
     else
     {
@@ -2707,14 +2707,14 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
         //Make sure that range is not consumed, even if it's a class.
         range = range.save;
 
-        foreach(ref e; bytes)
+        foreach (ref e; bytes)
         {
             e = range.front;
             range.popFront();
         }
     }
 
-    static if(endianness == Endian.bigEndian)
+    static if (endianness == Endian.bigEndian)
         return bigEndianToNative!T(bytes);
     else
         return littleEndianToNative!T(bytes);
@@ -2722,7 +2722,7 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
 
 /++ Ditto +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t index)
-    if(canSwapEndianness!T &&
+    if (canSwapEndianness!T &&
        isForwardRange!R &&
        hasSlicing!R &&
        is(ElementType!R : const ubyte))
@@ -2732,7 +2732,7 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t index)
 
 /++ Ditto +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
-    if(canSwapEndianness!T &&
+    if (canSwapEndianness!T &&
        isForwardRange!R &&
        hasSlicing!R &&
        is(ElementType!R : const ubyte))
@@ -2744,7 +2744,7 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
     const ubyte[T.sizeof] bytes = range[begin .. end];
     *index = end;
 
-    static if(endianness == Endian.bigEndian)
+    static if (endianness == Endian.bigEndian)
         return bigEndianToNative!T(bytes);
     else
         return littleEndianToNative!T(bytes);
@@ -2997,9 +2997,9 @@ unittest
         range = The range to read from.
   +/
 T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
-    if(canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
+    if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 {
-    static if(hasSlicing!R)
+    static if (hasSlicing!R)
     {
         const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
         range.popFrontN(T.sizeof);
@@ -3008,14 +3008,14 @@ T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
     {
         ubyte[T.sizeof] bytes;
 
-        foreach(ref e; bytes)
+        foreach (ref e; bytes)
         {
             e = range.front;
             range.popFront();
         }
     }
 
-    static if(endianness == Endian.bigEndian)
+    static if (endianness == Endian.bigEndian)
         return bigEndianToNative!T(bytes);
     else
         return littleEndianToNative!T(bytes);
@@ -3242,7 +3242,7 @@ unittest
                 is updated to the index after the bytes read.
   +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t index)
-    if(canSwapEndianness!T &&
+    if (canSwapEndianness!T &&
        isForwardRange!R &&
        hasSlicing!R &&
        is(ElementType!R : ubyte))
@@ -3252,14 +3252,14 @@ void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t 
 
 /++ Ditto +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t* index)
-    if(canSwapEndianness!T &&
+    if (canSwapEndianness!T &&
        isForwardRange!R &&
        hasSlicing!R &&
        is(ElementType!R : ubyte))
 {
     assert(index);
 
-    static if(endianness == Endian.bigEndian)
+    static if (endianness == Endian.bigEndian)
         immutable bytes = nativeToBigEndian!T(value);
     else
         immutable bytes = nativeToLittleEndian!T(value);
@@ -3586,9 +3586,9 @@ unittest
         value = The value to _append.
   +/
 void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
-    if(canSwapEndianness!T && isOutputRange!(R, ubyte))
+    if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 {
-    static if(endianness == Endian.bigEndian)
+    static if (endianness == Endian.bigEndian)
         immutable bytes = nativeToBigEndian!T(value);
     else
         immutable bytes = nativeToLittleEndian!T(value);
@@ -3747,7 +3747,7 @@ unittest
     import std.format : format;
     import std.array;
     import std.meta;
-    foreach(endianness; AliasSeq!(Endian.bigEndian, Endian.littleEndian))
+    foreach (endianness; AliasSeq!(Endian.bigEndian, Endian.littleEndian))
     {
         auto toWrite = appender!(ubyte[])();
         alias Types = AliasSeq!(uint, int, long, ulong, short, ubyte, ushort, byte, uint);
@@ -3756,7 +3756,7 @@ unittest
 
         size_t index = 0;
         size_t length = 0;
-        foreach(T; Types)
+        foreach (T; Types)
         {
             toWrite.append!(T, endianness)(cast(T)values[index++]);
             length += T.sizeof;
@@ -3766,7 +3766,7 @@ unittest
         assert(toRead.length == length);
 
         index = 0;
-        foreach(T; Types)
+        foreach (T; Types)
         {
             assert(toRead.peek!(T, endianness)() == values[index], format("Failed Index: %s", index));
             assert(toRead.peek!(T, endianness)(0) == values[index], format("Failed Index: %s", index));

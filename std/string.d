@@ -1469,7 +1469,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
             {
                 foreach_reverse (idx, dchar hay; haystack)
                 {
-                    if(!canFind(needles, hay))
+                    if (!canFind(needles, hay))
                     {
                         return idx;
                     }
@@ -2442,7 +2442,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
                  *  NEL is C2 85
                  */
                 case 0xC2:
-                    if(i + 1 < s.length && s[i + 1] == 0x85)
+                    if (i + 1 < s.length && s[i + 1] == 0x85)
                     {
                         retval.put(s[iStart .. i + (keepTerm == KeepTerminator.yes) * 2]);
                         iStart = i + 2;
@@ -2641,7 +2641,7 @@ public:
                          *  NEL is C2 85
                          */
                     case 0xC2:
-                        if(i + 1 < _input.length && _input[i + 1] == 0x85)
+                        if (i + 1 < _input.length && _input[i + 1] == 0x85)
                         {
                             iEnd = i + (keepTerm == KeepTerminator.yes) * 2;
                             iNext = i + 2;
@@ -4822,7 +4822,7 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
                               wchar[], const(wchar)[], immutable(wchar)[],
                               dchar[], const(dchar)[], immutable(dchar)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            foreach(R; AliasSeq!(dchar[dchar], const dchar[dchar],
+            foreach (R; AliasSeq!(dchar[dchar], const dchar[dchar],
                         immutable dchar[dchar]))
             {
                 R tt = ['h' : 'q', 'l' : '5'];
@@ -4884,7 +4884,7 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
                               dchar[], const(dchar)[], immutable(dchar)[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
 
-            foreach(R; AliasSeq!(string[dchar], const string[dchar],
+            foreach (R; AliasSeq!(string[dchar], const string[dchar],
                         immutable string[dchar]))
             {
                 R tt = ['h' : "yellow", 'l' : "42"];
@@ -6588,7 +6588,7 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
  *     StringException if indentation is done with different sequences
  *     of whitespace characters.
  */
-S outdent(S)(S str) @safe pure if(isSomeString!S)
+S outdent(S)(S str) @safe pure if (isSomeString!S)
 {
     return str.splitLines(KeepTerminator.yes).outdent().join();
 }
@@ -6630,7 +6630,7 @@ void main() {
  *     StringException if indentation is done with different sequences
  *     of whitespace characters.
  */
-S[] outdent(S)(S[] lines) @safe pure if(isSomeString!S)
+S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
 {
     import std.algorithm : startsWith;
 
@@ -6799,7 +6799,7 @@ Returns:
 See_Also: $(LREF representation)
 */
 auto assumeUTF(T)(T[] arr) pure
-    if(staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
+    if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 {
     import std.utf : validate;
     alias ToUTFType(U) = AliasSeq!(char, wchar, dchar)[U.sizeof / 2];
@@ -6821,24 +6821,24 @@ auto assumeUTF(T)(T[] arr) pure
 pure unittest
 {
     import std.algorithm : equal;
-    foreach(T; AliasSeq!(char[], wchar[], dchar[]))
+    foreach (T; AliasSeq!(char[], wchar[], dchar[]))
     {
         immutable T jti = "Hello World";
         T jt = jti.dup;
 
-        static if(is(T == char[]))
+        static if (is(T == char[]))
         {
             auto gt = cast(ubyte[])jt;
             auto gtc = cast(const(ubyte)[])jt;
             auto gti = cast(immutable(ubyte)[])jt;
         }
-        else static if(is(T == wchar[]))
+        else static if (is(T == wchar[]))
         {
             auto gt = cast(ushort[])jt;
             auto gtc = cast(const(ushort)[])jt;
             auto gti = cast(immutable(ushort)[])jt;
         }
-        else static if(is(T == dchar[]))
+        else static if (is(T == dchar[]))
         {
             auto gt = cast(uint[])jt;
             auto gtc = cast(const(uint)[])jt;

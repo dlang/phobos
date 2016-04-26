@@ -350,7 +350,7 @@ public:
         assert(abs(norm1 - norm2) <= seconds(2));
 
         import std.meta : AliasSeq;
-        foreach(ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
+        foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {
             scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currTime!ct;
@@ -375,7 +375,7 @@ public:
       +/
     static @property long currStdTime(ClockType clockType = ClockType.normal)() @trusted
     {
-        static if(clockType != ClockType.coarse &&
+        static if (clockType != ClockType.coarse &&
                   clockType != ClockType.normal &&
                   clockType != ClockType.precise &&
                   clockType != ClockType.second)
@@ -389,7 +389,7 @@ public:
             FILETIME fileTime;
             GetSystemTimeAsFileTime(&fileTime);
             immutable result = FILETIMEToStdTime(&fileTime);
-            static if(clockType == ClockType.second)
+            static if (clockType == ClockType.second)
             {
                 // Ideally, this would use core.std.time.time, but the C runtime
                 // has to be using unix time for that to work, and that's not
@@ -407,12 +407,12 @@ public:
 
             version(OSX)
             {
-                static if(clockType == ClockType.second)
+                static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
                 else
                 {
                     timeval tv;
-                    if(gettimeofday(&tv, null) != 0)
+                    if (gettimeofday(&tv, null) != 0)
                         throw new TimeException("Call to gettimeofday() failed");
                     return convert!("seconds", "hnsecs")(tv.tv_sec) +
                            convert!("usecs", "hnsecs")(tv.tv_usec) +
@@ -421,17 +421,17 @@ public:
             }
             else version(linux)
             {
-                static if(clockType == ClockType.second)
+                static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
                 else
                 {
                     import core.sys.linux.time;
-                    static if(clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME_COARSE;
-                    else static if(clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
-                    else static if(clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
+                    static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME_COARSE;
+                    else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
                     else static assert(0, "Previous static if is wrong.");
                     timespec ts;
-                    if(clock_gettime(clockArg, &ts) != 0)
+                    if (clock_gettime(clockArg, &ts) != 0)
                         throw new TimeException("Call to clock_gettime() failed");
                     return convert!("seconds", "hnsecs")(ts.tv_sec) +
                            ts.tv_nsec / 100 +
@@ -441,13 +441,13 @@ public:
             else version(FreeBSD)
             {
                 import core.sys.freebsd.time;
-                static if(clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME_FAST;
-                else static if(clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
-                else static if(clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME_PRECISE;
-                else static if(clockType == ClockType.second)  alias clockArg = CLOCK_SECOND;
+                static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME_FAST;
+                else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME_PRECISE;
+                else static if (clockType == ClockType.second)  alias clockArg = CLOCK_SECOND;
                 else static assert(0, "Previous static if is wrong.");
                 timespec ts;
-                if(clock_gettime(clockArg, &ts) != 0)
+                if (clock_gettime(clockArg, &ts) != 0)
                     throw new TimeException("Call to clock_gettime() failed");
                 return convert!("seconds", "hnsecs")(ts.tv_sec) +
                        ts.tv_nsec / 100 +
@@ -455,12 +455,12 @@ public:
             }
             else version(NetBSD)
             {
-                static if(clockType == ClockType.second)
+                static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
                 else
                 {
                     timeval tv;
-                    if(gettimeofday(&tv, null) != 0)
+                    if (gettimeofday(&tv, null) != 0)
                         throw new TimeException("Call to gettimeofday() failed");
                     return convert!("seconds", "hnsecs")(tv.tv_sec) +
                            convert!("usecs", "hnsecs")(tv.tv_usec) +
@@ -469,17 +469,17 @@ public:
             }
             else version(Solaris)
             {
-                static if(clockType == ClockType.second)
+                static if (clockType == ClockType.second)
                     return unixTimeToStdTime(core.stdc.time.time(null));
                 else
                 {
                     import core.sys.solaris.time;
-                    static if(clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME;
-                    else static if(clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
-                    else static if(clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
+                    static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
                     else static assert(0, "Previous static if is wrong.");
                     timespec ts;
-                    if(clock_gettime(clockArg, &ts) != 0)
+                    if (clock_gettime(clockArg, &ts) != 0)
                         throw new TimeException("Call to clock_gettime() failed");
                     return convert!("seconds", "hnsecs")(ts.tv_sec) +
                            ts.tv_nsec / 100 +
@@ -503,7 +503,7 @@ public:
         assert(abs(norm1 - norm2) <= limit);
 
         import std.meta : AliasSeq;
-        foreach(ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
+        foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {
             scope(failure) writefln("ClockType.%s", ct);
             auto value1 = Clock.currStdTime!ct;
@@ -889,9 +889,9 @@ public:
                    format("Given stdTime: %s", stdTime));
         }
 
-        foreach(stdTime; [-1234567890L, -250, 0, 250, 1235657390L])
+        foreach (stdTime; [-1234567890L, -250, 0, 250, 1235657390L])
         {
-            foreach(tz; testTZs)
+            foreach (tz; testTZs)
                 test(stdTime, tz);
         }
     }
@@ -959,11 +959,11 @@ public:
             assert(st1 == st2);
         }
 
-        foreach(tz1; testTZs)
+        foreach (tz1; testTZs)
         {
-            foreach(tz2; testTZs)
+            foreach (tz2; testTZs)
             {
-                foreach(dt; chain(testDateTimesBC, testDateTimesAD))
+                foreach (dt; chain(testDateTimesBC, testDateTimesAD))
                         test(dt, tz1, tz2);
             }
         }
@@ -996,9 +996,9 @@ public:
      +/
     int opCmp(in SysTime rhs) @safe const pure nothrow
     {
-        if(_stdTime < rhs._stdTime)
+        if (_stdTime < rhs._stdTime)
             return -1;
-        if(_stdTime > rhs._stdTime)
+        if (_stdTime > rhs._stdTime)
             return 1;
 
         return 0;
@@ -1027,9 +1027,9 @@ public:
 
         auto sts = array(map!SysTime(chain(testDateTimesBC, testDateTimesAD)));
 
-        foreach(st; sts)
-            foreach(tz1; testTZs)
-                foreach(tz2; testTZs)
+        foreach (st; sts)
+            foreach (tz1; testTZs)
+                foreach (tz2; testTZs)
                     testEqual(st, tz1, tz2);
 
         static void testCmp(SysTime st1,
@@ -1043,10 +1043,10 @@ public:
             assert(st2.opCmp(st1) > 0);
         }
 
-        foreach(si, st1; sts)
-            foreach(st2; sts[si+1 .. $])
-                foreach(tz1; testTZs)
-                    foreach(tz2; testTZs)
+        foreach (si, st1; sts)
+            foreach (st2; sts[si+1 .. $])
+                foreach (tz1; testTZs)
+                    foreach (tz2; testTZs)
                         testCmp(st1, tz1, st2, tz2);
 
         auto st = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
@@ -1086,17 +1086,17 @@ public:
         test(SysTime(1, UTC()), 1);
         test(SysTime(-1, UTC()), 0);
 
-        foreach(year; chain(testYearsBC, testYearsAD))
+        foreach (year; chain(testYearsBC, testYearsAD))
         {
-            foreach(md; testMonthDays)
+            foreach (md; testMonthDays)
             {
-                foreach(tod; testTODs)
+                foreach (tod; testTODs)
                 {
                     auto dt = DateTime(Date(year, md.month, md.day), tod);
 
-                    foreach(tz; testTZs)
+                    foreach (tz; testTZs)
                     {
-                        foreach(fs; testFracSecs)
+                        foreach (fs; testFracSecs)
                             test(SysTime(dt, fs, tz), year);
                     }
                 }
@@ -1125,7 +1125,7 @@ public:
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("hours", "hnsecs")(24);
             --days;
@@ -1155,11 +1155,11 @@ public:
             assert(st == expected);
         }
 
-        foreach(st; chain(testSysTimesBC, testSysTimesAD))
+        foreach (st; chain(testSysTimesBC, testSysTimesAD))
         {
             auto dt = cast(DateTime)st;
 
-            foreach(year; chain(testYearsBC, testYearsAD))
+            foreach (year; chain(testYearsBC, testYearsAD))
             {
                 auto e = SysTime(DateTime(year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
                                  st.fracSecs,
@@ -1168,11 +1168,11 @@ public:
             }
         }
 
-        foreach(fs; testFracSecs)
+        foreach (fs; testFracSecs)
         {
-            foreach(tz; testTZs)
+            foreach (tz; testTZs)
             {
-                foreach(tod; testTODs)
+                foreach (tod; testTODs)
                 {
                     test(SysTime(DateTime(Date(1999, 2, 28), tod), fs, tz), 2000,
                          SysTime(DateTime(Date(2000, 2, 28), tod), fs, tz));
@@ -1180,7 +1180,7 @@ public:
                          SysTime(DateTime(Date(1999, 2, 28), tod), fs, tz));
                 }
 
-                foreach(tod; testTODsThrown)
+                foreach (tod; testTODsThrown)
                 {
                     auto st = SysTime(DateTime(Date(2000, 2, 29), tod), fs, tz);
                     assertThrown!DateTimeException(st.year = 1999);
@@ -1216,14 +1216,14 @@ public:
     unittest
     {
         import std.format : format;
-        foreach(st; testSysTimesBC)
+        foreach (st; testSysTimesBC)
         {
             auto msg = format("SysTime: %s", st);
             assertNotThrown!DateTimeException(st.yearBC, msg);
             assert(st.yearBC == (st.year * -1) + 1, msg);
         }
 
-        foreach(st; [testSysTimesAD[0], testSysTimesAD[$/2], testSysTimesAD[$-1]])
+        foreach (st; [testSysTimesAD[0], testSysTimesAD[$/2], testSysTimesAD[$-1]])
             assertThrown!DateTimeException(st.yearBC, format("SysTime: %s", st));
 
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -1250,7 +1250,7 @@ public:
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("hours", "hnsecs")(24);
             --days;
@@ -1283,11 +1283,11 @@ public:
             assert(st == expected, format("SysTime: %s", st));
         }
 
-        foreach(st; chain(testSysTimesBC, testSysTimesAD))
+        foreach (st; chain(testSysTimesBC, testSysTimesAD))
         {
             auto dt = cast(DateTime)st;
 
-            foreach(year; testYearsBC)
+            foreach (year; testYearsBC)
             {
                 auto e = SysTime(DateTime(year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
                                  st.fracSecs,
@@ -1296,18 +1296,18 @@ public:
             }
         }
 
-        foreach(st; [testSysTimesBC[0], testSysTimesBC[$ - 1],
+        foreach (st; [testSysTimesBC[0], testSysTimesBC[$ - 1],
                      testSysTimesAD[0], testSysTimesAD[$ - 1]])
         {
-            foreach(year; testYearsBC)
+            foreach (year; testYearsBC)
                 assertThrown!DateTimeException(st.yearBC = year);
         }
 
-        foreach(fs; testFracSecs)
+        foreach (fs; testFracSecs)
         {
-            foreach(tz; testTZs)
+            foreach (tz; testTZs)
             {
-                foreach(tod; testTODs)
+                foreach (tod; testTODs)
                 {
                     test(SysTime(DateTime(Date(-1999, 2, 28), tod), fs, tz), 2001,
                          SysTime(DateTime(Date(-2000, 2, 28), tod), fs, tz));
@@ -1315,7 +1315,7 @@ public:
                          SysTime(DateTime(Date(-1999, 2, 28), tod), fs, tz));
                 }
 
-                foreach(tod; testTODsThrown)
+                foreach (tod; testTODsThrown)
                 {
                     auto st = SysTime(DateTime(Date(-2000, 2, 29), tod), fs, tz);
                     assertThrown!DateTimeException(st.year = -1999);
@@ -1362,17 +1362,17 @@ public:
         test(SysTime(1, UTC()), Month.jan);
         test(SysTime(-1, UTC()), Month.dec);
 
-        foreach(year; chain(testYearsBC, testYearsAD))
+        foreach (year; chain(testYearsBC, testYearsAD))
         {
-            foreach(md; testMonthDays)
+            foreach (md; testMonthDays)
             {
-                foreach(tod; testTODs)
+                foreach (tod; testTODs)
                 {
                     auto dt = DateTime(Date(year, md.month, md.day), tod);
 
-                    foreach(fs; testFracSecs)
+                    foreach (fs; testFracSecs)
                     {
-                        foreach(tz; testTZs)
+                        foreach (tz; testTZs)
                             test(SysTime(dt, fs, tz), md.month);
                     }
                 }
@@ -1400,7 +1400,7 @@ public:
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("hours", "hnsecs")(24);
             --days;
@@ -1423,13 +1423,13 @@ public:
             assert(st == expected);
         }
 
-        foreach(st; chain(testSysTimesBC, testSysTimesAD))
+        foreach (st; chain(testSysTimesBC, testSysTimesAD))
         {
             auto dt = cast(DateTime)st;
 
-            foreach(md; testMonthDays)
+            foreach (md; testMonthDays)
             {
-                if(st.day > maxDay(dt.year, md.month))
+                if (st.day > maxDay(dt.year, md.month))
                     continue;
                 auto e = SysTime(DateTime(dt.year, md.month, dt.day, dt.hour, dt.minute, dt.second),
                                  st.fracSecs,
@@ -1438,13 +1438,13 @@ public:
             }
         }
 
-        foreach(fs; testFracSecs)
+        foreach (fs; testFracSecs)
         {
-            foreach(tz; testTZs)
+            foreach (tz; testTZs)
             {
-                foreach(tod; testTODs)
+                foreach (tod; testTODs)
                 {
-                    foreach(year; filter!((a){return yearIsLeapYear(a);})
+                    foreach (year; filter!((a){return yearIsLeapYear(a);})
                                          (chain(testYearsBC, testYearsAD)))
                     {
                         test(SysTime(DateTime(Date(year, 1, 29), tod), fs, tz),
@@ -1452,7 +1452,7 @@ public:
                              SysTime(DateTime(Date(year, 2, 29), tod), fs, tz));
                     }
 
-                    foreach(year; chain(testYearsBC, testYearsAD))
+                    foreach (year; chain(testYearsBC, testYearsAD))
                     {
                         test(SysTime(DateTime(Date(year, 1, 28), tod), fs, tz),
                              Month.feb,
@@ -1465,13 +1465,13 @@ public:
             }
         }
 
-        foreach(fs; [testFracSecs[0], testFracSecs[$-1]])
+        foreach (fs; [testFracSecs[0], testFracSecs[$-1]])
         {
-            foreach(tz; testTZs)
+            foreach (tz; testTZs)
             {
-                foreach(tod; testTODsThrown)
+                foreach (tod; testTODsThrown)
                 {
-                    foreach(year; [testYearsBC[$-3], testYearsBC[$-2],
+                    foreach (year; [testYearsBC[$-3], testYearsBC[$-2],
                                    testYearsBC[$-2], testYearsAD[0],
                                    testYearsAD[$-2], testYearsAD[$-1]])
                     {
@@ -1523,17 +1523,17 @@ public:
         test(SysTime(1, UTC()), 1);
         test(SysTime(-1, UTC()), 31);
 
-        foreach(year; chain(testYearsBC, testYearsAD))
+        foreach (year; chain(testYearsBC, testYearsAD))
         {
-            foreach(md; testMonthDays)
+            foreach (md; testMonthDays)
             {
-                foreach(tod; testTODs)
+                foreach (tod; testTODs)
                 {
                     auto dt = DateTime(Date(year, md.month, md.day), tod);
 
-                    foreach(tz; testTZs)
+                    foreach (tz; testTZs)
                     {
-                        foreach(fs; testFracSecs)
+                        foreach (fs; testFracSecs)
                             test(SysTime(dt, fs, tz), md.day);
                     }
                 }
@@ -1562,7 +1562,7 @@ public:
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("hours", "hnsecs")(24);
             --days;
@@ -1580,13 +1580,13 @@ public:
         import std.format : format;
         import std.range;
 
-        foreach(day; chain(testDays))
+        foreach (day; chain(testDays))
         {
-            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            foreach (st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
 
-                if(day > maxDay(dt.year, dt.month))
+                if (day > maxDay(dt.year, dt.month))
                     continue;
                 auto expected = SysTime(DateTime(dt.year, dt.month, day, dt.hour, dt.minute, dt.second),
                                         st.fracSecs,
@@ -1596,15 +1596,15 @@ public:
             }
         }
 
-        foreach(tz; testTZs)
+        foreach (tz; testTZs)
         {
-            foreach(tod; testTODs)
+            foreach (tod; testTODs)
             {
-                foreach(fs; testFracSecs)
+                foreach (fs; testFracSecs)
                 {
-                    foreach(year; chain(testYearsBC, testYearsAD))
+                    foreach (year; chain(testYearsBC, testYearsAD))
                     {
-                        foreach(month; EnumMembers!Month)
+                        foreach (month; EnumMembers!Month)
                         {
                             auto st = SysTime(DateTime(Date(year, month, 1), tod), fs, tz);
                             immutable max = maxDay(year, month);
@@ -1618,17 +1618,17 @@ public:
             }
         }
 
-        foreach(tz; testTZs)
+        foreach (tz; testTZs)
         {
-            foreach(tod; testTODsThrown)
+            foreach (tod; testTODsThrown)
             {
-                foreach(fs; [testFracSecs[0], testFracSecs[$-1]])
+                foreach (fs; [testFracSecs[0], testFracSecs[$-1]])
                 {
-                    foreach(year; [testYearsBC[$-3], testYearsBC[$-2],
+                    foreach (year; [testYearsBC[$-3], testYearsBC[$-2],
                                    testYearsBC[$-2], testYearsAD[0],
                                    testYearsAD[$-2], testYearsAD[$-1]])
                     {
-                        foreach(month; EnumMembers!Month)
+                        foreach (month; EnumMembers!Month)
                         {
                             auto st = SysTime(DateTime(Date(year, month, 1), tod), fs, tz);
                             immutable max = maxDay(year, month);
@@ -1655,7 +1655,7 @@ public:
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("hours", "hnsecs")(24);
             --days;
@@ -1679,22 +1679,22 @@ public:
         test(SysTime(1, UTC()), 0);
         test(SysTime(-1, UTC()), 23);
 
-        foreach(tz; testTZs)
+        foreach (tz; testTZs)
         {
-            foreach(year; chain(testYearsBC, testYearsAD))
+            foreach (year; chain(testYearsBC, testYearsAD))
             {
-                foreach(md; testMonthDays)
+                foreach (md; testMonthDays)
                 {
-                    foreach(hour; testHours)
+                    foreach (hour; testHours)
                     {
-                        foreach(minute; testMinSecs)
+                        foreach (minute; testMinSecs)
                         {
-                            foreach(second; testMinSecs)
+                            foreach (second; testMinSecs)
                             {
                                 auto dt = DateTime(Date(year, md.month, md.day),
                                                    TimeOfDay(hour, minute, second));
 
-                                foreach(fs; testFracSecs)
+                                foreach (fs; testFracSecs)
                                     test(SysTime(dt, fs, tz), hour);
                             }
                         }
@@ -1729,13 +1729,13 @@ public:
         immutable daysHNSecs = convert!("days", "hnsecs")(days);
         immutable negative = hnsecs < 0;
 
-        if(negative)
+        if (negative)
             hnsecs += convert!("hours", "hnsecs")(24);
 
         hnsecs = removeUnitsFromHNSecs!"hours"(hnsecs);
         hnsecs += convert!("hours", "hnsecs")(hour);
 
-        if(negative)
+        if (negative)
             hnsecs -= convert!("hours", "hnsecs")(24);
 
         adjTime = daysHNSecs + hnsecs;
@@ -1746,9 +1746,9 @@ public:
         import std.range;
         import std.format : format;
 
-        foreach(hour; chain(testHours))
+        foreach (hour; chain(testHours))
         {
-            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            foreach (st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
                 auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, hour, dt.minute, dt.second),
@@ -1778,7 +1778,7 @@ public:
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("hours", "hnsecs")(24);
             --days;
@@ -1804,22 +1804,22 @@ public:
         test(SysTime(1, UTC()), 0);
         test(SysTime(-1, UTC()), 59);
 
-        foreach(tz; testTZs)
+        foreach (tz; testTZs)
         {
-            foreach(year; chain(testYearsBC, testYearsAD))
+            foreach (year; chain(testYearsBC, testYearsAD))
             {
-                foreach(md; testMonthDays)
+                foreach (md; testMonthDays)
                 {
-                    foreach(hour; testHours)
+                    foreach (hour; testHours)
                     {
-                        foreach(minute; testMinSecs)
+                        foreach (minute; testMinSecs)
                         {
-                            foreach(second; testMinSecs)
+                            foreach (second; testMinSecs)
                             {
                                 auto dt = DateTime(Date(year, md.month, md.day),
                                                    TimeOfDay(hour, minute, second));
 
-                                foreach(fs; testFracSecs)
+                                foreach (fs; testFracSecs)
                                     test(SysTime(dt, fs, tz), minute);
                             }
                         }
@@ -1854,7 +1854,7 @@ public:
         immutable daysHNSecs = convert!("days", "hnsecs")(days);
         immutable negative = hnsecs < 0;
 
-        if(negative)
+        if (negative)
             hnsecs += convert!("hours", "hnsecs")(24);
 
         immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
@@ -1863,7 +1863,7 @@ public:
         hnsecs += convert!("hours", "hnsecs")(hour);
         hnsecs += convert!("minutes", "hnsecs")(minute);
 
-        if(negative)
+        if (negative)
             hnsecs -= convert!("hours", "hnsecs")(24);
 
         adjTime = daysHNSecs + hnsecs;
@@ -1874,9 +1874,9 @@ public:
         import std.range;
         import std.format : format;
 
-        foreach(minute; testMinSecs)
+        foreach (minute; testMinSecs)
         {
-            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            foreach (st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
                 auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, minute, dt.second),
@@ -1906,7 +1906,7 @@ public:
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("hours", "hnsecs")(24);
             --days;
@@ -1933,22 +1933,22 @@ public:
         test(SysTime(1, UTC()), 0);
         test(SysTime(-1, UTC()), 59);
 
-        foreach(tz; testTZs)
+        foreach (tz; testTZs)
         {
-            foreach(year; chain(testYearsBC, testYearsAD))
+            foreach (year; chain(testYearsBC, testYearsAD))
             {
-                foreach(md; testMonthDays)
+                foreach (md; testMonthDays)
                 {
-                    foreach(hour; testHours)
+                    foreach (hour; testHours)
                     {
-                        foreach(minute; testMinSecs)
+                        foreach (minute; testMinSecs)
                         {
-                            foreach(second; testMinSecs)
+                            foreach (second; testMinSecs)
                             {
                                 auto dt = DateTime(Date(year, md.month, md.day),
                                                    TimeOfDay(hour, minute, second));
 
-                                foreach(fs; testFracSecs)
+                                foreach (fs; testFracSecs)
                                     test(SysTime(dt, fs, tz), second);
                             }
                         }
@@ -1983,7 +1983,7 @@ public:
         immutable daysHNSecs = convert!("days", "hnsecs")(days);
         immutable negative = hnsecs < 0;
 
-        if(negative)
+        if (negative)
             hnsecs += convert!("hours", "hnsecs")(24);
 
         immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
@@ -1994,7 +1994,7 @@ public:
         hnsecs += convert!("minutes", "hnsecs")(minute);
         hnsecs += convert!("seconds", "hnsecs")(second);
 
-        if(negative)
+        if (negative)
             hnsecs -= convert!("hours", "hnsecs")(24);
 
         adjTime = daysHNSecs + hnsecs;
@@ -2005,9 +2005,9 @@ public:
         import std.range;
         import std.format : format;
 
-        foreach(second; testMinSecs)
+        foreach (second; testMinSecs)
         {
-            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            foreach (st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
                 auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, second),
@@ -2037,7 +2037,7 @@ public:
     {
         auto hnsecs = removeUnitsFromHNSecs!"days"(adjTime);
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
             hnsecs += convert!("hours", "hnsecs")(24);
 
         return dur!"hnsecs"(removeUnitsFromHNSecs!"seconds"(hnsecs));
@@ -2064,20 +2064,20 @@ public:
         assert(SysTime(1, UTC()).fracSecs == hnsecs(1));
         assert(SysTime(-1, UTC()).fracSecs == hnsecs(9_999_999));
 
-        foreach(tz; testTZs)
+        foreach (tz; testTZs)
         {
-            foreach(year; chain(testYearsBC, testYearsAD))
+            foreach (year; chain(testYearsBC, testYearsAD))
             {
-                foreach(md; testMonthDays)
+                foreach (md; testMonthDays)
                 {
-                    foreach(hour; testHours)
+                    foreach (hour; testHours)
                     {
-                        foreach(minute; testMinSecs)
+                        foreach (minute; testMinSecs)
                         {
-                            foreach(second; testMinSecs)
+                            foreach (second; testMinSecs)
                             {
                                 auto dt = DateTime(Date(year, md.month, md.day), TimeOfDay(hour, minute, second));
-                                foreach(fs; testFracSecs)
+                                foreach (fs; testFracSecs)
                                     assert(SysTime(dt, fs, tz).fracSecs == fs);
                             }
                         }
@@ -2115,14 +2115,14 @@ public:
         immutable daysHNSecs = convert!("days", "hnsecs")(days);
         immutable negative = oldHNSecs < 0;
 
-        if(negative)
+        if (negative)
             oldHNSecs += convert!("hours", "hnsecs")(24);
 
         immutable seconds = splitUnitsFromHNSecs!"seconds"(oldHNSecs);
         immutable secondsHNSecs = convert!("seconds", "hnsecs")(seconds);
         auto newHNSecs = fracSecs.total!"hnsecs" + secondsHNSecs;
 
-        if(negative)
+        if (negative)
             newHNSecs -= convert!("hours", "hnsecs")(24);
 
         adjTime = daysHNSecs + newHNSecs;
@@ -2151,9 +2151,9 @@ public:
         import std.range;
         import std.format : format;
 
-        foreach(fracSec; testFracSecs)
+        foreach (fracSec; testFracSecs)
         {
-            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            foreach (st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
                 auto expected = SysTime(dt, fracSec, st.timezone);
@@ -2189,7 +2189,7 @@ public:
         {
             auto hnsecs = removeUnitsFromHNSecs!"days"(adjTime);
 
-            if(hnsecs < 0)
+            if (hnsecs < 0)
                 hnsecs += convert!("hours", "hnsecs")(24);
 
             hnsecs = removeUnitsFromHNSecs!"seconds"(hnsecs);
@@ -2207,7 +2207,7 @@ public:
 
         static void test(SysTime sysTime, FracSec expected, size_t line = __LINE__)
         {
-            if(sysTime.fracSec != expected)
+            if (sysTime.fracSec != expected)
                 throw new AssertError(format("Value given: %s", sysTime.fracSec), __FILE__, line);
         }
 
@@ -2215,22 +2215,22 @@ public:
         test(SysTime(1, UTC()), FracSec.from!"hnsecs"(1));
         test(SysTime(-1, UTC()), FracSec.from!"hnsecs"(9_999_999));
 
-        foreach(tz; testTZs)
+        foreach (tz; testTZs)
         {
-            foreach(year; chain(testYearsBC, testYearsAD))
+            foreach (year; chain(testYearsBC, testYearsAD))
             {
-                foreach(md; testMonthDays)
+                foreach (md; testMonthDays)
                 {
-                    foreach(hour; testHours)
+                    foreach (hour; testHours)
                     {
-                        foreach(minute; testMinSecs)
+                        foreach (minute; testMinSecs)
                         {
-                            foreach(second; testMinSecs)
+                            foreach (second; testMinSecs)
                             {
                                 auto dt = DateTime(Date(year, md.month, md.day),
                                                    TimeOfDay(hour, minute, second));
 
-                                foreach(fs; testFracSecs)
+                                foreach (fs; testFracSecs)
                                     test(SysTime(dt, fs, tz), FracSec.from!"hnsecs"(fs.total!"hnsecs"));
                             }
                         }
@@ -2273,7 +2273,7 @@ public:
         immutable daysHNSecs = convert!("days", "hnsecs")(days);
         immutable negative = hnsecs < 0;
 
-        if(negative)
+        if (negative)
             hnsecs += convert!("hours", "hnsecs")(24);
 
         immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
@@ -2285,7 +2285,7 @@ public:
         hnsecs += convert!("minutes", "hnsecs")(minute);
         hnsecs += convert!("seconds", "hnsecs")(second);
 
-        if(negative)
+        if (negative)
             hnsecs -= convert!("hours", "hnsecs")(24);
 
         adjTime = daysHNSecs + hnsecs;
@@ -2296,9 +2296,9 @@ public:
         import std.range;
         import std.format : format;
 
-        foreach(fracSec; testFracSecs)
+        foreach (fracSec; testFracSecs)
         {
-            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            foreach (st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
                 auto expected = SysTime(dt, fracSec, st.timezone);
@@ -2398,7 +2398,7 @@ public:
       +/
     @property void timezone(immutable TimeZone timezone) @safe pure nothrow
     {
-        if(timezone is null)
+        if (timezone is null)
             _timezone = LocalTime();
         else
             _timezone = timezone;
@@ -2483,7 +2483,7 @@ public:
       +/
     SysTime toOtherTZ(immutable TimeZone tz) @safe const pure nothrow
     {
-        if(tz is null)
+        if (tz is null)
             return SysTime(_stdTime, LocalTime());
         else
             return SysTime(_stdTime, tz);
@@ -2531,7 +2531,7 @@ public:
             this SysTime.
       +/
     T toUnixTime(T = time_t)() @safe const pure nothrow
-        if(is(T == int) || is(T == long))
+        if (is(T == int) || is(T == long))
     {
         return stdTimeToUnixTime!T(_stdTime);
     }
@@ -2555,7 +2555,7 @@ public:
     {
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
         import std.meta : AliasSeq;
-        foreach(units; AliasSeq!("hnsecs", "usecs", "msecs"))
+        foreach (units; AliasSeq!("hnsecs", "usecs", "msecs"))
             assert(SysTime(DateTime(1970, 1, 1, 0, 0, 0), dur!units(1), UTC()).toUnixTime() == 0);
         assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime() == 1);
         assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_999), UTC()).toUnixTime() == 0);
@@ -2815,13 +2815,13 @@ public:
                             causing the month to increment.
       +/
     ref SysTime add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe nothrow
-        if(units == "years" ||
+        if (units == "years" ||
            units == "months")
     {
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("hours", "hnsecs")(24);
             --days;
@@ -2831,7 +2831,7 @@ public:
         date.add!units(value, allowOverflow);
         days = date.dayOfGregorianCal - 1;
 
-        if(days < 0)
+        if (days < 0)
         {
             hnsecs -= convert!("hours", "hnsecs")(24);
             ++days;
@@ -3978,7 +3978,7 @@ public:
                             causing the month to increment.
       +/
     ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe nothrow
-        if(units == "years")
+        if (units == "years")
     {
         return add!"years"(value, allowOverflow);
     }
@@ -4024,12 +4024,12 @@ public:
 
     //Shares documentation with "years" overload.
     ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe nothrow
-        if(units == "months")
+        if (units == "months")
     {
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("hours", "hnsecs")(24);
             --days;
@@ -4039,7 +4039,7 @@ public:
         date.roll!"months"(value, allowOverflow);
         days = date.dayOfGregorianCal - 1;
 
-        if(days < 0)
+        if (days < 0)
         {
             hnsecs -= convert!("hours", "hnsecs")(24);
             ++days;
@@ -4823,12 +4823,12 @@ public:
             value = The number of $(D_PARAM units) to add to this $(LREF SysTime).
       +/
     ref SysTime roll(string units)(long value) @safe nothrow
-        if(units == "days")
+        if (units == "days")
     {
         auto hnsecs = adjTime;
         auto gdays = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("hours", "hnsecs")(24);
             --gdays;
@@ -4838,7 +4838,7 @@ public:
         date.roll!"days"(value);
         gdays = date.dayOfGregorianCal - 1;
 
-        if(gdays < 0)
+        if (gdays < 0)
         {
             hnsecs -= convert!("hours", "hnsecs")(24);
             ++gdays;
@@ -5179,7 +5179,7 @@ public:
 
     //Shares documentation with "days" version.
     ref SysTime roll(string units)(long value) @safe nothrow
-        if(units == "hours" ||
+        if (units == "hours" ||
            units == "minutes" ||
            units == "seconds")
     {
@@ -5188,7 +5188,7 @@ public:
             auto hnsecs = adjTime;
             auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-            if(hnsecs < 0)
+            if (hnsecs < 0)
             {
                 hnsecs += convert!("hours", "hnsecs")(24);
                 --days;
@@ -5206,7 +5206,7 @@ public:
             hnsecs += convert!("minutes", "hnsecs")(dateTime.minute);
             hnsecs += convert!("seconds", "hnsecs")(dateTime.second);
 
-            if(days < 0)
+            if (days < 0)
             {
                 hnsecs -= convert!("hours", "hnsecs")(24);
                 ++days;
@@ -5227,7 +5227,7 @@ public:
         {
             import std.format : format;
             orig.roll!"hours"(hours);
-            if(orig != expected)
+            if (orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
         }
 
@@ -5445,7 +5445,7 @@ public:
         {
             import std.format : format;
             orig.roll!"minutes"(minutes);
-            if(orig != expected)
+            if (orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
         }
 
@@ -5656,7 +5656,7 @@ public:
         {
             import std.format : format;
             orig.roll!"seconds"(seconds);
-            if(orig != expected)
+            if (orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
         }
 
@@ -5841,7 +5841,7 @@ public:
 
     //Shares documentation with "days" version.
     ref SysTime roll(string units)(long value) @safe nothrow
-        if(units == "msecs" ||
+        if (units == "msecs" ||
            units == "usecs" ||
            units == "hnsecs")
     {
@@ -5849,18 +5849,18 @@ public:
         immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
         immutable negative = hnsecs < 0;
 
-        if(negative)
+        if (negative)
             hnsecs += convert!("hours", "hnsecs")(24);
 
         immutable seconds = splitUnitsFromHNSecs!"seconds"(hnsecs);
         hnsecs += convert!(units, "hnsecs")(value);
         hnsecs %= convert!("seconds", "hnsecs")(1);
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
             hnsecs += convert!("seconds", "hnsecs")(1);
         hnsecs += convert!("seconds", "hnsecs")(seconds);
 
-        if(negative)
+        if (negative)
             hnsecs -= convert!("hours", "hnsecs")(24);
 
         immutable newDaysHNSecs = convert!("days", "hnsecs")(days);
@@ -5876,7 +5876,7 @@ public:
         {
             import std.format : format;
             orig.roll!"msecs"(milliseconds);
-            if(orig != expected)
+            if (orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
         }
 
@@ -5982,7 +5982,7 @@ public:
         {
             import std.format : format;
             orig.roll!"usecs"(microseconds);
-            if(orig != expected)
+            if (orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
         }
 
@@ -6112,7 +6112,7 @@ public:
         {
             import std.format : format;
             orig.roll!"hnsecs"(hnsecs);
-            if(orig != expected)
+            if (orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
         }
 
@@ -6265,7 +6265,7 @@ public:
                        this $(LREF SysTime).
       +/
     SysTime opBinary(string op)(Duration duration) @safe const pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         SysTime retval = SysTime(this._stdTime, this._timezone);
         immutable hnsecs = duration.total!"hnsecs";
@@ -6331,7 +6331,7 @@ public:
         {
             import std.format : format;
             auto result = orig + dur!"hnsecs"(hnsecs);
-            if(result != expected)
+            if (result != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", result, expected), __FILE__, line);
         }
 
@@ -6470,7 +6470,7 @@ public:
       +/
     deprecated("Use Duration instead of TickDuration.")
     SysTime opBinary(string op)(TickDuration td) @safe const pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         SysTime retval = SysTime(this._stdTime, this._timezone);
         immutable hnsecs = td.hnsecs;
@@ -6482,7 +6482,7 @@ public:
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
+        if (TickDuration.ticksPerSec == 1_000_000)
         {
             auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
 
@@ -6512,7 +6512,7 @@ public:
                        this $(LREF SysTime).
       +/
     ref SysTime opOpAssign(string op)(Duration duration) @safe pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         immutable hnsecs = duration.total!"hnsecs";
         mixin("_stdTime " ~ op ~ "= hnsecs;");
@@ -6563,9 +6563,9 @@ public:
             import std.format : format;
 
             auto r = orig += dur!"hnsecs"(hnsecs);
-            if(orig != expected)
+            if (orig != expected)
                 throw new AssertError(format("Failed 1. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
-            if(r != expected)
+            if (r != expected)
                 throw new AssertError(format("Failed 2. actual [%s] != expected [%s]", r, expected), __FILE__, line);
         }
 
@@ -6710,7 +6710,7 @@ public:
       +/
     deprecated("Use Duration instead of TickDuration.")
     ref SysTime opOpAssign(string op)(TickDuration td) @safe pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         immutable hnsecs = td.hnsecs;
         mixin("_stdTime " ~ op ~ "= hnsecs;");
@@ -6721,7 +6721,7 @@ public:
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
+        if (TickDuration.ticksPerSec == 1_000_000)
         {
             {
                 auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
@@ -6758,7 +6758,7 @@ public:
         )
       +/
     Duration opBinary(string op)(in SysTime rhs) @safe const pure nothrow
-        if(op == "-")
+        if (op == "-")
     {
         return dur!"hnsecs"(_stdTime - rhs._stdTime);
     }
@@ -7013,7 +7013,7 @@ public:
         //We have to add one because 0 would be midnight, January 1st, 1 A.D.,
         //which would be the 1st day of the Gregorian Calendar, not the 0th. So,
         //simply casting to days is one day off.
-        if(adjustedTime > 0)
+        if (adjustedTime > 0)
             return cast(int)getUnitsFromHNSecs!"days"(adjustedTime) + 1;
 
         long hnsecs = adjustedTime;
@@ -7214,7 +7214,7 @@ public:
         {
             import std.format : format;
 
-            if(date.dayOfGregorianCal != st.dayOfGregorianCal)
+            if (date.dayOfGregorianCal != st.dayOfGregorianCal)
             {
                 throw new AssertError(format("Date [%s] SysTime [%s]", date.dayOfGregorianCal, st.dayOfGregorianCal),
                                       __FILE__, line);
@@ -7382,10 +7382,10 @@ public:
         auto hnsecs = adjTime;
         hnsecs = removeUnitsFromHNSecs!"days"(hnsecs);
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
             hnsecs += convert!("hours", "hnsecs")(24);
 
-        if(--days < 0)
+        if (--days < 0)
         {
             hnsecs -= convert!("hours", "hnsecs")(24);
             ++days;
@@ -7432,7 +7432,7 @@ public:
             import std.format : format;
 
             orig.dayOfGregorianCal = day;
-            if(orig != expected)
+            if (orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
         }
 
@@ -7471,7 +7471,7 @@ public:
             import std.format : format;
 
             st.dayOfGregorianCal = day;
-            if(st != expected)
+            if (st != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", st, expected), __FILE__, line);
         }
 
@@ -7664,7 +7664,7 @@ public:
         auto newDays = date.dayOfGregorianCal - 1;
         long theTimeHNSecs;
 
-        if(newDays < 0)
+        if (newDays < 0)
         {
             theTimeHNSecs = -1;
             ++newDays;
@@ -7909,7 +7909,7 @@ public:
         Returns a $(LREF Date) equivalent to this $(LREF SysTime).
       +/
     Date opCast(T)() @safe const nothrow
-        if(is(Unqual!T == Date))
+        if (is(Unqual!T == Date))
     {
         return Date(dayOfGregorianCal);
     }
@@ -7943,14 +7943,14 @@ public:
         Returns a $(LREF DateTime) equivalent to this $(LREF SysTime).
       +/
     DateTime opCast(T)() @safe const nothrow
-        if(is(Unqual!T == DateTime))
+        if (is(Unqual!T == DateTime))
     {
         try
         {
             auto hnsecs = adjTime;
             auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-            if(hnsecs < 0)
+            if (hnsecs < 0)
             {
                 hnsecs += convert!("hours", "hnsecs")(24);
                 --days;
@@ -8002,14 +8002,14 @@ public:
         Returns a $(LREF TimeOfDay) equivalent to this $(LREF SysTime).
       +/
     TimeOfDay opCast(T)() @safe const nothrow
-        if(is(Unqual!T == TimeOfDay))
+        if (is(Unqual!T == TimeOfDay))
     {
         try
         {
             auto hnsecs = adjTime;
             hnsecs = removeUnitsFromHNSecs!"days"(hnsecs);
 
-            if(hnsecs < 0)
+            if (hnsecs < 0)
                 hnsecs += convert!("hours", "hnsecs")(24);
 
             immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
@@ -8053,7 +8053,7 @@ public:
     //should be allowed, and it doesn't work without this opCast() since opCast()
     //has already been defined for other types.
     SysTime opCast(T)() @safe const pure nothrow
-        if(is(Unqual!T == SysTime))
+        if (is(Unqual!T == SysTime))
     {
         return SysTime(_stdTime, _timezone);
     }
@@ -8097,7 +8097,7 @@ public:
 
             auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-            if(hnsecs < 0)
+            if (hnsecs < 0)
             {
                 hnsecs += convert!("hours", "hnsecs")(24);
                 --days;
@@ -8110,10 +8110,10 @@ public:
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
             auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
-            if(_timezone is LocalTime())
+            if (_timezone is LocalTime())
                 return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs);
 
-            if(_timezone is UTC())
+            if (_timezone is UTC())
                 return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
@@ -8227,7 +8227,7 @@ public:
 
             auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-            if(hnsecs < 0)
+            if (hnsecs < 0)
             {
                 hnsecs += convert!("hours", "hnsecs")(24);
                 --days;
@@ -8240,10 +8240,10 @@ public:
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
             auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
-            if(_timezone is LocalTime())
+            if (_timezone is LocalTime())
                 return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs);
 
-            if(_timezone is UTC())
+            if (_timezone is UTC())
                 return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
@@ -8361,7 +8361,7 @@ public:
 
             auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
 
-            if(hnsecs < 0)
+            if (hnsecs < 0)
             {
                 hnsecs += convert!("hours", "hnsecs")(24);
                 --days;
@@ -8374,10 +8374,10 @@ public:
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
             auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
-            if(_timezone is LocalTime())
+            if (_timezone is LocalTime())
                 return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs);
 
-            if(_timezone is UTC())
+            if (_timezone is UTC())
                 return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
@@ -8529,7 +8529,7 @@ public:
             format or if the resulting $(LREF SysTime) would not be valid.
       +/
     static SysTime fromISOString(S)(in S isoString, immutable TimeZone tz = null) @safe
-        if(isSomeString!S)
+        if (isSomeString!S)
     {
         import std.string : strip;
         import std.conv : to;
@@ -8545,13 +8545,13 @@ public:
         dstring fracSecStr;
         dstring zoneStr;
 
-        if(found[1] != 0)
+        if (found[1] != 0)
         {
-            if(found[1] == 1)
+            if (found[1] == 1)
             {
                 auto foundTZ = found[0].find('Z', '+', '-');
 
-                if(foundTZ[1] != 0)
+                if (foundTZ[1] != 0)
                 {
                     fracSecStr = found[0][0 .. $ - foundTZ[0].length];
                     zoneStr = foundTZ[0];
@@ -8569,9 +8569,9 @@ public:
             auto fracSec = fracSecsFromISOString(fracSecStr);
             Rebindable!(immutable TimeZone) parsedZone;
 
-            if(zoneStr.empty)
+            if (zoneStr.empty)
                 parsedZone = LocalTime();
-            else if(zoneStr == "Z")
+            else if (zoneStr == "Z")
                 parsedZone = UTC();
             else
             {
@@ -8583,7 +8583,7 @@ public:
 
             auto retval = SysTime(dateTime, fracSec, parsedZone);
 
-            if(tz !is null)
+            if (tz !is null)
                 retval.timezone = tz;
 
             return retval;
@@ -8626,7 +8626,7 @@ public:
     {
         import std.format: format;
 
-        foreach(str; ["", "20100704000000", "20100704 000000", "20100704t000000",
+        foreach (str; ["", "20100704000000", "20100704 000000", "20100704t000000",
                       "20100704T000000.", "20100704T000000.A", "20100704T000000.Z",
                       "20100704T000000.00000000", "20100704T000000.00000000",
                       "20100704T000000+", "20100704T000000-", "20100704T000000:",
@@ -8662,7 +8662,7 @@ public:
 
         static void test(string str, SysTime st, size_t line = __LINE__)
         {
-            if(SysTime.fromISOString(str) != st)
+            if (SysTime.fromISOString(str) != st)
                 throw new AssertError("unittest failure", __FILE__, line);
         }
 
@@ -8768,7 +8768,7 @@ public:
             format or if the resulting $(LREF SysTime) would not be valid.
       +/
     static SysTime fromISOExtString(S)(in S isoExtString, immutable TimeZone tz = null) @safe
-        if(isSomeString!(S))
+        if (isSomeString!(S))
     {
         import std.string : strip;
         import std.conv : to;
@@ -8786,13 +8786,13 @@ public:
         dstring fracSecStr;
         dstring zoneStr;
 
-        if(found[1] != 0)
+        if (found[1] != 0)
         {
-            if(found[1] == 1)
+            if (found[1] == 1)
             {
                 auto foundTZ = found[0].find('Z', '+', '-');
 
-                if(foundTZ[1] != 0)
+                if (foundTZ[1] != 0)
                 {
                     fracSecStr = found[0][0 .. $ - foundTZ[0].length];
                     zoneStr = foundTZ[0];
@@ -8810,16 +8810,16 @@ public:
             auto fracSec = fracSecsFromISOString(fracSecStr);
             Rebindable!(immutable TimeZone) parsedZone;
 
-            if(zoneStr.empty)
+            if (zoneStr.empty)
                 parsedZone = LocalTime();
-            else if(zoneStr == "Z")
+            else if (zoneStr == "Z")
                 parsedZone = UTC();
             else
                 parsedZone = SimpleTimeZone.fromISOExtString(zoneStr);
 
             auto retval = SysTime(dateTime, fracSec, parsedZone);
 
-            if(tz !is null)
+            if (tz !is null)
                 retval.timezone = tz;
 
             return retval;
@@ -8861,7 +8861,7 @@ public:
     {
         import std.format : format;
 
-        foreach(str; ["", "20100704000000", "20100704 000000",
+        foreach (str; ["", "20100704000000", "20100704 000000",
                       "20100704t000000", "20100704T000000.", "20100704T000000.0",
                       "2010-07:0400:00:00", "2010-07-04 00:00:00",
                       "2010-07-04 00:00:00", "2010-07-04t00:00:00",
@@ -8897,7 +8897,7 @@ public:
 
         static void test(string str, SysTime st, size_t line = __LINE__)
         {
-            if(SysTime.fromISOExtString(str) != st)
+            if (SysTime.fromISOExtString(str) != st)
                 throw new AssertError("unittest failure", __FILE__, line);
         }
 
@@ -8981,7 +8981,7 @@ public:
             or if the resulting $(LREF SysTime) would not be valid.
       +/
     static SysTime fromSimpleString(S)(in S simpleString, immutable TimeZone tz = null) @safe
-        if(isSomeString!(S))
+        if (isSomeString!(S))
     {
         import std.string : strip;
         import std.conv : to;
@@ -8999,13 +8999,13 @@ public:
         dstring fracSecStr;
         dstring zoneStr;
 
-        if(found[1] != 0)
+        if (found[1] != 0)
         {
-            if(found[1] == 1)
+            if (found[1] == 1)
             {
                 auto foundTZ = found[0].find('Z', '+', '-');
 
-                if(foundTZ[1] != 0)
+                if (foundTZ[1] != 0)
                 {
                     fracSecStr = found[0][0 .. $ - foundTZ[0].length];
                     zoneStr = foundTZ[0];
@@ -9023,16 +9023,16 @@ public:
             auto fracSec = fracSecsFromISOString(fracSecStr);
             Rebindable!(immutable TimeZone) parsedZone;
 
-            if(zoneStr.empty)
+            if (zoneStr.empty)
                 parsedZone = LocalTime();
-            else if(zoneStr == "Z")
+            else if (zoneStr == "Z")
                 parsedZone = UTC();
             else
                 parsedZone = SimpleTimeZone.fromISOExtString(zoneStr);
 
             auto retval = SysTime(dateTime, fracSec, parsedZone);
 
-            if(tz !is null)
+            if (tz !is null)
                 retval.timezone = tz;
 
             return retval;
@@ -9075,7 +9075,7 @@ public:
     {
         import std.format : format;
 
-        foreach(str; ["", "20100704000000", "20100704 000000",
+        foreach (str; ["", "20100704000000", "20100704 000000",
                       "20100704t000000", "20100704T000000.", "20100704T000000.0",
                       "2010-07-0400:00:00", "2010-07-04 00:00:00", "2010-07-04t00:00:00",
                       "2010-07-04T00:00:00.", "2010-07-04T00:00:00.0",
@@ -9113,7 +9113,7 @@ public:
 
         static void test(string str, SysTime st, size_t line = __LINE__)
         {
-            if(SysTime.fromSimpleString(str) != st)
+            if (SysTime.fromSimpleString(str) != st)
                 throw new AssertError("unittest failure", __FILE__, line);
         }
 
@@ -9345,7 +9345,7 @@ public:
      +/
     this(int day) @safe pure nothrow
     {
-        if(day > 0)
+        if (day > 0)
         {
             int years = (day / daysIn400Years) * 400 + 1;
             day %= daysIn400Years;
@@ -9353,7 +9353,7 @@ public:
             {
                 immutable tempYears = day / daysIn100Years;
 
-                if(tempYears == 4)
+                if (tempYears == 4)
                 {
                     years += 300;
                     day -= daysIn100Years * 3;
@@ -9371,7 +9371,7 @@ public:
             {
                 immutable tempYears = day / daysInYear;
 
-                if(tempYears == 4)
+                if (tempYears == 4)
                 {
                     years += 3;
                     day -= daysInYear * 3;
@@ -9383,7 +9383,7 @@ public:
                 }
             }
 
-            if(day == 0)
+            if (day == 0)
             {
                 _year = cast(short)(years - 1);
                 _month = Month.dec;
@@ -9399,7 +9399,7 @@ public:
                     assert(0, "dayOfYear assignment threw.");
             }
         }
-        else if(day <= 0 && -day < daysInLeapYear)
+        else if (day <= 0 && -day < daysInLeapYear)
         {
             _year = 0;
 
@@ -9417,7 +9417,7 @@ public:
             {
                 immutable tempYears = day / daysIn100Years;
 
-                if(tempYears == -4)
+                if (tempYears == -4)
                 {
                     years -= 300;
                     day += daysIn100Years * 3;
@@ -9435,7 +9435,7 @@ public:
             {
                 immutable tempYears = day / daysInYear;
 
-                if(tempYears == -4)
+                if (tempYears == -4)
                 {
                     years -= 3;
                     day += daysInYear * 3;
@@ -9447,7 +9447,7 @@ public:
                 }
             }
 
-            if(day == 0)
+            if (day == 0)
             {
                 _year = cast(short)(years + 1);
                 _month = Month.jan;
@@ -9471,7 +9471,7 @@ public:
         import std.range;
 
         //Test A.D.
-        foreach(gd; chain(testGregDaysBC, testGregDaysAD))
+        foreach (gd; chain(testGregDaysBC, testGregDaysAD))
             assert(Date(gd.day) == gd.date);
     }
 
@@ -9488,19 +9488,19 @@ public:
      +/
     int opCmp(in Date rhs) @safe const pure nothrow
     {
-        if(_year < rhs._year)
+        if (_year < rhs._year)
             return -1;
-        if(_year > rhs._year)
+        if (_year > rhs._year)
             return 1;
 
-        if(_month < rhs._month)
+        if (_month < rhs._month)
             return -1;
-        if(_month > rhs._month)
+        if (_month > rhs._month)
             return 1;
 
-        if(_day < rhs._day)
+        if (_day < rhs._day)
             return -1;
-        if(_day > rhs._day)
+        if (_day > rhs._day)
             return 1;
 
         return 0;
@@ -9680,7 +9680,7 @@ public:
     {
         import std.format : format;
 
-        if(isAD)
+        if (isAD)
             throw new DateTimeException(format("Year %s is A.D.", _year));
         return cast(ushort)((_year * -1) + 1);
     }
@@ -9717,7 +9717,7 @@ public:
      +/
     @property void yearBC(int year) @safe pure
     {
-        if(year <= 0)
+        if (year <= 0)
             throw new DateTimeException("The given year is not a year B.C.");
 
         _year = cast(short)((year - 1) * -1);
@@ -9844,9 +9844,9 @@ public:
                              format("Value given: %s", date));
         }
 
-        foreach(year; chain(testYearsBC, testYearsAD))
+        foreach (year; chain(testYearsBC, testYearsAD))
         {
-            foreach(md; testMonthDays)
+            foreach (md; testMonthDays)
                 test(Date(year, md.month, md.day), md.day);
         }
 
@@ -9978,15 +9978,15 @@ public:
                             causing the month to increment.
       +/
     ref Date add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
-        if(units == "years")
+        if (units == "years")
     {
         immutable newYear = _year + value;
 
         _year += value;
 
-        if(_month == Month.feb && _day == 29 && !yearIsLeapYear(_year))
+        if (_month == Month.feb && _day == 29 && !yearIsLeapYear(_year))
         {
-            if(allowOverflow == AllowDayOverflow.yes)
+            if (allowOverflow == AllowDayOverflow.yes)
             {
                 _month = Month.mar;
                 _day = 1;
@@ -10220,21 +10220,21 @@ public:
 
     //Shares documentation with "years" version.
     ref Date add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
-        if(units == "months")
+        if (units == "months")
     {
         auto years = months / 12;
         months %= 12;
         auto newMonth = _month + months;
 
-        if(months < 0)
+        if (months < 0)
         {
-            if(newMonth < 1)
+            if (newMonth < 1)
             {
                 newMonth += 12;
                 --years;
             }
         }
-        else if(newMonth > 12)
+        else if (newMonth > 12)
         {
             newMonth -= 12;
             ++years;
@@ -10246,9 +10246,9 @@ public:
         immutable currMaxDay = maxDay(_year, _month);
         immutable overflow = _day - currMaxDay;
 
-        if(overflow > 0)
+        if (overflow > 0)
         {
-            if(allowOverflow == AllowDayOverflow.yes)
+            if (allowOverflow == AllowDayOverflow.yes)
             {
                 ++_month;
                 _day = cast(ubyte)overflow;
@@ -10760,7 +10760,7 @@ public:
                             causing the month to increment.
       +/
     ref Date roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
-        if(units == "years")
+        if (units == "years")
     {
         return add!"years"(value, allowOverflow);
     }
@@ -10804,19 +10804,19 @@ public:
 
     //Shares documentation with "years" version.
     ref Date roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
-        if(units == "months")
+        if (units == "months")
     {
         months %= 12;
         auto newMonth = _month + months;
 
-        if(months < 0)
+        if (months < 0)
         {
-            if(newMonth < 1)
+            if (newMonth < 1)
                 newMonth += 12;
         }
         else
         {
-            if(newMonth > 12)
+            if (newMonth > 12)
                 newMonth -= 12;
         }
 
@@ -10825,9 +10825,9 @@ public:
         immutable currMaxDay = maxDay(_year, _month);
         immutable overflow = _day - currMaxDay;
 
-        if(overflow > 0)
+        if (overflow > 0)
         {
-            if(allowOverflow == AllowDayOverflow.yes)
+            if (allowOverflow == AllowDayOverflow.yes)
             {
                 ++_month;
                 _day = cast(ubyte)overflow;
@@ -11398,18 +11398,18 @@ public:
             days  = The number of days to add to this $(LREF Date).
       +/
     ref Date roll(string units)(long days) @safe pure nothrow
-        if(units == "days")
+        if (units == "days")
     {
         immutable limit = maxDay(_year, _month);
         days %= limit;
         auto newDay = _day + days;
 
-        if(days < 0)
+        if (days < 0)
         {
-            if(newDay < 1)
+            if (newDay < 1)
                 newDay += limit;
         }
-        else if(newDay > limit)
+        else if (newDay > limit)
             newDay -= limit;
 
         _day = cast(ubyte)newDay;
@@ -11636,7 +11636,7 @@ public:
                        this $(LREF Date).
       +/
     Date opBinary(string op)(Duration duration) @safe const pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         Date retval = this;
         immutable days = duration.total!"days";
@@ -11716,7 +11716,7 @@ public:
       +/
     deprecated("Use Duration instead of TickDuration.")
     Date opBinary(string op)(TickDuration td) @safe const pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         Date retval = this;
         immutable days = convert!("hnsecs", "days")(td.hnsecs);
@@ -11727,7 +11727,7 @@ public:
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
+        if (TickDuration.ticksPerSec == 1_000_000)
         {
             auto date = Date(1999, 7, 6);
 
@@ -11756,7 +11756,7 @@ public:
                        this $(LREF Date).
       +/
     ref Date opOpAssign(string op)(Duration duration) @safe pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         immutable days = duration.total!"days";
         mixin("return _addDays(" ~ op ~ "days);");
@@ -11830,7 +11830,7 @@ public:
       +/
     deprecated("Use Duration instead of TickDuration.")
     ref Date opOpAssign(string op)(TickDuration td) @safe pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         immutable days = convert!("seconds", "days")(td.seconds);
         mixin("return _addDays(" ~ op ~ "days);");
@@ -11840,7 +11840,7 @@ public:
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
+        if (TickDuration.ticksPerSec == 1_000_000)
         {
             {
                 auto date = Date(1999, 7, 6);
@@ -11879,7 +11879,7 @@ public:
         )
       +/
     Duration opBinary(string op)(in Date rhs) @safe const pure nothrow
-        if(op == "-")
+        if (op == "-")
     {
         return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
     }
@@ -12232,20 +12232,20 @@ public:
     {
         import std.range;
 
-        foreach(year; filter!((a){return !yearIsLeapYear(a);})
+        foreach (year; filter!((a){return !yearIsLeapYear(a);})
                              (chain(testYearsBC, testYearsAD)))
         {
-            foreach(doy; testDaysOfYear)
+            foreach (doy; testDaysOfYear)
             {
                 assert(Date(year, doy.md.month, doy.md.day).dayOfYear ==
                                  doy.day);
             }
         }
 
-        foreach(year; filter!((a){return yearIsLeapYear(a);})
+        foreach (year; filter!((a){return yearIsLeapYear(a);})
                              (chain(testYearsBC, testYearsAD)))
         {
-            foreach(doy; testDaysOfLeapYear)
+            foreach (doy; testDaysOfLeapYear)
             {
                 assert(Date(year, doy.md.month, doy.md.day).dayOfYear ==
                                  doy.day);
@@ -12273,7 +12273,7 @@ public:
     {
         immutable int[] lastDay = isLeapYear ? lastDayLeap : lastDayNonLeap;
 
-        if(day <= 0 || day > (isLeapYear ? daysInLeapYear : daysInYear) )
+        if (day <= 0 || day > (isLeapYear ? daysInLeapYear : daysInYear) )
             throw new DateTimeException("Invalid day of the year.");
 
         foreach (i; 1..lastDay.length)
@@ -12297,13 +12297,13 @@ public:
             assert(date.day == expected.day);
         }
 
-        foreach(doy; testDaysOfYear)
+        foreach (doy; testDaysOfYear)
         {
             test(Date(1999, 1, 1), doy.day, doy.md);
             test(Date(-1, 1, 1), doy.day, doy.md);
         }
 
-        foreach(doy; testDaysOfLeapYear)
+        foreach (doy; testDaysOfLeapYear)
         {
             test(Date(2000, 1, 1), doy.day, doy.md);
             test(Date(-4, 1, 1), doy.day, doy.md);
@@ -12321,9 +12321,9 @@ public:
      +/
     @property int dayOfGregorianCal() @safe const pure nothrow
     {
-        if(isAD)
+        if (isAD)
         {
-            if(_year == 1)
+            if (_year == 1)
                 return dayOfYear;
 
             int years = _year - 1;
@@ -12342,7 +12342,7 @@ public:
 
             return days;
         }
-        else if(_year == 0)
+        else if (_year == 0)
             return dayOfYear - daysInLeapYear;
         else
         {
@@ -12356,7 +12356,7 @@ public:
             days += (years / 4) * daysIn4Years;
             years %= 4;
 
-            if(years < 0)
+            if (years < 0)
             {
                 days -= daysInLeapYear;
                 ++years;
@@ -12391,7 +12391,7 @@ public:
     {
         import std.range;
 
-        foreach(gd; chain(testGregDaysBC, testGregDaysAD))
+        foreach (gd; chain(testGregDaysBC, testGregDaysAD))
             assert(gd.date.dayOfGregorianCal == gd.day);
 
         auto date = Date(1999, 7, 6);
@@ -12468,9 +12468,9 @@ public:
 
         try
         {
-            if(week == 53)
+            if (week == 53)
             {
-                switch(Date(_year + 1, 1, 1).dayOfWeek)
+                switch (Date(_year + 1, 1, 1).dayOfWeek)
                 {
                     case DayOfWeek.mon:
                     case DayOfWeek.tue:
@@ -12485,7 +12485,7 @@ public:
                         assert(0, "Invalid ISO Week");
                 }
             }
-            else if(week > 0)
+            else if (week > 0)
                 return cast(ubyte)week;
             else
                 return Date(_year - 1, 12, 31).isoWeek;
@@ -12759,14 +12759,14 @@ public:
         import std.format : format;
         try
         {
-            if(_year >= 0)
+            if (_year >= 0)
             {
-                if(_year < 10_000)
+                if (_year < 10_000)
                     return format("%04d%02d%02d", _year, _month, _day);
                 else
                     return format("+%05d%02d%02d", _year, _month, _day);
             }
-            else if(_year > -10_000)
+            else if (_year > -10_000)
                 return format("%05d%02d%02d", _year, _month, _day);
             else
                 return format("%06d%02d%02d", _year, _month, _day);
@@ -12815,14 +12815,14 @@ public:
         import std.format : format;
         try
         {
-            if(_year >= 0)
+            if (_year >= 0)
             {
-                if(_year < 10_000)
+                if (_year < 10_000)
                     return format("%04d-%02d-%02d", _year, _month, _day);
                 else
                     return format("+%05d-%02d-%02d", _year, _month, _day);
             }
-            else if(_year > -10_000)
+            else if (_year > -10_000)
                 return format("%05d-%02d-%02d", _year, _month, _day);
             else
                 return format("%06d-%02d-%02d", _year, _month, _day);
@@ -12871,14 +12871,14 @@ public:
         import std.format : format;
         try
         {
-            if(_year >= 0)
+            if (_year >= 0)
             {
-                if(_year < 10_000)
+                if (_year < 10_000)
                     return format("%04d-%s-%02d", _year, monthToString(_month), _day);
                 else
                     return format("+%05d-%s-%02d", _year, monthToString(_month), _day);
             }
-            else if(_year > -10_000)
+            else if (_year > -10_000)
                 return format("%05d-%s-%02d", _year, monthToString(_month), _day);
             else
                 return format("%06d-%s-%02d", _year, monthToString(_month), _day);
@@ -12951,7 +12951,7 @@ public:
             or if the resulting $(LREF Date) would not be valid.
       +/
     static Date fromISOString(S)(in S isoString) @safe pure
-        if(isSomeString!S)
+        if (isSomeString!S)
     {
         import std.ascii : isDigit;
         import std.string : strip;
@@ -12970,7 +12970,7 @@ public:
         enforce(all!isDigit(day), new DateTimeException(format("Invalid ISO String: %s", isoString)));
         enforce(all!isDigit(month), new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
-        if(year.length > 4)
+        if (year.length > 4)
         {
             enforce(year.startsWith('-', '+'),
                     new DateTimeException(format("Invalid ISO String: %s", isoString)));
@@ -13073,7 +13073,7 @@ public:
             Extended format or if the resulting $(LREF Date) would not be valid.
       +/
     static Date fromISOExtString(S)(in S isoExtString) @safe pure
-        if(isSomeString!(S))
+        if (isSomeString!(S))
     {
         import std.ascii : isDigit;
         import std.string : strip;
@@ -13096,7 +13096,7 @@ public:
         enforce(all!isDigit(month),
                 new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
-        if(year.length > 4)
+        if (year.length > 4)
         {
             enforce(year.startsWith('-', '+'),
                     new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
@@ -13200,7 +13200,7 @@ public:
             format or if the resulting $(LREF Date) would not be valid.
       +/
     static Date fromSimpleString(S)(in S simpleString) @safe pure
-        if(isSomeString!(S))
+        if (isSomeString!(S))
     {
         import std.ascii : isDigit;
         import std.string : strip;
@@ -13220,7 +13220,7 @@ public:
         enforce(dstr[$-7] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
         enforce(all!isDigit(day), new DateTimeException(format("Invalid string format: %s", simpleString)));
 
-        if(year.length > 4)
+        if (year.length > 4)
         {
             enforce(year.startsWith('-', '+'),
                     new DateTimeException(format("Invalid string format: %s", simpleString)));
@@ -13365,7 +13365,7 @@ private:
      +/
     static bool _valid(int year, int month, int day) @safe pure nothrow
     {
-        if(!valid!"months"(month))
+        if (!valid!"months"(month))
             return false;
 
         return valid!"days"(year, month, day);
@@ -13641,19 +13641,19 @@ public:
      +/
     int opCmp(in TimeOfDay rhs) @safe const pure nothrow
     {
-        if(_hour < rhs._hour)
+        if (_hour < rhs._hour)
             return -1;
-        if(_hour > rhs._hour)
+        if (_hour > rhs._hour)
             return 1;
 
-        if(_minute < rhs._minute)
+        if (_minute < rhs._minute)
             return -1;
-        if(_minute > rhs._minute)
+        if (_minute > rhs._minute)
             return 1;
 
-        if(_second < rhs._second)
+        if (_second < rhs._second)
             return -1;
-        if(_second > rhs._second)
+        if (_second > rhs._second)
             return 1;
 
         return 0;
@@ -13866,7 +13866,7 @@ public:
                     $(LREF TimeOfDay).
       +/
     ref TimeOfDay roll(string units)(long value) @safe pure nothrow
-        if(units == "hours")
+        if (units == "hours")
     {
         return this += dur!"hours"(value);
     }
@@ -13914,7 +13914,7 @@ public:
 
     //Shares documentation with "hours" version.
     ref TimeOfDay roll(string units)(long value) @safe pure nothrow
-        if(units == "minutes" ||
+        if (units == "minutes" ||
            units == "seconds")
     {
         import std.format : format;
@@ -13923,12 +13923,12 @@ public:
         value %= 60;
         mixin(format("auto newVal = cast(ubyte)(_%s) + value;", memberVarStr));
 
-        if(value < 0)
+        if (value < 0)
         {
-            if(newVal < 0)
+            if (newVal < 0)
                 newVal += 60;
         }
-        else if(newVal >= 60)
+        else if (newVal >= 60)
             newVal -= 60;
 
         mixin(format("_%s = cast(ubyte)newVal;", memberVarStr));
@@ -14110,7 +14110,7 @@ public:
                        this $(LREF TimeOfDay).
       +/
     TimeOfDay opBinary(string op)(Duration duration) @safe const pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         TimeOfDay retval = this;
         immutable seconds = duration.total!"seconds";
@@ -14186,7 +14186,7 @@ public:
       +/
     deprecated("Use Duration instead of TickDuration.")
     TimeOfDay opBinary(string op)(TickDuration td) @safe const pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         TimeOfDay retval = this;
         immutable seconds = td.seconds;
@@ -14197,7 +14197,7 @@ public:
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
+        if (TickDuration.ticksPerSec == 1_000_000)
         {
             auto tod = TimeOfDay(12, 30, 33);
 
@@ -14228,7 +14228,7 @@ public:
                        this $(LREF TimeOfDay).
       +/
     ref TimeOfDay opOpAssign(string op)(Duration duration) @safe pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         immutable seconds = duration.total!"seconds";
         mixin("return _addSeconds(" ~ op ~ "seconds);");
@@ -14289,7 +14289,7 @@ public:
       +/
     deprecated("Use Duration instead of TickDuration.")
     ref TimeOfDay opOpAssign(string op)(TickDuration td) @safe pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         immutable seconds = td.seconds;
         mixin("return _addSeconds(" ~ op ~ "seconds);");
@@ -14299,7 +14299,7 @@ public:
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
+        if (TickDuration.ticksPerSec == 1_000_000)
         {
             {
                 auto tod = TimeOfDay(12, 30, 33);
@@ -14341,7 +14341,7 @@ public:
             rhs = The $(LREF TimeOfDay) to subtract from this one.
       +/
     Duration opBinary(string op)(in TimeOfDay rhs) @safe const pure nothrow
-        if(op == "-")
+        if (op == "-")
     {
         immutable lhsSec = _hour * 3600 + _minute * 60 + _second;
         immutable rhsSec = rhs._hour * 3600 + rhs._minute * 60 + rhs._second;
@@ -14469,7 +14469,7 @@ public:
             or if the resulting $(LREF TimeOfDay) would not be valid.
       +/
     static TimeOfDay fromISOString(S)(in S isoString) @safe pure
-        if(isSomeString!S)
+        if (isSomeString!S)
     {
         import std.ascii : isDigit;
         import std.string : strip;
@@ -14577,7 +14577,7 @@ public:
             valid.
       +/
     static TimeOfDay fromISOExtString(S)(in S isoExtString) @safe pure
-        if(isSomeString!S)
+        if (isSomeString!S)
     {
         import std.ascii : isDigit;
         import std.string : strip;
@@ -14738,7 +14738,7 @@ private:
 
         hnsecs %= convert!("days", "hnsecs")(1);
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
             hnsecs += convert!("days", "hnsecs")(1);
 
         immutable newHours = splitUnitsFromHNSecs!"hours"(hnsecs);
@@ -14945,7 +14945,7 @@ public:
     {
         immutable dateResult = _date.opCmp(rhs._date);
 
-        if(dateResult != 0)
+        if (dateResult != 0)
             return dateResult;
 
         return _tod.opCmp(rhs._tod);
@@ -15481,11 +15481,11 @@ public:
             assert(dateTime.day == expected, format("Value given: %s", dateTime));
         }
 
-        foreach(year; chain(testYearsBC, testYearsAD))
+        foreach (year; chain(testYearsBC, testYearsAD))
         {
-            foreach(md; testMonthDays)
+            foreach (md; testMonthDays)
             {
-                foreach(tod; testTODs)
+                foreach (tod; testTODs)
                     test(DateTime(Date(year, md.month, md.day), tod), md.day);
             }
         }
@@ -15767,7 +15767,7 @@ public:
       +/
     ref DateTime add(string units)
                     (long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
-        if(units == "years" ||
+        if (units == "years" ||
            units == "months")
     {
         _date.add!units(value, allowOverflow);
@@ -15830,7 +15830,7 @@ public:
       +/
     ref DateTime roll(string units)
                      (long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
-        if(units == "years" ||
+        if (units == "years" ||
            units == "months")
     {
         _date.roll!units(value, allowOverflow);
@@ -15896,7 +15896,7 @@ public:
             value = The number of $(D_PARAM units) to add to this $(LREF DateTime).
       +/
     ref DateTime roll(string units)(long value) @safe pure nothrow
-        if(units == "days")
+        if (units == "days")
     {
         _date.roll!"days"(value);
         return this;
@@ -15937,7 +15937,7 @@ public:
 
     //Shares documentation with "days" version.
     ref DateTime roll(string units)(long value) @safe pure nothrow
-        if(units == "hours" ||
+        if (units == "hours" ||
            units == "minutes" ||
            units == "seconds")
     {
@@ -16456,7 +16456,7 @@ public:
                        this $(LREF DateTime).
       +/
     DateTime opBinary(string op)(Duration duration) @safe const pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         DateTime retval = this;
         immutable seconds = duration.total!"seconds";
@@ -16539,7 +16539,7 @@ public:
       +/
     deprecated("Use Duration instead of TickDuration.")
     DateTime opBinary(string op)(in TickDuration td) @safe const pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         DateTime retval = this;
         immutable seconds = td.seconds;
@@ -16550,7 +16550,7 @@ public:
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
+        if (TickDuration.ticksPerSec == 1_000_000)
         {
             auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
 
@@ -16579,7 +16579,7 @@ public:
                        $(LREF DateTime).
       +/
     ref DateTime opOpAssign(string op, D)(in D duration) @safe pure nothrow
-        if((op == "+" || op == "-") &&
+        if ((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
@@ -16587,9 +16587,9 @@ public:
 
         DateTime retval = this;
 
-        static if(is(Unqual!D == Duration))
+        static if (is(Unqual!D == Duration))
             immutable hnsecs = duration.total!"hnsecs";
-        else static if(is(Unqual!D == TickDuration))
+        else static if (is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
         mixin(format(`return _addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
@@ -16657,7 +16657,7 @@ public:
       +/
     deprecated("Use Duration instead of TickDuration.")
     ref DateTime opOpAssign(string op)(TickDuration td) @safe pure nothrow
-        if(op == "+" || op == "-")
+        if (op == "+" || op == "-")
     {
         DateTime retval = this;
         immutable seconds = td.seconds;
@@ -16668,7 +16668,7 @@ public:
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
+        if (TickDuration.ticksPerSec == 1_000_000)
         {
             {
                 auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -16707,7 +16707,7 @@ public:
         )
       +/
     Duration opBinary(string op)(in DateTime rhs) @safe const pure nothrow
-        if(op == "-")
+        if (op == "-")
     {
         immutable dateResult = _date - rhs.date;
         immutable todResult = _tod - rhs._tod;
@@ -17166,7 +17166,7 @@ public:
       +/
     @property long julianDay() @safe const pure nothrow
     {
-        if(_tod._hour < 12)
+        if (_tod._hour < 12)
             return _date.julianDay - 1;
         else
             return _date.julianDay;
@@ -17418,7 +17418,7 @@ public:
             or if the resulting $(LREF DateTime) would not be valid.
       +/
     static DateTime fromISOString(S)(in S isoString) @safe pure
-        if(isSomeString!S)
+        if (isSomeString!S)
     {
         import std.string : strip;
         import std.conv : to;
@@ -17506,7 +17506,7 @@ public:
             valid.
       +/
     static DateTime fromISOExtString(S)(in S isoExtString) @safe pure
-        if(isSomeString!(S))
+        if (isSomeString!(S))
     {
         import std.string : strip;
         import std.conv : to;
@@ -17592,7 +17592,7 @@ public:
             format or if the resulting $(LREF DateTime) would not be valid.
       +/
     static DateTime fromSimpleString(S)(in S simpleString) @safe pure
-        if(isSomeString!(S))
+        if (isSomeString!(S))
     {
         import std.string : strip;
         import std.conv : to;
@@ -17739,7 +17739,7 @@ private:
 
         auto days = splitUnitsFromHNSecs!"days"(hnsecs);
 
-        if(hnsecs < 0)
+        if (hnsecs < 0)
         {
             hnsecs += convert!("days", "hnsecs")(1);
             --days;
@@ -17974,9 +17974,9 @@ Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
 --------------------
       +/
     this(U)(in TP begin, in U end) pure
-        if(is(Unqual!TP == Unqual!U))
+        if (is(Unqual!TP == Unqual!U))
     {
-        if(!_valid(begin, end))
+        if (!_valid(begin, end))
             throw new DateTimeException("Arguments would result in an invalid Interval.");
 
         _begin = cast(TP)begin;
@@ -18000,12 +18000,12 @@ assert(Interval!Date(Date(1996, 1, 2), dur!"days"(3)) ==
 --------------------
       +/
     this(D)(in TP begin, in D duration) pure
-        if(__traits(compiles, begin + duration))
+        if (__traits(compiles, begin + duration))
     {
         _begin = cast(TP)begin;
         _end = begin + duration;
 
-        if(!_valid(_begin, _end))
+        if (!_valid(_begin, _end))
             throw new DateTimeException("Arguments would result in an invalid Interval.");
     }
 
@@ -18060,7 +18060,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin ==
       +/
     @property void begin(TP timePoint) pure
     {
-        if(!_valid(timePoint, _end))
+        if (!_valid(timePoint, _end))
             throw new DateTimeException("Arguments would result in an invalid Interval.");
 
         _begin = timePoint;
@@ -18093,7 +18093,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end ==
       +/
     @property void end(TP timePoint) pure
     {
-        if(!_valid(_begin, timePoint))
+        if (!_valid(_begin, timePoint))
             throw new DateTimeException("Arguments would result in an invalid Interval.");
 
         _end = timePoint;
@@ -18953,14 +18953,14 @@ assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
 --------------------
       +/
     void shift(D)(D duration) pure
-        if(__traits(compiles, begin + duration))
+        if (__traits(compiles, begin + duration))
     {
         _enforceNotEmpty();
 
         auto begin = _begin + duration;
         auto end = _end + duration;
 
-        if(!_valid(begin, end))
+        if (!_valid(begin, end))
             throw new DateTimeException("Argument would result in an invalid Interval.");
 
         _begin = begin;
@@ -18968,7 +18968,7 @@ assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
     }
 
 
-    static if(__traits(compiles, begin.add!"months"(1)) &&
+    static if (__traits(compiles, begin.add!"months"(1)) &&
               __traits(compiles, begin.add!"years"(1)))
     {
         /++
@@ -19003,7 +19003,7 @@ assert(interval2 == Interval!Date(Date(1994, 1, 2), Date(2010, 3, 1)));
 --------------------
           +/
         void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
-            if(isIntegral!T)
+            if (isIntegral!T)
         {
             _enforceNotEmpty();
 
@@ -19050,18 +19050,18 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
 --------------------
       +/
     void expand(D)(D duration, Direction dir = Direction.both) pure
-        if(__traits(compiles, begin + duration))
+        if (__traits(compiles, begin + duration))
     {
         _enforceNotEmpty();
 
-        switch(dir)
+        switch (dir)
         {
             case Direction.both:
             {
                 auto begin = _begin - duration;
                 auto end = _end + duration;
 
-                if(!_valid(begin, end))
+                if (!_valid(begin, end))
                     throw new DateTimeException("Argument would result in an invalid Interval.");
 
                 _begin = begin;
@@ -19073,7 +19073,7 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
             {
                 auto end = _end + duration;
 
-                if(!_valid(_begin, end))
+                if (!_valid(_begin, end))
                     throw new DateTimeException("Argument would result in an invalid Interval.");
                 _end = end;
 
@@ -19083,7 +19083,7 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
             {
                 auto begin = _begin - duration;
 
-                if(!_valid(begin, _end))
+                if (!_valid(begin, _end))
                     throw new DateTimeException("Argument would result in an invalid Interval.");
                 _begin = begin;
 
@@ -19094,7 +19094,7 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
         }
     }
 
-    static if(__traits(compiles, begin.add!"months"(1)) &&
+    static if (__traits(compiles, begin.add!"months"(1)) &&
               __traits(compiles, begin.add!"years"(1)))
     {
         /++
@@ -19128,11 +19128,11 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
 --------------------
           +/
         void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes, Direction dir = Direction.both)
-            if(isIntegral!T)
+            if (isIntegral!T)
         {
             _enforceNotEmpty();
 
-            switch(dir)
+            switch (dir)
             {
                 case Direction.both:
                 {
@@ -19235,7 +19235,7 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
 auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
 auto func = delegate (in Date date) //For iterating over even-numbered days.
             {
-                if((date.day & 1) == 0)
+                if ((date.day & 1) == 0)
                     return date + dur!"days"(2);
 
                 return date + dur!"days"(1);
@@ -19267,7 +19267,7 @@ assert(range.empty);
 
         auto range = IntervalRange!(TP, Direction.fwd)(this, func);
 
-        if(popFirst == PopFirst.yes)
+        if (popFirst == PopFirst.yes)
             range.popFront();
 
         return range;
@@ -19328,7 +19328,7 @@ assert(range.empty);
 auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
 auto func = delegate (in Date date) //For iterating over even-numbered days.
             {
-                if((date.day & 1) == 0)
+                if ((date.day & 1) == 0)
                     return date - dur!"days"(2);
 
                 return date - dur!"days"(1);
@@ -19360,7 +19360,7 @@ assert(range.empty);
 
         auto range = IntervalRange!(TP, Direction.bwd)(this, func);
 
-        if(popFirst == PopFirst.yes)
+        if (popFirst == PopFirst.yes)
             range.popFront();
 
         return range;
@@ -19413,7 +19413,7 @@ private:
       +/
     void _enforceNotEmpty(size_t line = __LINE__) const pure
     {
-        if(empty)
+        if (empty)
             throw new DateTimeException("Invalid operation for an empty Interval.", __FILE__, line);
     }
 
@@ -20750,7 +20750,7 @@ unittest
         auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
         auto func = delegate (in Date date)
                     {
-                        if((date.day & 1) == 0)
+                        if ((date.day & 1) == 0)
                             return date + dur!"days"(2);
 
                         return date + dur!"days"(1);
@@ -20816,7 +20816,7 @@ unittest
         auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
         auto func = delegate (in Date date)
                     {
-                        if((date.day & 1) == 0)
+                        if ((date.day & 1) == 0)
                             return date - dur!"days"(2);
 
                         return date - dur!"days"(1);
@@ -21630,13 +21630,13 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 --------------------
       +/
     void shift(D)(D duration) pure nothrow
-        if(__traits(compiles, begin + duration))
+        if (__traits(compiles, begin + duration))
     {
         _begin += duration;
     }
 
 
-    static if(__traits(compiles, begin.add!"months"(1)) &&
+    static if (__traits(compiles, begin.add!"months"(1)) &&
               __traits(compiles, begin.add!"years"(1)))
     {
         /++
@@ -21671,7 +21671,7 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 --------------------
           +/
         void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
-            if(isIntegral!T)
+            if (isIntegral!T)
         {
             auto begin = _begin;
 
@@ -21703,13 +21703,13 @@ assert(interval2 == PosInfInterval!Date(Date(1996, 1, 4)));
 --------------------
       +/
     void expand(D)(D duration) pure nothrow
-        if(__traits(compiles, begin + duration))
+        if (__traits(compiles, begin + duration))
     {
         _begin -= duration;
     }
 
 
-    static if(__traits(compiles, begin.add!"months"(1)) &&
+    static if (__traits(compiles, begin.add!"months"(1)) &&
               __traits(compiles, begin.add!"years"(1)))
     {
         /++
@@ -21739,7 +21739,7 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
 --------------------
           +/
         void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
-            if(isIntegral!T)
+            if (isIntegral!T)
         {
             auto begin = _begin;
 
@@ -21805,7 +21805,7 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
 auto interval = PosInfInterval!Date(Date(2010, 9, 1));
 auto func = delegate (in Date date) //For iterating over even-numbered days.
             {
-                if((date.day & 1) == 0)
+                if ((date.day & 1) == 0)
                     return date + dur!"days"(2);
 
                 return date + dur!"days"(1);
@@ -21835,7 +21835,7 @@ assert(!range.empty);
     {
         auto range = PosInfIntervalRange!(TP)(this, func);
 
-        if(popFirst == PopFirst.yes)
+        if (popFirst == PopFirst.yes)
             range.popFront();
 
         return range;
@@ -23007,7 +23007,7 @@ unittest
     auto interval = PosInfInterval!Date(Date(2010, 9, 1));
     auto func = delegate (in Date date)
                 {
-                    if((date.day & 1) == 0)
+                    if ((date.day & 1) == 0)
                         return date + dur!"days"(2);
 
                     return date + dur!"days"(1);
@@ -23837,13 +23837,13 @@ assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
 --------------------
       +/
     void shift(D)(D duration) pure nothrow
-        if(__traits(compiles, end + duration))
+        if (__traits(compiles, end + duration))
     {
         _end += duration;
     }
 
 
-    static if(__traits(compiles, end.add!"months"(1)) &&
+    static if (__traits(compiles, end.add!"months"(1)) &&
               __traits(compiles, end.add!"years"(1)))
     {
         /++
@@ -23877,7 +23877,7 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 --------------------
           +/
         void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
-            if(isIntegral!T)
+            if (isIntegral!T)
         {
             auto end = _end;
 
@@ -23909,13 +23909,13 @@ assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
 --------------------
       +/
     void expand(D)(D duration) pure nothrow
-        if(__traits(compiles, end + duration))
+        if (__traits(compiles, end + duration))
     {
         _end += duration;
     }
 
 
-    static if(__traits(compiles, end.add!"months"(1)) &&
+    static if (__traits(compiles, end.add!"months"(1)) &&
               __traits(compiles, end.add!"years"(1)))
     {
         /++
@@ -23945,7 +23945,7 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 --------------------
           +/
         void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
-            if(isIntegral!T)
+            if (isIntegral!T)
         {
             auto end = _end;
 
@@ -24011,7 +24011,7 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 auto interval = NegInfInterval!Date(Date(2010, 9, 9));
 auto func = delegate (in Date date) //For iterating over even-numbered days.
             {
-                if((date.day & 1) == 0)
+                if ((date.day & 1) == 0)
                     return date - dur!"days"(2);
 
                 return date - dur!"days"(1);
@@ -24040,7 +24040,7 @@ assert(!range.empty);
     {
         auto range = NegInfIntervalRange!(TP)(this, func);
 
-        if(popFirst == PopFirst.yes)
+        if (popFirst == PopFirst.yes)
             range.popFront();
 
         return range;
@@ -25220,7 +25220,7 @@ unittest
     auto interval = NegInfInterval!Date(Date(2010, 9, 9));
     auto func = delegate (in Date date)
                 {
-                    if((date.day & 1) == 0)
+                    if ((date.day & 1) == 0)
                         return date - dur!"days"(2);
 
                     return date - dur!"days"(1);
@@ -25281,7 +25281,7 @@ unittest
         dayOfWeek = The week that each time point in the range will be.
   +/
 static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayOfWeek dayOfWeek) nothrow
-    if(isTimePoint!TP &&
+    if (isTimePoint!TP &&
        (dir == Direction.fwd || dir == Direction.bwd) &&
        __traits(hasMember, TP, "dayOfWeek") &&
        !__traits(isStaticFunction, TP.dayOfWeek) &&
@@ -25292,7 +25292,7 @@ static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayO
         TP retval = cast(TP)tp;
         immutable days = daysToDayOfWeek(retval.dayOfWeek, dayOfWeek);
 
-        static if(dir == Direction.fwd)
+        static if (dir == Direction.fwd)
             immutable adjustedDays = days == 0 ? 7 : days;
         else
             immutable adjustedDays = days == 0 ? -7 : days - 7;
@@ -25385,7 +25385,7 @@ unittest
         month = The month that each time point in the range will be in.
   +/
 static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int month)
-    if(isTimePoint!TP &&
+    if (isTimePoint!TP &&
        (dir == Direction.fwd || dir == Direction.bwd) &&
        __traits(hasMember, TP, "month") &&
        !__traits(isStaticFunction, TP.month) &&
@@ -25398,14 +25398,14 @@ static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int mont
         TP retval = cast(TP)tp;
         immutable months = monthsToMonth(retval.month, month);
 
-        static if(dir == Direction.fwd)
+        static if (dir == Direction.fwd)
             immutable adjustedMonths = months == 0 ? 12 : months;
         else
             immutable adjustedMonths = months == 0 ? -12 : months - 12;
 
         retval.add!"months"(adjustedMonths, AllowDayOverflow.no);
 
-        if(retval.month != month)
+        if (retval.month != month)
         {
             retval.add!"months"(-1);
             assert(retval.month == month);
@@ -25509,13 +25509,13 @@ unittest
   +/
 static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                        (D duration) nothrow
-    if(isTimePoint!TP &&
+    if (isTimePoint!TP &&
        __traits(compiles, TP.init + duration) &&
        (dir == Direction.fwd || dir == Direction.bwd))
 {
     TP func(in TP tp)
     {
-        static if(dir == Direction.fwd)
+        static if (dir == Direction.fwd)
             return tp + duration;
         else
             return tp - duration;
@@ -25612,7 +25612,7 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                         int months = 0,
                                         AllowDayOverflow allowOverflow = AllowDayOverflow.yes,
                                         D duration = dur!"days"(0)) nothrow
-    if(isTimePoint!TP &&
+    if (isTimePoint!TP &&
        __traits(compiles, TP.init + duration) &&
        __traits(compiles, TP.init.add!"years"(years)) &&
        __traits(compiles, TP.init.add!"months"(months)) &&
@@ -25620,7 +25620,7 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
 {
     TP func(in TP tp)
     {
-        static if(dir == Direction.fwd)
+        static if (dir == Direction.fwd)
         {
             TP retval = cast(TP)tp;
 
@@ -25765,7 +25765,7 @@ unittest
     excluded will treat $(D begin) as included and $(D end) as excluded.
   +/
 struct IntervalRange(TP, Direction dir)
-    if(isTimePoint!TP && dir != Direction.both)
+    if (isTimePoint!TP && dir != Direction.both)
 {
 public:
 
@@ -25807,7 +25807,7 @@ public:
     {
         _enforceNotEmpty();
 
-        static if(dir == Direction.fwd)
+        static if (dir == Direction.fwd)
             return _interval.begin;
         else
             return _interval.end;
@@ -25834,11 +25834,11 @@ public:
     {
         _enforceNotEmpty();
 
-        static if(dir == Direction.fwd)
+        static if (dir == Direction.fwd)
         {
             auto begin = _func(_interval.begin);
 
-            if(begin > _interval.end)
+            if (begin > _interval.end)
                 begin = _interval.end;
 
             _enforceCorrectDirection(begin);
@@ -25849,7 +25849,7 @@ public:
         {
             auto end = _func(_interval.end);
 
-            if(end < _interval.begin)
+            if (end < _interval.begin)
                 end = _interval.begin;
 
             _enforceCorrectDirection(end);
@@ -25916,7 +25916,7 @@ private:
       +/
     void _enforceNotEmpty(size_t line = __LINE__) const pure
     {
-        if(empty)
+        if (empty)
             throw new DateTimeException("Invalid operation for an empty IntervalRange.", __FILE__, line);
     }
 
@@ -25930,7 +25930,7 @@ private:
     {
         import std.format : format;
 
-        static if(dir == Direction.fwd)
+        static if (dir == Direction.fwd)
         {
             enforce(newTP > _interval._begin,
                     new DateTimeException(format("Generated time point is before previous begin: prev [%s] new [%s]",
@@ -26105,7 +26105,7 @@ unittest
         auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
         auto expected = range.front;
 
-        foreach(date; range)
+        foreach (date; range)
         {
             assert(date == expected);
             expected += dur!"days"(7);
@@ -26125,7 +26125,7 @@ unittest
         auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
         auto expected = range.front;
 
-        foreach(date; range)
+        foreach (date; range)
         {
             assert(date == expected);
             expected += dur!"days"(-7);
@@ -26263,7 +26263,7 @@ unittest
     a $(LREF DateTimeException) will be thrown.
   +/
 struct PosInfIntervalRange(TP)
-    if(isTimePoint!TP)
+    if (isTimePoint!TP)
 {
 public:
 
@@ -26474,7 +26474,7 @@ unittest
     auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
     auto expected = range.front;
 
-    foreach(date; take(range, 79))
+    foreach (date; take(range, 79))
     {
         assert(date == expected);
         expected += dur!"days"(7);
@@ -26551,7 +26551,7 @@ unittest
     whether $(D end) is included or excluded will treat $(D end) as excluded.
   +/
 struct NegInfIntervalRange(TP)
-    if(isTimePoint!TP)
+    if (isTimePoint!TP)
 {
 public:
 
@@ -26762,7 +26762,7 @@ unittest
     auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
     auto expected = range.front;
 
-    foreach(date; take(range, 79))
+    foreach (date; take(range, 79))
     {
         assert(date == expected);
         expected += dur!"days"(-7);
@@ -26960,14 +26960,14 @@ public:
         {
             import std.format : format;
             auto windowsTZName = tzDatabaseNameToWindowsTZName(name);
-            if(windowsTZName != null)
+            if (windowsTZName != null)
             {
                 try
                     return WindowsTimeZone.getTimeZone(windowsTZName);
                 catch(DateTimeException dte)
                 {
                     auto oldName = _getOldName(windowsTZName);
-                    if(oldName != null)
+                    if (oldName != null)
                         return WindowsTimeZone.getTimeZone(oldName);
                     throw dte;
                 }
@@ -26991,7 +26991,7 @@ public:
     // time has passed.
     private static string _getOldName(string windowsTZName) @safe pure nothrow
     {
-        switch(windowsTZName)
+        switch (windowsTZName)
         {
             case "Belarus Standard Time": return "Kaliningrad Standard Time"; // Added 2014-10-08
             case "Russia Time Zone 10": return "Magadan Standard Time"; // Added 2014-10-08
@@ -27167,7 +27167,7 @@ public:
         else
             assert(0, "OS not supported.");
 
-        foreach(i; 0 .. tzs.length)
+        foreach (i; 0 .. tzs.length)
         {
             auto tz = tzs[i];
             immutable spring = dstSwitches[i][2];
@@ -27178,7 +27178,7 @@ public:
             //Verify that creating a SysTime in the given time zone results
             //in a SysTime with the correct std time during and surrounding
             //a DST switch.
-            foreach(hour; -12 .. 13)
+            foreach (hour; -12 .. 13)
             {
                 auto st = SysTime(dstSwitches[i][0] + dur!"hours"(hour), tz);
                 immutable targetHour = hour < 0 ? hour + 24 : hour;
@@ -27204,7 +27204,7 @@ public:
                     enforce((st + dur!"minutes"(1)).utcOffset == offset, msg("3"));
                 }
 
-                if(hour == spring)
+                if (hour == spring)
                 {
                     testHour(st, spring + 1, tz.name);
                     testHour(st + dur!"minutes"(1), spring + 1, tz.name);
@@ -27215,7 +27215,7 @@ public:
                     testHour(st + dur!"minutes"(1), targetHour, tz.name);
                 }
 
-                if(hour < spring)
+                if (hour < spring)
                     testOffset1(stdOffset, false);
                 else
                     testOffset1(dstOffset, true);
@@ -27224,10 +27224,10 @@ public:
                 testHour(st, targetHour, tz.name);
 
                 //Verify that 01:00 is the first 01:00 (or whatever hour before the switch is).
-                if(hour == fall - 1)
+                if (hour == fall - 1)
                     testHour(st + dur!"hours"(1), targetHour, tz.name);
 
-                    if(hour < fall)
+                    if (hour < fall)
                         testOffset1(dstOffset, true);
                     else
                         testOffset1(stdOffset, false);
@@ -27242,7 +27242,7 @@ public:
             //@@@BUG@@@ 3659 makes this necessary.
             auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
 
-            foreach(hour; -24 .. 25)
+            foreach (hour; -24 .. 25)
             {
                 auto utc = SysTime(dstSwitches[i][0] + dur!"hours"(hour), UTC());
                 auto local = utc.toOtherTZ(tz);
@@ -27259,7 +27259,7 @@ public:
                     enforce((utc + offset + dur!"minutes"(1)).hour == local.hour, msg("2"));
                 }
 
-                if(utc < springSwitch)
+                if (utc < springSwitch)
                     testOffset2(stdOffset);
                 else
                     testOffset2(dstOffset);
@@ -27267,9 +27267,9 @@ public:
                 utc = SysTime(dstSwitches[i][1] + dur!"hours"(hour), UTC());
                 local = utc.toOtherTZ(tz);
 
-                if(utc == fallSwitch || utc == fallSwitchMinus1)
+                if (utc == fallSwitch || utc == fallSwitchMinus1)
                 {
-                    if(first)
+                    if (first)
                     {
                         testOffset2(dstOffset);
                         first = false;
@@ -27277,7 +27277,7 @@ public:
                     else
                         testOffset2(stdOffset);
                 }
-                else if(utc > fallSwitch)
+                else if (utc > fallSwitch)
                     testOffset2(stdOffset);
                 else
                     testOffset2(dstOffset);
@@ -27320,7 +27320,7 @@ public:
             auto windowsNames = WindowsTimeZone.getInstalledTZNames();
             auto retval = appender!(string[])();
 
-            foreach(winName; windowsNames)
+            foreach (winName; windowsNames)
             {
                 auto tzName = windowsTZNameToTZDatabaseName(winName);
 
@@ -27330,7 +27330,7 @@ public:
                     assert(tzName !is null, format("TZName which is missing: %s", winName));
                 }
 
-                if(tzName !is null && tzName.startsWith(subName))
+                if (tzName !is null && tzName.startsWith(subName))
                     retval.put(tzName);
             }
 
@@ -27352,7 +27352,7 @@ public:
         // leaving it commented out until I can sort it out.
         //assert(equal(tzNames, tzNames.uniq()));
 
-        foreach(tzName; tzNames)
+        foreach (tzName; tzNames)
             assertNotThrown!DateTimeException(testPZSuccess(tzName));
     }
 
@@ -27458,16 +27458,16 @@ public:
 
             wchar[32] str;
 
-            foreach(i, ref wchar c; str)
+            foreach (i, ref wchar c; str)
                 c = tzInfo.StandardName[i];
 
             string retval;
 
             try
             {
-                foreach(dchar c; str)
+                foreach (dchar c; str)
                 {
-                    if(c == '\0')
+                    if (c == '\0')
                         break;
 
                     retval ~= c;
@@ -27529,16 +27529,16 @@ public:
 
             wchar[32] str;
 
-            foreach(i, ref wchar c; str)
+            foreach (i, ref wchar c; str)
                 c = tzInfo.DaylightName[i];
 
             string retval;
 
             try
             {
-                foreach(dchar c; str)
+                foreach (dchar c; str)
                 {
-                    if(c == '\0')
+                    if (c == '\0')
                         break;
 
                     retval ~= c;
@@ -27590,7 +27590,7 @@ public:
     {
         version(Posix)
         {
-            static if(is(typeof(daylight)))
+            static if (is(typeof(daylight)))
                 return cast(bool)(daylight);
             else
             {
@@ -27659,11 +27659,11 @@ public:
         else version(Windows)
         {
             //Apparently Windows isn't smart enough to deal with negative time_t.
-            if(unixTime >= 0)
+            if (unixTime >= 0)
             {
                 tm* timeInfo = localtime(&unixTime);
 
-                if(timeInfo)
+                if (timeInfo)
                     return cast(bool)(timeInfo.tm_isdst);
             }
 
@@ -27743,10 +27743,10 @@ public:
             timeInfo = localtime(future > unixTime ? &future : &unixTime);
             immutable futureOffset = timeInfo.tm_gmtoff;
 
-            if(pastOffset == futureOffset)
+            if (pastOffset == futureOffset)
                 return adjTime - convert!("seconds", "hnsecs")(pastOffset);
 
-            if(pastOffset < futureOffset)
+            if (pastOffset < futureOffset)
                 unixTime -= cast(time_t)convert!("hours", "seconds")(1);
 
             unixTime -= pastOffset;
@@ -27785,7 +27785,7 @@ public:
                             tuple("Europe/Paris",        DateTime(2012, 3, 25), DateTime(2012, 10, 28), 2, 3),
                             tuple("Australia/Adelaide",  DateTime(2012, 10, 7), DateTime(2012, 4, 1), 2, 3)];
 
-            foreach(i; 0 .. tzInfos.length)
+            foreach (i; 0 .. tzInfos.length)
             {
                 auto tzName = tzInfos[i][0];
                 setTZEnvVar(tzName);
@@ -27797,7 +27797,7 @@ public:
                 //Verify that creating a SysTime in the given time zone results
                 //in a SysTime with the correct std time during and surrounding
                 //a DST switch.
-                foreach(hour; -12 .. 13)
+                foreach (hour; -12 .. 13)
                 {
                     auto st = SysTime(tzInfos[i][1] + dur!"hours"(hour));
                     immutable targetHour = hour < 0 ? hour + 24 : hour;
@@ -27823,7 +27823,7 @@ public:
                         enforce((st + dur!"minutes"(1)).utcOffset == offset, msg("3"));
                     }
 
-                    if(hour == spring)
+                    if (hour == spring)
                     {
                         testHour(st, spring + 1, tzName);
                         testHour(st + dur!"minutes"(1), spring + 1, tzName);
@@ -27834,7 +27834,7 @@ public:
                         testHour(st + dur!"minutes"(1), targetHour, tzName);
                     }
 
-                    if(hour < spring)
+                    if (hour < spring)
                         testOffset1(stdOffset, false);
                     else
                         testOffset1(dstOffset, true);
@@ -27843,10 +27843,10 @@ public:
                     testHour(st, targetHour, tzName);
 
                     //Verify that 01:00 is the first 01:00 (or whatever hour before the switch is).
-                    if(hour == fall - 1)
+                    if (hour == fall - 1)
                         testHour(st + dur!"hours"(1), targetHour, tzName);
 
-                    if(hour < fall)
+                    if (hour < fall)
                         testOffset1(dstOffset, true);
                     else
                         testOffset1(stdOffset, false);
@@ -27861,7 +27861,7 @@ public:
                 //@@@BUG@@@ 3659 makes this necessary.
                 auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
 
-                foreach(hour; -24 .. 25)
+                foreach (hour; -24 .. 25)
                 {
                     auto utc = SysTime(tzInfos[i][1] + dur!"hours"(hour), UTC());
                     auto local = utc.toLocalTime();
@@ -27878,7 +27878,7 @@ public:
                         enforce((utc + offset + dur!"minutes"(1)).hour == local.hour, msg("2"));
                     }
 
-                    if(utc < springSwitch)
+                    if (utc < springSwitch)
                         testOffset2(stdOffset);
                     else
                         testOffset2(dstOffset);
@@ -27886,9 +27886,9 @@ public:
                     utc = SysTime(tzInfos[i][2] + dur!"hours"(hour), UTC());
                     local = utc.toLocalTime();
 
-                    if(utc == fallSwitch || utc == fallSwitchMinus1)
+                    if (utc == fallSwitch || utc == fallSwitchMinus1)
                     {
-                        if(first)
+                        if (first)
                         {
                             testOffset2(dstOffset);
                             first = false;
@@ -27896,7 +27896,7 @@ public:
                         else
                             testOffset2(stdOffset);
                     }
-                    else if(utc > fallSwitch)
+                    else if (utc > fallSwitch)
                         testOffset2(stdOffset);
                     else
                         testOffset2(dstOffset);
@@ -28312,7 +28312,7 @@ private:
             isoString = A string which represents a time zone in the ISO format.
       +/
     static immutable(SimpleTimeZone) fromISOString(S)(S isoString) @safe pure
-        if(isSomeString!S)
+        if (isSomeString!S)
     {
         import std.ascii : isDigit;
         import std.conv : to;
@@ -28331,9 +28331,9 @@ private:
         int hours;
         int minutes;
 
-        if(dstr.length == 2)
+        if (dstr.length == 2)
             hours = to!int(dstr);
-        else if(dstr.length == 4)
+        else if (dstr.length == 4)
         {
             hours = to!int(dstr[0 .. 2]);
             minutes = to!int(dstr[2 .. 4]);
@@ -28350,7 +28350,7 @@ private:
     {
         import std.format : format;
 
-        foreach(str; ["", "Z", "-", "+", "-:", "+:", "-1:", "+1:", "+1", "-1",
+        foreach (str; ["", "Z", "-", "+", "-:", "+:", "-1:", "+1:", "+1", "-1",
                       "-24:00", "+24:00", "-24", "+24", "-2400", "+2400",
                       "1", "+1", "-1", "+9", "-9",
                       "+1:0", "+01:0", "+1:00", "+01:000", "+01:60",
@@ -28369,7 +28369,7 @@ private:
 
         static void test(string str, Duration utcOffset, size_t line = __LINE__)
         {
-            if(SimpleTimeZone.fromISOString(str).utcOffset !=
+            if (SimpleTimeZone.fromISOString(str).utcOffset !=
                (new immutable SimpleTimeZone(utcOffset)).utcOffset)
             {
                 throw new AssertError("unittest failure", __FILE__, line);
@@ -28415,11 +28415,11 @@ private:
         static void test(in string isoString, int expectedOffset, size_t line = __LINE__)
         {
             auto stz = SimpleTimeZone.fromISOExtString(isoString);
-            if(stz.utcOffset != dur!"minutes"(expectedOffset))
+            if (stz.utcOffset != dur!"minutes"(expectedOffset))
                 throw new AssertError(format("unittest failure: wrong offset [%s]", stz.utcOffset), __FILE__, line);
 
             auto result = SimpleTimeZone.toISOExtString(stz.utcOffset);
-            if(result != isoString)
+            if (result != isoString)
                 throw new AssertError(format("unittest failure: [%s] != [%s]", result, isoString), __FILE__, line);
         }
 
@@ -28457,7 +28457,7 @@ private:
             isoExtString = A string which represents a time zone in the ISO format.
       +/
     static immutable(SimpleTimeZone) fromISOExtString(S)(S isoExtString) @safe pure
-        if(isSomeString!S)
+        if (isSomeString!S)
     {
         import std.ascii : isDigit;
         import std.conv : to;
@@ -28478,7 +28478,7 @@ private:
         dstring hoursStr;
         dstring minutesStr;
 
-        if(colon != -1)
+        if (colon != -1)
         {
             hoursStr = dstr[0 .. colon];
             minutesStr = dstr[colon + 1 .. $];
@@ -28502,7 +28502,7 @@ private:
     {
         import std.format : format;
 
-        foreach(str; ["", "Z", "-", "+", "-:", "+:", "-1:", "+1:", "+1", "-1",
+        foreach (str; ["", "Z", "-", "+", "-:", "+:", "-1:", "+1:", "+1", "-1",
                       "-24:00", "+24:00", "-24", "+24", "-2400", "-2400",
                       "1", "+1", "-1", "+9", "-9",
                       "+1:0", "+01:0", "+1:00", "+01:000", "+01:60",
@@ -28521,7 +28521,7 @@ private:
 
         static void test(string str, Duration utcOffset, size_t line = __LINE__)
         {
-            if(SimpleTimeZone.fromISOExtString(str).utcOffset !=
+            if (SimpleTimeZone.fromISOExtString(str).utcOffset !=
                (new immutable SimpleTimeZone(utcOffset)).utcOffset)
             {
                 throw new AssertError("unittest failure", __FILE__, line);
@@ -28567,11 +28567,11 @@ private:
         static void test(in string isoExtString, int expectedOffset, size_t line = __LINE__)
         {
             auto stz = SimpleTimeZone.fromISOExtString(isoExtString);
-            if(stz.utcOffset != dur!"minutes"(expectedOffset))
+            if (stz.utcOffset != dur!"minutes"(expectedOffset))
                 throw new AssertError(format("unittest failure: wrong offset [%s]", stz.utcOffset), __FILE__, line);
 
             auto result = SimpleTimeZone.toISOExtString(stz.utcOffset);
-            if(result != isoExtString)
+            if (result != isoExtString)
                 throw new AssertError(format("unittest failure: [%s] != [%s]", result, isoExtString), __FILE__, line);
         }
 
@@ -28668,7 +28668,7 @@ public:
         immutable unixTime = stdTimeToUnixTime(stdTime);
         immutable found = countUntil!"b < a.timeT"(_transitions, unixTime);
 
-        if(found == -1)
+        if (found == -1)
             return _transitions.back.ttInfo.isDST;
 
         immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
@@ -28693,7 +28693,7 @@ public:
         immutable unixTime = stdTimeToUnixTime(stdTime);
         immutable found = countUntil!"b < a.timeT"(_transitions, unixTime);
 
-        if(found == -1)
+        if (found == -1)
             return stdTime + convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
         immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
@@ -28721,25 +28721,25 @@ public:
 
         immutable pastFound = countUntil!"b < a.timeT"(_transitions, past);
 
-        if(pastFound == -1)
+        if (pastFound == -1)
             return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
         immutable futureFound = countUntil!"b < a.timeT"(_transitions[pastFound .. $], future);
         immutable pastTrans = pastFound == 0 ? _transitions[0] : _transitions[pastFound - 1];
 
-        if(futureFound == 0)
+        if (futureFound == 0)
             return adjTime - convert!("seconds", "hnsecs")(pastTrans.ttInfo.utcOffset + leapSecs);
 
         immutable futureTrans = futureFound == -1 ? _transitions.back
                                                   : _transitions[pastFound + futureFound - 1];
         immutable pastOffset = pastTrans.ttInfo.utcOffset;
 
-        if(pastOffset < futureTrans.ttInfo.utcOffset)
+        if (pastOffset < futureTrans.ttInfo.utcOffset)
             unixTime -= convert!("hours", "seconds")(1);
 
         immutable found = countUntil!"b < a.timeT"(_transitions[pastFound .. $], unixTime - pastOffset);
 
-        if(found == -1)
+        if (found == -1)
             return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
         immutable transition = found == 0 ? pastTrans : _transitions[pastFound + found - 1];
@@ -28836,9 +28836,9 @@ public:
                 auto zeroBlock = readVal!(ubyte[])(tzFile, 15);
                 bool allZeroes = true;
 
-                foreach(val; zeroBlock)
+                foreach (val; zeroBlock)
                 {
-                    if(val != 0)
+                    if (val != 0)
                     {
                         allZeroes = false;
                         break;
@@ -28870,25 +28870,25 @@ public:
 
             //time_ts where DST transitions occur.
             auto transitionTimeTs = new long[](tzh_timecnt);
-            foreach(ref transition; transitionTimeTs)
+            foreach (ref transition; transitionTimeTs)
                 transition = readVal!int(tzFile);
 
             //Indices into ttinfo structs indicating the changes
             //to be made at the corresponding DST transition.
             auto ttInfoIndices = new ubyte[](tzh_timecnt);
-            foreach(ref ttInfoIndex; ttInfoIndices)
+            foreach (ref ttInfoIndex; ttInfoIndices)
                 ttInfoIndex = readVal!ubyte(tzFile);
 
             //ttinfos which give info on DST transitions.
             auto tempTTInfos = new TempTTInfo[](tzh_typecnt);
-            foreach(ref ttInfo; tempTTInfos)
+            foreach (ref ttInfo; tempTTInfos)
                 ttInfo = readVal!TempTTInfo(tzFile);
 
             //The array of time zone abbreviation characters.
             auto tzAbbrevChars = readVal!(char[])(tzFile, tzh_charcnt);
 
             auto leapSeconds = new LeapSecond[](tzh_leapcnt);
-            foreach(ref leapSecond; leapSeconds)
+            foreach (ref leapSecond; leapSeconds)
             {
                 //The time_t when the leap second occurs.
                 auto timeT = readVal!int(tzFile);
@@ -28903,19 +28903,19 @@ public:
             //Indicate whether each corresponding DST transition were specified
             //in standard time or wall clock time.
             auto transitionIsStd = new bool[](tzh_ttisstdcnt);
-            foreach(ref isStd; transitionIsStd)
+            foreach (ref isStd; transitionIsStd)
                 isStd = readVal!bool(tzFile);
 
             //Indicate whether each corresponding DST transition associated with
             //local time types are specified in UTC or local time.
             auto transitionInUTC = new bool[](tzh_ttisgmtcnt);
-            foreach(ref inUTC; transitionInUTC)
+            foreach (ref inUTC; transitionInUTC)
                 inUTC = readVal!bool(tzFile);
 
             _enforceValidTZFile(!tzFile.eof);
 
             //If version 2 or 3, the information is duplicated in 64-bit.
-            if(tzFileVersion == '2' || tzFileVersion == '3')
+            if (tzFileVersion == '2' || tzFileVersion == '3')
             {
                 _enforceValidTZFile(readVal!(char[])(tzFile, 4) == "TZif");
 
@@ -28926,9 +28926,9 @@ public:
                     auto zeroBlock = readVal!(ubyte[])(tzFile, 15);
                     bool allZeroes = true;
 
-                    foreach(val; zeroBlock)
+                    foreach (val; zeroBlock)
                     {
-                        if(val != 0)
+                        if (val != 0)
                         {
                             allZeroes = false;
                             break;
@@ -28960,25 +28960,25 @@ public:
 
                 //time_ts where DST transitions occur.
                 transitionTimeTs = new long[](tzh_timecnt);
-                foreach(ref transition; transitionTimeTs)
+                foreach (ref transition; transitionTimeTs)
                     transition = readVal!long(tzFile);
 
                 //Indices into ttinfo structs indicating the changes
                 //to be made at the corresponding DST transition.
                 ttInfoIndices = new ubyte[](tzh_timecnt);
-                foreach(ref ttInfoIndex; ttInfoIndices)
+                foreach (ref ttInfoIndex; ttInfoIndices)
                     ttInfoIndex = readVal!ubyte(tzFile);
 
                 //ttinfos which give info on DST transitions.
                 tempTTInfos = new TempTTInfo[](tzh_typecnt);
-                foreach(ref ttInfo; tempTTInfos)
+                foreach (ref ttInfo; tempTTInfos)
                     ttInfo = readVal!TempTTInfo(tzFile);
 
                 //The array of time zone abbreviation characters.
                 tzAbbrevChars = readVal!(char[])(tzFile, tzh_charcnt);
 
                 leapSeconds = new LeapSecond[](tzh_leapcnt);
-                foreach(ref leapSecond; leapSeconds)
+                foreach (ref leapSecond; leapSeconds)
                 {
                     //The time_t when the leap second occurs.
                     auto timeT = readVal!long(tzFile);
@@ -28993,13 +28993,13 @@ public:
                 //Indicate whether each corresponding DST transition were specified
                 //in standard time or wall clock time.
                 transitionIsStd = new bool[](tzh_ttisstdcnt);
-                foreach(ref isStd; transitionIsStd)
+                foreach (ref isStd; transitionIsStd)
                     isStd = readVal!bool(tzFile);
 
                 //Indicate whether each corresponding DST transition associated with
                 //local time types are specified in UTC or local time.
                 transitionInUTC = new bool[](tzh_ttisgmtcnt);
-                foreach(ref inUTC; transitionInUTC)
+                foreach (ref inUTC; transitionInUTC)
                     inUTC = readVal!bool(tzFile);
             }
 
@@ -29021,27 +29021,27 @@ public:
 
             auto transitionTypes = new TransitionType*[](tempTTInfos.length);
 
-            foreach(i, ref ttype; transitionTypes)
+            foreach (i, ref ttype; transitionTypes)
             {
                 bool isStd = false;
 
-                if(i < transitionIsStd.length && !transitionIsStd.empty)
+                if (i < transitionIsStd.length && !transitionIsStd.empty)
                     isStd = transitionIsStd[i];
 
                 bool inUTC = false;
 
-                if(i < transitionInUTC.length && !transitionInUTC.empty)
+                if (i < transitionInUTC.length && !transitionInUTC.empty)
                     inUTC = transitionInUTC[i];
 
                 ttype = new TransitionType(isStd, inUTC);
             }
 
             auto ttInfos = new immutable(TTInfo)*[](tempTTInfos.length);
-            foreach(i, ref ttInfo; ttInfos)
+            foreach (i, ref ttInfo; ttInfos)
             {
                 auto tempTTInfo = tempTTInfos[i];
 
-                if(gmtZone)
+                if (gmtZone)
                     tempTTInfo.tt_gmtoff = -tempTTInfo.tt_gmtoff;
 
                 auto abbrevChars = tzAbbrevChars[tempTTInfo.tt_abbrind .. $];
@@ -29051,7 +29051,7 @@ public:
             }
 
             auto tempTransitions = new TempTransition[](transitionTimeTs.length);
-            foreach(i, ref tempTransition; tempTransitions)
+            foreach (i, ref tempTransition; tempTransitions)
             {
                 immutable ttiIndex = ttInfoIndices[i];
                 auto transitionTimeT = transitionTimeTs[i];
@@ -29061,7 +29061,7 @@ public:
                 tempTransition = TempTransition(transitionTimeT, ttInfo, ttype);
             }
 
-            if(tempTransitions.empty)
+            if (tempTransitions.empty)
             {
                 _enforceValidTZFile(ttInfos.length == 1 && transitionTypes.length == 1);
                 tempTransitions ~= TempTransition(0, ttInfos[0], transitionTypes[0]);
@@ -29071,7 +29071,7 @@ public:
             sort!"a.timeT < b.timeT"(leapSeconds);
 
             auto transitions = new Transition[](tempTransitions.length);
-            foreach(i, ref transition; transitions)
+            foreach (i, ref transition; transitions)
             {
                 auto tempTransition = tempTransitions[i];
                 auto transitionTimeT = tempTransition.timeT;
@@ -29087,24 +29087,24 @@ public:
             string dstName;
             bool hasDST = false;
 
-            foreach(transition; retro(transitions))
+            foreach (transition; retro(transitions))
             {
                 auto ttInfo = transition.ttInfo;
 
-                if(ttInfo.isDST)
+                if (ttInfo.isDST)
                 {
-                    if(dstName.empty)
+                    if (dstName.empty)
                         dstName = ttInfo.abbrev;
 
                     hasDST = true;
                 }
                 else
                 {
-                    if(stdName.empty)
+                    if (stdName.empty)
                         stdName = ttInfo.abbrev;
                 }
 
-                if(!stdName.empty && !dstName.empty)
+                if (!stdName.empty && !dstName.empty)
                     break;
             }
 
@@ -29175,13 +29175,13 @@ public:
         }
         else
         {
-            foreach(DirEntry dentry; dirEntries(tzDatabaseDir, SpanMode.depth))
+            foreach (DirEntry dentry; dirEntries(tzDatabaseDir, SpanMode.depth))
             {
-                if(dentry.isFile)
+                if (dentry.isFile)
                 {
                     auto tzName = dentry.name[tzDatabaseDir.length .. $];
 
-                    if(!tzName.extension().empty ||
+                    if (!tzName.extension().empty ||
                        !tzName.startsWith(subName) ||
                        tzName == "leapseconds" ||
                        tzName == "+VERSION")
@@ -29217,18 +29217,18 @@ public:
 
         auto tzNames = getInstalledTZNames();
 
-        foreach(tzName; tzNames)
+        foreach (tzName; tzNames)
             assertNotThrown!DateTimeException(testPTZSuccess(tzName));
 
         // No timezone directories on Android, just a single tzdata file
         version(Android) {} else
-        foreach(DirEntry dentry; dirEntries(defaultTZDatabaseDir, SpanMode.depth))
+        foreach (DirEntry dentry; dirEntries(defaultTZDatabaseDir, SpanMode.depth))
         {
-            if(dentry.isFile)
+            if (dentry.isFile)
             {
                 auto tzName = dentry.name[defaultTZDatabaseDir.length .. $];
 
-                if(!canFind(tzNames, tzName))
+                if (!canFind(tzNames, tzName))
                     assertThrown!DateTimeException(testPTZFailure(tzName));
             }
         }
@@ -29353,7 +29353,7 @@ private:
         Reads an int from a TZ file.
       +/
     static T readVal(T)(ref File tzFile) @trusted
-        if((isIntegral!T || isSomeChar!T) || is(Unqual!T == bool))
+        if ((isIntegral!T || isSomeChar!T) || is(Unqual!T == bool))
     {
         import std.bitmanip;
         T[1] buff;
@@ -29368,7 +29368,7 @@ private:
         Reads an array of values from a TZ file.
       +/
     static T readVal(T)(ref File tzFile, size_t length) @trusted
-        if(isArray!T)
+        if (isArray!T)
     {
         auto buff = new T(length);
 
@@ -29383,7 +29383,7 @@ private:
         Reads a $(D TempTTInfo) from a TZ file.
       +/
     static T readVal(T)(ref File tzFile) @safe
-        if(is(T == TempTTInfo))
+        if (is(T == TempTTInfo))
     {
         return TempTTInfo(readVal!int(tzFile),
                           readVal!bool(tzFile),
@@ -29397,24 +29397,24 @@ private:
       +/
     static void _enforceValidTZFile(bool result, size_t line = __LINE__) @safe pure
     {
-        if(!result)
+        if (!result)
             throw new DateTimeException("Not a valid tzdata file.", __FILE__, line);
     }
 
 
     int calculateLeapSeconds(long stdTime) @safe const pure nothrow
     {
-        if(_leapSeconds.empty)
+        if (_leapSeconds.empty)
             return 0;
 
         immutable unixTime = stdTimeToUnixTime(stdTime);
 
-        if(_leapSeconds.front.timeT >= unixTime)
+        if (_leapSeconds.front.timeT >= unixTime)
             return 0;
 
         immutable found = countUntil!"b < a.timeT"(_leapSeconds, unixTime);
 
-        if(found == -1)
+        if (found == -1)
             return _leapSeconds.back.total;
 
         immutable leapSecond = found == 0 ? _leapSeconds[0] : _leapSeconds[found - 1];
@@ -29430,20 +29430,20 @@ private:
          string dstName,
          bool hasDST) @safe immutable pure
     {
-        if(dstName.empty && !stdName.empty)
+        if (dstName.empty && !stdName.empty)
             dstName = stdName;
-        else if(stdName.empty && !dstName.empty)
+        else if (stdName.empty && !dstName.empty)
             stdName = dstName;
 
         super(name, stdName, dstName);
 
-        if(!transitions.empty)
+        if (!transitions.empty)
         {
-            foreach(i, transition; transitions[0 .. $-1])
+            foreach (i, transition; transitions[0 .. $-1])
                 _enforceValidTZFile(transition.timeT < transitions[i + 1].timeT);
         }
 
-        foreach(i, leapSecond; leapSeconds)
+        foreach (i, leapSecond; leapSeconds)
             _enforceValidTZFile(i == leapSeconds.length - 1 || leapSecond.timeT < leapSeconds[i + 1].timeT);
 
         _transitions = transitions;
@@ -29485,7 +29485,7 @@ private:
 
                 // Check for the combined file tzdata, which stores the index
                 // and the time zone data together.
-                if(combinedFile.exists() && combinedFile.isFile)
+                if (combinedFile.exists() && combinedFile.isFile)
                 {
                     tzFile = File(combinedFile);
                     _enforceValidTZFile(readVal!(char[])(tzFile, 6) == "tzdata");
@@ -29499,7 +29499,7 @@ private:
                     indexEntries = (dataOffset - indexOffset)/indexEntrySize;
                     separate_index = false;
                 }
-                else if(indexFile.exists() && indexFile.isFile)
+                else if (indexFile.exists() && indexFile.isFile)
                 {
                     tzFile = File(indexFile);
                     indexEntries = to!(uint)(tzFile.size/indexEntrySize);
@@ -29509,7 +29509,7 @@ private:
                     throw new DateTimeException(format("Both timezone files %s and %s do not exist.",
                         combinedFile, indexFile));
 
-                foreach(Unused; 0 .. indexEntries) {
+                foreach (Unused; 0 .. indexEntries) {
                     string tzName = to!string(readVal!(char[])(tzFile, 40).ptr);
                     uint tzOffset = readVal!uint(tzFile);
                     readVal!(uint[])(tzFile, 2);
@@ -29773,7 +29773,7 @@ else version(Windows)
 
             auto tzNames = getInstalledTZNames();
 
-            foreach(tzName; tzNames)
+            foreach (tzName; tzNames)
                 assertNotThrown!DateTimeException(testWTZSuccess(tzName));
         }
 
@@ -29784,22 +29784,22 @@ else version(Windows)
         {
             try
             {
-                if(tzInfo.DaylightDate.wMonth == 0)
+                if (tzInfo.DaylightDate.wMonth == 0)
                     return false;
 
                 auto utcDateTime = cast(DateTime)SysTime(stdTime, UTC());
 
                 //The limits of what SystemTimeToTzSpecificLocalTime will accept.
-                if(utcDateTime.year < 1601)
+                if (utcDateTime.year < 1601)
                 {
-                    if(utcDateTime.month == Month.feb && utcDateTime.day == 29)
+                    if (utcDateTime.month == Month.feb && utcDateTime.day == 29)
                         utcDateTime.day = 28;
 
                     utcDateTime.year = 1601;
                 }
-                else if(utcDateTime.year > 30_827)
+                else if (utcDateTime.year > 30_827)
                 {
-                    if(utcDateTime.month == Month.feb && utcDateTime.day == 29)
+                    if (utcDateTime.month == Month.feb && utcDateTime.day == 29)
                         utcDateTime.day = 28;
 
                     utcDateTime.year = 30_827;
@@ -29809,12 +29809,12 @@ else version(Windows)
                 //beginning or end of the year (bleh). Unless some bizarre time
                 //zone changes DST on January 1st or December 31st, this should
                 //fix the problem.
-                if(utcDateTime.month == Month.jan)
+                if (utcDateTime.month == Month.jan)
                 {
-                    if(utcDateTime.day == 1)
+                    if (utcDateTime.day == 1)
                         utcDateTime.day = 2;
                 }
-                else if(utcDateTime.month == Month.dec && utcDateTime.day == 31)
+                else if (utcDateTime.month == Month.dec && utcDateTime.day == 31)
                     utcDateTime.day = 30;
 
                 SYSTEMTIME utcTime = void;
@@ -29842,7 +29842,7 @@ else version(Windows)
                 immutable diff = utcDateTime - otherDateTime;
                 immutable minutes = diff.total!"minutes" - tzInfo.Bias;
 
-                if(minutes == tzInfo.DaylightBias)
+                if (minutes == tzInfo.DaylightBias)
                     return true;
 
                 assert(minutes == tzInfo.StandardBias);
@@ -29858,14 +29858,14 @@ else version(Windows)
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
 
-            foreach(year; [1600, 1601, 30_827, 30_828])
+            foreach (year; [1600, 1601, 30_827, 30_828])
                 WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(year, 1, 1)).stdTime);
         }
 
 
         static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) @safe nothrow
         {
-            if(hasDST && WindowsTimeZone._dstInEffect(tzInfo, stdTime))
+            if (hasDST && WindowsTimeZone._dstInEffect(tzInfo, stdTime))
                 return stdTime - convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
 
             return stdTime - convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.StandardBias);
@@ -29874,23 +29874,23 @@ else version(Windows)
 
         static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) @trusted nothrow
         {
-            if(hasDST)
+            if (hasDST)
             {
                 try
                 {
                     bool dstInEffectForLocalDateTime(DateTime localDateTime)
                     {
                         //The limits of what SystemTimeToTzSpecificLocalTime will accept.
-                        if(localDateTime.year < 1601)
+                        if (localDateTime.year < 1601)
                         {
-                            if(localDateTime.month == Month.feb && localDateTime.day == 29)
+                            if (localDateTime.month == Month.feb && localDateTime.day == 29)
                                 localDateTime.day = 28;
 
                             localDateTime.year = 1601;
                         }
-                        else if(localDateTime.year > 30_827)
+                        else if (localDateTime.year > 30_827)
                         {
-                            if(localDateTime.month == Month.feb && localDateTime.day == 29)
+                            if (localDateTime.month == Month.feb && localDateTime.day == 29)
                                 localDateTime.day = 28;
 
                             localDateTime.year = 30_827;
@@ -29900,12 +29900,12 @@ else version(Windows)
                         //beginning or end of the year (bleh). Unless some bizarre time
                         //zone changes DST on January 1st or December 31st, this should
                         //fix the problem.
-                        if(localDateTime.month == Month.jan)
+                        if (localDateTime.month == Month.jan)
                         {
-                            if(localDateTime.day == 1)
+                            if (localDateTime.day == 1)
                                 localDateTime.day = 2;
                         }
-                        else if(localDateTime.month == Month.dec && localDateTime.day == 31)
+                        else if (localDateTime.month == Month.dec && localDateTime.day == 31)
                             localDateTime.day = 30;
 
                         SYSTEMTIME utcTime = void;
@@ -29934,7 +29934,7 @@ else version(Windows)
                         immutable diff = localDateTime - utcDateTime;
                         immutable minutes = -tzInfo.Bias - diff.total!"minutes";
 
-                        if(minutes == tzInfo.DaylightBias)
+                        if (minutes == tzInfo.DaylightBias)
                             return true;
 
                         assert(minutes == tzInfo.StandardBias);
@@ -29952,18 +29952,18 @@ else version(Windows)
 
                     bool isDST;
 
-                    if(dstInEffectBefore && dstInEffectNow && dstInEffectAfter)
+                    if (dstInEffectBefore && dstInEffectNow && dstInEffectAfter)
                         isDST = true;
-                    else if(!dstInEffectBefore && !dstInEffectNow && !dstInEffectAfter)
+                    else if (!dstInEffectBefore && !dstInEffectNow && !dstInEffectAfter)
                         isDST = false;
-                    else if(!dstInEffectBefore && dstInEffectAfter)
+                    else if (!dstInEffectBefore && dstInEffectAfter)
                         isDST = false;
-                    else if(dstInEffectBefore && !dstInEffectAfter)
+                    else if (dstInEffectBefore && !dstInEffectAfter)
                         isDST = dstInEffectNow;
                     else
                         assert(0, "Bad Logic.");
 
-                    if(isDST)
+                    if (isDST)
                         return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
                 }
                 catch(Exception e)
@@ -30113,13 +30113,13 @@ TZConversions parseTZConversions(string windowsZonesXMLText) @safe pure
     immutable f1 = `<mapZone other="`;
     immutable f2 = `type="`;
 
-    foreach(line; windowsZonesXMLText.lineSplitter())
+    foreach (line; windowsZonesXMLText.lineSplitter())
     {
         // Sample line:
         // <mapZone other="Canada Central Standard Time" territory="CA" type="America/Regina America/Swift_Current"/>
 
         line = line.find(f1);
-        if(line.empty)
+        if (line.empty)
             continue;
         line = line[f1.length .. $];
         auto next = line.find('"');
@@ -30132,23 +30132,23 @@ TZConversions parseTZConversions(string windowsZonesXMLText) @safe pure
         enforce(!next.empty, "Error parsing. Text does not appear to be from windowsZones.xml");
         auto nixes = line[0 .. $ - next.length].split();
 
-        if(auto n = win in win2Nix)
+        if (auto n = win in win2Nix)
             *n ~= nixes;
         else
             win2Nix[win] = nixes;
 
-        foreach(nix; nixes)
+        foreach (nix; nixes)
         {
-            if(auto w = nix in nix2Win)
+            if (auto w = nix in nix2Win)
                 *w ~= win;
             else
                 nix2Win[nix] = [win];
         }
     }
 
-    foreach(key, ref value; nix2Win)
+    foreach (key, ref value; nix2Win)
         value = value.sort().uniq().array();
-    foreach(key, ref value; win2Nix)
+    foreach (key, ref value; win2Nix)
         value = value.sort().uniq().array();
 
     return TZConversions(nix2Win, win2Nix);
@@ -30227,7 +30227,7 @@ For terms of use, see http://www.unicode.org/copyright.html
     assert(tzConversions.fromWindows["UTC-11"] ==
            ["Etc/GMT+11", "Pacific/Midway", "Pacific/Niue", "Pacific/Pago_Pago"]);
 
-    foreach(key, value; tzConversions.fromWindows)
+    foreach (key, value; tzConversions.fromWindows)
     {
         assert(value.isSorted, key);
         assert(equal(value.uniq(), value), key);
@@ -30264,7 +30264,7 @@ For terms of use, see http://www.unicode.org/copyright.html
   +/
 string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
 {
-    switch(tzName)
+    switch (tzName)
     {
         case "Africa/Abidjan": return "Greenwich Standard Time";
         case "Africa/Accra": return "Greenwich Standard Time";
@@ -30707,7 +30707,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
 version(Windows) unittest
 {
     import std.format : format;
-    foreach(tzName; TimeZone.getInstalledTZNames())
+    foreach (tzName; TimeZone.getInstalledTZNames())
         assert(tzDatabaseNameToWindowsTZName(tzName) !is null, format("TZName which failed: %s", tzName));
 }
 
@@ -30732,7 +30732,7 @@ version(Windows) unittest
   +/
 string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
 {
-    switch(tzName)
+    switch (tzName)
     {
         case "AUS Central Standard Time": return "Australia/Darwin";
         case "AUS Eastern Standard Time": return "Australia/Sydney";
@@ -30863,7 +30863,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
 version(Windows) unittest
 {
     import std.format : format;
-    foreach(tzName; WindowsTimeZone.getInstalledTZNames())
+    foreach (tzName; WindowsTimeZone.getInstalledTZNames())
         assert(windowsTZNameToTZDatabaseName(tzName) !is null, format("TZName which failed: %s", tzName));
 }
 
@@ -30894,7 +30894,7 @@ public:
       +/
     this(AutoStart autostart)
     {
-        if(autostart)
+        if (autostart)
             start();
     }
 
@@ -30924,7 +30924,7 @@ public:
       +/
     void reset()
     {
-        if(_flagStarted)
+        if (_flagStarted)
         {
             // Set current system time if StopWatch is measuring.
             _timeStart = TickDuration.currSystemTick;
@@ -31007,7 +31007,7 @@ public:
       +/
     TickDuration peek() const
     {
-        if(_flagStarted)
+        if (_flagStarted)
             return TickDuration.currSystemTick - _timeStart + _timeMeasured;
 
         return _timeMeasured;
@@ -31096,10 +31096,10 @@ private:
     enum n = 100;
     TickDuration[n] times;
     TickDuration last = TickDuration.from!"seconds"(0);
-    foreach(i; 0..n)
+    foreach (i; 0..n)
     {
        sw.start(); //start/resume mesuring.
-       foreach(unused; 0..1_000_000)
+       foreach (unused; 0..1_000_000)
            bar();
        sw.stop();  //stop/pause measuring.
        //Return value of peek() after having stopped are the always same.
@@ -31112,7 +31112,7 @@ private:
     // To get the number of seconds,
     // use properties of TickDuration.
     // (seconds, msecs, usecs, hnsecs)
-    foreach(t; times)
+    foreach (t; times)
        sum += t.hnsecs;
     writeln("Average time: ", sum/n, " hnsecs");
 }
@@ -31145,10 +31145,10 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
     StopWatch sw;
     sw.start();
 
-    foreach(i, unused; fun)
+    foreach (i, unused; fun)
     {
         sw.reset();
-        foreach(j; 0 .. n)
+        foreach (j; 0 .. n)
             fun[i]();
         result[i] = sw.peek();
     }
@@ -31353,13 +31353,13 @@ unittest
 {
     import std.meta : AliasSeq;
 
-    foreach(TP; AliasSeq!(Date, DateTime, SysTime, TimeOfDay))
+    foreach (TP; AliasSeq!(Date, DateTime, SysTime, TimeOfDay))
     {
         static assert(isTimePoint!(const TP), TP.stringof);
         static assert(isTimePoint!(immutable TP), TP.stringof);
     }
 
-    foreach(T; AliasSeq!(float, string, Duration, Interval!Date, PosInfInterval!Date, NegInfInterval!Date))
+    foreach (T; AliasSeq!(float, string, Duration, Interval!Date, PosInfInterval!Date, NegInfInterval!Date))
         static assert(!isTimePoint!T, T.stringof);
 }
 
@@ -31372,10 +31372,10 @@ unittest
  +/
 static bool yearIsLeapYear(int year) @safe pure nothrow
 {
-    if(year % 400 == 0)
+    if (year % 400 == 0)
         return true;
 
-    if(year % 100 == 0)
+    if (year % 100 == 0)
         return false;
 
     return year % 4 == 0;
@@ -31384,14 +31384,14 @@ static bool yearIsLeapYear(int year) @safe pure nothrow
 unittest
 {
     import std.format : format;
-    foreach(year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
+    foreach (year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
                    2001, 2002, 2003, 2005, 2006, 2007, 2009, 2010, 2011])
     {
         assert(!yearIsLeapYear(year), format("year: %s.", year));
         assert(!yearIsLeapYear(-year), format("year: %s.", year));
     }
 
-    foreach(year; [0, 4, 8, 400, 800, 1600, 1996, 2000, 2004, 2008, 2012])
+    foreach (year; [0, 4, 8, 400, 800, 1600, 1996, 2000, 2004, 2008, 2012])
     {
         assert(yearIsLeapYear(year), format("year: %s.", year));
         assert(yearIsLeapYear(-year), format("year: %s.", year));
@@ -31457,7 +31457,7 @@ unittest
     assert(unixTimeToStdTime(0) == (Date(1970, 1, 1) - Date(1, 1, 1)).total!"hnsecs");
     assert(unixTimeToStdTime(0) == (DateTime(1970, 1, 1) - DateTime(1, 1, 1)).total!"hnsecs");
 
-    foreach(dt; [DateTime(2010, 11, 1, 19, 5, 22), DateTime(1952, 7, 6, 2, 17, 9)])
+    foreach (dt; [DateTime(2010, 11, 1, 19, 5, 22), DateTime(1952, 7, 6, 2, 17, 9)])
         assert(unixTimeToStdTime((dt - DateTime(1970, 1, 1)).total!"seconds") == (dt - DateTime.init).total!"hnsecs");
 }
 
@@ -31507,18 +31507,18 @@ unittest
         SysTime.toUnixTime
   +/
 T stdTimeToUnixTime(T = time_t)(long stdTime) @safe pure nothrow
-    if(is(T == int) || is(T == long))
+    if (is(T == int) || is(T == long))
 {
     immutable unixTime = convert!("hnsecs", "seconds")(stdTime - 621_355_968_000_000_000L);
 
     static assert(is(time_t == int) || is(time_t == long),
                   "Currently, std.datetime only supports systems where time_t is int or long");
 
-    static if(is(T == long))
+    static if (is(T == long))
         return unixTime;
-    else static if(is(T == int))
+    else static if (is(T == int))
     {
-        if(unixTime > int.max)
+        if (unixTime > int.max)
             return int.max;
         return unixTime < int.min ? int.min : cast(int)unixTime;
     }
@@ -31546,7 +31546,7 @@ unittest
     assert(stdTimeToUnixTime((Date(1970, 1, 1) - Date(1, 1, 1)).total!"hnsecs") == 0);
     assert(stdTimeToUnixTime((DateTime(1970, 1, 1) - DateTime(1, 1, 1)).total!"hnsecs") == 0);
 
-    foreach(dt; [DateTime(2010, 11, 1, 19, 5, 22), DateTime(1952, 7, 6, 2, 17, 9)])
+    foreach (dt; [DateTime(2010, 11, 1, 19, 5, 22), DateTime(1952, 7, 6, 2, 17, 9)])
         assert(stdTimeToUnixTime((dt - DateTime.init).total!"hnsecs") == (dt - DateTime(1970, 1, 1)).total!"seconds");
 
     enum max = convert!("seconds", "hnsecs")(int.max);
@@ -31697,31 +31697,31 @@ else version(Windows)
             throw new DateTimeException("The given SYSTEMTIME is for a date greater than SysTime.max.");
         }
 
-        if(st.wYear > max.year)
+        if (st.wYear > max.year)
             throwLaterThanMax();
-        else if(st.wYear == max.year)
+        else if (st.wYear == max.year)
         {
-            if(st.wMonth > max.month)
+            if (st.wMonth > max.month)
                 throwLaterThanMax();
-            else if(st.wMonth == max.month)
+            else if (st.wMonth == max.month)
             {
-                if(st.wDay > max.day)
+                if (st.wDay > max.day)
                     throwLaterThanMax();
-                else if(st.wDay == max.day)
+                else if (st.wDay == max.day)
                 {
-                    if(st.wHour > max.hour)
+                    if (st.wHour > max.hour)
                         throwLaterThanMax();
-                    else if(st.wHour == max.hour)
+                    else if (st.wHour == max.hour)
                     {
-                        if(st.wMinute > max.minute)
+                        if (st.wMinute > max.minute)
                             throwLaterThanMax();
-                        else if(st.wMinute == max.minute)
+                        else if (st.wMinute == max.minute)
                         {
-                            if(st.wSecond > max.second)
+                            if (st.wSecond > max.second)
                                 throwLaterThanMax();
-                            else if(st.wSecond == max.second)
+                            else if (st.wSecond == max.second)
                             {
-                                if(st.wMilliseconds > max.fracSecs.total!"msecs")
+                                if (st.wMilliseconds > max.fracSecs.total!"msecs")
                                     throwLaterThanMax();
                             }
                         }
@@ -31751,7 +31751,7 @@ else version(Windows)
     {
         immutable dt = cast(DateTime)sysTime;
 
-        if(dt.year < 1601)
+        if (dt.year < 1601)
             throw new DateTimeException("SYSTEMTIME cannot hold dates prior to the year 1601.");
 
         SYSTEMTIME st;
@@ -31795,7 +31795,7 @@ else version(Windows)
         ul.LowPart = ft.dwLowDateTime;
         ulong tempHNSecs = ul.QuadPart;
 
-        if(tempHNSecs > long.max - hnsecsFrom1601)
+        if (tempHNSecs > long.max - hnsecsFrom1601)
             throw new DateTimeException("The given FILETIME cannot be represented as a stdTime value.");
 
         return cast(long)tempHNSecs + hnsecsFrom1601;
@@ -31826,7 +31826,7 @@ else version(Windows)
 
     FILETIME stdTimeToFILETIME(long stdTime) @safe
     {
-        if(stdTime < hnsecsFrom1601)
+        if (stdTime < hnsecsFrom1601)
             throw new DateTimeException("The given stdTime value cannot be represented as a FILETIME.");
 
         ULARGE_INTEGER ul;
@@ -31880,7 +31880,7 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
 {
     uint dt = cast(uint)dft;
 
-    if(dt == 0)
+    if (dt == 0)
         throw new DateTimeException("Invalid DosFileTime.");
 
     int year = ((dt >> 25) & 0x7F) + 1980;
@@ -31923,10 +31923,10 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
 {
     auto dateTime = cast(DateTime)sysTime;
 
-    if(dateTime.year < 1980)
+    if (dateTime.year < 1980)
         throw new DateTimeException("DOS File Times cannot hold dates prior to 1980.");
 
-    if(dateTime.year > 2107)
+    if (dateTime.year > 2107)
         throw new DateTimeException("DOS File Times cannot hold dates past 2107.");
 
     uint retval = 0;
@@ -31995,7 +31995,7 @@ SysTime parseRFC822DateTime()(in char[] value) @safe
 
 /++ Ditto +/
 SysTime parseRFC822DateTime(R)(R value) @safe
-    if(isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
+    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
        (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
     import std.functional : not;
@@ -32008,12 +32008,12 @@ SysTime parseRFC822DateTime(R)(R value) @safe
     void stripAndCheckLen(R valueBefore, size_t minLen, size_t line = __LINE__)
     {
         value = _stripCFWS(valueBefore);
-        if(value.length < minLen)
+        if (value.length < minLen)
             throw new DateTimeException("date-time value too short", __FILE__, line);
     }
     stripAndCheckLen(value, "7Dec1200:00A".length);
 
-    static if(isArray!R && (is(ElementEncodingType!R == char) || is(ElementEncodingType!R == ubyte)))
+    static if (isArray!R && (is(ElementEncodingType!R == char) || is(ElementEncodingType!R == ubyte)))
     {
         static string sliceAsString(R str) @trusted
         {
@@ -32026,19 +32026,19 @@ SysTime parseRFC822DateTime(R)(R value) @safe
         char[] sliceAsString(R str) @trusted
         {
             size_t i = 0;
-            foreach(c; str)
+            foreach (c; str)
                 temp[i++] = cast(char)c;
             return temp[0 .. str.length];
         }
     }
 
     // day-of-week
-    if(isAlpha(value[0]))
+    if (isAlpha(value[0]))
     {
         auto dowStr = sliceAsString(value[0 .. 3]);
-        switch(dowStr)
+        switch (dowStr)
         {
-            foreach(dow; EnumMembers!DayOfWeek)
+            foreach (dow; EnumMembers!DayOfWeek)
             {
                 enum dowC = capitalize(to!string(dow));
                 case dowC:
@@ -32047,7 +32047,7 @@ SysTime parseRFC822DateTime(R)(R value) @safe
             default: throw new DateTimeException(format("Invalid day-of-week: %s", dowStr));
         }
 afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
-        if(value[0] != ',')
+        if (value[0] != ',')
             throw new DateTimeException("day-of-week missing comma");
         stripAndCheckLen(value[1 .. value.length], "7Dec1200:00A".length);
     }
@@ -32055,7 +32055,7 @@ afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
     // day
     immutable digits = isDigit(value[1]) ? 2 : 1;
     immutable day = _convDigits!short(value[0 .. digits]);
-    if(day == -1)
+    if (day == -1)
         throw new DateTimeException("Invalid day");
     stripAndCheckLen(value[digits .. value.length], "Dec1200:00A".length);
 
@@ -32063,9 +32063,9 @@ afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
     Month month;
     {
         auto monStr = sliceAsString(value[0 .. 3]);
-        switch(monStr)
+        switch (monStr)
         {
-            foreach(mon; EnumMembers!Month)
+            foreach (mon; EnumMembers!Month)
             {
                 enum monC = capitalize(to!string(mon));
                 case monC:
@@ -32082,20 +32082,20 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     // year
     auto found = value[2 .. value.length].find!(not!(std.ascii.isDigit))();
     size_t yearLen = value.length - found.length;
-    if(found.length == 0)
+    if (found.length == 0)
         throw new DateTimeException("Invalid year");
-    if(found[0] == ':')
+    if (found[0] == ':')
         yearLen -= 2;
     auto year = _convDigits!short(value[0 .. yearLen]);
-    if(year < 1900)
+    if (year < 1900)
     {
-        if(year == -1)
+        if (year == -1)
             throw new DateTimeException("Invalid year");
-        if(yearLen < 4)
+        if (yearLen < 4)
         {
-            if(yearLen == 3)
+            if (yearLen == 3)
                 year += 1900;
-            else if(yearLen == 2)
+            else if (yearLen == 2)
                 year += year < 50 ? 2000 : 1900;
             else
                 throw new DateTimeException("Invalid year. Too few digits.");
@@ -32108,7 +32108,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     // hour
     immutable hour = _convDigits!short(value[0 .. 2]);
     stripAndCheckLen(value[2 .. value.length], ":00A".length);
-    if(value[0] != ':')
+    if (value[0] != ':')
         throw new DateTimeException("Invalid hour");
     stripAndCheckLen(value[1 .. value.length], "00A".length);
 
@@ -32118,27 +32118,27 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
 
     // second
     short second;
-    if(value[0] == ':')
+    if (value[0] == ':')
     {
         stripAndCheckLen(value[1 .. value.length], "00A".length);
         second = _convDigits!short(value[0 .. 2]);
         // this is just if/until SysTime is sorted out to fully support leap seconds
-        if(second == 60)
+        if (second == 60)
             second = 59;
         stripAndCheckLen(value[2 .. value.length], "A".length);
     }
 
     immutable(TimeZone) parseTZ(int sign)
     {
-        if(value.length < 5)
+        if (value.length < 5)
             throw new DateTimeException("Invalid timezone");
         immutable zoneHours = _convDigits!short(value[1 .. 3]);
         immutable zoneMinutes = _convDigits!short(value[3 .. 5]);
-        if(zoneHours == -1 || zoneMinutes == -1 || zoneMinutes > 59)
+        if (zoneHours == -1 || zoneMinutes == -1 || zoneMinutes > 59)
             throw new DateTimeException("Invalid timezone");
         value = value[5 .. value.length];
         immutable utcOffset = (dur!"hours"(zoneHours) + dur!"minutes"(zoneMinutes)) * sign;
-        if(utcOffset == Duration.zero)
+        if (utcOffset == Duration.zero)
         {
             return sign == 1 ? cast(immutable(TimeZone))UTC()
                              : cast(immutable(TimeZone))new immutable SimpleTimeZone(Duration.zero);
@@ -32148,15 +32148,15 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
 
     // zone
     Rebindable!(immutable TimeZone) tz;
-    if(value[0] == '-')
+    if (value[0] == '-')
         tz = parseTZ(-1);
-    else if(value[0] == '+')
+    else if (value[0] == '+')
         tz = parseTZ(1);
     else
     {
         // obs-zone
         immutable tzLen = value.length - find(value, ' ', '\t', '(')[0].length;
-        switch(sliceAsString(value[0 .. tzLen <= 4 ? tzLen : 4]))
+        switch (sliceAsString(value[0 .. tzLen <= 4 ? tzLen : 4]))
         {
             case "UT": case "GMT": tz = UTC(); break;
             case "EST": tz = new immutable SimpleTimeZone(dur!"hours"(-5)); break;
@@ -32170,7 +32170,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
             case "J": case "j": throw new DateTimeException("Invalid timezone");
             default:
             {
-                if(all!(std.ascii.isAlpha)(value[0 .. tzLen]))
+                if (all!(std.ascii.isAlpha)(value[0 .. tzLen]))
                 {
                     tz = new immutable SimpleTimeZone(Duration.zero);
                     break;
@@ -32187,7 +32187,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     // that if the next character is printable (and not part of CFWS), then it
     // might be part of the timezone and thus affect what the timezone was
     // supposed to be, so we'll throw, but otherwise, we'll just ignore it.
-    if(!value.empty && isPrintable(value[0]) && value[0] != ' ' && value[0] != '(')
+    if (!value.empty && isPrintable(value[0]) && value[0] != ' ' && value[0] != '(')
         throw new DateTimeException("Invalid timezone");
 
     try
@@ -32216,7 +32216,7 @@ version(unittest) void testParse822(alias cr)(string str, SysTime expected, size
     import std.format : format;
     auto value = cr(str);
     auto result = parseRFC822DateTime(value);
-    if(result != expected)
+    if (result != expected)
         throw new AssertError(format("wrong result. expected [%s], actual[%s]", expected, result), __FILE__, line);
 }
 
@@ -32252,7 +32252,7 @@ unittest
         static auto start() { Rand3Letters retval; retval.popFront(); return retval; }
     }
 
-    foreach(cr; AliasSeq!(function(string a){return cast(char[])a;},
+    foreach (cr; AliasSeq!(function(string a){return cast(char[])a;},
                           function(string a){return cast(ubyte[])a;},
                           function(string a){return a;},
                           function(string a){return map!(b => cast(char)b)(a.representation);}))
@@ -32350,14 +32350,14 @@ unittest
         test("Sun, 4 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
         test("Sun, 4 Jul 1976 05:04:22 +0930", SysTime(dst1, cstStd));
 
-        foreach(int i, mon; _monthNames)
+        foreach (int i, mon; _monthNames)
         {
             test(format("17 %s 2012 00:05:02 +0000", mon), SysTime(DateTime(2012, i + 1, 17, 0, 5, 2), UTC()));
             test(format("17 %s 2012 00:05 +0000", mon), SysTime(DateTime(2012, i + 1, 17, 0, 5, 0), UTC()));
         }
 
         import std.uni;
-        foreach(mon; chain(_monthNames[].map!(a => toLower(a))(),
+        foreach (mon; chain(_monthNames[].map!(a => toLower(a))(),
                            _monthNames[].map!(a => toUpper(a))(),
                            ["Jam", "Jen", "Fec", "Fdb", "Mas", "Mbr", "Aps", "Aqr", "Mai", "Miy",
                             "Jum", "Jbn", "Jup", "Jal", "Aur", "Apg", "Sem", "Sap", "Ocm", "Odt",
@@ -32375,7 +32375,7 @@ unittest
             auto start = SysTime(DateTime(2012, 11, 11, 9, 42, 0), UTC());
             int day = 11;
 
-            foreach(int i, dow; daysOfWeekNames)
+            foreach (int i, dow; daysOfWeekNames)
             {
                 auto curr = start + dur!"days"(i);
                 test(format("%s, %s Nov 2012 09:42:00 +0000", dow, day), curr);
@@ -32387,7 +32387,7 @@ unittest
             }
         }
 
-        foreach(dow; chain(daysOfWeekNames[].map!(a => toLower(a))(),
+        foreach (dow; chain(daysOfWeekNames[].map!(a => toLower(a))(),
                            daysOfWeekNames[].map!(a => toUpper(a))(),
                            ["Sum", "Spn", "Mom", "Man", "Tuf", "Tae", "Wem", "Wdd", "The", "Tur",
                             "Fro", "Fai", "San", "Sut"],
@@ -32408,7 +32408,7 @@ unittest
         {
             auto st1 = SysTime(Date(1900, 1, 1), UTC());
             auto st2 = SysTime(Date(1900, 1, 1), new immutable SimpleTimeZone(dur!"hours"(-11)));
-            foreach(i; 1900 .. 2102)
+            foreach (i; 1900 .. 2102)
             {
                 test(format("1 Jan %05d 00:00 +0000", i), st1);
                 test(format("1 Jan %05d 00:00 -1100", i), st2);
@@ -32417,7 +32417,7 @@ unittest
             }
             st1.year = 9998;
             st2.year = 9998;
-            foreach(i; 9998 .. 11_002)
+            foreach (i; 9998 .. 11_002)
             {
                 test(format("1 Jan %05d 00:00 +0000", i), st1);
                 test(format("1 Jan %05d 00:00 -1100", i), st2);
@@ -32438,7 +32438,7 @@ unittest
 
         // test trailing stuff that gets ignored
         {
-            foreach(c; chain(iota(0, 33), ['('], iota(127, ubyte.max + 1)))
+            foreach (c; chain(iota(0, 33), ['('], iota(127, ubyte.max + 1)))
             {
                 scope(failure) writefln("c: %d", c);
                 test(format("21 Dec 2012 13:14:15 +0000%c", cast(char)c), SysTime(std1, UTC()));
@@ -32449,7 +32449,7 @@ unittest
 
         // test trailing stuff that doesn't get ignored
         {
-            foreach(c; chain(iota(33, '('), iota('(' + 1, 127)))
+            foreach (c; chain(iota(33, '('), iota('(' + 1, 127)))
             {
                 scope(failure) writefln("c: %d", c);
                 testBad(format("21 Dec 2012 13:14:15 +0000%c", cast(char)c));
@@ -32480,14 +32480,14 @@ unittest
 
         auto str = "01 Jan 2012 12:13:14 -0800 ";
         test(str, SysTime(DateTime(2012, 1, 1, 12, 13, 14), new immutable SimpleTimeZone(hours(-8))));
-        foreach(i; 0 .. str.length)
+        foreach (i; 0 .. str.length)
         {
             auto currStr = str.dup;
             currStr[i] = 'x';
             scope(failure) writefln("failed: %s", currStr);
             testBad(cast(string)currStr);
         }
-        foreach(i; 2 .. str.length)
+        foreach (i; 2 .. str.length)
         {
             auto currStr = str[0 .. $ - i];
             scope(failure) writefln("failed: %s", currStr);
@@ -32517,7 +32517,7 @@ unittest
     auto tooLate1 = SysTime(Date(10_000, 1, 1), UTC());
     auto tooLate2 = SysTime(DateTime(12_007, 12, 31, 12, 22, 19), UTC());
 
-    foreach(cr; AliasSeq!(function(string a){return cast(char[])a;},
+    foreach (cr; AliasSeq!(function(string a){return cast(char[])a;},
                           function(string a){return cast(ubyte[])a;},
                           function(string a){return a;},
                           function(string a){return map!(b => cast(char)b)(a.representation);}))
@@ -32528,7 +32528,7 @@ unittest
             auto list = ["", " ", " \r\n\t", "\t\r\n (hello world( frien(dog)) silly \r\n )  \t\t \r\n ()",
                          " \n ", "\t\n\t", " \n\t (foo) \n (bar) \r\n (baz) \n "];
 
-            foreach(i, cfws; list)
+            foreach (i, cfws; list)
             {
                 scope(failure) writefln("i: %s", i);
 
@@ -32588,7 +32588,7 @@ unittest
         {
             auto st1 = SysTime(Date(2000, 1, 1), UTC());
             auto st2 = SysTime(Date(2000, 1, 1), new immutable SimpleTimeZone(dur!"hours"(-12)));
-            foreach(i; 0 .. 50)
+            foreach (i; 0 .. 50)
             {
                 test(format("1 Jan %02d 00:00 GMT", i), st1);
                 test(format("1 Jan %02d 00:00 -1200", i), st2);
@@ -32600,7 +32600,7 @@ unittest
         {
             auto st1 = SysTime(Date(1950, 1, 1), UTC());
             auto st2 = SysTime(Date(1950, 1, 1), new immutable SimpleTimeZone(dur!"hours"(-12)));
-            foreach(i; 50 .. 100)
+            foreach (i; 50 .. 100)
             {
                 test(format("1 Jan %02d 00:00 GMT", i), st1);
                 test(format("1 Jan %02d 00:00 -1200", i), st2);
@@ -32612,7 +32612,7 @@ unittest
         {
             auto st1 = SysTime(Date(1900, 1, 1), UTC());
             auto st2 = SysTime(Date(1900, 1, 1), new immutable SimpleTimeZone(dur!"hours"(-11)));
-            foreach(i; 0 .. 1000)
+            foreach (i; 0 .. 1000)
             {
                 test(format("1 Jan %03d 00:00 GMT", i), st1);
                 test(format("1 Jan %03d 00:00 -1100", i), st2);
@@ -32621,7 +32621,7 @@ unittest
             }
         }
 
-        foreach(i; 0 .. 10)
+        foreach (i; 0 .. 10)
         {
             auto str1 = cr(format("1 Jan %d 00:00 GMT", i));
             auto str2 = cr(format("1 Jan %d 00:00 -1200", i));
@@ -32644,21 +32644,21 @@ unittest
             test("Wed, 03 May 1982 12:22:04 PDT", SysTime(dt, new immutable SimpleTimeZone(dur!"hours"(-7))));
 
             auto badTZ = new immutable SimpleTimeZone(Duration.zero);
-            foreach(dchar c; filter!(a => a != 'j' && a != 'J')(letters))
+            foreach (dchar c; filter!(a => a != 'j' && a != 'J')(letters))
             {
                 scope(failure) writefln("c: %s", c);
                 test(format("Wed, 03 May 1982 12:22:04 %s", c), SysTime(dt, badTZ));
                 test(format("Wed, 03 May 1982 12:22:04%s", c), SysTime(dt, badTZ));
             }
 
-            foreach(dchar c; ['j', 'J'])
+            foreach (dchar c; ['j', 'J'])
             {
                 scope(failure) writefln("c: %s", c);
                 assertThrown!DateTimeException(parseRFC822DateTime(cr(format("Wed, 03 May 1982 12:22:04 %s", c))));
                 assertThrown!DateTimeException(parseRFC822DateTime(cr(format("Wed, 03 May 1982 12:22:04%s", c))));
             }
 
-            foreach(string s; ["AAA", "GQW", "DDT", "PDA", "GT", "GM"])
+            foreach (string s; ["AAA", "GQW", "DDT", "PDA", "GT", "GM"])
             {
                 scope(failure) writefln("s: %s", s);
                 test(format("Wed, 03 May 1982 12:22:04 %s", s), SysTime(dt, badTZ));
@@ -32666,7 +32666,7 @@ unittest
 
             // test trailing stuff that gets ignored
             {
-                foreach(c; chain(iota(0, 33), ['('], iota(127, ubyte.max + 1)))
+                foreach (c; chain(iota(0, 33), ['('], iota(127, ubyte.max + 1)))
                 {
                     scope(failure) writefln("c: %d", c);
                     test(format("21Dec1213:14:15+0000%c", cast(char)c), std1);
@@ -32677,7 +32677,7 @@ unittest
 
             // test trailing stuff that doesn't get ignored
             {
-                foreach(c; chain(iota(33, '('), iota('(' + 1, 127)))
+                foreach (c; chain(iota(33, '('), iota('(' + 1, 127)))
                 {
                     scope(failure) writefln("c: %d", c);
                     assertThrown!DateTimeException(parseRFC822DateTime(cr(format("21Dec1213:14:15+0000%c", cast(char)c))));
@@ -32699,9 +32699,9 @@ unittest
                                             new immutable SimpleTimeZone(Duration.zero)));
 
         auto tooShortMsg = collectExceptionMsg!DateTimeException(parseRFC822DateTime(""));
-        foreach(str; ["Fri,7Dec1200:00:00", "7Dec1200:00:00"])
+        foreach (str; ["Fri,7Dec1200:00:00", "7Dec1200:00:00"])
         {
-            foreach(i; 0 .. str.length)
+            foreach (i; 0 .. str.length)
             {
                 auto value = str[0 .. $ - i];
                 scope(failure) writeln(value);
@@ -32722,9 +32722,9 @@ unittest
 bool validTimeUnits(string[] units...) @safe pure nothrow
 {
     import std.algorithm : canFind;
-    foreach(str; units)
+    foreach (str; units)
     {
-        if(!canFind(timeStrings[], str))
+        if (!canFind(timeStrings[], str))
             return false;
     }
 
@@ -32759,9 +32759,9 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
     enforce(indexOfLHS != -1, format("%s is not a valid TimeString", lhs));
     enforce(indexOfRHS != -1, format("%s is not a valid TimeString", rhs));
 
-    if(indexOfLHS < indexOfRHS)
+    if (indexOfLHS < indexOfRHS)
         return -1;
-    if(indexOfLHS > indexOfRHS)
+    if (indexOfLHS > indexOfRHS)
         return 1;
 
     return 0;
@@ -32769,18 +32769,18 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
 
 unittest
 {
-    foreach(i, outerUnits; timeStrings)
+    foreach (i, outerUnits; timeStrings)
     {
         assert(cmpTimeUnits(outerUnits, outerUnits) == 0);
 
         //For some reason, $ won't compile.
-        foreach(innerUnits; timeStrings[i+1 .. timeStrings.length])
+        foreach (innerUnits; timeStrings[i+1 .. timeStrings.length])
             assert(cmpTimeUnits(outerUnits, innerUnits) == -1);
     }
 
-    foreach(i, outerUnits; timeStrings)
+    foreach (i, outerUnits; timeStrings)
     {
-        foreach(innerUnits; timeStrings[0 .. i])
+        foreach (innerUnits; timeStrings[0 .. i])
             assert(cmpTimeUnits(outerUnits, innerUnits) == 1);
     }
 }
@@ -32803,7 +32803,7 @@ unittest
         )
  +/
 template CmpTimeUnits(string lhs, string rhs)
-    if(validTimeUnits(lhs, rhs))
+    if (validTimeUnits(lhs, rhs))
 {
     enum CmpTimeUnits = cmpTimeUnitsCTFE(lhs, rhs);
 }
@@ -32819,9 +32819,9 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
     immutable indexOfLHS = countUntil(tstrings, lhs);
     immutable indexOfRHS = countUntil(tstrings, rhs);
 
-    if(indexOfLHS < indexOfRHS)
+    if (indexOfLHS < indexOfRHS)
         return -1;
-    if(indexOfLHS > indexOfRHS)
+    if (indexOfLHS > indexOfRHS)
         return 1;
 
     return 0;
@@ -32839,17 +32839,17 @@ unittest
         auto currUnits = timeStrings[index];
         auto test = format(`assert(CmpTimeUnits!("%s", "%s") == 0);`, currUnits, currUnits);
 
-        foreach(units; timeStrings[index + 1 .. $])
+        foreach (units; timeStrings[index + 1 .. $])
             test ~= format(`assert(CmpTimeUnits!("%s", "%s") == -1);`, currUnits, units);
 
-        foreach(units; timeStrings[0 .. index])
+        foreach (units; timeStrings[0 .. index])
             test ~= format(`assert(CmpTimeUnits!("%s", "%s") == 1);`, currUnits, units);
 
         return test;
     }
 
     static assert(timeStrings.length == 10);
-    foreach(n; AliasSeq!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+    foreach (n; AliasSeq!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
         mixin(genTest(n));
 }
 
@@ -32865,18 +32865,18 @@ unittest
         value = The number to validate.
   +/
 bool valid(string units)(int value) @safe pure nothrow
-    if(units == "months" ||
+    if (units == "months" ||
        units == "hours" ||
        units == "minutes" ||
        units == "seconds")
 {
-    static if(units == "months")
+    static if (units == "months")
         return value >= Month.jan && value <= Month.dec;
-    else static if(units == "hours")
+    else static if (units == "hours")
         return value >= 0 && value <= TimeOfDay.maxHour;
-    else static if(units == "minutes")
+    else static if (units == "minutes")
         return value >= 0 && value <= TimeOfDay.maxMinute;
-    else static if(units == "seconds")
+    else static if (units == "seconds")
         return value >= 0 && value <= TimeOfDay.maxSecond;
 }
 
@@ -32900,7 +32900,7 @@ unittest
         day   = The day to validate.
   +/
 bool valid(string units)(int year, int month, int day) @safe pure nothrow
-    if(units == "days")
+    if (units == "days")
 {
     return day > 0 && day <= maxDay(year, month);
 }
@@ -32918,31 +32918,31 @@ bool valid(string units)(int year, int month, int day) @safe pure nothrow
         $(LREF DateTimeException) if $(D valid!units(value)) is false.
   +/
 void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) @safe pure
-    if(units == "months" ||
+    if (units == "months" ||
        units == "hours" ||
        units == "minutes" ||
        units == "seconds")
 {
     import std.format : format;
 
-    static if(units == "months")
+    static if (units == "months")
     {
-        if(!valid!units(value))
+        if (!valid!units(value))
             throw new DateTimeException(format("%s is not a valid month of the year.", value), file, line);
     }
-    else static if(units == "hours")
+    else static if (units == "hours")
     {
-        if(!valid!units(value))
+        if (!valid!units(value))
             throw new DateTimeException(format("%s is not a valid hour of the day.", value), file, line);
     }
-    else static if(units == "minutes")
+    else static if (units == "minutes")
     {
-        if(!valid!units(value))
+        if (!valid!units(value))
             throw new DateTimeException(format("%s is not a valid minute of an hour.", value), file, line);
     }
-    else static if(units == "seconds")
+    else static if (units == "seconds")
     {
-        if(!valid!units(value))
+        if (!valid!units(value))
             throw new DateTimeException(format("%s is not a valid second of a minute.", value), file, line);
     }
 }
@@ -32963,10 +32963,10 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
   +/
 void enforceValid(string units)
                  (int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) @safe pure
-    if(units == "days")
+    if (units == "days")
 {
     import std.format : format;
-    if(!valid!"days"(year, month, day))
+    if (!valid!"days"(year, month, day))
         throw new DateTimeException(format("%s is not a valid day in %s in %s", day, month, year), file, line);
 }
 
@@ -32984,10 +32984,10 @@ static int monthsToMonth(int currMonth, int month) @safe pure
     enforceValid!"months"(currMonth);
     enforceValid!"months"(month);
 
-    if(currMonth == month)
+    if (currMonth == month)
         return 0;
 
-    if(currMonth < month)
+    if (currMonth < month)
         return month - currMonth;
 
     return (Month.dec - currMonth) + month;
@@ -33059,10 +33059,10 @@ unittest
   +/
 static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
 {
-    if(currDoW == dow)
+    if (currDoW == dow)
         return 0;
 
-    if(currDoW < dow)
+    if (currDoW < dow)
         return dow - currDoW;
 
     return (DayOfWeek.sat - currDoW) + dow + 1;
@@ -33169,7 +33169,7 @@ version(StdDdoc)
 else
 {
     @safe auto measureTime(alias func)()
-        if(isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+        if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     {
         struct Result
         {
@@ -33187,7 +33187,7 @@ else
     }
 
     auto measureTime(alias func)()
-        if(!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+        if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     {
         struct Result
         {
@@ -33326,23 +33326,23 @@ immutable string[12] _monthNames = ["Jan",
     Template to help with converting between time units.
  +/
 template hnsecsPer(string units)
-    if(CmpTimeUnits!(units, "months") < 0)
+    if (CmpTimeUnits!(units, "months") < 0)
 {
-    static if(units == "hnsecs")
+    static if (units == "hnsecs")
         enum hnsecsPer = 1L;
-    else static if(units == "usecs")
+    else static if (units == "usecs")
         enum hnsecsPer = 10L;
-    else static if(units == "msecs")
+    else static if (units == "msecs")
         enum hnsecsPer = 1000 * hnsecsPer!"usecs";
-    else static if(units == "seconds")
+    else static if (units == "seconds")
         enum hnsecsPer = 1000 * hnsecsPer!"msecs";
-    else static if(units == "minutes")
+    else static if (units == "minutes")
         enum hnsecsPer = 60 * hnsecsPer!"seconds";
-    else static if(units == "hours")
+    else static if (units == "hours")
         enum hnsecsPer = 60 * hnsecsPer!"minutes";
-    else static if(units == "days")
+    else static if (units == "days")
         enum hnsecsPer = 24 * hnsecsPer!"hours";
-    else static if(units == "weeks")
+    else static if (units == "weeks")
         enum hnsecsPer = 7 * hnsecsPer!"days";
 }
 
@@ -33361,7 +33361,7 @@ template hnsecsPer(string units)
         The number of the given units from converting hnsecs to those units.
   +/
 long splitUnitsFromHNSecs(string units)(ref long hnsecs) @safe pure nothrow
-    if(validTimeUnits(units) &&
+    if (validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
     immutable value = convert!("hnsecs", units)(hnsecs);
@@ -33398,7 +33398,7 @@ unittest
         The split out value.
   +/
 long getUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
-    if(validTimeUnits(units) &&
+    if (validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
     return convert!("hnsecs", units)(hnsecs);
@@ -33428,7 +33428,7 @@ unittest
         The remaining hnsecs.
   +/
 long removeUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
-    if(validTimeUnits(units) &&
+    if (validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
     immutable value = convert!("hnsecs", units)(hnsecs);
@@ -33459,7 +33459,7 @@ in
 }
 body
 {
-    switch(month)
+    switch (month)
     {
         case Month.jan, Month.mar, Month.may, Month.jul, Month.aug, Month.oct, Month.dec:
             return 31;
@@ -33540,13 +33540,13 @@ unittest
 DayOfWeek getDayOfWeek(int day) @safe pure nothrow
 {
     //January 1st, 1 A.D. was a Monday
-    if(day >= 0)
+    if (day >= 0)
         return cast(DayOfWeek)(day % 7);
     else
     {
         immutable dow = cast(DayOfWeek)((day % 7) + 7);
 
-        if(dow == 7)
+        if (dow == 7)
             return DayOfWeek.sun;
         else
             return dow;
@@ -33631,7 +33631,7 @@ unittest
 Month monthFromString(string monthStr) @safe pure
 {
     import std.format : format;
-    switch(monthStr)
+    switch (monthStr)
     {
         case "Jan":
             return Month.jan;
@@ -33664,14 +33664,14 @@ Month monthFromString(string monthStr) @safe pure
 
 unittest
 {
-    foreach(badStr; ["Ja", "Janu", "Januar", "Januarys", "JJanuary", "JANUARY",
+    foreach (badStr; ["Ja", "Janu", "Januar", "Januarys", "JJanuary", "JANUARY",
                      "JAN", "january", "jaNuary", "jaN", "jaNuaRy", "jAn"])
     {
         scope(failure) writeln(badStr);
         assertThrown!DateTimeException(monthFromString(badStr));
     }
 
-    foreach(month; EnumMembers!Month)
+    foreach (month; EnumMembers!Month)
     {
         scope(failure) writeln(month);
         assert(monthFromString(monthToString(month)) == month);
@@ -33683,7 +33683,7 @@ unittest
     The time units which are one step smaller than the given units.
   +/
 template nextSmallerTimeUnits(string units)
-    if(validTimeUnits(units) &&
+    if (validTimeUnits(units) &&
        timeStrings.front != units)
 {
     import std.algorithm : countUntil;
@@ -33709,7 +33709,7 @@ unittest
     The time units which are one step larger than the given units.
   +/
 template nextLargerTimeUnits(string units)
-    if(validTimeUnits(units) &&
+    if (validTimeUnits(units) &&
        timeStrings.back != units)
 {
     import std.algorithm : countUntil;
@@ -33741,12 +33741,12 @@ static string fracSecsToISOString(int hnsecs) @safe pure nothrow
 
     try
     {
-        if(hnsecs == 0)
+        if (hnsecs == 0)
             return "";
 
         string isoString = format(".%07d", hnsecs);
 
-        while(isoString[$ - 1] == '0')
+        while (isoString[$ - 1] == '0')
             isoString.popBack();
 
         return isoString;
@@ -33788,14 +33788,14 @@ unittest
     fractional seconds.
   +/
 static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
-    if(isSomeString!S)
+    if (isSomeString!S)
 {
     import std.ascii : isDigit;
     import std.string : representation;
     import std.conv : to;
     import std.algorithm : all;
 
-    if(isoString.empty)
+    if (isoString.empty)
         return Duration.zero;
 
     auto str = isoString.representation;
@@ -33807,9 +33807,9 @@ static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
     enforce(all!isDigit(str), new DateTimeException("Invalid ISO String"));
 
     dchar[7] fullISOString = void;
-    foreach(i, ref dchar c; fullISOString)
+    foreach (i, ref dchar c; fullISOString)
     {
-        if(i < str.length)
+        if (i < str.length)
             c = str[i];
         else
             c = '0';
@@ -33894,13 +33894,13 @@ unittest
     Rather, it pops off the CFWS from the range and returns it.
   +/
 R _stripCFWS(R)(R range)
-    if(isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
+    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
        (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
     immutable e = range.length;
     outer: for(size_t i = 0; i < e; )
     {
-        switch(range[i])
+        switch (range[i])
         {
             case ' ': case '\t':
             {
@@ -33909,7 +33909,7 @@ R _stripCFWS(R)(R range)
             }
             case '\r':
             {
-                if(i + 2 < e && range[i + 1] == '\n' && (range[i + 2] == ' ' || range[i + 2] == '\t'))
+                if (i + 2 < e && range[i + 1] == '\n' && (range[i + 2] == ' ' || range[i + 2] == '\t'))
                 {
                     i += 3;
                     break;
@@ -33918,7 +33918,7 @@ R _stripCFWS(R)(R range)
             }
             case '\n':
             {
-                if(i + 1 < e && (range[i + 1] == ' ' || range[i + 1] == '\t'))
+                if (i + 1 < e && (range[i + 1] == ' ' || range[i + 1] == '\t'))
                 {
                     i += 2;
                     break;
@@ -33929,20 +33929,20 @@ R _stripCFWS(R)(R range)
             {
                 ++i;
                 size_t commentLevel = 1;
-                while(i < e)
+                while (i < e)
                 {
-                    if(range[i] == '(')
+                    if (range[i] == '(')
                         ++commentLevel;
-                    else if(range[i] == ')')
+                    else if (range[i] == ')')
                     {
                         ++i;
-                        if(--commentLevel == 0)
+                        if (--commentLevel == 0)
                             continue outer;
                         continue;
                     }
-                    else if(range[i] == '\\')
+                    else if (range[i] == '\\')
                     {
-                        if(++i == e)
+                        if (++i == e)
                             break outer;
                     }
                     ++i;
@@ -33962,7 +33962,7 @@ unittest
     import std.string;
     import std.typecons;
 
-    foreach(cr; AliasSeq!(function(string a){return cast(ubyte[])a;},
+    foreach (cr; AliasSeq!(function(string a){return cast(ubyte[])a;},
                           function(string a){return map!(b => cast(char)b)(a.representation);}))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
@@ -34059,17 +34059,17 @@ unittest
 // doesn't have to worry about quite as many cases as std.conv.to, since it
 // doesn't have to worry about a sign on the value or about whether it fits.
 T _convDigits(T, R)(R str)
-    if(isIntegral!T && isSigned!T) // The constraints on R were already covered by parseRFC822DateTime.
+    if (isIntegral!T && isSigned!T) // The constraints on R were already covered by parseRFC822DateTime.
 {
     import std.ascii : isDigit;
 
     assert(!str.empty);
     T num = 0;
-    foreach(i; 0 .. str.length)
+    foreach (i; 0 .. str.length)
     {
-        if(i != 0)
+        if (i != 0)
             num *= 10;
-        if(!isDigit(str[i]))
+        if (!isDigit(str[i]))
             return -1;
         num += str[i] - '0';
     }
@@ -34080,12 +34080,12 @@ unittest
 {
     import std.conv : to;
     import std.range;
-    foreach(i; chain(iota(0, 101), [250, 999, 1000, 1001, 2345, 9999]))
+    foreach (i; chain(iota(0, 101), [250, 999, 1000, 1001, 2345, 9999]))
     {
         scope(failure) writeln(i);
         assert(_convDigits!int(to!string(i)) == i);
     }
-    foreach(str; ["-42", "+42", "1a", "1 ", " ", " 42 "])
+    foreach (str; ["-42", "+42", "1a", "1 ", " ", " 42 "])
     {
         scope(failure) writeln(str);
         assert(_convDigits!int(str) == -1);
@@ -34389,44 +34389,44 @@ version(unittest)
 
         testFracSecs = [Duration.zero, hnsecs(1), hnsecs(5007), hnsecs(9999999)];
 
-        foreach(year; testYearsBC)
+        foreach (year; testYearsBC)
         {
-            foreach(md; testMonthDays)
+            foreach (md; testMonthDays)
                 testDatesBC ~= Date(year, md.month, md.day);
         }
 
-        foreach(year; testYearsAD)
+        foreach (year; testYearsAD)
         {
-            foreach(md; testMonthDays)
+            foreach (md; testMonthDays)
                 testDatesAD ~= Date(year, md.month, md.day);
         }
 
-        foreach(dt; testDatesBC)
+        foreach (dt; testDatesBC)
         {
-            foreach(tod; testTODs)
+            foreach (tod; testTODs)
                 testDateTimesBC ~= DateTime(dt, tod);
         }
 
-        foreach(dt; testDatesAD)
+        foreach (dt; testDatesAD)
         {
-            foreach(tod; testTODs)
+            foreach (tod; testTODs)
                 testDateTimesAD ~= DateTime(dt, tod);
         }
 
-        foreach(dt; testDateTimesBC)
+        foreach (dt; testDateTimesBC)
         {
-            foreach(tz; testTZs)
+            foreach (tz; testTZs)
             {
-                foreach(fs; testFracSecs)
+                foreach (fs; testFracSecs)
                     testSysTimesBC ~= SysTime(dt, fs, tz);
             }
         }
 
-        foreach(dt; testDateTimesAD)
+        foreach (dt; testDateTimesAD)
         {
-            foreach(tz; testTZs)
+            foreach (tz; testTZs)
             {
-                foreach(fs; testFracSecs)
+                foreach (fs; testFracSecs)
                     testSysTimesAD ~= SysTime(dt, fs, tz);
             }
         }
@@ -34463,7 +34463,7 @@ import std.string;
 
 int main(string[] args)
 {
-    if(args.length != 4 || args[1].baseName != "windowsZones.xml")
+    if (args.length != 4 || args[1].baseName != "windowsZones.xml")
     {
         stderr.writeln("genTZs.d windowsZones.xml <nix2WinFile> <win2NixFile>");
         return -1;
@@ -34475,10 +34475,10 @@ int main(string[] args)
     immutable f2 = `type="`;
 
     auto file = File(args[1]);
-    foreach(line; file.byLine())
+    foreach (line; file.byLine())
     {
         line = line.find(f1);
-        if(line.empty)
+        if (line.empty)
             continue;
         line = line[f1.length .. $];
         auto next = line.find('"');
@@ -34488,26 +34488,26 @@ int main(string[] args)
         next = line.find('"');
         auto nixes = to!string(line[0 .. $ - next.length]).split();
 
-        if(auto l = win in win2Nix)
+        if (auto l = win in win2Nix)
             *l ~= nixes;
         else
             win2Nix[win] = nixes;
-        foreach(nix; nixes)
+        foreach (nix; nixes)
         {
-            if(auto w = nix in nix2Win)
+            if (auto w = nix in nix2Win)
                 *w ~= win;
             else
                 nix2Win[nix] = [win];
         }
     }
 
-    foreach(nix; nix2Win.byKey())
+    foreach (nix; nix2Win.byKey())
     {
         auto wins = nix2Win[nix];
         nix2Win[nix] = wins.sort().uniq().array();
     }
 
-    foreach(win; win2Nix.byKey())
+    foreach (win; win2Nix.byKey())
     {
         auto nixes = win2Nix[win];
         win2Nix[win] = nixes.sort().uniq().array();
@@ -34515,26 +34515,26 @@ int main(string[] args)
 
     // AFAIK, there should be no cases of a TZ Database time zone converting to
     // multiple windows time zones.
-    foreach(nix, wins; nix2Win)
+    foreach (nix, wins; nix2Win)
         enforce(wins.length == 1, format("%s -> %s", nix, wins));
 
     // We'll try to eliminate multiples by favoring a conversion if it's already
     // in Phobos, but if it's new, then the correct one will have to be chosen
     // manually from the results.
     string[] haveMultiple;
-    foreach(win, nixes; win2Nix)
+    foreach (win, nixes; win2Nix)
     {
-        if(nixes.length > 1)
+        if (nixes.length > 1)
             haveMultiple ~= win;
     }
     bool[string] haveConflicts;
-    foreach(win; haveMultiple)
+    foreach (win; haveMultiple)
     {
-        if(auto curr = windowsTZNameToTZDatabaseName(win))
+        if (auto curr = windowsTZNameToTZDatabaseName(win))
         {
-            if(auto other = curr in nix2Win)
+            if (auto other = curr in nix2Win)
             {
-                if((*other)[0] == win)
+                if ((*other)[0] == win)
                 {
                     win2Nix[win] = [curr];
                     continue;
@@ -34549,10 +34549,10 @@ int main(string[] args)
     string[] nix2WinLines = [
         `string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc`,
         `{`,
-        `    switch(tzName)`,
+        `    switch (tzName)`,
         `    {`];
 
-    foreach(nix; nix2Win.keys.sort())
+    foreach (nix; nix2Win.keys.sort())
         nix2WinLines ~= format(`        case "%s": return "%s";`, nix, nix2Win[nix][0]);
 
     nix2WinLines ~= [
@@ -34564,12 +34564,12 @@ int main(string[] args)
     string[] win2NixLines = [
         `string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc`,
         `{`,
-        `    switch(tzName)`,
+        `    switch (tzName)`,
         `    {`];
-    foreach(win; win2Nix.keys.sort())
+    foreach (win; win2Nix.keys.sort())
     {
         immutable hasMultiple = cast(bool)(win in haveConflicts);
-        foreach(nix; win2Nix[win])
+        foreach (nix; win2Nix[win])
             win2NixLines ~= format(`        case "%s": return "%s";%s`, win, nix, hasMultiple ? " FIXME" : "");
     }
 

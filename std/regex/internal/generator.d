@@ -41,7 +41,7 @@ module std.regex.internal.generator;
         uint pc = 0, counter = 0, dataLenOld = uint.max;
         for(;;)
         {
-            switch(re.ir[pc].code)
+            switch (re.ir[pc].code)
             {
             case IR.Char:
                     formattedWrite(app,"%s", cast(dchar)re.ir[pc].data);
@@ -65,7 +65,7 @@ module std.regex.internal.generator;
                     do
                     {
                         x = rand(0x11_000);
-                    }while(x == '\r' || x == '\n' || !isValidDchar(x));
+                    }while (x == '\r' || x == '\n' || !isValidDchar(x));
                     formattedWrite(app, "%s", cast(dchar)x);
                     pc += IRL!(IR.Any);
                     break;
@@ -83,7 +83,7 @@ module std.regex.internal.generator;
                     uint next = pc + re.ir[pc].data + IRL!(IR.Option);
                     uint nOpt = 0;
                     //queue next Option
-                    while(re.ir[next].code == IR.Option)
+                    while (re.ir[next].code == IR.Option)
                     {
                         nOpt++;
                         next += re.ir[next].data + IRL!(IR.Option);
@@ -105,16 +105,16 @@ module std.regex.internal.generator;
                     uint len = re.ir[pc].data;
                     uint step = re.ir[pc+2].raw;
                     uint min = re.ir[pc+3].raw;
-                    if(counter < min)
+                    if (counter < min)
                     {
                         counter += step;
                         pc -= len;
                         break;
                     }
                     uint max = re.ir[pc+4].raw;
-                    if(counter < max)
+                    if (counter < max)
                     {
-                        if(app.data.length < limit && rand(3) > 0)
+                        if (app.data.length < limit && rand(3) > 0)
                         {
                             pc -= len;
                             counter += step;
@@ -136,13 +136,13 @@ module std.regex.internal.generator;
                     goto case IR.InfiniteEnd; //both Q and non-Q
                 case IR.InfiniteEnd, IR.InfiniteBloomEnd, IR.InfiniteQEnd:
                     uint len = re.ir[pc].data;
-                    if(app.data.length == dataLenOld)
+                    if (app.data.length == dataLenOld)
                     {
                         pc += IRL!(IR.InfiniteEnd);
                         break;
                     }
                     dataLenOld = cast(uint)app.data.length;
-                    if(app.data.length < limit && rand(3) > 0)
+                    if (app.data.length < limit && rand(3) > 0)
                         pc = pc - len;
                     else
                         pc = pc + re.ir[pc].length;
@@ -179,6 +179,6 @@ unittest
     auto gen = SampleGenerator!char(re, 20, 3141592);
     static assert(isInputRange!(typeof(gen)));
     //@@@BUG@@@ somehow gen.take(1_000) doesn't work
-    foreach(v; take(gen, 1_000))
+    foreach (v; take(gen, 1_000))
         assert(v.match(re));
 }

@@ -229,14 +229,14 @@ unittest
     ];
 
     // Make sure everything that should be valid, is
-    foreach(a;validStrings)
+    foreach (a;validStrings)
     {
         string s = cast(string)a;
         assert(isValid(s),"Failed to validate: "~makeReadable(s));
     }
 
     // Make sure everything that shouldn't be valid, isn't
-    foreach(a;invalidStrings)
+    foreach (a;invalidStrings)
     {
         string s = cast(string)a;
         assert(!isValid(s),"Incorrectly validated: "~makeReadable(s));
@@ -256,7 +256,7 @@ unittest
 
     // Make sure all transcodings work in both directions, using both forward
     // and reverse iteration
-    foreach(a; validStrings)
+    foreach (a; validStrings)
     {
         string s = cast(string)a;
         string s2;
@@ -622,7 +622,7 @@ struct CodeUnits(E)
     int opApply(scope int delegate(ref E) dg)
     {
         int result = 0;
-        foreach(E c;s)
+        foreach (E c;s)
         {
             result = dg(c);
             if (result != 0) break;
@@ -633,7 +633,7 @@ struct CodeUnits(E)
     int opApplyReverse(scope int delegate(ref E) dg)
     {
         int result = 0;
-        foreach_reverse(E c;s)
+        foreach_reverse (E c;s)
         {
             result = dg(c);
             if (result != 0) break;
@@ -2108,13 +2108,13 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Example:
  --------------------------------------------------------
  string s = "hello world";
- foreach(c;codePoints(s))
+ foreach (c;codePoints(s))
  {
      // do something with c (which will always be a dchar)
  }
  --------------------------------------------------------
 
- Note that, currently, foreach(c:codePoints(s)) is superior to foreach(c;s)
+ Note that, currently, foreach (c:codePoints(s)) is superior to foreach(c;s)
  in that the latter will fall over on encountering U+FFFF.
  */
 CodePoints!(E) codePoints(E)(immutable(E)[] s)
@@ -2132,7 +2132,7 @@ unittest
 {
     string s = "hello";
     string t;
-    foreach(c;codePoints(s))
+    foreach (c;codePoints(s))
     {
         t ~= cast(char)c;
     }
@@ -2172,7 +2172,7 @@ body
 unittest
 {
     char[] a;
-    foreach(c;codeUnits!(char)(cast(dchar)'\u20AC'))
+    foreach (c;codeUnits!(char)(cast(dchar)'\u20AC'))
     {
         a ~= c;
     }
@@ -2208,21 +2208,21 @@ in
 }
 body
 {
-    static if(is(Src==Dst))
+    static if (is(Src==Dst))
     {
         r = s;
     }
-    else static if(is(Src==AsciiChar))
+    else static if (is(Src==AsciiChar))
     {
         transcode!(char,Dst)(cast(string)s,r);
     }
     else
     {
-        static if(is(Dst == wchar))
+        static if (is(Dst == wchar))
         {
             immutable minReservePlace = 2;
         }
-        else static if(is(Dst == dchar))
+        else static if (is(Dst == dchar))
         {
             immutable minReservePlace = 1;
         }
@@ -2237,7 +2237,7 @@ body
 
         while (t.length != 0)
         {
-            if(tmpBuffer.length < minReservePlace)
+            if (tmpBuffer.length < minReservePlace)
             {
                 size_t prevLength = buffer.length;
                 buffer.length += t.length + minReservePlace;
@@ -2274,8 +2274,8 @@ unittest
         string asciiCharString = to!string(iota(0, 128, 1));
 
         alias Types = AliasSeq!(string, Latin1String, Latin2String, AsciiString, Windows1250String, Windows1252String, dstring, wstring);
-        foreach(S; Types)
-            foreach(D; Types)
+        foreach (S; Types)
+            foreach (D; Types)
             {
                 string str;
                 S sStr;
@@ -2289,8 +2289,8 @@ unittest
     {
         string czechChars = "Příliš žluťoučký kůň úpěl ďábelské ódy.";
         alias Types = AliasSeq!(string, dstring, wstring);
-        foreach(S; Types)
-            foreach(D; Types)
+        foreach (S; Types)
+            foreach (D; Types)
             {
                 string str;
                 S sStr;
@@ -2340,7 +2340,7 @@ abstract class EncodingScheme
         auto scheme = cast(EncodingScheme)ClassInfo.find(className).create();
         if (scheme is null)
             throw new EncodingException("Unable to create class "~className);
-        foreach(encodingName;scheme.names())
+        foreach (encodingName;scheme.names())
         {
             supported[toLower(encodingName)] = className;
         }
@@ -3262,19 +3262,19 @@ version(unittest)
 {
     void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
     {
-        static if(is(Src==Dst))
+        static if (is(Src==Dst))
         {
             return s;
         }
-        else static if(is(Src==AsciiChar))
+        else static if (is(Src==AsciiChar))
         {
             transcodeReverse!(char,Dst)(cast(string)s,r);
         }
         else
         {
-            foreach_reverse(d;codePoints(s))
+            foreach_reverse (d;codePoints(s))
             {
-                foreach_reverse(c;codeUnits!(Dst)(d))
+                foreach_reverse (c;codeUnits!(Dst)(d))
                 {
                     r = c ~ r;
                 }
@@ -3285,7 +3285,7 @@ version(unittest)
     string makeReadable(string s)
     {
         string r = "\"";
-        foreach(char c;s)
+        foreach (char c;s)
         {
             if (c >= 0x20 && c < 0x80)
             {
@@ -3305,7 +3305,7 @@ version(unittest)
     string makeReadable(wstring s)
     {
         string r = "\"";
-        foreach(wchar c;s)
+        foreach (wchar c;s)
         {
             if (c >= 0x20 && c < 0x80)
             {
@@ -3327,7 +3327,7 @@ version(unittest)
     string makeReadable(dstring s)
     {
         string r = "\"";
-        foreach(dchar c; s)
+        foreach (dchar c; s)
         {
             if (c >= 0x20 && c < 0x80)
             {

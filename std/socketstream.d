@@ -57,9 +57,9 @@ class SocketStream: Stream
          */
         this(Socket sock, FileMode mode)
         {
-            if(mode & FileMode.In)
+            if (mode & FileMode.In)
                 readable = true;
-            if(mode & FileMode.Out)
+            if (mode & FileMode.Out)
                 writeable = true;
 
             this.sock = sock;

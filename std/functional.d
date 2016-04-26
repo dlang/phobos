@@ -269,7 +269,7 @@ private uint _ctfeSkipOp(ref string op)
     while (op.length)
     {
         immutable front = op[0];
-        if(front.isASCII() && !(front.isAlphaNum() || front == '_' || front == '.'))
+        if (front.isASCII() && !(front.isAlphaNum() || front == '_' || front == '.'))
             op = op[1..$];
         else
             break;
@@ -286,7 +286,7 @@ private uint _ctfeSkipInteger(ref string op)
     while (op.length)
     {
         immutable front = op[0];
-        if(front.isDigit())
+        if (front.isDigit())
             op = op[1..$];
         else
             break;
@@ -322,7 +322,7 @@ private uint _ctfeMatchUnary(string fun, string name)
         }
         else if (h == 1)
         {
-            if(!fun._ctfeSkipOp())
+            if (!fun._ctfeSkipOp())
                 break;
         }
         else
@@ -369,7 +369,7 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
         }
         else if (h == 1)
         {
-            if(!fun._ctfeSkipOp())
+            if (!fun._ctfeSkipOp())
                 break;
         }
         else
@@ -679,7 +679,7 @@ template partial(alias fun, alias arg)
                 {
                     string msg = "Cannot call '" ~ fun.stringof ~ "' with arguments " ~
                         "(" ~ arg.stringof;
-                    foreach(T; Ts)
+                    foreach (T; Ts)
                         msg ~= ", " ~ T.stringof;
                     msg ~= ").";
                     return msg;

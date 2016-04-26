@@ -499,7 +499,7 @@ private:
                 }
 
                 auto args = cast(Tuple!(ParamTypes))t;
-                static if(is(ReturnType!A == void))
+                static if (is(ReturnType!A == void))
                 {
                     (*zis)(args.expand);
                     *p = Variant.init; // void returns uninitialized Variant.
@@ -2173,10 +2173,10 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
 
         Result result;
 
-        foreach(tidx, T; AllowedTypes)
+        foreach (tidx, T; AllowedTypes)
         {
             bool added = false;
-            foreach(dgidx, dg; Handler)
+            foreach (dgidx, dg; Handler)
             {
                 // Handle normal function objects
                 static if (isSomeFunction!dg)
@@ -2231,7 +2231,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
             throw new VariantException("variant must hold a value before being visited.");
     }
 
-    foreach(idx, T; AllowedTypes)
+    foreach (idx, T; AllowedTypes)
     {
         if (auto ptr = variant.peek!T)
         {

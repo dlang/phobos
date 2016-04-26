@@ -2091,37 +2091,37 @@ _U("Vowel_Jamo", V),
 }
 bool isFormatGen(dchar ch) @safe pure nothrow
 {
-    if(ch < 8288)
+    if (ch < 8288)
     {
-        if(ch < 1807)
+        if (ch < 1807)
         {
-            if(ch < 1564)
+            if (ch < 1564)
             {
-                if(ch == 173) return true;
-                if(ch < 1536) return false;
-                if(ch < 1541) return true;
+                if (ch == 173) return true;
+                if (ch < 1536) return false;
+                if (ch < 1541) return true;
                 return false;
             }
             else if (ch < 1565) return true;
             else
             {
-                if(ch == 1757) return true;
+                if (ch == 1757) return true;
                 return false;
             }
         }
         else if (ch < 1808) return true;
         else
         {
-            if(ch < 8203)
+            if (ch < 8203)
             {
-                if(ch == 6158) return true;
+                if (ch == 6158) return true;
                 return false;
             }
             else if (ch < 8208) return true;
             else
             {
-                if(ch < 8234) return false;
-                if(ch < 8239) return true;
+                if (ch < 8234) return false;
+                if (ch < 8239) return true;
                 return false;
             }
         }
@@ -2129,36 +2129,36 @@ bool isFormatGen(dchar ch) @safe pure nothrow
     else if (ch < 8293) return true;
     else
     {
-        if(ch < 69821)
+        if (ch < 69821)
         {
-            if(ch < 65279)
+            if (ch < 65279)
             {
-                if(ch < 8294) return false;
-                if(ch < 8304) return true;
+                if (ch < 8294) return false;
+                if (ch < 8304) return true;
                 return false;
             }
             else if (ch < 65280) return true;
             else
             {
-                if(ch < 65529) return false;
-                if(ch < 65532) return true;
+                if (ch < 65529) return false;
+                if (ch < 65532) return true;
                 return false;
             }
         }
         else if (ch < 69822) return true;
         else
         {
-            if(ch < 917505)
+            if (ch < 917505)
             {
-                if(ch < 119155) return false;
-                if(ch < 119163) return true;
+                if (ch < 119155) return false;
+                if (ch < 119163) return true;
                 return false;
             }
             else if (ch < 917506) return true;
             else
             {
-                if(ch < 917536) return false;
-                if(ch < 917632) return true;
+                if (ch < 917536) return false;
+                if (ch < 917632) return true;
                 return false;
             }
         }
@@ -2167,34 +2167,34 @@ bool isFormatGen(dchar ch) @safe pure nothrow
 
 bool isControlGen(dchar ch) @safe pure nothrow
 {
-    if(ch < 32) return true;
-    if(ch < 127) return false;
-    if(ch < 160) return true;
+    if (ch < 32) return true;
+    if (ch < 127) return false;
+    if (ch < 160) return true;
     return false;
 }
 
 bool isSpaceGen(dchar ch) @safe pure nothrow
 {
-    if(ch < 160)
+    if (ch < 160)
     {
-        if(ch == 32) return true;
+        if (ch == 32) return true;
         return false;
     }
     else if (ch < 161) return true;
     else
     {
-        if(ch < 8239)
+        if (ch < 8239)
         {
-            if(ch == 5760) return true;
-            if(ch < 8192) return false;
-            if(ch < 8203) return true;
+            if (ch == 5760) return true;
+            if (ch < 8192) return false;
+            if (ch < 8203) return true;
             return false;
         }
         else if (ch < 8240) return true;
         else
         {
-            if(ch == 8287) return true;
-            if(ch == 12288) return true;
+            if (ch == 8287) return true;
+            if (ch == 12288) return true;
             return false;
         }
     }
@@ -2202,43 +2202,43 @@ bool isSpaceGen(dchar ch) @safe pure nothrow
 
 bool isWhiteGen(dchar ch) @safe pure nothrow @nogc
 {
-    if(ch < 133)
+    if (ch < 133)
     {
-        if(ch < 9) return false;
-        if(ch < 14) return true;
-        if(ch == 32) return true;
+        if (ch < 9) return false;
+        if (ch < 14) return true;
+        if (ch == 32) return true;
         return false;
     }
     else if (ch < 134) return true;
     else
     {
-        if(ch < 8232)
+        if (ch < 8232)
         {
-            if(ch < 5760)
+            if (ch < 5760)
             {
-                if(ch == 160) return true;
+                if (ch == 160) return true;
                 return false;
             }
             else if (ch < 5761) return true;
             else
             {
-                if(ch < 8192) return false;
-                if(ch < 8203) return true;
+                if (ch < 8192) return false;
+                if (ch < 8203) return true;
                 return false;
             }
         }
         else if (ch < 8234) return true;
         else
         {
-            if(ch < 8287)
+            if (ch < 8287)
             {
-                if(ch == 8239) return true;
+                if (ch == 8239) return true;
                 return false;
             }
             else if (ch < 8288) return true;
             else
             {
-                if(ch == 12288) return true;
+                if (ch == 12288) return true;
                 return false;
             }
         }
@@ -2247,33 +2247,33 @@ bool isWhiteGen(dchar ch) @safe pure nothrow @nogc
 
 bool isHangL(dchar ch) @safe pure nothrow
 {
-    if(ch < 4352) return false;
-    if(ch < 4448) return true;
-    if(ch < 43360) return false;
-    if(ch < 43389) return true;
+    if (ch < 4352) return false;
+    if (ch < 4448) return true;
+    if (ch < 43360) return false;
+    if (ch < 43389) return true;
     return false;
 }
 
 bool isHangV(dchar ch) @safe pure nothrow
 {
-    if(ch < 4448) return false;
-    if(ch < 4520) return true;
-    if(ch < 55216) return false;
-    if(ch < 55239) return true;
+    if (ch < 4448) return false;
+    if (ch < 4520) return true;
+    if (ch < 55216) return false;
+    if (ch < 55239) return true;
     return false;
 }
 
 bool isHangT(dchar ch) @safe pure nothrow
 {
-    if(ch < 4520) return false;
-    if(ch < 4608) return true;
-    if(ch < 55243) return false;
-    if(ch < 55292) return true;
+    if (ch < 4520) return false;
+    if (ch < 4608) return true;
+    if (ch < 55243) return false;
+    if (ch < 55292) return true;
     return false;
 }
 
 
-static if(size_t.sizeof == 8) {
+static if (size_t.sizeof == 8) {
 //1536 bytes
 enum lowerCaseTrieEntries = TrieEntry!(bool, 8, 4, 9)([ 0x0,  0x20,  0x40], [ 0x100,  0x80,  0x2000], [ 0x402030202020100,  0x206020202020205,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x202020202020202,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x3000200010000,  0x3000300030003,  0x3000300030003,  0x5000400030003,  0x3000700030006,  0x3000800030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x9000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0xb0003000a0003,  0x3000c00030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0xe000d00030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x3000300030003,  0x0,  0x7fffffe00000000,  0x420040000000000,  0xff7fffff80000000,  0x55aaaaaaaaaaaaaa,  0xd4aaaaaaaaaaab55,  0xe6512d2a4e243129,  0xaa29aaaab5555240,  0x93faaaaaaaaaaaaa,  0xffffffffffffaa85,  0x1ffffffffefffff,  0x1f00000003,  0x0,  0x3c8a000000000020,  0xfffff00000010000,  0x192faaaaaae37fff,  0xffff000000000000,  0xaaaaaaaaffffffff,  0xaaaaaaaaaaaaa802,  0xaaaaaaaaaaaad554,  0xaaaaaaaaaa,  0xfffffffe00000000,  0xff,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0xffffffffffffffff,  0xffffffffffffffff,  0xffffffffffffffff,  0x0,  0xaaaaaaaaaaaaaaaa,  0xaaaaaaaaaaaaaaaa,  0xaaaaaaaabfeaaaaa,  0xaaaaaaaaaaaaaaaa,  0xff00ff003f00ff,  0x3fff00ff00ff003f,  0x40df00ff00ff00ff,  0xdc00ff00cf00dc,  0x0,  0x8002000000000000,  0x1fff0000,  0x0,  0x321080000008c400,  0xffff0000000043c0,  0x10,  0x0,  0x0,  0x0,  0x0,  0x3ffffff0000,  0x0,  0x0,  0x0,  0x0,  0xffff000000000000,  0x3fda15627fffffff,  0xaaaaaaaaaaaaaaaa,  0x8501aaaaaaaaa,  0x20bfffffffff,  0x0,  0x0,  0x0,  0x0,  0x2aaaaaaaaaaa,  0xaaaaaa,  0x0,  0xaaabaaa800000000,  0x95ffaaaaaaaaaaaa,  0x2aa000a50aa,  0x700000000000000,  0x0,  0x0,  0x0,  0x0,  0xf8007f,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x7fffffe,  0x0,  0x0,  0xffffff0000000000,  0xffff,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0xffffffc000000,  0xffffdfc000,  0xebc000000ffffffc,  0xfffffc000000ffef,  0xffffffc000000f,  0xffffffc0000,  0xfc000000ffffffc0,  0xffffc000000fffff,  0xffffffc000000ff,  0xffffffc00000,  0x3ffffffc00,  0xf0000003f7fffffc,  0xffc000000fdfffff,  0xffff0000003f7fff,  0xfffffc000000fdff,  0xbf7,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0]);
 //1472 bytes
@@ -2322,7 +2322,7 @@ _IUA toTitleTable() { static _IUA t = [ 0x41,  0x42,  0x43,  0x44,  0x45,  0x46,
 }
 
 
-static if(size_t.sizeof == 4) {
+static if (size_t.sizeof == 4) {
 //1536 bytes
 enum lowerCaseTrieEntries = TrieEntry!(bool, 8, 4, 9)([ 0x0,  0x40,  0x80], [ 0x100,  0x80,  0x2000], [ 0x2020100,  0x4020302,  0x2020205,  0x2060202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x2020202,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x10000,  0x30002,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x50004,  0x30006,  0x30007,  0x30003,  0x30008,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x90003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0xa0003,  0xb0003,  0x30003,  0x3000c,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0xe000d,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x30003,  0x0,  0x0,  0x0,  0x7fffffe,  0x0,  0x4200400,  0x80000000,  0xff7fffff,  0xaaaaaaaa,  0x55aaaaaa,  0xaaaaab55,  0xd4aaaaaa,  0x4e243129,  0xe6512d2a,  0xb5555240,  0xaa29aaaa,  0xaaaaaaaa,  0x93faaaaa,  0xffffaa85,  0xffffffff,  0xffefffff,  0x1ffffff,  0x3,  0x1f,  0x0,  0x0,  0x20,  0x3c8a0000,  0x10000,  0xfffff000,  0xaae37fff,  0x192faaaa,  0x0,  0xffff0000,  0xffffffff,  0xaaaaaaaa,  0xaaaaa802,  0xaaaaaaaa,  0xaaaad554,  0xaaaaaaaa,  0xaaaaaaaa,  0xaa,  0x0,  0xfffffffe,  0xff,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0xffffffff,  0xffffffff,  0xffffffff,  0xffffffff,  0xffffffff,  0xffffffff,  0x0,  0x0,  0xaaaaaaaa,  0xaaaaaaaa,  0xaaaaaaaa,  0xaaaaaaaa,  0xbfeaaaaa,  0xaaaaaaaa,  0xaaaaaaaa,  0xaaaaaaaa,  0x3f00ff,  0xff00ff,  0xff003f,  0x3fff00ff,  0xff00ff,  0x40df00ff,  0xcf00dc,  0xdc00ff,  0x0,  0x0,  0x0,  0x80020000,  0x1fff0000,  0x0,  0x0,  0x0,  0x8c400,  0x32108000,  0x43c0,  0xffff0000,  0x10,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0xffff0000,  0x3ff,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0xffff0000,  0x7fffffff,  0x3fda1562,  0xaaaaaaaa,  0xaaaaaaaa,  0xaaaaaaaa,  0x8501a,  0xffffffff,  0x20bf,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0xaaaaaaaa,  0x2aaa,  0xaaaaaa,  0x0,  0x0,  0x0,  0x0,  0xaaabaaa8,  0xaaaaaaaa,  0x95ffaaaa,  0xa50aa,  0x2aa,  0x0,  0x7000000,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0xf8007f,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x7fffffe,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0xffffff00,  0xffff,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0xfc000000,  0xfffff,  0xffdfc000,  0xff,  0xffffffc,  0xebc00000,  0xffef,  0xfffffc00,  0xc000000f,  0xffffff,  0xfffc0000,  0xfff,  0xffffffc0,  0xfc000000,  0xfffff,  0xffffc000,  0xff,  0xffffffc,  0xffc00000,  0xffff,  0xfffffc00,  0x3f,  0xf7fffffc,  0xf0000003,  0xfdfffff,  0xffc00000,  0x3f7fff,  0xffff0000,  0xfdff,  0xfffffc00,  0xbf7,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0]);
 //1472 bytes

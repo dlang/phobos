@@ -38,7 +38,7 @@ auto makeRegex(S, CG)(Parser!(S, CG) p)
 
 // helper for unittest
 auto makeRegex(S)(S arg)
-    if(isSomeString!S)
+    if (isSomeString!S)
 {
     return makeRegex(Parser!(S, CodeGen)(arg, ""));
 }
@@ -88,18 +88,18 @@ unittest
         for(uint pc = start; pc < end; )
         {
             uint len = code[pc].length;
-            if(code[pc].code == IR.GotoEndOr)
+            if (code[pc].code == IR.GotoEndOr)
                 break; //pick next alternation branch
-            if(code[pc].isAtom)
+            if (code[pc].isAtom)
             {
                 rev[revPc - len .. revPc] = code[pc .. pc + len];
                 revPc -= len;
                 pc += len;
             }
-            else if(code[pc].isStart || code[pc].isEnd)
+            else if (code[pc].isStart || code[pc].isEnd)
             {
                 //skip over other embedded lookbehinds they are reversed
-                if(code[pc].code == IR.LookbehindStart
+                if (code[pc].code == IR.LookbehindStart
                     || code[pc].code == IR.NeglookbehindStart)
                 {
                     uint blockLen = len + code[pc].data
@@ -113,15 +113,15 @@ unittest
                 uint secLen = code[second].length;
                 rev[revPc - secLen .. revPc] = code[second .. second + secLen];
                 revPc -= secLen;
-                if(code[pc].code == IR.OrStart)
+                if (code[pc].code == IR.OrStart)
                 {
                     //we pass len bytes forward, but secLen in reverse
                     uint revStart = revPc - (second + len - secLen - pc);
                     uint r = revStart;
                     uint i = pc + IRL!(IR.OrStart);
-                    while(code[i].code == IR.Option)
+                    while (code[i].code == IR.Option)
                     {
-                        if(code[i - 1].code != IR.OrStart)
+                        if (code[i - 1].code != IR.OrStart)
                         {
                             assert(code[i - 1].code == IR.GotoEndOr);
                             rev[r - 1] = code[i - 1];
@@ -130,7 +130,7 @@ unittest
                         auto newStart = i + IRL!(IR.Option);
                         auto newEnd = newStart + code[i].data;
                         auto newRpc = r + code[i].data + IRL!(IR.Option);
-                        if(code[newEnd].code != IR.OrEnd)
+                        if (code[newEnd].code != IR.OrEnd)
                         {
                             newRpc--;
                         }
@@ -146,7 +146,7 @@ unittest
                     pc += len;
             }
         }
-        if(stack.empty)
+        if (stack.empty)
             break;
         start = stack.top[0];
         end = stack.top[1];
@@ -166,11 +166,11 @@ dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
     for(int k = 0; k < maxDigit; k++)
     {
         auto current = str[k];//accepts ascii only, so it's OK to index directly
-        if('0' <= current && current <= '9')
+        if ('0' <= current && current <= '9')
             val = val * 16 + current - '0';
-        else if('a' <= current && current <= 'f')
+        else if ('a' <= current && current <= 'f')
             val = val * 16 + current -'a' + 10;
-        else if('A' <= current && current <= 'F')
+        else if ('A' <= current && current <= 'F')
             val = val * 16 + current - 'A' + 10;
         else
             throw new Exception("invalid escape sequence");
@@ -185,10 +185,10 @@ dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
     string[] non_hex = [ "000j", "000z", "FffG", "0Z"];
     string[] hex = [ "01", "ff", "00af", "10FFFF" ];
     int[] value = [ 1, 0xFF, 0xAF, 0x10FFFF ];
-    foreach(v; non_hex)
+    foreach (v; non_hex)
         assert(collectException(parseUniHex(v, v.length)).msg
           .canFind("invalid escape sequence"));
-    foreach(i, v; hex)
+    foreach (i, v; hex)
         assert(parseUniHex(v, v.length) == value[i]);
     string over = "0011FFFF";
     assert(collectException(parseUniHex(over, over.length)).msg
@@ -200,7 +200,7 @@ auto caseEnclose(CodepointSet set)
     auto cased = set & unicode.LC;
     foreach (dchar ch; cased.byCodepoint)
     {
-        foreach(c; simpleCaseFoldings(ch))
+        foreach (c; simpleCaseFoldings(ch))
             set |= c;
     }
     return set;
@@ -213,9 +213,9 @@ auto caseEnclose(CodepointSet set)
 {
     CodepointSet s = unicode(name);
     //FIXME: caseEnclose for new uni as Set | CaseEnclose(SET && LC)
-    if(casefold)
+    if (casefold)
        s = caseEnclose(s);
-    if(negated)
+    if (negated)
         s = s.inverted;
     return s;
 }
@@ -235,7 +235,7 @@ auto caseEnclose(CodepointSet set)
         assert(!empty);
         auto val = data[$ - 1];
         data = data[0 .. $ - 1];
-        if(!__ctfe)
+        if (!__ctfe)
             cast(void)data.assumeSafeAppend();
         return val;
     }
@@ -263,7 +263,7 @@ struct CodeGen
 
     void start(uint length)
     {
-        if(!__ctfe)
+        if (!__ctfe)
             ir.reserve((length*5+2)/4);
         fixupStack.push(0);
         groupStack.push(1);//0 - whole match
@@ -272,7 +272,7 @@ struct CodeGen
     //mark referenced groups for latter processing
     void markBackref(uint n)
     {
-        if(n/32 >= backrefed.length)
+        if (n/32 >= backrefed.length)
             backrefed.length = n/32 + 1;
         backrefed[n / 32] |= 1 << (n & 31);
     }
@@ -303,9 +303,9 @@ struct CodeGen
     @trusted void charsetToIr(CodepointSet set)
     {//@@@BUG@@@ writeln is @system
         uint chars = cast(uint)set.length;
-        if(chars < Bytecode.maxSequence)
+        if (chars < Bytecode.maxSequence)
         {
-            switch(chars)
+            switch (chars)
             {
                 case 1:
                     put(Bytecode(IR.Char, set.byCodepoint.front));
@@ -313,7 +313,7 @@ struct CodeGen
                 case 0:
                     throw new RegexException("empty CodepointSet not allowed");
                 default:
-                    foreach(ch; set.byCodepoint)
+                    foreach (ch; set.byCodepoint)
                         put(Bytecode(IR.OrChar, ch, chars));
             }
         }
@@ -322,15 +322,15 @@ struct CodeGen
             import std.algorithm : countUntil;
             auto ivals = set.byInterval;
             auto n = charsets.countUntil(set);
-            if(n >= 0)
+            if (n >= 0)
             {
-                if(ivals.length*2 > maxCharsetUsed)
+                if (ivals.length*2 > maxCharsetUsed)
                     put(Bytecode(IR.Trie, cast(uint)n));
                 else
                     put(Bytecode(IR.CodepointSet, cast(uint)n));
                 return;
             }
-            if(ivals.length*2 > maxCharsetUsed)
+            if (ivals.length*2 > maxCharsetUsed)
             {
                 auto t  = getMatcher(set);
                 put(Bytecode(IR.Trie, cast(uint)matchers.length));
@@ -409,7 +409,7 @@ struct CodeGen
         //groups are cumulative across lookarounds
         ir[fix+2] = Bytecode.fromRaw(groupStack.top+g);
         groupStack.top += g;
-        if(ir[fix].code == IR.LookbehindStart || ir[fix].code == IR.NeglookbehindStart)
+        if (ir[fix].code == IR.LookbehindStart || ir[fix].code == IR.NeglookbehindStart)
         {
             reverseBytecode(ir[fix + IRL!(IR.LookbehindStart) .. $]);
         }
@@ -420,7 +420,7 @@ struct CodeGen
     void fixRepetition(uint offset)
     {
         bool replace = ir[offset].code == IR.Nop;
-        if(replace)
+        if (replace)
         {
             copy(ir[offset + 1 .. $], ir[offset .. $ - 1]);
             ir.length -= 1;
@@ -432,12 +432,12 @@ struct CodeGen
     {
         bool replace = ir[offset].code == IR.Nop;
         uint len = cast(uint)ir.length - offset - replace;
-        if(max != infinite)
+        if (max != infinite)
         {
-            if(min != 1 || max != 1)
+            if (min != 1 || max != 1)
             {
                 Bytecode op = Bytecode(greedy ? IR.RepeatStart : IR.RepeatQStart, len);
-                if(replace)
+                if (replace)
                     ir[offset] = op;
                 else
                     insertInPlace(ir, offset, op);
@@ -449,12 +449,12 @@ struct CodeGen
                 counterDepth = std.algorithm.max(counterDepth, nesting+1);
             }
         }
-        else if(min) //&& max is infinite
+        else if (min) //&& max is infinite
         {
-            if(min != 1)
+            if (min != 1)
             {
                 Bytecode op = Bytecode(greedy ? IR.RepeatStart : IR.RepeatQStart, len);
-                if(replace)
+                if (replace)
                     ir[offset] = op;
                 else
                     insertInPlace(ir, offset, op);
@@ -466,7 +466,7 @@ struct CodeGen
                 putRaw(min);
                 counterDepth = std.algorithm.max(counterDepth, nesting+1);
             }
-            else if(replace)
+            else if (replace)
             {
                 copy(ir[offset+1 .. $], ir[offset .. $-1]);
                 ir.length -= 1;
@@ -481,7 +481,7 @@ struct CodeGen
         else//vanila {0,inf}
         {
             Bytecode op = Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len);
-            if(replace)
+            if (replace)
                 ir[offset] = op;
             else
                 insertInPlace(ir, offset, op);
@@ -494,7 +494,7 @@ struct CodeGen
     void fixAlternation()
     {
         uint fix = fixupStack.top;
-        if(ir.length > fix && ir[fix].code == IR.Option)
+        if (ir.length > fix && ir[fix].code == IR.Option)
         {
             ir[fix] = Bytecode(ir[fix].code, cast(uint)ir.length - fix);
             put(Bytecode(IR.GotoEndOr, 0));
@@ -504,7 +504,7 @@ struct CodeGen
         }
         uint len, orStart;
         //start a new option
-        if(fixupStack.length == 1)
+        if (fixupStack.length == 1)
         {//only root entry, effectively no fixup
             len = cast(uint)ir.length + IRL!(IR.GotoEndOr);
             orStart = 0;
@@ -532,10 +532,10 @@ struct CodeGen
         ir[fix] = Bytecode(IR.OrStart, cast(uint)ir.length - fix - IRL!(IR.OrStart));
         put(Bytecode(IR.OrEnd, cast(uint)ir.length - fix - IRL!(IR.OrStart)));
         uint pc = fix + IRL!(IR.OrStart);
-        while(ir[pc].code == IR.Option)
+        while (ir[pc].code == IR.Option)
         {
             pc = pc + ir[pc].data;
-            if(ir[pc].code != IR.GotoEndOr)
+            if (ir[pc].code != IR.GotoEndOr)
                 break;
             ir[pc] = Bytecode(IR.GotoEndOr, cast(uint)(ir.length - pc - IRL!(IR.OrEnd)));
             pc += IRL!(IR.GotoEndOr);
@@ -548,7 +548,7 @@ struct CodeGen
     {
         nesting--;
         uint fix = popFixup();
-        switch(ir[fix].code)
+        switch (ir[fix].code)
         {
         case IR.GroupStart:
             put(Bytecode(IR.GroupEnd, ir[fix].data));
@@ -561,7 +561,7 @@ struct CodeGen
             //two fixups: last option + full OR
             finishAlternation(fix);
             fix = topFixup;
-            switch(ir[fix].code)
+            switch (ir[fix].code)
             {
             case IR.GroupStart:
                 popFixup();
@@ -612,7 +612,7 @@ struct Parser(R, Generator)
     Generator g;
 
     @trusted this(S)(R pattern, S flags)
-        if(isSomeString!S)
+        if (isSomeString!S)
     {
         pat = origin = pattern;
         //reserve slightly more then avg as sampled from unittests
@@ -635,7 +635,7 @@ struct Parser(R, Generator)
 
     bool _next()
     {
-        if(pat.empty)
+        if (pat.empty)
         {
             empty =  true;
             return false;
@@ -647,12 +647,12 @@ struct Parser(R, Generator)
 
     void skipSpace()
     {
-        while(isWhite(current) && _next()){ }
+        while (isWhite(current) && _next()){ }
     }
 
     bool next()
     {
-        if(re_flags & RegexOption.freeform)
+        if (re_flags & RegexOption.freeform)
         {
             bool r = _next();
             skipSpace();
@@ -666,12 +666,12 @@ struct Parser(R, Generator)
     uint parseDecimal()
     {
         uint r = 0;
-        while(std.ascii.isDigit(current))
+        while (std.ascii.isDigit(current))
         {
-            if(r >= (uint.max/10))
+            if (r >= (uint.max/10))
                 error("Overflow in decimal number");
             r = 10*r + cast(uint)(current-'0');
-            if(!next())
+            if (!next())
                 break;
         }
         return r;
@@ -690,16 +690,16 @@ struct Parser(R, Generator)
     @trusted void parseFlags(S)(S flags)
     {//@@@BUG@@@ text is @system
         import std.conv;
-        foreach(ch; flags)//flags are ASCII anyway
+        foreach (ch; flags)//flags are ASCII anyway
         {
         L_FlagSwitch:
-            switch(ch)
+            switch (ch)
             {
 
-                foreach(i, op; __traits(allMembers, RegexOption))
+                foreach (i, op; __traits(allMembers, RegexOption))
                 {
                     case RegexOptionNames[i]:
-                            if(re_flags & mixin("RegexOption."~op))
+                            if (re_flags & mixin("RegexOption."~op))
                                 throw new RegexException(text("redundant flag specified: ",ch));
                             re_flags |= mixin("RegexOption."~op);
                             break L_FlagSwitch;
@@ -715,25 +715,25 @@ struct Parser(R, Generator)
     {
         uint fix;//fixup pointer
 
-        while(!empty)
+        while (!empty)
         {
             debug(std_regex_parser)
                 __ctfe || writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.data);
-            switch(current)
+            switch (current)
             {
             case '(':
                 next();
-                if(current == '?')
+                if (current == '?')
                 {
                     next();
-                    switch(current)
+                    switch (current)
                     {
                     case '#':
                         for(;;)
                         {
-                            if(!next())
+                            if (!next())
                                 error("Unexpected end of pattern");
-                            if(current == ')')
+                            if (current == ')')
                             {
                                 next();
                                 break;
@@ -754,27 +754,27 @@ struct Parser(R, Generator)
                         break;
                     case 'P':
                         next();
-                        if(current != '<')
+                        if (current != '<')
                             error("Expected '<' in named group");
                         string name;
-                        if(!next() || !(isAlpha(current) || current == '_'))
+                        if (!next() || !(isAlpha(current) || current == '_'))
                             error("Expected alpha starting a named group");
                         name ~= current;
-                        while(next() && (isAlpha(current) ||
+                        while (next() && (isAlpha(current) ||
                             current == '_' || std.ascii.isDigit(current)))
                         {
                             name ~= current;
                         }
-                        if(current != '>')
+                        if (current != '>')
                             error("Expected '>' closing named group");
                         next();
                         g.genNamedGroup(name);
                         break;
                     case '<':
                         next();
-                        if(current == '=')
+                        if (current == '=')
                             g.genLookaround(IR.LookbehindStart);
-                        else if(current == '!')
+                        else if (current == '!')
                             g.genLookaround(IR.NeglookbehindStart);
                         else
                             error("'!' or '=' expected after '<'");
@@ -793,7 +793,7 @@ struct Parser(R, Generator)
                 enforce(g.nesting, "Unmatched ')'");
                 next();
                 auto pair = g.onClose();
-                if(pair[0])
+                if (pair[0])
                     parseQuantifier(pair[1]);
                 break;
             case '|':
@@ -807,7 +807,7 @@ struct Parser(R, Generator)
             }
         }
 
-        if(g.fixupLength != 1)
+        if (g.fixupLength != 1)
         {
             fix = g.popFixup();
             g.finishAlternation(fix);
@@ -819,10 +819,10 @@ struct Parser(R, Generator)
     //parse and store IR for atom-quantifier pair
     @trusted void parseQuantifier(uint offset)
     {//copy is @system
-        if(empty)
+        if (empty)
             return g.fixRepetition(offset);
         uint min, max;
-        switch(current)
+        switch (current)
         {
         case '*':
             min = 0;
@@ -840,24 +840,24 @@ struct Parser(R, Generator)
             enforce(next(), "Unexpected end of regex pattern");
             enforce(std.ascii.isDigit(current), "First number required in repetition");
             min = parseDecimal();
-            if(current == '}')
+            if (current == '}')
                 max = min;
-            else if(current == ',')
+            else if (current == ',')
             {
                 next();
-                if(std.ascii.isDigit(current))
+                if (std.ascii.isDigit(current))
                     max = parseDecimal();
-                else if(current == '}')
+                else if (current == '}')
                     max = infinite;
                 else
                     error("Unexpected symbol in regex pattern");
                 skipSpace();
-                if(current != '}')
+                if (current != '}')
                     error("Unmatched '{' in regex pattern");
             }
             else
                 error("Unexpected symbol in regex pattern");
-            if(min > max)
+            if (min > max)
                 error("Illegal {n,m} quantifier");
             break;
         default:
@@ -866,7 +866,7 @@ struct Parser(R, Generator)
         }
         bool greedy = true;
         //check only if we managed to get new symbol
-        if(next() && current == '?')
+        if (next() && current == '?')
         {
             greedy = false;
             next();
@@ -877,9 +877,9 @@ struct Parser(R, Generator)
     //parse and store IR for atom
     void parseAtom()
     {
-        if(empty)
+        if (empty)
             return;
-        switch(current)
+        switch (current)
         {
         case '*', '?', '+', '|', '{', '}':
             error("'*', '+', '?', '{', '}' not allowed in atom");
@@ -905,14 +905,14 @@ struct Parser(R, Generator)
             break;
         default:
             //FIXME: getCommonCasing in new std uni
-            if(re_flags & RegexOption.casefold)
+            if (re_flags & RegexOption.casefold)
             {
                 auto range = simpleCaseFoldings(current);
                 assert(range.length <= 5);
-                if(range.length == 1)
+                if (range.length == 1)
                     g.put(Bytecode(IR.Char, range.front));
                 else
-                    foreach(v; range)
+                    foreach (v; range)
                         g.put(Bytecode(IR.OrChar, v, cast(uint)range.length));
             }
             else
@@ -941,10 +941,10 @@ struct Parser(R, Generator)
 
         static void addWithFlags(ref CodepointSet set, uint ch, uint re_flags)
         {
-            if(re_flags & RegexOption.casefold)
+            if (re_flags & RegexOption.casefold)
             {
                 auto range = simpleCaseFoldings(ch);
-                foreach(v; range)
+                foreach (v; range)
                     set |= v;
             }
             else
@@ -953,7 +953,7 @@ struct Parser(R, Generator)
 
         static Operator twinSymbolOperator(dchar symbol)
         {
-            switch(symbol)
+            switch (symbol)
             {
             case '|':
                 return Operator.Union;
@@ -971,10 +971,10 @@ struct Parser(R, Generator)
         L_CharTermLoop:
         for(;;)
         {
-            final switch(state)
+            final switch (state)
             {
             case State.Start:
-                switch(current)
+                switch (current)
                 {
                 case '|':
                 case '-':
@@ -998,7 +998,7 @@ struct Parser(R, Generator)
                 break;
             case State.Char:
                 // xxx last current xxx
-                switch(current)
+                switch (current)
                 {
                 case '|':
                 case '~':
@@ -1030,7 +1030,7 @@ struct Parser(R, Generator)
             case State.PotentialTwinSymbolOperator:
                 // xxx last current xxxx
                 // where last = [|-&~]
-                if(current == last)
+                if (current == last)
                 {
                     op = twinSymbolOperator(last);
                     next();//skip second twin char
@@ -1039,7 +1039,7 @@ struct Parser(R, Generator)
                 goto case State.Char;
             case State.Escape:
                 // xxx \ current xxx
-                switch(current)
+                switch (current)
                 {
                 case 'f':
                     last = '\f';
@@ -1065,7 +1065,7 @@ struct Parser(R, Generator)
                     last = parseControlCode();
                     state = State.Char;
                     break;
-                foreach(val; Escapables)
+                foreach (val; Escapables)
                 {
                 case val:
                 }
@@ -1122,7 +1122,7 @@ struct Parser(R, Generator)
                 break;
             case State.CharDash:
                 // xxx last - current xxx
-                switch(current)
+                switch (current)
                 {
                 case '[':
                     op = Operator.Union;
@@ -1142,7 +1142,7 @@ struct Parser(R, Generator)
                     break;
                 default:
                     enforce(last <= current, "inverted range");
-                    if(re_flags & RegexOption.casefold)
+                    if (re_flags & RegexOption.casefold)
                     {
                         for(uint ch = last; ch <= current; ch++)
                             addWithFlags(set, ch, re_flags);
@@ -1155,7 +1155,7 @@ struct Parser(R, Generator)
             case State.CharDashEscape:
             //xxx last - \ current xxx
                 uint end;
-                switch(current)
+                switch (current)
                 {
                 case 'f':
                     end = '\f';
@@ -1172,7 +1172,7 @@ struct Parser(R, Generator)
                 case 'v':
                     end = '\v';
                     break;
-                foreach(val; Escapables)
+                foreach (val; Escapables)
                 {
                 case val:
                 }
@@ -1223,7 +1223,7 @@ struct Parser(R, Generator)
         //
         static bool apply(Operator op, ref ValStack stack)
         {
-            switch(op)
+            switch (op)
             {
             case Operator.Negate:
                 stack.top = stack.top.inverted;
@@ -1255,11 +1255,11 @@ struct Parser(R, Generator)
         }
         static bool unrollWhile(alias cond)(ref ValStack vstack, ref OpStack opstack)
         {
-            while(cond(opstack.top))
+            while (cond(opstack.top))
             {
-                if(!apply(opstack.pop(),vstack))
+                if (!apply(opstack.pop(),vstack))
                     return false;//syntax error
-                if(opstack.empty)
+                if (opstack.empty)
                     return false;
             }
             return true;
@@ -1268,12 +1268,12 @@ struct Parser(R, Generator)
         L_CharsetLoop:
         do
         {
-            switch(current)
+            switch (current)
             {
             case '[':
                 opstack.push(Operator.Open);
                 enforce(next(), "unexpected end of character class");
-                if(current == '^')
+                if (current == '^')
                 {
                     opstack.push(Operator.Negate);
                     enforce(next(), "unexpected end of character class");
@@ -1283,9 +1283,9 @@ struct Parser(R, Generator)
                     enforce(next(), "wrong character set");
                     auto pair = parseCharTerm();
                     pair[0].add(']', ']'+1);
-                    if(pair[1] != Operator.None)
+                    if (pair[1] != Operator.None)
                     {
-                        if(opstack.top == Operator.Union)
+                        if (opstack.top == Operator.Union)
                             unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
                         opstack.push(pair[1]);
                     }
@@ -1298,16 +1298,16 @@ struct Parser(R, Generator)
                 enforce(!opstack.empty, "unmatched ']'");
                 opstack.pop();
                 next();
-                if(opstack.empty)
+                if (opstack.empty)
                     break L_CharsetLoop;
                 auto pair  = parseCharTerm();
-                if(!pair[0].empty)//not only operator e.g. -- or ~~
+                if (!pair[0].empty)//not only operator e.g. -- or ~~
                 {
                     vstack.top.add(pair[0]);//apply union
                 }
-                if(pair[1] != Operator.None)
+                if (pair[1] != Operator.None)
                 {
-                    if(opstack.top == Operator.Union)
+                    if (opstack.top == Operator.Union)
                         unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
                     opstack.push(pair[1]);
                 }
@@ -1315,17 +1315,17 @@ struct Parser(R, Generator)
             //
             default://yet another pair of term(op)?
                 auto pair = parseCharTerm();
-                if(pair[1] != Operator.None)
+                if (pair[1] != Operator.None)
                 {
-                    if(opstack.top == Operator.Union)
+                    if (opstack.top == Operator.Union)
                         unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
                     opstack.push(pair[1]);
                 }
                 vstack.push(pair[0]);
             }
 
-        }while(!empty || !opstack.empty);
-        while(!opstack.empty)
+        }while (!empty || !opstack.empty);
+        while (!opstack.empty)
             apply(opstack.pop(),vstack);
         assert(vstack.length == 1);
         g.charsetToIr(vstack.top);
@@ -1335,7 +1335,7 @@ struct Parser(R, Generator)
     @trusted void parseEscape()
     {//accesses array of appender
 
-        switch(current)
+        switch (current)
         {
         case 'f':   next(); g.put(Bytecode(IR.Char, '\f')); break;
         case 'n':   next(); g.put(Bytecode(IR.Char, '\n')); break;
@@ -1398,15 +1398,15 @@ struct Parser(R, Generator)
             enforce(nref < maxBackref, "Backref to unseen group");
             //perl's disambiguation rule i.e.
             //get next digit only if there is such group number
-            while(nref < maxBackref && next() && std.ascii.isDigit(current))
+            while (nref < maxBackref && next() && std.ascii.isDigit(current))
             {
                 nref = nref * 10 + current - '0';
             }
-            if(nref >= maxBackref)
+            if (nref >= maxBackref)
                 nref /= 10;
             enforce(!g.isOpenGroup(nref), "Backref to open group");
             uint localLimit = maxBackref - g.groupStack.top;
-            if(nref >= localLimit)
+            if (nref >= localLimit)
             {
                 g.put(Bytecode(IR.Backref, nref-localLimit));
                 g.ir[$-1].setLocalRef();
@@ -1416,7 +1416,7 @@ struct Parser(R, Generator)
             g.markBackref(nref);
             break;
         default:
-            if(current >= privateUseStart && current <= privateUseEnd)
+            if (current >= privateUseStart && current <= privateUseEnd)
             {
                 g.endPattern(current - privateUseStart + 1);
                 break;
@@ -1435,10 +1435,10 @@ struct Parser(R, Generator)
         char[MAX_PROPERTY] result;
         uint k = 0;
         enforce(next(), "eof parsing unicode property spec");
-        if(current == '{')
+        if (current == '{')
         {
-            while(k < MAX_PROPERTY && next() && current !='}' && current !=':')
-                if(current != '-' && current != ' ' && current != '_')
+            while (k < MAX_PROPERTY && next() && current !='}' && current !=':')
+                if (current != '-' && current != ' ' && current != '_')
                     result[k++] = cast(char)std.ascii.toLower(current);
             enforce(k != MAX_PROPERTY, "invalid property name");
             enforce(current == '}', "} expected ");
@@ -1495,14 +1495,14 @@ struct Parser(R, Generator)
         ulong cumRange = 0;
         for(uint i = 0; i < ir.length; i += ir[i].length)
         {
-            if(ir[i].hotspot)
+            if (ir[i].hotspot)
             {
                 assert(i + 1 < ir.length,
                     "unexpected end of IR while looking for hotspot");
                 ir[i+1] = Bytecode.fromRaw(hotspotTableSize);
                 hotspotTableSize += counterRange.top;
             }
-            switch(ir[i].code)
+            switch (ir[i].code)
             {
             case IR.RepeatStart, IR.RepeatQStart:
                 uint repEnd = cast(uint)(i + ir[i].data + IRL!(IR.RepeatStart));
@@ -1523,12 +1523,12 @@ struct Parser(R, Generator)
                 counterRange.pop();
                 break;
             case IR.GroupStart:
-                if(isBackref(ir[i].data))
+                if (isBackref(ir[i].data))
                     ir[i].setBackrefence();
                 threadCount += counterRange.top;
                 break;
             case IR.GroupEnd:
-                if(isBackref(ir[i].data))
+                if (isBackref(ir[i].data))
                     ir[i].setBackrefence();
                 threadCount += counterRange.top;
                 break;
@@ -1537,7 +1537,7 @@ struct Parser(R, Generator)
             }
         }
         checkIfOneShot();
-        if(!(flags & RegexInfo.oneShot))
+        if (!(flags & RegexInfo.oneShot))
             kickstart = Kickstart!Char(zis, new uint[](256));
         debug(std_regex_allocation) writefln("IR processed, max threads: %d", threadCount);
         optimize(zis);
@@ -1550,9 +1550,9 @@ void fixupBytecode()(Bytecode[] ir)
 
     with(IR) for(uint i=0; i<ir.length; i+= ir[i].length)
     {
-        if(ir[i].isStart || ir[i].code == Option)
+        if (ir[i].isStart || ir[i].code == Option)
             fixups.push(i);
-        else if(ir[i].code == OrEnd)
+        else if (ir[i].code == OrEnd)
         {
             // Alternatives need more care
             auto j = fixups.pop(); // last Option
@@ -1567,18 +1567,18 @@ void fixupBytecode()(Bytecode[] ir)
             for(;;)
             {
                 auto next = j + ir[j].data + IRL!(Option);
-                if(ir[next].code == IR.OrEnd)
+                if (ir[next].code == IR.OrEnd)
                     break;
                 ir[next - IRL!(GotoEndOr)].data = i - next;
                 j = next;
             }
         }
-        else if(ir[i].code == GotoEndOr)
+        else if (ir[i].code == GotoEndOr)
         {
             auto j = fixups.pop(); // Option
             ir[j].data = i - j + IRL!(GotoEndOr)- IRL!(Option); // to the next option
         }
-        else if(ir[i].isEnd)
+        else if (ir[i].isEnd)
         {
             auto j = fixups.pop();
             ir[i].data = i - j - ir[j].length;
@@ -1597,7 +1597,7 @@ void optimize(Char)(ref Regex!Char zis)
     Outer:
         for(uint i = idx; i < ir.length; i += ir[i].length)
         {
-            switch(ir[i].code)
+            switch (ir[i].code)
             {
                 case Char:
                     set.add(ir[i].data, ir[i].data+1);
@@ -1617,10 +1617,10 @@ void optimize(Char)(ref Regex!Char zis)
 
     with(zis) with(IR) for(uint i = 0; i < ir.length; i += ir[i].length)
     {
-        if(ir[i].code == InfiniteEnd)
+        if (ir[i].code == InfiniteEnd)
         {
             auto set = nextSet(i+IRL!(InfiniteEnd));
-            if(!set.empty && set.length < 10_000)
+            if (!set.empty && set.length < 10_000)
             {
                 ir[i] = Bytecode(InfiniteBloomEnd, ir[i].data);
                 ir[i - ir[i].data - IRL!(InfiniteStart)] =
@@ -1642,7 +1642,7 @@ void optimize(Char)(ref Regex!Char zis)
     {
         for(uint pc = 0; pc < ir.length; pc += ir[pc].length)
         {
-            if(ir[pc].isStart || ir[pc].isEnd)
+            if (ir[pc].isStart || ir[pc].isEnd)
             {
                 uint dest = ir[pc].indexOfPair(pc);
                 assert(dest < ir.length, text("Wrong length in opcode at pc=",
@@ -1650,7 +1650,7 @@ void optimize(Char)(ref Regex!Char zis)
                 assert(ir[dest].paired ==  ir[pc],
                     text("Wrong pairing of opcodes at pc=", pc, "and pc=", dest));
             }
-            else if(ir[pc].isAtom)
+            else if (ir[pc].isAtom)
             {
 
             }

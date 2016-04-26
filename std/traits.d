@@ -1485,7 +1485,7 @@ private FunctionAttribute extractAttribFlags(Attribs...)()
 $(D true) if $(D func) is $(D @safe) or $(D @trusted).
  */
 template isSafe(alias func)
-    if(isCallable!func)
+    if (isCallable!func)
 {
     enum isSafe = (functionAttributes!func & FunctionAttribute.safe) != 0 ||
                   (functionAttributes!func & FunctionAttribute.trusted) != 0;
@@ -2068,7 +2068,7 @@ Determines whether $(D T) has its own context pointer.
 $(D T) must be either $(D class), $(D struct), or $(D union).
 */
 template isNested(T)
-    if(is(T == class) || is(T == struct) || is(T == union))
+    if (is(T == class) || is(T == struct) || is(T == union))
 {
     enum isNested = __traits(isNested, T);
 }
@@ -2090,9 +2090,9 @@ have a context pointer.
 */
 template hasNested(T)
 {
-    static if(isStaticArray!T && T.length)
+    static if (isStaticArray!T && T.length)
         enum hasNested = hasNested!(typeof(T.init[0]));
-    else static if(is(T == class) || is(T == struct) || is(T == union))
+    else static if (is(T == class) || is(T == struct) || is(T == union))
         enum hasNested = isNested!T ||
             anySatisfy!(.hasNested, Fields!T);
     else
@@ -3076,11 +3076,11 @@ unittest
  */
 template hasElaborateCopyConstructor(S)
 {
-    static if(isStaticArray!S && S.length)
+    static if (isStaticArray!S && S.length)
     {
         enum bool hasElaborateCopyConstructor = hasElaborateCopyConstructor!(typeof(S.init[0]));
     }
-    else static if(is(S == struct))
+    else static if (is(S == struct))
     {
         enum hasElaborateCopyConstructor = hasMember!(S, "__postblit")
             || anySatisfy!(.hasElaborateCopyConstructor, FieldTypeTuple!S);
@@ -3132,11 +3132,11 @@ unittest
  */
 template hasElaborateAssign(S)
 {
-    static if(isStaticArray!S && S.length)
+    static if (isStaticArray!S && S.length)
     {
         enum bool hasElaborateAssign = hasElaborateAssign!(typeof(S.init[0]));
     }
-    else static if(is(S == struct))
+    else static if (is(S == struct))
     {
         enum hasElaborateAssign = is(typeof(S.init.opAssign(rvalueOf!S))) ||
                                   is(typeof(S.init.opAssign(lvalueOf!S))) ||
@@ -3218,11 +3218,11 @@ unittest
  */
 template hasElaborateDestructor(S)
 {
-    static if(isStaticArray!S && S.length)
+    static if (isStaticArray!S && S.length)
     {
         enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(S.init[0]));
     }
-    else static if(is(S == struct))
+    else static if (is(S == struct))
     {
         enum hasElaborateDestructor = hasMember!(S, "__dtor")
             || anySatisfy!(.hasElaborateDestructor, FieldTypeTuple!S);
@@ -3471,10 +3471,10 @@ unittest // Bugzilla 14561: huge enums
     string genEnum()
     {
         string result = "enum TLAs {";
-        foreach(c0; '0'..'2'+1)
-            foreach(c1; '0'..'9'+1)
-                foreach(c2; '0'..'9'+1)
-                    foreach(c3; '0'..'9'+1)
+        foreach (c0; '0'..'2'+1)
+            foreach (c1; '0'..'9'+1)
+                foreach (c2; '0'..'9'+1)
+                    foreach (c3; '0'..'9'+1)
         {
             result ~= '_';
             result ~= c0;
@@ -3951,7 +3951,7 @@ private template maxAlignment(U...) if (isTypeTuple!U)
 /**
 Returns class instance alignment.
  */
-template classInstanceAlignment(T) if(is(T == class))
+template classInstanceAlignment(T) if (is(T == class))
 {
     alias classInstanceAlignment = maxAlignment!(void*, typeof(T.tupleof));
 }
@@ -3986,7 +3986,7 @@ template CommonType(T...)
     }
     else static if (T.length == 1)
     {
-        static if(is(typeof(T[0])))
+        static if (is(typeof(T[0])))
         {
             alias CommonType = typeof(T[0]);
         }
@@ -4082,7 +4082,7 @@ template ImplicitConversionTargets(T)
             TypeTuple!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T : typeof(null)))
         alias ImplicitConversionTargets = TypeTuple!(typeof(null));
-    else static if(is(T : Object))
+    else static if (is(T : Object))
         alias ImplicitConversionTargets = TransitiveBaseTypeTuple!(T);
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
         alias ImplicitConversionTargets =
@@ -4577,7 +4577,7 @@ unittest
     static struct S { }
     int i;
     struct Nested { void f() { ++i; } }
-    foreach(T; TypeTuple!(int, immutable int, inout int, string, S, Nested, Object))
+    foreach (T; TypeTuple!(int, immutable int, inout int, string, S, Nested, Object))
     {
         static assert(!__traits(compiles, needLvalue(rvalueOf!T)));
         static assert( __traits(compiles, needLvalue(lvalueOf!T)));
@@ -5548,7 +5548,7 @@ unittest
  * that define $(D opApply) with a single loop variable, and builtin dynamic,
  * static and associative arrays.
  */
-enum bool isIterable(T) = is(typeof({ foreach(elem; T.init) {} }));
+enum bool isIterable(T) = is(typeof({ foreach (elem; T.init) {} }));
 
 ///
 unittest
@@ -6187,7 +6187,7 @@ template ForeachType(T)
     alias ForeachType = ReturnType!(typeof(
     (inout int x = 0)
     {
-        foreach(elem; T.init)
+        foreach (elem; T.init)
         {
             return elem;
         }
@@ -6324,7 +6324,7 @@ Returns the largest type, i.e. T such that T.sizeof is the largest.  If more
 than one type is of the same size, the leftmost argument of these in will be
 returned.
 */
-template Largest(T...) if(T.length >= 1)
+template Largest(T...) if (T.length >= 1)
 {
     static if (T.length == 1)
     {
@@ -6332,7 +6332,7 @@ template Largest(T...) if(T.length >= 1)
     }
     else static if (T.length == 2)
     {
-        static if(T[0].sizeof >= T[1].sizeof)
+        static if (T[0].sizeof >= T[1].sizeof)
         {
             alias Largest = T[0];
         }
@@ -6419,7 +6419,7 @@ unittest
 Returns the most negative value of the numeric type T.
 */
 template mostNegative(T)
-    if(isNumeric!T || isSomeChar!T || isBoolean!T)
+    if (isNumeric!T || isSomeChar!T || isBoolean!T)
 {
     static if (is(typeof(T.min_normal)))
         enum mostNegative = -T.max;
@@ -6441,10 +6441,10 @@ unittest
 ///
 unittest
 {
-    foreach(T; TypeTuple!(bool, byte, short, int, long))
+    foreach (T; TypeTuple!(bool, byte, short, int, long))
         static assert(mostNegative!T == T.min);
 
-    foreach(T; TypeTuple!(ubyte, ushort, uint, ulong, char, wchar, dchar))
+    foreach (T; TypeTuple!(ubyte, ushort, uint, ulong, char, wchar, dchar))
         static assert(mostNegative!T == 0);
 }
 
@@ -6694,7 +6694,7 @@ template getUDAs(alias symbol, alias attribute)
     import std.typetuple : Filter;
 
     template isDesiredUDA(alias S) {
-        static if(__traits(compiles, is(typeof(S) == attribute))) {
+        static if (__traits(compiles, is(typeof(S) == attribute))) {
             enum isDesiredUDA = is(typeof(S) == attribute);
         } else {
             enum isDesiredUDA = isInstanceOf!(attribute, typeof(S));

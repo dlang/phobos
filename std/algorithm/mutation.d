@@ -829,7 +829,7 @@ unittest
     assert (!typeid(S3).initializer().ptr);
     assert ( typeid(S4).initializer().ptr);
 
-    foreach(S; AliasSeq!(S1, S2, S3, S4))
+    foreach (S; AliasSeq!(S1, S2, S3, S4))
     {
         //initializeAll
         {

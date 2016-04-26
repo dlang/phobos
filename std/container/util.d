@@ -35,7 +35,7 @@ if (is(T == struct) || is(T == class))
         // to a null reference. We therefore construct an empty container
         // by passing an empty array to its constructor.
         // Issue #13872.
-        static if(arguments.length == 0)
+        static if (arguments.length == 0)
         {
             import std.range;
             alias ET = ElementType!(T.Range);
@@ -106,13 +106,13 @@ unittest
  * Convenience function for constructing a generic container.
  */
 template make(alias Container, Args...)
-    if(!is(Container))
+    if (!is(Container))
 {
     import std.range : isInputRange;
     import std.traits : isDynamicArray;
 
     auto make(Range)(Range range)
-        if(!isDynamicArray!Range && isInputRange!Range)
+        if (!isDynamicArray!Range && isInputRange!Range)
     {
         import std.range : ElementType;
         return .make!(Container!(ElementType!Range, Args))(range);

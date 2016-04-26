@@ -251,7 +251,7 @@ template isSeedable(Rng)
 Linear Congruential generator.
  */
 struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
-    if(isUnsigned!UIntType)
+    if (isUnsigned!UIntType)
 {
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
@@ -533,7 +533,7 @@ struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
                              UIntType a, size_t u, size_t s,
                              UIntType b, size_t t,
                              UIntType c, size_t l)
-    if(isUnsigned!UIntType)
+    if (isUnsigned!UIntType)
 {
     static assert(0 < w && w <= UIntType.sizeof * 8);
     static assert(1 <= m && m <= n);
@@ -614,7 +614,7 @@ Parameters for the generator.
    $(D Exception) if the InputRange didn't provide enough elements to seed the generator.
    The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
  */
-    void seed(T)(T range) if(isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
+    void seed(T)(T range) if (isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
     {
         size_t j;
         for (j = 0; j < n && !range.empty; ++j, range.popFront())
@@ -795,7 +795,7 @@ unittest
 {
     import std.range;
     // Check .save works
-    foreach(Type; std.meta.AliasSeq!(Mt19937))
+    foreach (Type; std.meta.AliasSeq!(Mt19937))
     {
         auto gen1 = Type(unpredictableSeed);
         auto gen2 = gen1.save;
@@ -834,7 +834,7 @@ unittest
  * )
  */
 struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType c)
-    if(isUnsigned!UIntType)
+    if (isUnsigned!UIntType)
 {
     static assert(bits == 32 || bits == 64 || bits == 96 || bits == 128 || bits == 160 || bits == 192,
                   "Xorshift supports only 32, 64, 96, 128, 160 and 192 bit versions. "
@@ -1101,7 +1101,7 @@ unittest
  */
 unittest
 {
-    foreach(Rng; PseudoRngTypes)
+    foreach (Rng; PseudoRngTypes)
     {
         static assert(isUniformRNG!Rng);
         auto rng = Rng(unpredictableSeed);
@@ -1175,7 +1175,7 @@ A singleton instance of the default random number generator
     static bool initialized;
     if (!initialized)
     {
-        static if(isSeedable!(Random, typeof(map!((a) => unpredictableSeed)(repeat(0)))))
+        static if (isSeedable!(Random, typeof(map!((a) => unpredictableSeed)(repeat(0)))))
             result.seed(map!((a) => unpredictableSeed)(repeat(0)));
         else
             result = Random(unpredictableSeed);
@@ -1239,7 +1239,7 @@ unittest
         assert('a' <= x && x < 'z');
     }
 
-    foreach(i; 0 .. 20)
+    foreach (i; 0 .. 20)
     {
         immutable ubyte a = 0;
             immutable ubyte b = 15;
@@ -1597,7 +1597,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 
 @safe unittest
 {
-    foreach(T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong))
     {
         T init = uniform!T();
@@ -1654,7 +1654,7 @@ if (is(E == enum))
     enum Fruit { Apple = 12, Mango = 29, Pear = 72 }
     foreach (_; 0 .. 100)
     {
-        foreach(f; [uniform!Fruit(), rndGen.uniform!Fruit()])
+        foreach (f; [uniform!Fruit(), rndGen.uniform!Fruit()])
         {
             assert(f == Fruit.Apple || f == Fruit.Mango || f == Fruit.Pear);
         }
@@ -1783,7 +1783,7 @@ array of size $(D n) of positive numbers of type $(D F) that sum to
 $(D 1). If $(D useThis) is provided, it is used as storage.
  */
 F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
-    if(isFloatingPoint!F)
+    if (isFloatingPoint!F)
 {
     import std.numeric : normalize;
     useThis.length = n;
@@ -1820,14 +1820,14 @@ Params:
  */
 
 void randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
-    if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
+    if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     return partialShuffle!(Range, RandomGen)(r, r.length, gen);
 }
 
 /// ditto
 void randomShuffle(Range)(Range r)
-    if(isRandomAccessRange!Range)
+    if (isRandomAccessRange!Range)
 {
     return randomShuffle(r, rndGen);
 }
@@ -1835,7 +1835,7 @@ void randomShuffle(Range)(Range r)
 unittest
 {
     import std.algorithm;
-    foreach(RandomGen; PseudoRngTypes)
+    foreach (RandomGen; PseudoRngTypes)
     {
         // Also tests partialShuffle indirectly.
         auto a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -1869,7 +1869,7 @@ Params:
           specified, defaults to $(D rndGen)
 */
 void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
-    if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
+    if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     import std.exception : enforce;
     import std.algorithm : swapAt;
@@ -1882,7 +1882,7 @@ void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
 
 /// ditto
 void partialShuffle(Range)(Range r, in size_t n)
-    if(isRandomAccessRange!Range)
+    if (isRandomAccessRange!Range)
 {
     return partialShuffle(r, n, rndGen);
 }
@@ -1890,7 +1890,7 @@ void partialShuffle(Range)(Range r, in size_t n)
 unittest
 {
     import std.algorithm;
-    foreach(RandomGen; PseudoRngTypes)
+    foreach (RandomGen; PseudoRngTypes)
     {
         auto a = [0, 1, 1, 2, 3];
         auto b = a.dup;
@@ -1903,7 +1903,7 @@ unittest
         immutable int LEN = 2;
         immutable int NUM = 750;
         int[][] chk;
-        foreach(step; 0..NUM)
+        foreach (step; 0..NUM)
         {
             partialShuffle(a, LEN, gen);
             chk ~= a[0..LEN].dup;
@@ -2614,7 +2614,7 @@ Variable names are chosen to match those in Vitter's paper.
             while (true)
             {
                 // Step D2: set values of x and u.
-                while(1)
+                while (1)
                 {
                     x = _available * (1-_Vprime);
                     s = cast(size_t) trunc(x);
@@ -2954,16 +2954,16 @@ unittest
          * This is a rough-and-ready check that the statistical properties
          * are in the ballpark -- not a proper validation of statistical
          * quality!  This incidentally also checks for reference-type
-         * initialization bugs, as the foreach() loop will operate on a
+         * initialization bugs, as the foreach () loop will operate on a
          * copy of the popFronted (and hence initialized) sample.
          */
         {
             size_t count0, count1, count99;
-            foreach(_; 0 .. 100_000)
+            foreach (_; 0 .. 100_000)
             {
                 auto sample = randomSample(iota(100), 5, &rng);
                 sample.popFront();
-                foreach(s; sample)
+                foreach (s; sample)
                 {
                     if (s == 0)
                     {

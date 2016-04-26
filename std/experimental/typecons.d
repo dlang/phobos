@@ -294,7 +294,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                     {
                         string r;
                         bool first = true;
-                        foreach(i; staticIota!(0, num))
+                        foreach (i; staticIota!(0, num))
                         {
                             import std.conv : to;
                             r ~= (first ? "" : ", ") ~ " a" ~ (i+1).to!string;
@@ -362,7 +362,7 @@ private template wrapperSignature(alias fun)
     {
         string r;
         bool first = true;
-        foreach(i, p; param)
+        foreach (i, p; param)
         {
             import std.conv : to;
             r ~= (first ? "" : ", ") ~ p.stringof ~ " a" ~ (i+1).to!string;

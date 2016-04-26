@@ -700,7 +700,7 @@ Throws: $(D ErrnoException) on error.
         scope(exit)
         {
             assert(_p.refs);
-            if(!--_p.refs)
+            if (!--_p.refs)
                 free(_p);
             _p = null; // start a new life
         }
@@ -2526,7 +2526,7 @@ $(D Range) that locks the file and allows fast writing to it.
 
         ~this() @trusted
         {
-            if(fps_)
+            if (fps_)
             {
                 FUNLOCK(fps_);
                 fps_ = null;
@@ -2535,7 +2535,7 @@ $(D Range) that locks the file and allows fast writing to it.
 
         this(this) @trusted
         {
-            if(fps_)
+            if (fps_)
             {
                 FLOCK(fps_);
             }
@@ -2929,7 +2929,7 @@ unittest
     @system void systemTests()
     {
         //system code can write to files/stdout with anything!
-        if(false)
+        if (false)
         {
             auto f = File();
 
@@ -2984,7 +2984,7 @@ unittest
         auto f = File();
 
         //safe code can write to files only with @safe and @trusted code...
-        if(false)
+        if (false)
         {
             f.write("just a string");
             f.write("string with arg: ", 47);
@@ -3240,7 +3240,7 @@ unittest // bugzilla 14861
     scope (exit) fr.close();
     int nom; string fam, nam, ot;
     // Error format read
-    while(!fr.eof)
+    while (!fr.eof)
         fr.readf("%s;%s;%s;%s\n", &nom, &fam, &nam, &ot);
 }
 
@@ -4376,7 +4376,7 @@ private struct ReadlnAppender
         char[4] ubuf;
         char[] u = toUTF8(ubuf, dc);
         reserve(u.length);
-        foreach(c; u)
+        foreach (c; u)
             buf.ptr[pos++] = c;
     }
     void putonly(char[] b)
@@ -4445,9 +4445,9 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
          */
       L1:
         int c;
-        while((c = FGETC(fp)) != -1) {
+        while ((c = FGETC(fp)) != -1) {
             app.putchar(cast(char) c);
-            if(c == terminator) {
+            if (c == terminator) {
                 buf = app.data;
                 return buf.length;
             }
@@ -4529,9 +4529,9 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     app.initialize(buf);
 
     int c;
-    while((c = FGETC(fp)) != -1) {
+    while ((c = FGETC(fp)) != -1) {
         app.putchar(cast(char) c);
-        if(c == terminator) {
+        if (c == terminator) {
             buf = app.data;
             return buf.length;
         }

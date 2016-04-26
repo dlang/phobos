@@ -116,7 +116,7 @@ class ZlibException : Exception
 uint adler32(uint adler, const(void)[] buf)
 {
     import std.range : chunks;
-    foreach(chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
+    foreach (chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
     {
         adler = etc.c.zlib.adler32(adler, chunk.ptr, cast(uint)chunk.length);
     }
@@ -159,7 +159,7 @@ unittest
 uint crc32(uint crc, const(void)[] buf)
 {
     import std.range : chunks;
-    foreach(chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
+    foreach (chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
     {
         crc = etc.c.zlib.crc32(crc, chunk.ptr, cast(uint)chunk.length);
     }
@@ -477,13 +477,13 @@ class Compress
         zs.next_out = tmpbuf.ptr;
         zs.avail_out = tmpbuf.length;
 
-        while( (err = deflate(&zs, mode)) != Z_STREAM_END)
+        while ( (err = deflate(&zs, mode)) != Z_STREAM_END)
         {
             if (err == Z_OK)
             {
                 if (zs.avail_out != 0 && mode != Z_FINISH)
                     break;
-                else if(zs.avail_out == 0)
+                else if (zs.avail_out == 0)
                 {
                     destbuf ~= tmpbuf;
                     zs.next_out = tmpbuf.ptr;
@@ -580,9 +580,9 @@ class UnCompress
         if (!inited)
         {
         int windowBits = 15;
-        if(format == HeaderFormat.gzip)
+        if (format == HeaderFormat.gzip)
             windowBits += 16;
-            else if(format == HeaderFormat.determineFromData)
+            else if (format == HeaderFormat.determineFromData)
             windowBits += 32;
 
             err = inflateInit2(&zs, windowBits);
@@ -693,10 +693,10 @@ unittest // by Dave
         char[] buf = new char[uniform(0, 100)];
 
         // Alternate between more & less compressible
-        foreach(ref char c; buf)
+        foreach (ref char c; buf)
             c = cast(char) (' ' + (uniform(0, idx % 2 ? 91 : 2)));
 
-        if(CompressThenUncompress(buf)) {
+        if (CompressThenUncompress(buf)) {
             debug(zlib) writeln("; Success.");
         } else {
             return;
@@ -708,10 +708,10 @@ unittest // by Dave
         char[] buf = new char[uniform(0, 1000/*0000*/)];
 
         // Alternate between more & less compressible
-        foreach(ref char c; buf)
+        foreach (ref char c; buf)
             c = cast(char) (' ' + (uniform(0, idx % 2 ? 91 : 10)));
 
-        if(CompressThenUncompress(buf)) {
+        if (CompressThenUncompress(buf)) {
             debug(zlib) writefln("; Success.");
         } else {
             return;

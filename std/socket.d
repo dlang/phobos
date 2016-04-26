@@ -208,9 +208,9 @@ string formatSocketError(int err) @trusted
 
         auto len = strlen(cs);
 
-        if(cs[len - 1] == '\n')
+        if (cs[len - 1] == '\n')
             len--;
-        if(cs[len - 1] == '\r')
+        if (cs[len - 1] == '\r')
             len--;
         return cs[0 .. len].idup;
     }
@@ -318,7 +318,7 @@ shared static this() @system
         // The version is just a request.
         int val;
         val = WSAStartup(0x2020, &wd);
-        if(val)         // Request Winsock 2.2 for IPv6.
+        if (val)         // Request Winsock 2.2 for IPv6.
             throw new SocketOSException("Unable to initialize socket library", val);
 
         // These functions may not be present on older Windows versions.
@@ -406,7 +406,7 @@ enum ProtocolType: int
  * if (proto.getProtocolByType(ProtocolType.TCP))
  * {
  *     writefln("  Name: %s", proto.name);
- *     foreach(string s; proto.aliases)
+ *     foreach (string s; proto.aliases)
  *          writefln("  Alias: %s", s);
  * }
  * else
@@ -429,11 +429,11 @@ class Protocol
         int i;
         for(i = 0;; i++)
         {
-            if(!proto.p_aliases[i])
+            if (!proto.p_aliases[i])
                 break;
         }
 
-        if(i)
+        if (i)
         {
             aliases = new string[i];
             for(i = 0; i != aliases.length; i++)
@@ -453,7 +453,7 @@ class Protocol
     {
         protoent* proto;
         proto = getprotobyname(name.tempCString());
-        if(!proto)
+        if (!proto)
             return false;
         populate(proto);
         return true;
@@ -466,7 +466,7 @@ class Protocol
     {
         protoent* proto;
         proto = getprotobynumber(type);
-        if(!proto)
+        if (!proto)
             return false;
         populate(proto);
         return true;
@@ -484,7 +484,7 @@ unittest
         assert(proto.getProtocolByType(ProtocolType.TCP));
         //writeln("About protocol TCP:");
         //writefln("\tName: %s", proto.name);
-        // foreach(string s; proto.aliases)
+        // foreach (string s; proto.aliases)
         // {
         //      writefln("\tAlias: %s", s);
         // }
@@ -531,11 +531,11 @@ class Service
         int i;
         for(i = 0;; i++)
         {
-            if(!serv.s_aliases[i])
+            if (!serv.s_aliases[i])
                 break;
         }
 
-        if(i)
+        if (i)
         {
             aliases = new string[i];
             for(i = 0; i != aliases.length; i++)
@@ -558,7 +558,7 @@ class Service
     {
         servent* serv;
         serv = getservbyname(name.tempCString(), protocolName.tempCString());
-        if(!serv)
+        if (!serv)
             return false;
         populate(serv);
         return true;
@@ -570,7 +570,7 @@ class Service
     {
         servent* serv;
         serv = getservbyport(port, protocolName.tempCString());
-        if(!serv)
+        if (!serv)
             return false;
         populate(serv);
         return true;
@@ -582,13 +582,13 @@ unittest
 {
     softUnittest({
         Service serv = new Service;
-        if(serv.getServiceByName("epmap", "tcp"))
+        if (serv.getServiceByName("epmap", "tcp"))
         {
             // writefln("About service epmap:");
             // writefln("\tService: %s", serv.name);
             // writefln("\tPort: %d", serv.port);
             // writefln("\tProtocol: %s", serv.protocolName);
-            // foreach(string s; serv.aliases)
+            // foreach (string s; serv.aliases)
             // {
             //      writefln("\tAlias: %s", s);
             // }
@@ -684,7 +684,7 @@ class InternetHost
 
     void validHostent(in hostent* he)
     {
-        if(he.h_addrtype != cast(int)AddressFamily.INET || he.h_length != 4)
+        if (he.h_addrtype != cast(int)AddressFamily.INET || he.h_length != 4)
             throw new HostException("Address family mismatch");
     }
 
@@ -699,11 +699,11 @@ class InternetHost
         for(i = 0;; i++)
         {
             p = he.h_aliases[i];
-            if(!p)
+            if (!p)
                 break;
         }
 
-        if(i)
+        if (i)
         {
             aliases = new string[i];
             for(i = 0; i != aliases.length; i++)
@@ -720,11 +720,11 @@ class InternetHost
         for(i = 0;; i++)
         {
             p = he.h_addr_list[i];
-            if(!p)
+            if (!p)
                 break;
         }
 
-        if(i)
+        if (i)
         {
             addrList = new uint[i];
             for(i = 0; i != addrList.length; i++)
@@ -846,7 +846,7 @@ unittest
                ih.name);
         // writefln("IP address = %s", ia.toAddrString());
         // writefln("name = %s", ih.name);
-        // foreach(int i, string s; ih.aliases)
+        // foreach (int i, string s; ih.aliases)
         // {
         //      writefln("aliases[%d] = %s", i, s);
         // }
@@ -854,7 +854,7 @@ unittest
 
         //assert(ih.getHostByAddr(ih.addrList[0]));
         // writefln("name = %s", ih.name);
-        // foreach(int i, string s; ih.aliases)
+        // foreach (int i, string s; ih.aliases)
         // {
         //      writefln("aliases[%d] = %s", i, s);
         // }
@@ -1563,10 +1563,10 @@ public:
     this(in char[] addr, ushort port)
     {
         uint uiaddr = parse(addr);
-        if(ADDR_NONE == uiaddr)
+        if (ADDR_NONE == uiaddr)
         {
             InternetHost ih = new InternetHost;
-            if(!ih.getHostByName(addr))
+            if (!ih.getHostByName(addr))
                 //throw new AddressException("Invalid internet address");
                 throw new AddressException(
                           text("Unable to resolve host '", addr, "'"));
@@ -2636,7 +2636,7 @@ public:
     {
         _family = af;
         auto handle = cast(socket_t) socket(af, type, protocol);
-        if(handle == socket_t.init)
+        if (handle == socket_t.init)
             throw new SocketOSException("Unable to create socket");
         setSock(handle);
     }
@@ -2656,7 +2656,7 @@ public:
     {
         protoent* proto;
         proto = getprotobyname(protocolName.tempCString());
-        if(!proto)
+        if (!proto)
             throw new SocketOSException("Unable to find the protocol");
         this(af, type, cast(ProtocolType)proto.p_proto);
     }
@@ -2717,20 +2717,20 @@ public:
         version(Windows)
         {
             uint num = !byes;
-            if(_SOCKET_ERROR == ioctlsocket(sock, FIONBIO, &num))
+            if (_SOCKET_ERROR == ioctlsocket(sock, FIONBIO, &num))
                 goto err;
             _blocking = byes;
         }
         else version(Posix)
         {
             int x = fcntl(sock, F_GETFL, 0);
-            if(-1 == x)
+            if (-1 == x)
                 goto err;
-            if(byes)
+            if (byes)
                 x &= ~O_NONBLOCK;
             else
                 x |= O_NONBLOCK;
-            if(-1 == fcntl(sock, F_SETFL, x))
+            if (-1 == fcntl(sock, F_SETFL, x))
                 goto err;
         }
         return;         // Success.
@@ -2757,7 +2757,7 @@ public:
     /// Associate a local address with this socket.
     void bind(Address addr) @trusted
     {
-        if(_SOCKET_ERROR == .bind(sock, addr.name, addr.nameLen))
+        if (_SOCKET_ERROR == .bind(sock, addr.name, addr.nameLen))
             throw new SocketOSException("Unable to bind socket");
     }
 
@@ -2768,21 +2768,21 @@ public:
      */
     void connect(Address to) @trusted
     {
-        if(_SOCKET_ERROR == .connect(sock, to.name, to.nameLen))
+        if (_SOCKET_ERROR == .connect(sock, to.name, to.nameLen))
         {
             int err;
             err = _lasterr();
 
-            if(!blocking)
+            if (!blocking)
             {
                 version(Windows)
                 {
-                    if(WSAEWOULDBLOCK == err)
+                    if (WSAEWOULDBLOCK == err)
                         return;
                 }
                 else version(Posix)
                 {
-                    if(EINPROGRESS == err)
+                    if (EINPROGRESS == err)
                         return;
                 }
                 else
@@ -2801,7 +2801,7 @@ public:
      */
     void listen(int backlog) @trusted
     {
-        if(_SOCKET_ERROR == .listen(sock, backlog))
+        if (_SOCKET_ERROR == .listen(sock, backlog))
             throw new SocketOSException("Unable to listen on socket");
     }
 
@@ -2827,7 +2827,7 @@ public:
     Socket accept() @trusted
     {
         auto newsock = cast(socket_t).accept(sock, null, null);
-        if(socket_t.init == newsock)
+        if (socket_t.init == newsock)
             throw new SocketAcceptException("Unable to accept socket connection");
 
         Socket newSocket;
@@ -2890,7 +2890,7 @@ public:
     static @property string hostName() @trusted     // getter
     {
         char[256] result;         // Host names are limited to 255 chars.
-        if(_SOCKET_ERROR == .gethostname(result.ptr, result.length))
+        if (_SOCKET_ERROR == .gethostname(result.ptr, result.length))
             throw new SocketOSException("Unable to obtain host name");
         return to!string(result.ptr);
     }
@@ -2900,9 +2900,9 @@ public:
     {
         Address addr = createAddress();
         socklen_t nameLen = addr.nameLen;
-        if(_SOCKET_ERROR == .getpeername(sock, addr.name, &nameLen))
+        if (_SOCKET_ERROR == .getpeername(sock, addr.name, &nameLen))
             throw new SocketOSException("Unable to obtain remote socket address");
-        if(nameLen > addr.nameLen)
+        if (nameLen > addr.nameLen)
             throw new SocketParameterException("Not enough socket address storage");
         assert(addr.addressFamily == _family);
         return addr;
@@ -2913,9 +2913,9 @@ public:
     {
         Address addr = createAddress();
         socklen_t nameLen = addr.nameLen;
-        if(_SOCKET_ERROR == .getsockname(sock, addr.name, &nameLen))
+        if (_SOCKET_ERROR == .getsockname(sock, addr.name, &nameLen))
             throw new SocketOSException("Unable to obtain local socket address");
-        if(nameLen > addr.nameLen)
+        if (nameLen > addr.nameLen)
             throw new SocketParameterException("Not enough socket address storage");
         assert(addr.addressFamily == _family);
         return addr;
@@ -3042,7 +3042,7 @@ public:
      */
     ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from) @trusted
     {
-        if(!buf.length)         //return 0 and don't think the connection closed
+        if (!buf.length)         //return 0 and don't think the connection closed
             return 0;
         if (from is null || from.addressFamily != _family)
             from = createAddress();
@@ -3051,12 +3051,12 @@ public:
         {
             auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, from.name, &nameLen);
             assert(from.addressFamily == _family);
-            // if(!read) //connection closed
+            // if (!read) //connection closed
             return read;
         } else {
             auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name, &nameLen);
             assert(from.addressFamily == _family);
-            // if(!read) //connection closed
+            // if (!read) //connection closed
             return read;
         }
     }
@@ -3073,16 +3073,16 @@ public:
     /// ditto
     ptrdiff_t receiveFrom(void[] buf, SocketFlags flags) @trusted
     {
-        if(!buf.length)         //return 0 and don't think the connection closed
+        if (!buf.length)         //return 0 and don't think the connection closed
             return 0;
         version(Windows)
         {
             auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, null, null);
-            // if(!read) //connection closed
+            // if (!read) //connection closed
             return read;
         } else {
             auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, null, null);
-            // if(!read) //connection closed
+            // if (!read) //connection closed
             return read;
         }
     }
@@ -3102,7 +3102,7 @@ public:
     int getOption(SocketOptionLevel level, SocketOption option, void[] result) @trusted
     {
         socklen_t len = cast(socklen_t) result.length;
-        if(_SOCKET_ERROR == .getsockopt(sock, cast(int)level, cast(int)option, result.ptr, &len))
+        if (_SOCKET_ERROR == .getsockopt(sock, cast(int)level, cast(int)option, result.ptr, &len))
             throw new SocketOSException("Unable to get socket option");
         return len;
     }
@@ -3149,7 +3149,7 @@ public:
     /// Set a socket option.
     void setOption(SocketOptionLevel level, SocketOption option, void[] value) @trusted
     {
-        if(_SOCKET_ERROR == .setsockopt(sock, cast(int)level,
+        if (_SOCKET_ERROR == .setsockopt(sock, cast(int)level,
                                         cast(int)option, value.ptr, cast(uint) value.length))
             throw new SocketOSException("Unable to set socket option");
     }
@@ -3324,12 +3324,12 @@ public:
     in
     {
         //make sure none of the SocketSet's are the same object
-        if(checkRead)
+        if (checkRead)
         {
             assert(checkRead !is checkWrite);
             assert(checkRead !is checkError);
         }
-        if(checkWrite)
+        if (checkWrite)
         {
             assert(checkWrite !is checkError);
         }
@@ -3348,7 +3348,7 @@ public:
         }
         else
         {
-            if(checkRead)
+            if (checkRead)
             {
                 fr = checkRead.toFd_set();
                 n = checkRead.selectn();
@@ -3358,12 +3358,12 @@ public:
                 fr = null;
             }
 
-            if(checkWrite)
+            if (checkWrite)
             {
                 fw = checkWrite.toFd_set();
                 int _n;
                 _n = checkWrite.selectn();
-                if(_n > n)
+                if (_n > n)
                     n = _n;
             }
             else
@@ -3371,12 +3371,12 @@ public:
                 fw = null;
             }
 
-            if(checkError)
+            if (checkError)
             {
                 fe = checkError.toFd_set();
                 int _n;
                 _n = checkError.selectn();
-                if(_n > n)
+                if (_n > n)
                     n = _n;
             }
             else
@@ -3395,12 +3395,12 @@ public:
 
         version(Windows)
         {
-            if(_SOCKET_ERROR == result && WSAGetLastError() == WSAEINTR)
+            if (_SOCKET_ERROR == result && WSAGetLastError() == WSAEINTR)
                 return -1;
         }
         else version(Posix)
         {
-            if(_SOCKET_ERROR == result && errno == EINTR)
+            if (_SOCKET_ERROR == result && errno == EINTR)
                 return -1;
         }
         else
@@ -3408,7 +3408,7 @@ public:
             static assert(0);
         }
 
-        if(_SOCKET_ERROR == result)
+        if (_SOCKET_ERROR == result)
             throw new SocketOSException("Socket select error");
 
         return result;
@@ -3420,7 +3420,7 @@ public:
     protected Address createAddress() pure nothrow
     {
         Address result;
-        switch(_family)
+        switch (_family)
         {
         static if (is(sockaddr_un))
         {

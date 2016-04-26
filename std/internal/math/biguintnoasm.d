@@ -224,7 +224,7 @@ uint multibyteMulAdd(char op)(uint [] dest, const(uint)[] src,
     ulong c = carry;
     for(size_t i = 0; i < src.length; ++i)
     {
-        static if(op=='+')
+        static if (op=='+')
         {
             c += cast(ulong)(multiplier) * src[i]  + dest[i];
             dest[i] = cast(uint)c;

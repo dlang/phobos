@@ -359,7 +359,7 @@ unittest
     char[10] tmpbuf = void;
     auto textbuf = ScopeBuffer!char(tmpbuf);
     scope(exit) textbuf.free();
-    foreach(i; 0..10) textbuf.put('w');
+    foreach (i; 0..10) textbuf.put('w');
     const csb = textbuf;
     const elem = csb[3];
     const slice0 = csb[0..5];

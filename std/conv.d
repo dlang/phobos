@@ -896,7 +896,7 @@ T toImpl(T, S)(S value)
     {
         static if (isSwitchable!(OriginalType!S) && EnumMembers!S.length <= 50)
         {
-            switch(value)
+            switch (value)
             {
                 foreach (member; NoDuplicates!(EnumMembers!S))
                 {
@@ -1292,7 +1292,7 @@ body
     }
 
     import std.array;
-    switch(radix)
+    switch (radix)
     {
         case 10:
             // The (value+0) is so integral promotions happen to the type
@@ -2494,10 +2494,10 @@ Target parse(Target, Source)(ref Source p)
 
     bool isHex = false;
     bool startsWithZero = p.front == '0';
-    if(startsWithZero)
+    if (startsWithZero)
     {
         p.popFront();
-        if(p.empty)
+        if (p.empty)
         {
             return (sign) ? -0.0 : 0.0;
         }
@@ -2661,19 +2661,19 @@ Target parse(Target, Source)(ref Source p)
 
                 //Have to shift one more time
                 //and do rounding
-                if((msdec & 0xFFE0_0000_0000_0000) != 0)
+                if ((msdec & 0xFFE0_0000_0000_0000) != 0)
                 {
                     auto roundUp = (msdec & 0x1);
 
                     msdec  = ((cast(ulong)msdec) >> 1);
                     e2++;
-                    if(roundUp)
+                    if (roundUp)
                     {
                         msdec += 1;
                         //If mantissa was 0b1111... and we added +1
                         //the mantissa should be 0b10000 (think of implicit bit)
                         //and the exponent increased
-                        if((msdec & 0x0020_0000_0000_0000) != 0)
+                        if ((msdec & 0x0020_0000_0000_0000) != 0)
                         {
                             msdec = 0x0010_0000_0000_0000;
                             e2++;
@@ -2924,7 +2924,7 @@ unittest
 //Tests for the double implementation
 unittest
 {
-    static if(real.mant_dig == 53)
+    static if (real.mant_dig == 53)
     {
         import core.stdc.stdlib, std.exception, std.math;
 
@@ -3002,11 +3002,11 @@ unittest
     errno = 0;  // In case it was set by another unittest in a different module.
     struct longdouble
     {
-        static if(real.mant_dig == 64)
+        static if (real.mant_dig == 64)
         {
             ushort[5] value;
         }
-        else static if(real.mant_dig == 53)
+        else static if (real.mant_dig == 53)
         {
             ushort[4] value;
         }
@@ -3020,9 +3020,9 @@ unittest
     longdouble x1;
     int i;
 
-    static if(real.mant_dig == 64)
+    static if (real.mant_dig == 64)
         enum s = "0x1.FFFFFFFFFFFFFFFEp-16382";
-    else static if(real.mant_dig == 53)
+    else static if (real.mant_dig == 53)
         enum s = "0x1.FFFFFFFFFFFFFFFEp-1000";
     else
         static assert(false, "Floating point format for real not supported");
@@ -3032,7 +3032,7 @@ unittest
     assert(s2.empty);
     x = *cast(longdouble *)&ld;
 
-    static if(real.mant_dig == 64)
+    static if (real.mant_dig == 64)
     {
         version (CRuntime_Microsoft)
             ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
@@ -3744,15 +3744,15 @@ See_Also:
     $(LREF parse) for parsing octal strings at runtime.
  */
 template octal(string num)
-    if(isOctalLiteral(num))
+    if (isOctalLiteral(num))
 {
-    static if((octalFitsInInt!num && !literalIsLong!num) && !literalIsUnsigned!num)
+    static if ((octalFitsInInt!num && !literalIsLong!num) && !literalIsUnsigned!num)
         enum octal = octal!int(num);
-    else static if((!octalFitsInInt!num || literalIsLong!num) && !literalIsUnsigned!num)
+    else static if ((!octalFitsInInt!num || literalIsLong!num) && !literalIsUnsigned!num)
         enum octal = octal!long(num);
-    else static if((octalFitsInInt!num && !literalIsLong!num) && literalIsUnsigned!num)
+    else static if ((octalFitsInInt!num && !literalIsLong!num) && literalIsUnsigned!num)
         enum octal = octal!uint(num);
-    else static if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
+    else static if ((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
         enum octal = octal!ulong(num);
     else
         static assert(false);
@@ -4924,7 +4924,7 @@ unittest //http://forum.dlang.org/post/nxbdgtdlmwscocbiypjs@forum.dlang.org
     {
         invariant()
         {
-            if(j == 0)
+            if (j == 0)
                 assert(a.i.isNaN(), "why is 'j' zero?? and i is not NaN?");
             else
                 assert(!a.i.isNaN());
@@ -5239,28 +5239,28 @@ unittest
 
 unittest
 {
-    foreach(T; AliasSeq!(byte, ubyte))
+    foreach (T; AliasSeq!(byte, ubyte))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ubyte));
         static assert(is(typeof(unsigned(cast(const T)1)) == ubyte));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == ubyte));
     }
 
-    foreach(T; AliasSeq!(short, ushort))
+    foreach (T; AliasSeq!(short, ushort))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ushort));
         static assert(is(typeof(unsigned(cast(const T)1)) == ushort));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == ushort));
     }
 
-    foreach(T; AliasSeq!(int, uint))
+    foreach (T; AliasSeq!(int, uint))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == uint));
         static assert(is(typeof(unsigned(cast(const T)1)) == uint));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == uint));
     }
 
-    foreach(T; AliasSeq!(long, ulong))
+    foreach (T; AliasSeq!(long, ulong))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ulong));
         static assert(is(typeof(unsigned(cast(const T)1)) == ulong));
@@ -5277,7 +5277,7 @@ auto unsigned(T)(T x) if (isSomeChar!T)
 
 unittest
 {
-    foreach(T; AliasSeq!(char, wchar, dchar))
+    foreach (T; AliasSeq!(char, wchar, dchar))
     {
         static assert(is(typeof(unsigned(cast(T)'A')) == T));
         static assert(is(typeof(unsigned(cast(const T)'A')) == T));
@@ -5313,28 +5313,28 @@ unittest
 
 unittest
 {
-    foreach(T; AliasSeq!(byte, ubyte))
+    foreach (T; AliasSeq!(byte, ubyte))
     {
         static assert(is(typeof(signed(cast(T)1)) == byte));
         static assert(is(typeof(signed(cast(const T)1)) == byte));
         static assert(is(typeof(signed(cast(immutable T)1)) == byte));
     }
 
-    foreach(T; AliasSeq!(short, ushort))
+    foreach (T; AliasSeq!(short, ushort))
     {
         static assert(is(typeof(signed(cast(T)1)) == short));
         static assert(is(typeof(signed(cast(const T)1)) == short));
         static assert(is(typeof(signed(cast(immutable T)1)) == short));
     }
 
-    foreach(T; AliasSeq!(int, uint))
+    foreach (T; AliasSeq!(int, uint))
     {
         static assert(is(typeof(signed(cast(T)1)) == int));
         static assert(is(typeof(signed(cast(const T)1)) == int));
         static assert(is(typeof(signed(cast(immutable T)1)) == int));
     }
 
-    foreach(T; AliasSeq!(long, ulong))
+    foreach (T; AliasSeq!(long, ulong))
     {
         static assert(is(typeof(signed(cast(T)1)) == long));
         static assert(is(typeof(signed(cast(const T)1)) == long));
@@ -5435,7 +5435,7 @@ private bool isHexLiteral(String)(in String hexData)
     import std.ascii : isHexDigit;
     import std.uni : lineSep, paraSep, nelSep;
     size_t i;
-    foreach(const dchar c; hexData)
+    foreach (const dchar c; hexData)
     {
         switch (c)
         {
@@ -5583,7 +5583,7 @@ private auto hexStrImpl(String)(String hexData)
     result.length = hexData.length / 2;
     size_t cnt;
     ubyte v;
-    foreach(c; hexData)
+    foreach (c; hexData)
     {
         if (c.isHexDigit)
         {
