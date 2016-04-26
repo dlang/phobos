@@ -1098,7 +1098,7 @@ L_Replace_Loop:
         final switch (state)
         {
         case State.Normal:
-            for(offset = 0; offset < format.length; offset++)//no decoding
+            for (offset = 0; offset < format.length; offset++)//no decoding
             {
                 if (format[offset] == '$')
                 {

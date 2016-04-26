@@ -39,7 +39,7 @@ module std.regex.internal.generator;
     void compose()
     {
         uint pc = 0, counter = 0, dataLenOld = uint.max;
-        for(;;)
+        for (;;)
         {
             switch (re.ir[pc].code)
             {
@@ -90,7 +90,7 @@ module std.regex.internal.generator;
                     }
                     nOpt++;
                     nOpt = rand(nOpt);
-                    for(;nOpt; nOpt--)
+                    for (;nOpt; nOpt--)
                     {
                         pc += re.ir[pc].data + IRL!(IR.Option);
                     }

@@ -140,7 +140,7 @@ unittest
 
     // test allocation sizes
     assert(GCAllocator.instance.goodAllocSize(1) == 16);
-    for(size_t s = 16; s <= 8192; s *= 2)
+    for (size_t s = 16; s <= 8192; s *= 2)
     {
         assert(GCAllocator.instance.goodAllocSize(s) == s);
         assert(GCAllocator.instance.goodAllocSize(s - (s / 2) + 1) == s);

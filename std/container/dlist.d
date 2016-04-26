@@ -771,7 +771,7 @@ private:
     alias IntList = DList!int;
     IntList list = IntList([0,1,2,3]);
     auto range = list[];
-    for( ; !range.empty; range.popFront())
+    for ( ; !range.empty; range.popFront())
     {
         int item = range.front;
         if (item == 2)
@@ -784,7 +784,7 @@ private:
 
     list = IntList([0,1,2,3]);
     range = list[];
-    for( ; !range.empty; range.popFront())
+    for ( ; !range.empty; range.popFront())
     {
         int item = range.front;
         if (item == 2)
@@ -797,7 +797,7 @@ private:
 
     list = IntList([0,1,2,3]);
     range = list[];
-    for( ; !range.empty; range.popFront())
+    for ( ; !range.empty; range.popFront())
     {
         int item = range.front;
         if (item == 0)
@@ -810,7 +810,7 @@ private:
 
     list = IntList([0,1,2,3]);
     range = list[];
-    for( ; !range.empty; range.popFront())
+    for ( ; !range.empty; range.popFront())
     {
         int item = range.front;
         if (item == 1)

@@ -1036,7 +1036,7 @@ public:
             T[U] aa;
             try
             {
-                for(; !recordRange.empty; recordRange.popFront())
+                for (; !recordRange.empty; recordRange.popFront())
                 {
                     aa[header[_input.col-1]] = recordRange.front;
                 }
@@ -1057,7 +1057,7 @@ public:
             size_t colIndex;
             try
             {
-                for(; !recordRange.empty;)
+                for (; !recordRange.empty;)
                 {
                     auto colData = recordRange.front;
                     scope(exit) colIndex++;

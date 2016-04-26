@@ -1718,7 +1718,7 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
     static assert(isForwardRange!(typeof(radial(a, 1))));
 
     auto r = radial([1,2,3,4,5]);
-    for(auto rr = r.save; !rr.empty; rr.popFront())
+    for (auto rr = r.save; !rr.empty; rr.popFront())
     {
         assert(rr.front == moveFront(rr));
     }
@@ -2021,7 +2021,7 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
             static assert(isForwardRange!T);
         }
 
-        for(auto tt = t; !tt.empty; tt.popFront())
+        for (auto tt = t; !tt.empty; tt.popFront())
         {
             assert(tt.front == moveFront(tt));
         }
@@ -4735,7 +4735,7 @@ auto sequence(alias fun, State...)(State args)
 
     auto odds = Sequence!("a[0] + n * a[1]", Tuple!(int, int))(
         tuple(1, 2));
-    for(int currentOdd = 1; currentOdd <= 21; currentOdd += 2) {
+    for (int currentOdd = 1; currentOdd <= 21; currentOdd += 2) {
         assert(odds.front == odds[0]);
         assert(odds[0] == currentOdd);
         odds.popFront();

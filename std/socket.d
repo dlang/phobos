@@ -427,7 +427,7 @@ class Protocol
         name = to!string(proto.p_name);
 
         int i;
-        for(i = 0;; i++)
+        for (i = 0;; i++)
         {
             if (!proto.p_aliases[i])
                 break;
@@ -436,7 +436,7 @@ class Protocol
         if (i)
         {
             aliases = new string[i];
-            for(i = 0; i != aliases.length; i++)
+            for (i = 0; i != aliases.length; i++)
             {
                 aliases[i] =
                     to!string(proto.p_aliases[i]);
@@ -529,7 +529,7 @@ class Service
         protocolName = to!string(serv.s_proto);
 
         int i;
-        for(i = 0;; i++)
+        for (i = 0;; i++)
         {
             if (!serv.s_aliases[i])
                 break;
@@ -538,7 +538,7 @@ class Service
         if (i)
         {
             aliases = new string[i];
-            for(i = 0; i != aliases.length; i++)
+            for (i = 0; i != aliases.length; i++)
             {
                 aliases[i] =
                     to!string(serv.s_aliases[i]);
@@ -696,7 +696,7 @@ class InternetHost
 
         name = to!string(he.h_name);
 
-        for(i = 0;; i++)
+        for (i = 0;; i++)
         {
             p = he.h_aliases[i];
             if (!p)
@@ -706,7 +706,7 @@ class InternetHost
         if (i)
         {
             aliases = new string[i];
-            for(i = 0; i != aliases.length; i++)
+            for (i = 0; i != aliases.length; i++)
             {
                 aliases[i] =
                     to!string(he.h_aliases[i]);
@@ -717,7 +717,7 @@ class InternetHost
             aliases = null;
         }
 
-        for(i = 0;; i++)
+        for (i = 0;; i++)
         {
             p = he.h_addr_list[i];
             if (!p)
@@ -727,7 +727,7 @@ class InternetHost
         if (i)
         {
             addrList = new uint[i];
-            for(i = 0; i != addrList.length; i++)
+            for (i = 0; i != addrList.length; i++)
             {
                 addrList[i] = ntohl(*(cast(uint*)he.h_addr_list[i]));
             }

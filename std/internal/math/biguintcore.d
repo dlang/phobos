@@ -2260,7 +2260,7 @@ void toHexZeroPadded(char[] output, uint value,
     ptrdiff_t x = output.length - 1;
     static immutable string upperHexDigits = "0123456789ABCDEF";
     static immutable string lowerHexDigits = "0123456789abcdef";
-    for( ; x>=0; --x)
+    for ( ; x>=0; --x)
     {
         if (letterCase == LetterCase.upper)
         {

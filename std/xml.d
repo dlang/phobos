@@ -2206,7 +2206,7 @@ private
         if (c != '\u0022' && c != '\u0027')
             fail("attribute value requires quotes");
         s = s[1..$];
-        for(;;)
+        for (;;)
         {
             munch(s,"^<&"~c);
             if (s.length == 0) fail("unterminated attribute value");

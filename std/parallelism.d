@@ -1922,7 +1922,7 @@ public:
                     assert(from !is null);
 
                     size_t i;
-                    for(; !source.empty && i < from.length; source.popFront())
+                    for (; !source.empty && i < from.length; source.popFront())
                     {
                         from[i++] = source.front;
                     }
@@ -2180,7 +2180,7 @@ public:
                 assert(buf !is null);
 
                 size_t i;
-                for(; !source.empty && i < buf.length; source.popFront())
+                for (; !source.empty && i < buf.length; source.popFront())
                 {
                     buf[i++] = source.front;
                 }
@@ -3617,7 +3617,7 @@ enum string parallelApplyMixinInputRange = q{
                 scope(exit) rangeMutex.unlock();
 
                 size_t i = 0;
-                for(; i < workUnitSize && !range.empty; range.popFront(), i++)
+                for (; i < workUnitSize && !range.empty; range.popFront(), i++)
                 {
                     temp[i] = addressOf(range.front);
                 }
@@ -3647,7 +3647,7 @@ enum string parallelApplyMixinInputRange = q{
                 scope(exit) rangeMutex.unlock();
 
                 size_t i = 0;
-                for(; i < workUnitSize && !range.empty; range.popFront(), i++)
+                for (; i < workUnitSize && !range.empty; range.popFront(), i++)
                 {
                     temp[i] = range.front;
                 }
@@ -4296,7 +4296,7 @@ version(parallelismStressTest)
     unittest
     {
         size_t attempt;
-        for(; attempt < 10; attempt++)
+        for (; attempt < 10; attempt++)
             foreach (poolSize; [0, 4])
         {
 

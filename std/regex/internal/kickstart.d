@@ -81,7 +81,7 @@ private:
                 Char[dchar.sizeof/Char.sizeof] buf;
                 uint tmask = mask;
                 size_t total = encode(buf, ch);
-                for(size_t i = 0; i < total; i++, tmask<<=1)
+                for (size_t i = 0; i < total; i++, tmask<<=1)
                 {
                     static if (charSize == 1)
                         setBits(buf[i], tmask);
@@ -143,7 +143,7 @@ public:
             return h;
         }
     L_FindChar:
-        for(size_t i = 0;;)
+        for (size_t i = 0;;)
         {
             switch (re.ir[i].code)
             {
@@ -176,10 +176,10 @@ public:
         ShiftThread t = ShiftThread(0, 0, table);
         //locate first fixed char if any
         n_length = 32;
-        for(;;)
+        for (;;)
         {
         L_Eval_Thread:
-            for(;;)
+            for (;;)
             {
                 switch (re.ir[t.pc].code)
                 {
@@ -196,17 +196,17 @@ public:
                     uint end = t.pc + len;
                     uint[Bytecode.maxSequence] s;
                     uint numS;
-                    for(uint i = 0; i < len; i++)
+                    for (uint i = 0; i < len; i++)
                     {
                         auto x = charLen(re.ir[t.pc+i].data);
                         if (countUntil(s[0..numS], x) < 0)
                            s[numS++] = x;
                     }
-                    for(uint i = t.pc; i < end; i++)
+                    for (uint i = t.pc; i < end; i++)
                     {
                         t.add(re.ir[i].data);
                     }
-                    for(uint i = 0; i < numS; i++)
+                    for (uint i = 0; i < numS; i++)
                     {
                         auto tx = fork(t, t.pc + len, t.counter);
                         if (tx.idx + s[i] <= n_length)
@@ -245,7 +245,7 @@ public:
                             arr[ofs++] = ival.b;
                         }
                         auto srange = assumeSorted!"a <= b"(arr);
-                        for(uint i = 0; i < codeBounds.length/2; i++)
+                        for (uint i = 0; i < codeBounds.length/2; i++)
                         {
                             auto start = srange.lowerBound(codeBounds[2*i]).length;
                             auto end = srange.lowerBound(codeBounds[2*i+1]).length;
@@ -265,7 +265,7 @@ public:
                             continue;
                         t.add(ch);
                     }
-                    for(uint i = 0; i < numS; i++)
+                    for (uint i = 0; i < numS; i++)
                     {
                         auto tx =  fork(t, t.pc + IRL!(IR.CodepointSet), t.counter);
                         tx.advance(s[i]);
@@ -405,7 +405,7 @@ public:
             {
                 if (!~state)
                 {//speed up seeking first matching place
-                    for(;;)
+                    for (;;)
                     {
                         assert(p <= end, text(p," vs ", end));
                         p = cast(ubyte*)memchr(p, fChar, end - p);
@@ -500,7 +500,7 @@ public:
     @system debug static void dump(uint[] table)
     {//@@@BUG@@@ writef(ln) is @system
         import std.stdio;
-        for(size_t i = 0; i < table.length; i += 4)
+        for (size_t i = 0; i < table.length; i += 4)
         {
             writefln("%32b %32b %32b %32b",table[i], table[i+1], table[i+2], table[i+3]);
         }

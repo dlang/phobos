@@ -3231,7 +3231,7 @@ unittest // bugzilla 14861
     static import std.file;
     auto deleteme = testFilename();
     File fw = File(deleteme, "w");
-    for(int i; i != 5000; i++)
+    for (int i; i != 5000; i++)
         fw.writeln(i, ";", "Иванов;Пётр;Петрович");
     fw.close();
     scope(exit) std.file.remove(deleteme);

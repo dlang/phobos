@@ -33898,7 +33898,7 @@ R _stripCFWS(R)(R range)
        (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
     immutable e = range.length;
-    outer: for(size_t i = 0; i < e; )
+    outer: for (size_t i = 0; i < e; )
     {
         switch (range[i])
         {

@@ -696,14 +696,14 @@ else
 void copyBackwards(T,U)(T[] src, U[] dest)
 {
     assert(src.length == dest.length);
-    for(size_t i=src.length; i-- > 0; )
+    for (size_t i=src.length; i-- > 0; )
         dest[i] = src[i];
 }
 
 void copyForward(T,U)(T[] src, U[] dest)
 {
     assert(src.length == dest.length);
-    for(size_t i=0; i<src.length; i++)
+    for (size_t i=0; i<src.length; i++)
         dest[i] = src[i];
 }
 
@@ -1044,12 +1044,12 @@ unittest
     alias fn3 = sliceBits!( 6,  9);
     alias fn4 = sliceBits!( 0,  6);
     static void check(size_t lvl, MA)(ref MA arr){
-        for(size_t i = 0; i< arr.length!lvl; i++)
+        for (size_t i = 0; i< arr.length!lvl; i++)
             assert(arr.slice!(lvl)[i] == i, text("Mismatch on lvl ", lvl, " idx ", i, " value: ", arr.slice!(lvl)[i]));
     }
 
     static void fillIdx(size_t lvl, MA)(ref MA arr){
-        for(size_t i = 0; i< arr.length!lvl; i++)
+        for (size_t i = 0; i< arr.length!lvl; i++)
             arr.slice!(lvl)[i] = i;
     }
     Bitty m1;
@@ -1062,7 +1062,7 @@ unittest
 
     m1.length!4 = 2^^16;
 
-    for(size_t i = 0; i< m1.length!4; i++)
+    for (size_t i = 0; i< m1.length!4; i++)
         m1.slice!(4)[i] = i % 2;
 
     fillIdx!1(m1);
@@ -1076,7 +1076,7 @@ unittest
     check!3(m1);
     check!2(m1);
     check!1(m1);
-    for(size_t i=0; i < 2^^16; i++)
+    for (size_t i=0; i < 2^^16; i++)
     {
         m1.slice!(4)[i] = i % 2;
         m1.slice!(0)[fn1(i)] = fn1(i);
@@ -1084,7 +1084,7 @@ unittest
         m1.slice!(2)[fn3(i)] = fn3(i);
         m1.slice!(3)[fn4(i)] = fn4(i);
     }
-    for(size_t i=0; i < 2^^16; i++)
+    for (size_t i=0; i < 2^^16; i++)
     {
         assert(m1.slice!(4)[i] == i % 2);
         assert(m1.slice!(0)[fn1(i)] == fn1(i));
@@ -1263,14 +1263,14 @@ pure nothrow:
         }
         size_t pad_e = roundDown(e);
         size_t i;
-        for(i=s; i<pad_s; i++)
+        for (i=s; i<pad_s; i++)
             if (ptr[i])
                 return false;
         // all in between is x*factor elements
-        for(size_t j=i/factor; i<pad_e; i+=factor, j++)
+        for (size_t j=i/factor; i<pad_e; i+=factor, j++)
             if (ptr.origin[j])
                 return false;
-        for(; i<e; i++)
+        for (; i<e; i++)
             if (ptr[i])
                 return false;
         return true;
@@ -1334,16 +1334,16 @@ pure nothrow:
         }
         size_t pad_end = roundDown(end); // rounded down
         size_t i;
-        for(i=start; i<pad_start; i++)
+        for (i=start; i<pad_start; i++)
             ptr[i] = val;
         // all in between is x*factor elements
         if (pad_start != pad_end)
         {
             size_t repval = replicateBits!(factor, bits)(val);
-            for(size_t j=i/factor; i<pad_end; i+=factor, j++)
+            for (size_t j=i/factor; i<pad_end; i+=factor, j++)
                 ptr.origin[j] = repval;// so speed it up by factor
         }
-        for(; i<end; i++)
+        for (; i<end; i++)
             ptr[i] = val;
     }
 
@@ -1371,7 +1371,7 @@ pure nothrow:
             return ptr.origin[s1/factor .. e1/factor]
                 == arr.ptr.origin[s2/factor .. e2/factor];
         }
-        for(size_t i=0;i<limit; i++)
+        for (size_t i=0;i<limit; i++)
             if (this[i] != arr[i])
                 return false;
         return true;
@@ -1456,7 +1456,7 @@ private struct SliceOverIndexed(T)
     {
         if (arr.length != length)
             return false;
-        for(size_t i=0; i <length; i++)
+        for (size_t i=0; i <length; i++)
             if (this[i] != arr[i])
                 return false;
         return true;
@@ -1917,7 +1917,7 @@ pure:
 //@@@BUG another forward reference workaround
 @trusted bool equalS(R1, R2)(R1 lhs, R2 rhs)
 {
-    for(;;){
+    for (;;){
         if (lhs.empty)
             return rhs.empty;
         if (rhs.empty)
@@ -2137,7 +2137,7 @@ public:
     package auto scanFor()(dchar ch) const
     {
         immutable len = data.length;
-        for(size_t i = 0; i < len; i++)
+        for (size_t i = 0; i < len; i++)
             if (ch < data[i])
                 return i & 1;
         return 0;
@@ -3862,7 +3862,7 @@ private:
         auto last = idx!level-pageSize;
         auto slice = ptr[idx!level - pageSize..idx!level];
         size_t j;
-        for(j=0; j<last; j+=pageSize)
+        for (j=0; j<last; j+=pageSize)
         {
             if (ptr[j..j+pageSize] == slice)
             {
@@ -5564,13 +5564,13 @@ unittest
     alias Set = CodepointSet;
     auto set = Set('A','Z','a','z');
     auto trie = buildTrie!(bool, uint, 256, lo8)(set.byInterval);// simple bool array
-    for(int a='a'; a<'z';a++)
+    for (int a='a'; a<'z';a++)
         assert(trie[a]);
-    for(int a='A'; a<'Z';a++)
+    for (int a='A'; a<'Z';a++)
         assert(trie[a]);
-    for(int a=0; a<'A'; a++)
+    for (int a=0; a<'A'; a++)
         assert(!trie[a]);
-    for(int a ='Z'; a<'a'; a++)
+    for (int a ='Z'; a<'a'; a++)
         assert(!trie[a]);
     trieStats(trie);
 
@@ -6809,7 +6809,7 @@ private:
     {
         size_t k = smallLength;
         ubyte* p = cast(ubyte*)enforce(malloc(3*(grow+1)), "malloc failed");
-        for(int i=0; i<k; i++)
+        for (int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data
         ptr_ = p;
@@ -7028,7 +7028,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     size_t start = idx - fTable[idx].n;
     size_t end = fTable[idx].size + start;
     assert(fTable[start].entry_len == 1);
-    for(idx=start; idx<end; idx++)
+    for (idx=start; idx<end; idx++)
     {
         auto entryLen = fTable[idx].entry_len;
         if (entryLen == 1)
@@ -7066,7 +7066,7 @@ int icmp(S1, S2)(S1 str1, S2 str2)
     if (isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
     && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
 {
-    for(;;)
+    for (;;)
     {
         if (str1.empty)
             return str2.empty ? 0 : -1;
@@ -7435,7 +7435,7 @@ int hangulSyllableIndex(dchar ch) pure nothrow @nogc
 // internal helper: compose hangul syllables leaving dchar.init in holes
 void hangulRecompose(dchar[] seq) pure nothrow @nogc
 {
-    for(size_t idx = 0; idx + 1 < seq.length; )
+    for (size_t idx = 0; idx + 1 < seq.length; )
     {
         if (isJamoL(seq[idx]) && isJamoV(seq[idx+1]))
         {
@@ -7643,7 +7643,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             auto first = countUntil(ccc, 0);
             if (first >= 0) // no starters?? no recomposition
             {
-                for(;;)
+                for (;;)
                 {
                     auto second = recompose(first, decomposed, ccc);
                     if (second == decomposed.length)
@@ -7721,7 +7721,7 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
     // writefln("recomposing %( %04x %)", input);
     // first one is always a starter thus we start at i == 1
     size_t i = start+1;
-    for(; ; )
+    for (; ; )
     {
         if (i == input.length)
             break;
@@ -7804,7 +7804,7 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
 
     auto br = input[0..idx];
     size_t region_start = 0;// default
-    for(;;)
+    for (;;)
     {
         if (br.empty)// start is 0
             break;

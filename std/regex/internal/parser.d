@@ -83,9 +83,9 @@ unittest
     Stack!(Tuple!(uint, uint, uint)) stack;
     uint start = 0;
     uint end = cast(uint)code.length;
-    for(;;)
+    for (;;)
     {
-        for(uint pc = start; pc < end; )
+        for (uint pc = start; pc < end; )
         {
             uint len = code[pc].length;
             if (code[pc].code == IR.GotoEndOr)
@@ -163,7 +163,7 @@ dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
     //std.conv.parse is both @system and bogus
     enforce(str.length >= maxDigit,"incomplete escape sequence");
     uint val;
-    for(int k = 0; k < maxDigit; k++)
+    for (int k = 0; k < maxDigit; k++)
     {
         auto current = str[k];//accepts ascii only, so it's OK to index directly
         if ('0' <= current && current <= '9')
@@ -729,7 +729,7 @@ struct Parser(R, Generator)
                     switch (current)
                     {
                     case '#':
-                        for(;;)
+                        for (;;)
                         {
                             if (!next())
                                 error("Unexpected end of pattern");
@@ -969,7 +969,7 @@ struct Parser(R, Generator)
         }
 
         L_CharTermLoop:
-        for(;;)
+        for (;;)
         {
             final switch (state)
             {
@@ -1144,7 +1144,7 @@ struct Parser(R, Generator)
                     enforce(last <= current, "inverted range");
                     if (re_flags & RegexOption.casefold)
                     {
-                        for(uint ch = last; ch <= current; ch++)
+                        for (uint ch = last; ch <= current; ch++)
                             addWithFlags(set, ch, re_flags);
                     }
                     else
@@ -1493,7 +1493,7 @@ struct Parser(R, Generator)
         auto counterRange = FixedStack!uint(new uint[maxCounterDepth+1], -1);
         counterRange.push(1);
         ulong cumRange = 0;
-        for(uint i = 0; i < ir.length; i += ir[i].length)
+        for (uint i = 0; i < ir.length; i += ir[i].length)
         {
             if (ir[i].hotspot)
             {
@@ -1548,7 +1548,7 @@ void fixupBytecode()(Bytecode[] ir)
 {
     Stack!uint fixups;
 
-    with(IR) for(uint i=0; i<ir.length; i+= ir[i].length)
+    with(IR) for (uint i=0; i<ir.length; i+= ir[i].length)
     {
         if (ir[i].isStart || ir[i].code == Option)
             fixups.push(i);
@@ -1564,7 +1564,7 @@ void fixupBytecode()(Bytecode[] ir)
             // fixup all GotoEndOrs
             j = j + IRL!(OrStart);
             assert(ir[j].code == Option);
-            for(;;)
+            for (;;)
             {
                 auto next = j + ir[j].data + IRL!(Option);
                 if (ir[next].code == IR.OrEnd)
@@ -1595,7 +1595,7 @@ void optimize(Char)(ref Regex!Char zis)
         CodepointSet set;
         with(zis) with(IR)
     Outer:
-        for(uint i = idx; i < ir.length; i += ir[i].length)
+        for (uint i = idx; i < ir.length; i += ir[i].length)
         {
             switch (ir[i].code)
             {
@@ -1615,7 +1615,7 @@ void optimize(Char)(ref Regex!Char zis)
         return set;
     }
 
-    with(zis) with(IR) for(uint i = 0; i < ir.length; i += ir[i].length)
+    with(zis) with(IR) for (uint i = 0; i < ir.length; i += ir[i].length)
     {
         if (ir[i].code == InfiniteEnd)
         {
@@ -1640,7 +1640,7 @@ void optimize(Char)(ref Regex!Char zis)
     import std.conv;
     with(zis)
     {
-        for(uint pc = 0; pc < ir.length; pc += ir[pc].length)
+        for (uint pc = 0; pc < ir.length; pc += ir[pc].length)
         {
             if (ir[pc].isStart || ir[pc].isEnd)
             {

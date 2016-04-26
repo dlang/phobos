@@ -562,7 +562,7 @@ template ThompsonOps(E, S, bool withInput:true)
             uint len = re.ir[t.pc].sequence;
             uint end = t.pc + len;
             static assert(IRL!(IR.OrChar) == 1);
-            for(; t.pc < end; t.pc++)
+            for (; t.pc < end; t.pc++)
                 if (re.ir[t.pc].data == front)
                     break;
             if (t.pc != end)
@@ -796,7 +796,7 @@ template ThompsonOps(E,S, bool withInput:false)
         opCacheBackTrue = arrayInChunk!(OpBackFunc)(re.ir.length, memory);
         opCacheBackFalse = arrayInChunk!(OpBackFunc)(re.ir.length, memory);
 
-        for(uint pc = 0; pc<re.ir.length; pc += re.ir[pc].length)
+        for (uint pc = 0; pc<re.ir.length; pc += re.ir[pc].length)
         {
         L_dispatch:
             switch (re.ir[pc].code)
@@ -919,7 +919,7 @@ template ThompsonOps(E,S, bool withInput:false)
         state.matches = matches;
 
         if (!atEnd)//if no char
-            for(;;)
+            for (;;)
             {
                 genCounter++;
                 debug(std_regex_matcher)
@@ -933,7 +933,7 @@ template ThompsonOps(E,S, bool withInput:false)
                         writeln();
                     }
                 }
-                for(state.t = clist.fetch(); state.t; state.t = clist.fetch())
+                for (state.t = clist.fetch(); state.t; state.t = clist.fetch())
                 {
                     eval!true(&state);
                 }
@@ -974,7 +974,7 @@ template ThompsonOps(E,S, bool withInput:false)
         genCounter++; //increment also on each end
         debug(std_regex_matcher) writefln("Threaded matching threads at end");
         //try out all zero-width posibilities
-        for(state.t = clist.fetch(); state.t; state.t = clist.fetch())
+        for (state.t = clist.fetch(); state.t; state.t = clist.fetch())
         {
             eval!false(&state);
         }
@@ -1055,7 +1055,7 @@ template ThompsonOps(E,S, bool withInput:false)
                 genCounter++;
                 evalFn!true(&state);
             }
-            for(;;)
+            for (;;)
             {
                 debug(std_regex_matcher) writeln("\n-- Started iteration of main cycle");
                 genCounter++;
@@ -1066,7 +1066,7 @@ template ThompsonOps(E,S, bool withInput:false)
                         assert(t);
                     }
                 }
-                for(state.t = clist.fetch(); state.t; state.t = clist.fetch())
+                for (state.t = clist.fetch(); state.t; state.t = clist.fetch())
                 {
                     evalFn!true(&state);
                 }
@@ -1085,7 +1085,7 @@ template ThompsonOps(E,S, bool withInput:false)
         genCounter++; //increment also on each end
         debug(std_regex_matcher) writefln("-- Matching threads at end");
         //try out all zero-width posibilities
-        for(state.t = clist.fetch(); state.t; state.t = clist.fetch())
+        for (state.t = clist.fetch(); state.t; state.t = clist.fetch())
         {
             evalFn!false(&state);
         }
@@ -1113,7 +1113,7 @@ template ThompsonOps(E,S, bool withInput:false)
         memory = memory[threadSize * size .. $];
         freelist = cast(Thread!DataIndex*)&mem[0];
         size_t i;
-        for(i = threadSize; i < threadSize*size; i += threadSize)
+        for (i = threadSize; i < threadSize*size; i += threadSize)
             (cast(Thread!DataIndex*)&mem[i-threadSize]).next = cast(Thread!DataIndex*)&mem[i];
         (cast(Thread!DataIndex*)&mem[i-threadSize]).next = null;
     }

@@ -689,7 +689,7 @@ unittest // by Dave
 
 
     // smallish buffers
-    for(int idx = 0; idx < 25; idx++) {
+    for (int idx = 0; idx < 25; idx++) {
         char[] buf = new char[uniform(0, 100)];
 
         // Alternate between more & less compressible
@@ -704,7 +704,7 @@ unittest // by Dave
     }
 
     // larger buffers
-    for(int idx = 0; idx < 25; idx++) {
+    for (int idx = 0; idx < 25; idx++) {
         char[] buf = new char[uniform(0, 1000/*0000*/)];
 
         // Alternate between more & less compressible

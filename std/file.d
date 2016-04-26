@@ -3612,7 +3612,7 @@ private struct DirIteratorImpl
         {
             if (_stack.data.empty)
                 return false;
-            for(dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
+            for (dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
             {
                 // Skip "." and ".."
                 if (core.stdc.string.strcmp(fdata.d_name.ptr, ".")  &&
