@@ -514,7 +514,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
                           wchar[], const(wchar)[], wstring,
                           dchar[], const(dchar)[], dstring))
     {
-        foreach(T; AliasSeq!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(commonPrefix(to!S(""), to!T("")).empty);
             assert(commonPrefix(to!S(""), to!T("hello")).empty);
@@ -1425,9 +1425,9 @@ if (isInputRange!InputRange &&
 @safe pure unittest
 {
     import std.meta : AliasSeq;
-    foreach(R; AliasSeq!(string, wstring, dstring))
+    foreach (R; AliasSeq!(string, wstring, dstring))
     {
-        foreach(E; AliasSeq!(char, wchar, dchar))
+        foreach (E; AliasSeq!(char, wchar, dchar))
         {
             R r1 = "hello world";
             E e1 = 'w';
@@ -1474,9 +1474,9 @@ if (isInputRange!InputRange &&
     {
         byte[]  sarr = [1, 2, 3, 4];
         ubyte[] uarr = [1, 2, 3, 4];
-        foreach(arr; AliasSeq!(sarr, uarr))
+        foreach (arr; AliasSeq!(sarr, uarr))
         {
-            foreach(T; AliasSeq!(byte, ubyte, int, uint))
+            foreach (T; AliasSeq!(byte, ubyte, int, uint))
             {
                 assert(find(arr, cast(T) 3) == arr[2 .. $]);
                 assert(find(arr, cast(T) 9) == arr[$ .. $]);

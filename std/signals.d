@@ -225,7 +225,7 @@ unittest
     {   // our slot
         void watch(string msg, int value)
         {
-            switch(observedMessageCounter++)
+            switch (observedMessageCounter++)
             {
                 case 0:
                     assert(msg == "setting new value");

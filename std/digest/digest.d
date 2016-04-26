@@ -92,7 +92,7 @@ unittest
     import std.stdio;
 
     // Digests a file and prints the result.
-    void digestFile(Hash)(string filename) if(isDigest!Hash)
+    void digestFile(Hash)(string filename) if (isDigest!Hash)
     {
         auto file = File(filename);
         auto result = digest!Hash(file.byChunk(4096 * 1024));
@@ -116,7 +116,7 @@ unittest
     import std.digest.crc, std.digest.sha, std.digest.md;
     import std.stdio;
     // Digests a file and prints the result.
-    void digestFile(Hash)(ref Hash hash, string filename) if(isDigest!Hash)
+    void digestFile(Hash)(ref Hash hash, string filename) if (isDigest!Hash)
     {
         File file = File(filename);
 
@@ -303,7 +303,7 @@ unittest
 unittest
 {
     import std.digest.crc;
-    void myFunction(T)() if(isDigest!T)
+    void myFunction(T)() if (isDigest!T)
     {
         T dig;
         dig.start();
@@ -317,7 +317,7 @@ unittest
  */
 template DigestType(T)
 {
-    static if(isDigest!T)
+    static if (isDigest!T)
     {
         alias DigestType =
             ReturnType!(typeof(
@@ -377,7 +377,7 @@ unittest
 unittest
 {
     import std.digest.crc;
-    void myFunction(T)() if(hasPeek!T)
+    void myFunction(T)() if (hasPeek!T)
     {
         T dig;
         dig.start();
@@ -424,7 +424,7 @@ package template isDigestibleRange(Range)
  * Params:
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
  */
-DigestType!Hash digest(Hash, Range)(auto ref Range range) if(!isArray!Range
+DigestType!Hash digest(Hash, Range)(auto ref Range range) if (!isArray!Range
     && isDigestibleRange!Range)
 {
     import std.algorithm : copy;
@@ -449,11 +449,11 @@ unittest
  * Params:
  *  data= one or more arrays of any type
  */
-DigestType!Hash digest(Hash, T...)(scope const T data) if(allSatisfy!(isArray, typeof(data)))
+DigestType!Hash digest(Hash, T...)(scope const T data) if (allSatisfy!(isArray, typeof(data)))
 {
     Hash hash;
     hash.start();
-    foreach(datum; data)
+    foreach (datum; data)
         hash.put(cast(const(ubyte[]))datum);
     return hash.finish();
 }
@@ -486,7 +486,7 @@ unittest
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, Range)(ref Range range)
-    if(!isArray!Range && isDigestibleRange!Range)
+    if (!isArray!Range && isDigestibleRange!Range)
 {
     return toHexString!order(digest!Hash(range));
 }
@@ -508,7 +508,7 @@ unittest
  *  data= one or more arrays of any type
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, T...)(scope const T data)
-    if(allSatisfy!(isArray, typeof(data)))
+    if (allSatisfy!(isArray, typeof(data)))
 {
     return toHexString!order(digest!Hash(data));
 }
@@ -611,7 +611,7 @@ interface Digest
         final @trusted nothrow ubyte[] digest(scope const(void[])[] data...)
         {
             this.reset();
-            foreach(datum; data)
+            foreach (datum; data)
                 this.put(cast(ubyte[])datum);
             return this.finish();
         }
@@ -713,9 +713,9 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase l
     char[num*2] result;
     size_t i;
 
-    static if(order == Order.increasing)
+    static if (order == Order.increasing)
     {
-        foreach(u; digest)
+        foreach (u; digest)
         {
             result[i++] = hexDigits[u >> 4];
             result[i++] = hexDigits[u & 15];
@@ -724,7 +724,7 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase l
     else
     {
         size_t j = num - 1;
-        while(i < num*2)
+        while (i < num*2)
         {
             result[i++] = hexDigits[digest[j] >> 4];
             result[i++] = hexDigits[digest[j] & 15];
@@ -756,9 +756,9 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
     auto result = new char[digest.length*2];
     size_t i;
 
-    static if(order == Order.increasing)
+    static if (order == Order.increasing)
     {
-        foreach(u; digest)
+        foreach (u; digest)
         {
             result[i++] = hexDigits[u >> 4];
             result[i++] = hexDigits[u & 15];
@@ -767,7 +767,7 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
     else
     {
         import std.range : retro;
-        foreach(u; retro(digest))
+        foreach (u; retro(digest))
         {
             result[i++] = hexDigits[u >> 4];
             result[i++] = hexDigits[u & 15];
@@ -838,7 +838,7 @@ ref T[N] asArray(size_t N, T)(ref T[] source, string errorMsg = "")
  * useful for other purposes as well. It returns the length (in bytes) of the hash value
  * produced by T.
  */
-template digestLength(T) if(isDigest!T)
+template digestLength(T) if (isDigest!T)
 {
     enum size_t digestLength = (ReturnType!(T.finish)).length;
 }
@@ -848,7 +848,7 @@ template digestLength(T) if(isDigest!T)
  * Modules providing digest implementations will usually provide
  * an alias for this template (e.g. MD5Digest, SHA1Digest, ...).
  */
-class WrapperDigest(T) if(isDigest!T) : Digest
+class WrapperDigest(T) if (isDigest!T) : Digest
 {
     protected:
         T _digest;
@@ -943,7 +943,7 @@ class WrapperDigest(T) if(isDigest!T) : Digest
             ///ditto
             @trusted ubyte[] peek() const;
         }
-        else static if(hasPeek!T)
+        else static if (hasPeek!T)
         {
             @trusted ubyte[] peek(scope ubyte[] buf) const
             in

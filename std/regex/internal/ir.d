@@ -31,14 +31,14 @@ CharMatcher[CodepointSet] matcherCache;
 //accessor with caching
 @trusted CharMatcher getMatcher(CodepointSet set)
 {// @@@BUG@@@ 6357 almost all properties of AA are not @safe
-    if(__ctfe || maxCachedMatchers == 0)
+    if (__ctfe || maxCachedMatchers == 0)
         return CharMatcher(set);
     else
     {
         auto p = set in matcherCache;
-        if(p)
+        if (p)
             return *p;
-        if(matcherCache.length == maxCachedMatchers)
+        if (matcherCache.length == maxCachedMatchers)
         {
             // flush enmatchers in trieCache
             matcherCache = null;
@@ -49,12 +49,12 @@ CharMatcher[CodepointSet] matcherCache;
 
 @trusted auto memoizeExpr(string expr)()
 {
-    if(__ctfe)
+    if (__ctfe)
         return mixin(expr);
     alias T = typeof(mixin(expr));
     static T slot;
     static bool initialized;
-    if(!initialized)
+    if (!initialized)
     {
         slot =  mixin(expr);
         initialized = true;
@@ -382,7 +382,7 @@ struct Group(DataIndex)
     import std.array, std.format;
     auto output = appender!string();
     formattedWrite(output,"%s", irb[pc].mnemonic);
-    switch(irb[pc].code)
+    switch (irb[pc].code)
     {
     case IR.Char:
         formattedWrite(output, " %s (0x%x)",cast(dchar)irb[pc].data, irb[pc].data);
@@ -412,8 +412,8 @@ struct Group(DataIndex)
     case IR.GroupStart, IR.GroupEnd:
         uint n = irb[pc].data;
         string name;
-        foreach(v;dict)
-            if(v.group == n)
+        foreach (v;dict)
+            if (v.group == n)
             {
                 name = "'"~v.name~"'";
                 break;
@@ -429,12 +429,12 @@ struct Group(DataIndex)
     case IR.Backref: case IR.CodepointSet: case IR.Trie:
         uint n = irb[pc].data;
         formattedWrite(output, " %u",  n);
-        if(irb[pc].code == IR.Backref)
+        if (irb[pc].code == IR.Backref)
             formattedWrite(output, " %s", irb[pc].localRef ? "local" : "global");
         break;
     default://all data-free instructions
     }
-    if(irb[pc].hotspot)
+    if (irb[pc].hotspot)
         formattedWrite(output, " Hotspot %u", irb[pc+1].raw);
     return output.data;
 }
@@ -523,7 +523,7 @@ package(std.regex):
     //bit access helper
     uint isBackref(uint n)
     {
-        if(n/32 >= backrefed.length)
+        if (n/32 >= backrefed.length)
             return 0;
         return backrefed[n / 32] & (1 << (n & 31));
     }
@@ -531,12 +531,12 @@ package(std.regex):
     //check if searching is not needed
     void checkIfOneShot()
     {
-        if(flags & RegexOption.multiline)
+        if (flags & RegexOption.multiline)
             return;
     L_CheckLoop:
         for(uint i = 0; i < ir.length; i += ir[i].length)
         {
-            switch(ir[i].code)
+            switch (ir[i].code)
             {
                 case IR.Bol:
                     flags |= RegexInfo.oneShot;
@@ -588,7 +588,7 @@ package(std.regex):
 
 //Simple UTF-string abstraction compatible with stream interface
 struct Input(Char)
-    if(is(Char :dchar))
+    if (is(Char :dchar))
 {
     import std.utf;
     alias DataIndex = size_t;
@@ -610,7 +610,7 @@ struct Input(Char)
         pos = _index;
         // DMD's inliner hates multiple return functions
         // but can live with single statement if/else bodies
-        if(_index == _origin.length)
+        if (_index == _origin.length)
             return false;
         else
             return res = std.utf.decode(_origin, _index), true;
@@ -652,7 +652,7 @@ struct BackLooperImpl(Input)
     @trusted bool nextChar(ref dchar res,ref size_t pos)
     {
         pos = _index;
-        if(_index == 0)
+        if (_index == 0)
             return false;
 
         res = _origin[0.._index].back;
@@ -674,7 +674,7 @@ struct BackLooperImpl(Input)
 
 template BackLooper(E)
 {
-    static if(is(E : BackLooperImpl!U, U))
+    static if (is(E : BackLooperImpl!U, U))
     {
         alias BackLooper = U;
     }
@@ -739,8 +739,8 @@ struct BitTable {
     uint[4] filter;
 
     this(CodepointSet set){
-        foreach(iv; set.byInterval){
-            foreach(v; iv.a..iv.b)
+        foreach (iv; set.byInterval){
+            foreach (v; iv.a..iv.b)
                 add(v);
         }
     }

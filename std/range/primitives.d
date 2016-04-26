@@ -188,7 +188,7 @@ guarantees that no more than a single element will be placed.
 +/
 private void doPut(R, E)(ref R r, auto ref E e)
 {
-    static if(is(PointerTarget!R == struct))
+    static if (is(PointerTarget!R == struct))
         enum usingPut = hasMember!(PointerTarget!R, "put");
     else
         enum usingPut = hasMember!(R, "put");
@@ -321,7 +321,7 @@ void put(R, E)(ref R r, E e)
             (is(E : const  char[]) && is(typeof(doPut(r,  char.max))) && !is(typeof(doPut(r, dchar.max))) && !is(typeof(doPut(r, wchar.max)))) ||
             (is(E : const wchar[]) && is(typeof(doPut(r, wchar.max))) && !is(typeof(doPut(r, dchar.max)))) ) )
         {
-            foreach(c; e)
+            foreach (c; e)
                 doPut(r, c);
         }
         else
@@ -533,7 +533,7 @@ unittest
         string result;
         void put(const(C)[][] ss)
         {
-            foreach(s; ss)
+            foreach (s; ss)
                 result ~= to!string(s);
         }
     }
@@ -646,7 +646,7 @@ unittest
     }
     void foo()
     {
-        foreach(C; AliasSeq!(char, wchar, dchar))
+        foreach (C; AliasSeq!(char, wchar, dchar))
         {
             formattedWrite((C c){},        "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
             formattedWrite((const(C)[]){}, "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
@@ -910,11 +910,11 @@ template isRandomAccessRange(R)
         static assert(!isNarrowString!R);
         static assert(hasLength!R || isInfinite!R);
 
-        static if(is(typeof(r[$])))
+        static if (is(typeof(r[$])))
         {
             static assert(is(typeof(f) == typeof(r[$])));
 
-            static if(!isInfinite!R)
+            static if (!isInfinite!R)
                 static assert(is(typeof(f) == typeof(r[$ - 1])));
         }
     }));
@@ -937,13 +937,13 @@ unittest
     static assert(hasLength!R || isInfinite!R); // must have length or be infinite
 
     // $ must work as it does with arrays if opIndex works with $
-    static if(is(typeof(r[$])))
+    static if (is(typeof(r[$])))
     {
         static assert(is(typeof(f) == typeof(r[$])));
 
         // $ - 1 doesn't make sense with infinite ranges but needs to work
         // with finite ones.
-        static if(!isInfinite!R)
+        static if (!isInfinite!R)
             static assert(is(typeof(f) == typeof(r[$ - 1])));
     }
 }
@@ -1462,7 +1462,7 @@ The following code must compile for $(D hasSlicing) to be $(D true):
 ----
 R r = void;
 
-static if(isInfinite!R)
+static if (isInfinite!R)
     typeof(take(r, 1)) s = r[1 .. 2];
 else
 {
@@ -1472,13 +1472,13 @@ else
 
 s = r[1 .. 2];
 
-static if(is(typeof(r[0 .. $])))
+static if (is(typeof(r[0 .. $])))
 {
     static assert(is(typeof(r[0 .. $]) == R));
     R t = r[0 .. $];
     t = r[0 .. $];
 
-    static if(!isInfinite!R)
+    static if (!isInfinite!R)
     {
         static assert(is(typeof(r[0 .. $ - 1]) == R));
         R u = r[0 .. $ - 1];
@@ -1497,7 +1497,7 @@ template hasSlicing(R)
     {
         R r = R.init;
 
-        static if(isInfinite!R)
+        static if (isInfinite!R)
         {
             typeof(r[1 .. 1]) s = r[1 .. 2];
         }
@@ -1509,13 +1509,13 @@ template hasSlicing(R)
 
         s = r[1 .. 2];
 
-        static if(is(typeof(r[0 .. $])))
+        static if (is(typeof(r[0 .. $])))
         {
             static assert(is(typeof(r[0 .. $]) == R));
             R t = r[0 .. $];
             t = r[0 .. $];
 
-            static if(!isInfinite!R)
+            static if (!isInfinite!R)
             {
                 static assert(is(typeof(r[0 .. $ - 1]) == R));
                 R u = r[0 .. $ - 1];
@@ -1964,7 +1964,7 @@ ElementType!R moveAt(R)(R r, size_t i)
 @safe unittest
 {
     auto a = [1,2,3,4];
-    foreach(idx, it; a)
+    foreach (idx, it; a)
     {
         assert(it == moveAt(a, idx));
     }
@@ -1974,7 +1974,7 @@ ElementType!R moveAt(R)(R r, size_t i)
 {
     import std.internal.test.dummyrange;
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges) {
         auto d = DummyType.init;
         assert(moveFront(d) == 1);
 
@@ -2066,10 +2066,10 @@ if (isNarrowString!(C[]))
 {
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 
-    static if(is(Unqual!C == char))
+    static if (is(Unqual!C == char))
     {
         immutable c = str[0];
-        if(c < 0x80)
+        if (c < 0x80)
         {
             //ptr is used to avoid unnnecessary bounds checking.
             str = str.ptr[1 .. str.length];
@@ -2078,7 +2078,7 @@ if (isNarrowString!(C[]))
         {
              import core.bitop : bsr;
              auto msbs = 7 - bsr(~c);
-             if((msbs < 2) | (msbs > 6))
+             if ((msbs < 2) | (msbs > 6))
              {
                  //Invalid UTF-8
                  msbs = 1;
@@ -2086,7 +2086,7 @@ if (isNarrowString!(C[]))
              str = str[msbs .. $];
         }
     }
-    else static if(is(Unqual!C == wchar))
+    else static if (is(Unqual!C == wchar))
     {
         immutable u = str[0];
         str = str[1 + (u >= 0xD800 && u <= 0xDBFF) .. $];
@@ -2098,14 +2098,14 @@ if (isNarrowString!(C[]))
 {
     import std.meta : AliasSeq;
 
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         S s = "\xC2\xA9hello";
         s.popFront();
         assert(s == "hello");
 
         S str = "hello\U00010143\u0100\U00010143";
-        foreach(dchar c; ['h', 'e', 'l', 'l', 'o', '\U00010143', '\u0100', '\U00010143'])
+        foreach (dchar c; ['h', 'e', 'l', 'l', 'o', '\U00010143', '\u0100', '\U00010143'])
         {
             assert(str.front == c);
             str.popFront();
@@ -2118,7 +2118,7 @@ if (isNarrowString!(C[]))
 
     C[] _eatString(C)(C[] str)
     {
-        while(!str.empty)
+        while (!str.empty)
             str.popFront();
 
         return str;
@@ -2172,7 +2172,7 @@ if (isNarrowString!(T[]))
 {
     import std.meta : AliasSeq;
 
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         S s = "hello\xE2\x89\xA0";
         s.popBack();
@@ -2184,7 +2184,7 @@ if (isNarrowString!(T[]))
         assert(s3 == "");
 
         S str = "\U00010143\u0100\U00010143hello";
-        foreach(dchar ch; ['o', 'l', 'l', 'e', 'h', '\U00010143', '\u0100', '\U00010143'])
+        foreach (dchar ch; ['o', 'l', 'l', 'e', 'h', '\U00010143', '\u0100', '\U00010143'])
         {
             assert(str.back == ch);
             str.popBack();

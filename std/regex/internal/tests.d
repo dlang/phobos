@@ -347,7 +347,7 @@ unittest
     void run_tests(alias matchFn)()
     {
         int i;
-        foreach(Char; AliasSeq!( char, wchar, dchar))
+        foreach (Char; AliasSeq!( char, wchar, dchar))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             alias String = immutable(Char)[];
             String produceExpected(M,Range)(auto ref M m, Range fmt)
@@ -357,7 +357,7 @@ unittest
                 return app.data;
             }
             Regex!(Char) r;
-            foreach(a, tvd; tv)
+            foreach (a, tvd; tv)
             {
                 uint c = tvd.result[0];
                 debug(std_regex_test) writeln(" Test #", a, " pattern: ", tvd.pattern, " with Char = ", Char.stringof);
@@ -374,12 +374,12 @@ unittest
 
                 assert((c == 'c') ? !i : i, "failed to compile pattern "~tvd.pattern);
 
-                if(c != 'c')
+                if (c != 'c')
                 {
                     auto m = matchFn(to!(String)(tvd.input), r);
                     i = !m.empty;
                     assert((c == 'y') ? i : !i, text(matchFn.stringof ~": failed to match pattern #", a ,": ", tvd.pattern));
-                    if(c == 'y')
+                    if (c == 'y')
                     {
                         auto result = produceExpected(m, to!(String)(tvd.format));
                         assert(result == to!String(tvd.replace),
@@ -418,10 +418,10 @@ unittest
         }
         else
             alias Tests = AliasSeq!(Sequence!(0, 30), Sequence!(235, tv.length-5));
-        foreach(a, v; Tests)
+        foreach (a, v; Tests)
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum tvd = tv[v];
-            static if(tvd.result == "c")
+            static if (tvd.result == "c")
             {
                 static assert(!__traits(compiles, (){
                     enum r = regex(tvd.pattern, tvd.flags);
@@ -439,11 +439,11 @@ unittest
                 bool ok = (c == 'y') ^ m.empty;
                 assert(ok, text("ctRegex: failed to match pattern #",
                     a ,": ", tvd.pattern));
-                if(c == 'y')
+                if (c == 'y')
                 {
                     import std.stdio;
                     auto result = produceExpected(m, tvd.format);
-                    if(result != tvd.replace)
+                    if (result != tvd.replace)
                         writeln("ctRegex mismatch pattern #", a, ": ", tvd.pattern," expected: ",
                                 tvd.replace, " vs ", result);
                 }
@@ -552,7 +552,7 @@ unittest
         string s = "a quick brown fox jumps over a lazy dog";
         auto r1 = regex("\\b[a-z]+\\b","g");
         string[] test;
-        foreach(m; matchFn(s, r1))
+        foreach (m; matchFn(s, r1))
             test ~= m.hit;
         assert(equal(test, [ "a", "quick", "brown", "fox", "jumps", "over", "a", "lazy", "dog"]));
         auto free_reg = regex(`
@@ -608,7 +608,7 @@ unittest
         //issue 4574
         //empty successful match still advances the input
         string[] pres, posts, hits;
-        foreach(m; matchFn("abcabc", regex("","g"))) {
+        foreach (m; matchFn("abcabc", regex("","g"))) {
             pres ~= m.pre;
             posts ~= m.post;
             assert(m.hit.empty);
@@ -647,7 +647,7 @@ unittest
         assert(collectException(
                 regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
                 ) is null);
-        foreach(ch; [Escapables])
+        foreach (ch; [Escapables])
         {
             assert(match(to!string(ch),regex(`[\`~ch~`]`)));
             assert(!match(to!string(ch),regex(`[^\`~ch~`]`)));
@@ -670,7 +670,7 @@ unittest
     {
         import std.uni : toUpper;
 
-        foreach(i, v; AliasSeq!(string, wstring, dstring))
+        foreach (i, v; AliasSeq!(string, wstring, dstring))
         {
             auto baz(Cap)(Cap m)
             if (is(Cap == Captures!(Cap.String)))
@@ -709,7 +709,7 @@ unittest
     auto w2 = ["", "abc", "de", "fg", "hi"];
 
     uint cnt;
-    foreach(e; sp2) {
+    foreach (e; sp2) {
         assert(w2[cnt++] == e);
     }
     assert(equal(sp2, w2));
@@ -763,7 +763,7 @@ unittest
 }
 unittest
 {// bugzilla 7679
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         enum re = ctRegex!(to!S(r"\."));
         auto str = to!S("a.b");
@@ -981,7 +981,7 @@ unittest
 unittest
 {
     auto ctPat2 = regex(r"^[CDF]$", "i");
-    foreach(v; ["C", "c", "D", "d", "F", "f"])
+    foreach (v; ["C", "c", "D", "d", "F", "f"])
         assert(matchAll(v, ctPat2).front.hit == v);
 }
 

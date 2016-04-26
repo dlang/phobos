@@ -213,7 +213,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
     static assert(!(blockSize == 1024 && digestSize < 224),
         "Invalid SHA digestSize for a blockSize of 1024. The digestSize must be 224, 256, 384 or 512.");
 
-    static if(digestSize==160) /* SHA-1 */
+    static if (digestSize==160) /* SHA-1 */
     {
         version(USE_SSSE3)
         {
@@ -230,35 +230,35 @@ struct SHA(uint hashBlockSize, uint digestSize)
             alias transform = transformX86;
         }
     }
-    else static if(blockSize == 512) /* SHA-224, SHA-256 */
+    else static if (blockSize == 512) /* SHA-224, SHA-256 */
         alias transform = transformSHA2!uint;
-    else static if(blockSize == 1024) /* SHA-384, SHA-512, SHA-512/224, SHA-512/256 */
+    else static if (blockSize == 1024) /* SHA-384, SHA-512, SHA-512/224, SHA-512/256 */
         alias transform = transformSHA2!ulong;
     else
         static assert(0);
 
     private:
         /* magic initialization constants - state (ABCDEFGH) */
-        static if(blockSize == 512 && digestSize == 160) /* SHA-1 */
+        static if (blockSize == 512 && digestSize == 160) /* SHA-1 */
         {
             uint[5] state =
             [0x67452301,0xefcdab89,0x98badcfe,0x10325476,0xc3d2e1f0];
         }
-        else static if(blockSize == 512 && digestSize == 224) /* SHA-224 */
+        else static if (blockSize == 512 && digestSize == 224) /* SHA-224 */
         {
             uint[8] state = [
                 0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939,
                 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4,
             ];
         }
-        else static if(blockSize == 512 && digestSize == 256) /* SHA-256 */
+        else static if (blockSize == 512 && digestSize == 256) /* SHA-256 */
         {
             uint[8] state = [
                 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
                 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
             ];
         }
-        else static if(blockSize == 1024 && digestSize == 224) /* SHA-512/224 */
+        else static if (blockSize == 1024 && digestSize == 224) /* SHA-512/224 */
         {
             ulong[8] state = [
                 0x8C3D37C8_19544DA2, 0x73E19966_89DCD4D6,
@@ -267,7 +267,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 0x3F9D85A8_6A1D36C8, 0x1112E6AD_91D692A1,
             ];
         }
-        else static if(blockSize == 1024 && digestSize == 256) /* SHA-512/256 */
+        else static if (blockSize == 1024 && digestSize == 256) /* SHA-512/256 */
         {
             ulong[8] state = [
                 0x22312194_FC2BF72C, 0x9F555FA3_C84C64C2,
@@ -276,7 +276,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 0x2B0199FC_2C85B8AA, 0x0EB72DDC_81C52CA2,
             ];
         }
-        else static if(blockSize == 1024 && digestSize == 384) /* SHA-384 */
+        else static if (blockSize == 1024 && digestSize == 384) /* SHA-384 */
         {
             ulong[8] state = [
                 0xcbbb9d5d_c1059ed8, 0x629a292a_367cd507,
@@ -285,7 +285,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 0xdb0c2e0d_64f98fa7, 0x47b5481d_befa4fa4,
             ];
         }
-        else static if(blockSize == 1024 && digestSize == 512) /* SHA-512 */
+        else static if (blockSize == 1024 && digestSize == 512) /* SHA-512 */
         {
             ulong[8] state = [
                 0x6a09e667_f3bcc908, 0xbb67ae85_84caa73b,
@@ -298,7 +298,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             static assert(0);
 
         /* constants */
-        static if(blockSize == 512)
+        static if (blockSize == 512)
         {
             static immutable uint[64] constants = [
                 0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -311,7 +311,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
             ];
         }
-        else static if(blockSize == 1024)
+        else static if (blockSize == 1024)
         {
             static immutable ulong[80] constants = [
                 0x428a2f98_d728ae22, 0x71374491_23ef65cd, 0xb5c0fbcf_ec4d3b2f, 0xe9b5dba5_8189dbbc,
@@ -632,7 +632,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             T_SHA2_16_79!Word(62, W, C, D, E, F, G, H, A, B, constants[62]);
             T_SHA2_16_79!Word(63, W, B, C, D, E, F, G, H, A, constants[63]);
 
-            static if(is(Word==ulong))
+            static if (is(Word==ulong))
             {
                 T_SHA2_16_79!Word(64, W, A, B, C, D, E, F, G, H, constants[64]);
                 T_SHA2_16_79!Word(65, W, H, A, B, C, D, E, F, G, constants[65]);
@@ -702,14 +702,14 @@ struct SHA(uint hashBlockSize, uint digestSize)
             index = (cast(uint)count[0] >> 3) & (blockSizeInBytes - 1);
 
             /* Update number of bits */
-            static if(blockSize==512)
+            static if (blockSize==512)
                 count[0] += inputLen * 8;
-            else static if(blockSize==1024)
+            else static if (blockSize==1024)
             {
                 /* ugly hack to work around lack of ucent */
                 auto oldCount0 = count[0];
                 count[0] += inputLen * 8;
-                if(count[0] < oldCount0)
+                if (count[0] < oldCount0)
                     count[1]++;
             }
             else
@@ -752,7 +752,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
          */
         ubyte[digestSize/8] finish() @trusted pure nothrow @nogc
         {
-            static if(blockSize==512)
+            static if (blockSize==512)
             {
                 ubyte[32] data = void;
                 uint index, padLen;
@@ -776,7 +776,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 start();
                 return data[0..digestSize/8];
             }
-            else static if(blockSize==1024)
+            else static if (blockSize==1024)
             {
                 ubyte[64] data = void;
                 uint index, padLen;
@@ -854,7 +854,7 @@ unittest
 {
     //Let's use the template features:
     //Note: When passing a SHA1 to a function, it must be passed by reference!
-    void doSomething(T)(ref T hash) if(isDigest!T)
+    void doSomething(T)(ref T hash) if (isDigest!T)
     {
       hash.put(cast(ubyte)0);
     }

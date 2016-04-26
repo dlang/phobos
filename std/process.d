@@ -1210,7 +1210,7 @@ private:
     {
         if (_processID == terminated) return _exitCode;
         int exitCode;
-        while(true)
+        while (true)
         {
             int status;
             auto check = waitpid(_processID, &status, block ? 0 : WNOHANG);
@@ -1275,7 +1275,7 @@ private:
 
         ~this()
         {
-            if(_handle != INVALID_HANDLE_VALUE)
+            if (_handle != INVALID_HANDLE_VALUE)
             {
                 CloseHandle(_handle);
                 _handle = INVALID_HANDLE_VALUE;
@@ -3304,7 +3304,7 @@ int system(string command)
 private void toAStringz(in string[] a, const(char)**az)
 {
     import std.string : toStringz;
-    foreach(string s; a)
+    foreach (string s; a)
     {
         *az++ = toStringz(s);
     }
@@ -3367,34 +3367,34 @@ int _spawnvp(int mode, in char *pathname, in char **argv)
     int retval = 0;
     pid_t pid = fork();
 
-    if(!pid)
+    if (!pid)
     {   // child
         core.sys.posix.unistd.execvp(pathname, argv);
         goto Lerror;
     }
-    else if(pid > 0)
+    else if (pid > 0)
     {   // parent
-        if(mode == _P_NOWAIT)
+        if (mode == _P_NOWAIT)
         {
             retval = pid; // caller waits
         }
         else
         {
-            while(1)
+            while (1)
             {
                 int status;
                 pid_t wpid = waitpid(pid, &status, 0);
-                if(exited(status))
+                if (exited(status))
                 {
                     retval = exitstatus(status);
                     break;
                 }
-                else if(signaled(status))
+                else if (signaled(status))
                 {
                     retval = -termsig(status);
                     break;
                 }
-                else if(stopped(status)) // ptrace support
+                else if (stopped(status)) // ptrace support
                     continue;
                 else
                     goto Lerror;
@@ -3578,7 +3578,7 @@ version(Posix)
 {
     import std.array : split;
     // Is pathname rooted?
-    if(pathname[0] == '/')
+    if (pathname[0] == '/')
     {
         // Yes, so just call execve()
         return execve(pathname, argv, envp);
@@ -3594,13 +3594,13 @@ version(Posix)
         // execution, so there's no need to check the execve() result through
         // the loop.
 
-        foreach(string pathDir; envPaths)
+        foreach (string pathDir; envPaths)
         {
             string  composite   =  cast(string) (pathDir ~ "/" ~ pathname);
 
             iRet = execve(composite, argv, envp);
         }
-        if(0 != iRet)
+        if (0 != iRet)
         {
             iRet = execve(pathname, argv, envp);
         }

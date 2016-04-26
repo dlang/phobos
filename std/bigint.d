@@ -1531,7 +1531,7 @@ unittest // 13963
 {
     BigInt x = 1;
     import std.meta : AliasSeq;
-    foreach(Int; AliasSeq!(byte, ubyte, short, ushort, int, uint))
+    foreach (Int; AliasSeq!(byte, ubyte, short, ushort, int, uint))
     {
         assert(is(typeof(x % Int(1)) == int));
     }

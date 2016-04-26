@@ -12,11 +12,11 @@ import std.algorithm, std.range, std.utf;
 //utility for shiftOr, returns a minimum number of bytes to test in a Char
 uint effectiveSize(Char)()
 {
-    static if(is(Char == char))
+    static if (is(Char == char))
         return 1;
-    else static if(is(Char == wchar))
+    else static if (is(Char == wchar))
         return 2;
-    else static if(is(Char == dchar))
+    else static if (is(Char == dchar))
         return 3;
     else
         static assert(0);
@@ -63,7 +63,7 @@ private:
 
         void set(alias setBits = setInvMask)(dchar ch)
         {
-            static if(charSize == 3)
+            static if (charSize == 3)
             {
                 uint val = ch, tmask = mask;
                 setBits(val&0xFF, tmask);
@@ -83,9 +83,9 @@ private:
                 size_t total = encode(buf, ch);
                 for(size_t i = 0; i < total; i++, tmask<<=1)
                 {
-                    static if(charSize == 1)
+                    static if (charSize == 1)
                         setBits(buf[i], tmask);
-                    else static if(charSize == 2)
+                    else static if (charSize == 2)
                     {
                         setBits(buf[i]&0xFF, tmask);
                         tmask <<= 1;
@@ -115,7 +115,7 @@ private:
     {
         auto t = worklist[$-1];
         worklist.length -= 1;
-        if(!__ctfe)
+        if (!__ctfe)
             cast(void)worklist.assumeSafeAppend();
         return t;
     }
@@ -136,7 +136,7 @@ public:
         ulong hash(uint[] tab)
         {
             ulong h = 0xcbf29ce484222325;
-            foreach(v; tab){
+            foreach (v; tab){
                 h ^= v;
                 h *= 0x100000001b3;
             }
@@ -145,11 +145,11 @@ public:
     L_FindChar:
         for(size_t i = 0;;)
         {
-            switch(re.ir[i].code)
+            switch (re.ir[i].code)
             {
                 case IR.Char:
                     fChar = re.ir[i].data;
-                    static if(charSize != 3)
+                    static if (charSize != 3)
                     {
                         Char[dchar.sizeof/Char.sizeof] buf;
                         encode(buf, fChar);
@@ -181,11 +181,11 @@ public:
         L_Eval_Thread:
             for(;;)
             {
-                switch(re.ir[t.pc].code)
+                switch (re.ir[t.pc].code)
                 {
                 case IR.Char:
                     uint s = charLen(re.ir[t.pc].data);
-                    if(t.idx+s > n_length)
+                    if (t.idx+s > n_length)
                         goto L_StopThread;
                     t.add(re.ir[t.pc].data);
                     t.advance(s);
@@ -199,7 +199,7 @@ public:
                     for(uint i = 0; i < len; i++)
                     {
                         auto x = charLen(re.ir[t.pc+i].data);
-                        if(countUntil(s[0..numS], x) < 0)
+                        if (countUntil(s[0..numS], x) < 0)
                            s[numS++] = x;
                     }
                     for(uint i = t.pc; i < end; i++)
@@ -209,13 +209,13 @@ public:
                     for(uint i = 0; i < numS; i++)
                     {
                         auto tx = fork(t, t.pc + len, t.counter);
-                        if(tx.idx + s[i] <= n_length)
+                        if (tx.idx + s[i] <= n_length)
                         {
                             tx.advance(s[i]);
                             trs ~= tx;
                         }
                     }
-                    if(!trs.empty)
+                    if (!trs.empty)
                         t = fetch(trs);
                     else
                         goto L_StopThread;
@@ -225,7 +225,7 @@ public:
                     auto set = re.charsets[re.ir[t.pc].data];
                     uint[4] s;
                     uint numS;
-                    static if(charSize == 3)
+                    static if (charSize == 3)
                     {
                         s[0] = charSize;
                         numS = 1;
@@ -233,13 +233,13 @@ public:
                     else
                     {
 
-                        static if(charSize == 1)
+                        static if (charSize == 1)
                             static immutable codeBounds = [0x0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF, 0x10000, 0x10FFFF];
                         else //== 2
                             static immutable codeBounds = [0x0, 0xFFFF, 0x10000, 0x10FFFF];
                         uint[] arr = new uint[set.byInterval.length * 2];
                         size_t ofs = 0;
-                        foreach(ival; set.byInterval)
+                        foreach (ival; set.byInterval)
                         {
                             arr[ofs++] = ival.a;
                             arr[ofs++] = ival.b;
@@ -249,19 +249,19 @@ public:
                         {
                             auto start = srange.lowerBound(codeBounds[2*i]).length;
                             auto end = srange.lowerBound(codeBounds[2*i+1]).length;
-                            if(end > start || (end == start && (end & 1)))
+                            if (end > start || (end == start && (end & 1)))
                                s[numS++] = (i+1)*charSize;
                         }
                     }
-                    if(numS == 0 || t.idx + s[numS-1] > n_length)
+                    if (numS == 0 || t.idx + s[numS-1] > n_length)
                         goto L_StopThread;
                     auto  chars = set.length;
-                    if(chars > charsetThreshold)
+                    if (chars > charsetThreshold)
                         goto L_StopThread;
-                    foreach(ch; set.byCodepoint)
+                    foreach (ch; set.byCodepoint)
                     {
                         //avoid surrogate pairs
-                        if(0xD800 <= ch && ch <= 0xDFFF)
+                        if (0xD800 <= ch && ch <= 0xDFFF)
                             continue;
                         t.add(ch);
                     }
@@ -271,7 +271,7 @@ public:
                         tx.advance(s[i]);
                         trs ~= tx;
                     }
-                    if(!trs.empty)
+                    if (!trs.empty)
                         t = fetch(trs);
                     else
                         goto L_StopThread;
@@ -286,7 +286,7 @@ public:
                 case IR.OrEnd:
                     auto slot = re.ir[t.pc+1].raw+t.counter;
                     auto val = hash(t.tab);
-                    if(val in merge[slot])
+                    if (val in merge[slot])
                         goto L_StopThread; // merge equivalent
                     merge[slot][val] = true;
                     t.pc += IRL!(IR.OrEnd);
@@ -297,7 +297,7 @@ public:
                 case IR.Option:
                     uint next = t.pc + re.ir[t.pc].data + IRL!(IR.Option);
                     //queue next Option
-                    if(re.ir[next].code == IR.Option)
+                    if (re.ir[next].code == IR.Option)
                     {
                         trs ~= fork(t, next, t.counter);
                     }
@@ -310,20 +310,20 @@ public:
                 case IR.RepeatQEnd:
                     auto slot = re.ir[t.pc+1].raw+t.counter;
                     auto val = hash(t.tab);
-                    if(val in merge[slot])
+                    if (val in merge[slot])
                         goto L_StopThread; // merge equivalent
                     merge[slot][val] = true;
                     uint len = re.ir[t.pc].data;
                     uint step = re.ir[t.pc+2].raw;
                     uint min = re.ir[t.pc+3].raw;
-                    if(t.counter < min)
+                    if (t.counter < min)
                     {
                         t.counter += step;
                         t.pc -= len;
                         break;
                     }
                     uint max = re.ir[t.pc+4].raw;
-                    if(t.counter < max)
+                    if (t.counter < max)
                     {
                         trs ~= fork(t, t.pc - len, t.counter + step);
                         t.counter = t.counter%step;
@@ -342,12 +342,12 @@ public:
                 case IR.InfiniteQEnd:
                     auto slot = re.ir[t.pc+1].raw+t.counter;
                     auto val = hash(t.tab);
-                    if(val in merge[slot])
+                    if (val in merge[slot])
                         goto L_StopThread; // merge equivalent
                     merge[slot][val] = true;
                     uint len = re.ir[t.pc].data;
                     uint pc1, pc2; //branches to take in priority order
-                    if(++t.hops == 32)
+                    if (++t.hops == 32)
                         goto L_StopThread;
                     pc1 = t.pc + IRL!(IR.InfiniteEnd);
                     pc2 = t.pc - len;
@@ -371,7 +371,7 @@ public:
                     break L_Eval_Thread;
                 }
             }
-            if(trs.empty)
+            if (trs.empty)
                 break;
             t = fetch(trs);
         }
@@ -397,28 +397,28 @@ public:
         uint state = uint.max;
         uint limit = 1u<<(n_length - 1u);
         debug(std_regex_search) writefln("Limit: %32b",limit);
-        if(fChar != uint.max)
+        if (fChar != uint.max)
         {
             const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
             const orginalAlign = cast(size_t)p & (Char.sizeof-1);
-            while(p != end)
+            while (p != end)
             {
-                if(!~state)
+                if (!~state)
                 {//speed up seeking first matching place
                     for(;;)
                     {
                         assert(p <= end, text(p," vs ", end));
                         p = cast(ubyte*)memchr(p, fChar, end - p);
-                        if(!p)
+                        if (!p)
                             return haystack.length;
-                        if((cast(size_t)p & (Char.sizeof-1)) == orginalAlign)
+                        if ((cast(size_t)p & (Char.sizeof-1)) == orginalAlign)
                             break;
-                        if(++p == end)
+                        if (++p == end)
                             return haystack.length;
                     }
                     state = ~1u;
                     assert((cast(size_t)p & (Char.sizeof-1)) == orginalAlign);
-                    static if(charSize == 3)
+                    static if (charSize == 3)
                     {
                         state = (state<<1) | table[p[1]];
                         state = (state<<1) | table[p[2]];
@@ -427,14 +427,14 @@ public:
                     else
                         p++;
                     //first char is tested, see if that's all
-                    if(!(state & limit))
+                    if (!(state & limit))
                         return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
                             -length;
                 }
                 else
                 {//have some bits/states for possible matches,
                  //use the usual shift-or cycle
-                    static if(charSize == 3)
+                    static if (charSize == 3)
                     {
                         state = (state<<1) | table[p[0]];
                         state = (state<<1) | table[p[1]];
@@ -446,7 +446,7 @@ public:
                         state = (state<<1) | table[p[0]];
                         p++;
                     }
-                    if(!(state & limit))
+                    if (!(state & limit))
                         return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
                             -length;
                 }
@@ -456,16 +456,16 @@ public:
         else
         {
             //normal path, partially unrolled for char/wchar
-            static if(charSize == 3)
+            static if (charSize == 3)
             {
                 const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
-                while(p != end)
+                while (p != end)
                 {
                     state = (state<<1) | table[p[0]];
                     state = (state<<1) | table[p[1]];
                     state = (state<<1) | table[p[2]];
                     p += 4;
-                    if(!(state & limit))//division rounds down for dchar
+                    if (!(state & limit))//division rounds down for dchar
                         return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
                         -length;
                 }
@@ -474,20 +474,20 @@ public:
             {
                 auto len = cast(ubyte*)(haystack.ptr + haystack.length) - p;
                 size_t i  = 0;
-                if(len & 1)
+                if (len & 1)
                 {
                     state = (state<<1) | table[p[i++]];
-                    if(!(state & limit))
+                    if (!(state & limit))
                         return idx+i/Char.sizeof-length;
                 }
-                while(i < len)
+                while (i < len)
                 {
                     state = (state<<1) | table[p[i++]];
-                    if(!(state & limit))
+                    if (!(state & limit))
                         return idx+i/Char.sizeof
                             -length;
                     state = (state<<1) | table[p[i++]];
-                    if(!(state & limit))
+                    if (!(state & limit))
                         return idx+i/Char.sizeof
                             -length;
                     debug(std_regex_search) writefln("State: %32b", state);
@@ -512,7 +512,7 @@ unittest
     import std.conv, std.regex;
     @trusted void test_fixed(alias Kick)()
     {
-        foreach(i, v; AliasSeq!(char, wchar, dchar))
+        foreach (i, v; AliasSeq!(char, wchar, dchar))
         {
             alias Char = v;
             alias String = immutable(v)[];
@@ -538,7 +538,7 @@ unittest
     }
     @trusted void test_flex(alias Kick)()
     {
-        foreach(i, v; AliasSeq!(char, wchar, dchar))
+        foreach (i, v; AliasSeq!(char, wchar, dchar))
         {
             alias Char = v;
             alias String = immutable(v)[];

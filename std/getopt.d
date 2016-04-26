@@ -559,7 +559,7 @@ private template optionValidator(A...)
             {
                 msg = format(fmt, "invalid argument type " ~ A[0].stringof, 0);
             }
-            else foreach(i; staticIota!(1, A.length))
+            else foreach (i; staticIota!(1, A.length))
             {
                 static if (!isReceiver!(A[i]) && !isSomeString!(A[i]) &&
                     !(is(A[i] == config)))
@@ -1488,7 +1488,7 @@ $(D Option). If a help message is present it will be printed next. The format is
 illustrated by this code:
 
 ------------
-foreach(it; opt)
+foreach (it; opt)
 {
     writefln("%*s %*s%s%s", lengthOfLongestShortOption, it.optShort,
         lengthOfLongestLongOption, it.optLong,

@@ -107,7 +107,7 @@ unittest
     ids ~= md5UUID("test.name.123");
     ids ~= sha1UUID("test.name.123");
 
-    foreach(entry; ids)
+    foreach (entry; ids)
     {
         assert(entry.variant == UUID.Variant.rfc4122);
     }
@@ -135,7 +135,7 @@ public struct UUID
 
         @safe pure nothrow @nogc Char toChar(Char)(size_t i) const
         {
-            if(i <= 9)
+            if (i <= 9)
                 return cast(Char)('0' + i);
             else
                 return cast(Char)('a' + (i-10));
@@ -218,7 +218,7 @@ public struct UUID
              */
             ubyte[16] data;
             private ulong[2] ulongs;
-            static if(size_t.sizeof == 4)
+            static if (size_t.sizeof == 4)
                 private uint[4] uints;
         }
 
@@ -275,11 +275,11 @@ public struct UUID
          * You need to pass exactly 16 ubytes.
          */
         @safe pure this(T...)(T uuidData)
-            if(uuidData.length == 16 && allSatisfy!(isIntegral, T))
+            if (uuidData.length == 16 && allSatisfy!(isIntegral, T))
         {
             import std.conv : to;
 
-            foreach(idx, it; uuidData)
+            foreach (idx, it; uuidData)
             {
                 this.data[idx] = to!ubyte(it);
             }
@@ -331,36 +331,36 @@ public struct UUID
          *
          * For a less strict parser, see $(LREF parseUUID)
          */
-        this(T)(in T[] uuid) if(isSomeChar!(Unqual!T))
+        this(T)(in T[] uuid) if (isSomeChar!(Unqual!T))
         {
             import std.conv : to, parse;
-            if(uuid.length < 36)
+            if (uuid.length < 36)
             {
                 throw new UUIDParsingException(to!string(uuid), 0,
                     UUIDParsingException.Reason.tooLittle, "Insufficient Input");
             }
-            if(uuid.length > 36)
+            if (uuid.length > 36)
             {
                 throw new UUIDParsingException(to!string(uuid), 35, UUIDParsingException.Reason.tooMuch,
                     "Input is too long, need exactly 36 characters");
             }
             enum skipInd = [skipSeq];
-            foreach(pos; skipInd)
-                if(uuid[pos] != '-')
+            foreach (pos; skipInd)
+                if (uuid[pos] != '-')
                     throw new UUIDParsingException(to!string(uuid), pos,
                         UUIDParsingException.Reason.invalidChar, "Expected '-'");
 
             ubyte[16] data2; //ctfe bug
             uint pos = void;
 
-            foreach(i, p; byteSeq)
+            foreach (i, p; byteSeq)
             {
                 enum uint s = 'a'-10-'0';
                 uint h = uuid[p];
                 uint l = uuid[p+1];
                 pos = p;
-                if(h < '0') goto Lerr;
-                if(l < '0') goto Lerr;
+                if (h < '0') goto Lerr;
+                if (l < '0') goto Lerr;
                 if (h > '9')
                 {
                     h |= 0x20; //poorman's tolower
@@ -406,7 +406,7 @@ public struct UUID
             import std.meta;
             import std.conv : to;
 
-            foreach(S; AliasSeq!(char[], const(char)[], immutable(char)[],
+            foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[],
                                   wchar[], const(wchar)[], immutable(wchar)[],
                                   dchar[], const(dchar)[], immutable(dchar)[],
                                   immutable(char[]), immutable(wchar[]), immutable(dchar[])))
@@ -464,13 +464,13 @@ public struct UUID
          */
         @trusted pure nothrow @nogc @property bool empty() const
         {
-            if(__ctfe)
+            if (__ctfe)
                 return data == (ubyte[16]).init;
 
             auto p = cast(const(size_t*))data.ptr;
-            static if(size_t.sizeof == 4)
+            static if (size_t.sizeof == 4)
                 return p[0] == 0 && p[1] == 0 && p[2] == 0 && p[3] == 0;
-            else static if(size_t.sizeof == 8)
+            else static if (size_t.sizeof == 8)
                 return p[0] == 0 && p[1] == 0;
             else
                 static assert(false, "nonsense, it's not 32 or 64 bit");
@@ -530,11 +530,11 @@ public struct UUID
             //which is index 8, since indexes count backwards
             auto octet7 = data[8]; //octet 7 is array index 8
 
-            if((octet7 & 0x80) == 0x00) //0b0xxxxxxx
+            if ((octet7 & 0x80) == 0x00) //0b0xxxxxxx
                 return Variant.ncs;
-            else if((octet7 & 0xC0) == 0x80) //0b10xxxxxx
+            else if ((octet7 & 0xC0) == 0x80) //0b10xxxxxx
                 return Variant.rfc4122;
-            else if((octet7 & 0xE0) == 0xC0) //0b110xxxxx
+            else if ((octet7 & 0xE0) == 0xC0) //0b110xxxxx
                 return Variant.microsoft;
             else
             {
@@ -567,7 +567,7 @@ public struct UUID
                                     0xd0 : Variant.microsoft,
                                     0xe0 : Variant.future,
                                     0xf0 : Variant.future];
-            foreach(key, value; tests)
+            foreach (key, value; tests)
             {
                 UUID u;
                 u.data[8] = key;
@@ -628,7 +628,7 @@ public struct UUID
                 0xd0 : UUID.Version.unknown,
                 0xe0 : UUID.Version.unknown,
                 0xf0 : UUID.Version.unknown];
-            foreach(key, value; tests)
+            foreach (key, value; tests)
             {
                 UUID u;
                 u.data[6] = key;
@@ -740,7 +740,7 @@ public struct UUID
         //MurmurHash2
         @safe pure nothrow @nogc size_t toHash() const
         {
-            static if(size_t.sizeof == 4)
+            static if (size_t.sizeof == 4)
             {
                 enum uint m = 0x5bd1e995;
                 enum uint n = 16;
@@ -869,9 +869,9 @@ public struct UUID
         }
         body {
             alias Char = typeof(Range.init[0]);
-            foreach(pos; skipSeq)
+            foreach (pos; skipSeq)
                 result[pos] = cast(Char)('-');
-            foreach(i, pos; byteSeq)
+            foreach (i, pos; byteSeq)
             {
                 const uint entry = this.data[i];
                 const uint hi = entry >> 4;
@@ -913,13 +913,13 @@ public struct UUID
         @safe pure nothrow @nogc unittest
         {
             import std.meta: AliasSeq;
-            foreach(Char; AliasSeq!(char, wchar, dchar))
+            foreach (Char; AliasSeq!(char, wchar, dchar))
             {
                 alias String = immutable(Char)[];
                 //CTFE
                 enum String s = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
                 enum id = UUID(s);
-                static if(is(Char == char))
+                static if (is(Char == char))
                 {
                     enum p = id.toString();
                     static assert(s == p);
@@ -1313,28 +1313,28 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
  * caused by a malformed UUID parsed at compile time can be cryptic,
  * but errors are detected and reported at compile time.
  */
-UUID parseUUID(T)(T uuidString) if(isSomeString!T)
+UUID parseUUID(T)(T uuidString) if (isSomeString!T)
 {
     return parseUUID(uuidString);
 }
 
 ///ditto
-UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
+UUID parseUUID(Range)(ref Range uuidRange) if (isInputRange!Range
     && is(Unqual!(ElementType!Range) == dchar))
 {
     import std.conv : ConvException, parse;
     import std.ascii : isHexDigit;
 
-    static if(isForwardRange!Range)
+    static if (isForwardRange!Range)
         auto errorCopy = uuidRange.save;
 
     void parserError()(size_t pos, UUIDParsingException.Reason reason, string message, Throwable next = null,
         string file = __FILE__, size_t line = __LINE__)
     {
-        static if(isForwardRange!Range)
+        static if (isForwardRange!Range)
         {
             import std.conv : to;
-            static if(isInfinite!Range)
+            static if (isInfinite!Range)
             {
                 throw new UUIDParsingException(to!string(take(errorCopy, pos)), pos, reason, message,
                     next, file, line);
@@ -1351,10 +1351,10 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
         }
     }
 
-    static if(hasLength!Range)
+    static if (hasLength!Range)
     {
         import std.conv : to;
-        if(uuidRange.length < 32)
+        if (uuidRange.length < 32)
         {
             throw new UUIDParsingException(to!string(uuidRange), 0, UUIDParsingException.Reason.tooLittle,
                 "Insufficient Input");
@@ -1369,7 +1369,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
     size_t skip()()
     {
         size_t skipped;
-        while(!uuidRange.empty && !isHexDigit(uuidRange.front))
+        while (!uuidRange.empty && !isHexDigit(uuidRange.front))
         {
             skipped++;
             uuidRange.popFront();
@@ -1379,25 +1379,25 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
 
     consumed += skip();
 
-    if(uuidRange.empty)
+    if (uuidRange.empty)
         parserError(consumed, UUIDParsingException.Reason.tooLittle, "Insufficient Input");
 
     bool dashAllowed = false;
 
-    parseLoop: while(!uuidRange.empty)
+    parseLoop: while (!uuidRange.empty)
     {
         dchar character = uuidRange.front;
 
-        if(character == '-')
+        if (character == '-')
         {
-            if(!dashAllowed)
+            if (!dashAllowed)
                 parserError(consumed, UUIDParsingException.Reason.invalidChar, "Unexpected '-'");
             else
                 dashAllowed = false;
 
             consumed++;
         }
-        else if(!isHexDigit(character))
+        else if (!isHexDigit(character))
         {
             parserError(consumed, UUIDParsingException.Reason.invalidChar,
                 "Unexpected character (wanted a hexDigit)");
@@ -1407,9 +1407,9 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
             try
             {
                 consumed += 2;
-                static if(isSomeString!Range)
+                static if (isSomeString!Range)
                 {
-                    if(uuidRange.length < 2)
+                    if (uuidRange.length < 2)
                     {
                         parserError(consumed, UUIDParsingException.Reason.tooLittle,
                             "Insufficient Input");
@@ -1423,7 +1423,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
                     dchar[2] copyBuf;
                     copyBuf[0] = character;
                     uuidRange.popFront();
-                    if(uuidRange.empty)
+                    if (uuidRange.empty)
                     {
                         parserError(consumed, UUIDParsingException.Reason.tooLittle,
                             "Insufficient Input");
@@ -1433,7 +1433,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
                     result.data[element++] = parse!ubyte(part, 16);
                 }
 
-                if(element == 16)
+                if (element == 16)
                 {
                     uuidRange.popFront();
                     break parseLoop;
@@ -1451,11 +1451,11 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
     }
     assert(element <= 16);
 
-    if(element < 16)
+    if (element < 16)
         parserError(consumed, UUIDParsingException.Reason.tooLittle, "Insufficient Input");
 
     consumed += skip();
-    if(!uuidRange.empty)
+    if (!uuidRange.empty)
         parserError(consumed, UUIDParsingException.Reason.invalidChar, "Unexpected character");
 
     return result;
@@ -1506,7 +1506,7 @@ unittest
             return input.empty;
         }
 
-        static if(forward)
+        static if (forward)
         {
             @property TestRange!true save()
             {
@@ -1526,7 +1526,7 @@ unittest
     //Helper function for unittests - Need to pass ranges by ref
     UUID parseHelper(T)(string input)
     {
-        static if(is(T == TestInputRange) || is(T == TestForwardRange))
+        static if (is(T == TestInputRange) || is(T == TestForwardRange))
         {
             T range = T(to!dstring(input));
             return parseUUID(range);
@@ -1535,7 +1535,7 @@ unittest
             return parseUUID(to!T(input));
     }
 
-    foreach(S; AliasSeq!(char[], const(char)[], immutable(char)[],
+    foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[],
                           immutable(char[]), immutable(wchar[]), immutable(dchar[]),
@@ -1668,7 +1668,7 @@ unittest
 
     auto r = regex(uuidRegex, "g");
     UUID[] found;
-    foreach(c; match(test, r))
+    foreach (c; match(test, r))
     {
         found ~= UUID(c.hit);
     }

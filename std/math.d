@@ -163,7 +163,7 @@ version(unittest)
 {
     import core.stdc.stdio;
 
-    static if(real.sizeof > double.sizeof)
+    static if (real.sizeof > double.sizeof)
         enum uint useDigits = 16;
     else
         enum uint useDigits = 15;
@@ -580,7 +580,7 @@ auto conj(Num)(Num z) @safe pure nothrow @nogc
 {
     //FIXME
     //Issue 14206
-    static if(is(Num* : const(cdouble*)))
+    static if (is(Num* : const(cdouble*)))
         return cast(cdouble) conj(cast(creal)z);
     else
         return z.re - z.im*1fi;
@@ -2197,7 +2197,7 @@ unittest
 unittest
 {
     FloatingPointControl ctrl;
-    if(FloatingPointControl.hasExceptionTraps)
+    if (FloatingPointControl.hasExceptionTraps)
         ctrl.disableExceptions(FloatingPointControl.allExceptions);
     ctrl.rounding = FloatingPointControl.roundToNearest;
 
@@ -2359,11 +2359,11 @@ creal expi(real y) @trusted pure nothrow @nogc
  *      )
  */
 T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
-    if(isFloatingPoint!T)
+    if (isFloatingPoint!T)
 {
     Unqual!T vf = value;
     ushort* vu = cast(ushort*)&vf;
-    static if(is(Unqual!T == float))
+    static if (is(Unqual!T == float))
         int* vi = cast(int*)&vf;
     else
         long* vl = cast(long*)&vf;
@@ -2576,7 +2576,7 @@ unittest
              tuple(-T.nan, -T.nan, int.min),
              ];
 
-        foreach(elem; vals)
+        foreach (elem; vals)
         {
             T x = elem[0];
             T e = elem[1];
@@ -2596,7 +2596,7 @@ unittest
                 [T.min_normal,  .5,     -16381],
                 [T.min_normal/2.0L, .5,     -16382]    // subnormal
             ];
-            foreach(elem; extendedvals)
+            foreach (elem; extendedvals)
             {
                 T x = elem[0];
                 T e = elem[1];
@@ -2640,7 +2640,7 @@ unittest
  *      )
  */
 int ilogb(T)(const T x) @trusted pure nothrow @nogc
-    if(isFloatingPoint!T)
+    if (isFloatingPoint!T)
 {
     alias F = floatTraits!T;
 
@@ -2649,7 +2649,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         T rv;
         ushort[T.sizeof/2] vu;
         uint[T.sizeof/4] vui;
-        static if(T.sizeof >= 8)
+        static if (T.sizeof >= 8)
             ulong[T.sizeof/8] vul;
     }
     floatBits y = void;
@@ -2780,7 +2780,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
 }
 /// ditto
 int ilogb(T)(const T x) @safe pure nothrow @nogc
-    if(isIntegral!T && isUnsigned!T)
+    if (isIntegral!T && isUnsigned!T)
 {
     if (x == 0)
         return FP_ILOGB0;
@@ -2792,7 +2792,7 @@ int ilogb(T)(const T x) @safe pure nothrow @nogc
 }
 /// ditto
 int ilogb(T)(const T x) @safe pure nothrow @nogc
-    if(isIntegral!T && isSigned!T)
+    if (isIntegral!T && isSigned!T)
 {
     // Note: abs(x) can not be used because the return type is not Unsigned and
     //       the return value would be wrong for x == int.min
@@ -2826,7 +2826,7 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
             T(  0.123     , -4          ),
         ];
 
-        foreach(elem; vals)
+        foreach (elem; vals)
         {
             assert(ilogb(elem[0]) == elem[1]);
         }
@@ -2879,7 +2879,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 @nogc @safe pure nothrow unittest
 {
     import std.meta;
-    foreach(T; AliasSeq!(float, double, real))
+    foreach (T; AliasSeq!(float, double, real))
     {
         T r;
 
@@ -3048,9 +3048,9 @@ real log(real x) @safe pure nothrow @nogc
 
         // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
         // where z = 2(x - 1)/(x + 1)
-        if((exp > 2) || (exp < -2))
+        if ((exp > 2) || (exp < -2))
         {
-            if(x < SQRT1_2)
+            if (x < SQRT1_2)
             {   // 2(2x - 1)/(2x + 1)
                 exp -= 1;
                 z = x - 0.5;
@@ -3179,9 +3179,9 @@ real log10(real x) @safe pure nothrow @nogc
 
         // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
         // where z = 2(x - 1)/(x + 1)
-        if((exp > 2) || (exp < -2))
+        if ((exp > 2) || (exp < -2))
         {
-            if(x < SQRT1_2)
+            if (x < SQRT1_2)
             {   // 2(2x - 1)/(2x + 1)
                 exp -= 1;
                 z = x - 0.5;
@@ -3341,9 +3341,9 @@ real log2(real x) @safe pure nothrow @nogc
 
         // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
         // where z = 2(x - 1)/(x + 1)
-        if((exp > 2) || (exp < -2))
+        if ((exp > 2) || (exp < -2))
         {
-            if(x < SQRT1_2)
+            if (x < SQRT1_2)
             {   // 2(2x - 1)/(2x + 1)
                 exp -= 1;
                 z = x - 0.5;
@@ -4797,7 +4797,7 @@ unittest
     {
         assert(FloatingPointControl.rounding
                == FloatingPointControl.roundToNearest);
-        if(FloatingPointControl.hasExceptionTraps)
+        if (FloatingPointControl.hasExceptionTraps)
             assert(FloatingPointControl.enabledExceptions == 0);
     }
 
@@ -4813,7 +4813,7 @@ unittest
     }
     ensureDefaults();
 
-    if(FloatingPointControl.hasExceptionTraps)
+    if (FloatingPointControl.hasExceptionTraps)
     {
         FloatingPointControl ctrl;
         ctrl.enableExceptions(FloatingPointControl.divByZeroException
@@ -4896,7 +4896,7 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 {
     import std.meta;
 
-    foreach(T; AliasSeq!(float, double, real))
+    foreach (T; AliasSeq!(float, double, real))
     {
         // CTFE-able tests
         assert(isNaN(T.init));
@@ -6055,7 +6055,7 @@ typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n) @nogc @trusted pur
 
 /**Computes integer to floating point powers.*/
 real pow(I, F)(I x, F y) @nogc @trusted pure nothrow
-    if(isIntegral!I && isFloatingPoint!F)
+    if (isIntegral!I && isFloatingPoint!F)
 {
     return pow(cast(real) x, cast(Unqual!F) y);
 }
@@ -6254,27 +6254,27 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
             // Result is real only if y is an integer
             // Check for a non-zero fractional part
             enum maxOdd = pow(2.0L, real.mant_dig) - 1.0L;
-            static if(maxOdd > ulong.max)
+            static if (maxOdd > ulong.max)
             {
                 // Generic method, for any FP type
-                if(floor(y) != y)
+                if (floor(y) != y)
                     return sqrt(x); // Complex result -- create a NaN
 
                 const hy = ldexp(y, -1);
-                if(floor(hy) != hy)
+                if (floor(hy) != hy)
                     sign = -1.0;
             }
             else
             {
                 // Much faster, if ulong has enough precision
                 const absY = fabs(y);
-                if(absY <= maxOdd)
+                if (absY <= maxOdd)
                 {
                     const uy = cast(ulong)absY;
-                    if(uy != absY)
+                    if (uy != absY)
                         return sqrt(x); // Complex result -- create a NaN
 
-                    if(uy & 1)
+                    if (uy & 1)
                         sign = -1.0;
                 }
             }
@@ -6680,7 +6680,7 @@ in
 }
 body
 {
-    static if(is(Unqual!T2 == real))
+    static if (is(Unqual!T2 == real))
     {
         return polyImpl(x, A);
     }
@@ -6732,7 +6732,7 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
 {
     version (D_InlineAsm_X86)
     {
-        if(__ctfe)
+        if (__ctfe)
         {
             return polyImplBase(x, A);
         }
@@ -7465,7 +7465,7 @@ T nextPow2(T)(const T val) if (isFloatingPoint!T)
 {
     import std.meta: AliasSeq;
 
-    foreach(T; AliasSeq!(float, double, real))
+    foreach (T; AliasSeq!(float, double, real))
     {
         enum T subNormal = T.min_normal / 2;
 
@@ -7584,7 +7584,7 @@ T truncPow2(T)(const T val) if (isFloatingPoint!T)
 {
     import std.meta: AliasSeq;
 
-    foreach(T; AliasSeq!(float, double, real))
+    foreach (T; AliasSeq!(float, double, real))
     {
         assert(truncPow2(T(0.0)) == 0.0);
 

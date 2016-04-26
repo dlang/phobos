@@ -293,13 +293,13 @@ unittest
 
 // Used in Tuple.toString
 private template sharedToString(alias field)
-    if(is(typeof(field) == shared))
+    if (is(typeof(field) == shared))
 {
     static immutable sharedToString = typeof(field).stringof;
 }
 
 private template sharedToString(alias field)
-    if(!is(typeof(field) == shared))
+    if (!is(typeof(field) == shared))
 {
     alias sharedToString = field;
 }
@@ -6101,7 +6101,7 @@ template scoped(T)
             // As `Scoped` can be unaligned moved in memory class instance should be moved accordingly.
             immutable size_t d = alignedStore - Scoped_store.ptr;
             size_t* currD = cast(size_t*) &Scoped_store[$ - size_t.sizeof];
-            if(d != *currD)
+            if (d != *currD)
             {
                 import core.stdc.string;
                 memmove(alignedStore, Scoped_store.ptr + *currD, __traits(classInstanceSize, T));
@@ -6221,7 +6221,7 @@ unittest
 }
 
 private size_t _alignUp(size_t alignment)(size_t n)
-    if(alignment > 0 && !((alignment - 1) & alignment))
+    if (alignment > 0 && !((alignment - 1) & alignment))
 {
     enum badEnd = alignment - 1; // 0b11, 0b111, ...
     return (n + badEnd) & ~badEnd;
@@ -6275,7 +6275,7 @@ unittest // Issue 6580 testcase
             alloca(size);
             alignmentTest();
         }
-        foreach(i; 0 .. 10)
+        foreach (i; 0 .. 10)
             test(i);
     }
     else
@@ -6285,7 +6285,7 @@ unittest // Issue 6580 testcase
             byte[size] arr;
             alignmentTest();
         }
-        foreach(i; AliasSeq!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+        foreach (i; AliasSeq!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
             test!i();
     }
 }
@@ -6662,7 +6662,7 @@ enum E
 }
 E e = E.A | E.B;
 // will throw SwitchError
-final switch(e)
+final switch (e)
 {
     case E.A:
         return;

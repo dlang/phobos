@@ -537,7 +537,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             // using positional parameters!
 
             // Make the conditional compilation of this loop explicit, to avoid "statement not reachable" warnings.
-            static if(A.length > 0)
+            static if (A.length > 0)
             {
                 foreach (i; spec.indexStart - 1 .. spec.indexEnd)
                 {
@@ -2767,7 +2767,7 @@ unittest  // Issue 8921
 
 template hasToString(T, Char)
 {
-    static if(isPointer!T && !isAggregateType!T)
+    static if (isPointer!T && !isAggregateType!T)
     {
         // X* does not have toString, even if X is aggregate type has toString.
         enum hasToString = 0;
@@ -3580,9 +3580,9 @@ void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = _
     FormatSpec!char f;
     auto w = appender!string();
     formatValue(w, val, f);
-    foreach(cur; expected)
+    foreach (cur; expected)
     {
-        if(w.data == cur) return;
+        if (w.data == cur) return;
     }
     enforce!AssertError(
             false,
@@ -3597,9 +3597,9 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
     import std.array : appender;
     auto w = appender!string();
     formattedWrite(w, fmt, val);
-    foreach(cur; expected)
+    foreach (cur; expected)
     {
-        if(w.data == cur) return;
+        if (w.data == cur) return;
     }
     enforce!AssertError(
             false,
@@ -4116,9 +4116,9 @@ void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn =
 
     auto input = w.data;
 
-    foreach(cur; formatted)
+    foreach (cur; formatted)
     {
-        if(input == cur) return;
+        if (input == cur) return;
     }
     enforce!AssertError(
             false,
@@ -5184,7 +5184,7 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
     scope(exit) free(argBuffer);
 
     size_t bufUsed = 0;
-    foreach(ti; arguments)
+    foreach (ti; arguments)
     {
         // Ensure the required alignment
         bufUsed += ti.talign - 1;
@@ -5378,7 +5378,7 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
                         import std.math : isNaN, isInfinity;
                         if (isNaN(v)) // snprintf writes 1.#QNAN
                             n = snprintf(fbuf.ptr, sl, "nan");
-                        else if(isInfinity(v)) // snprintf writes 1.#INF
+                        else if (isInfinity(v)) // snprintf writes 1.#INF
                             n = snprintf(fbuf.ptr, sl, v < 0 ? "-inf" : "inf");
                         else
                             n = snprintf(fbuf.ptr, sl, format.ptr, field_width,
@@ -5451,7 +5451,7 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
             auto mSave = m;
             valti = skipCI(valti);
             keyti = skipCI(keyti);
-            foreach(ref fakevalue; vaa)
+            foreach (ref fakevalue; vaa)
             {
                 if (comma) putc(',');
                 comma = true;

@@ -165,7 +165,7 @@ interface InputStream {
    * For example, to echo a file line-by-line with line numbers run:
    * ------------------------------------
    * Stream file = new BufferedFile("sample.txt");
-   * foreach(ulong n, char[] line; file)
+   * foreach (ulong n, char[] line; file)
    * {
    *     writefln("line %d: %s", n, line);
    * }
@@ -698,7 +698,7 @@ class Stream : InputStream, OutputStream {
     char c;
     bool firstCharacter = true;
     while ((j < arguments.length || i < fmt.length) && !eof) {
-      if(firstCharacter) {
+      if (firstCharacter) {
         c = getc();
         firstCharacter = false;
       }
@@ -933,15 +933,15 @@ class Stream : InputStream, OutputStream {
                 }
               }
             }
-            if(width && (c == 'n' || c == 'N')) {
+            if (width && (c == 'n' || c == 'N')) {
               width--;
               c = getc();
               count++;
-              if(width && (c == 'a' || c == 'A')) {
+              if (width && (c == 'a' || c == 'A')) {
                 width--;
                 c = getc();
                 count++;
-                if(width && (c == 'n' || c == 'N')) {
+                if (width && (c == 'n' || c == 'N')) {
                   width--;
                   c = getc();
                   count++;
@@ -949,15 +949,15 @@ class Stream : InputStream, OutputStream {
                 }
               }
             }
-            if(width && (c == 'i' || c == 'I')) {
+            if (width && (c == 'i' || c == 'I')) {
               width--;
               c = getc();
               count++;
-              if(width && (c == 'n' || c == 'N')) {
+              if (width && (c == 'n' || c == 'N')) {
                 width--;
                 c = getc();
                 count++;
-                if(width && (c == 'f' || c == 'F')) {
+                if (width && (c == 'f' || c == 'F')) {
                   width--;
                   c = getc();
                   count++;
@@ -1770,23 +1770,23 @@ class BufferedStream : FilterStream {
           for(;;) {
               size_t start = bufferCurPos;
             L1:
-              foreach(ubyte b; buffer[start .. bufferLen]) {
+              foreach (ubyte b; buffer[start .. bufferLen]) {
                   bufferCurPos++;
                   pc[idx] = b;
-                  if(idx < T.sizeof - 1) {
+                  if (idx < T.sizeof - 1) {
                       idx++;
                       continue L1;
                   } else {
                       idx = 0;
                   }
-                  if(c == '\n' || haveCR) {
-                      if(haveCR && c != '\n') bufferCurPos--;
+                  if (c == '\n' || haveCR) {
+                      if (haveCR && c != '\n') bufferCurPos--;
                       break L0;
                   } else {
-                      if(c == '\r') {
+                      if (c == '\r') {
                           haveCR = true;
                       } else {
-                          if(lineSize < inBuffer.length) {
+                          if (lineSize < inBuffer.length) {
                               inBuffer[lineSize] = c;
                           } else {
                               inBuffer ~= c;
@@ -1797,7 +1797,7 @@ class BufferedStream : FilterStream {
               }
               flush();
               size_t res = super.readBlock(buffer.ptr, buffer.length);
-              if(!res) break L0; // EOF
+              if (!res) break L0; // EOF
               bufferSourcePos = bufferLen = res;
               streamPos += res;
           }
@@ -2191,7 +2191,7 @@ class File: Stream {
     file.writeLine("That was blank");
     file.position = 0;
     char[][] lines;
-    foreach(char[] line; file) {
+    foreach (char[] line; file) {
       lines ~= line.dup;
     }
     assert( lines.length == 4 );
@@ -2201,7 +2201,7 @@ class File: Stream {
     assert( lines[3] == "That was blank");
     file.position = 0;
     lines = new char[][4];
-    foreach(ulong n, char[] line; file) {
+    foreach (ulong n, char[] line; file) {
       lines[cast(size_t)(n-1)] = line.dup;
     }
     assert( lines[0] == "Testing stream.d:");
@@ -2540,7 +2540,7 @@ class EndianStream : FilterStream {
   override void write(dchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
 
   override void writeStringW(const(wchar)[] str) {
-    foreach(wchar cw;str) {
+    foreach (wchar cw;str) {
       fixBO(&cw,2);
       s.writeExact(&cw, 2);
     }

@@ -481,12 +481,12 @@ unittest
     assert(arr.moveBack() == 4);
     assert(arr.moveAt(1) == 2);
 
-    foreach(elem; arrWrapped) {}
-    foreach(i, elem; arrWrapped) {}
+    foreach (elem; arrWrapped) {}
+    foreach (i, elem; arrWrapped) {}
 
     assert(inputRangeObject(arrWrapped) is arrWrapped);
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges) {
         auto d = DummyType.init;
         static assert(propagatesRangeType!(DummyType,
                         typeof(inputRangeObject(d))));

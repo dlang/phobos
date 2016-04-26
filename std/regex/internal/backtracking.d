@@ -16,7 +16,7 @@ import std.range, std.typecons, std.traits, core.stdc.stdlib;
 template BacktrackingMatcher(bool CTregex)
 {
     @trusted struct BacktrackingMatcher(Char, Stream = Input!Char)
-        if(is(Char : dchar))
+        if (is(Char : dchar))
     {
         alias DataIndex = Stream.DataIndex;
         struct State
@@ -31,7 +31,7 @@ template BacktrackingMatcher(bool CTregex)
         alias RegEx = Regex!Char;
         alias MatchFn = bool function (ref BacktrackingMatcher!(Char, Stream));
         RegEx re;      //regex program
-        static if(CTregex)
+        static if (CTregex)
             MatchFn nativeFn; //native code for that program
         //Stream state
         Stream s;
@@ -41,7 +41,7 @@ template BacktrackingMatcher(bool CTregex)
         //backtracking machine state
         uint pc, counter;
         DataIndex lastState = 0;    //top of state stack
-        static if(!CTregex)
+        static if (!CTregex)
             uint infiniteNesting;
         size_t[] memory;
         Trace[]  merge;
@@ -53,7 +53,7 @@ template BacktrackingMatcher(bool CTregex)
             bool mark(size_t idx)
             {
                 auto d = idx - offset;
-                if(d < 64) // including overflow
+                if (d < 64) // including overflow
                 {
                     auto p = mask & (1UL<<d);
                     mask |= 1UL<<d;
@@ -70,7 +70,7 @@ template BacktrackingMatcher(bool CTregex)
         //local slice of matches, global for backref
         Group!DataIndex[] matches, backrefed;
 
-        static if(__traits(hasMember,Stream, "search"))
+        static if (__traits(hasMember,Stream, "search"))
         {
             enum kicked = true;
         }
@@ -93,15 +93,15 @@ template BacktrackingMatcher(bool CTregex)
 
         void next()
         {
-            if(!s.nextChar(front, index))
+            if (!s.nextChar(front, index))
                 index = s.lastIndex;
         }
 
         void search()
         {
-            static if(kicked)
+            static if (kicked)
             {
-                if(!s.search(re.kickstart, front, index))
+                if (!s.search(re.kickstart, front, index))
                 {
                     index = s.lastIndex;
                 }
@@ -178,13 +178,13 @@ template BacktrackingMatcher(bool CTregex)
         {
             size_t start = index;
             int val = matchImpl();
-            if(val)
+            if (val)
             {//stream is updated here
                 matches[0].begin = start;
                 matches[0].end = index;
-                if(!(re.flags & RegexOption.global) || atEnd)
+                if (!(re.flags & RegexOption.global) || atEnd)
                     exhausted = true;
-                if(start == index)//empty match advances input
+                if (start == index)//empty match advances input
                     next();
                 return val;
             }
@@ -199,36 +199,36 @@ template BacktrackingMatcher(bool CTregex)
             {
                 writeln("------------------------------------------");
             }
-            if(exhausted) //all matches collected
+            if (exhausted) //all matches collected
                 return false;
             this.matches = matches;
-            if(re.flags & RegexInfo.oneShot)
+            if (re.flags & RegexInfo.oneShot)
             {
                 exhausted = true;
                 DataIndex start = index;
                 auto m = matchImpl();
-                if(m)
+                if (m)
                 {
                     matches[0].begin = start;
                     matches[0].end = index;
                 }
                 return m;
             }
-            static if(kicked)
+            static if (kicked)
             {
-                if(!re.kickstart.empty)
+                if (!re.kickstart.empty)
                 {
                     for(;;)
                     {
                         int val = matchFinalize();
-                        if(val)
+                        if (val)
                             return val;
                         else
                         {
-                            if(atEnd)
+                            if (atEnd)
                                 break;
                             search();
-                            if(atEnd)
+                            if (atEnd)
                             {
                                 exhausted = true;
                                 return matchFinalize();
@@ -243,14 +243,14 @@ template BacktrackingMatcher(bool CTregex)
             for(;;)
             {
                 int val = matchFinalize();
-                if(val)
+                if (val)
                     return val;
                 else
                 {
-                    if(atEnd)
+                    if (atEnd)
                         break;
                     next();
-                    if(atEnd)
+                    if (atEnd)
                     {
                         exhausted = true;
                         return matchFinalize();
@@ -267,7 +267,7 @@ template BacktrackingMatcher(bool CTregex)
         +/
         int matchImpl()
         {
-            static if(CTregex && is(typeof(nativeFn(this))))
+            static if (CTregex && is(typeof(nativeFn(this))))
             {
                     debug(std_regex_ctr) writeln("using C-T matcher");
                 return nativeFn(this);
@@ -286,45 +286,45 @@ template BacktrackingMatcher(bool CTregex)
                         writefln("PC: %s\tCNT: %s\t%s \tfront: %s src: %s",
                             pc, counter, disassemble(re.ir, pc, re.dict),
                             front, s._index);
-                    switch(re.ir[pc].code)
+                    switch (re.ir[pc].code)
                     {
                     case IR.OrChar://assumes IRL!(OrChar) == 1
-                        if(atEnd)
+                        if (atEnd)
                             goto L_backtrack;
                         uint len = re.ir[pc].sequence;
                         uint end = pc + len;
-                        if(re.ir[pc].data != front && re.ir[pc+1].data != front)
+                        if (re.ir[pc].data != front && re.ir[pc+1].data != front)
                         {
                             for(pc = pc+2; pc < end; pc++)
-                                if(re.ir[pc].data == front)
+                                if (re.ir[pc].data == front)
                                     break;
-                            if(pc == end)
+                            if (pc == end)
                                 goto L_backtrack;
                         }
                         pc = end;
                         next();
                         break;
                     case IR.Char:
-                        if(atEnd || front != re.ir[pc].data)
+                        if (atEnd || front != re.ir[pc].data)
                             goto L_backtrack;
                         pc += IRL!(IR.Char);
                         next();
                     break;
                     case IR.Any:
-                        if(atEnd || (!(re.flags & RegexOption.singleline)
+                        if (atEnd || (!(re.flags & RegexOption.singleline)
                                 && (front == '\r' || front == '\n')))
                             goto L_backtrack;
                         pc += IRL!(IR.Any);
                         next();
                         break;
                     case IR.CodepointSet:
-                        if(atEnd || !re.charsets[re.ir[pc].data].scanFor(front))
+                        if (atEnd || !re.charsets[re.ir[pc].data].scanFor(front))
                             goto L_backtrack;
                         next();
                         pc += IRL!(IR.CodepointSet);
                         break;
                     case IR.Trie:
-                        if(atEnd || !re.matchers[re.ir[pc].data][front])
+                        if (atEnd || !re.matchers[re.ir[pc].data][front])
                             goto L_backtrack;
                         next();
                         pc += IRL!(IR.Trie);
@@ -333,22 +333,22 @@ template BacktrackingMatcher(bool CTregex)
                         dchar back;
                         DataIndex bi;
                         //at start & end of input
-                        if(atStart && wordMatcher[front])
+                        if (atStart && wordMatcher[front])
                         {
                             pc += IRL!(IR.Wordboundary);
                             break;
                         }
-                        else if(atEnd && s.loopBack(index).nextChar(back, bi)
+                        else if (atEnd && s.loopBack(index).nextChar(back, bi)
                                 && wordMatcher[back])
                         {
                             pc += IRL!(IR.Wordboundary);
                             break;
                         }
-                        else if(s.loopBack(index).nextChar(back, bi))
+                        else if (s.loopBack(index).nextChar(back, bi))
                         {
                             bool af = wordMatcher[front];
                             bool ab = wordMatcher[back];
-                            if(af ^ ab)
+                            if (af ^ ab)
                             {
                                 pc += IRL!(IR.Wordboundary);
                                 break;
@@ -359,16 +359,16 @@ template BacktrackingMatcher(bool CTregex)
                         dchar back;
                         DataIndex bi;
                         //at start & end of input
-                        if(atStart && wordMatcher[front])
+                        if (atStart && wordMatcher[front])
                             goto L_backtrack;
-                        else if(atEnd && s.loopBack(index).nextChar(back, bi)
+                        else if (atEnd && s.loopBack(index).nextChar(back, bi)
                                 && wordMatcher[back])
                             goto L_backtrack;
-                        else if(s.loopBack(index).nextChar(back, bi))
+                        else if (s.loopBack(index).nextChar(back, bi))
                         {
                             bool af = wordMatcher[front];
                             bool ab = wordMatcher[back];
-                            if(af ^ ab)
+                            if (af ^ ab)
                                 goto L_backtrack;
                         }
                         pc += IRL!(IR.Wordboundary);
@@ -376,9 +376,9 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.Bol:
                         dchar back;
                         DataIndex bi;
-                        if(atStart)
+                        if (atStart)
                             pc += IRL!(IR.Bol);
-                        else if((re.flags & RegexOption.multiline)
+                        else if ((re.flags & RegexOption.multiline)
                             && s.loopBack(index).nextChar(back,bi)
                             && endOfLine(back, front == '\n'))
                         {
@@ -392,7 +392,7 @@ template BacktrackingMatcher(bool CTregex)
                         DataIndex bi;
                         debug(std_regex_matcher) writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
                         //no matching inside \r\n
-                        if(atEnd || ((re.flags & RegexOption.multiline)
+                        if (atEnd || ((re.flags & RegexOption.multiline)
                             && endOfLine(front, s.loopBack(index).nextChar(back,bi)
                                 && back == '\r')))
                         {
@@ -406,7 +406,7 @@ template BacktrackingMatcher(bool CTregex)
                         //now pc is at end IR.Infinite(Q)End
                         uint len = re.ir[pc].data;
                         int test;
-                        if(re.ir[pc].code == IR.InfiniteEnd)
+                        if (re.ir[pc].code == IR.InfiniteEnd)
                         {
                             pushState(pc+IRL!(IR.InfiniteEnd), counter);
                             pc -= len;
@@ -422,7 +422,7 @@ template BacktrackingMatcher(bool CTregex)
                         //now pc is at end IR.InfiniteBloomEnd
                         uint len = re.ir[pc].data;
                         uint filterIdx = re.ir[pc+2].raw;
-                        if(re.filters[filterIdx][front])
+                        if (re.filters[filterIdx][front])
                             pushState(pc+IRL!(IR.InfiniteBloomEnd), counter);
                         pc -= len;
                         break;
@@ -431,7 +431,7 @@ template BacktrackingMatcher(bool CTregex)
                         break;
                     case IR.RepeatEnd:
                     case IR.RepeatQEnd:
-                        if(merge[re.ir[pc + 1].raw+counter].mark(index))
+                        if (merge[re.ir[pc + 1].raw+counter].mark(index))
                         {
                             // merged!
                             goto L_backtrack;
@@ -441,14 +441,14 @@ template BacktrackingMatcher(bool CTregex)
                         uint step =  re.ir[pc+2].raw;
                         uint min = re.ir[pc+3].raw;
                         uint max = re.ir[pc+4].raw;
-                        if(counter < min)
+                        if (counter < min)
                         {
                             counter += step;
                             pc -= len;
                         }
-                        else if(counter < max)
+                        else if (counter < max)
                         {
-                            if(re.ir[pc].code == IR.RepeatEnd)
+                            if (re.ir[pc].code == IR.RepeatEnd)
                             {
                                 pushState(pc + IRL!(IR.RepeatEnd), counter%step);
                                 counter += step;
@@ -470,14 +470,14 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.InfiniteEnd:
                     case IR.InfiniteQEnd:
                         debug(std_regex_matcher) writeln("Infinited nesting:", infiniteNesting);
-                        if(merge[re.ir[pc + 1].raw+counter].mark(index))
+                        if (merge[re.ir[pc + 1].raw+counter].mark(index))
                         {
                             // merged!
                             goto L_backtrack;
                         }
                         uint len = re.ir[pc].data;
                         int test;
-                        if(re.ir[pc].code == IR.InfiniteEnd)
+                        if (re.ir[pc].code == IR.InfiniteEnd)
                         {
                             pushState(pc + IRL!(IR.InfiniteEnd), counter);
                             pc -= len;
@@ -490,14 +490,14 @@ template BacktrackingMatcher(bool CTregex)
                         break;
                     case IR.InfiniteBloomEnd:
                         debug(std_regex_matcher) writeln("Infinited nesting:", infiniteNesting);
-                        if(merge[re.ir[pc + 1].raw+counter].mark(index))
+                        if (merge[re.ir[pc + 1].raw+counter].mark(index))
                         {
                             // merged!
                             goto L_backtrack;
                         }
                         uint len = re.ir[pc].data;
                         uint filterIdx = re.ir[pc+2].raw;
-                        if(re.filters[filterIdx][front])
+                        if (re.filters[filterIdx][front])
                         {
                             infiniteNesting--;
                             pushState(pc + IRL!(IR.InfiniteBloomEnd), counter);
@@ -506,7 +506,7 @@ template BacktrackingMatcher(bool CTregex)
                         pc -= len;
                         break;
                     case IR.OrEnd:
-                        if(merge[re.ir[pc + 1].raw+counter].mark(index))
+                        if (merge[re.ir[pc + 1].raw+counter].mark(index))
                         {
                             // merged!
                             goto L_backtrack;
@@ -518,7 +518,7 @@ template BacktrackingMatcher(bool CTregex)
                         goto case;
                     case IR.Option:
                         uint len = re.ir[pc].data;
-                        if(re.ir[pc+len].code == IR.GotoEndOr)//not a last one
+                        if (re.ir[pc+len].code == IR.GotoEndOr)//not a last one
                         {
                             pushState(pc + len + IRL!(IR.Option), counter); //remember 2nd branch
                         }
@@ -546,7 +546,7 @@ template BacktrackingMatcher(bool CTregex)
                         uint ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
                         auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
                         scope(exit) free(mem.ptr);
-                        static if(Stream.isLoopback)
+                        static if (Stream.isLoopback)
                         {
                             auto matcher = bwdMatcher(this, mem);
                         }
@@ -560,7 +560,7 @@ template BacktrackingMatcher(bool CTregex)
                         bool match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookaheadStart);
                         s.reset(save);
                         next();
-                        if(!match)
+                        if (!match)
                             goto L_backtrack;
                         else
                         {
@@ -573,7 +573,7 @@ template BacktrackingMatcher(bool CTregex)
                         uint ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
                         auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
                         scope(exit) free(mem.ptr);
-                        static if(Stream.isLoopback)
+                        static if (Stream.isLoopback)
                         {
                             alias Matcher = BacktrackingMatcher!(Char, Stream);
                             auto matcher = Matcher(re, s, mem, front, index);
@@ -587,7 +587,7 @@ template BacktrackingMatcher(bool CTregex)
                         matcher.re.ir = re.ir[pc + IRL!(IR.LookbehindStart) .. pc + IRL!(IR.LookbehindStart) + len + IRL!(IR.LookbehindEnd)];
                         matcher.backrefed  = backrefed.empty ? matches : backrefed;
                         bool match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookbehindStart);
-                        if(!match)
+                        if (!match)
                             goto L_backtrack;
                         else
                         {
@@ -599,12 +599,12 @@ template BacktrackingMatcher(bool CTregex)
                         auto referenced = re.ir[pc].localRef
                                 ? s[matches[n].begin .. matches[n].end]
                                 : s[backrefed[n].begin .. backrefed[n].end];
-                        while(!atEnd && !referenced.empty && front == referenced.front)
+                        while (!atEnd && !referenced.empty && front == referenced.front)
                         {
                             next();
                             referenced.popFront();
                         }
-                        if(referenced.empty)
+                        if (referenced.empty)
                             pc++;
                         else
                             goto L_backtrack;
@@ -622,7 +622,7 @@ template BacktrackingMatcher(bool CTregex)
                         debug printBytecode(re.ir[0..$]);
                         assert(0);
                     L_backtrack:
-                        if(!popState())
+                        if (!popState())
                         {
                             s.reset(start);
                             return 0;
@@ -642,7 +642,7 @@ template BacktrackingMatcher(bool CTregex)
         {
             size_t* prev = memory.ptr-1;
             prev = cast(size_t*)*prev;//take out hidden pointer
-            if(!prev)
+            if (!prev)
                 return false;
             else
             {
@@ -656,7 +656,7 @@ template BacktrackingMatcher(bool CTregex)
         }
 
         void stackPush(T)(T val)
-            if(!isDynamicArray!T)
+            if (!isDynamicArray!T)
         {
             *cast(T*)&memory[lastState] = val;
             enum delta = (T.sizeof+size_t.sizeof/2)/size_t.sizeof;
@@ -674,7 +674,7 @@ template BacktrackingMatcher(bool CTregex)
         }
 
         void stackPop(T)(ref T val)
-            if(!isDynamicArray!T)
+            if (!isDynamicArray!T)
         {
             enum delta = (T.sizeof+size_t.sizeof/2)/size_t.sizeof;
             lastState -= delta;
@@ -693,12 +693,12 @@ template BacktrackingMatcher(bool CTregex)
             debug(std_regex_matcher) writeln("pop array SP= ", lastState);
         }
 
-        static if(!CTregex)
+        static if (!CTregex)
         {
             //helper function, saves engine state
             void pushState(uint pc, uint counter)
             {
-                if(stateSize + matches.length > stackAvail)
+                if (stateSize + matches.length > stackAvail)
                 {
                     newStack();
                     lastState = 0;
@@ -716,7 +716,7 @@ template BacktrackingMatcher(bool CTregex)
             //helper function, restores engine state
             bool popState()
             {
-                if(!lastState)
+                if (!lastState)
                     return prevStack();
                 lastState -= 2*matches.length;
                 auto pm = cast(size_t[])matches;
@@ -730,7 +730,7 @@ template BacktrackingMatcher(bool CTregex)
                 debug(std_regex_matcher)
                 {
                     writefln("Restored matches", front, s[index .. s.lastIndex]);
-                    foreach(i, m; matches)
+                    foreach (i, m; matches)
                         writefln("Sub(%d) : %s..%s", i, m.begin, m.end);
                 }
                 s.reset(index);
@@ -749,13 +749,13 @@ template BacktrackingMatcher(bool CTregex)
 {
     import std.conv;
     bool seenDollar;
-    foreach(i, ch; format)
+    foreach (i, ch; format)
     {
-        if(ch == '$')
+        if (ch == '$')
         {
-            if(seenDollar)
+            if (seenDollar)
             {
-                static if(args.length > 0)
+                static if (args.length > 0)
                 {
                     return  format[0 .. i - 1] ~ to!string(args[0])
                         ~ ctSub(format[i + 1 .. $], args[1 .. $]);
@@ -819,7 +819,7 @@ struct CtContext
                     stackPop(counter);"
             : "
                     counter = 0;";
-        if(match < total_matches)
+        if (match < total_matches)
         {
             text ~= ctSub("
                     stackPop(matches[$$..$$]);", reserved, match);
@@ -836,12 +836,12 @@ struct CtContext
     string saveCode(uint pc, string count_expr="counter")
     {
         string text = ctSub("
-                    if(stackAvail < $$*(Group!(DataIndex)).sizeof/size_t.sizeof + $$)
+                    if (stackAvail < $$*(Group!(DataIndex)).sizeof/size_t.sizeof + $$)
                     {
                         newStack();
                         lastState = 0;
                     }", match - reserved, cast(int)counter + 2);
-        if(match < total_matches)
+        if (match < total_matches)
             text ~= ctSub("
                     stackPush(matches[$$..$$]);", reserved, match);
         else
@@ -859,7 +859,7 @@ struct CtContext
     {
         CtState result;
         result.addr = addr;
-        while(!ir.empty)
+        while (!ir.empty)
         {
             auto n = ctGenGroup(ir, result.addr);
             result.code ~= n.code;
@@ -876,7 +876,7 @@ struct CtContext
         auto nextInstr = ctSub("goto case $$;", addr+1);
         CtState r;
         assert(!ir.empty);
-        switch(ir[0].code)
+        switch (ir[0].code)
         {
         case IR.InfiniteStart,  IR.InfiniteBloomStart,IR.InfiniteQStart, IR.RepeatStart, IR.RepeatQStart:
             bool infLoop =
@@ -921,7 +921,7 @@ struct CtContext
             auto slice = ir[start .. end];
             r.code ~= ctSub(`
             case $$: //fake lookaround "atom"
-                    static if(typeof(matcher.s).isLoopback)
+                    static if (typeof(matcher.s).isLoopback)
                         alias Lookaround = $$;
                     else
                         alias Lookaround = $$;
@@ -934,7 +934,7 @@ struct CtContext
                     auto save = index;
                     auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
                     scope(exit) free(mem.ptr);
-                    static if(typeof(matcher.s).isLoopback)
+                    static if (typeof(matcher.s).isLoopback)
                         auto lookaround = $$;
                     else
                         auto lookaround = $$;
@@ -944,7 +944,7 @@ struct CtContext
                     int match = $$;
                     s.reset(save);
                     next();
-                    if(match)
+                    if (match)
                         $$
                     else
                         $$`, addr,
@@ -980,7 +980,7 @@ struct CtContext
         {
             assert(ir[0].code == IR.Option);
             auto len = ir[0].data;
-            if(optL+len < ir.length  && ir[optL+len].code == IR.Option)//not a last option
+            if (optL+len < ir.length  && ir[optL+len].code == IR.Option)//not a last option
             {
                 auto nir = ir[optL .. optL+len-IRL!(IR.GotoEndOr)];
                 r = ctGenBlock(nir, addr+2);//space for Option + restore state
@@ -1022,7 +1022,7 @@ struct CtContext
         r = ctSub(`
                 case $$: debug(std_regex_matcher) writeln("#$$");`,
                     addr, addr);
-        switch(ir[0].code)
+        switch (ir[0].code)
         {
         case IR.InfiniteStart, IR.InfiniteQStart, IR.InfiniteBloomStart:
             r ~= ctSub( `
@@ -1032,7 +1032,7 @@ struct CtContext
         case IR.InfiniteEnd:
             testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd) .. $],addr + 1);
             r ~= ctSub( `
-                    if(merge[$$+counter].mark(index))
+                    if (merge[$$+counter].mark(index))
                     {
                         // merged!
                         goto L_backtrack;
@@ -1053,7 +1053,7 @@ struct CtContext
             //TODO: check bloom filter and skip on failure
             testCode = ctQuickTest(ir[IRL!(IR.InfiniteBloomEnd) .. $],addr + 1);
             r ~= ctSub( `
-                    if(merge[$$+counter].mark(index))
+                    if (merge[$$+counter].mark(index))
                     {
                         // merged!
                         goto L_backtrack;
@@ -1074,7 +1074,7 @@ struct CtContext
             testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd) .. $],addr + 1);
             auto altCode = testCode.length ? ctSub("else goto case $$;", fixup) : "";
             r ~= ctSub( `
-                    if(merge[$$+counter].mark(index))
+                    if (merge[$$+counter].mark(index))
                     {
                         // merged!
                         goto L_backtrack;
@@ -1105,22 +1105,22 @@ struct CtContext
             uint min = ir[3].raw;
             uint max = ir[4].raw;
             r ~= ctSub(`
-                    if(merge[$$+counter].mark(index))
+                    if (merge[$$+counter].mark(index))
                     {
                         // merged!
                         goto L_backtrack;
                     }
-                    if(counter < $$)
+                    if (counter < $$)
                     {
                         debug(std_regex_matcher) writeln("RepeatEnd min case pc=", $$);
                         counter += $$;
                         goto case $$;
                     }`,  ir[1].raw, min, addr, step, fixup);
-            if(ir[0].code == IR.RepeatEnd)
+            if (ir[0].code == IR.RepeatEnd)
             {
                 string counter_expr = ctSub("counter % $$", step);
                 r ~= ctSub(`
-                    else if(counter < $$)
+                    else if (counter < $$)
                     {
                             $$
                             counter += $$;
@@ -1131,7 +1131,7 @@ struct CtContext
             {
                 string counter_expr = ctSub("counter % $$", step);
                 r ~= ctSub(`
-                    else if(counter < $$)
+                    else if (counter < $$)
                     {
                         $$
                         counter = counter % $$;
@@ -1172,13 +1172,13 @@ struct CtContext
     string ctQuickTest(Bytecode[] ir, int id)
     {
         uint pc = 0;
-        while(pc < ir.length && ir[pc].isAtom)
+        while (pc < ir.length && ir[pc].isAtom)
         {
-            if(ir[pc].code == IR.GroupStart || ir[pc].code == IR.GroupEnd)
+            if (ir[pc].code == IR.GroupStart || ir[pc].code == IR.GroupEnd)
             {
                 pc++;
             }
-            else if(ir[pc].code == IR.Backref)
+            else if (ir[pc].code == IR.Backref)
                 break;
             else
             {
@@ -1188,7 +1188,7 @@ struct CtContext
                     {
                         $$ //$$
                     }
-                    if(test_$$() >= 0)`, id, code.ptr ? code : "return 0;",
+                    if (test_$$() >= 0)`, id, code.ptr ? code : "return 0;",
                         ir[pc].mnemonic, id);
             }
         }
@@ -1210,7 +1210,7 @@ struct CtContext
     {
         string code;
         string bailOut, nextInstr;
-        if(addr < 0)
+        if (addr < 0)
         {
             bailOut = "return -1;";
             nextInstr = "return 0;";
@@ -1223,17 +1223,17 @@ struct CtContext
                  case $$: debug(std_regex_matcher) writeln("#$$");
                     `, addr, addr);
         }
-        switch(ir[0].code)
+        switch (ir[0].code)
         {
         case IR.OrChar://assumes IRL!(OrChar) == 1
             code ~=  ctSub(`
-                    if(atEnd)
+                    if (atEnd)
                         $$`, bailOut);
             uint len = ir[0].sequence;
             for(uint i = 0; i < len; i++)
             {
                 code ~= ctSub( `
-                    if(front == $$)
+                    if (front == $$)
                     {
                         $$
                         $$
@@ -1244,43 +1244,43 @@ struct CtContext
             break;
         case IR.Char:
             code ~= ctSub( `
-                    if(atEnd || front != $$)
+                    if (atEnd || front != $$)
                         $$
                     $$
                     $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
             break;
         case IR.Any:
             code ~= ctSub( `
-                    if(atEnd || (!(re.flags & RegexOption.singleline)
+                    if (atEnd || (!(re.flags & RegexOption.singleline)
                                 && (front == '\r' || front == '\n')))
                         $$
                     $$
                     $$`, bailOut, addr >= 0 ? "next();" :"",nextInstr);
             break;
         case IR.CodepointSet:
-            if(charsets.length)
+            if (charsets.length)
             {
                 string name = `func_`~to!string(addr+1);
                 string funcCode = charsets[ir[0].data].toSourceCode(name);
                 code ~= ctSub( `
                     static $$
-                    if(atEnd || !$$(front))
+                    if (atEnd || !$$(front))
                         $$
                     $$
                 $$`, funcCode, name, bailOut, addr >= 0 ? "next();" :"", nextInstr);
             }
             else
                 code ~= ctSub( `
-                    if(atEnd || !re.charsets[$$].scanFor(front))
+                    if (atEnd || !re.charsets[$$].scanFor(front))
                         $$
                     $$
                 $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
             break;
         case IR.Trie:
-            if(charsets.length && charsets[ir[0].data].byInterval.length  <= 8)
+            if (charsets.length && charsets[ir[0].data].byInterval.length  <= 8)
                 goto case IR.CodepointSet;
             code ~= ctSub( `
-                    if(atEnd || !re.matchers[$$][front])
+                    if (atEnd || !re.matchers[$$][front])
                         $$
                     $$
                 $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
@@ -1289,20 +1289,20 @@ struct CtContext
             code ~= ctSub( `
                     dchar back;
                     DataIndex bi;
-                    if(atStart && wordMatcher[front])
+                    if (atStart && wordMatcher[front])
                     {
                         $$
                     }
-                    else if(atEnd && s.loopBack(index).nextChar(back, bi)
+                    else if (atEnd && s.loopBack(index).nextChar(back, bi)
                             && wordMatcher[back])
                     {
                         $$
                     }
-                    else if(s.loopBack(index).nextChar(back, bi))
+                    else if (s.loopBack(index).nextChar(back, bi))
                     {
                         bool af = wordMatcher[front];
                         bool ab = wordMatcher[back];
-                        if(af ^ ab)
+                        if (af ^ ab)
                         {
                             $$
                         }
@@ -1314,16 +1314,16 @@ struct CtContext
                     dchar back;
                     DataIndex bi;
                     //at start & end of input
-                    if(atStart && wordMatcher[front])
+                    if (atStart && wordMatcher[front])
                         $$
-                    else if(atEnd && s.loopBack(index).nextChar(back, bi)
+                    else if (atEnd && s.loopBack(index).nextChar(back, bi)
                             && wordMatcher[back])
                         $$
-                    else if(s.loopBack(index).nextChar(back, bi))
+                    else if (s.loopBack(index).nextChar(back, bi))
                     {
                         bool af = wordMatcher[front];
                         bool ab = wordMatcher[back];
-                        if(af ^ ab)
+                        if (af ^ ab)
                             $$
                     }
                     $$`, bailOut, bailOut, bailOut, nextInstr);
@@ -1333,7 +1333,7 @@ struct CtContext
             code ~= ctSub(`
                     dchar back;
                     DataIndex bi;
-                    if(atStart || ((re.flags & RegexOption.multiline)
+                    if (atStart || ((re.flags & RegexOption.multiline)
                         && s.loopBack(index).nextChar(back,bi)
                         && endOfLine(back, front == '\n')))
                     {
@@ -1350,7 +1350,7 @@ struct CtContext
                     DataIndex bi;
                     debug(std_regex_matcher) writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
                     //no matching inside \r\n
-                    if(atEnd || ((re.flags & RegexOption.multiline)
+                    if (atEnd || ((re.flags & RegexOption.multiline)
                             && endOfLine(front, s.loopBack(index).nextChar(back,bi)
                              && back == '\r')))
                     {
@@ -1381,12 +1381,12 @@ struct CtContext
                     ir[0].data, ir[0].data);
             code ~= ctSub( `
                     $$
-                    while(!atEnd && !referenced.empty && front == referenced.front)
+                    while (!atEnd && !referenced.empty && front == referenced.front)
                     {
                         next();
                         referenced.popFront();
                     }
-                    if(referenced.empty)
+                    if (referenced.empty)
                         $$
                     else
                         $$`, mStr, nextInstr, bailOut);
@@ -1416,7 +1416,7 @@ struct CtContext
             goto StartLoop;
             debug(std_regex_matcher) writeln("Try CT matching  starting at ",s[index..s.lastIndex]);
         L_backtrack:
-            if(lastState || prevStack())
+            if (lastState || prevStack())
             {
                 stackPop(pc);
                 stackPop(index);
@@ -1429,7 +1429,7 @@ struct CtContext
                 return false;
             }
         StartLoop:
-            switch(pc)
+            switch (pc)
             {
         `;
         r ~= bdy.code;

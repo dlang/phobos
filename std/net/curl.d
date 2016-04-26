@@ -3748,7 +3748,7 @@ struct SMTP
     {
         assert(!recipients.empty, "Recipient must not be empty");
         curl_slist* recipients_list = null;
-        foreach(recipient; recipients)
+        foreach (recipient; recipients)
         {
             recipients_list =
                 Curl.curl.slist_append(recipients_list,
@@ -3999,7 +3999,7 @@ struct Curl
                 interleavefunction, chunk_data, chunk_bgn_function,
                 chunk_end_function, fnmatch_data, fnmatch_function, cookiejar, postfields);
 
-            foreach(option; tt)
+            foreach (option; tt)
                 copy.clear(option);
         }
 

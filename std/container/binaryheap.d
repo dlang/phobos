@@ -62,7 +62,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     import std.algorithm : move, min, HeapOps, swapAt;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
-    static if(isRandomAccessRange!Store)
+    static if (isRandomAccessRange!Store)
         alias Range = Store;
     else
         alias Range = typeof(Store.init[]);

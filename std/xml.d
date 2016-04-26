@@ -93,7 +93,7 @@ void main()
 
     // Put it back together again;
     auto doc = new Document(new Tag("catalog"));
-    foreach(book;books)
+    foreach (book;books)
     {
         auto element = new Element("book");
         element.tag.attr["id"] = book.id;
@@ -150,7 +150,7 @@ bool isChar(dchar c) // rule 2
     {
         if (c >= 0x20)
             return true;
-        switch(c)
+        switch (c)
         {
         case 0xA:
         case 0x9:
@@ -713,7 +713,7 @@ class Element : Item
     {
         this.tag = new Tag(tag_.name);
         tag.type = TagType.EMPTY;
-        foreach(k,v;tag_.attr) tag.attr[k] = v;
+        foreach (k,v;tag_.attr) tag.attr[k] = v;
         tag.tagString = tag_.tagString;
     }
 
@@ -888,7 +888,7 @@ class Element : Item
     override size_t toHash() const
     {
         size_t hash = tag.toHash();
-        foreach(item;items) hash += item.toHash();
+        foreach (item;items) hash += item.toHash();
         return hash;
     }
 
@@ -909,7 +909,7 @@ class Element : Item
         string text(DecodeMode mode=DecodeMode.LOOSE)
         {
             string buffer;
-            foreach(item;items)
+            foreach (item;items)
             {
                 Text t = cast(Text)item;
                 if (t is null) throw new DecodeException(item.toString());
@@ -940,10 +940,10 @@ class Element : Item
             }
 
             string[] a = [ tag.toStartString() ];
-            foreach(item;items)
+            foreach (item;items)
             {
                 string[] b = item.pretty(indent);
-                foreach(s;b)
+                foreach (s;b)
                 {
                     a ~= rightJustify(s,count(s) + indent);
                 }
@@ -1017,7 +1017,7 @@ class Tag
         try { checkName(s,t); }
         catch(Err e) { assert(false,"Invalid tag name:" ~ e.toString()); }
 
-        foreach(k,v;attr)
+        foreach (k,v;attr)
         {
             s = k;
             try { checkName(s,t); }
@@ -1068,7 +1068,7 @@ class Tag
             if (optc(s,'/')) type = TagType.END;
             name = munch(s,"^/>"~whitespace);
             munch(s,whitespace);
-            while(s.length > 0 && s[0] != '>' && s[0] != '/')
+            while (s.length > 0 && s[0] != '>' && s[0] != '/')
             {
                 string key = munch(s,"^="~whitespace);
                 munch(s,whitespace);
@@ -1170,7 +1170,7 @@ class Tag
             string toNonEndString()
             {
                 string s = "<" ~ name;
-                foreach(key,val;attr)
+                foreach (key,val;attr)
                     s ~= format(" %s=\"%s\"",key,encode(val));
                 return s;
             }
@@ -1970,7 +1970,7 @@ class ElementParser
         Tag[string] startTags;
         if (tag_ !is null) startTags[tag_.name] = tag_;
 
-        while(s.length != 0)
+        while (s.length != 0)
         {
             if (startsWith(*s,"<!--"))
             {
@@ -2050,7 +2050,7 @@ class ElementParser
                     // FIX by hed010gy, for bug 2979
                     // http://d.puremagic.com/issues/show_bug.cgi?id=2979
                     if (tag_.attr.length > 0)
-                          foreach(tn,tv; tag_.attr) startTag.attr[tn]=tv;
+                          foreach (tn,tv; tag_.attr) startTag.attr[tn]=tv;
                     // END FIX
 
                     // Handle the pretend start tag
@@ -2155,7 +2155,7 @@ private
 
         dchar c;
         int n = -1;
-        foreach(int i,dchar d; s)
+        foreach (int i,dchar d; s)
         {
             if (!isChar(d))
             {
@@ -2184,7 +2184,7 @@ private
 
         if (s.length == 0) fail();
         int n;
-        foreach(int i,dchar c;s)
+        foreach (int i,dchar c;s)
         {
             if (c == '_' || c == ':' || isLetter(c)) continue;
             if (i == 0) fail();
@@ -2485,7 +2485,7 @@ private
         {
             char d = s[0];
             int n = 0;
-            switch(d)
+            switch (d)
             {
                 case 'F','f': ++n;      goto case;
                 case 'E','e': ++n;      goto case;
@@ -2972,7 +2972,7 @@ private
     string startOf(string s)
     {
         string r;
-        foreach(char c;s)
+        foreach (char c;s)
         {
             r ~= (c < 0x20 || c > 0x7F) ? '.' : c;
             if (r.length >= 40) { r ~= "___"; break; }

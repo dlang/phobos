@@ -223,10 +223,10 @@ unittest
         int opApply(int delegate(ref int) dg)
         {
             int res;
-            foreach(i; 0..10)
+            foreach (i; 0..10)
             {
                 res = dg(i);
-                if(res) break;
+                if (res) break;
             }
 
             return res;
@@ -283,7 +283,7 @@ unittest
         int i;
     }
 
-    foreach(T; AliasSeq!(S, const S, immutable S))
+    foreach (T; AliasSeq!(S, const S, immutable S))
     {
         auto arr = [T(1), T(2), T(3), T(4)];
         assert(array(arr) == arr);
@@ -476,7 +476,7 @@ version(unittest)
 // Returns the number of dimensions in an array T.
 private template nDimensions(T)
 {
-    static if(isArray!T)
+    static if (isArray!T)
     {
         enum nDimensions = 1 + nDimensions!(typeof(T.init[0]));
     }
@@ -581,7 +581,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 
     double[][] matrix = minimallyInitializedArray!(double[][])(42);
     assert(matrix.length == 42);
-    foreach(elem; matrix)
+    foreach (elem; matrix)
     {
         assert(elem.ptr is null);
     }
@@ -637,7 +637,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     else static if (I.length > 1)
     {
         ret = arrayAllocImpl!(false, E[])(size);
-        foreach(ref elem; ret)
+        foreach (ref elem; ret)
             elem = arrayAllocImpl!(minimallyInitialized, E)(sizes[1..$]);
     }
 
@@ -819,10 +819,10 @@ private void copyBackwards(T)(T[] src, T[] dest)
 
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(!isSomeString!(T[])
+    if (!isSomeString!(T[])
         && allSatisfy!(isInputRangeOrConvertible!T, U) && U.length > 0)
 {
-    static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
+    static if (allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
         import std.conv : emplaceRef;
 
@@ -878,9 +878,9 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 
 /// Ditto
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
+    if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
 {
-    static if(is(Unqual!T == T)
+    static if (is(Unqual!T == T)
         && allSatisfy!(isInputRangeWithLengthOrConvertible!dchar, U))
     {
         import std.utf : codeLength;
@@ -888,7 +888,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         //helper function: re-encode dchar to Ts and store at *ptr
         static T* putDChar(T* ptr, dchar ch)
         {
-            static if(is(T == dchar))
+            static if (is(T == dchar))
             {
                 *ptr++ = ch;
                 return ptr;
@@ -898,9 +898,9 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
                 import std.utf : encode;
                 T[dchar.sizeof/T.sizeof] buf;
                 size_t len = encode(buf, ch);
-                final switch(len)
+                final switch (len)
                 {
-                    static if(T.sizeof == char.sizeof)
+                    static if (T.sizeof == char.sizeof)
                     {
                 case 4:
                         ptr[3] = buf[3];
@@ -942,7 +942,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         auto ptr = array.ptr + pos;
         foreach (i, E; U)
         {
-            static if(is(E : dchar))
+            static if (is(E : dchar))
             {
                 ptr = putDChar(ptr, stuff[i]);
             }
@@ -1017,17 +1017,17 @@ unittest
                string file = __FILE__, size_t line = __LINE__)
     {
         {
-            static if(is(T == typeof(T.init.dup)))
+            static if (is(T == typeof(T.init.dup)))
                 auto a = orig.dup;
             else
                 auto a = orig.idup;
 
             a.insertInPlace(pos, toInsert);
-            if(!std.algorithm.equal(a, result))
+            if (!std.algorithm.equal(a, result))
                 return false;
         }
 
-        static if(isInputRange!U)
+        static if (isInputRange!U)
         {
             orig.insertInPlace(pos, filter!"true"(toInsert));
             return std.algorithm.equal(orig, result);
@@ -1073,7 +1073,7 @@ unittest
     // variadic version
     bool testVar(T, U...)(T orig, size_t pos, U args)
     {
-        static if(is(T == typeof(T.init.dup)))
+        static if (is(T == typeof(T.init.dup)))
             auto a = orig.dup;
         else
             auto a = orig.idup;
@@ -1218,7 +1218,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 
 @safe pure nothrow unittest
 {
-    foreach(T; AliasSeq!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
+    foreach (T; AliasSeq!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
     {
         T a = [1, 2, 3, 4, 5];
         T b = a;
@@ -1555,7 +1555,7 @@ private enum bool hasCheapIteration(R) = isArray!R;
         $(XREF_PACK algorithm,iteration,joiner)
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
-    if(isInputRange!RoR &&
+    if (isInputRange!RoR &&
        isInputRange!(Unqual!(ElementType!RoR)) &&
        isInputRange!R &&
        is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
@@ -1581,12 +1581,12 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     else
         alias sepArr = sep;
 
-    static if(hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
+    static if (hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
         import std.conv : emplaceRef;
         size_t length;          // length of result array
         size_t rorLength;       // length of range ror
-        foreach(r; ror.save)
+        foreach (r; ror.save)
         {
             length += r.length;
             ++rorLength;
@@ -1597,14 +1597,14 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
 
         auto result = (() @trusted => uninitializedArray!(RetTypeElement[])(length))();
         size_t len;
-        foreach(e; ror.front)
+        foreach (e; ror.front)
             emplaceRef(result[len++], e);
         ror.popFront();
-        foreach(r; ror)
+        foreach (r; ror)
         {
-            foreach(e; sepArr)
+            foreach (e; sepArr)
                 emplaceRef(result[len++], e);
-            foreach(e; r)
+            foreach (e; r)
                 emplaceRef(result[len++], e);
         }
         assert(len == result.length);
@@ -1632,7 +1632,7 @@ unittest // Issue 14230
 
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
-    if(isInputRange!RoR &&
+    if (isInputRange!RoR &&
        isInputRange!(Unqual!(ElementType!RoR)) &&
        is(E : ElementType!(ElementType!RoR)))
 {
@@ -1643,7 +1643,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
     if (ror.empty)
         return RetType.init;
 
-    static if(hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
+    static if (hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
         static if (isSomeChar!E && isSomeChar!RetTypeElement && E.sizeof > RetTypeElement.sizeof)
         {
@@ -1657,7 +1657,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
             import std.conv : emplaceRef;
             size_t length;
             size_t rorLength;
-            foreach(r; ror.save)
+            foreach (r; ror.save)
             {
                 length += r.length;
                 ++rorLength;
@@ -1669,13 +1669,13 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
 
 
             size_t len;
-            foreach(e; ror.front)
+            foreach (e; ror.front)
                 emplaceRef(result[len++], e);
             ror.popFront();
-            foreach(r; ror)
+            foreach (r; ror)
             {
                 emplaceRef(result[len++], sep);
-                foreach(e; r)
+                foreach (e; r)
                     emplaceRef(result[len++], e);
             }
             assert(len == result.length);
@@ -1718,7 +1718,7 @@ unittest // Issue 14230
 
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
-    if(isInputRange!RoR &&
+    if (isInputRange!RoR &&
        isInputRange!(Unqual!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
@@ -1728,17 +1728,17 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     if (ror.empty)
         return RetType.init;
 
-    static if(hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
+    static if (hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
         import std.conv : emplaceRef;
         size_t length;
-        foreach(r; ror.save)
+        foreach (r; ror.save)
             length += r.length;
 
         auto result = (() @trusted => uninitializedArray!(RetTypeElement[])(length))();
         size_t len;
-        foreach(r; ror)
-            foreach(e; r)
+        foreach (r; ror)
+            foreach (e; r)
                 emplaceRef(result[len++], e);
         assert(len == result.length);
         return (() @trusted => cast(RetType)result)();
@@ -1813,7 +1813,7 @@ unittest
 
     debug(std_array) printf("array.join.unittest\n");
 
-    foreach(R; AliasSeq!(string, wstring, dstring))
+    foreach (R; AliasSeq!(string, wstring, dstring))
     {
         R word1 = "日本語";
         R word2 = "paul";
@@ -1830,7 +1830,7 @@ unittest
         auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
         auto filteredWords    = filter!"true"(filteredWordsArr);
 
-        foreach(S; AliasSeq!(string, wstring, dstring))
+        foreach (S; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filteredWords, to!(ElementType!S)(',')) == "日本語,paul,jerry");
@@ -2079,11 +2079,11 @@ unittest
     array without changing the contents of $(D subject).
  +/
 T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
-    if(isInputRange!Range &&
+    if (isInputRange!Range &&
        (is(ElementType!Range : T) ||
         isSomeString!(T[]) && is(ElementType!Range : dchar)))
 {
-    static if(hasLength!Range && is(ElementEncodingType!Range : T))
+    static if (hasLength!Range && is(ElementEncodingType!Range : T))
     {
         import std.algorithm : copy;
         assert(from <= to);
@@ -2091,7 +2091,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
         auto retval = new Unqual!(T)[](subject.length - sliceLen + stuff.length);
         retval[0 .. from] = subject[0 .. from];
 
-        if(!stuff.empty)
+        if (!stuff.empty)
             copy(stuff, retval[from .. from + stuff.length]);
 
         retval[from + stuff.length .. $] = subject[to .. $];
@@ -2195,9 +2195,9 @@ unittest
     shrinks the array as needed.
  +/
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
-    if(is(typeof(replace(array, from, to, stuff))))
+    if (is(typeof(replace(array, from, to, stuff))))
 {
-    static if(isDynamicArray!Range &&
+    static if (isDynamicArray!Range &&
               is(Unqual!(ElementEncodingType!Range) == T) &&
               !isNarrowString!(T[]))
     {
@@ -2294,8 +2294,8 @@ unittest
     alias allChars = AliasSeq!(char, immutable(char), const(char),
                          wchar, immutable(wchar), const(wchar),
                          dchar, immutable(dchar), const(dchar));
-    foreach(T; allChars)
-        foreach(U; allChars)
+    foreach (T; allChars)
+        foreach (U; allChars)
             testStringReplaceInPlace!(T, U)();
 
     void testInout(inout(int)[] a)
@@ -2327,17 +2327,17 @@ unittest
                string file = __FILE__, size_t line = __LINE__)
     {
         {
-            static if(is(T == typeof(T.init.dup)))
+            static if (is(T == typeof(T.init.dup)))
                 auto a = orig.dup;
             else
                 auto a = orig.idup;
 
             a.replaceInPlace(from, to, toReplace);
-            if(!std.algorithm.equal(a, result))
+            if (!std.algorithm.equal(a, result))
                 return false;
         }
 
-        static if(isInputRange!U)
+        static if (isInputRange!U)
         {
             orig.replaceInPlace(from, to, filter!"true"(toReplace));
             return std.algorithm.equal(orig, result);
@@ -3015,11 +3015,11 @@ private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
 {
     import core.bitop : bsr;
     import std.algorithm : max;
-    if(curLen == 0)
+    if (curLen == 0)
         return max(reqLen,8);
     ulong mult = 100 + (1000UL) / (bsr(curLen * TSizeOf) + 1);
     // limit to doubling the length, we don't want to grow too much
-    if(mult > 200)
+    if (mult > 200)
         mult = 200;
     auto sugLen = cast(size_t)((curLen * mult + 99) / 100);
     return max(reqLen, sugLen);
@@ -3416,7 +3416,7 @@ unittest //Test large allocations (for GC.extend)
     import std.algorithm : equal;
     Appender!(char[]) app;
     app.reserve(1); //cover reserve on non-initialized
-    foreach(_; 0 .. 100_000)
+    foreach (_; 0 .. 100_000)
         app.put('a');
     assert(equal(app.data, 'a'.repeat(100_000)));
 }

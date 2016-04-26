@@ -34,7 +34,7 @@
  * {
  *     auto text = "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
  *
- *     foreach(record; csvReader!(Tuple!(string, string, int))(text))
+ *     foreach (record; csvReader!(Tuple!(string, string, int))(text))
  *     {
  *         writefln("%s works as a %s and earns $%d per year",
  *                  record[0], record[1], record[2]);
@@ -43,7 +43,7 @@
  *     // To read the same string from the file "filename.csv":
  *
  *     auto file = File("filename.csv", "r");
- *     foreach(record;
+ *     foreach (record;
  *         file.byLine.joiner("\n").csvReader!(Tuple!(string, string, int)))
  *     {
  *         writefln("%s works as a %s and earns $%d per year",
@@ -60,7 +60,7 @@
  * auto text = "Name,Occupation,Salary\r"
  *     "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
  *
- * foreach(record; csvReader!(string[string])
+ * foreach (record; csvReader!(string[string])
  *         (text, null))
  * {
  *     writefln("%s works as a %s and earns $%s per year.",
@@ -252,7 +252,7 @@ enum Malformed
  * int[] ans = [76,26,22];
  * auto records = csvReader!int(str);
  *
- * foreach(record; records)
+ * foreach (record; records)
  * {
  *     assert(equal(record, ans));
  * }
@@ -271,7 +271,7 @@ enum Malformed
  *
  * auto records = csvReader!Layout(str,';');
  *
- * foreach(record; records)
+ * foreach (record; records)
  * {
  *     writeln(record.name);
  *     writeln(record.value);
@@ -334,7 +334,7 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  * auto records = csvReader!int(str, ["b"]);
  *
  * auto ans = [[65],[123]];
- * foreach(record; records)
+ * foreach (record; records)
  * {
  *     assert(equal(record, ans.front));
  *     ans.popFront();
@@ -431,9 +431,9 @@ auto csvReader(Contents = string,
     auto records = csvReader(str);
 
     int count;
-    foreach(record; records)
+    foreach (record; records)
     {
-        foreach(cell; record)
+        foreach (cell; record)
         {
             count++;
         }
@@ -472,7 +472,7 @@ auto csvReader(Contents = string,
     auto records = csvReader!(Layout,Malformed.ignore)(str);
 
     int count;
-    foreach(record; records)
+    foreach (record; records)
     {
         assert(ans[count].name == record.name);
         assert(ans[count].value == record.value);
@@ -495,10 +495,10 @@ auto csvReader(Contents = string,
                  "one\ntwo,2\nthree,3",
                  "one,1\ntwo\nthree,3"];
 
-    foreach(str; strs)
+    foreach (str; strs)
     {
         auto records = csvReader!A(str);
-        assertThrown!CSVException((){foreach(record; records) { }}());
+        assertThrown!CSVException((){foreach (record; records) { }}());
     }
 }
 
@@ -527,7 +527,7 @@ auto csvReader(Contents = string,
     auto records = csvReader!Layout(str);
 
     int count;
-    foreach(record; records)
+    foreach (record; records)
     {
         assert(ans[count].name == record.name);
         assert(ans[count].value == record.value);
@@ -545,7 +545,7 @@ auto csvReader(Contents = string,
     int[] ans = [76,26,22];
     auto records = csvReader!int(str);
 
-    foreach(record; records)
+    foreach (record; records)
     {
         assert(equal(record, ans));
     }
@@ -595,7 +595,7 @@ unittest
     auto records = csvReader!int(str, ["b"]);
 
     auto ans = [[65],[123]];
-    foreach(record; records)
+    foreach (record; records)
     {
         assert(equal(record, ans.front));
         ans.popFront();
@@ -614,7 +614,7 @@ unittest
        (str, ["b","a"], ',', '"');
 
     auto ans2 = [["Hello","65"],["World","123"]];
-    foreach(record; records2) {
+    foreach (record; records2) {
         assert(equal(record, ans2.front));
         ans2.popFront();
     }
@@ -624,7 +624,7 @@ unittest
        (str, ["a","b","c","d"], ',', '"');
 
     ans2 = [["Joe","Carpenter"],["Fred","Fly"]];
-    foreach(record; records2) {
+    foreach (record; records2) {
         assert(equal(record, ans2.front));
         ans2.popFront();
     }
@@ -643,9 +643,9 @@ unittest
 @safe pure unittest
 {
     string str = "one \"quoted\"";
-    foreach(record; csvReader!(string,Malformed.ignore)(str))
+    foreach (record; csvReader!(string,Malformed.ignore)(str))
     {
-        foreach(cell; record)
+        foreach (cell; record)
         {
             assert(cell == "one \"quoted\"");
         }
@@ -656,7 +656,7 @@ unittest
     {
         string a,b;
     }
-    foreach(record; csvReader!(Ans,Malformed.ignore)(str))
+    foreach (record; csvReader!(Ans,Malformed.ignore)(str))
     {
         assert(record.a == "one \"quoted\"");
         assert(record.b == "two \"quoted\" end");
@@ -670,7 +670,7 @@ unittest
 
     try
     {
-        foreach(record; csvReader(str))
+        foreach (record; csvReader(str))
         {}
         assert(0);
     }
@@ -703,7 +703,7 @@ unittest
 
   auto records = csvReader!(string[string])(str,["3","1"],'❁');
   int count;
-  foreach(record; records)
+  foreach (record; records)
   {
       count++;
       assert(record["1"] == "34");
@@ -743,11 +743,11 @@ unittest
     auto ir = InputRange("Name,Occupation,Salary\r"d~
           "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n"d);
 
-    foreach(record; csvReader(ir, cast(string[])null))
-        foreach(cell; record) {}
-    foreach(record; csvReader!(Tuple!(string, string, int))
+    foreach (record; csvReader(ir, cast(string[])null))
+        foreach (cell; record) {}
+    foreach (record; csvReader!(Tuple!(string, string, int))
             (ir,cast(string[])null)) {}
-    foreach(record; csvReader!(string[string])
+    foreach (record; csvReader!(string[string])
             (ir,cast(string[])null)) {}
 }
 
@@ -826,7 +826,7 @@ public:
      * auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
      *       (str, ';', '^');
      *
-     * foreach(record; records) {
+     * foreach (record; records) {
      *    assert(equal(record, ans));
      * }
      * -------
@@ -850,7 +850,7 @@ public:
      *       (str, ["high","low"], ';', '^');
      *
      * int[] ans = [76,22];
-     * foreach(record; records) {
+     * foreach (record; records) {
      *    assert(equal(record, ans));
      * }
      * -------
@@ -867,7 +867,7 @@ public:
         _quote = quote;
 
         size_t[string] colToIndex;
-        foreach(h; colHeaders)
+        foreach (h; colHeaders)
         {
             colToIndex[h] = size_t.max;
         }
@@ -876,7 +876,7 @@ public:
             (_input, _separator, _quote, indices);
 
         size_t colIndex;
-        foreach(col; r)
+        foreach (col; r)
         {
             header ~= col;
             auto ptr = col in colToIndex;
@@ -889,7 +889,7 @@ public:
 
         indices.length = colToIndex.length;
         int i;
-        foreach(h; colHeaders)
+        foreach (h; colHeaders)
         {
             immutable index = colToIndex[h];
             static if (ErrorLevel != Malformed.ignore)
@@ -983,7 +983,7 @@ public:
      */
     void popFront()
     {
-        while(!recordRange.empty)
+        while (!recordRange.empty)
         {
             recordRange.popFront();
         }
@@ -1063,7 +1063,7 @@ public:
                     scope(exit) colIndex++;
                     if (indices.length > 0)
                     {
-                        foreach(ti, ToType; Fields!(Contents))
+                        foreach (ti, ToType; Fields!(Contents))
                         {
                             if (indices[ti] == colIndex)
                             {
@@ -1074,7 +1074,7 @@ public:
                     }
                     else
                     {
-                        foreach(ti, ToType; Fields!(Contents))
+                        foreach (ti, ToType; Fields!(Contents))
                         {
                             if (ti == colIndex)
                             {
@@ -1104,7 +1104,7 @@ public:
     auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
           (str, ';', '^');
 
-    foreach(record; records)
+    foreach (record; records)
     {
         assert(equal(record, ans));
     }
@@ -1118,7 +1118,7 @@ pure unittest
     Joe, Joker, 99\r";
     bool pass = true;
     auto r = csvReader(failData);
-    try foreach(entry; r){}
+    try foreach (entry; r){}
     catch pass = false;
     assert(pass);
 }
@@ -1161,7 +1161,7 @@ public:
         // to eliminate so many tokens. This calculates
         // how many will be skipped to get to the next header column
         size_t normalizer;
-        foreach(ref c; _popCount) {
+        foreach (ref c; _popCount) {
             static if (ErrorLevel == Malformed.ignore)
             {
                 // If we are not throwing exceptions
@@ -1228,7 +1228,7 @@ public:
             import std.format : format;
         // Skip last of record when header is depleted.
         if (_popCount.ptr && _popCount.empty)
-            while(!recordEnd())
+            while (!recordEnd())
             {
                 prime(1);
             }
@@ -1270,7 +1270,7 @@ public:
      */
     private void prime(size_t skipNum)
     {
-        foreach(i; 0..skipNum)
+        foreach (i; 0..skipNum)
         {
             _input.col++;
             _front.shrinkTo(0);
@@ -1315,7 +1315,7 @@ public:
             _popCount.popFront();
 
         if (skipNum == size_t.max) {
-            while(!recordEnd())
+            while (!recordEnd())
                 prime(1);
             _empty = true;
             return;
@@ -1379,7 +1379,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
         input.popFront();
     }
 
-    while(!input.empty)
+    while (!input.empty)
     {
         assert(!(quoted && escQuote));
         if (!quoted)

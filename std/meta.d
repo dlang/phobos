@@ -757,7 +757,7 @@ template predicate must be instantiable with all the given items.
  */
 template anySatisfy(alias F, T...)
 {
-    static if(T.length == 0)
+    static if (T.length == 0)
     {
         enum anySatisfy = false;
     }
@@ -1060,7 +1060,7 @@ unittest
 unittest
 {
     enum REF = [0, 1, 2, 3];
-    foreach(I, V; aliasSeqOf!([0, 1, 2, 3]))
+    foreach (I, V; aliasSeqOf!([0, 1, 2, 3]))
     {
         static assert(V == I);
         static assert(V == REF[I]);
@@ -1086,7 +1086,7 @@ unittest
 unittest
 {
     enum REF = "日本語"d;
-    foreach(I, V; aliasSeqOf!"日本語"c)
+    foreach (I, V; aliasSeqOf!"日本語"c)
     {
         static assert(V == REF[I]);
     }

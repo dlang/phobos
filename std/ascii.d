@@ -84,10 +84,10 @@ bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
+    foreach (c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
         assert(isAlphaNum(c));
 
-    foreach(c; whitespace)
+    foreach (c; whitespace)
         assert(!isAlphaNum(c));
 }
 
@@ -115,10 +115,10 @@ bool isAlpha(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(c; chain(letters, lowercase, uppercase))
+    foreach (c; chain(letters, lowercase, uppercase))
         assert(isAlpha(c));
 
-    foreach(c; chain(digits, octalDigits, whitespace))
+    foreach (c; chain(digits, octalDigits, whitespace))
         assert(!isAlpha(c));
 }
 
@@ -146,10 +146,10 @@ bool isLower(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(c; lowercase)
+    foreach (c; lowercase)
         assert(isLower(c));
 
-    foreach(c; chain(digits, uppercase, whitespace))
+    foreach (c; chain(digits, uppercase, whitespace))
         assert(!isLower(c));
 }
 
@@ -177,10 +177,10 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(c; uppercase)
+    foreach (c; uppercase)
         assert(isUpper(c));
 
-    foreach(c; chain(digits, lowercase, whitespace))
+    foreach (c; chain(digits, lowercase, whitespace))
         assert(!isUpper(c));
 }
 
@@ -209,10 +209,10 @@ bool isDigit(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(c; digits)
+    foreach (c; digits)
         assert(isDigit(c));
 
-    foreach(c; chain(letters, whitespace))
+    foreach (c; chain(letters, whitespace))
         assert(!isDigit(c));
 }
 
@@ -238,10 +238,10 @@ bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(c; octalDigits)
+    foreach (c; octalDigits)
         assert(isOctalDigit(c));
 
-    foreach(c; chain(letters, ['8', '9'], whitespace))
+    foreach (c; chain(letters, ['8', '9'], whitespace))
         assert(!isOctalDigit(c));
 }
 
@@ -268,10 +268,10 @@ bool isHexDigit(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(c; fullHexDigits)
+    foreach (c; fullHexDigits)
         assert(isHexDigit(c));
 
-    foreach(c; chain(lowercase[6 .. $], uppercase[6 .. $], whitespace))
+    foreach (c; chain(lowercase[6 .. $], uppercase[6 .. $], whitespace))
         assert(!isHexDigit(c));
 }
 
@@ -305,10 +305,10 @@ bool isWhite(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(c; whitespace)
+    foreach (c; whitespace)
         assert(isWhite(c));
 
-    foreach(c; chain(digits, letters))
+    foreach (c; chain(digits, letters))
         assert(!isWhite(c));
 }
 
@@ -341,11 +341,11 @@ bool isControl(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(dchar c; 0 .. 32)
+    foreach (dchar c; 0 .. 32)
         assert(isControl(c));
     assert(isControl(127));
 
-    foreach(c; chain(digits, letters, [' ']))
+    foreach (c; chain(digits, letters, [' ']))
         assert(!isControl(c));
 }
 
@@ -385,9 +385,9 @@ bool isPunctuation(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach (dchar c; 0 .. 128)
     {
-        if(isControl(c) || isAlphaNum(c) || c == ' ')
+        if (isControl(c) || isAlphaNum(c) || c == ' ')
             assert(!isPunctuation(c));
         else
             assert(isPunctuation(c));
@@ -421,9 +421,9 @@ bool isGraphical(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach (dchar c; 0 .. 128)
     {
-        if(isControl(c) || c == ' ')
+        if (isControl(c) || c == ' ')
             assert(!isGraphical(c));
         else
             assert(isGraphical(c));
@@ -456,9 +456,9 @@ bool isPrintable(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach (dchar c; 0 .. 128)
     {
-        if(isControl(c))
+        if (isControl(c))
             assert(!isPrintable(c));
         else
             assert(isPrintable(c));
@@ -486,7 +486,7 @@ bool isASCII(dchar c) @safe pure nothrow @nogc
 
 unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach (dchar c; 0 .. 128)
         assert(isASCII(c));
 
     assert(!isASCII(128));
@@ -505,7 +505,7 @@ unittest
     ASCII character, otherwise $(D c) itself.
   +/
 auto toLower(C)(C c)
-    if(is(C : dchar))
+    if (is(C : dchar))
 {
     import std.traits : isAggregateType, OriginalType, Unqual;
 
@@ -532,20 +532,20 @@ auto toLower(C)(C c)
 @safe pure nothrow unittest
 {
 
-    foreach(C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
+    foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
-        foreach(i, c; uppercase)
+        foreach (i, c; uppercase)
             assert(toLower(cast(C)c) == lowercase[i]);
 
-        foreach(C c; 0 .. 128)
+        foreach (C c; 0 .. 128)
         {
-            if(c < 'A' || c > 'Z')
+            if (c < 'A' || c > 'Z')
                 assert(toLower(c) == c);
             else
                 assert(toLower(c) != c);
         }
 
-        foreach(C c; 128 .. C.max)
+        foreach (C c; 128 .. C.max)
             assert(toLower(c) == c);
 
         //CTFE
@@ -567,7 +567,7 @@ auto toLower(C)(C c)
     character, otherwise $(D c) itself.
   +/
 auto toUpper(C)(C c)
-    if(is(C : dchar))
+    if (is(C : dchar))
 {
     import std.traits : isAggregateType, OriginalType, Unqual;
 
@@ -593,20 +593,20 @@ auto toUpper(C)(C c)
 
 @safe pure nothrow unittest
 {
-    foreach(C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
+    foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
-        foreach(i, c; lowercase)
+        foreach (i, c; lowercase)
             assert(toUpper(cast(C)c) == uppercase[i]);
 
-        foreach(C c; 0 .. 128)
+        foreach (C c; 0 .. 128)
         {
-            if(c < 'a' || c > 'z')
+            if (c < 'a' || c > 'z')
                 assert(toUpper(c) == c);
             else
                 assert(toUpper(c) != c);
         }
 
-        foreach(C c; 128 .. C.max)
+        foreach (C c; 128 .. C.max)
             assert(toUpper(c) == c);
 
         //CTFE
