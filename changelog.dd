@@ -25,6 +25,7 @@ $(BUGSTITLE Library Changes,
     equal values was added.)
     $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
         rangified.)
+    $(LI $(RELATIVE_LINK2 copyRecurse, New Function: `std.file.copyRecurse`.))
 )
 
 $(BUGSTITLE Library Changes,
@@ -77,6 +78,14 @@ $(LI $(P $(XREF range, iota)'s `.length` property is now always returned as
 		In non-release mode, you will get an exception if the length exceeds
 		`size_t.max` in your call to `iota`.
 	)
+
+$(LI $(LNAME2 copyRecurse, New Function: `std.file.copyRecurse`.)
+
+    $(P A new function has been added: $(XREF file, copyRecurse). It differs
+        from $(XREF file, copy) in that `copyRecurse` accepts directories and
+        copies them recursively.
+    )
+)
 
 Macros:
     TITLE=Change Log

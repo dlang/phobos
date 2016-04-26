@@ -3372,6 +3372,219 @@ unittest // issue 15865
     assert(readText(t) == "a");
 }
 
+/***************************************************
+Copy file or directory $(D from) to $(D to). When a directory is copied, its
+contents are copied as well, recursively.
+
+File timestamps are preserved, except for symbolic links.
+File attributes are preserved, if $(D preserve) equals $(D PreserveAttributes.yes).
+On Windows only $(D PreserveAttributes.yes) (the default on Windows) is supported.
+
+Existing target files are overwritten. Existing target directories are written
+into.
+
+With symbolic links, the links themselves are copied. That is, for every
+symbolic link in $(D from), a new link with the same target path is created in
+$(D to). Relative target paths are not changed. They may be invalidated by the
+copying, when they point outside of the copied directory tree.
+
+Special files (e.g. device files, FIFOs) cannot be copied with $(D copyRecurse).
+
+Params:
+    from = string or range of characters representing the existing
+        file/directory name
+    to = string or range of characters representing the target file/directory
+        name
+    preserve = whether to preserve the file attributes
+
+Throws: $(D FileException) on error.
+ */
+void copyRecurse(string from, string to,
+    PreserveAttributes preserve = preserveAttributesDefault)
+{
+    // Remove any trailing directory separators.
+    from = buildNormalizedPath(from);
+    to = buildNormalizedPath(to);
+
+    immutable attrs = getLinkAttributes(from);
+
+    if (attrIsFile(attrs)) copy(from, to, preserve);
+    else if (attrIsDir(attrs))
+    {
+        mkdirRecurse(std.conv.to!string(to));
+
+        if (preserve == PreserveAttributes.yes) setAttributes(to, attrs);
+
+        foreach (entry; dirEntries(from, SpanMode.shallow, false))
+        {
+            immutable path = entry.name[from.length + 1 .. $];
+                // + 1 for the directory separator
+            copyRecurse(entry.name, buildPath(to, path), preserve);
+        }
+
+        SysTime accessTime, modificationTime;
+        getTimes(from, accessTime, modificationTime);
+        setTimes(to, accessTime, modificationTime);
+    }
+    else if (attrIsSymlink(attrs))
+    {
+        version (Posix)
+        {
+            if (exists(to)) remove(to);
+            symlink(readLink(from), to);
+            if (preserve == PreserveAttributes.yes)
+            {
+                /*NOTE: Would copy attributes of the symlink here, but there
+                is no setLinkAttributes here, and no fchmodat in the C headers.
+                Just enforcing that the new attributes are the same as the old
+                ones, for now. */
+                if (getLinkAttributes(to) != attrs)
+                {
+                    throw new FileException(from, "Cannot preserve " ~
+                        "non-default attributes of symbolic link.");
+                }
+            }
+            /*NOTE: Would copy timestamps of the symlink here, but there is no
+            setLinkTimes here, and no lutimes in the C headers. Just ignoring
+            for now. */
+        }
+        else version (Windows) assert(false);
+        else static assert(false);
+    }
+    else throw new FileException(from, "Cannot copy special file.");
+}
+
+unittest // copyRecurse can still copy mere files
+{
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+    write(t1, "1");
+    copyRecurse(t1, t2);
+    assert(readText(t2) == "1");
+    write(t1, "2");
+    copyRecurse(t1, t2);
+    assert(readText(t2) == "2");
+}
+
+unittest // copying directories
+{
+    auto t1 = deleteme ~  ".srcdir", t2 = deleteme~".dstdir";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) rmdirRecurse(t);
+    mkdirRecurse(t1 ~ "/a/b1");
+    mkdirRecurse(t1 ~ "/a/b2");
+    write(t1 ~ "/a/b1/f", "1");
+    write(t1 ~ "/f", "1");
+    copyRecurse(t1, t2);
+    assert(readText(t2 ~ "/a/b1/f") == "1");
+    assert(readText(t2 ~ "/f") == "1");
+    assert((t2 ~ "/a/b2").exists);
+    write(t2 ~ "/g", "");
+    write(t1 ~ "/f", "2");
+    copyRecurse(t1, t2);
+    assert((t2 ~ "/g").exists);
+    assert(readText(t2 ~ "/f") == "2");
+}
+
+unittest // 'from' ending in a directory separator
+{
+    auto t1 = deleteme ~  ".srcdir", t2 = deleteme~".dstdir";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) rmdirRecurse(t);
+    mkdirRecurse(t1 ~ "/a/b1");
+    copyRecurse(t1 ~ "/", t2);
+    assert((t2 ~ "/a/b1").exists);
+}
+
+unittest // 'to' ending in a directory separator
+{
+    auto t1 = deleteme ~  ".srcdir", t2 = deleteme~".dstdir";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) rmdirRecurse(t);
+    mkdirRecurse(t1 ~ "/a/b1");
+    copyRecurse(t1, t2 ~ "/");
+    assert((t2 ~ "/a/b1").exists);
+}
+
+version (Posix) unittest // symlinks
+{
+    auto t1 = deleteme ~  ".srcdir", t2 = deleteme~".dstdir";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) rmdirRecurse(t);
+    mkdirRecurse(t1 ~ "/a");
+    write(t1 ~ "/f", "1");
+    symlink("f", t1 ~ "/l");
+    symlink("../f", t1 ~ "/a/l");
+    copyRecurse(t1, t2);
+    assert(readText(t2 ~ "/f") == "1");
+    assert(readText(t2 ~ "/l") == "1");
+    assert(readText(t2 ~ "/a/l") == "1");
+    write(t2 ~ "/f", "2");
+    assert(readText(t2 ~ "/l") == "2");
+    assert(readText(t2 ~ "/a/l") == "2");
+}
+
+version (Posix) unittest // special files are rejected
+{
+    import core.sys.posix.sys.stat: mkfifo;
+    import std.string: toStringz;
+    auto t1 = deleteme ~  ".srcdir", t2 = deleteme~".dstdir";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) rmdirRecurse(t);
+    mkdirRecurse(t1);
+    mkfifo(toStringz(t1 ~ "/fifo"), octal!"600");
+    assertThrown!FileException(copyRecurse(t1, t2));
+}
+
+unittest // overwriting existing files
+{
+    auto t1 = deleteme ~  ".srcdir", t2 = deleteme~".dstdir";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) rmdirRecurse(t);
+    mkdirRecurse(t1);
+    write(t1 ~ "/f", "1");
+    version (Posix) symlink("l1", t1 ~ "/l");
+    mkdirRecurse(t2);
+    write(t2 ~ "/f", "2");
+    version (Posix) symlink("l2", t2 ~ "/l");
+    copyRecurse(t1, t2);
+    assert(readText(t2 ~ "/f") == "1");
+    version (Posix) assert(readLink(t2 ~ "/l") == "l1");
+}
+
+version (Posix) unittest // PreserveAttributes
+{
+    auto t1 = deleteme ~  ".srcdir", t2 = deleteme~".dstdir";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) rmdirRecurse(t);
+    mkdirRecurse(t1 ~ "/d");
+    write(t1 ~ "/f", "1");
+    enum rw = octal!"600";
+    enum rwx = octal!"700";
+    setAttributes(t1 ~ "/d", rw);
+    setAttributes(t1 ~ "/f", rw);
+    setAttributes(t1, rwx);
+    copyRecurse(t1, t2, PreserveAttributes.yes);
+    assert((getAttributes(t2 ~ "/d") & rwx) == rw);
+    assert((getAttributes(t2 ~ "/f") & rwx) == rw);
+    assert((getAttributes(t2) & rwx) == rwx);
+}
+
+unittest // timestamps are preserved
+{
+    auto t1 = deleteme ~  ".srcdir", t2 = deleteme~".dstdir";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) rmdirRecurse(t);
+    mkdirRecurse(t1 ~ "/d");
+    write(t1 ~ "/f", "1");
+    setTimes(t1, SysTime(DateTime(1877, 08, 17)),
+        SysTime(DateTime(1877, 08, 17)));
+    copyRecurse(t1, t2);
+    void assertSameTimes(in char[] f1, in char[] f2)
+    {
+        SysTime a1, m1, a2, m2;
+        getTimes(f1, a1, m1);
+        getTimes(f2, a2, m2);
+        assert(a1 == a2, text(f1, " ", a1, " != ", a2));
+        assert(m1 == m2, f1);
+    }
+    assertSameTimes(t1, t2);
+    assertSameTimes(t1 ~ "/d", t2 ~ "/d");
+    assertSameTimes(t1 ~ "/f", t2 ~ "/f");
+}
+
 /++
     Remove directory and all of its content and subdirectories,
     recursively.
