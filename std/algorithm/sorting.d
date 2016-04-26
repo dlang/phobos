@@ -17,13 +17,11 @@ $(T2 isPartitioned,
         $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns $(D true) because
         the predicate is $(D true) for a portion of the range and $(D false)
         afterwards.)
-$(T2 isSorted,
-        $(D isSorted([1, 1, 2, 3])) returns $(D true).)
-$(T2 isStrictlyMonotonic,
-        $(D isStrictlyMonotonic([1, 1, 2, 3])) returns $(D false).)
-$(T2 ordered,
-        $(D ordered(1, 1, 2, 3)) returns $(D true).)
-$(T2 strictlyOrdered,
+$(T2 isOrdered,
+        $(D isOrdered([1, 1, 2, 3])) returns $(D true). Supports a variadic argumennts:
+        $(D isOrdered(1, 1, 2, 3)) returns $(D true).)
+$(T2 isStrictlyOrdered,
+        $(D isStrictlyOrdered([1, 1, 2, 3])) returns $(D false). Supports variadic arguments:
         $(D strictlyOrdered(1, 1, 2, 3)) returns $(D false).)
 $(T2 makeIndex,
         Creates a separate index for a range.)
@@ -132,28 +130,46 @@ unittest
     assert(b == [ 3, 4, 5, 6 ]);
 }
 
-// isSorted
+/**
+Checks whether a range is comparable with the comparison operation $(D less).
+*/
+// private
+template hasComparableElements(R, alias less)
+{
+    enum bool hasComparableElements = isInputRange!R && is(typeof(
+    (inout int = 0)
+    {
+        R r = R.init;
+        if(binaryFun!less(r.front, r.front)) {}
+    }));
+}
+
+// isOrdered
 /**
 Checks whether a forward range is sorted according to the comparison
 operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
 less).
 
-Unlike $(LREF isSorted), $(LREF isStrictlyMonotonic) does not allow for equal values,
+Unlike $(LREF isOrdered), $(LREF isStrictlyOrdered) does not allow for equal values,
 i.e. values for which both `less(a, b)` and `less(b, a)` are false.
 
+It supports a range as a single range argument `r`
+or variadic number of comparable `values`.
 With either function, the predicate must be a strict ordering just like with
-$(LREF isSorted). For example, using `"a <= b"` instead of `"a < b"` is
+$(LREF isOrdered). For example, using `"a <= b"` instead of `"a < b"` is
 incorrect and will cause failed assertions.
 
 Params:
     less = Predicate the range should be sorted by.
     r = Forward range to check for sortedness.
+    values = The tested values (instead of r)
 
 Returns:
-    `true` if the range is sorted, false otherwise. $(LREF isSorted) allows
-    duplicates, $(LREF isStrictlyMonotonic) not.
+    `true` if the range is sorted, false otherwise. $(LREF isOrdered) allows
+    duplicates, $(LREF isStrictlyOrdered) not.
 */
-bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
+bool isOrdered(alias less = "a < b", Range)(Range r)
+if (isForwardRange!(Range) && hasComparableElements!(Range, less))
 {
     if (r.empty) return true;
 
@@ -165,7 +181,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
             if (!binaryFun!less(r[i + 1], r[i])) continue;
             assert(
                 !binaryFun!less(r[i], r[i + 1]),
-                "Predicate for isSorted is not antisymmetric. Both" ~
+                "Predicate for isOrdered is not antisymmetric. Both" ~
                         " pred(a, b) and pred(b, a) are true for certain values.");
             return false;
         }
@@ -182,7 +198,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
             // Check for antisymmetric predicate
             assert(
                 !binaryFun!less(r.front, ahead.front),
-                "Predicate for isSorted is not antisymmetric. Both" ~
+                "Predicate for isOrdered is not antisymmetric. Both" ~
                         " pred(a, b) and pred(b, a) are true for certain values.");
             return false;
         }
@@ -193,20 +209,20 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 ///
 @safe unittest
 {
-    assert([1, 1, 2].isSorted);
+    assert([1, 1, 2].isOrdered);
     // strictly monotonic doesn't allow duplicates
-    assert(![1, 1, 2].isStrictlyMonotonic);
+    assert(![1, 1, 2].isStrictlyOrdered);
 
     int[] arr = [4, 3, 2, 1];
-    assert(!isSorted(arr));
-    assert(!isStrictlyMonotonic(arr));
+    assert(!isOrdered(arr));
+    assert(!isStrictlyOrdered(arr));
 
-    assert(isSorted!"a > b"(arr));
-    assert(isStrictlyMonotonic!"a > b"(arr));
+    assert(isOrdered!"a > b"(arr));
+    assert(isStrictlyOrdered!"a > b"(arr));
 
     sort(arr);
-    assert(isSorted(arr));
-    assert(isStrictlyMonotonic(arr));
+    assert(isOrdered(arr));
+    assert(isStrictlyOrdered(arr));
 }
 
 @safe unittest
@@ -215,95 +231,42 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 
     // Issue 9457
     auto x = "abcd";
-    assert(isSorted(x));
+    assert(isOrdered(x));
     auto y = "acbd";
-    assert(!isSorted(y));
+    assert(!isOrdered(y));
 
     int[] a = [1, 2, 3];
-    assert(isSorted(a));
+    assert(isOrdered(a));
     int[] b = [1, 3, 2];
-    assert(!isSorted(b));
+    assert(!isOrdered(b));
 
     // ignores duplicates
     int[] c = [1, 1, 2];
-    assert(isSorted(c));
+    assert(isOrdered(c));
 
     dchar[] ds = "コーヒーが好きです"d.dup;
     sort(ds);
     string s = to!string(ds);
-    assert(isSorted(ds));  // random-access
-    assert(isSorted(s));   // bidirectional
+    assert(isOrdered(ds));  // random-access
+    assert(isOrdered(s));   // bidirectional
 }
 
 @nogc @safe nothrow pure unittest
 {
     static immutable a = [1, 2, 3];
-    assert(a.isSorted);
+    assert(a.isOrdered);
 }
 
 /// ditto
-bool isStrictlyMonotonic(alias less = "a < b", Range)(Range r)
-if (isForwardRange!Range)
+bool isStrictlyOrdered(alias less = "a < b", Range)(Range r)
+if (isForwardRange!(Range) && hasComparableElements!(Range, less))
 {
     import std.algorithm.searching : findAdjacent;
     return findAdjacent!((a,b) => !binaryFun!less(a,b))(r).empty;
 }
 
-@safe unittest
-{
-    import std.conv : to;
-
-    assert("abcd".isStrictlyMonotonic);
-    assert(!"aacd".isStrictlyMonotonic);
-    assert(!"acb".isStrictlyMonotonic);
-
-    assert([1, 2, 3].isStrictlyMonotonic);
-    assert(![1, 3, 2].isStrictlyMonotonic);
-    assert(![1, 1, 2].isStrictlyMonotonic);
-
-    // ー occurs twice -> can't be strict
-    dchar[] ds = "コーヒーが好きです"d.dup;
-    sort(ds);
-    string s = to!string(ds);
-    assert(!isStrictlyMonotonic(ds));  // random-access
-    assert(!isStrictlyMonotonic(s));   // bidirectional
-
-    dchar[] ds2 = "コーヒが好きです"d.dup;
-    sort(ds2);
-    string s2 = to!string(ds2);
-    assert(isStrictlyMonotonic(ds2));  // random-access
-    assert(isStrictlyMonotonic(s2));   // bidirectional
-}
-
-@nogc @safe nothrow pure unittest
-{
-    static immutable a = [1, 2, 3];
-    assert(a.isStrictlyMonotonic);
-}
-
-/**
-Like $(D isSorted), returns $(D true) if the given $(D values) are ordered
-according to the comparison operation $(D less). Unlike $(D isSorted), takes values
-directly instead of structured in a range.
-
-$(D ordered) allows repeated values, e.g. $(D ordered(1, 1, 2)) is $(D true). To verify
-that the values are ordered strictly monotonically, use $(D strictlyOrdered);
-$(D strictlyOrdered(1, 1, 2)) is $(D false).
-
-With either function, the predicate must be a strict ordering. For example,
-using $(D "a <= b") instead of $(D "a < b") is incorrect and will cause failed
-assertions.
-
-Params:
-    values = The tested value
-    less = The comparison predicate
-
-Returns:
-    $(D true) if the values are ordered; $(D ordered) allows for duplicates,
-    $(D strictlyOrdered) does not.
-*/
-
-bool ordered(alias less = "a < b", T...)(T values)
+/// ditto
+bool isOrdered(alias less = "a < b", T...)(T values)
 if ((T.length == 2 && is(typeof(binaryFun!less(values[1], values[0])) : bool))
     ||
     (T.length > 2 && is(typeof(ordered!less(values[0 .. 1 + $ / 2])))
@@ -323,7 +286,7 @@ if ((T.length == 2 && is(typeof(binaryFun!less(values[1], values[0])) : bool))
 }
 
 /// ditto
-bool strictlyOrdered(alias less = "a < b", T...)(T values)
+bool isStrictlyOrdered(alias less = "a < b", T...)(T values)
 if (is(typeof(ordered!less(values))))
 {
     foreach (i, _; T[0 .. $ - 1])
@@ -338,21 +301,65 @@ if (is(typeof(ordered!less(values))))
     return true;
 }
 
+deprecated("Please use isOrdered")
+alias isSorted = isOrdered;
+
+deprecated("Please use isStrictlyOrdered")
+alias isStrictlyMonotonic = isStrictlyOrdered;
+
+deprecated("Please use isOrdered instead")
+alias ordered = isOrdered;
+
+deprecated("Please use isOrdered instead")
+alias orderedStrictly = isStrictlyOrdered;
+
 ///
 unittest
 {
-    assert(ordered(42, 42, 43));
-    assert(!strictlyOrdered(43, 42, 45));
-    assert(ordered(42, 42, 43));
-    assert(!strictlyOrdered(42, 42, 43));
-    assert(!ordered(43, 42, 45));
+    assert(isOrdered(42, 42, 43));
+    assert(!isStrictlyOrdered(43, 42, 45));
+    assert(isOrdered(42, 42, 43));
+    assert(!isStrictlyOrdered(42, 42, 43));
+    assert(!isOrdered(43, 42, 45));
     // Ordered lexicographically
-    assert(ordered("Jane", "Jim", "Joe"));
-    assert(strictlyOrdered("Jane", "Jim", "Joe"));
-    // Incidentally also ordered by length decreasing
-    assert(ordered!((a, b) => a.length > b.length)("Jane", "Jim", "Joe"));
+    assert(isOrdered("Jane", "Jim", "Joe"));
+    assert(isStrictlyOrdered("Jane", "Jim", "Joe"));
+    // Incidentally also isOrdered by length decreasing
+    assert(isOrdered!((a, b) => a.length > b.length)("Jane", "Jim", "Joe"));
     // ... but not strictly so: "Jim" and "Joe" have the same length
-    assert(!strictlyOrdered!((a, b) => a.length > b.length)("Jane", "Jim", "Joe"));
+    assert(!isStrictlyOrdered!((a, b) => a.length > b.length)("Jane", "Jim", "Joe"));
+}
+
+@safe unittest
+{
+    import std.conv : to;
+
+    assert("abcd".isStrictlyOrdered);
+    assert(!"aacd".isStrictlyOrdered);
+    assert(!"acb".isStrictlyOrdered);
+
+    assert([1, 2, 3].isStrictlyOrdered);
+    assert(![1, 3, 2].isStrictlyOrdered);
+    assert(![1, 1, 2].isStrictlyOrdered);
+
+    // ー occurs twice -> can't be strict
+    dchar[] ds = "コーヒーが好きです"d.dup;
+    sort(ds);
+    string s = to!string(ds);
+    assert(!isStrictlyOrdered(ds));  // random-access
+    assert(!isStrictlyOrdered(s));   // bidirectional
+
+    dchar[] ds2 = "コーヒが好きです"d.dup;
+    sort(ds2);
+    string s2 = to!string(ds2);
+    assert(isStrictlyOrdered(ds2));  // random-access
+    assert(isStrictlyOrdered(s2));   // bidirectional
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable a = [1, 2, 3];
+    assert(a.isStrictlyOrdered);
 }
 
 // partition
@@ -789,11 +796,11 @@ unittest
     // index using pointers
     auto index1 = new immutable(int)*[arr.length];
     makeIndex!("a < b")(arr, index1);
-    assert(isSorted!("*a < *b")(index1));
+    assert(isOrdered!("*a < *b")(index1));
     // index using offsets
     auto index2 = new size_t[arr.length];
     makeIndex!("a < b")(arr, index2);
-    assert(isSorted!
+    assert(isOrdered!
         ((size_t a, size_t b){ return arr[a] < arr[b];})
         (index2));
 }
@@ -812,12 +819,12 @@ unittest
     static assert(!isIntegral!(ElementType!(ImmIndex)));
     static assert(is(ElementType!(ImmIndex) : ElementType!(ImmRange)*));
     makeIndex!("a < b")(arr, index1);
-    assert(isSorted!("*a < *b")(index1));
+    assert(isOrdered!("*a < *b")(index1));
 
     // index using offsets
     auto index2 = new long[arr.length];
     makeIndex(arr, index2);
-    assert(isSorted!
+    assert(isOrdered!
             ((long a, long b){
                 return arr[cast(size_t) a] < arr[cast(size_t) b];
             })(index2));
@@ -826,7 +833,7 @@ unittest
     string[] arr1 = ["I", "have", "no", "chocolate"];
     auto index3 = new byte[arr1.length];
     makeIndex(arr1, index3);
-    assert(isSorted!
+    assert(isOrdered!
             ((byte a, byte b){ return arr1[a] < arr1[b];})
             (index3));
 }
@@ -1041,7 +1048,7 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
     }
 
     optimisticInsertionSort!(binaryFun!("a < b"), int[])(a);
-    assert(isSorted(a));
+    assert(isOrdered(a));
 }
 
 // sort
@@ -1118,7 +1125,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
             TimSortImpl!(lessFun, Range).sort(r, null);
 
         enum maxLen = 8;
-        assert(isSorted!lessFun(r), "Failed to sort range of type " ~ Range.stringof);
+        assert(isOrdered!lessFun(r), "Failed to sort range of type " ~ Range.stringof);
     }
     else
     {
@@ -1190,11 +1197,11 @@ unittest
     bool greater2(int a, int b) { return a + i > b + i; }
     bool delegate(int, int) greater = &greater2;
     sort!(greater)(a);
-    assert(isSorted!(greater)(a));
+    assert(isOrdered!(greater)(a));
 
     // sort using string
     sort!("a < b")(a);
-    assert(isSorted!("a < b")(a));
+    assert(isOrdered!("a < b")(a));
 
     // sort using function; all elements equal
     foreach (ref e; a) {
@@ -1202,7 +1209,7 @@ unittest
     }
     static bool less(int a, int b) { return a < b; }
     sort!(less)(a);
-    assert(isSorted!(less)(a));
+    assert(isOrdered!(less)(a));
 
     string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
     bool lessi(string a, string b) { return toUpper(a) < toUpper(b); }
@@ -1211,14 +1218,14 @@ unittest
 
     // sort using ternary predicate
     //sort!("b - a")(a);
-    //assert(isSorted!(less)(a));
+    //assert(isOrdered!(less)(a));
 
     a = rndstuff!(int)();
     sort(a);
-    assert(isSorted(a));
+    assert(isOrdered(a));
     auto b = rndstuff!(string)();
     sort!("toLower(a) < toLower(b)")(b);
-    assert(isSorted!("toUpper(a) < toUpper(b)")(b));
+    assert(isOrdered!("toUpper(a) < toUpper(b)")(b));
 
     {
         // Issue 10317
@@ -1598,7 +1605,7 @@ private template TimSortImpl(alias pred, R)
     void binaryInsertionSort(R range, size_t sortedLen = 1)
     out
     {
-        if (!__ctfe) assert(isSorted!pred(range));
+        if (!__ctfe) assert(isOrdered!pred(range));
     }
     body
     {
@@ -1654,8 +1661,8 @@ private template TimSortImpl(alias pred, R)
     {
         if (!__ctfe)
         {
-            assert(isSorted!pred(range[0 .. mid]));
-            assert(isSorted!pred(range[mid .. range.length]));
+            assert(isOrdered!pred(range[0 .. mid]));
+            assert(isOrdered!pred(range[mid .. range.length]));
         }
     }
     body
@@ -1708,7 +1715,7 @@ private template TimSortImpl(alias pred, R)
     size_t mergeLo(R range, immutable size_t mid, size_t minGallop, T[] temp)
     out
     {
-        if (!__ctfe) assert(isSorted!pred(range));
+        if (!__ctfe) assert(isOrdered!pred(range));
     }
     body
     {
@@ -1791,7 +1798,7 @@ private template TimSortImpl(alias pred, R)
     size_t mergeHi(R range, immutable size_t mid, size_t minGallop, T[] temp)
     out
     {
-        if (!__ctfe) assert(isSorted!pred(range));
+        if (!__ctfe) assert(isOrdered!pred(range));
     }
     body
     {
@@ -2029,7 +2036,7 @@ unittest
         sort!(comp, SwapStrategy.stable)(arr);
 
         // Test that the array was sorted correctly
-        assert(isSorted!comp(arr));
+        assert(isOrdered!comp(arr));
 
         // Test that the array was sorted stably
         foreach(i; 0 .. arr.length - 1)
@@ -2049,7 +2056,7 @@ unittest
 
 unittest
 {//bugzilla 4584
-    assert(isSorted!"a < b"(sort!("a < b", SwapStrategy.stable)(
+    assert(isOrdered!"a < b"(sort!("a < b", SwapStrategy.stable)(
        [83, 42, 85, 86, 87, 22, 89, 30, 91, 46, 93, 94, 95, 6,
          97, 14, 33, 10, 101, 102, 103, 26, 105, 106, 107, 6]
     )));
@@ -2110,9 +2117,9 @@ and only minimal extra data (one array of transformed elements) is
 created.
 
 To check whether an array was sorted and benefit of the speedup of
-Schwartz sorting, a function $(D schwartzIsSorted) is not provided
+Schwartz sorting, a function $(D schwartzisOrdered) is not provided
 because the effect can be achieved by calling $(D
-isSorted!less(map!transform(r))).
+isOrdered!less(map!transform(r))).
 
 Params:
     transform = The transformation to apply.
@@ -2210,7 +2217,7 @@ unittest
     assert(arr[0] == highEnt);
     assert(arr[1] == midEnt);
     assert(arr[2] == lowEnt);
-    assert(isSorted!("a > b")(map!(entropy)(arr)));
+    assert(isOrdered!("a > b")(map!(entropy)(arr)));
 }
 
 unittest
@@ -2243,7 +2250,7 @@ unittest
     assert(arr[0] == lowEnt);
     assert(arr[1] == midEnt);
     assert(arr[2] == highEnt);
-    assert(isSorted!("a < b")(map!(entropy)(arr)));
+    assert(isOrdered!("a < b")(map!(entropy)(arr)));
 }
 
 // partialSort
@@ -2571,7 +2578,7 @@ unittest
     auto n = uniform(0, a.length, r);
     ptrdiff_t[] b = new ptrdiff_t[n];
     topNCopy!(binaryFun!("a < b"))(a, b, SortOutput.yes);
-    assert(isSorted!(binaryFun!("a < b"))(b));
+    assert(isOrdered!(binaryFun!("a < b"))(b));
 }
 
 /**
