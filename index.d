@@ -520,3 +520,5 @@ $(COMMENT
 Macros:
         TITLE=Phobos Runtime Library
         WIKI=Phobos
+        DDOC_BLANKLINE=
+        _=
