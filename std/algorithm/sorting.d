@@ -25,6 +25,8 @@ $(T2 strictlyOrdered,
         $(D strictlyOrdered(1, 1, 2, 3)) returns $(D false).)
 $(T2 makeIndex,
         Creates a separate index for a range.)
+$(T2 merge,
+        Lazily merges two or more sorted ranges.)
 $(T2 multiSort,
         Sorts by multiple keys.)
 $(T2 nextEvenPermutation,
@@ -73,6 +75,7 @@ import std.range.primitives;
 // FIXME
 import std.range; // : SortedRange;
 import std.traits;
+import std.meta; // : allSatisfy;
 
 /**
 Specifies whether the output of certain algorithm is desired in sorted
@@ -832,6 +835,212 @@ unittest
     assert(isSorted!
             ((byte a, byte b){ return arr1[a] < arr1[b];})
             (index3));
+}
+
+/**
+Lazily computes the union of two or more ranges $(D rs). The ranges
+are assumed to be sorted by $(D less). Elements in the output are not
+unique; the length of the output is the sum of the lengths of the
+inputs. (The $(D length) member is offered if all ranges also have
+length.) The element types of all ranges must have a common type.
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    rs = The ranges to compute the union for.
+
+Returns:
+    A range containing the union of the given ranges.
+
+See_Also:
+   $(XREF algorithm, setops, SetUnion)
+ */
+struct Merge(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))
+{
+private:
+    Rs _r;
+    alias comp = binaryFun!(less);
+    uint _crt;
+
+    void adjustPosition(uint candidate = 0)()
+    {
+        static if (candidate == Rs.length)
+        {
+            _crt = _crt.max;
+        }
+        else
+        {
+            if (_r[candidate].empty)
+            {
+                adjustPosition!(candidate + 1)();
+                return;
+            }
+            foreach (i, U; Rs[candidate + 1 .. $])
+            {
+                enum j = candidate + i + 1;
+                if (_r[j].empty) continue;
+                if (comp(_r[j].front, _r[candidate].front))
+                {
+                    // a new candidate was found
+                    adjustPosition!(j)();
+                    return;
+                }
+            }
+            // Found a successful candidate
+            _crt = candidate;
+        }
+    }
+
+public:
+    alias ElementType = CommonType!(staticMap!(.ElementType, Rs));
+    static assert(!is(CommonType!(staticMap!(.ElementType, Rs)) == void),
+        typeof(this).stringof ~ ": incompatible element types.");
+
+    ///
+    this(Rs rs)
+    {
+        this._r = rs;
+        adjustPosition();
+    }
+
+    ///
+    @property bool empty()
+    {
+        return _crt == _crt.max;
+    }
+
+    ///
+    void popFront()
+    {
+        // Assumes _crt is correct
+        assert(!empty);
+        foreach (i, U; Rs)
+        {
+            if (i < _crt) continue;
+            // found _crt
+            assert(!_r[i].empty);
+            _r[i].popFront();
+            adjustPosition();
+            return;
+        }
+        assert(false);
+    }
+
+    ///
+    @property auto ref ElementType front()
+    {
+        assert(!empty);
+        // Assume _crt is correct
+        foreach (i, U; Rs)
+        {
+            if (i < _crt) continue;
+            assert(!_r[i].empty);
+            return _r[i].front;
+        }
+        assert(false);
+    }
+
+    static if (allSatisfy!(isForwardRange, Rs))
+    {
+        ///
+        @property auto save()
+        {
+            auto ret = this;
+            foreach (ti, elem; _r)
+            {
+                ret._r[ti] = elem.save;
+            }
+            return ret;
+        }
+    }
+
+    static if (allSatisfy!(hasLength, Rs))
+    {
+        ///
+        @property size_t length()
+        {
+            size_t result;
+            foreach (i, U; Rs)
+            {
+                result += _r[i].length;
+            }
+            return result;
+        }
+
+        ///
+        alias opDollar = length;
+    }
+}
+
+/// Ditto
+Merge!(less, Rs) merge(alias less = "a < b", Rs...)
+(Rs rs)
+{
+    return typeof(return)(rs);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int[] a = [1, 3, 5];
+    int[] b = [2, 3, 4];
+    assert(a.merge(b).equal([1, 2, 3, 3, 4, 5]));
+}
+
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int[] a = [ 1, 2, 4, 5, 7, 9 ];
+    int[] b = [ 0, 1, 2, 4, 7, 8 ];
+    double[] c = [ 10.5 ];
+
+    assert(merge(a, b).length == a.length + b.length);
+    assert(equal(merge(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
+    assert(equal(merge(a, c, b),
+                    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10.5][]));
+    auto u = merge(a, b);
+    u.front--;
+    assert(equal(u, [-1, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
+}
+
+@safe pure nothrow unittest
+{
+    // save
+    import std.range: dropOne;
+    int[] a = [1, 2];
+    int[] b = [0, 3];
+    auto arr = a.merge(b);
+    assert(arr.front == 0);
+    assert(arr.save.dropOne.front == 1);
+    assert(arr.front == 0);
+}
+
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
+
+    auto dummyResult1 = [1, 1, 1.5, 2, 3, 4, 5, 5.5, 6, 7, 8, 9, 10];
+    auto dummyResult2 = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5,
+                         6, 6, 7, 7, 8, 8, 9, 9, 10, 10];
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        assert(d.merge([1, 1.5, 5.5]).equal(dummyResult1));
+        assert(d.merge(d).equal(dummyResult2));
+    }
+}
+
+@nogc @safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static immutable a = [1, 3, 5];
+    static immutable b = [2, 3, 4];
+    static immutable r = [1, 2, 3, 3, 4, 5];
+    assert(a.merge(b).equal(r));
 }
 
 private template validPredicates(E, less...)
