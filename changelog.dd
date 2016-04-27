@@ -5,23 +5,25 @@ $(COMMENT Pending changelog for 2.072. This will get copied to dlang.org and
 )
 
 $(BUGSTITLE Library Changes,
-    $(LI $(RELATIVE_LINK2 process, Process creation in
-        $(STDMODREF process, std.process) was sped up on Posix.))
-    $(LI $(XREF range, padLeft) and $(XREF range, padRight) were added.)
+    $(LI $(RELATIVE_LINK2 process, Process creation in `std.process` was sped up
+        on Posix.))
+    $(LI $(RELATIVE_LINK2 padLeft-padRight, `std.range.padLeft` and
+        `std.range.padRight` were added.))
+    $(LI $(RELATIVE_LINK2 regex-multiple-patterns, `std.regex.regex` now
+        supports matching multiple patterns in one go.))
+    $(LI $(RELATIVE_LINK2 mutation, `std.algorithm.mutation` was exposed))
+    $(LI $(RELATIVE_LINK2 iota-length-size_t, `std.range.iota's `.length`
+        property is fixed to `size_t` instead of the type being iterated))
     $(LI $(XREF uni, isNumber) and $(XREF uni, isPunctuation) now use a separate,
     optimized path for ASCII inputs.)
     $(LI $(XREF uni, isAlphaNum), which is analogous to $(XREF ascii, isAlphaNum)
         was added.)
-    $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.
+    $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.)
     $(LI std.regex had numerous optimization applied, compile-time $(XREF regex, ctRegex)
     should now be generally faster then the run-time version.)
-    $(LI $(XREF regex, regex) now supports matching multiple patterns in one go.)
-    $(LI $(XREF algorithm, mutation, swapAt) was exposed)
-    $(LI $(XREF range, primitives, moveAt) accepts only `size_t` for its index
+    $(LI $(REF moveAt, std,range,primitives) accepts only `size_t` for its index
     arguments.)
-    $(LI $(XREF range, iota)'s `.length` property is fixed to `size_t` instead
-    of the type being iterated)
-    $(LI $(XREF algorithm, sorting, isStrictlyMonotonic) which doesn't allow
+    $(LI $(REF isStrictlyMonotonic, std,algorithm,sorting) which doesn't allow
     equal values was added.)
     $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
         rangified.)
@@ -29,16 +31,18 @@ $(BUGSTITLE Library Changes,
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(RELATIVE_LINK2 process, Process creation in
-    $(STDMODREF process, std.process) was sped up on Posix.)
-Previously, Posix systems would attempt to close every file descriptor from 3
-    to the maximum file descriptor number if `inheritFDs` was not specified
-    with `spawnProcess`, `pipeProcess`, etc.
-    $(STDMODREF process, std.process) now uses `poll()` to determine which
-    descriptors need closing.
+$(LI $(LNAME2 process, Process creation in `std.process` was sped up on Posix.)
+    $(P Previously, Posix systems would attempt to close every file descriptor
+        from 3 to the maximum file descriptor number if `inheritFDs` was not
+        specified with `spawnProcess`, `pipeProcess`, etc.
+        $(STDMODREF process, std.process) now uses `poll()` to determine which
+        descriptors need closing.
+    )
 )
 
-$(LI $(P $(XREF range, padLeft) and $(XREF range, padRight) are functions for
+$(LI $(LNAME2 padLeft-padRight, `std.range.padLeft` and `std.range.padRight`
+        were added.)
+    $(P $(XREF range, padLeft) and $(XREF range, padRight) are functions for
         padding ranges to a specified length using the given element.
     )
 
@@ -52,7 +56,7 @@ assert("Hello World!".padRight('!', 15).equal("Hello World!!!!"));
 -------
 )
 
-$(LI $(XREF regex, regex) now supports matching multiple patterns in one go.
+$(LI $(LNAME2 regex-multiple-patterns, `std.regex.regex` now supports matching multiple patterns in one go.)
 -------
 import std.regex;
 // multi-pattern regex
@@ -67,16 +71,23 @@ assert(m.front[1] == "12");
 -------
 )
 
-$(LI $(P $(XREF algorithm, mutation, swapAt) allows to swap elements
-		of a RandomAccessRange by their indices.
+$(LI $(LNAME2 mutation, `std.algorithm.mutation` was exposed)
+    $(P $(REF swapAt, std,algorithm,mutation) allows to swap elements
+        of a RandomAccessRange by their indices.
     )
+)
 
-$(LI $(P $(XREF range, iota)'s `.length` property is now always returned as
-		`size_t`.  This means if you are on a 32-bit CPU and you are using
-		iota to iterate 64-bit types, the length will be truncated to `size_t`.
-		In non-release mode, you will get an exception if the length exceeds
-		`size_t.max` in your call to `iota`.
-	)
+$(LI $(LNAME2 iota-length-size_t, `std.range.iota's `.length` property is fixed
+        to `size_t` instead of the type being iterated)
+    $(P $(XREF range, iota)'s `.length` property is now always returned as
+        `size_t`.  This means if you are on a 32-bit CPU and you are using
+        iota to iterate 64-bit types, the length will be truncated to `size_t`.
+        In non-release mode, you will get an exception if the length exceeds
+        `size_t.max` in your call to `iota`.
+    )
+)
+
+)
 
 Macros:
     TITLE=Change Log
