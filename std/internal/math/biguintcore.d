@@ -742,7 +742,7 @@ public:
             ++evenbits;
         }
 
-        if ((x.data.length- firstnonzero == 2))
+        if (x.data.length- firstnonzero == 2)
         {
             // Check for a single digit straddling a digit boundary
             BigDigit x1 = x.data[firstnonzero+1];

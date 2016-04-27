@@ -36,7 +36,7 @@ import std.traits : isArray;
 struct DummyRange(ReturnBy _r, Length _l, RangeType _rt, T = uint[])
         if (isArray!T)
 {
-    private enum uinttestData =
+    private static immutable uinttestData =
         [1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U];
     // These enums are so that the template params are visible outside
     // this instantiation.
@@ -61,7 +61,7 @@ struct DummyRange(ReturnBy _r, Length _l, RangeType _rt, T = uint[])
         // Workaround for DMD bug 4378
         static if (is(T == uint[]))
         {
-            arr = uinttestData;
+            arr = uinttestData.dup;
         }
     }
 

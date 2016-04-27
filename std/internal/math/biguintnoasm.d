@@ -24,8 +24,8 @@ public:
 alias BigDigit = uint; // A Bignum is an array of BigDigits.
 
     // Limits for when to switch between multiplication algorithms.
-enum : int { KARATSUBALIMIT = 10 }; // Minimum value for which Karatsuba is worthwhile.
-enum : int { KARATSUBASQUARELIMIT=12 }; // Minimum value for which square Karatsuba is worthwhile
+enum int KARATSUBALIMIT = 10; // Minimum value for which Karatsuba is worthwhile.
+enum int KARATSUBASQUARELIMIT = 12; // Minimum value for which square Karatsuba is worthwhile
 
 
 /** Multi-byte addition or subtraction

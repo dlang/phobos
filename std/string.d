@@ -4380,7 +4380,7 @@ unittest
 
     assert(detabber(" \u2029\t".byChar, 9).array == " \u2029         ");
     auto r = "hel\tx".byWchar.detabber();
-    assert(r.front == 'h' && r.front == 'h');
+    assert(r.front == 'h');
     auto s = r.save;
     r.popFront();
     r.popFront();

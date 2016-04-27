@@ -1059,7 +1059,7 @@ unittest
 ///
 unittest
 {
-    enum REF = [0, 1, 2, 3];
+    static immutable REF = [0, 1, 2, 3];
     foreach (I, V; aliasSeqOf!([0, 1, 2, 3]))
     {
         static assert(V == I);

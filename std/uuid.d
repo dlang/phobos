@@ -344,7 +344,7 @@ public struct UUID
                 throw new UUIDParsingException(to!string(uuid), 35, UUIDParsingException.Reason.tooMuch,
                     "Input is too long, need exactly 36 characters");
             }
-            enum skipInd = [skipSeq];
+            static immutable skipInd = [skipSeq];
             foreach (pos; skipInd)
                 if (uuid[pos] != '-')
                     throw new UUIDParsingException(to!string(uuid), pos,

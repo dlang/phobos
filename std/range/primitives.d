@@ -581,7 +581,7 @@ unittest
     {
         char c;
         enum empty = false;
-        void popFront(){};
+        void popFront(){}
         ref char front() return @property
         {
             return c;

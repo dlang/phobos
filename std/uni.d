@@ -7299,7 +7299,7 @@ enum UnicodeDecomposition {
 enum {
     Canonical = UnicodeDecomposition.Canonical,
     Compatibility = UnicodeDecomposition.Compatibility
-};
+}
 
 /++
     Try to canonically compose 2 $(CHARACTERS).
@@ -7571,7 +7571,7 @@ enum {
     NFKC = NormalizationForm.NFKC,
     ///ditto
     NFKD = NormalizationForm.NFKD
-};
+}
 
 /++
     Returns $(D input) string normalized to the chosen form.

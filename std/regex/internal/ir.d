@@ -592,7 +592,7 @@ struct Input(Char)
 {
     import std.utf;
     alias DataIndex = size_t;
-    enum { isLoopback = false };
+    enum bool isLoopback = false;
     alias String = const(Char)[];
     String _origin;
     size_t _index;
@@ -641,7 +641,7 @@ struct BackLooperImpl(Input)
     import std.utf;
     alias DataIndex = size_t;
     alias String = Input.String;
-    enum { isLoopback = true };
+    enum bool isLoopback = true;
     String _origin;
     size_t _index;
     this(Input input, size_t index)
