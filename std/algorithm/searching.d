@@ -3551,6 +3551,197 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(arr2d.maxElement!"a[1]" == arr2d[1]);
 }
 
+/**
+Iterates the passed range and selects the min and max element with `less`.
+If the extreme element occurs multiple time, the first occurrence will be
+returned.
+This function is more efficient than calling both $(LREF minElement) and
+$(LREF maxElement).
+
+Params:
+    map = custom accessor for the comparison key
+    selector = custom mapping for the extrema selection
+    minSeed = custom seed to use as initial element for min
+    maxSeed = custom seed to use as initial element for min
+    r = Range from which the extreme value will be selected
+
+Returns:
+    The extreme value according to `map` and `selector` of the passed-in values.
+
+See_Also:
+    $(LREF minElement), $(LREF maxElement)
+*/
+auto minmaxElement(alias map = "a", alias selector = "a < b", Range)(Range r)
+    if (isInputRange!Range && !isInfinite!Range)
+in
+{
+    assert(!r.empty, "r is an empty range");
+}
+body
+{
+    alias Element = ElementType!Range;
+    Unqual!Element seed = r.front;
+    r.popFront();
+    return minmaxElement!(map, selector)(r, seed, seed);
+}
+
+/// ditto
+auto minmaxElement(alias map = "a", alias selector = "a < b", Range,
+                      RangeElementType = ElementType!Range)
+                     (Range r, RangeElementType minSeed, RangeElementType maxSeed)
+    if (isInputRange!Range && !isInfinite!Range &&
+        !is(CommonType!(ElementType!Range, RangeElementType) == void))
+{
+    alias mapFun = unaryFun!map;
+    alias selectorFun = binaryFun!selector;
+
+    alias Element = ElementType!Range;
+    alias CommonElement = CommonType!(Element, RangeElementType);
+    alias MapType = Unqual!(typeof(mapFun(CommonElement.init)));
+
+    Unqual!CommonElement minElement = minSeed;
+    Unqual!CommonElement maxElement = maxSeed;
+
+    MapType minElementMapped = mapFun(minElement);
+    MapType maxElementMapped = mapFun(maxElement);
+
+    alias minmaxTuple = Tuple!(Unqual!CommonElement, "min", Unqual!CommonElement, "max");
+
+    static if (isRandomAccessRange!Range && hasLength!Range)
+    {
+        foreach (const i; 0 .. r.length)
+        {
+            MapType mapElement = mapFun(r[i]);
+            if (selectorFun(mapElement, minElementMapped))
+            {
+                minElement = r[i];
+                minElementMapped = mapElement;
+            }
+            if (selectorFun(maxElementMapped, mapElement))
+            {
+                maxElement = r[i];
+                maxElementMapped = mapElement;
+            }
+        }
+    }
+    else
+    {
+        while (!r.empty)
+        {
+            MapType rawElement1 = r.front;
+            MapType mapElement1 = mapFun(rawElement1);
+            r.popFront();
+            // check if the range had an uneven amount of elements and thus has ended
+            if (r.empty)
+            {
+                if (selectorFun(mapElement1, minElementMapped))
+                {
+                    minElement = rawElement1;
+                    minElementMapped = mapElement1;
+                }
+                if (selectorFun(maxElementMapped, mapElement1))
+                {
+                    maxElement = rawElement1;
+                    maxElementMapped = mapElement1;
+                }
+            }
+            MapType rawElement2 = r.front;
+            MapType mapElement2 = mapFun(rawElement1);
+            r.popFront();
+
+            if (selectorFun(mapElement1, mapElement2))
+            {
+                if (selectorFun(mapElement1, minElementMapped))
+                {
+                    minElement = rawElement1;
+                    minElementMapped = mapElement1;
+                }
+                if (selectorFun(maxElementMapped, mapElement2))
+                {
+                    maxElement = rawElement2;
+                    maxElementMapped = mapElement2;
+                }
+            }
+            else
+            {
+                if (selectorFun(mapElement2, minElementMapped))
+                {
+                    maxElement = rawElement2;
+                    minElementMapped = mapElement2;
+                }
+                if (selectorFun(maxElementMapped, mapElement1))
+                {
+                    minElement = rawElement1;
+                    maxElementMapped = mapElement1;
+                }
+
+            }
+        }
+    }
+    return minmaxTuple(minElement, maxElement);
+}
+
+///
+@safe pure unittest
+{
+    import std.range: enumerate;
+    import std.stdio;
+
+    assert([2, 1, 4, 3].minmaxElement == tuple(1, 4));
+
+    //// allows to get the index of an element too
+    assert([5, 3, 7, 9].enumerate.minmaxElement!"a.value" == tuple(tuple(1, 3), tuple(3, 9)));
+
+    // any custom accessor can be passed
+    assert([[0, 4], [1, 2]].minmaxElement!"a[1]" == tuple([1, 2], [0, 4]));
+
+    // can be seeded
+    int[] arr;
+    assert(arr.minmaxElement(1, 2) == tuple(1, 2));
+}
+
+@safe pure unittest
+{
+    import std.range: enumerate, iota;
+    // supports mapping
+    assert([3, 4, 5, 1, 2].enumerate.minmaxElement!"a.value" ==
+                                    tuple(tuple(3, 1), tuple(2, 5)));
+    assert([5, 2, 4].enumerate.minmaxElement!"a.value" ==
+                                    tuple(tuple(1, 2), tuple(0, 5)));
+
+    // forward ranges
+    assert(iota(1, 5).minmaxElement() == tuple(1, 4));
+    assert(iota(2, 5).enumerate.minmaxElement!"a.value" ==
+                                    tuple(tuple(0, 2), tuple(2, 4)));
+
+    // should work with const
+    const(int)[] immArr = [2, 1, 3];
+    assert(immArr.minmaxElement == tuple(1, 3));
+
+    // should work with immutable
+    immutable(int)[] immArr2 = [2, 1, 3];
+    assert(immArr2.minmaxElement == tuple(1, 3));
+
+    // with strings
+    assert(["b", "a", "c"].minmaxElement == tuple("a", "c"));
+
+    // with all dummy ranges
+    import std.internal.test.dummyrange;
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        assert(d.minmaxElement == tuple(1, 10));
+    }
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable arr = [7, 3, 4, 2, 1, 8];
+    assert(arr.minmaxElement == tuple(1, 8));
+
+    static immutable arr2d = [[1, 9], [3, 1], [2, 12], [4, 2]];
+    assert(arr2d.minmaxElement!"a[1]" == tuple(arr2d[1], arr2d[2]));
+}
 // minPos
 /**
 Computes a subrange of `range` starting at the first occurrence of `range`'s

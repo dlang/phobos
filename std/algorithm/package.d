@@ -37,6 +37,7 @@ $(TR
         $(SUBREF searching, maxCount)
         $(SUBREF searching, minElement)
         $(SUBREF searching, maxElement)
+        $(SUBREF searching, minmaxElement)
         $(SUBREF searching, minIndex)
         $(SUBREF searching, maxIndex)
         $(SUBREF searching, minPos)
