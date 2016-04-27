@@ -2978,22 +2978,24 @@ template fold(fun...) if (fun.length >= 1)
 }
 
 /++
-Similar to $(LREF fold), but returns a range containing the successive reduced
-values. The call $(D cumulativeFold!(fun)(range, seed)) first assigns $(D seed)
-to an internal variable $(D result), also called the accumulator.
+Similar to `fold`, but returns a range containing the successive reduced values.
+The call $(D cumulativeFold!(fun)(range, seed)) first assigns `seed` to an
+internal variable `result`, also called the accumulator.
 The returned range contains the values $(D result = fun(result, x)) lazily
-evaluated for each element $(D x) in $(D range). Finally, the last element has
-the same value as $(D fold!(fun)(seed, range)).
+evaluated for each element `x` in `range`. Finally, the last element has the
+same value as $(D fold!(fun)(seed, range)).
 The one-argument version $(D cumulativeFold!(fun)(range)) works similarly, but
 it returns the first element unchanged and uses it as seed for the next
 elements.
-This function is also known as `partial_sum`, `accumulate`, `prefix_sum`,
-`scan`, or `cumulative_sum`.
-
+This function is also known as
+    $(WEB en.cppreference.com/w/cpp/algorithm/partial_sum, partial_sum),
+    $(WEB docs.python.org/3/library/itertools.html#itertools.accumulate, accumulate),
+    $(WEB hackage.haskell.org/package/base-4.8.2.0/docs/Prelude.html#v:scanl, scan),
+    $(WEB mathworld.wolfram.com/CumulativeSum.html, Cumulative Sum).
 Returns:
-    a range containg the consecutive reduced values. If there is more than one
-    fun, the element type will be $(REF Tuple, std, typecons) containing one
-    element for each fun.
+    The function returns a range containing the consecutive reduced values. If
+    there is more than one `fun`, the element type will be $(XREF typecons,
+    Tuple) containing one element for each `fun`.
 
 See_Also:
     $(WEB en.wikipedia.org/wiki/Prefix_sum, Prefix Sum)
@@ -3002,18 +3004,18 @@ template cumulativeFold(fun...)
 if (fun.length >= 1)
 {
     import std.meta : staticMap;
-    alias binfuns = staticMap!(binaryFun, fun);
+    private alias binfuns = staticMap!(binaryFun, fun);
 
     /++
-    No-seed version. The first element of $(D r) is used as the seed's value.
-    For each function $(D f) in $(D fun), the corresponding seed type $(D S) is
-    $(D Unqual!(typeof(f(e, e)))), where $(D e) is an element of $(D r): $(D
-    ElementType!R).
-    Once S has been determined, then $(D S s = e;) and $(D s = f(s, e);) must
+    No-seed version. The first element of `r` is used as the seed's value.
+    For each function `f` in `fun`, the corresponding seed type `S` is
+    $(D Unqual!(typeof(f(e, e)))), where `e` is an element of `r`:
+    `ElementType!R`.
+    Once `S` has been determined, then $(D S s = e;) and $(D s = f(s, e);) must
     both be legal.
     Params:
         fun = one or more functions
-        range = an input range as defined by $(D isInputRange)
+        range = an input range as defined by `isInputRange`
     Returns:
         a range containing the consecutive reduced values.
     +/
@@ -3024,15 +3026,15 @@ if (fun.length >= 1)
     }
 
     /++
-    Seed version. The seed should be a single value if $(D fun) is a
-    single function. If $(D fun) is multiple functions, then $(D seed)
-    should be a $(XREF typecons,Tuple), with one field per function in $(D f).
+    Seed version. The seed should be a single value if `fun` is a single
+    function. If `fun` is multiple functions, then `seed` should be a $(XREF
+    typecons, Tuple), with one field per function in `f`.
     For convenience, if the seed is const, or has qualified fields, then
-    $(D cumulativeFold) will operate on an unqualified copy. If this happens
-    then the returned type will not perfectly match $(D S).
+    `cumulativeFold` will operate on an unqualified copy. If this happens
+    then the returned type will not perfectly match `S`.
     Params:
         fun = one or more functions
-        range = an input range as defined by $(D isInputRange)
+        range = an input range as defined by `isInputRange`
         seed = the initial value of the accumulator
     Returns:
         a range containing the consecutive reduced values.
@@ -3096,12 +3098,7 @@ if (fun.length >= 1)
 
             @property auto front()
             {
-                version(assert)
-                {
-                    import core.exception : RangeError;
-                    if (empty)
-                        throw new RangeError();
-                }
+                assert(!empty);
                 static if (fun.length > 1)
                 {
                     import std.typecons : tuple;
@@ -3199,9 +3196,9 @@ if (fun.length >= 1)
 /**
 Sometimes it is very useful to compute multiple aggregates in one pass.
 One advantage is that the computation is faster because the looping overhead
-is shared. That's why $(D cumulativeFold) accepts multiple functions.
-If two or more functions are passed, $(D cumulativeFold) returns a
-$(XREF typecons, Tuple) object with one member per passed-in function.
+is shared. That's why `cumulativeFold` accepts multiple functions.
+If two or more functions are passed, `cumulativeFold` returns a $(XREF typecons,
+Tuple) object with one member per passed-in function.
 The number of seeds must be correspondingly increased.
 */
 @safe unittest

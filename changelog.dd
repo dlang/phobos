@@ -42,8 +42,8 @@ $(LI $(LNAME2 process, Process creation in `std.process` was sped up on Posix.)
     )
 )
 
-$(LI $(LNAME2 std-algorithm-iteration-cumulativeFold, $(REF cumulativeFold,
-std, algorithm, iteration) was added.)
+$(LI $(LNAME2 std-algorithm-iteration-cumulativeFold, $(XREF algorithm.iteration,
+cumulativeFold) was added.)
 
     $(P $(XREF algorithm.iterator, cumulativeFold) returns the successive
         reduced values of an input range.)
