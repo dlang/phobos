@@ -357,7 +357,7 @@ unittest
 {
     import std.experimental.allocator.gc_allocator;
     import std.experimental.allocator;
-    alias AffixAllocator!(GCAllocator, uint) MyAllocator;
+    alias MyAllocator = AffixAllocator!(GCAllocator, uint);
     auto a = MyAllocator.instance.makeArray!(shared int)(100);
     static assert(is(typeof(&MyAllocator.instance.prefix(a)) == shared(uint)*));
     auto b = MyAllocator.instance.makeArray!(shared const int)(100);

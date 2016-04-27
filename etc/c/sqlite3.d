@@ -74,9 +74,9 @@ int sqlite3_threadsafe();
 struct sqlite3;
 
 ///
-alias long sqlite3_int64;
+alias sqlite3_int64 = long;
 ///
-alias ulong sqlite3_uint64;
+alias sqlite3_uint64 = ulong;
 
 /**
 ** CAPI3REF: Closing A Database Connection
@@ -354,9 +354,9 @@ struct sqlite3_mutex;
 ** CAPI3REF: OS Interface Object
 */
 
-alias void * function() xDlSymReturn;
+alias xDlSymReturn = void * function();
 /// Ditto
-alias void function() sqlite3_syscall_ptr;
+alias sqlite3_syscall_ptr = void function();
 
 struct sqlite3_vfs
 {
@@ -1071,7 +1071,7 @@ void sqlite3_set_auxdata(sqlite3_context*, int N, void*, void function (void*));
 /**
 ** CAPI3REF: Constants Defining Special Destructor Behavior
 */
-alias void function (void*) sqlite3_destructor_type;
+alias sqlite3_destructor_type = void function (void*);
 /// Ditto
 enum
 {
@@ -1353,7 +1353,7 @@ void sqlite3_reset_auto_extension();
 ** CAPI3REF: Virtual Table Object
 */
 
-alias void function (sqlite3_context*,int,sqlite3_value**) mapFunction;
+alias mapFunction = void function (sqlite3_context*,int,sqlite3_value**);
 
 /// Ditto
 struct sqlite3_module

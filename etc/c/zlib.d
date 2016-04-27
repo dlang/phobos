@@ -75,8 +75,8 @@ const ZLIB_VERNUM = 0x1280;
   crash even in case of corrupted input.
 */
 
-alias void* function (void* opaque, uint items, uint size) alloc_func;
-alias void  function (void* opaque, void* address) free_func;
+alias alloc_func = void* function (void* opaque, uint items, uint size);
+alias free_func = void  function (void* opaque, void* address);
 
 struct z_stream
 {
@@ -100,7 +100,7 @@ struct z_stream
     c_ulong reserved;   /* reserved for future use */
 }
 
-alias z_stream* z_streamp;
+alias z_streamp = z_stream*;
 
 /*
      gzip header information passed to and from zlib routines.  See RFC 1952
@@ -124,7 +124,7 @@ struct gz_header
                            when writing a gzip file) */
 }
 
-alias gz_header* gz_headerp;
+alias gz_headerp = gz_header*;
 
 /*
   The application must update next_in and avail_in when avail_in has
@@ -884,8 +884,8 @@ int inflateBackInit(z_stream* strm, int windowBits, ubyte* window)
    match the version of the header file.
 */
 
-alias uint function(void*, ubyte**) in_func;
-alias int function(void*, ubyte*, uint) out_func;
+alias in_func = uint function(void*, ubyte**);
+alias out_func = int function(void*, ubyte*, uint);
 
 int inflateBack(z_stream* strm,
                 in_func f_in,
@@ -1080,8 +1080,8 @@ int uncompress(ubyte* dest,
 */
 
 
-alias void* gzFile;
-alias int z_off_t;              // file offset
+alias gzFile = void*;
+alias z_off_t = int;              // file offset
 
 gzFile gzopen(const(char)* path, const(char)* mode);
 /*

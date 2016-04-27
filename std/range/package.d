@@ -816,7 +816,7 @@ if (Ranges.length > 0 &&
             // This doesn't work yet
             static if (allSameType)
             {
-                alias ref RvalueElementType ElementType;
+                alias ElementType = ref RvalueElementType;
             }
             else
             {
