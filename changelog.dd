@@ -27,6 +27,7 @@ $(BUGSTITLE Library Changes,
     equal values was added.)
     $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
         rangified.)
+    $(LI $(RELATIVE_LINK2 copyRecurse, New Function: `std.file.copyRecurse`.))
 )
 
 $(BUGSTITLE Library Changes,
@@ -87,6 +88,14 @@ $(LI $(LNAME2 iota-length-size_t, `std.range.iota's `.length` property is fixed
     )
 )
 
+)
+
+$(LI $(LNAME2 copyRecurse, New Function: `std.file.copyRecurse`.)
+
+    $(P A new function has been added: $(XREF file, copyRecurse). It differs
+        from $(XREF file, copy) in that `copyRecurse` accepts directories and
+        copies them recursively.
+    )
 )
 
 Macros:
