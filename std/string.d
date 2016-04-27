@@ -5804,13 +5804,11 @@ unittest
  * Returns:
  *     $(D bool)
  */
-
-bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
+bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S)
 {
-    import std.algorithm : among;
+    import std.algorithm.comparison : among;
 
-    immutable iLen = s.length;
-    if (iLen == 0)
+    if (s.empty)
         return false;
 
     // Check for NaN (Not a Number) and for Infinity
@@ -5818,10 +5816,13 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
             ("nan", "nani", "nan+nani", "inf", "-inf"))
         return true;
 
-    immutable j = s[0].among!('-', '+')() != 0;
+    if (s.front == '-' || s.front == '+')
+        s.popFront;
+
+    immutable iLen = s.length;
     bool bDecimalPoint, bExponent, bComplex, sawDigits;
 
-    for (size_t i = j; i < iLen; i++)
+    for (size_t i = 0; i < iLen; i++)
     {
         immutable c = s[i];
 
@@ -5847,21 +5848,21 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
         }
 
         // Allow only one exponent per number
-        if (c.among!('e', 'E')())
+        if (c == 'e' || c == 'E')
         {
             // A 2nd exponent found, return not a number
             if (bExponent || i + 1 >= iLen)
                 return false;
             // Look forward for the sign, and if
             // missing then this is not a number.
-            if (!s[i + 1].among!('-', '+')())
+            if (s[i + 1] != '-' && s[i + 1] != '+')
                 return false;
             bExponent = true;
             i++;
             continue;
         }
         // Allow only one decimal point per number to be used
-        if (c == '.' )
+        if (c == '.')
         {
             // A 2nd decimal point found, return not a number
             if (bDecimalPoint)
@@ -5974,6 +5975,22 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
     assert(!isNumeric("e+"));
     assert(!isNumeric(".f"));
     assert(!isNumeric("e+f"));
+}
+
+// Test string types
+@safe unittest
+{
+    import std.meta : AliasSeq;
+    import std.conv : to;
+
+    foreach (T; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
+    {
+        assert("123".to!T.isNumeric());
+        assert("123UL".to!T.isNumeric());
+        assert("123fi".to!T.isNumeric());
+        assert("123li".to!T.isNumeric());
+        assert(!"--123L".to!T.isNumeric());
+    }
 }
 
 @trusted unittest
