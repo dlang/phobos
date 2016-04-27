@@ -20941,7 +20941,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
 assert(!PosInfInterval!Date(Date(1996, 1, 2)).empty);
 --------------------
       +/
-    @property enum bool empty = false;
+    enum bool empty = false;
 
 
     /++
@@ -23130,7 +23130,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
 assert(!NegInfInterval!Date(Date(1996, 1, 2)).empty);
 --------------------
       +/
-    @property enum bool empty = false;
+    enum bool empty = false;
 
 
     /++

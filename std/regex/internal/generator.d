@@ -163,7 +163,7 @@ module std.regex.internal.generator;
         return app.data;
     }
 
-    @property enum empty = false;
+    enum empty = false;
 
     void popFront()
     {
