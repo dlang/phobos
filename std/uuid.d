@@ -494,7 +494,7 @@ public struct UUID
                 return data;
             }
 
-            for(size_t i = 0; i < 16; i++)
+            for (size_t i = 0; i < 16; i++)
             {
                 assert(!UUID(getData(i)).empty);
             }
@@ -504,7 +504,7 @@ public struct UUID
 
             bool ctfeTest()
             {
-                for(size_t i = 0; i < 16; i++)
+                for (size_t i = 0; i < 16; i++)
                 {
                     auto ctfeEmpty2 = UUID(getData(i)).empty;
                     assert(!ctfeEmpty2);

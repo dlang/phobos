@@ -2241,7 +2241,7 @@ unittest
             left <<= (T.sizeof - 1) * 8;
             T right = 0xffU;
 
-            for(size_t i = 1; i < T.sizeof; ++i)
+            for (size_t i = 1; i < T.sizeof; ++i)
             {
                 assert(swapEndian(left) == right);
                 assert(swapEndian(right) == left);

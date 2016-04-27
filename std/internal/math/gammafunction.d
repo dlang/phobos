@@ -753,7 +753,7 @@ ihalve:
 
     dir = 0;
     di = 0.5L;
-    for( i=0; i<400; i++ ) {
+    for ( i=0; i<400; i++ ) {
         if ( i != 0 ) {
             x = x0  +  di * (x1 - x0);
             if ( x == 1.0L ) {
@@ -846,7 +846,7 @@ newt:
     nflg = 1;
     lgm = logGamma(a+b) - logGamma(a) - logGamma(b);
 
-    for( i=0; i<15; i++ ) {
+    for ( i=0; i<15; i++ ) {
         /* Compute the function at this point. */
         if ( i != 0 )
             y = betaIncomplete(a,b,x);
@@ -1346,7 +1346,7 @@ body {
 
     lgm = logGamma(a);
 
-    for( i=0; i<10; i++ ) {
+    for ( i=0; i<10; i++ ) {
         if ( x > x0 || x < x1 )
             goto ihalve;
         y = gammaIncompleteCompl(a,x);
@@ -1391,7 +1391,7 @@ ihalve:
     d = 0.5L;
     dir = 0;
 
-    for( i=0; i<400; i++ ) {
+    for ( i=0; i<400; i++ ) {
         x = x1  +  d * (x0 - x1);
         y = gammaIncompleteCompl( a, x );
         lgm = (x0 - x1)/(x1 + x0);
@@ -1603,9 +1603,9 @@ unittest {
     assert(logmdigamma(-5.0).isNaN());
     assert(isIdentical(logmdigamma(NaN(0xABC)), NaN(0xABC)));
     assert(logmdigamma(0.0) == real.infinity);
-    for(auto x = 0.01; x < 1.0; x += 0.1)
+    for (auto x = 0.01; x < 1.0; x += 0.1)
         assert(approxEqual(digamma(x), log(x) - logmdigamma(x)));
-    for(auto x = 1.0; x < 15.0; x += 1.0)
+    for (auto x = 1.0; x < 15.0; x += 1.0)
         assert(approxEqual(digamma(x), log(x) - logmdigamma(x)));
 }
 

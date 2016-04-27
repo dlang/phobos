@@ -416,7 +416,7 @@ class Stream : InputStream, OutputStream {
   // reads block of data of specified size,
   // throws ReadException on error
   void readExact(void* buffer, size_t size) {
-    for(;;) {
+    for (;;) {
       if (!size) return;
       size_t readsize = readBlock(buffer, size); // return 0 on eof
       if (readsize == 0) break;
@@ -1082,7 +1082,7 @@ class Stream : InputStream, OutputStream {
   // throws WriteException on error
   void writeExact(const void* buffer, size_t size) {
     const(void)* p = buffer;
-    for(;;) {
+    for (;;) {
       if (!size) return;
       size_t writesize = writeBlock(p, size);
       if (writesize == 0) break;
@@ -1767,7 +1767,7 @@ class BufferedStream : FilterStream {
           ubyte*  pc = cast(ubyte*)&c;
 
         L0:
-          for(;;) {
+          for (;;) {
               size_t start = bufferCurPos;
             L1:
               foreach (ubyte b; buffer[start .. bufferLen]) {

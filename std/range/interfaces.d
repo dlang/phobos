@@ -404,7 +404,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
             int opApply(int delegate(E) dg) {
                 int res;
 
-                for(auto r = _range; !r.empty; r.popFront()) {
+                for (auto r = _range; !r.empty; r.popFront()) {
                     res = dg(r.front);
                     if (res) break;
                 }
@@ -416,7 +416,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                 int res;
 
                 size_t i = 0;
-                for(auto r = _range; !r.empty; r.popFront()) {
+                for (auto r = _range; !r.empty; r.popFront()) {
                     res = dg(i, r.front);
                     if (res) break;
                     i++;

@@ -244,7 +244,7 @@ unittest
 
     // Make sure we can sanitize everything bad
     assert(invalidStrings.length == sanitizedStrings.length);
-    for(int i=0; i<invalidStrings.length; ++i)
+    for (int i=0; i<invalidStrings.length; ++i)
     {
         string s = cast(string)invalidStrings[i];
         string t = sanitize(s);
@@ -2114,7 +2114,7 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  }
  --------------------------------------------------------
 
- Note that, currently, foreach (c:codePoints(s)) is superior to foreach(c;s)
+ Note that, currently, foreach (c:codePoints(s)) is superior to foreach (c;s)
  in that the latter will fall over on encountering U+FFFF.
  */
 CodePoints!(E) codePoints(E)(immutable(E)[] s)

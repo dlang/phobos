@@ -1206,7 +1206,7 @@ pure nothrow unittest
     import std.experimental.ndslice.slice;
     auto slice = new long[20].sliced(5, 4);
 
-    for(auto elems = slice.byElement; !elems.empty; elems.popFront)
+    for (auto elems = slice.byElement; !elems.empty; elems.popFront)
     {
         size_t[2] index = elems.index;
         elems.front = index[0] * 10 + index[1] * 3;

@@ -194,7 +194,7 @@ struct MD5
             {
                 import std.bitmanip : littleEndianToNative;
 
-                for(size_t i = 0; i < 16; i++)
+                for (size_t i = 0; i < 16; i++)
                 {
                     x[i] = littleEndianToNative!uint(*cast(ubyte[4]*)&(*block)[i*4]);
                 }
@@ -321,7 +321,7 @@ struct MD5
                 (&_buffer[index])[0 .. partLen] = data.ptr[0 .. partLen];
                 transform(&_buffer);
 
-                for(i = partLen; i + 63 < inputLen; i += 64)
+                for (i = partLen; i + 63 < inputLen; i += 64)
                 {
                     transform(cast(const(ubyte[64])*)(data[i .. i + 64].ptr));
                 }

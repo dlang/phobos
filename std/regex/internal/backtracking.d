@@ -218,7 +218,7 @@ template BacktrackingMatcher(bool CTregex)
             {
                 if (!re.kickstart.empty)
                 {
-                    for(;;)
+                    for (;;)
                     {
                         int val = matchFinalize();
                         if (val)
@@ -240,7 +240,7 @@ template BacktrackingMatcher(bool CTregex)
                 }
             }
             //no search available - skip a char at a time
-            for(;;)
+            for (;;)
             {
                 int val = matchFinalize();
                 if (val)
@@ -280,7 +280,7 @@ template BacktrackingMatcher(bool CTregex)
                 auto start = s._index;
                 debug(std_regex_matcher)
                     writeln("Try match starting at ", s[index..s.lastIndex]);
-                for(;;)
+                for (;;)
                 {
                     debug(std_regex_matcher)
                         writefln("PC: %s\tCNT: %s\t%s \tfront: %s src: %s",
@@ -295,7 +295,7 @@ template BacktrackingMatcher(bool CTregex)
                         uint end = pc + len;
                         if (re.ir[pc].data != front && re.ir[pc+1].data != front)
                         {
-                            for(pc = pc+2; pc < end; pc++)
+                            for (pc = pc+2; pc < end; pc++)
                                 if (re.ir[pc].data == front)
                                     break;
                             if (pc == end)
@@ -976,7 +976,7 @@ struct CtContext
         CtState[] pieces;
         CtState r;
         enum optL = IRL!(IR.Option);
-        for(;;)
+        for (;;)
         {
             assert(ir[0].code == IR.Option);
             auto len = ir[0].data;
@@ -998,7 +998,7 @@ struct CtContext
             }
         }
         r = pieces[0];
-        for(uint i = 1; i < pieces.length; i++)
+        for (uint i = 1; i < pieces.length; i++)
         {
             r.code ~= ctSub(`
                 case $$:
@@ -1230,7 +1230,7 @@ struct CtContext
                     if (atEnd)
                         $$`, bailOut);
             uint len = ir[0].sequence;
-            for(uint i = 0; i < len; i++)
+            for (uint i = 0; i < len; i++)
             {
                 code ~= ctSub( `
                     if (front == $$)

@@ -1390,7 +1390,7 @@ private:
             import core.time;
             scope(exit) notified = false;
 
-            for( auto limit = MonoTime.currTime + period;
+            for ( auto limit = MonoTime.currTime + period;
                  !notified && !period.isNegative;
                  period = limit - MonoTime.currTime )
             {
@@ -1986,7 +1986,7 @@ private
 
             bool scan( ref ListT list )
             {
-                for( auto range = list[]; !range.empty; )
+                for ( auto range = list[]; !range.empty; )
                 {
                     // Only the message handler will throw, so if this occurs
                     // we can be certain that the message was handled.
@@ -2130,7 +2130,7 @@ private
 
             void sweep( ref ListT list )
             {
-                for( auto range = list[]; !range.empty; range.popFront() )
+                for ( auto range = list[]; !range.empty; range.popFront() )
                 {
                     if ( range.front.type == MsgType.linkDead )
                         onLinkDeadMsg( range.front );

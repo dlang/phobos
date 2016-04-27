@@ -1638,14 +1638,14 @@ assert(equal(rbt[], [5]));
             if (n !is null)
             {
                 printTree(n.right, indent + 2);
-                for(int i = 0; i < indent; i++)
+                for (int i = 0; i < indent; i++)
                     write(".");
                 writeln(n.color == n.color.Black ? "B" : "R");
                 printTree(n.left, indent + 2);
             }
             else
             {
-                for(int i = 0; i < indent; i++)
+                for (int i = 0; i < indent; i++)
                     write(".");
                 writeln("N");
             }

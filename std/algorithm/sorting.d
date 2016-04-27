@@ -1622,7 +1622,7 @@ private template TimSortImpl(alias pred, R)
             //11 instructions vs 7 in the innermost loop [checked on Win32]
             //moveAll(retro(range[lower .. sortedLen]),
             //            retro(range[lower+1 .. sortedLen+1]));
-            for(upper=sortedLen; upper > lower; upper--)
+            for (upper=sortedLen; upper > lower; upper--)
                 range[upper] = range.moveAt(upper - 1);
             range[lower] = move(item);
         }
