@@ -1655,6 +1655,34 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 }
 
 /**
+ * roundRobin can be used to create "interleave" functionality which inserts
+ * an element between each element in a range.
+ */
+unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto interleave(R, E)(R range, E element) if (isInputRange!R)
+    {
+        static if (hasLength!R)
+        {
+            immutable len = range.length;
+        }
+        else
+        {
+            immutable len = range.walkLength;
+        }
+
+        return roundRobin(
+            range,
+            element.repeat(len - 1)
+        );
+    }
+
+    assert(interleave([1, 2, 3], 0).equal([1, 0, 2, 0, 3]));
+}
+
+/**
 Iterates a random-access range starting from a given point and
 progressively extending left and right from that point. If no initial
 point is given, iteration starts from the middle of the
