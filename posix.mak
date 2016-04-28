@@ -413,6 +413,11 @@ FORCE:
 
 endif
 
+JSON = phobos.json
+json : $(JSON)
+$(JSON) : $(ALL_D_FILES)
+	$(DMD) $(DFLAGS) -o- -Xf$@ $^
+
 ###########################################################
 # html documentation
 
