@@ -1304,7 +1304,7 @@ private auto extremum(alias map = "a", alias selector = "a < b", Range,
     assert(arr2d.extremum([1]) == [1]);
 
     // allow seeds of different types (implicit casting)
-    assert([2, 3, 4].extremum(1.5) == 1.5);
+    assert(extremum([2, 3, 4], 1.5) == 1.5);
 }
 
 // find
