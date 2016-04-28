@@ -7060,6 +7060,15 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     The cost of $(D icmp) being pedantically correct is
     slightly worse performance.
     )
+
+    Returns:
+        An $(D int) that is 0 if the strings match,
+        &lt;0 if $(D str1) is lexicographically "less" than $(D str2),
+        &gt;0 if $(D str1) is lexicographically "greater" than $(D str2)
+
+    See_Also:
+        $(LREF sicmp)
+        $(XREF_PACK algorithm,comparison,cmp)
 +/
 int icmp(S1, S2)(S1 str1, S2 str2)
     if (isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
@@ -7094,9 +7103,22 @@ int icmp(S1, S2)(S1 str1, S2 str2)
 }
 
 ///
-unittest{
+unittest
+{
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
+}
+
+/**
+ * By using $(XREF utf, byUTF) and its aliases, GC allocations via auto-decoding
+ * and thrown exceptions can be avoided, making `icmp` `@safe @nogc nothrow pure`.
+ */
+@safe @nogc nothrow pure unittest
+{
+    import std.utf : byDchar;
+
+    assert(icmp("Rußland".byDchar, "Russland".byDchar) == 0);
+    assert(icmp("ᾩ -> \u1F70\u03B9".byDchar, "\u1F61\u03B9 -> ᾲ".byDchar) == 0);
 }
 
 // overloads for the most common cases to reduce compile time
