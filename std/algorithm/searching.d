@@ -31,6 +31,8 @@ $(T2 commonPrefix,
         $(D commonPrefix("parakeet", "parachute")) returns $(D "para").)
 $(T2 endsWith,
         $(D endsWith("rocks", "ks")) returns $(D true).)
+$(T2 extremum,
+        `[2, 4, 3].enumerate.extremum!(a.value, "a > b")` returns `tuple(1, 4)`.)
 $(T2 find,
         $(D find("hello world", "or")) returns $(D "orld") using linear search.
         (For binary search refer to $(REF sortedRange, std,range).))
@@ -1227,7 +1229,7 @@ Params:
 Returns:
     The extreme value according to `map` and `selector` of the passed-in values.
 */
-private auto extremum(alias map = "a", alias selector = "a < b", Range)(Range r)
+auto extremum(alias map = "a", alias selector = "a < b", Range)(Range r)
     if (isInputRange!Range && !isInfinite!Range)
 in
 {
@@ -1242,7 +1244,8 @@ body
     return extremum!(map, selector)(r, seed);
 }
 
-private auto extremum(alias map = "a", alias selector = "a < b", Range,
+/// ditto
+auto extremum(alias map = "a", alias selector = "a < b", Range,
                       RangeElementType = ElementType!Range)
                      (Range r, RangeElementType seedElement)
     if (isInputRange!Range && !isInfinite!Range &&
@@ -1286,6 +1289,7 @@ private auto extremum(alias map = "a", alias selector = "a < b", Range,
     return extremeElement;
 }
 
+///
 @safe pure nothrow unittest
 {
     // allows a custom map to select the extremum
@@ -1297,6 +1301,7 @@ private auto extremum(alias map = "a", alias selector = "a < b", Range,
     assert([[0, 4], [1, 2]].extremum!("a[1]", "a > b") == [0, 4]);
 }
 
+///
 @safe pure nothrow unittest
 {
     // allow seeds
