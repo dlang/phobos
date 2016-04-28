@@ -1469,7 +1469,6 @@ private:
 
 static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
 
-// BUG? forward reference to return type of sliceOverIndexed!Grapheme
 SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
     if (is(Unqual!T == T))
 {
@@ -6660,13 +6659,13 @@ public:
         Warning: Invalidates when this Grapheme leaves the scope,
         attempts to use it then would lead to memory corruption.
     +/
-    @system auto opSlice(size_t a, size_t b) pure nothrow @nogc
+    @system SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) pure nothrow @nogc
     {
         return sliceOverIndexed(a, b, &this);
     }
 
     /// ditto
-    @system auto opSlice() pure nothrow @nogc
+    @system SliceOverIndexed!Grapheme opSlice() pure nothrow @nogc
     {
         return sliceOverIndexed(0, length, &this);
     }
