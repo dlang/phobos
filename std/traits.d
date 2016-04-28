@@ -3745,7 +3745,15 @@ template MemberFunctionsTuple(C, string name)
                 alias Target = FunctionTypeOf!target;
                 alias Rest0 = FunctionTypeOf!(rest[0]);
 
-                static if (isCovariantWith!(Target, Rest0))
+                static if (isCovariantWith!(Target, Rest0) && isCovariantWith!(Rest0, Target))
+                {
+                    // One of these overrides the other. Choose the one from the most derived parent.
+                    static if (is(AliasSeq!(__traits(parent, target))[0] : AliasSeq!(__traits(parent, rest[0]))[0]))
+                        alias shrinkOne = shrinkOne!(target, rest[1 .. $]);
+                    else
+                        alias shrinkOne = shrinkOne!(rest[0], rest[1 .. $]);
+                }
+                else static if (isCovariantWith!(Target, Rest0))
                     // target overrides rest[0] -- erase rest[0].
                     alias shrinkOne = shrinkOne!(target, rest[1 .. $]);
                 else static if (isCovariantWith!(Rest0, Target))
@@ -3799,6 +3807,24 @@ unittest
     static assert(foos.length == 2);
     static assert(__traits(isSame, foos[0], C.foo));
     static assert(__traits(isSame, foos[1], B.foo));
+}
+
+unittest // Issue 15920
+{
+    class A
+    {
+        void f(){}
+        void f(int){}
+    }
+    class B : A
+    {
+        override void f(){}
+        override void f(int){}
+    }
+    alias fs = MemberFunctionsTuple!(B, "f");
+    alias bfs = AliasSeq!(__traits(getOverloads, B, "f"));
+    assert(__traits(isSame, fs[0], bfs[0]) || __traits(isSame, fs[0], bfs[1]));
+    assert(__traits(isSame, fs[1], bfs[0]) || __traits(isSame, fs[1], bfs[1]));
 }
 
 unittest
