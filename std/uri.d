@@ -372,6 +372,44 @@ string encodeComponent(Char)(in Char[] uriComponent) if (isSomeChar!Char)
     return URI_Encode(s, URI_Alpha | URI_Digit | URI_Mark);
 }
 
+/* Encode associative array using www-form-urlencoding
+ *
+ * Params:
+ *      values = an associative array containing the values to be encoded.
+ *
+ * Returns:
+ *      A string encoded using www-form-urlencoding.
+ */
+package string urlEncode(in string[string] values)
+{
+    if (values.length == 0)
+        return "";
+
+    import std.array : Appender;
+    import std.format : formattedWrite;
+
+    Appender!string enc;
+    enc.reserve(values.length * 128);
+
+    bool first = true;
+    foreach (k, v; values)
+    {
+        if (!first)
+            enc.put('&');
+        formattedWrite(enc, "%s=%s", encodeComponent(k), encodeComponent(v));
+        first = false;
+    }
+    return enc.data;
+}
+
+unittest
+{
+    string[string] a;
+    assert(urlEncode(a) == "");
+    assert(urlEncode(["name1" : "value1"]) == "name1=value1");
+    assert(urlEncode(["name1" : "value1", "name2" : "value2"]) == "name1=value1&name2=value2");
+}
+
 /***************************
  * Does string s[] start with a URL?
  * Returns:
