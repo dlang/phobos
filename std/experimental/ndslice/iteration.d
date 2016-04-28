@@ -9,24 +9,31 @@ All operators return slice of the same type as the type of the argument.
 
 $(BOOKTABLE $(H2 Transpose operators),
 
-$(TR $(TH Function Name) $(TH Descriprottion))
-$(T2 transposed, `iotaSlice(3, 4, 5, 6, 7).transposed!(4, 0, 1).shape` returns `[7, 3, 4, 5, 6]`.)
-$(T2 swapped, `iotaSlice(3, 4, 5).swapped!(1, 2).shape` returns `[3, 5, 4]`.)
-$(T2 everted, `iotaSlice(3, 4, 5).everted.shape` returns `[5, 4, 3]`.)
+$(TR $(TH Function Name) $(TH Description))
+$(T2 transposed, Permutes dimensions. $(BR)
+    `iotaSlice(3, 4, 5, 6, 7).transposed!(4, 0, 1).shape` returns `[7, 3, 4, 5, 6]`.)
+$(T2 swapped, Swaps dimensions $(BR)
+    `iotaSlice(3, 4, 5).swapped!(1, 2).shape` returns `[3, 5, 4]`.)
+$(T2 everted, Reverses the order of dimensions $(BR)
+    `iotaSlice(3, 4, 5).everted.shape` returns `[5, 4, 3]`.)
 )
 See also $(SUBREF selection, evertPack).
 
 $(BOOKTABLE $(H2 Iteration operators),
 
 $(TR $(TH Function Name) $(TH Description))
-$(T2 strided, `iotaSlice(13, 40).strided!(0, 1)(2, 5).shape` equals to `[7, 8]`.)
-$(T2 reversed, `slice.reversed!0` returns the slice with reversed direction of iteration for top level dimension.)
-$(T2 allReversed, `iotaSlice(4, 5).allReversed` equals to `20.iota.retro.sliced(4, 5)`.)
+$(T2 strided, Multiplies the stride of a selected dimension by a factor.$(BR)
+    `iotaSlice(13, 40).strided!(0, 1)(2, 5).shape` equals to `[7, 8]`.)
+$(T2 reversed, Reverses the direction of iteration for selected dimensions. $(BR)
+    `slice.reversed!0` returns the slice with reversed direction of iteration for top level dimension.)
+$(T2 allReversed, Reverses the direction of iteration for all dimensions. $(BR)
+    `iotaSlice(4, 5).allReversed` equals to `20.iota.retro.sliced(4, 5)`.)
 )
 
 $(BOOKTABLE $(H2 Other operators),
 $(TR $(TH Function Name) $(TH Description))
-$(T2 rotated, `iotaSlice(2, 3).rotated` equals to `[[2, 5], [1, 4], [0, 3]]`.)
+$(T2 rotated, Rotates two selected dimensions by `k*90` degrees. $(BR)
+    `iotaSlice(2, 3).rotated` equals to `[[2, 5], [1, 4], [0, 3]]`.)
 )
 
 $(H4 Drop operators)
@@ -484,7 +491,7 @@ Slice!(2, Range) transposed(Range)(auto ref Slice!(2, Range) slice)
         .shape == cast(size_t[5])[7, 3, 4, 5, 6]);
 }
 
-/// `2`-dimensional transpose
+/// _2-dimensional transpose
 @safe @nogc pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
@@ -643,7 +650,7 @@ private enum _stridedCode = q{
 };
 
 /++
-Multiplies the stride of the selected dimension by the factor.
+Multiplies the stride of the selected dimension by a factor.
 
 Params:
     slice = input slice

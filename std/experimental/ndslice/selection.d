@@ -27,12 +27,12 @@ $(T2 evertPack, reverses dimension packs)
 $(BOOKTABLE $(H2 Selectors),
 
 $(TR $(TH Function Name) $(TH Description))
-$(T2 byElement, a random access range of all elements with `index` property)
+$(T2 byElement, flat, random access range of all elements with `index` property)
 $(T2 byElementInStandardSimplex, an input range of all elements in standard simplex of hypercube with `index` property.
     If the slice has two dimensions, it is a range of all elements of upper left triangular matrix.)
-$(T2 indexSlice, returns a lazy slice with elements equal to the initial multidimensional index)
-$(T2 iotaSlice, returns a lazy slice with elements equal to the initial flattened (continuous) index)
-$(T2 reshape, returns a new slice for the same data)
+$(T2 indexSlice, lazy slice with initial multidimensional index)
+$(T2 iotaSlice, lazy slice with initial flattened (continuous) index)
+$(T2 reshape, new slice with changed dimensions for the same data)
 $(T2 diagonal, 1-dimensional slice composed of diagonal elements)
 $(T2 blocks, n-dimensional slice composed of n-dimensional non-overlapping blocks.
     If the slice has two dimensions, it is a block matrix.)
@@ -69,7 +69,7 @@ Params:
     K = sizes of dimension packs
 Returns:
     `pack!K` returns `Slice!(N-K, Slice!(K+1, Range))`;
-    `slice.pack!(K1, K2, ..., Kn)` is the same as `slice.pacKed!K1.pacKed!K2. ... pacKed!Kn`.
+    `slice.pack!(K1, K2, ..., Kn)` is the same as `slice.pack!K1.pack!K2. ... pack!Kn`.
 +/
 template pack(K...)
 {
@@ -308,6 +308,7 @@ Slice!(1, Range) diagonal(size_t N, Range)(auto ref Slice!(N, Range) slice)
     assert(iotaSlice(2, 3).diagonal == d);
 }
 
+/// Non-square matrix
 @safe @nogc pure nothrow unittest
 {
     import std.algorithm.comparison: equal;
@@ -326,7 +327,7 @@ Slice!(1, Range) diagonal(size_t N, Range)(auto ref Slice!(N, Range) slice)
         .equal(only(0, 3)));
 }
 
-/// ditto
+/// Loop through diagonal
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
@@ -690,7 +691,7 @@ pure nothrow unittest
 }
 
 /++
-Returns a new slice for the same data.
+Returns a new slice for the same data with different dimensions.
 
 Params:
     slice = slice to be reshaped
@@ -1559,7 +1560,7 @@ Params:
     lengths = list of dimension lengths
 Returns:
     `N`-dimensional slice composed of indexes
-See_also: $(LREF IndexSlice)
+See_also: $(LREF IndexSlice), $(LREF iotaSlice)
 +/
 IndexSlice!(Lengths.length) indexSlice(Lengths...)(Lengths lengths)
     if (allSatisfy!(isIndex, Lengths))
@@ -1663,7 +1664,7 @@ Params:
     shift = value of the first element in a slice
 Returns:
     `N`-dimensional slice composed of indexes
-See_also: $(LREF IotaSlice)
+See_also: $(LREF IotaSlice), $(LREF indexSlice)
 +/
 IotaSlice!(Lengths.length) iotaSlice(Lengths...)(Lengths lengths)
     if (allSatisfy!(isIndex, Lengths))
