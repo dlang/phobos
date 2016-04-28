@@ -889,19 +889,19 @@ in comments on operator overloading.
 
 $(BOOKTABLE
 $(TR $(TH Definition) $(TH Examples at `N == 3`))
-$(TR $(TD An $(BLUE interval) is a part of a sequence of type `i .. j`.)
+$(TR $(TD An $(B interval) is a part of a sequence of type `i .. j`.)
     $(STD `2..$-3`, `0..4`))
-$(TR $(TD An $(BLUE index) is a part of a sequence of type `i`.)
+$(TR $(TD An $(B index) is a part of a sequence of type `i`.)
     $(STD `3`, `$-1`))
-$(TR $(TD A $(BLUE partially defined slice) is a sequence composed of
-    $(BLUE intervals) and $(BLUE indexes) with an overall length strictly less than `N`.)
+$(TR $(TD A $(B partially defined slice) is a sequence composed of
+    $(B intervals) and $(B indexes) with an overall length strictly less than `N`.)
     $(STD `[3]`, `[0..$]`, `[3, 3]`, `[0..$,0..3]`, `[0..$,2]`))
-$(TR $(TD A $(BLUE fully defined index) is a sequence
-    composed only of $(BLUE indexes) with an overall length equal to `N`.)
+$(TR $(TD A $(B fully defined index) is a sequence
+    composed only of $(B indexes) with an overall length equal to `N`.)
     $(STD `[2,3,1]`))
-$(TR $(TD A $(BLUE fully defined slice) is an empty sequence
-    or a sequence composed of $(BLUE indexes) and at least one
-    $(BLUE interval) with an overall length equal to `N`.)
+$(TR $(TD A $(B fully defined slice) is an empty sequence
+    or a sequence composed of $(B indexes) and at least one
+    $(B interval) with an overall length equal to `N`.)
     $(STD `[]`, `[3..$,0..3,0..$-1]`, `[2,0..$,1]`))
 )
 
@@ -1605,7 +1605,7 @@ struct Slice(size_t _N, _Range)
     }
 
     /++
-    Returns: total number of elements in a slice
+    Returns: Total number of elements in a slice
     +/
     size_t elementsCount() const
     {
@@ -1700,7 +1700,7 @@ struct Slice(size_t _N, _Range)
     }
 
     /++
-    $(BLUE Fully defined index).
+    $(BOLD Fully defined index)
     +/
     auto ref opIndex(Repeat!(N, size_t) _indexes)
     {
@@ -1775,7 +1775,7 @@ struct Slice(size_t _N, _Range)
     }
 
     /++
-    $(BLUE Partially or fully defined slice).
+    $(BOLD Partially or fully defined slice.)
     +/
     auto opIndex(Slices...)(Slices slices)
         if (isPureSlice!Slices)
@@ -1925,7 +1925,7 @@ struct Slice(size_t _N, _Range)
         }
 
         /++
-        Assignment of a value of `Slice` type to a $(BLUE fully defined slice).
+        Assignment of a value of `Slice` type to a $(B fully defined slice).
         +/
         void opIndexAssign(size_t RN, RRange, Slices...)(Slice!(RN, RRange) value, Slices slices)
             if (isFullPureSlice!Slices
@@ -1974,7 +1974,7 @@ struct Slice(size_t _N, _Range)
         }
 
         /++
-        Assignment of a regular multidimensional array to a $(BLUE fully defined slice).
+        Assignment of a regular multidimensional array to a $(B fully defined slice).
         +/
         void opIndexAssign(T, Slices...)(T[] value, Slices slices)
             if (isFullPureSlice!Slices
@@ -2030,7 +2030,7 @@ struct Slice(size_t _N, _Range)
         }
 
         /++
-        Assignment of a value (e.g. a number) to a $(BLUE fully defined slice).
+        Assignment of a value (e.g. a number) to a $(B fully defined slice).
         +/
         void opIndexAssign(T, Slices...)(T value, Slices slices)
             if (isFullPureSlice!Slices
@@ -2090,7 +2090,7 @@ struct Slice(size_t _N, _Range)
         }
 
         /++
-        Assignment of a value (e.g. a number) to a $(BLUE fully defined index).
+        Assignment of a value (e.g. a number) to a $(B fully defined index).
         +/
         auto ref opIndexAssign(T)(T value, Repeat!(N, size_t) _indexes)
         {
@@ -2141,7 +2141,7 @@ struct Slice(size_t _N, _Range)
         }
 
         /++
-        Op Assignment `op=` of a value (e.g. a number) to a $(BLUE fully defined index).
+        Op Assignment `op=` of a value (e.g. a number) to a $(B fully defined index).
         +/
         auto ref opIndexOpAssign(string op, T)(T value, Repeat!(N, size_t) _indexes)
         {
@@ -2192,7 +2192,7 @@ struct Slice(size_t _N, _Range)
         }
 
         /++
-        Op Assignment `op=` of a value of `Slice` type to a $(BLUE fully defined slice).
+        Op Assignment `op=` of a value of `Slice` type to a $(B fully defined slice).
         +/
         void opIndexOpAssign(string op, size_t RN, RRange, Slices...)(Slice!(RN, RRange) value, Slices slices)
             if (isFullPureSlice!Slices
@@ -2241,7 +2241,7 @@ struct Slice(size_t _N, _Range)
         }
 
         /++
-        Op Assignment `op=` of a regular multidimensional array to a $(BLUE fully defined slice).
+        Op Assignment `op=` of a regular multidimensional array to a $(B fully defined slice).
         +/
         void opIndexOpAssign(string op, T, Slices...)(T[] value, Slices slices)
             if (isFullPureSlice!Slices
@@ -2289,7 +2289,7 @@ struct Slice(size_t _N, _Range)
         }
 
         /++
-        Op Assignment `op=` of a value (e.g. a number) to a $(BLUE fully defined slice).
+        Op Assignment `op=` of a value (e.g. a number) to a $(B fully defined slice).
         +/
         void opIndexOpAssign(string op, T, Slices...)(T value, Slices slices)
             if (isFullPureSlice!Slices
@@ -2331,7 +2331,7 @@ struct Slice(size_t _N, _Range)
         }
 
         /++
-        Increment `++` and Decrement `--` operators for a $(BLUE fully defined index).
+        Increment `++` and Decrement `--` operators for a $(B fully defined index).
         +/
         auto ref opIndexUnary(string op)(Repeat!(N, size_t) _indexes)
             if (op == `++` || op == `--`)
@@ -2384,7 +2384,7 @@ struct Slice(size_t _N, _Range)
         }
 
         /++
-        Increment `++` and Decrement `--` operators for a $(BLUE fully defined slice).
+        Increment `++` and Decrement `--` operators for a $(B fully defined slice).
         +/
         void opIndexUnary(string op, Slices...)(Slices slices)
             if (isFullPureSlice!Slices && (op == `++` || op == `--`))

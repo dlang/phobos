@@ -54,8 +54,9 @@ Quick_Start:
 $(SUBREF slice, sliced) is a function designed to create
 a multidimensional view over a range.
 Multidimensional view is presented by $(SUBREF slice, Slice) type.
+
 ------
-auto matrix = new double[12].sliced(3, 4);
+auto matrix = slice!double(3, 4);
 matrix[] = 0;
 matrix.diagonal[] = 1;
 
@@ -94,7 +95,7 @@ $(TR $(TDNW Basic Level
         $(SUBREF slice, SliceException)
     )
 )
-$(TR $(TDNW Middle Level
+$(TR $(TDNW Medium Level
         $(BR) $(SMALL Various iteration operators))
      $(TDNW $(SUBMODULE iteration))
      $(TD
@@ -147,7 +148,7 @@ reflected from the original image, and then applying the given function to the
 new file.
 
 Note: You can find the example at
-$(LINK2 https://github.com/DlangScience/examples/tree/master/image_processing/median-filter, GitHub).
+$(LINK2 https://github.com/libmir/mir/blob/master/examples/median_filter.d, GitHub).
 
 -------
 /++
