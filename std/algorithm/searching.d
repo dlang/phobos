@@ -1252,38 +1252,40 @@ Params:
 Returns:
     The extreme value according to `map` and `selector` of the passed-in values.
 */
-private auto extremum(alias map = "a", alias selector = "a < b", Range)(Range r)
-if (isInputRange!Range && !isInfinite!Range)
+private auto extremum(alias map, alias selector = "a < b", Range)(Range r)
+if (isInputRange!Range && !isInfinite!Range &&
+    is(typeof(unaryFun!map(ElementType!(Range).init))))
 in
 {
     assert(!r.empty, "r is an empty range");
 }
 body
 {
-    alias mapFun = unaryFun!map;
     alias Element = ElementType!Range;
     Unqual!Element seed = r.front;
     r.popFront();
     return extremum!(map, selector)(r, seed);
 }
 
-private auto extremum(alias map = "a", alias selector = "a < b", Range,
+private auto extremum(alias map, alias selector = "a < b", Range,
                       RangeElementType = ElementType!Range)
                      (Range r, RangeElementType seedElement)
 if (isInputRange!Range && !isInfinite!Range &&
-    !is(CommonType!(ElementType!Range, RangeElementType) == void))
+    !is(CommonType!(ElementType!Range, RangeElementType) == void) &&
+     is(typeof(unaryFun!map(ElementType!(Range).init))))
 {
     alias mapFun = unaryFun!map;
     alias selectorFun = binaryFun!selector;
 
     alias Element = ElementType!Range;
     alias CommonElement = CommonType!(Element, RangeElementType);
-    alias MapType = Unqual!(typeof(mapFun(CommonElement.init)));
-
     Unqual!CommonElement extremeElement = seedElement;
+
+    alias MapType = Unqual!(typeof(mapFun(CommonElement.init)));
     MapType extremeElementMapped = mapFun(extremeElement);
 
-    static if (isRandomAccessRange!Range && hasLength!Range)
+    // direct access via a random access range is faster
+    static if (isRandomAccessRange!Range)
     {
         foreach (const i; 0 .. r.length)
         {
@@ -1311,7 +1313,55 @@ if (isInputRange!Range && !isInfinite!Range &&
     return extremeElement;
 }
 
-@safe pure nothrow unittest
+private auto extremum(alias selector = "a < b", Range)(Range r)
+    if (isInputRange!Range && !isInfinite!Range &&
+        !is(typeof(unaryFun!selector(ElementType!(Range).init))))
+{
+    alias Element = ElementType!Range;
+    Unqual!Element seed = r.front;
+    r.popFront();
+    return extremum!selector(r, seed);
+}
+
+// if we only have one statement in the loop it can be optimized a lot better
+private auto extremum(alias selector = "a < b", Range,
+                      RangeElementType = ElementType!Range)
+                     (Range r, RangeElementType seedElement)
+    if (isInputRange!Range && !isInfinite!Range &&
+        !is(CommonType!(ElementType!Range, RangeElementType) == void) &&
+        !is(typeof(unaryFun!selector(ElementType!(Range).init))))
+{
+    alias Element = ElementType!Range;
+    alias CommonElement = CommonType!(Element, RangeElementType);
+    Unqual!CommonElement extremeElement = seedElement;
+    alias selectorFun = binaryFun!selector;
+
+    // direct access via a random access range is faster
+    static if (isRandomAccessRange!Range)
+    {
+        foreach (const i; 0 .. r.length)
+        {
+            if (selectorFun(r[i], extremeElement))
+            {
+                extremeElement = r[i];
+            }
+        }
+    }
+    else
+    {
+        while (!r.empty)
+        {
+            if (selectorFun(r.front, extremeElement))
+            {
+                extremeElement = r.front;
+            }
+            r.popFront();
+        }
+    }
+    return extremeElement;
+}
+
+@safe pure unittest
 {
     // allows a custom map to select the extremum
     assert([[0, 4], [1, 2]].extremum!"a[0]" == [0, 4]);
@@ -1320,19 +1370,67 @@ if (isInputRange!Range && !isInfinite!Range &&
     // allows a custom selector for comparison
     assert([[0, 4], [1, 2]].extremum!("a[0]", "a > b") == [1, 2]);
     assert([[0, 4], [1, 2]].extremum!("a[1]", "a > b") == [0, 4]);
+
+    // use a custom comparator
+    import std.math : cmp;
+    assert([-2., 0, 5].extremum!cmp == 5.0);
+    assert([-2., 0, 2].extremum!`cmp(a, b) < 0` == -2.0);
+
+    // combine with map
+    import std.range : enumerate;
+    assert([-3., 0, 5].enumerate.extremum!(`a.value`, cmp) == tuple(2, 5.0));
+    assert([-2., 0, 2].enumerate.extremum!(`a.value`, `cmp(a, b) < 0`) == tuple(0, -2.0));
+
+    // seed with a custom value
+    int[] arr;
+    assert(arr.extremum(1) == 1);
 }
 
 @safe pure nothrow unittest
 {
-    // allow seeds
-    int[] arr;
-    assert(arr.extremum(1) == 1);
-
+    // 2d seeds
     int[][] arr2d;
     assert(arr2d.extremum([1]) == [1]);
 
     // allow seeds of different types (implicit casting)
     assert(extremum([2, 3, 4], 1.5) == 1.5);
+}
+
+@safe pure unittest
+{
+    import std.range : enumerate, iota;
+
+    // forward ranges
+    assert(iota(1, 5).extremum() == 1);
+    assert(iota(2, 5).enumerate.extremum!"a.value" == tuple(0, 2));
+
+    // should work with const
+    const(int)[] immArr = [2, 1, 3];
+    assert(immArr.extremum == 1);
+
+    // should work with immutable
+    immutable(int)[] immArr2 = [2, 1, 3];
+    assert(immArr2.extremum == 1);
+
+    // with strings
+    assert(["b", "a", "c"].extremum == "a");
+
+    // with all dummy ranges
+    import std.internal.test.dummyrange;
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        assert(d.extremum == 1);
+    }
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable arr = [7, 3, 4, 2, 1, 8];
+    assert(arr.extremum == 1);
+
+    static immutable arr2d = [[1, 9], [3, 1], [4, 2]];
+    assert(arr2d.extremum!"a[1]" == arr2d[1]);
 }
 
 // find
@@ -3287,19 +3385,34 @@ Returns: The minimal element of the passed-in range.
 See_Also:
     $(REF min, std,algorithm,comparison)
 */
-auto minElement(alias map = "a", Range)(Range r)
+auto minElement(alias map, Range)(Range r)
 if (isInputRange!Range && !isInfinite!Range)
 {
     return extremum!map(r);
 }
 
+auto minElement(Range)(Range r)
+    if (isInputRange!Range && !isInfinite!Range)
+{
+    return extremum(r);
+}
+
 /// ditto
-auto minElement(alias map = "a", Range, RangeElementType = ElementType!Range)
+auto minElement(alias map, Range, RangeElementType = ElementType!Range)
                (Range r, RangeElementType seed)
 if (isInputRange!Range && !isInfinite!Range &&
     !is(CommonType!(ElementType!Range, RangeElementType) == void))
 {
     return extremum!map(r, seed);
+}
+
+/// ditto
+auto minElement(Range, RangeElementType = ElementType!Range)
+               (Range r, RangeElementType seed)
+    if (isInputRange!Range && !isInfinite!Range &&
+        !is(CommonType!(ElementType!Range, RangeElementType) == void))
+{
+    return extremum(r, seed);
 }
 
 ///
@@ -3453,7 +3566,6 @@ if (isInputRange!Range && !isInfinite!Range)
     static immutable arr2d = [[1, 3], [3, 9], [4, 2]];
     assert(arr2d.maxElement!"a[1]" == arr2d[1]);
 }
-
 
 // minPos
 /**
