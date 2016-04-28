@@ -12,7 +12,7 @@ WIKI = Phobos/StdNumeric
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu),
-                   Don Clugston, Robert Jacques
+                   Don Clugston, Robert Jacques, Ilya Yaroshenko
 Source:    $(PHOBOSSRC std/_numeric.d)
 */
 /*
@@ -161,14 +161,14 @@ private:
     // get the correct unsigned bitfield type to support > 32 bits
     template uType(uint bits)
     {
-        static if(bits <= size_t.sizeof*8)  alias uType = size_t;
+        static if (bits <= size_t.sizeof*8)  alias uType = size_t;
         else                                alias uType = ulong ;
     }
 
     // get the correct signed   bitfield type to support > 32 bits
     template sType(uint bits)
     {
-        static if(bits <= ptrdiff_t.sizeof*8-1) alias sType = ptrdiff_t;
+        static if (bits <= ptrdiff_t.sizeof*8-1) alias sType = ptrdiff_t;
         else                                    alias sType = long;
     }
 
@@ -243,7 +243,7 @@ private:
             // Convert denormalized form to normalized form
             ((flags&Flags.allowDenorm) && exp==0))
         {
-            if(sig > 0)
+            if (sig > 0)
             {
                 import core.bitop : bsr;
                 auto shift2 = precision - bsr(sig);
@@ -465,7 +465,7 @@ public:
         static if (flags & Flags.signed)
         value.sign        = 0;
         value.exponent    = 1;
-        static if(flags&Flags.storeNormalized)
+        static if (flags&Flags.storeNormalized)
             value.significand = 0;
         else
             value.significand = cast(T_sig) 1uL << (precision - 1);
@@ -764,12 +764,12 @@ public:
 
 /**  Find a real root of a real function f(x) via bracketing.
  *
- * Given a function $(D f) and a range $(D [a..b]) such that $(D f(a))
- * and $(D f(b)) have opposite signs or at least one of them equals ±0,
- * returns the value of $(D x) in
- * the range which is closest to a root of $(D f(x)).  If $(D f(x))
+ * Given a function `f` and a range `[a..b]` such that `f(a)`
+ * and `f(b)` have opposite signs or at least one of them equals ±0,
+ * returns the value of `x` in
+ * the range which is closest to a root of `f(x)`.  If `f(x)`
  * has more than one root in the range, one will be chosen
- * arbitrarily.  If $(D f(x)) returns NaN, NaN will be returned;
+ * arbitrarily.  If `f(x)` returns NaN, NaN will be returned;
  * otherwise, this algorithm is guaranteed to succeed.
  *
  * Uses an algorithm based on TOMS748, which uses inverse cubic
@@ -777,7 +777,7 @@ public:
  * or secant interpolation. Compared to TOMS748, this implementation
  * improves worst-case performance by a factor of more than 100, and
  * typical performance by a factor of 2. For 80-bit reals, most
- * problems require 8 to 15 calls to $(D f(x)) to achieve full machine
+ * problems require 8 to 15 calls to `f(x)` to achieve full machine
  * precision. The worst-case performance (pathological cases) is
  * approximately twice the number of bits.
  *
@@ -789,17 +789,17 @@ public:
  */
 T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
     scope DT tolerance) //= (T a, T b) => false)
-    if(
+    if (
         isFloatingPoint!T &&
         is(typeof(tolerance(T.init, T.init)) : bool) &&
         is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
     )
 {
     immutable fa = f(a);
-    if(fa == 0)
+    if (fa == 0)
         return a;
     immutable fb = f(b);
-    if(fb == 0)
+    if (fb == 0)
         return b;
     immutable r = findRoot(f, a, b, fa, fb, tolerance);
     // Return the first value if it is smaller or NaN
@@ -819,10 +819,10 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  *
  * f = Function to be analyzed
  *
- * ax = Left bound of initial range of $(D f) known to contain the
+ * ax = Left bound of initial range of `f` known to contain the
  * root.
  *
- * bx = Right bound of initial range of $(D f) known to contain the
+ * bx = Right bound of initial range of `f` known to contain the
  * root.
  *
  * fax = Value of $(D f(ax)).
@@ -840,14 +840,14 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  * Returns:
  *
  * A tuple consisting of two ranges. The first two elements are the
- * range (in $(D x)) of the root, while the second pair of elements
+ * range (in `x`) of the root, while the second pair of elements
  * are the corresponding function values at those points. If an exact
  * root was found, both of the first two elements will contain the
  * root, and the second pair of elements will be 0.
  */
 Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx,
     scope DT tolerance) // = (T a, T b) => false)
-    if(
+    if (
         isFloatingPoint!T &&
         is(typeof(tolerance(T.init, T.init)) : bool) &&
         is(typeof(f(T.init)) == R) && isFloatingPoint!R
@@ -1383,12 +1383,12 @@ unittest
 }
 
 /++
-Find a real minimum of a real function $(D f(x)) via bracketing.
-Given a function $(D f) and a range $(D (ax..bx)),
-returns the value of $(D x) in the range which is closest to a minimum of $(D f(x)).
-$(D f) is never evaluted at the endpoints of $(D ax) and $(D bx).
-If $(D f(x)) has more than one minimum in the range, one will be chosen arbitrarily.
-If $(D f(x)) returns NaN or -Infinity, $(D (x, f(x), NaN)) will be returned;
+Find a real minimum of a real function `f(x)` via bracketing.
+Given a function `f` and a range `(ax..bx)`,
+returns the value of `x` in the range which is closest to a minimum of `f(x)`.
+`f` is never evaluted at the endpoints of `ax` and `bx`.
+If `f(x)` has more than one minimum in the range, one will be chosen arbitrarily.
+If `f(x)` returns NaN or -Infinity, `(x, f(x), NaN)` will be returned;
 otherwise, this algorithm is guaranteed to succeed.
 
 Params:
@@ -1399,12 +1399,12 @@ Params:
     absTolerance = Absolute tolerance.
 
 Preconditions:
-    $(D ax) and $(D bx) shall be finite reals. $(BR)
+    `ax` and `bx` shall be finite reals. $(BR)
     $(D relTolerance) shall be normal positive real. $(BR)
     $(D absTolerance) shall be normal positive real no less then $(D T.epsilon*2).
 
 Returns:
-    A tuple consisting of $(D x), $(D y = f(x)) and $(D error = 3 * (absTolerance * fabs(x) + relTolerance)).
+    A tuple consisting of `x`, `y = f(x)` and `error = 3 * (absTolerance * fabs(x) + relTolerance)`.
 
     The method used is a combination of golden section search and
 successive parabolic interpolation. Convergence is never much slower
@@ -1453,7 +1453,7 @@ body
     T  v = a * cm1 + b * c;
     assert(isFinite(v));
     R fv = f(v);
-    if(isNaN(fv) || fv == -T.infinity)
+    if (isNaN(fv) || fv == -T.infinity)
     {
         return typeof(return)(v, fv, T.init);
     }
@@ -1462,15 +1462,15 @@ body
     T  x = v;
     R fx = fv;
     size_t i;
-    for(R d = 0, e = 0;;)
+    for (R d = 0, e = 0;;)
     {
         i++;
         T m = (a + b) / 2;
         // This fix is not part of the original algorithm
-        if(!isFinite(m)) // fix infinity loop. Issue can be reproduced in R.
+        if (!isFinite(m)) // fix infinity loop. Issue can be reproduced in R.
         {
             m = a / 2 + b / 2;
-            if(!isFinite(m)) // fast-math compiler switch is enabled
+            if (!isFinite(m)) // fast-math compiler switch is enabled
             {
                 //SIMD instructions can be used by compiler, do not reduce declarations
                 int a_exp = void;
@@ -1480,7 +1480,7 @@ body
                 immutable am = ldexp(an, a_exp-1);
                 immutable bm = ldexp(bn, b_exp-1);
                 m = am + bm;
-                if(!isFinite(m)) // wrong input: constraints are disabled in release mode
+                if (!isFinite(m)) // wrong input: constraints are disabled in release mode
                 {
                     return typeof(return).init;
                 }
@@ -1533,7 +1533,7 @@ body
         // f must not be evaluated too close to x
         u = x + (fabs(d) >= tolerance ? d : d > 0 ? tolerance : -tolerance);
         immutable fu = f(u);
-        if(isNaN(fu) || fu == -T.infinity)
+        if (isNaN(fu) || fu == -T.infinity)
         {
             return typeof(return)(u, fu, T.init);
         }
@@ -1563,15 +1563,17 @@ body
 }
 
 ///
-unittest {
+unittest
+{
     auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
     assert(ret.x.approxEqual(4.0));
     assert(ret.y.approxEqual(0.0));
 }
 
-unittest {
+unittest
+{
     import std.meta: AliasSeq;
-    foreach(T; AliasSeq!(double, float, real))
+    foreach (T; AliasSeq!(double, float, real))
     {
         {
             auto ret = findLocalMin!T((T x) => (x-4)^^2, T.min_normal, 1e7);
@@ -1659,7 +1661,7 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1749,7 +1751,7 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1793,7 +1795,7 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 3.0, ];
@@ -1943,7 +1945,7 @@ if (isInputRange!Range &&
 unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] p = [ 0.0, 0, 0, 1 ];
         assert(entropy(p) == 0);
@@ -2635,7 +2637,7 @@ private:
         auto recurseRange = range;
         recurseRange.doubleSteps();
 
-        if(buf.length > 4)
+        if (buf.length > 4)
         {
             fftImpl(recurseRange, buf[0..$ / 2]);
             recurseRange.popHalf();
@@ -2670,7 +2672,7 @@ private:
 
         // Converts odd indices of range to the imaginary components of
         // a range half the size.  The even indices become the real components.
-        static if(isArray!R && isFloatingPoint!E)
+        static if (isArray!R && isFloatingPoint!E)
         {
             // Then the memory layout of complex numbers provides a dirt
             // cheap way to convert.  This is a common case, so take advantage.
@@ -2852,7 +2854,7 @@ private:
          * inefficient, but having all the lookups be next to each other in
          * memory at every level of iteration is a huge win performance-wise.
          */
-        if(size == 0)
+        if (size == 0)
         {
             return;
         }
@@ -2957,7 +2959,7 @@ public:
      * property that can be both read and written and are floating point numbers.
      */
     void fft(Ret, R)(R range, Ret buf) const
-        if(isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+        if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
     {
         enforce(buf.length == range.length);
         enforceSize(range);
