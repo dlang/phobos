@@ -6930,8 +6930,8 @@ unittest
     than $(LREF icmp). However keep in mind the warning below.)
 
     Params:
-        str1 = a string or a $(D ForwardRange) of $(D dchar)s
-        str2 = a string or a $(D ForwardRange) of $(D dchar)s
+        str1 = a string
+        str2 = a string
 
     Returns:
         An $(D int) that is 0 if the strings match,
@@ -6947,17 +6947,16 @@ unittest
         $(LREF icmp)
         $(XREF_PACK algorithm,comparison,cmp)
 +/
-int sicmp(S1, S2)(S1 str1, S2 str2)
-    if (isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
-    && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
+int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
 {
     alias sTable = simpleCaseTable;
+    import std.utf : decode;
+
     size_t ridx=0;
     foreach (dchar lhs; str1)
     {
         if (ridx == str2.length)
             return 1;
-        import std.utf : decode;
         dchar rhs = decode(str2, ridx);
         int diff = lhs - rhs;
         if (!diff)
@@ -6991,7 +6990,8 @@ int sicmp(S1, S2)(S1 str1, S2 str2)
 }
 
 ///
-unittest{
+unittest
+{
     assert(sicmp("Август", "авгусТ") == 0);
     // Greek also works as long as there is no 1:M mapping in sight
     assert(sicmp("ΌΎ", "όύ") == 0);
