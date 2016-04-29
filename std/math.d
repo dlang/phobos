@@ -7333,28 +7333,17 @@ private T powIntegralImpl(PowType type, T)(T val)
 {
     import core.bitop : bsr;
 
-    Unqual!T x = val;
-
-    static if (isSigned!T)
-    if (x < 0)
-        x = abs(x);
-
-    if (x == 0)
-        return x;
-
-    static if (type == PowType.ceil)
-        x = cast(Unqual!T) (Unqual!T(1) << bsr(x) + 1);
+    if (val == 0 || (type == PowType.ceil && (val > T.max / 2 || val == T.min)))
+        return 0;
     else
-        x = cast(Unqual!T) (Unqual!T(1) << bsr(x));
-
-    static if (isSigned!T)
-    if (val < 0)
-        return -x;
-
-    return x;
+    {
+        static if (isSigned!T)
+            return cast(Unqual!T) (val < 0 ? -(T(1) << bsr(-val) + type) : T(1) << bsr(val) + type);
+        else
+            return cast(Unqual!T) (T(1) << bsr(val) + type);
+    }
 }
 
-pragma(inline, true)
 private T powFloatingPointImpl(PowType type, T)(T x)
 {
     if (!x.isFinite)
@@ -7380,8 +7369,11 @@ private T powFloatingPointImpl(PowType type, T)(T x)
 }
 
 /**
- * Gives the next power of two after $(D val). $(T) can be any built-in
+ * Gives the next power of two after $(D val). `T` can be any built-in
  * numerical type.
+ *
+ * If the operation would lead to an over/underflow, this function will
+ * return `0`.
  *
  * Params:
  *     val = any number
@@ -7410,15 +7402,15 @@ T nextPow2(T)(const T val) if (isFloatingPoint!T)
     assert(nextPow2(-2) == -4);
     assert(nextPow2(-10) == -16);
 
-    assert(nextPow2(uint.max) == 1);
+    assert(nextPow2(uint.max) == 0);
     assert(nextPow2(uint.min) == 0);
-    assert(nextPow2(size_t.max) == 1);
+    assert(nextPow2(size_t.max) == 0);
     assert(nextPow2(size_t.min) == 0);
 
-    assert(nextPow2(int.max) == int.min);
-    assert(nextPow2(int.min) == -1);
-    assert(nextPow2(long.max) == long.min);
-    assert(nextPow2(long.min) == -1);
+    assert(nextPow2(int.max) == 0);
+    assert(nextPow2(int.min) == 0);
+    assert(nextPow2(long.max) == 0);
+    assert(nextPow2(long.min) == 0);
 }
 
 ///
@@ -7491,6 +7483,15 @@ T nextPow2(T)(const T val) if (isFloatingPoint!T)
         assert(nextPow2(T.infinity) == T.infinity);
         assert(nextPow2(T.init).isNaN);
     }
+}
+
+@safe @nogc pure nothrow unittest // Issue 15973
+{
+    assert(nextPow2(uint.max / 2) == uint.max / 2 + 1);
+    assert(nextPow2(uint.max / 2 + 2) == 0);
+    assert(nextPow2(int.max / 2) == int.max / 2 + 1);
+    assert(nextPow2(int.max / 2 + 2) == 0);
+    assert(nextPow2(int.min + 1) == int.min);
 }
 
 /**
