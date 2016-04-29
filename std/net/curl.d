@@ -3112,7 +3112,7 @@ struct HTTP
         }
 
         ///
-        string toString()
+        string toString() const
         {
             return format("%s %s (%s.%s)",
                           code, reason, majorVersion, minorVersion);
