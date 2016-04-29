@@ -8162,6 +8162,13 @@ sorting relation.
         import std.algorithm.iteration : chunkBy;
         return _input.chunkBy!((a, b) => !predFun(a, b) && !predFun(b, a));
     }
+
+    import std.algorithm.sorting: MultiPred;
+
+    static if( is( pred == MultiPred!P, P... ) )
+    auto shrinkPred( uint n )() {
+      return assumeSorted!( pred.shrink!n )( this );
+    }
 }
 
 ///
