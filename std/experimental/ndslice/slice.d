@@ -1180,13 +1180,16 @@ struct Slice(size_t _N, _Range)
 
     /++
     Returns:
-        pointer to the first element of a slice if slice is defined as `Slice!(N, T*)` or
-        plain structure with two fields `shift` and `range` otherwise. In second case the expression `range[shift]`
-        refers to the first element. For slices with named elements the type of a return value has the same behavior like a pointer.
+        Pointer to the first element of a slice if slice is defined as `Slice!(N, T*)`
+        or plain structure with two fields `shift` and `range` otherwise.
+        In second case the expression `range[shift]` refers to the first element.
+        For slices with named elements the type of a return value
+        has the same behavior like a pointer.
     Note:
-        `ptr` is defined only for not packed slices.
+        `ptr` is defined only for non-packed slices.
     Attention:
-        `ptr` refers to the first element in the memory representation if and only if all strides are positive.
+        `ptr` refers to the first element in the memory representation
+        if and only if all strides are positive.
     +/
     static if (is(PureRange == Range))
     auto ptr() @property
