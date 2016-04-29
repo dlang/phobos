@@ -47,7 +47,8 @@ alias multibyteSub = multibyteAddSub!('-');
 
 
 private import core.cpuid;
-private import std.traits : Unqual;
+private import std.traits;
+private import std.range.primitives;
 public import std.ascii : LetterCase;
 
 shared static this()
@@ -356,35 +357,53 @@ public:
     }
 
     // return false if invalid character found
-    bool fromHexString(const(char)[] s) pure nothrow @safe
+    bool fromHexString(Range)(Range s) if (
+        isBidirectionalRange!Range && isSomeChar!(ElementType!Range))
     {
+        import std.range : walkLength;
+
         //Strip leading zeros
-        int firstNonZero = 0;
-        while ((firstNonZero < s.length - 1) &&
-            (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
+        while (!s.empty && s.front == '0')
+            s.popFront;
+
+        if (s.empty)
         {
-                ++firstNonZero;
+            data = ZERO;
+            return true;
         }
-        auto len = (s.length - firstNonZero + 15)/4;
-        auto tmp = new BigDigit[len+1];
-        uint part = 0;
-        uint sofar = 0;
-        uint partcount = 0;
-        assert(s.length>0);
-        for (ptrdiff_t i = s.length - 1; i>=firstNonZero; --i)
+
+        auto len = (s.save.walkLength + 15) / 4;
+        auto tmp = new BigDigit[len + 1];
+        uint part, sofar, partcount;
+
+        foreach_reverse (character; s)
         {
-            assert(i>=0);
-            char c = s[i];
-            if (s[i]=='_') continue;
-            uint x = (c>='0' && c<='9') ? c - '0'
-                   : (c>='A' && c<='F') ? c - 'A' + 10
-                   : (c>='a' && c<='f') ? c - 'a' + 10
-                   : 100;
-            if (x==100) return false;
+            if (character == '_')
+                continue;
+
+            uint x;
+            if (character >= '0' && character <= '9')
+            {
+                x = character - '0';
+            }
+            else if (character >= 'A' && character <= 'F')
+            {
+                x = character - 'A' + 10;
+            }
+            else if (character >= 'a' && character <= 'f')
+            {
+                x = character - 'a' + 10;
+            }
+            else
+            {
+                return false;
+            }
+
             part >>= 4;
-            part |= (x<<(32-4));
+            part |= (x << (32 - 4));
             ++partcount;
-            if (partcount==8)
+
+            if (partcount == 8)
             {
                 tmp[sofar] = part;
                 ++sofar;
@@ -407,25 +426,26 @@ public:
     }
 
     // return true if OK; false if erroneous characters found
-    // FIXME: actually throws `ConvException` on error.
-    bool fromDecimalString(const(char)[] s) pure @trusted
+    bool fromDecimalString(Range)(Range s) if (
+        isForwardRange!Range && isSomeChar!(ElementType!Range))
     {
-        //Strip leading zeros
-        int firstNonZero = 0;
-        while ((firstNonZero < s.length) &&
-            (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
+        import std.range : walkLength;
+
+        while (!s.empty && s.front == '0')
         {
-                ++firstNonZero;
+            s.popFront;
         }
-        if (firstNonZero == s.length && s.length >= 1)
+
+        if (s.empty)
         {
             data = ZERO;
             return true;
         }
-        auto predictlength = (18*2 + 2*(s.length-firstNonZero)) / 19;
-        auto tmp = new BigDigit[predictlength];
 
-        uint hi = biguintFromDecimal(tmp, s[firstNonZero..$]);
+        auto predict_length = (18 * 2 + 2 * s.save.walkLength) / 19;
+        auto tmp = new BigDigit[predict_length];
+
+        uint hi = biguintFromDecimal(tmp, s);
         tmp.length = hi;
 
         data = trustedAssumeUnique(tmp);
@@ -1673,10 +1693,14 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data) pure nothrow
  * Returns:
  *    the highest index of data which was used.
  */
-int biguintFromDecimal(BigDigit [] data, const(char)[] s) pure
+int biguintFromDecimal(Range)(BigDigit[] data, Range s) if (
+    isInputRange!Range &&
+    isSomeChar!(ElementType!Range) &&
+    !isInfinite!Range)
 in
 {
-    assert((data.length >= 2) || (data.length == 1 && s.length == 1));
+    static if (hasLength!Range)
+        assert((data.length >= 2) || (data.length == 1 && s.length == 1));
 }
 body
 {
@@ -1699,14 +1723,15 @@ body
     if (data.length > 1)
         data[1] = 0;
 
-    for (int i= (s[0]=='-' || s[0]=='+')? 1 : 0; i<s.length; ++i)
+    foreach (character; s)
     {
-        if (s[i] == '_')
+        if (character == '_')
             continue;
-        if (s[i] < '0' || s[i] > '9')
+
+        if (character < '0' || character > '9')
             throw new ConvException("invalid digit");
         x *= 10;
-        x += s[i] - '0';
+        x += character - '0';
         ++lo;
         if (lo == 9)
         {
