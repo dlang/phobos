@@ -455,6 +455,11 @@ Build _getBuild() {
     version(Windows)
         druntimes ~= Target.phony(DRUNTIMESO, "", [druntime]);
 
+
+    enum json = Target("$project/phobos.json",
+                       DMD ~ " " ~ DFLAGS ~ " -o- -Xf$out $in",
+                       ALL_D_FILES.map!(a => Target(a)));
+
     // html documentation
     // D file to html, e.g. std/conv.d -> std_conv.html
     // But "package.d" is special cased: std/range/package.d -> std_range.html
@@ -519,10 +524,12 @@ Build _getBuild() {
 
     auto targets = chain(all.map!createTopLevelTarget,
                          chain(fat,
-                               [unittest_, unittest_debug, unittest_release, gitzip, zip, install], druntimes,
+                               [unittest_, unittest_debug, unittest_release, gitzip, zip, install],
+                               druntimes, json,
                                [html], htmls,
                                [allmod, rsync_prerelease, html_consolidated, changelog_html],
-                               [checkwhitespace, auto_tester_build, auto_tester_test], unittestsModule, unittestsPackage).
+                               [checkwhitespace, auto_tester_build, auto_tester_test],
+                               unittestsModule, unittestsPackage).
                          map!(a => optional(a))).array;
 
     return Build(targets);
