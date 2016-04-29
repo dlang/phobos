@@ -12,7 +12,7 @@ WIKI = Phobos/StdNumeric
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu),
-                   Don Clugston, Robert Jacques
+                   Don Clugston, Robert Jacques, Ilya Yaroshenko
 Source:    $(PHOBOSSRC std/_numeric.d)
 */
 /*
@@ -767,12 +767,12 @@ public:
 
 /**  Find a real root of a real function f(x) via bracketing.
  *
- * Given a function $(D f) and a range $(D [a..b]) such that $(D f(a))
- * and $(D f(b)) have opposite signs or at least one of them equals ±0,
- * returns the value of $(D x) in
- * the range which is closest to a root of $(D f(x)).  If $(D f(x))
+ * Given a function `f` and a range `[a..b]` such that `f(a)`
+ * and `f(b)` have opposite signs or at least one of them equals ±0,
+ * returns the value of `x` in
+ * the range which is closest to a root of `f(x)`.  If `f(x)`
  * has more than one root in the range, one will be chosen
- * arbitrarily.  If $(D f(x)) returns NaN, NaN will be returned;
+ * arbitrarily.  If `f(x)` returns NaN, NaN will be returned;
  * otherwise, this algorithm is guaranteed to succeed.
  *
  * Uses an algorithm based on TOMS748, which uses inverse cubic
@@ -780,7 +780,7 @@ public:
  * or secant interpolation. Compared to TOMS748, this implementation
  * improves worst-case performance by a factor of more than 100, and
  * typical performance by a factor of 2. For 80-bit reals, most
- * problems require 8 to 15 calls to $(D f(x)) to achieve full machine
+ * problems require 8 to 15 calls to `f(x)` to achieve full machine
  * precision. The worst-case performance (pathological cases) is
  * approximately twice the number of bits.
  *
@@ -822,10 +822,10 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  *
  * f = Function to be analyzed
  *
- * ax = Left bound of initial range of $(D f) known to contain the
+ * ax = Left bound of initial range of `f` known to contain the
  * root.
  *
- * bx = Right bound of initial range of $(D f) known to contain the
+ * bx = Right bound of initial range of `f` known to contain the
  * root.
  *
  * fax = Value of $(D f(ax)).
@@ -843,7 +843,7 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  * Returns:
  *
  * A tuple consisting of two ranges. The first two elements are the
- * range (in $(D x)) of the root, while the second pair of elements
+ * range (in `x`) of the root, while the second pair of elements
  * are the corresponding function values at those points. If an exact
  * root was found, both of the first two elements will contain the
  * root, and the second pair of elements will be 0.
@@ -1383,6 +1383,236 @@ unittest
     static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
     static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
     static assert(__traits(compiles, findRoot((real x)=>cast(double)x, real.init, real.init)));
+}
+
+/++
+Find a real minimum of a real function `f(x)` via bracketing.
+Given a function `f` and a range `(ax..bx)`,
+returns the value of `x` in the range which is closest to a minimum of `f(x)`.
+`f` is never evaluted at the endpoints of `ax` and `bx`.
+If `f(x)` has more than one minimum in the range, one will be chosen arbitrarily.
+If `f(x)` returns NaN or -Infinity, `(x, f(x), NaN)` will be returned;
+otherwise, this algorithm is guaranteed to succeed.
+
+Params:
+    f = Function to be analyzed
+    ax = Left bound of initial range of f known to contain the minimum.
+    bx = Right bound of initial range of f known to contain the minimum.
+    relTolerance = Relative tolerance.
+    absTolerance = Absolute tolerance.
+
+Preconditions:
+    `ax` and `bx` shall be finite reals. $(BR)
+    $(D relTolerance) shall be normal positive real. $(BR)
+    $(D absTolerance) shall be normal positive real no less then $(D T.epsilon*2).
+
+Returns:
+    A tuple consisting of `x`, `y = f(x)` and `error = 3 * (absTolerance * fabs(x) + relTolerance)`.
+
+    The method used is a combination of golden section search and
+successive parabolic interpolation. Convergence is never much slower
+than that for a Fibonacci search.
+
+References:
+    "Algorithms for Minimization without Derivatives", Richard Brent, Prentice-Hall, Inc. (1973)
+
+See_Also: $(LREF findRoot), $(XREF math, isNormal)
++/
+Tuple!(T, "x", Unqual!(ReturnType!DF), "y", T, "error")
+findLocalMin(T, DF)(
+        scope DF f,
+        in T ax,
+        in T bx,
+        in T relTolerance = sqrt(T.epsilon),
+        in T absTolerance = sqrt(T.epsilon),
+        )
+    if (isFloatingPoint!T
+        && __traits(compiles, {T _ = DF.init(T.init);}))
+in
+{
+    assert(isFinite(ax), "ax is not finite");
+    assert(isFinite(bx), "bx is not finite");
+    assert(isNormal(relTolerance), "relTolerance is not normal floating point number");
+    assert(isNormal(absTolerance), "absTolerance is not normal floating point number");
+    assert(relTolerance >= 0, "absTolerance is not positive");
+    assert(absTolerance >= T.epsilon*2, "absTolerance is not greater then `2*T.epsilon`");
+}
+out (result)
+{
+    assert(isFinite(result.x));
+}
+body
+{
+    alias R = Unqual!(CommonType!(ReturnType!DF, T));
+    // c is the squared inverse of the golden ratio
+    // (3 - sqrt(5))/2
+    // Value obtained from Wolfram Alpha.
+    enum T c = 0x0.61c8864680b583ea0c633f9fa31237p+0L;
+    enum T cm1 = 0x0.9e3779b97f4a7c15f39cc0605cedc8p+0L;
+    R tolerance;
+    T a = ax > bx ? bx : ax;
+    T b = ax > bx ? ax : bx;
+    // sequence of declarations suitable for SIMD instructions
+    T  v = a * cm1 + b * c;
+    assert(isFinite(v));
+    R fv = f(v);
+    if (isNaN(fv) || fv == -T.infinity)
+    {
+        return typeof(return)(v, fv, T.init);
+    }
+    T  w = v;
+    R fw = fv;
+    T  x = v;
+    R fx = fv;
+    size_t i;
+    for (R d = 0, e = 0;;)
+    {
+        i++;
+        T m = (a + b) / 2;
+        // This fix is not part of the original algorithm
+        if (!isFinite(m)) // fix infinity loop. Issue can be reproduced in R.
+        {
+            m = a / 2 + b / 2;
+            if (!isFinite(m)) // fast-math compiler switch is enabled
+            {
+                //SIMD instructions can be used by compiler, do not reduce declarations
+                int a_exp = void;
+                int b_exp = void;
+                immutable an = frexp(a, a_exp);
+                immutable bn = frexp(b, b_exp);
+                immutable am = ldexp(an, a_exp-1);
+                immutable bm = ldexp(bn, b_exp-1);
+                m = am + bm;
+                if (!isFinite(m)) // wrong input: constraints are disabled in release mode
+                {
+                    return typeof(return).init;
+                }
+            }
+        }
+        tolerance = absTolerance * fabs(x) + relTolerance;
+        immutable t2 = tolerance * 2;
+        // check stopping criterion
+        if (!(fabs(x - m) > t2 - (b - a) / 2))
+        {
+            break;
+        }
+        R p = 0;
+        R q = 0;
+        R r = 0;
+        // fit parabola
+        if (fabs(e) > tolerance)
+        {
+            immutable  xw =  x -  w;
+            immutable fxw = fx - fw;
+            immutable  xv =  x -  v;
+            immutable fxv = fx - fv;
+            immutable xwfxv = xw * fxv;
+            immutable xvfxw = xv * fxw;
+            p = xv * xvfxw - xw * xwfxv;
+            q = (xvfxw - xwfxv) * 2;
+            if (q > 0)
+                p = -p;
+            else
+                q = -q;
+            r = e;
+            e = d;
+        }
+        T u;
+        // a parabolic-interpolation step
+        if (fabs(p) < fabs(q * r / 2) && p > q * (a - x) && p < q * (b - x))
+        {
+            d = p / q;
+            u = x + d;
+            // f must not be evaluated too close to a or b
+            if (u - a < t2 || b - u < t2)
+                d = x < m ? tolerance : -tolerance;
+        }
+        // a golden-section step
+        else
+        {
+            e = (x < m ? b : a) - x;
+            d = c * e;
+        }
+        // f must not be evaluated too close to x
+        u = x + (fabs(d) >= tolerance ? d : d > 0 ? tolerance : -tolerance);
+        immutable fu = f(u);
+        if (isNaN(fu) || fu == -T.infinity)
+        {
+            return typeof(return)(u, fu, T.init);
+        }
+        //  update  a, b, v, w, and x
+        if (fu <= fx)
+        {
+            u < x ? b : a = x;
+            v = w; fv = fw;
+            w = x; fw = fx;
+            x = u; fx = fu;
+        }
+        else
+        {
+            u < x ? a : b = u;
+            if (fu <= fw || w == x)
+            {
+                v = w; fv = fw;
+                w = u; fw = fu;
+            }
+            else if (fu <= fv || v == x || v == w)
+            { // do not remove this braces
+                v = u; fv = fu;
+            }
+        }
+    }
+    return typeof(return)(x, fx, tolerance * 3);
+}
+
+///
+unittest
+{
+    auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
+    assert(ret.x.approxEqual(4.0));
+    assert(ret.y.approxEqual(0.0));
+}
+
+unittest
+{
+    import std.meta: AliasSeq;
+    foreach (T; AliasSeq!(double, float, real))
+    {
+        {
+            auto ret = findLocalMin!T((T x) => (x-4)^^2, T.min_normal, 1e7);
+            assert(ret.x.approxEqual(T(4)));
+            assert(ret.y.approxEqual(T(0)));
+        }
+        {
+            auto ret = findLocalMin!T((T x) => fabs(x-1), -T.max/4, T.max/4, T.min_normal, 2*T.epsilon);
+            assert(approxEqual(ret.x, T(1)));
+            assert(approxEqual(ret.y, T(0)));
+            assert(ret.error <= 10 * T.epsilon);
+        }
+        {
+            auto ret = findLocalMin!T((T x) => T.init, 0, 1, T.min_normal, 2*T.epsilon);
+            assert(!ret.x.isNaN);
+            assert(ret.y.isNaN);
+            assert(ret.error.isNaN);
+        }
+        {
+            auto ret = findLocalMin!T((T x) => log(x), 0, 1, T.min_normal, 2*T.epsilon);
+            assert(ret.error < 3.00001 * ((2*T.epsilon)*fabs(ret.x)+ T.min_normal));
+            assert(ret.x >= 0 && ret.x <= ret.error);
+        }
+        {
+            auto ret = findLocalMin!T((T x) => log(x), 0, T.max, T.min_normal, 2*T.epsilon);
+            assert(ret.y < -18);
+            assert(ret.error < 5e-08);
+            assert(ret.x >= 0 && ret.x <= ret.error);
+        }
+        {
+            auto ret = findLocalMin!T((T x) => -fabs(x), -1, 1, T.min_normal, 2*T.epsilon);
+            assert(ret.x.fabs.approxEqual(T(1)));
+            assert(ret.y.fabs.approxEqual(T(1)));
+            assert(ret.error.approxEqual(T(0)));
+        }
+    }
 }
 
 /**
