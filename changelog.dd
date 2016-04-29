@@ -7,6 +7,8 @@ $(COMMENT Pending changelog for 2.072. This will get copied to dlang.org and
 $(BUGSTITLE Library Changes,
     $(LI $(RELATIVE_LINK2 process, Process creation in `std.process` was sped up
         on Posix.))
+    $(LI $(RELATIVE_LINK2 std-algorithm-iteration-cumulativeFold, $(XREF
+        algorithm.iterator, cumulativeFold) was added.))
     $(LI $(RELATIVE_LINK2 padLeft-padRight, `std.range.padLeft` and
         `std.range.padRight` were added.))
     $(LI $(RELATIVE_LINK2 regex-multiple-patterns, `std.regex.regex` now
@@ -40,6 +42,17 @@ $(LI $(LNAME2 process, Process creation in `std.process` was sped up on Posix.)
         $(STDMODREF process, std.process) now uses `poll()` to determine which
         descriptors need closing.
     )
+)
+
+$(LI $(LNAME2 std-algorithm-iteration-cumulativeFold, $(XREF algorithm.iteration,
+cumulativeFold) was added.)
+
+    $(P $(XREF algorithm.iterator, cumulativeFold) returns the successive
+        reduced values of an input range.)
+------
+assert([1, 2, 3, 4, 5].cumulativeFold!((a, b) => a + b).array == [1, 3, 6, 10, 15]);
+assert([1, 2, 3].cumulativeFold!((a, b) => a + b)(100).array == [101, 103, 106]);
+------
 )
 
 $(LI $(LNAME2 padLeft-padRight, `std.range.padLeft` and `std.range.padRight`
