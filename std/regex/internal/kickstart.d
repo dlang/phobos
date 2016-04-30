@@ -160,7 +160,7 @@ public:
                 case IR.GroupStart, IR.GroupEnd:
                     i += IRL!(IR.GroupStart);
                     break;
-                case IR.Bol, IR.Wordboundary, IR.Notwordboundary:
+                case IR.Bof, IR.Bol, IR.Wordboundary, IR.Notwordboundary:
                     i += IRL!(IR.Bol);
                     break;
                 default:
@@ -357,7 +357,7 @@ public:
                 case IR.GroupStart, IR.GroupEnd:
                     t.pc += IRL!(IR.GroupStart);
                     break;
-                case IR.Bol, IR.Wordboundary, IR.Notwordboundary:
+                case IR.Bof, IR.Bol, IR.Wordboundary, IR.Notwordboundary:
                     t.pc += IRL!(IR.Bol);
                     break;
                 case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
