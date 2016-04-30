@@ -60,7 +60,7 @@
  *           $(LREF isCovariantWith)
  *           $(LREF isImplicitlyConvertible)
  * ))
- * <!--$(TR $(TD SomethingTypeOf) $(TD
+ * $(TR $(TD SomethingTypeOf) $(TD
  *           $(LREF BooleanTypeOf)
  *           $(LREF IntegralTypeOf)
  *           $(LREF FloatingPointTypeOf)
@@ -74,7 +74,7 @@
  *           $(LREF StringTypeOf)
  *           $(LREF AssocArrayTypeOf)
  *           $(LREF BuiltinTypeOf)
- * ))-->
+ * ))
  * $(TR $(TD Categories of types) $(TD
  *           $(LREF isAggregateType)
  *           $(LREF isArray)
