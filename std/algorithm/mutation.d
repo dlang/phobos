@@ -1563,7 +1563,8 @@ of the stability requirement, $(D remove) moved elements from the end
 of the array over the slots to be removed. This way there is less data
 movement to be done which improves the execution time of the function.
 
-The function $(D remove) works on any forward range. The moving
+The function $(D remove) works on bidirectional ranges that have assignable
+lvalue elements. The moving
 strategy is (listed from fastest to slowest): $(UL $(LI If $(D s ==
 SwapStrategy.unstable && isRandomAccessRange!Range && hasLength!Range
 && hasLvalueElements!Range), then elements are moved from the end
