@@ -896,7 +896,7 @@ template ThompsonOps(E,S, bool withInput:false)
             return matchOneShot(matches);
         }
         static if (kicked)
-            if (!re.kickstart.empty)
+            if (re.kickstart)
                 return matchImpl!(true)(matches);
         return matchImpl!(false)(matches);
     }
