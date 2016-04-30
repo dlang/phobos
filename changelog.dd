@@ -31,6 +31,8 @@ $(BUGSTITLE Library Changes,
         rangified.)
     $(LI All overloads of `std.conv.toImpl` has been made private. Please use
         $(XREF conv, to) instead.)
+    $(LI $(RELATIVE_LINK2 min-max-element,
+    `std.algorithm.searching.{min,max}Element` for ranges have been added.))
 )
 
 $(BUGSTITLE Library Changes,
@@ -100,6 +102,22 @@ $(LI $(LNAME2 iota-length-size_t, `std.range.iota's `.length` property is fixed
         In non-release mode, you will get an exception if the length exceeds
         `size_t.max` in your call to `iota`.
     )
+)
+
+$(LI $(LNAME2 min-max-element, `std.algorithm.searching.{min,max}Element`
+	have been added.)
+    $(P $(XREF algorithm, searching, minElement) and $(XREF algorithm,
+    searching, maxElement) are functions to search for the minimum and maximum
+    element in a range. They support a custom `map` accessor.
+    )
+
+-------
+import std.algorithm.searching;
+import std.range;
+import std.typecons;
+assert([3, 1, 4].minElement == 1);
+assert([4, 7, 5].enumerate.maxElement!`a.value` == tuple(1, 7));
+-------
 )
 
 )
