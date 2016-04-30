@@ -2741,13 +2741,13 @@ public:
 
 
     /// Get the socket's address family.
-    @property AddressFamily addressFamily()
+    @property AddressFamily addressFamily() const pure nothrow @nogc
     {
         return _family;
     }
 
     /// Property that indicates if this is a valid, alive socket.
-    @property bool isAlive() @trusted const
+    @property bool isAlive() @trusted const nothrow @nogc
     {
         int type;
         socklen_t typesize = cast(socklen_t) type.sizeof;
@@ -2755,7 +2755,7 @@ public:
     }
 
     /// Associate a local address with this socket.
-    void bind(Address addr) @trusted
+    void bind(Address addr) @trusted const
     {
         if (_SOCKET_ERROR == .bind(sock, addr.name, addr.nameLen))
             throw new SocketOSException("Unable to bind socket");
@@ -2766,7 +2766,7 @@ public:
      * the connection to be made. If the socket is nonblocking, connect
      * returns immediately and the connection attempt is still in progress.
      */
-    void connect(Address to) @trusted
+    void connect(Address to) @trusted const
     {
         if (_SOCKET_ERROR == .connect(sock, to.name, to.nameLen))
         {
@@ -2799,7 +2799,7 @@ public:
      * can $(D listen). The $(D backlog) is a request of how many pending
      * incoming connections are queued until $(D accept)ed.
      */
-    void listen(int backlog) @trusted
+    void listen(int backlog) @trusted const
     {
         if (_SOCKET_ERROR == .listen(sock, backlog))
             throw new SocketOSException("Unable to listen on socket");
@@ -2814,7 +2814,7 @@ public:
      */
     // Override to use a derived class.
     // The returned socket's handle must not be set.
-    protected Socket accepting() pure nothrow
+    protected Socket accepting() const pure nothrow
     {
         return new Socket;
     }
@@ -2824,7 +2824,7 @@ public:
      * waits for a connection request. Throws $(D SocketAcceptException) if
      * unable to _accept. See $(D accepting) for use with derived classes.
      */
-    Socket accept() @trusted
+    Socket accept() const @trusted
     {
         auto newsock = cast(socket_t).accept(sock, null, null);
         if (socket_t.init == newsock)
@@ -2851,7 +2851,7 @@ public:
     }
 
     /// Disables sends and/or receives.
-    void shutdown(SocketShutdown how) @trusted nothrow @nogc
+    void shutdown(SocketShutdown how) @trusted const nothrow @nogc
     {
         .shutdown(sock, cast(int)how);
     }
@@ -2896,7 +2896,7 @@ public:
     }
 
     /// Remote endpoint $(D Address).
-    @property Address remoteAddress() @trusted
+    @property Address remoteAddress() const @trusted
     {
         Address addr = createAddress();
         socklen_t nameLen = addr.nameLen;
@@ -2909,7 +2909,7 @@ public:
     }
 
     /// Local endpoint $(D Address).
-    @property Address localAddress() @trusted
+    @property Address localAddress() const @trusted
     {
         Address addr = createAddress();
         socklen_t nameLen = addr.nameLen;
@@ -2935,7 +2935,7 @@ public:
      * failure.
      */
     //returns number of bytes actually sent, or -1 on error
-    ptrdiff_t send(const(void)[] buf, SocketFlags flags) @trusted
+    ptrdiff_t send(const(void)[] buf, SocketFlags flags) @trusted const nothrow @nogc
     {
         static if (is(typeof(MSG_NOSIGNAL)))
         {
@@ -2949,7 +2949,7 @@ public:
     }
 
     /// ditto
-    ptrdiff_t send(const(void)[] buf)
+    ptrdiff_t send(const(void)[] buf) @trusted const nothrow @nogc
     {
         return send(buf, SocketFlags.NONE);
     }
@@ -2961,7 +2961,7 @@ public:
      * Returns: The number of bytes actually sent, or $(D Socket.ERROR) on
      * failure.
      */
-    ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) @trusted
+    ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) @trusted const nothrow @nogc
     {
         static if (is(typeof(MSG_NOSIGNAL)))
         {
@@ -2977,7 +2977,7 @@ public:
     }
 
     /// ditto
-    ptrdiff_t sendTo(const(void)[] buf, Address to)
+    ptrdiff_t sendTo(const(void)[] buf, Address to) @trusted const nothrow @nogc
     {
         return sendTo(buf, SocketFlags.NONE, to);
     }
@@ -2985,7 +2985,7 @@ public:
 
     //assumes you connect()ed
     /// ditto
-    ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags) @trusted
+    ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags) @trusted const nothrow @nogc
     {
         static if (is(typeof(MSG_NOSIGNAL)))
         {
@@ -3000,7 +3000,7 @@ public:
 
     //assumes you connect()ed
     /// ditto
-    ptrdiff_t sendTo(const(void)[] buf)
+    ptrdiff_t sendTo(const(void)[] buf) @trusted const nothrow @nogc
     {
         return sendTo(buf, SocketFlags.NONE);
     }
@@ -3013,7 +3013,7 @@ public:
      * has closed the connection, or $(D Socket.ERROR) on failure.
      */
     //returns number of bytes actually received, 0 on connection closure, or -1 on error
-    ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted
+    ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted const nothrow @nogc
     {
         version(Windows)         // Does not use size_t
         {
@@ -3028,7 +3028,7 @@ public:
     }
 
     /// ditto
-    ptrdiff_t receive(void[] buf)
+    ptrdiff_t receive(void[] buf) @trusted const nothrow @nogc
     {
         return receive(buf, SocketFlags.NONE);
     }
@@ -3040,7 +3040,7 @@ public:
      * Returns: The number of bytes actually received, $(D 0) if the remote side
      * has closed the connection, or $(D Socket.ERROR) on failure.
      */
-    ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from) @trusted
+    ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from) @trusted const nothrow
     {
         if (!buf.length)         //return 0 and don't think the connection closed
             return 0;
@@ -3063,7 +3063,7 @@ public:
 
 
     /// ditto
-    ptrdiff_t receiveFrom(void[] buf, ref Address from)
+    ptrdiff_t receiveFrom(void[] buf, ref Address from) @trusted const nothrow
     {
         return receiveFrom(buf, SocketFlags.NONE, from);
     }
@@ -3071,7 +3071,7 @@ public:
 
     //assumes you connect()ed
     /// ditto
-    ptrdiff_t receiveFrom(void[] buf, SocketFlags flags) @trusted
+    ptrdiff_t receiveFrom(void[] buf, SocketFlags flags) @trusted const nothrow @nogc
     {
         if (!buf.length)         //return 0 and don't think the connection closed
             return 0;
@@ -3090,7 +3090,7 @@ public:
 
     //assumes you connect()ed
     /// ditto
-    ptrdiff_t receiveFrom(void[] buf)
+    ptrdiff_t receiveFrom(void[] buf) @trusted const nothrow @nogc
     {
         return receiveFrom(buf, SocketFlags.NONE);
     }
@@ -3099,7 +3099,7 @@ public:
     /// Get a socket option.
     /// Returns: The number of bytes written to $(D result).
     //returns the length, in bytes, of the actual result - very different from getsockopt()
-    int getOption(SocketOptionLevel level, SocketOption option, void[] result) @trusted
+    int getOption(SocketOptionLevel level, SocketOption option, void[] result) @trusted const
     {
         socklen_t len = cast(socklen_t) result.length;
         if (_SOCKET_ERROR == .getsockopt(sock, cast(int)level, cast(int)option, result.ptr, &len))
@@ -3109,21 +3109,21 @@ public:
 
 
     /// Common case of getting integer and boolean options.
-    int getOption(SocketOptionLevel level, SocketOption option, out int32_t result) @trusted
+    int getOption(SocketOptionLevel level, SocketOption option, out int32_t result) @trusted const
     {
         return getOption(level, option, (&result)[0 .. 1]);
     }
 
 
     /// Get the linger option.
-    int getOption(SocketOptionLevel level, SocketOption option, out Linger result) @trusted
+    int getOption(SocketOptionLevel level, SocketOption option, out Linger result) @trusted const
     {
         //return getOption(cast(SocketOptionLevel)SocketOptionLevel.SOCKET, SocketOption.LINGER, (&result)[0 .. 1]);
         return getOption(level, option, (&result.clinger)[0 .. 1]);
     }
 
     /// Get a timeout (duration) option.
-    void getOption(SocketOptionLevel level, SocketOption option, out Duration result) @trusted
+    void getOption(SocketOptionLevel level, SocketOption option, out Duration result) @trusted const
     {
         enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
                 new SocketParameterException("Not a valid timeout option: " ~ to!string(option)));
@@ -3147,7 +3147,7 @@ public:
     }
 
     /// Set a socket option.
-    void setOption(SocketOptionLevel level, SocketOption option, void[] value) @trusted
+    void setOption(SocketOptionLevel level, SocketOption option, void[] value) @trusted const
     {
         if (_SOCKET_ERROR == .setsockopt(sock, cast(int)level,
                                         cast(int)option, value.ptr, cast(uint) value.length))
@@ -3156,14 +3156,14 @@ public:
 
 
     /// Common case for setting integer and boolean options.
-    void setOption(SocketOptionLevel level, SocketOption option, int32_t value) @trusted
+    void setOption(SocketOptionLevel level, SocketOption option, int32_t value) @trusted const
     {
         setOption(level, option, (&value)[0 .. 1]);
     }
 
 
     /// Set the linger option.
-    void setOption(SocketOptionLevel level, SocketOption option, Linger value) @trusted
+    void setOption(SocketOptionLevel level, SocketOption option, Linger value) @trusted const
     {
         //setOption(cast(SocketOptionLevel)SocketOptionLevel.SOCKET, SocketOption.LINGER, (&value)[0 .. 1]);
         setOption(level, option, (&value.clinger)[0 .. 1]);
@@ -3210,7 +3210,7 @@ public:
      *     sw.peek.msecs);
      * ---
      */
-    void setOption(SocketOptionLevel level, SocketOption option, Duration value) @trusted
+    void setOption(SocketOptionLevel level, SocketOption option, Duration value) @trusted const
     {
         enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
                 new SocketParameterException("Not a valid timeout option: " ~ to!string(option)));
@@ -3238,7 +3238,7 @@ public:
 
     /// Get a text description of this socket's error status, and clear the
     /// socket's error status.
-    string getErrorText()
+    string getErrorText() const
     {
         int32_t error;
         getOption(SocketOptionLevel.SOCKET, SocketOption.ERROR, error);
@@ -3258,7 +3258,7 @@ public:
      * $(D SocketFeatureException) if setting keep-alive parameters is
      * unsupported on the current platform.
      */
-    void setKeepAlive(int time, int interval) @trusted
+    void setKeepAlive(int time, int interval) @trusted const
     {
         version(Windows)
         {
@@ -3417,7 +3417,7 @@ public:
 
     /// Returns a new Address object for the current address family.
     /// Can be overridden to support other addresses.
-    protected Address createAddress() pure nothrow
+    protected Address createAddress() const pure nothrow
     {
         Address result;
         switch (_family)
