@@ -13,7 +13,8 @@ $(BUGSTITLE Library Changes,
         `std.range.padRight` were added.))
     $(LI $(RELATIVE_LINK2 regex-multiple-patterns, `std.regex.regex` now
         supports matching multiple patterns in one go.))
-    $(LI $(RELATIVE_LINK2 mutation, `std.algorithm.mutation` was exposed))
+    $(LI $(RELATIVE_LINK2 mutation, `std.algorithm.mutation.swapAt` was
+        exposed))
     $(LI $(RELATIVE_LINK2 iota-length-size_t, `std.range.iota's `.length`
         property is fixed to `size_t` instead of the type being iterated))
     $(LI $(XREF uni, isNumber) and $(XREF uni, isPunctuation) now use a separate,
@@ -88,7 +89,7 @@ assert(m.front[1] == "12");
 -------
 )
 
-$(LI $(LNAME2 mutation, `std.algorithm.mutation` was exposed)
+$(LI $(LNAME2 mutation, `std.algorithm.mutation.swapAt` was exposed)
     $(P $(REF swapAt, std,algorithm,mutation) allows to swap elements
         of a RandomAccessRange by their indices.
     )
