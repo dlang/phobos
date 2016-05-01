@@ -13,6 +13,15 @@ $(BUGSTITLE Library Changes,
         `std.range.padRight` were added.))
     $(LI $(RELATIVE_LINK2 regex-multiple-patterns, `std.regex.regex` now
         supports matching multiple patterns in one go.))
+    $(LI $(RELATIVE_LINK2 optimization, `findLocalMin` was added to `std.numeric`.))
+    $(LI $(RELATIVE_LINK2 slice_ptr, `ptr` property and public constructor were
+        added to `std.experimental.ndslice.slice.Slice`.))
+    $(LI $(RELATIVE_LINK2 slice_alloc, `slice`, `shape`, `ndarray`, and other
+        utilities were added to `std.experimental.ndslice.slice`.))
+    $(LI $(RELATIVE_LINK2 slice_iota, `iotaSlice` lazy tensor was added to
+        `std.experimental.ndslice.selection`.))
+    $(LI $(RELATIVE_LINK2 slice_mio, partial support for Math Index Order
+        was added to `std.experimental.ndslice.slice.Slice`.))
     $(LI $(RELATIVE_LINK2 mutation, `std.algorithm.mutation.swapAt` was
         exposed))
     $(LI $(RELATIVE_LINK2 iota-length-size_t, `std.range.iota's `.length`
@@ -87,6 +96,83 @@ m.popFront();
 assert(m.front.whichPattern == 1);
 assert(m.front[1] == "12");
 -------
+)
+
+$(LI $(LNAME2 optimization, `findLocalMin` was added to `std.numeric`.)
+    $(P $(REF findLocalMin, std,numeric) finds a real minimum of a real function `f(x)` via bracketing.)
+-------
+import std.numeric, std.math;
+
+auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
+
+assert(ret.x.approxEqual(4.0));
+assert(ret.y.approxEqual(0.0));
+-------
+)
+
+$(LI $(LNAME2 slice_ptr, `ptr` property and public constructor were added to
+    `std.experimental.ndslice.slice.Slice`.)
+    $(P `ptr` property allows to access `Slice`'s underlaying pointer or range. 
+        Please refer to $(REF Slice, std,experimental,ndslice,slice)'s
+        internal binary epresentation before using the property.
+        `ptr` property is used in $(LINK2 https://github.com/libmir/mir, Mir)
+        for $(LINK2 http://docs.mir.dlang.io/latest/mir_sparse_package.html, sparse tensors).
+        `ndslice` developer mirror in Mir will be removed as
+        soon as LDC (LLVM D compiler) supports D version 2.072..
+    ) 
+    $(P Public constructor for `Slice` was added to support
+        $(STDMODREF ndslice, std.experimental.ndslice) integration
+        with other languages and libraries such as Julia language and NumPy library.
+    )
+)
+
+$(LI $(LNAME2 slice_alloc, `slice`, `shape`, `ndarray`, and other utilities
+    were added to `std.experimental.ndslice.slice`.)
+    $(P 
+        $(REF shape, std,experimental,ndslice,slice)
+        $(REF slice, std,experimental,ndslice,slice),
+        $(REF makeSlice, std,experimental,ndslice,slice),
+        $(REF ndarray, std,experimental,ndslice,slice), and
+        $(REF makeNdarray, std,experimental,ndslice,slice)
+        allocation utilities were added to $(STDMODREF ndslice.slice, std.experimental.ndslice)
+        )
+    $(P Example: Transposing common 2D array using `ndslice`)
+-----
+import std.experimental.ndslice;
+
+auto ar = [[0, 1, 2], [3, 4, 5]];
+
+auto sh = ar.shape;         // [2, 3] type of size_t[2]
+auto sl = slice!int(sh);    // allocates slice with corresponding shape
+sl[] = ar;                  // fills sl with values from ar
+ar = sl.transposed.ndarray; // allocates common 2D array
+
+assert(ar == [[0, 3], [1, 4], [2, 5]]);
+-----
+)
+
+$(LI $(LNAME2 slice_iota, `iotaSlice` lazy tensor was added to `std.experimental.ndslice.selection`.)
+    %(P $(REF iotaSlice, std,experimental,ndslice,selection) is the fastest possible `Slice`.)
+---
+import std.experimental.ndslice;
+
+auto sl = iotaSlice([2, 3], 10);
+
+assert(sl.transposed == [[10, 13],
+                         [11, 14],
+                         [12, 15]]);
+---
+)
+
+$(LI $(LNAME2 slice_mio, partial support for Math Index Order was added to `std.experimental.ndslice.slice.Slice`.)
+---
+import std.experimental.ndslice;
+
+auto sl = iotaSlice(3, 4);
+
+assert(sl[2, 3] == 11); // D & C index order
+assert(sl(3, 2) == 11); // Math & Fortran index order
+---
 )
 
 $(LI $(LNAME2 mutation, `std.algorithm.mutation.swapAt` was exposed)
