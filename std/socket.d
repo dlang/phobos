@@ -2928,6 +2928,15 @@ public:
      */
     enum int ERROR = _SOCKET_ERROR;
 
+    private static int capToInt(size_t size) nothrow @nogc
+    {
+        // Windows uses int instead of size_t for length arguments.
+        // Luckily, the send/recv functions make no guarantee that
+        // all the data is sent, so we use that to send at most
+        // int.max bytes.
+        return size > size_t(int.max) ? int.max : cast(int)size;
+    }
+
     /**
      * Send data on the connection. If the socket is blocking and there is no
      * buffer space left, $(D send) waits.
@@ -2942,7 +2951,7 @@ public:
             flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
         }
         version( Windows )
-            auto sent = .send(sock, buf.ptr, to!int(buf.length), cast(int)flags);
+            auto sent = .send(sock, buf.ptr, capToInt(buf.length), cast(int)flags);
         else
             auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
         return sent;
@@ -2969,7 +2978,7 @@ public:
         }
         version( Windows )
             return .sendto(
-                       sock, buf.ptr, std.conv.to!int(buf.length),
+                       sock, buf.ptr, capToInt(buf.length),
                        cast(int)flags, to.name, to.nameLen
                        );
         else
@@ -2992,7 +3001,7 @@ public:
             flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
         }
         version(Windows)
-            return .sendto(sock, buf.ptr, to!int(buf.length), cast(int)flags, null, 0);
+            return .sendto(sock, buf.ptr, capToInt(buf.length), cast(int)flags, null, 0);
         else
             return .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
     }
@@ -3018,7 +3027,7 @@ public:
         version(Windows)         // Does not use size_t
         {
             return buf.length
-                   ? .recv(sock, buf.ptr, to!int(buf.length), cast(int)flags)
+                   ? .recv(sock, buf.ptr, capToInt(buf.length), cast(int)flags)
                    : 0;
         } else {
             return buf.length
@@ -3049,7 +3058,7 @@ public:
         socklen_t nameLen = from.nameLen;
         version(Windows)
         {
-            auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, from.name, &nameLen);
+            auto read = .recvfrom(sock, buf.ptr, capToInt(buf.length), cast(int)flags, from.name, &nameLen);
             assert(from.addressFamily == _family);
             // if (!read) //connection closed
             return read;
@@ -3077,7 +3086,7 @@ public:
             return 0;
         version(Windows)
         {
-            auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, null, null);
+            auto read = .recvfrom(sock, buf.ptr, capToInt(buf.length), cast(int)flags, null, null);
             // if (!read) //connection closed
             return read;
         } else {
