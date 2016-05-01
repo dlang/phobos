@@ -20,7 +20,7 @@ struct GCAllocator
     deallocate) and $(D reallocate) methods are $(D @system) because they may
     move memory around, leaving dangling pointers in user code.
     */
-    @trusted void[] allocate(size_t bytes) shared
+    @trusted void[] allocate(size_t bytes) shared nothrow pure
     {
         if (!bytes) return null;
         auto p = GC.malloc(bytes);
@@ -80,14 +80,14 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool deallocate(void[] b) shared
+    bool deallocate(void[] b) shared nothrow @safe
     {
-        GC.free(b.ptr);
+        //GC.free(b.ptr);
         return true;
     }
 
     /// Ditto
-    size_t goodAllocSize(size_t n) shared
+    size_t goodAllocSize(size_t n) shared @safe pure @nogc
     {
         if (n == 0)
             return 0;
@@ -158,4 +158,90 @@ unittest
 
     // anything above a page is simply rounded up to next page
     assert(GCAllocator.instance.goodAllocSize(4096 * 4 + 1) == 4096 * 5);
+}
+
+// safe construction of int arrays
+nothrow unittest
+{
+    import std.experimental.allocator: dispose, makeArray;
+    auto Allocator = GCAllocator.instance;
+
+    auto safeFun() @safe
+    {
+        int[] arr = Allocator.makeArray!int(2);
+        assert(arr == [0, 0]);
+        return arr;
+    }
+    Allocator.dispose(safeFun());
+
+    auto safeFun2() @safe
+    {
+        int[] arr2 = GCAllocator.instance.makeArray!int(2, 1);
+        assert(arr2 == [1, 1]);
+        return arr2;
+    }
+    Allocator.dispose(safeFun2());
+
+    auto safeFun3() @safe
+    {
+        import std.range: iota;
+        int[] arr3 = GCAllocator.instance.makeArray!int(2.iota);
+        assert(arr3 == [0, 1]);
+        return arr3;
+    }
+    Allocator.dispose(safeFun3());
+}
+
+// safe construction of struct arrays with destructor
+nothrow unittest
+{
+    import std.traits: hasElaborateDestructor;
+    static struct S { int a; ~this() nothrow @safe {}; }
+    static assert( hasElaborateDestructor!S);
+
+    import std.experimental.allocator: dispose, makeArray;
+    auto Allocator = GCAllocator.instance;
+
+    static immutable S s0;
+    static immutable s1 = S(1);
+
+    auto safeFun() @safe
+    {
+        S[] arr = Allocator.makeArray!S(2);
+        assert(arr == [s0, s0]);
+        return arr;
+    }
+    Allocator.dispose(safeFun());
+
+    auto safeFun2() @safe
+    {
+        S[] arr = Allocator.makeArray!S(2, S(1));
+        assert(arr == [s1, s1]);
+        return arr;
+    }
+    Allocator.dispose(safeFun2());
+
+    auto safeFun3() @safe
+    {
+        import std.range;
+        static immutable sPrefill = [S(0), S(1)];
+        S[] arr = GCAllocator.instance.makeArray!S(sPrefill.chain);
+        assert(arr == sPrefill);
+        return arr;
+    }
+    Allocator.dispose(safeFun3());
+}
+
+unittest
+{
+    import std.traits;
+    import std.internal.test.dummyrange;
+    alias R = DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input);
+    R r;
+    void foo()
+    {
+        import std.experimental.allocator: makeArray;
+        makeArray!int(GCAllocator.instance, r);
+    }
+    static assert(!isSafe!foo);
 }
