@@ -567,6 +567,26 @@ slice(T,
 }
 
 /// ditto
+auto slice(T,
+    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    size_t N)(auto ref in size_t[N] lengths, auto ref T init)
+{
+    immutable len = lengthsProduct(lengths);
+    static if (!hasElaborateAssign!(T[]))
+    {
+        import std.array : uninitializedArray;
+        auto arr = uninitializedArray!(T[])(len);
+    }
+    else
+    {
+        auto arr = new T[len];
+    }
+    arr[] = init;
+    auto ret = arr.sliced!replaceArrayWithPointer(lengths);
+    return ret;
+}
+
+/// ditto
 auto slice(
     Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
     size_t N, Range)(auto ref Slice!(N, Range) slice)
@@ -579,14 +599,29 @@ auto slice(
 ///
 pure nothrow unittest
 {
-    auto slice = slice!int(5, 6, 7);
-    assert(slice.length == 5);
-    assert(slice.elementsCount == 5 * 6 * 7);
-    static assert(is(typeof(slice) == Slice!(3, int*)));
+    auto tensor = slice!int(5, 6, 7);
+    assert(tensor.length == 5);
+    assert(tensor.elementsCount == 5 * 6 * 7);
+    static assert(is(typeof(tensor) == Slice!(3, int*)));
 
     // creates duplicate using `slice`
-    auto dup = .slice(slice);
-    assert(dup == slice);
+    auto dup = tensor.slice;
+    assert(dup == tensor);
+}
+
+///
+pure nothrow unittest
+{
+    auto tensor = slice([2, 3], 5);
+    assert(tensor.elementsCount == 2 * 3);
+    assert(tensor[1, 1] == 5);
+}
+
+pure nothrow unittest
+{
+    import std.experimental.ndslice.selection: iotaSlice;
+    auto tensor = iotaSlice(2, 3).slice;
+    assert(tensor == [[0, 1, 2], [3, 4, 5]]);
 }
 
 /++
