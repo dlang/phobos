@@ -56,6 +56,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.encoding;
 
 import std.traits;
+import std.typecons;
 import std.range.primitives;
 
 unittest
@@ -3361,8 +3362,6 @@ version(unittest)
         return "0123456789ABCDEF"[n & 0xF];
     }
 }
-
-import std.typecons;
 
 /** Definitions of common Byte Order Marks.
 The elements of the $(D enum) can used as indices into $(D bomTable) to get
