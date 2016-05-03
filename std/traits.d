@@ -3257,7 +3257,7 @@ unittest
     static assert( hasElaborateDestructor!S7);
 }
 
-alias Identity(alias A) = A;
+package alias Identity(alias A) = A;
 
 /**
    Yields $(D true) if and only if $(D T) is an aggregate that defines
