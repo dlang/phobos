@@ -3709,15 +3709,21 @@ private S textImpl(S, U...)(U args)
     {
         return null;
     }
+    else static if (U.length == 1)
+    {
+        return to!S(args[0]);
+    }
     else
     {
-        auto result = to!S(args[0]);
-        foreach (arg; args[1 .. $])
-            result ~= to!S(arg);
-        return result;
+        import std.array : appender;
+
+        auto app = appender!S();
+
+        foreach (arg; args)
+            app.put(to!S(arg));
+        return app.data;
     }
 }
-
 
 
 /***************************************************************
