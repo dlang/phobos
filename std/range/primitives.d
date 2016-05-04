@@ -2201,7 +2201,7 @@ Implements the range interface primitive $(D front) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.front) is
 equivalent to $(D front(array)). For $(GLOSSARY narrow strings), $(D
-front) automatically returns the first $(GLOSSARY code point) as a $(D
+front) automatically returns the first $(GLOSSARY code point) as _a $(D
 dchar).
 */
 @property ref T front(T)(T[] a) @safe pure nothrow @nogc
@@ -2232,6 +2232,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     assert(c.front == 1);
 }
 
+/// ditto
 @property dchar front(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
     import std.utf : decode;
@@ -2245,11 +2246,11 @@ Implements the range interface primitive $(D back) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.back) is
 equivalent to $(D back(array)). For $(GLOSSARY narrow strings), $(D
-back) automatically returns the last $(GLOSSARY code point) as a $(D
+back) automatically returns the last $(GLOSSARY code point) as _a $(D
 dchar).
 */
 @property ref T back(T)(T[] a) @safe pure nothrow @nogc
-if (!isNarrowString!(T[]))
+if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     return a[$ - 1];
@@ -2273,6 +2274,7 @@ if (!isNarrowString!(T[]))
     assert(c.back == 3);
 }
 
+/// ditto
 // Specialization for strings
 @property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
