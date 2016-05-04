@@ -27,7 +27,7 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Ready-made predicate functions to compare two values.
     ))
     $(TR $(TD $(D $(LREF memoize)))
-        $(TD Creates a function that caches its result for fast re-evalation.
+        $(TD Creates a function that caches its result for fast re-evaluation.
     ))
     $(TR $(TD $(D $(LREF not)))
         $(TD Creates a function that negates another.
