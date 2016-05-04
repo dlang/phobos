@@ -39,7 +39,8 @@ static this() {
         OS = "osx";
     }
 
-    if(userVars.get("MODEL", "") == "") {
+    MODEL = userVars.get("MODEL", "");
+    if(MODEL == "") {
         if(OS == "solaris")
             uname_M = executeShell("isainfo -n").output.chomp;
         else
@@ -456,9 +457,9 @@ Build _getBuild() {
         druntimes ~= Target.phony(DRUNTIMESO, "", [druntime]);
 
 
-    enum json = Target("$project/phobos.json",
+    auto json = Target("$project/phobos.json",
                        DMD ~ " " ~ DFLAGS ~ " -o- -Xf$out $in",
-                       ALL_D_FILES.map!(a => Target(a)));
+                       ALL_D_FILES.map!(a => Target(a)).array);
 
     // html documentation
     // D file to html, e.g. std/conv.d -> std_conv.html
@@ -525,7 +526,7 @@ Build _getBuild() {
     auto targets = chain(all.map!createTopLevelTarget,
                          chain(fat,
                                [unittest_, unittest_debug, unittest_release, gitzip, zip, install],
-                               druntimes, json,
+                               druntimes, [json],
                                [html], htmls,
                                [allmod, rsync_prerelease, html_consolidated, changelog_html],
                                [checkwhitespace, auto_tester_build, auto_tester_test],
