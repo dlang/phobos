@@ -374,7 +374,7 @@ public:
     // has a useful trait: if supplied with valid UTF indexes,
     // returns only valid UTF indexes
     // (that given the haystack in question is valid UTF string)
-    final @trusted bool opCall(ref Input!Char s)
+    final @trusted bool search(ref Input!Char s)
     {//@BUG: apparently assumes little endian machines
         import std.conv : text;
         import core.stdc.string : memchr;
@@ -504,6 +504,12 @@ public:
         return false;
     }
 
+    final @trusted bool match(ref Input!Char s)
+    {
+        //TODO: stub
+        return false;
+    }
+
     @system debug static void dump(uint[] table)
     {//@@@BUG@@@ writef(ln) is @system
         import std.stdio : writefln;
@@ -529,7 +535,7 @@ unittest
         auto inp = Input!C(source);
         foreach(r; results)
         {
-            kick(inp);
+            kick.search(inp);
             dchar ch;
             size_t idx;
             assert(inp._index == r, text(inp._index, " vs ", r));
@@ -547,12 +553,12 @@ unittest
         shiftOrLength(`\ba{2}c\bxyz`.to!String, 6);
         auto kick = shiftOrLength(`\ba{2}c\b`.to!String, 3);
         auto inp = Input!Char("aabaacaa");
-        assert(kick(inp));
+        assert(kick.search(inp));
         assert(inp._index == 3, text(Char.stringof," == ", kick.length));
         dchar ch;
         size_t idx;
         inp.nextChar(ch, idx);
-        assert(!kick(inp));
+        assert(!kick.search(inp));
         assert(inp._index == 8, text(Char.stringof," == ", kick.length));
     }
 
@@ -568,7 +574,6 @@ unittest
         kick = shiftOrLength(`a(b{1,2}|c{1,2})x`.to!String, 3);
         searches("ababx".to!String, kick, 2);
         searches("abaacba".to!String, kick, 3); //expected inexact
-
     }
 }
 

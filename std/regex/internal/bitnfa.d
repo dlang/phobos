@@ -1,3 +1,4 @@
+
 //Written in the D programming language
 /*
     Implementation of a concept "NFA in a word" which is
@@ -28,14 +29,20 @@ struct HashTab
         return p.value;
     }
 
+    bool opBinaryRight(string op:"in")(uint key)
+    {
+        auto p = locate(key, table);
+        return p.occupied;
+    }
+
     void opIndexAssign(uint value, uint key)
     {
-        if(table.length == 0) grow();
+        if (table.length == 0) grow();
         auto p = locate(key, table);
-        if(!p.occupied)
+        if (!p.occupied)
         {
             items++;
-            if(4*items >= table.length*3)
+            if (4*items >= table.length*3)
             {
                 grow();
                 p = locate(key, table);
@@ -49,9 +56,9 @@ struct HashTab
     auto keys()
     {
         auto app = appender!(uint[])();
-        foreach(i, v; table)
+        foreach (i, v; table)
         {
-            if(v.occupied)
+            if (v.occupied)
                 app.put(v.key);
         }
         return app.data;
@@ -60,9 +67,9 @@ struct HashTab
     auto values()
     {
         auto app = appender!(uint[])();
-        foreach(i, v; table)
+        foreach (i, v; table)
         {
-            if(v.occupied)
+            if (v.occupied)
                 app.put(v.value);
         }
         return app.data;
@@ -89,12 +96,12 @@ private:
     static Node* locate()(uint key, Node[] table)
     {
         size_t slot = hashOf(key) & (table.length-1);
-        while(table[slot].occupied)
+        while (table[slot].occupied)
         {
-            if(table[slot].key == key)
+            if (table[slot].key == key)
                 break;
             slot += 1;
-            if(slot == table.length)
+            if (slot == table.length)
                 slot = 0;
         }
         return table.ptr+slot;
@@ -103,9 +110,9 @@ private:
     void grow()
     {
         Node[] newTable = new Node[table.length ? table.length*2 : 4];
-        foreach(i, v; table)
+        foreach (i, v; table)
         {
-            if(v.occupied)
+            if (v.occupied)
             {
                 auto p = locate(v.key, newTable);
                 *p = v;
@@ -134,7 +141,7 @@ struct UIntTrie2
     static uint hash(uint[] data)
     {
         uint h = 5183;
-        foreach(v; data)
+        foreach (v; data)
         {
             h = 31*h + v;
         }
@@ -164,7 +171,7 @@ struct UIntTrie2
     void setPageRange(string op)(uint val, uint low, uint high)
     {
         immutable blk = index[low>>blockBits];
-        if(refCounts[blk] == 1) // modify in-place
+        if (refCounts[blk] == 1) // modify in-place
         {
             immutable lowIdx = blk*blockSize + (low & (blockSize-1));
             immutable highIdx = high - low + lowIdx;
@@ -180,10 +187,10 @@ struct UIntTrie2
             mixin("scratch[lowIdx..highIdx] "~op~"= val;");
             uint h = hash(scratch);
             bool found = false;
-            foreach(i,x; hashes)
+            foreach (i,x; hashes)
             {
-                if(x != h) continue;
-                if(scratch[] == blocks[i*blockSize .. (i+1)*blockSize])
+                if (x != h) continue;
+                if (scratch[] == blocks[i*blockSize .. (i+1)*blockSize])
                 {
                     // re-route to existing page
                     index[low>>blockBits] = cast(ushort)i;
@@ -192,7 +199,7 @@ struct UIntTrie2
                     break;
                 }
             }
-            if(!found)
+            if (!found)
             {
                 index[low>>blockBits] = cast(ushort)hashes.length;
                 blocks ~= scratch[];
@@ -213,9 +220,9 @@ struct UIntTrie2
         uint endBlk = end >> blockBits;
         uint first = min(startBlk*blockSize+blockSize, end);
         setPageRange!op(val, start, first);
-        foreach(blk; startBlk..endBlk)
+        foreach (blk; startBlk..endBlk)
             setPageRange!op(val, blk*blockSize, (blk+1)*blockSize);
-        if(first != end)
+        if (first != end)
         {
             setPageRange!op(val, endBlk*blockSize, end);
         }
@@ -232,15 +239,15 @@ unittest
     import std.uni;
     UIntTrie2 trie2 = UIntTrie2();
     auto letters = unicode("L");
-    foreach(r; letters.byInterval)
+    foreach (r; letters.byInterval)
         trie2[r.a..r.b] &= 1;
-    foreach(ch; letters.byCodepoint)
+    foreach (ch; letters.byCodepoint)
         assert(trie2[ch] == 1);
     auto space = unicode("WhiteSpace");
     auto trie3 = UIntTrie2();
-    foreach(r; space.byInterval)
+    foreach (r; space.byInterval)
         trie3[r.a..r.b] &= 2;
-    foreach(ch; space.byCodepoint)
+    foreach (ch; space.byCodepoint)
         assert(trie3[ch] == 2);
 }
 
@@ -266,22 +273,22 @@ struct BitNfa
         bool nextChoice()
         {
             uint i;
-            for(i=0;i<selection.length; i++)
+            for (i=0;i<selection.length; i++)
             {
                 selection[i] ^= true;
-                if(selection[i])
+                if (selection[i])
                     break;
             }
             return i != selection.length;
         }
         // first prepare full mask
-        foreach(k; keys) controlFlowMask |= k;
+        foreach (k; keys) controlFlowMask |= k;
         // next set all combinations in cf
-        while(nextChoice())
+        while (nextChoice())
         {
             uint kmask = 0, vmask = 0;
-            foreach(i,v; selection)
-                if(v)
+            foreach (i,v; selection)
+                if (v)
                 {
                     kmask |= keys[i];
                     vmask |= values[i];
@@ -293,17 +300,20 @@ struct BitNfa
     uint[] collectControlFlow(Bytecode[] ir, uint i)
     {
         uint[] result;
+        bool[] visited = new bool[ir.length];
         Stack!uint paths;
         paths.push(i);
-        while(!paths.empty())
+        while (!paths.empty())
         {
             uint j = paths.pop();
-            switch(ir[j].code) with(IR)
+            if (visited[j]) continue;
+            visited[j] = true;
+            switch (ir[j].code) with(IR)
             {
             case OrStart:
                 j += IRL!OrStart;
                 assert(ir[j].code == Option);
-                while(ir[j].code == Option)
+                while (ir[j].code == Option)
                 {
                     //import std.stdio;
                     //writefln("> %d %s", j, ir[j].mnemonic);
@@ -315,7 +325,7 @@ struct BitNfa
             case GotoEndOr:
                 paths.push(j+IRL!GotoEndOr+ir[j].data);
                 break;
-            case OrEnd, Wordboundary, Notwordboundary, Bol, Eol, Nop, GroupStart, GroupEnd:
+            case OrEnd, Wordboundary, Notwordboundary, Bof, Bol, Eol, Eof, Nop, GroupStart, GroupEnd:
                 paths.push(j+ir[j].length);
                 break;
             case LookaheadStart, NeglookaheadStart, LookbehindStart,
@@ -324,11 +334,11 @@ struct BitNfa
                 break;
             case InfiniteStart, InfiniteQStart:
                 paths.push(j+IRL!InfiniteStart);
-                paths.push(j+ir[j].data+IRL!InfiniteEnd);
+                paths.push(j+IRL!InfiniteStart+ir[j].data+IRL!InfiniteEnd);
                 break;
             case InfiniteBloomStart:
                 paths.push(j+IRL!InfiniteStart);
-                paths.push(j+ir[j].data+IRL!InfiniteBloomEnd);
+                paths.push(j+IRL!InfiniteBloomStart+ir[j].data+IRL!InfiniteBloomEnd);
                 break;
             case InfiniteEnd, InfiniteQEnd:
                 paths.push(j-ir[j].data);
@@ -354,16 +364,16 @@ struct BitNfa
         uint[] bitMapping = new uint[re.ir.length];
         uint bitCount = 0, nesting=0, lastNonnested=0;
         with(re)
-outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
+outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
         {
-            if(nesting == 0) lastNonnested = i;
-            if(ir[i].isStart) nesting++;
-            if(ir[i].isEnd) nesting--;
-            switch(ir[i].code)
+            if (nesting == 0) lastNonnested = i;
+            if (ir[i].isStart) nesting++;
+            if (ir[i].isEnd) nesting--;
+            switch (ir[i].code)
             {
-            case Option, OrEnd, Nop, Bol,
+            case Option, OrEnd, Nop, Bof, Bol,
             GroupStart, GroupEnd,
-            Eol, Wordboundary, Notwordboundary:
+            Eol, Eof, Wordboundary, Notwordboundary:
                 bitMapping[i] = bitCount;
                 break;
             // skipover complex assertions
@@ -379,16 +389,16 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
                 break outer;
             case OrChar:
                 uint s = ir[i].sequence;
-                for(uint j=i; j<i+s; j++)
+                for (uint j=i; j<i+s; j++)
                     bitMapping[j] = bitCount;
                 i += (s-1)*IRL!OrChar;
                 bitCount++;
-                if(bitCount == 32)
+                if (bitCount == 32)
                     break outer;
                 break;
             default:
                 bitMapping[i] = bitCount++;
-                if(bitCount == 32)
+                if (bitCount == 32)
                     break outer;
             }
         }
@@ -397,24 +407,24 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
         finalMask |= 1u<<bitMapping[lastNonnested];
         length = lastNonnested;
         with(re)
-        for(uint i=0; i<length; i += ir[i].length)
+        for (uint i=0; i<length; i += ir[i].length)
         {
-            switch(ir[i].code) with (IR)
+            switch (ir[i].code) with (IR)
             {
             case OrStart,GotoEndOr, InfiniteStart,
-            InfiniteBloomStart, InfiniteBloomEnd,
-            InfiniteEnd, InfiniteQEnd, InfiniteQStart:
+            InfiniteQStart,InfiniteBloomStart,
+            InfiniteBloomEnd, InfiniteEnd, InfiniteQEnd:
                 // collect stops across all paths
                 auto rets = collectControlFlow(ir, i);
                 uint mask = 0;
                 debug(std_regex_bitnfa) __ctfe || writeln(rets);
-                foreach(pc; rets) mask |= 1u<<bitMapping[pc];
+                foreach (pc; rets) mask |= 1u<<bitMapping[pc];
                 // map this individual c-f to all possible stops
                 controlFlow[1u<<bitMapping[i]] = mask;
                 break;
-            case Option, OrEnd, Nop, Bol,
+            case Option, OrEnd, Nop, Bol, Bof,
                 GroupStart, GroupEnd,
-                Eol, Wordboundary, Notwordboundary:
+                Eol, Eof, Wordboundary, Notwordboundary:
                 break;
             case LookaheadStart, NeglookaheadStart, LookbehindStart,
                 NeglookbehindStart:
@@ -433,20 +443,20 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
                 auto ch = ir[i].data;
                 //import std.stdio;
                 //writefln("Char %c - %b", cast(dchar)ch, mask);
-                if(ch < 0x80)
+                if (ch < 0x80)
                     asciiTab[ch] &= ~mask;
                 else
                     uniTab[ch] &= ~mask;
                 break;
             case OrChar:
                 uint s = ir[i].sequence;
-                for(size_t j=i; j<i+s; j++)
+                for (size_t j=i; j<i+s; j++)
                 {
                     uint mask = 1u<<bitMapping[i];
                     auto ch = ir[j].data;
                     //import std.stdio;
                     //writefln("OrChar %c - %b", cast(dchar)ch, mask);
-                    if(ch < 0x80)
+                    if (ch < 0x80)
                         asciiTab[ch] &= ~mask;
                     else
                         uniTab[ch] &= ~mask;
@@ -456,13 +466,13 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
             case CodepointSet, Trie:
                 auto cset = charsets[ir[i].data];
                 uint mask = 1u<<bitMapping[i];
-                foreach(ival; cset.byInterval)
+                foreach (ival; cset.byInterval)
                 {
-                    if(ival.b < 0x80)
+                    if (ival.b < 0x80)
                         asciiTab[ival.a..ival.b] &= ~mask;
                     else
                     {
-                        if(ival.a < 0x80)
+                        if (ival.a < 0x80)
                             asciiTab[ival.a..0x80] &= ~mask;
                         uniTab[ival.a..ival.b] &= ~mask;
                     }
@@ -474,16 +484,23 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
         }
         length += re.ir[lastNonnested].length;
         combineControlFlow();
+        if (0x1 & finalMask)
+        {
+            length = 0;
+        }
+        else if (0x1 in controlFlow)
+        {
+            if (controlFlow[0x01] & finalMask)
+                length = 0; // set zero-width as empty
+        }
     }
 
-    bool opCall(Input)(ref Input r)
+    bool search(Input)(ref Input r)
     {
-        bool matched = false;
-        size_t mIdx = 0;
         dchar ch;
         size_t idx;
         uint word = ~0u;
-        for(;;)
+        for (;;)
         {
             word <<= 1; // shift - create a state
             // cfMask has 1 for each control-flow op
@@ -491,31 +508,102 @@ outer:  for(uint i=0; i<ir.length; i += ir[i].length) with(IR)
             word = word | controlFlowMask; // kill cflow
             word &= ~controlFlow[cflow]; // map normal ops
             debug(std_regex_bitnfa) __ctfe || writefln("%b %b %b %b", word, finalMask, cflow, controlFlowMask);
-            if((word & finalMask) != finalMask)
+            if ((word & finalMask) != finalMask)
             {
-                matched = true; // keep running to see if there is longer match
-                mIdx = r._index;
+                return true;
             }
-            else if(matched)
-                break;
-            if(!r.nextChar(ch, idx))
+            if (!r.nextChar(ch, idx))
                 break;
             // mask away failing states
-            if(ch < 0x80)
+            if (ch < 0x80)
                 word |= asciiTab[ch];
             else
                 word |= uniTab[ch];
         }
-        if(matched)
+        return false;
+    }
+
+    bool match(Input)(ref Input r)
+    {
+        dchar ch;
+        size_t idx;
+        uint word = ~1u;
+        size_t mIdx = 0;
+        bool matched = false;
+        auto save = r._index;
+        for (;;)
         {
-            r.reset(mIdx);
+            // cfMask has 1 for each control-flow op
+            uint cflow = ~word  & controlFlowMask;
+            word = word | controlFlowMask; // kill cflow
+            word &= ~controlFlow[cflow]; // map normal ops
+            debug(std_regex_bitnfa) __ctfe || writefln("%b %b %b %b", word, finalMask, cflow, controlFlowMask);
+            if ((word & finalMask) != finalMask)
+            {
+                // keep running to see if there is longer match
+                matched = true;
+                mIdx = r._index;
+            }
+            else if (word == ~0u) // no active states
+                break;
+            if (!r.nextChar(ch, idx))
+                break;
+            // mask away failing states
+            if (ch < 0x80)
+                word |= asciiTab[ch];
+            else
+                word |= uniTab[ch];
+            // shift and
+            word = (word<<1) | 1;
+
         }
+        if (matched)
+            r.reset(mIdx);
+        else
+            r.reset(save);
         return matched;
     }
 }
 
+auto reverseBitNfa(Char)(auto ref Regex!Char re, uint length)
+{
+    auto re2 = re;
+    re2.ir = re2.ir.dup;
+    uint len = length - 1;
+    reverseBytecode(re2.ir[0..len]);
+    // check for the case of multiple patterns as one alternation
+    if (len == re2.ir.length-IRL!(IR.End))
+    {
+        debug(std_regex_bitnfa) __ctfe || writeln("Reverse!");
+        with(IR) with(re2) if (ir[0].code == OrStart)
+        {
+            size_t pc = IRL!OrStart;
+            while (ir[pc].code == Option)
+            {
+                size_t size = ir[pc].data;
+                if (ir[pc+size-IRL!GotoEndOr].code == GotoEndOr)
+                {
+                    ir[pc+size-IRL!(GotoEndOr)].data = ir[pc+size-IRL!(GotoEndOr)].data+1;
+                    size -= IRL!GotoEndOr;
+                }
+                size_t j = pc + IRL!Option;
+                if (ir[j].code == End)
+                {
+                    auto save = ir[j];
+                    foreach (k; j+1..j+size)
+                        ir[k-1] = ir[k];
+                    ir[j+size-1] = save;
+                }
+                pc = j + ir[pc].data;
+            }
+        }
+    }
+    debug(std_regex_bitnfa) __ctfe || re2.print();
+    return BitNfa(re2);
+}
+
 final class BitMatcher(Char) : Kickstart!(Char)
-    if(is(Char : dchar))
+    if (is(Char : dchar))
 {
 @trusted:
     BitNfa forward, backward;
@@ -523,51 +611,33 @@ final class BitMatcher(Char) : Kickstart!(Char)
     this()(auto ref Regex!Char re)
     {
         forward = BitNfa(re);
-        //reverse Bytecode
-        auto re2 = re;
-        re2.ir = re2.ir.dup;
         // keep the end where it belongs
-        uint len = forward.length - 1;
-        reverseBytecode(re2.ir[0..len]);
-        // check for the case of multiple patterns as one alternation
-        if(len == re2.ir.length-IRL!(IR.End))
-        {
-            debug(std_regex_bitnfa) __ctfe || writeln("Reverse!");
-            with(IR) with(re2) if(ir[0].code == OrStart)
-            {
-                size_t pc = IRL!OrStart;
-                while(ir[pc].code == Option)
-                {
-                    size_t size = ir[pc].data;
-                    if(ir[pc+size-IRL!GotoEndOr].code == GotoEndOr)
-                    {
-                        ir[pc+size-IRL!(GotoEndOr)].data = ir[pc+size-IRL!(GotoEndOr)].data+1;
-                        size -= IRL!GotoEndOr;
-                    }
-                    size_t j = pc + IRL!Option;
-                    if(ir[j].code == End)
-                    {
-                        auto save = ir[j];
-                        foreach(k; j+1..j+size)
-                            ir[k-1] = ir[k];
-                        ir[j+size-1] = save;
-                    }
-                    pc = j + ir[pc].data;
-                }
-            }
-        }
-        debug(std_regex_bitnfa) __ctfe || re2.print();
-        backward = BitNfa(re2);
+        if (!forward.empty)
+            backward = reverseBitNfa(re, forward.length);
     }
 
-    final bool opCall(ref Input!Char r)
+    final bool search(ref Input!Char r)
     {
-        bool res = forward(r);
-        if(res){
+        auto save = r._index;
+        bool res = forward.search(r);
+        if (res)
+        {
             auto back = r.loopBack(r._index);
-            assert(backward(back));
-            r.reset(back._index);
+            auto t = backward.match(back);
+            assert(t);
+            if (back._index < save)
+                r.reset(save);
+            else
+                r.reset(back._index);
         }
+        return res;
+    }
+
+    final bool match(ref Input!Char r)
+    {
+        auto save = r._index;
+        bool res = forward.match(r);
+        r.reset(save);
         return res;
     }
 
@@ -578,30 +648,40 @@ version(unittest)
 {
     template check(alias make)
     {
-        private void check(T)(string input, T re, size_t idx=uint.max)
+        private void check(T)(string input, T re, size_t idx=uint.max, int line=__LINE__)
         {
             import std.regex, std.conv;
             import std.stdio;
             auto rex = regex(re);
             auto m = make(rex);
             auto s = Input!char(input);
-            assert(m(s), "Failed "~input~" with "~to!string(re));
-            assert(s._index == idx || (idx ==uint.max && s._index == input.length));
+            assert(m.search(s), text("Failed @", line, " ", input, " with ", re));
+            assert(s._index == idx || (idx ==uint.max && s._index == input.length),
+                text("Failed @", line, " index=", s._index));
         }
     }
 
     template checkFail(alias make)
     {
-        private void checkFail(T)(string input, T re, size_t idx=uint.max)
+        private void checkFail(T)(string input, T re, size_t idx=uint.max, int line=__LINE__)
         {
             import std.regex, std.conv;
             import std.stdio;
             auto rex = regex(re);
             auto m = make(rex);
             auto s = Input!char(input);
-            assert(!m(s), "Should have failed "~input~" with "~to!string(re));
+            assert(!m.search(s), text("Should have failed @", line, " " , input, " with ", re));
             assert(s._index == idx || (idx ==uint.max && s._index == input.length));
         }
+    }
+
+    private void checkEmpty(T)(T re)
+    {
+        import std.regex, std.conv;
+        import std.stdio;
+        auto rex = regex(re);
+        auto m = BitNfa(rex);
+        assert(m.empty, "Should be empty "~to!string(re));
     }
 
     alias checkBit = check!BitNfa;
@@ -616,7 +696,8 @@ unittest
     "xabcd".checkBit("abc", 4);
     "xabbbcdyy".checkBit("a[b-c]*c", 6);
     "abc1".checkBit("([a-zA-Z_0-9]*)1");
-    "abbabc".checkBit("(a|b)*",5);
+    "(a|b)*".checkEmpty;
+    "abbabc".checkBit("(a|b)*c");
     "abd".checkBitFail("abc");
     // check truncation
     "0123456789_0123456789_0123456789_012"
@@ -624,17 +705,23 @@ unittest
     "0123456789_0123456789_0123456789_012"
         .checkBit("0123456789(0123456789_0123456789_0123456789_0123456789|01234)",10);
     // assertions ignored
-    "0abc1".checkBit("(?<![0-9])[a-c]*$", 4);
+    "0abc1".checkBit("(?<![0-9])[a-c]+$", 2);
     // stop on repetition
     "abcdef1".checkBit("a[a-z]{5}", 1);
-    "ads@email.com".checkBit(`\S+@\S+`);
+    "ads@email.com".checkBit(`\S+@\S+`,5);
     "abc@email.com".checkBit(`\S+@\S?1`, 4);
+    "1".checkBit(r"\d+",1);
+    "()*".checkEmpty;
+    "^".checkEmpty;
+    "abc".checkBit(`\w[bc]`, 2);
 }
 
 unittest
 {
     "xxabcy".checkM("abc", 2);
     "_10bcy".checkM([`\d+`, `[a-z]+`], 1);
-    "1/03/12 - 3/03/12".checkM([r"(\d+)/(\d+)/(\d+)", "abc"],0);
+    "1/03/12 - 3/03/12".checkM([r"\d+/\d+/\d+"],0);
     "abc@email.com".checkM(`\S+@\S?1`, 0);
+    "Strap a rocket engine on a chicken.".checkM("[ra]", 2);
+    "abcd".checkM("ab|cd", 0);
 }

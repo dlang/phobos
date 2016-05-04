@@ -729,8 +729,6 @@ struct Parser(R, Generator)
 
         while (!empty)
         {
-            debug(std_regex_parser)
-                __ctfe || writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.data);
             switch (current)
             {
             case '(':
@@ -1485,11 +1483,13 @@ struct Parser(R, Generator)
             if (current >= privateUseStart && current <= privateUseEnd)
             {
                 g.endPattern(current - privateUseStart + 1);
-                break;
             }
-            auto op = Bytecode(IR.Char, current);
+            else
+            {
+                auto op = Bytecode(IR.Char, current);
+                g.put(op);
+            }
             next();
-            g.put(op);
         }
     }
 

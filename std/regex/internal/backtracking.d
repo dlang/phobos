@@ -225,6 +225,7 @@ template BacktrackingMatcher(bool CTregex)
                             return val;
                         else
                         {
+                            import std.stdio;
                             if (atEnd)
                                 break;
                             search();

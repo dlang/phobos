@@ -459,7 +459,8 @@ struct Group(DataIndex)
 +/
 interface Kickstart(Char){
 @trusted:
-    bool opCall(ref Input!Char input);
+    bool search(ref Input!Char input);
+    bool match(ref Input!Char input);
     @property bool empty() const;
 }
 
@@ -741,9 +742,9 @@ struct Input(Char)
         return _index == _origin.length;
     }
 
-    bool search(Kickstart)(ref Kickstart kick, ref dchar res, ref size_t pos)
+    bool search(Kickstart!Char kick, ref dchar res, ref size_t pos)
     {
-        kick(this);
+        kick.search(this);
         return nextChar(res, pos);
     }
 

@@ -241,6 +241,8 @@ SRC_STD_REGEX= \
 	std\regex\package.d \
 	std\regex\internal\parser.d \
 	std\regex\internal\tests.d \
+	std\regex\internal\tests2.d \
+	std\regex\internal\tests3.d \
 	std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d \
 	std\regex\internal\shiftor.d \
