@@ -1423,10 +1423,6 @@ unittest //more alias this opCast
     assert(!mayPointTo(A.init, p));
 }
 
-// Explicitly undocumented. It will be removed in May 2016. @@@DEPRECATED_2016-05@@@
-deprecated ("pointsTo is ambiguous. Please use either of doesPointTo or mayPointTo")
-alias pointsTo = doesPointTo;
-
 /+
 Returns true if the field at index $(D i) in ($D T) shares its address with another field.
 
