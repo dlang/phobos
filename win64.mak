@@ -522,7 +522,6 @@ DOCS= \
 	$(DOC)\std_zip.html \
 	$(DOC)\std_zlib.html \
 	$(DOC)\std_net_isemail.html \
-	$(DOC)\std_net_curl.html \
 	$(DOC)\std_experimental_logger_core.html \
 	$(DOC)\std_experimental_logger_filelogger.html \
 	$(DOC)\std_experimental_logger_multilogger.html \
@@ -567,7 +566,6 @@ DOCS= \
 	$(DOC)\std_c_string.html \
 	$(DOC)\std_c_time.html \
 	$(DOC)\std_c_wcharh.html \
-	$(DOC)\etc_c_curl.html \
 	$(DOC)\etc_c_sqlite3.html \
 	$(DOC)\etc_c_zlib.html \
 	$(DOC)\etc_c_odbc_sql.html \
@@ -948,9 +946,6 @@ $(DOC)\std_zlib.html : $(STDDOC) std\zlib.d
 $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_isemail.html $(STDDOC) std\net\isemail.d
 
-$(DOC)\std_net_curl.html : $(STDDOC) std\net\curl.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_curl.html $(STDDOC) std\net\curl.d
-
 $(DOC)\std_experimental_logger_core.html : $(STDDOC) std\experimental\logger\core.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_core.html $(STDDOC) std\experimental\logger\core.d
 
@@ -1118,9 +1113,6 @@ $(DOC)\std_c_time.html : $(STDDOC) std\c\time.d
 
 $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_wcharh.html $(STDDOC) std\c\wcharh.d
-
-$(DOC)\etc_c_curl.html : $(STDDOC) etc\c\curl.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_curl.html $(STDDOC) etc\c\curl.d
 
 $(DOC)\etc_c_sqlite3.html : $(STDDOC) etc\c\sqlite3.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_sqlite3.html $(STDDOC) etc\c\sqlite3.d

@@ -1,6 +1,9 @@
 // Written in the D programming language.
 
 /**
+$(RED Deprecated: This module is considered out-dated and not up to Phobos'
+current standards. It will be removed in May 2018.)
+
 Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
