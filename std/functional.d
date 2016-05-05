@@ -701,10 +701,6 @@ unittest
     // functions without committing to a particular type of the function.
 }
 
-// Explicitly undocumented. It will be removed in March 2016. @@@DEPRECATED_2016-03@@@
-deprecated("Please use std.functional.partial instead")
-alias curry = partial;
-
 // tests for partially evaluating callables
 unittest
 {

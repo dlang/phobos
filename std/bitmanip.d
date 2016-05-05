@@ -737,17 +737,6 @@ unittest
 
 struct BitArray
 {
-    // Explicitly undocumented. They will be removed in April 2016. @@@DEPRECATED_2016-04@@@
-    deprecated("Use the constructor instead.")
-    @property void ptr(size_t* p) pure nothrow @nogc { _ptr = p; }
-    deprecated("Use .opIndex instead.")
-    @property inout(size_t)* ptr() inout pure nothrow @nogc { return _ptr; }
-
-    deprecated("Use .length instead.")
-    @property void len(size_t v) pure nothrow @nogc { _len = v; }
-    deprecated("Use .length instead.")
-    @property size_t len() const pure nothrow @nogc { return _len; }
-
 private:
 
     import std.format : FormatSpec;

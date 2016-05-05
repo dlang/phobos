@@ -2681,23 +2681,6 @@ if (isDynamicArray!A)
         _data.capacity = arr.length;
     }
 
-    //Broken function. To be removed.
-    static if (is(T == immutable))
-    {
-        // Explicitly undocumented. It will be removed in March 2016. @@@DEPRECATED_2016-03@@@
-        deprecated ("Using this constructor will break the type system. Please fix your code to use `Appender!(T[]).this(T[] arr)' directly.")
-        this(Unqual!T[] arr) pure nothrow
-        {
-            this(cast(T[]) arr);
-        }
-
-        //temporary: For resolving ambiguity:
-        this(typeof(null))
-        {
-            this(cast(T[]) null);
-        }
-    }
-
     /**
      * Reserve at least newCapacity elements for appending.  Note that more elements
      * may be reserved than requested.  If newCapacity <= capacity, then nothing is
