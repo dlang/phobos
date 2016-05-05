@@ -5188,12 +5188,23 @@ unittest
 
 /**
 Detect whether $(D T) is one of the built-in character types.
+
+The built-in char types are any of $(D char), $(D wchar) or $(D dchar), with or without qualifiers.
  */
 enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
 
 ///
 unittest
 {
+    //Char types
+    static assert( isSomeChar!char);
+    static assert( isSomeChar!wchar);
+    static assert( isSomeChar!dchar);
+    static assert( isSomeChar!(typeof('c')));
+    static assert( isSomeChar!(immutable char));
+    static assert( isSomeChar!(const dchar));
+
+    //Non char types
     static assert(!isSomeChar!int);
     static assert(!isSomeChar!byte);
     static assert(!isSomeChar!string);
@@ -5230,14 +5241,22 @@ enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStati
 ///
 unittest
 {
+    //String types
+    static assert( isSomeString!string);
+    static assert( isSomeString!(wchar[]));
+    static assert( isSomeString!(dchar[]));
+    static assert( isSomeString!(typeof("aaa")));
+    static assert( isSomeString!(const(char)[]));
+
+    enum ES : string { a = "aaa", b = "bbb" }
+    static assert( isSomeString!ES);
+
+    //Non string types
     static assert(!isSomeString!int);
     static assert(!isSomeString!(int[]));
     static assert(!isSomeString!(byte[]));
     static assert(!isSomeString!(typeof(null)));
     static assert(!isSomeString!(char[4]));
-
-    enum ES : string { a = "aaa", b = "bbb" }
-    static assert( isSomeString!ES);
 }
 
 unittest
