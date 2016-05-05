@@ -2522,9 +2522,10 @@ version(Windows) string getcwd()
 }
 else version (Solaris) string getcwd()
 {
-    enum MAXPATHLEN = 2048;
+    /* BUF_SIZE >= PATH_MAX */
+    enum BUF_SIZE = 4096;
     /* The user should be able to specify any size buffer > 0 */
-    auto p = cenforce(core.sys.posix.unistd.getcwd(null, MAXPATHLEN),
+    auto p = cenforce(core.sys.posix.unistd.getcwd(null, BUF_SIZE),
             "cannot get cwd");
     scope(exit) core.stdc.stdlib.free(p);
     return p[0 .. core.stdc.string.strlen(p)].idup;
