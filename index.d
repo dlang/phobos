@@ -132,10 +132,6 @@ $(BOOKTABLE ,
     )
     $(LEADINGROW External library bindings)
     $(TR
-        $(TDNW $(LINK2 etc_c_curl.html, etc.c.curl))
-        $(TD Interface to libcurl C library.)
-    )
-    $(TR
         $(TDNW $(LINK2 etc_c_odbc_sql.html, etc.c.odbc.sql))
         $(TD Interface to ODBC C library.)
     )
@@ -283,10 +279,6 @@ $(BOOKTABLE ,
     $(TR
         $(TDNW $(LINK2 std_socket.html, std.socket))
         $(TD Socket primitives.)
-    )
-    $(TR
-        $(TDNW $(LINK2 std_net_curl.html, std.net.curl))
-        $(TD Networking client functionality as provided by libcurl.)
     )
     $(TR
         $(TDNW $(LINK2 std_net_isemail.html, std.net.isemail))

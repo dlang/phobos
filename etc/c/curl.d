@@ -1,4 +1,7 @@
 /**
+   $(RED Deprecated: This module is considered out-dated and not up to Phobos'
+   current standards. It will be removed in May 2018.)
+
    This is an interface to the libcurl library.
 
    Converted to D from curl headers by $(LINK2 http://www.digitalmars.com/d/2.0/htod.html, htod) and
