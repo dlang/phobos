@@ -703,12 +703,9 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
     assert(result > 0);
 }
 
-enum areEquable(T, U) = is(typeof({ return T.init == U.init; })); // TODO move to std.traits
-enum haveEquableLengths(T, U) = is(typeof({ return T.init.length == U.init.length; })); // TODO move to std.traits
-
 // equal
 /**
-Compares two ranges for equality, as defined by predicate $(D pred)
+Compares two ore more ranges for equality, as defined by predicate $(D pred)
 (which is $(D ==) by default).
 */
 template equal(alias pred = "a == b")
@@ -720,8 +717,8 @@ template equal(alias pred = "a == b")
     This function compares the ranges $(D r) and $(D ss) for equality. The
     ranges may have different element types, as long as $(D pred(a, b))
     evaluates to $(D bool) for $(D a) in $(D r) and all $(D b) in all elements
-    in $(D ss).  Performs $(BIGOH min(r1.length, ss.length)) evaluations of $(D
-    pred).
+    in all the other $(D ss).  Performs $(BIGOH min(r1.length, ss.length))
+    evaluations of $(D pred).
 
     Params:
         r = The first range to be compared.
@@ -739,10 +736,9 @@ template equal(alias pred = "a == b")
         isInputRange!R &&
         allSatisfy!(isInputRange, Ss))
     {
-        enum hasLengthComparableToR(T) = haveEquableLengths!(R, T);
-        enum isEquableToR(T) = areEquable!(R, T);
+        enum isEquableToR(T) = is(typeof({ return R.init == T.init; }));
 
-        // start by detecting default pred and compatible dynamicarray
+        // start by detecting default pred and compatible dynamic array
         static if (is(typeof(pred) == string) &&
                    pred == "a == b" &&
                    isArray!R &&
@@ -756,8 +752,8 @@ template equal(alias pred = "a == b")
             return true;
         }
         // use fast implementation when the ranges have comparable lengths
-        else static if (allSatisfy!(hasLength, Ss) &&
-                        allSatisfy!(hasLengthComparableToR, Ss))
+        else static if (hasLength!R &&
+                        allSatisfy!(hasLength, Ss))
         {
             // check equal lengths
             foreach (ref s; ss)
@@ -818,7 +814,7 @@ template equal(alias pred = "a == b")
 
     double[] d3 = [ 1, 2, 4 ]; // only three elements
 
-    // 1. test dynamic array variants
+    // 1. all are arrays
     assert(!equal(a, b, c, d3)); // lengths should differ
     assert(equal(a, b, c, d)); // all equal
     assert(!equal(x, b, c, d)); // first differs
@@ -826,13 +822,13 @@ template equal(alias pred = "a == b")
 
     import std.algorithm.iteration: map, filter;
 
-    // 2. test version when all have hasLengths and they are all comparable
+    // 2. all have hasLengths and they are all comparable
     assert(!equal(a.map!"a", b.map!"a", c.map!"a", d3.map!"a"));
     assert(equal(a.map!"a", b.map!"a", c.map!"a", d.map!"a"));
     assert(!equal(x.map!"a", b.map!"a", c.map!"a", d.map!"a"));
     assert(!equal(a.map!"a", b.map!"a", c.map!"a", x.map!"a"));
 
-    // 3. test case when not all have hasLength
+    // 3. not all have hasLength
     assert(!equal(a.filter!(a => true), b.filter!(a => true), c.filter!(a => true), d3.filter!(a => true)));
     assert(equal(a.filter!(a => true), b.filter!(a => true), c.filter!(a => true), d.filter!(a => true)));
     assert(!equal(x.filter!(a => true), b.filter!(a => true), c.filter!(a => true), d.filter!(a => true)));
