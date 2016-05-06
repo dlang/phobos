@@ -539,10 +539,18 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
     cenforce(fd != -1, name, namez);
     {
         scope(failure) core.sys.posix.unistd.close(fd);
+
         immutable size = buffer.length;
-        cenforce(
-            core.sys.posix.unistd.write(fd, buffer.ptr, size) == size,
-            name, namez);
+        size_t sum, cnt = void;
+        while (sum != size)
+        {
+            cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
+            auto numwritten = core.sys.posix.unistd.write(fd, buffer.ptr + sum, cnt);
+            if (numwritten != cnt)
+                break;
+            sum += numwritten;
+        }
+        cenforce(sum == size, name, namez);
     }
     cenforce(core.sys.posix.unistd.close(fd) == 0, name, namez);
 }
@@ -552,6 +560,7 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
 version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez,
         in void[] buffer, bool append) @trusted
 {
+    HANDLE h;
     if (append)
     {
         alias defaults =
@@ -559,15 +568,10 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
 
-        auto h = CreateFileW(namez, defaults);
-
+        h = CreateFileW(namez, defaults);
         cenforce(h != INVALID_HANDLE_VALUE, name, namez);
-        scope(exit) cenforce(CloseHandle(h), name, namez);
-        DWORD numwritten;
-        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
-                && buffer.length == numwritten,
-                name, namez);
+        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER,
+            name, namez);
     }
     else // write
     {
@@ -576,15 +580,21 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
 
-        auto h = CreateFileW(namez, defaults);
-
+        h = CreateFileW(namez, defaults);
         cenforce(h != INVALID_HANDLE_VALUE, name, namez);
-        scope(exit) cenforce(CloseHandle(h), name, namez);
-        DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
-                && buffer.length == numwritten,
-                name, namez);
     }
+    immutable size = buffer.length;
+    size_t sum, cnt = void;
+    DWORD numwritten = void;
+    while (sum != size)
+    {
+        cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
+        WriteFile(h, buffer.ptr + sum, cast(uint) cnt, &numwritten, null);
+        if (numwritten != cnt)
+            break;
+        sum += numwritten;
+    }
+    cenforce(sum == size && CloseHandle(h), name, namez);
 }
 
 /***************************************************
