@@ -96,11 +96,11 @@ Example:
 ---
 import std.net.curl, std.stdio;
 
-// Return a char[] containing the content specified by an URL
+// Return a char[] containing the content specified by a URL
 auto content = get("dlang.org");
 
-// Post data and return a char[] containing the content specified by an URL
-auto content = post("mydomain.com/here.cgi", "post data");
+// Post data and return a char[] containing the content specified by a URL
+auto content = post("mydomain.com/here.cgi", ["name1" : "value1", "name2" : "value2"]);
 
 // Get content of file from ftp server
 auto content = get("ftp.digitalmars.com/sieve.ds");
@@ -566,22 +566,26 @@ unittest
 /** HTTP post content.
  *
  * Params:
- * url = resource to post to
- * postData = data to send as the body of the request. An array
- *            of an arbitrary type is accepted and will be cast to ubyte[]
- *            before sending it.
- * conn = HTTP connection to use
+ *     url = resource to post to
+ *     postDict = data to send as the body of the request. An associative array
+ *                of $(D string) is accepted and will be encoded using
+ *                www-form-urlencoding
+ *     postData = data to send as the body of the request. An array
+ *                of an arbitrary type is accepted and will be cast to ubyte[]
+ *                before sending it.
+ *     conn = HTTP connection to use
+ *     T    = The template parameter $(D T) specifies the type to return. Possible values
+ *            are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ *            for $(D char), content will be converted from the connection character set
+ *            (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ *            by default) to UTF-8.
  *
- * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
- * for $(D char), content will be converted from the connection character set
- * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
- * by default) to UTF-8.
- *
- * Example:
+ * Examples:
  * ----
  * import std.net.curl;
- * auto content = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
+ *
+ * auto content1 = post("d-lang.appspot.com/testUrl2", ["name1" : "value1", "name2" : "value2"]);
+ * auto content2 = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
  * ----
  *
  * Returns:
@@ -627,6 +631,27 @@ unittest
     assert(res == cast(ubyte[])[17, 27, 35, 41]);
 }
 
+/// ditto
+T[] post(T = char)(const(char)[] url, string[string] postDict, HTTP conn = HTTP())
+if (is(T == char) || is(T == ubyte))
+{
+    import std.uri : urlEncode;
+
+    return post(url, urlEncode(postDict), conn);
+}
+
+unittest
+{
+    foreach (host; [testServer.addr, "http://" ~ testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq!char;
+            s.send(httpOK(req.bdy));
+        });
+        auto res = post(host ~ "/path", ["name1" : "value1", "name2" : "value2"]);
+        assert(res == "name1=value1&name2=value2");
+    }
+}
 
 /** HTTP/FTP put content.
  *
