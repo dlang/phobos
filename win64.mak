@@ -239,15 +239,19 @@ SRC_STD_RANGE= \
 SRC_STD_REGEX= \
 	std\regex\internal\ir.d \
 	std\regex\package.d \
-	std\regex\internal\parser.d \
 	std\regex\internal\tests.d \
-	std\regex\internal\tests2.d \
-	std\regex\internal\tests3.d \
+	std\regex\internal\generator.d
+
+SRC_STD_REGEX_2 = \
+	std\regex\internal\parser.d \
 	std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d \
+	std\regex\internal\tests2.d
+
+SRC_STD_REGEX_3 = \
 	std\regex\internal\shiftor.d \
 	std\regex\internal\bitnfa.d \
-	std\regex\internal\generator.d
+	std\regex\internal\tests3.d
 
 SRC_STD_C= \
 	std\c\process.d \
@@ -374,6 +378,8 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
+	$(SRC_STD_REGEX_2) \
+	$(SRC_STD_REGEX_3) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) \
@@ -624,11 +630,13 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6i.obj $(SRC_STD_6i)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_EXP_LOGGER)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8a.obj $(SRC_STD_REGEX)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8b.obj $(SRC_STD_NET)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8b.obj $(SRC_STD_REGEX_2)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8c.obj $(SRC_STD_REGEX_3)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8d.obj $(SRC_STD_NET)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8e.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8f.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8g.obj $(SRC_ETC) $(SRC_ETC_C)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8h.obj $(SRC_STD_EXP)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9.obj $(SRC_STD_EXP_ALLOC)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_NDSLICE)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
