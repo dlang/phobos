@@ -4253,15 +4253,18 @@ package template isBlitAssignable(T)
                 static if (i == 0)
                 {
                 }
-                else if (T.tupleof[i].offsetof == offset)
-                {
-                    if (assignable)
-                        continue;
-                }
                 else
                 {
-                    if (!assignable)
-                        return false;
+                    if (T.tupleof[i].offsetof == offset)
+                    {
+                        if (assignable)
+                            continue;
+                    }
+                    else
+                    {
+                        if (!assignable)
+                            return false;
+                    }
                 }
                 assignable = isBlitAssignable!(typeof(T.tupleof[i]));
                 offset = T.tupleof[i].offsetof;
