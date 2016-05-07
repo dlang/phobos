@@ -2530,6 +2530,16 @@ version(Windows) string getcwd()
         return toUTF8(ptr[0 .. n2]);
     }
 }
+else version (Solaris) string getcwd()
+{
+    /* BUF_SIZE >= PATH_MAX */
+    enum BUF_SIZE = 4096;
+    /* The user should be able to specify any size buffer > 0 */
+    auto p = cenforce(core.sys.posix.unistd.getcwd(null, BUF_SIZE),
+            "cannot get cwd");
+    scope(exit) core.stdc.stdlib.free(p);
+    return p[0 .. core.stdc.string.strlen(p)].idup;
+}
 else version (Posix) string getcwd()
 {
     auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
