@@ -479,7 +479,7 @@ interface Kickstart(Char){
         assert(!empty);
         auto val = data[$ - 1];
         data = data[0 .. $ - 1];
-        if(!__ctfe)
+        if (!__ctfe)
             cast(void)data.assumeSafeAppend();
         return val;
     }
@@ -499,23 +499,23 @@ interface Kickstart(Char){
     Stack!(Tuple!(uint, uint, uint)) stack;
     uint start = 0;
     uint end = cast(uint)code.length;
-    for(;;)
+    for (;;)
     {
-        for(uint pc = start; pc < end; )
+        for (uint pc = start; pc < end; )
         {
             uint len = code[pc].length;
-            if(code[pc].code == IR.GotoEndOr)
+            if (code[pc].code == IR.GotoEndOr)
                 break; //pick next alternation branch
-            if(code[pc].isAtom)
+            if (code[pc].isAtom)
             {
                 rev[revPc - len .. revPc] = code[pc .. pc + len];
                 revPc -= len;
                 pc += len;
             }
-            else if(code[pc].isStart || code[pc].isEnd)
+            else if (code[pc].isStart || code[pc].isEnd)
             {
                 //skip over other embedded lookbehinds they are reversed
-                if(code[pc].code == IR.LookbehindStart
+                if (code[pc].code == IR.LookbehindStart
                     || code[pc].code == IR.NeglookbehindStart)
                 {
                     uint blockLen = len + code[pc].data
@@ -529,15 +529,15 @@ interface Kickstart(Char){
                 uint secLen = code[second].length;
                 rev[revPc - secLen .. revPc] = code[second .. second + secLen];
                 revPc -= secLen;
-                if(code[pc].code == IR.OrStart)
+                if (code[pc].code == IR.OrStart)
                 {
                     //we pass len bytes forward, but secLen in reverse
                     uint revStart = revPc - (second + len - secLen - pc);
                     uint r = revStart;
                     uint i = pc + IRL!(IR.OrStart);
-                    while(code[i].code == IR.Option)
+                    while (code[i].code == IR.Option)
                     {
-                        if(code[i - 1].code != IR.OrStart)
+                        if (code[i - 1].code != IR.OrStart)
                         {
                             assert(code[i - 1].code == IR.GotoEndOr);
                             rev[r - 1] = code[i - 1];
@@ -546,7 +546,7 @@ interface Kickstart(Char){
                         auto newStart = i + IRL!(IR.Option);
                         auto newEnd = newStart + code[i].data;
                         auto newRpc = r + code[i].data + IRL!(IR.Option);
-                        if(code[newEnd].code != IR.OrEnd)
+                        if (code[newEnd].code != IR.OrEnd)
                         {
                             newRpc--;
                         }
@@ -562,7 +562,7 @@ interface Kickstart(Char){
                     pc += len;
             }
         }
-        if(stack.empty)
+        if (stack.empty)
             break;
         start = stack.top[0];
         end = stack.top[1];

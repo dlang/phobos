@@ -1607,10 +1607,10 @@ struct Parser(R, Generator)
         if (!(flags & RegexInfo.oneShot))
         {
             kickstart = new ShiftOr!Char(zis);
-            if(kickstart.empty)
+            if (kickstart.empty)
             {
                 kickstart = new BitMatcher!Char(zis);
-                if(kickstart.empty)
+                if (kickstart.empty)
                     kickstart = null;
             }
         }

@@ -43,7 +43,7 @@ unittest
 }
 unittest
 {// bugzilla 7679
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         enum re = ctRegex!(to!S(r"\."));
         auto str = to!S("a.b");
@@ -61,7 +61,7 @@ unittest
     auto r = regex(
        r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
     auto uniCapturesNew = match(uniFileOld, r);
-    for(int i = 0; i < 20; i++)
+    for (int i = 0; i < 20; i++)
         foreach (matchNew; uniCapturesNew) {}
     //a second issue with same symptoms
     auto r2 = regex(`([а-яА-Я\-_]+\s*)+(?<=[\s\.,\^])`);
@@ -261,7 +261,7 @@ unittest
 unittest
 {
     auto ctPat2 = regex(r"^[CDF]$", "i");
-    foreach(v; ["C", "c", "D", "d", "F", "f"])
+    foreach (v; ["C", "c", "D", "d", "F", "f"])
         assert(matchAll(v, ctPat2).front.hit  == v);
 }
 

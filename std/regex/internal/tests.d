@@ -352,7 +352,7 @@ unittest
     void run_tests(alias matchFn)()
     {
         int i;
-        foreach(Char; AliasSeq!( char, wchar, dchar))
+        foreach (Char; AliasSeq!( char, wchar, dchar))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             alias String = immutable(Char)[];
             String produceExpected(M,Range)(auto ref M m, Range fmt)
@@ -362,7 +362,7 @@ unittest
                 return app.data;
             }
             Regex!(Char) r;
-            foreach(a, tvd; tv)
+            foreach (a, tvd; tv)
             {
                 uint c = tvd.result[0];
                 debug(std_regex_test) writeln(" Test #", a, " pattern: ", tvd.pattern, " with Char = ", Char.stringof);
@@ -379,7 +379,7 @@ unittest
 
                 assert((c == 'c') ? !i : i, "failed to compile pattern "~tvd.pattern);
 
-                if(c != 'c')
+                if (c != 'c')
                 {
                     auto m = matchFn(to!(String)(tvd.input), r);
                     i = !m.empty;
@@ -427,10 +427,10 @@ unittest
         }
         else
             alias Tests = AliasSeq!(Sequence!(0, 25));
-        foreach(a, v; Tests)
+        foreach (a, v; Tests)
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum tvd = tv[v];
-            static if(tvd.result == "c")
+            static if (tvd.result == "c")
             {
                 static assert(!__traits(compiles, (){
                     enum r = regex(tvd.pattern, tvd.flags);
@@ -448,11 +448,11 @@ unittest
                 bool ok = (c == 'y') ^ m.empty;
                 assert(ok, text("ctRegex: failed to match pattern #",
                     a ,": ", tvd.pattern));
-                if(c == 'y')
+                if (c == 'y')
                 {
                     import std.stdio;
                     auto result = produceExpected(m, tvd.format);
-                    if(result != tvd.replace)
+                    if (result != tvd.replace)
                         writeln("ctRegex mismatch pattern #", a, ": ", tvd.pattern," expected: ",
                                 tvd.replace, " vs ", result);
                 }

@@ -533,7 +533,7 @@ unittest
     auto searches(C)(const (C)[] source, ShiftOr!C kick, uint[] results...)
     {
         auto inp = Input!C(source);
-        foreach(r; results)
+        foreach (r; results)
         {
             kick.search(inp);
             dchar ch;
@@ -543,7 +543,7 @@ unittest
         }
     }
 
-    foreach(i, Char; AliasSeq!(char, wchar, dchar))
+    foreach (i, Char; AliasSeq!(char, wchar, dchar))
     {
         alias String = immutable(Char)[];
         shiftOrLength(`abc`.to!String, 3);
@@ -562,7 +562,7 @@ unittest
         assert(inp._index == 8, text(Char.stringof," == ", kick.length));
     }
 
-    foreach(i, Char; AliasSeq!(char, wchar, dchar))
+    foreach (i, Char; AliasSeq!(char, wchar, dchar))
     {
         alias String = immutable(Char)[];
         auto kick = shiftOrLength(`abc[a-z]`.to!String, 4);

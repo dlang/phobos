@@ -91,7 +91,7 @@ unittest
         string s = "a quick brown fox jumps over a lazy dog";
         auto r1 = regex("\\b[a-z]+\\b","g");
         string[] test;
-        foreach(m; matchFn(s, r1))
+        foreach (m; matchFn(s, r1))
             test ~= m.hit;
         assert(equal(test, [ "a", "quick", "brown", "fox", "jumps", "over", "a", "lazy", "dog"]));
         auto free_reg = regex(`
@@ -147,7 +147,7 @@ unittest
         //issue 4574
         //empty successful match still advances the input
         string[] pres, posts, hits;
-        foreach(m; matchFn("abcabc", regex("","g"))) {
+        foreach (m; matchFn("abcabc", regex("","g"))) {
             pres ~= m.pre;
             posts ~= m.post;
             assert(m.hit.empty);
@@ -186,7 +186,7 @@ unittest
         assert(collectException(
                 regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
                 ) is null);
-        foreach(ch; [Escapables])
+        foreach (ch; [Escapables])
         {
             assert(match(to!string(ch),regex(`[\`~ch~`]`)));
             assert(!match(to!string(ch),regex(`[^\`~ch~`]`)));
@@ -209,7 +209,7 @@ unittest
     {
         import std.uni : toUpper;
 
-        foreach(i, v; AliasSeq!(string, wstring, dstring))
+        foreach (i, v; AliasSeq!(string, wstring, dstring))
         {
             auto baz(Cap)(Cap m)
             if (is(Cap == Captures!(Cap.String)))
@@ -248,7 +248,7 @@ unittest
     auto w2 = ["", "abc", "de", "fg", "hi"];
 
     uint cnt;
-    foreach(e; sp2) {
+    foreach (e; sp2) {
         assert(w2[cnt++] == e);
     }
     assert(equal(sp2, w2));
