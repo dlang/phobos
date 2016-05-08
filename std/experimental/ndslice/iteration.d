@@ -1213,10 +1213,8 @@ body
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.slice;
-    import std.range: iota, retro;
-    assert((5 * 3 * 6 * 7).iota
-        .sliced(5, 3, 6, 7)
+    import std.experimental.ndslice.selection: iotaSlice;
+    assert(iotaSlice(5, 3, 6, 7)
         .dropToHypercube
         .shape == cast(size_t[4])[3, 3, 3, 3]);
 }
