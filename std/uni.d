@@ -8036,10 +8036,11 @@ private alias UpperTriple = AliasSeq!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab
 private alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
 
 // generic toUpper/toLower on whole string, creates new or returns as is
-private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pure
+private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, S)(S s) @trusted pure
     if (isSomeString!S)
 {
     import std.array : appender;
+    import std.ascii : isASCII;
 
     foreach (i, dchar cOuter; s)
     {
@@ -8050,22 +8051,29 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pur
         result.reserve(s.length);
         foreach (dchar c; s[i .. $])
         {
-            idx = indexFn(c);
-            if (idx == ushort.max)
-                result.put(c);
-            else if (idx < maxIdx)
+            if (c.isASCII)
             {
-                c = tableFn(idx);
-                result.put(c);
+                result.put(asciiConvert(c));
             }
             else
             {
-                auto val = tableFn(idx);
-                // unpack length + codepoint
-                uint len = val>>24;
-                result.put(cast(dchar)(val & 0xFF_FFFF));
-                foreach (j; idx+1..idx+len)
-                    result.put(tableFn(j));
+                idx = indexFn(c);
+                if (idx == ushort.max)
+                    result.put(c);
+                else if (idx < maxIdx)
+                {
+                    c = tableFn(idx);
+                    result.put(c);
+                }
+                else
+                {
+                    auto val = tableFn(idx);
+                    // unpack length + codepoint
+                    uint len = val>>24;
+                    result.put(cast(dchar)(val & 0xFF_FFFF));
+                    foreach (j; idx+1..idx+len)
+                        result.put(tableFn(j));
+                }
             }
         }
         return result.data;
@@ -8803,7 +8811,8 @@ dchar toLower(dchar c)
 S toLower(S)(S s) @trusted pure
     if (isSomeString!S)
 {
-    return toCase!(LowerTriple)(s);
+    static import std.ascii;
+    return toCase!(LowerTriple, std.ascii.toLower)(s);
 }
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
@@ -8968,7 +8977,8 @@ unittest
 S toUpper(S)(S s) @trusted pure
     if (isSomeString!S)
 {
-    return toCase!(UpperTriple)(s);
+    static import std.ascii;
+    return toCase!(UpperTriple, std.ascii.toUpper)(s);
 }
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
