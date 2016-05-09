@@ -13,6 +13,8 @@ $(BUGSTITLE Library Changes,
         `std.range.padRight` were added.))
     $(LI $(RELATIVE_LINK2 regex-multiple-patterns, `std.regex.regex` now
         supports matching multiple patterns in one go.))
+    $(LI $(RELATIVE_LINK2 regex-with-matches, `std.regex.splitter` now
+        supports keeping the pattern matches in the resulting range.))
     $(LI $(RELATIVE_LINK2 optimization, `findLocalMin` was added to `std.numeric`.))
     $(LI $(RELATIVE_LINK2 slice_ptr, `ptr` property and public constructor were
         added to `std.experimental.ndslice.slice.Slice`.))
@@ -95,6 +97,22 @@ assert(m.front[2] == "43");
 m.popFront();
 assert(m.front.whichPattern == 1);
 assert(m.front[1] == "12");
+-------
+)
+
+$(LI $(LNAME2 regex-with-matches, $(XREF regex, splitter) now supports keeping the
+pattern matches in the resulting range.)
+-------
+import std.regex;
+import std.algorithm.comparison : equal;
+
+auto pattern = regex(`([\.,])`);
+assert("2003.04.05"
+    .splitter!(No.keepSeparators)(pattern)
+    .equal(["2003", "04", "05"]));
+assert("2003.04.05"
+    .splitter!(Yes.keepSeparators)(pattern)
+    .equal(["2003", ".", "04", ".", "05"]));
 -------
 )
 
