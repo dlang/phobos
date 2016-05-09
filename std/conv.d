@@ -89,22 +89,6 @@ private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln =
 
 private
 {
-    template isImaginary(T)
-    {
-        enum bool isImaginary = staticIndexOf!(Unqual!T,
-                ifloat, idouble, ireal) >= 0;
-    }
-    template isComplex(T)
-    {
-        enum bool isComplex = staticIndexOf!(Unqual!T,
-                cfloat, cdouble, creal) >= 0;
-    }
-    template isNarrowInteger(T)
-    {
-        enum bool isNarrowInteger = staticIndexOf!(Unqual!T,
-                byte, ubyte, short, ushort) >= 0;
-    }
-
     T toStr(T, S)(S src)
         if (isSomeString!T)
     {
