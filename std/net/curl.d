@@ -3903,7 +3903,10 @@ private struct CurlAPI
             version (OSX)
                 static immutable names = ["libcurl.4.dylib"];
             else version (Posix)
-                static immutable names = ["libcurl.so", "libcurl.so.4", "libcurl-gnutls.so.4", "libcurl-nss.so.4", "libcurl.so.3"];
+            {
+                static immutable names = ["libcurl.so", "libcurl.so.4",
+                "libcurl-gnutls.so.4", "libcurl-nss.so.4", "libcurl.so.3"];
+            }
             else version (Windows)
                 static immutable names = ["libcurl.dll", "curl.dll"];
 
