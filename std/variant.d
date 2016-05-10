@@ -721,7 +721,7 @@ public:
      * Returns $(D true) if and only if the $(D VariantN)
      * object holds an object implicitly convertible to type $(D
      * U). Implicit convertibility is defined as per
-     * $(LINK2 std_traits.html#ImplicitConversionTargets,ImplicitConversionTargets).
+     * $(REF_ALTTEXT ImplicitConversionTargets, ImplicitConversionTargets, std,traits).
      */
 
     @property bool convertsTo(T)() const

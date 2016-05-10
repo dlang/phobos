@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-This is a submodule of $(LINK2 std_algorithm.html, std.algorithm).
+This is a submodule of $(MREF std, algorithm).
 It contains generic _searching algorithms.
 
 $(BOOKTABLE Cheat Sheet,

@@ -170,7 +170,7 @@ sort(a);                   // no predicate, "a < b" is implicit
 
 Macros:
 WIKI = Phobos/StdAlgorithm
-SUBMODULE = $(LINK2 std_algorithm_$1.html, std.algorithm.$1)
+SUBMODULE = $(MREF std, algorithm, $1)
 SUBREF = $(LINK2 std_algorithm_$1.html#.$2, $(TT $2))$(NBSP)
 
 Copyright: Andrei Alexandrescu 2008-.

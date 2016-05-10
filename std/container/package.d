@@ -103,29 +103,29 @@ This module consists of the following submodules:
 
 $(UL
     $(LI
-        The $(LINK2 std_container_array.html, std._container.array) module provides
+        The $(MREF std, _container, array) module provides
         an array type with deterministic control of memory, not reliant on
         the GC unlike built-in arrays.
     )
     $(LI
-        The $(LINK2 std_container_binaryheap.html, std._container.binaryheap) module
+        The $(MREF std, _container, binaryheap) module
         provides a binary heap implementation that can be applied to any
         user-provided random-access range.
     )
     $(LI
-        The $(LINK2 std_container_dlist.html, std._container.dlist) module provides
+        The $(MREF std, _container, dlist) module provides
         a doubly-linked list implementation.
     )
     $(LI
-        The $(LINK2 std_container_rbtree.html, std._container.rbtree) module
+        The $(MREF std, _container, rbtree) module
         implements red-black trees.
     )
     $(LI
-        The $(LINK2 std_container_slist.html, std._container.slist) module
+        The $(MREF std, _container, slist) module
         implements singly-linked lists.
     )
     $(LI
-        The $(LINK2 std_container_util.html, std._container.util) module contains
+        The $(MREF std, _container, util) module contains
         some generic tools commonly used by _container implementations.
     )
 )
@@ -135,7 +135,7 @@ The_primary_range_of_a_container:
 While some _containers offer direct access to their elements e.g. via
 $(D opIndex), $(D c.front) or $(D c.back), access
 and modification of a _container's contents is generally done through
-its primary $(LINK2 std_range.html, range) type,
+its primary $(MREF_ALTTEXT range, std, range) type,
 which is aliased as $(D C.Range). For example, the primary range type of
 $(D Array!int) is $(D Array!int.Range).
 
@@ -168,7 +168,7 @@ array.linearRemove(array[].find(2).take(1));
 assert(array[].equal([1, 3]));
 ---
 
-When any $(LINK2 std_range.html, range) can be passed as an argument to
+When any $(MREF_ALTTEXT range, std, range) can be passed as an argument to
 a member function, the documention usually refers to the parameter's templated
 type as $(D Stuff).
 
@@ -199,10 +199,10 @@ The primitive $(D c.remove(r)) guarantees
 $(BIGOH n$(SUBSCRIPT r) log n$(SUBSCRIPT c)) complexity in the worst case and
 $(D c.linearRemove(r)) relaxes this guarantee to $(BIGOH n$(SUBSCRIPT c)).
 
-Since a sequence of elements can be removed from a $(LINK2 std_container_dlist.html, doubly linked list)
+Since a sequence of elements can be removed from a $(MREF_ALTTEXT doubly linked list,std,_container,dlist)
 in constant time, $(D DList) provides the primitive $(D c.remove(r))
 as well as $(D c.linearRemove(r)). On the other hand
-$(LINK2 std_container_array.html, Array) only offers $(D c.linearRemove(r)).
+$(MREF_ALTTEXT Array, std,_container, array) only offers $(D c.linearRemove(r)).
 
 The following table describes the common set of primitives that containers
 implement.  A _container need not implement all primitives, but if a

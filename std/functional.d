@@ -5,8 +5,7 @@ Functions that manipulate other functions.
 
 This module provides functions for compile time function composition. These
 functions are helpful when constructing predicates for the algorithms in
-$(LINK2 std_algorithm.html, std.algorithm) or $(LINK2 std_range.html,
-std.range).
+$(MREF std, algorithm) or $(MREF std, range).
 
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)

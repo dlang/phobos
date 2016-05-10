@@ -1,5 +1,5 @@
 /**
-This module is a submodule of $(LINK2 std_range.html, std.range).
+This module is a submodule of $(MREF std, range).
 
 The main $(D std.range) module provides template-based tools for working with
 ranges, but sometimes an object-based interface for ranges is needed, such as
@@ -76,8 +76,9 @@ import std.traits;
  * around input ranges with element type E.  This is useful where a well-defined
  * binary interface is required, such as when a DLL function or virtual function
  * needs to accept a generic range as a parameter. Note that
- * $(LINK2 std_range_primitives.html#isInputRange, isInputRange) and friends check for conformance to structural
- * interfaces, not for implementation of these $(D interface) types.
+ * $(REF_ALTTEXT isInputRange, isInputRange, std, range, primitives)
+ * and friends check for conformance to structural interfaces
+ * not for implementation of these $(D interface) types.
  *
  * Limitations:
  *

@@ -1,5 +1,5 @@
 /**
-This is a submodule of $(LINK2 std_experimental_ndslice.html, std.experimental.ndslice).
+This is a submodule of $(MREF std, experimental, ndslice).
 
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
@@ -8,8 +8,6 @@ Authors:   Ilya Yaroshenko
 Source:    $(PHOBOSSRC std/_experimental/_ndslice/_slice.d)
 
 Macros:
-SUBMODULE = $(LINK2 std_experimental_ndslice_$1.html, std.experimental.ndslice.$1)
-SUBREF = $(LINK2 std_experimental_ndslice_$1.html#.$2, $(TT $2))$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
 STD = $(TD $(SMALL $0))
@@ -626,7 +624,7 @@ pure nothrow unittest
 
 /++
 Allocates an array through a specified allocator and creates an n-dimensional slice over it.
-See also $(LINK2 std_experimental_allocator.html, std.experimental.allocator).
+See also $(MREF std, experimental, allocator).
 Params:
     alloc = allocator
     lengths = list of lengths for each dimension
@@ -857,7 +855,7 @@ unittest
 }
 
 /++
-Base Exception class for $(LINK2 std_experimental_ndslice.html, std.experimental.ndslice).
+Base Exception class for $(MREF std, experimental, ndslice).
 +/
 class SliceException: Exception
 {
@@ -2538,7 +2536,7 @@ pure nothrow unittest
 
 /++
 Creating a slice from text.
-See also $(LINK2 std_format.html, std.format).
+See also $(MREF std, format).
 +/
 unittest
 {
