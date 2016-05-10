@@ -2246,7 +2246,11 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                     static if (HandlerOverloadMap.exceptionFuncIdx != -1)
                         return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
                     else
-                        throw new VariantException("variant holds value of type '" ~ T.stringof ~ "' but no visitor has been provided");
+                        throw new VariantException(
+                            "variant holds value of type '"
+                            ~ T.stringof ~
+                            "' but no visitor has been provided"
+                        );
                 }
             }
             else
