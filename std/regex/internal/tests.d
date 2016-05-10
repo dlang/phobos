@@ -255,7 +255,8 @@ unittest
         TestVectors(  "[a-c~~b-f]+",    "abcdef", "y", "$&", "a"),
 //unicode blocks & properties:
         TestVectors(  `\P{Inlatin1suppl ement}`, "\u00c2!", "y", "$&", "!"),
-        TestVectors(  `\p{InLatin-1 Supplement}\p{in-mathematical-operators}\P{Inlatin1suppl ement}`, "\u00c2\u2200\u00c3\u2203.", "y", "$&", "\u00c3\u2203."),
+        TestVectors(  `\p{InLatin-1 Supplement}\p{in-mathematical-operators}\P{Inlatin1suppl ement}`,
+            "\u00c2\u2200\u00c3\u2203.", "y", "$&", "\u00c3\u2203."),
         TestVectors(  `[-+*/\p{in-mathematical-operators}]{2}`,    "a+\u2212",    "y",    "$&",    "+\u2212"),
         TestVectors(  `\p{Ll}+`,                      "XabcD",    "y",  "$&",      "abc"),
         TestVectors(  `\p{Lu}+`,                      "абвГДЕ",   "y",  "$&",      "ГДЕ"),
@@ -265,11 +266,11 @@ unittest
         TestVectors(  `[c-wф]фф`, "ффф", "y", "$&", "ффф"),
 //case insensitive:
         TestVectors(   `^abcdEf$`,           "AbCdEF",              "y",   "$&", "AbCdEF",      "i"),
-        TestVectors(   `Русский язык`,    "рУсскИй ЯзЫк",           "y",   "$&", "рУсскИй ЯзЫк",     "i"),
+        TestVectors(   `Русский язык`, "рУсскИй ЯзЫк", "y", "$&", "рУсскИй ЯзЫк", "i"),
         TestVectors(   `ⒶⒷⓒ` ,        "ⓐⓑⒸ",                   "y",   "$&", "ⓐⓑⒸ",      "i"),
         TestVectors(   "\U00010400{2}",  "\U00010428\U00010400 ",   "y",   "$&", "\U00010428\U00010400", "i"),
         TestVectors(   `[adzУ-Я]{4}`,    "DzюЯ",                   "y",   "$&", "DzюЯ", "i"),
-        TestVectors(   `\p{L}\p{Lu}{10}`, "абвгдеЖЗИКЛ",            "y",   "$&", "абвгдеЖЗИКЛ", "i"),
+        TestVectors(   `\p{L}\p{Lu}{10}`, "абвгдеЖЗИКЛ", "y",   "$&", "абвгдеЖЗИКЛ", "i"),
         TestVectors(   `(?:Dåb){3}`,  "DåbDÅBdÅb",                  "y",   "$&", "DåbDÅBdÅb", "i"),
 //escapes:
         TestVectors(    `\u0041\u005a\U00000065\u0001`,         "AZe\u0001",       "y",   "$&", "AZe\u0001"),
@@ -383,7 +384,10 @@ unittest
                 {
                     auto m = matchFn(to!(String)(tvd.input), r);
                     i = !m.empty;
-                    assert((c == 'y') ? i : !i, text(matchFn.stringof ~": failed to match pattern #", a ,": ", tvd.pattern));
+                    assert(
+                        (c == 'y') ? i : !i,
+                        text(matchFn.stringof ~": failed to match pattern #", a ,": ", tvd.pattern)
+                    );
                     if (c == 'y')
                     {
                         auto result = produceExpected(m, to!(String)(tvd.format));
@@ -689,8 +693,9 @@ unittest
                    == to!String("ack capacity"));
             assert(std.regex.replace!(matchFn)(to!String("noon"), regex(to!String("^n")), to!String("[$&]"))
                    == to!String("[n]oon"));
-            assert(std.regex.replace!(matchFn)(to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'"))
-                   == to!String(": test2 test1 :"));
+            assert(std.regex.replace!(matchFn)(
+                to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'")
+            ) == to!String(": test2 test1 :"));
             auto s = std.regex.replace!(baz!(Captures!(String)))(to!String("Strap a rocket engine on a chicken."),
                     regex(to!String("[ar]"), "g"));
             assert(s == "StRAp A Rocket engine on A chicken.");
