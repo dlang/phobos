@@ -318,7 +318,8 @@ void put(R, E)(ref R r, E e)
         //Special optimization: If E is a narrow string, and r accepts characters no-wider than the string's
         //Then simply feed the characters 1 by 1.
         static if (isNarrowString!E && (
-            (is(E : const  char[]) && is(typeof(doPut(r,  char.max))) && !is(typeof(doPut(r, dchar.max))) && !is(typeof(doPut(r, wchar.max)))) ||
+            (is(E : const  char[]) && is(typeof(doPut(r,  char.max))) && !is(typeof(doPut(r, dchar.max))) &&
+                !is(typeof(doPut(r, wchar.max)))) ||
             (is(E : const wchar[]) && is(typeof(doPut(r, wchar.max))) && !is(typeof(doPut(r, dchar.max)))) ) )
         {
             foreach (c; e)
