@@ -108,8 +108,8 @@ Build _getBuild() {
         string DRUNTIME(string build = BUILD, string model = MODEL) {
             return DRUNTIME_PATH ~ "/generated/" ~ OS ~ "/" ~ build ~ "/" ~ model ~ "/libdruntime.a";
         }
-        string DRUNTIMESO(string build = BUILD) {
-            return stripExtension(DRUNTIME(build)) ~ ".so.a";
+        string DRUNTIMESO(string build = BUILD, string model = MODEL) {
+            return stripExtension(DRUNTIME(build, model)) ~ ".so.a";
         }
     }
 
@@ -333,18 +333,33 @@ Build _getBuild() {
     alias dll = target_DLL;
     auto all = SHARED ? [lib, dll] : [lib]; // the Makefile "all" targets
 
+    Target druntimeTarget(string build) {
+        if(CUSTOM_DRUNTIME) {
+            // We consider a custom-set DRUNTIME a sign they build druntime themselves
+        } else {
+            // This rule additionally produces $(DRUNTIMESO). Add a fake dependency
+            // to always invoke druntime's make. Use FORCE instead of .PHONY to
+            // avoid rebuilding phobos when $(DRUNTIME) didn't change.
+
+            auto command = "make -C " ~ DRUNTIME_PATH ~
+                " -f posix.mak MODEL=" ~ MODEL ~
+                " DMD=" ~ DMD ~ " OS=" ~ OS ~ " BUILD=" ~ build;
+            auto druntime = Target("$project/" ~ DRUNTIME(build), command);
+            return SHARED ? Target("$project/" ~ DRUNTIMESO(build), command) : druntime;
+        }
+    }
+
     // Unittests
     Target[] createUnitTests(string build) {
         auto UT_D_OBJS = D_MODULES.map!(a => "$project/" ~ ROOT(build) ~ "/unittest/" ~ a ~ ".o").array;
-        auto target_DRUNTIME = SHARED ? Target(DRUNTIMESO(build)) : Target(DRUNTIME(build));
-
+        auto target_DRUNTIME = druntimeTarget(build);
         Target test_runner;
 
         if(!SHARED) {
             auto target_UT_D_OBJS = D_MODULES.
                 map!(a => Target("$project/" ~ ROOT(build) ~ "/unittest/" ~ a ~ ".o",
                                  DMD ~ " " ~ DFLAGS(build) ~ " -unittest -c -of$out $in",
-                                 [Target(a ~ ".d"), target_DRUNTIME])).array;
+                                 target_DRUNTIME ~ [Target(a ~ ".d")])).array;
 
             test_runner = Target("$project/" ~ ROOT(build) ~ "/unittest/test_runner",
                                  DMD ~ " " ~ DFLAGS(build) ~ " -unittest -of$out " ~ DRUNTIME_PATH ~ "/src/test_runner.d " ~
@@ -358,14 +373,16 @@ Build _getBuild() {
             auto target_UT_D_OBJS = D_MODULES.
                 map!(a => Target("$project/" ~ ROOT(build) ~ "/unittest/" ~ a ~ ".o",
                                  DMD ~ " " ~ DFLAGS(build) ~ " -fPIC -unittest -c -of$out $in",
-                                 [Target(a ~ ".d"), target_DRUNTIME])).array;
+                                 target_DRUNTIME ~ [Target(a ~ ".d")])).array;
+            // writeln(target_UT_D_OBJS);
+            // if(target_UT_D_OBJS.length) throw new Exception("foo");
 
             auto UT_LIBSO = "$project/" ~ ROOT(build) ~ "/unittest/libphobos2-ut.so";
             auto target_UT_LIBSO = Target(UT_LIBSO,
                                           DMD ~ " " ~ DFLAGS(build) ~ " -fPIC -shared -unittest -of$out " ~
                                           chain(UT_D_OBJS, OBJS(build), [DRUNTIMESO(build), LINKDL]).join(" ") ~
                                           " -defaultlib= -debuglib=",
-                                          target_UT_D_OBJS ~ target_OBJS(build) ~ target_DRUNTIME
+                                          target_DRUNTIME ~ target_UT_D_OBJS ~ target_OBJS(build)
                 );
 
             test_runner = Target("$project/" ~ ROOT(build) ~ "/unittest/test_runner",
@@ -444,18 +461,6 @@ Build _getBuild() {
                                "cp -r etc/* " ~ INSTALL_DIR ~ "/src/phobos/etc; " ~
                                "cp LICENSE_1_0.TXT " ~ INSTALL_DIR ~ "/phobos-LICENSE.txt");
 
-    Target[] druntimes;
-    if(CUSTOM_DRUNTIME) {
-        // We consider a custom-set DRUNTIME a sign they build druntime themselves
-    } else
-        // This rule additionally produces $(DRUNTIMESO). Add a fake dependency
-        // to always invoke druntime's make. Use FORCE instead of .PHONY to
-        // avoid rebuilding phobos when $(DRUNTIME) didn't change.
-        druntimes ~= Target.phony(DRUNTIME, "make -C " ~ DRUNTIME_PATH ~ " -f posix.mak MODEL=" ~ MODEL ~
-                                  " DMD=" ~ DMD ~ " OS=" ~ OS ~ " BUILD=" ~ BUILD);
-    version(Windows)
-        druntimes ~= Target.phony(DRUNTIMESO, "", [druntime]);
-
 
     auto json = Target("$project/phobos.json",
                        DMD ~ " " ~ DFLAGS ~ " -o- -Xf$out $in",
@@ -526,7 +531,7 @@ Build _getBuild() {
     auto targets = chain(all.map!createTopLevelTarget,
                          chain(fat,
                                [unittest_, unittest_debug, unittest_release, gitzip, zip, install],
-                               druntimes, [json],
+                               [json],
                                [html], htmls,
                                [allmod, rsync_prerelease, html_consolidated, changelog_html],
                                [checkwhitespace, auto_tester_build, auto_tester_test],
