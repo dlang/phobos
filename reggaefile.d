@@ -340,8 +340,12 @@ Build _getBuild() {
             // This rule additionally produces $(DRUNTIMESO). Add a fake dependency
             // to always invoke druntime's make. Use FORCE instead of .PHONY to
             // avoid rebuilding phobos when $(DRUNTIME) didn't change.
-
-            auto command = "make -C " ~ DRUNTIME_PATH ~
+            string make;
+            if(OS == "freebsd")
+                make = "gmake";
+            else
+                make = "make";
+            auto command = make ~ " -C " ~ DRUNTIME_PATH ~
                 " -f posix.mak MODEL=" ~ MODEL ~
                 " DMD=" ~ DMD ~ " OS=" ~ OS ~ " BUILD=" ~ build;
             auto druntime = Target("$project/" ~ DRUNTIME(build), command);
