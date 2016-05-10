@@ -1647,17 +1647,6 @@ if (isInputRange!InputRange)
         }
         return haystack[$ .. $];
     }
-    else static if (!isInfinite!R && hasSlicing!R && is(typeof(haystack[cast(size_t)0 .. $])))
-    {
-        size_t i = 0;
-        for (auto h = haystack.save; !h.empty; h.popFront())
-        {
-            if (predFun(h.front))
-                return haystack[i .. $];
-            ++i;
-        }
-        return haystack[$ .. $];
-    }
     else
     {
         //standard range
