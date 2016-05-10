@@ -1060,12 +1060,18 @@ unittest
 
     // Result from reference implementation.
     auto checking = [
-        [2463534242UL, 901999875, 3371835698, 2675058524, 1053936272, 3811264849, 472493137, 3856898176, 2131710969, 2312157505],
-        [362436069UL, 2113136921, 19051112, 3010520417, 951284840, 1213972223, 3173832558, 2611145638, 2515869689, 2245824891],
-        [521288629UL, 1950277231, 185954712, 1582725458, 3580567609, 2303633688, 2394948066, 4108622809, 1116800180, 3357585673],
-        [88675123UL, 3701687786, 458299110, 2500872618, 3633119408, 516391518, 2377269574, 2599949379, 717229868, 137866584],
-        [5783321UL, 393427209, 1947109840, 565829276, 1006220149, 971147905, 1436324242, 2800460115, 1484058076, 3823330032],
-        [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
+        [2463534242UL, 901999875, 3371835698, 2675058524, 1053936272, 3811264849,
+        472493137, 3856898176, 2131710969, 2312157505],
+        [362436069UL, 2113136921, 19051112, 3010520417, 951284840, 1213972223,
+        3173832558, 2611145638, 2515869689, 2245824891],
+        [521288629UL, 1950277231, 185954712, 1582725458, 3580567609, 2303633688,
+        2394948066, 4108622809, 1116800180, 3357585673],
+        [88675123UL, 3701687786, 458299110, 2500872618, 3633119408, 516391518,
+        2377269574, 2599949379, 717229868, 137866584],
+        [5783321UL, 393427209, 1947109840, 565829276, 1006220149, 971147905,
+        1436324242, 2800460115, 1484058076, 3823330032],
+        [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219,
+        2464530826, 1604040631, 3653403911]
     ];
 
     alias XorshiftTypes = std.meta.AliasSeq!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192);
@@ -2823,10 +2829,18 @@ unittest
         /* Check that randomSample will throw an error if we claim more
          * items are available than there actually are, or if we try to
          * sample more items than are available. */
-        assert(collectExceptionMsg(randomSample(a, 5, 15)) == "RandomSample: specified 15 items as available when input contains only 10");
-        assert(collectExceptionMsg(randomSample(a, 15)) == "RandomSample: cannot sample 15 items when only 10 are available");
-        assert(collectExceptionMsg(randomSample(a, 9, 8)) == "RandomSample: cannot sample 9 items when only 8 are available");
-        assert(collectExceptionMsg(randomSample(TestInputRange(), 12, 11)) == "RandomSample: cannot sample 12 items when only 11 are available");
+        assert(collectExceptionMsg(
+            randomSample(a, 5, 15)
+        ) == "RandomSample: specified 15 items as available when input contains only 10");
+        assert(collectExceptionMsg(
+            randomSample(a, 15)
+        ) == "RandomSample: cannot sample 15 items when only 10 are available");
+        assert(collectExceptionMsg(
+            randomSample(a, 9, 8)
+        ) == "RandomSample: cannot sample 9 items when only 8 are available");
+        assert(collectExceptionMsg(
+            randomSample(TestInputRange(), 12, 11)
+        ) == "RandomSample: cannot sample 12 items when only 11 are available");
 
         /* Check that sampling algorithm never accidentally overruns the end of
          * the input range.  If input is an InputRange without .length, this
