@@ -1809,6 +1809,8 @@ alias _RealArray = CowArray!ReallocPolicy;
 
 unittest
 {
+    import std.algorithm.comparison : equal;
+
     with(ReallocPolicy)
     {
         bool test(T, U, V)(T orig, size_t from, size_t to, U toReplace, V result,
@@ -1817,7 +1819,7 @@ unittest
             {
                 replaceImpl(orig, from, to, toReplace);
                 scope(exit) destroy(orig);
-                if (!equalS(orig, result))
+                if (!equal(orig, result))
                     return false;
             }
             return true;
@@ -1901,23 +1903,6 @@ pure:
     @property ref inout(uint) a() inout { return _tuple[0]; }
     @property ref inout(uint) b() inout { return _tuple[1]; }
 }
-
-//@@@BUG another forward reference workaround
-@trusted bool equalS(R1, R2)(R1 lhs, R2 rhs)
-{
-    for (;;){
-        if (lhs.empty)
-            return rhs.empty;
-        if (rhs.empty)
-            return false;
-        if (lhs.front != rhs.front)
-            return false;
-        lhs.popFront();
-        rhs.popFront();
-    }
-}
-
-
 
 /**
     $(P
@@ -3311,13 +3296,13 @@ private:
         u24.length = 0;
         assert(u24.empty);
         u24.append([1, 2]);
-        assert(equalS(u24[], [1, 2]));
+        assert(equal(u24[], [1, 2]));
         u24.append(111);
-        assert(equalS(u24[], [1, 2, 111]));
+        assert(equal(u24[], [1, 2, 111]));
         assert(!u24_c.empty && u24_c[1] == 1024);
         u24.length = 3;
         copy(iota(0, 3), u24[]);
-        assert(equalS(u24[], iota(0, 3)));
+        assert(equal(u24[], iota(0, 3)));
         assert(u24_c[1] == 1024);
     }
 
@@ -3327,15 +3312,15 @@ private:
         T u24_3;
         u24_3 = u24_2;
         assert(u24_2 == u24_3);
-        assert(equalS(u24[], u24_2[]));
-        assert(equalS(u24_2[], u24_3[]));
+        assert(equal(u24[], u24_2[]));
+        assert(equal(u24_2[], u24_3[]));
         funcRef(u24_3);
 
-        assert(equalS(u24_3[], iota(0, 3)));
-        assert(!equalS(u24_2[], u24_3[]));
-        assert(equalS(u24_2[], u24[]));
+        assert(equal(u24_3[], iota(0, 3)));
+        assert(!equal(u24_2[], u24_3[]));
+        assert(equal(u24_2[], u24[]));
         u24_2 = u24_3;
-        assert(equalS(u24_2[], iota(0, 3)));
+        assert(equal(u24_2[], iota(0, 3)));
         // to test that passed arg is intact outside
         // plus try out opEquals
         u24 = u24_3;
@@ -3372,12 +3357,12 @@ private:
         // set this to about 100M to stress-test COW memory management
         foreach (v; 0..10_000)
             func2(arr);
-        assert(equalS(arr[], [72, 0xFE_FEFE, 100]));
+        assert(equal(arr[], [72, 0xFE_FEFE, 100]));
 
         auto r2 = U24A(iota(0, 100));
-        assert(equalS(r2[], iota(0, 100)), text(r2[]));
+        assert(equal(r2[], iota(0, 100)), text(r2[]));
         copy(iota(10, 170, 2), r2[10..90]);
-        assert(equalS(r2[], chain(iota(0, 10), iota(10, 170, 2), iota(90, 100)))
+        assert(equal(r2[], chain(iota(0, 10), iota(10, 170, 2), iota(90, 100)))
                , text(r2[]));
     }
 }
@@ -3623,36 +3608,38 @@ version(unittest)
 {
     import std.conv;
     import std.typecons;
+    import std.algorithm.comparison : equal;
+
     foreach (CodeList; AliasSeq!(InversionList!(ReallocPolicy)))
     {
         auto arr = "ABCDEFGHIJKLMabcdefghijklm"d;
         auto a = CodeList('A','N','a', 'n');
-        assert(equalS(a.byInterval,
+        assert(equal(a.byInterval,
                 [tuple(cast(uint)'A', cast(uint)'N'), tuple(cast(uint)'a', cast(uint)'n')]
             ), text(a.byInterval));
 
         // same @@@BUG as in issue 8949 ?
         version(bug8949)
         {
-            assert(equalS(retro(a.byInterval),
+            assert(equal(retro(a.byInterval),
                 [tuple(cast(uint)'a', cast(uint)'n'), tuple(cast(uint)'A', cast(uint)'N')]
             ), text(retro(a.byInterval)));
         }
         auto achr = a.byCodepoint;
-        assert(equalS(achr, arr), text(a.byCodepoint));
+        assert(equal(achr, arr), text(a.byCodepoint));
         foreach (ch; a.byCodepoint)
             assert(a[ch]);
         auto x = CodeList(100, 500, 600, 900, 1200, 1500);
-        assert(equalS(x.byInterval, [ tuple(100, 500), tuple(600, 900), tuple(1200, 1500)]), text(x.byInterval));
+        assert(equal(x.byInterval, [ tuple(100, 500), tuple(600, 900), tuple(1200, 1500)]), text(x.byInterval));
         foreach (ch; x.byCodepoint)
             assert(x[ch]);
         static if (is(CodeList == CodepointSet))
         {
             auto y = CodeList(x.byInterval);
-            assert(equalS(x.byInterval, y.byInterval));
+            assert(equal(x.byInterval, y.byInterval));
         }
-        assert(equalS(CodepointSet.init.byInterval, cast(Tuple!(uint, uint)[])[]));
-        assert(equalS(CodepointSet.init.byCodepoint, cast(dchar[])[]));
+        assert(equal(CodepointSet.init.byInterval, cast(Tuple!(uint, uint)[])[]));
+        assert(equal(CodepointSet.init.byCodepoint, cast(dchar[])[]));
     }
 }
 
@@ -5746,6 +5733,8 @@ package ubyte[] compressIntervals(Range)(Range intervals)
 @safe pure unittest
 {
     import std.typecons;
+    import std.algorithm.comparison : equal;
+
     auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
     ubyte[] enc = [cast(ubyte)80, 47, 1, (0b1_00<<5) | (1<<2), 0];
     assert(compressIntervals(run) == enc);
@@ -5760,8 +5749,8 @@ package ubyte[] compressIntervals(Range)(Range intervals)
     idx = 0;
     assert(decompressFrom(enc2, idx) == 0);
     assert(decompressFrom(enc2, idx) == (1<<20)+512+1);
-    assert(equalS(decompressIntervals(compressIntervals(run)), run));
-    assert(equalS(decompressIntervals(compressIntervals(run2)), run2));
+    assert(equal(decompressIntervals(compressIntervals(run)), run));
+    assert(equal(decompressIntervals(compressIntervals(run2)), run2));
 }
 
 // Creates a range of $(D CodepointInterval) that lazily decodes compressed data.
@@ -6368,18 +6357,20 @@ Grapheme decodeGrapheme(Input)(ref Input inp)
 
 unittest
 {
+    import std.algorithm.comparison : equal;
+
     Grapheme gr;
     string s = " \u0020\u0308 ";
     gr = decodeGrapheme(s);
     assert(gr.length == 1 && gr[0] == ' ');
     gr = decodeGrapheme(s);
-    assert(gr.length == 2 && equalS(gr[0..2], " \u0308"));
+    assert(gr.length == 2 && equal(gr[0..2], " \u0308"));
     s = "\u0300\u0308\u1100";
-    assert(equalS(decodeGrapheme(s)[], "\u0300\u0308"));
-    assert(equalS(decodeGrapheme(s)[], "\u1100"));
+    assert(equal(decodeGrapheme(s)[], "\u0300\u0308"));
+    assert(equal(decodeGrapheme(s)[], "\u1100"));
     s = "\u11A8\u0308\uAC01";
-    assert(equalS(decodeGrapheme(s)[], "\u11A8\u0308"));
-    assert(equalS(decodeGrapheme(s)[], "\uAC01"));
+    assert(equal(decodeGrapheme(s)[], "\u11A8\u0308"));
+    assert(equal(decodeGrapheme(s)[], "\uAC01"));
 }
 
 /++
@@ -6825,6 +6816,8 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
 unittest
 {
     import std.algorithm : filter;
+    import std.algorithm.comparison : equal;
+
     string bold = "ku\u0308hn";
 
     // note that decodeGrapheme takes parameter by ref
@@ -6836,23 +6829,23 @@ unittest
     // the next grapheme is 2 characters long
     auto wideOne = decodeGrapheme(bold);
     // slicing a grapheme yields a random-access range of dchar
-    assert(wideOne[].equalS("u\u0308"));
+    assert(wideOne[].equal("u\u0308"));
     assert(wideOne.length == 2);
     static assert(isRandomAccessRange!(typeof(wideOne[])));
 
     // all of the usual range manipulation is possible
-    assert(wideOne[].filter!isMark().equalS("\u0308"));
+    assert(wideOne[].filter!isMark().equal("\u0308"));
 
     auto g = Grapheme("A");
     assert(g.valid);
     g ~= '\u0301';
-    assert(g[].equalS("A\u0301"));
+    assert(g[].equal("A\u0301"));
     assert(g.valid);
     g ~= "B";
     // not a valid grapheme cluster anymore
     assert(!g.valid);
     // still could be useful though
-    assert(g[].equalS("A\u0301B"));
+    assert(g[].equal("A\u0301B"));
 }
 
 unittest
@@ -6900,17 +6893,17 @@ unittest
     copy[1] = '-';
     assert(g[0] == 'a' && copy[0] == 'X');
     assert(g[1] == 'b' && copy[1] == '-');
-    assert(equalS(g[2..g.length], copy[2..copy.length]));
+    assert(equal(g[2..g.length], copy[2..copy.length]));
     copy = Grapheme("АБВГДЕЁЖЗИКЛМ");
-    assert(equalS(copy[0..8], "АБВГДЕЁЖ"), text(copy[0..8]));
+    assert(equal(copy[0..8], "АБВГДЕЁЖ"), text(copy[0..8]));
     copy ~= "xyz";
-    assert(equalS(copy[13..15], "xy"), text(copy[13..15]));
+    assert(equal(copy[13..15], "xy"), text(copy[13..15]));
     assert(!copy.valid);
 
     Grapheme h;
     foreach (dchar v; iota(cast(int)'A', cast(int)'Z'+1).map!"cast(dchar)a"())
         h ~= v;
-    assert(equalS(h[], iota(cast(int)'A', cast(int)'Z'+1)));
+    assert(equal(h[], iota(cast(int)'A', cast(int)'Z'+1)));
 }
 
 /++
@@ -7244,14 +7237,14 @@ package auto simpleCaseFoldings(dchar ch)
 unittest
 {
     import std.exception : assertCTFEable;
-    import std.algorithm : canFind;
+    import std.algorithm : canFind, equal;
     import std.array;
     assertCTFEable!((){
         auto r = simpleCaseFoldings('Э').array;
         assert(r.length == 2);
         assert(r.canFind('э') && r.canFind('Э'));
         auto sr = simpleCaseFoldings('~');
-        assert(sr.equalS("~"));
+        assert(sr.equal("~"));
         //A with ring above - casefolds to the same bucket as Angstrom sign
         sr = simpleCaseFoldings('Å');
         assert(sr.length == 3);
@@ -7391,6 +7384,8 @@ public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 ///
 unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(compose('A','\u0308') == '\u00C4');
     assert(compose('A', 'B') == dchar.init);
     assert(compose('C', '\u0301') == '\u0106');
@@ -7398,10 +7393,10 @@ unittest
     // thus the following doesn't compose
     assert(compose('\u0308', 'A') == dchar.init);
 
-    assert(decompose('Ĉ')[].equalS("C\u0302"));
-    assert(decompose('D')[].equalS("D"));
-    assert(decompose('\uD4DC')[].equalS("\u1111\u1171\u11B7"));
-    assert(decompose!Compatibility('¹')[].equalS("1"));
+    assert(decompose('Ĉ')[].equal("C\u0302"));
+    assert(decompose('D')[].equal("D"));
+    assert(decompose('\uD4DC')[].equal("\u1111\u1171\u11B7"));
+    assert(decompose!Compatibility('¹')[].equal("1"));
 }
 
 //----------------------------------------------------------------------------
@@ -7538,11 +7533,12 @@ unittest
 unittest
 {
     import std.conv;
+    import std.algorithm.comparison : equal;
 
     static void testDecomp(UnicodeDecomposition T)(dchar ch, string r)
     {
         Grapheme g = decompose!T(ch);
-        assert(equalS(g[], r), text(g[], " vs ", r));
+        assert(equal(g[], r), text(g[], " vs ", r));
     }
     testDecomp!Canonical('\u1FF4', "\u03C9\u0301\u0345");
     testDecomp!Canonical('\uF907', "\u9F9C");
@@ -7550,7 +7546,7 @@ unittest
     testDecomp!Compatibility('\uA7F9', "\u0153");
 
     // check examples
-    assert(decomposeHangul('\uD4DB')[].equalS("\u1111\u1171\u11B6"));
+    assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
     assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
     assert(composeJamo('\u1111', '\u1171') == '\uD4CC'); // leave out T-vowel
     assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
