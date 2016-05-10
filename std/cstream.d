@@ -20,7 +20,9 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-deprecated("It will be removed from Phobos in October 2016. If you still need it, go to https://github.com/DigitalMars/undeaD") module std.cstream;
+deprecated(
+    "It will be removed from Phobos in October 2016. If you still need it, go to https://github.com/DigitalMars/undeaD"
+) module std.cstream;
 // @@@DEPRECATED_2016-10@@@
 
 public import core.stdc.stdio;
