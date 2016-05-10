@@ -1096,7 +1096,8 @@ unittest
 
 size_t spaceFor(size_t _bits)(size_t new_len) @safe pure nothrow @nogc
 {
-    enum bits = _bits == 1 ? 1 : ceilPowerOf2(_bits);// see PackedArrayView
+    import std.math : nextPow2;
+    enum bits = _bits == 1 ? 1 : nextPow2(_bits - 1);// see PackedArrayView
     static if (bits > 8*size_t.sizeof)
     {
         static assert(bits % (size_t.sizeof*8) == 0);
@@ -1120,8 +1121,9 @@ template PackedArrayView(T)
     if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
         && isBitPackableType!U) || isBitPackableType!T)
 {
+    import std.math : nextPow2;
     private enum bits = bitSizeOf!T;
-    alias PackedArrayView = PackedArrayViewImpl!(T, bits > 1 ? ceilPowerOf2(bits) : 1);
+    alias PackedArrayView = PackedArrayViewImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
 
 //unsafe and fast access to a chunk of RAM as if it contains packed values
@@ -1129,8 +1131,9 @@ template PackedPtr(T)
     if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
         && isBitPackableType!U) || isBitPackableType!T)
 {
+    import std.math : nextPow2;
     private enum bits = bitSizeOf!T;
-    alias PackedPtr = PackedPtrImpl!(T, bits > 1 ? ceilPowerOf2(bits) : 1);
+    alias PackedPtr = PackedPtrImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
 
 @trusted struct PackedPtrImpl(T, size_t bits)
@@ -1601,36 +1604,22 @@ size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
     return idx;
 }
 
-//
-size_t floorPowerOf2(size_t arg) @safe pure nothrow @nogc
-{
-    import core.bitop : bsr;
-    assert(arg > 1); // else bsr is undefined
-    return 1<<bsr(arg-1);
-}
-
-size_t ceilPowerOf2(size_t arg) @safe pure nothrow @nogc
-{
-    import core.bitop : bsr;
-    assert(arg > 1); // else bsr is undefined
-    return 1<<bsr(arg-1)+1;
-}
-
 template sharMethod(alias uniLowerBound)
 {
     size_t sharMethod(alias _pred="a<b", Range, T)(Range range, T needle)
         if (is(T : ElementType!Range))
     {
-        import std.functional;
+        import std.functional : binaryFun;
+        import std.math : nextPow2, truncPow2;
         alias pred = binaryFun!_pred;
         if (range.length == 0)
             return 0;
         if (isPowerOf2(range.length))
             return uniLowerBound!pred(range, needle);
-        size_t n = floorPowerOf2(range.length);
+        size_t n = truncPow2(range.length);
         if (pred(range[n-1], needle))
         {// search in another 2^^k area that fully covers the tail of range
-            size_t k = ceilPowerOf2(range.length - n + 1);
+            size_t k = nextPow2(range.length - n + 1);
             return range.length - k + uniLowerBound!pred(range[$-k..$], needle);
         }
         else
