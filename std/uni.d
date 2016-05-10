@@ -8094,7 +8094,7 @@ unittest //12428
 
 
 // generic toUpper/toLower on whole range, returns range
-private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str)
+private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, Range)(Range str)
     // Accept range of dchar's
     if (isInputRange!Range &&
         isSomeChar!(ElementEncodingType!Range) &&
@@ -8109,31 +8109,41 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str
 
         @property auto front()
         {
+            import std.ascii : isASCII;
+
             if (!nLeft)
             {
                 dchar c = r.front;
-                const idx = indexFn(c);
-                if (idx == ushort.max)
+                if (c.isASCII)
                 {
-                    buf[0] = c;
-                    nLeft = 1;
-                }
-                else if (idx < maxIdx)
-                {
-                    buf[0] = tableFn(idx);
+                    buf[0] = asciiConvert(c);
                     nLeft = 1;
                 }
                 else
                 {
-                    auto val = tableFn(idx);
-                    // unpack length + codepoint
-                    nLeft = val >> 24;
-                    if (nLeft == 0)
+                    const idx = indexFn(c);
+                    if (idx == ushort.max)
+                    {
+                        buf[0] = c;
                         nLeft = 1;
-                    assert(nLeft <= buf.length);
-                    buf[nLeft - 1] = cast(dchar)(val & 0xFF_FFFF);
-                    foreach (j; 1 .. nLeft)
-                        buf[nLeft - j - 1] = tableFn(idx + j);
+                    }
+                    else if (idx < maxIdx)
+                    {
+                        buf[0] = tableFn(idx);
+                        nLeft = 1;
+                    }
+                    else
+                    {
+                        auto val = tableFn(idx);
+                        // unpack length + codepoint
+                        nLeft = val >> 24;
+                        if (nLeft == 0)
+                            nLeft = 1;
+                        assert(nLeft <= buf.length);
+                        buf[nLeft - 1] = cast(dchar)(val & 0xFF_FFFF);
+                        foreach (j; 1 .. nLeft)
+                            buf[nLeft - j - 1] = tableFn(idx + j);
+                    }
                 }
             }
             return buf[nLeft - 1];
@@ -8194,11 +8204,12 @@ auto asLowerCase(Range)(Range str)
         import std.utf : byDchar;
 
         // Decode first
-        return toCaser!LowerTriple(str.byDchar);
+        return asLowerCase(str.byDchar);
     }
     else
     {
-        return toCaser!LowerTriple(str);
+        static import std.ascii;
+        return toCaser!(LowerTriple, std.ascii.toLower)(str);
     }
 }
 
@@ -8212,11 +8223,12 @@ auto asUpperCase(Range)(Range str)
         import std.utf : byDchar;
 
         // Decode first
-        return toCaser!UpperTriple(str.byDchar);
+        return asUpperCase(str.byDchar);
     }
     else
     {
-        return toCaser!UpperTriple(str);
+        static import std.ascii;
+        return toCaser!(UpperTriple, std.ascii.toUpper)(str);
     }
 }
 
