@@ -8111,7 +8111,8 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
                     buf[0] = asciiConvert(c);
                     nLeft = 1;
                 }
-                else {
+                else
+                {
                     const idx = indexFn(c);
                     if (idx == ushort.max)
                     {
