@@ -298,8 +298,9 @@ template ThompsonOps(E, S, bool withInput:true)
                 }
                 else
                 {
-                    debug(std_regex_matcher) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
-                                    t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                    debug(std_regex_matcher)
+                        writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
+                            t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
                     return popState(e);
                 }
                 uint max = re.ir[t.pc+4].raw;
