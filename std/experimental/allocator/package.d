@@ -454,7 +454,8 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
     scope(failure) alloc.deallocate(m);
     static if (is(T == class))
         return emplace!T(m, args);
-    else return emplace(cast(T*) m.ptr, args);
+    else
+        return emplace(cast(T*) m.ptr, args);
 }
 
 ///
@@ -556,11 +557,12 @@ unittest
     test(theAllocator);
 }
 
-private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
+private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow @trusted
 {
+    alias U = Unqual!T;
     import core.stdc.string : memcpy;
     if (!array.length) return;
-    memcpy(array.ptr, &filler, T.sizeof);
+    memcpy(array.ptr, (cast(U*) &filler), T.sizeof);
     // Fill the array from the initialized portion of itself exponentially.
     for (size_t offset = T.sizeof; offset < array.length; )
     {
@@ -690,6 +692,8 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     {
         scope(failure) alloc.deallocate(m);
         size_t i = 0;
+
+        import std.traits : hasElaborateDestructor;
         static if (hasElaborateDestructor!T)
         {
             scope (failure)
@@ -708,7 +712,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     else
     {
         alias U = Unqual!T;
-        fillWithMemcpy(cast(U[]) result, *(cast(U*) &init));
+        fillWithMemcpy(cast(U[]) result, init);
     }
     return result;
 }
@@ -760,19 +764,23 @@ if (isInputRange!R)
         auto result = cast(T[]) m;
 
         size_t i = 0;
-        scope (failure)
+
+        scope (failure) alloc.deallocate(m);
+        static if (hasElaborateDestructor!T)
         {
-            foreach (j; 0 .. i)
+            scope (failure)
             {
-                destroy(*cast(Unqual!T*) (result.ptr + j));
+                foreach (j; 0 .. i)
+                {
+                    ()@trusted{ destroy(*cast(Unqual!T*) (result.ptr + j)); }();
+                }
             }
-            alloc.deallocate(m);
         }
 
         for (; !range.empty; range.popFront, ++i)
         {
             import std.conv : emplace;
-            cast(void) emplace!T(result.ptr + i, range.front);
+            cast(void) emplaceRef!T(result[i], range.front);
         }
 
         return result;
@@ -809,7 +817,7 @@ if (isInputRange!R)
                 result = cast(T[]) m;
             }
             import std.conv : emplace;
-            emplace!T(result.ptr + initialized, range.front);
+            emplaceRef!T(result[initialized], range.front);
         }
 
         // Try to shrink memory, no harm if not possible
@@ -979,7 +987,7 @@ if (isInputRange!R)
         {
             assert(!toFill.empty);
             import std.conv : emplace;
-            emplace!T(&toFill.front, range.front);
+            emplaceRef!T(toFill.front, range.front);
         }
         assert(toFill.empty);
     }
