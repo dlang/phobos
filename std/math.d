@@ -4135,7 +4135,9 @@ real round(real x) @trusted nothrow @nogc
     version (CRuntime_Microsoft)
     {
         auto old = FloatingPointControl.getControlState();
-        FloatingPointControl.setControlState((old & ~FloatingPointControl.ROUNDING_MASK) | FloatingPointControl.roundToZero);
+        FloatingPointControl.setControlState(
+            (old & ~FloatingPointControl.ROUNDING_MASK) | FloatingPointControl.roundToZero
+        );
         x = rint((x >= 0) ? x + 0.5 : x - 0.5);
         FloatingPointControl.setControlState(old);
         return x;
