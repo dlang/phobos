@@ -989,7 +989,8 @@ if (isInputRange!T)
                     else
                         value.store.uinteger = parse!ulong(data);
 
-                    value.type_tag = !isNegative && value.store.uinteger & (1UL << 63) ? JSON_TYPE.UINTEGER : JSON_TYPE.INTEGER;
+                    value.type_tag = !isNegative && value.store.uinteger & (1UL << 63) ?
+                        JSON_TYPE.UINTEGER : JSON_TYPE.INTEGER;
                 }
                 break;
 
@@ -1507,7 +1508,8 @@ unittest
         `[12,"foo",true,false]`,
         `{}`,
         `{"a":1,"b":null}`,
-        `{"goodbye":[true,"or",false,["test",42,{"nested":{"a":23.54,"b":0.0012}}]],"hello":{"array":[12,null,{}],"json":"is great"}}`,
+        `{"goodbye":[true,"or",false,["test",42,{"nested":{"a":23.54,"b":0.0012}}]],`
+        ~`"hello":{"array":[12,null,{}],"json":"is great"}}`,
     ];
 
     version (MinGW)
