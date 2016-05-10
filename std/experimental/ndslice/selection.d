@@ -1016,7 +1016,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
                     _indexes[i] = n;
                     n = _indexes[i - 1] + v;
                 }
-                assert(n < _slice._lengths[0]);
+                assert(n <= _slice._lengths[0]);
                 with (_slice)
                 {
                     _shift += (n - _indexes[0]) * _strides[0];
@@ -1379,6 +1379,14 @@ unittest
     static assert(isRandomAccessRange!B);
     static assert(hasLength!B);
     static assert(hasSlicing!B);
+}
+
+// Issue 16010
+unittest
+{
+    auto s = iotaSlice(3, 4).byElement;
+    foreach (_; 0 .. s.length)
+        s = s[1 .. $];
 }
 
 /++
