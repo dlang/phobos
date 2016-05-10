@@ -2379,10 +2379,12 @@ public:
         assert(format("%d", unicode.Cyrillic) == unicode.Cyrillic.to!string);
 
         assert(format("%#x", unicode.Cyrillic) ==
-            "[0x400..0x485) [0x487..0x528) [0x1d2b..0x1d2c) [0x1d78..0x1d79) [0x2de0..0x2e00) [0xa640..0xa698) [0xa69f..0xa6a0)");
+            "[0x400..0x485) [0x487..0x528) [0x1d2b..0x1d2c) [0x1d78..0x1d79) [0x2de0..0x2e00) "
+            ~"[0xa640..0xa698) [0xa69f..0xa6a0)");
 
         assert(format("%#X", unicode.Cyrillic) ==
-            "[0X400..0X485) [0X487..0X528) [0X1D2B..0X1D2C) [0X1D78..0X1D79) [0X2DE0..0X2E00) [0XA640..0XA698) [0XA69F..0XA6A0)");
+            "[0X400..0X485) [0X487..0X528) [0X1D2B..0X1D2C) [0X1D78..0X1D79) [0X2DE0..0X2E00) "
+            ~"[0XA640..0XA698) [0XA69F..0XA6A0)");
     }
 
     unittest
@@ -5653,7 +5655,8 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 
 //============================================================================
 
-@safe pure int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) if (is(Char1 : dchar) && is(Char2 : dchar))
+@safe pure int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
+    if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     import std.ascii : toLower;
     import std.algorithm : cmp, map, filter;
@@ -5668,7 +5671,8 @@ template idxTypes(Key, size_t fullBits, Prefix...)
     assert(!comparePropertyName("foo-bar", "fooBar"));
 }
 
-bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pure if (is(Char1 : dchar) && is(Char2 : dchar))
+bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pure
+    if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     return comparePropertyName(a, b) < 0;
 }
