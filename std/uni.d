@@ -1695,7 +1695,7 @@ unittest
 
 
 // Simple storage manipulation policy
-@trusted public struct GcPolicy
+@trusted private struct GcPolicy
 {
     static T[] dup(T)(const T[] arr)
     {
@@ -3690,7 +3690,7 @@ template mapTrieIndex(Prefix...)
 
     See $(LREF buildTrie) for generic helpers built on top of it.
 */
-@trusted struct TrieBuilder(Value, Key, Args...)
+@trusted private struct TrieBuilder(Value, Key, Args...)
     if (isBitPackableType!Value && isValidArgsForTrie!(Key, Args))
 {
     import std.exception : enforce;
@@ -3978,7 +3978,7 @@ public:
     }
 }
 
-/*
+/**
     $(P A generic Trie data-structure for a fixed number of stages.
     The design goal is optimal speed with smallest footprint size.
     )
@@ -3988,21 +3988,21 @@ public:
     )
 
 */
-@trusted public struct Trie(Value, Key, Args...)
+@trusted private struct Trie(Value, Key, Args...)
     if (isValidPrefixForTrie!(Key, Args)
         || (isValidPrefixForTrie!(Key, Args[1..$])
             && is(typeof(Args[0]) : size_t)))
 {
     static if (is(typeof(Args[0]) : size_t))
     {
-        enum maxIndex = Args[0];
-        enum hasBoundsCheck = true;
-        alias Prefix = Args[1..$];
+        private enum maxIndex = Args[0];
+        private enum hasBoundsCheck = true;
+        private alias Prefix = Args[1..$];
     }
     else
     {
-        enum hasBoundsCheck = false;
-        alias Prefix = Args;
+        private enum hasBoundsCheck = false;
+        private alias Prefix = Args;
     }
 
     private this()(typeof(_table) table)
@@ -4017,7 +4017,7 @@ public:
         _table = typeof(_table)(offsets, sizes, data);
     }
 
-    /*
+    /**
         $(P Lookup the $(D key) in this $(D Trie). )
 
         $(P The lookup always succeeds if key fits the domain
@@ -4032,7 +4032,6 @@ public:
         Domain range-checking is only enabled in debug builds
         and results in assertion failure.
     */
-    // templated to auto-detect pure, @safe and nothrow
     TypeOfBitPacked!Value opIndex()(Key key) const
     {
         static if (hasBoundsCheck)
@@ -4045,17 +4044,20 @@ public:
         return _table.ptr!(p.length-1)[idx];
     }
 
+    ///
     @property size_t bytes(size_t n=size_t.max)() const
     {
         return _table.bytes!n;
     }
 
+    ///
     @property size_t pages(size_t n)() const
     {
         return (bytes!n+2^^(Prefix[n].bitSize-1))
                 /2^^Prefix[n].bitSize;
     }
 
+    ///
     void store(OutRange)(scope OutRange sink) const
         if (isOutputRange!(OutRange, char))
     {
@@ -4276,8 +4278,7 @@ public template CodepointTrie(T, sizes...)
     alias CodepointTrie = typeof(TrieBuilder!(T, dchar, lastDchar+1, Prefix)(T.init).build());
 }
 
-// @@@BUG multiSort can's access private symbols from uni
-public template cmpK0(alias Pred)
+package template cmpK0(alias Pred)
 {
     import std.typecons;
     static bool cmpK0(Value, Key)
@@ -4287,7 +4288,7 @@ public template cmpK0(alias Pred)
     }
 }
 
-/*
+/**
     The most general utility for construction of $(D Trie)s
     short of using $(D TrieBuilder) directly.
 
@@ -4299,7 +4300,7 @@ public template cmpK0(alias Pred)
     then the whole tuple of $(D Args) is treated as predicates
     and the maximum Key is deduced from predicates.
 */
-public template buildTrie(Value, Key, Args...)
+private template buildTrie(Value, Key, Args...)
     if (isValidArgsForTrie!(Key, Args))
 {
     static if (is(typeof(Args[0]) : Key)) // prefix starts with upper bound on Key
@@ -4498,7 +4499,7 @@ public struct MatcherConcept
         assert(truth == "= 4"); // test never affects argument
     }
 
-    /*
+    /**
         Advanced feature - provide direct access to a subset of matcher based a
         set of known encoding lengths. Lengths are provided in
         $(S_LINK Code unit, code units). The sub-matcher then may do less
@@ -6589,12 +6590,14 @@ unittest
     import std.exception : enforce;
 
 public:
+    /// Ctor
     this(C)(in C[] chars...)
         if (is(C : dchar))
     {
         this ~= chars;
     }
 
+    ///ditto
     this(Input)(Input seq)
         if (!isDynamicArray!Input
             && isInputRange!Input && is(ElementType!Input : dchar))
@@ -7901,7 +7904,7 @@ else
 {
 
 // trusted -> avoid bounds check
-@trusted pure nothrow @nogc
+@trusted pure nothrow @nogc private
 {
     // hide template instances behind functions (Bugzilla 13232)
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
@@ -8205,12 +8208,14 @@ auto asUpperCase(Range)(Range str)
     assert("hEllo".asUpperCase.equal("HELLO"));
 }
 
+// explicitly undocumented
 auto asLowerCase(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
     return asLowerCase!(StringTypeOf!Range)(str);
 }
 
+// explicitly undocumented
 auto asUpperCase(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
