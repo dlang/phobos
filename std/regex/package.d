@@ -465,7 +465,10 @@ private:
         import core.stdc.stdlib;
         if (n > smallString)
         {
-            auto p = cast(Group!DataIndex*)enforce(calloc(Group!DataIndex.sizeof,n), "Failed to allocate Captures struct");
+            auto p = cast(Group!DataIndex*)enforce(
+                calloc(Group!DataIndex.sizeof,n),
+                "Failed to allocate Captures struct"
+            );
             big_matches = p[0..n];
             _refcount = 1;
         }
