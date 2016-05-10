@@ -257,7 +257,8 @@ template rotated(size_t dimensionA, size_t dimensionB)
 }
 
 /// ditto
-Slice!(N, Range) rotated(size_t N, Range)(Slice!(N, Range) slice, size_t dimensionA, size_t dimensionB, sizediff_t k = 1)
+Slice!(N, Range) rotated(size_t N, Range)(Slice!(N, Range) slice,
+    size_t dimensionA, size_t dimensionB, sizediff_t k = 1)
 in{
     {
         alias dimension = dimensionA;
