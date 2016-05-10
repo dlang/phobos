@@ -1462,8 +1462,9 @@ if (isForwardRange!Range && is(typeof(ElementType!Range.init == Separator.init))
     return range.splitter(sep).array;
 }
 ///ditto
-auto split(Range, Separator)(Range range, Separator sep)
-if (isForwardRange!Range && isForwardRange!Separator && is(typeof(ElementType!Range.init == ElementType!Separator.init)))
+auto split(Range, Separator)(Range range, Separator sep) if (
+        isForwardRange!Range && isForwardRange!Separator
+        && is(typeof(ElementType!Range.init == ElementType!Separator.init)))
 {
     import std.algorithm : splitter;
     return range.splitter(sep).array;
