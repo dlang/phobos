@@ -933,7 +933,7 @@ struct MultiArray(Types...)
     void store(OutRange)(scope OutRange sink) const
         if (isOutputRange!(OutRange, char))
     {
-        import std.format;
+        import std.format : formattedWrite;
         formattedWrite(sink, "[%( 0x%x, %)]", offsets[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", sz[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", storage);
@@ -958,7 +958,7 @@ private:
 
 unittest
 {
-    import std.conv;
+    import std.conv : text;
     enum dg = (){
         // sizes are:
         // lvl0: 3, lvl1 : 2, lvl2: 1
@@ -1031,7 +1031,7 @@ unittest
 
 unittest
 {// more bitpacking tests
-    import std.conv;
+    import std.conv : text;
 
     alias Bitty =
       MultiArray!(BitPacked!(size_t, 3)
@@ -1632,7 +1632,9 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
 unittest
 {
-    import std.range;
+    import std.range : assumeSorted, iota;
+    import std.array : array;
+
     auto stdLowerBound(T)(T[] range, T needle)
     {
         return assumeSorted(range).lowerBound(needle).length;
@@ -2345,7 +2347,7 @@ public:
     void toString(scope void delegate(const(char)[]) sink,
                   FormatSpec!char fmt) /* const */
     {
-        import std.format;
+        import std.format : formatValue;
         auto range = byInterval;
         if (range.empty)
             return;
@@ -3007,7 +3009,7 @@ private:
 
 @system unittest
 {
-    import std.conv;
+    import std.conv : to;
     assert(unicode.ASCII.to!string() == "[0..128)");
 }
 
@@ -3286,9 +3288,10 @@ private:
 
 @safe unittest// Uint24 tests
 {
-    import std.algorithm;
-    import std.conv;
-    import std.range;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.mutation : copy;
+    import std.conv : text;
+    import std.range : iota, chain;
     void funcRef(T)(ref T u24)
     {
         u24.length = 2;
@@ -3376,7 +3379,7 @@ version(unittest)
 
 @safe unittest// core set primitives test
 {
-    import std.conv;
+    import std.conv : text;
     foreach (CodeList; AllSets)
     {
         CodeList a;
@@ -3453,8 +3456,10 @@ version(unittest)
 //test constructor to work with any order of intervals
 @safe unittest
 {
-    import std.conv, std.range, std.algorithm;
-    import std.typecons;
+    import std.conv : text, to;
+    import std.range : chain, iota;
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
     //ensure constructor handles bad ordering and overlap
     auto c1 = CodepointSet('а', 'я'+1, 'А','Я'+1);
     foreach (ch; chain(iota('а', 'я'+1), iota('А','Я'+1)))
@@ -3495,7 +3500,7 @@ version(unittest)
 
 @safe unittest
 {   // full set operations
-    import std.conv;
+    import std.conv : text;
     foreach (CodeList; AllSets)
     {
         CodeList a, b, c, d;
@@ -3600,7 +3605,7 @@ version(unittest)
 
 @safe unittest// vs single dchar
 {
-    import std.conv;
+    import std.conv : text;
     CodepointSet a = CodepointSet(10, 100, 120, 200);
     assert(a - 'A' == CodepointSet(10, 65, 66, 100, 120, 200), text(a - 'A'));
     assert((a & 'B') == CodepointSet(66, 67));
@@ -3608,8 +3613,8 @@ version(unittest)
 
 @safe unittest// iteration & opIndex
 {
-    import std.conv;
-    import std.typecons;
+    import std.conv : text;
+    import std.typecons : tuple, Tuple;
     import std.algorithm.comparison : equal;
 
     foreach (CodeList; AliasSeq!(InversionList!(ReallocPolicy)))
@@ -4282,7 +4287,7 @@ public template CodepointTrie(T, sizes...)
 
 package template cmpK0(alias Pred)
 {
-    import std.typecons;
+    import std.typecons : Tuple;
     static bool cmpK0(Value, Key)
         (Tuple!(Value, Key) a, Tuple!(Value, Key) b)
     {
@@ -4591,7 +4596,7 @@ template Utf8Matcher()
 
     void badEncoding() pure @safe
     {
-        import std.utf;
+        import std.utf : UTFException;
         throw new UTFException("Invalid UTF-8 sequence");
     }
 
@@ -4793,7 +4798,7 @@ template Utf8Matcher()
 
         bool lookup(int size, Mode mode, Range)(ref Range inp) const pure @trusted
         {
-            import std.typecons;
+            import std.typecons : staticIota;
             if (inp.length < size)
             {
                 badEncoding();
@@ -4871,7 +4876,7 @@ template Utf16Matcher()
 
     void badEncoding() pure
     {
-        import std.utf;
+        import std.utf : UTFException;
         throw new UTFException("Invalid UTF-16 sequence");
     }
 
@@ -5197,7 +5202,6 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
 
 @safe unittest
 {
-    import std.range;
     string rs = "hi! ﾈемног砀 текста";
     auto codec = rs.decoder;
     auto utf8 =  utf8Matcher(unicode.Letter);
@@ -5253,7 +5257,7 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
 
 @safe unittest
 {
-    import std.range;
+    import std.range : stride;
     static bool testAll(Matcher, Range)(ref Matcher m, ref Range r)
     {
         bool t = m.test(r);
@@ -5305,7 +5309,7 @@ unittest
 {
     import std.exception : collectException;
     import std.format : format;
-    import std.algorithm;
+    import std.algorithm.iteration : map;
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto utf8 = utfMatcher!char(unicode.L);
     //decode failure cases UTF-8
@@ -5315,9 +5319,7 @@ unittest
     foreach (msg; fails8){
         assert(collectException((){
             auto s = msg;
-            import std.utf;
             size_t idx = 0;
-            //decode(s, idx);
             utf8.test(s);
         }()), format("%( %2x %)", cast(ubyte[])msg));
     }
@@ -5512,14 +5514,16 @@ template Sequence(size_t start, size_t end)
 //---- TRIE TESTS ----
 unittest
 {
-    import std.conv;
-    import std.algorithm;
-    import std.range;
+    import std.conv : text, to;
+    import std.algorithm.iteration : map;
+    import std.algorithm.sorting : sort;
+    import std.range : iota;
+    import std.array : array;
     static trieStats(TRIE)(TRIE t)
     {
         version(std_uni_stats)
         {
-            import std.stdio;
+            import std.stdio : writefln, writeln;
             writeln("---TRIE FOOTPRINT STATS---");
             foreach (i; staticIota!(0, t.table.dim) )
             {
@@ -5737,7 +5741,7 @@ package ubyte[] compressIntervals(Range)(Range intervals)
 
 @safe pure unittest
 {
-    import std.typecons;
+    import std.typecons : tuple;
     import std.algorithm.comparison : equal;
 
     auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
@@ -6030,6 +6034,7 @@ template SetSearcher(alias table, string kind)
     ///
     unittest
     {
+        import std.exception : collectException;
         auto ascii = unicode.ASCII;
         assert(ascii['A']);
         assert(ascii['~']);
@@ -6043,7 +6048,6 @@ template SetSearcher(alias table, string kind)
         assert(!latin['$']);
         // BTW Latin 1 Supplement is a block, hence "In" prefix
         assert(latin == unicode("In Latin 1 Supplement"));
-        import std.exception;
         // run-time look up throws if no such set is found
         assert(collectException(unicode("InCyrilliac")));
     }
@@ -6428,9 +6432,8 @@ auto byGrapheme(Range)(Range range)
 ///
 unittest
 {
-    import std.conv;
-    import std.range;
-    import std.algorithm;
+    import std.range : walkLength, take, drop;
+    import std.algorithm.comparison : equal;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
@@ -6454,9 +6457,9 @@ private static struct InputRangeString
 
 unittest
 {
-    import std.conv;
-    import std.range;
-    import std.algorithm;
+    import std.array : array;
+    import std.range : walkLength, retro;
+    import std.algorithm.comparison : equal;
     assert("".byGrapheme.walkLength == 0);
 
     auto reverse = "le\u0308on";
@@ -6542,7 +6545,8 @@ Range byCodePoint(Range)(Range range)
 unittest
 {
     import std.conv : text;
-    import std.range;
+    import std.array : array;
+    import std.range : retro;
 
     string s = "noe\u0308l"; // noël
 
@@ -6558,8 +6562,7 @@ unittest
 
 unittest
 {
-    import std.conv;
-    import std.algorithm;
+    import std.algorithm.comparison : equal;
     assert("".byGrapheme.byCodePoint.equal(""));
 
     string text = "noe\u0308l";
@@ -6867,9 +6870,10 @@ unittest
 
 unittest
 {
-    import std.conv;
-    import std.algorithm;
-    import std.range;
+    import std.conv : text;
+    import std.range : iota;
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
 
     // not valid clusters (but it just a test)
     auto g  = Grapheme('a', 'b', 'c', 'd', 'e');
@@ -7123,9 +7127,9 @@ unittest
 
 unittest
 {
-    import std.conv;
+    import std.conv : to;
     import std.exception : assertCTFEable;
-    import std.algorithm;
+    import std.algorithm.sorting : sort;
     assertCTFEable!(
     {
     foreach (cfunc; AliasSeq!(icmp, sicmp))
@@ -7244,8 +7248,9 @@ package auto simpleCaseFoldings(dchar ch)
 unittest
 {
     import std.exception : assertCTFEable;
-    import std.algorithm : canFind, equal;
-    import std.array;
+    import std.algorithm.searching : canFind;
+    import std.algorithm.comparison : equal;
+    import std.array : array;
     assertCTFEable!((){
         auto r = simpleCaseFoldings('Э').array;
         assert(r.length == 2);
@@ -7323,7 +7328,7 @@ enum {
 +/
 public dchar compose(dchar first, dchar second) pure nothrow
 {
-    import std.internal.unicode_comp;
+    import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
     import std.algorithm : map;
     import std.range : assumeSorted;
     size_t packed = compositionJumpTrie[first];
@@ -7369,8 +7374,8 @@ unittest{
 +/
 public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 {
-    import std.internal.unicode_decomp;
-    import std.algorithm : until;
+    import std.internal.unicode_decomp : decompCompatTable, decompCanonTable;
+    import std.algorithm.searching : until;
     static if (decompType == Canonical)
     {
         alias table = decompCanonTable;
@@ -7499,7 +7504,7 @@ Grapheme decomposeHangul(dchar ch)
 ///
 unittest
 {
-    import std.algorithm;
+    import std.algorithm.comparison : equal;
     assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
 }
 
@@ -7539,7 +7544,7 @@ unittest
 
 unittest
 {
-    import std.conv;
+    import std.conv : text;
     import std.algorithm.comparison : equal;
 
     static void testDecomp(UnicodeDecomposition T)(dchar ch, string r)
@@ -7705,7 +7710,7 @@ unittest
 
 unittest
 {
-    import std.conv;
+    import std.conv : text;
 
     assert(normalize!NFD("abc\uF904def") == "abc\u6ED1def", text(normalize!NFD("abc\uF904def")));
     assert(normalize!NFKD("2¹⁰") == "210", normalize!NFKD("2¹⁰"));
@@ -8075,7 +8080,7 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, 
 
 unittest //12428
 {
-    import std.array;
+    import std.array : replicate;
     auto s = "abcdefghij".replicate(300);
     s = s[0..10];
 
@@ -8254,7 +8259,7 @@ unittest
 
 unittest
 {
-    import std.array;
+    import std.array : array;
 
     auto a = "HELLo".asLowerCase;
     auto savea = a.save;
@@ -8446,7 +8451,7 @@ unittest
 
 unittest
 {
-    import std.array;
+    import std.array : array;
 
     auto a = "hELLo".asCapitalized;
     auto savea = a.save;
@@ -8540,7 +8545,7 @@ unittest
 // TODO: helper, I wish std.utf was more flexible (and stright)
 private size_t encodeTo(wchar[] buf, size_t idx, dchar c) @trusted pure
 {
-    import std.utf;
+    import std.utf : UTFException;
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
@@ -8569,7 +8574,7 @@ private size_t encodeTo(dchar[] buf, size_t idx, dchar c) @trusted pure nothrow 
 private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[] s) @trusted pure
     if (is(C == char) || is(C == wchar)  || is(C == dchar))
 {
-    import std.utf;
+    import std.utf : decode, codeLength;
     size_t curIdx = 0;
     size_t destIdx = 0;
     alias slowToCase = toCaseInPlaceAlloc!(indexFn, maxIdx, tableFn);
@@ -8637,7 +8642,7 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
 {
     size_t toCaseLength(C)(in C[] str)
     {
-        import std.utf;
+        import std.utf : decode, codeLength;
         size_t codeLen = 0;
         size_t lastNonTrivial = 0;
         size_t curIdx = 0;
@@ -8675,7 +8680,6 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
 
 unittest
 {
-    import std.conv;
     alias toLowerLength = toCaseLength!(LowerTriple);
     assert(toLowerLength("abcd") == 4);
     assert(toLowerLength("аБВгд456") == 10+3);
@@ -8949,9 +8953,9 @@ dchar toUpper(dchar c)
 ///
 unittest
 {
-    import std.algorithm;
-    import std.uni;
-    import std.array;
+    import std.algorithm.mutation : copy;
+    import std.algorithm.iteration : map;
+    import std.array : appender;
 
     auto abuf = appender!(char[])();
     "hello".map!toUpper.copy(&abuf);
@@ -9445,28 +9449,28 @@ private:
     //normalization quick-check tables
     auto nfcQCTrie()
     {
-        import std.internal.unicode_norm;
+        import std.internal.unicode_norm : nfcQCTrieEntries;
         static immutable res = asTrie(nfcQCTrieEntries);
         return res;
     }
 
     auto nfdQCTrie()
     {
-        import std.internal.unicode_norm;
+        import std.internal.unicode_norm : nfdQCTrieEntries;
         static immutable res = asTrie(nfdQCTrieEntries);
         return res;
     }
 
     auto nfkcQCTrie()
     {
-        import std.internal.unicode_norm;
+        import std.internal.unicode_norm : nfkcQCTrieEntries;
         static immutable res = asTrie(nfkcQCTrieEntries);
         return res;
     }
 
     auto nfkdQCTrie()
     {
-        import std.internal.unicode_norm;
+        import std.internal.unicode_norm : nfkdQCTrieEntries;
         static immutable res = asTrie(nfkdQCTrieEntries);
         return res;
     }
@@ -9474,28 +9478,28 @@ private:
     //grapheme breaking algorithm tables
     auto mcTrie()
     {
-        import std.internal.unicode_grapheme;
+        import std.internal.unicode_grapheme : mcTrieEntries;
         static immutable res = asTrie(mcTrieEntries);
         return res;
     }
 
     auto graphemeExtendTrie()
     {
-        import std.internal.unicode_grapheme;
+        import std.internal.unicode_grapheme : graphemeExtendTrieEntries;
         static immutable res = asTrie(graphemeExtendTrieEntries);
         return res;
     }
 
     auto hangLV()
     {
-        import std.internal.unicode_grapheme;
+        import std.internal.unicode_grapheme : hangulLVTrieEntries;
         static immutable res = asTrie(hangulLVTrieEntries);
         return res;
     }
 
     auto hangLVT()
     {
-        import std.internal.unicode_grapheme;
+        import std.internal.unicode_grapheme : hangulLVTTrieEntries;
         static immutable res = asTrie(hangulLVTTrieEntries);
         return res;
     }
@@ -9503,28 +9507,28 @@ private:
     // tables below are used for composition/decomposition
     auto combiningClassTrie()
     {
-        import std.internal.unicode_comp;
+        import std.internal.unicode_comp : combiningClassTrieEntries;
         static immutable res = asTrie(combiningClassTrieEntries);
         return res;
     }
 
     auto compatMappingTrie()
     {
-        import std.internal.unicode_decomp;
+        import std.internal.unicode_decomp : compatMappingTrieEntries;
         static immutable res = asTrie(compatMappingTrieEntries);
         return res;
     }
 
     auto canonMappingTrie()
     {
-        import std.internal.unicode_decomp;
+        import std.internal.unicode_decomp : canonMappingTrieEntries;
         static immutable res = asTrie(canonMappingTrieEntries);
         return res;
     }
 
     auto compositionJumpTrie()
     {
-        import std.internal.unicode_comp;
+        import std.internal.unicode_comp : compositionJumpTrieEntries;
         static immutable res = asTrie(compositionJumpTrieEntries);
         return res;
     }
