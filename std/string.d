@@ -264,12 +264,6 @@ inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
     it.
   +/
 immutable(char)* toStringz(const(char)[] s) @trusted pure nothrow
-in
-{
-    // The assert below contradicts the unittests!
-    //assert(memchr(s.ptr, 0, s.length) == null,
-    //text(s.length, ": `", s, "'"));
-}
 out (result)
 {
     import core.stdc.string : strlen, memcmp;
@@ -327,16 +321,12 @@ immutable(char)* toStringz(in string s) @trusted pure nothrow
     return toStringz(cast(const char[]) s);
 }
 
+///
 pure nothrow unittest
 {
     import core.stdc.string : strlen;
     import std.conv : to;
 
-    debug(string) trustedPrintf("string.toStringz.unittest\n");
-
-    // TODO: CTFEable toStringz is really necessary?
-    //assertCTFEable!(
-    //{
     auto p = toStringz("foo");
     assert(strlen(p) == 3);
     const(char)[] foo = "abbzxyzzy";
@@ -358,7 +348,6 @@ pure nothrow unittest
     const string test2 = "";
     p = toStringz(test2);
     assert(*p == 0);
-    //});
 }
 
 
