@@ -18,8 +18,8 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 {
     import std.traits : hasMember;
     import common = std.experimental.allocator.common : roundUpToMultipleOf,
-        reallocate,
-        Ternary;
+        reallocate;
+    import std.typecons : Ternary;
 
     static assert((max - (min - 1)) % step == 0,
         "Invalid limits when instantiating " ~ Bucketizer.stringof);
@@ -235,7 +235,8 @@ unittest
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.mallocator : Mallocator;
-    import std.experimental.allocator.common : unbounded, Ternary;
+    import std.experimental.allocator.common : unbounded;
+    import std.typecons : Ternary;
     import std.algorithm : max;
     Bucketizer!(
         FreeList!(

@@ -48,6 +48,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     import std.traits : hasMember;
     version(unittest) import std.stdio;
     import std.conv : text;
+    import std.typecons : Ternary;
 
     unittest
     {
@@ -884,6 +885,7 @@ struct BitmappedBlockWithInternalPointers(
     ParentAllocator = NullAllocator)
 {
     import std.conv : text;
+    import std.typecons : Ternary;
     unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;

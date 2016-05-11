@@ -24,6 +24,7 @@ struct ScopedAllocator(ParentAllocator)
     private import std.experimental.allocator.building_blocks.affix_allocator
         : AffixAllocator;
     private import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     private struct Node
     {
@@ -190,6 +191,7 @@ struct ScopedAllocator(ParentAllocator)
 unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
     ScopedAllocator!Mallocator alloc;
     assert(alloc.empty == Ternary.yes);
     const b = alloc.allocate(10);

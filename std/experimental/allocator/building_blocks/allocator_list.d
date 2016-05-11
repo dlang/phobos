@@ -65,6 +65,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     import std.traits : hasMember;
     import std.conv : emplace;
     import std.algorithm : min, move;
+    import std.typecons : Ternary;
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
 
@@ -610,6 +611,7 @@ unittest
 {
     import std.algorithm : max;
     import std.experimental.allocator.building_blocks.region : Region;
+    import std.typecons : Ternary;
     AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null);

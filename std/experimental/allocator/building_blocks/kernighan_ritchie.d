@@ -94,8 +94,9 @@ information is available in client code at deallocation time.)
 */
 struct KRRegion(ParentAllocator = NullAllocator)
 {
-    import std.experimental.allocator.common : stateSize, alignedAt, Ternary;
+    import std.experimental.allocator.common : stateSize, alignedAt;
     import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     private static struct Node
     {
@@ -600,7 +601,7 @@ unittest
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.fallback_allocator
         : fallbackAllocator;
-    import std.experimental.allocator.common : Ternary;
+    import std.typecons : Ternary;
     // KRRegion fronting a general-purpose allocator
     ubyte[1024 * 128] buf;
     auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.instance);
@@ -633,7 +634,7 @@ unittest
 {
     import std.algorithm : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import   std.experimental.allocator.common : Ternary;
+    import std.typecons : Ternary;
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
@@ -666,7 +667,7 @@ unittest
 {
     import std.algorithm : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.common : Ternary;
+    import std.typecons : Ternary;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
@@ -732,7 +733,7 @@ unittest
 unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.common : Ternary;
+    import std.typecons : Ternary;
     auto alloc = KRRegion!()(GCAllocator.instance.allocate(1024 * 1024));
     const store = alloc.allocate(KRRegion!().sizeof);
     auto p = cast(KRRegion!()* ) store.ptr;
