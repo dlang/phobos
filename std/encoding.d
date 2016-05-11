@@ -2274,7 +2274,8 @@ unittest
 
         string asciiCharString = to!string(iota(0, 128, 1));
 
-        alias Types = AliasSeq!(string, Latin1String, Latin2String, AsciiString, Windows1250String, Windows1252String, dstring, wstring);
+        alias Types = AliasSeq!(string, Latin1String, Latin2String, AsciiString,
+            Windows1250String, Windows1252String, dstring, wstring);
         foreach (S; Types)
             foreach (D; Types)
             {

@@ -4293,7 +4293,8 @@ string lockstepReverseFailMixin(Ranges...)(bool withIndex)
 
     if (withIndex)
     {
-        message = "Indexed reverse iteration with lockstep is only supported if all ranges are bidirectional and have a length.\n";
+        message = "Indexed reverse iteration with lockstep is only supported"
+        ~"if all ranges are bidirectional and have a length.\n";
     }
     else
     {

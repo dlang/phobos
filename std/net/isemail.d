@@ -229,8 +229,8 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                                 break;
 
                                 default:
-                                    throw new Exception("More text found where none is allowed, but unrecognised prior " ~
-                                                        "context: " ~ to!(string)(contextPrior));
+                                    throw new Exception("More text found where none is allowed, but "
+                                        ~"unrecognised prior context: " ~ to!(string)(contextPrior));
                             }
                         }
 
@@ -254,9 +254,11 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                 {
                     case Token.openParenthesis:
                         if (elementLength == 0)
-                            returnStatus ~= elementCount == 0 ? EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt
+                        {
+                            returnStatus ~= elementCount == 0 ?
+                                EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt
                                 : EmailStatusCode.deprecatedComment;
-
+                        }
                         else
                         {
                             returnStatus ~= EmailStatusCode.comment;
@@ -316,9 +318,11 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         }
 
                         if (elementLength == 0)
-                            returnStatus ~= elementCount == 0 ? EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt
+                        {
+                            returnStatus ~= elementCount == 0 ?
+                                EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt
                                 : EmailStatusCode.deprecatedFoldingWhitespace;
-
+                        }
                         else
                         {
                             returnStatus ~= EmailStatusCode.foldingWhitespace;
@@ -345,8 +349,8 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                                 break;
 
                                 default:
-                                    throw new Exception("More text found where none is allowed, but unrecognised prior " ~
-                                                        "context: " ~ to!(string)(contextPrior));
+                                    throw new Exception("More text found where none is allowed, but "
+                                        ~"unrecognised prior context: " ~ to!(string)(contextPrior));
                             }
 
                         }
@@ -1099,9 +1103,12 @@ unittest
     assert(`test@[RFC-5322-domain-literal] (comment)`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteral);
 
-    assert("\u007F@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorExpectingText);
-    assert("test@\u007F.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorExpectingText);
-    assert("\"\u007F\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.deprecatedQuotedText);
+    assert("\u007F@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorExpectingText);
+    assert("test@\u007F.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorExpectingText);
+    assert("\"\u007F\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.deprecatedQuotedText);
 
     assert("\"\\\u007F\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
             EmailStatusCode.deprecatedQuotedPair);
@@ -1115,8 +1122,8 @@ unittest
     assert("\u000Dtest@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
 
-    assert("\"\u000Dtest\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf
-        ,`No LF after the CR`);
+    assert("\"\u000Dtest\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorCrNoLf, `No LF after the CR`);
 
     assert("(\u000D)test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);

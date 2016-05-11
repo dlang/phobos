@@ -1489,7 +1489,8 @@ unittest
     assert(w.data == "1337");
 }
 
-private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, const ref FormatSpec!Char fs, uint base, ulong mask)
+private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, const ref FormatSpec!Char fs,
+    uint base, ulong mask)
 {
     T arg = val;
 
@@ -2050,16 +2051,18 @@ unittest
     formatTest( "%-r", "ab"w, ['a', 0      , 'b', 0      ] );
     formatTest( "%-r", "ab"d, ['a', 0, 0, 0, 'b', 0, 0, 0] );
     formatTest( "%-r", "日本語"c, ['\xe6', '\x97', '\xa5', '\xe6', '\x9c', '\xac', '\xe8', '\xaa', '\x9e'] );
-    formatTest( "%-r", "日本語"w, ['\xe5', '\x65',                 '\x2c', '\x67',                 '\x9e', '\x8a'                ] );
-    formatTest( "%-r", "日本語"d, ['\xe5', '\x65', '\x00', '\x00', '\x2c', '\x67', '\x00', '\x00', '\x9e', '\x8a', '\x00', '\x00'] );
+    formatTest( "%-r", "日本語"w, ['\xe5', '\x65', '\x2c', '\x67', '\x9e', '\x8a']);
+    formatTest( "%-r", "日本語"d, ['\xe5', '\x65', '\x00', '\x00', '\x2c', '\x67',
+        '\x00', '\x00', '\x9e', '\x8a', '\x00', '\x00'] );
 
     //Big Endian
     formatTest( "%+r", "ab"c, [         'a',          'b'] );
     formatTest( "%+r", "ab"w, [      0, 'a',       0, 'b'] );
     formatTest( "%+r", "ab"d, [0, 0, 0, 'a', 0, 0, 0, 'b'] );
     formatTest( "%+r", "日本語"c, ['\xe6', '\x97', '\xa5', '\xe6', '\x9c', '\xac', '\xe8', '\xaa', '\x9e'] );
-    formatTest( "%+r", "日本語"w, [                '\x65', '\xe5',                 '\x67', '\x2c',                 '\x8a', '\x9e'] );
-    formatTest( "%+r", "日本語"d, ['\x00', '\x00', '\x65', '\xe5', '\x00', '\x00', '\x67', '\x2c', '\x00', '\x00', '\x8a', '\x9e'] );
+    formatTest( "%+r", "日本語"w, ['\x65', '\xe5', '\x67', '\x2c', '\x8a', '\x9e'] );
+    formatTest( "%+r", "日本語"d, ['\x00', '\x00', '\x65', '\xe5', '\x00', '\x00',
+        '\x67', '\x2c', '\x00', '\x00', '\x8a', '\x9e'] );
 }
 
 /**
@@ -4384,7 +4387,10 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     {
         // raw read
         //enforce(input.length >= T.sizeof);
-        enforce(isSomeString!Range || ElementType!(Range).sizeof == 1, "Cannot parse input of type %s".format(Range.stringof));
+        enforce(
+            isSomeString!Range || ElementType!(Range).sizeof == 1,
+            "Cannot parse input of type %s".format(Range.stringof)
+        );
         union X
         {
             ubyte[T.sizeof] raw;

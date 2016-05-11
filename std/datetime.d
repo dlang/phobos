@@ -2182,7 +2182,8 @@ public:
 
         Fractional seconds past the second.
      +/
-    deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It returns a Duration instead of a FracSec, as FracSec is being deprecated.")
+    deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). "
+        ~"It returns a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property FracSec fracSec() @safe const nothrow
     {
         try
@@ -2262,7 +2263,8 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D fracSec) is negative.
      +/
-    deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It takes a Duration instead of a FracSec, as FracSec is being deprecated.")
+    deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). "
+        ~"It takes a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property void fracSec(FracSec fracSec) @safe
     {
         immutable fracHNSecs = fracSec.hnsecs;
@@ -2696,14 +2698,28 @@ public:
             assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), hnsecs(10), UTC()).toTimeSpec() == timespec(1, 1000));
             assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), usecs(7), UTC()).toTimeSpec() == timespec(1, 7000));
 
-            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_999), UTC()).toTimeSpec() == timespec(0, -100));
-            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_990), UTC()).toTimeSpec() == timespec(0, -1000));
+            assert(SysTime(
+                DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_999), UTC()
+            ).toTimeSpec() == timespec(0, -100));
+            assert(SysTime(
+                DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_990), UTC()
+            ).toTimeSpec() == timespec(0, -1000));
 
-            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), usecs(999_999), UTC()).toTimeSpec() == timespec(0, -1_000));
-            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), usecs(999), UTC()).toTimeSpec() == timespec(0, -999_001_000));
-            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), msecs(999), UTC()).toTimeSpec() == timespec(0, -1_000_000));
-            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()).toTimeSpec() == timespec(-1, 0));
-            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 58), usecs(17), UTC()).toTimeSpec() == timespec(-1, -999_983_000));
+            assert(SysTime(
+                DateTime(1969, 12, 31, 23, 59, 59), usecs(999_999), UTC()
+            ).toTimeSpec() == timespec(0, -1_000));
+            assert(SysTime(
+                DateTime(1969, 12, 31, 23, 59, 59), usecs(999), UTC()
+            ).toTimeSpec() == timespec(0, -999_001_000));
+            assert(SysTime(
+                DateTime(1969, 12, 31, 23, 59, 59), msecs(999), UTC()
+            ).toTimeSpec() == timespec(0, -1_000_000));
+            assert(SysTime(
+                DateTime(1969, 12, 31, 23, 59, 59), UTC()
+            ).toTimeSpec() == timespec(-1, 0));
+            assert(SysTime(
+                DateTime(1969, 12, 31, 23, 59, 58), usecs(17), UTC()
+            ).toTimeSpec() == timespec(-1, -999_983_000));
         }
     }
 
@@ -15307,9 +15323,21 @@ public:
             assert(dt == expected);
         }
 
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), 1999, DateTime(Date(1999, 1, 1), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), 0, DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), -1999, DateTime(Date(-1999, 1, 1), TimeOfDay(12, 30, 33)));
+        testDT(
+            DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)),
+            1999,
+            DateTime(Date(1999, 1, 1), TimeOfDay(12, 30, 33))
+        );
+        testDT(
+            DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)),
+            0,
+            DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33))
+        );
+        testDT(
+            DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)),
+            -1999,
+            DateTime(Date(-1999, 1, 1), TimeOfDay(12, 30, 33))
+        );
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
@@ -15445,8 +15473,16 @@ public:
         assertThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)0));
         assertThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)13));
 
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)7, DateTime(Date(1, 7, 1), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)7, DateTime(Date(-1, 7, 1), TimeOfDay(12, 30, 33)));
+        testDT(
+            DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)),
+            cast(Month)7,
+            DateTime(Date(1, 7, 1), TimeOfDay(12, 30, 33))
+        );
+        testDT(
+            DateTime(Date(-1, 1, 1), TimeOfDay(12, 30, 33)),
+            cast(Month)7,
+            DateTime(Date(-1, 7, 1), TimeOfDay(12, 30, 33))
+        );
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
@@ -15955,156 +15991,288 @@ public:
         }
 
         //Test A.D.
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(1999, 7, 6), TimeOfDay(14, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(1999, 7, 6), TimeOfDay(15, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(1999, 7, 6), TimeOfDay(16, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(1999, 7, 6), TimeOfDay(17, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 6, DateTime(Date(1999, 7, 6), TimeOfDay(18, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 7, DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 8, DateTime(Date(1999, 7, 6), TimeOfDay(20, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 9, DateTime(Date(1999, 7, 6), TimeOfDay(21, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 11, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 12, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 13, DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 14, DateTime(Date(1999, 7, 6), TimeOfDay(2, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(1999, 7, 6), TimeOfDay(3, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 16, DateTime(Date(1999, 7, 6), TimeOfDay(4, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 17, DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 18, DateTime(Date(1999, 7, 6), TimeOfDay(6, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 19, DateTime(Date(1999, 7, 6), TimeOfDay(7, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 20, DateTime(Date(1999, 7, 6), TimeOfDay(8, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 21, DateTime(Date(1999, 7, 6), TimeOfDay(9, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 22, DateTime(Date(1999, 7, 6), TimeOfDay(10, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 23, DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 24, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 25, DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2,
+            DateTime(Date(1999, 7, 6), TimeOfDay(14, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3,
+            DateTime(Date(1999, 7, 6), TimeOfDay(15, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4,
+            DateTime(Date(1999, 7, 6), TimeOfDay(16, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5,
+            DateTime(Date(1999, 7, 6), TimeOfDay(17, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 6,
+            DateTime(Date(1999, 7, 6), TimeOfDay(18, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 7,
+            DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 8,
+            DateTime(Date(1999, 7, 6), TimeOfDay(20, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 9,
+            DateTime(Date(1999, 7, 6), TimeOfDay(21, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10,
+            DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 11,
+            DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 12,
+            DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 13,
+            DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 14,
+            DateTime(Date(1999, 7, 6), TimeOfDay(2, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15,
+            DateTime(Date(1999, 7, 6), TimeOfDay(3, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 16,
+            DateTime(Date(1999, 7, 6), TimeOfDay(4, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 17,
+            DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 18,
+            DateTime(Date(1999, 7, 6), TimeOfDay(6, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 19,
+            DateTime(Date(1999, 7, 6), TimeOfDay(7, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 20,
+            DateTime(Date(1999, 7, 6), TimeOfDay(8, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 21,
+            DateTime(Date(1999, 7, 6), TimeOfDay(9, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 22,
+            DateTime(Date(1999, 7, 6), TimeOfDay(10, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 23,
+            DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 24,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 25,
+            DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(1999, 7, 6), TimeOfDay(10, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(1999, 7, 6), TimeOfDay(9, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(1999, 7, 6), TimeOfDay(8, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(1999, 7, 6), TimeOfDay(7, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -6, DateTime(Date(1999, 7, 6), TimeOfDay(6, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -7, DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -8, DateTime(Date(1999, 7, 6), TimeOfDay(4, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -9, DateTime(Date(1999, 7, 6), TimeOfDay(3, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(1999, 7, 6), TimeOfDay(2, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -11, DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -12, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -13, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -14, DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(1999, 7, 6), TimeOfDay(21, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -16, DateTime(Date(1999, 7, 6), TimeOfDay(20, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -17, DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -18, DateTime(Date(1999, 7, 6), TimeOfDay(18, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -19, DateTime(Date(1999, 7, 6), TimeOfDay(17, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -20, DateTime(Date(1999, 7, 6), TimeOfDay(16, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -21, DateTime(Date(1999, 7, 6), TimeOfDay(15, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -22, DateTime(Date(1999, 7, 6), TimeOfDay(14, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -23, DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -24, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -25, DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2,
+            DateTime(Date(1999, 7, 6), TimeOfDay(10, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3,
+            DateTime(Date(1999, 7, 6), TimeOfDay(9, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4,
+            DateTime(Date(1999, 7, 6), TimeOfDay(8, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5,
+            DateTime(Date(1999, 7, 6), TimeOfDay(7, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -6,
+            DateTime(Date(1999, 7, 6), TimeOfDay(6, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -7,
+            DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -8,
+            DateTime(Date(1999, 7, 6), TimeOfDay(4, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -9,
+            DateTime(Date(1999, 7, 6), TimeOfDay(3, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10,
+            DateTime(Date(1999, 7, 6), TimeOfDay(2, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -11,
+            DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -12,
+            DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -13,
+            DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -14,
+            DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15,
+            DateTime(Date(1999, 7, 6), TimeOfDay(21, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -16,
+            DateTime(Date(1999, 7, 6), TimeOfDay(20, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -17,
+            DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -18,
+            DateTime(Date(1999, 7, 6), TimeOfDay(18, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -19,
+            DateTime(Date(1999, 7, 6), TimeOfDay(17, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -20,
+            DateTime(Date(1999, 7, 6), TimeOfDay(16, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -21,
+            DateTime(Date(1999, 7, 6), TimeOfDay(15, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -22,
+            DateTime(Date(1999, 7, 6), TimeOfDay(14, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -23,
+            DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -24,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -25,
+            DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), 1, DateTime(Date(1999,
+            7, 6), TimeOfDay(1, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), 0, DateTime(Date(1999,
+            7, 6), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), -1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), 1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), 0,
+            DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), -1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
 
-        testDT(DateTime(Date(1999, 7, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(1999, 7, 31), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(1999, 8, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(1999, 8, 1), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 31), TimeOfDay(23, 30, 33)), 1,
+            DateTime(Date(1999, 7, 31), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(1999, 8, 1), TimeOfDay(0, 30, 33)), -1,
+            DateTime(Date(1999, 8, 1), TimeOfDay(23, 30, 33)));
 
-        testDT(DateTime(Date(1999, 12, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(1999, 12, 31), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(2000, 1, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(2000, 1, 1), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(1999, 12, 31), TimeOfDay(23, 30, 33)), 1,
+            DateTime(Date(1999, 12, 31), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(2000, 1, 1), TimeOfDay(0, 30, 33)), -1,
+            DateTime(Date(2000, 1, 1), TimeOfDay(23, 30, 33)));
 
-        testDT(DateTime(Date(1999, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(1999, 2, 28), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(1999, 3, 2), TimeOfDay(0, 30, 33)), -25, DateTime(Date(1999, 3, 2), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(1999, 2, 28), TimeOfDay(23, 30, 33)), 25,
+            DateTime(Date(1999, 2, 28), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(1999, 3, 2), TimeOfDay(0, 30, 33)), -25,
+            DateTime(Date(1999, 3, 2), TimeOfDay(23, 30, 33)));
 
-        testDT(DateTime(Date(2000, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(2000, 2, 28), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(2000, 3, 1), TimeOfDay(0, 30, 33)), -25, DateTime(Date(2000, 3, 1), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(2000, 2, 28), TimeOfDay(23, 30, 33)), 25,
+            DateTime(Date(2000, 2, 28), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(2000, 3, 1), TimeOfDay(0, 30, 33)), -25,
+            DateTime(Date(2000, 3, 1), TimeOfDay(23, 30, 33)));
 
         //Test B.C.
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(-1999, 7, 6), TimeOfDay(14, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(-1999, 7, 6), TimeOfDay(15, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(-1999, 7, 6), TimeOfDay(16, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(-1999, 7, 6), TimeOfDay(17, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 6, DateTime(Date(-1999, 7, 6), TimeOfDay(18, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 7, DateTime(Date(-1999, 7, 6), TimeOfDay(19, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 8, DateTime(Date(-1999, 7, 6), TimeOfDay(20, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 9, DateTime(Date(-1999, 7, 6), TimeOfDay(21, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 11, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 12, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 13, DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 14, DateTime(Date(-1999, 7, 6), TimeOfDay(2, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(-1999, 7, 6), TimeOfDay(3, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 16, DateTime(Date(-1999, 7, 6), TimeOfDay(4, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 17, DateTime(Date(-1999, 7, 6), TimeOfDay(5, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 18, DateTime(Date(-1999, 7, 6), TimeOfDay(6, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 19, DateTime(Date(-1999, 7, 6), TimeOfDay(7, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 20, DateTime(Date(-1999, 7, 6), TimeOfDay(8, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 21, DateTime(Date(-1999, 7, 6), TimeOfDay(9, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 22, DateTime(Date(-1999, 7, 6), TimeOfDay(10, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 23, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 24, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 25, DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(14, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(15, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(16, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(17, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 6,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(18, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 7,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(19, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 8,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(20, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 9,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(21, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 11,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 12,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 13,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 14,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(2, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(3, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 16,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(4, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 17,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(5, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 18,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(6, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 19,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(7, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 20,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(8, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 21,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(9, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 22,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(10, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 23,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 24,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 25,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(-1999, 7, 6), TimeOfDay(10, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(-1999, 7, 6), TimeOfDay(9, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(-1999, 7, 6), TimeOfDay(8, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(-1999, 7, 6), TimeOfDay(7, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -6, DateTime(Date(-1999, 7, 6), TimeOfDay(6, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -7, DateTime(Date(-1999, 7, 6), TimeOfDay(5, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -8, DateTime(Date(-1999, 7, 6), TimeOfDay(4, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -9, DateTime(Date(-1999, 7, 6), TimeOfDay(3, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(-1999, 7, 6), TimeOfDay(2, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -11, DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -12, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -13, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -14, DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(-1999, 7, 6), TimeOfDay(21, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -16, DateTime(Date(-1999, 7, 6), TimeOfDay(20, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -17, DateTime(Date(-1999, 7, 6), TimeOfDay(19, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -18, DateTime(Date(-1999, 7, 6), TimeOfDay(18, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -19, DateTime(Date(-1999, 7, 6), TimeOfDay(17, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -20, DateTime(Date(-1999, 7, 6), TimeOfDay(16, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -21, DateTime(Date(-1999, 7, 6), TimeOfDay(15, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -22, DateTime(Date(-1999, 7, 6), TimeOfDay(14, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -23, DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -24, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -25, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(10, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(9, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(8, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(7, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -6,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(6, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -7,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(5, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -8,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(4, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -9,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(3, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(2, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -11,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -12,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -13,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -14,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(21, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -16,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(20, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -17,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(19, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -18,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(18, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -19,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(17, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -20,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(16, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -21,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(15, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -22,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(14, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -23,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -24,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -25,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(-1999, 7, 31), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(-1999, 8, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(-1999, 8, 1), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 31), TimeOfDay(23, 30, 33)), 1,
+            DateTime(Date(-1999, 7, 31), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(-1999, 8, 1), TimeOfDay(0, 30, 33)), -1,
+            DateTime(Date(-1999, 8, 1), TimeOfDay(23, 30, 33)));
 
-        testDT(DateTime(Date(-2001, 12, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(-2001, 12, 31), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(-2000, 1, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(-2000, 1, 1), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(-2001, 12, 31), TimeOfDay(23, 30, 33)), 1,
+            DateTime(Date(-2001, 12, 31), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(-2000, 1, 1), TimeOfDay(0, 30, 33)), -1,
+            DateTime(Date(-2000, 1, 1), TimeOfDay(23, 30, 33)));
 
-        testDT(DateTime(Date(-2001, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(-2001, 2, 28), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(-2001, 3, 2), TimeOfDay(0, 30, 33)), -25, DateTime(Date(-2001, 3, 2), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(-2001, 2, 28), TimeOfDay(23, 30, 33)), 25,
+            DateTime(Date(-2001, 2, 28), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(-2001, 3, 2), TimeOfDay(0, 30, 33)), -25,
+            DateTime(Date(-2001, 3, 2), TimeOfDay(23, 30, 33)));
 
-        testDT(DateTime(Date(-2000, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(-2000, 2, 28), TimeOfDay(0, 30, 33)));
-        testDT(DateTime(Date(-2000, 3, 1), TimeOfDay(0, 30, 33)), -25, DateTime(Date(-2000, 3, 1), TimeOfDay(23, 30, 33)));
+        testDT(DateTime(Date(-2000, 2, 28), TimeOfDay(23, 30, 33)), 25,
+            DateTime(Date(-2000, 2, 28), TimeOfDay(0, 30, 33)));
+        testDT(DateTime(Date(-2000, 3, 1), TimeOfDay(0, 30, 33)), -25,
+            DateTime(Date(-2000, 3, 1), TimeOfDay(23, 30, 33)));
 
         //Test Both
-        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 17_546, DateTime(Date(-1, 1, 1), TimeOfDay(13, 30, 33)));
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -17_546, DateTime(Date(1, 1, 1), TimeOfDay(11, 30, 33)));
+        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 17_546,
+            DateTime(Date(-1, 1, 1), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -17_546,
+            DateTime(Date(1, 1, 1), TimeOfDay(11, 30, 33)));
 
         auto dt = DateTime(2000, 1, 31, 9, 7, 6);
         dt.roll!"hours"(27).roll!"hours"(-9);
@@ -16126,157 +16294,285 @@ public:
         }
 
         //Test A.D.
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 32, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 34, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 35, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 40, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 29, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 45, DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 75, DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 90, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 100, DateTime(Date(1999, 7, 6), TimeOfDay(12, 10, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 32, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 34, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 35, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 40, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 29,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 30,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 45,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 60,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 75,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 90,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 100,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 10, 33)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 689, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 690, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 691, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 960, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1439, DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1440, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1441, DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2880, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 689,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 690,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 691,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 960,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1439,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1440,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1441,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2880,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 28, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 27, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 26, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 25, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 20, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -29, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -30, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -45, DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -75, DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -90, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -100, DateTime(Date(1999, 7, 6), TimeOfDay(12, 50, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 28, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 27, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 26, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 25, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 20, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -29,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -30,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -45,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -60,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -75,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -90,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -100,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 50, 33)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -749, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -750, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -751, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -960, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1439, DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1440, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1441, DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2880, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -749,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -750,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -751,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -960,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1439,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1440,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1441,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2880,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), 1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), 0,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), -1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(11, 0, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(11, 58, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), 1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(11, 0, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), 0,
+            DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), -1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(11, 58, 33)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 1, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 59, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), 1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(0, 1, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), 0,
+            DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), -1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(0, 59, 33)));
 
-        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), 1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 0, 33)));
-        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), 0, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)));
-        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), -1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 58, 33)));
+        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), 1,
+            DateTime(Date(1999, 7, 5), TimeOfDay(23, 0, 33)));
+        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), 0,
+            DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)));
+        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), -1,
+            DateTime(Date(1999, 7, 5), TimeOfDay(23, 58, 33)));
 
-        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), 1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 0, 33)));
-        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), 0, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)));
-        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), -1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 58, 33)));
+        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), 1,
+            DateTime(Date(1998, 12, 31), TimeOfDay(23, 0, 33)));
+        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), 0,
+            DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)));
+        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), -1,
+            DateTime(Date(1998, 12, 31), TimeOfDay(23, 58, 33)));
 
         //Test B.C.
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 32, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 33, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 34, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 35, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 40, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 29, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 45, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 75, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 90, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 100, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 10, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 32, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 33, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 34, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 35, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 40, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 29,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 30,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 45,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 60,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 75,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 90,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 100,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 10, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 689, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 690, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 691, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 960, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1439, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1440, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1441, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2880, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 689,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 690,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 691,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 960,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1439,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1440,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1441,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2880,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 28, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 27, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 26, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 25, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 20, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -29, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -30, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -45, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -75, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -90, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -100, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 50, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 28, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 27, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 26, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 25, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 20, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -29,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -30,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -45,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -60,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -75,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -90,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -100,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 50, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -749, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -750, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -751, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -960, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1439, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1440, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1441, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2880, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -749,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -750,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -751,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -960,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1439,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1440,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1441,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2880,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 0, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 58, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(11, 0, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(11, 58, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 1, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 59, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(0, 1, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(0, 59, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), 1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 0, 33)));
-        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), 0, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)));
-        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), -1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 58, 33)));
+        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), 1,
+            DateTime(Date(-1999, 7, 5), TimeOfDay(23, 0, 33)));
+        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), 0,
+            DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)));
+        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), -1,
+            DateTime(Date(-1999, 7, 5), TimeOfDay(23, 58, 33)));
 
-        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), 1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 0, 33)));
-        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), 0, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)));
-        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), -1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 58, 33)));
+        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), 1,
+            DateTime(Date(-2000, 12, 31), TimeOfDay(23, 0, 33)));
+        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), 0,
+            DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)));
+        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), -1,
+            DateTime(Date(-2000, 12, 31), TimeOfDay(23, 58, 33)));
 
         //Test Both
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1, 1, 1), TimeOfDay(0, 59, 0)));
-        testDT(DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 0)), 1, DateTime(Date(0, 12, 31), TimeOfDay(23, 0, 0)));
+        testDT(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1,
+            1, 1), TimeOfDay(0, 59, 0)));
+        testDT(DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 0)), 1, DateTime(Date(0,
+            12, 31), TimeOfDay(23, 0, 0)));
 
-        testDT(DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(0, 1, 1), TimeOfDay(0, 59, 0)));
-        testDT(DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 0)), 1, DateTime(Date(-1, 12, 31), TimeOfDay(23, 0, 0)));
+        testDT(DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(0,
+            1, 1), TimeOfDay(0, 59, 0)));
+        testDT(DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 0)), 1,
+            DateTime(Date(-1, 12, 31), TimeOfDay(23, 0, 0)));
 
-        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 1_052_760, DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)));
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -1_052_760, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 1_052_760,
+            DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)));
+        testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -1_052_760,
+            DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
 
-        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 1_052_782, DateTime(Date(-1, 1, 1), TimeOfDay(11, 52, 33)));
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 52, 33)), -1_052_782, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 1_052_782,
+            DateTime(Date(-1, 1, 1), TimeOfDay(11, 52, 33)));
+        testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 52, 33)), -1_052_782,
+            DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
 
         auto dt = DateTime(2000, 1, 31, 9, 7, 6);
         dt.roll!"minutes"(92).roll!"minutes"(-292);
@@ -16298,135 +16594,243 @@ public:
         }
 
         //Test A.D.
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 35)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 36)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 37)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 38)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 43)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 48)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 26, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 27, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 3)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 59, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 61, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 35)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 36)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 37)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 38)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 43)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 48)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 26,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 27,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 30,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 3)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 59,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 60,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 61,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1766, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1767, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1768, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 1)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2007, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3599, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3600, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3601, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 7200, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1766,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1767,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1768,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 1)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2007,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3599,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3600,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3601,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 7200,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 31)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 30)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 29)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 28)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 23)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 18)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -33, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -34, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -35, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 58)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -59, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -61, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 31)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 30)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 29)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 28)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 23)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 18)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -33,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -34,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -35,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 58)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -59,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -60,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -61,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 1)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), 1, DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 1)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), 0, DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 0)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), -1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 1)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 59)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), 1, DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 0, 1)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), 0, DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 0, 0)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), -1,
+            DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 59)));
 
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 1)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)));
-        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 59)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), 1, DateTime(Date(1999,
+            7, 6), TimeOfDay(0, 0, 1)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), 0, DateTime(Date(1999,
+            7, 6), TimeOfDay(0, 0, 0)));
+        testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1999,
+            7, 6), TimeOfDay(0, 0, 59)));
 
-        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), 1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 0)));
-        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), 0, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)));
-        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), -1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 58)));
+        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), 1,
+            DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 0)));
+        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), 0,
+            DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)));
+        testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), -1,
+            DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 58)));
 
-        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 0)));
-        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), 0, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)));
-        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), -1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 58)));
+        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), 1,
+            DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 0)));
+        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), 0,
+            DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)));
+        testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), -1,
+            DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 58)));
 
         //Test B.C.
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 35)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 36)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 37)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 38)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 43)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 48)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 26, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 27, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 3)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 59, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 61, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 35)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 36)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 37)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 38)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 43)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 48)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 26,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 27,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 30,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 3)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 59,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 60,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 61,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1766, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1767, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1768, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 1)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2007, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3599, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3600, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3601, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 7200, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1766,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1767,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1768,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 1)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2007,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3599,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3600,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3601,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 7200,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 31)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 30)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 29)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 28)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 23)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 18)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -33, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -34, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -35, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 58)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -59, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -61, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 31)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 30)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 29)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 28)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 23)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 18)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -33,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -34,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -35,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 58)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -59,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -60,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -61,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 1)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 1)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 1)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 59)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 1)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 59)));
 
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 1)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)));
-        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 59)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), 1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 1)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), 0,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)));
+        testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), -1,
+            DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 59)));
 
-        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), 1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 0)));
-        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), 0, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)));
-        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), -1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 58)));
+        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), 1,
+            DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 0)));
+        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), 0,
+            DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)));
+        testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), -1,
+            DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 58)));
 
-        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 0)));
-        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), 0, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)));
-        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), -1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 58)));
+        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), 1,
+            DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 0)));
+        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), 0,
+            DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)));
+        testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), -1,
+            DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 58)));
 
         //Test Both
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 59)));
-        testDT(DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 0)));
+        testDT(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1, 1,
+            1), TimeOfDay(0, 0, 59)));
+        testDT(DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(0,
+            12, 31), TimeOfDay(23, 59, 0)));
 
-        testDT(DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 59)));
-        testDT(DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 0)));
+        testDT(DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(0, 1,
+            1), TimeOfDay(0, 0, 59)));
+        testDT(DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(-1,
+            12, 31), TimeOfDay(23, 59, 0)));
 
-        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 63_165_600L, DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)));
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -63_165_600L, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 63_165_600L,
+            DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)));
+        testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -63_165_600L,
+            DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
 
-        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 63_165_617L, DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 50)));
-        testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 50)), -63_165_617L, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
+        testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 63_165_617L,
+            DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 50)));
+        testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 50)), -63_165_617L,
+            DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
 
         auto dt = DateTime(2000, 1, 31, 9, 7, 6);
         dt.roll!"seconds"(92).roll!"seconds"(-292);
@@ -16597,41 +17001,73 @@ public:
 
     unittest
     {
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"weeks"(7) == DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"weeks"(-7) == DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"days"(7) == DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"days"(-7) == DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"weeks"(7) == DateTime(Date(1999,
+            8, 24), TimeOfDay(12, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"weeks"(-7) == DateTime(Date(1999,
+            5, 18), TimeOfDay(12, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"days"(7) == DateTime(Date(1999,
+            7, 13), TimeOfDay(12, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"days"(-7) == DateTime(Date(1999,
+            6, 29), TimeOfDay(12, 30, 33)));
 
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"hours"(7) == DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"hours"(-7) == DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"minutes"(7) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"minutes"(-7) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"seconds"(7) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"seconds"(-7) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"msecs"(7_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"msecs"(-7_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"usecs"(7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"usecs"(-7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"hnsecs"(70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"hnsecs"(-70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"hours"(7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(19, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"hours"(-7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(5, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"minutes"(7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 37, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"minutes"(-7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 23, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"seconds"(7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 40)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"seconds"(-7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 26)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"msecs"(7_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 40)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"msecs"(-7_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 26)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"usecs"(7_000_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 40)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"usecs"(-7_000_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 26)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"hnsecs"(70_000_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 40)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"hnsecs"(-70_000_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 26)));
 
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"weeks"(-7) == DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"weeks"(7) == DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"days"(-7) == DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"days"(7) == DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"weeks"(-7) == DateTime(Date(1999,
+            8, 24), TimeOfDay(12, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"weeks"(7) == DateTime(Date(1999,
+            5, 18), TimeOfDay(12, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"days"(-7) == DateTime(Date(1999,
+            7, 13), TimeOfDay(12, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"days"(7) == DateTime(Date(1999,
+            6, 29), TimeOfDay(12, 30, 33)));
 
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"hours"(-7) == DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"hours"(7) == DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"minutes"(-7) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"minutes"(7) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"seconds"(-7) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"seconds"(7) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"msecs"(-7_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"msecs"(7_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"usecs"(-7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"usecs"(7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"hnsecs"(-70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"hnsecs"(70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"hours"(-7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(19, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"hours"(7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(5, 30, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"minutes"(-7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 37, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"minutes"(7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 23, 33)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"seconds"(-7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 40)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"seconds"(7) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 26)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"msecs"(-7_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 40)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"msecs"(7_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 26)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"usecs"(-7_000_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 40)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"usecs"(7_000_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 26)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"hnsecs"(-70_000_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 40)));
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"hnsecs"(70_000_000) == DateTime(Date(1999,
+            7, 6), TimeOfDay(12, 30, 26)));
 
         auto dt = DateTime(2000, 1, 31, 9, 7, 6);
         (dt += dur!"seconds"(92)) -= dur!"days"(-500);
@@ -17652,13 +18088,34 @@ public:
         assertThrown!DateTimeException(DateTime.fromSimpleString("20101222T172201"));
         assertThrown!DateTimeException(DateTime.fromSimpleString("2010-12-22T172201"));
 
-        assert(DateTime.fromSimpleString("2010-Dec-22 17:22:01") == DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
-        assert(DateTime.fromSimpleString("1999-Jul-06 12:30:33") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        assert(DateTime.fromSimpleString("-1999-Jul-06 12:30:33") == DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        assert(DateTime.fromSimpleString("+01999-Jul-06 12:30:33") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        assert(DateTime.fromSimpleString("1999-Jul-06 12:30:33 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        assert(DateTime.fromSimpleString(" 1999-Jul-06 12:30:33") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        assert(DateTime.fromSimpleString(" 1999-Jul-06 12:30:33 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+        assert(
+            DateTime.fromSimpleString("2010-Dec-22 17:22:01") == DateTime(
+                Date(2010, 12, 22), TimeOfDay(17, 22, 01))
+        );
+        assert(
+            DateTime.fromSimpleString("1999-Jul-06 12:30:33") == DateTime(
+                Date(1999, 7, 6), TimeOfDay(12, 30, 33))
+        );
+        assert(
+            DateTime.fromSimpleString("-1999-Jul-06 12:30:33") == DateTime(
+                Date(-1999, 7, 6), TimeOfDay(12, 30, 33))
+        );
+        assert(
+            DateTime.fromSimpleString("+01999-Jul-06 12:30:33") == DateTime(
+                Date(1999, 7, 6), TimeOfDay(12, 30, 33))
+        );
+        assert(
+            DateTime.fromSimpleString("1999-Jul-06 12:30:33 ") == DateTime(
+                Date(1999, 7, 6), TimeOfDay(12, 30, 33))
+        );
+        assert(
+            DateTime.fromSimpleString(" 1999-Jul-06 12:30:33") == DateTime(
+                Date(1999, 7, 6), TimeOfDay(12, 30, 33))
+        );
+        assert(
+            DateTime.fromSimpleString(" 1999-Jul-06 12:30:33 ") == DateTime(
+                Date(1999, 7, 6), TimeOfDay(12, 30, 33))
+        );
     }
 
 
@@ -18578,7 +19035,10 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
     {
         import std.format : format;
 
-        enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
+        enforce(
+            this.intersects(interval),
+            new DateTimeException(format("%s and %s do not intersect.", this, interval))
+        );
 
         auto begin = _begin > interval._begin ? _begin : interval._begin;
         auto end = _end < interval._end ? _end : interval._end;
@@ -18612,7 +19072,10 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
     {
         import std.format : format;
 
-        enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
+        enforce(
+            this.intersects(interval),
+            new DateTimeException(format("%s and %s do not intersect.", this, interval))
+        );
 
         return Interval(_begin > interval._begin ? _begin : interval._begin, _end);
     }
@@ -18643,7 +19106,10 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
     {
         import std.format : format;
 
-        enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
+        enforce(
+            this.intersects(interval),
+            new DateTimeException(format("%s and %s do not intersect.", this, interval))
+        );
 
         return Interval(_begin, _end < interval._end ? _end : interval._end);
     }
@@ -19127,8 +19593,9 @@ interval2.expand(-2);
 assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
 --------------------
           +/
-        void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes, Direction dir = Direction.both)
-            if (isIntegral!T)
+        void expand(T)(
+            T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes,
+            Direction dir = Direction.both) if (isIntegral!T)
         {
             _enforceNotEmpty();
 
@@ -19157,7 +19624,10 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
                     end.add!"years"(years, allowOverflow);
                     end.add!"months"(months, allowOverflow);
 
-                    enforce(_valid(_begin, end), new DateTimeException("Argument would result in an invalid Interval."));
+                    enforce(
+                        _valid(_begin, end),
+                        new DateTimeException("Argument would result in an invalid Interval.")
+                    );
                     _end = end;
 
                     return;
@@ -19169,7 +19639,10 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
                     begin.add!"years"(-years, allowOverflow);
                     begin.add!"months"(-months, allowOverflow);
 
-                    enforce(_valid(begin, _end), new DateTimeException("Argument would result in an invalid Interval."));
+                    enforce(
+                        _valid(begin, _end),
+                        new DateTimeException("Argument would result in an invalid Interval.")
+                    );
                     _begin = begin;
 
                     return;
@@ -19455,12 +19928,30 @@ unittest
 
     //Verify Examples.
     Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
-    assert(Interval!Date(Date(1996, 1, 2), dur!"weeks"(3)) == Interval!Date(Date(1996, 1, 2), Date(1996, 1, 23)));
-    assert(Interval!Date(Date(1996, 1, 2), dur!"days"(3)) == Interval!Date(Date(1996, 1, 2), Date(1996, 1, 5)));
-    assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"hours"(3)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 15, 0, 0)));
-    assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"minutes"(3)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 3, 0)));
-    assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"seconds"(3)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 0, 3)));
-    assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"msecs"(3000)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 0, 3)));
+    assert(
+        Interval!Date(Date(1996, 1, 2), dur!"weeks"(3)) == Interval!Date(
+            Date(1996, 1, 2), Date(1996, 1, 23))
+    );
+    assert(
+        Interval!Date(Date(1996, 1, 2), dur!"days"(3)) == Interval!Date(
+            Date(1996, 1, 2), Date(1996, 1, 5))
+    );
+    assert(
+        Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"hours"(3)) == Interval!DateTime(
+            DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 15, 0, 0))
+    );
+    assert(
+        Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"minutes"(3)) == Interval!DateTime(
+            DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 3, 0))
+    );
+    assert(
+        Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"seconds"(3)) == Interval!DateTime(
+            DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 0, 3))
+    );
+    assert(
+        Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"msecs"(3000)) == Interval!DateTime(
+            DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 0, 3))
+    );
 }
 
 //Test Interval's begin.
@@ -19501,8 +19992,12 @@ unittest
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).length == dur!"days"(0));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).length == dur!"days"(90));
     assert(Interval!TimeOfDay(TimeOfDay(0, 30, 0), TimeOfDay(12, 22, 7)).length == dur!"seconds"(42_727));
-    assert(Interval!DateTime(DateTime(2010, 1, 1, 0, 30, 0), DateTime(2010, 1, 2, 12, 22, 7)).length == dur!"seconds"(129_127));
-    assert(Interval!SysTime(SysTime(DateTime(2010, 1, 1, 0, 30, 0)), SysTime(DateTime(2010, 1, 2, 12, 22, 7))).length == dur!"seconds"(129_127));
+    assert(Interval!DateTime(
+        DateTime(2010, 1, 1, 0, 30, 0), DateTime(2010, 1, 2, 12, 22, 7)).length == dur!"seconds"(129_127));
+    assert(Interval!SysTime(
+        SysTime(DateTime(2010, 1, 1, 0, 30, 0)),
+        SysTime(DateTime(2010, 1, 2, 12, 22, 7))
+    ).length == dur!"seconds"(129_127));
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -19569,7 +20064,10 @@ unittest
 
     assertThrown!DateTimeException(interval.contains(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
     assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).contains(interval));
-    assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).contains(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+    assertThrown!DateTimeException(Interval!Date(
+        Date(2010, 7, 4),
+        dur!"days"(0)
+    ).contains(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
 
     assert(interval.contains(interval));
     assert(!interval.contains(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -19649,9 +20147,18 @@ unittest
     assert(!iInterval.contains(iNegInfInterval));
 
     //Verify Examples.
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
+    assert(!Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).contains(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).contains(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+    assert(!Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).contains(Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
 
     assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(PosInfInterval!Date(Date(1999, 5, 4))));
 
@@ -19695,7 +20202,10 @@ unittest
 
     assertThrown!DateTimeException(interval.isBefore(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
     assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).isBefore(interval));
-    assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).isBefore(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+    assertThrown!DateTimeException(Interval!Date(
+        Date(2010, 7, 4),
+        dur!"days"(0)
+    ).isBefore(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
 
     assert(!interval.isBefore(interval));
     assert(!interval.isBefore(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -19775,9 +20285,18 @@ unittest
     assert(!iInterval.isBefore(iNegInfInterval));
 
     //Verify Examples.
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Interval!Date(Date(2012, 3, 1), Date(2013, 5, 1))));
+    assert(!Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isBefore(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+    assert(!Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isBefore(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isBefore(Interval!Date(Date(2012, 3, 1), Date(2013, 5, 1))));
 
     assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(PosInfInterval!Date(Date(1999, 5, 4))));
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(PosInfInterval!Date(Date(2013, 3, 7))));
@@ -19822,7 +20341,10 @@ unittest
 
     assertThrown!DateTimeException(interval.isAfter(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
     assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).isAfter(interval));
-    assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).isAfter(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+    assertThrown!DateTimeException(Interval!Date(
+        Date(2010, 7, 4),
+        dur!"days"(0)
+    ).isAfter(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
 
     assert(!interval.isAfter(interval));
     assert(interval.isAfter(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -19902,9 +20424,18 @@ unittest
     assert(!iInterval.isAfter(iNegInfInterval));
 
     //Verify Examples.
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+    assert(!Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isAfter(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+    assert(!Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isAfter(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isAfter(Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 
     assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(PosInfInterval!Date(Date(1999, 5, 4))));
 
@@ -19918,7 +20449,10 @@ unittest
 
     assertThrown!DateTimeException(interval.intersects(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
     assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).intersects(interval));
-    assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).intersects(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+    assertThrown!DateTimeException(Interval!Date(
+        Date(2010, 7, 4),
+        dur!"days"(0)
+    ).intersects(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
 
     assert(interval.intersects(interval));
     assert(!interval.intersects(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -19998,9 +20532,18 @@ unittest
     assert(iInterval.intersects(iNegInfInterval));
 
     //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).intersects(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).intersects(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+    assert(!Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).intersects(Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 
     assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(PosInfInterval!Date(Date(1999, 5, 4))));
     assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(PosInfInterval!Date(Date(2012, 3, 1))));
@@ -20016,7 +20559,10 @@ unittest
 
     assertThrown!DateTimeException(interval.intersection(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
     assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).intersection(interval));
-    assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).intersection(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+    assertThrown!DateTimeException(Interval!Date(
+        Date(2010, 7, 4),
+        dur!"days"(0)
+    ).intersection(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
 
     assertThrown!DateTimeException(interval.intersection(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
     assertThrown!DateTimeException(interval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))));
@@ -20124,14 +20670,38 @@ unittest
     assert(!iInterval.intersection(iNegInfInterval).empty);
 
     //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) == Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).intersection(Interval!Date(
+        Date(1990, 7, 6),
+        Date(2000, 8, 2))
+    ) == Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).intersection(Interval!Date(
+        Date(1999, 1, 12),
+        Date(2011, 9, 17))
+    ) == Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
 
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1990, 7, 6))) == Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1999, 1, 12))) == Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).intersection(PosInfInterval!Date(Date(1990, 7, 6))) == Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).intersection(PosInfInterval!Date(Date(1999, 1, 12))) == Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
 
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(NegInfInterval!Date(Date(1999, 7, 6))) == Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(NegInfInterval!Date(Date(2013, 1, 12))) == Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).intersection(NegInfInterval!Date(Date(1999, 7, 6))) == Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).intersection(NegInfInterval!Date(Date(2013, 1, 12))) == Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
 }
 
 //Test Interval's isAdjacent().
@@ -20146,7 +20716,10 @@ unittest
 
     assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
     assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), interval));
-    assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+    assertThrown!DateTimeException(testInterval(Interval!Date(
+        Date(2010, 7, 4),
+        dur!"days"(0)
+    ), Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
 
     assert(!interval.isAdjacent(interval));
     assert(!interval.isAdjacent(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -20226,15 +20799,36 @@ unittest
     assert(!iInterval.isAdjacent(iNegInfInterval));
 
     //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(1990, 7, 6), Date(1996, 1, 2))));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(2012, 3, 1), Date(2013, 9, 17))));
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(1989, 3, 1), Date(2012, 3, 1))));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isAdjacent(Interval!Date(Date(1990, 7, 6), Date(1996, 1, 2))));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isAdjacent(Interval!Date(Date(2012, 3, 1), Date(2013, 9, 17))));
+    assert(!Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isAdjacent(Interval!Date(Date(1989, 3, 1), Date(2012, 3, 1))));
 
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(PosInfInterval!Date(Date(1999, 5, 4))));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(PosInfInterval!Date(Date(2012, 3, 1))));
+    assert(!Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isAdjacent(PosInfInterval!Date(Date(1999, 5, 4))));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isAdjacent(PosInfInterval!Date(Date(2012, 3, 1))));
 
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(NegInfInterval!Date(Date(1996, 1, 2))));
-    assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(NegInfInterval!Date(Date(2000, 1, 2))));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isAdjacent(NegInfInterval!Date(Date(1996, 1, 2))));
+    assert(!Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).isAdjacent(NegInfInterval!Date(Date(2000, 1, 2))));
 }
 
 //Test Interval's merge().
@@ -20249,7 +20843,10 @@ unittest
 
     assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
     assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), interval));
-    assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+    assertThrown!DateTimeException(testInterval(Interval!Date(
+        Date(2010, 7, 4),
+        dur!"days"(0)
+    ), Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
 
     assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
     assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
@@ -20363,14 +20960,46 @@ unittest
     assert(!iInterval.merge(iNegInfInterval).empty);
 
     //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) == Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).merge(Interval!Date(
+        Date(1990, 7, 6),
+        Date(2000, 8, 2))
+    ) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).merge(Interval!Date(
+        Date(2012, 3, 1),
+        Date(2013, 5, 7))
+    ) == Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
 
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(PosInfInterval!Date(Date(2012, 3, 1))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).merge(PosInfInterval!Date(
+        Date(1990, 7, 6))
+    ) == PosInfInterval!Date(Date(1990, 7 , 6)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).merge(PosInfInterval!Date(
+        Date(2012, 3, 1))
+    ) == PosInfInterval!Date(Date(1996, 1 , 2)));
 
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(1996, 1, 2))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2013, 1 , 12)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).merge(NegInfInterval!Date(
+        Date(1996, 1, 2))
+    ) == NegInfInterval!Date(Date(2012, 3 , 1)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).merge(NegInfInterval!Date(
+        Date(2013, 1, 12))
+    ) == NegInfInterval!Date(Date(2013, 1 , 12)));
 }
 
 //Test Interval's span().
@@ -20383,9 +21012,18 @@ unittest
         interval1.span(interval2);
     }
 
-    assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
-    assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), interval));
-    assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+    assertThrown!DateTimeException(testInterval(interval, Interval!Date(
+        Date(2010, 7, 4),
+        dur!"days"(0))
+    ));
+    assertThrown!DateTimeException(testInterval(Interval!Date(
+        Date(2010, 7, 4),
+        dur!"days"(0)
+    ),interval));
+    assertThrown!DateTimeException(testInterval(Interval!Date(
+        Date(2010, 7, 4),
+        dur!"days"(0)
+    ), Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
 
     assert(interval.span(interval) == interval);
     assert(interval.span(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))) ==
@@ -20501,14 +21139,46 @@ unittest
     assert(!iInterval.span(iNegInfInterval).empty);
 
     //Verify Examples.
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(Interval!Date(Date(1990, 7, 6), Date(1991, 1, 8))) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) == Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).span(Interval!Date(
+        Date(1990, 7, 6),
+        Date(1991, 1, 8))
+    ) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).span(Interval!Date(
+        Date(2012, 3, 1),
+        Date(2013, 5, 7))
+    ) == Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
 
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(PosInfInterval!Date(Date(2050, 1, 1))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).span(PosInfInterval!Date(
+        Date(1990, 7, 6))
+    ) == PosInfInterval!Date(Date(1990, 7 , 6)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).span(PosInfInterval!Date(
+        Date(2050, 1, 1))
+    ) == PosInfInterval!Date(Date(1996, 1 , 2)));
 
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(NegInfInterval!Date(Date(1602, 5, 21))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-    assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2013, 1 , 12)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).span(NegInfInterval!Date(
+        Date(1602, 5, 21))
+    ) == NegInfInterval!Date(Date(2012, 3 , 1)));
+    assert(Interval!Date(
+        Date(1996, 1, 2),
+        Date(2012, 3, 1)
+    ).span(NegInfInterval!Date(
+        Date(2013, 1, 12))
+    ) == NegInfInterval!Date(Date(2013, 1 , 12)));
 }
 
 //Test Interval's shift(duration).
@@ -20561,7 +21231,8 @@ unittest
 
         assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), 1, 0));
 
-        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow, in I expected, size_t line = __LINE__)
+        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow,
+            in I expected, size_t line = __LINE__)
         {
             interval.shift(years, months, allow);
             assert(interval == expected);
@@ -20610,7 +21281,10 @@ unittest
     }
 
     assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), dur!"days"(1)));
-    assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)), dur!"days"(-5)));
+    assertThrown!DateTimeException(testIntervalFail(Interval!Date(
+        Date(2010, 7, 4),
+        Date(2010, 7, 5)
+    ), dur!"days"(-5)));
 
     static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
     {
@@ -20651,52 +21325,83 @@ unittest
         assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), 1, 0));
         assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)), -5, 0));
 
-        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow, Direction dir, in I expected, size_t line = __LINE__)
+        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow,
+            Direction dir, in I expected, size_t line = __LINE__)
         {
             interval.expand(years, months, allow, dir);
             assert(interval == expected);
         }
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(1995, 7, 4), Date(2017, 1, 7)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(2005, 7, 4), Date(2007, 1, 7)));
+        testInterval(interval, 5, 0, AllowDayOverflow.yes, Direction.both,
+            Interval!Date(Date(1995, 7, 4), Date(2017, 1, 7)));
+        testInterval(interval, -5, 0, AllowDayOverflow.yes, Direction.both,
+            Interval!Date(Date(2005, 7, 4), Date(2007, 1, 7)));
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 7, 4), Date(2017, 1, 7)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 7, 4), Date(2007, 1, 7)));
+        testInterval(interval, 5, 0, AllowDayOverflow.yes, Direction.fwd,
+            Interval!Date(Date(2000, 7, 4), Date(2017, 1, 7)));
+        testInterval(interval, -5, 0, AllowDayOverflow.yes, Direction.fwd,
+            Interval!Date(Date(2000, 7, 4), Date(2007, 1, 7)));
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(1995, 7, 4), Date(2012, 1, 7)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(2005, 7, 4), Date(2012, 1, 7)));
+        testInterval(interval, 5, 0, AllowDayOverflow.yes, Direction.bwd,
+            Interval!Date(Date(1995, 7, 4), Date(2012, 1, 7)));
+        testInterval(interval, -5, 0, AllowDayOverflow.yes, Direction.bwd,
+            Interval!Date(Date(2005, 7, 4), Date(2012, 1, 7)));
 
         auto interval2 = Interval!Date(Date(2000, 1, 29), Date(2010, 5, 31));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(1998, 12, 29), Date(2011, 7, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(1999, 3, 1), Date(2011, 5, 1)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(2001, 3, 1), Date(2009, 5, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(2000, 12, 29), Date(2009, 7, 1)));
+        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.both,
+            Interval!Date(Date(1998, 12, 29), Date(2011, 7, 1)));
+        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.both,
+            Interval!Date(Date(1999, 3, 1), Date(2011, 5, 1)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.both,
+            Interval!Date(Date(2001, 3, 1), Date(2009, 5, 1)));
+        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.both,
+            Interval!Date(Date(2000, 12, 29), Date(2009, 7, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(1998, 12, 29), Date(2011, 6, 30)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(1999, 2, 28), Date(2011, 4, 30)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(2001, 2, 28), Date(2009, 4, 30)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(2000, 12, 29), Date(2009, 6, 30)));
+        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.both,
+            Interval!Date(Date(1998, 12, 29), Date(2011, 6, 30)));
+        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.both,
+            Interval!Date(Date(1999, 2, 28), Date(2011, 4, 30)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.both,
+            Interval!Date(Date(2001, 2, 28), Date(2009, 4, 30)));
+        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.both,
+            Interval!Date(Date(2000, 12, 29), Date(2009, 6, 30)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 7, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 5, 1)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2009, 5, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2009, 7, 1)));
+        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.fwd,
+            Interval!Date(Date(2000, 1, 29), Date(2011, 7, 1)));
+        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.fwd,
+            Interval!Date(Date(2000, 1, 29), Date(2011, 5, 1)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.fwd,
+            Interval!Date(Date(2000, 1, 29), Date(2009, 5, 1)));
+        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.fwd,
+            Interval!Date(Date(2000, 1, 29), Date(2009, 7, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 6, 30)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 4, 30)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2009, 4, 30)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2009, 6, 30)));
+        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.fwd,
+            Interval!Date(Date(2000, 1, 29), Date(2011, 6, 30)));
+        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.fwd,
+            Interval!Date(Date(2000, 1, 29), Date(2011, 4, 30)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.fwd,
+            Interval!Date(Date(2000, 1, 29), Date(2009, 4, 30)));
+        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.fwd,
+            Interval!Date(Date(2000, 1, 29), Date(2009, 6, 30)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(1998, 12, 29), Date(2010, 5, 31)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(1999, 3, 1), Date(2010, 5, 31)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(2001, 3, 1), Date(2010, 5, 31)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(2000, 12, 29), Date(2010, 5, 31)));
+        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.bwd,
+            Interval!Date(Date(1998, 12, 29), Date(2010, 5, 31)));
+        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.bwd,
+            Interval!Date(Date(1999, 3, 1), Date(2010, 5, 31)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.bwd,
+            Interval!Date(Date(2001, 3, 1), Date(2010, 5, 31)));
+        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.bwd,
+            Interval!Date(Date(2000, 12, 29), Date(2010, 5, 31)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(1998, 12, 29), Date(2010, 5, 31)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(1999, 2, 28), Date(2010, 5, 31)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(2001, 2, 28), Date(2010, 5, 31)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(2000, 12, 29), Date(2010, 5, 31)));
+        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.bwd,
+            Interval!Date(Date(1998, 12, 29), Date(2010, 5, 31)));
+        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.bwd,
+            Interval!Date(Date(1999, 2, 28), Date(2010, 5, 31)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.bwd,
+            Interval!Date(Date(2001, 2, 28), Date(2010, 5, 31)));
+        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.bwd,
+            Interval!Date(Date(2000, 12, 29), Date(2010, 5, 31)));
     }
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -20741,8 +21446,12 @@ unittest
         assert(Interval!Date(Date(2010, 9, 12), Date(2010, 10, 1)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri)).front ==
                     Date(2010, 9, 12));
 
-        assert(Interval!Date(Date(2010, 9, 12), Date(2010, 10, 1)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri), PopFirst.yes).front ==
-                    Date(2010, 9, 17));
+        assert(
+        Interval!Date(
+            Date(2010, 9, 12),
+            Date(2010, 10, 1)
+        ).fwdRange(
+                everyDayOfWeek!Date(DayOfWeek.fri), PopFirst.yes).front ==Date(2010, 9, 17));
     }
 
     //Verify Examples.
@@ -20804,11 +21513,13 @@ unittest
         assert(!interval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).empty);
         assert(interval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri), PopFirst.yes).empty);
 
-        assert(Interval!Date(Date(2010, 9, 19), Date(2010, 10, 1)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).front ==
-                    Date(2010, 10, 1));
+        assert(Interval!Date(Date(2010, 9, 19), Date(2010, 10, 1))
+            .bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).front == Date(2010,
+            10, 1));
 
-        assert(Interval!Date(Date(2010, 9, 19), Date(2010, 10, 1)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri), PopFirst.yes).front ==
-                    Date(2010, 9, 24));
+        assert(Interval!Date(Date(2010, 9, 19), Date(2010, 10, 1))
+            .bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri), PopFirst.yes).front == Date(2010,
+            9, 24));
     }
 
     //Verify Examples.
@@ -21330,7 +22041,10 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
     {
         import std.format : format;
 
-        enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
+        enforce(
+            this.intersects(interval),
+            new DateTimeException(format("%s and %s do not intersect.", this, interval))
+        );
 
         auto begin = _begin > interval._begin ? _begin : interval._begin;
 
@@ -21385,7 +22099,10 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
     {
         import std.format : format;
 
-        enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
+        enforce(
+            this.intersects(interval),
+            new DateTimeException(format("%s and %s do not intersect.", this, interval))
+        );
 
         return Interval!TP(_begin, interval._end);
     }
@@ -22497,14 +23214,24 @@ unittest
     assert(!iPosInfInterval.intersection(iNegInfInterval).empty);
 
     //Verify Examples.
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) == Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(Interval!Date(Date(1990,
+        7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1996, 1, 2), Date(2000, 8, 2)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(Interval!Date(Date(1999,
+        1, 12), Date(2011, 9, 17))) == Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17)));
 
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1996, 1 , 2)));
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(PosInfInterval!Date(Date(1999, 1, 12))) == PosInfInterval!Date(Date(1999, 1 , 12)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2))
+        .intersection(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1996,
+        1, 2)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2))
+        .intersection(PosInfInterval!Date(Date(1999, 1, 12))) == PosInfInterval!Date(Date(1999,
+        1, 12)));
 
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(NegInfInterval!Date(Date(1999, 7, 6))) == Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(NegInfInterval!Date(Date(2013, 1, 12))) == Interval!Date(Date(1996, 1 , 2), Date(2013, 1, 12)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2))
+        .intersection(NegInfInterval!Date(Date(1999, 7, 6))) == Interval!Date(Date(1996,
+        1, 2), Date(1999, 7, 6)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2))
+        .intersection(NegInfInterval!Date(Date(2013, 1, 12))) == Interval!Date(Date(1996,
+        1, 2), Date(2013, 1, 12)));
 }
 
 //Test PosInfInterval's isAdjacent().
@@ -22710,11 +23437,15 @@ unittest
     static assert(!__traits(compiles, iPosInfInterval.merge(iNegInfInterval)));
 
     //Verify Examples.
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(Interval!Date(Date(1990, 7,
+        6), Date(2000, 8, 2))) == PosInfInterval!Date(Date(1990, 7, 6)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(Interval!Date(Date(1999, 1,
+        12), Date(2011, 9, 17))) == PosInfInterval!Date(Date(1996, 1, 2)));
 
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(PosInfInterval!Date(Date(1999, 1, 12))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(PosInfInterval!Date(Date(1990,
+        7, 6))) == PosInfInterval!Date(Date(1990, 7, 6)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(PosInfInterval!Date(Date(1999,
+        1, 12))) == PosInfInterval!Date(Date(1996, 1, 2)));
 }
 
 //Test PosInfInterval's span().
@@ -22826,12 +23557,17 @@ unittest
     static assert(!__traits(compiles, iPosInfInterval.span(iNegInfInterval)));
 
     //Verify Examples.
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).span(Interval!Date(Date(500, 8, 9), Date(1602, 1, 31))) == PosInfInterval!Date(Date(500, 8, 9)));
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).span(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).span(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).span(Interval!Date(Date(500, 8,
+        9), Date(1602, 1, 31))) == PosInfInterval!Date(Date(500, 8, 9)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).span(Interval!Date(Date(1990, 7,
+        6), Date(2000, 8, 2))) == PosInfInterval!Date(Date(1990, 7, 6)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).span(Interval!Date(Date(1999, 1,
+        12), Date(2011, 9, 17))) == PosInfInterval!Date(Date(1996, 1, 2)));
 
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).span(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-    assert(PosInfInterval!Date(Date(1996, 1, 2)).span(PosInfInterval!Date(Date(1999, 1, 12))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).span(PosInfInterval!Date(Date(1990,
+        7, 6))) == PosInfInterval!Date(Date(1990, 7, 6)));
+    assert(PosInfInterval!Date(Date(1996, 1, 2)).span(PosInfInterval!Date(Date(1999,
+        1, 12))) == PosInfInterval!Date(Date(1996, 1, 2)));
 }
 
 //Test PosInfInterval's shift().
@@ -22870,7 +23606,8 @@ unittest
     {
         auto interval = PosInfInterval!Date(Date(2010, 7, 4));
 
-        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow, in I expected, size_t line = __LINE__)
+        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow,
+            in I expected, size_t line = __LINE__)
         {
             interval.shift(years, months, allow);
             assert(interval == expected);
@@ -22944,7 +23681,8 @@ unittest
     {
         auto interval = PosInfInterval!Date(Date(2000, 7, 4));
 
-        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow, in I expected, size_t line = __LINE__)
+        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow,
+            in I expected, size_t line = __LINE__)
         {
             interval.expand(years, months, allow);
             assert(interval == expected);
@@ -23528,7 +24266,10 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
     {
         import std.format : format;
 
-        enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
+        enforce(
+            this.intersects(interval),
+            new DateTimeException(format("%s and %s do not intersect.", this, interval))
+        );
 
         auto end = _end < interval._end ? _end : interval._end;
 
@@ -23560,7 +24301,10 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
     {
         import std.format : format;
 
-        enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
+        enforce(
+            this.intersects(interval),
+            new DateTimeException(format("%s and %s do not intersect.", this, interval))
+        );
 
         return Interval!TP(interval._begin, _end);
     }
@@ -24700,14 +25444,24 @@ unittest
     assert(!iNegInfInterval.intersection(iNegInfInterval).empty);
 
     //Verify Examples.
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1990, 7 , 6), Date(2000, 8, 2)));
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) == Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(Interval!Date(Date(1990,
+        7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(Interval!Date(Date(1999,
+        1, 12), Date(2015, 9, 2))) == Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1)));
 
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1990, 7, 6))) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1999, 1, 12))) == Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1))
+        .intersection(PosInfInterval!Date(Date(1990, 7, 6))) == Interval!Date(Date(1990,
+        7, 6), Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1))
+        .intersection(PosInfInterval!Date(Date(1999, 1, 12))) == Interval!Date(Date(1999,
+        1, 12), Date(2012, 3, 1)));
 
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(NegInfInterval!Date(Date(1999, 7, 6))) == NegInfInterval!Date(Date(1999, 7 , 6)));
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2012, 3 , 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1))
+        .intersection(NegInfInterval!Date(Date(1999, 7, 6))) == NegInfInterval!Date(Date(1999,
+        7, 6)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1))
+        .intersection(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2012,
+        3, 1)));
 }
 
 //Test NegInfInterval's isAdjacent().
@@ -24915,11 +25669,15 @@ unittest
     assert(!iNegInfInterval.merge(iNegInfInterval).empty);
 
     //Verify Examples.
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) == NegInfInterval!Date(Date(2015, 9 , 2)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(Interval!Date(Date(1990, 7,
+        6), Date(2000, 8, 2))) == NegInfInterval!Date(Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(Interval!Date(Date(1999, 1,
+        12), Date(2015, 9, 2))) == NegInfInterval!Date(Date(2015, 9, 2)));
 
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(1999, 7, 6))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2013, 1 , 12)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(1999,
+        7, 6))) == NegInfInterval!Date(Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(2013,
+        1, 12))) == NegInfInterval!Date(Date(2013, 1, 12)));
 }
 
 //Test NegInfInterval's span().
@@ -25031,12 +25789,17 @@ unittest
     assert(!iNegInfInterval.span(iNegInfInterval).empty);
 
     //Verify Examples.
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) == NegInfInterval!Date(Date(2015, 9 , 2)));
-    assert(NegInfInterval!Date(Date(1600, 1, 7)).span(Interval!Date(Date(2012, 3, 11), Date(2017, 7, 1))) == NegInfInterval!Date(Date(2017, 7 , 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(Interval!Date(Date(1990, 7,
+        6), Date(2000, 8, 2))) == NegInfInterval!Date(Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(Interval!Date(Date(1999, 1,
+        12), Date(2015, 9, 2))) == NegInfInterval!Date(Date(2015, 9, 2)));
+    assert(NegInfInterval!Date(Date(1600, 1, 7)).span(Interval!Date(Date(2012, 3,
+        11), Date(2017, 7, 1))) == NegInfInterval!Date(Date(2017, 7, 1)));
 
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(NegInfInterval!Date(Date(1999, 7, 6))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2013, 1 , 12)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(NegInfInterval!Date(Date(1999,
+        7, 6))) == NegInfInterval!Date(Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(NegInfInterval!Date(Date(2013,
+        1, 12))) == NegInfInterval!Date(Date(2013, 1, 12)));
 }
 
 //Test NegInfInterval's shift().
@@ -25080,7 +25843,8 @@ unittest
             interval.shift(years, months);
         }
 
-        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow, in I expected, size_t line = __LINE__)
+        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow,
+            in I expected, size_t line = __LINE__)
         {
             interval.shift(years, months, allow);
             assert(interval == expected);
@@ -25154,7 +25918,8 @@ unittest
     {
         auto interval = NegInfInterval!Date(Date(2012, 1, 7));
 
-        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow, in I expected, size_t line = __LINE__)
+        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow,
+            in I expected, size_t line = __LINE__)
         {
             interval.expand(years, months, allow);
             assert(interval == expected);
@@ -25204,11 +25969,11 @@ unittest
 
     assertThrown!DateTimeException(testInterval(negInfInterval));
 
-    assert(NegInfInterval!Date(Date(2010, 10, 1)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).front ==
-                Date(2010, 10, 1));
+    assert(NegInfInterval!Date(Date(2010, 10, 1)).bwdRange(everyDayOfWeek!(Date,
+        Direction.bwd)(DayOfWeek.fri)).front == Date(2010, 10, 1));
 
-    assert(NegInfInterval!Date(Date(2010, 10, 1)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri), PopFirst.yes).front ==
-                Date(2010, 9, 24));
+    assert(NegInfInterval!Date(Date(2010, 10, 1)).bwdRange(everyDayOfWeek!(Date,
+        Direction.bwd)(DayOfWeek.fri), PopFirst.yes).front == Date(2010, 9, 24));
 
     //Verify Examples.
     auto interval = NegInfInterval!Date(Date(2010, 9, 9));
@@ -26014,7 +26779,10 @@ unittest
             return cast(SysTime)st;
         }
 
-        auto interval = Interval!SysTime(SysTime(DateTime(2010, 7, 4, 12, 1, 7)), SysTime(DateTime(2012, 1, 7, 14, 0, 0)));
+        auto interval = Interval!SysTime(
+            SysTime(DateTime(2010, 7, 4, 12, 1, 7)),
+            SysTime(DateTime(2012, 1, 7, 14, 0, 0))
+        );
 
         auto ir = IntervalRange!(SysTime, Direction.fwd)(interval, &stFunc);
     }
@@ -26040,13 +26808,19 @@ unittest
 
     //bwd
     {
-        auto range = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+        auto range = Interval!Date(
+            Date(2010, 9, 19),
+            Date(2010, 9, 21)
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
 
         assert(!range.empty);
         range.popFront();
         assert(range.empty);
 
-        const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+        const cRange = Interval!Date(
+            Date(2010, 7, 4),
+            Date(2012, 1, 7)
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
         assert(!cRange.empty);
 
         //Apparently, creating an immutable IntervalRange!Date doesn't work, so we can't test if
@@ -26059,13 +26833,19 @@ unittest
 {
     //fwd
     {
-        auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        auto emptyRange = Interval!Date(
+            Date(2010, 9, 19),
+            Date(2010, 9, 20)
+        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
         assertThrown!DateTimeException((in IntervalRange!(Date, Direction.fwd) range){range.front;}(emptyRange));
 
         auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
         assert(range.front == Date(2010, 7, 4));
 
-        auto poppedRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        auto poppedRange = Interval!Date(
+            Date(2010, 7, 4),
+            Date(2012, 1, 7)
+        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
         assert(poppedRange.front == Date(2010, 7, 7));
 
         const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
@@ -26074,16 +26854,28 @@ unittest
 
     //bwd
     {
-        auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        auto emptyRange = Interval!Date(
+            Date(2010, 9, 19),
+            Date(2010, 9, 20)
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
         assertThrown!DateTimeException((in IntervalRange!(Date, Direction.bwd) range){range.front;}(emptyRange));
 
-        auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
+        auto range = Interval!Date(
+            Date(2010, 7, 4),
+            Date(2012, 1, 7)
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
         assert(range.front == Date(2012, 1, 7));
 
-        auto poppedRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        auto poppedRange = Interval!Date(
+            Date(2010, 7, 4),
+            Date(2012, 1, 7)
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
         assert(poppedRange.front == Date(2012, 1, 4));
 
-        const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+        const cRange = Interval!Date(
+            Date(2010, 7, 4),
+            Date(2012, 1, 7)
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
         assert(cRange.front != Date.init);
     }
 }
@@ -26093,10 +26885,16 @@ unittest
 {
     //fwd
     {
-        auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        auto emptyRange = Interval!Date(
+            Date(2010, 9, 19),
+            Date(2010, 9, 20)
+        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
         assertThrown!DateTimeException((IntervalRange!(Date, Direction.fwd) range){range.popFront();}(emptyRange));
 
-        auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        auto range = Interval!Date(
+            Date(2010, 7, 4),
+            Date(2012, 1, 7)
+        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
         auto expected = range.front;
 
         foreach (date; range)
@@ -26113,10 +26911,16 @@ unittest
 
     //bwd
     {
-        auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        auto emptyRange = Interval!Date(
+            Date(2010, 9, 19),
+            Date(2010, 9, 20)
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
         assertThrown!DateTimeException((IntervalRange!(Date, Direction.bwd) range){range.popFront();}(emptyRange));
 
-        auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        auto range = Interval!Date(
+            Date(2010, 7, 4),
+            Date(2012, 1, 7)
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
         auto expected = range.front;
 
         foreach (date; range)
@@ -26127,7 +26931,10 @@ unittest
 
         assert(walkLength(range) == 79);
 
-        const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+        const cRange = Interval!Date(
+            Date(2010, 7, 4),
+            Date(2012, 1, 7)
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
         static assert(!__traits(compiles, cRange.popFront()));
     }
 }
@@ -26741,7 +27548,9 @@ unittest
     auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
     assert(range.front == Date(2012, 1, 7));
 
-    auto poppedRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+    auto poppedRange = NegInfInterval!Date(
+        Date(2012, 1, 7)
+    ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
     assert(poppedRange.front == Date(2012, 1, 4));
 
     const cRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
@@ -26753,7 +27562,9 @@ unittest
 {
     import std.range;
 
-    auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+    auto range = NegInfInterval!Date(
+        Date(2012, 1, 7)
+    ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
     auto expected = range.front;
 
     foreach (date; take(range, 79))
@@ -32674,9 +33485,12 @@ unittest
                 foreach (c; chain(iota(33, '('), iota('(' + 1, 127)))
                 {
                     scope(failure) writefln("c: %d", c);
-                    assertThrown!DateTimeException(parseRFC822DateTime(cr(format("21Dec1213:14:15+0000%c", cast(char)c))));
-                    assertThrown!DateTimeException(parseRFC822DateTime(cr(format("21Dec1213:14:15+0000%c  ", cast(char)c))));
-                    assertThrown!DateTimeException(parseRFC822DateTime(cr(format("21Dec1213:14:15+0000%chello", cast(char)c))));
+                    assertThrown!DateTimeException(
+                        parseRFC822DateTime(cr(format("21Dec1213:14:15+0000%c", cast(char)c))));
+                    assertThrown!DateTimeException(
+                        parseRFC822DateTime(cr(format("21Dec1213:14:15+0000%c  ", cast(char)c))));
+                    assertThrown!DateTimeException(
+                        parseRFC822DateTime(cr(format("21Dec1213:14:15+0000%chello", cast(char)c))));
                 }
             }
         }

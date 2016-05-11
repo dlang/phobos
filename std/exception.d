@@ -357,8 +357,8 @@ unittest
     enforce(line.length, "Expected a non-empty line.");
     --------------------
  +/
-T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
-    if (is(typeof({ if (!value) {} })))
+T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
+    string file = __FILE__, size_t line = __LINE__) if (is(typeof({ if (!value) {} })))
 {
     if (!value) bailOut!E(file, line, msg);
     return value;
@@ -1568,7 +1568,12 @@ class ErrnoException : Exception
 CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
+        "The error handler's return value("
+        ~ T2.stringof ~
+        ") does not have a common type with the expression("
+        ~ T1.stringof ~
+        ")."
+    );
     try
     {
         return expression();
@@ -1584,7 +1589,12 @@ CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 ex
 CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, scope T2 delegate(E) errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
+        "The error handler's return value("
+        ~ T2.stringof ~
+        ") does not have a common type with the expression("
+        ~ T1.stringof ~
+        ")."
+    );
     try
     {
         return expression();
@@ -1600,7 +1610,12 @@ CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, sc
 CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate(Exception) errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
+        "The error handler's return value("
+        ~ T2.stringof ~
+        ") does not have a common type with the expression("
+        ~ T1.stringof ~
+        ")."
+    );
     try
     {
         return expression();

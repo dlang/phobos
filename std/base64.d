@@ -346,7 +346,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem. See comment on 'out'.
-        version (unittest) assert(bufptr - buffer.ptr == encodeLength(srcLen), "The length of result is different from Base64");
+        version (unittest)
+            assert(
+                bufptr - buffer.ptr == encodeLength(srcLen),
+                "The length of result is different from Base64"
+            );
 
         // encode method can't assume buffer length. So, slice needed.
         return buffer[0..bufptr - buffer.ptr];
@@ -525,7 +529,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest) assert(pcount == encodeLength(srcLen), "The number of put is different from the length of Base64");
+        version (unittest)
+            assert(
+                pcount == encodeLength(srcLen),
+                "The number of put is different from the length of Base64"
+            );
 
         return pcount;
     }
@@ -1119,7 +1127,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest) assert((bufptr - buffer.ptr) >= (decodeLength(srcLen) - 2), "The length of result is smaller than expected length");
+        version (unittest)
+            assert(
+                (bufptr - buffer.ptr) >= (decodeLength(srcLen) - 2),
+                "The length of result is smaller than expected length"
+            );
 
         return buffer[0..bufptr - buffer.ptr];
     }
@@ -1300,7 +1312,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest) assert(pcount >= (decodeLength(srcLen) - 2), "The length of result is smaller than expected length");
+        version (unittest)
+            assert(
+                pcount >= (decodeLength(srcLen) - 2),
+                "The length of result is smaller than expected length"
+            );
 
         return pcount;
     }

@@ -1023,8 +1023,8 @@ body
         return decodeImpl!(true, useReplacementDchar)(str, index);
 }
 
-dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index) @trusted pure
-    if (isSomeString!S)
+dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+    auto ref S str, ref size_t index) @trusted pure if (isSomeString!S)
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
@@ -1064,8 +1064,8 @@ body
         type of range being used and how many code units had to be popped off
         before the code point was determined to be invalid.
   +/
-dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(ref S str, out size_t numCodeUnits)
-    if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
+dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+    ref S str, out size_t numCodeUnits) if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
 in
 {
     assert(!str.empty);
@@ -1100,8 +1100,8 @@ body
     }
 }
 
-dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(ref S str, out size_t numCodeUnits) @trusted pure
-    if (isSomeString!S)
+dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+    ref S str, out size_t numCodeUnits) @trusted pure if (isSomeString!S)
 in
 {
     assert(!str.empty);
@@ -1164,8 +1164,9 @@ package template codeUnitLimit(S)
  * Returns:
  *      decoded character
  */
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
-    if (is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+    auto ref S str, ref size_t index) if (
+    is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
     /* The following encodings are valid, except for the 5 and 6 byte
      * combinations:
@@ -1393,7 +1394,8 @@ unittest
     }
 }
 
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)
+(auto ref S str, ref size_t index)
     if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
     static if (is(S : const wchar[]))
@@ -1511,7 +1513,8 @@ unittest
     }
 }
 
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+    auto ref S str, ref size_t index)
     if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
     static if (is(S : const dchar[]))
@@ -1826,8 +1829,10 @@ unittest
         static assert(isSafe!({ S str; size_t i = 0; decode(str, i);      }));
         static assert(isSafe!({ S str; size_t i = 0; decodeFront(str, i); }));
         static assert(isSafe!({ S str; decodeFront(str); }));
-        static assert((functionAttributes!({ S str; size_t i = 0; decode(str, i);      }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({ S str; size_t i = 0; decodeFront(str, i); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ S str; size_t i = 0; decode(str, i); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({
+            S str; size_t i = 0; decodeFront(str, i);
+        }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ S str; decodeFront(str); }) & FunctionAttribute.pure_) != 0);
     }
     });

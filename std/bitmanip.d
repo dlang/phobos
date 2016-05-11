@@ -187,7 +187,8 @@ private template createReferenceAccessor(string store, T, ulong bits, string nam
         ~ "return cast("~T.stringof~") cast(void*) result;}\n"
     // setter
         ~"@property void "~name~"("~T.stringof~" v) @trusted pure nothrow @nogc { "
-        ~"assert(((cast(typeof("~store~")) cast(void*) v) & "~myToString(mask)~`) == 0, "Value not properly aligned for '`~name~`'"); `
+        ~"assert(((cast(typeof("~store~")) cast(void*) v) & "~myToString(mask)
+        ~`) == 0, "Value not properly aligned for '`~name~`'"); `
         ~store~" = cast(typeof("~store~"))"
         ~" (("~store~" & (cast(typeof("~store~")) "~myToString(mask)~"))"
         ~" | ((cast(typeof("~store~")) cast(void*) v) & (cast(typeof("~store~")) "~myToString(~mask)~")));}\n";
@@ -205,7 +206,10 @@ private template sizeOfBitField(T...)
 
 private template createTaggedReference(T, ulong a, string name, Ts...)
 {
-    static assert(sizeOfBitField!Ts <= getBitsForAlign(a), "Fields must fit in the bits know to be zero because of alignment.");
+    static assert(
+        sizeOfBitField!Ts <= getBitsForAlign(a),
+        "Fields must fit in the bits know to be zero because of alignment."
+    );
     enum StoreName = createStoreName!(T, name, 0, Ts);
     enum result
         = createReferenceAccessor!(StoreName, T, sizeOfBitField!Ts, name).result

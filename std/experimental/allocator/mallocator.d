@@ -237,8 +237,10 @@ struct AlignedMallocator
             return null;
 
         else if (code == EINVAL)
-            assert (0, "AlignedMallocator.alignment is not a power of two multiple of (void*).sizeof, according to posix_memalign!");
-
+        {
+            assert(0, "AlignedMallocator.alignment is not a power of two "
+                ~"multiple of (void*).sizeof, according to posix_memalign!");
+        }
         else if (code != 0)
             assert (0, "posix_memalign returned an unknown code!");
 

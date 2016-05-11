@@ -170,7 +170,8 @@ private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE
 
 version (Windows)
 @trusted
-private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, string file = __FILE__, size_t line = __LINE__)
+private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
+    string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)
         return condition;
@@ -187,7 +188,8 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, str
 
 version (Posix)
 @trusted
-private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, string file = __FILE__, size_t line = __LINE__)
+private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
+    string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)
         return condition;

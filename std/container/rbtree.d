@@ -1693,7 +1693,9 @@ assert(equal(rbt[], [5]));
                 {
                     writeln("bad tree at:");
                     debug printTree(n);
-                    throw new Exception("Node at path " ~ path ~ " has different number of black nodes on left and right paths");
+                    throw new Exception(
+                        "Node at path " ~ path ~ " has different number of black nodes on left and right paths"
+                    );
                 }
                 return l + (n.color == n.color.Black ? 1 : 0);
             }

@@ -321,7 +321,13 @@ private struct _Cache(R, bool bidir)
         CacheTypes caches;
 
         static assert(isAssignable!(UE, E) && is(UE : E),
-            algoFormat("Cannot instantiate range with %s because %s elements are not assignable to %s.", R.stringof, E.stringof, UE.stringof));
+            algoFormat(
+                "Cannot instantiate range with %s because %s elements are not assignable to %s.",
+                R.stringof,
+                E.stringof,
+                UE.stringof
+            )
+        );
     }
 
     this(R range)
@@ -2669,7 +2675,13 @@ template reduce(fun...) if (fun.length >= 1)
             foreach (i, f; binfuns)
             {
                 static assert(!is(typeof(f(args[i], e))) || is(typeof(args[i] = f(args[i], e))),
-                    algoFormat("Incompatible function/seed/element: %s/%s/%s", fullyQualifiedName!f, Args[i].stringof, E.stringof));
+                    algoFormat(
+                        "Incompatible function/seed/element: %s/%s/%s",
+                        fullyQualifiedName!f,
+                        Args[i].stringof,
+                        E.stringof
+                    )
+                );
             }
 
             static if (mustInitialize) if (initialized == false)
@@ -2684,7 +2696,9 @@ template reduce(fun...) if (fun.length >= 1)
             foreach (i, f; binfuns)
                 args[i] = f(args[i], e);
         }
-        static if (mustInitialize) if (!initialized) throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
+        static if (mustInitialize)
+        if (!initialized)
+            throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
 
         static if (Args.length == 1)
             return args[0];
@@ -2968,7 +2982,12 @@ private template ReduceSeedType(E)
         ReduceSeedType s = ReduceSeedType.init;
         static assert(is(typeof({ReduceSeedType s = lvalueOf!E;})) &&
             is(typeof(lvalueOf!ReduceSeedType = fun(lvalueOf!ReduceSeedType, lvalueOf!E))),
-            algoFormat("Unable to deduce an acceptable seed type for %s with element type %s.", fullyQualifiedName!fun, E.stringof));
+            algoFormat(
+                "Unable to deduce an acceptable seed type for %s with element type %s.",
+                fullyQualifiedName!fun,
+                E.stringof
+            )
+        );
     }
 }
 
@@ -4231,8 +4250,14 @@ private struct SplitterResult(alias isTerminator, Range)
     import std.uni : isWhite;
 
     //@@@6791@@@
-    assert(equal(splitter("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
-    assert(equal(splitter!(std.uni.isWhite)("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
+    assert(equal(
+        splitter("là dove terminava quella valle"),
+        ["là", "dove", "terminava", "quella", "valle"]
+    ));
+    assert(equal(
+        splitter!(std.uni.isWhite)("là dove terminava quella valle"),
+        ["là", "dove", "terminava", "quella", "valle"]
+    ));
     assert(equal(splitter!"a=='本'"("日本語"), ["日", "語"]));
 }
 

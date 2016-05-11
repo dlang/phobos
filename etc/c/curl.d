@@ -1563,7 +1563,14 @@ CURLcode  curl_global_init(c_long flags);
  * callback routines with be invoked by this library instead of the system
  * memory management routines like malloc, free etc.
  */
-CURLcode  curl_global_init_mem(c_long flags, curl_malloc_callback m, curl_free_callback f, curl_realloc_callback r, curl_strdup_callback s, curl_calloc_callback c);
+CURLcode  curl_global_init_mem(
+  c_long flags,
+  curl_malloc_callback m,
+  curl_free_callback f,
+  curl_realloc_callback r,
+  curl_strdup_callback s,
+  curl_calloc_callback c
+);
 
 /**
  * Name: curl_global_cleanup()
@@ -2139,7 +2146,13 @@ extern (C) CURLMcode  curl_multi_remove_handle(CURLM *multi_handle, CURL *curl_h
 /** tmp decl */
 alias fd_set = int;
 ///
-extern (C) CURLMcode  curl_multi_fdset(CURLM *multi_handle, fd_set *read_fd_set, fd_set *write_fd_set, fd_set *exc_fd_set, int *max_fd);
+extern (C) CURLMcode  curl_multi_fdset(
+  CURLM *multi_handle,
+  fd_set *read_fd_set,
+  fd_set *write_fd_set,
+  fd_set *exc_fd_set,
+  int *max_fd
+);
 
  /**
   * Name:    curl_multi_perform()

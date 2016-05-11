@@ -862,8 +862,9 @@ public struct UUID
          * Write the UUID into `result` as an ASCII string in the canonical form.
          */
         @safe pure nothrow @nogc void toString(Range)(Range result) const
-            if (isRandomAccessRange!Range && hasAssignableElements!Range && hasLength!Range && (isSomeChar!(typeof(Range.init[0])) || isUnsigned!(typeof(Range.init[0])))
-                || isSomeString!Range && isMutable!(typeof(Range.init[0])))
+            if (isRandomAccessRange!Range && hasAssignableElements!Range &&
+                hasLength!Range && (isSomeChar!(typeof(Range.init[0])) || isUnsigned!(typeof(Range.init[0]))) ||
+                isSomeString!Range && isMutable!(typeof(Range.init[0])))
         in {
             assert(result.length >= 36, "Result's length for UUID.toString must be greater or equal 36.");
         }

@@ -565,7 +565,9 @@ template BacktrackingMatcher(bool CTregex)
                         }
                         matcher.matches = matches[ms .. me];
                         matcher.backrefed = backrefed.empty ? matches : backrefed;
-                        matcher.re.ir = re.ir[pc+IRL!(IR.LookaheadStart) .. pc+IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd)];
+                        matcher.re.ir = re.ir[
+                            pc+IRL!(IR.LookaheadStart) .. pc+IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd)
+                        ];
                         bool match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookaheadStart);
                         s.reset(save);
                         next();
@@ -593,7 +595,9 @@ template BacktrackingMatcher(bool CTregex)
                             auto matcher = Matcher(re, s.loopBack(index), mem);
                         }
                         matcher.matches = matches[ms .. me];
-                        matcher.re.ir = re.ir[pc + IRL!(IR.LookbehindStart) .. pc + IRL!(IR.LookbehindStart) + len + IRL!(IR.LookbehindEnd)];
+                        matcher.re.ir = re.ir[
+                          pc + IRL!(IR.LookbehindStart) .. pc + IRL!(IR.LookbehindStart) + len + IRL!(IR.LookbehindEnd)
+                        ];
                         matcher.backrefed  = backrefed.empty ? matches : backrefed;
                         bool match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookbehindStart);
                         if (!match)

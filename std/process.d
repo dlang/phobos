@@ -2871,14 +2871,16 @@ unittest
 
         e = escapeShellCommand(helper ~ s) ~ ">" ~ escapeShellFileName(fn);
         {
-            scope(failure) writefln("executeShell() with redirect failed.\nExpected:\t%s\nFilename:\t%s\nEncoded:\t%s", s, [fn], [e]);
+            scope(failure) writefln(
+                "executeShell() with redirect failed.\nExpected:\t%s\nFilename:\t%s\nEncoded:\t%s", s, [fn], [e]);
             auto result = executeShell(e);
             assert(result.status == 0, "std_process_unittest_helper failed");
             assert(!result.output.length, "No output expected, got:\n" ~ result.output);
             g = readText(fn).split("\0")[1..$];
         }
         remove(fn);
-        assert(s == g, format("executeShell() with redirect test failed.\nExpected:\t%s\nGot:\t\t%s\nEncoded:\t%s", s, g, [e]));
+        assert(s == g,
+            format("executeShell() with redirect test failed.\nExpected:\t%s\nGot:\t\t%s\nEncoded:\t%s", s, g, [e]));
     }
 
     while (true)
