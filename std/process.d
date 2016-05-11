@@ -3771,7 +3771,7 @@ else version (OSX)
             args[2] = null;
         }
 
-        auto childpid = fork();
+        auto childpid = core.sys.posix.unistd.fork();
         if (childpid == 0)
         {
             core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);
