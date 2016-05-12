@@ -34,7 +34,7 @@ struct ScopedAllocator(ParentAllocator)
 
     alias Allocator = AffixAllocator!(ParentAllocator, Node);
 
-    // state {
+    // state
     /**
     If $(D ParentAllocator) is stateful, $(D parent) is a property giving access
     to an $(D AffixAllocator!ParentAllocator). Otherwise, $(D parent) is an alias for `AffixAllocator!ParentAllocator.instance`.
@@ -48,7 +48,6 @@ struct ScopedAllocator(ParentAllocator)
         alias parent = Allocator.instance;
     }
     private Node* root;
-    // }
 
     /**
     $(D ScopedAllocator) is not copyable.

@@ -34,7 +34,7 @@ struct Region(ParentAllocator = NullAllocator,
 
     import std.traits : hasMember;
 
-    // state {
+    // state
     /**
     The _parent allocator. Depending on whether $(D ParentAllocator) holds state
     or not, this is a member variable or an alias for
@@ -49,7 +49,6 @@ struct Region(ParentAllocator = NullAllocator,
         alias parent = ParentAllocator.instance;
     }
     private void* _current, _begin, _end;
-    // }
 
     /**
     Constructs a region backed by a user-provided store. Assumes $(D store) is
@@ -88,10 +87,9 @@ struct Region(ParentAllocator = NullAllocator,
     }
 
     /*
-    TODO: The postblit of $(D BasicRegion) is disabled because such objects
+    TODO: The postblit of $(D BasicRegion) should be disabled because such objects
     should not be copied around naively.
     */
-    //@disable this(this);
 
     /**
     If `ParentAllocator` is not `NullAllocator` and defines `deallocate`, the region defines a destructor that uses `ParentAllocator.delete` to free the
@@ -425,12 +423,6 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     private void lazyInit()
     {
         assert(!_impl._current);
-        //static if (alignment > double.alignof)
-        //{
-        //    auto p = _store.ptr.alignUpTo(alignment);
-        //}
-        //else
-        //    auto p = _store.ptr;
         _impl = typeof(_impl)(_store);
         assert(_impl._current.alignedAt(alignment));
     }

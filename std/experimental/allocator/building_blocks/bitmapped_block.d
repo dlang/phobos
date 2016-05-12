@@ -259,7 +259,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     @trusted void[] allocate(const size_t s)
     {
         const blocks = s.divideRoundUp(blockSize);
-        //writefln("Allocating %s blocks each of size %s", blocks, blockSize);
         void[] result = void;
 
     switcharoo:
@@ -467,22 +466,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         _control[i .. i + blocks] = 1;
         return _payload[cast(size_t) (i * blockSize)
             .. cast(size_t) ((i + blocks) * blockSize)];
-        //void[] result;
-        //auto pos = tuple(_startIdx, 0);
-        //for (;;)
-        //{
-        //    if (pos[0] >= _control.rep.length)
-        //    {
-        //        // No more memory
-        //        return null;
-        //    }
-        //    pos = allocateAt(pos[0], pos[1], blocks, result);
-        //    if (pos[0] == size_t.max)
-        //    {
-        //        // Found and allocated
-        //        return result;
-        //    }
-        //}
     }
 
     // Rounds sizeInBytes to a multiple of blockSize.
@@ -534,7 +517,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         assert((b.ptr - _payload.ptr) % blockSize == 0);
         const blockIdx = (b.ptr - _payload.ptr) / blockSize;
         const blockIdxAfter = blockIdx + blocksOld;
-        //writefln("blockIdx: %s, blockIdxAfter: %s", blockIdx, blockIdxAfter);
 
         // Try the maximum
         const wordIdx = blockIdxAfter / 64,
@@ -601,8 +583,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     bool deallocate(void[] b)
     {
         if (b is null) return true;
-        // Adjust pointer, might be inside a block after alignedAllocate
-        //auto p = (b.ptr - _payload.ptr) / blockSize
 
         // Locate position
         immutable pos = b.ptr - _payload.ptr;
@@ -753,8 +733,6 @@ unittest
             text(x.ptr, " ", x.length, " ", a));
         a.deallocateAll();
 
-        //writeln("Control words: ", a._control.length);
-        //writeln("Payload bytes: ", a._payload.length);
         bool twice = true;
 
     begin:
@@ -852,7 +830,6 @@ unittest
     BitmappedBlock!(8, 8, NullAllocator) h1;
     assert(h1.totalAllocation(1) >= 8);
     assert(h1.totalAllocation(64) >= 64);
-    //writeln(h1.totalAllocation(8 * 64));
     assert(h1.totalAllocation(8 * 64) >= 8 * 64);
     assert(h1.totalAllocation(8 * 63) >= 8 * 63);
     assert(h1.totalAllocation(8 * 64 + 1) >= 8 * 65);
@@ -1034,8 +1011,6 @@ struct BitmappedBlockWithInternalPointers(
         // Find block start
         auto block = (p - _heap._payload.ptr) / _heap.blockSize;
         if (block >= _allocStart.length) return null;
-        // This may happen during marking, so comment it out.
-        // if (!_heap._control[block]) return null;
         // Within an allocation, must find the 1 just to the left of it
         auto i = _allocStart.find1Backward(block);
         if (i == i.max) return null;

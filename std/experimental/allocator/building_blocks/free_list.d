@@ -165,7 +165,7 @@ struct FreeList(ParentAllocator,
         return (cast(void*) p)[0 .. max];
     }
 
-    // statistics {
+    // statistics
     static if (adaptive == Yes.adaptive)
     {
         private enum double windowLength = 1000.0;
@@ -198,12 +198,11 @@ struct FreeList(ParentAllocator,
             }
         }
     }
-    // } statistics
 
     private struct Node { Node* next; }
     static assert(ParentAllocator.alignment >= Node.alignof);
 
-    // state {
+    // state
     /**
     The parent allocator. Depending on whether $(D ParentAllocator) holds state
     or not, this is a member variable or an alias for
@@ -214,7 +213,6 @@ struct FreeList(ParentAllocator,
     private Node* root;
     static if (minSize == chooseAtRuntime) private size_t _min = chooseAtRuntime;
     static if (maxSize == chooseAtRuntime) private size_t _max = chooseAtRuntime;
-    // }
 
     /**
     Alignment offered.
@@ -392,7 +390,6 @@ unittest
     FreeList!(GCAllocator, 0, 8) fl;
     assert(fl.root is null);
     auto b1 = fl.allocate(7);
-    //assert(fl._root !is null);
     fl.allocate(8);
     assert(fl.root is null);
     fl.deallocate(b1);
@@ -436,7 +433,7 @@ struct ContiguousFreeList(ParentAllocator,
 
     alias SParent = StatsCollector!(ParentAllocator, Options.bytesUsed);
 
-    // state {
+    // state
     /**
     The parent allocator. Depending on whether $(D ParentAllocator) holds state
     or not, this is a member variable or an alias for
@@ -446,7 +443,6 @@ struct ContiguousFreeList(ParentAllocator,
     FreeList!(NullAllocator, minSize, maxSize) fl;
     void[] support;
     size_t allocated;
-    // }
 
     /// Alignment offered.
     enum uint alignment = (void*).alignof;

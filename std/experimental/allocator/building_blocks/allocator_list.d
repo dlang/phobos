@@ -102,7 +102,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     // State is stored in an array, but it has a list threaded through it by
     // means of "nextIdx".
 
-    // state {
+    // state
     static if (!ouroboros)
     {
         static if (stateSize!BookkeepingAllocator) BookkeepingAllocator bkalloc;
@@ -114,7 +114,6 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
     private Node[] allocators;
     private Node* root;
-    // }
 
     static if (stateSize!Factory)
     {
@@ -228,10 +227,9 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         auto toFree = allocators;
 
-        // Change state {
+        // Change state
         root = newAllocators.ptr + (root - allocators.ptr);
         allocators = newAllocators;
-        // }
 
         // Free the olden buffer
         static if (ouroboros)

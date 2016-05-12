@@ -1,14 +1,5 @@
 module std.experimental.allocator.building_blocks.null_allocator;
 
-/*
-  _   _       _ _          _ _                 _
- | \ | |     | | |   /\   | | |               | |
- |  \| |_   _| | |  /  \  | | | ___   ___ __ _| |_ ___  _ __
- | . ` | | | | | | / /\ \ | | |/ _ \ / __/ _` | __/ _ \| '__|
- | |\  | |_| | | |/ ____ \| | | (_) | (_| (_| | || (_) | |
- |_| \_|\__,_|_|_/_/    \_\_|_|\___/ \___\__,_|\__\___/|_|
-*/
-
 /**
 $(D NullAllocator) is an emphatically empty implementation of the allocator
 interface. Although it has no direct use, it is useful as a "terminator" in
