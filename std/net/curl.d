@@ -313,8 +313,6 @@ version(unittest)
 }
 version(StdDdoc) import std.stdio;
 
-extern (C) void exit(int);
-
 // Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);
 
@@ -1510,12 +1508,10 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     }
 }
 
-// Workaround bug #2458
-// It should really be defined inside the byLineAsync method.
-// Do not create instances of this struct since it will be
-// moved when the bug has been fixed.
+// @@@@BUG 15831@@@@
+// this should be inside byLineAsync
 // Range that reads one line at a time asynchronously.
-static struct AsyncLineInputRange(Char)
+private static struct AsyncLineInputRange(Char)
 {
     private Char[] line;
     mixin WorkerThreadProtocol!(Char, line);
@@ -1538,7 +1534,6 @@ static struct AsyncLineInputRange(Char)
         }
     }
 }
-
 
 /** HTTP/FTP fetch content as a range of lines asynchronously.
  *
@@ -1664,13 +1659,10 @@ unittest
     }
 }
 
-
-// Workaround bug #2458
-// It should really be defined inside the byLineAsync method.
-// Do not create instances of this struct since it will be
-// moved when the bug has been fixed.
+// @@@@BUG 15831@@@@
+// this should be inside byLineAsync
 // Range that reads one chunk at a time asynchronously.
-static struct AsyncChunkInputRange
+private static struct AsyncChunkInputRange
 {
     private ubyte[] chunk;
     mixin WorkerThreadProtocol!(ubyte, chunk);
@@ -2445,6 +2437,7 @@ struct HTTP
         return http;
     }
 
+    ///
     static HTTP opCall()
     {
         HTTP http;
@@ -2452,6 +2445,7 @@ struct HTTP
         return http;
     }
 
+    ///
     HTTP dup()
     {
         HTTP copy;
@@ -3183,6 +3177,7 @@ struct FTP
         return ftp;
     }
 
+    ///
     static FTP opCall()
     {
         FTP ftp;
@@ -3190,6 +3185,7 @@ struct FTP
         return ftp;
     }
 
+    ///
     FTP dup()
     {
         FTP copy = FTP();
@@ -3524,6 +3520,7 @@ struct SMTP
         return smtp;
     }
 
+    ///
     static SMTP opCall()
     {
         SMTP smtp;
@@ -3973,7 +3970,7 @@ struct Curl
 {
     alias OutData = void[];
     alias InData = ubyte[];
-    bool stopped;
+    private bool _stopped;
 
     private static auto ref curl() @property { return CurlAPI.instance; }
 
@@ -4000,8 +3997,14 @@ struct Curl
         enforce!CurlException(!handle, "Curl instance already initialized");
         handle = curl.easy_init();
         enforce!CurlException(handle, "Curl instance couldn't be initialized");
-        stopped = false;
+        _stopped = false;
         set(CurlOption.nosignal, 1);
+    }
+
+    ///
+    @property bool stopped() const
+    {
+        return _stopped;
     }
 
     /**
@@ -4016,7 +4019,7 @@ struct Curl
     {
         Curl copy;
         copy.handle = curl.easy_duphandle(handle);
-        copy.stopped = false;
+        copy._stopped = false;
 
         with (CurlOption) {
             auto tt = AliasSeq!(file, writefunction, writeheader,
@@ -4094,7 +4097,7 @@ struct Curl
     void shutdown()
     {
         throwOnStopped();
-        stopped = true;
+        _stopped = true;
         curl.easy_cleanup(this.handle);
         this.handle = null;
     }
