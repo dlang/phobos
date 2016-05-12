@@ -1319,83 +1319,6 @@ private struct FilterBidiResult(alias pred, Range)
     }
 }
 
-// group
-struct Group(alias pred, R) if (isInputRange!R)
-{
-    import std.typecons : Rebindable, tuple, Tuple;
-
-    private alias comp = binaryFun!pred;
-
-    private alias E = ElementType!R;
-    static if ((is(E == class) || is(E == interface)) &&
-               (is(E == const) || is(E == immutable)))
-    {
-        private alias MutableE = Rebindable!E;
-    }
-    else static if (is(E : Unqual!E))
-    {
-        private alias MutableE = Unqual!E;
-    }
-    else
-    {
-        private alias MutableE = E;
-    }
-
-    private R _input;
-    private Tuple!(MutableE, uint) _current;
-
-    this(R input)
-    {
-        _input = input;
-        if (!_input.empty) popFront();
-    }
-
-    void popFront()
-    {
-        if (_input.empty)
-        {
-            _current[1] = 0;
-        }
-        else
-        {
-            _current = tuple(_input.front, 1u);
-            _input.popFront();
-            while (!_input.empty && comp(_current[0], _input.front))
-            {
-                ++_current[1];
-                _input.popFront();
-            }
-        }
-    }
-
-    static if (isInfinite!R)
-    {
-        enum bool empty = false;  // Propagate infiniteness.
-    }
-    else
-    {
-        @property bool empty()
-        {
-            return _current[1] == 0;
-        }
-    }
-
-    @property auto ref front()
-    {
-        assert(!empty);
-        return _current;
-    }
-
-    static if (isForwardRange!R) {
-        @property typeof(this) save() {
-            typeof(this) ret = this;
-            ret._input = this._input.save;
-            ret._current = this._current;
-            return ret;
-        }
-    }
-}
-
 /**
 Groups consecutively equivalent elements into a single tuple of the element and
 the number of its repetitions.
@@ -1421,6 +1344,89 @@ range, and a forward range in all other cases.
 Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 {
     return typeof(return)(r);
+}
+
+/// ditto
+struct Group(alias pred, R) if (isInputRange!R)
+{
+    import std.typecons : Rebindable, tuple, Tuple;
+
+    private alias comp = binaryFun!pred;
+
+    private alias E = ElementType!R;
+    static if ((is(E == class) || is(E == interface)) &&
+               (is(E == const) || is(E == immutable)))
+    {
+        private alias MutableE = Rebindable!E;
+    }
+    else static if (is(E : Unqual!E))
+    {
+        private alias MutableE = Unqual!E;
+    }
+    else
+    {
+        private alias MutableE = E;
+    }
+
+    private R _input;
+    private Tuple!(MutableE, uint) _current;
+
+    ///
+    this(R input)
+    {
+        _input = input;
+        if (!_input.empty) popFront();
+    }
+
+    ///
+    void popFront()
+    {
+        if (_input.empty)
+        {
+            _current[1] = 0;
+        }
+        else
+        {
+            _current = tuple(_input.front, 1u);
+            _input.popFront();
+            while (!_input.empty && comp(_current[0], _input.front))
+            {
+                ++_current[1];
+                _input.popFront();
+            }
+        }
+    }
+
+    static if (isInfinite!R)
+    {
+        ///
+        enum bool empty = false;  // Propagate infiniteness.
+    }
+    else
+    {
+        ///
+        @property bool empty()
+        {
+            return _current[1] == 0;
+        }
+    }
+
+    ///
+    @property auto ref front()
+    {
+        assert(!empty);
+        return _current;
+    }
+
+    static if (isForwardRange!R) {
+        ///
+        @property typeof(this) save() {
+            typeof(this) ret = this;
+            ret._input = this._input.save;
+            ret._current = this._current;
+            return ret;
+        }
+    }
 }
 
 ///
@@ -4874,13 +4880,31 @@ private struct UniqResult(alias pred, Range)
     }
 }
 
-// permutations
+/**
+Lazily computes all _permutations of $(D r) using $(WEB
+en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
+
+Returns:
+A forward range the elements of which are an $(XREF range,
+indexed) view into $(D r).
+
+See_Also:
+$(XREF_PACK algorithm,sorting,nextPermutation).
+*/
+Permutations!Range permutations(Range)(Range r)
+    if (isRandomAccessRange!Range && hasLength!Range)
+{
+    return typeof(return)(r);
+}
+
+/// ditto
 struct Permutations(Range)
     if (isRandomAccessRange!Range && hasLength!Range)
 {
     size_t[] indices, state;
     Range r;
 
+    ///
     this(Range r)
     {
         import std.range : iota;
@@ -4892,14 +4916,17 @@ struct Permutations(Range)
         empty = r.length == 0;
     }
 
+    ///
     bool empty;
 
+    ///
     @property auto front()
     {
         import std.range : indexed;
         return r.indexed(indices);
     }
 
+    ///
     void popFront()
     {
         void next(int n)
@@ -4926,23 +4953,6 @@ struct Permutations(Range)
 
         next(2);
     }
-}
-
-/**
-Lazily computes all _permutations of $(D r) using $(WEB
-en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
-
-Returns:
-A forward range the elements of which are an $(XREF range,
-indexed) view into $(D r).
-
-See_Also:
-$(XREF_PACK algorithm,sorting,nextPermutation).
-*/
-Permutations!Range permutations(Range)(Range r)
-    if (isRandomAccessRange!Range && hasLength!Range)
-{
-    return typeof(return)(r);
 }
 
 ///

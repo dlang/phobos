@@ -1667,7 +1667,7 @@ if (s != SwapStrategy.stable
     return range;
 }
 
-// Ditto
+/// Ditto
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset...)
 (Range range, Offset offset)
@@ -2380,8 +2380,9 @@ unittest
     swap(b1, b2);
 }
 
-// Not yet documented
-void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
+/// ditto
+void swap(T)(ref T lhs, ref T rhs)
+    if (is(typeof(lhs.proxySwap(rhs))))
 {
     lhs.proxySwap(rhs);
 }

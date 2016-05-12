@@ -1168,7 +1168,7 @@ size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     assert(levenshteinDistance("cat"d, "rat"d) == 1);
 }
 
-// compat overload for alias this strings
+/// ditto
 size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
     if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
@@ -1240,7 +1240,7 @@ levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     assert(levenshteinDistance("kitten", "sitting") == 3);
 }
 
-// compat overload for alias this strings
+/// ditto
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
