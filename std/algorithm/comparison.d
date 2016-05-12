@@ -1295,6 +1295,20 @@ MaxType!T max(T...)(T args)
     static assert (is(typeof(a < b)),
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
+    // bug 10448, fixes NaN comparison
+    static if (isFloatingPoint!T0 || isFloatingPoint!T1)
+    {
+        import std.math : isNaN;
+
+        static if (isFloatingPoint!T0)
+        if (a.isNaN)
+            return T0.nan;
+
+        static if (isFloatingPoint!T1)
+        if (b.isNaN)
+            return T1.nan;
+    }
+
     //Do the "max" proper with a and b
     import std.functional : lessThan;
     immutable chooseB = lessThan!(T0, T1)(a, b);
@@ -1313,6 +1327,15 @@ MaxType!T max(T...)(T args)
     auto e = min(a, b, c);
     assert(is(typeof(e) == double));
     assert(e == 2);
+}
+
+/// Any comparison with NaN will always return NaN
+@safe unittest
+{
+    import std.math : isNaN;
+
+    assert(max(10, double.nan).isNaN);
+    assert(max(real.nan, double.infinity).isNaN);
 }
 
 @safe unittest
@@ -1409,6 +1432,20 @@ MinType!T min(T...)(T args)
     static assert (is(typeof(a < b)),
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
+    // bug 10448, fixes NaN comparison
+    static if (isFloatingPoint!T0 || isFloatingPoint!T1)
+    {
+        import std.math : isNaN;
+
+        static if (isFloatingPoint!T0)
+        if (a.isNaN)
+            return T0.nan;
+
+        static if (isFloatingPoint!T1)
+        if (b.isNaN)
+            return T1.nan;
+    }
+
     //Do the "min" proper with a and b
     import std.functional : lessThan;
     immutable chooseA = lessThan!(T0, T1)(a, b);
@@ -1445,6 +1482,15 @@ MinType!T min(T...)(T args)
     assert(min(Date.max, Date(1982, 1, 4)) == Date(1982, 1, 4));
     assert(min(Date.min, Date.max) == Date.min);
     assert(min(Date.max, Date.min) == Date.min);
+}
+
+/// Any comparison with NaN will always return NaN
+@safe unittest
+{
+    import std.math : isNaN;
+
+    assert(min(10, double.nan).isNaN);
+    assert(min(real.nan, double.infinity).isNaN);
 }
 
 // mismatch
