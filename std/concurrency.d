@@ -52,7 +52,7 @@
  * ---
  *
  * Copyright: Copyright Sean Kelly 2009 - 2014.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   [http://www.boost.org/LICENSE_1_0.txt|Boost License 1.0]
  * Authors:   Sean Kelly, Alex Rønne Petersen, Martin Nowak
  * Source:    $(PHOBOSSRC std/_concurrency.d)
  */

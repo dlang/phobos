@@ -5215,15 +5215,15 @@ body
  * See if character c is in the pattern.
  * Patterns:
  *
- *  A <i>pattern</i> is an array of characters much like a <i>character
- *  class</i> in regular expressions. A sequence of characters
+ *  A $(I pattern) is an array of characters much like a $(I character
+ *  class) in regular expressions. A sequence of characters
  *  can be given, such as "abcde". The '-' can represent a range
  *  of characters, as "a-e" represents the same pattern as "abcde".
  *  "a-fA-F0-9" represents all the hex characters.
  *  If the first character of a pattern is '^', then the pattern
  *  is negated, i.e. "^0-9" means any character except a digit.
- *  The functions inPattern, <b>countchars</b>, <b>removeschars</b>,
- *  and <b>squeeze</b>
+ *  The functions [inPattern], [countchars], [removechars],
+ *  and [squeeze]
  *  use patterns.
  *
  * Note: In the future, the pattern syntax may be improved
@@ -6599,8 +6599,6 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
  * This uniformly outdents the text as much as possible.
  * Whitespace-only lines are always converted to blank lines.
  *
- * Does not allocate memory if it does not throw.
- *
  * Params:
  *     str = multi-line string
  *
@@ -6642,6 +6640,8 @@ void main() {
  *
  * This uniformly outdents the text as much as possible.
  * Whitespace-only lines are always converted to blank lines.
+ *
+ * Does not allocate memory if it does not throw.
  *
  * Params:
  *     lines = array of single-line strings
