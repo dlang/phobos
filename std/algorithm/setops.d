@@ -794,7 +794,7 @@ struct NWayUnion(alias less, RangeOfRanges)
         // revert comparison order so we get the smallest elements first
         return comp(b.front, a.front);
     }
-    BinaryHeap!(RangeOfRanges, compFront) _heap;
+    private BinaryHeap!(RangeOfRanges, compFront) _heap;
 
     ///
     this(RangeOfRanges ror)

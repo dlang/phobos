@@ -70,7 +70,7 @@ import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 
-template aggregate(fun...) if (fun.length >= 1)
+private template aggregate(fun...) if (fun.length >= 1)
 {
     /* --Intentionally not ddoc--
      * Aggregates elements in each subrange of the given range of ranges using
@@ -4899,8 +4899,33 @@ Permutations!Range permutations(Range)(Range r)
 struct Permutations(Range)
     if (isRandomAccessRange!Range && hasLength!Range)
 {
-    size_t[] indices, state;
-    Range r;
+    private size_t[] _indices, _state;
+    private Range _r;
+    private bool _empty;
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Use front()")
+    @property size_t[] indices() pure nothrow @nogc @safe { return _indices; }
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Don't set it manually")
+    @property void indices(size_t[] indices) pure nothrow @nogc @safe { _indices = indices; }
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Use front()")
+    @property size_t[] state() pure nothrow @nogc @safe { return _state; }
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Don't set it manually")
+    @property void state(size_t[] state) pure nothrow @nogc @safe { state = state; }
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Access will be forbidden.")
+    @property Range r() pure nothrow @nogc @safe { return _r; }
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Don't set it manually")
+    @property void r(Range r) pure nothrow @nogc @safe { _r = r; }
 
     ///
     this(Range r)
@@ -4908,20 +4933,23 @@ struct Permutations(Range)
         import std.range : iota;
         import std.array : array;
 
-        this.r = r;
-        state = r.length ? new size_t[r.length-1] : null;
-        indices = iota(size_t(r.length)).array;
-        empty = r.length == 0;
+        this._r = r;
+        _state = r.length ? new size_t[r.length-1] : null;
+        _indices = iota(size_t(r.length)).array;
+        _empty = r.length == 0;
     }
 
     ///
-    bool empty;
+    @property bool empty() const pure nothrow @safe @nogc
+    {
+        return _empty;
+    }
 
     ///
     @property auto front()
     {
         import std.range : indexed;
-        return r.indexed(indices);
+        return _r.indexed(_indices);
     }
 
     ///
@@ -4931,20 +4959,20 @@ struct Permutations(Range)
         {
             import std.algorithm.mutation : swap;
 
-            if (n > indices.length)
+            if (n > _indices.length)
             {
-                empty = true;
+                _empty = true;
                 return;
             }
 
             if (n % 2 == 1)
-                swap(indices[0], indices[n-1]);
+                swap(_indices[0], _indices[n-1]);
             else
-                swap(indices[state[n-2]], indices[n-1]);
+                swap(_indices[_state[n-2]], _indices[n-1]);
 
-            if (++state[n-2] == n)
+            if (++_state[n-2] == n)
             {
-                state[n-2] = 0;
+                _state[n-2] = 0;
                 next(n+1);
             }
         }

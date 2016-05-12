@@ -1922,9 +1922,8 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
     assert(find(haystack, filter!"true"(needle)).empty);
 }
 
-// Internally used by some find() overloads above. Can't make it
-// private due to bugs in the compiler.
-/*private*/ R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, R2 needle)
+// Internally used by some find() overloads above
+private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, R2 needle)
 {
     enum estimateNeedleLength = hasLength!R1 && !hasLength!R2;
 
@@ -3856,7 +3855,7 @@ bool startsWith(alias pred, R)(R doesThisStart)
 Consume all elements from $(D r) that are equal to one of the elements
 $(D es).
  */
-void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
+private void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 //if (is(typeof(binaryFun!pred(r1.front, es[0]))))
 {
   loop:
@@ -3938,8 +3937,8 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     //             uint, "", 6));
     //             OpenRight, "_openRight", 1,
     //             bool,  "_done", 1,
-    OpenRight _openRight;
-    bool _done;
+    private OpenRight _openRight;
+    private bool _done;
 
     static if (!is(Sentinel == void))
         ///
