@@ -239,84 +239,84 @@ $(TABLE_ROWS $(CLASS allocator-table)
 * + Allocator
   + Description
 
-* - [std.experimental.allocator.building_blocks.null_allocator.NullAllocator|NullAllocator]
+* - [NullAllocator]
   - Very good at doing absolutely nothing. A good starting point for defining
     other allocators or for studying the API.
 
-* - $(TDC3 GCAllocator, gc_allocator)
+* - [GCAllocator]
   - The system-provided garbage-collector allocator.  This should be the default
     fallback allocator tapping into system memory. It offers manual $(D free)
     and dutifully collects litter.
 
-* - $(TDC3 Mallocator, mallocator)
+* - [Mallocator]
   - The C heap _allocator, a.k.a. $(D malloc)/$(D realloc)/$(D free). Use
     sparingly and only for code that is unlikely to leak.
 
-* - $(TDC3 AlignedMallocator, mallocator)
+* - [AlignedMallocator]
   - Interface to OS-specific allocators that support specifying alignment:
     [http://man7.org/linux/man-pages/man3/posix_memalign.3.html|posix_memalign] on Posix and
     [http://msdn.microsoft.com/en-us/library/fs9stz4e(v=vs.80).aspx|__aligned_xxx] on Windows.
 
-* - [std.experimental.allocator.building_blocks.affix_allocator.AffixAllocator|AffixAllocator]
+* - [AffixAllocator]
   - Allocator that allows and manages allocating extra prefix and/or a suffix
     bytes for each block allocated.
 
-* - [std.experimental.allocator.building_blocks.bitmapped_block.BitmappedBlock|BitmappedBlock]
+* - [BitmappedBlock]
   - Organizes one contiguous chunk of memory in equal-size blocks and tracks
     allocation status at the cost of one bit per block.
 
-* - [std.experimental.allocator.building_blocks.fallback_allocator.FallbackAllocator|FallbackAllocator]
+* - [FallbackAllocator]
   - Allocator that combines two other allocators - primary and fallback.
     Allocation requests are first tried with primary, and upon failure are
     passed to the fallback. Useful for small and fast allocators fronting
     general-purpose ones.
 
-* - [std.experimental.allocator.building_blocks.FreeList, free_list]
+* - [FreeList]
   - Allocator that implements a [http://wikipedia.org/wiki/Free_list|free list]
     on top of any other allocator. The preferred size, tolerance, and maximum
     elements are configurable at compile- and run time.
 
-* - [std.experimental.allocator.building_blocks.SharedFreeList, free_list]
+* - [SharedFreeList]
   - Same features as $(D FreeList), but packaged as a $(D shared) structure that
     is accessible to several threads.
 
-* - [std.experimental.allocator.building_blocks.FreeTree, free_tree]
+* - [FreeTree]
   - Allocator similar to $(D FreeList) that uses a binary search tree to
     adaptively store not one, but many free lists.
 
-* - [std.experimental.allocator.building_blocks.Region, region]
+* - [Region]
   - Region allocator organizes a chunk of memory as a simple
     bump-the-pointer allocator.
 
-* - [std.experimental.allocator.building_blocks.InSituRegion, region]
+* - [InSituRegion]
   - Region holding its own allocation, most often on the stack. Has
     statically-determined size.
 
-* - [std.experimental.allocator.building_blocks.SbrkRegion, region]
+* - [SbrkRegion]
   - Region using $(D $(LUCKY sbrk)) for allocating memory.
 
-* - $(TDC3 MmapAllocator, mmap_allocator)
+* - [MmapAllocator]
   - Allocator using $(D $(LUCKY mmap)) directly.
 
-* - [std.experimental.allocator.building_blocks.StatsCollector, stats_collector]
+* - [StatsCollector]
   - Collect statistics about any other allocator.
 
-* - [std.experimental.allocator.building_blocks.Quantizer, quantizer]
+* - [Quantizer]
   - Allocates in coarse-grained quantas, thus improving performance of
     reallocations by often reallocating in place. The drawback is higher
     memory consumption because of allocated and unused memory.
 
-* - [std.experimental.allocator.building_blocks.AllocatorList, allocator_list]
+* - [AllocatorList]
   - Given an allocator factory, lazily creates as many allocators as needed
     to satisfy allocation requests. The allocators are stored in a linked list.
     Requests for allocation are satisfied by searching the list in a linear
     manner.
 
-* - [std.experimental.allocator.building_blocks.Segregator, segregator]
+* - [Segregator]
   - Segregates allocation requests by size and dispatches them to distinct
     allocators.
 
-* - [std.experimental.allocator.building_blocks.Bucketizer, bucketizer]
+* - [Bucketizer]
   - Divides allocation sizes in discrete buckets and uses an array of
     allocators, one per bucket, to satisfy requests.
 

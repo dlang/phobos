@@ -36,7 +36,7 @@ struct FreeList(ParentAllocator,
     static assert(maxSize >= (void*).sizeof,
         "Maximum size must accommodate a pointer.");
 
-    private enum unchecked = minSize == 0 && maxSize == unbounded;
+    privat enum unchecked = minSize == 0 && maxSize == unbounded;
 
     private enum hasTolerance = !unchecked && (minSize != maxSize
         || maxSize == chooseAtRuntime);
