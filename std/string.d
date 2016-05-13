@@ -5798,36 +5798,66 @@ unittest
  * function, or any of the conversion functions.
  *
  * Params:
- *     s = the string to check
+ *     s = the string or random access range to check
  *     bAllowSep = accept separator characters or not
  *
  * Returns:
  *     $(D bool)
  */
-bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S)
+bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
+    (isRandomAccessRange!S &&
+    hasSlicing!S &&
+    isSomeChar!(ElementType!S) &&
+    !isInfinite!S))
 {
     import std.algorithm.comparison : among;
+    import std.ascii : isASCII;
 
-    if (s.empty)
+    // ASCII only case insensitive comparison with two ranges
+    static bool asciiCmp(S1)(S1 a, string b)
+    {
+        import std.algorithm.comparison : equal;
+        import std.algorithm.iteration : map;
+        import std.ascii : toLower;
+        import std.utf : byChar;
+        return a.map!toLower.equal(b.byChar.map!toLower);
+    }
+
+    // auto-decoding special case, we're only comparing characters
+    // in the ASCII range so there's no reason to decode
+    static if (isSomeString!S)
+    {
+        import std.utf : byCodeUnit;
+        auto codeUnits = s.byCodeUnit;
+    }
+    else
+    {
+        alias codeUnits = s;
+    }
+
+    if (codeUnits.empty)
         return false;
 
     // Check for NaN (Not a Number) and for Infinity
-    if (s.among!((a, b) => icmp(a, b) == 0)
+    if (codeUnits.among!((a, b) => asciiCmp(a.save, b))
             ("nan", "nani", "nan+nani", "inf", "-inf"))
         return true;
 
-    if (s.front == '-' || s.front == '+')
-        s.popFront;
+    auto frontResult = codeUnits.front;
+    if (frontResult == '-' || frontResult == '+')
+        codeUnits.popFront;
 
-    immutable iLen = s.length;
+    immutable iLen = codeUnits.length;
     bool bDecimalPoint, bExponent, bComplex, sawDigits;
 
     for (size_t i = 0; i < iLen; i++)
     {
-        immutable c = s[i];
+        immutable c = codeUnits[i];
 
-        // Digits are good, continue checking
-        // with the popFront character... ;)
+        if (!c.isASCII)
+            return false;
+
+        // Digits are good, skip to the next character
         if (c >= '0' && c <= '9')
         {
             sawDigits = true;
@@ -5855,7 +5885,7 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S)
                 return false;
             // Look forward for the sign, and if
             // missing then this is not a number.
-            if (s[i + 1] != '-' && s[i + 1] != '+')
+            if (codeUnits[i + 1] != '-' && codeUnits[i + 1] != '+')
                 return false;
             bExponent = true;
             i++;
@@ -5877,19 +5907,19 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S)
             if (!sawDigits)
                 return false;
             // Integer Whole Number
-            if (icmp(s[i..iLen], "ul") == 0 &&
+            if (asciiCmp(codeUnits[i..iLen], "ul") &&
                     (!bDecimalPoint && !bExponent && !bComplex))
                 return true;
             // Floating-Point Number
-            if (s[i..iLen].among!((a, b) => icmp(a, b) == 0)("fi", "li") &&
+            if (codeUnits[i..iLen].among!((a, b) => asciiCmp(a, b))("fi", "li") &&
                     (bDecimalPoint || bExponent || bComplex))
                 return true;
-            if (icmp(s[i..iLen], "ul") == 0 &&
+            if (asciiCmp(codeUnits[i..iLen], "ul") &&
                     (bDecimalPoint || bExponent || bComplex))
                 return false;
             // Could be a Integer or a Float, thus
             // all these suffixes are valid for both
-            return s[i..iLen].among!((a, b) => icmp(a, b) == 0)
+            return codeUnits[i..iLen].among!((a, b) => asciiCmp(a, b))
                 ("ul", "fi", "li") != 0;
         }
         if (i == iLen - 1)
@@ -5919,7 +5949,7 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S)
  * Integer Whole Number: (byte, ubyte, short, ushort, int, uint, long, and ulong)
  * ['+'|'-']digit(s)[U|L|UL]
  */
-@safe pure unittest
+@safe @nogc pure nothrow unittest
 {
     assert(isNumeric("123"));
     assert(isNumeric("123UL"));
@@ -5933,7 +5963,7 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S)
  * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
  *      or [nan|nani|inf|-inf]
  */
-@safe pure unittest
+@safe @nogc pure nothrow unittest
 {
     assert(isNumeric("+123"));
     assert(isNumeric("-123.01"));
@@ -5952,14 +5982,14 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S)
  *         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
  *      or [nan|nani|nan+nani|inf|-inf]
  */
-@safe pure unittest
+@safe @nogc pure nothrow unittest
 {
     assert(isNumeric("-123e-1+456.9e-10Li"));
     assert(isNumeric("+123e+10+456i"));
     assert(isNumeric("123+456"));
 }
 
-@safe pure unittest
+@safe @nogc pure nothrow unittest
 {
     assert(!isNumeric("F"));
     assert(!isNumeric("L"));
@@ -5991,6 +6021,35 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S)
         assert("123li".to!T.isNumeric());
         assert(!"--123L".to!T.isNumeric());
     }
+}
+
+// test ranges
+pure unittest
+{
+    import std.utf : byCodeUnit;
+    import std.range : refRange;
+
+    assert("123".byCodeUnit.isNumeric());
+    assert("123UL".byCodeUnit.isNumeric());
+    assert("123fi".byCodeUnit.isNumeric());
+    assert("123li".byCodeUnit.isNumeric());
+    assert(!"--123L".byCodeUnit.isNumeric());
+
+    dstring z = "0";
+    assert(isNumeric(refRange(&z)));
+
+    dstring nani = "nani";
+    assert(isNumeric(refRange(&nani)));
+}
+
+/// isNumeric works with CTFE
+unittest
+{
+    enum a = isNumeric("123.00E-5+1234.45E-12Li");
+    enum b = isNumeric("12345xxxx890");
+
+    static assert( a);
+    static assert(!b);
 }
 
 @trusted unittest
@@ -6045,7 +6104,6 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S)
     assert(!isNumeric("-"));
     assert(!isNumeric("+"));
 }
-
 
 /*****************************
  * Soundex algorithm.
