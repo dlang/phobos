@@ -26,14 +26,14 @@ $(TR $(TDNW Generating UUIDs)
           )
      )
 $(TR $(TDNW Using UUIDs)
-     $(TD $(MYREF2 UUID.uuidVersion, uuidVersion)
-          $(MYREF2 UUID.variant, variant)
-          $(MYREF2 UUID.toString, toString)
-          $(MYREF2 UUID.data, data)
-          $(MYREF2 UUID.swap, swap)
-          $(MYREF2 UUID.opEquals, opEquals)
-          $(MYREF2 UUID.opCmp, opCmp)
-          $(MYREF2 UUID.toHash, toHash)
+     $(TD [UUID.uuidVersion|uuidVersion]
+          [UUID.variant|variant]
+          [UUID.toString|toString]
+          [UUID.data|data]
+          [UUID.swap|swap]
+          [UUID.opEquals|opEquals]
+          [UUID.opCmp|opCmp]
+          [UUID.toHash|toHash]
           )
      )
 $(TR $(TDNW UUID namespaces)
@@ -72,19 +72,19 @@ $(TR $(TDNW UUID namespaces)
  * Use UUID's constructors or the UUID generator functions to get an initialized UUID.
  *
  * This is a port of $(LINK2 http://www.boost.org/doc/libs/1_42_0/libs/uuid/uuid.html,
- * boost._uuid) from the Boost project with some minor additions and API
+ * boost.uuid) from the Boost project with some minor additions and API
  * changes for a more D-like API.
  *
  * Standards:
  * $(LINK2 http://www.ietf.org/rfc/rfc4122.txt, RFC 4122)
  *
  * See_Also:
- * $(LINK http://en.wikipedia.org/wiki/Universally_unique_identifier)
+ * http://en.wikipedia.org/wiki/Universally_unique_identifier
  *
  * Copyright: Copyright Johannes Pfau 2011 - .
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Johannes Pfau
- * Source:    $(PHOBOSSRC std/_uuid.d)
+ * Source:    $(PHOBOSSRC std/uuid.d)
  *
  * Macros:
  * MYREF2 = <a href="#$2">$(TT $1)</a>&nbsp;

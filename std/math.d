@@ -480,7 +480,7 @@ enum real LOG2 =       0x1.34413509f79fef311f12b35816f92p-2L; /** $(SUB log, 10)
 enum real LOG10E =     0x1.bcb7b1526e50e32a6ab7555f5a67cp-2L; /** $(SUB log, 10)e = 0.434294... */
 enum real LN2 =        0x1.62e42fefa39ef35793c7673007e5fp-1L; /** ln 2  = 0.693147... */
 enum real LN10 =       0x1.26bb1bbb5551582dd4adac5705a61p+1L; /** ln 10 = 2.302585... */
-enum real PI =         0x1.921fb54442d18469898cc51701b84p+1L; /** $(_PI) = 3.141592... */
+enum real PI =         0x1.921fb54442d18469898cc51701b84p+1L; /** $(PI) = 3.141592... */
 enum real PI_2 =       PI/2;                                  /** $(PI) / 2 = 1.570796... */
 enum real PI_4 =       PI/4;                                  /** $(PI) / 4 = 0.785398... */
 enum real M_1_PI =     0x1.45f306dc9c882a53f84eafa3ea69cp-2L; /** 1 / $(PI) = 0.318309... */

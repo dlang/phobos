@@ -6,7 +6,7 @@
     This module provides:
     $(UL
         $(LI Types to represent points in time: $(LREF SysTime), $(LREF Date),
-             $(LREF TimeOfDay), and $(LREF2 .DateTime, DateTime).)
+             $(LREF TimeOfDay), and $(LREF DateTime).)
         $(LI Types to represent intervals of time.)
         $(LI Types to represent ranges over intervals of time.)
         $(LI Types to represent time zones (used by $(LREF SysTime)).)
@@ -16,7 +16,7 @@
         $(LI Various helper functions.)
     )
 
-    Closely related to std.datetime is <a href="core_time.html">$(D core.time)</a>,
+    Closely related to std.datetime is [core.time],
     and some of the time types used in std.datetime come from there - such as
     $(CXREF time, Duration), $(CXREF time, TickDuration), and
     $(CXREF time, FracSec).
@@ -53,7 +53,7 @@
     while $(LREF SysTime) is designed for dealing with time from the OS. Check out
     their specific documentation for more details.
 
-    To get the current time, use $(LREF2 .Clock.currTime, Clock.currTime).
+    To get the current time, use $(LREF Clock.currTime).
     It will return the current
     time as a $(LREF SysTime). To print it, $(D toString) is
     sufficient, but if using $(D toISOString), $(D toISOExtString), or
@@ -89,13 +89,12 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
         $(LREF DateTimeException)).
 
     See_Also:
-        $(DDLINK intro-to-_datetime, Introduction to std.datetime,
-                 Introduction to std&#46;_datetime)<br>
-        $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601)<br>
-        $(WEB en.wikipedia.org/wiki/Tz_database,
-              Wikipedia entry on TZ Database)<br>
-        $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones,
-              List of Time Zones)<br>
+    $(LIST
+        * [http://dlang.org/intro-to-datetime.html|Introduction to std.datetime]
+        * [http://en.wikipedia.org/wiki/ISO_8601|ISO 8601]
+        * [http://en.wikipedia.org/wiki/Tz_database|Wikipedia entry on TZ Database]
+        * [http://en.wikipedia.org/wiki/List_of_tz_database_time_zones|List of Time Zones]
+    )
 
     Copyright: Copyright 2010 - 2015
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -214,7 +213,7 @@ enum AllowDayOverflow
 }
 
 /++
-    Indicates a direction in time. One example of its use is $(LREF2 .Interval, Interval)'s
+    Indicates a direction in time. One example of its use is $(LREF Interval)'s
     $(LREF expand, expand) function which uses it to indicate whether the interval should
     be expanded backwards (into the past), forwards (into the future), or both.
   +/
@@ -622,11 +621,11 @@ private:
     care about time zones, then $(LREF DateTime) would be the type to
     use. For system time, use $(D SysTime).
 
-    $(LREF2 .Clock.currTime, Clock.currTime) will return the current time as a $(D SysTime).
+    $(LREF Clock.currTime) will return the current time as a $(D SysTime).
     To convert a $(D SysTime) to a $(LREF Date) or $(LREF DateTime), simply cast
     it. To convert a $(LREF Date) or $(LREF DateTime) to a
     $(D SysTime), use $(D SysTime)'s constructor, and pass in the
-    intended time zone with it (or don't pass in a $(LREF2 .TimeZone, TimeZone), and the local
+    intended time zone with it (or don't pass in a $(LREF TimeZone), and the local
     time zone will be used). Be aware, however, that converting from a
     $(LREF DateTime) to a $(D SysTime) will not necessarily be 100% accurate due to
     DST (one hour of the year doesn't exist and another occurs twice).
@@ -639,11 +638,11 @@ private:
     Database files), and use $(LREF WindowsTimeZone) on Windows systems.
     The time in $(D SysTime) is kept internally in hnsecs from midnight,
     January 1st, 1 A.D. UTC. Conversion error cannot happen when changing
-    the time zone of a $(D SysTime). $(LREF LocalTime) is the $(LREF2 .TimeZone, TimeZone) class
-    which represents the local time, and $(D UTC) is the $(LREF2 .TimeZone, TimeZone) class
-    which represents UTC. $(D SysTime) uses $(LREF LocalTime) if no $(LREF2 .TimeZone, TimeZone)
+    the time zone of a $(D SysTime). $(LREF LocalTime) is the $(LREF TimeZone) class
+    which represents the local time, and $(D UTC) is the $(LREF TimeZone) class
+    which represents UTC. $(D SysTime) uses $(LREF LocalTime) if no $(LREF TimeZone)
     is provided. For more details on time zones, see the documentation for
-    $(LREF2 .TimeZone, TimeZone), $(LREF PosixTimeZone), and $(LREF WindowsTimeZone).
+    $(LREF TimeZone), $(LREF PosixTimeZone), and $(LREF WindowsTimeZone).
 
     $(D SysTime)'s range is from approximately 29,000 B.C. to approximately
     29,000 A.D.
@@ -659,7 +658,7 @@ public:
             dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
                        internal std time. As $(LREF DateTime) has no concept of
                        time zone, tz is used as its time zone.
-            tz       = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
+            tz       = The $(LREF TimeZone) to use for this $(LREF SysTime). If null,
                        $(LREF LocalTime) will be used. The given $(LREF DateTime) is
                        assumed to be in the given time zone.
       +/
@@ -700,7 +699,7 @@ public:
                        internal std time. As $(LREF DateTime) has no concept of
                        time zone, tz is used as its time zone.
             fracSecs = The fractional seconds portion of the time.
-            tz       = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
+            tz       = The $(LREF TimeZone) to use for this $(LREF SysTime). If null,
                        $(LREF LocalTime) will be used. The given $(LREF DateTime) is
                        assumed to be in the given time zone.
 
@@ -759,7 +758,7 @@ public:
                        internal std time. As $(LREF DateTime) has no concept of
                        time zone, tz is used as its time zone.
             fracSec  = The fractional seconds portion of the time.
-            tz       = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
+            tz       = The $(LREF TimeZone) to use for this $(LREF SysTime). If null,
                        $(LREF LocalTime) will be used. The given $(LREF DateTime) is
                        assumed to be in the given time zone.
 
@@ -820,7 +819,7 @@ public:
             date = The $(LREF Date) to use to set this $(LREF SysTime)'s internal std
                    time. As $(LREF Date) has no concept of time zone, tz is used as
                    its time zone.
-            tz   = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
+            tz   = The $(LREF TimeZone) to use for this $(LREF SysTime). If null,
                    $(LREF LocalTime) will be used. The given $(LREF Date) is assumed
                    to be in the given time zone.
       +/
@@ -869,7 +868,7 @@ public:
 
         Params:
             stdTime = The number of hnsecs since midnight, January 1st, 1 A.D. UTC.
-            tz      = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
+            tz      = The $(LREF TimeZone) to use for this $(LREF SysTime). If null,
                       $(LREF LocalTime) will be used.
       +/
     this(long stdTime, immutable TimeZone tz = null) @safe pure nothrow
@@ -2396,7 +2395,7 @@ public:
         adjust the time to this $(LREF SysTime)'s time zone before returning.
 
         Params:
-            timezone = The $(LREF2 .TimeZone, TimeZone) to set this $(LREF SysTime)'s time zone to.
+            timezone = The $(LREF TimeZone) to set this $(LREF SysTime)'s time zone to.
       +/
     @property void timezone(immutable TimeZone timezone) @safe pure nothrow
     {
@@ -18469,7 +18468,7 @@ assert(Interval!Date(Date(1996, 1, 2), dur!"days"(3)) ==
 
     /++
         Params:
-            rhs = The $(LREF2 .Interval, Interval) to assign to this one.
+            rhs = The $(LREF Interval) to assign to this one.
       +/
     ref Interval opAssign(const ref Interval rhs) pure nothrow
     {
@@ -18481,7 +18480,7 @@ assert(Interval!Date(Date(1996, 1, 2), dur!"days"(3)) ==
 
     /++
         Params:
-            rhs = The $(LREF2 .Interval, Interval) to assign to this one.
+            rhs = The $(LREF Interval) to assign to this one.
       +/
     ref Interval opAssign(Interval rhs) pure nothrow
     {
@@ -26482,14 +26481,14 @@ unittest
 
 
 /++
-    A range over an $(LREF2 .Interval, Interval).
+    A range over an $(LREF Interval).
 
-    $(D IntervalRange) is only ever constructed by $(LREF2 .Interval, Interval). However, when
+    $(D IntervalRange) is only ever constructed by $(LREF Interval). However, when
     it is constructed, it is given a function, $(D func), which is used to
     generate the time points which are iterated over. $(D func) takes a time
     point and returns a time point of the same type. For instance,
     to iterate over all of the days in
-    the interval $(D Interval!Date), pass a function to $(LREF2 .Interval, Interval)'s $(D fwdRange)
+    the interval $(D Interval!Date), pass a function to $(LREF Interval)'s $(D fwdRange)
     where that function took a $(LREF Date) and returned a $(LREF Date) which was one
     day later. That function would then be used by $(D IntervalRange)'s
     $(D popFront) to iterate over the $(LREF Date)s in the interval.
@@ -26516,10 +26515,10 @@ unittest
     it and its $(D end) is excluded from it, if $(D dir == Direction.bwd), then
     $(D begin) is treated as excluded and $(D end) is treated as included. This
     allows for the same behavior in both directions. This works because none of
-    $(LREF2 .Interval, Interval)'s functions which care about whether $(D begin) or $(D end) is
+    $(LREF Interval)'s functions which care about whether $(D begin) or $(D end) is
     included or excluded are ever called by $(D IntervalRange). $(D interval)
     returns a normal interval, regardless of whether $(D dir == Direction.fwd)
-    or if $(D dir == Direction.bwd), so any $(LREF2 .Interval, Interval) functions which are
+    or if $(D dir == Direction.bwd), so any $(LREF Interval) functions which are
     called on it which care about whether $(D begin) or $(D end) are included or
     excluded will treat $(D begin) as included and $(D end) as excluded.
   +/
@@ -27625,7 +27624,7 @@ public:
 
     /++
         The name of the time zone per the TZ Database. This is the name used to
-        get a $(LREF2 .TimeZone, TimeZone) by name with $(D TimeZone.getTimeZone).
+        get a $(LREF TimeZone) by name with $(D TimeZone.getTimeZone).
 
         See_Also:
             $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
@@ -27730,7 +27729,7 @@ public:
               too often for us to compile the conversions into Phobos and have
               them be properly up-to-date.)
 
-        Returns a $(LREF2 .TimeZone, TimeZone) with the give name per the TZ Database.
+        Returns a $(LREF TimeZone) with the give name per the TZ Database.
 
         This returns a $(LREF PosixTimeZone) on Posix systems and a
         $(LREF WindowsTimeZone) on Windows systems. For
@@ -28213,7 +28212,7 @@ public:
     {
         /++
             The name of the time zone per the TZ Database. This is the name used to
-            get a $(LREF2 .TimeZone, TimeZone) by name with $(D TimeZone.getTimeZone).
+            get a $(LREF TimeZone) by name with $(D TimeZone.getTimeZone).
 
             Note that this always returns the empty string. This is because time
             zones cannot be uniquely identified by the attributes given by the
@@ -28733,7 +28732,7 @@ private:
 
 
 /++
-    A $(LREF2 .TimeZone, TimeZone) which represents UTC.
+    A $(LREF TimeZone) which represents UTC.
   +/
 final class UTC : TimeZone
 {
@@ -29576,7 +29575,7 @@ public:
 
 
     /++
-        Returns a $(LREF2 .TimeZone, TimeZone) with the give name per the TZ Database. The time
+        Returns a $(LREF TimeZone) with the give name per the TZ Database. The time
         zone information is fetched from the TZ Database time zone files in the
         given directory.
 
@@ -30420,7 +30419,7 @@ version(StdDdoc)
 
 
         /++
-            Returns a $(LREF2 .TimeZone, TimeZone) with the given name per the Windows time
+            Returns a $(LREF TimeZone) with the given name per the Windows time
             zone names. The time zone information is fetched from the Windows
             registry.
 

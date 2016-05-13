@@ -2,7 +2,7 @@
 Implements logging facilities.
 
 Copyright: Copyright Robert "burner" Schadek 2013 --
-License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License: [http://www.boost.org/LICENSE_1_0.txt|Boost License 1.0].
 Authors: $(WEB http://www.svs.informatik.uni-oldenburg.de/60865.html, Robert burner Schadek)
 
 $(H3 Basic Logging)

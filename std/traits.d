@@ -8,12 +8,12 @@
  * $(DIVC quickindex,
  * $(BOOKTABLE ,
  * $(TR $(TH Category) $(TH Templates))
- * $(TR $(TD Symbol Name _traits) $(TD
+ * $(TR $(TD Symbol Name traits) $(TD
  *           $(LREF fullyQualifiedName)
  *           $(LREF moduleName)
  *           $(LREF packageName)
  * ))
- * $(TR $(TD Function _traits) $(TD
+ * $(TR $(TD Function traits) $(TD
  *           $(LREF arity)
  *           $(LREF functionAttributes)
  *           $(LREF functionLinkage)
@@ -28,7 +28,7 @@
  *           $(LREF SetFunctionAttributes)
  *           $(LREF variadicFunctionStyle)
  * ))
- * $(TR $(TD Aggregate Type _traits) $(TD
+ * $(TR $(TD Aggregate Type traits) $(TD
  *           $(LREF BaseClassesTuple)
  *           $(LREF BaseTypeTuple)
  *           $(LREF classInstanceAlignment)
@@ -149,7 +149,7 @@
  *            $(WEB klickverbot.at, David Nadlinger),
  *            Kenji Hara,
  *            Shoichi Kato
- * Source:    $(PHOBOSSRC std/_traits.d)
+ * Source:    $(PHOBOSSRC std/traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -4636,7 +4636,7 @@ private template AliasThisTypeOf(T) if (isAggregateType!T)
         static assert(0, T.stringof~" does not have alias this type");
 }
 
-/*
+/**
  */
 template BooleanTypeOf(T)
 {
@@ -4687,7 +4687,7 @@ unittest
     static assert(is(BooleanTypeOf!S == bool));
 }
 
-/*
+/**
  */
 template IntegralTypeOf(T)
 {
@@ -4721,7 +4721,7 @@ unittest
         }
 }
 
-/*
+/**
  */
 template FloatingPointTypeOf(T)
 {
@@ -4755,7 +4755,7 @@ unittest
         }
 }
 
-/*
+/**
  */
 template NumericTypeOf(T)
 {
@@ -4784,7 +4784,7 @@ unittest
         }
 }
 
-/*
+/**
  */
 template UnsignedTypeOf(T)
 {
@@ -4795,7 +4795,7 @@ template UnsignedTypeOf(T)
         static assert(0, T.stringof~" is not an unsigned type.");
 }
 
-/*
+/**
  */
 template SignedTypeOf(T)
 {
@@ -4808,7 +4808,7 @@ template SignedTypeOf(T)
         static assert(0, T.stringof~" is not an signed type.");
 }
 
-/*
+/**
  */
 template CharTypeOf(T)
 {
@@ -4849,7 +4849,7 @@ unittest
         }
 }
 
-/*
+/**
  */
 template StaticArrayTypeOf(T)
 {
@@ -4884,7 +4884,7 @@ unittest
         }
 }
 
-/*
+/**
  */
 template DynamicArrayTypeOf(T)
 {
@@ -4921,7 +4921,7 @@ unittest
     static assert(!is(DynamicArrayTypeOf!(typeof(null))));
 }
 
-/*
+/**
  */
 template ArrayTypeOf(T)
 {
@@ -4933,7 +4933,7 @@ template ArrayTypeOf(T)
         static assert(0, T.stringof~" is not an array type");
 }
 
-/*
+/**
 Always returns the Dynamic Array version.
  */
 template StringTypeOf(T)
@@ -4985,7 +4985,7 @@ unittest
     static assert(is(StringTypeOf!(char[4]) == char[]));
 }
 
-/*
+/**
  */
 template AssocArrayTypeOf(T)
 {
@@ -5022,7 +5022,7 @@ unittest
                     }
 }
 
-/*
+/**
  */
 template BuiltinTypeOf(T)
 {
@@ -5313,7 +5313,7 @@ unittest
 }
 
 
-/*
+/**
 Detect whether $(D T) is a struct or static array that is implicitly
 convertible to a string.
  */

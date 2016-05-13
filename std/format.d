@@ -3,9 +3,9 @@
 /**
    This module implements the formatting functionality for strings and
    I/O. It's comparable to C99's $(D vsprintf()) and uses a similar
-   _format encoding scheme.
+   format encoding scheme.
 
-   For an introductory look at $(B std._format)'s capabilities and how to use
+   For an introductory look at $(B std.format)'s capabilities and how to use
    this module see the dedicated
    $(LINK2 http://wiki.dlang.org/Defining_custom_print_format_specifiers, DWiki article).
 
@@ -15,23 +15,23 @@ $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
     $(TR $(TD $(LREF formattedRead))
-        $(TD Reads values according to the _format string from an InputRange.
+        $(TD Reads values according to the format string from an InputRange.
     ))
     $(TR $(TD $(LREF formattedWrite))
-        $(TD Formats its arguments according to the _format string and puts them
+        $(TD Formats its arguments according to the format string and puts them
         to an OutputRange.
     ))
 )
 
    Please see the documentation of function $(LREF formattedWrite) for a
-   description of the _format string.
+   description of the format string.
 
    Two functions have been added for convenience:
 
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(LREF _format))
+    $(TR $(TD $(LREF format))
         $(TD Returns a GC-allocated string with the formatting result.
     ))
     $(TR $(TD $(LREF sformat))
@@ -54,7 +54,7 @@ $(TR $(TH Function Name) $(TH Description)
    Authors: $(WEB walterbright.com, Walter Bright), $(WEB erdani.com,
    Andrei Alexandrescu), and Kenji Hara
 
-   Source: $(PHOBOSSRC std/_format.d)
+   Source: $(PHOBOSSRC std/format.d)
  */
 module std.format;
 
@@ -6419,7 +6419,7 @@ unittest
 /*****************************************************
  * Format arguments into a string.
  *
- * Params: fmt  = Format string. For detailed specification, see $(XREF _format,formattedWrite).
+ * Params: fmt  = Format string. For detailed specification, see $(XREF format,formattedWrite).
  *         args = Variadic list of arguments to format into returned string.
  */
 immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar!Char)

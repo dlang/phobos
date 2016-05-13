@@ -7,47 +7,47 @@ This module provides all kinds of functions to create, manipulate or convert arr
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(LREF _array))
-        $(TD Returns a copy of the input in a newly allocated dynamic _array.
+    $(TR $(TD $(LREF array))
+        $(TD Returns a copy of the input in a newly allocated dynamic array.
     ))
     $(TR $(TD $(LREF appender))
-        $(TD Returns a new Appender initialized with a given _array.
+        $(TD Returns a new Appender initialized with a given array.
     ))
     $(TR $(TD $(LREF assocArray))
-        $(TD Returns a newly allocated associative _array from a range of key/value tuples.
+        $(TD Returns a newly allocated associative array from a range of key/value tuples.
     ))
     $(TR $(TD $(LREF byPair))
-        $(TD Construct a range iterating over an associative _array by key/value tuples.
+        $(TD Construct a range iterating over an associative array by key/value tuples.
     ))
     $(TR $(TD $(LREF insertInPlace))
-        $(TD Inserts into an existing _array at a given position.
+        $(TD Inserts into an existing array at a given position.
     ))
     $(TR $(TD $(LREF join))
-        $(TD Concatenates a range of ranges into one _array.
+        $(TD Concatenates a range of ranges into one array.
     ))
     $(TR $(TD $(LREF minimallyInitializedArray))
-        $(TD Returns a new _array of type $(D T).
+        $(TD Returns a new array of type $(D T).
     ))
     $(TR $(TD $(LREF replace))
-        $(TD Returns a new _array with all occurrences of a certain subrange replaced.
+        $(TD Returns a new array with all occurrences of a certain subrange replaced.
     ))
     $(TR $(TD $(LREF replaceFirst))
-        $(TD Returns a new _array with the first occurrence of a certain subrange replaced.
+        $(TD Returns a new array with the first occurrence of a certain subrange replaced.
     ))
     $(TR $(TD $(LREF replaceInPlace))
-        $(TD Replaces all occurrences of a certain subrange and puts the result into a given _array.
+        $(TD Replaces all occurrences of a certain subrange and puts the result into a given array.
     ))
     $(TR $(TD $(LREF replaceInto))
         $(TD Replaces all occurrences of a certain subrange and puts the result into an output range.
     ))
     $(TR $(TD $(LREF replaceLast))
-        $(TD Returns a new _array with the last occurrence of a certain subrange replaced.
+        $(TD Returns a new array with the last occurrence of a certain subrange replaced.
     ))
     $(TR $(TD $(LREF replaceSlice))
-        $(TD Returns a new _array with a given slice replaced.
+        $(TD Returns a new array with a given slice replaced.
     ))
     $(TR $(TD $(LREF replicate))
-        $(TD Creates a new _array out of several copies of an input _array or range.
+        $(TD Creates a new array out of several copies of an input array or range.
     ))
     $(TR $(TD $(LREF sameHead))
         $(TD Checks if the initial segments of two arrays refer to the same
@@ -58,10 +58,10 @@ $(TR $(TH Function Name) $(TH Description)
         in memory.
     ))
     $(TR $(TD $(LREF split))
-        $(TD Eagerly split a range or string into an _array.
+        $(TD Eagerly split a range or string into an array.
     ))
     $(TR $(TD $(LREF uninitializedArray))
-        $(TD Returns a new _array of type $(D T) without initializing its elements.
+        $(TD Returns a new array of type $(D T) without initializing its elements.
     ))
 )
 
@@ -71,7 +71,7 @@ License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   $(WEB erdani.org, Andrei Alexandrescu) and Jonathan M Davis
 
-Source: $(PHOBOSSRC std/_array.d)
+Source: $(PHOBOSSRC std/array.d)
 */
 module std.array;
 
@@ -332,7 +332,7 @@ unittest
 }
 
 /**
-Returns a newly allocated associative _array from a range of key/value tuples.
+Returns a newly allocated associative array from a range of key/value tuples.
 Params: r = An input range of tuples of keys and values.
 Returns: A newly allocated associative array out of elements of the input
 range, which must be a range of tuples (Key, Value). Returns a null associative
@@ -1422,10 +1422,10 @@ unittest
 
 // @@@DEPRECATED_2017-01@@@
 /++
-    $(RED Deprecated. Use $(XREF_PACK algorithm,iteration,_splitter) instead.
+    $(RED Deprecated. Use $(XREF_PACK algorithm,iteration,splitter) instead.
           This will be removed in January 2017.)
 
-    Alias for $(XREF_PACK algorithm,iteration,_splitter).
+    Alias for $(XREF_PACK algorithm,iteration,splitter).
  +/
 deprecated("Please use std.algorithm.iteration.splitter instead.")
 alias splitter = std.algorithm.iteration.splitter;
@@ -1433,10 +1433,10 @@ alias splitter = std.algorithm.iteration.splitter;
 /++
     Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.
 
-    The _range must be a
-    $(XREF_PACK_NAMED _range,primitives,isForwardRange,forward _range).
+    The range must be a
+    $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range).
     The separator can be a value of the same type as the elements in $(D range)
-    or it can be another forward _range.
+    or it can be another forward range.
 
     Example:
         If $(D range) is a $(D string), $(D sep) can be a $(D char) or another
@@ -1445,7 +1445,7 @@ alias splitter = std.algorithm.iteration.splitter;
         The return type will be an array of $(D int) arrays.
 
     Params:
-        range = a forward _range.
+        range = a forward range.
         sep = a value of the same type as the elements of $(D range) or another
         forward range.
 

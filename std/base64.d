@@ -73,7 +73,7 @@ unittest
 }
 
 /**
- * Implementation of standard _Base64 encoding.
+ * Implementation of standard Base64 encoding.
  *
  *
  * See $(LREF Base64Impl) for a description of available methods.
@@ -247,8 +247,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * encoding.
      *
      * Params:
-     *  source = The $(LINK2 std_range_primitives.html#isInputRange, input
-     *           range) to _encode.
+     *  source = The [isInputRange|input range] to encode.
      *  buffer = The $(D char[]) buffer to store the encoded result.
      *
      * Returns:
@@ -416,14 +415,12 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
     /**
      * Encodes $(D_PARAM source) into an
-     * $(LINK2 std_range_primitives.html#isOutputRange, output range) using
+     * [isOutputRange|output range] using
      * Base64 encoding.
      *
      * Params:
-     *  source = The $(LINK2 std_range_primitives.html#isInputRange, input
-     *           range) to _encode.
-     *  range  = The $(LINK2 std_range_primitives.html#isOutputRange, output
-     *           range) to store the encoded result.
+     *  source = The [isInputRange|input range] to encode.
+     *  range  = The [isOutputRange|output range] to store the encoded result.
      *
      * Returns:
      *  The number of times the output range's $(D put) method was invoked.
@@ -600,8 +597,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * buffers.
      *
      * Params:
-     *  source = The $(LINK2 std_range_primitives.html#isInputRange, input
-     *           range) to _encode.
+     *  source = The [isInputRange|input range) to encode.
      *
      * Returns:
      *  A newly-allocated $(D char[]) buffer containing the encoded string.
@@ -631,12 +627,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
 
     /**
-     * An $(LINK2 std_range_primitives.html#isInputRange, input range) that
+     * An [isInputRange|input range] that
      * iterates over the respective Base64 encodings of a range of data items.
      *
-     * This range will be a $(LINK2 std_range_primitives.html#isForwardRange,
-     * forward range) if the underlying data source is at least a forward
-     * range.
+     * This range will be a [isForwardRange|forward range] if the underlying
+     * data source is at least a forward range.
      *
      * Note: This struct is not intended to be created in user code directly;
      * use the $(LREF encoder) function instead.
@@ -709,8 +704,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * Save the current iteration state of the range.
              *
              * This method is only available if the underlying range is a
-             * $(LINK2 std_range_primitives.html#isForwardRange, forward
-             * range).
+             * [isForwardRange|forward range].
              *
              * Returns:
              *  A copy of $(D this).
@@ -743,11 +737,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
 
     /**
-     * An $(LINK2 std_range_primitives.html#isInputRange, input range) that
+     * An [isInputRange|input range] that
      * iterates over the encoded bytes of the given source data.
      *
-     * It will be a $(LINK2 std_range_primitives.html#isForwardRange, forward
-     * range) if the underlying data source is at least a forward range.
+     * It will be a [isForwardRange|forward range] if the underlying data
+     * source is at least a forward range.
      *
      * Note: This struct is not intended to be created in user code directly;
      * use the $(LREF encoder) function instead.
@@ -874,8 +868,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * Save the current iteration state of the range.
              *
              * This method is only available if the underlying range is a
-             * $(LINK2 std_range_primitives.html#isForwardRange, forward
-             * range).
+             * [isForwardRange|forward range].
              *
              * Returns:
              *  A copy of $(D this).
@@ -893,11 +886,10 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
     /**
      * Construct an $(D Encoder) that iterates over the Base64 encoding of the
-     * given $(LINK2 std_range_primitives.html#isInputRange, input range).
+     * given [isInputRange|input range].
      *
      * Params:
-     *  range = An $(LINK2 std_range_primitives.html#isInputRange, input
-     *      range) over the data to be encoded.
+     *  range = An [isInputRange|input range] over the data to be encoded.
      *
      * Returns:
      *  If $(D_PARAM range) is a range of bytes, an $(D Encoder) that iterates
@@ -907,9 +899,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  iterates over the Base64 encoded strings of each element of the range.
      *
      *  In both cases, the returned $(D Encoder) will be a
-     *  $(LINK2 std_range_primitives.html#isForwardRange, forward range) if the
-     *  given $(D range) is at least a forward range, otherwise it will be only
-     *  an input range.
+     *  [isForwardRange|forward range] if the given $(D range) is at least a
+     * forward range, otherwise it will be only an input range.
      *
      * Example:
      * This example encodes the input one line at a time.
@@ -1021,8 +1012,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Decodes $(D_PARAM source) into the given buffer.
      *
      * Params:
-     *  source = The $(LINK2 std_range_primitives.html#isInputRange, input
-     *      range) to _decode.
+     *  source = The [isInputRange|input range] to decode.
      *  buffer = The buffer to store decoded result.
      *
      * Returns:
@@ -1197,14 +1187,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
 
     /**
-     * Decodes $(D_PARAM source) into a given
-     * $(LINK2 std_range_primitives.html#isOutputRange, output range).
+     * Decodes $(D_PARAM source) into a given [isOutputRange|output range].
      *
      * Params:
-     *  source = The $(LINK2 std_range_primitives.html#isInputRange, input
-     *           range) to _decode.
-     *  range  = The $(LINK2 std_range_primitives.html#isOutputRange, output
-     *           range) to store the decoded result.
+     *  source = The [isInputRange|input range] to decode.
+     *  range  = The [isOutputRange|output range] to store the decoded result.
      *
      * Returns:
      *  The number of times the output range's $(D put) method was invoked.
@@ -1385,8 +1372,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * buffers.
      *
      * Params:
-     *  source = The $(LINK2 std_range_primitives.html#isInputRange, input
-     *           range) to _decode.
+     *  source = The [isInputRange|input range] to decode.
      *
      * Returns:
      *  A newly-allocated $(D ubyte[]) buffer containing the decoded string.
@@ -1416,12 +1402,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
 
     /**
-     * An $(LINK2 std_range_primitives.html#isInputRange, input range) that
+     * An [isInputRange|input range] that
      * iterates over the decoded data of a range of Base64 encodings.
      *
-     * This range will be a $(LINK2 std_range_primitives.html#isForwardRange,
-     * forward range) if the underlying data source is at least a forward
-     * range.
+     * This range will be a [isForwardRange|forward range] if the
+     * underlying data source is at least a forward range.
      *
      * Note: This struct is not intended to be created in user code directly;
      * use the $(LREF decoder) function instead.
@@ -1490,8 +1475,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * Saves the current iteration state.
              *
              * This method is only available if the underlying range is a
-             * $(LINK2 std_range_primitives.html#isForwardRange, forward
-             * range).
+             * [isForwardRange|forward range].
              *
              * Returns: A copy of $(D this).
              */
@@ -1541,12 +1525,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
 
     /**
-     * An $(LINK2 std_range_primitives.html#isInputRange, input range) that
+     * An [isInputRange|input range] that
      * iterates over the bytes of data decoded from a Base64 encoded string.
      *
-     * This range will be a $(LINK2 std_range_primitives.html#isForwardRange,
-     * forward range) if the underlying data source is at least a forward
-     * range.
+     * This range will be a [isForwardRange|forward range] if the underlying
+     * data source is at least a forward range.
      *
      * Note: This struct is not intended to be created in user code directly;
      * use the $(LREF decoder) function instead.
@@ -1683,8 +1666,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * Saves the current iteration state.
              *
              * This method is only available if the underlying range is a
-             * $(LINK2 std_range_primitives.html#isForwardRange, forward
-             * range).
+             * [isForwardRange|forward range].
              *
              * Returns: A copy of $(D this).
              */
@@ -1704,8 +1686,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Base64 encoded data.
      *
      * Params:
-     *  range = An $(LINK2 std_range_primitives.html#isInputRange, input
-     *      range) over the data to be decoded.
+     *  range = An [isInputRange|input range) over the data to be decoded.
      *
      * Returns:
      *  If $(D_PARAM range) is a range of characters, a $(D Decoder) that
@@ -1714,13 +1695,12 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  If $(D_PARAM range) is a range of ranges of characters, a $(D Decoder)
      *  that iterates over the decoded strings corresponding to each element of
      *  the range. In this case, the length of each subrange must be a multiple
-     *  of 4; the returned _decoder does not keep track of Base64 decoding
+     *  of 4; the returned decoder does not keep track of Base64 decoding
      *  state across subrange boundaries.
      *
      *  In both cases, the returned $(D Decoder) will be a
-     *  $(LINK2 std_range_primitives.html#isForwardRange, forward range) if the
-     *  given $(D range) is at least a forward range, otherwise it will be only
-     *  an input range.
+     *  [isForwardRange|forward range] if the  given $(D range) is at least a
+     *  forward range, otherwise it will be only an input range.
      *
      * If the input data contains characters not found in the base alphabet of
      * the current Base64 encoding scheme, the returned range may throw a

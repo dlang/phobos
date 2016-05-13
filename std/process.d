@@ -42,11 +42,11 @@ $(LI
 
 The following table compactly summarises the different _process creation
 functions and how they relate to each other:
-$(BOOKTABLE,
+$(BOOKTABLE ,
     $(TR $(TH )
          $(TH Runs program directly)
          $(TH Runs shell command))
-    $(TR $(TD Low-level _process creation)
+    $(TR $(TD Low-level process creation)
          $(TD $(LREF spawnProcess))
          $(TD $(LREF spawnShell)))
     $(TR $(TD Automatic input/output redirection using pipes)
@@ -62,7 +62,7 @@ $(UL
 $(LI
     $(LREF pipe) is used to create unidirectional pipes.)
 $(LI
-    $(LREF environment) is an interface through which the current _process'
+    $(LREF environment) is an interface through which the current process'
     environment variables can be read and manipulated.)
 $(LI
     $(LREF escapeShellCommand) and $(LREF escapeShellFileName) are useful
@@ -78,7 +78,7 @@ Copyright:
 License:
    $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Source:
-    $(PHOBOSSRC std/_process.d)
+    $(PHOBOSSRC std/process.d)
 Macros:
     WIKI=Phobos/StdProcess
     LREF=$(D $(LINK2 #.$0,$0))
@@ -166,10 +166,10 @@ version (Posix)
 
 
 /**
-Spawns a new _process, optionally assigning it an arbitrary set of standard
+Spawns a new process, optionally assigning it an arbitrary set of standard
 input, output, and error streams.
 
-The function returns immediately, leaving the child _process to execute
+The function returns immediately, leaving the child process to execute
 in parallel with its parent.  It is recommended to always call $(LREF wait)
 on the returned $(LREF Pid), as detailed in the documentation for $(D wait).
 

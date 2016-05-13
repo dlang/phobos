@@ -1,23 +1,23 @@
 // Written in the D programming language.
 
 /** This module contains the $(LREF Complex) type, which is used to represent
-    _complex numbers, along with related mathematical operations and functions.
+    complex numbers, along with related mathematical operations and functions.
 
     $(LREF Complex) will eventually
-    $(DDLINK deprecate, Deprecated Features, replace)
+    [http://dlang.org/deprecate.html#Imaginary%20and%20complex%20types|replace]
     the built-in types $(D cfloat), $(D cdouble), $(D creal), $(D ifloat),
     $(D idouble), and $(D ireal).
 
     Authors:    Lars Tandle Kyllingstad, Don Clugston
     Copyright:  Copyright (c) 2010, Lars T. Kyllingstad.
     License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Source:     $(PHOBOSSRC std/_complex.d)
+    Source:     $(PHOBOSSRC std/complex.d)
 */
 module std.complex;
 
 import std.traits;
 
-/** Helper function that returns a _complex number with the specified
+/** Helper function that returns a complex number with the specified
     real and imaginary parts.
 
     Params:

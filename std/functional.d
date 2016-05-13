@@ -957,8 +957,8 @@ unittest
 }
 
 /**
- * $(LUCKY Memoizes) a function so as to avoid repeated
- * computation.
+ * [https://en.wikipedia.org/wiki/Memoization|Memoizes] a function so as to
+ * avoid repeated computation.
  *
  * 
  * The memoization structure is a hash table keyed by a

@@ -1,17 +1,17 @@
 /**
-$(D std._parallelism) implements high-level primitives for SMP _parallelism.
+$(D std.parallelism) implements high-level primitives for SMP parallelism.
 These include parallel foreach, parallel reduce, parallel eager map, pipelining
-and future/promise _parallelism.  $(D std._parallelism) is recommended when the
+and future/promise parallelism.  $(D std.parallelism) is recommended when the
 same operation is to be executed in parallel on different data, or when a
 function is to be executed in a background thread and its result returned to a
 well-defined main thread.  For communication between arbitrary threads, see
 $(D std.concurrency).
 
-$(D std._parallelism) is based on the concept of a $(D Task).  A $(D Task) is an
+$(D std.parallelism) is based on the concept of a $(D Task).  A $(D Task) is an
 object that represents the fundamental unit of work in this library and may be
 executed in parallel with any other $(D Task).  Using $(D Task)
 directly allows programming with a future/promise paradigm.  All other
-supported _parallelism paradigms (parallel foreach, map, reduce, pipelining)
+supported parallelism paradigms (parallel foreach, map, reduce, pipelining)
 represent an additional level of abstraction over $(D Task).  They
 automatically create one or more $(D Task) objects, or closely related types
 that are conceptually identical but not part of the public API.
@@ -29,9 +29,10 @@ more worker threads.  If the result of a $(D Task) is needed before execution
 by a worker thread has begun, the $(D Task) can be removed from the task queue
 and executed immediately in the thread where the result is needed.
 
-Warning:  Unless marked as $(D @trusted) or $(D @safe), artifacts in
-          this module allow implicit data sharing between threads and cannot
-          guarantee that client code is free from low level data races.
+$(WARNING  Unless marked as $(D @trusted) or $(D @safe), artifacts in
+           this module allow implicit data sharing between threads and cannot
+           guarantee that client code is free from low level data races.
+)
 
 Synopsis:
 
@@ -67,7 +68,7 @@ void main() {
 }
 ---
 
-Source:    $(PHOBOSSRC std/_parallelism.d)
+Source:    $(PHOBOSSRC std/parallelism.d)
 Author:  David Simcha
 Copyright:  Copyright (c) 2009-2011, David Simcha.
 License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
@@ -404,7 +405,7 @@ private struct AbstractTask
 /**
 $(D Task) represents the fundamental unit of work.  A $(D Task) may be
 executed in parallel with any other $(D Task).  Using this struct directly
-allows future/promise _parallelism.  In this paradigm, a function (or delegate
+allows future/promise parallelism.  In this paradigm, a function (or delegate
 or other callable) is executed in a thread other than the one it was called
 from.  The calling thread does not block while the function is being executed.
 A call to $(D workForce), $(D yieldForce), or $(D spinForce) is used to
@@ -2769,7 +2770,7 @@ public:
     Struct for creating worker-local storage.  Worker-local storage is
     thread-local storage that exists only for worker threads in a given
     $(D TaskPool) plus a single thread outside the pool.  It is allocated on the
-    garbage collected heap in a way that avoids _false sharing, and doesn't
+    garbage collected heap in a way that avoids false sharing, and doesn't
     necessarily have global scope within any thread.  It can be accessed from
     any worker thread in the $(D TaskPool) that created it, and one thread
     outside this $(D TaskPool).  All threads outside the pool that created a
