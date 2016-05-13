@@ -1295,23 +1295,27 @@ MaxType!T max(T...)(T args)
     static assert (is(typeof(a < b)),
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
+    //Do the "max" proper with a and b
+    import std.functional : lessThan;
+    bool chooseB = lessThan!(T0, T1)(a, b);
+
     // bug 10448, fixes NaN comparison
     static if (isFloatingPoint!T0 || isFloatingPoint!T1)
     {
         import std.math : isNaN;
-
-        static if (isFloatingPoint!T0)
-        if (a.isNaN)
-            return T0.nan;
-
-        static if (isFloatingPoint!T1)
-        if (b.isNaN)
-            return T1.nan;
+        if (chooseB)
+        {
+            // If T1 is not numeric, it might have a custom opCmp()
+            static if (isFloatingPoint!T0 && !isNumeric!T1)
+                chooseB = !(a.isNaN);
+        }
+        else
+        {
+            static if (isFloatingPoint!T1)
+                chooseB = b.isNaN;
+        }
     }
 
-    //Do the "max" proper with a and b
-    import std.functional : lessThan;
-    immutable chooseB = lessThan!(T0, T1)(a, b);
     return cast(typeof(return)) (chooseB ? b : a);
 }
 
@@ -1432,23 +1436,27 @@ MinType!T min(T...)(T args)
     static assert (is(typeof(a < b)),
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
+    //Do the "min" proper with a and b
+    import std.functional : lessThan;
+    bool chooseA = lessThan!(T0, T1)(a, b);
+
     // bug 10448, fixes NaN comparison
     static if (isFloatingPoint!T0 || isFloatingPoint!T1)
     {
         import std.math : isNaN;
-
-        static if (isFloatingPoint!T0)
-        if (a.isNaN)
-            return T0.nan;
-
-        static if (isFloatingPoint!T1)
-        if (b.isNaN)
-            return T1.nan;
+        if (chooseA)
+        {
+            // If T0 is not numeric, it might have a custom opCmp()
+            static if (isFloatingPoint!T1 && !isNumeric!T0)
+                chooseA = !(b.isNaN);
+        }
+        else
+        {
+            static if (isFloatingPoint!T0)
+                chooseA = a.isNaN;
+        }
     }
 
-    //Do the "min" proper with a and b
-    import std.functional : lessThan;
-    immutable chooseA = lessThan!(T0, T1)(a, b);
     return cast(typeof(return)) (chooseA ? a : b);
 }
 
