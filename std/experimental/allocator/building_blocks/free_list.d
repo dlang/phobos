@@ -3,6 +3,33 @@ module std.experimental.allocator.building_blocks.free_list;
 import std.experimental.allocator.common;
 import std.typecons : Flag, Yes, No;
 
+// check the traits of a FreeList ParentAllocator with a useful diagnostic
+private template isFreeListAlloc(A)
+{
+    string checker()
+    {
+        enum err = "a free list allocator must ";
+        string result;
+        static if (!is(A == class) && !is(A == struct) && !is(A == interface))
+            result = err ~ "be an aggregate";
+        else static if (!__traits(hasMember, A, "allocate"))
+            result = err ~ "implement the allocate() primitive";
+        else  static if (!__traits(hasMember, A, "deallocate") &&
+            !__traits(hasMember, A, "deallocateAll"))
+                result = err ~  "either implement the allocate() or the deallocateAll() primitive";
+        return result;
+    }
+    enum isFreeListAlloc = checker();
+}
+
+unittest
+{
+    struct Bar{}
+    static assert(isFreeListAlloc!Bar != "");
+    import std.experimental.allocator.mmap_allocator : MmapAllocator;
+    static assert(isFreeListAlloc!MmapAllocator == "");
+}
+
 /**
 
 $(WEB en.wikipedia.org/wiki/Free_list, Free list allocator), stackable on top of
@@ -30,6 +57,8 @@ struct FreeList(ParentAllocator,
     import std.conv : text;
     import std.exception : enforce;
     import std.traits : hasMember;
+
+    static assert (isFreeListAlloc!ParentAllocator == "", isFreeListAlloc!ParentAllocator);
 
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
     static assert(maxSize >= (void*).sizeof,
@@ -359,14 +388,26 @@ struct FreeList(ParentAllocator,
     }
 
     /**
-    Defined only if $(D ParentAllocator) defines $(D deallocateAll). If so,
-    forwards to it and resets the freelist.
+    If the parent allocator implements `deallocateAll` then forwards it otherwise
+    each element is freed with the parent's `deallocate`.
     */
-    static if (hasMember!(ParentAllocator, "deallocateAll"))
     bool deallocateAll()
     {
+        static if (hasMember!(ParentAllocator, "deallocateAll"))
+        {
+            immutable result = parent.deallocateAll();
+        }
+        else static if (hasMember!(ParentAllocator, "deallocate"))
+        {
+            bool result = true;
+            for (auto n = root; n; n = n.next)
+            {
+                if (!parent.deallocate((cast(ubyte*)n)[0 .. max]))
+                    result = false;
+            }
+        }
         root = null;
-        return parent.deallocateAll();
+        return result;
     }
 
     /**
@@ -401,6 +442,18 @@ unittest
     assert(fl.root is null);
 }
 
+unittest
+{
+    import std.experimental.allocator.mallocator: Mallocator;
+    FreeList!(Mallocator, 0, size_t.sizeof * 2) fl;
+    auto b0 = fl.allocate(size_t.sizeof);
+    auto b1 = fl.allocate(size_t.sizeof);
+    assert(b0.ptr);
+    assert(b1.ptr);
+    fl.deallocateAll;
+    assert(fl.root is null);
+}
+
 /**
 Free list built on top of exactly one contiguous block of memory. The block is
 assumed to have been allocated with $(D ParentAllocator), and is released in
@@ -429,6 +482,8 @@ struct ContiguousFreeList(ParentAllocator,
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
     import std.traits : hasMember;
+
+    static assert (isFreeListAlloc!ParentAllocator == "", isFreeListAlloc!ParentAllocator);
 
     alias Impl = FreeList!(NullAllocator, minSize, maxSize);
     enum unchecked = minSize == 0 && maxSize == unbounded;
@@ -753,6 +808,8 @@ struct SharedFreeList(ParentAllocator,
     import std.exception : enforce;
     import std.traits : hasMember;
 
+    static assert (isFreeListAlloc!ParentAllocator == "", isFreeListAlloc!ParentAllocator);
+
     static assert(approxMaxNodes, "approxMaxNodes must not be null.");
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
     static assert(maxSize >= (void*).sizeof,
@@ -1002,14 +1059,13 @@ struct SharedFreeList(ParentAllocator,
     /// Ditto
     bool deallocateAll() shared
     {
-        bool result = false;
         static if (hasMember!(ParentAllocator, "deallocateAll"))
         {
-            result = parent.deallocateAll();
+            immutable result = parent.deallocateAll();
         }
         else static if (hasMember!(ParentAllocator, "deallocate"))
         {
-            result = true;
+            bool result = true;
             for (auto n = _root; n; n = n.next)
             {
                 if (!parent.deallocate((cast(ubyte*)n)[0 .. max]))
