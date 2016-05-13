@@ -30421,7 +30421,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "America/Pangnirtung": return "Eastern Standard Time";
         case "America/Paramaribo": return "SA Eastern Standard Time";
         case "America/Phoenix": return "US Mountain Standard Time";
-        case "America/Port-au-Prince": return "Eastern Standard Time";
+        case "America/Port-au-Prince": return "Haiti Standard Time";
         case "America/Port_of_Spain": return "SA Western Standard Time";
         case "America/Porto_Velho": return "SA Western Standard Time";
         case "America/Puerto_Rico": return "SA Western Standard Time";
@@ -30664,6 +30664,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Pacific/Apia": return "Samoa Standard Time";
         case "Pacific/Auckland": return "New Zealand Standard Time";
         case "Pacific/Bougainville": return "Central Pacific Standard Time";
+        case "Pacific/Easter": return "Easter Island Standard Time";
         case "Pacific/Efate": return "Central Pacific Standard Time";
         case "Pacific/Enderbury": return "Tonga Standard Time";
         case "Pacific/Fakaofo": return "Tonga Standard Time";
@@ -30731,6 +30732,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "AUS Central Standard Time": return "Australia/Darwin";
         case "AUS Eastern Standard Time": return "Australia/Sydney";
         case "Afghanistan Standard Time": return "Asia/Kabul";
+        case "Haiti Standard Time": return "America/Port-au-Prince";
         case "Alaskan Standard Time": return "America/Anchorage";
         case "Altai Standard Time": return "Asia/Barnaul";
         case "Arab Standard Time": return "Asia/Riyadh";
@@ -30765,6 +30767,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         // updated recently enough).
         case "E. Europe Standard Time": return "Europe/Minsk";
         case "E. South America Standard Time": return "America/Sao_Paulo";
+        case "Easter Island Standard Time": return "Pacific/Easter";
         case "Eastern Standard Time": return "America/New_York";
         case "Eastern Standard Time (Mexico)": return "America/Cancun";
         case "Egypt Standard Time": return "Africa/Cairo";
