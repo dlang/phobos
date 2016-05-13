@@ -5,8 +5,8 @@
     D constrains integral types to specific sizes. But efficiency
     of different sizes varies from machine to machine,
     pointer sizes vary, and the maximum integer size varies.
-    <b>stdint</b> offers a portable way of trading off size
-    vs efficiency, in a manner compatible with the <tt>stdint.h</tt>
+    $(B stdint) offers a portable way of trading off size
+    vs efficiency, in a manner compatible with the $(TT stdint.h)
     definitions in C.
 
     The exact aliases are types of exactly the specified number of bits.
@@ -17,7 +17,7 @@
 
     The aliases are:
 
-    $(ATABLE $(TR
+    $(TABLE $(TR
     $(TH Exact Alias)
     $(TH Description)
     $(TH At Least Alias)
@@ -88,7 +88,7 @@
     The ptr aliases are integral types guaranteed to be large enough
     to hold a pointer without losing bits:
 
-    $(ATABLE $(TR
+    $(TABLE $(TR
     $(TH Alias)
     $(TH Description)
     )$(TR
@@ -101,7 +101,7 @@
 
     The max aliases are the largest integral types:
 
-    $(ATABLE $(TR
+    $(TABLE $(TR
     $(TH Alias)
     $(TH Description)
     )$(TR

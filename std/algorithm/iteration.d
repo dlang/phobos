@@ -2549,6 +2549,7 @@ Implements the homonym function (also known as $(D accumulate), $(D
 compress), $(D inject), or $(D foldl)) present in various programming
 languages of functional flavor. There is also $(LREF fold) which does
 the same thing but with the opposite parameter order.
+
 The call $(D reduce!(fun)(seed, range)) first assigns $(D seed) to
 an internal variable $(D result), also called the accumulator.
 Then, for each element $(D x) in $(D range), $(D result = fun(result, x))
@@ -2569,6 +2570,9 @@ See_Also:
 
     $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
     precise summing of floating point numbers.
+
+Tags:
+    accumulate, fold
 +/
 template reduce(fun...) if (fun.length >= 1)
 {

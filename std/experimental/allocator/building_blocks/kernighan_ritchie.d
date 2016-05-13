@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.kernighan_ritchie;
 import std.experimental.allocator.building_blocks.null_allocator;
 

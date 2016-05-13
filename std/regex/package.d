@@ -1,9 +1,9 @@
 /++
-  $(LUCKY Regular expressions) are a commonly used method of pattern matching
-  on strings, with $(I regex) being a catchy word for a pattern in this domain
-  specific language. Typical problems usually solved by regular expressions
-  include validation of user input and the ubiquitous find $(AMP) replace
-  in text processing utilities.
+  $(LINK2 https://en.wikipedia.org/wiki/Regular_expression, Regular expressions)
+  are a commonly used method of pattern matching on strings, with $(I regex)
+  being a catchy word for a pattern in this domain specific language. Typical
+  problems usually solved by regular expressions include validation of user
+  input and the ubiquitous find $(AMP) replace in text processing utilities.
 
   $(SECTION Synopsis)
   ---
@@ -49,6 +49,8 @@
 
 
   ---
+
+
   $(SECTION Syntax and general information)
   The general usage guideline is to keep regex complexity on the side of simplicity,
   as its capabilities reside in purely character-level manipulation.
@@ -249,7 +251,7 @@
     API and utility constructs are modeled after the original $(D std.regex)
   by Walter Bright and Andrei Alexandrescu.
 
-  Source: $(PHOBOSSRC std/_regex/_package.d)
+  Source: $(PHOBOSSRC std/regex/package.d)
 
 Macros:
     REG_ROW = $(TR $(TD $(I $1 )) $(TD $+) )
@@ -318,7 +320,7 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
     pattern(s) = Regular expression(s) to match
     flags = The _attributes (g, i, m and x accepted)
 
-    Throws: $(D RegexException) if there were any errors during compilation.
+    Throws: $(LREF RegexException) if there were any errors during compilation.
 +/
 @trusted public auto regex(S)(S[] patterns, const(char)[] flags="")
     if (isSomeString!(S))
@@ -412,7 +414,7 @@ enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
 
 /++
     $(D Captures) object contains submatches captured during a call
-    to $(D match) or iteration over $(D RegexMatch) range.
+    to $(D match) or iteration over $(LREF RegexMatch) range.
 
     First element of range is the whole match.
 +/
@@ -881,7 +883,7 @@ private R replaceAllWith(alias output,
     matching scheme to use depends highly on the pattern kind and
     can done automatically on case by case basis.
 
-    Returns: a $(D RegexMatch) object holding engine state after first match.
+    Returns: a $(LREF RegexMatch) object holding engine state after first match.
 +/
 
 public auto match(R, RegEx)(R input, RegEx re)
@@ -1048,7 +1050,9 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
 
 /++
     Start matching of $(D input) to regex pattern $(D re),
-    using traditional $(LUCKY backtracking) matching scheme.
+    using traditional
+    $(LINK2 https://en.wikipedia.org/wiki/Backtracking, backtracking)
+    matching scheme.
 
     The use of this function is $(RED discouraged) - use either of
     $(LREF matchAll) or $(LREF matchFirst).
@@ -1059,7 +1063,7 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
     matching scheme to use depends highly on the pattern kind and
     can done automatically on case by case basis.
 
-    Returns: a $(D RegexMatch) object holding engine
+    Returns: a $(LREF RegexMatch) object holding engine
     state after first match.
 
 +/

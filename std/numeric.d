@@ -44,7 +44,7 @@ public enum CustomFloatFlags
      * Store values in normalized form by default. The actual precision of the
      * significand is extended by 1 bit by assuming an implicit leading bit of 1
      * instead of 0. i.e. $(D 1.nnnn) instead of $(D 0.nnnn).
-     * True for all $(LUCKY IEE754) types
+     * True for all [https://en.wikipedia.org/wiki/IEEE_754-2008|IEEE 754] types
      */
     storeNormalized = 2,
 
@@ -775,6 +775,7 @@ public:
  * arbitrarily.  If `f(x)` returns NaN, NaN will be returned;
  * otherwise, this algorithm is guaranteed to succeed.
  *
+ *
  * Uses an algorithm based on TOMS748, which uses inverse cubic
  * interpolation whenever possible, otherwise reverting to parabolic
  * or secant interpolation. Compared to TOMS748, this implementation
@@ -788,6 +789,9 @@ public:
  * G. Alefeld, F.A. Potra, Yixun Shi, Mathematics of Computation 61,
  * pp733-744 (1993).  Fortran code available from $(WEB
  * www.netlib.org,www.netlib.org) as algorithm TOMS478.
+ *
+ * See_Also:
+ *    $(LINK2 http://d.darktech.org/findRoot.html, Blog: How to find the zeros of a function with dlang)
  *
  */
 T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
@@ -2612,6 +2616,10 @@ private alias lookup_t = float;
  *
  * References:
  * $(WEB en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm)
+ *
+ * See_Also:
+ * $(LREF fft)
+ * $(LREF inverseFft)
  */
 final class Fft
 {

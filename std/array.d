@@ -7,61 +7,61 @@ This module provides all kinds of functions to create, manipulate or convert arr
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF _array)))
-        $(TD Returns a copy of the input in a newly allocated dynamic _array.
+    $(TR $(TD $(LREF array))
+        $(TD Returns a copy of the input in a newly allocated dynamic array.
     ))
-    $(TR $(TD $(D $(LREF appender)))
-        $(TD Returns a new Appender initialized with a given _array.
+    $(TR $(TD $(LREF appender))
+        $(TD Returns a new Appender initialized with a given array.
     ))
-    $(TR $(TD $(D $(LREF assocArray)))
-        $(TD Returns a newly allocated associative _array from a range of key/value tuples.
+    $(TR $(TD $(LREF assocArray))
+        $(TD Returns a newly allocated associative array from a range of key/value tuples.
     ))
-    $(TR $(TD $(D $(LREF byPair)))
-        $(TD Construct a range iterating over an associative _array by key/value tuples.
+    $(TR $(TD $(LREF byPair))
+        $(TD Construct a range iterating over an associative array by key/value tuples.
     ))
-    $(TR $(TD $(D $(LREF insertInPlace)))
-        $(TD Inserts into an existing _array at a given position.
+    $(TR $(TD $(LREF insertInPlace))
+        $(TD Inserts into an existing array at a given position.
     ))
-    $(TR $(TD $(D $(LREF join)))
-        $(TD Concatenates a range of ranges into one _array.
+    $(TR $(TD $(LREF join))
+        $(TD Concatenates a range of ranges into one array.
     ))
-    $(TR $(TD $(D $(LREF minimallyInitializedArray)))
-        $(TD Returns a new _array of type $(D T).
+    $(TR $(TD $(LREF minimallyInitializedArray))
+        $(TD Returns a new array of type $(D T).
     ))
-    $(TR $(TD $(D $(LREF replace)))
-        $(TD Returns a new _array with all occurrences of a certain subrange replaced.
+    $(TR $(TD $(LREF replace))
+        $(TD Returns a new array with all occurrences of a certain subrange replaced.
     ))
-    $(TR $(TD $(D $(LREF replaceFirst)))
-        $(TD Returns a new _array with the first occurrence of a certain subrange replaced.
+    $(TR $(TD $(LREF replaceFirst))
+        $(TD Returns a new array with the first occurrence of a certain subrange replaced.
     ))
-    $(TR $(TD $(D $(LREF replaceInPlace)))
-        $(TD Replaces all occurrences of a certain subrange and puts the result into a given _array.
+    $(TR $(TD $(LREF replaceInPlace))
+        $(TD Replaces all occurrences of a certain subrange and puts the result into a given array.
     ))
-    $(TR $(TD $(D $(LREF replaceInto)))
+    $(TR $(TD $(LREF replaceInto))
         $(TD Replaces all occurrences of a certain subrange and puts the result into an output range.
     ))
-    $(TR $(TD $(D $(LREF replaceLast)))
-        $(TD Returns a new _array with the last occurrence of a certain subrange replaced.
+    $(TR $(TD $(LREF replaceLast))
+        $(TD Returns a new array with the last occurrence of a certain subrange replaced.
     ))
-    $(TR $(TD $(D $(LREF replaceSlice)))
-        $(TD Returns a new _array with a given slice replaced.
+    $(TR $(TD $(LREF replaceSlice))
+        $(TD Returns a new array with a given slice replaced.
     ))
-    $(TR $(TD $(D $(LREF replicate)))
-        $(TD Creates a new _array out of several copies of an input _array or range.
+    $(TR $(TD $(LREF replicate))
+        $(TD Creates a new array out of several copies of an input array or range.
     ))
-    $(TR $(TD $(D $(LREF sameHead)))
+    $(TR $(TD $(LREF sameHead))
         $(TD Checks if the initial segments of two arrays refer to the same
         place in memory.
     ))
-    $(TR $(TD $(D $(LREF sameTail)))
+    $(TR $(TD $(LREF sameTail))
         $(TD Checks if the final segments of two arrays refer to the same place
         in memory.
     ))
-    $(TR $(TD $(D $(LREF split)))
-        $(TD Eagerly split a range or string into an _array.
+    $(TR $(TD $(LREF split))
+        $(TD Eagerly split a range or string into an array.
     ))
-    $(TR $(TD $(D $(LREF uninitializedArray)))
-        $(TD Returns a new _array of type $(D T) without initializing its elements.
+    $(TR $(TD $(LREF uninitializedArray))
+        $(TD Returns a new array of type $(D T) without initializing its elements.
     ))
 )
 
@@ -71,7 +71,7 @@ License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   $(WEB erdani.org, Andrei Alexandrescu) and Jonathan M Davis
 
-Source: $(PHOBOSSRC std/_array.d)
+Source: $(PHOBOSSRC std/array.d)
 */
 module std.array;
 
@@ -332,7 +332,7 @@ unittest
 }
 
 /**
-Returns a newly allocated associative _array from a range of key/value tuples.
+Returns a newly allocated associative array from a range of key/value tuples.
 Params: r = An input range of tuples of keys and values.
 Returns: A newly allocated associative array out of elements of the input
 range, which must be a range of tuples (Key, Value). Returns a null associative
@@ -519,7 +519,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I) && hasIndirections!(ElementEn
     return arrayAllocImpl!(false, T, ST)(sizes);
 }
 
-///
+/// ditto
 auto uninitializedArray(T, I...)(I sizes) nothrow @trusted
 if (isDynamicArray!T && allSatisfy!(isIntegral, I) && !hasIndirections!(ElementEncodingType!T))
 {
@@ -551,6 +551,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I) && !hasIndirections!(ElementE
 
 /++
 Returns a new array of type $(D T) allocated on the garbage collected heap.
+
 
 Partial initialization is done for types with indirections, for preservation
 of memory safety. Note that elements will only be initialized to 0, but not
@@ -1421,10 +1422,10 @@ unittest
 
 // @@@DEPRECATED_2017-01@@@
 /++
-    $(RED Deprecated. Use $(XREF_PACK algorithm,iteration,_splitter) instead.
+    $(RED Deprecated. Use $(XREF_PACK algorithm,iteration,splitter) instead.
           This will be removed in January 2017.)
 
-    Alias for $(XREF_PACK algorithm,iteration,_splitter).
+    Alias for $(XREF_PACK algorithm,iteration,splitter).
  +/
 deprecated("Please use std.algorithm.iteration.splitter instead.")
 alias splitter = std.algorithm.iteration.splitter;
@@ -1432,10 +1433,10 @@ alias splitter = std.algorithm.iteration.splitter;
 /++
     Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.
 
-    The _range must be a
-    $(XREF_PACK_NAMED _range,primitives,isForwardRange,forward _range).
+    The range must be a
+    $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range).
     The separator can be a value of the same type as the elements in $(D range)
-    or it can be another forward _range.
+    or it can be another forward range.
 
     Example:
         If $(D range) is a $(D string), $(D sep) can be a $(D char) or another
@@ -1444,7 +1445,7 @@ alias splitter = std.algorithm.iteration.splitter;
         The return type will be an array of $(D int) arrays.
 
     Params:
-        range = a forward _range.
+        range = a forward range.
         sep = a value of the same type as the elements of $(D range) or another
         forward range.
 
@@ -1545,12 +1546,19 @@ private enum bool hasCheapIteration(R) = isArray!R;
    Concatenates all of the ranges in $(D ror) together into one array using
    $(D sep) as the separator if present.
 
+   ---
+    string result = join(["a", "b", "c"], ", "); // result == "a, b, c";
+   ---
+
    Params:
         ror = Range of Ranges of Elements
         sep = Range of Elements
 
    Returns:
-        an allocated array of Elements
+        an allocated array of Elements. The returned value is of the same
+        type as the elements, so if you gave it a set of strings, it will
+        return a string. If you gave it a series of arrays of $(D int)s,
+        to join, it will return an array of $(D int)s.
 
    See_Also:
         $(XREF_PACK algorithm,iteration,joiner)

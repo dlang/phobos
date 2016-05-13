@@ -1,19 +1,27 @@
 // Written in the D programming language.
 
-/** This module is used to manipulate _path strings.
+/**
+    This module is used to manipulate and inspect _path strings
+    (and string-like objects).
 
     All functions, with the exception of $(LREF expandTilde) (and in some
     cases $(LREF absolutePath) and $(LREF relativePath)), are pure
     string manipulation functions; they don't depend on any state outside
     the program, nor do they perform any actual file system actions.
-    This has the consequence that the module does not make any distinction
-    between a _path that points to a directory and a _path that points to a
-    file, and it does not know whether or not the object pointed to by the
-    _path actually exists in the file system.
-    To differentiate between these cases, use $(XREF file,isDir) and
-    $(XREF file,exists).
 
-    Note that on Windows, both the backslash ($(D `\`)) and the slash ($(D `/`))
+    $(MREF std,file) can be used to work with the file system.
+    Notably, $(XREF file,dirEntries) can give you the names of files
+    in a directory, which you can then further inspect with this module.
+
+    The fact that std.path works only on strings also has the consequence
+    that the module does not make any distinction between a _path that points
+    to a directory and a _path that points to a file, and it does not know
+    whether or not the object pointed to by the _path actually exists in the
+    file system.  To differentiate between these cases, use $(XREF file,isDir)
+    and $(XREF file,exists).
+
+
+    Note that on Windows, both the backslash (`\`) and the slash (`/`)
     are in principle valid directory separators.  This module treats them
     both on equal footing, but in cases where a $(I new) separator is
     added, a backslash will be used.  Furthermore, the $(LREF buildNormalizedPath)
@@ -48,6 +56,9 @@
         $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Source:
         $(PHOBOSSRC std/_path.d)
+    See_Also:
+        module $(MREF std,stdio) for opening files and manipulating them via handles
+        module $(MREF std,file) for examining file attributes and directory entries
     Macros:
         WIKI = Phobos/StdPath
 */
@@ -99,8 +110,8 @@ else static assert (0, "unsupported platform");
 
 /** Determines whether the given character is a directory separator.
 
-    On Windows, this includes both $(D `\`) and $(D `/`).
-    On POSIX, it's just $(D `/`).
+    On Windows, this includes both `\` and `/`.
+    On POSIX, it's just `/`.
 */
 bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
 {
@@ -1261,7 +1272,7 @@ unittest
     preceding segments will be dropped.
 
     On Windows, if one of the path segments are rooted, but not absolute
-    (e.g. $(D `\foo`)), all preceding path segments down to the previous
+    (e.g. `\foo`), all preceding path segments down to the previous
     root will be dropped.  (See below for an example.)
 
     This function always allocates memory to hold the resulting path.
@@ -2472,8 +2483,8 @@ unittest
     ---
 
     On Windows, an absolute path starts at the root directory of
-    a specific drive.  Hence, it must start with $(D `d:\`) or $(D `d:/`),
-    where $(D d) is the drive letter.  Alternatively, it may be a
+    a specific drive.  Hence, it must start with `d:\` or `d:/`,
+    where `d` is the drive letter.  Alternatively, it may be a
     network path, i.e. a path starting with a double (back)slash.
     ---
     version (Windows)
@@ -2682,14 +2693,14 @@ unittest
     taken to be the current working directory.  If specified,
     $(D base) must be an absolute _path, and it is always assumed
     to refer to a directory.  If $(D path) and $(D base) refer to
-    the same directory, the function returns $(D `.`).
+    the same directory, the function returns `.`.
 
     The following algorithm is used:
     $(OL
         $(LI If $(D path) is a relative directory, return it unaltered.)
         $(LI Find a common root between $(D path) and $(D base).
             If there is no common root, return $(D path) unaltered.)
-        $(LI Prepare a string with as many $(D `../`) or $(D `..\`) as
+        $(LI Prepare a string with as many `../` or `..\` as
             necessary to reach the common root from base path.)
         $(LI Append the remaining segments of $(D path) to the string
             and return.)
@@ -2932,7 +2943,7 @@ unittest
     comparison.  This is controlled through the $(D cs) template parameter
     which, if not specified, is given by $(LREF CaseSensitive)$(D .osDefault).
 
-    On Windows, the backslash and slash characters ($(D `\`) and $(D `/`))
+    On Windows, the backslash and slash characters (`\` and `/`)
     are considered equal.
 
     Params:
@@ -3556,13 +3567,13 @@ unittest
         $(LI If the second character of $(D path) is a colon ($(D ':')),
             the first character is interpreted as a drive letter, and
             must be in the range A-Z (case insensitive).)
-        $(LI If $(D path) is on the form $(D `\\$(I server)\$(I share)\...`)
+        $(LI If $(D path) is on the form `\\$(I server)\$(I share)\...`
             (UNC path), $(LREF isValidFilename) is applied to $(I server)
             and $(I share) as well.)
-        $(LI If $(D path) starts with $(D `\\?\`) (long UNC path), the
+        $(LI If $(D path) starts with `\\?\` (long UNC path), the
             only requirement for the rest of the string is that it does
             not contain the null character.)
-        $(LI If $(D path) starts with $(D `\\.\`) (Win32 device namespace)
+        $(LI If $(D path) starts with `\\.\` (Win32 device namespace)
             this function returns $(D false); such paths are beyond the scope
             of this module.)
     )

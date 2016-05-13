@@ -74,6 +74,7 @@ $(TR $(TDNW Miscellaneous)
     )
 )))
 
+
 Objects of types $(D _string), $(D wstring), and $(D dstring) are value types
 and cannot be mutated element-by-element. For using mutation during building
 strings, use $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D xxxstring)
@@ -82,9 +83,8 @@ making code more robust.
 
 The following functions are publicly imported:
 
-$(BOOKTABLE ,
+$(BOOKTABLE Publicly imported functions,
 $(TR $(TH Module) $(TH Functions) )
-$(LEADINGROW Publicly imported functions)
     $(TR $(TD std.algorithm)
         $(TD
          $(SHORTXREF_PACK algorithm,comparison,cmp)
@@ -116,21 +116,20 @@ $(LEADINGROW Publicly imported functions)
 )
 
 There is a rich set of functions for _string handling defined in other modules.
-Functions related to Unicode and ASCII are found in $(LINK2 std_uni.html, std.uni)
-and $(LINK2 std_ascii.html, std.ascii), respectively. Other functions that have a
-wider generality than just strings can be found in $(LINK2 std_algorithm.html,
-std.algorithm) and $(LINK2 std_range.html, std.range).
+Functions related to Unicode and ASCII are found in $(MREF std,uni)
+and $(MREF std,ascii), respectively. Other functions that have a
+wider generality than just strings can be found in $(MREF std,algorithm) and $(MREF std,range).
 
 See_Also:
     $(LIST
-    $(LINK2 std_algorithm.html, std.algorithm) and
-    $(LINK2 std_range.html, std.range)
+    $(MREF std,algorithm) and
+    $(MREF std,range)
     for generic range algorithms
     ,
-    $(LINK2 std_ascii.html, std.ascii)
+    $(MREF std,ascii)
     for functions that work with ASCII strings
     ,
-    $(LINK2 std_uni.html, std.uni)
+    $(MREF std,uni)
     for functions that work with unicode strings
     )
 
@@ -226,14 +225,19 @@ class StringException : Exception
 
 
 /++
+    Slices a C-style $(D char*) into a D-style $(D char[]).
+
     Params:
         cString = A null-terminated c-style string.
 
     Returns: A D-style array of $(D char) referencing the same string.  The
     returned array will retain the same type qualifiers as the input.
 
-    $(RED Important Note:) The returned array is a slice of the original buffer.
-    The original data is not changed and not copied.
+    $(PITFALL The returned array is a slice of the original buffer.
+    The original data is not changed and not copied. This means if it
+    is freed by a later call to the C library, the returned string becomes
+    invalid too. You may want to call `.idup` on the returned string to make
+    a copy if you intend to keep it around.)
 +/
 
 inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
@@ -249,6 +253,8 @@ inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
 }
 
 /++
+    Converts a D-style $(D string) to a C-style $(D const char*).
+
     Params:
         s = A D-style string.
 
@@ -257,12 +263,32 @@ inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
     first $(D '\0') that it sees as the end of the string. If $(D s.empty) is
     $(D true), then a string containing only $(D '\0') is returned.
 
-    $(RED Important Note:) When passing a $(D char*) to a C function, and the C
+    $(PITFALL When passing a $(D char*) to a C function, and the C
     function keeps it around for any reason, make sure that you keep a
     reference to it in your D code. Otherwise, it may become invalid during a
     garbage collection cycle and cause a nasty bug when the C code tries to use
-    it.
+    it.)
   +/
+immutable(char)* toStringz(in string s) @trusted pure nothrow
+{
+    if (s.empty) return "".ptr;
+    /* Peek past end of s[], if it's 0, no conversion necessary.
+     * Note that the compiler will put a 0 past the end of static
+     * strings, and the storage allocator will put a 0 past the end
+     * of newly allocated char[]'s.
+     */
+    immutable p = s.ptr + s.length;
+    // Is p dereferenceable? A simple test: if the p points to an
+    // address multiple of 4, then conservatively assume the pointer
+    // might be pointing to a new block of memory, which might be
+    // unreadable. Otherwise, it's definitely pointing to valid
+    // memory.
+    if ((cast(size_t) p & 3) && *p == 0)
+        return s.ptr;
+    return toStringz(cast(const char[]) s);
+}
+
+/++ Ditto +/
 immutable(char)* toStringz(const(char)[] s) @trusted pure nothrow
 in
 {
@@ -305,26 +331,6 @@ body
     copy[s.length] = 0;
 
     return assumeUnique(copy).ptr;
-}
-
-/++ Ditto +/
-immutable(char)* toStringz(in string s) @trusted pure nothrow
-{
-    if (s.empty) return "".ptr;
-    /* Peek past end of s[], if it's 0, no conversion necessary.
-     * Note that the compiler will put a 0 past the end of static
-     * strings, and the storage allocator will put a 0 past the end
-     * of newly allocated char[]'s.
-     */
-    immutable p = s.ptr + s.length;
-    // Is p dereferenceable? A simple test: if the p points to an
-    // address multiple of 4, then conservatively assume the pointer
-    // might be pointing to a new block of memory, which might be
-    // unreadable. Otherwise, it's definitely pointing to valid
-    // memory.
-    if ((cast(size_t) p & 3) && *p == 0)
-        return s.ptr;
-    return toStringz(cast(const char[]) s);
 }
 
 pure nothrow unittest
@@ -5209,15 +5215,15 @@ body
  * See if character c is in the pattern.
  * Patterns:
  *
- *  A <i>pattern</i> is an array of characters much like a <i>character
- *  class</i> in regular expressions. A sequence of characters
+ *  A $(I pattern) is an array of characters much like a $(I character
+ *  class) in regular expressions. A sequence of characters
  *  can be given, such as "abcde". The '-' can represent a range
  *  of characters, as "a-e" represents the same pattern as "abcde".
  *  "a-fA-F0-9" represents all the hex characters.
  *  If the first character of a pattern is '^', then the pattern
  *  is negated, i.e. "^0-9" means any character except a digit.
- *  The functions inPattern, <b>countchars</b>, <b>removeschars</b>,
- *  and <b>squeeze</b>
+ *  The functions [inPattern], [countchars], [removechars],
+ *  and [squeeze]
  *  use patterns.
  *
  * Note: In the future, the pattern syntax may be improved
@@ -5459,7 +5465,7 @@ S squeeze(S)(S s, in S pattern = null)
 /***************************************************************
  Finds the position $(D_PARAM pos) of the first character in $(D_PARAM
  s) that does not match $(D_PARAM pattern) (in the terminology used by
- $(LINK2 std_string.html,inPattern)). Updates $(D_PARAM s =
+ $(XREF string,inPattern)). Updates $(D_PARAM s =
  s[pos..$]). Returns the slice from the beginning of the original
  (before update) string up to, and excluding, $(D_PARAM pos).
 
@@ -6593,8 +6599,6 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
  * This uniformly outdents the text as much as possible.
  * Whitespace-only lines are always converted to blank lines.
  *
- * Does not allocate memory if it does not throw.
- *
  * Params:
  *     str = multi-line string
  *
@@ -6636,6 +6640,8 @@ void main() {
  *
  * This uniformly outdents the text as much as possible.
  * Whitespace-only lines are always converted to blank lines.
+ *
+ * Does not allocate memory if it does not throw.
  *
  * Params:
  *     lines = array of single-line strings

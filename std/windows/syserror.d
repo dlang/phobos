@@ -16,53 +16,6 @@
 module std.windows.syserror;
 import std.traits : isSomeString;
 
-version (StdDdoc)
-{
-    private
-    {
-        alias DWORD = uint;
-        enum LANG_NEUTRAL = 0, SUBLANG_DEFAULT = 1;
-    }
-
-    /** Query the text for a Windows error code, as returned by
-        $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms679360.aspx,
-        $(D GetLastError)), as a D string.
-     */
-    string sysErrorString(
-        DWORD errCode,
-        // MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT) is the user's default language
-        int langId = LANG_NEUTRAL,
-        int subLangId = SUBLANG_DEFAULT) @trusted;
-
-    /*********************
-       Thrown if errors that set
-       $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms679360.aspx,
-       $(D GetLastError)) occur.
-     */
-    class WindowsException : Exception
-    {
-        private alias DWORD = int;
-        final @property DWORD code(); /// $(D GetLastError)'s return value.
-        this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted;
-    }
-
-    /++
-        If $(D !!value) is true, $(D value) is returned. Otherwise,
-        $(D new WindowsException(GetLastError(), msg)) is thrown.
-        $(D WindowsException) assumes that the last operation set
-        $(D GetLastError()) appropriately.
-
-        Example:
-        --------------------
-        wenforce(DeleteFileA("junk.tmp"), "DeleteFile failed");
-        --------------------
-     +/
-    T wenforce(T, S)(T value, lazy S msg = null,
-        string file = __FILE__, size_t line = __LINE__) @safe
-        if (isSomeString!S);
-}
-else:
-
 version (Windows):
 
 import std.windows.charset;
@@ -71,6 +24,10 @@ import std.conv : to;
 import std.format : formattedWrite;
 import core.sys.windows.windows;
 
+/** Query the text for a Windows error code, as returned by
+    $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms679360.aspx,
+    $(D GetLastError)), as a D string.
+ */
 string sysErrorString(
     DWORD errCode,
     // MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT) is the user's default language
@@ -89,6 +46,7 @@ string sysErrorString(
     return buf.data;
 }
 
+///
 bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
 {
     wchar *lpMsgBuf = null;
@@ -114,14 +72,20 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
         return false;
 }
 
-
+/*********************
+   Thrown if errors that set
+   $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms679360.aspx,
+   $(D GetLastError)) occur.
+ */
 class WindowsException : Exception
 {
     import core.sys.windows.windows;
 
-    final @property DWORD code() { return _code; } /// $(D GetLastError)'s return value.
+    /// $(D GetLastError)'s return value.
+    final @property DWORD code() { return _code; }
     private DWORD _code;
 
+    ///
     this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted
     {
         _code = code;
@@ -146,6 +110,17 @@ class WindowsException : Exception
 }
 
 
+/++
+    If $(D !!value) is true, $(D value) is returned. Otherwise,
+    $(D new WindowsException(GetLastError(), msg)) is thrown.
+    $(D WindowsException) assumes that the last operation set
+    $(D GetLastError()) appropriately.
+
+    Example:
+    --------------------
+    wenforce(DeleteFileA("junk.tmp"), "DeleteFile failed");
+    --------------------
+ +/
 T wenforce(T, S)(T value, lazy S msg = null,
     string file = __FILE__, size_t line = __LINE__) if (isSomeString!S)
 {
@@ -154,6 +129,7 @@ T wenforce(T, S)(T value, lazy S msg = null,
     return value;
 }
 
+///
 T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)

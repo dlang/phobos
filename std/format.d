@@ -3,9 +3,9 @@
 /**
    This module implements the formatting functionality for strings and
    I/O. It's comparable to C99's $(D vsprintf()) and uses a similar
-   _format encoding scheme.
+   format encoding scheme.
 
-   For an introductory look at $(B std._format)'s capabilities and how to use
+   For an introductory look at $(B std.format)'s capabilities and how to use
    this module see the dedicated
    $(LINK2 http://wiki.dlang.org/Defining_custom_print_format_specifiers, DWiki article).
 
@@ -14,35 +14,35 @@
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF formattedRead)))
-        $(TD Reads values according to the _format string from an InputRange.
+    $(TR $(TD $(LREF formattedRead))
+        $(TD Reads values according to the format string from an InputRange.
     ))
-    $(TR $(TD $(D $(LREF formattedWrite)))
-        $(TD Formats its arguments according to the _format string and puts them
+    $(TR $(TD $(LREF formattedWrite))
+        $(TD Formats its arguments according to the format string and puts them
         to an OutputRange.
     ))
 )
 
-   Please see the documentation of function $(D $(LREF formattedWrite)) for a
-   description of the _format string.
+   Please see the documentation of function $(LREF formattedWrite) for a
+   description of the format string.
 
    Two functions have been added for convenience:
 
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF _format)))
+    $(TR $(TD $(LREF format))
         $(TD Returns a GC-allocated string with the formatting result.
     ))
-    $(TR $(TD $(D $(LREF sformat)))
+    $(TR $(TD $(LREF sformat))
         $(TD Puts the formatting result into a preallocated array.
     ))
 )
 
-   These two functions are publicly imported by $(LINK2 std_string.html,
-   std.string) to be easily available.
+   These two functions are publicly imported by $(MREF std,string)
+   to be easily available.
 
-   The functions $(D $(LREF formatValue)) and $(D $(LREF unformatValue)) are
+   The functions $(LREF formatValue) and $(LREF unformatValue) are
    used for the plumbing.
 
    Macros: WIKI = Phobos/StdFormat
@@ -54,7 +54,7 @@ $(TR $(TH Function Name) $(TH Description)
    Authors: $(WEB walterbright.com, Walter Bright), $(WEB erdani.com,
    Andrei Alexandrescu), and Kenji Hara
 
-   Source: $(PHOBOSSRC std/_format.d)
+   Source: $(PHOBOSSRC std/format.d)
  */
 module std.format;
 
@@ -108,6 +108,7 @@ private alias enforceFmt = enforceEx!FormatException;
    to $(D fmt), and sends the resulting characters to $(D w). The
    encoding of the output is the same as $(D Char). The type $(D Writer)
    must satisfy $(D $(XREF_PACK range,primitives,isOutputRange)!(Writer, Char)).
+
 
    The variadic arguments are normally consumed in order. POSIX-style
    $(WEB opengroup.org/onlinepubs/009695399/functions/printf.html,
@@ -6418,7 +6419,7 @@ unittest
 /*****************************************************
  * Format arguments into a string.
  *
- * Params: fmt  = Format string. For detailed specification, see $(XREF _format,formattedWrite).
+ * Params: fmt  = Format string. For detailed specification, see $(XREF format,formattedWrite).
  *         args = Variadic list of arguments to format into returned string.
  */
 immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar!Char)

@@ -5,44 +5,43 @@ Functions that manipulate other functions.
 
 This module provides functions for compile time function composition. These
 functions are helpful when constructing predicates for the algorithms in
-$(LINK2 std_algorithm.html, std.algorithm) or $(LINK2 std_range.html,
-std.range).
+$(MREF std,algorithm) or $(MREF std,range).
 
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF adjoin)))
+    $(TR $(TD $(LREF adjoin))
         $(TD Joins a couple of functions into one that executes the original
         functions independently and returns a tuple with all the results.
     ))
-    $(TR $(TD $(D $(LREF compose)), $(D $(LREF pipe)))
+    $(TR $(TD $(LREF compose), $(LREF pipe))
         $(TD Join a couple of functions into one that executes the original
         functions one after the other, using one function's result for the next
         function's argument.
     ))
-    $(TR $(TD $(D $(LREF forward)))
+    $(TR $(TD $(LREF forward))
         $(TD Forwards function arguments while saving ref-ness.
     ))
-    $(TR $(TD $(D $(LREF lessThan)), $(D $(LREF greaterThan)), $(D $(LREF equalTo)))
+    $(TR $(TD $(LREF lessThan), $(LREF greaterThan), $(LREF equalTo))
         $(TD Ready-made predicate functions to compare two values.
     ))
-    $(TR $(TD $(D $(LREF memoize)))
+    $(TR $(TD $(LREF memoize))
         $(TD Creates a function that caches its result for fast re-evaluation.
     ))
-    $(TR $(TD $(D $(LREF not)))
+    $(TR $(TD $(LREF not))
         $(TD Creates a function that negates another.
     ))
-    $(TR $(TD $(D $(LREF partial)))
+    $(TR $(TD $(LREF partial))
         $(TD Creates a function that binds the first argument of a given function
         to a given value.
     ))
-    $(TR $(TD $(D $(LREF reverseArgs)), $(D $(LREF binaryReverseArgs)))
+    $(TR $(TD $(LREF reverseArgs), $(LREF binaryReverseArgs))
         $(TD Predicate that reverses the order of its arguments.
     ))
-    $(TR $(TD $(D $(LREF toDelegate)))
+    $(TR $(TD $(LREF toDelegate))
         $(TD Converts a callable to a delegate.
     ))
-    $(TR $(TD $(D $(LREF unaryFun)), $(D $(LREF binaryFun)))
+    $(TR $(TD $(LREF unaryFun), $(LREF binaryFun))
         $(TD Create a unary or binary function from a string. Most often
         used when defining algorithms on ranges.
     ))
@@ -478,8 +477,8 @@ unittest //check user defined types
 }
 
 /**
-   Predicate that returns $(D_PARAM a < b).
-   Correctly compares signed and unsigned integers, ie. -1 < 2U.
+   Predicate that returns $(D a < b).
+   Correctly compares signed and unsigned integers, ie. $(D -1 < 2U).
 */
 alias lessThan = safeOp!"<";
 
@@ -499,8 +498,8 @@ pure @safe @nogc nothrow unittest
 }
 
 /**
-   Predicate that returns $(D_PARAM a > b).
-   Correctly compares signed and unsigned integers, ie. 2U > -1.
+   Predicate that returns $(D a > b).
+   Correctly compares signed and unsigned integers, ie. $(D 2U > -1).
 */
 alias greaterThan = safeOp!">";
 
@@ -520,8 +519,8 @@ unittest
 }
 
 /**
-   Predicate that returns $(D_PARAM a == b).
-   Correctly compares signed and unsigned integers, ie. !(-1 == ~0U).
+   Predicate that returns $(D a == b).
+   Correctly compares signed and unsigned integers, ie. $(D !(-1 == ~0U)).
 */
 alias equalTo = safeOp!"==";
 
@@ -654,7 +653,7 @@ unittest
 
 /**
 $(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially
-applies) $(D_PARAM fun) by tying its first argument to $(D_PARAM arg).
+applies) $(D fun) by tying its first argument to $(D arg).
  */
 template partial(alias fun, alias arg)
 {
@@ -958,8 +957,11 @@ unittest
 }
 
 /**
- * $(LUCKY Memoizes) a function so as to avoid repeated
- * computation. The memoization structure is a hash table keyed by a
+ * [https://en.wikipedia.org/wiki/Memoization|Memoizes] a function so as to
+ * avoid repeated computation.
+ *
+ * 
+ * The memoization structure is a hash table keyed by a
  * tuple of the function's arguments. There is a speed gain if the
  * function is repeatedly called with the same arguments and is more
  * expensive than a hash table lookup. For more information on memoization, refer to $(WEB docs.google.com/viewer?url=http%3A%2F%2Fhop.perl.plover.com%2Fbook%2Fpdf%2F03CachingAndMemoization.pdf, this book chapter).

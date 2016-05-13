@@ -4,17 +4,18 @@
 Utilities for manipulating files and scanning directories. Functions
 in this module handle files as a unit, e.g., read or write one _file
 at a time. For opening files and manipulating them via handles refer
-to module $(LINK2 std_stdio.html,$(D std.stdio)).
+to module $(MREF std,stdio). For functions to inspect a path string, see
+$(MREF std,path).
 
 Macros:
 WIKI = Phobos/StdFile
 
 Copyright: Copyright Digital Mars 2007 - 2011.
-See_Also:  The $(WEB ddili.org/ders/d.en/files.html, official tutorial) for an
-introduction to working with files in D, module
-$(LINK2 std_stdio.html,$(D std.stdio)) for opening files and manipulating them
-via handles, and module $(LINK2 std_path.html,$(D std.path)) for manipulating
-path strings.
+See_Also:
+    The $(WEB ddili.org/ders/d.en/files.html, official tutorial) for an introduction to working with files in D
+    module $(MREF std,stdio) for opening files and manipulating them via handles
+    and module $(MREF std,path) for manipulating path strings.
+
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
@@ -1474,7 +1475,7 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
 
 
 /++
- Returns the attributes of the given file.
+ Returns the platform-specific attributes of the given file.
 
  Note that the file attributes on Windows and Posix systems are
  completely different. On Windows, they're what is returned by
@@ -1588,6 +1589,7 @@ uint getLinkAttributes(R)(R name)
     }
 }
 
+/// ditto
 uint getLinkAttributes(R)(auto ref R name)
     if (isConvertibleToString!R)
 {
@@ -1642,6 +1644,7 @@ void setAttributes(R)(R name, uint attributes)
     }
 }
 
+/// ditto
 void setAttributes(R)(auto ref R name, uint attributes)
     if (isConvertibleToString!R)
 {
@@ -1685,6 +1688,7 @@ assert("/usr/share/include".isDir);
     }
 }
 
+/// ditto
 @property bool isDir(R)(auto ref R name)
     if (isConvertibleToString!R)
 {
@@ -1831,6 +1835,7 @@ assert(!"/usr/share/include".isFile);
         return (getAttributes(name) & S_IFMT) == S_IFREG;
 }
 
+/// ditto
 @property bool isFile(R)(auto ref R name)
     if (isConvertibleToString!R)
 {
@@ -1965,6 +1970,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
 }
 
+/// ditto
 @property bool isSymlink(R)(auto ref R name)
     if (isConvertibleToString!R)
 {
@@ -2161,6 +2167,7 @@ void mkdir(R)(R pathname)
     }
 }
 
+/// ditto
 void mkdir(R)(auto ref R pathname)
     if (isConvertibleToString!R)
 {

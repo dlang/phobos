@@ -107,7 +107,7 @@ $(TR $(TDNW Sorting)
         $(SUBREF sorting, topNIndex)
     )
 )
-$(TR $(TDNW Set&nbsp;operations)
+$(TR $(TDNW Set operations)
     $(TDNW $(SUBMODULE setops))
     $(TD
         $(SUBREF setops, cartesianProduct)

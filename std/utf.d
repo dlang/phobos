@@ -7,9 +7,11 @@
     $(D '\u0000' &lt;= character &lt;= '\U0010FFFF').
 
     See_Also:
-        $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia)<br>
-        $(LINK http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8)<br>
-        $(LINK http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335)
+    $(LIST
+        * $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia)
+        * [http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8]
+        * [http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335]
+    )
     Macros:
         WIKI = Phobos/StdUtf
 

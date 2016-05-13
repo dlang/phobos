@@ -35,7 +35,7 @@ $(T2 endsWith,
         $(D endsWith("rocks", "ks")) returns $(D true).)
 $(T2 find,
         $(D find("hello world", "or")) returns $(D "orld") using linear search.
-        (For binary search refer to $(XREF range,sortedRange).))
+        (For binary search refer to $(XREF range,SortedRange).))
 $(T2 findAdjacent,
         $(D findAdjacent([1, 2, 3, 3, 4])) returns the subrange starting with
         two equal adjacent elements, i.e. $(D [3, 3, 4]).)
@@ -2504,25 +2504,29 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 /**
-These functions find the first occurrence of `needle` in `haystack` and then
-split `haystack` as follows.
+These functions find the first occurrence of $(D needle) in $(D
+haystack) and then split $(D haystack) in their return values.
 
-`findSplit` returns a tuple `result` containing $(I three) ranges. `result[0]`
-is the portion of `haystack` before `needle`, `result[1]` is the portion of
-`haystack` that matches `needle`, and `result[2]` is the portion of `haystack`
-after the match. If `needle` was not found, `result[0]` comprehends `haystack`
-entirely and `result[1]` and `result[2]` are empty.
 
-`findSplitBefore` returns a tuple `result` containing two ranges. `result[0]` is
-the portion of `haystack` before `needle`, and `result[1]` is the balance of
-`haystack` starting with the match. If `needle` was not found, `result[0]`
-comprehends `haystack` entirely and `result[1]` is empty.
+$(D findSplit) returns a tuple $(D result) containing $(I three)
+ranges. $(D result[0]) is the portion of $(D haystack) before $(D
+needle), $(D result[1]) is the portion of $(D haystack) that matches
+$(D needle), and $(D result[2]) is the portion of $(D haystack) after
+the match. If $(D needle) was not found, $(D result[0])
+comprehends $(D haystack) entirely and $(D result[1]) and $(D result[2])
+are empty.
 
-`findSplitAfter` returns a tuple `result` containing two ranges.
-`result[0]` is the portion of `haystack` up to and including the
-match, and `result[1]` is the balance of `haystack` starting
-after the match. If `needle` was not found, `result[0]` is empty
-and `result[1]` is `haystack`.
+$(D findSplitBefore) returns a tuple $(D result) containing two
+ranges. $(D result[0]) is the portion of $(D haystack) before $(D
+needle), and $(D result[1]) is the balance of $(D haystack) starting
+with the match. If $(D needle) was not found, $(D result[0])
+comprehends $(D haystack) entirely and $(D result[1]) is empty.
+
+$(D findSplitAfter) returns a tuple $(D result) containing two ranges.
+$(D result[0]) is the portion of $(D haystack) up to and including the
+match, and $(D result[1]) is the balance of $(D haystack) starting
+after the match. If $(D needle) was not found, $(D result[0]) is empty
+and $(D result[1]) is $(D haystack).
 
 In all cases, the concatenation of the returned ranges spans the
 entire `haystack`.
@@ -2546,10 +2550,20 @@ details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
 shown in the following example.
 
 Example:
+
+This example shows the use of the return value and the $(D bool opCast) idiom:
 ---
-if (const split = haystack.findSplit(needle))
+if (auto split = haystack.findSplit(needle))
 {
-     doSomethingWithSplit(split);
+     // needle was found. We can use the three parts of the returned tuple:
+     auto beforeNeedle = split[0];
+     auto needleMatch = split[1];
+     auto afterNeedle = split[2];
+     // you can now do something with these three parts
+}
+else
+{
+     // needle was not found in haystack
 }
 ---
  */
@@ -2732,7 +2746,8 @@ if (isForwardRange!R1 && isForwardRange!R2)
     }
 }
 
-///
+/// This example shows the difference in return values of $(LREF findSkip),
+/// $(LREF findSplitBefore), and $(LREF findSplitAfter).
 @safe unittest
 {
     auto a = "Carl Sagan Memorial Station";

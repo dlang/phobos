@@ -1389,6 +1389,7 @@ Throws: $(D Exception) if the file is not opened.
 /**
 Read line from the file handle and return it as a specified type.
 
+
 This version manages its own read buffer, which means one memory allocation per call. If you are not
 retaining a reference to the read data, consider the $(D File.readln(buf)) version, which may offer
 better performance as it can reuse its read buffer.
@@ -1402,6 +1403,11 @@ Note:
 
 Returns:
     The line that was read, including the line terminator character.
+
+    $(TIP
+        Use $(REF std.string.chomp) to cut off the line terminator if you don't want it, such as when passing
+        it to $(REF std.conv.to). For example: $(D int a = to!int(readln.chomp);)
+    )
 
 Throws:
     $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
@@ -1472,6 +1478,7 @@ void main()
 /**
 Read line from the file handle and write it to $(D buf[]), including
 terminating character.
+
 
 This can be faster than $(D line = File.readln()) because you can reuse
 the buffer for each call. Note that reusing the buffer means that you
@@ -3583,12 +3590,18 @@ unittest
 /**********************************
  * Read line from $(D stdin).
  *
+ *
  * This version manages its own read buffer, which means one memory allocation per call. If you are not
  * retaining a reference to the read data, consider the $(D readln(buf)) version, which may offer
  * better performance as it can reuse its read buffer.
  *
  * Returns:
  *        The line that was read, including the line terminator character.
+ *
+ *        $(TIP
+ *          Use $(REF std.string.chomp) to cut off the line terminator if you don't want it, such as when passing
+ *          it to $(REF std.conv.to). For example: $(D int a = to!int(readln.chomp);)
+ *         )
  * Params:
  *        S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
  *        terminator = Line terminator (by default, $(D '\n')).
@@ -3608,6 +3621,22 @@ void main()
         write(line);
 }
 ---
+
+This reads an integer from stdin:
+---
+import std.stdio;
+import std.string : chomp;
+import std.conv : to;
+
+void main()
+{
+    // If you forget to use `.chomp` here, you will get a
+    // ConvException when you try to run the program.
+    int fromUser = to!int(readln().chomp);
+    writeln(fromUser);
+}
+---
+
 */
 S readln(S = string)(dchar terminator = '\n')
 if (isSomeString!S)
@@ -3617,6 +3646,7 @@ if (isSomeString!S)
 
 /**********************************
  * Read line from $(D stdin) and write it to buf[], including terminating character.
+ *
  *
  * This can be faster than $(D line = readln()) because you can reuse
  * the buffer for each call. Note that reusing the buffer means that you

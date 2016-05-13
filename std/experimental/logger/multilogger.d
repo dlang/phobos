@@ -1,3 +1,4 @@
+///
 module std.experimental.logger.multilogger;
 
 import std.experimental.logger.core;

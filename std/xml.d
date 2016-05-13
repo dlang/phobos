@@ -10,7 +10,7 @@ Classes and functions for creating and parsing XML
 The basic architecture of this module is that there are standalone functions,
 classes for constructing an XML document from scratch (Tag, Element and
 Document), and also classes for parsing a pre-existing XML file (ElementParser
-and DocumentParser). The parsing classes <i>may</i> be used to build a
+and DocumentParser). The parsing classes $(I may) be used to build a
 Document, but that is not their primary purpose. The handling capabilities of
 DocumentParser and ElementParser are sufficiently customizable that you can
 make them do pretty much whatever you want.

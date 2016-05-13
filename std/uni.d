@@ -9,7 +9,7 @@
 
     $(P All primitives listed operate on Unicode characters and
     sets of characters. For functions which operate on ASCII characters
-    and ignore Unicode $(CHARACTERS), see $(LINK2 std_ascii.html, std.ascii).
+    and ignore Unicode $(CHARACTERS), see $(MREF std,ascii).
     For definitions of Unicode $(CHARACTER), $(CODEPOINT) and other terms
     used throughout this module see the $(S_LINK Terminology, terminology) section
     below.

@@ -11,49 +11,49 @@ $(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Members) )
 $(TR $(TDNW Constants) $(TD
-    $(MYREF E) $(MYREF PI) $(MYREF PI_2) $(MYREF PI_4) $(MYREF M_1_PI)
-    $(MYREF M_2_PI) $(MYREF M_2_SQRTPI) $(MYREF LN10) $(MYREF LN2)
-    $(MYREF LOG2) $(MYREF LOG2E) $(MYREF LOG2T) $(MYREF LOG10E)
-    $(MYREF SQRT2) $(MYREF SQRT1_2)
+    $(LREF E) $(LREF PI) $(LREF PI_2) $(LREF PI_4) $(LREF M_1_PI)
+    $(LREF M_2_PI) $(LREF M_2_SQRTPI) $(LREF LN10) $(LREF LN2)
+    $(LREF LOG2) $(LREF LOG2E) $(LREF LOG2T) $(LREF LOG10E)
+    $(LREF SQRT2) $(LREF SQRT1_2)
 ))
 $(TR $(TDNW Classics) $(TD
-    $(MYREF abs) $(MYREF fabs) $(MYREF sqrt) $(MYREF cbrt) $(MYREF hypot)
-    $(MYREF poly) $(MYREF nextPow2) $(MYREF truncPow2)
+    $(LREF abs) $(LREF fabs) $(LREF sqrt) $(LREF cbrt) $(LREF hypot)
+    $(LREF poly) $(LREF nextPow2) $(LREF truncPow2)
 ))
 $(TR $(TDNW Trigonometry) $(TD
-    $(MYREF sin) $(MYREF cos) $(MYREF tan) $(MYREF asin) $(MYREF acos)
-    $(MYREF atan) $(MYREF atan2) $(MYREF sinh) $(MYREF cosh) $(MYREF tanh)
-    $(MYREF asinh) $(MYREF acosh) $(MYREF atanh) $(MYREF expi)
+    $(LREF sin) $(LREF cos) $(LREF tan) $(LREF asin) $(LREF acos)
+    $(LREF atan) $(LREF atan2) $(LREF sinh) $(LREF cosh) $(LREF tanh)
+    $(LREF asinh) $(LREF acosh) $(LREF atanh) $(LREF expi)
 ))
 $(TR $(TDNW Rounding) $(TD
-    $(MYREF ceil) $(MYREF floor) $(MYREF round) $(MYREF lround)
-    $(MYREF trunc) $(MYREF rint) $(MYREF lrint) $(MYREF nearbyint)
-    $(MYREF rndtol)
+    $(LREF ceil) $(LREF floor) $(LREF round) $(LREF lround)
+    $(LREF trunc) $(LREF rint) $(LREF lrint) $(LREF nearbyint)
+    $(LREF rndtol)
 ))
 $(TR $(TDNW Exponentiation & Logarithms) $(TD
-    $(MYREF pow) $(MYREF exp) $(MYREF exp2) $(MYREF expm1) $(MYREF ldexp)
-    $(MYREF frexp) $(MYREF log) $(MYREF log2) $(MYREF log10) $(MYREF logb)
-    $(MYREF ilogb) $(MYREF log1p) $(MYREF scalbn)
+    $(LREF pow) $(LREF exp) $(LREF exp2) $(LREF expm1) $(LREF ldexp)
+    $(LREF frexp) $(LREF log) $(LREF log2) $(LREF log10) $(LREF logb)
+    $(LREF ilogb) $(LREF log1p) $(LREF scalbn)
 ))
 $(TR $(TDNW Modulus) $(TD
-    $(MYREF fmod) $(MYREF modf) $(MYREF remainder)
+    $(LREF fmod) $(LREF modf) $(LREF remainder)
 ))
 $(TR $(TDNW Floating-point operations) $(TD
-    $(MYREF approxEqual) $(MYREF feqrel) $(MYREF fdim) $(MYREF fmax)
-    $(MYREF fmin) $(MYREF fma) $(MYREF nextDown) $(MYREF nextUp)
-    $(MYREF nextafter) $(MYREF NaN) $(MYREF getNaNPayload)
-    $(MYREF cmp)
+    $(LREF approxEqual) $(LREF feqrel) $(LREF fdim) $(LREF fmax)
+    $(LREF fmin) $(LREF fma) $(LREF nextDown) $(LREF nextUp)
+    $(LREF nextafter) $(LREF NaN) $(LREF getNaNPayload)
+    $(LREF cmp)
 ))
 $(TR $(TDNW Introspection) $(TD
-    $(MYREF isFinite) $(MYREF isIdentical) $(MYREF isInfinity) $(MYREF isNaN)
-    $(MYREF isNormal) $(MYREF isSubnormal) $(MYREF signbit) $(MYREF sgn)
-    $(MYREF copysign)
+    $(LREF isFinite) $(LREF isIdentical) $(LREF isInfinity) $(LREF isNaN)
+    $(LREF isNormal) $(LREF isSubnormal) $(LREF signbit) $(LREF sgn)
+    $(LREF copysign)
 ))
 $(TR $(TDNW Complex Numbers) $(TD
-  $(MYREF abs) $(MYREF conj) $(MYREF sin) $(MYREF cos) $(MYREF expi)
+  $(LREF abs) $(LREF conj) $(LREF sin) $(LREF cos) $(LREF expi)
 ))
 $(TR $(TDNW Hardware Control) $(TD
-    $(MYREF IeeeFlags) $(MYREF FloatingPointControl)
+    $(LREF IeeeFlags) $(LREF FloatingPointControl)
 ))
 )
 )
@@ -480,7 +480,7 @@ enum real LOG2 =       0x1.34413509f79fef311f12b35816f92p-2L; /** $(SUB log, 10)
 enum real LOG10E =     0x1.bcb7b1526e50e32a6ab7555f5a67cp-2L; /** $(SUB log, 10)e = 0.434294... */
 enum real LN2 =        0x1.62e42fefa39ef35793c7673007e5fp-1L; /** ln 2  = 0.693147... */
 enum real LN10 =       0x1.26bb1bbb5551582dd4adac5705a61p+1L; /** ln 10 = 2.302585... */
-enum real PI =         0x1.921fb54442d18469898cc51701b84p+1L; /** $(_PI) = 3.141592... */
+enum real PI =         0x1.921fb54442d18469898cc51701b84p+1L; /** $(PI) = 3.141592... */
 enum real PI_2 =       PI/2;                                  /** $(PI) / 2 = 1.570796... */
 enum real PI_4 =       PI/4;                                  /** $(PI) / 4 = 0.785398... */
 enum real M_1_PI =     0x1.45f306dc9c882a53f84eafa3ea69cp-2L; /** 1 / $(PI) = 0.318309... */
@@ -660,7 +660,7 @@ unittest
  * Returns:
  *      sine of x
  * See_Also:
- *      $(MYREF cos), $(MYREF tan), $(MYREF asin)
+ *      $(LREF cos), $(LREF tan), $(LREF asin)
  * Bugs:
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
@@ -7116,7 +7116,7 @@ real yl2xp1(real x, real y) @nogc @safe pure nothrow;       // y * log2(x + 1)
  *      0 if $(D x) and $(D y) are identical, and positive value otherwise.
  *
  * See_Also:
- *      $(MYREF isIdentical)
+ *      $(LREF isIdentical)
  * Standards: Conforms to IEEE 754-2008
  */
 int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow

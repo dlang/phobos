@@ -8,8 +8,9 @@ immune of threading issues. The generators feature a number of
 well-known and well-documented methods of generating random
 numbers. An overall fast and reliable means to generate random numbers
 is the $(D_PARAM Mt19937) generator, which derives its name from
-"$(LUCKY Mersenne Twister) with a period of 2 to the power of
-19937". In memory-constrained situations, $(LUCKY linear congruential)
+"[https://en.wikipedia.org/wiki/Mersenne_twister|Mersenne Twister] with
+a period of 2 to the power of 19937". In memory-constrained situations,
+[https://en.wikipedia.org/wiki/Linear_congruential_generator|linear congruential]
 generators such as $(D MinstdRand0) and $(D MinstdRand) might be
 useful. The standard library provides an alias $(D_PARAM Random) for
 whichever generator it considers the most fit for the target
@@ -35,7 +36,7 @@ distributions, which skew a generator's output statistical
 distribution in various ways. So far the uniform distribution for
 integers and real numbers have been implemented.
 
-Source:    $(PHOBOSSRC std/_random.d)
+Source:    $(PHOBOSSRC std/random.d)
 
 Macros:
 

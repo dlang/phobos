@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * Compress/decompress data using the $(WEB www._zlib.net, _zlib library).
+ * Compress/decompress data using the $(WEB www.zlib.net, zlib library).
  *
  * Examples:
  *
@@ -49,7 +49,7 @@
  * Copyright: Copyright Digital Mars 2000 - 2011.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
- * Source:    $(PHOBOSSRC std/_zlib.d)
+ * Source:    $(PHOBOSSRC std/zlib.d)
  */
 /*          Copyright Digital Mars 2000 - 2011.
  * Distributed under the Boost Software License, Version 1.0.
@@ -331,9 +331,15 @@ enum HeaderFormat {
     determineFromData /// used when decompressing. Try to automatically detect the stream format by looking at the data
 }
 
-/*********************************************
- * Used when the data to be compressed is not all in one buffer.
- */
+/++
+    Used when the data to be compressed is not all in one buffer.
+
+
+    $(PITFALL
+        This will keep a reference to the buffer you pass in to compress.
+	Do not overwrite it while the operation is in progress.
+    )
++/
 
 class Compress
 {
@@ -399,6 +405,11 @@ class Compress
      * Compress the data in buf and return the compressed data.
      * Params:
      *    buf = data to compress
+     *
+     * $(PITFALL
+     *     This will keep a reference to the buffer you pass in to compress.
+     *     Do not overwrite it while the operation is in progress.
+     * )
      *
      * Returns:
      *    the compressed data. The buffers returned from successive calls to this should be concatenated together.
@@ -510,6 +521,11 @@ class Compress
 
 /******
  * Used when the data to be decompressed is not all in one buffer.
+ *
+ * $(PITFALL
+ *     This will keep a reference to the buffer you pass in to compress.
+ *     Do not overwrite it while the operation is in progress.
+ * )
  */
 
 class UnCompress
@@ -564,6 +580,11 @@ class UnCompress
      * Decompress the data in buf and return the decompressed data.
      * The buffers returned from successive calls to this should be concatenated
      * together.
+     *
+     * $(PITFALL
+     *     This will keep a reference to the buffer you pass in to compress.
+     *     Do not overwrite it while the operation is in progress.
+     * )
      */
     const(void)[] uncompress(const(void)[] buf)
     in

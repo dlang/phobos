@@ -1440,7 +1440,7 @@ unittest
 }
 
 /**
-    Constructs a $(D Tuple) object instantiated and initialized according to
+    Constructs a $(LREF Tuple) object instantiated and initialized according to
     the given arguments.
 
     Params:
@@ -3146,7 +3146,7 @@ unittest
     assertThrown!NotImplementedError(c.notYetImplemented()); // throws an Error
 }
 
-// / ditto
+/// Thrown when you ask for something that isn't implemented
 class NotImplementedError : Error
 {
     this(string method)
@@ -6526,7 +6526,11 @@ McConnell in the $(LUCKY Code Complete) book, along with three other
 kinds of coupling. The author argues citing several studies that
 coupling has a negative effect on code quality. $(D Flag) offers a
 simple structuring method for passing yes/no flags to APIs.
- */
+
+See_Also:
+    $(LREF Yes)
+    $(LREF No)
+*/
 template Flag(string name) {
     ///
     enum Flag : bool
@@ -6551,6 +6555,9 @@ template Flag(string name) {
 Convenience names that allow using e.g. $(D Yes.encryption) instead of
 $(D Flag!"encryption".yes) and $(D No.encryption) instead of $(D
 Flag!"encryption".no).
+
+See_Also:
+	$(LREF Flag)
 */
 struct Yes
 {

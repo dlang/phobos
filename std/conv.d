@@ -2,6 +2,7 @@
 
 /**
 A one-stop shop for converting values from one type to another.
+Typical usage: $(TT $(LREF to)!SomeType(some_variable);)
 
 Copyright: Copyright Digital Mars 2007-.
 
@@ -150,19 +151,19 @@ class ConvOverflowException : ConvException
 }
 
 /**
-The `to` template converts a value from one type _to another.
+The `to` template converts a value from one type to another.
 The source type is deduced and the target type must be specified, for example the
 expression `to!int(42.0)` converts the number 42 from
-`double` _to `int`. The conversion is "safe", i.e.,
+`double` to `int`. The conversion is "safe", i.e.,
 it checks for overflow; `to!int(4.2e10)` would throw the
 `ConvOverflowException` exception. Overflow checks are only
 inserted when necessary, e.g., `to!double(42)` does not do
 any checking because any `int` fits in a `double`.
 
-Conversions from string _to numeric types differ from the C equivalents
+Conversions from string to numeric types differ from the C equivalents
 `atoi()` and `atol()` by checking for overflow and not allowing whitespace.
 
-For conversion of strings _to signed types, the grammar recognized is:
+For conversion of strings to signed types, the grammar recognized is:
 <pre>
 $(I Integer): $(I Sign UnsignedInteger)
 $(I UnsignedInteger)
@@ -171,7 +172,7 @@ $(I Sign):
     $(B -)
 </pre>
 
-For conversion _to unsigned types, the grammar recognized is:
+For conversion to unsigned types, the grammar recognized is:
 <pre>
 $(I UnsignedInteger):
     $(I DecimalDigit)
@@ -195,7 +196,7 @@ template to(T)
 }
 
 /**
- * Converting a value _to its own type (useful mostly for generic code)
+ * Converting a value to its own type (useful mostly for generic code)
  * simply returns its argument.
  */
 @safe pure unittest
@@ -206,12 +207,12 @@ template to(T)
 }
 
 /**
- * Converting among numeric types is a safe way _to cast them around.
+ * Converting among numeric types is a safe way to cast them around.
  *
- * Conversions from floating-point types _to integral types allow loss of
+ * Conversions from floating-point types to integral types allow loss of
  * precision (the fractional part of a floating-point number). The
  * conversion is truncating towards zero, the same way a cast would
- * truncate. (_To round a floating point value when casting _to an
+ * truncate. (_To round a floating point value when casting to an
  * integral, use `roundTo`.)
  */
 @safe pure unittest
@@ -230,9 +231,9 @@ template to(T)
 }
 
 /**
- * When converting strings _to numeric types, note that the D hexadecimal and binary
+ * When converting strings to numeric types, note that the D hexadecimal and binary
  * literals are not handled. Neither the prefixes that indicate the base, nor the
- * horizontal bar used _to separate groups of digits are recognized. This also
+ * horizontal bar used to separate groups of digits are recognized. This also
  * applies to the suffixes that indicate the type.
  *
  * _To work around this, you can specify a radix for conversions involving numbers.
@@ -246,7 +247,7 @@ template to(T)
 }
 
 /**
- * Conversions from integral types _to floating-point types always
+ * Conversions from integral types to floating-point types always
  * succeed, but might lose accuracy. The largest integers with a
  * predecessor representable in floating-point format are `2^24-1` for
  * `float`, `2^53-1` for `double`, and `2^64-1` for `real` (when
@@ -261,8 +262,8 @@ template to(T)
 }
 
 /**
- * Converting an array _to another array type works by converting each
- * element in turn. Associative arrays can be converted _to associative
+ * Converting an array to another array type works by converting each
+ * element in turn. Associative arrays can be converted to associative
  * arrays as long as keys and values can in turn be converted.
  */
 @safe pure unittest
@@ -286,9 +287,9 @@ template to(T)
  * Conversions operate transitively, meaning that they work on arrays and
  * associative arrays of any complexity.
  *
- * This conversion works because `to!short` applies _to an `int`, `to!wstring`
- * applies _to a `string`, `to!string` applies _to a `double`, and
- * `to!(double[])` applies _to an `int[]`. The conversion might throw an
+ * This conversion works because `to!short` applies to an `int`, `to!wstring`
+ * applies to a `string`, `to!string` applies to a `double`, and
+ * `to!(double[])` applies to an `int[]`. The conversion might throw an
  * exception because `to!short` might fail the range check.
  */
 unittest
@@ -317,30 +318,30 @@ unittest
 /**
  * Stringize conversion from all types is supported.
  * $(UL
- *   $(LI String _to string conversion works for any two string types having
+ *   $(LI String to string conversion works for any two string types having
  *        ($(D char), $(D wchar), $(D dchar)) character widths and any
  *        combination of qualifiers (mutable, $(D const), or $(D immutable)).)
- *   $(LI Converts array (other than strings) _to string.
+ *   $(LI Converts array (other than strings) to string.
  *        Each element is converted by calling $(D to!T).)
- *   $(LI Associative array _to string conversion.
+ *   $(LI Associative array to string conversion.
  *        Each element is printed by calling $(D to!T).)
- *   $(LI Object _to string conversion calls $(D toString) against the object or
+ *   $(LI Object to string conversion calls $(D toString) against the object or
  *        returns $(D "null") if the object is null.)
- *   $(LI Struct _to string conversion calls $(D toString) against the struct if
+ *   $(LI Struct to string conversion calls $(D toString) against the struct if
  *        it is defined.)
- *   $(LI For structs that do not define $(D toString), the conversion _to string
+ *   $(LI For structs that do not define $(D toString), the conversion to string
  *        produces the list of fields.)
- *   $(LI Enumerated types are converted _to strings as their symbolic names.)
+ *   $(LI Enumerated types are converted to strings as their symbolic names.)
  *   $(LI Boolean values are printed as $(D "true") or $(D "false").)
- *   $(LI $(D char), $(D wchar), $(D dchar) _to a string type.)
- *   $(LI Unsigned or signed integers _to strings.
+ *   $(LI $(D char), $(D wchar), $(D dchar) to a string type.)
+ *   $(LI Unsigned or signed integers to strings.
  *        $(DL $(DT [special case])
- *             $(DD Convert integral value _to string in $(D_PARAM radix) radix.
+ *             $(DD Convert integral value to string in $(D_PARAM radix) radix.
  *             radix must be a value from 2 to 36.
  *             value is treated as a signed value only if radix is 10.
  *             The characters A through Z are used to represent values 10 through 36
  *             and their case is determined by the $(D_PARAM letterCase) parameter.)))
- *   $(LI All floating point types _to all string types.)
+ *   $(LI All floating point types to all string types.)
  *   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
  *        If pointer is $(D char*), treat it as C-style strings.
  *        In that case, this function is $(D @system).))
@@ -847,7 +848,7 @@ private T toImpl(T, S)(S value)
 }
 
 /**
-Handles type _to string conversions
+Handles type to string conversions
 */
 private T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
@@ -5354,8 +5355,8 @@ template castFrom(From)
 {
     /**
         Params:
-            To    = The type _to cast _to.
-            value = The value _to cast. It must be of type $(D From),
+            To    = The type to cast to.
+            value = The value to cast. It must be of type $(D From),
                     otherwise a compile-time error is emitted.
 
         Returns:

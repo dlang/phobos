@@ -41,8 +41,8 @@ Synopsis:
 Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Jeremie Pelletier, David Herberth
-References: $(LINK http://json.org/)
-Source:    $(PHOBOSSRC std/_json.d)
+References: http://json.org/
+Source:    $(PHOBOSSRC std/json.d)
 */
 /*
          Copyright Jeremie Pelletier 2008 - 2009.
