@@ -50,6 +50,186 @@ import std.traits;
 import core.stdc.errno;
 import core.stdc.string;
 
+private struct EqualOperation {}
+
+/++
+Asserts that an actual value is equal to an expected value.
+If not, an $(D AssertError) is thrown.
+
+Params:
+    equal      = Binary predicate to compare actual and expected
+    actual     = Actual value
+    expected   = Expected value to test against
+    msg        = Optional message to output on test failure.
+    file       = The file where the error occurred.
+                 Defaults to $(D __FILE__).
+    line       = The line where the error occurred.
+                 Defaults to $(D __LINE__).
+
+Throws:
+    $(D AssertError) if actual is not equal to expected.
+
+Returns:
+    true if actual is equal to expected, otherwise false
++/
+bool assertEqual(alias equal = EqualOperation, A, E)(
+                    auto ref A actual, auto ref E expected,
+                    string msg = null,
+                    string file = __FILE__,
+                    size_t line = __LINE__) @safe nothrow
+{
+    import core.exception : AssertError, Exception;
+    import std.conv: to, ConvException;
+    import std.functional: binaryFun;
+
+    bool isEqual, isError;
+
+    try
+    {
+        // this special case avoids objects being copied by default
+        static if (is(equal == EqualOperation))
+            isEqual = ()@trusted{ return actual == expected; }();
+        else
+        {
+            alias eq = binaryFun!(equal);
+            isEqual = eq(actual, expected);
+        }
+    }
+    catch(Exception e)
+    {
+        isError = true;
+        throw new AssertError("Couldn't compare values", file, line, e);
+    }
+
+    if (!isEqual && !isError)
+    {
+        string assertMsg = "assertEqual failed: ";
+        Exception e;
+
+        // actual
+        assertMsg ~= "got: ";
+        try
+            assertMsg ~= ()@trusted{ return to!string(actual); }();
+        catch(Exception e)
+        {
+            assertMsg ~= "(couldn't convert to string)";
+            .e = e;
+        }
+        assertMsg ~= "(" ~ typeof(actual).stringof ~ ")";
+
+        // expected
+        assertMsg ~= ", expected: ";
+        try
+            assertMsg ~= ()@trusted{ return to!string(expected); }();
+        catch(Exception e)
+        {
+            assertMsg ~= "(couldn't convert to string)";
+            .e = e;
+        }
+        assertMsg ~= "(" ~ typeof(expected).stringof ~ ")";
+
+        // custom message
+        if (msg !is null)
+            assertMsg ~= " - " ~ msg;
+        throw new AssertError(assertMsg, file, line, e);
+    }
+    return isEqual;
+}
+
+///
+unittest
+{
+    assertEqual("a", "a");
+    assertEqual(1, 2 - 1);
+    assertEqual(3.5, 3.5);
+
+    import core.exception : AssertError;
+    assert(collectExceptionMsg!AssertError(assertEqual(1, 2)) ==
+           `assertEqual failed: got: 1(int), expected: 2(int)`);
+
+    // use with a custom predicate
+    import std.range: chain;
+    import std.algorithm.comparison: equal;
+    assertEqual!equal(chain([1, 2], [3, 4]), [1, 2, 3, 4]);
+
+    assert(collectExceptionMsg!AssertError(
+            assertEqual!equal(chain([1, 5], [3, 4]), [1, 2, 3, 4])) ==
+           `assertEqual failed: got: [1, 5, 3, 4](Result), expected: [1, 2, 3, 4](int[])`);
+}
+
+unittest
+{
+    import core.exception : AssertError;
+    assert(collectExceptionMsg!AssertError(assertEqual("a", "b")) ==
+           `assertEqual failed: got: a(string), expected: b(string)`);
+
+    assert(collectExceptionMsg!AssertError(assertEqual('a', 'b')) ==
+           `assertEqual failed: got: a(char), expected: b(char)`);
+
+    assert(collectExceptionMsg!AssertError(assertEqual(3.5, 4.5)) ==
+           `assertEqual failed: got: 3.5(double), expected: 4.5(double)`);
+
+    import std.bigint: BigInt;
+    assertEqual(1, BigInt(1));
+    assert(collectExceptionMsg!AssertError(assertEqual(BigInt(1), BigInt(2))) ==
+           `assertEqual failed: got: 1(BigInt), expected: 2(BigInt)`);
+}
+
+// test with structs
+unittest
+{
+    struct A { int a; }
+
+    A A1 = A(1);
+    assertEqual(A1, A(1));
+
+    import core.exception : AssertError;
+    assert(collectExceptionMsg!AssertError(assertEqual(A1, A(2))) ==
+           `assertEqual failed: got: A(1)(A), expected: A(2)(A)`);
+}
+
+// test with classes
+unittest
+{
+    class B {
+        int b;
+
+        this(int b)
+        {
+            this.b = b;
+        }
+        override bool opEquals(Object o) const
+        {
+            auto rhs = cast(const B)o;
+            return this.b == rhs.b;
+        }
+        override string toString() const {
+            import std.conv;
+            return "B(" ~ b.to!string ~ ")";
+        }
+    }
+
+    B B1 = new B(1);
+
+    import core.exception : AssertError;
+    assert(collectExceptionMsg!AssertError(assertEqual(B1, new B(2))) ==
+           `assertEqual failed: got: B(1)(B), expected: B(2)(B)`);
+}
+
+// custom messages
+unittest
+{
+    import core.exception : AssertError;
+    assert(collectExceptionMsg!AssertError(assertEqual("a", "b", "this should never happen")) ==
+           `assertEqual failed: got: a(string), expected: b(string) - this should never happen`);
+}
+
+@safe pure nothrow unittest
+{
+    assertEqual("a", "a");
+    assertEqual(1, 2 - 1);
+}
+
 /++
     Asserts that the given expression does $(I not) throw the given type
     of $(D Throwable). If a $(D Throwable) of the given type is thrown,
