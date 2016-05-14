@@ -1183,7 +1183,7 @@ struct Slice(size_t _N, _Range)
     }
 
     static if (!hasPtrBehavior!PureRange)
-    this(ref in size_t[PureN] lengths, ref in sizediff_t[PureN] strides, PtrShell!PureRange shell)
+    this(in size_t[PureN] lengths, in sizediff_t[PureN] strides, PtrShell!PureRange shell)
     {
         foreach (i; Iota!(0, PureN))
             _lengths[i] = lengths[i];
@@ -1201,7 +1201,7 @@ struct Slice(size_t _N, _Range)
         strides = strides
         range = range or pointer to iterate on
     +/
-    this(ref in size_t[PureN] lengths, ref in sizediff_t[PureN] strides, PureRange range)
+    this(in size_t[PureN] lengths, in sizediff_t[PureN] strides, PureRange range)
     {
         foreach (i; Iota!(0, PureN))
             _lengths[i] = lengths[i];
@@ -1211,6 +1211,30 @@ struct Slice(size_t _N, _Range)
             _ptr = range;
         else
             _ptr._range = range;
+    }
+
+    /// Creates a 2-dimentional slice with custom strides.
+    @nogc nothrow pure
+    unittest
+    {
+        import std.experimental.ndslice.selection: byElement;
+        import std.algorithm.comparison : equal;
+        import std.range : only;
+
+        uint[8] array = [1, 2, 3, 4, 5, 6, 7, 8];
+        auto slice = Slice!(2, uint*)([2, 2], [4, 1], array.ptr);
+
+        assert(&slice[0, 0] == &array[0]);
+        assert(&slice[0, 1] == &array[1]);
+        assert(&slice[1, 0] == &array[4]);
+        assert(&slice[1, 1] == &array[5]);
+        assert(slice.byElement.equal(only(1, 2, 5, 6)));
+
+        array[2] = 42;
+        assert(slice.byElement.equal(only(1, 2, 5, 6)));
+
+        array[1] = 99;
+        assert(slice.byElement.equal(only(1, 99, 5, 6)));
     }
 
     /++
