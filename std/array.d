@@ -2011,10 +2011,10 @@ unittest
 {
     auto arr = [1, 2, 3, 4, 5];
     auto from = [2, 3];
-    auto into = [4, 6];
+    auto to = [4, 6];
     auto sink = appender!(int[])();
 
-    replaceInto(sink, arr, from, into);
+    replaceInto(sink, arr, from, to);
 
     assert(sink.data == [1, 4, 6, 4, 5]);
 }
