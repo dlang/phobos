@@ -624,7 +624,7 @@ struct Parser(R, Generator)
         {
             parseRegex();
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             error(e.msg);//also adds pattern location
         }
@@ -785,7 +785,7 @@ struct Parser(R, Generator)
                         bool enable = true;
                         do
                         {
-                            switch(current)
+                            switch (current)
                             {
                             case 's':
                                 if (enable)

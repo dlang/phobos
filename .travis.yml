@@ -15,6 +15,6 @@ install:
 script:
  - (cd .. && rdmd ./checkwhitespace.d $(find phobos -name '*.d'))
  # enforce whitespace between statements
- - grep -E "(for|foreach|foreach_reverse|if|while)\(" $(find . -name '*.d'); test $? -eq 1
+ - grep -E "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $(find . -name '*.d'); test $? -eq 1
  # at the moment libdparse has problems to parse some modules (->excludes)
  - ./dsc --config .dscanner.ini --styleCheck $(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.

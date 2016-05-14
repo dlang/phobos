@@ -269,7 +269,7 @@ unittest
         assertThrown!Exception(throwEx(new Exception("It's an Exception")),
                                "It's a message");
     }
-    catch(AssertError) assert(0);
+    catch (AssertError) assert(0);
 
     try
     {
@@ -291,7 +291,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!Exception(nothrowEx());
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -301,7 +301,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!Exception(nothrowEx(), "It's a message");
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -311,7 +311,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!AssertError(nothrowEx());
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -321,7 +321,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!AssertError(nothrowEx(), "It's a message");
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -786,7 +786,7 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
 
         return cast(string)null;
     }
-    catch(T e)
+    catch (T e)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
 }
 ///
@@ -973,7 +973,7 @@ T assumeWontThrow(T)(lazy T expr,
     {
         return expr;
     }
-    catch(Exception e)
+    catch (Exception e)
     {
         import std.range.primitives : empty;
         immutable tail = msg.empty ? "." : ": " ~ msg;
@@ -1578,7 +1578,7 @@ CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 ex
     {
         return expression();
     }
-    catch(E)
+    catch (E)
     {
         return errorHandler();
     }
@@ -1599,7 +1599,7 @@ CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, sc
     {
         return expression();
     }
-    catch(E e)
+    catch (E e)
     {
         return errorHandler(e);
     }
@@ -1620,7 +1620,7 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
     {
         return expression();
     }
-    catch(Exception e)
+    catch (Exception e)
     {
         return errorHandler(e);
     }
@@ -1773,7 +1773,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return typeof(this)(range.save);
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return typeof(this)(handler(exception, this.range));
                     }
@@ -1797,7 +1797,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range.empty;
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return handler(exception, this.range);
                     }
@@ -1815,7 +1815,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                 {
                     return this.range.front;
                 }
-                catch(E exception)
+                catch (E exception)
                 {
                     return handler(exception, this.range);
                 }
@@ -1832,7 +1832,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                 {
                     this.range.popFront();
                 }
-                catch(E exception)
+                catch (E exception)
                 {
                     handler(exception, this.range);
                 }
@@ -1851,7 +1851,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range.back;
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return handler(exception, this.range);
                     }
@@ -1868,7 +1868,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         this.range.popBack();
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         handler(exception, this.range);
                     }
@@ -1888,7 +1888,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range[index];
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         static if (__traits(compiles, handler(exception, this.range, index)))
                             return handler(exception, this.range, index);
@@ -1911,7 +1911,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range.length;
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return handler(exception, this.range);
                     }
@@ -1933,7 +1933,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                         {
                             return typeof(this)(this.range[lower .. upper]);
                         }
-                        catch(E exception)
+                        catch (E exception)
                         {
                             return typeof(this)(handler(exception, this.range));
                         }
@@ -1955,7 +1955,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                         {
                             return typeof(this)(this.range[lower .. $]);
                         }
-                        catch(E exception)
+                        catch (E exception)
                         {
                             return typeof(this)(handler(exception, this.range));
                         }
@@ -1972,7 +1972,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                         {
                             return takeExactly(typeof(this)(this.range[lower .. $]), upper - 1);
                         }
-                        catch(E exception)
+                        catch (E exception)
                         {
                             return takeExactly(typeof(this)(handler(exception, this.range)), 0);
                         }

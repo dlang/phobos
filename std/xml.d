@@ -469,7 +469,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
                     buffer ~= temp[0 .. encode(temp, d)];
                     i = s.length - t.length - 1;
                 }
-                catch(Err e)
+                catch (Err e)
                 {
                     if (mode == DecodeMode.STRICT)
                         throw new DecodeException("Unescaped &");
@@ -1015,13 +1015,13 @@ class Tag
 
         s = name;
         try { checkName(s,t); }
-        catch(Err e) { assert(false,"Invalid tag name:" ~ e.toString()); }
+        catch (Err e) { assert(false,"Invalid tag name:" ~ e.toString()); }
 
         foreach (k,v;attr)
         {
             s = k;
             try { checkName(s,t); }
-            catch(Err e)
+            catch (Err e)
                 { assert(false,"Invalid atrribute name:" ~ e.toString()); }
         }
     }
@@ -1088,7 +1088,7 @@ class Tag
             reqc(s,'>');
             tagString.length = (s.ptr - tagString.ptr);
         }
-        catch(XMLException e)
+        catch (XMLException e)
         {
             tagString.length = (s.ptr - tagString.ptr);
             throw new TagException(tagString);
@@ -2131,7 +2131,7 @@ private
             else if (s.startsWith("<?"))   { checkPI(s); }
             else                           { checkSpace(s); }
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkDocument(ref string s) // rule 1
@@ -2143,7 +2143,7 @@ private
             checkElement(s);
             star!(checkMisc)(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkChars(ref string s) // rule 2
@@ -2212,7 +2212,7 @@ private
             if (s.length == 0) fail("unterminated attribute value");
             if (s[0] == '<') fail("< found in attribute value");
             if (s[0] == c) break;
-            try { checkReference(s); } catch(Err e) { fail(e); }
+            try { checkReference(s); } catch (Err e) { fail(e); }
         }
         s = s[1..$];
     }
@@ -2234,11 +2234,11 @@ private
     {
         mixin Check!("Comment");
 
-        try { checkLiteral("<!--",s); } catch(Err e) { fail(e); }
+        try { checkLiteral("<!--",s); } catch (Err e) { fail(e); }
         ptrdiff_t n = s.indexOf("--");
         if (n == -1) fail("unterminated comment");
         s = s[n..$];
-        try { checkLiteral("-->",s); } catch(Err e) { fail(e); }
+        try { checkLiteral("-->",s); } catch (Err e) { fail(e); }
     }
 
     void checkPI(ref string s) // rule 16
@@ -2250,7 +2250,7 @@ private
             checkLiteral("<?",s);
             checkEnd("?>",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkCDSect(ref string s) // rule 18
@@ -2262,7 +2262,7 @@ private
             checkLiteral(cdata,s);
             checkEnd("]]>",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkProlog(ref string s) // rule 22
@@ -2279,7 +2279,7 @@ private
             star!(checkMisc)(s);
             opt!(seq!(checkDocTypeDecl,star!(checkMisc)))(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkXMLDecl(ref string s) // rule 23
@@ -2295,7 +2295,7 @@ private
             opt!(checkSpace)(s);
             checkLiteral("?>",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkVersionInfo(ref string s) // rule 24
@@ -2309,7 +2309,7 @@ private
             checkEq(s);
             quoted!(checkVersionNum)(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkEq(ref string s) // rule 25
@@ -2322,7 +2322,7 @@ private
             checkLiteral("=",s);
             opt!(checkSpace)(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkVersionNum(ref string s) // rule 26
@@ -2346,7 +2346,7 @@ private
             //
             checkEnd(">",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkSDDecl(ref string s) // rule 32
@@ -2359,7 +2359,7 @@ private
             checkLiteral("standalone",s);
             checkEq(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
 
         int n = 0;
              if (s.startsWith("'yes'") || s.startsWith("\"yes\"")) n = 5;
@@ -2374,7 +2374,7 @@ private
         mixin Check!("Element");
 
         string sname,ename,t;
-        try { checkTag(s,t,sname); } catch(Err e) { fail(e); }
+        try { checkTag(s,t,sname); } catch (Err e) { fail(e); }
 
         if (t == "STag")
         {
@@ -2384,7 +2384,7 @@ private
                 t = s;
                 checkETag(s,ename);
             }
-            catch(Err e) { fail(e); }
+            catch (Err e) { fail(e); }
 
             if (sname != ename)
             {
@@ -2414,7 +2414,7 @@ private
             }
             checkLiteral(">",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkAttribute(ref string s) // rule 41
@@ -2428,7 +2428,7 @@ private
             checkEq(s);
             checkAttValue(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkETag(ref string s, out string name) // rule 42
@@ -2442,7 +2442,7 @@ private
             opt!(checkSpace)(s);
             checkLiteral(">",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkContent(ref string s) // rule 43
@@ -2463,7 +2463,7 @@ private
                 else                               { checkCharData(s); }
             }
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkCharRef(ref string s, out dchar c) // rule 66
@@ -2471,7 +2471,7 @@ private
         mixin Check!("CharRef");
 
         c = 0;
-        try { checkLiteral("&#",s); } catch(Err e) { fail(e); }
+        try { checkLiteral("&#",s); } catch (Err e) { fail(e); }
         int radix = 10;
         if (s.length != 0 && s[0] == 'x')
         {
@@ -2525,7 +2525,7 @@ private
             if (s.startsWith("&#")) checkCharRef(s,c);
             else checkEntityRef(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkEntityRef(ref string s) // rule 68
@@ -2539,7 +2539,7 @@ private
             checkName(s,name);
             checkLiteral(";",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkEncName(ref string s) // rule 81
@@ -2562,7 +2562,7 @@ private
             checkEq(s);
             quoted!(checkEncName)(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     // Helper functions
@@ -2589,7 +2589,7 @@ private
 
     void opt(alias f)(ref string s)
     {
-        try { f(s); } catch(Err e) {}
+        try { f(s); } catch (Err e) {}
     }
 
     void plus(alias f)(ref string s)
@@ -2603,7 +2603,7 @@ private
         while (s.length != 0)
         {
             try { f(s); }
-            catch(Err e) { return; }
+            catch (Err e) { return; }
         }
     }
 
@@ -2650,7 +2650,7 @@ void check(string s)
         checkDocument(s);
         if (s.length != 0) throw new Err(s,"Junk found after document");
     }
-    catch(Err e)
+    catch (Err e)
     {
         e.complete(s);
         throw e;
@@ -2698,7 +2698,7 @@ unittest
         ]");
     assert(false);
     }
-    catch(CheckException e)
+    catch (CheckException e)
     {
         int n = e.toString().indexOf("end tag name \"genres\" differs"~
             " from start tag name \"genre\"");

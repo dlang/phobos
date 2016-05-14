@@ -1704,7 +1704,7 @@ assert(equal(rbt[], [5]));
             {
                 recurse(_end.left, "");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 debug printTree(_end.left, 0);
                 throw e;

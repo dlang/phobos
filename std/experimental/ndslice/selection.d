@@ -806,7 +806,7 @@ pure unittest
     {
         // Tries to reshape without allocation
         try return slice.reshape(lengths);
-        catch(ReshapeException e)
+        catch (ReshapeException e)
             //allocates the elements and creates a slice
             //Note: -1 length is not supported by reshape2
             return slice.byElement.array.sliced(lengths);

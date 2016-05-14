@@ -1611,7 +1611,7 @@ unittest // Issue 14724
     {
         rslt = getopt(args, config.required, "foo|f", "bool a", &a);
     }
-    catch(Exception e)
+    catch (Exception e)
     {
         enum errorMsg = "If the request for help was passed required options" ~
                 "must not be set.";
