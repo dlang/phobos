@@ -1156,7 +1156,7 @@ package template codeUnitLimit(S)
  * The three overloads of this operate on chars, wchars, and dchars.
  *
  * Params:
- *      canIndex = if S is indexable
+ *      _canIndex = if S is indexable
  *      useReplacementDchar = if invalid UTF, return replacementDchar rather than throwing
  *      str = input string or Range
  *      index = starting index into s[]; incremented by number of code units processed
@@ -1164,7 +1164,7 @@ package template codeUnitLimit(S)
  * Returns:
  *      decoded character
  */
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+private dchar decodeImpl(bool _canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
     auto ref S str, ref size_t index) if (
     is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
@@ -1183,14 +1183,24 @@ private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar 
     alias bitMask = AliasSeq!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
 
     static if (is(S : const char[]))
+    {
+        enum canIndex = true;
         auto pstr = str.ptr + index;
+    }
     else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+    {
+        enum canIndex = true;
         auto pstr = str[index .. str.length];
+    }
     else
+    {
+        enum canIndex = false;
         alias pstr = str;
+    }
 
     //@@@BUG@@@ 14447 forces this to be done outside of decodeImpl
     //enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
+    assert (canIndex == _canIndex);
 
     static if (canIndex)
     {
@@ -1394,19 +1404,29 @@ unittest
     }
 }
 
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)
+private dchar decodeImpl(bool _canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)
 (auto ref S str, ref size_t index)
     if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
     static if (is(S : const wchar[]))
+    {
+        enum canIndex = true;
         auto pstr = str.ptr + index;
+    }
     else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+    {
+        enum canIndex = true;
         auto pstr = str[index .. str.length];
+    }
     else
+    {
+        enum canIndex = false;
         alias pstr = str;
+    }
 
     //@@@BUG@@@ 14447 forces this to be done outside of decodeImpl
     //enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
+    assert (canIndex == _canIndex);
 
     static if (canIndex)
     {
@@ -1513,7 +1533,7 @@ unittest
     }
 }
 
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+private dchar decodeImpl(bool _canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
     auto ref S str, ref size_t index)
     if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
