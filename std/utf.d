@@ -1020,7 +1020,7 @@ body
     if (str[index] < codeUnitLimit!S)
         return str[index++];
     else
-        return decodeImpl!(true, useReplacementDchar)(str, index);
+        return decodeImpl!(useReplacementDchar)(str, index);
 }
 
 dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
@@ -1038,7 +1038,7 @@ body
     if (str[index] < codeUnitLimit!S)
         return str[index++];
     else
-        return decodeImpl!(true, useReplacementDchar)(str, index);
+        return decodeImpl!(useReplacementDchar)(str, index);
 }
 
 /++
@@ -1086,11 +1086,7 @@ body
     }
     else
     {
-        //@@@BUG@@@ 14447 forces canIndex to be done outside of decodeImpl, which
-        //is undesirable, since not all overloads of decodeImpl need it. So, it
-        //should be moved back into decodeImpl once bug# 8521 has been fixed.
-        enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
-        immutable retval = decodeImpl!(canIndex, useReplacementDchar)(str, numCodeUnits);
+        immutable retval = decodeImpl!(useReplacementDchar)(str, numCodeUnits);
 
         // The other range types were already popped by decodeImpl.
         static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
@@ -1121,7 +1117,7 @@ body
     }
     else
     {
-        immutable retval = decodeImpl!(true, useReplacementDchar)(str, numCodeUnits);
+        immutable retval = decodeImpl!(useReplacementDchar)(str, numCodeUnits);
         str = str[numCodeUnits .. $];
         return retval;
     }
@@ -1156,7 +1152,6 @@ package template codeUnitLimit(S)
  * The three overloads of this operate on chars, wchars, and dchars.
  *
  * Params:
- *      _canIndex = if S is indexable
  *      useReplacementDchar = if invalid UTF, return replacementDchar rather than throwing
  *      str = input string or Range
  *      index = starting index into s[]; incremented by number of code units processed
@@ -1164,7 +1159,7 @@ package template codeUnitLimit(S)
  * Returns:
  *      decoded character
  */
-private dchar decodeImpl(bool _canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+private dchar decodeImpl(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
     auto ref S str, ref size_t index) if (
     is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
@@ -1197,10 +1192,6 @@ private dchar decodeImpl(bool _canIndex, UseReplacementDchar useReplacementDchar
         enum canIndex = false;
         alias pstr = str;
     }
-
-    //@@@BUG@@@ 14447 forces this to be done outside of decodeImpl
-    //enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
-    assert (canIndex == _canIndex);
 
     static if (canIndex)
     {
@@ -1398,13 +1389,13 @@ unittest
     {
         auto r = R(s);
         size_t index;
-        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        dchar dc = decodeImpl!(Flag!"useReplacementDchar".yes)(r, index);
         assert(dc == replacementDchar);
         assert(1 <= index && index <= s.length);
     }
 }
 
-private dchar decodeImpl(bool _canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)
+private dchar decodeImpl(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)
 (auto ref S str, ref size_t index)
     if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
@@ -1423,10 +1414,6 @@ private dchar decodeImpl(bool _canIndex, UseReplacementDchar useReplacementDchar
         enum canIndex = false;
         alias pstr = str;
     }
-
-    //@@@BUG@@@ 14447 forces this to be done outside of decodeImpl
-    //enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
-    assert (canIndex == _canIndex);
 
     static if (canIndex)
     {
@@ -1527,13 +1514,13 @@ unittest
     {
         auto r = R(s);
         size_t index;
-        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        dchar dc = decodeImpl!(Flag!"useReplacementDchar".yes)(r, index);
         assert(dc == replacementDchar);
         assert(1 <= index && index <= s.length);
     }
 }
 
-private dchar decodeImpl(bool _canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+private dchar decodeImpl(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
     auto ref S str, ref size_t index)
     if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
@@ -1591,7 +1578,7 @@ unittest
     {
         auto r = R(s);
         size_t index;
-        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        dchar dc = decodeImpl!(Flag!"useReplacementDchar".yes)(r, index);
         assert(dc == replacementDchar);
         assert(1 <= index && index <= s.length);
     }
