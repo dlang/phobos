@@ -6941,16 +6941,16 @@ unittest
 /**
  * A static assertion that a type satisfies a given template constraint.
  * It can be used as a $(LINK2 ../attribute.html#uda, UDA) or
- * in a $(D static assert) to make sure that a type conforms
+ * in a `static assert` to make sure that a type conforms
  * to the compile-time interface the user expects it to.
- * The difference between using $(D models) and a simple static assert
- * with the template contraint is that $(D models) will instantiate the
+ * The difference between using `models` and a simple static assert
+ * with the template contraint is that `models` will instantiate the
  * failing code when the constraint is not satisfied,
  * yielding compiler error messages to aid the user.
  *
- * The template contraint predicate must start with the word $(D is)
- * (e.g. $(D isInputRange)) and an associated template function
- * with the "is" replaced by "check" should exist (e.g. $(D checkInputRange))
+ * The template contraint predicate must start with the word `is`
+ * (e.g. `isInputRange`) and an associated template function
+ * with the "is" replaced by "check" should exist (e.g. `checkInputRange`)
  * and be defined in the same module.
  */
 template models(T, alias P, A...)
@@ -6969,10 +6969,9 @@ template models(T, alias P, A...)
     {
         bool models()
         {
-            import std.algorithm;
+            import std.algorithm.searching.countUntil;
             enum openParenIndex = P.stringof.countUntil("(");
-            //2 to get rid of "is"
-            enum untilOpenParen = P.stringof[2 .. openParenIndex];
+            enum untilOpenParen = P.stringof["is".length .. openParenIndex];
             enum checkName = "check" ~ untilOpenParen;
             enum mixinStr = checkName ~ "!(T, A);";
             mixin("import " ~ moduleName!(P) ~ ";"); //make it visible first
