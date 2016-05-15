@@ -25,6 +25,18 @@ import std.traits;
 
 public import std.container.util;
 
+///
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : take;
+    auto maxHeap = heapify([4, 7, 3, 1, 5]);
+    assert(maxHeap.take(3).equal([7, 5, 4]));
+
+    auto minHeap = heapify!"a > b"([4, 7, 3, 1, 5]);
+    assert(minHeap.take(3).equal([1, 3, 4]));
+}
+
 // BinaryHeap
 /**
 Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
