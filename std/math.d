@@ -18,7 +18,7 @@ $(TR $(TDNW Constants) $(TD
 ))
 $(TR $(TDNW Classics) $(TD
     $(MYREF abs) $(MYREF fabs) $(MYREF sqrt) $(MYREF cbrt) $(MYREF hypot)
-    $(MYREF poly) $(MYREF nextPow2) $(MYREF truncPow2)
+    $(MYREF poly) $(MYREF isPowerOf2) $(MYREF nextPow2) $(MYREF truncPow2)
 ))
 $(TR $(TDNW Trigonometry) $(TD
     $(MYREF sin) $(MYREF cos) $(MYREF tan) $(MYREF asin) $(MYREF acos)
@@ -7606,4 +7606,52 @@ T truncPow2(T)(const T val) if (isFloatingPoint!T)
         assert(truncPow2(T.infinity) == T.infinity);
         assert(truncPow2(T.init).isNaN);
     }
+}
+
+// Credit: Matthias Bentrup
+/**
+Params:
+    x = the number to test
+
+Returns:
+    `true` if `x` is a nonzero power of two.
+*/
+@safe @nogc nothrow pure
+bool isPowerOf2(T)(T x) if (isIntegral!T)
+in
+{
+    static if (isSigned!T)
+        assert(x > -1, "isPowerOf2 only accepts non-negative arguments");
+}
+body
+{
+    static if (isSigned!T)
+    {
+        import std.conv : unsigned;
+
+        if (x == 0)
+            return false;
+
+        x = unsigned(x);
+    }
+
+    return (x & -x) > (x - 1);
+}
+
+///
+@safe @nogc nothrow pure
+unittest
+{
+    assert(!isPowerOf2(0));
+    assert( isPowerOf2(1));
+    assert( isPowerOf2(2));
+    assert(!isPowerOf2(3));
+    assert( isPowerOf2(4));
+    assert(!isPowerOf2(5));
+    assert(!isPowerOf2(6));
+    assert(!isPowerOf2(7));
+    assert( isPowerOf2(8));
+    assert(!isPowerOf2(9));
+    assert(!isPowerOf2(10));
+    assert( isPowerOf2(1UL << 31));
 }
