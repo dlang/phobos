@@ -5140,7 +5140,7 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     }
     else
     {
-        return (x - 1) == x;
+        return (x < -X.max) || (X.max < x);
     }
 }
 
