@@ -4845,5 +4845,5 @@ version(unittest) string testFilename(string file = __FILE__, size_t line = __LI
     import std.path : baseName;
 
     // filename intentionally contains non-ASCII (Russian) characters for test Issue 7648
-    return text("deleteme-детка.", baseName(file), ".", line);
+    return text(deleteme, "-детка.", baseName(file), ".", line);
 }

@@ -237,14 +237,14 @@ void[] read(R)(R name, size_t upTo = size_t.max)
     import std.utf : byChar;
     scope(exit)
     {
-        assert(exists("someUniqueFilename"));
-        remove("someUniqueFilename");
+        assert(exists(deleteme));
+        remove(deleteme);
     }
 
-    write("someUniqueFilename", "1234");
-    assert(read("someUniqueFilename", 2) == "12");
-    assert(read("someUniqueFilename".byChar) == "1234");
-    assert((cast(ubyte[])read("someUniqueFilename")).length == 4);
+    write(deleteme, "1234"); // deleteme is the name of a temporary file
+    assert(read(deleteme, 2) == "12");
+    assert(read(deleteme.byChar) == "1234");
+    assert((cast(ubyte[])read(deleteme)).length == 4);
 }
 
 void[] read(R)(auto ref R name, size_t upTo = size_t.max)
@@ -416,13 +416,13 @@ S readText(S = string, R)(R name)
 @safe unittest
 {
     import std.string;
-    write("someUniqueFilename", "abc\n");
+    write(deleteme, "abc\n"); // deleteme is the name of a temporary file
     scope(exit)
     {
-        assert(exists("someUniqueFilename"));
-        remove("someUniqueFilename");
+        assert(exists(deleteme));
+        remove(deleteme);
     }
-    enforce(chomp(readText("someUniqueFilename")) == "abc");
+    enforce(chomp(readText(deleteme)) == "abc");
 }
 
 S readText(S = string, R)(auto ref R name)
@@ -462,13 +462,13 @@ unittest
 {
    scope(exit)
    {
-       assert(exists("someUniqueFilename"));
-       remove("someUniqueFilename");
+       assert(exists(deleteme));
+       remove(deleteme);
    }
 
    int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
-   write("someUniqueFilename", a);
-   assert(cast(int[]) read("someUniqueFilename") == a);
+   write(deleteme, a); // deleteme is the name of a temporary file
+   assert(cast(int[]) read(deleteme) == a);
 }
 
 void write(R)(auto ref R name, const void[] buffer)
@@ -506,15 +506,15 @@ unittest
 {
    scope(exit)
    {
-       assert(exists("someUniqueFilename"));
-       remove("someUniqueFilename");
+       assert(exists(deleteme));
+       remove(deleteme);
    }
 
    int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
-   write("someUniqueFilename", a);
+   write(deleteme, a); // deleteme is the name of a temporary file
    int[] b = [ 13, 21 ];
-   append("someUniqueFilename", b);
-   assert(cast(int[]) read("someUniqueFilename") == a ~ b);
+   append(deleteme, b);
+   assert(cast(int[]) read(deleteme) == a ~ b);
 }
 
 void append(R)(auto ref R name, const void[] buffer)
@@ -3267,7 +3267,7 @@ void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve 
 unittest // issue 15319
 {
     import std.file : dirEntries;
-    auto fs = dirEntries(getcwd, SpanMode.depth);
+    auto fs = dirEntries(tempDir(), SpanMode.depth);
     assert(__traits(compiles, copy(fs.front, fs.front)));
 }
 
@@ -4041,15 +4041,15 @@ unittest
 {
     scope(exit)
     {
-        assert(exists("someUniqueFilename"));
-        remove("someUniqueFilename");
+        assert(exists(deleteme));
+        remove(deleteme);
     }
 
-    write("someUniqueFilename", "12 12.25\n345 1.125");
+    write(deleteme, "12 12.25\n345 1.125"); // deleteme is the name of a temporary file
 
     // Load file; each line is an int followed by comma, whitespace and a
     // double.
-    auto a = slurp!(int, double)("someUniqueFilename", "%s %s");
+    auto a = slurp!(int, double)(deleteme, "%s %s");
     assert(a.length == 2);
     assert(a[0] == tuple(12, 12.25));
     assert(a[1] == tuple(345, 1.125));
