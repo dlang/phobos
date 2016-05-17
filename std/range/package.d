@@ -7323,9 +7323,9 @@ in
         {
             Largest!(Enumerator, Signed!LengthType) signedLength;
             try signedLength = to!(typeof(signedLength))(range.length);
-            catch(ConvException)
+            catch (ConvException)
                 overflow = true;
-            catch(Exception)
+            catch (Exception)
                 assert(false);
 
             auto result = adds(start, signedLength, overflow);

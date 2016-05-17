@@ -2841,7 +2841,7 @@ public:
                 newSocket._blocking = _blocking;                 //inherits blocking mode
             newSocket._family = _family;             //same family
         }
-        catch(Throwable o)
+        catch (Throwable o)
         {
             _close(newsock);
             throw o;

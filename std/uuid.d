@@ -1442,7 +1442,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if (isInputRange!Range
 
                 dashAllowed = true;
             }
-            catch(ConvException e)
+            catch (ConvException e)
             {
                 parserError(consumed, UUIDParsingException.Reason.invalidChar,
                     "Couldn't parse ubyte", e);

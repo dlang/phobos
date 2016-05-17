@@ -667,7 +667,7 @@ public:
     {
         try
             this(dateTime, Duration.zero, tz);
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "SysTime's constructor threw when it shouldn't have.");
     }
 
@@ -783,7 +783,7 @@ public:
 
             this(standardTime, _timezone);
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
     }
 
@@ -835,7 +835,7 @@ public:
 
             this(standardTime, _timezone);
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "Date's constructor through when it shouldn't have.");
     }
 
@@ -2197,7 +2197,7 @@ public:
 
             return FracSec.from!"hnsecs"(cast(int)hnsecs);
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "FracSec.from!\"hnsecs\"() threw.");
     }
 
@@ -5232,7 +5232,7 @@ public:
             adjTime = newDaysHNSecs + hnsecs;
             return this;
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
     }
 
@@ -7978,7 +7978,7 @@ public:
 
             return DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
     }
 
@@ -8034,7 +8034,7 @@ public:
 
             return TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second);
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "TimeOfDay's constructor threw.");
     }
 
@@ -8139,7 +8139,7 @@ public:
                           fracSecsToISOString(cast(int)hnsecs),
                           SimpleTimeZone.toISOExtString(utcOffset));
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -8269,7 +8269,7 @@ public:
                           fracSecsToISOString(cast(int)hnsecs),
                           SimpleTimeZone.toISOExtString(utcOffset));
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -8403,7 +8403,7 @@ public:
                           fracSecsToISOString(cast(int)hnsecs),
                           SimpleTimeZone.toISOExtString(utcOffset));
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -8593,7 +8593,7 @@ public:
             {
                 try
                     parsedZone = SimpleTimeZone.fromISOString(zoneStr);
-                catch(DateTimeException dte)
+                catch (DateTimeException dte)
                     parsedZone = SimpleTimeZone.fromISOExtString(zoneStr);
             }
 
@@ -8604,7 +8604,7 @@ public:
 
             return retval;
         }
-        catch(DateTimeException dte)
+        catch (DateTimeException dte)
             throw new DateTimeException(format("Invalid ISO String: %s", isoString));
     }
 
@@ -8840,7 +8840,7 @@ public:
 
             return retval;
         }
-        catch(DateTimeException dte)
+        catch (DateTimeException dte)
             throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
     }
 
@@ -9053,7 +9053,7 @@ public:
 
             return retval;
         }
-        catch(DateTimeException dte)
+        catch (DateTimeException dte)
             throw new DateTimeException(format("Invalid Simple String: %s", simpleString));
     }
 
@@ -9411,7 +9411,7 @@ public:
 
                 try
                     dayOfYear = day;
-                catch(Exception e)
+                catch (Exception e)
                     assert(0, "dayOfYear assignment threw.");
             }
         }
@@ -9421,7 +9421,7 @@ public:
 
             try
                 dayOfYear = (daysInLeapYear + day);
-            catch(Exception e)
+            catch (Exception e)
                 assert(0, "dayOfYear assignment threw.");
         }
         else
@@ -9476,7 +9476,7 @@ public:
 
                 try
                     dayOfYear = newDoY;
-                catch(Exception e)
+                catch (Exception e)
                     assert(0, "dayOfYear assignment threw.");
             }
         }
@@ -12506,7 +12506,7 @@ public:
             else
                 return Date(_year - 1, 12, 31).isoWeek;
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "Date's constructor threw.");
     }
 
@@ -12579,7 +12579,7 @@ public:
     {
         try
             return Date(_year, _month, maxDay(_year, _month));
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "Date's constructor threw.");
     }
 
@@ -12787,7 +12787,7 @@ public:
             else
                 return format("%06d%02d%02d", _year, _month, _day);
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -12843,7 +12843,7 @@ public:
             else
                 return format("%06d-%02d-%02d", _year, _month, _day);
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -12899,7 +12899,7 @@ public:
             else
                 return format("%06d-%s-%02d", _year, monthToString(_month), _day);
         }
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -14402,7 +14402,7 @@ public:
         import std.format : format;
         try
             return format("%02d%02d%02d", _hour, _minute, _second);
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -14432,7 +14432,7 @@ public:
         import std.format : format;
         try
             return format("%02d:%02d:%02d", _hour, _minute, _second);
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -17482,7 +17482,7 @@ public:
     {
         try
             return DateTime(_date.endOfMonth, TimeOfDay(23, 59, 59));
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "DateTime constructor threw.");
     }
 
@@ -17673,7 +17673,7 @@ public:
         import std.format : format;
         try
             return format("%sT%s", _date.toISOString(), _tod.toISOString());
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -17726,7 +17726,7 @@ public:
         import std.format : format;
         try
             return format("%sT%s", _date.toISOExtString(), _tod.toISOExtString());
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -17778,7 +17778,7 @@ public:
         import std.format : format;
         try
             return format("%s %s", _date.toSimpleString(), _tod.toString());
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -19875,7 +19875,7 @@ private:
         import std.format : format;
         try
             return format("[%s - %s)", _begin, _end);
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -22590,7 +22590,7 @@ private:
         import std.format : format;
         try
             return format("[%s - ∞)", _begin);
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -24819,7 +24819,7 @@ private:
         import std.format : format;
         try
             return format("[-∞ - %s)", _end);
-        catch(Exception e)
+        catch (Exception e)
             assert(0, "format() threw.");
     }
 
@@ -27769,7 +27769,7 @@ public:
             {
                 try
                     return WindowsTimeZone.getTimeZone(windowsTZName);
-                catch(DateTimeException dte)
+                catch (DateTimeException dte)
                 {
                     auto oldName = _getOldName(windowsTZName);
                     if (oldName != null)
@@ -28250,7 +28250,7 @@ public:
             import std.conv : to;
             try
                 return to!string(tzname[0]);
-            catch(Exception e)
+            catch (Exception e)
                 assert(0, "to!string(tzname[0]) failed.");
         }
         else version(Windows)
@@ -28280,7 +28280,7 @@ public:
 
                 return retval;
             }
-            catch(Exception e)
+            catch (Exception e)
                 assert(0, "GetTimeZoneInformation() returned invalid UTF-16.");
         }
     }
@@ -28321,7 +28321,7 @@ public:
             import std.conv : to;
             try
                 return to!string(tzname[1]);
-            catch(Exception e)
+            catch (Exception e)
                 assert(0, "to!string(tzname[1]) failed.");
         }
         else version(Windows)
@@ -28351,7 +28351,7 @@ public:
 
                 return retval;
             }
-            catch(Exception e)
+            catch (Exception e)
                 assert(0, "GetTimeZoneInformation() returned invalid UTF-16.");
         }
     }
@@ -28409,7 +28409,7 @@ public:
 
                     return janOffset != julyOffset;
                 }
-                catch(Exception e)
+                catch (Exception e)
                     assert(0, "Clock.currTime() threw.");
             }
         }
@@ -29915,9 +29915,9 @@ public:
 
             return new immutable PosixTimeZone(transitions.idup, leapSeconds.idup, name, stdName, dstName, hasDST);
         }
-        catch(DateTimeException dte)
+        catch (DateTimeException dte)
             throw dte;
-        catch(Exception e)
+        catch (Exception e)
             throw new DateTimeException("Not a valid TZ data file", __FILE__, __LINE__, e);
     }
 
@@ -30654,7 +30654,7 @@ else version(Windows)
 
                 return false;
             }
-            catch(Exception e)
+            catch (Exception e)
                 assert(0, "DateTime's constructor threw.");
         }
 
@@ -30771,7 +30771,7 @@ else version(Windows)
                     if (isDST)
                         return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
                 }
-                catch(Exception e)
+                catch (Exception e)
                     assert(0, "SysTime's constructor threw.");
             }
 
@@ -31775,7 +31775,7 @@ public:
         bool doublestart = true;
         try
             sw.start();
-        catch(AssertError e)
+        catch (AssertError e)
             doublestart = false;
         assert(!doublestart);
         sw.stop();
@@ -31802,7 +31802,7 @@ public:
         bool doublestop = true;
         try
             sw.stop();
-        catch(AssertError e)
+        catch (AssertError e)
             doublestop = false;
         assert(!doublestop);
         assert((t1 - sw.peek()).to!("seconds", real)() == 0);
@@ -32700,7 +32700,7 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
 
     try
         return SysTime(DateTime(year, month, dayOfMonth, hour, minute, second), tz);
-    catch(DateTimeException dte)
+    catch (DateTimeException dte)
         throw new DateTimeException("Invalid DosFileTime", __FILE__, __LINE__, dte);
 }
 
@@ -33000,7 +33000,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
 
     try
         return SysTime(DateTime(year, month, day, hour, minute, second), tz);
-    catch(DateTimeException dte)
+    catch (DateTimeException dte)
         throw new DateTimeException("date-time format is correct, but the resulting SysTime is invalid.", dte);
 }
 
@@ -33032,7 +33032,7 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
 {
     try
         parseRFC822DateTime(cr(str));
-    catch(DateTimeException)
+    catch (DateTimeException)
         return;
     throw new AssertError("No DateTimeException was thrown", __FILE__, line);
 }
@@ -34562,7 +34562,7 @@ static string fracSecsToISOString(int hnsecs) @safe pure nothrow
 
         return isoString;
     }
-    catch(Exception e)
+    catch (Exception e)
         assert(0, "format() threw.");
 }
 

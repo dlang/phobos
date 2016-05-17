@@ -606,7 +606,7 @@ unittest
         csvReader(str, ["c","b"]);
         assert(0);
     }
-    catch(HeaderMismatchException e)
+    catch (HeaderMismatchException e)
     {
         assert(e.col == 2);
     }
@@ -1041,7 +1041,7 @@ public:
                     aa[header[_input.col-1]] = recordRange.front;
                 }
             }
-            catch(ConvException e)
+            catch (ConvException e)
             {
                 throw new CSVException(e.msg, _input.row, _input.col, e);
             }
@@ -1086,7 +1086,7 @@ public:
                     recordRange.popFront();
                 }
             }
-            catch(ConvException e)
+            catch (ConvException e)
             {
                 throw new CSVException(e.msg, _input.row, colIndex, e);
             }
@@ -1280,14 +1280,14 @@ public:
             try
                 csvNextToken!(Range, ErrorLevel, Separator)
                                    (_input.range, _front, _separator, _quote,false);
-            catch(IncompleteCellException ice)
+            catch (IncompleteCellException ice)
             {
                 ice.row = _input.row;
                 ice.col = _input.col;
                 ice.partialData = _front.data.idup;
                 throw ice;
             }
-            catch(ConvException e)
+            catch (ConvException e)
             {
                 throw new CSVException(e.msg, _input.row, _input.col, e);
             }
@@ -1302,7 +1302,7 @@ public:
             csvNextToken!(Range, ErrorLevel, Separator)
                 (_input.range, _front, _separator, _quote,false);
         }
-        catch(IncompleteCellException ice)
+        catch (IncompleteCellException ice)
         {
             ice.row = _input.row;
             ice.col = _input.col;
@@ -1327,7 +1327,7 @@ public:
         auto data = _front.data;
         static if (!isSomeString!Contents) skipWS(data);
         try curContentsoken = to!Contents(data);
-        catch(ConvException e)
+        catch (ConvException e)
         {
             throw new CSVException(e.msg, _input.row, _input.col, e);
         }

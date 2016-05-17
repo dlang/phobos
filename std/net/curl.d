@@ -2416,7 +2416,7 @@ struct HTTP
                         callback(fieldName, m.captures[2]);
                     headersIn[fieldName] = m.captures[2].idup;
                 }
-                catch(UTFException e)
+                catch (UTFException e)
                 {
                     //munch it - a header should be all ASCII, any "wrong UTF" is broken header
                 }

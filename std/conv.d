@@ -2215,7 +2215,7 @@ Lerr:
             int x = input.to!int();
             assert(false, "Invalid conversion did not throw");
         }
-        catch(ConvException e)
+        catch (ConvException e)
         {
             // Ensure error message contains failing character, not the character
             // beyond.
@@ -2223,7 +2223,7 @@ Lerr:
             assert( e.msg.canFind(charInMsg) &&
                    !e.msg.canFind(charNotInMsg));
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             assert(false, "Did not throw ConvException");
         }
