@@ -23,8 +23,8 @@ class FileLogger : Logger
 
     Example:
     -------------
-    auto l1 = new FileLogger("logFile", "loggerName");
-    auto l2 = new FileLogger("logFile", "loggerName", LogLevel.fatal);
+    auto l1 = new FileLogger("logFile");
+    auto l2 = new FileLogger("logFile", LogLevel.fatal);
     -------------
     */
     this(in string fn, const LogLevel lv = LogLevel.all) @safe
@@ -49,8 +49,8 @@ class FileLogger : Logger
     Example:
     -------------
     auto file = File("logFile.log", "w");
-    auto l1 = new FileLogger(file, "LoggerName");
-    auto l2 = new FileLogger(file, "LoggerName", LogLevel.fatal);
+    auto l1 = new FileLogger(file);
+    auto l2 = new FileLogger(file, LogLevel.fatal);
     -------------
     */
     this(File file, const LogLevel lv = LogLevel.all) @safe
