@@ -4808,12 +4808,15 @@ unittest
     }
     ensureDefaults();
 
+    version(D_HardFloat)
     {
-        FloatingPointControl ctrl;
-        ctrl.rounding = FloatingPointControl.roundDown;
-        assert(FloatingPointControl.rounding == FloatingPointControl.roundDown);
+        {
+            FloatingPointControl ctrl;
+            ctrl.rounding = FloatingPointControl.roundDown;
+            assert(FloatingPointControl.rounding == FloatingPointControl.roundDown);
+        }
+        ensureDefaults();
     }
-    ensureDefaults();
 
     if (FloatingPointControl.hasExceptionTraps)
     {

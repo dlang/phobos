@@ -912,7 +912,9 @@ unittest
     assert(amAfter.time == am.time);
 }
 
-// Posix-only, because we can't rely on the unzip command being available on Windows
+// Non-Android Posix-only, because we can't rely on the unzip command being
+// available on Android or Windows
+version(Android) {} else
 version(Posix) unittest
 {
     import std.datetime, std.file, std.format, std.path, std.process, std.stdio;
