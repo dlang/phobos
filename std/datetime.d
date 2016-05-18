@@ -31700,13 +31700,13 @@ public:
     /++
        Auto start with constructor.
       +/
-    this(AutoStart autostart)
+    this(AutoStart autostart) @nogc
     {
         if (autostart)
             start();
     }
 
-    @safe unittest
+    @nogc @safe unittest
     {
         auto sw = StopWatch(AutoStart.yes);
         sw.stop();
@@ -31714,13 +31714,13 @@ public:
 
 
     ///
-    bool opEquals(const StopWatch rhs) const pure nothrow
+    bool opEquals(const StopWatch rhs) const pure nothrow @nogc
     {
         return opEquals(rhs);
     }
 
     /// ditto
-    bool opEquals(const ref StopWatch rhs) const pure nothrow
+    bool opEquals(const ref StopWatch rhs) const pure nothrow @nogc
     {
         return _timeStart == rhs._timeStart &&
                _timeMeasured == rhs._timeMeasured;
@@ -31730,7 +31730,7 @@ public:
     /++
        Resets the stop watch.
       +/
-    void reset()
+    void reset() @nogc
     {
         if (_flagStarted)
         {
@@ -31747,7 +31747,7 @@ public:
     }
 
     ///
-    @safe unittest
+    @nogc @safe unittest
     {
         StopWatch sw;
         sw.start();
@@ -31760,14 +31760,14 @@ public:
     /++
        Starts the stop watch.
       +/
-    void start()
+    void start() @nogc
     {
         assert(!_flagStarted);
         _flagStarted = true;
         _timeStart = TickDuration.currSystemTick;
     }
 
-    @trusted unittest
+    @nogc @trusted unittest
     {
         StopWatch sw;
         sw.start();
@@ -31786,14 +31786,14 @@ public:
     /++
        Stops the stop watch.
       +/
-    void stop()
+    void stop() @nogc
     {
         assert(_flagStarted);
         _flagStarted = false;
         _timeMeasured += TickDuration.currSystemTick - _timeStart;
     }
 
-    @trusted unittest
+    @nogc @trusted unittest
     {
         StopWatch sw;
         sw.start();
@@ -31813,7 +31813,7 @@ public:
        Peek at the amount of time which has passed since the stop watch was
        started.
       +/
-    TickDuration peek() const
+    TickDuration peek() const @nogc
     {
         if (_flagStarted)
             return TickDuration.currSystemTick - _timeStart + _timeMeasured;
@@ -31821,7 +31821,7 @@ public:
         return _timeMeasured;
     }
 
-    @safe unittest
+    @nogc @safe unittest
     {
         StopWatch sw;
         sw.start();
@@ -31838,13 +31838,13 @@ public:
        Set the amount of time which has been measured since the stop watch was
        started.
       +/
-    void setMeasured(TickDuration d)
+    void setMeasured(TickDuration d) @nogc
     {
         reset();
         _timeMeasured = d;
     }
 
-     @safe unittest
+    @nogc @safe unittest
     {
         StopWatch sw;
         TickDuration t0;
@@ -31858,12 +31858,12 @@ public:
     /++
        Confirm whether this stopwatch is measuring time.
       +/
-    bool running() @property const pure nothrow
+    bool running() @property const pure nothrow @nogc
     {
         return _flagStarted;
     }
 
-    @safe unittest
+    @nogc @safe unittest
     {
         StopWatch sw1;
         assert(!sw1.running);
