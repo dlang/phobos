@@ -73,11 +73,14 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
     int threshold;
     bool diagnose;
 
-    if (errorLevel == EmailStatusCode.any || errorLevel == EmailStatusCode.none)
+    if (errorLevel == EmailStatusCode.any)
     {
         threshold = EmailStatusCode.valid;
-        diagnose = errorLevel == EmailStatusCode.any;
+        diagnose = true;
     }
+
+    else if (errorLevel == EmailStatusCode.none)
+        threshold = defaultThreshold;
 
     else
     {
@@ -768,6 +771,15 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 
 unittest
 {
+    assert(`test.test@iana.org`.isEmail(CheckDns.no).statusCode == EmailStatusCode.valid);
+    assert(`test.test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.none).statusCode == EmailStatusCode.valid);
+
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::8888]`.isEmail(CheckDns.no,
+        EmailStatusCode.none).statusCode == EmailStatusCode.valid);
+
+    assert(`test`.isEmail(CheckDns.no, EmailStatusCode.none).statusCode == EmailStatusCode.error);
+    assert(`(comment)test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.none).statusCode == EmailStatusCode.error);
+
     assert(``.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
     assert(`test`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
     assert(`@`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoLocalPart);
