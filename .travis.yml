@@ -5,7 +5,7 @@ d: dmd-2.071.0
 install:
  - wget "https://raw.githubusercontent.com/dlang/dmd/master/src/checkwhitespace.d" -O ../checkwhitespace.d
  - git clone https://github.com/Hackerpilot/Dscanner
- - (cd Dscanner && git checkout tags/v0.4.0-alpha5)
+ - (cd Dscanner && git checkout tags/v0.4.0-alpha6)
  - (cd Dscanner && git submodule update --init --recursive)
  # debug build is faster, but disable 'missing import' messages (missing core from druntime)
  - (cd Dscanner && sed 's/dparse_verbose/StdLoggerDisableWarning/' -i makefile && make githash debug)
