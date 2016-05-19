@@ -1,6 +1,3 @@
-// This Makefile snippet detects the OS and the architecture MODEL
-// Keep this file in sync between druntime, phobos, and dmd repositories!
-
 import reggae;
 import std.process;
 import std.string;
@@ -8,91 +5,52 @@ import std.algorithm;
 import std.array;
 import std.path;
 import std.range;
+import std.file;
 
 
-string OS, uname_S, uname_M, MODEL;
+version(OSX) enum OS = "osx";
+version(linux) enum OS = "linux";
+version(FreeBSD) enum OS = "freebsd";
+version(OpenBSD) enum OS = "openbsd";
+version(Solaris) enum OS = "solaris";
 
-static this() {
-    if(userVars.get("OS", "") == "") {
-        auto uname_S = executeShell("uname -s").output.chomp;
-        switch(uname_S) {
-        case "Darwin":
-            OS = "osx"; break;
-        case "Linux":
-            OS = "linux"; break;
-        case "FreeBSD":
-            OS = "freebsd"; break;
-        case "OpenBSD":
-            OS = "openbsd"; break;
-        case "Solaris":
-            OS = "solaris"; break;
-        case "SunOS":
-            OS = "solaris"; break;
-        default:
-            throw new Exception("Unrecognized or unsupported OS for uname: " ~ uname_S);
-        }
-    }
+static assert(is(typeof(OS)), "Unrecognized or unsupported OS");
 
-    if(userVars.get("OS", "") == "MACOS") {
-        // When running make from XCode it may set environment var OS=MACOS.
-        // Adjust it here:
-        OS = "osx";
-    }
+version(X86) enum MODEL = "32";
+version(X86_64) enum MODEL = "64";
+static assert(is(typeof(MODEL)), "Cannot figure 32/64 model");
 
-    MODEL = userVars.get("MODEL", "");
-    if(MODEL == "") {
-        if(OS == "solaris")
-            uname_M = executeShell("isainfo -n").output.chomp;
-        else
-            uname_M = executeShell("uname -m").output.chomp;
-
-        if(["x86_64", "amd64"].canFind(uname_M))
-            MODEL = "64";
-
-        if(["i386", "i586", "i686"].canFind(uname_M))
-            MODEL = "32";
-
-        if(MODEL == "")
-            throw new Exception("Cannot figure 32/64 model from uname -m: " ~ uname_M);
-    }
-}
 
 string MODEL_FLAG(string model = MODEL) {
     return "-m" ~ model;
 }
 
-
-import reggae;
-//import osmodel;
-import std.algorithm;
-import std.file;
+auto shell(string cmd) {
+    return executeShell(cmd).output.chomp;
+}
 
 Build _getBuild() {
     enum QUIET = userVars.get("QUIET", "");
 
-    // Default to a release built, override with BUILD=debug
-    static if("BUILD" in userVars) {
-        enum BUILD = userVars["BUILD"];
-        enum BUILD_WAS_SPECIFIED = true;
-    } else {
-        enum BUILD = "release";
-        enum BUILD_WAS_SPECIFIED = false;
-    }
+    // Default to a release built, override with -d BUILD=debug
+    enum BUILD = userVars.get("BUILD", "release");
 
     enum PIC = "PIC" in userVars ? "-fPIC" : "";
-    enum INSTALL_DIR = userVars.get("INSTALL_DIR", "../install");
-    enum DRUNTIME_PATH = userVars.get("DRUNTIME_PATH", "../druntime");
-    enum ZIPFILE = userVars.get("ZIPFILE", "phobos.zip");
-    enum ROOT_OF_THEM_ALL = userVars.get("ROOT_OF_THEM_ALL", "generated");
+    enum INSTALL_DIR = "../install";
+    enum DRUNTIME_PATH = "../druntime";
+    enum ZIPFILE = "phobos.zip";
+    enum ROOT_OF_THEM_ALL = "generated";
+
     // ROOT is a variable in posix.mak, but is a function here so the build can vary
     string ROOT(string build = BUILD, string model = MODEL) {
         return userVars.get("ROOT", ROOT_OF_THEM_ALL ~ "/" ~ OS ~ "/" ~ build ~ "/" ~ model);
     }
+
     // Documentation-related stuff
-    enum DOCSRC = userVars.get("DOCSRC", "../dlang.org");
-    enum WEBSITE_DIR = userVars.get("WEBSITE_DIR", "../web");
-    enum DOC_OUTPUT_DIR = userVars.get("DOC_OUTPUT_DIR", WEBSITE_DIR ~ "/phobos-prerelease");
-    enum BIGDOC_OUTPUT_DIR = userVars.get("BIGDOC_OUTPUT_DIR", "/tmp");
+    enum DOCSRC = "../dlang.org";
+    enum WEBSITE_DIR = "../web";
+    enum DOC_OUTPUT_DIR = WEBSITE_DIR ~ "/phobos-prerelease";
+    enum BIGDOC_OUTPUT_DIR = "/tmp";
     enum STDDOC = ["html.ddoc", "dlang.org.ddoc", "std_navbar-prerelease.ddoc",
                    "std.ddoc", "macros.ddoc", ".generated/modlist-prerelease.ddoc"].
         map!(a => DOCSRC ~ "/" ~ a).array;
@@ -100,39 +58,38 @@ Build _getBuild() {
 
     enum CUSTOM_DRUNTIME = userVars.get("DRUNTIME", "") != "";
 
+    // DRUNTIME is a variable in posix.mak
+    static if(CUSTOM_DRUNTIME) {
+        string DRUNTIME(string build = BUILD, string model = MODEL) {
+            return userVars["DRUNTIME"];
+        }
+    }
+
     version(Windows) {
-        string DRUNTIME(string build = BUILD) { return DRUNTIME_PATH ~ "/lib/druntime.lib"; }
+        static if(!CUSTOM_DRUNTIME)
+            string DRUNTIME(string build = BUILD) { return DRUNTIME_PATH ~ "/lib/druntime.lib"; }
         string DRUNTIMESO(string build = BUILD) { return ""; }
     } else {
-        // DRUNTIME is a variable in posix.mak
-        string DRUNTIME(string build = BUILD, string model = MODEL) {
-            return DRUNTIME_PATH ~ "/generated/" ~ OS ~ "/" ~ build ~ "/" ~ model ~ "/libdruntime.a";
+        static if(!CUSTOM_DRUNTIME) {
+            string DRUNTIME(string build = BUILD, string model = MODEL) {
+                return DRUNTIME_PATH ~ "/generated/" ~ OS ~ "/" ~ build ~ "/" ~ model ~ "/libdruntime.a";
+            }
         }
         string DRUNTIMESO(string build = BUILD, string model = MODEL) {
             return stripExtension(DRUNTIME(build, model)) ~ ".so.a";
         }
     }
 
-    string DMD, DMDEXTRAFLAGS;
-    string CC, RUN;
-    if(OS == "win32wine") {
-        CC = "wine dmc.exe";
-        DMD = "wine dmd.exe";
-        RUN = "wine";
-    } else {
-        DMD = "../dmd/src/dmd";
-        if(OS == "win32") {
-            CC = "dmc";
-        } else {
-            CC = "cc";
-        }
-    }
+    enum DMDEXTRAFLAGS = userVars.get("DMDEXTRAFLAGS", "");
+    enum DMD = "../dmd/src/dmd";
+    version(Windows) enum CC = "dmc";
+    else             enum CC = "cc";
 
-    auto DDOC = DMD ~ " -conf= " ~ MODEL_FLAG ~ " -w -c -o- -version=StdDdoc -I" ~
+    enum DDOC = DMD ~ " -conf= " ~ MODEL_FLAG ~ " -w -c -o- -version=StdDdoc -I" ~
         DRUNTIME_PATH ~ "/import " ~ DMDEXTRAFLAGS;
 
     string CFLAGS(string build = BUILD, string model = MODEL) {
-        return MODEL_FLAG(model) ~ " -fPIC -DHAVE_UNISTD_H" ~ (build == "debug" ? " -g" : " -O3");
+        return MODEL_FLAG(model) ~ " -fPIC -DHAVE_UNISTD_H " ~ (build == "debug" ? "-g" : "-O3");
     }
 
     string DFLAGS(string build = BUILD, string model = MODEL) {
@@ -141,35 +98,25 @@ Build _getBuild() {
         return flags;
     }
 
-    version(Windows) {
-        enum DOTOBJ = ".obj";
-        enum DOTEXE = ".exe";
-        enum PATHSEP = `\`;
-    } else {
-        enum DOTOBJ = ".o";
-        enum PATHSEP = "/";
-    }
+    version(Windows) enum DOTOBJ = ".obj";
+    else             enum DOTOBJ = ".o";
 
-    version(Linux)
-        enum LINKDL = "-L-ldl";
-    else
-        enum LINKDL = "";
-
-    auto TIMELIMIT = executeShell("which timelimit 2>/dev/null || true").output.chomp != "" ? "timelimit -t 60" : "";
-
-    enum VERSION = "../dmd/VERSION";
+    version(linux) enum LINKDL = "-L-ldl";
+    else           enum LINKDL = "";
 
     // Set LIB, the ultimate target
     version(Windows) {
-        auto LIB = ROOT ~ "/phobos.lib";
+        enum LIB = ROOT ~ "/phobos.lib";
     } else {
-        auto LIB = ROOT ~ "/libphobos2.a";
+        enum LIB = ROOT ~ "/libphobos2.a";
         // 2.064.2 => libphobos2.so.0.64.2
         // 2.065 => libphobos2.so.0.65.0
         // MAJOR version is 0 for now, which means the ABI is still unstable
         enum MAJOR = "0";
-        auto MINOR = executeShell("awk -F. '{ print int($2) }' " ~ VERSION).output.chomp;
-        auto PATCH = executeShell("awk -F. '{ print int($3) }' " ~ VERSION).output.chomp;
+        auto versionParts = readText("../dmd/VERSION").chomp.split(".");
+        import std.conv: to;
+        auto MINOR = versionParts[1].to!int.to!string;
+        auto PATCH = versionParts[2].to!int.to!string;
         // SONAME doesn't use patch level (ABI compatible)
         auto SONAME = "libphobos2.so." ~ MAJOR ~ "." ~ MINOR;
         auto LIBSO = ROOT ~ "/" ~ SONAME ~ "." ~ PATCH;
@@ -280,7 +227,7 @@ Build _getBuild() {
     }
 
     // build with shared library support (default to true on supported platforms)
-    auto SHARED = userVars.get("SHARED", ["linux", "freebsd"].canFind(OS) ? true : false);
+    enum SHARED = userVars.get("SHARED", ["linux", "freebsd"].canFind(OS) ? true : false);
 
     // Rules begin here
 
@@ -293,12 +240,12 @@ Build _getBuild() {
             array;
     }
 
-    Target target_LIB(string build = BUILD, string model = MODEL) {
+    Target target_LIB(string model = MODEL) {
         return Target("$project/" ~ LIB,
-                      DMD ~ " " ~ DFLAGS(build, model) ~ " -lib -of$out " ~ DRUNTIME(build, model) ~ " " ~
+                      DMD ~ " " ~ DFLAGS(BUILD, model) ~ " -lib -of$out " ~ DRUNTIME(BUILD, model) ~ " " ~
                       chain(D_FILES, OBJS).join(" "),
-                      target_OBJS(build, model) ~
-                      chain(ALL_D_FILES, [DRUNTIME(build)]).map!(a => Target(a)).array);
+                      target_OBJS(BUILD, model) ~
+                      chain(ALL_D_FILES, [DRUNTIME(BUILD)]).map!(a => Target(a)).array);
     }
 
     // the makefile here rewrites PIC for the dll rule, which we can't do, so add it to the flags
@@ -323,9 +270,9 @@ Build _getBuild() {
                            ROOT_OF_THEM_ALL ~ "/osx/release/32/libphobos2.a \\\n" ~
                            ROOT_OF_THEM_ALL ~ "/osx/release/64/libphobos2.a \\\n" ~
                           "-create -output $out",
-                           [target_LIB(BUILD, "32"), target_LIB(BUILD, "64")])];
+                           [target_LIB("32"), target_LIB("64")])];
     } else {
-        Target[] fat;
+        Target[] fat; //nothing to see here
     }
 
     // the equivalent of all: lib dll
@@ -340,11 +287,8 @@ Build _getBuild() {
             // This rule additionally produces $(DRUNTIMESO). Add a fake dependency
             // to always invoke druntime's make. Use FORCE instead of .PHONY to
             // avoid rebuilding phobos when $(DRUNTIME) didn't change.
-            string make;
-            if(OS == "freebsd")
-                make = "gmake";
-            else
-                make = "make";
+            version(FreeBSD) enum make = "gmake";
+            else             enum make = "make";
             auto command = make ~ " -C " ~ DRUNTIME_PATH ~
                 " -f posix.mak MODEL=" ~ MODEL ~
                 " DMD=" ~ DMD ~ " OS=" ~ OS ~ " BUILD=" ~ build;
@@ -378,8 +322,6 @@ Build _getBuild() {
                 map!(a => Target("$project/" ~ ROOT(build) ~ "/unittest/" ~ a ~ ".o",
                                  DMD ~ " " ~ DFLAGS(build) ~ " -fPIC -unittest -c -of$out $in",
                                  target_DRUNTIME ~ [Target(a ~ ".d")])).array;
-            // writeln(target_UT_D_OBJS);
-            // if(target_UT_D_OBJS.length) throw new Exception("foo");
 
             auto UT_LIBSO = "$project/" ~ ROOT(build) ~ "/unittest/libphobos2-ut.so";
             auto target_UT_LIBSO = Target(UT_LIBSO,
@@ -397,9 +339,11 @@ Build _getBuild() {
         // returns the module name given the src path
         string moduleName(in string fileName) { return fileName.replace("/", "."); }
 
+        auto TIMELIMIT = shell("which timelimit 2>/dev/null || true") != "" ? "timelimit -t 60" : "";
+
         return D_MODULES.
             map!(a => Target.phony("unittest/" ~ a ~ ".run",
-                                   QUIET ~ TIMELIMIT ~ RUN ~ " $in " ~ moduleName(a),
+                                   QUIET ~ TIMELIMIT ~ " $in " ~ moduleName(a),
                                    [test_runner])).array;
 
     }
@@ -407,13 +351,12 @@ Build _getBuild() {
     auto unittest_debug = Target.phony("unittest-debug", "", createUnitTests("debug"));
     auto unittest_release = Target.phony("unittest-release", "", createUnitTests("release")) ;
 
-    static if(BUILD_WAS_SPECIFIED) {
+    static if("BUILD" in userVars) { // BUILD_WAS_SPECIFIED
         // target for the batch unittests (using shared phobos library and test_runner)
         auto unittest_ = Target.phony("unittest", "", createUnitTests(BUILD));
     } else {
         auto unittest_ = Target.phony("unittest", "", [unittest_debug, unittest_release]);
     }
-
 
     // Target for quickly running a single unittest (using static phobos library).
     // For example: "make std/algorithm/mutation.test"
@@ -443,27 +386,24 @@ Build _getBuild() {
     auto gitzip = Target.phony("gitzip", "git archive --format=zip HEAD > " ~ ZIPFILE);
     auto zip = Target.phony("zip", "rm -f " ~ ZIPFILE ~ "; zip -r " ~ ZIPFILE ~ " . -x .git\\* -x generated\\*");
 
-    version(OSX)
-        auto lib_dir = "lib" ~ MODEL;
-    else
-        auto lib_dir = "lib";
+    version(OSX) enum lib_dir = "lib" ~ MODEL;
+    else         enum lib_dir = "lib";
 
-    Target install;
     auto installCommonCmd = "mkdir -p " ~ [INSTALL_DIR, OS, lib_dir].join("/") ~ "; " ~
         "cp " ~ LIB ~ " " ~ [INSTALL_DIR, OS, lib_dir].join("/") ~ "/; ";
-    if(SHARED)
-        install = Target.phony("install",
-                               installCommonCmd ~
-                               "cp -P " ~ LIBSO ~ " " ~ [INSTALL_DIR, OS, lib_dir].join("/") ~ "/; " ~
-                               "ln -sf " ~ baseName(LIBSO) ~ [INSTALL_DIR, OS, lib_dir, "libphobos2.so"].join("/"));
+    static if(SHARED)
+        auto install = Target.phony("install",
+                                    installCommonCmd ~
+                                    "cp -P " ~ LIBSO ~ " " ~ [INSTALL_DIR, OS, lib_dir].join("/") ~ "/; " ~
+                                    "ln -sf " ~ baseName(LIBSO) ~ [INSTALL_DIR, OS, lib_dir, "libphobos2.so"].join("/"));
     else
-        install = Target.phony("install",
-                               installCommonCmd ~
-                               "mkdir -p " ~ INSTALL_DIR ~ "/src/phobos/etc; " ~
-                               "mkdir -p " ~ INSTALL_DIR ~ "/src/phobos/std; " ~
-                               "cp -r std/* " ~ INSTALL_DIR ~ "/src/phobos/std; " ~
-                               "cp -r etc/* " ~ INSTALL_DIR ~ "/src/phobos/etc; " ~
-                               "cp LICENSE_1_0.TXT " ~ INSTALL_DIR ~ "/phobos-LICENSE.txt");
+        auto install = Target.phony("install",
+                                    installCommonCmd ~
+                                    "mkdir -p " ~ INSTALL_DIR ~ "/src/phobos/etc; " ~
+                                    "mkdir -p " ~ INSTALL_DIR ~ "/src/phobos/std; " ~
+                                    "cp -r std/* " ~ INSTALL_DIR ~ "/src/phobos/std; " ~
+                                    "cp -r etc/* " ~ INSTALL_DIR ~ "/src/phobos/etc; " ~
+                                    "cp LICENSE_1_0.TXT " ~ INSTALL_DIR ~ "/phobos-LICENSE.txt");
 
 
     auto json = Target("$project/phobos.json",
@@ -483,7 +423,7 @@ Build _getBuild() {
     auto HTMLS = SRC_DOCUMENTABLES.map!(a => DOC_OUTPUT_DIR ~ "/" ~ D2HTML(a)).array;
     auto BIGHTMLS = SRC_DOCUMENTABLES.map!(a => BIGDOC_OUTPUT_DIR ~ "/" ~ D2HTML(a)).array;
 
-    auto doc_output_dir = Target(DOC_OUTPUT_DIR ~ "/.", "mkdir -p $in", []);
+    auto doc_output_dir = Target(DOC_OUTPUT_DIR ~ "/.", "mkdir -p $out", []);
     // For each module, define a rule e.g.:
     //  ../web/phobos/std_conv.html : std/conv.d $(STDDOC) ; ...
     auto htmls = SRC_DOCUMENTABLES.map!(a => Target(DOC_OUTPUT_DIR ~ "/" ~ D2HTML(a),
