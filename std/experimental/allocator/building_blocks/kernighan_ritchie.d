@@ -149,7 +149,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
         }
     }
 
-    // state {
+    // state
     /**
     If $(D ParentAllocator) holds state, $(D parent) is a public member of type
     $(D KRRegion). Otherwise, $(D parent) is an $(D alias) for
@@ -160,7 +160,6 @@ struct KRRegion(ParentAllocator = NullAllocator)
     private void[] payload;
     private Node* root;
     private bool regionMode = true;
-    // }
 
     auto byNodePtr()
     {
@@ -518,8 +517,6 @@ struct KRRegion(ParentAllocator = NullAllocator)
     */
     void[] allocateAll()
     {
-        //debug(KRRegion) assertValid("allocateAll");
-        //debug(KRRegion) scope(exit) assertValid("allocateAll");
         if (regionMode) switchToFreeList;
         if (root && root.next == root)
             return allocate(root.size);

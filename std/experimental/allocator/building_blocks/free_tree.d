@@ -54,11 +54,10 @@ struct FreeTree(ParentAllocator)
     import std.algorithm : min, max, swap;
     import std.traits : hasMember;
 
-    // State {
+    // State
     static if (stateSize!ParentAllocator) private ParentAllocator parent;
     else private alias parent = ParentAllocator.instance;
     private Node* root; // that's the entire added state
-    // }
 
     private struct Node
     {

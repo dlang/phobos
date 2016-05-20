@@ -702,10 +702,6 @@ unittest
         assert(a.numDeallocate == 3);
         assert(a.numAllocate == a.numDeallocate);
         assert(a.bytesUsed == 0);
-
-        //import std.stdio;
-        //Allocator.reportPerCallStatistics(stdout);
-        //a.reportStatistics(stdout);
      }
 
     import std.experimental.allocator.gc_allocator : GCAllocator;

@@ -141,14 +141,11 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
         }
     }
 
-    // state {
+    // state
     static if (stateSize!PrimaryAllocator) private PrimaryAllocator primary;
     else alias primary = PrimaryAllocator.instance;
     static if (Policies.length > 0)
         private Tuple!(Stride2!(Policies[1 .. $])) extras;
-    // }
-
-    //pragma(msg, "Allocators available: ", typeof(extras));
 
     private static bool match(uint have, uint want)
     {

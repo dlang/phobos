@@ -24,20 +24,12 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     static assert((max - (min - 1)) % step == 0,
         "Invalid limits when instantiating " ~ Bucketizer.stringof);
 
-    //static if (min == chooseAtRuntime) size_t _min;
-    //else alias _min = min;
-    //static if (max == chooseAtRuntime) size_t _max;
-    //else alias _max = max;
-    //static if (step == chooseAtRuntime) size_t _step;
-    //else alias _step = step;
-
-    // state {
+    // state
     /**
     The array of allocators is publicly available for e.g. initialization and
     inspection.
     */
     Allocator[(max + 1 - min) / step] buckets;
-    // }
 
     private Allocator* allocatorFor(size_t n)
     {

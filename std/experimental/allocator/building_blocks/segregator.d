@@ -256,7 +256,6 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         && !stateSize!LargeAllocator
         && is(typeof(SmallAllocator.instance) == shared)
         && is(typeof(LargeAllocator.instance) == shared);
-    //pragma(msg, sharedMethods);
 
     static if (sharedMethods)
     {
@@ -336,12 +335,6 @@ template Segregator(Args...) if (Args.length > 3)
             .Segregator!(Args[2 .. $])
         );
     }
-
-    // Linear search
-    //alias Segregator = .Segregator!(
-    //    Args[0], Args[1],
-    //    .Segregator!(Args[2 .. $])
-    //);
 }
 
 ///
