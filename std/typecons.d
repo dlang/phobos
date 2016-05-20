@@ -7498,7 +7498,7 @@ public:
 
     public:
         int field = 564;
-        
+
     @property:
         int valProp() const
         {
@@ -7508,7 +7508,7 @@ public:
         {
             _valProp = val;
         }
-        
+
         ref inout(int) refProp() inout
         {
             return _refProp;
@@ -7529,7 +7529,7 @@ public:
         assert(obj.getField!int("valProp") == 31);
         assert(obj.getField!int("refProp") == -78);
         assert(obj.getField!int("field") == 564);
-        
+
         int got1, got2, got3;
         obj.getField("valProp", got1);
         assert(got1 == 31);
@@ -7537,7 +7537,7 @@ public:
         assert(got2 == -78);
         obj.getField("field", got3);
         assert(got3 == 564);
-        
+
         //assertThrown(obj.refField!(const int)("valProp"));
         assert(obj.refField!(const int)("refProp") == -78);
         assert(obj.refField!(const int)("field") == 564);
@@ -7549,7 +7549,7 @@ public:
         assert(obj.refProp == 22);
         obj.refField!int("field") = -100;
         assert(obj.field == -100);
-        
+
         obj.setField("valProp", 50);
         assert(obj.valProp == 50);
         obj.setField("refProp", -191);
@@ -7557,7 +7557,7 @@ public:
         obj.setField("field", -81320);
         assert(obj.field == -81320);
     }
-    
+
     S s;
     testRead(s);
     testWrite(s);

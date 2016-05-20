@@ -47,6 +47,8 @@ $(BUGSTITLE Library Changes,
     `std.algorithm.searching.{min,max}Element` for ranges have been added.))
     $(LI $(REF Ternary, std,typecons) was added to represent three valued
     logic.)
+    $(LI $(RELATIVE_LINK2 getField, Added runtime member getting and setting
+    via `std.typecons.getField` and `std.typecons.setField`.))
 )
 
 $(BUGSTITLE Library Changes,
@@ -224,6 +226,28 @@ import std.range;
 import std.typecons;
 assert([3, 1, 4].minElement == 1);
 assert([4, 7, 5].enumerate.maxElement!`a.value` == tuple(1, 7));
+-------
+)
+
+$(LI $(LNAME2 getField, Added runtime member getting and setting
+    via `std.typecons.getField` and `std.typecons.setField`.)
+    $(P $(XREF typecons, getField), $(XREF typecons, refField), and
+    $(XREF typecons, setField) allow scripting language style setting of
+    type fields from runtime generated strings.
+    )
+
+-------
+import std.typecons;
+
+struct Foo
+{
+    int bar = 42;
+}
+
+Foo foo;
+int val;
+foo.getField("bar", val);
+assert(val == 42);
 -------
 )
 
