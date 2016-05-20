@@ -68,6 +68,7 @@ public:
     {
         import std.algorithm.iteration : filterBidirectional;
         import std.algorithm.searching : startsWith;
+        import std.utf : byCodeUnit, byChar;
         import std.exception : enforce;
         import std.conv : ConvException;
 
@@ -78,30 +79,37 @@ public:
 
         data = 0UL;
 
+        // auto decoding special case
+        static if (isNarrowString!Range)
+            auto codeUnits = s.byCodeUnit();
+        else
+            alias codeUnits = s;
+
         // check for signs and if the string is a hex value
-        if (s.front == '+')
+        if (codeUnits.front == '+')
         {
-            s.popFront(); // skip '+'
+            codeUnits.popFront(); // skip '+'
         }
-        else if (s.front == '-')
+        else if (codeUnits.front == '-')
         {
             neg = true;
-            s.popFront();
+            codeUnits.popFront();
         }
 
-        if (s.save.startsWith("0x") || s.save.startsWith("0X"))
+        if (codeUnits.save.startsWith("0x".byChar) ||
+            codeUnits.save.startsWith("0X".byChar))
         {
-            s.popFront;
-            s.popFront;
+            codeUnits.popFront;
+            codeUnits.popFront;
 
-            if (!s.empty)
-                ok = data.fromHexString(s.filterBidirectional!(a => a != '_'));
+            if (!codeUnits.empty)
+                ok = data.fromHexString(codeUnits.filterBidirectional!(a => a != '_'));
             else
                 ok = false;
         }
         else
         {
-            ok = data.fromDecimalString(s.filterBidirectional!(a => a != '_'));
+            ok = data.fromDecimalString(codeUnits.filterBidirectional!(a => a != '_'));
         }
 
         enforce!ConvException(ok, "Not a valid numerical string");
