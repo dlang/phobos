@@ -4121,7 +4121,7 @@ template ImplicitConversionTargets(T)
             TypeTuple!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T : typeof(null)))
         alias ImplicitConversionTargets = TypeTuple!(typeof(null));
-    else static if (is(T : Object))
+    else static if (is(T == class))
         alias ImplicitConversionTargets = TransitiveBaseTypeTuple!(T);
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
         alias ImplicitConversionTargets =
@@ -4136,6 +4136,13 @@ template ImplicitConversionTargets(T)
 {
     static assert(is(ImplicitConversionTargets!(double)[0] == real));
     static assert(is(ImplicitConversionTargets!(string)[0] == const(char)[]));
+}
+
+unittest // bugzilla 15940
+{
+    class Foo{}
+    struct Bar{Foo foo; alias foo this;}
+    static assert(ImplicitConversionTargets!(Bar).length == 0);
 }
 
 /**
