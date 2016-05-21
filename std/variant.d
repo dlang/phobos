@@ -2639,3 +2639,12 @@ unittest
     static struct Foo15827 { Variant v; this(Foo15827 v) {} }
     Variant v = Foo15827.init;
 }
+
+unittest
+{
+    // Bugzilla 15940
+    class Foo{}
+    struct Bar{Foo foo; alias foo this;}
+    Bar bar;
+    Variant v = Variant(bar);
+}
