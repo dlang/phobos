@@ -7143,3 +7143,222 @@ unittest
         ubyte, ubyte, T3, T3,
     );
 }
+
+/++
+ + Type constructor for head-const variables.
+ +
+ + Head-const variables cannot be directly mutated or rebound, but references
+ + reached through the variable are typed with their original mutability.
+ + It is equivalent to $(D final) variables in D1 and Java, as well as
+ + $(D readonly) variables in C#.
+ +
+ + When $(D T) is a $(D const) or $(D immutable) type, $(D HeadConst) aliases
+ + to $(D T).
+ +/
+struct HeadConst(T)
+    if (!is(T == const) && !is(T == immutable))
+{
+    private T HeadConst_value;
+    mixin Proxy!HeadConst_value;
+
+    /++
+     + Construction is forwarded to the underlying type.
+     +/
+    this(T other)
+    {
+        this.HeadConst_value = other;
+    }
+
+    /// Ditto
+    this(Args...)(auto ref Args args)
+        if (__traits(compiles, T(args)))
+    {
+        static assert((!is(T == struct) && !is(T == union)) || !isNested!T,
+            "Non-static nested type " ~ fullyQualifiedName!T ~ " must be " ~
+            "constructed explicitly at the call-site (e.g. auto s = " ~
+            "headConst(" ~ T.stringof ~ "(...));)");
+        this.HeadConst_value = T(args);
+    }
+
+    // Attaching function attributes gives less noisy error messages
+    pure nothrow @safe @nogc
+    {
+        /++
+         + All operators, including member access, are forwarded to the
+         + underlying value of type $(D T) except for these mutating operators,
+         + which are disabled.
+         +/
+        @disable void opAssign(Other)(Other other);
+        @disable void opOpAssign(string op, Other)(Other other); /// Ditto
+        @disable void opUnary(string op : "--")(); /// Ditto
+        @disable void opUnary(string op : "++")(); /// Ditto
+    }
+
+    /++
+     +
+     + $(D HeadConst!T) implicitly converts to an rvalue of type $(D T) through
+     + $(D AliasThis).
+     +/
+    inout(T) HeadConst_get() inout
+    {
+        return HeadConst_value;
+    }
+
+    /// Ditto
+    alias HeadConst_get this;
+
+    auto ref T opUnary(string op)()
+        if (__traits(compiles, mixin(op ~ "T.init")))
+    {
+        return mixin(op ~ "this.HeadConst_value");
+    }
+}
+
+/// Ditto
+template HeadConst(T)
+    if (is(T == const) || is(T == immutable))
+{
+    alias HeadConst = T;
+}
+
+/// Ditto
+HeadConst!T headConst(T)(T t)
+{
+    return HeadConst!T(t);
+}
+
+/// $(D HeadConst) can be used to create class references which cannot be rebound:
+pure nothrow @safe unittest
+{
+    static class A
+    {
+        int i;
+
+        this(int i) pure nothrow @nogc @safe
+        {
+            this.i = i;
+        }
+    }
+
+    auto a = headConst(new A(42));
+    assert(a.i == 42);
+
+    // a = new C(24); // Reassignment is illegal,
+    a.i = 24; // But fields are still mutable.
+
+    assert(a.i == 24);
+}
+
+/// $(D HeadConst) can also be used to create read-only data fields without using transitive immutability:
+pure nothrow @safe unittest
+{
+    static class A
+    {
+        int i;
+
+        this(int i) pure nothrow @nogc @safe
+        {
+            this.i = i;
+        }
+    }
+
+    static class B
+    {
+        HeadConst!A a;
+
+        this(A a) pure nothrow @nogc @safe
+        {
+            this.a = a; // Construction, thus allowed.
+        }
+    }
+
+    auto b = new B(new A(42));
+    assert(b.a.i == 42);
+
+    // b.a = new A(24); // Reassignment is illegal,
+    b.a.i = 24; // but `a` is still mutable.
+
+    assert(b.a.i == 24);
+}
+
+pure nothrow @safe unittest
+{
+    static class A { int i; }
+    static assert(!is(HeadConst!A == A));
+    static assert(is(HeadConst!(const A) == const A));
+    static assert(is(HeadConst!(immutable A) == immutable A));
+
+    HeadConst!A a = new A;
+    static assert(!__traits(compiles, a = new A));
+
+    static void foo(ref A a) pure nothrow @safe @nogc {}
+    static assert(!__traits(compiles, foo(a)));
+
+    assert(a.i == 0);
+    a.i = 42;
+    assert(a.i == 42);
+
+    HeadConst!int i = 42;
+    static assert(!__traits(compiles, i = 24));
+    static assert(!__traits(compiles, --i));
+    static assert(!__traits(compiles, ++i));
+    assert(i == 42);
+    int iCopy = i;
+    assert(iCopy == 42);
+    iCopy = -i; // non-mutating unary operators must work
+    assert(iCopy == -42);
+
+    static struct S
+    {
+        int i;
+
+        pure nothrow @safe @nogc:
+        this(int i){}
+        this(string s){}
+        this(int i, string s, float f){ this.i = i; }
+    }
+
+    HeadConst!S sint = 42;
+    HeadConst!S sstr = "foo";
+    static assert(!__traits(compiles, sint = sstr));
+
+    auto sboth = HeadConst!S(42, "foo", 3.14);
+    assert(sboth.i == 42);
+
+    sboth.i = 24;
+    assert(sboth.i == 24);
+
+    struct NestedS
+    {
+        int i;
+        int get() pure nothrow @safe @nogc { return sboth.i + i; }
+    }
+
+    // Nested structs must be constructed at the call-site
+    static assert(!__traits(compiles, HeadConst!NestedS(6)));
+    auto s = headConst(NestedS(6));
+    assert(s.i == 6);
+    assert(s.get == 30);
+
+    class NestedC
+    {
+        int i;
+
+        pure nothrow @safe @nogc:
+        this(int i) { this.i = i; }
+        int get() { return sboth.i + i; }
+    }
+
+    auto c = headConst(new NestedC(6));
+    assert(c.i == 6);
+    assert(c.get == 30);
+}
+
+pure nothrow @safe unittest
+{
+    auto arr = headConst([1, 2, 3]);
+    static assert(!__traits(compiles, arr = null));
+    static assert(!__traits(compiles, arr ~= 4));
+    assert((arr ~ 4) == [1, 2, 3, 4]);
+}
+
