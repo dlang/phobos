@@ -1252,7 +1252,8 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                     }
                 }
                 else {
-                    json.put(to!string(val));
+                    import std.format : format;
+                    json.put("%.16g".format(val));
                 }
                 break;
 
@@ -1717,5 +1718,12 @@ pure nothrow @safe unittest // issue 15884
     Test!char();
     Test!wchar();
     Test!dchar();
+}
+
+@safe unittest // issue 15885
+{
+    double num = 30738.22;
+    JSONValue json = JSONValue(num);
+    assert(to!double(toJSON(json)) == num);
 }
 
