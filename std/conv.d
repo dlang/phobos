@@ -4454,6 +4454,151 @@ unittest
     static assert(!__traits(compiles, emplace!S(&s, 2, 3)));
 }
 
+
+/** Calls an overloaded and/or templated function from a wrapper function.
+
+It's assumed that first $(D wrapperOwnArgs) arguments of $(D wrapperFunc)
+aren't passed to $(D func). Other parameters are passed with preserving
+lvalue/rvalue state.
+
+For free function or static member function, pass it as $(D func) template
+argument to $(D callFunction).
+
+For non-static member function pass type as $(D T) and function name as
+$(D funcName) template arguments to $(D callNonstaticMemberFunction).
+And lvalue of type $(D T) for which to call non-static member function
+should also be passed before wrapped function arguments.
+
+Note:
+All rvalue wrapper arguments will be moved using $(XREF algorithm, move)
+to temporaries which will be destroyed just after wrapped function is called.
+
+Example:
+---
+import std.stdio;
+
+struct S
+{
+    void f(int i)
+    { writefln("f(int i = %s)", i); }
+
+    void f(ref int i)
+    { writefln("f(ref int i = %s)", i); }
+}
+
+void wrapper()(ref S s, bool doCall, auto ref int i)
+{ if(doCall) callNonstaticMemberFunction!(wrapper, 2, S, "f")(s, i); }
+
+S s;
+int n = 2;
+
+wrapper(s, true, 1); // Prints: f(int i = 1)
+wrapper(s, true, n); // Prints: f(ref int i = 2)
+---
+*/
+template callFunction(alias wrapperFunc, size_t wrapperOwnArgs, alias func)
+{
+    mixin callFunctionImpl!(wrapperFunc, wrapperOwnArgs);
+
+    auto ref callFunction(ref Args refArgs)
+    { mixin("return func" ~ callString); }
+}
+
+/// ditto
+template callNonstaticMemberFunction(alias wrapperFunc, size_t wrapperOwnArgs, T, string funcName)
+{
+    mixin callFunctionImpl!(wrapperFunc, wrapperOwnArgs);
+
+    auto ref callNonstaticMemberFunction(ref T t, ref Args refArgs)
+    { mixin("return t." ~ funcName ~ callString); }
+}
+
+private mixin template callFunctionImpl(alias wrapperFunc, size_t wrapperOwnArgs)
+{
+    // Workaround Issue @@@8995@@@
+    alias ParameterTypeTuple!wrapperFunc[wrapperOwnArgs .. $] ArgsWithStorageClasses;
+    template DeStorage(T) { alias T DeStorage; }
+    alias staticMap!(DeStorage, ArgsWithStorageClasses) Args;
+
+    T rvalueOf(T)(ref T t)
+    { return move(t); }
+
+    enum callString = 
+    {
+        string argsStr;
+        foreach(i, storageClass; parameterStorageClassTuple!wrapperFunc[wrapperOwnArgs .. $])
+        {
+            enum byRef = !!(storageClass & (ParameterStorageClass.ref_ | ParameterStorageClass.out_));
+            if(i) argsStr ~= ',';
+            import std.string;
+            argsStr ~= xformat(byRef ? "%s" : "rvalueOf(%s)", xformat("refArgs[%s]", i));
+        }
+        return "(" ~ argsStr ~ ");";
+    }();
+}
+
+unittest
+{
+    static int k;
+    int i;
+    bool isRef;
+    auto ref f(T : int)(auto ref T j)
+    {
+        isRef = __traits(isRef, j);
+        i = j;
+        static if(__traits(isRef, j))
+            return k;
+    }
+
+    void fWrapperRef(ref int j)
+    {
+        callFunction!(fWrapperRef, 0, f)(j) = 7;
+        assert(k == 7);
+    }
+
+    int n = 1;
+    fWrapperRef(n);
+    assert(isRef == true && i == 1);
+
+    void fWrapper(int j)
+    {
+        static assert(!__traits(compiles, { callFunction!(fWrapper, 0, f)(j) = 0; }));
+        callFunction!(fWrapper, 0, f)(j);
+    }
+
+    fWrapper(2);
+    assert(isRef == false && i == 2);
+}
+
+unittest
+{
+    int i;
+    bool isRef;
+    struct S
+    {
+        void f(ref int j)
+        { isRef = true; i = j; }
+
+        void f(int j)
+        { isRef = false; i = j; }
+    }
+
+    S s;
+    void fWrapperRef(ref int j)
+    { callNonstaticMemberFunction!(fWrapperRef, 0, S, "f")(s, j); }
+
+    int n = 1;
+    fWrapperRef(n);
+    assert(isRef == true && i == 1);
+
+    void fWrapper(int j)
+    { callNonstaticMemberFunction!(fWrapper, 0, S, "f")(s, j); }
+
+    fWrapper(2);
+    assert(isRef == false && i == 2);
+}
+
+
 unittest
 {
     struct S { int a, b = 7; }
