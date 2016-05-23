@@ -101,10 +101,18 @@ mixin template Signal(T1...)
      */
     final void emit( T1 i )
     {
+        // The simplest (and the slowest) way of partially fixing @@@BUG9606@@@
+        // is adding/removing GC range. This also make original test case from
+        // @@@BUG4150@@@ pass.
+        import core.memory;
+        GC.addRange(slots.ptr, slot_t.sizeof * slots_idx);
+
         foreach (slot; slots[0 .. slots_idx])
         {   if (slot)
                 slot(i);
         }
+
+        GC.removeRange(slots.ptr);
     }
 
     /***
