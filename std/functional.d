@@ -1277,6 +1277,37 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
     }
 }
 
+/**
+ * Calls the delegate with the value as argument. Used for temporarily binding
+ * a value as an argument.
+ *
+ * Example:
+ * ----
+ * assert(
+ *         (1 + 2 * 3).bindTo!(x => x * x * x + 2 * x * x + 3 * x)()
+ *         ==
+ *         (1 + 2 * 3) * ( 1 + 2 * 3) * ( 1 + 2 * 3)
+ *         + 2 * ( 1 + 2 * 3) * (1 + 2 * 3)
+ *         + 3 * ( 1 + 2 * 3)
+ *       );
+ * ----
+ */
+auto bindTo(alias dlg, T)(T value) if(__traits(compiles, dlg(value)))
+{
+    return dlg(value);
+}
+
+unittest//verify example
+{
+    assert(
+            (1 + 2 * 3).bindTo!(x => x * x * x + 2 * x * x + 3 * x)()
+            ==
+            (1 + 2 * 3) * ( 1 + 2 * 3) * ( 1 + 2 * 3)
+            + 2 * ( 1 + 2 * 3) * (1 + 2 * 3)
+            + 3 * ( 1 + 2 * 3)
+          );
+}
+
 unittest {
     static int inc(ref uint num) {
         num++;
