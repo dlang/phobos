@@ -771,9 +771,10 @@ private T toImpl(T, S)(S value)
     auto result = ()@trusted{ return cast(T) value; }();
     if (!result && value)
     {
+        auto dynamicinfo = is(S == interface) ? typeid(value).info : typeid(value);
         throw new ConvException("Cannot convert object of static type "
-                ~S.classinfo.name~" and dynamic type "~value.classinfo.name
-                ~" to type "~T.classinfo.name);
+                ~S.stringof~" and dynamic type "~dynamicinfo.name
+                ~" to type "~T.stringof);
     }
     return result;
 }
