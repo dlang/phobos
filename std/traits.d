@@ -5082,6 +5082,93 @@ unittest
 }
 
 /**
+ * Checks whether $(D T) is structurally an integer, i.e. whether it supports
+ * all of the operations an integer type should support.  Does not check the
+ * nominal type of $(D T).  In particular, for a mutable type $(D T) the
+ * following must compile:
+ *
+ * ---
+ * T n;
+ * n = 2;
+ * n <<= 1;
+ * n >>= 1;
+ * n += n;
+ * n += 2;
+ * n *= n;
+ * n *= 2;
+ * n /= n;
+ * n /= 2;
+ * n -= n;
+ * n -= 2;
+ * n %= 2;
+ * n %= n;
+ * bool foo = n < 2;
+ * bool bar = n == 2;
+ * bool goo = n < n + 1;
+ * bool tar = n == n;
+ * ---
+ *
+ * while for a non-mutable type, the above must compile for its unqualified,
+ * mutable variant.
+ *
+ * All built-in D integers and character types and $(XREF bigint, BigInt) are
+ * integer-like by this definition.
+ */
+template isIntegerLike(T)
+{
+    static if (isMutable!T)
+    {
+        enum bool isIntegerLike = is(typeof({
+            T n;
+            n = 2;
+            n = n;
+            n <<= 1;
+            n >>= 1;
+            n += n;
+            n += 2;
+            n *= n;
+            n *= 2;
+            n /= n;
+            n /= 2;
+            n -= n;
+            n -= 2;
+            n %= 2;
+            n %= n;
+            bool foo = n < 2;
+            bool bar = n == 2;
+            bool goo = n < n + 1;
+            bool tar = n == n;
+
+            return n;
+        }));
+    }
+    else
+    {
+        alias isIntegerLike = isIntegerLike!(Unqual!T);
+    }
+}
+
+unittest
+{
+    import std.bigint;
+    foreach (T; TypeTuple!(BigInt, long, ulong, int, uint,
+                          short, ushort, byte, ubyte,
+                          char, wchar, dchar))
+    {
+        static assert(isIntegerLike!T);
+        static assert(isIntegerLike!(const(T)));
+        static assert(isIntegerLike!(immutable(T)));
+    }
+
+    foreach (T; TypeTuple!(real, double, float, bool))
+    {
+        static assert(!isIntegerLike!T);
+        static assert(!isIntegerLike!(const(T)));
+        static assert(!isIntegerLike!(immutable(T)));
+    }
+}
+
+/**
  * Detect whether $(D T) is a built-in floating point type.
  */
 enum bool isFloatingPoint(T) = is(FloatingPointTypeOf!T) && !isAggregateType!T;
