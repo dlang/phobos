@@ -712,6 +712,37 @@ nothrow unittest
     enum b3 = minimallyInitializedArray!(S3[][])(2, 2);
 }
 
+/**
+    Returns a pointer to one-past-the-end of an array.
+
+Example:
+$(D_RUN_CODE
+$(ARGS
+----
+int[] a = [ 1, 2, 3 ];
+int[] b;
+assert(a.ptr + a.length == a.ptrEnd);
+assert(b.ptr == b.ptrEnd);
+----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
+
+    $(RED Warning: The pointer returned by this function will not be
+    considered a live reference to the array by the garbage collector.)
+*/
+@property @trusted pure nothrow
+auto ptrEnd(T)(T arr)
+    if(isArray!T)
+{
+    return arr.ptr + arr.length;
+}
+unittest
+{
+    int[] a = [ 1, 2, 3 ];
+    int[] b;
+    assert(a.ptr + a.length == a.ptrEnd);
+    assert(b.ptr == b.ptrEnd);
+}
+
 // overlap
 /*
 NOTE: Undocumented for now, overlap does not yet work with ctfe.
@@ -727,7 +758,7 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
     static U* min(U* a, U* b) nothrow { return a < b ? a : b; }
 
     auto b = max(r1.ptr, r2.ptr);
-    auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
+    auto e = min(r1.ptrEnd, r2.ptrEnd);
     return b < e ? b[0 .. e - b] : null;
 }
 
