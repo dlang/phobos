@@ -6496,6 +6496,77 @@ unittest
         static assert(mostNegative!T == 0);
 }
 
+/**
+Promote the type T to the next larger version of the same base type.
+T must be a primitive built-in type, otherwise a compile-time error occurs.
+*/
+template Promote(T)
+{
+    alias ModifyTypePreservingSTC!(PromoteImpl, OriginalType!T) Promote;
+}
+
+private template PromoteImpl(T)
+{
+    static if (is(T == ubyte)) alias ushort PromoteImpl;
+    else static if (is(T == byte)) alias short PromoteImpl;
+    else static if (is(T == ushort)) alias uint PromoteImpl;
+    else static if (is(T == short)) alias int PromoteImpl;
+    else static if (is(T == uint)) alias ulong PromoteImpl;
+    else static if (is(T == int)) alias long PromoteImpl;
+    else static if (is(T == float)) alias double PromoteImpl;
+    else static if (is(T == double)) alias real PromoteImpl;
+    else static if (is(T == ulong) || is(T == long) || is(T == real))
+        static assert(false, "Type '" ~ T.stringof
+                       ~ "' is already the largest possible type");
+    else static assert(false, "Type '" ~ T.stringof
+                       ~ "' can not be promoted");
+}
+
+unittest
+{
+    alias Promote!(ubyte) S;
+    assert(is(S == ushort));
+    alias Promote!(const(float)) S1;
+    assert(is(S1 == const(double)), S1.stringof);
+    alias Promote!(immutable(int)) S2;
+    assert(is(S2 == immutable(long)), S2.stringof);
+}
+
+/**
+Demote the type T to the next smaller version of the same base type.
+T must be a primitive built-in type, otherwise a compile-time error occurs.
+*/
+template Demote(T)
+{
+    alias ModifyTypePreservingSTC!(DemoteImpl, OriginalType!T) Demote;
+}
+
+private template DemoteImpl(T)
+{
+    static if (is(T == ulong)) alias uint DemoteImpl;
+    else static if (is(T == long)) alias int DemoteImpl;
+    else static if (is(T == uint)) alias ushort DemoteImpl;
+    else static if (is(T == int)) alias short DemoteImpl;
+    else static if (is(T == ushort)) alias ubyte DemoteImpl;
+    else static if (is(T == short)) alias byte DemoteImpl;
+    else static if (is(T == real)) alias double DemoteImpl;
+    else static if (is(T == double)) alias float DemoteImpl;
+    else static if (is(T == ubyte) || is(T == byte) || is(T == float))
+        static assert(false, "Type '" ~ T.stringof
+                       ~ "' is already the smallest possible type");
+    else static assert(false, "Type '" ~ T.stringof
+                       ~ "' can not be demoted");
+}
+
+unittest
+{
+    alias Demote!(ulong) S;
+    assert(is(S == uint));
+    alias Demote!(const(double)) S1;
+    assert(is(S1 == const(float)), S1.stringof);
+    alias Demote!(immutable(short)) S2;
+    assert(is(S2 == immutable(byte)), S2.stringof);
+}
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Misc.
