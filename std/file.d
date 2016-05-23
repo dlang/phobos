@@ -4056,6 +4056,257 @@ unittest
 }
 
 
+/++
+Returns a range that lazily iterates over files and directories whose names
+match the given _pattern.
+
+$(D pattern) is specified as a path where one or more characters (or entire
+path segments) may be wildcards.  The path is split into segments using
+$(XREF path,pathSplitter), and each segment that contains one or more
+wildcards is matched against actual file system nodes using $(XREF path,globMatch).
+Wildcard characters never match across directory separators.
+
+The range elements are of type $(LREF DirEntry).
+
+Example:
+---
+foreach (file; glob("foo/a*/bar/b?z/Hello {World,there}"))
+{
+    // Examples of files which will be matched if they exist:
+    //   foo/a/bar/baz/Hello World
+    //   foo/abc/bar/biz/Hello there
+    //
+    // Examples of files which will *not* be matched:
+    //   foo/a/xxx/bar/baz/Hello World  ("a*" does not match "a/xxx")
+    //   foo/a/bar/bz/Hello there       ("b?z" does not match "bz")
+    //   foo/a/bar/baz/Hello someone    ("{World,there}" does not match "someone")
+
+    writeln("Matching path: ", file.name);
+}
+---
++/
+auto glob(string pattern)
+{
+    static struct Glob
+    {
+        this(string pattern)
+        {
+            if (pattern.empty) throw new Error("Empty pattern");
+
+            // We start by splitting 'pattern' into subpatterns.
+            string subPat;
+            foreach (segment; pathSplitter(pattern))
+            {
+                if (!subPat.empty && !isRooted(segment)) subPat ~= dirSeparator;
+                subPat ~= segment;
+                if (containsWildcards(segment))
+                {
+                    m_subPatterns ~= subPat;
+                    subPat = null;
+                }
+            }
+            m_suffix = subPat;
+
+            if (m_subPatterns.empty)
+            {
+                // This is a zero- or one-element range.
+                m_single = true;
+                m_empty = !exists(pattern);
+                if (!m_empty) m_front = dirEntry(pattern);
+            }
+            else
+            {
+                m_single = false;
+                // Prepare the array of directory ranges.
+                m_dirIters = new DirIter[m_subPatterns.length];
+                m_dirIters[0] = globIter(dirName(m_subPatterns[0]),
+                                        baseName(m_subPatterns[0]));
+                auto level = makeRanges(0);
+                while (level < m_dirIters.length - 1)
+                {
+                    level = popNext(level);
+                    if (level < 0)
+                    {
+                        m_empty = true;
+                        return;
+                    }
+                }
+                popToNextMatch();
+            }
+        }
+
+        // Returns whether the range is empty.
+        @property bool empty() const { return m_empty; }
+
+        // Returns the front of the range.
+        @property DirEntry front() const
+        {
+            if (empty) throw new RangeError("Range is empty");
+            return m_front;
+        }
+
+        // Advances the range one step.
+        void popFront()
+        {
+            if (empty) throw new RangeError("Range is empty");
+            if (m_single)
+            {
+                m_empty = true;
+            }
+            else
+            {
+                m_dirIters[$-1].popFront();
+                popToNextMatch();
+            }
+        }
+
+    private:
+        // If the front of the topmost directory range matches the glob,
+        // this function sets m_front and returns.  Otherwise, it advances
+        // the underlying ranges until a match is found.
+        void popToNextMatch()
+        {
+            for (;;)
+            {
+                if (m_suffix.empty)
+                {
+                    // Set m_front to the front of the topmost directory range.
+                    if (!m_dirIters[$-1].empty)
+                    {
+                        m_front = m_dirIters[$-1].front;
+                        m_empty = false;
+                        return;
+                    }
+                }
+                else
+                {
+                    // Advance the topmost directory range until a match is found.
+                    while (!m_dirIters[$-1].empty)
+                    {
+                        auto tryFront = buildPath(m_dirIters[$-1].front.name, m_suffix);
+                        if (exists(tryFront))
+                        {
+                            m_front = dirEntry(tryFront);
+                            m_empty = false;
+                            return;
+                        }
+                        m_dirIters[$-1].popFront();
+                    }
+                }
+
+                // No match was found, and the topmost directory iterator is
+                // complete.  We have to determine the next one.
+                if (m_dirIters.length == 1 || !popNext(cast(int) m_dirIters.length - 2))
+                {
+                    m_empty = true;
+                    return;
+                }
+            }
+        }
+
+        // Advances the underlying ranges one step, and returns false if all
+        // ranges are empty.
+        bool popNext(int level)
+        {
+            do
+            {
+                // Find the topmost non-empty dir range.
+                level = popNextNonEmptyRange(level);
+
+                // If all dir ranges are empty, we are done.
+                if (level < 0) return false;
+
+                // The range at 'level' has been advanced forward one step.
+                // Make new dir ranges above this level.
+                level = makeRanges(level);
+            } while (level < m_dirIters.length - 1);
+            return true;
+        }
+
+        // Starts with the dir range at the given level, and advances it one step.
+        // If it is empty, level is decreased by one, and the range at that level
+        // is advanced one step.  This continues down to the first range which is not
+        // empty after it has been advanced.  The function returns the level of that
+        // range.  If -1 is returned, it means that all ranges are empty.
+        int popNextNonEmptyRange(int level)
+        {
+            assert (level >= 0);
+            while (level >= 0)
+            {
+                m_dirIters[level].popFront();
+                if (m_dirIters[level].empty) --level;
+                else break;
+            }
+            return level;
+        }
+
+        // Starts at depth, and creates dir ranges for each level above.
+        // If a dir range at some level is empty on construction, the function
+        // stops and returns that level.  Otherwise, it proceeds to the top
+        // and returns m_dirIters.length - 1.
+        int makeRanges(int level)
+        {
+            if (level < m_dirIters.length - 1)
+            {
+                bool dirExists;
+                do
+                {
+                    auto pat = buildPath(m_dirIters[level].front.name,
+                                         m_subPatterns[++level]);
+                    auto dir = dirName(pat);
+                    dirExists = exists(dir) && isDir(dir);
+                    if (dirExists) m_dirIters[level] = globIter(dir, baseName(pat));
+                } while (level < m_dirIters.length - 1
+                        && dirExists
+                        && !m_dirIters[level].empty);
+            }
+            return level;
+        }
+
+        // Returns a range which iterates over all files in 'dir' which
+        // match 'pattern'.
+        static auto globIter(string dir, string pattern)
+        {
+            return dirEntries(dir, pattern, SpanMode.shallow);
+        }
+
+        // Returns whether the given string contains wildcard characters.
+        static bool containsWildcards(in char[] s) @safe pure nothrow
+        {
+            foreach (c; s)
+                if (c == '*' || c == '?' || c == '{' || c == '[') return true;
+            return false;
+        }
+
+        // Whether the range only contains one element (i.e. the pattern
+        // did not contain any wildcards).
+        bool m_single;
+
+        // Caches for empty and front.
+        bool m_empty = true;
+        DirEntry m_front;
+
+        // A list subpatterns, plus an optional suffix.  For example, if the
+        // original pattern is "foo/bar/*/baz/abc?/*/def", then m_subPatterns
+        // will be ["foo/bar/*", "baz/abc?", "*"] and m_suffix will be "def".
+        string[] m_subPatterns;
+        string m_suffix;
+
+        // The underlying directory iteration ranges, one for each subpattern.
+        alias ReturnType!globIter DirIter;
+        DirIter[] m_dirIters;
+    }
+    return Glob(pattern);
+}
+
+unittest
+{
+    alias typeof(glob(string.init)) GlobRange;
+    static assert (isInputRange!GlobRange
+                   && is(ElementType!GlobRange == DirEntry));
+}
+
+
 /**
 Returns the path to a directory for temporary files.
 
