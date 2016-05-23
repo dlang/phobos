@@ -655,29 +655,36 @@ template Tuple(Specs...)
         int opCmp(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
-            foreach (i, Unused; Types)
-            {
-                if (field[i] != rhs.field[i])
-                {
-                    return field[i] < rhs.field[i] ? -1 : 1;
-                }
-            }
-            return 0;
+            mixin(opCmpImpl);
         }
 
         /// ditto
         int opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
+            mixin(opCmpImpl);
+        }
+        private enum string opCmpImpl = q{
             foreach (i, Unused; Types)
             {
-                if (field[i] != rhs.field[i])
+                static if (is(typeof(field[i].opCmp(rhs.field[i]))))
                 {
-                    return field[i] < rhs.field[i] ? -1 : 1;
+                    immutable c = field[i].opCmp(rhs.field[i]);
+                    if (c != 0) return c;
+                }
+                else static if (is(typeof(rhs.field[i].opCmp(field[i]))))
+                {
+                    immutable c = rhs.field[i].opCmp(field[i]);
+                    if (c != 0) return -c;
+                }
+                else
+                {
+                    if (field[i] != rhs.field[i])
+                        return (field[i] < rhs.field[i]) ? -1 : 1;
                 }
             }
             return 0;
-        }
+        };
 
         /**
             The first `v1` for which `v1 > v2` is true determines
@@ -1275,6 +1282,48 @@ unittest
         assert(t[0] == 1 && t[1] == 2);
         Tuple!(long, uint) t2 = ints;
         assert(t2[0] == 1 && t2[1] == 2);
+    }
+    // opCmp runtime
+    {
+        struct S
+        {
+            int i;
+            int opCmp(const S rhs) const pure @safe
+            {
+                if (i != rhs.i)
+                    return (i < rhs.i) ? -1 : 1;
+                return 0;
+            }
+            int opCmp(const int rhs) const pure @safe
+            {
+                if (i != rhs)
+                    return (i < rhs) ? -1 : 1;
+                return 0;
+            }
+            bool opEquals(T)(T rhs) const {assert(0);}
+        }
+        //Uniform initialization
+        auto s(int k){return S(k);}
+        auto i(int k){return k;}
+        foreach (f1; TypeTuple!(i, s))
+        {
+            foreach (f2; TypeTuple!(i, s))
+            {
+                auto a = tuple(f1(1), f2(2));
+                auto b = tuple(f2(1), f1(2));
+                auto c = tuple(f1(2), f2(0));
+                const d = tuple(f2(2), f1(0));
+                const e = tuple(f1(1), f2(0));
+                const f = tuple(f2(1), f1(0));
+                assert(a <= b && a >= b);
+                assert(c <= d && c >= d);
+                assert(e <= f && e >= f);
+
+                assert(a < c && a < d && b < c && b < d);
+                assert(a > e && a > f && b > e && b > f);
+                assert(c > e && c > f && d > e && d > f);
+            }
+        }
     }
 }
 @safe unittest
