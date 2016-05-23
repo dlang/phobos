@@ -788,6 +788,8 @@ struct NWayUnion(alias less, RangeOfRanges)
     private alias ElementType = .ElementType!(.ElementType!RangeOfRanges);
     private alias comp = binaryFun!less;
     private RangeOfRanges _ror;
+
+    ///
     static bool compFront(.ElementType!RangeOfRanges a,
             .ElementType!RangeOfRanges b)
     {
@@ -796,6 +798,7 @@ struct NWayUnion(alias less, RangeOfRanges)
     }
     BinaryHeap!(RangeOfRanges, compFront) _heap;
 
+    ///
     this(RangeOfRanges ror)
     {
         import std.algorithm.mutation : remove, SwapStrategy;
@@ -807,13 +810,16 @@ struct NWayUnion(alias less, RangeOfRanges)
         _heap.acquire(_ror);
     }
 
+    ///
     @property bool empty() { return _ror.empty; }
 
+    ///
     @property auto ref front()
     {
         return _heap.front.front;
     }
 
+    ///
     void popFront()
     {
         _heap.removeFront();
@@ -900,6 +906,7 @@ private:
     }
 
 public:
+    ///
     this(R1 r1, R2 r2)
     {
         this.r1 = r1;
@@ -908,12 +915,14 @@ public:
         adjustPosition();
     }
 
+    ///
     void popFront()
     {
         r1.popFront();
         adjustPosition();
     }
 
+    ///
     @property auto ref front()
     {
         assert(!empty);
@@ -922,6 +931,7 @@ public:
 
     static if (isForwardRange!R1 && isForwardRange!R2)
     {
+        ///
         @property typeof(this) save()
         {
             auto ret = this;
@@ -931,6 +941,7 @@ public:
         }
     }
 
+    ///
     @property bool empty() { return r1.empty; }
 }
 
@@ -1010,6 +1021,7 @@ private:
     }
 
 public:
+    ///
     this(Rs input)
     {
         this._input = input;
@@ -1017,6 +1029,7 @@ public:
         adjustPosition();
     }
 
+    ///
     @property bool empty()
     {
         foreach (ref r; _input)
@@ -1026,6 +1039,7 @@ public:
         return false;
     }
 
+    ///
     void popFront()
     {
         assert(!empty);
@@ -1042,6 +1056,7 @@ public:
         adjustPosition();
     }
 
+    ///
     @property ElementType front()
     {
         assert(!empty);
@@ -1050,6 +1065,7 @@ public:
 
     static if (allSatisfy!(isForwardRange, Rs))
     {
+        ///
         @property SetIntersection save()
         {
             auto ret = this;
@@ -1158,6 +1174,7 @@ private:
     }
 
 public:
+    ///
     this(R1 r1, R2 r2)
     {
         this.r1 = r1;
@@ -1166,6 +1183,7 @@ public:
         adjustPosition();
     }
 
+    ///
     void popFront()
     {
         assert(!empty);
@@ -1187,6 +1205,7 @@ public:
         adjustPosition();
     }
 
+    ///
     @property auto ref front()
     {
         assert(!empty);
@@ -1197,6 +1216,7 @@ public:
 
     static if (isForwardRange!R1 && isForwardRange!R2)
     {
+        ///
         @property typeof(this) save()
         {
             auto ret = this;
@@ -1206,8 +1226,10 @@ public:
         }
     }
 
+    ///
     ref auto opSlice() { return this; }
 
+    ///
     @property bool empty() { return r1.empty && r2.empty; }
 }
 
@@ -1300,17 +1322,20 @@ public:
     static assert(!is(CommonType!(staticMap!(.ElementType, Rs)) == void),
         typeof(this).stringof ~ ": incompatible element types.");
 
+    ///
     this(Rs rs)
     {
         this._r = rs;
         adjustPosition();
     }
 
+    ///
     @property bool empty()
     {
         return _crt == _crt.max;
     }
 
+    ///
     void popFront()
     {
         // Assumes _crt is correct
@@ -1327,6 +1352,7 @@ public:
         assert(false);
     }
 
+    ///
     @property auto ref ElementType front()
     {
         assert(!empty);
@@ -1342,6 +1368,7 @@ public:
 
     static if (allSatisfy!(isForwardRange, Rs))
     {
+        ///
         @property auto save()
         {
             auto ret = this;
@@ -1355,6 +1382,7 @@ public:
 
     static if (allSatisfy!(hasLength, Rs))
     {
+        ///
         @property size_t length()
         {
             size_t result;

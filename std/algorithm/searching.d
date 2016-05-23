@@ -321,6 +321,7 @@ is ignored.
     }
 
 public:
+    ///
     this(Range needle)
     {
         if (!needle.length) return;
@@ -347,6 +348,7 @@ public:
         }
     }
 
+    ///
     Range beFound(Range haystack)
     {
         import std.algorithm.comparison : max;
@@ -368,11 +370,13 @@ public:
         return haystack[$ .. $];
     }
 
+    ///
     @property size_t length()
     {
         return needle.length;
     }
 
+    ///
     alias opDollar = length;
 }
 
@@ -1765,8 +1769,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(equal(r, SList!int(2, 5, 7, 3)[]));
 }
 
-// Specialization for searching a random-access range for a
-// bidirectional range
+/// ditto
 R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isRandomAccessRange!R1 && isBidirectionalRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
@@ -1775,9 +1778,7 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
     const needleLength = walkLength(needle.save);
     if (needleLength > haystack.length)
     {
-        // @@@BUG@@@
-        //return haystack[$ .. $];
-        return haystack[haystack.length .. haystack.length];
+        return haystack[$ .. $];
     }
     // @@@BUG@@@
     // auto needleBack = moveBack(needle);
@@ -1837,8 +1838,7 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
     //assert(find!"a == b"("abc", "bc").length == 2);
 }
 
-// Leftover specialization: searching a random-access range for a
-// non-bidirectional forward range
+/// ditto
 R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
     is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
@@ -3850,96 +3850,6 @@ enum OpenRight
     yes /// Interval is open to the right (last element is not included)
 }
 
-struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
-{
-    private Range _input;
-    static if (!is(Sentinel == void))
-        private Sentinel _sentinel;
-    // mixin(bitfields!(
-    //             OpenRight, "_openRight", 1,
-    //             bool,  "_done", 1,
-    //             uint, "", 6));
-    //             OpenRight, "_openRight", 1,
-    //             bool,  "_done", 1,
-    OpenRight _openRight;
-    bool _done;
-
-    static if (!is(Sentinel == void))
-        this(Range input, Sentinel sentinel,
-                OpenRight openRight = OpenRight.yes)
-        {
-            _input = input;
-            _sentinel = sentinel;
-            _openRight = openRight;
-            _done = _input.empty || openRight && predSatisfied();
-        }
-    else
-        this(Range input, OpenRight openRight = OpenRight.yes)
-        {
-            _input = input;
-            _openRight = openRight;
-            _done = _input.empty || openRight && predSatisfied();
-        }
-
-    @property bool empty()
-    {
-        return _done;
-    }
-
-    @property auto ref front()
-    {
-        assert(!empty);
-        return _input.front;
-    }
-
-    private bool predSatisfied()
-    {
-        static if (is(Sentinel == void))
-            return cast(bool) unaryFun!pred(_input.front);
-        else
-            return cast(bool) startsWith!pred(_input, _sentinel);
-    }
-
-    void popFront()
-    {
-        assert(!empty);
-        if (!_openRight)
-        {
-            _done = predSatisfied();
-            _input.popFront();
-            _done = _done || _input.empty;
-        }
-        else
-        {
-            _input.popFront();
-            _done = _input.empty || predSatisfied();
-        }
-    }
-
-    static if (isForwardRange!Range)
-    {
-        static if (!is(Sentinel == void))
-            @property Until save()
-            {
-                Until result = this;
-                result._input     = _input.save;
-                result._sentinel  = _sentinel;
-                result._openRight = _openRight;
-                result._done      = _done;
-                return result;
-            }
-        else
-            @property Until save()
-            {
-                Until result = this;
-                result._input     = _input.save;
-                result._openRight = _openRight;
-                result._done      = _done;
-                return result;
-            }
-    }
-}
-
 /**
 Lazily iterates $(D range) _until the element $(D e) for which
 $(D pred(e, sentinel)) is true.
@@ -3974,6 +3884,104 @@ until(alias pred, Range)
 (Range range, OpenRight openRight = OpenRight.yes)
 {
     return typeof(return)(range, openRight);
+}
+
+/// ditto
+struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
+{
+    private Range _input;
+    static if (!is(Sentinel == void))
+        private Sentinel _sentinel;
+    // mixin(bitfields!(
+    //             OpenRight, "_openRight", 1,
+    //             bool,  "_done", 1,
+    //             uint, "", 6));
+    //             OpenRight, "_openRight", 1,
+    //             bool,  "_done", 1,
+    OpenRight _openRight;
+    bool _done;
+
+    static if (!is(Sentinel == void))
+        ///
+        this(Range input, Sentinel sentinel,
+                OpenRight openRight = OpenRight.yes)
+        {
+            _input = input;
+            _sentinel = sentinel;
+            _openRight = openRight;
+            _done = _input.empty || openRight && predSatisfied();
+        }
+    else
+        ///
+        this(Range input, OpenRight openRight = OpenRight.yes)
+        {
+            _input = input;
+            _openRight = openRight;
+            _done = _input.empty || openRight && predSatisfied();
+        }
+
+    ///
+    @property bool empty()
+    {
+        return _done;
+    }
+
+    ///
+    @property auto ref front()
+    {
+        assert(!empty);
+        return _input.front;
+    }
+
+    private bool predSatisfied()
+    {
+        static if (is(Sentinel == void))
+            return cast(bool) unaryFun!pred(_input.front);
+        else
+            return cast(bool) startsWith!pred(_input, _sentinel);
+    }
+
+    ///
+    void popFront()
+    {
+        assert(!empty);
+        if (!_openRight)
+        {
+            _done = predSatisfied();
+            _input.popFront();
+            _done = _done || _input.empty;
+        }
+        else
+        {
+            _input.popFront();
+            _done = _input.empty || predSatisfied();
+        }
+    }
+
+    static if (isForwardRange!Range)
+    {
+        static if (!is(Sentinel == void))
+            ///
+            @property Until save()
+            {
+                Until result = this;
+                result._input     = _input.save;
+                result._sentinel  = _sentinel;
+                result._openRight = _openRight;
+                result._done      = _done;
+                return result;
+            }
+        else
+            ///
+            @property Until save()
+            {
+                Until result = this;
+                result._input     = _input.save;
+                result._openRight = _openRight;
+                result._done      = _done;
+                return result;
+            }
+    }
 }
 
 ///
