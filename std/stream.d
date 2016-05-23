@@ -2213,6 +2213,16 @@ class File: Stream {
   }
 }
 
+/// static initialization for standard streams
+static this() {
+  sin  = new File(0, FileMode.In ),
+  sout = new File(1, FileMode.Out),
+  serr = new File(2, FileMode.Out);
+}
+
+/// standard input, output and error file stream
+File sin, sout, serr;
+
 /***
  * This subclass is for buffered file system streams.
  *
