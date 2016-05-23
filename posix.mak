@@ -124,7 +124,7 @@ LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 60 ,)
 
 # Set VERSION, where the file is that contains the version string
-VERSION=../dmd/VERSION
+VERSION=../VERSION
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
