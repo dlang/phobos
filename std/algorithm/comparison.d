@@ -1261,7 +1261,9 @@ levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
 
 // max
 /**
-Iterates the passed arguments and return the maximum value.
+Iterates the passed arguments and return the maximum value. Note that floating-point
+NaN values are not handled in a consistent way by this function; see `std.math.fmax`
+if this is a problem.
 
 Params:
     args = The values to select the maximum from. At least two arguments must
@@ -1273,6 +1275,7 @@ Returns:
 
 See_Also:
     $(XREF_PACK algorithm,searching,maxElement)
+    $(XREF_PACK math,fmax)
 */
 MaxType!T max(T...)(T args)
     if (T.length >= 2)
@@ -1380,13 +1383,16 @@ private template MinType(T...)
 
 // min
 /**
-Iterates the passed arguments and returns the minimum value.
+Iterates the passed arguments and returns the minimum value. Note that floating-point
+NaN values are not handled in a consistent way by this function; see `std.math.fmin`
+if this is a problem.
 
 Params: args = The values to select the minimum from. At least two arguments
     must be passed, and they must be comparable with `<`.
 Returns: The minimum of the passed-in values.
 See_Also:
     $(XREF_PACK algorithm,searching,minElement)
+    $(XREF_PACK math,fmin)
 */
 MinType!T min(T...)(T args)
     if (T.length >= 2)

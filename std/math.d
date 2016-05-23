@@ -133,6 +133,7 @@ import core.bitop;
 import core.math;
 import core.stdc.math;
 import std.traits;
+import std.meta;
 
 version(LDC)
 {
@@ -5884,14 +5885,288 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
 real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0.0; }
 
 /****************************************
- * Returns the larger of x and y.
+ * Returns the largest (most positive) element of `nums`.
+ *
+ * Elements are compared after implicit conversion to a common floating-point
+ * type. If `nums` is empty or any element `isNaN`, a `nan` value will be returned.
  */
-real fmax(real x, real y) @safe pure nothrow @nogc { return x > y ? x : y; }
+auto fmax(T ...)(T nums)
+    if (allSatisfy!(ApplyRight!(isImplicitlyConvertible, real), T))
+{
+    pragma(inline, true);
+
+    alias F = AutoFImumType!T;
+    static if (T.length <= 4)
+        return fimumImpl!(">", T.length, F)(nums);
+    else
+        return fimumImpl!(">", F)(nums);
+}
+
+/// ditto
+auto fmax(F, T ...)(T nums)
+    if (isFloatingPoint!F && allSatisfy!(ApplyRight!(isImplicitlyConvertible, F), T))
+{
+    pragma(inline, true);
+
+    alias R = OriginalType!(Unqual!F);
+    static if (T.length <= 4)
+        return fimumImpl!(">", T.length, R)(nums);
+    else
+        return fimumImpl!(">", R)(nums);
+}
+
+/// ditto
+auto fmax(F)(const F[] nums) pure @safe nothrow @nogc
+    if (isFloatingPoint!F)
+{
+    pragma(inline, true);
+
+    alias R = OriginalType!(Unqual!F);
+    return fimumImpl!(">", R)(nums);
+}
+
+/// ditto
+auto fmax(F, size_t count)(auto ref const(F[count]) nums) pure @safe nothrow @nogc
+    if (isFloatingPoint!F)
+{
+    pragma(inline, true);
+
+    alias R = OriginalType!(Unqual!F);
+    static if (count <= 4)
+        return fimumImpl!(">", count, R)(nums);
+    else
+        return fimumImpl!(">", R)(nums[]);
+}
+
+///
+pure @safe nothrow @nogc unittest
+{
+    // Any number of arguments is supported:
+    assert(fmax(101.0, -5.0, 7.3723e121, double.epsilon) == 7.3723e121);
+    assert(fmax(1) == 1.0);
+    assert(fmax(ubyte.max, 25.0f) == 255.0f);
+    // Static and dynamic floating-point arrays, too:
+    double[7] nums = [0.0, double.min_normal, 0.5, -1.0, -double.max, double.infinity, 8];
+    assert(fmax(nums) == double.infinity);
+    assert(fmax(nums[1 .. 3]) == 0.5);
+
+    // NaN handling:
+    assert(fmax().isNaN);
+    assert(fmax(13, -431_315, long.max, real.nan, float.infinity).isNaN);
+
+    // The return type is always floating-point, and mixed signed-unsigned comparisons
+    // are safe, even if all the arguments are integers.
+    assert(fmax(int.min, cast(uint)int.max) is cast(double)int.max);
+    // The F template parameter can be used to request a specific floating-point type:
+    static assert(is(typeof(fmax!float(1u)) == float));
+    static assert(is(typeof(fmax!double(1L)) == double));
+    static assert(is(typeof(fmax!real(1.0f)) == real));
+}
 
 /****************************************
- * Returns the smaller of x and y.
+ * Returns the smallest (most negative) element of `nums`.
+ *
+ * Elements are compared after implicit conversion to a common floating-point
+ * type. If `nums` is empty or any element `isNaN`, a `nan` value will be returned.
  */
-real fmin(real x, real y) @safe pure nothrow @nogc { return x < y ? x : y; }
+auto fmin(T ...)(T nums)
+    if (allSatisfy!(ApplyRight!(isImplicitlyConvertible, real), T))
+{
+    pragma(inline, true);
+
+    alias F = AutoFImumType!T;
+    static if (T.length <= 4)
+        return fimumImpl!("<", T.length, F)(nums);
+    else
+        return fimumImpl!("<", F)(nums);
+}
+
+/// ditto
+auto fmin(F, T ...)(T nums)
+    if (isFloatingPoint!F && allSatisfy!(ApplyRight!(isImplicitlyConvertible, F), T))
+{
+    pragma(inline, true);
+
+    alias R = OriginalType!(Unqual!F);
+    static if (T.length <= 4)
+        return fimumImpl!("<", T.length, R)(nums);
+    else
+        return fimumImpl!("<", R)(nums);
+}
+
+/// ditto
+auto fmin(F)(const F[] nums) pure @safe nothrow @nogc
+    if (isFloatingPoint!F)
+{
+    pragma(inline, true);
+
+    alias R = OriginalType!(Unqual!F);
+    return fimumImpl!("<", R)(nums);
+}
+
+/// ditto
+auto fmin(F, size_t count)(auto ref const(F[count]) nums) pure @safe nothrow @nogc
+    if (isFloatingPoint!F)
+{
+    pragma(inline, true);
+
+    alias R = OriginalType!(Unqual!F);
+    static if (count <= 4)
+        return fimumImpl!("<", count, R)(nums);
+    else
+        return fimumImpl!("<", R)(nums[]);
+}
+
+///
+pure @safe nothrow @nogc unittest
+{
+    // Any number of arguments is supported:
+    assert(fmin(101.0, -5.0, 7.3723e121, double.epsilon) == -5.0);
+    assert(fmin(1) == 1.0);
+    assert(fmin(ubyte.max, 25.0f) == 25.0f);
+    // Static and dynamic floating-point arrays, too:
+    double[7] nums = [0.0, double.min_normal, 0.5, -1.0, -double.max, double.infinity, 8];
+    assert(fmin(nums) == -double.max);
+    assert(fmin(nums[1 .. 3]) == double.min_normal);
+
+    // NaN handling:
+    assert(fmin().isNaN);
+    assert(fmin(13, -431_315, long.max, real.nan, float.infinity).isNaN);
+
+    // The return type is always floating-point, and mixed signed-unsigned comparisons
+    // are safe, even if all the arguments are integers.
+    assert(fmin(-1, cast(uint)int.max) is -1.0);
+    // The F template parameter can be used to request a specific floating-point type:
+    static assert(is(typeof(fmin!float(1u)) == float));
+    static assert(is(typeof(fmin!double(1L)) == double));
+    static assert(is(typeof(fmin!real(1.0f)) == real));
+}
+
+private template AutoFImumType(T ...)
+{
+    private enum int reqPrec =
+    {
+        int max = (T.length == 0) ? double.mant_dig : 0;
+        foreach (V; T)
+        {
+            int prec;
+            static if (is(V : short) || is(V : ushort))
+                prec = 8 * ushort.sizeof;
+            else static if (is(V : int) || is(V : uint))
+                prec = 8 * uint.sizeof;
+            else static if (is(V : long) || is(V : ulong))
+                prec = 8 * ulong.sizeof;
+            else static if (is(typeof(typeof(V.init + 1).mant_dig)))
+                prec = typeof(V.init + 1).mant_dig;
+            else
+                prec = real.mant_dig;
+
+            if (prec > max)
+                max = prec;
+        }
+        return max;
+    }();
+
+    static if (reqPrec <= float.mant_dig)
+        alias AutoFImumType = float;
+    else static if (reqPrec <= double.mant_dig)
+        alias AutoFImumType = double;
+    else
+        alias AutoFImumType = real;
+}
+
+unittest
+{
+    foreach (F; AliasSeq!(float, double, real))
+        static assert(is(AutoFImumType!F == F));
+    foreach (I; AliasSeq!(bool, byte, ubyte, char, short, ushort, wchar))
+        static assert(is(AutoFImumType!I == float));
+    foreach (I; AliasSeq!(int, uint, dchar))
+        static assert(is(AutoFImumType!I == double));
+    foreach (I; AliasSeq!(long, ulong))
+        static assert(is(AutoFImumType!I == real));
+
+    enum Foo : float { foo = 1.0f }
+    static assert(is(AutoFImumType!Foo == float));
+    enum Bar : long { bar = 1 }
+    static assert(is(AutoFImumType!Bar == real));
+
+    struct Baz
+    {
+        short baz;
+        alias baz this;
+    }
+    static assert(is(AutoFImumType!Baz == float));
+
+    static assert(is(AutoFImumType!(ushort, Foo) == float));
+    static assert(is(AutoFImumType!(uint, wchar) == double));
+    static assert(is(AutoFImumType!(Baz, uint, float) == double));
+    static assert(is(AutoFImumType!(byte, Bar, long) == real));
+    static assert(is(AutoFImumType!(real, int) == real));
+    static assert(is(AutoFImumType!(float, real) == real));
+    static assert(is(AutoFImumType!(double, real) == real));
+    static assert(is(AutoFImumType!(real, double, float) == real));
+}
+
+private F fimumImpl(string op, size_t count, F)(F[count] nums ...) pure @safe nothrow @nogc
+    if (isFloatingPoint!F && count <= 4)
+{
+    static if (count <= 2)
+        pragma(inline, true);
+    F ret = F.nan;
+
+    static if (count > 1)
+    {
+        enum ax = 0,
+             bx = 1 + (count > 2);
+
+        static if (count > 2)
+        {
+            static if (count > 3)
+                nums[bx] = fimumImpl!(op, 2)(nums[2], nums[3]);
+            else
+                nums[bx] = nums[2];
+
+            nums[ax] = fimumImpl!(op, 2)(nums[0], nums[1]);
+        }
+
+        ret = (mixin(`nums[ax] ` ~ op ~ `= nums[bx]`) || nums[ax].isNaN) ?
+            nums[ax] : nums[bx];
+    }
+    else static if (count > 0)
+        ret = nums[0];
+
+    return ret;
+}
+
+private F fimumImpl(string op, F)(const(F)[] nums ...) pure @safe nothrow @nogc
+    if (isFloatingPoint!F)
+{
+    enum anti = (mixin(`1 ` ~ op ~ ` -1`) ? -1 : 1) * F.infinity;
+    Unqual!F ret = anti;
+
+    while (nums.length >= 4)
+    {
+        F[4] num4 = nums[0 .. 4];
+        const m4 = fimumImpl!(op, 4)(num4);
+        nums = nums[4 .. $];
+
+        if (mixin(`m4 ` ~ op ~ ` ret`))
+            ret = m4;
+        else if (m4.isNaN)
+            return m4;
+    }
+
+    foreach (num1; nums)
+    {
+        if (mixin(`num1 ` ~ op ~ ` ret`))
+            ret = num1;
+        else if (num1.isNaN)
+            return num1;
+    }
+
+    return ret;
+}
 
 /**************************************
  * Returns (x * y) + z, rounding only once according to the
