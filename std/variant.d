@@ -2613,9 +2613,9 @@ unittest
     Obj obj = 1;
 
     obj.visit!(
-        (int x) => {},
-        (IntTypedef x) => {},
-        (Obj[] x) => {},
+        (int x) {},
+        (IntTypedef x) {},
+        (Obj[] x) {},
     );
 }
 
