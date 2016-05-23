@@ -3499,6 +3499,39 @@ unittest
     static assert(__traits(identifier, EnumMembers!E[2]) == "b");
 }
 
+/**
+Retrieve the base type of an enumerated type $(D enum E).
+
+Params:
+ E = An enumerated type.
+
+Example:
+---
+import std.traits;
+enum En : float { a = 1.0, b = 2.0 }
+EnumBaseType!En f;  // f declared as float
+---
+*/
+template EnumBaseType(E)
+    if (is(E == enum))
+{
+    static if (is(E BaseType == enum))
+    {
+        alias BaseType EnumBaseType;
+    }
+}
+
+unittest
+{
+    enum Ef : float { a = 1.0, b = 2.0 }
+    struct Foo { int opCmp(Foo rhs) { return 0; } }
+    enum Es : Foo { a = Foo(), b = Foo() }
+    enum EnEn : Es { c = Es.a }
+    static assert(is(EnumBaseType!Ef == float));
+    static assert(is(EnumBaseType!Es == Foo));
+    static assert(is(EnumBaseType!EnEn == Es)
+                  && is(EnumBaseType!(EnumBaseType!EnEn) == Foo));
+}
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Classes and Interfaces
