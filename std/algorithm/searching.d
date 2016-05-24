@@ -2563,6 +2563,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
         {
             asTuple = typeof(asTuple)(pre, separator, post);
         }
+        void opAssign(typeof(asTuple) rhs)
+        {
+            asTuple = rhs;
+        }
         Tuple!(S1, S1, S2) asTuple;
         bool opCast(T : bool)()
         {
@@ -2623,6 +2627,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
         {
             asTuple = typeof(asTuple)(pre, post);
         }
+        void opAssign(typeof(asTuple) rhs)
+        {
+            asTuple = rhs;
+        }
         Tuple!(S1, S2) asTuple;
         bool opCast(T : bool)()
         {
@@ -2679,6 +2687,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
         {
             asTuple = typeof(asTuple)(pre, post);
         }
+        void opAssign(typeof(asTuple) rhs)
+        {
+            asTuple = rhs;
+        }
         Tuple!(S1, S2) asTuple;
         bool opCast(T : bool)()
         {
@@ -2733,7 +2745,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     auto a = "Carl Sagan Memorial Station";
     auto r = findSplit(a, "Velikovsky");
@@ -2758,7 +2770,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r2[1] == " Memorial Station");
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto r = findSplit(a, [9, 1]);
@@ -2791,7 +2803,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r2[1] == a[4 .. $]);
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -2826,6 +2838,37 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r2);
     assert(equal(r2[0], a[0 .. 4]));
     assert(equal(r2[1], a[4 .. $]));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    auto str = "sep,one,sep,two";
+
+    auto split = str.findSplitAfter(",");
+    assert(split[0] == "sep,");
+
+    split = split[1].findSplitAfter(",");
+    assert(split[0] == "one,");
+
+    split = split[1].findSplitBefore(",");
+    assert(split[0] == "sep");
+}
+
+@safe pure nothrow @nogc unittest
+{
+    auto str = "sep,one,sep,two";
+
+    auto split = str.findSplitBefore(",two");
+    assert(split[0] == "sep,one,sep");
+    assert(split[1] == ",two");
+
+    split = split[0].findSplitBefore(",sep");
+    assert(split[0] == "sep,one");
+    assert(split[1] == ",sep");
+
+    split = split[0].findSplitAfter(",");
+    assert(split[0] == "sep,");
+    assert(split[1] == "one");
 }
 
 // minCount
