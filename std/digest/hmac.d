@@ -8,9 +8,6 @@ the corresponding $(WEB en.wikipedia.org/wiki/Hash-based_message_authentication_
 $(SCRIPT inhibitQuickIndex = 1;)
 
 Macros:
-WIKI = Phobos/StdDigestHMAC
-SUBMODULE = $(LINK2 std_digest_$1.html, std.digest.$1)
-SUBREF = $(LINK2 std_digest_$1.html#.$2, $(TT $2))$(NBSP)
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 

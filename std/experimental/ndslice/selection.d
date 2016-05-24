@@ -1,7 +1,7 @@
 /**
 $(SCRIPT inhibitQuickIndex = 1;)
 
-This is a submodule of $(LINK2 std_experimental_ndslice.html, std.experimental.ndslice).
+This is a submodule of $(MREF std, experimental, ndslice).
 
 Selectors create new views and iteration patterns over the same data, without copying.
 
@@ -47,8 +47,7 @@ Authors:   Ilya Yaroshenko
 Source:    $(PHOBOSSRC std/_experimental/_ndslice/_selection.d)
 
 Macros:
-SUBMODULE = $(LINK2 std_experimental_ndslice_$1.html, std.experimental.ndslice.$1)
-SUBREF = $(LINK2 std_experimental_ndslice_$1.html#.$2, $(TT $2))$(NBSP)
+SUBREF = $(REF_ALTTEXT $(TT $2), $2, std,experimental, ndslice, $1)$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
 */
@@ -1560,7 +1559,7 @@ pure nothrow unittest
 
 /++
 Returns a slice, the elements of which are equal to the initial multidimensional index value.
-This is multidimensional analog of $(LINK2 std_range.html#iota, std.range.iota).
+This is multidimensional analog of $(REF iota, std, range).
 For a flattened (continuous) index, see $(LREF iotaSlice).
 
 Params:

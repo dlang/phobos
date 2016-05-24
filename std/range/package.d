@@ -20,12 +20,12 @@ Submodules:
 
 This module has two submodules:
 
-The $(LINK2 std_range_primitives.html, $(D std._range.primitives)) submodule
+The $(MREF std, _range, primitives) submodule
 provides basic _range functionality. It defines several templates for testing
 whether a given object is a _range, what kind of _range it is, and provides
 some common _range operations.
 
-The $(LINK2 std_range_interfaces.html, $(D std._range.interfaces)) submodule
+The $(MREF std, _range, interfaces) submodule
 provides object-based interfaces for working with ranges via runtime
 polymorphism.
 
@@ -168,8 +168,8 @@ $(BOOKTABLE ,
 
 Ranges whose elements are sorted afford better efficiency with certain
 operations. For this, the $(D $(LREF assumeSorted)) function can be used to
-construct a $(D $(LREF SortedRange)) from a pre-sorted _range. The $(LINK2
-std_algorithm.html#sort, $(D std.algorithm.sort)) function also conveniently
+construct a $(D $(LREF SortedRange)) from a pre-sorted _range. The $(REF
+sort, std, algorithm, sorting) function also conveniently
 returns a $(D SortedRange). $(D SortedRange) objects provide some additional
 _range operations that take advantage of the fact that the _range is sorted.
 

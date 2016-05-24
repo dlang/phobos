@@ -2,7 +2,7 @@
 This module implements a singly-linked list container.
 It can be used as a stack.
 
-This module is a submodule of $(LINK2 std_container.html, std.container).
+This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_slist.d)
 Macros:

@@ -116,21 +116,21 @@ $(LEADINGROW Publicly imported functions)
 )
 
 There is a rich set of functions for _string handling defined in other modules.
-Functions related to Unicode and ASCII are found in $(LINK2 std_uni.html, std.uni)
-and $(LINK2 std_ascii.html, std.ascii), respectively. Other functions that have a
-wider generality than just strings can be found in $(LINK2 std_algorithm.html,
-std.algorithm) and $(LINK2 std_range.html, std.range).
+Functions related to Unicode and ASCII are found in $(MREF std, uni)
+and $(MREF std, ascii), respectively. Other functions that have a
+wider generality than just strings can be found in $(MREF std, algorithm)
+and $(MREF std, range).
 
 See_Also:
     $(LIST
-    $(LINK2 std_algorithm.html, std.algorithm) and
-    $(LINK2 std_range.html, std.range)
+    $(MREF std, algorithm) and
+    $(MREF std, range)
     for generic range algorithms
     ,
-    $(LINK2 std_ascii.html, std.ascii)
+    $(MREF std, ascii)
     for functions that work with ASCII strings
     ,
-    $(LINK2 std_uni.html, std.uni)
+    $(MREF std, uni)
     for functions that work with unicode strings
     )
 
@@ -5198,16 +5198,15 @@ body
  * See if character c is in the pattern.
  * Patterns:
  *
- *  A <i>pattern</i> is an array of characters much like a <i>character
- *  class</i> in regular expressions. A sequence of characters
+ *  A $(I pattern) is an array of characters much like a $(I character
+ *  class) in regular expressions. A sequence of characters
  *  can be given, such as "abcde". The '-' can represent a range
  *  of characters, as "a-e" represents the same pattern as "abcde".
  *  "a-fA-F0-9" represents all the hex characters.
  *  If the first character of a pattern is '^', then the pattern
  *  is negated, i.e. "^0-9" means any character except a digit.
- *  The functions inPattern, <b>countchars</b>, <b>removeschars</b>,
- *  and <b>squeeze</b>
- *  use patterns.
+ *  The functions inPattern, $(B countchars), $(B removeschars),
+ *  and $(B squeeze) use patterns.
  *
  * Note: In the future, the pattern syntax may be improved
  *  to be more like regular expression character classes.
@@ -5448,7 +5447,7 @@ S squeeze(S)(S s, in S pattern = null)
 /***************************************************************
  Finds the position $(D_PARAM pos) of the first character in $(D_PARAM
  s) that does not match $(D_PARAM pattern) (in the terminology used by
- $(LINK2 std_string.html,inPattern)). Updates $(D_PARAM s =
+ $(XREF string,inPattern)). Updates $(D_PARAM s =
  s[pos..$]). Returns the slice from the beginning of the original
  (before update) string up to, and excluding, $(D_PARAM pos).
 
@@ -5456,7 +5455,6 @@ The $(D_PARAM munch) function is mostly convenient for skipping
 certain category of characters (e.g. whitespace) when parsing
 strings. (In such cases, the return value is not used.)
  */
-
 S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
 {
     size_t j = s.length;
