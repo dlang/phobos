@@ -1711,13 +1711,18 @@ assert(equal(rbt[], [5]));
     }
 
     /**
-    Formats the RedBlackTree into a sink function. For more info see
-    $(D std.format.formatValue)
-    */
-    void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) const {
-        sink("RedBlackTree(");
-        sink.formatValue(this[], fmt);
-        sink(")");
+      Formats the RedBlackTree into a sink function. For more info see $(D
+      std.format.formatValue). Note that this only is available when the
+      element type can be formatted. Otherwise, the default toString from
+      Object is used.
+     */
+    static if(is(typeof((){FormatSpec!(char) fmt; formatValue((const(char)[]) {}, ConstRange.init, fmt);})))
+    {
+        void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) const {
+            sink("RedBlackTree(");
+            sink.formatValue(this[], fmt);
+            sink(")");
+        }
     }
 
     /**
@@ -2043,4 +2048,11 @@ unittest
     static assert(is(typeof(rt1.upperBound(3).front) == immutable(int)));
     import std.algorithm : equal;
     assert(rt1.upperBound(2).equal([3, 4, 5]));
+}
+
+// issue 15941
+unittest
+{
+    class C {}
+    RedBlackTree!(C, "cast(void*)a < cast(void*)b") tree;
 }
