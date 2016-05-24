@@ -45,6 +45,8 @@ $(BUGSTITLE Library Changes,
         $(XREF conv, to) instead.)
     $(LI $(RELATIVE_LINK2 min-max-element,
     `std.algorithm.searching.{min,max}Element` for ranges have been added.))
+    $(LI $(XREF Ternary, std,typecons) was added to represent three valued
+    logic.)
 )
 
 $(BUGSTITLE Library Changes,

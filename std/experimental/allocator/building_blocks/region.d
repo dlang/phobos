@@ -33,6 +33,7 @@ struct Region(ParentAllocator = NullAllocator,
     static assert(ParentAllocator.alignment >= minAlign);
 
     import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     // state
     /**
@@ -379,6 +380,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     import std.algorithm : max;
     import std.conv : to;
     import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     static assert(minAlign.isGoodStaticAlignment);
     static assert(size >= minAlign);
@@ -594,6 +596,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         pthread_mutex_t, pthread_mutex_lock, pthread_mutex_unlock,
         PTHREAD_MUTEX_INITIALIZER;
     private static shared pthread_mutex_t sbrkMutex = PTHREAD_MUTEX_INITIALIZER;
+    import std.typecons : Ternary;
 
     // workaround for https://issues.dlang.org/show_bug.cgi?id=14617
     version(OSX)
@@ -780,6 +783,7 @@ version(Posix) unittest
 
 version(Posix) unittest
 {
+    import std.typecons : Ternary;
     alias alloc = SbrkRegion!(8).instance;
     auto a = alloc.alignedAllocate(2001, 4096);
     assert(a.length == 2001);

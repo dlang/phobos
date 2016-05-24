@@ -7,7 +7,7 @@ composite allocators.
 */
 struct NullAllocator
 {
-    import std.experimental.allocator.common : Ternary;
+    import std.typecons : Ternary;
     /**
     $(D NullAllocator) advertises a relatively large _alignment equal to 64 KB.
     This is because $(D NullAllocator) never actually needs to honor this
@@ -68,6 +68,6 @@ unittest
     assert(b is null);
     NullAllocator.instance.deallocate(b);
     NullAllocator.instance.deallocateAll();
-    import std.experimental.allocator.common : Ternary;
+    import std.typecons : Ternary;
     assert(NullAllocator.instance.owns(null) == Ternary.no);
 }
