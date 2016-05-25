@@ -135,8 +135,8 @@ See_Also:
     )
 
 Macros:
-        SHORTXREF=$(XREF2 $1, $2, $(TT $2))
-        SHORTXREF_PACK=$(XREF_PACK_NAMED $1,$2,$3, $(TT $3))
+        SHORTXREF=$(REF_ALTTEXT $(TT $2), $2, std,$1)
+        SHORTXREF_PACK=$(REF_ALTTEXT $(TT $3), $3, std,$1,$2)
 
 Copyright: Copyright Digital Mars 2007-.
 

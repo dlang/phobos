@@ -3471,8 +3471,8 @@ Params:
 args = The first argument $(D args[0]) should be the format string, specifying
 how to format the rest of the arguments. For a full description of the syntax
 of the format string and how it controls the formatting of the rest of the
-arguments, please refer to the documentation for $(XREF format,
-formattedWrite).
+arguments, please refer to the documentation for $(REF formattedWrite,
+std,format).
 
 Note: In older versions of Phobos, it used to be possible to write:
 

@@ -477,7 +477,7 @@ defines $(D KeyType) to be $(D K) and $(D ValueType) to be $(D V).
 
 /**
 Defines the container's primary range, which embodies one of the
-ranges defined in $(XREFMODULE range).
+ranges defined in $(MREF std,range).
 
 Generally a container may define several types of ranges.
  */

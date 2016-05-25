@@ -104,8 +104,8 @@ import std.exception;  // basicExceptionCtors
  * be made when there is failure to match the header see $(LREF
  * HeaderMismatchException) for details.
  *
- * When performing type conversions, $(XREF ConvException) is stored in the $(D
- * next) field.
+ * When performing type conversions, $(REF ConvException, std,conv) is stored in
+ * the $(D next) field.
  */
 class CSVException : Exception
 {

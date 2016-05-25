@@ -1610,8 +1610,7 @@ haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
 pred).
 
 To _find the last element of a bidirectional $(D haystack) satisfying
-$(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
-range, retro).
+$(D pred), call $(D find!(pred)(retro(haystack))). See $(REF retro, std,range).
 
 Params:
 
@@ -2527,8 +2526,8 @@ entire `haystack`.
 
 If `haystack` is a random-access range, all three components of the tuple have
 the same type as `haystack`. Otherwise, `haystack` must be a forward range and
-the type of `result[0]` and `result[1]` is the same as $(XREF
-range,takeExactly).
+the type of `result[0]` and `result[1]` is the same as $(REF takeExactly,
+std,range).
 
 Params:
     pred = Predicate to use for comparing needle against haystack.
@@ -3108,7 +3107,7 @@ Params:
 Returns: The minimal element of the passed-in range.
 
 See_Also:
-    $(XREF algorithm, comparison, min)
+    $(REF min, std,algorithm,comparison)
 */
 auto minElement(alias map = "a", Range)(Range r)
     if (isInputRange!Range && !isInfinite!Range)
@@ -3198,7 +3197,7 @@ Params:
 Returns: The maximal element of the passed-in range.
 
 See_Also:
-    $(XREF algorithm, comparison, max)
+    $(REF max, std,algorithm,comparison)
 */
 auto maxElement(alias map = "a", Range)(Range r)
     if (isInputRange!Range && !isInfinite!Range &&

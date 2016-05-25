@@ -7,8 +7,8 @@ $(COMMENT Pending changelog for 2.072. This will get copied to dlang.org and
 $(BUGSTITLE Library Changes,
     $(LI $(RELATIVE_LINK2 process, Process creation in `std.process` was sped up
         on Posix.))
-    $(LI $(RELATIVE_LINK2 std-algorithm-iteration-cumulativeFold, $(XREF
-        algorithm.iterator, cumulativeFold) was added.))
+    $(LI $(RELATIVE_LINK2 std-algorithm-iteration-cumulativeFold,
+        `algorithm.iteration.cumulativeFold` was added.))
     $(LI $(RELATIVE_LINK2 padLeft-padRight, `std.range.padLeft` and
         `std.range.padRight` were added.))
     $(LI $(RELATIVE_LINK2 regex-multiple-patterns, `std.regex.regex` now
@@ -45,7 +45,7 @@ $(BUGSTITLE Library Changes,
         $(REF to, std,conv) instead.)
     $(LI $(RELATIVE_LINK2 min-max-element,
     `std.algorithm.searching.{min,max}Element` for ranges have been added.))
-    $(LI $(XREF Ternary, std,typecons) was added to represent three valued
+    $(LI $(REF Ternary, std,typecons) was added to represent three valued
     logic.)
 )
 
@@ -60,10 +60,10 @@ $(LI $(LNAME2 process, Process creation in `std.process` was sped up on Posix.)
     )
 )
 
-$(LI $(LNAME2 std-algorithm-iteration-cumulativeFold, $(XREF algorithm.iteration,
-cumulativeFold) was added.)
+$(LI $(LNAME2 std-algorithm-iteration-cumulativeFold,
+    `algorithm.iteration.cumulativeFold` was added.))
 
-    $(P $(REF cumulativeFold, std,algorithm.iterator) returns the successive
+    $(P $(REF cumulativeFold, std,algorithm,iteration) returns the successive
         reduced values of an input range.)
 ------
 assert([1, 2, 3, 4, 5].cumulativeFold!((a, b) => a + b).array == [1, 3, 6, 10, 15]);
@@ -213,8 +213,8 @@ $(LI $(LNAME2 iota-length-size_t, `std.range.iota's `.length` property is fixed
 
 $(LI $(LNAME2 min-max-element, `std.algorithm.searching.{min,max}Element`
 	have been added.)
-    $(P $(XREF algorithm, searching, minElement) and $(XREF algorithm,
-    searching, maxElement) are functions to search for the minimum and maximum
+    $(P $(REF minElement, algorithm,searching) and $(REF maxElement,
+    algorithm,searching) are functions to search for the minimum and maximum
     element in a range. They support a custom `map` accessor.
     )
 

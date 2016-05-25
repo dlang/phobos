@@ -3085,8 +3085,8 @@ This function is also known as
     $(WEB mathworld.wolfram.com/CumulativeSum.html, Cumulative Sum).
 Returns:
     The function returns a range containing the consecutive reduced values. If
-    there is more than one `fun`, the element type will be $(XREF typecons,
-    Tuple) containing one element for each `fun`.
+    there is more than one `fun`, the element type will be $(REF Tuple,
+    std,typecons) containing one element for each `fun`.
 
 See_Also:
     $(WEB en.wikipedia.org/wiki/Prefix_sum, Prefix Sum)
@@ -3118,8 +3118,8 @@ if (fun.length >= 1)
 
     /++
     Seed version. The seed should be a single value if `fun` is a single
-    function. If `fun` is multiple functions, then `seed` should be a $(XREF
-    typecons, Tuple), with one field per function in `f`.
+    function. If `fun` is multiple functions, then `seed` should be a
+    $(REF Tuple, std,typecons), with one field per function in `f`.
     For convenience, if the seed is const, or has qualified fields, then
     `cumulativeFold` will operate on an unqualified copy. If this happens
     then the returned type will not perfectly match `S`.
@@ -3288,8 +3288,8 @@ if (fun.length >= 1)
 Sometimes it is very useful to compute multiple aggregates in one pass.
 One advantage is that the computation is faster because the looping overhead
 is shared. That's why `cumulativeFold` accepts multiple functions.
-If two or more functions are passed, `cumulativeFold` returns a $(XREF typecons,
-Tuple) object with one member per passed-in function.
+If two or more functions are passed, `cumulativeFold` returns a $(REF Tuple,
+std,typecons) object with one member per passed-in function.
 The number of seeds must be correspondingly increased.
 */
 @safe unittest
@@ -4883,8 +4883,8 @@ Lazily computes all _permutations of $(D r) using $(WEB
 en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
 
 Returns:
-A forward range the elements of which are an $(XREF range,
-indexed) view into $(D r).
+A forward range the elements of which are an $(REF indexed, std,range)
+view into $(D r).
 
 See_Also:
 $(REF nextPermutation, std,algorithm,sorting).
