@@ -6,18 +6,25 @@ $(SCRIPT inhibitQuickIndex = 1;)
 
 $(DIVC quickindex,
 $(BOOKTABLE ,
-$(TR $(TH Category) $(TH Functions)
+$(TR
+    $(TH Category)
+    $(TH Functions)
 )
-$(TR $(TDNW Template API) $(TD $(MYREF MD5)
-)
-)
-$(TR $(TDNW OOP API) $(TD $(MYREF MD5Digest))
-)
-$(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
-)
+$(TR
+    $(TDNW Template API)
+    $(TD $(MYREF MD5)
 )
 )
-
+$(TR
+    $(TDNW OOP API)
+    $(TD $(MYREF MD5Digest))
+)
+$(TR
+    $(TDNW Helpers)
+    $(TD $(MYREF md5Of))
+)
+)
+)
  * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
  * differences between the template and the OOP API, see $(D std.digest.digest).
  *

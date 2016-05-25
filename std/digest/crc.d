@@ -2,21 +2,27 @@
 Cyclic Redundancy Check (32-bit) implementation.
 
 $(SCRIPT inhibitQuickIndex = 1;)
-
 $(DIVC quickindex,
 $(BOOKTABLE ,
-$(TR $(TH Category) $(TH Functions)
+$(TR
+    $(TH Category)
+    $(TH Functions)
 )
-$(TR $(TDNW Template API) $(TD $(MYREF CRC32)
-)
-)
-$(TR $(TDNW OOP API) $(TD $(MYREF CRC32Digest))
-)
-$(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
-)
+$(TR
+    $(TDNW Template API)
+    $(TD $(MYREF CRC32)
 )
 )
-
+$(TR
+    $(TDNW OOP API)
+    $(TD $(MYREF CRC32Digest))
+)
+$(TR
+    $(TDNW Helpers)
+    $(TD $(MYREF crcHexString) $(MYREF crc32Of))
+)
+)
+)
  *
  * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
  * differences between the template and the OOP API, see $(D std.digest.digest).
