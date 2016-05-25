@@ -4,9 +4,7 @@ This is a submodule of $(MREF std, algorithm).
 It contains generic _comparison algorithms.
 
 $(BOOKTABLE Cheat Sheet,
-
 $(TR $(TH Function Name) $(TH Description))
-
 $(T2 among,
         Checks if a value is among a set of values, e.g.
         $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))

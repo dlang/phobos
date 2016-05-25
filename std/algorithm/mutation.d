@@ -4,9 +4,7 @@ This is a submodule of $(MREF std, algorithm).
 It contains generic _mutation algorithms.
 
 $(BOOKTABLE Cheat Sheet,
-
 $(TR $(TH Function Name) $(TH Description))
-
 $(T2 bringToFront,
         If $(D a = [1, 2, 3]) and $(D b = [4, 5, 6, 7]),
         $(D bringToFront(a, b)) leaves $(D a = [4, 5, 6]) and

@@ -4,9 +4,7 @@ This is a submodule of $(MREF std, algorithm).
 It contains generic _iteration algorithms.
 
 $(BOOKTABLE Cheat Sheet,
-
 $(TR $(TH Function Name) $(TH Description))
-
 $(T2 cache,
         Eagerly evaluates and caches another range's $(D front).)
 $(T2 cacheBidirectional,
