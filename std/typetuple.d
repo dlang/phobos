@@ -12,7 +12,7 @@ module std.typetuple;
 public import std.meta;
 
 /**
- * Alternate name for $(XREF meta,AliasSeq) for legacy compatibility.
+ * Alternate name for $(REF AliasSeq, std,meta) for legacy compatibility.
  */
 alias TypeTuple = AliasSeq;
 

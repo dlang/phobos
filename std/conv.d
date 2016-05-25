@@ -5204,7 +5204,7 @@ unittest
     (e.g from $(D int) to $(D long)).
 
     Note that the result is always mutable even if the original type was const
-    or immutable. In order to retain the constness, use $(XREF traits, Unsigned).
+    or immutable. In order to retain the constness, use $(REF Unsigned, std,traits).
  */
 auto unsigned(T)(T x) if (isIntegral!T)
 {
@@ -5278,7 +5278,7 @@ unittest
     (e.g from $(D uint) to $(D ulong)).
 
     Note that the result is always mutable even if the original type was const
-    or immutable. In order to retain the constness, use $(XREF traits, Signed).
+    or immutable. In order to retain the constness, use $(REF Signed, std,traits).
  */
 auto signed(T)(T x) if (isIntegral!T)
 {

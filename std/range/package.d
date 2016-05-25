@@ -2967,7 +2967,7 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 }
 
 /**
-Given callable ($(XREF traits, isCallable)) $(D fun), create as a range
+Given callable ($(REF isCallable, std,traits)) $(D fun), create as a range
 whose front is defined by successive calls to $(D fun()).
 This is especially useful to call function with global side effects (random
 functions), or to create ranges expressed as a single delegate, rather than
@@ -2981,7 +2981,7 @@ The resulting range will call $(D fun()) on every call to $(D front),
 and only when $(D front) is called, regardless of how the range is
 iterated.
 It is advised to compose generate with either
-$(XREF_PACK algorithm,iteration,cache) or $(XREF array,array), or to use it in a
+$(XREF_PACK algorithm,iteration,cache) or $(REF array, std,array), or to use it in a
 foreach loop.
 A by-value foreach loop means that the loop value is not $(D ref).
 
@@ -5370,7 +5370,7 @@ auto iota(B, E)(B begin, E end)
 }
 
 /**
-User-defined types such as $(XREF bigint, BigInt) are also supported, as long
+User-defined types such as $(REF BigInt, std,bigint) are also supported, as long
 as they can be incremented with $(D ++) and compared with $(D <) or $(D ==).
 */
 // Issue 6447
@@ -7274,7 +7274,7 @@ unittest
 /**
 Iterate over $(D range) with an attached index variable.
 
-Each element is a $(XREF typecons, Tuple) containing the index
+Each element is a $(REF Tuple, std,typecons) containing the index
 and the element, in that order, where the index member is named $(D index)
 and the element member is named $(D value).
 
@@ -9222,7 +9222,7 @@ struct NullSink
   It is important to note that as the resultant range is evaluated lazily,
   in the case of the version of $(D tee) that takes a function, the function
   will not actually be executed until the range is "walked" using functions
-  that evaluate ranges, such as $(XREF array,array) or
+  that evaluate ranges, such as $(REF array, std,array) or
   $(XREF_PACK algorithm,iteration,fold).
 
   Params:

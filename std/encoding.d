@@ -2197,7 +2197,7 @@ unittest
     r = Destination string
 
  See_Also:
-    $(XREF conv, to)
+    $(REF to, std,conv)
  */
 void transcode(Src,Dst)(immutable(Src)[] s,out immutable(Dst)[] r)
 in

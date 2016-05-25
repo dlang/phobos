@@ -339,7 +339,7 @@ range, which must be a range of tuples (Key, Value). Returns a null associative
 array reference when given an empty range.
 Duplicates: Associative arrays have unique keys. If r contains duplicate keys,
 then the result will contain the value of the last pair for that key in r.
-See_Also: $(XREF typecons, Tuple)
+See_Also: $(REF Tuple, std,typecons)
  */
 
 auto assocArray(Range)(Range r)
@@ -1247,7 +1247,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 /********************************************
 Returns an array that consists of $(D s) (which must be an input
 range) repeated $(D n) times. This function allocates, fills, and
-returns a new array. For a lazy version, refer to $(XREF range, repeat).
+returns a new array. For a lazy version, refer to $(REF repeat, std,range).
  */
 ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
 {
@@ -1330,7 +1330,7 @@ See_Also:
 $(XREF_PACK algorithm,iteration,splitter) for a version that splits using any
 separator.
 
-$(XREF regex, splitter) for a version that splits using a regular
+$(REF splitter, std,regex) for a version that splits using a regular
 expression defined separator.
 +/
 S[] split(S)(S s) @safe pure

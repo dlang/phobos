@@ -722,7 +722,7 @@ private struct RBRange(N)
  * of $(BIGOH lg(n)).
  *
  * To use a different comparison than $(D "a < b"), pass a different operator string
- * that can be used by $(XREF functional, binaryFun), or pass in a
+ * that can be used by $(REF binaryFun, std,functional), or pass in a
  * function, delegate, functor, or any type where $(D less(a, b)) results in a $(D bool)
  * value.
  *

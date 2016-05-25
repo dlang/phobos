@@ -376,7 +376,7 @@ alias CaseSensitive = Flag!"caseSensitive";
 
     Throws:
         If the sequence starting at $(D startIdx) does not represent a well
-        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
+        formed codepoint, then a $(REF UTFException, std,utf) may be thrown.
 
   +/
 ptrdiff_t indexOf(Range)(Range s, in dchar c,
@@ -699,7 +699,7 @@ unittest
 
     Throws:
         If the sequence starting at $(D startIdx) does not represent a well
-        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
+        formed codepoint, then a $(REF UTFException, std,utf) may be thrown.
 
     Bugs:
         Does not work with case insensitive strings where the mapping of
@@ -971,7 +971,7 @@ unittest
 
     Throws:
         If the sequence ending at $(D startIdx) does not represent a well
-        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
+        formed codepoint, then a $(REF UTFException, std,utf) may be thrown.
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
@@ -1157,7 +1157,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 
     Throws:
         If the sequence ending at $(D startIdx) does not represent a well
-        formed codepoint, then a $(XREF utf,UTFException) may be thrown.
+        formed codepoint, then a $(REF UTFException, std,utf) may be thrown.
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
@@ -1538,7 +1538,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
     then $(D -1) is returned. The $(D startIdx) slices $(D haystack) in the
     following way $(D haystack[startIdx .. $]). $(D startIdx) represents a
     codeunit index in $(D haystack). If the sequence ending at $(D startIdx)
-    does not represent a well formed codepoint, then a $(XREF utf,UTFException)
+    does not represent a well formed codepoint, then a $(REF UTFException, std,utf)
     may be thrown.
 
     Params:
@@ -1707,7 +1707,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     then $(D -1) is returned. The $(D stopIdx) slices $(D haystack) in the
     following way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit
     index in $(D haystack). If the sequence ending at $(D startIdx) does not
-    represent a well formed codepoint, then a $(XREF utf,UTFException) may be
+    represent a well formed codepoint, then a $(REF UTFException, std,utf) may be
     thrown.
 
     Params:
@@ -2281,7 +2281,7 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  *     The capitalized string.
  *
  * See_Also:
- *      $(XREF uni, asCapitalized) for a lazy range version that doesn't allocate memory
+ *      $(REF asCapitalized, std,uni) for a lazy range version that doesn't allocate memory
  */
 S capitalize(S)(S input) @trusted pure
     if (isSomeString!S)
@@ -2350,8 +2350,8 @@ auto capitalize(S)(auto ref S s)
 
 /++
     Split $(D s) into an array of lines according to the unicode standard using
-    $(D '\r'), $(D '\n'), $(D "\r\n"), $(XREF uni, lineSep),
-    $(XREF uni, paraSep), $(D U+0085) (NEL), $(D '\v')  and $(D '\f')
+    $(D '\r'), $(D '\n'), $(D "\r\n"), $(REF lineSep, std,uni),
+    $(REF paraSep, std,uni), $(D U+0085) (NEL), $(D '\v')  and $(D '\f')
     as delimiters. If $(D keepTerm) is set to $(D KeepTerminator.yes), then the
     delimiter is included in the strings returned.
 
@@ -2371,8 +2371,8 @@ auto capitalize(S)(auto ref S s)
     array of strings, each element is a line that is a slice of $(D s)
   See_Also:
     $(LREF lineSplitter)
-    $(XREF algorithm, splitter)
-    $(XREF regex, splitter)
+    $(REF splitter, std,algorithm)
+    $(REF splitter, std,regex)
  +/
 alias KeepTerminator = Flag!"keepTerminator";
 
@@ -2679,7 +2679,7 @@ public:
 /***********************************
  *  Split an array or slicable range of characters into a range of lines
     using $(D '\r'), $(D '\n'), $(D '\v'), $(D '\f'), $(D "\r\n"),
-    $(XREF uni, lineSep), $(XREF uni, paraSep) and $(D '\u0085') (NEL)
+    $(REF lineSep, std,uni), $(REF paraSep, std,uni) and $(D '\u0085') (NEL)
     as delimiters. If $(D keepTerm) is set to $(D KeepTerminator.yes), then the
     delimiter is included in the slices returned.
 
@@ -2698,8 +2698,8 @@ public:
 
   See_Also:
     $(LREF splitLines)
-    $(XREF algorithm, splitter)
-    $(XREF regex, splitter)
+    $(REF splitter, std,algorithm)
+    $(REF splitter, std,regex)
  */
 auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
     if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
@@ -2819,7 +2819,7 @@ unittest
 }
 
 /++
-    Strips leading whitespace (as defined by $(XREF uni, isWhite)).
+    Strips leading whitespace (as defined by $(REF isWhite, std,uni)).
 
     Params:
         input = string or ForwardRange of characters
@@ -2827,7 +2827,7 @@ unittest
     Returns: $(D input) stripped of leading whitespace.
 
     Postconditions: $(D input) and the returned value
-    will share the same tail (see $(XREF array, sameTail)).
+    will share the same tail (see $(REF sameTail, std,array)).
 
     See_Also:
         Generic stripping on ranges: $(REF _stripLeft, std, algorithm, mutation)
@@ -2893,7 +2893,7 @@ unittest
 }
 
 /++
-    Strips trailing whitespace (as defined by $(XREF uni, isWhite)).
+    Strips trailing whitespace (as defined by $(REF isWhite, std,uni)).
 
     Params:
         str = string or random access range of characters
@@ -3055,7 +3055,7 @@ unittest
 
 /++
     Strips both leading and trailing whitespace (as defined by
-    $(XREF uni, isWhite)).
+    $(REF isWhite, std,uni)).
 
     Params:
         str = string or random access range of characters
@@ -3158,7 +3158,7 @@ auto strip(Range)(auto ref Range str)
     $(D delimiter), then it is returned unchanged.
 
     If no $(D delimiter) is given, then one trailing  $(D '\r'), $(D '\n'),
-    $(D "\r\n"), $(D '\f'), $(D '\v'), $(XREF uni, lineSep), $(XREF uni, paraSep), or $(XREF uni, nelSep)
+    $(D "\r\n"), $(D '\f'), $(D '\v'), $(REF lineSep, std,uni), $(REF paraSep, std,uni), or $(REF nelSep, std,uni)
     is removed from the end of $(D str). If $(D str) does not end with any of those characters,
     then it is returned unchanged.
 
@@ -4744,7 +4744,7 @@ unittest
 
     See_Also:
         $(LREF tr)
-        $(XREF array, replace)
+        $(REF replace, std,array)
 
     Params:
         str        = The original string.
@@ -5012,7 +5012,7 @@ private void translateImpl(C1, T, C2, Buffer)(C1[] str,
 
     See_Also:
         $(LREF tr)
-        $(XREF array, replace)
+        $(REF replace, std,array)
 
     Params:
         str        = The original string.
@@ -5447,7 +5447,7 @@ S squeeze(S)(S s, in S pattern = null)
 /***************************************************************
  Finds the position $(D_PARAM pos) of the first character in $(D_PARAM
  s) that does not match $(D_PARAM pattern) (in the terminology used by
- $(XREF string,inPattern)). Updates $(D_PARAM s =
+ $(REF inPattern, std,string)). Updates $(D_PARAM s =
  s[pos..$]). Returns the slice from the beginning of the original
  (before update) string up to, and excluding, $(D_PARAM pos).
 

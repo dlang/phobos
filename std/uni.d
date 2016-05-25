@@ -4,7 +4,7 @@
     $(P The $(D std.uni) module provides an implementation
     of fundamental Unicode algorithms and data structures.
     This doesn't include UTF encoding and decoding primitives,
-    see $(XREF _utf, decode) and $(XREF _utf, encode) in std.utf
+    see $(REF decode, std,_utf) and $(REF encode, std,_utf) in std.utf
     for this functionality. )
 
     $(P All primitives listed operate on Unicode characters and
@@ -1851,7 +1851,7 @@ public alias CodepointSet = InversionList!GcPolicy;
 // public alias CodepointInterval = Tuple!(uint, "a", uint, "b");
 
 /**
-    The recommended type of $(XREF _typecons, Tuple)
+    The recommended type of $(REF Tuple, std,_typecons)
     to represent [a, b$(RPAREN) intervals of $(CODEPOINTS). As used in $(LREF InversionList).
     Any interval type should pass $(LREF isIntegralPair) trait.
 */
@@ -2293,8 +2293,8 @@ public:
         open-right intervals and feed it to $(D sink).
         )
         $(P Used by various standard formatting facilities such as
-         $(XREF _format, formattedWrite), $(XREF _stdio, write),
-         $(XREF _stdio, writef), $(XREF _conv, to) and others.
+         $(REF formattedWrite, std,_format), $(REF write, std,_stdio),
+         $(REF writef, std,_stdio), $(REF to, std,_conv) and others.
         )
         Example:
         ---
@@ -4322,9 +4322,9 @@ private template buildTrie(Value, Key, Args...)
         In other words $(LREF mapTrieIndex) should be a
         monotonically increasing function that maps $(D Key) to an integer.
 
-        See_Also: $(XREF _algorithm, sort),
-        $(XREF _range, SortedRange),
-        $(XREF _algorithm, setUnion).
+        See_Also: $(REF sort, std,_algorithm),
+        $(REF SortedRange, std,_range),
+        $(REF setUnion, std,_algorithm).
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
         if (isInputRange!Range && is(typeof(Range.init.front[0]) : Value)
@@ -7116,7 +7116,7 @@ unittest
 }
 
 /**
- * By using $(XREF utf, byUTF) and its aliases, GC allocations via auto-decoding
+ * By using $(REF byUTF, std,utf) and its aliases, GC allocations via auto-decoding
  * and thrown exceptions can be avoided, making `icmp` `@safe @nogc nothrow pure`.
  */
 @safe @nogc nothrow pure unittest
@@ -8203,7 +8203,7 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
  *
  * Does not allocate memory.
  * Characters in UTF-8 or UTF-16 format that cannot be decoded
- * are treated as $(XREF utf, replacementDchar).
+ * are treated as $(REF replacementDchar, std,utf).
  *
  * Params:
  *      str = string or range of characters
@@ -8423,7 +8423,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
  *
  * Does not allocate memory.
  * Characters in UTF-8 or UTF-16 format that cannot be decoded
- * are treated as $(XREF utf, replacementDchar).
+ * are treated as $(REF replacementDchar, std,utf).
  *
  * Params:
  *      str = string or range of characters
@@ -8958,7 +8958,7 @@ unittest
     to produce an algorithm that can convert a range of characters to upper case
     without allocating memory.
     A string can then be produced by using $(XREF_PACK algorithm,mutation,copy)
-    to send it to an $(XREF array, appender).
+    to send it to an $(REF appender, std,array).
 +/
 @safe pure nothrow @nogc
 dchar toUpper(dchar c)

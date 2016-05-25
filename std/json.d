@@ -700,7 +700,7 @@ struct JSONValue
 
 /**
 Parses a serialized string and returns a tree of JSON values.
-Throws: $(XREF json,JSONException) if the depth exceeds the max depth.
+Throws: $(REF JSONException, std,json) if the depth exceeds the max depth.
 Params:
     json = json-formatted string to parse
     maxDepth = maximum depth of nesting allowed, -1 disables depth checking
@@ -1068,7 +1068,7 @@ unittest
 
 /**
 Parses a serialized string and returns a tree of JSON values.
-Throws: $(XREF json,JSONException) if the depth exceeds the max depth.
+Throws: $(REF JSONException, std,json) if the depth exceeds the max depth.
 Params:
     json = json-formatted string to parse
     options = enable decoding string representations of NaN/Inf as float values

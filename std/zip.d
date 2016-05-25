@@ -155,7 +155,7 @@ final class ArchiveMember
 
     /**
      * Set the OS specific file attributes, as obtained by
-     * $(XREF file,getAttributes) or $(XREF file,DirEntry.attributes), for this archive member.
+     * $(REF getAttributes, std,file) or $(REF DirEntry.attributes, std,file), for this archive member.
      */
     @property void fileAttributes(uint attr)
     {

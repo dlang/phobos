@@ -33,7 +33,7 @@ $(T2 endsWith,
         $(D endsWith("rocks", "ks")) returns $(D true).)
 $(T2 find,
         $(D find("hello world", "or")) returns $(D "orld") using linear search.
-        (For binary search refer to $(XREF range,sortedRange).))
+        (For binary search refer to $(REF sortedRange, std,range).))
 $(T2 findAdjacent,
         $(D findAdjacent([1, 2, 3, 3, 4])) returns the subrange starting with
         two equal adjacent elements, i.e. $(D [3, 3, 4]).)
@@ -398,7 +398,7 @@ $(D takeExactly(r1, n)), where $(D n) is the number of elements in the common
 prefix of both ranges.
 
 See_Also:
-    $(XREF range, takeExactly)
+    $(REF takeExactly, std,range)
  */
 auto commonPrefix(alias pred = "a == b", R1, R2)(R1 r1, R2 r2)
 if (isForwardRange!R1 && isInputRange!R2 &&
@@ -1317,7 +1317,7 @@ pred). Performs $(BIGOH walkLength(haystack)) evaluations of $(D
 pred).
 
 To _find the last occurrence of $(D needle) in $(D haystack), call $(D
-find(retro(haystack), needle)). See $(XREF range, retro).
+find(retro(haystack), needle)). See $(REF retro, std,range).
 
 Params:
 

@@ -131,7 +131,7 @@ private alias enforceFmt = enforceEx!FormatException;
    Params:
 
    w = Output is sent to this writer. Typical output writers include
-   $(XREF array,Appender!string) and $(XREF stdio,LockingTextWriter).
+   $(REF Appender!string, std,array) and $(REF LockingTextWriter, std,stdio).
 
    fmt = Format string.
 
@@ -6415,7 +6415,7 @@ unittest
 /*****************************************************
  * Format arguments into a string.
  *
- * Params: fmt  = Format string. For detailed specification, see $(XREF _format,formattedWrite).
+ * Params: fmt  = Format string. For detailed specification, see $(REF formattedWrite, std,_format).
  *         args = Variadic list of arguments to format into returned string.
  */
 immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar!Char)

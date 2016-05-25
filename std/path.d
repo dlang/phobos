@@ -10,8 +10,8 @@
     between a _path that points to a directory and a _path that points to a
     file, and it does not know whether or not the object pointed to by the
     _path actually exists in the file system.
-    To differentiate between these cases, use $(XREF file,isDir) and
-    $(XREF file,exists).
+    To differentiate between these cases, use $(REF isDir, std,file) and
+    $(REF exists, std,file).
 
     Note that on Windows, both the backslash ($(D `\`)) and the slash ($(D `/`))
     are in principle valid directory separators.  This module treats them
@@ -3547,7 +3547,7 @@ unittest
     or is equal to $(D ".") or $(D "..").
 
     $(B It does $(I not) check whether the _path points to an existing file
-    or directory; use $(XREF file,exists) for this purpose.)
+    or directory; use $(REF exists, std,file) for this purpose.)
 
     On Windows, some special rules apply:
     $(UL

@@ -388,7 +388,7 @@ unittest
 
 /**
  * Checks whether the digest has a $(D blockSize) member, which contains the
- * digest's internal block size in bits. It is primarily used by $(XREF digest.hmac, HMAC).
+ * digest's internal block size in bits. It is primarily used by $(REF HMAC, std,digest.hmac).
  */
 
 template hasBlockSize(T)

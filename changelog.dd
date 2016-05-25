@@ -28,12 +28,12 @@ $(BUGSTITLE Library Changes,
         exposed))
     $(LI $(RELATIVE_LINK2 iota-length-size_t, `std.range.iota's `.length`
         property is fixed to `size_t` instead of the type being iterated))
-    $(LI $(XREF uni, isNumber) and $(XREF uni, isPunctuation) now use a separate,
+    $(LI $(REF isNumber, std,uni) and $(REF isPunctuation, std,uni) now use a separate,
     optimized path for ASCII inputs.)
-    $(LI $(XREF uni, isAlphaNum), which is analogous to $(XREF ascii, isAlphaNum)
+    $(LI $(REF isAlphaNum, std,uni), which is analogous to $(REF isAlphaNum, std,ascii)
         was added.)
-    $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.)
-    $(LI std.regex had numerous optimization applied, compile-time $(XREF regex, ctRegex)
+    $(LI $(REF regex, std,regex) now supports inline comments with (?#...) syntax.)
+    $(LI std.regex had numerous optimization applied, compile-time $(REF ctRegex, std,regex)
     should now be generally faster then the run-time version.)
     $(LI $(REF moveAt, std,range,primitives) accepts only `size_t` for its index
     arguments.)
@@ -42,7 +42,7 @@ $(BUGSTITLE Library Changes,
     $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
         rangified.)
     $(LI All overloads of `std.conv.toImpl` has been made private. Please use
-        $(XREF conv, to) instead.)
+        $(REF to, std,conv) instead.)
     $(LI $(RELATIVE_LINK2 min-max-element,
     `std.algorithm.searching.{min,max}Element` for ranges have been added.))
     $(LI $(XREF Ternary, std,typecons) was added to represent three valued
@@ -63,7 +63,7 @@ $(LI $(LNAME2 process, Process creation in `std.process` was sped up on Posix.)
 $(LI $(LNAME2 std-algorithm-iteration-cumulativeFold, $(XREF algorithm.iteration,
 cumulativeFold) was added.)
 
-    $(P $(XREF algorithm.iterator, cumulativeFold) returns the successive
+    $(P $(REF cumulativeFold, std,algorithm.iterator) returns the successive
         reduced values of an input range.)
 ------
 assert([1, 2, 3, 4, 5].cumulativeFold!((a, b) => a + b).array == [1, 3, 6, 10, 15]);
@@ -73,7 +73,7 @@ assert([1, 2, 3].cumulativeFold!((a, b) => a + b)(100).array == [101, 103, 106])
 
 $(LI $(LNAME2 padLeft-padRight, `std.range.padLeft` and `std.range.padRight`
         were added.)
-    $(P $(XREF range, padLeft) and $(XREF range, padRight) are functions for
+    $(P $(REF padLeft, std,range) and $(REF padRight, std,range) are functions for
         padding ranges to a specified length using the given element.
     )
 
@@ -102,7 +102,7 @@ assert(m.front[1] == "12");
 -------
 )
 
-$(LI $(LNAME2 regex-with-matches, $(XREF regex, splitter) now supports keeping the
+$(LI $(LNAME2 regex-with-matches, $(REF splitter, std,regex) now supports keeping the
 pattern matches in the resulting range.)
 -------
 import std.regex;
@@ -203,7 +203,7 @@ $(LI $(LNAME2 mutation, `std.algorithm.mutation.swapAt` was exposed)
 
 $(LI $(LNAME2 iota-length-size_t, `std.range.iota's `.length` property is fixed
         to `size_t` instead of the type being iterated)
-    $(P $(XREF range, iota)'s `.length` property is now always returned as
+    $(P $(REF iota, std,range)'s `.length` property is now always returned as
         `size_t`.  This means if you are on a 32-bit CPU and you are using
         iota to iterate 64-bit types, the length will be truncated to `size_t`.
         In non-release mode, you will get an exception if the length exceeds

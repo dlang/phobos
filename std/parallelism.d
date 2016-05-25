@@ -414,7 +414,7 @@ meaning that any memory writes made in the thread that executed the $(D Task)
 are guaranteed to be visible in the calling thread after one of these functions
 returns.
 
-The $(XREF parallelism, task) and $(XREF parallelism, scopedTask) functions can
+The $(REF task, std,parallelism) and $(REF scopedTask, std,parallelism) functions can
 be used to create an instance of this struct.  See $(D task) for usage examples.
 
 Function results are returned from $(D yieldForce), $(D spinForce) and
@@ -733,7 +733,7 @@ struct Task(alias fun, Args...)
     newly created thread, then terminate the thread.  This can be used for
     future/promise parallelism.  An explicit priority may be given
     to the $(D Task).  If one is provided, its value is forwarded to
-    $(D core.thread.Thread.priority). See $(XREF parallelism, task) for
+    $(D core.thread.Thread.priority). See $(REF task, std,parallelism) for
     usage example.
     */
     void executeInNewThread() @trusted
@@ -771,8 +771,8 @@ ReturnType!F run(F, Args...)(F fpOrDelegate, ref Args args)
 /**
 Creates a $(D Task) on the GC heap that calls an alias.  This may be executed
 via $(D Task.executeInNewThread) or by submitting to a
-$(XREF parallelism, TaskPool).  A globally accessible instance of
-$(D TaskPool) is provided by $(XREF parallelism, taskPool).
+$(REF TaskPool, std,parallelism).  A globally accessible instance of
+$(D TaskPool) is provided by $(REF taskPool, std,parallelism).
 
 Returns:  A pointer to the $(D Task).
 
@@ -883,7 +883,7 @@ identical to the non-@safe case, but safety introduces some restrictions:
 1.  $(D fun) must be @safe or @trusted.
 
 2.  $(D F) must not have any unshared aliasing as defined by
-    $(XREF traits, hasUnsharedAliasing).  This means it
+    $(REF hasUnsharedAliasing, std,traits).  This means it
     may not be an unshared delegate or a non-shared class or struct
     with overloaded $(D opCall).  This also precludes accepting template
     alias parameters.
@@ -1000,7 +1000,7 @@ thread that executes the $(D Task) at the front of the queue when one is
 available and sleeps when the queue is empty.
 
 This class should usually be used via the global instantiation
-available via the $(XREF parallelism, taskPool) property.
+available via the $(REF taskPool, std,parallelism) property.
 Occasionally it is useful to explicitly instantiate a $(D TaskPool):
 
 1.  When you want $(D TaskPool) instances with multiple priorities, for example
@@ -3141,7 +3141,7 @@ public:
     Notes:
 
     @trusted overloads of this function are called for $(D Task)s if
-    $(XREF traits, hasUnsharedAliasing) is false for the $(D Task)'s
+    $(REF hasUnsharedAliasing, std,traits) is false for the $(D Task)'s
     return type or the function the $(D Task) executes is $(D pure).
     $(D Task) objects that meet all other requirements specified in the
     $(D @trusted) overloads of $(D task) and $(D scopedTask) may be created

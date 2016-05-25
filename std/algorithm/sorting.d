@@ -10,7 +10,7 @@ $(T2 completeSort,
         $(D completeSort(a, b)) leaves $(D a = [6, 10, 15]) and $(D b = [20,
         30, 40]).
         The range $(D a) must be sorted prior to the call, and as a result the
-        combination $(D $(XREF range,chain)(a, b)) is sorted.)
+        combination $(D $(REF chain, std,range)(a, b)) is sorted.)
 $(T2 isPartitioned,
         $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns $(D true) because
         the predicate is $(D true) for a portion of the range and $(D false)
@@ -594,7 +594,7 @@ Params:
     pivot = The pivot element.
 
 Returns:
-    A $(XREF typecons,Tuple) of the three resulting ranges. These ranges are
+    A $(REF Tuple, std,typecons) of the three resulting ranges. These ranges are
     slices of the original range.
 
 BUGS: stable $(D partition3) has not been implemented yet.
@@ -1084,12 +1084,12 @@ Sorts a random-access range according to the predicate $(D less). Performs
 $(BIGOH r.length * log(r.length)) evaluations of $(D less). Stable sorting
 requires $(D hasAssignableElements!Range) to be true.
 
-$(D sort) returns a $(XREF range, SortedRange) over the original range, which
+$(D sort) returns a $(REF SortedRange, std,range) over the original range, which
 functions that can take advantage of sorted data can then use to know that the
-range is sorted and adjust accordingly. The $(XREF range, SortedRange) is a
+range is sorted and adjust accordingly. The $(REF SortedRange, std,range) is a
 wrapper around the original range, so both it and the original range are sorted,
 but other functions won't know that the original range has been sorted, whereas
-they $(I can) know that $(XREF range, SortedRange) has been sorted.
+they $(I can) know that $(REF SortedRange, std,range) has been sorted.
 
 The predicate is expected to satisfy certain rules in order for $(D sort) to
 behave as expected - otherwise, the program may fail on certain inputs (but not
@@ -1099,7 +1099,7 @@ $(D less(a,c)) (transitivity), and, conversely, $(D !less(a,b) && !less(b,c)) to
 imply $(D !less(a,c)). Note that the default predicate ($(D "a < b")) does not
 always satisfy these conditions for floating point types, because the expression
 will always be $(D false) when either $(D a) or $(D b) is NaN.
-Use $(XREF math, cmp) instead.
+Use $(REF cmp, std,math) instead.
 
 If `less` involves expensive computations on the _sort key, it may be
 worthwhile to use $(LREF schwartzSort) instead.
@@ -1121,10 +1121,10 @@ or more allocations per call. Both algorithms have $(BIGOH n log n) worst-case
 time complexity.
 
 See_Also:
-    $(XREF range, assumeSorted)$(BR)
-    $(XREF range, SortedRange)$(BR)
+    $(REF assumeSorted, std,range)$(BR)
+    $(REF SortedRange, std,range)$(BR)
     $(XREF_PACK algorithm,mutation,SwapStrategy)$(BR)
-    $(XREF functional, binaryFun)
+    $(REF binaryFun, std,functional)
 */
 SortedRange!(Range, less)
 sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,

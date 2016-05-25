@@ -225,7 +225,7 @@ wait(spawnProcess("myapp", ["foo" : "bar"], Config.newEnv));
 
 Standard_streams:
 The optional arguments $(D stdin), $(D stdout) and $(D stderr) may
-be used to assign arbitrary $(XREF stdio,File) objects as the standard
+be used to assign arbitrary $(REF File, std,stdio) objects as the standard
 input, output and error streams, respectively, of the child process.  The
 former must be opened for reading, while the latter two must be opened for
 writing.  The default is for the child process to inherit the standard
@@ -260,14 +260,14 @@ Params:
 args    = An array which contains the program name as the zeroth element
           and any command-line arguments in the following elements.
 stdin   = The standard input stream of the child process.
-          This can be any $(XREF stdio,File) that is opened for reading.
+          This can be any $(REF File, std,stdio) that is opened for reading.
           By default the child process inherits the parent's input
           stream.
 stdout  = The standard output stream of the child process.
-          This can be any $(XREF stdio,File) that is opened for writing.
+          This can be any $(REF File, std,stdio) that is opened for writing.
           By default the child process inherits the parent's output stream.
 stderr  = The standard error stream of the child process.
-          This can be any $(XREF stdio,File) that is opened for writing.
+          This can be any $(REF File, std,stdio) that is opened for writing.
           By default the child process inherits the parent's error stream.
 env     = Additional environment variables for the child process.
 config  = Flags that control process creation. See $(LREF Config)
@@ -281,7 +281,7 @@ A $(LREF Pid) object that corresponds to the spawned process.
 
 Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF stdio,StdioException) on failure to pass one of the streams
+$(REF StdioException, std,stdio) on failure to pass one of the streams
     to the child process (Windows only).$(BR)
 $(CXREF exception,RangeError) if $(D args) is empty.
 */
@@ -1588,7 +1588,7 @@ Returns:
 A $(LREF Pipe) object that corresponds to the created _pipe.
 
 Throws:
-$(XREF stdio,StdioException) on failure.
+$(REF StdioException, std,stdio) on failure.
 */
 version (Posix)
 Pipe pipe() @trusted //TODO: @safe
@@ -1655,7 +1655,7 @@ struct Pipe
     /**
     Closes both ends of the pipe.
 
-    Normally it is not necessary to do this manually, as $(XREF stdio,File)
+    Normally it is not necessary to do this manually, as $(REF File, std,stdio)
     objects are automatically closed when there are no more references
     to them.
 
@@ -1664,7 +1664,7 @@ struct Pipe
     child process is platform dependent.)
 
     Throws:
-    $(XREF exception,ErrnoException) if an error occurs.
+    $(REF ErrnoException, std,exception) if an error occurs.
     */
     void close() @safe
     {
@@ -1729,14 +1729,14 @@ shellPath = The path to the shell to use to run the specified program.
             By default this is $(LREF nativeShell).
 
 Returns:
-A $(LREF ProcessPipes) object which contains $(XREF stdio,File)
+A $(LREF ProcessPipes) object which contains $(REF File, std,stdio)
 handles that communicate with the redirected streams of the child
 process, along with a $(LREF Pid) object that corresponds to the
 spawned process.
 
 Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF stdio,StdioException) on failure to redirect any of the streams.$(BR)
+$(REF StdioException, std,stdio) on failure to redirect any of the streams.$(BR)
 
 Example:
 ---
@@ -2000,7 +2000,7 @@ unittest
 }
 
 /**
-Object which contains $(XREF stdio,File) handles that allow communication
+Object which contains $(REF File, std,stdio) handles that allow communication
 with a child process through its standard streams.
 */
 struct ProcessPipes
@@ -2013,7 +2013,7 @@ struct ProcessPipes
     }
 
     /**
-    An $(XREF stdio,File) that allows writing to the child process'
+    An $(REF File, std,stdio) that allows writing to the child process'
     standard input stream.
 
     Throws:
@@ -2029,7 +2029,7 @@ struct ProcessPipes
     }
 
     /**
-    An $(XREF stdio,File) that allows reading from the child process'
+    An $(REF File, std,stdio) that allows reading from the child process'
     standard output stream.
 
     Throws:
@@ -2045,7 +2045,7 @@ struct ProcessPipes
     }
 
     /**
-    An $(XREF stdio,File) that allows reading from the child process'
+    An $(REF File, std,stdio) that allows reading from the child process'
     standard error stream.
 
     Throws:
@@ -2122,7 +2122,7 @@ value is the signal number.  (See $(LREF wait) for details.)
 
 Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF stdio,StdioException) on failure to capture output.
+$(REF StdioException, std,stdio) on failure to capture output.
 */
 auto execute(in char[][] args,
              const string[string] env = null,
@@ -2981,7 +2981,7 @@ static:
 
     Throws:
     $(OBJECTREF Exception) if the environment variable does not exist,
-    or $(XREF utf,UTFException) if the variable contains invalid UTF-16
+    or $(REF UTFException, std,utf) if the variable contains invalid UTF-16
     characters (Windows only).
 
     See_also:
@@ -3016,7 +3016,7 @@ static:
     ---
 
     Throws:
-    $(XREF utf,UTFException) if the variable contains invalid UTF-16
+    $(REF UTFException, std,utf) if the variable contains invalid UTF-16
     characters (Windows only).
     */
     string get(in char[] name, string defaultValue = null) @safe

@@ -72,7 +72,7 @@ Params:
     otherRanges = Zero or more non-infinite forward ranges
 
 Returns:
-    A forward range of $(XREF typecons,Tuple) representing elements of the
+    A forward range of $(REF Tuple, std,typecons) representing elements of the
     cartesian product of the given ranges.
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)

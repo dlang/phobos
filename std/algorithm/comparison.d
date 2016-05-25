@@ -1767,7 +1767,7 @@ the benefit of have better complexity than the $(D AllocateGC.no) option. Howeve
 this option is only available for ranges whose equality can be determined via each
 element's $(D toHash) method. If customized equality is needed, then the $(D pred)
 template parameter can be passed, and the function will automatically switch to
-the non-allocating algorithm. See $(XREF functional,binaryFun) for more details on
+the non-allocating algorithm. See $(REF binaryFun, std,functional) for more details on
 how to define $(D pred).
 
 Non-allocating forward range option: $(BIGOH n^2)

@@ -632,7 +632,7 @@ public:
     /**
         Implements casting to integer types.
 
-        Throws: $(XREF conv,ConvOverflowException) if the number exceeds
+        Throws: $(REF ConvOverflowException, std,conv) if the number exceeds
         the target type's range.
      */
     T opCast(T:ulong)() /*pure*/ const

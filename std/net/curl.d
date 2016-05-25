@@ -1975,7 +1975,7 @@ private mixin template Protocol()
      * theprotocol.netInterface = [ 192, 168, 1, 32 ];
      * ----
      *
-     * See: $(XREF socket, InternetAddress)
+     * See: $(REF InternetAddress, std,socket)
      */
     @property void netInterface(const(char)[] i)
     {
@@ -2628,7 +2628,7 @@ struct HTTP
          * theprotocol.netInterface = [ 192, 168, 1, 32 ];
          * ----
          *
-         * See: $(XREF socket, InternetAddress)
+         * See: $(REF InternetAddress, std,socket)
          */
         @property void netInterface(const(char)[] i);
 
@@ -3308,7 +3308,7 @@ struct FTP
          * theprotocol.netInterface = [ 192, 168, 1, 32 ];
          * ----
          *
-         * See: $(XREF socket, InternetAddress)
+         * See: $(REF InternetAddress, std,socket)
          */
         @property void netInterface(const(char)[] i);
 
@@ -3657,7 +3657,7 @@ struct SMTP
          * theprotocol.netInterface = [ 192, 168, 1, 32 ];
          * ----
          *
-         * See: $(XREF socket, InternetAddress)
+         * See: $(REF InternetAddress, std,socket)
          */
         @property void netInterface(const(char)[] i);
 

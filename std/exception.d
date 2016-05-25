@@ -1748,7 +1748,7 @@ Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
 
 opSlice:
 Infinite ranges with slicing support must return an instance of
-$(XREF range, Take) when sliced with a specific lower and upper
+$(REF Take, std,range) when sliced with a specific lower and upper
 bound (see $(XREF_PACK range,primitives,hasSlicing)); $(D handle) deals with
 this by $(D take)ing 0 from the return value of the handler function and
 returning that when an exception is caught.

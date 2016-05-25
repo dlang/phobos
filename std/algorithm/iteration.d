@@ -122,7 +122,7 @@ The result is then directly returned when $(D front) is called,
 rather than re-evaluated.
 
 This can be a useful function to place in a chain, after functions
-that have expensive evaluation, as a lazy alternative to $(XREF array,array).
+that have expensive evaluation, as a lazy alternative to $(REF array, std,array).
 In particular, it can be placed after a call to $(D map), or before a call
 to $(D filter).
 
@@ -205,7 +205,7 @@ Tip: $(D cache) is eager when evaluating elements. If calling front on the
 underlying _range has a side effect, it will be observeable before calling
 front on the actual cached _range.
 
-Furthermore, care should be taken composing $(D cache) with $(XREF _range,take).
+Furthermore, care should be taken composing $(D cache) with $(REF take, std,_range).
 By placing $(D take) before $(D cache), then $(D cache) will be "aware"
 of when the _range ends, and correctly stop caching elements when needed.
 If calling front has no side effect though, placing $(D take) after $(D cache)
@@ -840,13 +840,13 @@ can be avoided by explicitly specifying a predicate lambda with a
 $(D lazy) parameter.
 
 $(D each) also supports $(D opApply)-based iterators, so it will work
-with e.g. $(XREF parallelism, parallel).
+with e.g. $(REF parallel, std,parallelism).
 
 Params:
     pred = predicate to apply to each element of the range
     r = range or iterable over which each iterates
 
-See_Also: $(XREF range,tee)
+See_Also: $(REF tee, std,range)
 
  */
 template each(alias pred = "a")
@@ -1029,7 +1029,7 @@ unittest
 $(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
 
 Implements the higher order _filter function. The predicate is passed to
-$(XREF functional,unaryFun), and can either accept a string, or any callable
+$(REF unaryFun, std,functional), and can either accept a string, or any callable
 that can be executed via $(D pred(element)).
 
 Params:
@@ -1232,9 +1232,9 @@ private struct FilterResult(alias pred, Range)
  * finding the last element in the range that satisfies the filtering
  * condition (in addition to finding the first one). The advantage is
  * that the filtered range can be spanned from both directions. Also,
- * $(XREF range, retro) can be applied against the filtered range.
+ * $(REF retro, std,range) can be applied against the filtered range.
  *
- * The predicate is passed to $(XREF functional,unaryFun), and can either
+ * The predicate is passed to $(REF unaryFun, std,functional), and can either
  * accept a string, or any callable that can be executed via $(D pred(element)).
  *
  * Params:
@@ -1325,7 +1325,7 @@ Similarly to $(D uniq), $(D group) produces a range that iterates over unique
 consecutive elements of the given range. Each element of this range is a tuple
 of the element and the number of times it is repeated in the original range.
 Equivalence of elements is assessed by using the predicate $(D pred), which
-defaults to $(D "a == b").  The predicate is passed to $(XREF functional,binaryFun),
+defaults to $(D "a == b").  The predicate is passed to $(REF binaryFun, std,functional),
 and can either accept a string, or any callable that can be executed via
 $(D pred(element, element)).
 
@@ -1772,8 +1772,8 @@ unittest
  * Chunks an input range into subranges of equivalent adjacent elements.
  *
  * Equivalence is defined by the predicate $(D pred), which can be either
- * binary, which is passed to $(XREF functional,binaryFun), or unary, which is
- * passed to $(XREF functional,unaryFun). In the binary form, two _range elements
+ * binary, which is passed to $(REF binaryFun, std,functional), or unary, which is
+ * passed to $(REF unaryFun, std,functional). In the binary form, two _range elements
  * $(D a) and $(D b) are considered equivalent if $(D pred(a,b)) is true. In
  * unary form, two elements are considered equivalent if $(D pred(a) == pred(b))
  * is true.
@@ -2025,7 +2025,7 @@ both outer and inner ranges of $(D RoR) are forward ranges; otherwise it will
 be only an input range.
 
 See_also:
-$(XREF range,chain), which chains a sequence of ranges with compatible elements
+$(REF chain, std,range), which chains a sequence of ranges with compatible elements
 into a single range.
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
@@ -2626,7 +2626,7 @@ template reduce(fun...) if (fun.length >= 1)
     /++
     Seed version. The seed should be a single value if $(D fun) is a
     single function. If $(D fun) is multiple functions, then $(D seed)
-    should be a $(XREF typecons,Tuple), with one field per function in $(D f).
+    should be a $(REF Tuple, std,typecons), with one field per function in $(D f).
 
     For convenience, if the seed is const, or has qualified fields, then
     $(D reduce) will operate on an unqualified copy. If this happens
@@ -2768,7 +2768,7 @@ Sometimes it is very useful to compute multiple aggregates in one pass.
 One advantage is that the computation is faster because the looping overhead
 is shared. That's why $(D reduce) accepts multiple functions.
 If two or more functions are passed, $(D reduce) returns a
-$(XREF typecons, Tuple) object with one member per passed-in function.
+$(REF Tuple, std,typecons) object with one member per passed-in function.
 The number of seeds must be correspondingly increased.
 */
 @safe unittest
@@ -3459,7 +3459,7 @@ Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
 empty elements.
 
-The predicate is passed to $(XREF functional,binaryFun), and can either accept
+The predicate is passed to $(REF binaryFun, std,functional), and can either accept
 a string, or any callable that can be executed via $(D pred(element, s)).
 
 If the empty range is given, the result is a range with one empty
@@ -3488,7 +3488,7 @@ Returns:
     likewise.
 
 See_Also:
- $(XREF regex, _splitter) for a version that splits using a regular
+ $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator.
 */
 auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
@@ -3744,7 +3744,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 Similar to the previous overload of $(D splitter), except this one uses another
 range as a separator. This can be used with any narrow string type or sliceable
 range type, but is most popular with string types. The predicate is passed to
-$(XREF functional,binaryFun), and can either accept a string, or any callable
+$(REF binaryFun, std,functional), and can either accept a string, or any callable
 that can be executed via $(D pred(r.front, s.front)).
 
 Two adjacent separators are considered to surround an empty element in
@@ -3768,7 +3768,7 @@ Returns:
     is a forward range or bidirectional range, the returned range will be
     likewise.
 
-See_Also: $(XREF regex, _splitter) for a version that splits using a regular
+See_Also: $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator.
  */
 auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
@@ -4017,7 +4017,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
 Similar to the previous overload of $(D splitter), except this one does not use a separator.
 Instead, the predicate is an unary function on the input range's element type.
-The $(D isTerminator) predicate is passed to $(XREF functional,unaryFun) and can
+The $(D isTerminator) predicate is passed to $(REF unaryFun, std,functional) and can
 either accept a string, or any callable that can be executed via $(D pred(element, s)).
 
 Two adjacent separators are considered to surround an empty element in
@@ -4037,7 +4037,7 @@ Returns:
     is a forward range or bidirectional range, the returned range will be
     likewise.
 
-See_Also: $(XREF regex, _splitter) for a version that splits using a regular
+See_Also: $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator.
  */
 auto splitter(alias isTerminator, Range)(Range input)
@@ -4754,7 +4754,7 @@ Lazily iterates unique consecutive elements of the given range (functionality
 akin to the $(WEB wikipedia.org/wiki/_Uniq, _uniq) system
 utility). Equivalence of elements is assessed by using the predicate
 $(D pred), by default $(D "a == b"). The predicate is passed to
-$(XREF functional,binaryFun), and can either accept a string, or any callable
+$(REF binaryFun, std,functional), and can either accept a string, or any callable
 that can be executed via $(D pred(element, element)). If the given range is
 bidirectional, $(D uniq) also yields a bidirectional range.
 

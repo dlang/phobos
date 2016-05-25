@@ -1480,7 +1480,7 @@ Params:
 buf = Buffer used to store the resulting line data. buf is
 resized as necessary.
 terminator = Line terminator (by default, $(D '\n')). Use
-$(XREF ascii, newline) for portability (unless the file was opened in
+$(REF newline, std,ascii) for portability (unless the file was opened in
 text mode).
 
 Returns:
@@ -1668,7 +1668,7 @@ is recommended if you want to process a complete file.
     /**
      * Read data from the file according to the specified
      * $(LINK2 std_format.html#_format-string, format specifier) using
-     * $(XREF _format,formattedRead).
+     * $(REF formattedRead, std,_format).
      */
     uint readf(Data...)(in char[] format, Data data)
     {
@@ -1899,7 +1899,7 @@ Char = Character type for each line, defaulting to $(D char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
-$(XREF ascii, newline) for portability (unless the file was opened in
+$(REF newline, std,ascii) for portability (unless the file was opened in
 text mode).
 
 Example:
@@ -2058,7 +2058,7 @@ Char = Character type for each line, defaulting to $(D immutable char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
-$(XREF ascii, newline) for portability (unless the file was opened in
+$(REF newline, std,ascii) for portability (unless the file was opened in
 text mode).
 
 Example:
@@ -2076,7 +2076,7 @@ void main()
 }
 ----
 See_Also:
-$(XREF file,readText)
+$(REF readText, std,file)
 */
     auto byLineCopy(Terminator = char, Char = immutable char)
             (KeepTerminator keepTerminator = KeepTerminator.no,
@@ -3568,7 +3568,7 @@ unittest
 /**
  * Read data from $(D stdin) according to the specified
  * $(LINK2 std_format.html#format-string, format specifier) using
- * $(XREF format,formattedRead).
+ * $(REF formattedRead, std,format).
  */
 uint readf(A...)(in char[] format, A args)
 {
@@ -3632,7 +3632,7 @@ if (isSomeString!S)
  *        $(D size_t) 0 for end of file, otherwise number of characters read
  * Params:
  *        buf = Buffer used to store the resulting line data. buf is resized as necessary.
- *        terminator = Line terminator (by default, $(D '\n')). Use $(XREF ascii, newline)
+ *        terminator = Line terminator (by default, $(D '\n')). Use $(REF newline, std,ascii)
  *        for portability (unless the file was opened in text mode).
  * Throws:
  *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
@@ -4173,7 +4173,7 @@ unittest
 /**
 Writes an array or range to a file.
 Shorthand for $(D data.copy(File(fileName, "wb").lockingBinaryWriter)).
-Similar to $(XREF file,write), strings are written as-is,
+Similar to $(REF write, std,file), strings are written as-is,
 rather than encoded according to the $(D File)'s $(WEB
 en.cppreference.com/w/c/io#Narrow_and_wide_orientation,
 orientation).

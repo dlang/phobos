@@ -385,7 +385,7 @@ range elements, different types of ranges are accepted:
 
 /**
 To _copy at most $(D n) elements from a range, you may want to use
-$(XREF range, take):
+$(REF take, std,range):
 */
 @safe unittest
 {
@@ -412,7 +412,7 @@ use $(LREF filter):
 }
 
 /**
-$(XREF range, retro) can be used to achieve behavior similar to
+$(REF retro, std,range) can be used to achieve behavior similar to
 $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 */
 @safe unittest
