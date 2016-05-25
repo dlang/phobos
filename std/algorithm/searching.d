@@ -385,10 +385,10 @@ Params:
     pred = The predicate to use in comparing elements for commonality. Defaults
         to equality $(D "a == b").
 
-    r1 = A $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) of
+    r1 = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) of
         elements.
 
-    r2 = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of
+    r2 = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
         elements.
 
 Returns:
@@ -700,16 +700,16 @@ size_t count(alias pred = "true", R)(R haystack)
 
 /++
     Counts elements in the given
-    $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range)
+    $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
     until the given predicate is true for one of the given $(D needles).
 
     Params:
         pred = The predicate for determining when to stop counting.
         haystack = The
-            $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to be
+            $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to be
             counted.
         needles = Either a single element, or a
-            $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range)
+            $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
             of elements, to be evaluated in turn against each
             element in $(D haystack) under the given predicate.
 
@@ -872,7 +872,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
     Params:
         pred = Predicate to when to stop counting.
         haystack = An
-          $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of
+          $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
           elements to be counted.
     Returns: The number of elements which must be popped from $(D haystack)
     before $(D pred(haystack.front)) is $(D true).
@@ -969,7 +969,7 @@ Params:
         the needle(s).
 
     doesThisEnd = The
-        $(XREF_PACK_NAMED range,primitives,isBidirectionalRange,bidirectional range)
+        $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
         to check.
 
     withOneOfThese = The needles to check against, which may be single
@@ -1326,7 +1326,7 @@ $(D "a == b").
 The negated predicate $(D "a != b") can be used to search instead for the first
 element $(I not) matching the needle.
 
-haystack = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range)
+haystack = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 searched in.
 
 needle = The element searched for.
@@ -1618,7 +1618,7 @@ Params:
 pred = The predicate for determining if a given element is the one being
 searched for.
 
-haystack = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to
+haystack = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
 search in.
 
 Returns:
@@ -1697,10 +1697,10 @@ Params:
 pred = The predicate to use for comparing respective elements from the haystack
 and the needle. Defaults to simple equality $(D "a == b").
 
-haystack = The $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range)
+haystack = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 searched in.
 
-needle = The $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range)
+needle = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 searched for.
 
 Returns:
@@ -2339,7 +2339,7 @@ evaluations of $(D pred).
 
 Params:
     pred = The predicate to satisfy.
-    r = A $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to
+    r = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
         search in.
 
 Returns:
@@ -2415,9 +2415,9 @@ Performs $(BIGOH seq.length * choices.length) evaluations of $(D pred).
 
 Params:
     pred = The predicate to use for determining a match.
-    seq = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to
+    seq = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
         search.
-    choices = A $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range)
+    choices = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
         of possible choices.
 
 Returns:
@@ -2463,10 +2463,10 @@ Range1 findAmong(alias pred = "a == b", Range1, Range2)(
  *
  * Params:
  *  haystack = The
- *   $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to search
+ *   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
  *   in.
  *  needle = The
- *   $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to search
+ *   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
  *   for.
  *
  * Returns: $(D true) if the needle was found, in which case $(D haystack) is
@@ -3407,9 +3407,9 @@ range, or do nothing if there is no match.
 Params:
     pred = The predicate that determines whether elements from each respective
         range match. Defaults to equality $(D "a == b").
-    r1 = The $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to
+    r1 = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
         move forward.
-    r2 = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range)
+    r2 = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
         representing the initial segment of $(D r1) to skip over.
 
 Returns:
@@ -3487,7 +3487,7 @@ Params:
     pred = The predicate that determines whether an element from the range
         matches the given element.
 
-    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to skip
+    r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to skip
         over.
 
     e = The element to match.
@@ -3536,7 +3536,7 @@ bool skipOver(alias pred, R, E)(ref R r, E e)
 
 /**
 Checks whether the given
-$(XREF_PACK_NAMED range,primitives,isInputRange,input range) starts with (one
+$(REF_ALTTEXT input range, isInputRange, std,range,primitives) starts with (one
 of) the given needle(s) or, if no needles are given,
 if its front element fulfils predicate $(D pred).
 
@@ -3897,7 +3897,7 @@ $(D pred(e, sentinel)) is true.
 
 Params:
     pred = Predicate to determine when to stop.
-    range = The $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+    range = The $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
     to iterate over.
     sentinel = The element to stop at.
     openRight = Determines whether the element for which the given predicate is
@@ -3905,10 +3905,10 @@ Params:
         not ($(D OpenRight.yes)).
 
 Returns:
-    An $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range) that
+    An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives) that
     iterates over the original range's elements, but ends when the specified
     predicate becomes true. If the original range is a
-    $(XREF_PACK_NAMED _range,primitives,isForwardRange,forward _range) or
+    $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives) or
     higher, this range will be a forward range.
  */
 Until!(pred, Range, Sentinel)

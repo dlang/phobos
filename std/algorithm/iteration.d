@@ -1331,7 +1331,7 @@ $(D pred(element, element)).
 
 Params:
     pred = Binary predicate for determining equivalence of two elements.
-    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to
+    r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
         iterate over.
 
 Returns: A range of elements of type $(D Tuple!(ElementType!R, uint)),
@@ -2014,9 +2014,9 @@ joined directly without anything in between them (often called $(D flatten)
 in other languages).
 
 Params:
-    r = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of input
+    r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of input
         ranges to be joined.
-    sep = A $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) of
+    sep = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) of
         element(s) to serve as separators in the joined range.
 
 Returns:
@@ -3473,7 +3473,7 @@ below).
 Params:
     pred = The predicate for comparing each element with the separator,
         defaulting to $(D "a == b").
-    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to be
+    r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to be
         split. Must support slicing and $(D .length).
     s = The element to be treated as the separator between range segments to be
         split.
@@ -3754,9 +3754,9 @@ empty elements.
 Params:
     pred = The predicate for comparing each element with the separator,
         defaulting to $(D "a == b").
-    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to be
+    r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to be
         split.
-    s = The $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to
+    s = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
         be treated as the separator between segments of $(D r) to be split.
 
 Constraints:
@@ -4026,7 +4026,7 @@ empty elements.
 
 Params:
     isTerminator = The predicate for deciding where to split the range.
-    input = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to
+    input = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
         be split.
 
 Constraints:
@@ -4276,7 +4276,7 @@ Params:
     s = The string to be split.
 
 Returns:
-    An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of slices of
+    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of slices of
     the original string split by whitespace.
  +/
 auto splitter(C)(C[] s)
@@ -4459,7 +4459,7 @@ if (isSomeChar!C)
 // sum
 /**
 Sums elements of $(D r), which must be a finite
-$(XREF_PACK_NAMED range,primitives,isInputRange,input range). Although
+$(REF_ALTTEXT input range, isInputRange, std,range,primitives). Although
 conceptually $(D sum(r)) is equivalent to $(LREF fold)!((a, b) => a +
 b)(r, 0), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
@@ -4467,7 +4467,7 @@ as follows.
 $(UL
 $(LI If $(D $(REF ElementType, std,range,primitives)!R) is a floating-point
 type and $(D R) is a
-$(XREF_PACK_NAMED range,primitives,isRandomAccessRange,random-access range) with
+$(REF_ALTTEXT random-access range, isRandomAccessRange, std,range,primitives) with
 length and slicing, then $(D sum) uses the
 $(WEB en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
 algorithm.)
@@ -4760,11 +4760,11 @@ bidirectional, $(D uniq) also yields a bidirectional range.
 
 Params:
     pred = Predicate for determining equivalence between range elements.
-    r = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of
+    r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
         elements to filter.
 
 Returns:
-    An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of
+    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
     consecutively unique elements in the original range. If $(D r) is also a
     forward range or bidirectional range, the returned range will be likewise.
 */

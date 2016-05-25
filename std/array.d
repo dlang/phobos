@@ -1433,7 +1433,7 @@ alias splitter = std.algorithm.iteration.splitter;
     Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.
 
     The _range must be a
-    $(XREF_PACK_NAMED _range,primitives,isForwardRange,forward _range).
+    $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives).
     The separator can be a value of the same type as the elements in $(D range)
     or it can be another forward _range.
 

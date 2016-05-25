@@ -2618,10 +2618,10 @@ Params:
         Defaults to $(D a < b).
     ss = $(RED (Not implemented yet.)) Specify the swapping strategy.
     r = A
-        $(XREF_PACK_NAMED range,primitives,isRandomAccessRange,random-access range)
+        $(REF_ALTTEXT random-access range, isRandomAccessRange, std,range,primitives)
         of elements to make an index for.
     index = A
-        $(XREF_PACK_NAMED range,primitives,isRandomAccessRange,random-access range)
+        $(REF_ALTTEXT random-access range, isRandomAccessRange, std,range,primitives)
         with assignable elements to build the index in. The length of this range
         determines how many top elements to index in $(D r).
 

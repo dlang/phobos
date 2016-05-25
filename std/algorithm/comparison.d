@@ -79,7 +79,7 @@ Returns:
     found value plus one is returned.
 
 See_Also:
-$(XREF_PACK_NAMED algorithm,searching,find,find) and $(XREF_PACK_NAMED algorithm,searching,canFind, canFind) for finding a value in a
+$(REF_ALTTEXT find, find, std,algorithm,searching) and $(REF_ALTTEXT canFind, canFind, std,algorithm,searching) for finding a value in a
 range.
 */
 uint among(alias pred = (a, b) => a == b, Value, Values...)

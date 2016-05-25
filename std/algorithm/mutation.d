@@ -474,7 +474,7 @@ Assigns $(D value) to each element of input _range $(D range).
 
 Params:
         range = An
-                $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+                $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
                 that exposes references to its elements and has assignable
                 elements
         value = Assigned to each element of range
@@ -588,10 +588,10 @@ $(D range) does not have to be a multiple of the length of $(D
 filler). If $(D filler) is empty, an exception is thrown.
 
 Params:
-    range = An $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+    range = An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
             that exposes references to its elements and has assignable elements.
     filler = The
-             $(XREF_PACK_NAMED _range,primitives,isForwardRange,forward _range)
+             $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
              representing the _fill pattern.
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
@@ -710,7 +710,7 @@ Assumes that the elements of the range are uninitialized.
 
 Params:
         range = An
-                $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+                $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
                 that exposes references to its elements and has assignable
                 elements
 
@@ -1277,9 +1277,9 @@ This precondition will be asserted. If you cannot ensure there is enough room in
 `tgt` to accommodate all of `src` use $(LREF moveSome) instead.
 
 Params:
-    src = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+    src = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         movable elements.
-    tgt = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+    tgt = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         elements that elements from $(D src) can be moved into.
 
 Returns: The leftover portion of $(D tgt) after all elements from $(D src) have
@@ -1384,9 +1384,9 @@ element `b` in `tgt`, in increasing order, stopping when either range has been
 exhausted.
 
 Params:
-    src = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+    src = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         movable elements.
-    tgt = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+    tgt = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         elements that elements from $(D src) can be moved into.
 
 Returns: The leftover portions of the two ranges after one or the other of the
@@ -2524,9 +2524,9 @@ be of different types but must have the same element type and support
 swapping.
 
 Params:
-    r1 = an $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+    r1 = an $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
          with swappable elements
-    r2 = an $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+    r2 = an $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
          with swappable elements
 
 Returns:
@@ -2565,7 +2565,7 @@ uninitializedFill are equivalent).
 
 Params:
         range = An
-                $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+                $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
                 that exposes references to its elements and has assignable
                 elements
         value = Assigned to each element of range
