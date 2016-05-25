@@ -35,17 +35,17 @@ $(BUGSTITLE Library Changes,
     $(LI $(XREF regex, regex) now supports inline comments with (?#...) syntax.)
     $(LI std.regex had numerous optimization applied, compile-time $(XREF regex, ctRegex)
     should now be generally faster then the run-time version.)
-    $(LI $(REF moveAt, std,range,primitives) accepts only `size_t` for its index
+    $(LI $(XREF moveAt, range,primitives) accepts only `size_t` for its index
     arguments.)
-    $(LI $(REF isStrictlyMonotonic, std,algorithm,sorting) which doesn't allow
+    $(LI $(XREF isStrictlyMonotonic, algorithm,sorting) which doesn't allow
     equal values was added.)
-    $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
+    $(LI $(XREF readLink, file) and $(XREF symlink, file) have been
         rangified.)
     $(LI All overloads of `std.conv.toImpl` has been made private. Please use
         $(XREF conv, to) instead.)
     $(LI $(RELATIVE_LINK2 min-max-element,
     `std.algorithm.searching.{min,max}Element` for ranges have been added.))
-    $(LI $(XREF Ternary, std,typecons) was added to represent three valued
+    $(LI $(XREF Ternary, typecons) was added to represent three valued
     logic.)
 )
 
@@ -119,7 +119,7 @@ assert("2003.04.05"
 )
 
 $(LI $(LNAME2 optimization, `findLocalMin` was added to `std.numeric`.)
-    $(P $(REF findLocalMin, std,numeric) finds a real minimum of a real function `f(x)` via bracketing.)
+    $(P $(XREF findLocalMin, numeric) finds a real minimum of a real function `f(x)` via bracketing.)
 -------
 import std.numeric, std.math;
 
@@ -133,7 +133,7 @@ assert(ret.y.approxEqual(0.0));
 $(LI $(LNAME2 slice_ptr, `ptr` property and public constructor were added to
     `std.experimental.ndslice.slice.Slice`.)
     $(P `ptr` property allows to access `Slice`'s underlaying pointer or range. 
-        Please refer to $(REF Slice, std,experimental,ndslice,slice)'s
+        Please refer to $(XREF Slice, experimental,ndslice,slice)'s
         internal binary epresentation before using the property.
         `ptr` property is used in $(LINK2 https://github.com/libmir/mir, Mir)
         for $(LINK2 http://docs.mir.dlang.io/latest/mir_sparse_package.html, sparse tensors).
@@ -149,11 +149,11 @@ $(LI $(LNAME2 slice_ptr, `ptr` property and public constructor were added to
 $(LI $(LNAME2 slice_alloc, `slice`, `shape`, `ndarray`, and other utilities
     were added to `std.experimental.ndslice.slice`.)
     $(P 
-        $(REF shape, std,experimental,ndslice,slice)
-        $(REF slice, std,experimental,ndslice,slice),
-        $(REF makeSlice, std,experimental,ndslice,slice),
-        $(REF ndarray, std,experimental,ndslice,slice), and
-        $(REF makeNdarray, std,experimental,ndslice,slice)
+        $(XREF shape, experimental,ndslice,slice)
+        $(XREF slice, experimental,ndslice,slice),
+        $(XREF makeSlice, experimental,ndslice,slice),
+        $(XREF ndarray, experimental,ndslice,slice), and
+        $(XREF makeNdarray, experimental,ndslice,slice)
         allocation utilities were added to $(STDMODREF ndslice.slice, std.experimental.ndslice)
         )
     $(P Example: Transposing common 2D array using `ndslice`)
@@ -172,7 +172,7 @@ assert(ar == [[0, 3], [1, 4], [2, 5]]);
 )
 
 $(LI $(LNAME2 slice_iota, `iotaSlice` lazy tensor was added to `std.experimental.ndslice.selection`.)
-    %(P $(REF iotaSlice, std,experimental,ndslice,selection) is the fastest possible `Slice`.)
+    %(P $(XREF iotaSlice, experimental,ndslice,selection) is the fastest possible `Slice`.)
 ---
 import std.experimental.ndslice;
 
@@ -196,7 +196,7 @@ assert(sl(3, 2) == 11); // Math & Fortran index order
 )
 
 $(LI $(LNAME2 mutation, `std.algorithm.mutation.swapAt` was exposed)
-    $(P $(REF swapAt, std,algorithm,mutation) allows to swap elements
+    $(P $(XREF swapAt, algorithm,mutation) allows to swap elements
         of a RandomAccessRange by their indices.
     )
 )
