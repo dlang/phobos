@@ -1841,8 +1841,6 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
             }
             // Found a match with the last element in the needle
             auto cand = haystack[scout + 1 - needleLength .. haystack.length];
-            // This intermediate creation of a slice is why the
-            // random access variant above is faster.
             if (startsWith!pred(cand, needle))
             {
                 // found
