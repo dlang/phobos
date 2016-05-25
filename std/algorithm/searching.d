@@ -1773,44 +1773,85 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     if (needle.empty) return haystack;
-    const needleLength = walkLength(needle.save);
+    static if (hasLength!R2)
+    {
+        immutable needleLength = needle.length;
+    }
+    else
+    {
+        immutable needleLength = walkLength(needle.save);
+    }
     if (needleLength > haystack.length)
     {
         return haystack[haystack.length .. haystack.length];
     }
-    // @@@BUG@@@
-    // auto needleBack = moveBack(needle);
-    // Stage 1: find the step
-    size_t step = 1;
-    auto needleBack = needle.back;
-    needle.popBack();
-    for (auto i = needle.save; !i.empty && i.back != needleBack;
-         i.popBack(), ++step)
+    static if (isRandomAccessRange!R2)
     {
+        immutable lastIndex = needleLength - 1;
+        auto last = needle[lastIndex];
+        size_t j = lastIndex, skip = 0;
+        for (; j < haystack.length;)
+        {
+            if (!binaryFun!pred(haystack[j], last))
+            {
+                ++j;
+                continue;
+            }
+            immutable k = j - lastIndex;
+            // last elements match
+            for (size_t i = 0;; ++i)
+            {
+                if (i == lastIndex)
+                    return haystack[k .. haystack.length];
+                if (!binaryFun!pred(haystack[k + i], needle[i]))
+                    break;
+            }
+            if (skip == 0) {
+                skip = 1;
+                while (skip < needleLength && needle[needleLength - 1 - skip] != needle[needleLength - 1])
+                {
+                    ++skip;
+                }
+            }
+            j += skip;
+        }
     }
-    // Stage 2: linear find
-    size_t scout = needleLength - 1;
-    for (;;)
+    else
     {
-        if (scout >= haystack.length)
+        // @@@BUG@@@
+        // auto needleBack = moveBack(needle);
+        // Stage 1: find the step
+        size_t step = 1;
+        auto needleBack = needle.back;
+        needle.popBack();
+        for (auto i = needle.save; !i.empty && i.back != needleBack;
+                i.popBack(), ++step)
         {
-            return haystack[haystack.length .. haystack.length];
         }
-        if (!binaryFun!pred(haystack[scout], needleBack))
+        // Stage 2: linear find
+        size_t scout = needleLength - 1;
+        for (;;)
         {
-            ++scout;
-            continue;
+            if (scout >= haystack.length)
+                break;
+            if (!binaryFun!pred(haystack[scout], needleBack))
+            {
+                ++scout;
+                continue;
+            }
+            // Found a match with the last element in the needle
+            auto cand = haystack[scout + 1 - needleLength .. haystack.length];
+            // This intermediate creation of a slice is why the
+            // random access variant above is faster.
+            if (startsWith!pred(cand, needle))
+            {
+                // found
+                return cand;
+            }
+            scout += step;
         }
-        // Found a match with the last element in the needle
-        auto cand = haystack[scout + 1 - needleLength .. haystack.length];
-        if (startsWith!pred(cand, needle))
-        {
-            // found
-            return cand;
-        }
-        // Continue with the stride
-        scout += step;
     }
+    return haystack[haystack.length .. haystack.length];
 }
 
 @safe unittest
