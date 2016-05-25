@@ -136,7 +136,7 @@ $(D cache) does not provide random access primitives,
 as $(D cache) would be unable to cache the random accesses.
 If $(D Range) provides slicing primitives,
 then $(D cache) will provide the same slicing primitives,
-but $(D hasSlicing!Cache) will not yield true (as the $(XREF_PACK _range,primitives,hasSlicing)
+but $(D hasSlicing!Cache) will not yield true (as the $(REF hasSlicing, std,_range,primitives)
 trait also checks for random access).
 
 Params:
@@ -4465,7 +4465,7 @@ b)(r, 0), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
-$(LI If $(D $(XREF_PACK range,primitives,ElementType)!R) is a floating-point
+$(LI If $(D $(REF ElementType, std,range,primitives)!R) is a floating-point
 type and $(D R) is a
 $(XREF_PACK_NAMED range,primitives,isRandomAccessRange,random-access range) with
 length and slicing, then $(D sum) uses the
@@ -4887,7 +4887,7 @@ A forward range the elements of which are an $(XREF range,
 indexed) view into $(D r).
 
 See_Also:
-$(XREF_PACK algorithm,sorting,nextPermutation).
+$(REF nextPermutation, std,algorithm,sorting).
 */
 Permutations!Range permutations(Range)(Range r)
     if (isRandomAccessRange!Range && hasLength!Range)

@@ -1327,7 +1327,7 @@ delimiter. Runs of whitespace are merged together (no empty words are produced).
 $(D @safe), $(D pure) and $(D CTFE)-able.
 
 See_Also:
-$(XREF_PACK algorithm,iteration,splitter) for a version that splits using any
+$(REF splitter, std,algorithm,iteration) for a version that splits using any
 separator.
 
 $(REF splitter, std,regex) for a version that splits using a regular
@@ -1421,10 +1421,10 @@ unittest
 
 // @@@DEPRECATED_2017-01@@@
 /++
-    $(RED Deprecated. Use $(XREF_PACK algorithm,iteration,_splitter) instead.
+    $(RED Deprecated. Use $(REF _splitter, std,algorithm,iteration) instead.
           This will be removed in January 2017.)
 
-    Alias for $(XREF_PACK algorithm,iteration,_splitter).
+    Alias for $(REF _splitter, std,algorithm,iteration).
  +/
 deprecated("Please use std.algorithm.iteration.splitter instead.")
 alias splitter = std.algorithm.iteration.splitter;
@@ -1452,7 +1452,7 @@ alias splitter = std.algorithm.iteration.splitter;
         An array containing the divided parts of $(D range).
 
     See_Also:
-        $(XREF_PACK algorithm,iteration,splitter) for the lazy version of this
+        $(REF splitter, std,algorithm,iteration) for the lazy version of this
         function.
  +/
 auto split(Range, Separator)(Range range, Separator sep)
@@ -1553,7 +1553,7 @@ private enum bool hasCheapIteration(R) = isArray!R;
         an allocated array of Elements
 
    See_Also:
-        $(XREF_PACK algorithm,iteration,joiner)
+        $(REF joiner, std,algorithm,iteration)
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if (isInputRange!RoR &&

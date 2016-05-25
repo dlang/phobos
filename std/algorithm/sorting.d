@@ -1123,7 +1123,7 @@ time complexity.
 See_Also:
     $(REF assumeSorted, std,range)$(BR)
     $(REF SortedRange, std,range)$(BR)
-    $(XREF_PACK algorithm,mutation,SwapStrategy)$(BR)
+    $(REF SwapStrategy, std,algorithm,mutation)$(BR)
     $(REF binaryFun, std,functional)
 */
 SortedRange!(Range, less)
@@ -2775,7 +2775,7 @@ do
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
  * See_Also:
- * $(XREF_PACK algorithm,iteration,permutations).
+ * $(REF permutations, std,algorithm,iteration).
  */
 bool nextPermutation(alias less="a < b", BidirectionalRange)
                     (BidirectionalRange range)

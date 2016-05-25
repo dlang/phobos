@@ -6948,7 +6948,7 @@ unittest
 
     See_Also:
         $(LREF icmp)
-        $(XREF_PACK algorithm,comparison,cmp)
+        $(REF cmp, std,algorithm,comparison)
 +/
 int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
 {
@@ -7073,7 +7073,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
 
     See_Also:
         $(LREF sicmp)
-        $(XREF_PACK algorithm,comparison,cmp)
+        $(REF cmp, std,algorithm,comparison)
 +/
 int icmp(S1, S2)(S1 str1, S2 str2)
     if (isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
@@ -8954,10 +8954,10 @@ unittest
     Certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toUpper which takes full string instead.
 
-    toUpper can be used as an argument to $(XREF_PACK algorithm,iteration,map)
+    toUpper can be used as an argument to $(REF map, std,algorithm,iteration)
     to produce an algorithm that can convert a range of characters to upper case
     without allocating memory.
-    A string can then be produced by using $(XREF_PACK algorithm,mutation,copy)
+    A string can then be produced by using $(REF copy, std,algorithm,mutation)
     to send it to an $(REF appender, std,array).
 +/
 @safe pure nothrow @nogc

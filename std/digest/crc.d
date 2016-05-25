@@ -26,8 +26,8 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
  *
  * Note:
  * CRCs are usually printed with the MSB first. When using
- * $(XREF_PACK digest,digest,toHexString) the result will be in an unexpected
- * order. Use $(XREF_PACK digest,digest,toHexString)'s optional order parameter
+ * $(REF toHexString, std,digest,digest) the result will be in an unexpected
+ * order. Use $(REF toHexString, std,digest,digest)'s optional order parameter
  * to specify decreasing order for the correct result. The $(LREF crcHexString)
  * alias can also be used for this purpose.
  *
@@ -154,7 +154,7 @@ struct CRC32
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * Also implements the $(REF isOutputRange, std,range,primitives)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
@@ -304,7 +304,7 @@ unittest
 }
 
 /**
- * This is a convenience alias for $(XREF_PACK digest,digest,digest) using the
+ * This is a convenience alias for $(REF digest, std,digest,digest) using the
  * CRC32 implementation.
  *
  * Params:
@@ -339,7 +339,7 @@ unittest
 }
 
 /**
- * This is a convenience alias for $(XREF_PACK digest,digest,toHexString)
+ * This is a convenience alias for $(REF toHexString, std,digest,digest)
  * producing the usual CRC32 string output.
  */
 public alias crcHexString = toHexString!(Order.decreasing);
@@ -351,7 +351,7 @@ public alias crcHexString = toHexString!(Order.decreasing, 16);
  * OOP API CRC32 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(XREF_PACK digest,digest,WrapperDigest)!CRC32), see
+ * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC32), see
  * there for more information.
  */
 alias CRC32Digest = WrapperDigest!CRC32;

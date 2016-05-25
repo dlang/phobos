@@ -2416,7 +2416,7 @@ void main()
 }
 ---
 
-$(XREF_PACK algorithm,iteration,joiner) can be used to join chunks together into
+$(REF joiner, std,algorithm,iteration) can be used to join chunks together into
 a single range lazily.
 Example:
 ---

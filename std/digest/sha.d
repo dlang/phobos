@@ -687,7 +687,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
 
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * Also implements the $(REF isOutputRange, std,range,primitives)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         void put(scope const(ubyte)[] input...) @trusted pure nothrow @nogc
@@ -1115,7 +1115,7 @@ unittest
 }
 
 /**
- * These are convenience aliases for $(XREF_PACK digest,digest,digest) using the
+ * These are convenience aliases for $(REF digest, std,digest,digest) using the
  * SHA implementation.
  */
 //simple alias doesn't work here, hope this gets inlined...
@@ -1194,7 +1194,7 @@ unittest
  * OOP API SHA1 and SHA2 implementations.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(XREF_PACK digest,digest,WrapperDigest)!SHA1), see
+ * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!SHA1), see
  * there for more information.
  */
 alias SHA1Digest = WrapperDigest!SHA1;
