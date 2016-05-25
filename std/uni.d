@@ -8,88 +8,87 @@
     for this functionality. )
 
     $(P All primitives listed operate on Unicode characters and
-    sets of characters. For functions which operate on ASCII characters
-    and ignore Unicode $(CHARACTERS), see $(MREF std, ascii).
-    For definitions of Unicode $(CHARACTER), $(CODEPOINT) and other terms
-    used throughout this module see the $(S_LINK Terminology, terminology) section
-    below.
+        sets of characters. For functions which operate on ASCII characters
+        and ignore Unicode $(CHARACTERS), see $(MREF std, ascii).
+        For definitions of Unicode $(CHARACTER), $(CODEPOINT) and other terms
+        used throughout this module see the $(S_LINK Terminology, terminology) section
+        below.
     )
-
     $(P The focus of this module is the core needs of developing Unicode-aware
-    applications. To that effect it provides the following optimized primitives:
+        applications. To that effect it provides the following optimized primitives:
     )
     $(UL
-    $(LI Character classification by category and common properties:
-        $(LREF isAlpha), $(LREF isWhite) and others.
-    )
-    $(LI
-        Case-insensitive string comparison ($(LREF sicmp), $(LREF icmp)).
-    )
-    $(LI
-        Converting text to any of the four normalization forms via $(LREF normalize).
-    )
-    $(LI
-        Decoding ($(LREF decodeGrapheme))  and iteration ($(LREF byGrapheme), $(LREF graphemeStride))
-        by user-perceived characters, that is by $(LREF Grapheme) clusters.
-    )
-    $(LI
-        Decomposing and composing of individual character(s) according to canonical
-        or compatibility rules, see $(LREF compose) and $(LREF decompose),
-        including the specific version for Hangul syllables $(LREF composeJamo)
-        and $(LREF decomposeHangul).
-    )
+        $(LI Character classification by category and common properties:
+            $(LREF isAlpha), $(LREF isWhite) and others.
+        )
+        $(LI
+            Case-insensitive string comparison ($(LREF sicmp), $(LREF icmp)).
+        )
+        $(LI
+            Converting text to any of the four normalization forms via $(LREF normalize).
+        )
+        $(LI
+            Decoding ($(LREF decodeGrapheme))  and iteration ($(LREF byGrapheme), $(LREF graphemeStride))
+            by user-perceived characters, that is by $(LREF Grapheme) clusters.
+        )
+        $(LI
+            Decomposing and composing of individual character(s) according to canonical
+            or compatibility rules, see $(LREF compose) and $(LREF decompose),
+            including the specific version for Hangul syllables $(LREF composeJamo)
+            and $(LREF decomposeHangul).
+        )
     )
     $(P It's recognized that an application may need further enhancements
-    and extensions, such as less commonly known algorithms,
-    or tailoring existing ones for region specific needs. To help users
-    with building any extra functionality beyond the core primitives,
-    the module provides:
+        and extensions, such as less commonly known algorithms,
+        or tailoring existing ones for region specific needs. To help users
+        with building any extra functionality beyond the core primitives,
+        the module provides:
     )
     $(UL
-    $(LI
-        $(LREF CodepointSet), a type for easy manipulation of sets of characters.
-        Besides the typical set algebra it provides an unusual feature:
-        a D source code generator for detection of $(CODEPOINTS) in this set.
-        This is a boon for meta-programming parser frameworks,
-        and is used internally to power classification in small
-        sets like $(LREF isWhite).
-    )
-    $(LI
-        A way to construct optimal packed multi-stage tables also known as a
-        special case of $(LUCKY Trie).
-        The functions $(LREF codepointTrie), $(LREF codepointSetTrie)
-        construct custom tries that map dchar to value.
-        The end result is a fast and predictable $(BIGOH 1) lookup that powers
-        functions like $(LREF isAlpha) and $(LREF combiningClass),
-        but for user-defined data sets.
-    )
-    $(LI
-        A useful technique for Unicode-aware parsers that perform
-        character classification of encoded $(CODEPOINTS)
-        is to avoid unnecassary decoding at all costs.
-        $(LREF utfMatcher) provides an improvement over the usual workflow
-        of decode-classify-process, combining the decoding and classification
-        steps. By extracting necessary bits directly from encoded
-        $(S_LINK Code unit, code units) matchers achieve
-        significant performance improvements. See $(LREF MatcherConcept) for
-        the common interface of UTF matchers.
-    )
-    $(LI
-        Generally useful building blocks for customized normalization:
-        $(LREF combiningClass) for querying combining class
-        and $(LREF allowedIn) for testing the Quick_Check
-        property of a given normalization form.
-    )
-    $(LI
-        Access to a large selection of commonly used sets of $(CODEPOINTS).
-        $(S_LINK Unicode properties, Supported sets) include Script,
-        Block and General Category. The exact contents of a set can be
-        observed in the CLDR utility, on the
-        $(WEB www.unicode.org/cldr/utility/properties.jsp, property index) page
-        of the Unicode website.
-        See $(LREF unicode) for easy and (optionally) compile-time checked set
-        queries.
-    )
+        $(LI
+            $(LREF CodepointSet), a type for easy manipulation of sets of characters.
+            Besides the typical set algebra it provides an unusual feature:
+            a D source code generator for detection of $(CODEPOINTS) in this set.
+            This is a boon for meta-programming parser frameworks,
+            and is used internally to power classification in small
+            sets like $(LREF isWhite).
+        )
+        $(LI
+            A way to construct optimal packed multi-stage tables also known as a
+            special case of $(LUCKY Trie).
+            The functions $(LREF codepointTrie), $(LREF codepointSetTrie)
+            construct custom tries that map dchar to value.
+            The end result is a fast and predictable $(BIGOH 1) lookup that powers
+            functions like $(LREF isAlpha) and $(LREF combiningClass),
+            but for user-defined data sets.
+        )
+        $(LI
+            A useful technique for Unicode-aware parsers that perform
+            character classification of encoded $(CODEPOINTS)
+            is to avoid unnecassary decoding at all costs.
+            $(LREF utfMatcher) provides an improvement over the usual workflow
+            of decode-classify-process, combining the decoding and classification
+            steps. By extracting necessary bits directly from encoded
+            $(S_LINK Code unit, code units) matchers achieve
+            significant performance improvements. See $(LREF MatcherConcept) for
+            the common interface of UTF matchers.
+        )
+        $(LI
+            Generally useful building blocks for customized normalization:
+            $(LREF combiningClass) for querying combining class
+            and $(LREF allowedIn) for testing the Quick_Check
+            property of a given normalization form.
+        )
+        $(LI
+            Access to a large selection of commonly used sets of $(CODEPOINTS).
+            $(S_LINK Unicode properties, Supported sets) include Script,
+            Block and General Category. The exact contents of a set can be
+            observed in the CLDR utility, on the
+            $(WEB www.unicode.org/cldr/utility/properties.jsp, property index) page
+            of the Unicode website.
+            See $(LREF unicode) for easy and (optionally) compile-time checked set
+            queries.
+        )
     )
     $(SECTION Synopsis)
     ---
@@ -151,84 +150,78 @@
         assert(normalize!NFKD("2¹⁰") == "210");
     }
     ---
-    $(SECTION Terminology)
+    $(SECTION Terminology
+    )
     $(P The following is a list of important Unicode notions
     and definitions. Any conventions used specifically in this
     module alone are marked as such. The descriptions are based on the formal
     definition as found in $(WEB www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
     chapter three of The Unicode Standard Core Specification.)
     )
-
     $(P $(DEF Abstract character) A unit of information used for the organization,
-    control, or representation of textual data.
-    Note that:
+        control, or representation of textual data.
+        Note that:
         $(UL
-        $(LI When representing data, the nature of that data
-        is generally symbolic as opposed to some other
-        kind of data (for example, visual).)
-
-        $(LI An abstract character has no concrete form
-        and should not be confused with a $(S_LINK Glyph, glyph).)
-
-        $(LI An abstract character does not necessarily
-        correspond to what a user thinks of as a “character”
-         and should not be confused with a $(LREF Grapheme).)
-
-        $(LI The abstract characters encoded (see Encoded character)
-        are known as Unicode abstract characters.)
-
-        $(LI Abstract characters not directly
-        encoded by the Unicode Standard can often be
-        represented by the use of combining character sequences.)
+            $(LI When representing data, the nature of that data
+                is generally symbolic as opposed to some other
+                kind of data (for example, visual).
+            )
+             $(LI An abstract character has no concrete form
+                and should not be confused with a $(S_LINK Glyph, glyph).
+            )
+            $(LI An abstract character does not necessarily
+                correspond to what a user thinks of as a “character”
+                and should not be confused with a $(LREF Grapheme).
+            )
+            $(LI The abstract characters encoded (see Encoded character)
+                are known as Unicode abstract characters.
+            )
+            $(LI Abstract characters not directly
+                encoded by the Unicode Standard can often be
+                represented by the use of combining character sequences.
+            )
         )
     )
-
     $(P $(DEF Canonical decomposition)
-    The decomposition of a character or character sequence
-    that results from recursively applying the canonical
-    mappings found in the Unicode Character Database
-    and these described in Conjoining Jamo Behavior
-    (section 12 of
-    $(WEB www.unicode.org/uni2book/ch03.pdf, Unicode Conformance)).
+        The decomposition of a character or character sequence
+        that results from recursively applying the canonical
+        mappings found in the Unicode Character Database
+        and these described in Conjoining Jamo Behavior
+        (section 12 of
+        $(WEB www.unicode.org/uni2book/ch03.pdf, Unicode Conformance)).
     )
-
     $(P $(DEF Canonical composition)
-    The precise definition of the Canonical composition
-    is the algorithm as specified in $(WEB www.unicode.org/uni2book/ch03.pdf,
-    Unicode Conformance) section 11.
-    Informally it's the process that does the reverse of the canonical
-    decomposition with the addition of certain rules
-    that e.g. prevent legacy characters from appearing in the composed result.
+        The precise definition of the Canonical composition
+        is the algorithm as specified in $(WEB www.unicode.org/uni2book/ch03.pdf,
+        Unicode Conformance) section 11.
+        Informally it's the process that does the reverse of the canonical
+        decomposition with the addition of certain rules
+        that e.g. prevent legacy characters from appearing in the composed result.
     )
-
     $(P $(DEF Canonical equivalent)
-    Two character sequences are said to be canonical equivalents if
-    their full canonical decompositions are identical.
+        Two character sequences are said to be canonical equivalents if
+        their full canonical decompositions are identical.
     )
-
     $(P $(DEF Character) Typically differs by context.
-    For the purpose of this documentation the term $(I character)
-    implies $(I encoded character), that is, a code point having
-    an assigned abstract character (a symbolic meaning).
+        For the purpose of this documentation the term $(I character)
+        implies $(I encoded character), that is, a code point having
+        an assigned abstract character (a symbolic meaning).
     )
-
     $(P $(DEF Code point) Any value in the Unicode codespace;
-    that is, the range of integers from 0 to 10FFFF (hex).
-    Not all code points are assigned to encoded characters.
+        that is, the range of integers from 0 to 10FFFF (hex).
+        Not all code points are assigned to encoded characters.
     )
-
     $(P $(DEF Code unit) The minimal bit combination that can represent
-    a unit of encoded text for processing or interchange.
-    Depending on the encoding this could be:
-    8-bit code units in the UTF-8 ($(D char)),
-    16-bit code units in the UTF-16 ($(D wchar)),
-    and 32-bit code units in the UTF-32 ($(D dchar)).
-    $(I Note that in UTF-32, a code unit is a code point
-    and is represented by the D $(D dchar) type.)
+        a unit of encoded text for processing or interchange.
+        Depending on the encoding this could be:
+        8-bit code units in the UTF-8 ($(D char)),
+        16-bit code units in the UTF-16 ($(D wchar)),
+        and 32-bit code units in the UTF-32 ($(D dchar)).
+        $(I Note that in UTF-32, a code unit is a code point
+        and is represented by the D $(D dchar) type.)
     )
-
     $(P $(DEF Combining character) A character with the General Category
-     of Combining Mark(M).
+        of Combining Mark(M).
         $(UL
             $(LI All characters with non-zero canonical combining class
             are combining characters, but the reverse is not the case:
@@ -241,38 +234,31 @@
             )
         )
     )
-
     $(P $(DEF Combining class)
         A numerical value used by the Unicode Canonical Ordering Algorithm
         to determine which sequences of combining marks are to be
         considered canonically equivalent and  which are not.
     )
-
     $(P $(DEF Compatibility decomposition)
-    The decomposition of a character or character sequence that results
-    from recursively applying both the compatibility mappings and
-    the canonical mappings found in the Unicode Character Database, and those
-    described in Conjoining Jamo Behavior no characters
-    can be further decomposed.
+        The decomposition of a character or character sequence that results
+        from recursively applying both the compatibility mappings and
+        the canonical mappings found in the Unicode Character Database, and those
+        described in Conjoining Jamo Behavior no characters
+        can be further decomposed.
     )
-
     $(P $(DEF Compatibility equivalent)
-    Two character sequences are said to be compatibility
-    equivalents if their full compatibility decompositions are identical.
+        Two character sequences are said to be compatibility
+        equivalents if their full compatibility decompositions are identical.
     )
-
     $(P $(DEF Encoded character) An association (or mapping)
-    between an abstract character and a code point.
+        between an abstract character and a code point.
     )
-
     $(P $(DEF Glyph) The actual, concrete image of a glyph representation
-    having been rasterized or otherwise imaged onto some display surface.
+        having been rasterized or otherwise imaged onto some display surface.
     )
-
     $(P $(DEF Grapheme base) A character with the property
-     Grapheme_Base, or any standard Korean syllable block.
+        Grapheme_Base, or any standard Korean syllable block.
     )
-
     $(P $(DEF Grapheme cluster) Defined as the text between
         grapheme boundaries  as specified by Unicode Standard Annex #29,
         $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation).
@@ -301,83 +287,73 @@
         as defined in the aforementioned standard annex.
         )
     )
-
-
     $(P $(DEF Nonspacing mark) A combining character with the
         General Category of Nonspacing Mark (Mn) or Enclosing Mark (Me).
     )
-
-    $(P $(DEF Spacing mark) A combining character that is not a nonspacing mark.)
-
-
-    $(SECTION Normalization)
-
+    $(P $(DEF Spacing mark) A combining character that is not a nonspacing mark.
+    )
+    $(SECTION Normalization
+    )
     $(P The concepts of $(S_LINK Canonical equivalent, canonical equivalent)
-     or $(S_LINK Compatibility equivalent, compatibility equivalent)
-    characters in the Unicode Standard make it necessary to have a full, formal
-    definition of equivalence for Unicode strings.
-    String equivalence is determined by a process called normalization,
-    whereby strings are converted into forms which are compared
-    directly for identity. This is the primary goal of the normalization process,
-    see the function $(LREF normalize) to convert into any of
-    the four defined forms.
+        or $(S_LINK Compatibility equivalent, compatibility equivalent)
+        characters in the Unicode Standard make it necessary to have a full, formal
+        definition of equivalence for Unicode strings.
+        String equivalence is determined by a process called normalization,
+        whereby strings are converted into forms which are compared
+        directly for identity. This is the primary goal of the normalization process,
+        see the function $(LREF normalize) to convert into any of
+        the four defined forms.
     )
-
     $(P A very important attribute of the Unicode Normalization Forms
-    is that they must remain stable between versions of the Unicode Standard.
-    A Unicode string normalized to a particular Unicode Normalization Form
-    in one version of the standard is guaranteed to remain in that Normalization
-    Form for implementations of future versions of the standard.
+        is that they must remain stable between versions of the Unicode Standard.
+        A Unicode string normalized to a particular Unicode Normalization Form
+        in one version of the standard is guaranteed to remain in that Normalization
+        Form for implementations of future versions of the standard.
     )
-
     $(P The Unicode Standard specifies four normalization forms.
-    Informally, two of these forms are defined by maximal decomposition
-    of equivalent sequences, and two of these forms are defined
-    by maximal $(I composition) of equivalent sequences.
-        $(UL
-        $(LI Normalization Form D (NFD): The $(S_LINK Canonical decomposition,
-            canonical decomposition) of a character sequence.)
-        $(LI Normalization Form KD (NFKD): The $(S_LINK Compatibility decomposition,
-            compatibility decomposition) of a character sequence.)
-        $(LI Normalization Form C (NFC): The canonical composition of the
-            $(S_LINK Canonical decomposition, canonical decomposition)
-            of a coded character sequence.)
-        $(LI Normalization Form KC (NFKC): The canonical composition
-        of the $(S_LINK Compatibility decomposition,
-            compatibility decomposition) of a character sequence)
-        )
+        Informally, two of these forms are defined by maximal decomposition
+        of equivalent sequences, and two of these forms are defined
+        by maximal $(I composition) of equivalent sequences.
+            $(UL
+            $(LI Normalization Form D (NFD): The $(S_LINK Canonical decomposition,
+                canonical decomposition) of a character sequence.)
+            $(LI Normalization Form KD (NFKD): The $(S_LINK Compatibility decomposition,
+                compatibility decomposition) of a character sequence.)
+            $(LI Normalization Form C (NFC): The canonical composition of the
+                $(S_LINK Canonical decomposition, canonical decomposition)
+                of a coded character sequence.)
+            $(LI Normalization Form KC (NFKC): The canonical composition
+            of the $(S_LINK Compatibility decomposition,
+                compatibility decomposition) of a character sequence)
+            )
     )
-
     $(P The choice of the normalization form depends on the particular use case.
-    NFC is the best form for general text, since it's more compatible with
-    strings converted from legacy encodings. NFKC is the preferred form for
-    identifiers, especially where there are security concerns. NFD and NFKD
-    are the most useful for internal processing.
+        NFC is the best form for general text, since it's more compatible with
+        strings converted from legacy encodings. NFKC is the preferred form for
+        identifiers, especially where there are security concerns. NFD and NFKD
+        are the most useful for internal processing.
     )
-
-    $(SECTION Construction of lookup tables)
-
+    $(SECTION Construction of lookup tables
+    )
     $(P The Unicode standard describes a set of algorithms that
-    depend on having the ability to quickly look up various properties
-    of a code point. Given the the codespace of about 1 million $(CODEPOINTS),
-    it is not a trivial task to provide a space-efficient solution for
-    the multitude of properties.)
-
-    $(P Common approaches such as hash-tables or binary search over
-     sorted code point intervals (as in $(LREF InversionList)) are insufficient.
-     Hash-tables have enormous memory footprint and binary search
-     over intervals is not fast enough for some heavy-duty algorithms.
-     )
-
-    $(P The recommended solution (see Unicode Implementation Guidelines)
-    is using multi-stage tables that are an implementation of the
-    $(WEB en.wikipedia.org/wiki/Trie, Trie) data structure with integer
-    keys and a fixed number of stages. For the remainder of the section
-    this will be called a fixed trie. The following describes a particular
-    implementation that is aimed for the speed of access at the expense
-    of ideal size savings.
+        depend on having the ability to quickly look up various properties
+        of a code point. Given the the codespace of about 1 million $(CODEPOINTS),
+        it is not a trivial task to provide a space-efficient solution for
+        the multitude of properties.
     )
-
+    $(P Common approaches such as hash-tables or binary search over
+        sorted code point intervals (as in $(LREF InversionList)) are insufficient.
+        Hash-tables have enormous memory footprint and binary search
+        over intervals is not fast enough for some heavy-duty algorithms.
+    )
+    $(P The recommended solution (see Unicode Implementation Guidelines)
+        is using multi-stage tables that are an implementation of the
+        $(WEB en.wikipedia.org/wiki/Trie, Trie) data structure with integer
+        keys and a fixed number of stages. For the remainder of the section
+        this will be called a fixed trie. The following describes a particular
+        implementation that is aimed for the speed of access at the expense
+        of ideal size savings.
+    )
     $(P Taking a 2-level Trie as an example the principle of operation is as follows.
         Split the number of bits in a key (code point, 21 bits) into 2 components
         (e.g. 15 and 8).  The first is the number of bits in the index of the trie
@@ -385,7 +361,6 @@
         The layout of the trie is then an array of size 2^^bits-of-index followed
         an array of memory chunks of size 2^^bits-of-page/bits-per-element.
     )
-
     $(P The number of pages is variable (but not less then 1)
         unlike the number of entries in the index. The slots of the index
         all have to contain a number of a page that is present. The lookup is then
@@ -401,93 +376,91 @@
     pages[index[n >> bits_per_page]][n & (elemsPerPage - 1)];
     ---
     $(P Where if $(D elemsPerPage) is a power of 2 the whole process is
-    a handful of simple instructions and 2 array reads. Subsequent levels
-    of the trie are introduced by recursing on this notion - the index array
-    is treated as values. The number of bits in index is then again
-    split into 2 parts, with pages over 'current-index' and the new 'upper-index'.
+        a handful of simple instructions and 2 array reads. Subsequent levels
+        of the trie are introduced by recursing on this notion - the index array
+        is treated as values. The number of bits in index is then again
+        split into 2 parts, with pages over 'current-index' and the new 'upper-index'.
     )
 
     $(P For completeness a level 1 trie is simply an array.
-    The current implementation takes advantage of bit-packing values
-    when the range is known to be limited in advance (such as $(D bool)).
-    See also $(LREF BitPacked) for enforcing it manually.
-    The major size advantage however comes from the fact
-    that multiple $(B identical pages on every level are merged) by construction.
+        The current implementation takes advantage of bit-packing values
+        when the range is known to be limited in advance (such as $(D bool)).
+        See also $(LREF BitPacked) for enforcing it manually.
+        The major size advantage however comes from the fact
+        that multiple $(B identical pages on every level are merged) by construction.
     )
-
     $(P The process of constructing a trie is more involved and is hidden from
-    the user in a form of the convenience functions $(LREF codepointTrie),
-    $(LREF codepointSetTrie) and the even more convenient $(LREF toTrie).
-    In general a set or built-in AA with $(D dchar) type
-    can be turned into a trie. The trie object in this module
-    is read-only (immutable); it's effectively frozen after construction.
+        the user in a form of the convenience functions $(LREF codepointTrie),
+        $(LREF codepointSetTrie) and the even more convenient $(LREF toTrie).
+        In general a set or built-in AA with $(D dchar) type
+        can be turned into a trie. The trie object in this module
+        is read-only (immutable); it's effectively frozen after construction.
     )
-
-    $(SECTION Unicode properties)
-
+    $(SECTION Unicode properties
+    )
     $(P This is a full list of Unicode properties accessible through $(LREF unicode)
-    with specific helpers per category nested within. Consult the
-    $(WEB www.unicode.org/cldr/utility/properties.jsp, CLDR utility)
-    when in doubt about the contents of a particular set.)
-
+        with specific helpers per category nested within. Consult the
+        $(WEB www.unicode.org/cldr/utility/properties.jsp, CLDR utility)
+        when in doubt about the contents of a particular set.
+    )
     $(P General category sets listed below are only accessible with the
-    $(LREF unicode) shorthand accessor.)
-    $(BOOKTABLE $(B General category ),
-         $(TR $(TH Abb.) $(TH Long form)
-            $(TH Abb.) $(TH Long form)$(TH Abb.) $(TH Long form))
-        $(TR $(TD L) $(TD Letter)
-            $(TD Cn) $(TD Unassigned)  $(TD Po) $(TD Other_Punctuation))
-        $(TR $(TD Ll) $(TD Lowercase_Letter)
-            $(TD Co) $(TD Private_Use) $(TD Ps) $(TD Open_Punctuation))
-        $(TR $(TD Lm) $(TD Modifier_Letter)
-            $(TD Cs) $(TD Surrogate)   $(TD S) $(TD Symbol))
-        $(TR $(TD Lo) $(TD Other_Letter)
-            $(TD N) $(TD Number)  $(TD Sc) $(TD Currency_Symbol))
-        $(TR $(TD Lt) $(TD Titlecase_Letter)
-          $(TD Nd) $(TD Decimal_Number)  $(TD Sk) $(TD Modifier_Symbol))
-        $(TR $(TD Lu) $(TD Uppercase_Letter)
-          $(TD Nl) $(TD Letter_Number)   $(TD Sm) $(TD Math_Symbol))
-        $(TR $(TD M) $(TD Mark)
-          $(TD No) $(TD Other_Number)    $(TD So) $(TD Other_Symbol))
-        $(TR $(TD Mc) $(TD Spacing_Mark)
-          $(TD P) $(TD Punctuation) $(TD Z) $(TD Separator))
-        $(TR $(TD Me) $(TD Enclosing_Mark)
-          $(TD Pc) $(TD Connector_Punctuation)   $(TD Zl) $(TD Line_Separator))
-        $(TR $(TD Mn) $(TD Nonspacing_Mark)
-          $(TD Pd) $(TD Dash_Punctuation)    $(TD Zp) $(TD Paragraph_Separator))
-        $(TR $(TD C) $(TD Other)
-          $(TD Pe) $(TD Close_Punctuation) $(TD Zs) $(TD Space_Separator))
-        $(TR $(TD Cc) $(TD Control) $(TD Pf)
-          $(TD Final_Punctuation)   $(TD -) $(TD Any))
-        $(TR $(TD Cf) $(TD Format)
-          $(TD Pi) $(TD Initial_Punctuation) $(TD -) $(TD ASCII))
+        $(LREF unicode) shorthand accessor.)
+        $(BOOKTABLE $(B General category ),
+             $(TR $(TH Abb.) $(TH Long form)
+                $(TH Abb.) $(TH Long form)$(TH Abb.) $(TH Long form))
+            $(TR $(TD L) $(TD Letter)
+                $(TD Cn) $(TD Unassigned)  $(TD Po) $(TD Other_Punctuation))
+            $(TR $(TD Ll) $(TD Lowercase_Letter)
+                $(TD Co) $(TD Private_Use) $(TD Ps) $(TD Open_Punctuation))
+            $(TR $(TD Lm) $(TD Modifier_Letter)
+                $(TD Cs) $(TD Surrogate)   $(TD S) $(TD Symbol))
+            $(TR $(TD Lo) $(TD Other_Letter)
+                $(TD N) $(TD Number)  $(TD Sc) $(TD Currency_Symbol))
+            $(TR $(TD Lt) $(TD Titlecase_Letter)
+              $(TD Nd) $(TD Decimal_Number)  $(TD Sk) $(TD Modifier_Symbol))
+            $(TR $(TD Lu) $(TD Uppercase_Letter)
+              $(TD Nl) $(TD Letter_Number)   $(TD Sm) $(TD Math_Symbol))
+            $(TR $(TD M) $(TD Mark)
+              $(TD No) $(TD Other_Number)    $(TD So) $(TD Other_Symbol))
+            $(TR $(TD Mc) $(TD Spacing_Mark)
+              $(TD P) $(TD Punctuation) $(TD Z) $(TD Separator))
+            $(TR $(TD Me) $(TD Enclosing_Mark)
+              $(TD Pc) $(TD Connector_Punctuation)   $(TD Zl) $(TD Line_Separator))
+            $(TR $(TD Mn) $(TD Nonspacing_Mark)
+              $(TD Pd) $(TD Dash_Punctuation)    $(TD Zp) $(TD Paragraph_Separator))
+            $(TR $(TD C) $(TD Other)
+              $(TD Pe) $(TD Close_Punctuation) $(TD Zs) $(TD Space_Separator))
+            $(TR $(TD Cc) $(TD Control) $(TD Pf)
+              $(TD Final_Punctuation)   $(TD -) $(TD Any))
+            $(TR $(TD Cf) $(TD Format)
+              $(TD Pi) $(TD Initial_Punctuation) $(TD -) $(TD ASCII))
     )
     $(P Sets for other commonly useful properties that are
-    accessible with $(LREF unicode):)
-    $(BOOKTABLE $(B Common binary properties),
-        $(TR $(TH Name) $(TH Name) $(TH Name))
-        $(TR $(TD Alphabetic)  $(TD Ideographic) $(TD Other_Uppercase))
-        $(TR $(TD ASCII_Hex_Digit) $(TD IDS_Binary_Operator) $(TD Pattern_Syntax))
-        $(TR $(TD Bidi_Control)    $(TD ID_Start)    $(TD Pattern_White_Space))
-        $(TR $(TD Cased)   $(TD IDS_Trinary_Operator)    $(TD Quotation_Mark))
-        $(TR $(TD Case_Ignorable)  $(TD Join_Control)    $(TD Radical))
-        $(TR $(TD Dash)    $(TD Logical_Order_Exception) $(TD Soft_Dotted))
-        $(TR $(TD Default_Ignorable_Code_Point)    $(TD Lowercase)   $(TD STerm))
-        $(TR $(TD Deprecated)  $(TD Math)    $(TD Terminal_Punctuation))
-        $(TR $(TD Diacritic)   $(TD Noncharacter_Code_Point) $(TD Unified_Ideograph))
-        $(TR $(TD Extender)    $(TD Other_Alphabetic)    $(TD Uppercase))
-        $(TR $(TD Grapheme_Base)   $(TD Other_Default_Ignorable_Code_Point)  $(TD Variation_Selector))
-        $(TR $(TD Grapheme_Extend) $(TD Other_Grapheme_Extend)   $(TD White_Space))
-        $(TR $(TD Grapheme_Link)   $(TD Other_ID_Continue)   $(TD XID_Continue))
-        $(TR $(TD Hex_Digit)   $(TD Other_ID_Start)  $(TD XID_Start))
-        $(TR $(TD Hyphen)  $(TD Other_Lowercase) )
-        $(TR $(TD ID_Continue) $(TD Other_Math)  )
+        accessible with $(LREF unicode):)
+        $(BOOKTABLE $(B Common binary properties),
+            $(TR $(TH Name) $(TH Name) $(TH Name))
+            $(TR $(TD Alphabetic)  $(TD Ideographic) $(TD Other_Uppercase))
+            $(TR $(TD ASCII_Hex_Digit) $(TD IDS_Binary_Operator) $(TD Pattern_Syntax))
+            $(TR $(TD Bidi_Control)    $(TD ID_Start)    $(TD Pattern_White_Space))
+            $(TR $(TD Cased)   $(TD IDS_Trinary_Operator)    $(TD Quotation_Mark))
+            $(TR $(TD Case_Ignorable)  $(TD Join_Control)    $(TD Radical))
+            $(TR $(TD Dash)    $(TD Logical_Order_Exception) $(TD Soft_Dotted))
+            $(TR $(TD Default_Ignorable_Code_Point)    $(TD Lowercase)   $(TD STerm))
+            $(TR $(TD Deprecated)  $(TD Math)    $(TD Terminal_Punctuation))
+            $(TR $(TD Diacritic)   $(TD Noncharacter_Code_Point) $(TD Unified_Ideograph))
+            $(TR $(TD Extender)    $(TD Other_Alphabetic)    $(TD Uppercase))
+            $(TR $(TD Grapheme_Base)   $(TD Other_Default_Ignorable_Code_Point)  $(TD Variation_Selector))
+            $(TR $(TD Grapheme_Extend) $(TD Other_Grapheme_Extend)   $(TD White_Space))
+            $(TR $(TD Grapheme_Link)   $(TD Other_ID_Continue)   $(TD XID_Continue))
+            $(TR $(TD Hex_Digit)   $(TD Other_ID_Start)  $(TD XID_Start))
+            $(TR $(TD Hyphen)  $(TD Other_Lowercase) )
+            $(TR $(TD ID_Continue) $(TD Other_Math)  )
     )
     $(P Bellow is the table with block names accepted by $(LREF unicode.block).
-    Note that the shorthand version $(LREF unicode) requires "In"
-    to be prepended to the names of blocks so as to disambiguate
-    scripts and blocks.)
-
+        Note that the shorthand version $(LREF unicode) requires "In"
+        to be prepended to the names of blocks so as to disambiguate
+        scripts and blocks.
+    )
     $(BOOKTABLE $(B Blocks),
         $(TR $(TD Aegean Numbers)    $(TD Ethiopic Extended) $(TD Mongolian))
         $(TR $(TD Alchemical Symbols)    $(TD Ethiopic Extended-A)   $(TD Musical Symbols))
@@ -564,54 +537,52 @@
         $(TR $(TD Enclosed Ideographic Supplement)   $(TD Miscellaneous Technical)   )
         $(TR $(TD Ethiopic)  $(TD Modifier Tone Letters) )
     )
-
     $(P Bellow is the table with script names accepted by $(LREF unicode.script)
-    and by the shorthand version $(LREF unicode):)
-    $(BOOKTABLE $(B Scripts),
-        $(TR $(TD Arabic)  $(TD Hanunoo) $(TD Old_Italic))
-        $(TR $(TD Armenian)    $(TD Hebrew)  $(TD Old_Persian))
-        $(TR $(TD Avestan) $(TD Hiragana)    $(TD Old_South_Arabian))
-        $(TR $(TD Balinese)    $(TD Imperial_Aramaic)    $(TD Old_Turkic))
-        $(TR $(TD Bamum)   $(TD Inherited)   $(TD Oriya))
-        $(TR $(TD Batak)   $(TD Inscriptional_Pahlavi)   $(TD Osmanya))
-        $(TR $(TD Bengali) $(TD Inscriptional_Parthian)  $(TD Phags_Pa))
-        $(TR $(TD Bopomofo)    $(TD Javanese)    $(TD Phoenician))
-        $(TR $(TD Brahmi)  $(TD Kaithi)  $(TD Rejang))
-        $(TR $(TD Braille) $(TD Kannada) $(TD Runic))
-        $(TR $(TD Buginese)    $(TD Katakana)    $(TD Samaritan))
-        $(TR $(TD Buhid)   $(TD Kayah_Li)    $(TD Saurashtra))
-        $(TR $(TD Canadian_Aboriginal) $(TD Kharoshthi)  $(TD Sharada))
-        $(TR $(TD Carian)  $(TD Khmer)   $(TD Shavian))
-        $(TR $(TD Chakma)  $(TD Lao) $(TD Sinhala))
-        $(TR $(TD Cham)    $(TD Latin)   $(TD Sora_Sompeng))
-        $(TR $(TD Cherokee)    $(TD Lepcha)  $(TD Sundanese))
-        $(TR $(TD Common)  $(TD Limbu)   $(TD Syloti_Nagri))
-        $(TR $(TD Coptic)  $(TD Linear_B)    $(TD Syriac))
-        $(TR $(TD Cuneiform)   $(TD Lisu)    $(TD Tagalog))
-        $(TR $(TD Cypriot) $(TD Lycian)  $(TD Tagbanwa))
-        $(TR $(TD Cyrillic)    $(TD Lydian)  $(TD Tai_Le))
-        $(TR $(TD Deseret) $(TD Malayalam)   $(TD Tai_Tham))
-        $(TR $(TD Devanagari)  $(TD Mandaic) $(TD Tai_Viet))
-        $(TR $(TD Egyptian_Hieroglyphs)    $(TD Meetei_Mayek)    $(TD Takri))
-        $(TR $(TD Ethiopic)    $(TD Meroitic_Cursive)    $(TD Tamil))
-        $(TR $(TD Georgian)    $(TD Meroitic_Hieroglyphs)    $(TD Telugu))
-        $(TR $(TD Glagolitic)  $(TD Miao)    $(TD Thaana))
-        $(TR $(TD Gothic)  $(TD Mongolian)   $(TD Thai))
-        $(TR $(TD Greek)   $(TD Myanmar) $(TD Tibetan))
-        $(TR $(TD Gujarati)    $(TD New_Tai_Lue) $(TD Tifinagh))
-        $(TR $(TD Gurmukhi)    $(TD Nko) $(TD Ugaritic))
-        $(TR $(TD Han) $(TD Ogham)   $(TD Vai))
-        $(TR $(TD Hangul)  $(TD Ol_Chiki)    $(TD Yi))
+        and by the shorthand version $(LREF unicode):)
+        $(BOOKTABLE $(B Scripts),
+            $(TR $(TD Arabic)  $(TD Hanunoo) $(TD Old_Italic))
+            $(TR $(TD Armenian)    $(TD Hebrew)  $(TD Old_Persian))
+            $(TR $(TD Avestan) $(TD Hiragana)    $(TD Old_South_Arabian))
+            $(TR $(TD Balinese)    $(TD Imperial_Aramaic)    $(TD Old_Turkic))
+            $(TR $(TD Bamum)   $(TD Inherited)   $(TD Oriya))
+            $(TR $(TD Batak)   $(TD Inscriptional_Pahlavi)   $(TD Osmanya))
+            $(TR $(TD Bengali) $(TD Inscriptional_Parthian)  $(TD Phags_Pa))
+            $(TR $(TD Bopomofo)    $(TD Javanese)    $(TD Phoenician))
+            $(TR $(TD Brahmi)  $(TD Kaithi)  $(TD Rejang))
+            $(TR $(TD Braille) $(TD Kannada) $(TD Runic))
+            $(TR $(TD Buginese)    $(TD Katakana)    $(TD Samaritan))
+            $(TR $(TD Buhid)   $(TD Kayah_Li)    $(TD Saurashtra))
+            $(TR $(TD Canadian_Aboriginal) $(TD Kharoshthi)  $(TD Sharada))
+            $(TR $(TD Carian)  $(TD Khmer)   $(TD Shavian))
+            $(TR $(TD Chakma)  $(TD Lao) $(TD Sinhala))
+            $(TR $(TD Cham)    $(TD Latin)   $(TD Sora_Sompeng))
+            $(TR $(TD Cherokee)    $(TD Lepcha)  $(TD Sundanese))
+            $(TR $(TD Common)  $(TD Limbu)   $(TD Syloti_Nagri))
+            $(TR $(TD Coptic)  $(TD Linear_B)    $(TD Syriac))
+            $(TR $(TD Cuneiform)   $(TD Lisu)    $(TD Tagalog))
+            $(TR $(TD Cypriot) $(TD Lycian)  $(TD Tagbanwa))
+            $(TR $(TD Cyrillic)    $(TD Lydian)  $(TD Tai_Le))
+            $(TR $(TD Deseret) $(TD Malayalam)   $(TD Tai_Tham))
+            $(TR $(TD Devanagari)  $(TD Mandaic) $(TD Tai_Viet))
+            $(TR $(TD Egyptian_Hieroglyphs)    $(TD Meetei_Mayek)    $(TD Takri))
+            $(TR $(TD Ethiopic)    $(TD Meroitic_Cursive)    $(TD Tamil))
+            $(TR $(TD Georgian)    $(TD Meroitic_Hieroglyphs)    $(TD Telugu))
+            $(TR $(TD Glagolitic)  $(TD Miao)    $(TD Thaana))
+            $(TR $(TD Gothic)  $(TD Mongolian)   $(TD Thai))
+            $(TR $(TD Greek)   $(TD Myanmar) $(TD Tibetan))
+            $(TR $(TD Gujarati)    $(TD New_Tai_Lue) $(TD Tifinagh))
+            $(TR $(TD Gurmukhi)    $(TD Nko) $(TD Ugaritic))
+            $(TR $(TD Han) $(TD Ogham)   $(TD Vai))
+            $(TR $(TD Hangul)  $(TD Ol_Chiki)    $(TD Yi))
     )
-
     $(P Bellow is the table of names accepted by $(LREF unicode.hangulSyllableType).)
-    $(BOOKTABLE $(B Hangul syllable type),
-        $(TR $(TH Abb.) $(TH Long form))
-        $(TR $(TD L)   $(TD Leading_Jamo))
-        $(TR $(TD LV)  $(TD LV_Syllable))
-        $(TR $(TD LVT) $(TD LVT_Syllable) )
-        $(TR $(TD T)   $(TD Trailing_Jamo))
-        $(TR $(TD V)   $(TD Vowel_Jamo))
+        $(BOOKTABLE $(B Hangul syllable type),
+            $(TR $(TH Abb.) $(TH Long form))
+            $(TR $(TD L)   $(TD Leading_Jamo))
+            $(TR $(TD LV)  $(TD LV_Syllable))
+            $(TR $(TD LVT) $(TD LVT_Syllable) )
+            $(TR $(TD T)   $(TD Trailing_Jamo))
+            $(TR $(TD V)   $(TD Vowel_Jamo))
     )
     References:
         $(WEB www.digitalmars.com/d/ascii-table.html, ASCII Table),
