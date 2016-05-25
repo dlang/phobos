@@ -325,7 +325,7 @@ struct JSONValue
     @property inout(JSONValue[]) arrayNoRef() inout pure @trusted
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
-                                "JSONValue is not an object");
+                                "JSONValue is not an array");
         return store.array;
     }
 
