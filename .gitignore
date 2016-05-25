@@ -16,3 +16,10 @@ bin/
 obj/
 
 *.html
+
+compile_commands.json
+.reggae
+build
+reggae/bin
+reggae/dmd.zip
+reggae/dmd2
