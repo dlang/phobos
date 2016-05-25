@@ -274,10 +274,21 @@ and $(D length == capacity), throws an exception.
         }
         else
         {
-            // can't grow
-            enforce(length < _store.length,
-                    "Cannot grow a heap created over a range");
-            _store[_length] = value;
+            import std.traits : isDynamicArray;
+            static if (isDynamicArray!Store)
+            {
+                if (_store.length == 0)
+                    _store.length = 8;
+                else if (length == _store.length)
+                    _store.length = length * 3 / 2;
+                _store[_length] = value;
+            }
+            else
+            {
+                // can't grow
+                enforce(length < _store.length,
+                        "Cannot grow a heap created over a range");
+            }
         }
 
         // sink down the element
@@ -444,4 +455,20 @@ unittest // 15675
     Array!int elements = [1, 2, 10, 12];
     auto heap = heapify(elements);
     assert(heap.front == 12);
+}
+
+unittest // 16072
+{
+    auto q = heapify!"a > b"([2, 4, 5]);
+    q.insert(1);
+    q.insert(6);
+    assert(q.front == 1);
+
+    // test more multiple grows
+    int[] arr;
+    auto r = heapify!"a < b"(arr);
+    foreach (i; 0..100)
+        r.insert(i);
+
+    assert(r.front == 99);
 }
