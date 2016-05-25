@@ -51,7 +51,6 @@ $(BOOKTABLE ,
     ))
 )
 
-
 Source: $(PHOBOSSRC std/range/_interfaces.d)
 
 Macros:

@@ -6,7 +6,6 @@
  * Mathematical special functions are available in $(D std.mathspecial).
  *
 $(SCRIPT inhibitQuickIndex = 1;)
-
 $(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Members) )
@@ -57,7 +56,6 @@ $(TR $(TDNW Hardware Control) $(TD
 ))
 )
 )
-
  * The functionality closely follows the IEEE754-2008 standard for
  * floating-point arithmetic, including the use of camelCase names rather
  * than C99-style lower case names. All of these functions behave correctly

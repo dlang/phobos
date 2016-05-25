@@ -9,7 +9,6 @@
  * variant of the CSV format. This parser will loosely follow the
  * $(WEB tools.ietf.org/html/rfc4180, RFC-4180). CSV input should adhere
  * to the following criteria (differences from RFC-4180 in parentheses):
- *
  * $(UL
  *     $(LI A record is separated by a new line (CRLF,LF,CR))
  *     $(LI A final record may end with a new line)
@@ -52,10 +51,8 @@
  }
  * }
  * -------
- *
  * When an input contains a header the $(D Contents) can be specified as an
  * associative array. Passing null to signify that a header is present.
- *
  * -------
  * auto text = "Name,Occupation,Salary\r"
  *     "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
@@ -68,7 +65,6 @@
  *              record["Salary"]);
  * }
  * -------
- *
  * This module allows content to be iterated by record stored in a struct,
  * class, associative array, or as a range of fields. Upon detection of an
  * error an CSVException is thrown (can be disabled). csvNextToken has been

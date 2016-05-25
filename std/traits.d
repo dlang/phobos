@@ -4,7 +4,6 @@
  * Templates which extract information about types and symbols at compile time.
  *
  * $(SCRIPT inhibitQuickIndex = 1;)
- *
  * $(DIVC quickindex,
  * $(BOOKTABLE ,
  * $(TR $(TH Category) $(TH Templates))

@@ -15,7 +15,6 @@
         $(LI Benchmarking functions.)
         $(LI Various helper functions.)
     )
-
     Closely related to std.datetime is <a href="core_time.html">$(D core.time)</a>,
     and some of the time types used in std.datetime come from there - such as
     $(CXREF time, Duration), $(CXREF time, TickDuration), and
@@ -60,13 +59,11 @@
     $(D toSimpleString), use the corresponding $(D fromISOString),
     $(D fromISOExtString), or $(D fromSimpleString) to create a
     $(LREF SysTime) from the string.
-
 --------------------
 auto currentTime = Clock.currTime();
 auto timeString = currentTime.toISOExtString();
 auto restoredTime = SysTime.fromISOExtString(timeString);
 --------------------
-
     Various functions take a string (or strings) to represent a unit of time
     (e.g. $(D convert!("days", "hours")(numDays))). The valid strings to use
     with such functions are $(D "years"), $(D "months"), $(D "weeks"),

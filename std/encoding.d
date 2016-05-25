@@ -9,7 +9,6 @@ between strings of different type, as well as validation and sanitization.
 
 Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
 (also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250 and WINDOWS-1252.
-
 $(UL
 $(LI The type $(D AsciiChar) represents an ASCII character.)
 $(LI The type $(D AsciiString) represents an ASCII string.)
@@ -20,8 +19,8 @@ $(LI The type $(D Latin2String) represents an ISO-8859-2 string.)
 $(LI The type $(D Windows1250Char) represents a Windows-1250 character.)
 $(LI The type $(D Windows1250String) represents a Windows-1250 string.)
 $(LI The type $(D Windows1252Char) represents a Windows-1252 character.)
-$(LI The type $(D Windows1252String) represents a Windows-1252 string.))
-
+$(LI The type $(D Windows1252String) represents a Windows-1252 string.)
+)
 For cases where the _encoding is not known at compile-time, but is
 known at run-time, we provide the abstract class $(D EncodingScheme)
 and its subclasses.  To construct a run-time encoder/decoder, one does

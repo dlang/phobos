@@ -24,7 +24,6 @@
  * ubyte[] decoded = Base64.decode("FPucA9l+");
  * assert(decoded == [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e]);
  * -----
- *
  * The range API is supported for both encoding and decoding:
  *
  * Example:
