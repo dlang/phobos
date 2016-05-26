@@ -5,7 +5,6 @@ It can be used as a queue, dequeue or stack.
 This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_dlist.d)
-TEXTWITHCOMMAS = $0
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.

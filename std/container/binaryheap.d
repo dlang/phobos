@@ -5,7 +5,6 @@ adaptor that makes a binary heap out of any user-provided random-access range.
 This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_binaryheap.d)
-TEXTWITHCOMMAS = $0
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
