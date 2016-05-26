@@ -415,8 +415,11 @@ private Pid spawnProcessImpl(in char[][] args,
     auto id = core.sys.posix.unistd.fork();
     if (id < 0)
         throw ProcessException.newFromErrno("Failed to spawn new process");
-    if (id == 0)
+
+    void forkChild() nothrow @nogc
     {
+        pragma(inline, true);
+
         // Child process
 
         // Set the working directory.
@@ -455,7 +458,12 @@ private Pid spawnProcessImpl(in char[][] args,
 
             // Get the maximum number of file descriptors that could be open.
             rlimit r;
-            errnoEnforce(getrlimit(RLIMIT_NOFILE, &r) == 0);
+            if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+            {
+                core.sys.posix.stdio.perror("getrlimit");
+                core.sys.posix.unistd._exit(1);
+                assert(0);
+            }
             immutable maxDescriptors = cast(int)r.rlim_cur;
 
             // The above, less stdin, stdout, and stderr
@@ -513,6 +521,11 @@ private Pid spawnProcessImpl(in char[][] args,
         // If execution fails, exit as quickly as possible.
         core.sys.posix.stdio.perror("spawnProcess(): Failed to execute program");
         core.sys.posix.unistd._exit(1);
+    }
+
+    if (id == 0)
+    {
+        forkChild();
         assert (0);
     }
     else
@@ -779,7 +792,7 @@ version (Posix) unittest
 
 // Sets or unsets the FD_CLOEXEC flag on the given file descriptor.
 version (Posix)
-private void setCLOEXEC(int fd, bool on)
+private void setCLOEXEC(int fd, bool on) nothrow @nogc
 {
     import core.sys.posix.fcntl;
     auto flags = fcntl(fd, F_GETFD);
@@ -3754,7 +3767,7 @@ else version (OSX)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-    void browse(const(char)[] url)
+    void browse(const(char)[] url) nothrow @nogc
     {
         const(char)*[5] args;
 
@@ -3790,7 +3803,7 @@ else version (Posix)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-    void browse(const(char)[] url)
+    void browse(const(char)[] url) nothrow @nogc
     {
         const(char)*[3] args;
 
