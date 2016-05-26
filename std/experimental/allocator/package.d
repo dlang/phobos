@@ -1123,33 +1123,85 @@ allocated with the same allocator.
 */
 void dispose(A, T)(auto ref A alloc, T* p)
 {
+    if (!p) return;
     static if (hasElaborateDestructor!T)
-    {
-        destroy(*p);
-    }
+        p.__dtor;
     alloc.deallocate((cast(void*)p)[0 .. T.sizeof]);
 }
 
 /// Ditto
 void dispose(A, T)(auto ref A alloc, T p)
-if (is(T == class) || is(T == interface))
+if (is(T == class) && T.stringof != Object.stringof)
 {
-    if (!p) return;
-    static if (is(T == interface))
+    if (p)
+    {
+        auto support = (cast(void*) p)[0 .. typeid(p).initializer.length];
+        static if (__traits(hasMember, T, "__dtor"))
+        {
+            p.__dtor;
+            alloc.deallocate(support);
+        }
+        else // dtor might be in an ancestor
+        {
+            dispose(alloc, cast(Object) p);
+        }
+    }
+}
+
+/// Ditto
+void dispose(A, T, bool isObject = false)(auto ref A alloc, T p)
+if (is(T == class) && T.stringof == Object.stringof)
+{
+    // the content of this overload can't be in the previous because when the
+    // static type is not known (e.g after cast from interface to Object) dispose()
+    // can't be @nogc since the dtor is a delegate determined at runtime. isObject
+    // indicates if the static type is really "Object", e.g "alloc.make!Object"
+    if (p)
+    {
+        static if (!isObject)
+        {
+            TypeInfo_Class tic = cast(TypeInfo_Class) typeid(p);
+            auto support = (cast(void*) p)[0 .. tic.initializer.length];
+
+            void* dtorPtr = tic.destructor;
+
+            while (!dtorPtr && tic.base)
+            {
+                tic = tic.base;
+                dtorPtr = tic.destructor;
+            }
+            if (dtorPtr)
+            {
+                void delegate() dtor;
+                dtor.funcptr = cast(void function()) dtorPtr;
+                dtor.ptr = cast(void*) p;
+                dtor();
+            }
+        }
+        alloc.deallocate(support);
+    }
+}
+
+/// Ditto
+void dispose(A, T)(auto ref A alloc, T p)
+if (is(T == interface))
+{
+    if (p)
     {
         version(Windows)
         {
-            import core.sys.windows.unknwn;
+            import core.sys.windows.unknwn: IUnknown;
             static assert(!is(T: IUnknown), "COM interfaces can't be destroyed in "
                 ~ __PRETTY_FUNCTION__);
         }
-        auto ob = cast(Object) p;
+        static if (__traits(allMembers, T).length)
+        {
+            foreach (ov; __traits(getOverloads, T, __traits(allMembers, T)[0]))
+            static assert(functionLinkage!ov != "C++", "C++ interfaces can't be destroyed in "
+                ~ __PRETTY_FUNCTION__);
+        }
+        dispose(alloc, cast(Object) p);
     }
-    else
-        alias ob = p;
-    auto support = (cast(void*) ob)[0 .. typeid(ob).initializer.length];
-    destroy(p);
-    alloc.deallocate(support);
 }
 
 /// Ditto
@@ -1158,11 +1210,42 @@ void dispose(A, T)(auto ref A alloc, T[] array)
     static if (hasElaborateDestructor!(typeof(array[0])))
     {
         foreach (ref e; array)
-        {
-            destroy(e);
-        }
+            e.__dtor;
     }
     alloc.deallocate(array);
+}
+
+@nogc unittest // bugzilla 16064
+{
+    static class A
+    {
+        ~this() @nogc
+        {}
+    }
+    import std.experimental.allocator.mallocator: Mallocator;
+    A a =  Mallocator.instance.make!A;
+    Mallocator.instance.dispose(a);
+}
+
+unittest
+{
+    static int x;
+    static class Base {}
+    static class Derived : Base {~this() { x = 42;}}
+
+    Base base = theAllocator.make!Derived;
+    dispose(theAllocator, base);
+    assert(x == 42);
+}
+
+unittest
+{
+    extern(C++) interface Foo{void fun();}
+    Foo foo;
+    static assert(!is(typeof(theAllocator.dispose(foo))));
+    interface Bar{void bar();}
+    Bar bar;
+    static assert(is(typeof(theAllocator.dispose(bar))));
 }
 
 unittest
