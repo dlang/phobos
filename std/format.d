@@ -190,49 +190,68 @@ $(I FormatChar):
 )
 
     $(BOOKTABLE Flags affect formatting depending on the specifier as
-    follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
-
-    $(TR $(TD $(B '-')) $(TD numeric) $(TD Left justify the result in
-        the field.  It overrides any $(B 0) flag.))
-
-    $(TR $(TD $(B '+')) $(TD numeric) $(TD Prefix positive numbers in
-    a signed conversion with a $(B +).  It overrides any $(I space)
-    flag.))
-
-    $(TR $(TD $(B '#')) $(TD integral ($(B 'o'))) $(TD Add to
-    precision as necessary so that the first digit of the octal
-    formatting is a '0', even if both the argument and the $(I
-    Precision) are zero.))
-
-    $(TR $(TD $(B '#')) $(TD integral ($(B 'x'), $(B 'X'))) $(TD If
-       non-zero, prefix result with $(B 0x) ($(B 0X)).))
-
-    $(TR $(TD $(B '#')) $(TD floating) $(TD Always insert the decimal
-       point and print trailing zeros.))
-
-    $(TR $(TD $(B '0')) $(TD numeric) $(TD Use leading
-    zeros to pad rather than spaces (except for the floating point
-    values $(D nan) and $(D infinity)).  Ignore if there's a $(I
-    Precision).))
-
-    $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
-    numbers in a signed conversion with a space.)))
-
+    follows.,
+    $(TR
+        $(TH Flag)
+        $(TH Types&nbsp;affected)
+        $(TH Semantics)
+    )
+    $(TR
+        $(TD $(B '-'))
+        $(TD numeric)
+        $(TD Left justify the result in
+        the field.  It overrides any $(B 0) flag.)
+    )
+    $(TR
+        $(TD $(B '+'))
+        $(TD numeric)
+        $(TD Prefix positive numbers in a signed conversion with a $(B +).
+        It overrides any $(I space) flag.)
+    )
+    $(TR
+        $(TD $(B '#'))
+        $(TD integral ($(B 'o')))
+        $(TD Add to precision as necessary so that the first digit of the octal
+             formatting is a '0', even if both the argument and the $(I
+             Precision) are zero.)
+    )
+    $(TR
+        $(TD $(B '#'))
+        $(TD integral ($(B 'x'), $(B 'X')))
+        $(TD If non-zero, prefix result with $(B 0x) ($(B 0X)).)
+    )
+    $(TR
+        $(TD $(B '#'))
+        $(TD floating)
+        $(TD Always insert the decimal point and print trailing zeros.)
+    )
+    $(TR
+        $(TD $(B '0'))
+        $(TD numeric)
+        $(TD Use leading zeros to pad rather than spaces
+             (except for the floating point values $(D nan) and $(D infinity)).
+             Ignore if there's a $(I Precision).)
+    )
+    $(TR
+        $(TD $(B ' '))
+        $(TD numeric)
+        $(TD Prefix positive numbers in a signed conversion with a space.)
+    ))
     $(DL
         $(DT $(I Width))
         $(DD
-        Specifies the minimum field width.
-        If the width is a $(B *), an additional argument of type $(B int),
-        preceding the actual argument, is taken as the width.
-        If the width is negative, it is as if the $(B -) was given
-        as a $(I Flags) character.)
-
+            Specifies the minimum field width.
+            If the width is a $(B *), an additional argument of type $(B int),
+            preceding the actual argument, is taken as the width.
+            If the width is negative, it is as if the $(B -) was given
+            as a $(I Flags) character.
+        )
         $(DT $(I Precision))
         $(DD Gives the precision for numeric conversions.
-        If the precision is a $(B *), an additional argument of type $(B int),
-        preceding the actual argument, is taken as the precision.
-        If it is negative, it is as if there was no $(I Precision) specifier.)
-
+             If the precision is a $(B *), an additional argument of type $(B int),
+             preceding the actual argument, is taken as the precision.
+             If it is negative, it is as if there was no $(I Precision) specifier.
+        )
         $(DT $(I FormatChar))
         $(DD
         $(DL
@@ -274,66 +293,66 @@ $(I FormatChar):
                 would look like for the contents of the associative array,
                 e.g.: ["red" : 10, "blue" : 20].)
             ))
-
             $(DT $(B 'c'))
-            $(DD The corresponding argument must be a character type.)
-
+            $(DD The corresponding argument must be a character type.
+            )
             $(DT $(B 'b','d','o','x','X'))
             $(DD The corresponding argument must be an integral type
-            and is formatted as an integer. If the argument is a signed type
-            and the $(I FormatChar) is $(B d) it is converted to
-            a signed string of characters, otherwise it is treated as
-            unsigned. An argument of type $(B bool) is formatted as '1'
-            or '0'. The base used is binary for $(B b), octal for $(B o),
-            decimal
-            for $(B d), and hexadecimal for $(B x) or $(B X).
-            $(B x) formats using lower case letters, $(B X) uppercase.
-            If there are fewer resulting digits than the $(I Precision),
-            leading zeros are used as necessary.
-            If the $(I Precision) is 0 and the number is 0, no digits
-            result.)
-
+                 and is formatted as an integer. If the argument is a signed type
+                 and the $(I FormatChar) is $(B d) it is converted to
+                 a signed string of characters, otherwise it is treated as
+                 unsigned. An argument of type $(B bool) is formatted as '1'
+                 or '0'. The base used is binary for $(B b), octal for $(B o),
+                 decimal
+                 for $(B d), and hexadecimal for $(B x) or $(B X).
+                 $(B x) formats using lower case letters, $(B X) uppercase.
+                 If there are fewer resulting digits than the $(I Precision),
+                 leading zeros are used as necessary.
+                 If the $(I Precision) is 0 and the number is 0, no digits
+                 result.
+            )
             $(DT $(B 'e','E'))
             $(DD A floating point number is formatted as one digit before
-            the decimal point, $(I Precision) digits after, the $(I FormatChar),
-            &plusmn;, followed by at least a two digit exponent:
-            $(I d.dddddd)e$(I &plusmn;dd).
-            If there is no $(I Precision), six
-            digits are generated after the decimal point.
-            If the $(I Precision) is 0, no decimal point is generated.)
-
+                the decimal point, $(I Precision) digits after, the $(I FormatChar),
+                &plusmn;, followed by at least a two digit exponent:
+                $(I d.dddddd)e$(I &plusmn;dd).
+                If there is no $(I Precision), six
+                digits are generated after the decimal point.
+                If the $(I Precision) is 0, no decimal point is generated.
+            )
             $(DT $(B 'f','F'))
             $(DD A floating point number is formatted in decimal notation.
-            The $(I Precision) specifies the number of digits generated
-            after the decimal point. It defaults to six. At least one digit
-            is generated before the decimal point. If the $(I Precision)
-            is zero, no decimal point is generated.)
-
+                The $(I Precision) specifies the number of digits generated
+                after the decimal point. It defaults to six. At least one digit
+                is generated before the decimal point. If the $(I Precision)
+                is zero, no decimal point is generated.
+            )
             $(DT $(B 'g','G'))
             $(DD A floating point number is formatted in either $(B e) or
-            $(B f) format for $(B g); $(B E) or $(B F) format for
-            $(B G).
-            The $(B f) format is used if the exponent for an $(B e) format
-            is greater than -5 and less than the $(I Precision).
-            The $(I Precision) specifies the number of significant
-            digits, and defaults to six.
-            Trailing zeros are elided after the decimal point, if the fractional
-            part is zero then no decimal point is generated.)
-
+                $(B f) format for $(B g); $(B E) or $(B F) format for
+                $(B G).
+                The $(B f) format is used if the exponent for an $(B e) format
+                is greater than -5 and less than the $(I Precision).
+                The $(I Precision) specifies the number of significant
+                digits, and defaults to six.
+                Trailing zeros are elided after the decimal point, if the fractional
+                part is zero then no decimal point is generated.
+            )
             $(DT $(B 'a','A'))
             $(DD A floating point number is formatted in hexadecimal
-            exponential notation 0x$(I h.hhhhhh)p$(I &plusmn;d).
-            There is one hexadecimal digit before the decimal point, and as
-            many after as specified by the $(I Precision).
-            If the $(I Precision) is zero, no decimal point is generated.
-            If there is no $(I Precision), as many hexadecimal digits as
-            necessary to exactly represent the mantissa are generated.
-            The exponent is written in as few digits as possible,
-            but at least one, is in decimal, and represents a power of 2 as in
-            $(I h.hhhhhh)*2<sup>$(I &plusmn;d)</sup>.
-            The exponent for zero is zero.
-            The hexadecimal digits, x and p are in upper case if the
-            $(I FormatChar) is upper case.)
+                exponential notation 0x$(I h.hhhhhh)p$(I &plusmn;d).
+                There is one hexadecimal digit before the decimal point, and as
+                many after as specified by the $(I Precision).
+                If the $(I Precision) is zero, no decimal point is generated.
+                If there is no $(I Precision), as many hexadecimal digits as
+                necessary to exactly represent the mantissa are generated.
+                The exponent is written in as few digits as possible,
+                but at least one, is in decimal, and represents a power of 2 as in
+                $(I h.hhhhhh)*2<sup>$(I &plusmn;d)</sup>.
+                The exponent for zero is zero.
+                The hexadecimal digits, x and p are in upper case if the
+                $(I FormatChar) is upper case.
+            )
         ))
     )
 
