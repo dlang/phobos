@@ -5,8 +5,6 @@ It can be used as a queue, dequeue or stack.
 This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_dlist.d)
-Macros:
-WIKI = Phobos/StdContainer
 TEXTWITHCOMMAS = $0
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code

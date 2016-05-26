@@ -5,8 +5,6 @@
  *       current standards. It will be remove in October 2016.)
  *
  * Source:    $(PHOBOSSRC std/_stream.d)
- * Macros:
- *      WIKI = Phobos/StdStream
  */
 
 /*

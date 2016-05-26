@@ -134,7 +134,7 @@ See_Also:
     for functions that work with unicode strings
     )
 
-Macros: WIKI = Phobos/StdString
+Macros:
         SHORTXREF=$(XREF2 $1, $2, $(TT $2))
         SHORTXREF_PACK=$(XREF_PACK_NAMED $1,$2,$3, $(TT $3))
 

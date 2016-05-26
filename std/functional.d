@@ -47,10 +47,6 @@ $(TR $(TH Function Name) $(TH Description)
     ))
 )
 
-Macros:
-
-WIKI = Phobos/StdFunctional
-
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)

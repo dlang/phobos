@@ -38,8 +38,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
  *
  * Source: $(PHOBOSSRC std/digest/_md.d)
  *
- * Macros:
- * WIKI = Phobos/StdMd5
  */
 
 /* md5.d - RSA Data Security, Inc., MD5 message-digest algorithm

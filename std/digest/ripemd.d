@@ -42,8 +42,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
  *
  * Source: $(PHOBOSSRC std/digest/_ripemd.d)
  *
- * Macros:
- * WIKI = Phobos/StdRipemd
  */
 
 module std.digest.ripemd;

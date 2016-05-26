@@ -40,8 +40,6 @@
  * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger),
  *      $(WEB thecybershadow.net, Vladimir Panteleev)
  * Source:  $(PHOBOSSRC std/_socket.d)
- * Macros:
- *      WIKI=Phobos/StdSocket
  */
 
 module std.socket;

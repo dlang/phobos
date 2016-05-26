@@ -17,9 +17,6 @@
  *  $(LINK2 http://amazon.com/exec/obidos/ASIN/0201704315/ref=ase_classicempire/102-2957199-2585768,
  *      Modern C++ Design),
  *   Andrei Alexandrescu (Addison-Wesley Professional, 2001)
- * Macros:
- *  WIKI = Phobos/StdMeta
- *
  * Copyright: Copyright Digital Mars 2005 - 2015.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:

@@ -40,9 +40,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
  *
  * Source: $(PHOBOSSRC std/digest/_crc.d)
  *
- * Macros:
- * WIKI = Phobos/StdUtilDigestCRC32
- *
  * Standards:
  * Implements the 'common' IEEE CRC32 variant
  * (LSB-first order, Initial value uint.max, complement result)

@@ -136,9 +136,6 @@
  * )
  * )
  *
- * Macros:
- *  WIKI = Phobos/StdTraits
- *
  * Copyright: Copyright Digital Mars 2005 - 2009.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright),

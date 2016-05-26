@@ -11,9 +11,6 @@
  * See_Also:
  *  $(LINK2 http://www.ietf.org/rfc/rfc3986.txt, RFC 3986)<br>
  *  $(LINK2 http://en.wikipedia.org/wiki/Uniform_resource_identifier, Wikipedia)
- * Macros:
- *  WIKI = Phobos/StdUri
- *
  * Copyright: Copyright Digital Mars 2000 - 2009.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)

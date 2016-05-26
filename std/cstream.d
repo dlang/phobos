@@ -7,9 +7,6 @@
  * The std.cstream module bridges core.stdc.stdio (or std.stdio) and std.stream.
  * Both core.stdc.stdio and std.stream are publicly imported by std.cstream.
  *
- * Macros:
- *      WIKI=Phobos/StdCstream
- *
  * Copyright: Copyright Ben Hinkle 2007 - 2009.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Ben Hinkle

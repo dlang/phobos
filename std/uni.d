@@ -597,9 +597,6 @@
     Trademarks:
         Unicode(tm) is a trademark of Unicode, Inc.
 
-    Macros:
-        WIKI=Phobos/StdUni
-
     Copyright: Copyright 2013 -
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Dmitry Olshansky

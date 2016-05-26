@@ -6,9 +6,6 @@ header in Alexander Stepanov's $(LINK2 http://sgi.com/tech/stl,
 Standard Template Library), with a few additions.
 
 Macros:
-
-WIKI = Phobos/StdNumeric
-
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu),

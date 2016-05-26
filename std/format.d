@@ -44,9 +44,6 @@ $(TR $(TH Function Name) $(TH Description)
 
    The functions $(D $(LREF formatValue)) and $(D $(LREF unformatValue)) are
    used for the plumbing.
-
-   Macros: WIKI = Phobos/StdFormat
-
    Copyright: Copyright Digital Mars 2000-2013.
 
    License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).

@@ -4,8 +4,6 @@ This module implements a red-black tree container.
 This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_rbtree.d)
-Macros:
-WIKI = Phobos/StdContainer
 TEXTWITHCOMMAS = $0
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code

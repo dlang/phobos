@@ -48,8 +48,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  *
  * Source: $(PHOBOSSRC std/digest/_sha.d)
  *
- * Macros:
- *      WIKI = Phobos/StdSha1
  */
 
 /*          Copyright Kai Nacke 2012.
