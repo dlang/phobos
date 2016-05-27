@@ -218,11 +218,7 @@ struct Region(ParentAllocator = NullAllocator,
     {
         assert(owns(b) == Ternary.yes || b.ptr is null);
         assert(b.ptr + b.length <= _current || b.ptr is null);
-        if (!b.ptr)
-        {
-            b = allocate(delta);
-            return b.length == delta;
-        }
+        if (!b.ptr) return delta == 0;
         auto newLength = b.length + delta;
         if (_current < b.ptr + b.length + alignment)
         {
@@ -694,7 +690,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     */
     bool expand(ref void[] b, size_t delta) shared
     {
-        if (b is null) return (b = allocate(delta)) !is null;
+        if (b is null) return delta == 0;
         assert(_brkInitial && _brkCurrent); // otherwise where did b come from?
         pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
         scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0

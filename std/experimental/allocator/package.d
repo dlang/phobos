@@ -899,6 +899,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
         size_t delta)
 {
     if (!delta) return true;
+    if (array is null) return false;
     immutable oldLength = array.length;
     void[] buf = array;
     if (!alloc.reallocate(buf, buf.length + T.sizeof * delta)) return false;
@@ -925,6 +926,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     size_t delta, auto ref T init)
 {
     if (!delta) return true;
+    if (array is null) return false;
     void[] buf = array;
     if (!alloc.reallocate(buf, buf.length + T.sizeof * delta)) return false;
     immutable oldLength = array.length;
@@ -953,6 +955,7 @@ bool expandArray(T, Allocator, R)(auto ref Allocator alloc, ref T[] array,
         R range)
 if (isInputRange!R)
 {
+    if (array is null) return false;
     static if (isForwardRange!R)
     {
         immutable delta = walkLength(range.save);
@@ -1396,7 +1399,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         static if (hasMember!(Allocator, "expand"))
             return impl.expand(b, s);
         else
-            return false;
+            return s == 0;
     }
 
     /// Returns $(D impl.reallocate(b, s)).

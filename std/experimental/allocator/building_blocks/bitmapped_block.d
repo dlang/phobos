@@ -494,11 +494,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     {
         // Dispose with trivial corner cases
         if (delta == 0) return true;
-        if (b is null)
-        {
-            b = allocate(delta);
-            return b !is null;
-        }
+        if (b is null) return false;
 
         /* To simplify matters, refuse to expand buffers that don't start at a block start (this may be the case for blocks allocated with alignedAllocate).
         */
@@ -968,11 +964,7 @@ struct BitmappedBlockWithInternalPointers(
     bool expand(ref void[] b, size_t bytes)
     {
         if (!bytes) return true;
-        if (b is null)
-        {
-            b = allocate(bytes);
-            return b !is null;
-        }
+        if (b is null) return false;
         immutable oldBlocks =
             (b.length + _heap.blockSize - 1) / _heap.blockSize;
         assert(oldBlocks);

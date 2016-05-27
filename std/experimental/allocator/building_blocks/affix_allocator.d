@@ -146,11 +146,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         static if (!stateSize!Suffix && hasMember!(Allocator, "expand"))
         bool expand(ref void[] b, size_t delta)
         {
-            if (!b.ptr)
-            {
-                b = allocate(delta);
-                return b.length == delta;
-            }
+            if (!b.ptr) return delta == 0;
             auto t = actualAllocation(b);
             const result = parent.expand(t, delta);
             if (!result) return false;

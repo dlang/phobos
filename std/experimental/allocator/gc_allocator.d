@@ -31,11 +31,7 @@ struct GCAllocator
     @system bool expand(ref void[] b, size_t delta) shared
     {
         if (delta == 0) return true;
-        if (b is null)
-        {
-            b = allocate(delta);
-            return b.ptr != null; // we assume allocate will achieve the correct size.
-        }
+        if (b is null) return false;
         immutable curLength = GC.sizeOf(b.ptr);
         assert(curLength != 0); // we have a valid GC pointer here
         immutable desired = b.length + delta;

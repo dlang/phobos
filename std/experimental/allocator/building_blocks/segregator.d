@@ -151,6 +151,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
                 || hasMember!(LargeAllocator, "expand"))
         bool expand(ref void[] b, size_t delta)
         {
+            if (!delta) return true;
             if (b.length + delta <= threshold)
             {
                 // Old and new allocations handled by _small

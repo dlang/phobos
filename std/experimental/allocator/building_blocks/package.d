@@ -70,8 +70,8 @@ reallocated or deallocated with the usual primitives, if defined).))
 
 $(TR $(TDC bool expand(ref void[] b, size_t delta);, $(POST !$(RES) || b.length
 == $(I old)(b).length + delta)) $(TD Expands $(D b) by $(D delta) bytes. If $(D
-delta == 0), succeeds without changing $(D b). If $(D b is null), the call
-evaluates $(D b = allocate(delta)) and returns $(D b !is null). Otherwise, $(D
+delta == 0), succeeds without changing $(D b). If $(D b is null), returns
+`false` (the null pointer cannot be expanded in place). Otherwise, $(D
 b) must be a buffer previously allocated with the same allocator. If expansion
 was successful, $(D expand) changes $(D b)'s length to $(D b.length + delta) and
 returns $(D true). Upon failure, the call effects no change upon the allocator
