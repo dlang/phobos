@@ -616,10 +616,9 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 +/
 module std.uni;
 
-import core.stdc.stdlib;
-import std.meta, std.traits;
-import std.range.primitives;
-
+import std.meta;// AliasSeq
+import std.range.primitives;// ElementEncodingType, ElementType, isForwardRange, isInputRange, isRandomAccessRange
+import std.traits;// isConvertibleToString, isIntegral, isSomeChar, isSomeString, Unqual
 
 // debug = std_uni;
 
@@ -655,12 +654,6 @@ private:
     }
 }
 
-version(std_uni_bootstrap){}
-else
-{
-    import std.internal.unicode_tables; // generated file
-}
-
 void copyBackwards(T,U)(T[] src, U[] dest)
 {
     assert(src.length == dest.length);
@@ -690,7 +683,7 @@ public enum dchar nelSep  = '\u0085'; /// Constant $(CODEPOINT) (0x0085) - next 
 // test the intro example
 @safe unittest
 {
-    import std.algorithm : find;
+    import std.algorithm.searching : find;
     // initialize code point sets using script/block or property name
     // set contains code points from both scripts.
     auto set = unicode("Cyrillic") | unicode("Armenian");
@@ -788,7 +781,7 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
 
 @safe pure nothrow @nogc unittest // for replicate
 {
-    import std.algorithm : sum, map;
+    import std.algorithm.iteration : sum, map;
     import std.range : iota;
     size_t m = 0b111;
     size_t m2 = 0b01;
@@ -802,6 +795,7 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
 // multiple arrays squashed into one memory block
 struct MultiArray(Types...)
 {
+    import std.range.primitives : isOutputRange;
     this(size_t[] sizes...) @safe pure nothrow
     {
         assert(dim == sizes.length);
@@ -908,6 +902,7 @@ struct MultiArray(Types...)
     }
 
 private:
+    import std.meta : staticMap;
     @property auto raw_ptr(size_t n)()inout pure nothrow @nogc
     {
         static if (n == 0)
@@ -1631,7 +1626,7 @@ unittest
 @trusted size_t genericReplace(Policy=void, T, Range)
     (ref T dest, size_t from, size_t to, Range stuff)
 {
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     size_t delta = to - from;
     size_t stuff_end = from+stuff.length;
     if (stuff.length > delta)
@@ -1667,6 +1662,8 @@ unittest
 // Simple storage manipulation policy
 @trusted private struct GcPolicy
 {
+    import std.traits : isDynamicArray;
+
     static T[] dup(T)(const T[] arr)
     {
         return arr.dup;
@@ -1720,6 +1717,8 @@ unittest
 // ditto
 @trusted struct ReallocPolicy
 {
+    import std.range.primitives : hasLength;
+
     static T[] dup(T)(const T[] arr)
     {
         auto result = alloc!T(arr.length);
@@ -1729,6 +1728,7 @@ unittest
 
     static T[] alloc(T)(size_t size)
     {
+        import core.stdc.stdlib : malloc;
         import std.exception : enforce;
         auto ptr = cast(T*)enforce(malloc(T.sizeof*size), "out of memory on C heap");
         return ptr[0..size];
@@ -1736,13 +1736,14 @@ unittest
 
     static T[] realloc(T)(T[] arr, size_t size)
     {
+        import core.stdc.stdlib : realloc;
         import std.exception : enforce;
         if (!size)
         {
             destroy(arr);
             return null;
         }
-        auto ptr = cast(T*)enforce(core.stdc.stdlib.realloc(
+        auto ptr = cast(T*)enforce(realloc(
                              arr.ptr, T.sizeof*size), "out of memory on C heap");
         return ptr[0..size];
     }
@@ -1768,6 +1769,7 @@ unittest
 
     static void destroy(T)(ref T[] arr)
     {
+        import core.stdc.stdlib : free;
         if (arr.ptr)
             free(arr.ptr);
         arr = null;
@@ -1971,7 +1973,7 @@ public:
     //helper function that avoids sanity check to be CTFE-friendly
     private static fromIntervals(Range)(Range intervals) pure
     {
-        import std.algorithm : map;
+        import std.algorithm.iteration : map;
         import std.range : roundRobin;
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
             intervals.save.map!"a[1]"());
@@ -2316,6 +2318,7 @@ public:
                   FormatSpec!char fmt) /* const */
     {
         import std.format : formatValue;
+        import std.range.primitives : put;
         auto range = byInterval;
         if (range.empty)
             return;
@@ -2533,9 +2536,10 @@ public:
     */
     string toSourceCode(string funcName="")
     {
+        import std.algorithm.searching : countUntil;
         import std.array : array;
         import std.format : format;
-        import std.algorithm : countUntil;
+        import std.range.primitives : empty;
         enum maxBinary = 3;
         static string linearScope(R)(R ivals, string indent)
         {
@@ -2735,7 +2739,9 @@ private:
     // to make sure invariants hold
     void sanitize()
     {
-        import std.algorithm : sort, SwapStrategy, max;
+        import std.algorithm.comparison : max;
+        import std.algorithm.mutation : SwapStrategy;
+        import std.algorithm.sorting : sort;
         if (data.length == 0)
             return;
         alias Ival = CodepointInterval;
@@ -3048,6 +3054,8 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
 }
 @trusted struct CowArray(SP=GcPolicy)
 {
+    import std.range.primitives : hasLength;
+
     static auto reuse(uint[] arr)
     {
         CowArray cow;
@@ -3061,7 +3069,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     this(Range)(Range range)
         if (isInputRange!Range && hasLength!Range)
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         length = range.length;
         copy(range, data[0..$-1]);
     }
@@ -3069,7 +3077,8 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     this(Range)(Range range)
         if (isForwardRange!Range && !hasLength!Range)
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
+        import std.range.primitives : walkLength;
         auto len = walkLength(range.save);
         length = len;
         copy(range, data[0..$-1]);
@@ -3107,7 +3116,8 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     //+ an extra slot for ref-count
     @property void length(size_t len)
     {
-        import std.algorithm : min, copy;
+        import std.algorithm.comparison : min;
+        import std.algorithm.mutation : copy;
         if (len == 0)
         {
             if (!empty)
@@ -3240,7 +3250,7 @@ private:
     }
     body
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         // dec shared ref-count
         refCount = count - 1;
         // copy to the new chunk of RAM
@@ -3260,6 +3270,7 @@ private:
     import std.algorithm.mutation : copy;
     import std.conv : text;
     import std.range : iota, chain;
+    import std.range.primitives : isBidirectionalRange, isOutputRange;
     void funcRef(T)(ref T u24)
     {
         u24.length = 2;
@@ -3820,7 +3831,7 @@ private:
                 next_lvl_index = force!NextIdx(j/pageSize);
                 version(none)
                 {
-                writefln("LEVEL(%s) page maped idx: %s: 0..%s  ---> [%s..%s]"
+                writefln("LEVEL(%s) page mapped idx: %s: 0..%s  ---> [%s..%s]"
                         ,level
                         ,indices[level-1], pageSize, j, j+pageSize);
                 writeln("LEVEL(", level
@@ -3968,6 +3979,7 @@ public:
         || (isValidPrefixForTrie!(Key, Args[1..$])
             && is(typeof(Args[0]) : size_t)))
 {
+    import std.range.primitives : isOutputRange;
     static if (is(typeof(Args[0]) : size_t))
     {
         private enum maxIndex = Args[0];
@@ -4077,6 +4089,7 @@ template callableWith(T)
 */
 template isValidPrefixForTrie(Key, Prefix...)
 {
+    import std.meta : allSatisfy;
     enum isValidPrefixForTrie = allSatisfy!(callableWith!Key, Prefix); // TODO: tighten the screws
 }
 
@@ -4278,6 +4291,7 @@ package template cmpK0(alias Pred)
 private template buildTrie(Value, Key, Args...)
     if (isValidArgsForTrie!(Key, Args))
 {
+    import std.range.primitives : front;
     static if (is(typeof(Args[0]) : Key)) // prefix starts with upper bound on Key
     {
         alias Prefix = Args[1..$];
@@ -4348,7 +4362,7 @@ private template buildTrie(Value, Key, Args...)
             && is(typeof(Range.init.front[0]) : Value)
             && is(typeof(Range.init.front[1]) : Key))
     {
-        import std.algorithm : multiSort;
+        import std.algorithm.sorting : multiSort;
         alias Comps = GetComparators!(Prefix.length);
         if (unsorted)
             multiSort!(Comps)(range);
@@ -4392,7 +4406,8 @@ private template buildTrie(Value, Key, Args...)
     */
     auto buildTrie(Key, Value)(Value[Key] map, Value filler=Value.init)
     {
-        import std.range : zip, array;
+        import std.array : array;
+        import std.range : zip;
         auto range = array(zip(map.values, map.keys));
         return buildTrie(range, filler, true); // sort it
     }
@@ -4625,7 +4640,7 @@ template Utf8Matcher()
 
     auto build(Set)(Set set)
     {
-        import std.algorithm : map;
+        import std.algorithm.iteration : map;
         auto ascii = set & unicode.ASCII;
         auto utf8_2 = set & CodepointSet(0x80, 0x800);
         auto utf8_3 = set & CodepointSet(0x800, 0x1_0000);
@@ -4643,6 +4658,7 @@ template Utf8Matcher()
     mixin template DefMatcher()
     {
         import std.format : format;
+        import std.meta : Erase, staticIndexOf;
         enum hasASCII = staticIndexOf!(1, Sizes) >= 0;
         alias UniSizes = Erase!(1, Sizes);
 
@@ -4749,6 +4765,7 @@ template Utf8Matcher()
 
     struct Impl(Sizes...)
     {
+        import std.meta : allSatisfy, staticMap;
         static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
@@ -4825,6 +4842,7 @@ template Utf8Matcher()
 
     struct CherryPick(I, Sizes...)
     {
+        import std.meta : allSatisfy;
         static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
@@ -4876,7 +4894,7 @@ template Utf16Matcher()
 
     auto build(Set)(Set set)
     {
-        import std.algorithm : map;
+        import std.algorithm.iteration : map;
         auto ascii = set & unicode.ASCII;
         auto bmp = (set & CodepointSet.fromIntervals(0x80, 0xFFFF+1))
             - CodepointSet.fromIntervals(0xD800, 0xDFFF+1);
@@ -4976,6 +4994,7 @@ template Utf16Matcher()
         if (Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
+        import std.meta : allSatisfy;
         static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
         static if (Sizes.length > 1)
@@ -5064,6 +5083,7 @@ template Utf16Matcher()
         if (Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
+        import std.meta : allSatisfy;
         I* m;
         enum sizeFlags = I.sizeFlags;
 
@@ -5384,6 +5404,7 @@ struct BitPacked(T, size_t sz)
 template bitSizeOf(Args...)
     if (Args.length == 1)
 {
+    import std.traits : ReturnType;
     alias T = Args[0];
     static if (__traits(compiles, { size_t val = T.bitSize; })) //(is(typeof(T.bitSize) : size_t))
     {
@@ -5631,7 +5652,8 @@ template idxTypes(Key, size_t fullBits, Prefix...)
     if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     import std.ascii : toLower;
-    import std.algorithm : cmp, map, filter;
+    import std.algorithm.comparison : cmp;
+    import std.algorithm.iteration : map, filter;
     static bool pred(dchar c) {return !c.isWhite && c != '-' && c != '_';}
     return cmp(
         a.map!toLower.filter!pred,
@@ -5793,7 +5815,7 @@ else
 @trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name) pure
 {
     import std.range : assumeSorted;
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
         (table.map!"a.name"());
     size_t idx = range.lowerBound(name).length;
@@ -5817,6 +5839,7 @@ else
 @trusted bool loadProperty(Set=CodepointSet, C)
     (in C[] name, ref Set target) pure
 {
+    import std.internal.unicode_tables : uniProps; // generated file
     alias ucmp = comparePropertyName;
     // conjure cumulative properties by hand
     if (ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
@@ -5914,7 +5937,8 @@ else
 // CTFE-only helper for checking property names at compile-time
 @safe bool isPrettyPropertyName(C)(in C[] name)
 {
-    import std.algorithm : find;
+    import std.algorithm.searching : find;
+    import std.range.primitives : empty;
     auto names = [
         "L", "Letter",
         "LC", "Cased Letter",
@@ -6048,6 +6072,7 @@ template SetSearcher(alias table, string kind)
     */
     struct block
     {
+        import std.internal.unicode_tables : blocks; // generated file
         mixin SetSearcher!(blocks.tab, "block");
     }
 
@@ -6066,6 +6091,7 @@ template SetSearcher(alias table, string kind)
     */
     struct script
     {
+        import std.internal.unicode_tables : scripts; // generated file
         mixin SetSearcher!(scripts.tab, "script");
     }
 
@@ -6096,6 +6122,7 @@ template SetSearcher(alias table, string kind)
     */
     struct hangulSyllableType
     {
+        import std.internal.unicode_tables : hangul; // generated file
         mixin SetSearcher!(hangul.tab, "hangul syllable type");
     }
 
@@ -6115,6 +6142,7 @@ private:
 
     static bool findAny(string name)
     {
+        import std.internal.unicode_tables : blocks, scripts, uniProps; // generated file
         return isPrettyPropertyName(name)
             || findSetName!(uniProps.tab)(name) || findSetName!(scripts.tab)(name)
             || (ucmp(name[0..2],"In") == 0 && findSetName!(blocks.tab)(name[2..$]));
@@ -6123,6 +6151,7 @@ private:
     static auto loadAny(Set=CodepointSet, C)(in C[] name) pure
     {
         import std.conv : to;
+        import std.internal.unicode_tables : blocks, scripts; // generated file
         Set set;
         bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
             || (name.length > 2 && ucmp(name[0..2],"In") == 0
@@ -6139,6 +6168,7 @@ private:
 
 unittest
 {
+    import std.internal.unicode_tables : blocks, uniProps; // generated file
     assert(unicode("InHebrew") == asSet(blocks.Hebrew));
     assert(unicode("separator") == (asSet(uniProps.Zs) | asSet(uniProps.Zl) | asSet(uniProps.Zp)));
     assert(unicode("In-Kharoshthi") == asSet(blocks.Kharoshthi));
@@ -6169,6 +6199,8 @@ template genericDecodeGrapheme(bool getValue)
 
     Value genericDecodeGrapheme(Input)(ref Input range)
     {
+        import std.range.primitives : empty, front, popFront;
+        import std.internal.unicode_tables : isHangL, isHangT, isHangV; // generated file
         enum GraphemeState {
             Start,
             CR,
@@ -6380,6 +6412,7 @@ auto byGrapheme(Range)(Range range)
 
         void popFront()
         {
+            import std.range.primitives : empty;
             _front = _range.empty ? Grapheme.init : _range.decodeGrapheme();
         }
 
@@ -6387,6 +6420,7 @@ auto byGrapheme(Range)(Range range)
         {
             Result save() @property
             {
+                import std.range.primitives : save;
                 return Result(_range.save, _front);
             }
         }
@@ -6400,7 +6434,8 @@ auto byGrapheme(Range)(Range range)
 ///
 unittest
 {
-    import std.range : walkLength, take, drop;
+    import std.range : take, drop;
+    import std.range.primitives : walkLength;
     import std.algorithm.comparison : equal;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
@@ -6418,15 +6453,16 @@ private static struct InputRangeString
 {
     private string s;
 
-    bool empty() @property { return s.empty; }
-    dchar front() @property { return s.front; }
-    void popFront() { s.popFront(); }
+    bool empty() @property { import std.range.primitives : empty; return s.empty; }
+    dchar front() @property { import std.range.primitives : front; return s.front; }
+    void popFront() { import std.range.primitives : popFront; s.popFront(); }
 }
 
 unittest
 {
     import std.array : array;
-    import std.range : walkLength, retro;
+    import std.range : retro;
+    import std.range.primitives : walkLength;
     import std.algorithm.comparison : equal;
     assert("".byGrapheme.walkLength == 0);
 
@@ -6531,6 +6567,7 @@ unittest
 unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range.primitives : walkLength;
     assert("".byGrapheme.byCodePoint.equal(""));
 
     string text = "noe\u0308l";
@@ -6563,6 +6600,7 @@ unittest
 @trusted struct Grapheme
 {
     import std.exception : enforce;
+    import std.traits : isDynamicArray;
 
 public:
     /// Ctor
@@ -6646,6 +6684,7 @@ public:
     {
         static if (op == "~")
         {
+            import core.stdc.stdlib : realloc;
             if (!isBig)
             {
                 if (slen_ + 1 > small_cap)
@@ -6720,6 +6759,7 @@ public:
 
     this(this)
     {
+        import core.stdc.stdlib : malloc;
         if (isBig)
         {// dup it
             auto raw_cap = 3*(cap_+1);
@@ -6731,6 +6771,7 @@ public:
 
     ~this()
     {
+        import core.stdc.stdlib : free;
         if (isBig)
         {
             free(ptr_);
@@ -6764,6 +6805,7 @@ private:
 
     void convertToBig()
     {
+        import core.stdc.stdlib : malloc;
         size_t k = smallLength;
         ubyte* p = cast(ubyte*)enforce(malloc(3*(grow+1)), "malloc failed");
         for (int i=0; i<k; i++)
@@ -6793,7 +6835,7 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
 ///
 unittest
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
     import std.algorithm.comparison : equal;
 
     string bold = "ku\u0308hn";
@@ -6910,6 +6952,7 @@ unittest
 +/
 int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
 {
+    import std.internal.unicode_tables : simpleCaseTable; // generated file
     alias sTable = simpleCaseTable;
     import std.utf : decode;
 
@@ -6979,7 +7022,8 @@ unittest
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     @trusted pure /*TODO nothrow*/
 {
-    import std.algorithm : skipOver;
+    import std.algorithm.searching : skipOver;
+    import std.internal.unicode_tables : fullCaseTable; // generated file
     alias fTable = fullCaseTable;
     size_t idx = fullCaseTrie[lhs];
     // fullCaseTrie is packed index table
@@ -7035,6 +7079,7 @@ int icmp(S1, S2)(S1 str1, S2 str2)
     if (isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
     && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
 {
+    import std.range.primitives : empty, front, popFront;
     for (;;)
     {
         if (str1.empty)
@@ -7141,6 +7186,7 @@ unittest
 */
 package auto simpleCaseFoldings(dchar ch)
 {
+    import std.internal.unicode_tables : simpleCaseTable; // generated file
     alias sTable = simpleCaseTable;
     static struct Range
     {
@@ -7297,7 +7343,7 @@ enum {
 public dchar compose(dchar first, dchar second) pure nothrow
 {
     import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.range : assumeSorted;
     size_t packed = compositionJumpTrie[first];
     if (packed == ushort.max)
@@ -7572,7 +7618,8 @@ enum {
 +/
 inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 {
-    import std.algorithm : sort, SwapStrategy;
+    import std.algorithm.mutation : SwapStrategy;
+    import std.algorithm.sorting : sort;
     import std.range : zip;
     import std.array : appender;
 
@@ -7624,7 +7671,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             (zip(ccc[firstNonStable..$], decomposed[firstNonStable..$]));
         static if (norm == NFC || norm == NFKC)
         {
-            import std.algorithm : countUntil;
+            import std.algorithm.searching : countUntil;
             size_t idx = 0;
             auto first = countUntil(ccc, 0);
             if (first >= 0) // no starters?? no recomposition
@@ -7644,7 +7691,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             app.put(decomposed);
         else
         {
-            import std.algorithm : remove;
+            import std.algorithm.mutation : remove;
             auto clean = remove!("a == dchar.init", SwapStrategy.stable)(decomposed);
             app.put(decomposed[0 .. clean.length]);
         }
@@ -7786,6 +7833,7 @@ private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
 {
     import std.utf : codeLength;
+    import std.range.primitives : back, empty, popFront;
     import std.typecons : tuple;
 
     auto br = input[0..idx];
@@ -7883,6 +7931,8 @@ else
 // trusted -> avoid bounds check
 @trusted pure nothrow @nogc private
 {
+    import std.internal.unicode_tables : toLowerTable, toTitleTable, toUpperTable; // generated file
+
     // hide template instances behind functions (Bugzilla 13232)
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
     ushort toLowerSimpleIndex(dchar c) { return toLowerSimpleIndexTrie[c]; }
@@ -7907,6 +7957,7 @@ public:
 @safe pure nothrow @nogc
 public bool isWhite(dchar c)
 {
+    import std.internal.unicode_tables : isWhiteGen; // generated file
     return isWhiteGen(c); // call pregenerated binary search
 }
 
@@ -8069,12 +8120,14 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
     {
         @property bool empty()
         {
+            import std.range.primitives : empty;
             return !nLeft && r.empty;
         }
 
         @property auto front()
         {
             import std.ascii : isASCII;
+            import std.range.primitives : front;
 
             if (!nLeft)
             {
@@ -8116,6 +8169,7 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
 
         void popFront()
         {
+            import std.range.primitives : popFront;
             if (!nLeft)
                 front;
             assert(nLeft);
@@ -8128,6 +8182,7 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
         {
             @property auto save()
             {
+                import std.range.primitives : save;
                 auto ret = this;
                 ret.r = r.save;
                 return ret;
@@ -8209,6 +8264,7 @@ auto asUpperCase(Range)(Range str)
 auto asLowerCase(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
+    import std.traits : StringTypeOf;
     return asLowerCase!(StringTypeOf!Range)(str);
 }
 
@@ -8216,6 +8272,7 @@ auto asLowerCase(Range)(auto ref Range str)
 auto asUpperCase(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
+    import std.traits : StringTypeOf;
     return asUpperCase!(StringTypeOf!Range)(str);
 }
 
@@ -8277,11 +8334,13 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
     {
         @property bool empty()
         {
+            import std.range.primitives : empty;
             return lower ? lwr.empty : !nLeft && r.empty;
         }
 
         @property auto front()
         {
+            import std.range.primitives : front;
             if (lower)
                 return lwr.front;
 
@@ -8317,6 +8376,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
 
         void popFront()
         {
+            import std.range.primitives : popFront;
             if (lower)
                 lwr.popFront();
             else
@@ -8338,6 +8398,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
         {
             @property auto save()
             {
+                import std.range.primitives : save;
                 auto ret = this;
                 ret.r = r.save;
                 ret.lwr = lwr.save;
@@ -8403,6 +8464,7 @@ auto asCapitalized(Range)(Range str)
 auto asCapitalized(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
+    import std.traits : StringTypeOf;
     return asCapitalized!(StringTypeOf!Range)(str);
 }
 
@@ -8835,7 +8897,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
     string s1 = "FoL";
     string s2 = toLower(s1);
     assert(cmp(s2, "fol") == 0, s2);
@@ -8971,7 +9033,7 @@ S toUpper(S)(S s) @trusted pure
 
 unittest
 {
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
 
     string s1 = "FoL";
     string s2;
@@ -9243,6 +9305,7 @@ unittest
 @safe pure nothrow @nogc
 bool isSpace(dchar c)
 {
+    import std.internal.unicode_tables : isSpaceGen; // generated file
     return isSpaceGen(c);
 }
 
@@ -9287,6 +9350,7 @@ unittest
 @safe pure nothrow @nogc
 bool isControl(dchar c)
 {
+    import std.internal.unicode_tables : isControlGen; // generated file
     return isControlGen(c);
 }
 
@@ -9310,6 +9374,7 @@ unittest
 @safe pure nothrow @nogc
 bool isFormat(dchar c)
 {
+    import std.internal.unicode_tables : isFormatGen; // generated file
     return isFormatGen(c);
 }
 
@@ -9398,6 +9463,8 @@ private:
 
 @safe pure nothrow @nogc @property
 {
+    import std.internal.unicode_tables; // generated file
+
     // It's important to use auto return here, so that the compiler
     // only runs semantic on the return type if the function gets
     // used. Also these are functions rather than templates to not
