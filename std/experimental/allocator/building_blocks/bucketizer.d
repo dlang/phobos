@@ -17,8 +17,7 @@ for $(D Bucketizer). To handle them separately, $(D Segregator) may be of use.
 struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 {
     import std.traits : hasMember;
-    import common = std.experimental.allocator.common : roundUpToMultipleOf,
-        reallocate;
+    import common = std.experimental.allocator.common : roundUpToMultipleOf;
     import std.typecons : Ternary;
 
     static assert((max - (min - 1)) % step == 0,
