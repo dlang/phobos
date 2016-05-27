@@ -127,10 +127,9 @@ version (Win64)
         version = Win64_DMD_InlineAsm;
 }
 
-import core.bitop;
-import core.math;
-import core.stdc.math;
-import std.traits;
+static import core.math;
+static import core.stdc.math;
+import std.traits;// CommonType, isFloatingPoint, isIntegral, isSigned, isUnsigned, Largest, Unqual
 
 version(LDC)
 {
@@ -159,7 +158,7 @@ else version(D_InlineAsm_X86_64)
 
 version(unittest)
 {
-    import core.stdc.stdio;
+    import core.stdc.stdio : sprintf;
 
     static if (real.sizeof > double.sizeof)
         enum uint useDigits = 16;
@@ -2556,7 +2555,8 @@ unittest
 
 unittest
 {
-    import std.meta, std.typecons;
+    import std.meta : AliasSeq;
+    import std.typecons : tuple, Tuple;
 
     foreach (T; AliasSeq!(real, double, float))
     {
@@ -2643,6 +2643,7 @@ unittest
 int ilogb(T)(const T x) @trusted pure nothrow @nogc
     if (isFloatingPoint!T)
 {
+    import core.bitop : bsr;
     alias F = floatTraits!T;
 
     union floatBits
@@ -2783,6 +2784,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
 int ilogb(T)(const T x) @safe pure nothrow @nogc
     if (isIntegral!T && isUnsigned!T)
 {
+    import core.bitop : bsr;
     if (x == 0)
         return FP_ILOGB0;
     else
@@ -2795,6 +2797,7 @@ int ilogb(T)(const T x) @safe pure nothrow @nogc
 int ilogb(T)(const T x) @safe pure nothrow @nogc
     if (isIntegral!T && isSigned!T)
 {
+    import std.traits : Unsigned;
     // Note: abs(x) can not be used because the return type is not Unsigned and
     //       the return value would be wrong for x == int.min
     Unsigned!T absx =  x>=0 ? x : -x;
@@ -2806,7 +2809,8 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
 
 @trusted nothrow @nogc unittest
 {
-    import std.meta, std.typecons;
+    import std.meta : AliasSeq;
+    import std.typecons : Tuple;
     foreach (F; AliasSeq!(float, double, real))
     {
         alias T = Tuple!(F, int);
@@ -2879,7 +2883,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 ///
 @nogc @safe pure nothrow unittest
 {
-    import std.meta;
+    import std.meta : AliasSeq;
     foreach (T; AliasSeq!(float, double, real))
     {
         T r;
@@ -4900,7 +4904,7 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 
 @safe pure nothrow @nogc unittest
 {
-    import std.meta;
+    import std.meta : AliasSeq;
 
     foreach (T; AliasSeq!(float, double, real))
     {
@@ -5084,7 +5088,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.meta;
+    import std.meta : AliasSeq;
 
     foreach (T; AliasSeq!(float, double, real))
     {
@@ -5324,7 +5328,7 @@ R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.meta;
+    import std.meta : AliasSeq;
 
     foreach (X; AliasSeq!(float, double, real, int, long))
     {
@@ -5905,6 +5909,7 @@ real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; 
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
     if (isFloatingPoint!(F) && isIntegral!(G))
 {
+    import std.traits : Unsigned;
     real p = 1.0, v = void;
     Unsigned!(Unqual!G) m = n;
     if (n < 0)
@@ -6906,7 +6911,7 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 {
-    import std.range;
+    import std.range.primitives : empty, front, isInputRange, popFront;
     static if (isInputRange!T)
     {
         static if (isInputRange!U)
@@ -7299,7 +7304,7 @@ unittest
 
 unittest
 {
-    import std.meta;
+    import std.meta : AliasSeq;
     foreach (T; AliasSeq!(float, double, real))
     {
         T[] values = [-cast(T)NaN(20), -cast(T)NaN(10), -T.nan, -T.infinity,

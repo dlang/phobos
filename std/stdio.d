@@ -14,11 +14,12 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
 module std.stdio;
 
 public import core.stdc.stdio;
-import std.typecons;// Flag
-import std.stdiobase;
 import core.stdc.stddef;// wchar_t
-import std.range.primitives;// empty, front, isBidirectionalRange
-import std.traits;// Unqual, isSomeChar, isSomeString
+import std.algorithm.mutation; // copy
+import std.range.primitives;// ElementEncodingType, front, isBidirectionalRange, isInputRange
+import std.stdiobase;
+import std.traits;// isSomeChar, isSomeString, Unqual
+import std.typecons;// Flag
 
 
 /++
@@ -278,6 +279,7 @@ public:
         import std.conv : text;
         import std.exception : enforce;
         import std.format : formattedRead;
+        import std.range.primitives : empty;
         import std.string : chomp;
 
         enforce(file.isOpen, "ByRecord: File must be open");
@@ -461,7 +463,7 @@ file.
  */
     void opAssign(File rhs) @safe
     {
-        import std.algorithm : swap;
+        import std.algorithm.mutation : swap;
 
         swap(this, rhs);
     }
@@ -1247,8 +1249,8 @@ Removes the lock over the specified file segment.
         static void runForked(void delegate() code)
         {
             import core.stdc.stdlib : exit;
-            import core.sys.posix.unistd;
-            import core.sys.posix.sys.wait;
+            import core.sys.posix.sys.wait : wait;
+            import core.sys.posix.unistd : fork;
             int child, status;
             if ((child = fork()) == 0)
             {
@@ -1427,7 +1429,7 @@ void main()
     unittest
     {
         static import std.file;
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
         import std.meta : AliasSeq;
 
         auto deleteme = testFilename();
@@ -1619,8 +1621,9 @@ is recommended if you want to process a complete file.
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
         isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
     {
-        import std.algorithm : endsWith, swap;
-        import std.range.primitives : back;
+        import std.algorithm.mutation : swap;
+        import std.algorithm.searching : endsWith;
+        import std.range.primitives : back, empty;
 
         auto last = terminator.back;
         C[] buf2;
@@ -1776,7 +1779,7 @@ Allows to directly use range operations on lines of a file.
     struct ByLine(Char, Terminator)
     {
     private:
-        import std.typecons;
+        import std.typecons : RefCounted, RefCountedAutoInitialize;
 
         /* Ref-counting stops the source range's Impl
          * from getting out of sync after the range is copied, e.g.
@@ -1844,7 +1847,8 @@ Allows to directly use range operations on lines of a file.
 
             void popFront()
             {
-                import std.algorithm : endsWith;
+                import std.algorithm.searching : endsWith;
+                import std.range.primitives : empty;
                 assert(file.isOpen);
                 line = buffer;
                 file.readln(line, terminator);
@@ -1972,7 +1976,7 @@ the contents may well have changed).
     private struct ByLineCopy(Char, Terminator)
     {
     private:
-        import std.typecons;
+        import std.typecons : RefCounted, RefCountedAutoInitialize;
 
         /* Ref-counting stops the source range's ByLineCopyImpl
          * from getting out of sync after the range is copied, e.g.
@@ -2101,8 +2105,7 @@ $(XREF file,readText)
     unittest
     {
         static import std.file;
-        import std.algorithm : equal;
-        import std.range;
+        import std.algorithm.comparison : equal;
 
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
@@ -2122,8 +2125,9 @@ $(XREF file,readText)
         void test(Terminator)(string txt, in string[] witness,
                 KeepTerminator kt, Terminator term, bool popFirstLine = false)
         {
+            import std.array : array;
             import std.conv : text;
-            import std.algorithm : sort;
+            import std.algorithm.sorting : sort;
             import std.range.primitives : walkLength;
 
             uint i;
@@ -2180,8 +2184,8 @@ $(XREF file,readText)
 
     unittest
     {
-        import std.algorithm : equal;
-        import std.range;
+        import std.algorithm.comparison : equal;
+        import std.range : drop, take;
 
         version(Win64)
         {
@@ -2272,6 +2276,7 @@ $(XREF file,readText)
     unittest
     {
          static import std.file;
+         import std.typecons : tuple;
 
          // prepare test file
          auto testFile = testFilename();
@@ -2315,7 +2320,7 @@ $(XREF file,readText)
 
         this(File file, ubyte[] buffer)
         {
-            import std.exception;
+            import std.exception : enforce;
             enforce(buffer.length, "size must be larger than 0");
             file_ = file;
             chunk_ = buffer;
@@ -2682,6 +2687,7 @@ See $(LREF byChunk) for an example.
     // the file mode on destruction, it is RefCounted on Windows.
     struct BinaryWriterImpl(bool locking)
     {
+        import std.traits : hasIndirections;
     private:
         FILE* fps;
         string name;
@@ -2827,10 +2833,11 @@ void main()
 
     unittest
     {
-        import std.algorithm : copy, reverse;
+        import std.algorithm.mutation : reverse;
         static import std.file;
         import std.exception : collectException;
-        import std.range : only, retro, put;
+        import std.range : only, retro;
+        import std.range.primitives : put;
         import std.string : format;
 
         auto deleteme = testFilename();
@@ -3051,7 +3058,8 @@ unittest
 unittest
 {
     static import std.file;
-    import std.range;
+    import std.range : chain, only, repeat;
+    import std.range.primitives : isOutputRange;
 
     auto deleteme = testFilename();
     scope(exit) std.file.remove(deleteme);
@@ -3123,7 +3131,7 @@ struct LockingTextReader
 
     void opAssign(LockingTextReader r)
     {
-        import std.algorithm : swap;
+        import std.algorithm.mutation : swap;
         swap(this, r);
     }
 
@@ -3194,7 +3202,8 @@ unittest
 unittest // bugzilla 13686
 {
     static import std.file;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
+    import std.utf : byDchar;
 
     auto deleteme = testFilename();
     std.file.write(deleteme, "Тест");
@@ -3204,7 +3213,6 @@ unittest // bugzilla 13686
     File(deleteme).readf("%s", &s);
     assert(s == "Тест");
 
-    import std.utf;
     auto ltr = LockingTextReader(File(deleteme)).byDchar;
     assert(equal(ltr, "Тест".byDchar));
 }
@@ -3321,6 +3329,7 @@ void writeln(T...)(T args)
                     !isAggregateType!(typeof(args[0])))
     {
         import std.exception : enforce;
+        import std.traits : isStaticArray;
 
         // Specialization for strings - a very frequent case
         auto w = .trustedStdout.lockingTextWriter();
@@ -4170,9 +4179,9 @@ en.cppreference.com/w/c/io#Narrow_and_wide_orientation,
 orientation).
 */
 void toFile(T)(T data, string fileName)
-    if (is(typeof(std.algorithm.mutation.copy(data, stdout.lockingBinaryWriter))))
+    if (is(typeof(copy(data, stdout.lockingBinaryWriter))))
 {
-    std.algorithm.mutation.copy(data, File(fileName, "wb").lockingBinaryWriter);
+    copy(data, File(fileName, "wb").lockingBinaryWriter);
 }
 
 unittest
@@ -4314,8 +4323,6 @@ unittest
 // roll our own appender, but with "safe" arrays
 private struct ReadlnAppender
 {
-    import core.stdc.string;
-
     char[] buf;
     size_t pos;
     bool safeAppend = false;
@@ -4351,6 +4358,7 @@ private struct ReadlnAppender
     }
     void reserve(size_t n)
     {
+        import core.stdc.string : memcpy;
         if (!reserveWithoutAllocating(n))
         {
             size_t ncap = buf.length * 2 + 128 + n;
@@ -4378,6 +4386,7 @@ private struct ReadlnAppender
     }
     void putonly(char[] b)
     {
+        import core.stdc.string : memcpy;
         assert(pos == 0);   // assume this is the only put call
         if (reserveWithoutAllocating(b.length))
             memcpy(buf.ptr + pos, b.ptr, b.length);
@@ -4689,13 +4698,14 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         }
         else version (Posix)
         {
+            import std.utf : encode;
             buf.length = 0;
             for (int c; (c = FGETWC(fp)) != -1; )
             {
                 if ((c & ~0x7F) == 0)
                     buf ~= cast(char)c;
                 else
-                    std.utf.encode(buf, cast(dchar)c);
+                    encode(buf, cast(dchar)c);
                 if (c == terminator)
                     break;
             }
