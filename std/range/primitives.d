@@ -1995,7 +1995,6 @@ arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.empty) is
 equivalent to $(D empty(array)).
  */
-
 @property bool empty(T)(in T[] a) @safe pure nothrow @nogc
 {
     return !a.length;
@@ -2016,7 +2015,6 @@ the first argument using the dot notation, $(D array.save) is
 equivalent to $(D save(array)). The function does not duplicate the
 content of the array, it simply returns its argument.
  */
-
 @property T[] save(T)(T[] a) @safe pure nothrow @nogc
 {
     return a;
@@ -2038,7 +2036,6 @@ equivalent to $(D popFront(array)). For $(GLOSSARY narrow strings),
 $(D popFront) automatically advances to the next $(GLOSSARY code
 point).
 */
-
 void popFront(T)(ref T[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
@@ -2061,7 +2058,7 @@ version(unittest)
     static assert(!is(typeof({          void[] a; popFront(a); })));
 }
 
-// Specialization for narrow strings. The necessity of
+/// ditto
 void popFront(C)(ref C[] str) @trusted pure nothrow
 if (isNarrowString!(C[]))
 {
@@ -2137,7 +2134,6 @@ the first argument using the dot notation, $(D array.popBack) is
 equivalent to $(D popBack(array)). For $(GLOSSARY narrow strings), $(D
 popFront) automatically eliminates the last $(GLOSSARY code point).
 */
-
 void popBack(T)(ref T[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
@@ -2160,7 +2156,7 @@ version(unittest)
     static assert(!is(typeof({          void[] a; popBack(a); })));
 }
 
-// Specialization for arrays of char
+/// ditto
 void popBack(T)(ref T[] a) @safe pure
 if (isNarrowString!(T[]))
 {
