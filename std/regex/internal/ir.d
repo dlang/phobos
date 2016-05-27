@@ -606,15 +606,15 @@ struct Input(Char)
     }
 
     //codepoint at current stream position
-    bool nextChar(ref dchar res, ref size_t pos)
+    pragma(inline, true) bool nextChar(ref dchar res, ref size_t pos)
     {
         pos = _index;
         // DMD's inliner hates multiple return functions
         // but can live with single statement if/else bodies
-        if (_index == _origin.length)
-            return false;
-        else
-            return res = std.utf.decode(_origin, _index), true;
+        bool n = !(_index == _origin.length);
+        if (n)
+            res = std.utf.decode(_origin, _index);
+        return n;
     }
     @property bool atEnd(){
         return _index == _origin.length;
