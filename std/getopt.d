@@ -10,10 +10,6 @@ supported in the form of long options introduced by a double dash
 with the more traditional single-letter approach, is provided but not
 enabled by default.
 
-Macros:
-
-WIKI = Phobos/StdGetopt
-
 Copyright: Copyright Andrei Alexandrescu 2008 - 2015.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)

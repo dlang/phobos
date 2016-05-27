@@ -6,9 +6,6 @@ in this module handle files as a unit, e.g., read or write one _file
 at a time. For opening files and manipulating them via handles refer
 to module $(MREF std, stdio).
 
-Macros:
-WIKI = Phobos/StdFile
-
 Copyright: Copyright Digital Mars 2007 - 2011.
 See_Also:  The $(WEB ddili.org/ders/d.en/files.html, official tutorial) for an
 introduction to working with files in D, module

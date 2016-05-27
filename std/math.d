@@ -79,8 +79,6 @@ $(TR $(TDNW Hardware Control) $(TD
  * The semantics and names of feqrel and approxEqual will be revised.
  *
  * Macros:
- *      WIKI = Phobos/StdMath
- *
  *      TABLE_SV = <table border="1" cellpadding="4" cellspacing="0">
  *              <caption>Special Values</caption>
  *              $0</table>

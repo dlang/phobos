@@ -8,8 +8,6 @@
  * D Programming Language runtime library
  * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
- * Macros:
- *      WIKI=Phobos/StdCStdlib
  */
 deprecated("Import core.stdc.stdlib or core.sys.posix.stdlib instead")
 module std.c.stdlib;

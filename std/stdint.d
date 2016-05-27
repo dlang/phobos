@@ -113,7 +113,6 @@
     ))
 
  * Macros:
- *  WIKI=Phobos/StdStdint
  *  ATABLE=<table border="1" cellspacing="0" cellpadding="5">$0</table>
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.

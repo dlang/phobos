@@ -39,9 +39,6 @@ UTF-32LE; or (on big-endian architectures) UTF-16BE and UTF-32BE.
 This library provides a mechanism whereby other modules may add $(D
 EncodingScheme) subclasses for any other _encoding.
 
-Macros:
-    WIKI=Phobos/StdEncoding
-
 Copyright: Copyright Janice Caron 2008 - 2009.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron

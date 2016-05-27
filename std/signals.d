@@ -46,7 +46,6 @@
  *      Not safe for multiple threads operating on the same signals
  *      or slots.
  * Macros:
- *      WIKI = Phobos/StdSignals
  *      SIGNALS=signals
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.

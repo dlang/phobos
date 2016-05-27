@@ -14,9 +14,6 @@
  *      $(LI $(BUGZILLA 2137))
  *      )
  *
- * Macros:
- *      WIKI = Phobos/StdZip
- *
  * Example:
  * ---
 // Read existing zip file.

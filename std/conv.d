@@ -15,9 +15,6 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
 
 Source:    $(PHOBOSSRC std/_conv.d)
 
-Macros:
-WIKI = Phobos/StdConv
-
 */
 module std.conv;
 

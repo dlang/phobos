@@ -33,7 +33,6 @@
  * References:
  *      $(MREF std, stream)
  * Source:    $(PHOBOSSRC std/_socketstream.d)
- * Macros: WIKI=Phobos/StdSocketstream
  */
 deprecated("It will be removed from Phobos in October 2016. If you still need it, go to https://github.com/DigitalMars/undeaD") module std.socketstream;
 // @@@DEPRECATED_2016-10@@@

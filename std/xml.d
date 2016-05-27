@@ -112,9 +112,6 @@ void main()
     writefln(join(doc.pretty(3),"\n"));
 }
 -------------------------------------------------------------------------------
-Macros:
-    WIKI=Phobos/StdXml
-
 Copyright: Copyright Janice Caron 2008 - 2009.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron

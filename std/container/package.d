@@ -401,9 +401,6 @@ $(TR  $(TDNW $(D )) $(TDNW $(D )) $(TD ))
 )
 
 Source: $(PHOBOSSRC std/_container/package.d)
-Macros:
-WIKI = Phobos/StdContainer
-TEXTWITHCOMMAS = $0
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.

@@ -175,10 +175,6 @@ _range operations that take advantage of the fact that the _range is sorted.
 
 Source: $(PHOBOSSRC std/_range/_package.d)
 
-Macros:
-
-WIKI = Phobos/StdRange
-
 Copyright: Copyright by authors 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).

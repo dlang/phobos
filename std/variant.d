@@ -10,9 +10,6 @@ Such types are useful
 for type-uniform binary interfaces, interfacing with scripting
 languages, and comfortable exploratory programming.
 
-Macros:
- WIKI = Phobos/StdVariant
-
 Synopsis:
 ----
 Variant a; // Must assign before use, otherwise exception ensues

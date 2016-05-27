@@ -48,8 +48,6 @@
         $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Source:
         $(PHOBOSSRC std/_path.d)
-    Macros:
-        WIKI = Phobos/StdPath
 */
 module std.path;
 
