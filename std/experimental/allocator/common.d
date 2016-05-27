@@ -649,8 +649,8 @@ package void testAllocator(alias make)()
         void[] b5 = null;
         assert(aa.expand(b5, 0));
         assert(b5 is null);
-        assert(aa.expand(b5, 1));
-        assert(b5.length == 1);
+        assert(!aa.expand(b5, 1));
+        assert(b5.length == 0);
     }}
 
     void[] b6 = null;

@@ -95,11 +95,7 @@ struct FallbackAllocator(Primary, Fallback)
     bool expand(ref void[] b, size_t delta)
     {
         if (!delta) return true;
-        if (!b.ptr)
-        {
-            b = allocate(delta);
-            return b.length == delta;
-        }
+        if (!b.ptr) return false;
         if (primary.owns(b) == Ternary.yes)
         {
             static if (hasMember!(Primary, "expand"))

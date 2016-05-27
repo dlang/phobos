@@ -98,11 +98,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr)
-        {
-            b = allocate(delta);
-            return b.length == delta;
-        }
+        if (!b.ptr) return delta == 0;
         immutable allocated = goodAllocSize(b.length),
             needed = b.length + delta,
             neededAllocation = goodAllocSize(needed);
