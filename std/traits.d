@@ -155,7 +155,7 @@
  */
 module std.traits;
 
-import std.typetuple;
+import std.typetuple; // TypeTuple
 
 ///////////////////////////////////////////////////////////////////////////////
 // Functions
@@ -334,7 +334,7 @@ private alias parentOf(alias sym : T!Args, alias T, Args...) = Identity!(__trait
  */
 template packageName(alias T)
 {
-    import std.algorithm : startsWith;
+    import std.algorithm.searching : startsWith;
 
     static if (__traits(compiles, parentOf!T))
         enum parent = packageName!(parentOf!T);
@@ -388,7 +388,7 @@ version (none) version(unittest) //Please uncomment me when changing packageName
  */
 template moduleName(alias T)
 {
-    import std.algorithm : startsWith;
+    import std.algorithm.searching : startsWith;
 
     static assert(!T.stringof.startsWith("package "), "cannot get the module name for a package");
 
@@ -540,7 +540,7 @@ private template fqnSym(alias T)
 
     static string adjustIdent(string s)
     {
-        import std.algorithm : skipOver, findSplit;
+        import std.algorithm.searching : findSplit, skipOver;
 
         if (s.skipOver("package ") || s.skipOver("module "))
             return s;
@@ -623,8 +623,10 @@ private template fqnType(T,
 
         static if (parameters.length)
         {
-            import std.algorithm : map;
-            import std.range : join, zip;
+            import std.algorithm.iteration : map;
+            import std.array : join;
+            import std.meta : staticMap;
+            import std.range : zip;
 
             string result = join(
                 map!(a => format("%s%s", a[0], a[1]))(
@@ -721,8 +723,6 @@ private template fqnType(T,
     }
     else static if (isStaticArray!T)
     {
-        import std.conv;
-
         enum fqnType = chain!(
             format("%s[%s]", fqnType!(typeof(T.init[0]), qualifiers), T.length)
         );
@@ -1908,7 +1908,7 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
     if (isFunctionPointer!T || isDelegate!T)
 {
     mixin({
-        import std.algorithm : canFind;
+        import std.algorithm.searching : canFind;
 
         static assert(!(attrs & FunctionAttribute.trusted) ||
             !(attrs & FunctionAttribute.safe),
@@ -2012,7 +2012,7 @@ version (unittest)
 }
 unittest
 {
-    import std.algorithm : reduce;
+    import std.algorithm.iteration : reduce;
 
     alias FA = FunctionAttribute;
     foreach (BaseT; TypeTuple!(typeof(&sc), typeof(&novar), typeof(&cstyle),
@@ -2088,6 +2088,7 @@ have a context pointer.
 */
 template hasNested(T)
 {
+    import std.meta : anySatisfy;
     static if (isStaticArray!T && T.length)
         enum hasNested = hasNested!(typeof(T.init[0]));
     else static if (is(T == class) || is(T == struct) || is(T == union))
@@ -2226,6 +2227,7 @@ private enum NameOf(alias T) = T.stringof;
  */
 template FieldNameTuple(T)
 {
+    import std.meta : staticMap;
     static if (is(T == struct) || is(T == union))
         alias FieldNameTuple = staticMap!(NameOf, T.tupleof[0 .. $ - isNested!T]);
     else static if (is(T == class))
@@ -2686,6 +2688,7 @@ $(LI a delegate.))
 */
 template hasAliasing(T...)
 {
+    import std.meta : anySatisfy;
     import std.typecons : Rebindable;
 
     static if (T.length && is(T[0] : Rebindable!R, R))
@@ -2789,6 +2792,7 @@ $(LI an associative array.) $(LI a delegate.))
  */
 template hasIndirections(T)
 {
+    import std.meta : anySatisfy;
     static if (is(T == struct) || is(T == union))
         enum hasIndirections = anySatisfy!(.hasIndirections, FieldTypeTuple!T);
     else static if (isStaticArray!T && is(T : E[N], E, size_t N))
@@ -2899,6 +2903,7 @@ immutable or shared.) $(LI a delegate that is not shared.))
 
 template hasUnsharedAliasing(T...)
 {
+    import std.meta : anySatisfy;
     import std.typecons : Rebindable;
 
     static if (!T.length)
@@ -3074,6 +3079,7 @@ unittest
  */
 template hasElaborateCopyConstructor(S)
 {
+    import std.meta : anySatisfy;
     static if (isStaticArray!S && S.length)
     {
         enum bool hasElaborateCopyConstructor = hasElaborateCopyConstructor!(typeof(S.init[0]));
@@ -3130,6 +3136,7 @@ unittest
  */
 template hasElaborateAssign(S)
 {
+    import std.meta : anySatisfy;
     static if (isStaticArray!S && S.length)
     {
         enum bool hasElaborateAssign = hasElaborateAssign!(typeof(S.init[0]));
@@ -3216,6 +3223,7 @@ unittest
  */
 template hasElaborateDestructor(S)
 {
+    import std.meta : anySatisfy;
     static if (isStaticArray!S && S.length)
     {
         enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(S.init[0]));
@@ -3599,6 +3607,7 @@ unittest
  */
 template InterfacesTuple(T)
 {
+    import std.meta : NoDuplicates;
     template Flatten(H, T...)
     {
         static if (T.length)
@@ -3735,6 +3744,7 @@ template MemberFunctionsTuple(C, string name)
         // shrinkOne!args[1..$] = non-covariant others
         template shrinkOne(/+ alias target, rest... +/ args...)
         {
+            import std.meta : AliasSeq;
             alias target = args[0 .. 1]; // prevent property functions from being evaluated
             alias rest = args[1 .. $];
 
@@ -3809,6 +3819,7 @@ unittest
 
 unittest // Issue 15920
 {
+    import std.meta : AliasSeq;
     class A
     {
         void f(){}
@@ -3960,13 +3971,14 @@ unittest
 
 private template maxAlignment(U...) if (isTypeTuple!U)
 {
+    import std.meta : staticMap;
     static if (U.length == 0)
         static assert(0);
     else static if (U.length == 1)
         enum maxAlignment = U[0].alignof;
     else
     {
-        import std.algorithm : max;
+        import std.algorithm.comparison : max;
         enum maxAlignment = max(staticMap!(.maxAlignment, U));
     }
 }
@@ -4687,6 +4699,7 @@ unittest
  */
 template IntegralTypeOf(T)
 {
+    import std.meta : staticIndexOf;
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
         alias X = IntegralTypeOf!AT;
     else
@@ -4721,6 +4734,7 @@ unittest
  */
 template FloatingPointTypeOf(T)
 {
+    import std.meta : staticIndexOf;
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
         alias X = FloatingPointTypeOf!AT;
     else
@@ -4784,6 +4798,7 @@ unittest
  */
 template UnsignedTypeOf(T)
 {
+    import std.meta : staticIndexOf;
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, UnsignedIntTypeList) >= 0)
         alias UnsignedTypeOf = X;
@@ -4795,6 +4810,7 @@ template UnsignedTypeOf(T)
  */
 template SignedTypeOf(T)
 {
+    import std.meta : staticIndexOf;
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, SignedIntTypeList) >= 0)
         alias SignedTypeOf = X;
@@ -4808,6 +4824,7 @@ template SignedTypeOf(T)
  */
 template CharTypeOf(T)
 {
+    import std.meta : staticIndexOf;
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
         alias X = CharTypeOf!AT;
     else
@@ -6596,7 +6613,7 @@ unittest
 unittest
 {
     // Test for bug 5718
-    import std.demangle;
+    import std.demangle : demangle;
     int foo;
     auto foo_demangled = demangle(mangledName!foo);
     assert(foo_demangled[0 .. 4] == "int " && foo_demangled[$-3 .. $] == "foo",
@@ -6667,7 +6684,7 @@ unittest
  */
 template hasUDA(alias symbol, alias attribute)
 {
-    import std.typetuple : staticIndexOf;
+    import std.meta : staticIndexOf, staticMap;
 
     static if (is(attribute == struct) || is(attribute == class))
     {
@@ -6735,7 +6752,7 @@ unittest
  */
 template getUDAs(alias symbol, alias attribute)
 {
-    import std.typetuple : Filter;
+    import std.meta : Filter;
 
     template isDesiredUDA(alias S) {
         static if (__traits(compiles, is(typeof(S) == attribute)))
@@ -6930,7 +6947,7 @@ enum ifTestable(T, alias pred = a => a) = __traits(compiles, { if (pred(T.init))
 
 unittest
 {
-    import std.meta : AliasSeq;
+    import std.meta : AliasSeq, allSatisfy;
     static assert(allSatisfy!(ifTestable, AliasSeq!(bool, int, float, double, string)));
     struct BoolWrapper { bool value; }
     static assert(!ifTestable!(bool, a => BoolWrapper(a)));
