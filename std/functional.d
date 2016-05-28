@@ -784,7 +784,7 @@ unittest
 
 /**
 Takes multiple functions and adjoins them together. The result is a
-$(XREF typecons, Tuple) with one element per passed-in function. Upon
+$(REF Tuple, std,typecons) with one element per passed-in function. Upon
 invocation, the returned tuple is the adjoined results of all
 functions.
 

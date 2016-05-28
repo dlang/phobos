@@ -310,7 +310,7 @@ for the second, and so on.
 
 The choice of zero-based indexing instead of one-base indexing was
 motivated by the ability to use value `Tuple`s with various compile-time
-loop constructs (e.g. $(XREF meta, AliasSeq) iteration), all of which use
+loop constructs (e.g. $(REF AliasSeq, std,meta) iteration), all of which use
 zero-based indexing.
 
 Params:
@@ -6888,7 +6888,7 @@ However, member types in `struct`s or `class`es are not replaced because there
 are no ways to express the types resulting after replacement.
 
 This is an advanced type manipulation necessary e.g. for replacing the
-placeholder type `This` in $(XREF variant, Algebraic).
+placeholder type `This` in $(REF Algebraic, std,variant).
 
 Returns: `ReplaceType` aliases itself to the type(s) that result after
 replacement.

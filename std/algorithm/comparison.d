@@ -79,7 +79,7 @@ Returns:
     found value plus one is returned.
 
 See_Also:
-$(XREF_PACK_NAMED algorithm,searching,find,find) and $(XREF_PACK_NAMED algorithm,searching,canFind, canFind) for finding a value in a
+$(REF_ALTTEXT find, find, std,algorithm,searching) and $(REF_ALTTEXT canFind, canFind, std,algorithm,searching) for finding a value in a
 range.
 */
 uint among(alias pred = (a, b) => a == b, Value, Values...)
@@ -1270,7 +1270,7 @@ Returns:
     the type among the passed arguments that is able to store the largest value.
 
 See_Also:
-    $(XREF_PACK algorithm,searching,maxElement)
+    $(REF maxElement, std,algorithm,searching)
 */
 MaxType!T max(T...)(T args)
     if (T.length >= 2)
@@ -1384,7 +1384,7 @@ Params: args = The values to select the minimum from. At least two arguments
     must be passed, and they must be comparable with `<`.
 Returns: The minimum of the passed-in values.
 See_Also:
-    $(XREF_PACK algorithm,searching,minElement)
+    $(REF minElement, std,algorithm,searching)
 */
 MinType!T min(T...)(T args)
     if (T.length >= 2)
@@ -1767,7 +1767,7 @@ the benefit of have better complexity than the $(D AllocateGC.no) option. Howeve
 this option is only available for ranges whose equality can be determined via each
 element's $(D toHash) method. If customized equality is needed, then the $(D pred)
 template parameter can be passed, and the function will automatically switch to
-the non-allocating algorithm. See $(XREF functional,binaryFun) for more details on
+the non-allocating algorithm. See $(REF binaryFun, std,functional) for more details on
 how to define $(D pred).
 
 Non-allocating forward range option: $(BIGOH n^2)

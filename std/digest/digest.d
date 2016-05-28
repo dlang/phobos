@@ -204,7 +204,7 @@ version(ExampleDigest)
         public:
             /**
              * Use this to feed the digest with data.
-             * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+             * Also implements the $(REF isOutputRange, std,range,primitives)
              * interface for $(D ubyte) and $(D const(ubyte)[]).
              * The following usages of $(D put) must work for any type which
              * passes $(LREF isDigest):
@@ -388,7 +388,7 @@ unittest
 
 /**
  * Checks whether the digest has a $(D blockSize) member, which contains the
- * digest's internal block size in bits. It is primarily used by $(XREF digest.hmac, HMAC).
+ * digest's internal block size in bits. It is primarily used by $(REF HMAC, std,digest.hmac).
  */
 
 template hasBlockSize(T)
@@ -562,7 +562,7 @@ interface Digest
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * Also implements the $(REF isOutputRange, std,range,primitives)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Example:
@@ -864,7 +864,7 @@ class WrapperDigest(T) if (isDigest!T) : Digest
 
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * Also implements the $(REF isOutputRange, std,range,primitives)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         @trusted nothrow void put(scope const(ubyte)[] data...)

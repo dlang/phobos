@@ -382,7 +382,7 @@ version (linux) @safe unittest
 }
 
 /********************************************
-Read and validates (using $(XREF utf, validate)) a text file. $(D S)
+Read and validates (using $(REF validate, std,utf)) a text file. $(D S)
 can be a type of array of characters of any width and constancy. No
 width conversion is performed; if the width of the characters in file
 $(D name) is different from the width of elements of $(D S),
@@ -442,7 +442,7 @@ Params:
 
 Throws: $(D FileException) on error.
 
-See_also: $(XREF stdio,toFile)
+See_also: $(REF toFile, std,stdio)
  */
 void write(R)(R name, const void[] buffer)
     if ((isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
@@ -2566,7 +2566,7 @@ else version (NetBSD)
  * Returns the full path of the current executable.
  *
  * Throws:
- * $(XREF object, Exception)
+ * $(REF Exception, std,object)
  */
 @trusted string thisExePath ()
 {
@@ -3903,7 +3903,7 @@ unittest
         path = The directory to iterate over.
         pattern  = String with wildcards, such as $(RED "*.d"). The supported
                    wildcard strings are described under
-                   $(XREF _path, globMatch).
+                   $(REF globMatch, std,_path).
         mode = Whether the directory's sub-directories should be iterated
                over depth-first ($(D_PARAM depth)), breadth-first
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).

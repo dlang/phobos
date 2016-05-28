@@ -1413,7 +1413,7 @@ than that for a Fibonacci search.
 References:
     "Algorithms for Minimization without Derivatives", Richard Brent, Prentice-Hall, Inc. (1973)
 
-See_Also: $(LREF findRoot), $(XREF math, isNormal)
+See_Also: $(LREF findRoot), $(REF isNormal, std,math)
 +/
 Tuple!(T, "x", Unqual!(ReturnType!DF), "y", T, "error")
 findLocalMin(T, DF)(

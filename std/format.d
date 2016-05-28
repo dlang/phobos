@@ -104,7 +104,7 @@ private alias enforceFmt = enforceEx!FormatException;
    Interprets variadic argument list $(D args), formats them according
    to $(D fmt), and sends the resulting characters to $(D w). The
    encoding of the output is the same as $(D Char). The type $(D Writer)
-   must satisfy $(D $(XREF_PACK range,primitives,isOutputRange)!(Writer, Char)).
+   must satisfy $(D $(REF isOutputRange, std,range,primitives)!(Writer, Char)).
 
    The variadic arguments are normally consumed in order. POSIX-style
    $(WEB opengroup.org/onlinepubs/009695399/functions/printf.html,
@@ -131,7 +131,7 @@ private alias enforceFmt = enforceEx!FormatException;
    Params:
 
    w = Output is sent to this writer. Typical output writers include
-   $(XREF array,Appender!string) and $(XREF stdio,LockingTextWriter).
+   $(REF Appender!string, std,array) and $(REF LockingTextWriter, std,stdio).
 
    fmt = Format string.
 
@@ -6415,7 +6415,7 @@ unittest
 /*****************************************************
  * Format arguments into a string.
  *
- * Params: fmt  = Format string. For detailed specification, see $(XREF _format,formattedWrite).
+ * Params: fmt  = Format string. For detailed specification, see $(REF formattedWrite, std,_format).
  *         args = Variadic list of arguments to format into returned string.
  */
 immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar!Char)

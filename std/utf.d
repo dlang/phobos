@@ -3103,7 +3103,7 @@ enum dchar replacementDchar = '\uFFFD';
  * Iterate a range of char, wchar, or dchars by code unit.
  *
  * The purpose is to bypass the special case decoding that
- * $(XREF array,front) does to character arrays.
+ * $(REF front, std,array) does to character arrays.
  * Params:
  *      r = input range of characters, or array of characters
  * Returns:

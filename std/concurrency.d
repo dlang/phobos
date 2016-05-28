@@ -259,7 +259,7 @@ class LinkTerminated : Exception
 
 /**
  * Thrown if a message was sent to a thread via
- * $(XREF concurrency, prioritySend) and the receiver does not have a handler
+ * $(REF prioritySend, std,concurrency) and the receiver does not have a handler
  * for a message of this type.
  */
 class PriorityMessageException : Exception
@@ -596,7 +596,7 @@ unittest
  * Places the values as a message at the back of tid's message queue.
  *
  * Sends the supplied value to the thread represented by tid.  As with
- * $(XREF concurrency, spawn), $(D T) must not have unshared aliasing.
+ * $(REF spawn, std,concurrency), $(D T) must not have unshared aliasing.
  */
 void send(T...)( Tid tid, T vals )
 {
@@ -648,10 +648,10 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  * specified types are available.  This function works by pattern matching
  * a message against a set of delegates and executing the first match found.
  *
- * If a delegate that accepts a $(XREF variant, Variant) is included as
+ * If a delegate that accepts a $(REF Variant, std,variant) is included as
  * the last argument to $(D receive), it will match any message that was not
  * matched by an earlier delegate.  If more than one argument is sent,
- * the $(D Variant) will contain a $(XREF typecons, Tuple) of all values
+ * the $(D Variant) will contain a $(REF Tuple, std,typecons) of all values
  * sent.
  *
  * Example:
@@ -740,7 +740,7 @@ private template receiveOnlyRet(T...)
  *          is received.
  *
  * Returns: The received message.  If $(D T.length) is greater than one,
- *          the message will be packed into a $(XREF typecons, Tuple).
+ *          the message will be packed into a $(REF Tuple, std,typecons).
  *
  * Example:
  * ---

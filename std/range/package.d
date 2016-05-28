@@ -2967,7 +2967,7 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 }
 
 /**
-Given callable ($(XREF traits, isCallable)) $(D fun), create as a range
+Given callable ($(REF isCallable, std,traits)) $(D fun), create as a range
 whose front is defined by successive calls to $(D fun()).
 This is especially useful to call function with global side effects (random
 functions), or to create ranges expressed as a single delegate, rather than
@@ -2976,12 +2976,12 @@ $(D fun) maybe be passed either a template alias parameter (existing
 function, delegate, struct type defining static $(D opCall)... ) or
 a run-time value argument (delegate, function object... ).
 The result range models an InputRange
-($(XREF_PACK range,primitives,isInputRange)).
+($(REF isInputRange, std,range,primitives)).
 The resulting range will call $(D fun()) on every call to $(D front),
 and only when $(D front) is called, regardless of how the range is
 iterated.
 It is advised to compose generate with either
-$(XREF_PACK algorithm,iteration,cache) or $(XREF array,array), or to use it in a
+$(REF cache, std,algorithm,iteration) or $(REF array, std,array), or to use it in a
 foreach loop.
 A by-value foreach loop means that the loop value is not $(D ref).
 
@@ -5370,7 +5370,7 @@ auto iota(B, E)(B begin, E end)
 }
 
 /**
-User-defined types such as $(XREF bigint, BigInt) are also supported, as long
+User-defined types such as $(REF BigInt, std,bigint) are also supported, as long
 as they can be incremented with $(D ++) and compared with $(D <) or $(D ==).
 */
 // Issue 6447
@@ -7274,7 +7274,7 @@ unittest
 /**
 Iterate over $(D range) with an attached index variable.
 
-Each element is a $(XREF typecons, Tuple) containing the index
+Each element is a $(REF Tuple, std,typecons) containing the index
 and the element, in that order, where the index member is named $(D index)
 and the element member is named $(D value).
 
@@ -7712,7 +7712,7 @@ Represents a sorted range. In addition to the regular range
 primitives, supports additional operations that take advantage of the
 ordering, such as merge and binary search. To obtain a $(D
 SortedRange) from an unsorted range $(D r), use
-$(XREF_PACK algorithm,sorting,sort) which sorts $(D r) in place and returns the
+$(REF sort, std,algorithm,sorting) which sorts $(D r) in place and returns the
 corresponding $(D SortedRange). To construct a $(D SortedRange) from a range
 $(D r) that is known to be already sorted, use $(LREF assumeSorted) described
 below.
@@ -8325,7 +8325,7 @@ effect on the complexity of subsequent operations specific to sorted
 ranges (such as binary search). The probability of an arbitrary
 unsorted range failing the test is very high (however, an
 almost-sorted range is likely to pass it). To check for sortedness at
-cost $(BIGOH n), use $(XREF_PACK algorithm,sorting,isSorted).
+cost $(BIGOH n), use $(REF isSorted, std,algorithm,sorting).
  */
 auto assumeSorted(alias pred = "a < b", R)(R r)
 if (isInputRange!(Unqual!R))
@@ -9222,8 +9222,8 @@ struct NullSink
   It is important to note that as the resultant range is evaluated lazily,
   in the case of the version of $(D tee) that takes a function, the function
   will not actually be executed until the range is "walked" using functions
-  that evaluate ranges, such as $(XREF array,array) or
-  $(XREF_PACK algorithm,iteration,fold).
+  that evaluate ranges, such as $(REF array, std,array) or
+  $(REF fold, std,algorithm,iteration).
 
   Params:
   pipeOnPop = If `Yes.pipeOnPop`, simply iterating the range without ever
@@ -9243,7 +9243,7 @@ struct NullSink
   iterated and returns its elements in turn. In addition, the same elements
   will be passed to `outputRange` or `fun` as well.
 
-  See_Also: $(XREF_PACK algorithm,iteration,each)
+  See_Also: $(REF each, std,algorithm,iteration)
 +/
 auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
 if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))

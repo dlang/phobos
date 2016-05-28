@@ -26,7 +26,7 @@ import std.meta : allSatisfy;
  * information about the block size, it can be supplied explicitly using
  * the second overload.
  *
- * This type conforms to $(XREF digest.digest, isDigest).
+ * This type conforms to $(REF isDigest, std,digest.digest).
  */
 
 version(StdDdoc)
@@ -142,7 +142,7 @@ if (hashBlockSize % 8 == 0)
 
     /**
      * Feeds a piece of data into the hash computation. This method allows the
-     * type to be used as an $(XREF range, OutputRange).
+     * type to be used as an $(REF OutputRange, std,range).
      *
      * Returns:
      * A reference to the digest for convenient chaining.

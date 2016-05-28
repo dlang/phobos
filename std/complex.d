@@ -108,10 +108,10 @@ struct Complex(T)  if (isFloatingPoint!T)
     /** Converts the complex number to a string representation.
 
     The second form of this function is usually not called directly;
-    instead, it is used via $(XREF string,format), as shown in the examples
+    instead, it is used via $(REF format, std,string), as shown in the examples
     below.  Supported format characters are 'e', 'f', 'g', 'a', and 's'.
 
-    See the $(MREF std, format) and $(XREF string, format)
+    See the $(MREF std, format) and $(REF format, std,string)
     documentation for more information.
     */
     string toString() const /* TODO: @safe pure nothrow */
@@ -822,7 +822,7 @@ unittest{
 
     Note:
     $(D expi) is included here for convenience and for easy migration of code
-    that uses $(XREF math,_expi).  Unlike $(XREF math,_expi), which uses the
+    that uses $(REF _expi, std,math).  Unlike $(REF _expi, std,math), which uses the
     x87 $(I fsincos) instruction when possible, this function is no faster
     than calculating cos(y) and sin(y) separately.
 */
