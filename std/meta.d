@@ -12,6 +12,49 @@
  * take a single argument and evaluate to a boolean constant. Such templates
  * are referred to as $(I template predicates).
  *
+ * $(SCRIPT inhibitQuickIndex = 1;)
+ * $(DIVC quickindex,
+ * $(BOOKTABLE ,
+ * $(TR $(TH Category) $(TH Templates))
+ * $(TR $(TD Building blocks) $(TD
+ *           $(LREF Alias)
+ *           $(LREF AliasSeq)
+ *           $(LREF aliasSeqOf)
+ * ))
+ * $(TR $(TD Alias sequence filtering) $(TD
+ *           $(LREF Erase)
+ *           $(LREF EraseAll)
+ *           $(LREF Filter)
+ *           $(LREF NoDuplicates)
+ * ))
+ * $(TR $(TD Alias sequence type hierarchy) $(TD
+ *           $(LREF DerivedToFront)
+ *           $(LREF MostDerived)
+ * ))
+ * $(TR $(TD Alias sequence transformation) $(TD
+ *           $(LREF Repeat)
+ *           $(LREF Replace)
+ *           $(LREF ReplaceAll)
+ *           $(LREF Reverse)
+ *           $(LREF staticMap)
+ *           $(LREF staticSort)
+ * ))
+ * $(TR $(TD Alias sequence indexing) $(TD
+ *           $(LREF staticIndexOf)
+ * ))
+ * $(TR $(TD Boolean template predicate operators) $(TD
+ *           $(LREF allSatisfy)
+ *           $(LREF anySatisfy)
+ *           $(LREF templateAnd)
+ *           $(LREF templateNot)
+ *           $(LREF templateOr)
+ * ))
+ * $(TR $(TD Template instantiation) $(TD
+ *           $(LREF ApplyLeft)
+ *           $(LREF ApplyRight)
+ * ))
+ * ))
+ *
  * References:
  *  Based on ideas in Table 3.1 from
  *  $(LINK2 http://amazon.com/exec/obidos/ASIN/0201704315/ref=ase_classicempire/102-2957199-2585768,
