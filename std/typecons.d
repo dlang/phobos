@@ -1815,13 +1815,17 @@ if (is(S == struct))
     else
     struct Rebindable
     {
-        // fields of payload must be treated as tail const (unless S is mutable)
-        private Unqual!S payload;
+        // fields of mutPayload must be treated as tail const
+        private union
+        {
+            Unqual!S mutPayload = void;
+            S payload;
+        }
 
         this()(S s) @trusted
         {
-            // we preserve tail immutable guarantees so cast is OK
-            payload = cast(Unqual!S)s;
+            // we preserve tail immutable guarantees so mutable union is OK
+            payload = s;
         }
 
         void opAssign()(S s)
@@ -1830,7 +1834,7 @@ if (is(S == struct))
         }
 
         static if (!is(S == immutable))
-        ref S Rebindable_getRef() @property
+        ref S Rebindable_getRef() @property @trusted
         {
             // payload exposed as const ref when S is const
             return payload;
@@ -1839,8 +1843,8 @@ if (is(S == struct))
         static if (is(S == immutable))
         S Rebindable_get() @property @trusted
         {
-            // we return a copy so cast to immutable is OK
-            return cast(S)payload;
+            // we return a copy so mutable union is OK
+            return payload;
         }
 
         static if (is(S == immutable))
@@ -1852,7 +1856,7 @@ if (is(S == struct))
         {
             import std.algorithm : move;
             // call destructor with proper constness
-            S s = cast(S)move(payload);
+            S s = cast(S)move(mutPayload);
         }
     }
 }
