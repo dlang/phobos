@@ -287,7 +287,8 @@ unittest
     static assert(staticIndexOf!("void", 0, void, "void") == 2);
 }
 
-/// Kept for backwards compatibility
+// Explicitly undocumented. It will be removed in February 2017. @@@DEPRECATED_2017-02@@@
+deprecated("Please use staticIndexOf")
 alias IndexOf = staticIndexOf;
 
 /**
