@@ -161,7 +161,7 @@ STD_PACKAGES = std $(addprefix std/,\
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
-  concurrencybase conv cstream csv datetime demangle encoding exception file format \
+  conv cstream csv datetime demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
   outbuffer parallelism path process random signals socket socketstream stdint \
   stdio stdiobase stream string system traits typecons typetuple uni \
@@ -204,6 +204,7 @@ EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
 EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
 
 EXTRA_MODULES_INTERNAL := $(addprefix			\
+	std/concurrencybase \
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
