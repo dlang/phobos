@@ -38,8 +38,8 @@ void main(string[] args)
 }
 
 // Create and write new zip file.
-import std.file: write;
-import std.string: representation;
+import std.file : write;
+import std.string : representation;
 
 void main()
 {

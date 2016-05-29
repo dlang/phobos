@@ -99,8 +99,8 @@ template pack(K...)
 @safe @nogc pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    import std.range.primitives: ElementType;
-    import std.range: iota;
+    import std.range.primitives : ElementType;
+    import std.range : iota;
     auto r = (3 * 4 * 5 * 6 * 7 * 8 * 9 * 10 * 11).iota;
     auto a = r.sliced(3, 4, 5, 6, 7, 8, 9, 10, 11);
     auto b = a.pack!(2, 3); // same as `a.pack!2.pack!3`
@@ -203,7 +203,7 @@ evertPack(size_t N, Range)(auto ref Slice!(N, Range) slice)
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.iteration: transposed;
+    import std.experimental.ndslice.iteration : transposed;
     auto slice = iotaSlice(3, 4, 5, 6, 7, 8, 9, 10, 11);
     assert(slice
         .pack!2
@@ -218,10 +218,10 @@ evertPack(size_t N, Range)(auto ref Slice!(N, Range) slice)
 pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.iteration: transposed;
-    import std.range.primitives: ElementType;
-    import std.range: iota;
-    import std.algorithm.comparison: equal;
+    import std.experimental.ndslice.iteration : transposed;
+    import std.range.primitives : ElementType;
+    import std.range : iota;
+    import std.algorithm.comparison : equal;
     auto r = (3 * 4 * 5 * 6 * 7 * 8 * 9 * 10 * 11).iota;
     auto a = r.sliced(3, 4, 5, 6, 7, 8, 9, 10, 11);
     auto b = a
@@ -310,8 +310,8 @@ Slice!(1, Range) diagonal(size_t N, Range)(auto ref Slice!(N, Range) slice)
 /// Non-square matrix
 @safe @nogc pure nothrow unittest
 {
-    import std.algorithm.comparison: equal;
-    import std.range: only;
+    import std.algorithm.comparison : equal;
+    import std.range : only;
 
     //  -------
     // | 0 1 |
@@ -344,7 +344,7 @@ pure nothrow unittest
 /// Matrix, subdiagonal
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.iteration: dropOne;
+    import std.experimental.ndslice.iteration : dropOne;
     //  -------
     // | 0 1 2 |
     // | 3 4 5 |
@@ -358,7 +358,7 @@ pure nothrow unittest
 /// Matrix, antidiagonal
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.iteration: dropToHypercube, reversed;
+    import std.experimental.ndslice.iteration : dropToHypercube, reversed;
     //  -------
     // | 0 1 2 |
     // | 3 4 5 |
@@ -388,7 +388,7 @@ pure nothrow unittest
 /// 3D, subdiagonal
 @safe @nogc pure nothrow unittest
 {
-    import std.experimental.ndslice.iteration: dropOne;
+    import std.experimental.ndslice.iteration : dropOne;
     //  -----------
     // |  0   1  2 |
     // |  3   4  5 |
@@ -405,7 +405,7 @@ pure nothrow unittest
 /// 3D, diagonal plain
 @nogc @safe pure nothrow unittest
 {
-    import std.experimental.ndslice.iteration: dropOne;
+    import std.experimental.ndslice.iteration : dropOne;
     //  -----------
     // |  0   1  2 |
     // |  3   4  5 |
@@ -783,7 +783,7 @@ Slice!(Lengths.length, Range)
 ///
 @safe pure unittest
 {
-    import std.experimental.ndslice.iteration: allReversed;
+    import std.experimental.ndslice.iteration : allReversed;
     auto slice = iotaSlice(3, 4)
         .allReversed
         .reshape(-1, 3);
@@ -798,8 +798,8 @@ Slice!(Lengths.length, Range)
 pure unittest
 {
     import std.experimental.ndslice.slice;
-    import std.experimental.ndslice.iteration: reversed;
-    import std.array: array;
+    import std.experimental.ndslice.iteration : reversed;
+    import std.array : array;
 
     auto reshape2(S, L...)(S slice, L lengths)
     {
@@ -827,7 +827,7 @@ pure unittest
 
 @safe pure unittest
 {
-    import std.experimental.ndslice.iteration: allReversed;
+    import std.experimental.ndslice.iteration : allReversed;
     auto slice = iotaSlice(1, 1, 3, 2, 1, 2, 1).allReversed;
     assert(slice.reshape(1, -1, 1, 1, 3, 1) ==
         [[[[[[11], [10], [9]]]],
@@ -845,8 +845,8 @@ unittest
 @safe pure unittest
 {
     import std.experimental.ndslice.slice;
-    import std.range: iota;
-    import std.exception: assertThrown;
+    import std.range : iota;
+    import std.exception : assertThrown;
 
     auto e = 1.iotaSlice(1);
     // resize to the wrong dimension
@@ -1165,8 +1165,8 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
 /// Regular slice
 @safe @nogc pure nothrow unittest
 {
-    import std.algorithm.comparison: equal;
-    import std.range: iota;
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
     assert(iotaSlice(4, 5)
         .byElement
         .equal(20.iota));
@@ -1177,7 +1177,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration;
-    import std.range: drop;
+    import std.range : drop;
     assert(iotaSlice(3, 4, 5, 6, 7)
         .pack!2
         .byElement()
@@ -1222,8 +1222,8 @@ pure nothrow unittest
 pure nothrow unittest
 {
     // test save
-    import std.range: dropOne;
-    import std.range: iota;
+    import std.range : dropOne;
+    import std.range : iota;
 
     auto elems = 12.iota.sliced(3, 4).byElement;
     assert(elems.front == 0);
@@ -1237,9 +1237,9 @@ Random access and slicing
 @nogc nothrow unittest
 {
     import std.experimental.ndslice.slice;
-    import std.algorithm.comparison: equal;
-    import std.array: array;
-    import std.range: iota, repeat;
+    import std.algorithm.comparison : equal;
+    import std.array : array;
+    import std.range : iota, repeat;
     static data = 20.iota.array;
     auto elems = data.sliced(4, 5).byElement;
 
@@ -1275,8 +1275,8 @@ Use $(SUBREF iteration, allReversed) in pipeline before
 +/
 @safe @nogc pure nothrow unittest
 {
-    import std.range: retro;
-    import std.experimental.ndslice.iteration: allReversed;
+    import std.range : retro;
+    import std.experimental.ndslice.iteration : allReversed;
 
     auto slice = iotaSlice(3, 4, 5);
 
@@ -1301,7 +1301,7 @@ Use $(SUBREF iteration, allReversed) in pipeline before
 
 @safe @nogc pure nothrow unittest
 {
-    import std.range.primitives: isRandomAccessRange, hasSlicing;
+    import std.range.primitives : isRandomAccessRange, hasSlicing;
     auto elems = iotaSlice(4, 5).byElement;
     static assert(isRandomAccessRange!(typeof(elems)));
     static assert(hasSlicing!(typeof(elems)));
@@ -1311,7 +1311,7 @@ Use $(SUBREF iteration, allReversed) in pipeline before
 @safe @nogc pure nothrow unittest
 {
     import std.experimental.ndslice.iteration;
-    import std.range: isRandomAccessRange;
+    import std.range : isRandomAccessRange;
     auto elems = iotaSlice(4, 5).everted.byElement;
     static assert(isRandomAccessRange!(typeof(elems)));
 
@@ -1328,8 +1328,8 @@ Use $(SUBREF iteration, allReversed) in pipeline before
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration;
-    import std.range: iota, isForwardRange, hasLength;
-    import std.algorithm.comparison: equal;
+    import std.range : iota, isForwardRange, hasLength;
+    import std.algorithm.comparison : equal;
 
     auto range = (3 * 4 * 5 * 6 * 7).iota;
     auto slice0 = range.sliced(3, 4, 5, 6, 7);
@@ -1532,7 +1532,7 @@ pure nothrow unittest
 /// Properties
 @safe @nogc pure nothrow unittest
 {
-    import std.range.primitives: popFrontN;
+    import std.range.primitives : popFrontN;
 
     auto elems = iotaSlice(3, 4).byElementInStandardSimplex;
 
@@ -1548,7 +1548,7 @@ pure nothrow unittest
 @safe @nogc pure nothrow unittest
 {
     auto elems = iotaSlice(3, 4).byElementInStandardSimplex;
-    import std.range: dropOne, popFrontN;
+    import std.range : dropOne, popFrontN;
     elems.popFrontN(4);
 
     assert(elems.save.dropOne.front == 8);
@@ -1578,7 +1578,7 @@ IndexSlice!(Lengths.length) indexSlice(Lengths...)(Lengths lengths)
 ///ditto
 IndexSlice!N indexSlice(size_t N)(auto ref size_t[N] lengths)
 {
-    import std.experimental.ndslice.slice: sliced;
+    import std.experimental.ndslice.slice : sliced;
     with (typeof(return)) return Range(lengths[1 .. $]).sliced(lengths);
 }
 
@@ -1612,7 +1612,7 @@ IndexSlice!N indexSlice(size_t N)(auto ref size_t[N] lengths)
 @safe pure nothrow unittest
 {
     // test save
-    import std.range: dropOne;
+    import std.range : dropOne;
 
     auto im = indexSlice(7, 9);
     auto imByElement = im.byElement;
@@ -1657,7 +1657,7 @@ template IndexSlice(size_t N)
 unittest
 {
     auto r = indexSlice(1);
-    import std.range.primitives: isRandomAccessRange;
+    import std.range.primitives : isRandomAccessRange;
     static assert(isRandomAccessRange!(typeof(r)));
 }
 
@@ -1682,7 +1682,7 @@ IotaSlice!(Lengths.length) iotaSlice(Lengths...)(Lengths lengths)
 ///ditto
 IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
 {
-    import std.experimental.ndslice.slice: sliced;
+    import std.experimental.ndslice.slice : sliced;
     with (typeof(return)) return Range.init.sliced(lengths, shift);
 }
 
@@ -1696,7 +1696,7 @@ IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
 
     assert(slice == array);
 
-    import std.range.primitives: isRandomAccessRange;
+    import std.range.primitives : isRandomAccessRange;
     static assert(isRandomAccessRange!(IotaSlice!2));
     static assert(is(IotaSlice!2 : Slice!(2, Range), Range));
     static assert(is(DeepElementType!(IotaSlice!2) == size_t));

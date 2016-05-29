@@ -20,9 +20,9 @@ unittest
 {
     version(Posix)
     {
-        import core.stdc.stdlib: free;
-        import core.sys.posix.stdlib: setenv;
-        import std.exception: enforce;
+        import core.stdc.stdlib : free;
+        import core.sys.posix.stdlib : setenv;
+        import std.exception : enforce;
 
         void setEnvironment(in char[] name, in char[] value)
         { enforce(setenv(name.tempCString(), value.tempCString(), 1) != -1); }
@@ -30,8 +30,8 @@ unittest
 
     version(Windows)
     {
-        import core.sys.windows.windows: SetEnvironmentVariableW;
-        import std.exception: enforce;
+        import core.sys.windows.windows : SetEnvironmentVariableW;
+        import std.exception : enforce;
 
         void setEnvironment(in char[] name, in char[] value)
         { enforce(SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW())); }
@@ -149,7 +149,7 @@ auto tempCString(To = char, From)(From str)
     {
         pragma(inline, false);  // because it's rarely called
 
-        import core.exception   : onOutOfMemoryError;
+        import core.exception : onOutOfMemoryError;
         import core.stdc.string : memcpy;
         import core.stdc.stdlib : malloc, realloc;
 

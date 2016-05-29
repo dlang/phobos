@@ -865,7 +865,7 @@ template multiSort(less...) //if (less.length > 1)
     if (validPredicates!(ElementType!Range, less))
     {
         import std.range : assumeSorted;
-        import std.meta: AliasSeq;
+        import std.meta : AliasSeq;
         static if (is(typeof(less[$ - 1]) == SwapStrategy))
         {
             enum ss = less[$ - 1];

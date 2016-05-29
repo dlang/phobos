@@ -371,7 +371,7 @@ unittest
 
 unittest // invalid start bytes
 {
-    import std.exception: assertThrown;
+    import std.exception : assertThrown;
     immutable char[] invalidStartBytes = [
         0b1111_1000, // indicating a sequence length of 5
         0b1111_1100, // 6

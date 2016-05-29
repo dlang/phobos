@@ -76,7 +76,7 @@ else static if (BigDigit.sizeof == long.sizeof)
 else static assert(0, "Unsupported BigDigit size");
 
 private import std.exception : assumeUnique;
-private import std.traits:isIntegral;
+private import std.traits : isIntegral;
 enum BigDigitBits = BigDigit.sizeof*8;
 template maxBigDigits(T) if (isIntegral!T)
 {

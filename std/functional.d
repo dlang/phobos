@@ -909,9 +909,9 @@ template compose(fun...)
 ///
 unittest
 {
-    import std.algorithm: equal, map;
-    import std.array: split;
-    import std.conv: to;
+    import std.algorithm : equal, map;
+    import std.array : split;
+    import std.conv : to;
 
     // First split a string in whitespace-separated tokens and then
     // convert each token into an integer

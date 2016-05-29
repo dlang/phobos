@@ -3903,7 +3903,7 @@ pure unittest
 ///
 pure unittest
 {
-    import std.conv: to;
+    import std.conv : to;
 
     int[] a = [ 1, 2, 3 ];
     string[] b = [ "a", "b", "c" ];
@@ -7957,7 +7957,7 @@ if (isInputRange!Range)
     ///
     unittest
     {
-        import std.algorithm: equal;
+        import std.algorithm : equal;
         auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
         auto p = a.lowerBound(4);
         assert(equal(p, [ 0, 1, 2, 3 ]));
@@ -8001,7 +8001,7 @@ See_Also: STL's $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
     ///
     unittest
     {
-        import std.algorithm: equal;
+        import std.algorithm : equal;
         auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
         auto p = a.upperBound(3);
         assert(equal(p, [4, 4, 5, 6]));
@@ -8064,7 +8064,7 @@ See_Also: STL's $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
     ///
     unittest
     {
-        import std.algorithm: equal;
+        import std.algorithm : equal;
         auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
         auto r = a.assumeSorted.equalRange(3);
         assert(equal(r, [ 3, 3, 3 ]));
@@ -8124,7 +8124,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
     ///
     unittest
     {
-        import std.algorithm: equal;
+        import std.algorithm : equal;
         auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
         auto r = assumeSorted(a).trisect(3);
         assert(equal(r[0], [ 1, 2 ]));

@@ -2075,7 +2075,7 @@ Returns:
 ///
 unittest
 {
-    import std.exception: assertThrown, assertNotThrown;
+    import std.exception : assertThrown, assertNotThrown;
 
     Nullable!int ni;
     //`get` is implicitly called. Will throw
@@ -2371,7 +2371,7 @@ unittest
 }
 unittest
 {
-    import std.conv: to;
+    import std.conv : to;
     import std.array;
 
     // Bugzilla 10915
@@ -2556,7 +2556,7 @@ Returns:
 ///
 unittest
 {
-    import std.exception: assertThrown, assertNotThrown;
+    import std.exception : assertThrown, assertNotThrown;
 
     Nullable!(int, -1) ni;
     //`get` is implicitly called. Will throw
@@ -2695,7 +2695,7 @@ unittest
 }
 unittest
 {
-    import std.conv: to;
+    import std.conv : to;
 
     // Bugzilla 10915
     Nullable!(int, 1) ni = 1;
@@ -2851,7 +2851,7 @@ Params:
     ///
     unittest
     {
-        import std.exception: assertThrown, assertNotThrown;
+        import std.exception : assertThrown, assertNotThrown;
 
         NullableRef!int nr;
         assert(nr.isNull);
@@ -2877,7 +2877,7 @@ This function is also called for the implicit conversion to $(D T).
     ///
     unittest
     {
-        import std.exception: assertThrown, assertNotThrown;
+        import std.exception : assertThrown, assertNotThrown;
 
         NullableRef!int nr;
         //`get` is implicitly called. Will throw
@@ -2997,7 +2997,7 @@ unittest
 }
 unittest
 {
-    import std.conv: to;
+    import std.conv : to;
 
     // Bugzilla 10915
     NullableRef!int nri;
@@ -3051,7 +3051,7 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
 ///
 unittest
 {
-    import std.math: isNaN;
+    import std.math : isNaN;
 
     static abstract class C
     {
@@ -3131,7 +3131,7 @@ alias WhiteHole(Base) = AutoImplement!(Base, generateAssertTrap, isAbstractFunct
 ///
 unittest
 {
-    import std.exception: assertThrown;
+    import std.exception : assertThrown;
 
     static class C
     {
@@ -5878,8 +5878,8 @@ template TypedefType(T)
 ///
 unittest
 {
-    import std.typecons: Typedef, TypedefType;
-    import std.conv: to;
+    import std.typecons : Typedef, TypedefType;
+    import std.conv : to;
 
     alias MyInt = Typedef!int;
     static assert(is(TypedefType!MyInt == int));

@@ -8640,7 +8640,7 @@ public:
 
     unittest
     {
-        import std.format: format;
+        import std.format : format;
 
         foreach (str; ["", "20100704000000", "20100704 000000", "20100704t000000",
                       "20100704T000000.", "20100704T000000.A", "20100704T000000.Z",

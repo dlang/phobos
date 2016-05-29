@@ -740,7 +740,7 @@ struct BitArray
 private:
 
     import std.format : FormatSpec;
-    import core.bitop: bts, btr, bsf, bt;
+    import core.bitop : bts, btr, bsf, bt;
 
     size_t _len;
     size_t* _ptr;
@@ -2182,13 +2182,13 @@ private ushort swapEndianImpl(ushort val) @safe pure nothrow @nogc
 
 private uint swapEndianImpl(uint val) @trusted pure nothrow @nogc
 {
-    import core.bitop: bswap;
+    import core.bitop : bswap;
     return bswap(val);
 }
 
 private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 {
-    import core.bitop: bswap;
+    import core.bitop : bswap;
     immutable ulong res = bswap(cast(uint)val);
     return res << 32 | bswap(cast(uint)(val >> 32));
 }
@@ -3977,7 +3977,7 @@ unittest
 unittest
 {
     import std.algorithm : equal;
-    import std.range: iota;
+    import std.range : iota;
 
     import std.meta;
     foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))

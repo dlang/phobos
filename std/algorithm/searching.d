@@ -3127,7 +3127,7 @@ auto minElement(alias map = "a", Range, RangeElementType = ElementType!Range)
 ///
 @safe pure unittest
 {
-    import std.range: enumerate;
+    import std.range : enumerate;
 
     assert([2, 1, 4, 3].minElement == 1);
 
@@ -3144,7 +3144,7 @@ auto minElement(alias map = "a", Range, RangeElementType = ElementType!Range)
 
 @safe pure unittest
 {
-    import std.range: enumerate, iota;
+    import std.range : enumerate, iota;
     // supports mapping
     assert([3, 4, 5, 1, 2].enumerate.minElement!"a.value" == tuple(3, 1));
     assert([5, 2, 4].enumerate.minElement!"a.value" == tuple(1, 2));
@@ -3217,7 +3217,7 @@ auto maxElement(alias map = "a", Range, RangeElementType = ElementType!Range)
 ///
 @safe pure unittest
 {
-    import std.range: enumerate;
+    import std.range : enumerate;
     assert([2, 1, 4, 3].maxElement == 4);
 
     // allows to get the index of an element too
@@ -3233,7 +3233,7 @@ auto maxElement(alias map = "a", Range, RangeElementType = ElementType!Range)
 
 @safe pure unittest
 {
-    import std.range: enumerate, iota;
+    import std.range : enumerate, iota;
 
     // supports mapping
     assert([3, 4, 5, 1, 2].enumerate.maxElement!"a.value" == tuple(2, 5));

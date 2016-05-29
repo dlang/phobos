@@ -494,7 +494,7 @@ public:
     void opAssign(F)(F input)
         if (__traits(compiles, cast(real)input))
     {
-        import std.conv: text;
+        import std.conv : text;
         static if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
             auto value = ToBinary!(Unqual!F)(input);
         else
@@ -527,7 +527,7 @@ public:
     @property F get(F)()
         if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
     {
-        import std.conv: text;
+        import std.conv : text;
 
         ToBinary!F result;
 
@@ -1572,7 +1572,7 @@ unittest
 
 unittest
 {
-    import std.meta: AliasSeq;
+    import std.meta : AliasSeq;
     foreach (T; AliasSeq!(double, float, real))
     {
         {
@@ -2491,7 +2491,7 @@ unittest
 
 unittest
 {
-    import std.conv: text;
+    import std.conv : text;
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
     auto simIter = gapWeightedSimilarityIncremental(s, t, 1.0);
@@ -2621,7 +2621,7 @@ private:
 
     void enforceSize(R)(R range) const
     {
-        import std.conv: text;
+        import std.conv : text;
         enforce(range.length <= size, text(
             "FFT size mismatch.  Expected ", size, ", got ", range.length));
     }

@@ -2486,8 +2486,8 @@ version(Posix) unittest // input range of dchars
     mkdirRecurse(deleteme);
     scope(exit) if (deleteme.exists) rmdirRecurse(deleteme);
     write(deleteme ~ "/f", "");
-    import std.range.interfaces: InputRange, inputRangeObject;
-    import std.utf: byChar;
+    import std.range.interfaces : InputRange, inputRangeObject;
+    import std.utf : byChar;
     immutable string link = deleteme ~ "/l";
     symlink("f", link);
     InputRange!dchar linkr = inputRangeObject(link);
@@ -3459,7 +3459,7 @@ version(Windows) unittest
 
 version(Posix) unittest
 {
-    import std.process: executeShell;
+    import std.process : executeShell;
     collectException(rmdirRecurse(deleteme));
     auto d = deleteme~"/a/b/c/d/e/f/g";
     enforce(collectException(mkdir(d)));

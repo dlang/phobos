@@ -3914,7 +3914,7 @@ string expandTilde(string inputPath) nothrow
 }
 
 
-version(unittest) import std.process: environment;
+version(unittest) import std.process : environment;
 unittest
 {
     version (Posix)

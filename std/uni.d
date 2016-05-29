@@ -8311,7 +8311,7 @@ unittest
     {
     }
 
-    import std.algorithm.comparison  : equal;
+    import std.algorithm.comparison : equal;
 
     "HELLo"w.asLowerCase.equal("hello"d);
     "HELLo"w.asUpperCase.equal("HELLO"d);
@@ -8516,7 +8516,7 @@ unittest
     {
     }
 
-    import std.algorithm.comparison  : equal;
+    import std.algorithm.comparison : equal;
 
     "HELLo"w.asCapitalized.equal("Hello"d);
     "hElLO"w.asCapitalized.equal("Hello"d);

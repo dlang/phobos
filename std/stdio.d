@@ -756,7 +756,7 @@ Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) f
     {
         // Issue 12349
         static import std.file;
-        import std.exception: assertThrown;
+        import std.exception : assertThrown;
 
         auto deleteme = testFilename();
         auto f = File(deleteme, "w");
@@ -3080,7 +3080,7 @@ unittest
 
 @safe unittest
 {
-    import std.exception: collectException;
+    import std.exception : collectException;
     auto e = collectException({ File f; f.writeln("Hello!"); }());
     assert(e && e.msg == "Attempting to write to closed File");
 }
