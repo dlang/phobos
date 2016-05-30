@@ -1822,35 +1822,33 @@ if (is(S == struct))
             S payload;
         }
 
-    @trusted:
-
         this(S s)
         {
             // we preserve tail immutable guarantees so mutable union is OK
             payload = s;
         }
 
-        void opAssign(S s)
+        void opAssign(S s) @trusted
         {
             auto rs = Rebindable(s);
             import std.algorithm.mutation : swap;
             swap(mutPayload, rs.mutPayload);
         }
 
-        void opAssign(typeof(this) other)
+        void opAssign(typeof(this) other) @trusted
         {
             this = other.payload;
         }
 
         static if (!is(S == immutable))
-        ref S Rebindable_getRef() @property
+        ref S Rebindable_getRef() @property @trusted
         {
             // payload exposed as const ref when S is const
             return payload;
         }
 
         static if (is(S == immutable))
-        S Rebindable_get() @property
+        S Rebindable_get() @property @trusted
         {
             // we return a copy so mutable union is OK
             return payload;
@@ -1861,11 +1859,17 @@ if (is(S == struct))
         else
             alias Rebindable_getRef this;
 
-        ~this()
+        private
+        auto movePayload() @trusted
         {
             import std.algorithm : move;
+            return cast(S)move(mutPayload);
+        }
+
+        ~this()
+        {
             // call destructor with proper constness
-            S s = cast(S)move(mutPayload);
+            S s = movePayload;
         }
     }
 }
