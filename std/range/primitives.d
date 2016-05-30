@@ -2057,7 +2057,12 @@ version(unittest)
     static assert(!is(typeof({          void[] a; popFront(a); })));
 }
 
+enum stringDeprecationMsg = "Unicode string requires the range element type to be specified explicitly:" ~
+        "Use std.uni.byCodePoint, std.utf.byCodeUnit or std.uni.byGrapheme." ~
+        "Read more: <shortlink>";
+
 // Specialization for narrow strings. The necessity of
+deprecated(stringDeprecationMsg)
 void popFront(C)(ref C[] str) @trusted pure nothrow
 if (isNarrowString!(C[]))
 {
@@ -2157,6 +2162,7 @@ version(unittest)
 }
 
 // Specialization for arrays of char
+deprecated(stringDeprecationMsg)
 void popBack(T)(ref T[] a) @safe pure
 if (isNarrowString!(T[]))
 {
@@ -2230,6 +2236,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 /// ditto
+deprecated(stringDeprecationMsg)
 @property dchar front(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
     import std.utf : decode;
@@ -2273,6 +2280,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 
 /// ditto
 // Specialization for strings
+deprecated(stringDeprecationMsg)
 @property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
     import std.utf : decode, strideBack;
