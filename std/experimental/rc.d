@@ -74,15 +74,45 @@ private struct CowStringCore(C)
     {
         auto oldCapacity = capacity;
         assert(cap > oldCapacity);
-        if (_support &&
-                alloc.expand(_support, C.sizeof * (cap - oldCapacity)))
+        if (_support
+            && *prefs == 0
+            && alloc.expand(_support, C.sizeof * (cap - oldCapacity)))
+        {
             return;
+        }
         // Need to create a whole new string
         auto t = cast(C[]) alloc.allocate(C.sizeof * cap);
         t || assert(0);
+        assert(alloc.parent.prefix(t) == 0);
         t[0 .. _payload.length] = _payload[];
+        if (_support !is null)
+        {
+            auto p = prefs;
+            if (!*p) alloc.deallocate(_support);
+            else --*p;
+        }
         _payload = t[0 .. _payload.length];
         _support = t;
+    }
+
+    private uint* prefs()
+    {
+        assert(_support !is null);
+        return &alloc.parent.prefix(_support);
+    }
+
+    void incRef()
+    {
+        if (_support is null) return;
+        ++*prefs;
+    }
+
+    void decRef()
+    {
+        if (_support is null) return;
+        auto p = prefs;
+        if (!*p) alloc.deallocate(_support);
+        else --*p;
     }
 }
 
@@ -96,12 +126,42 @@ private auto slack(RCStr)(ref RCStr s)
     return s.payloadPtr[s.length .. s.capacity];
 }
 
+struct B
+{
+    int x;
+    this(int y) immutable
+    {
+        x = y;
+    }
+}
+
+unittest
+{
+    auto b = immutable(B)(42);
+    assert(b.x == 42);
+}
+
+struct A
+{
+    B x;
+    this(int y) immutable
+    {
+        x = immutable(B)(y);
+    }
+}
+
+unittest
+{
+    auto a = immutable(A)(42);
+    assert(a.x.x == 42);
+}
+
 /**
 */
 struct RCStr(C)
 if (isSomeChar!C)
 {
-    import std.range, std.traits;
+    import std.conv, std.range, std.traits;
     alias K = Unqual!C;
 
     // state {
@@ -112,6 +172,51 @@ if (isSomeChar!C)
         CowStringCore!K _large = void;
     }
     // }
+
+    this(S)(S str) if (isSomeString!S)
+    {
+        assert(isSmall && codeUnits == 0);
+        this ~= str;
+    }
+
+    this(S)(S str) immutable if (isSomeString!S)
+    {
+        if (str.length <= _small.capacity)
+        {
+            /*_small.payloadPtr[0 .. str.length] = str[];
+            _small.forceLength(str.length);*/
+        }
+        else
+        {
+            assert(0);
+        }
+    }
+
+    this(this)
+    {
+        if (!isSmall) _large.incRef;
+    }
+
+    ~this()
+    {
+        if (!isSmall) _large.decRef;
+    }
+
+    void opAssign(RCStr!C rhs)
+    {
+        this.__dtor;
+        if (rhs.isSmall)
+        {
+            _small.payloadPtr[0 .. rhs._small.length] = rhs.payload[];
+            _small.forceLength(rhs._small.length);
+        }
+        else
+        {
+            _small.invalidate;
+            emplace(&_large, rhs._large);
+            _large.incRef;
+        }
+    }
 
     private bool isSmall() const { return _small.valid; }
 
@@ -188,13 +293,26 @@ if (isSomeChar!C)
         assert(t.capacity > _small.length);
         t.payloadPtr[0 .. _small.length] = _small.payload;
         t.forceLength(_small.length);
-        import core.stdc.string, std.conv;
+        import core.stdc.string;
         memcpy(&_large, &t, t.sizeof);
         emplace(&t);
         _small.invalidate;
     }
 
-    RCStr!C opCat(X)(X x)
+    auto opCast(T)() if (is(T == immutable RCStr!C))
+    {
+        if (isSmall)
+        {
+            return immutable(RCStr!C)(_small.payload);
+        }
+        assert(0);
+        /*static if (is(C == immutable))
+        {
+
+        }*/
+    }
+
+    auto opCat(X)(X x)
     if (is(typeof(this ~= x)))
     {
         // TODO: optimize
@@ -203,7 +321,7 @@ if (isSomeChar!C)
         return result;
     }
 
-    void opCatAssign(in RCStr!C rhs)
+    void opCatAssign(RCStr!C rhs)
     {
         this ~= rhs.payload;
     }
@@ -301,6 +419,18 @@ version(unittest) private void test(C)()
         "12345678901234567890123456789012345678901234567890123456789012345");
     auto s2 = s1 ~ s1;
     assert(s2 == s);
+    s2 = s;
+    assert(s2 == s);
+}
+
+version(unittest) private void test2(C)()
+{
+    /*static immutable(RCStr!C) fun(immutable RCStr!C s)
+    {
+        return s ~ s;
+    }*/
+    auto s1 = RCStr!C("1234");
+    auto s2 = cast(immutable RCStr!C) s1;
 }
 
 unittest
@@ -314,6 +444,9 @@ unittest
     test!dchar;
     test!(const dchar);
     test!(immutable dchar);
+
+    test2!char;
+
     import std.stdio;
     writeln(alloc.bytesUsed);
 }
