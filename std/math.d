@@ -28,7 +28,7 @@ $(TR $(TDNW Trigonometry) $(TD
 $(TR $(TDNW Rounding) $(TD
     $(MYREF ceil) $(MYREF floor) $(MYREF round) $(MYREF lround)
     $(MYREF trunc) $(MYREF rint) $(MYREF lrint) $(MYREF nearbyint)
-    $(MYREF rndtol)
+    $(MYREF rndtol) $(MYREF quantize)
 ))
 $(TR $(TDNW Exponentiation & Logarithms) $(TD
     $(MYREF pow) $(MYREF exp) $(MYREF exp2) $(MYREF expm1) $(MYREF ldexp)
@@ -3930,6 +3930,97 @@ float floor(float x) @trusted pure nothrow @nogc
     assert(floor(float.infinity) == float.infinity);
     assert(isNaN(floor(float.nan)));
     assert(isNaN(floor(float.init)));
+}
+
+/**
+ * Round `val` to a multiple of `unit`. `rfunc` specifies the rounding
+ * function to use; by default this is `rint`, which uses the current
+ * rounding mode.
+ */
+Unqual!F quantize(alias rfunc = rint, F)(const F val, const F unit)
+    if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
+{
+    typeof(return) ret = val;
+    if (unit != 0)
+    {
+        const scaled = val / unit;
+        if (!scaled.isInfinity)
+            ret = rfunc(scaled) * unit;
+    }
+    return ret;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(12345.6789L.quantize(0.01L) == 12345.68L);
+    assert(12345.6789L.quantize!floor(0.01L) == 12345.67L);
+    assert(12345.6789L.quantize(22.0L) == 12342.0L);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(12345.6789L.quantize(0) == 12345.6789L);
+    assert(12345.6789L.quantize(real.infinity).isNaN);
+    assert(12345.6789L.quantize(real.nan).isNaN);
+    assert(real.infinity.quantize(0.01L) == real.infinity);
+    assert(real.infinity.quantize(real.nan).isNaN);
+    assert(real.nan.quantize(0.01L).isNaN);
+    assert(real.nan.quantize(real.infinity).isNaN);
+    assert(real.nan.quantize(real.nan).isNaN);
+}
+
+/**
+ * Round `val` to a multiple of `pow(base, exp)`. `rfunc` specifies the
+ * rounding function to use; by default this is `rint`, which uses the
+ * current rounding mode.
+ */
+Unqual!F quantize(real base, alias rfunc = rint, F, E)(const F val, const E exp)
+    if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F && isIntegral!E)
+{
+    // TODO: Compile-time optimization for power-of-two bases?
+    return quantize!rfunc(val, pow(cast(F)base, exp));
+}
+
+/// ditto
+Unqual!F quantize(real base, long exp = 1, alias rfunc = rint, F)(const F val)
+    if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
+{
+    enum unit = cast(F)pow(base, exp);
+    return quantize!rfunc(val, unit);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(12345.6789L.quantize!10(-2) == 12345.68L);
+    assert(12345.6789L.quantize!(10, -2) == 12345.68L);
+    assert(12345.6789L.quantize!(10, floor)(-2) == 12345.67L);
+    assert(12345.6789L.quantize!(10, -2, floor) == 12345.67L);
+
+    assert(12345.6789L.quantize!22(1) == 12342.0L);
+    assert(12345.6789L.quantize!22 == 12342.0L);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
+
+    foreach (F; AliasSeq!(real, double, float))
+    {
+        const maxL10 = cast(int) F.max.log10.floor;
+        const maxR10 = pow(cast(F)10, maxL10);
+        assert((cast(F) 0.9L * maxR10).quantize!10(maxL10) ==  maxR10);
+        assert((cast(F)-0.9L * maxR10).quantize!10(maxL10) == -maxR10);
+
+        assert(F.max.quantize(F.min_normal) == F.max);
+        assert((-F.max).quantize(F.min_normal) == -F.max);
+        assert(F.min_normal.quantize(F.max) == 0);
+        assert((-F.min_normal).quantize(F.max) == 0);
+        assert(F.min_normal.quantize(F.min_normal) == F.min_normal);
+        assert((-F.min_normal).quantize(F.min_normal) == -F.min_normal);
+    }
 }
 
 /******************************************
