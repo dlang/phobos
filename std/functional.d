@@ -60,7 +60,8 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.functional;
 
-import std.meta, std.traits;
+import std.meta; // AliasSeq, Reverse
+import std.traits; // isCallable, Parameters
 
 
 private template needOpCallAlias(alias fun)
@@ -82,8 +83,6 @@ private template needOpCallAlias(alias fun)
      */
     static if (is(typeof(fun.opCall) == function))
     {
-        import std.traits : Parameters;
-
         enum needOpCallAlias = !is(typeof(fun)) && __traits(compiles, () {
             return fun(Parameters!fun.init);
         });
@@ -305,7 +304,6 @@ private uint _ctfeSkipName(ref string op, string name)
 private uint _ctfeMatchUnary(string fun, string name)
 {
     if (!__ctfe) assert(false);
-    import std.stdio;
     fun._ctfeSkipOp();
     for (;;)
     {
@@ -421,15 +419,18 @@ unittest
 template safeOp(string S)
     if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
 {
+    import std.traits : isIntegral;
     private bool unsafeOp(ElementType1, ElementType2)(ElementType1 a, ElementType2 b) pure
         if (isIntegral!ElementType1 && isIntegral!ElementType2)
     {
+        import std.traits : CommonType;
         alias T = CommonType!(ElementType1, ElementType2);
         return mixin("cast(T)a "~S~" cast(T)b");
     }
 
     bool safeOp(T0, T1)(auto ref T0 a, auto ref T1 b)
     {
+        import std.traits : mostNegative;
         static if (isIntegral!T0 && isIntegral!T1 &&
                    (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
         {
@@ -461,7 +462,7 @@ template safeOp(string S)
 
 unittest //check user defined types
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     struct Foo
     {
         int a;
@@ -630,8 +631,8 @@ template not(alias pred)
 ///
 unittest
 {
+    import std.algorithm.searching : find;
     import std.functional;
-    import std.algorithm : find;
     import std.uni : isWhite;
     string a = "   Hello, world!";
     assert(find!(not!isWhite)(a) == "Hello, world!");
@@ -656,6 +657,7 @@ template partial(alias fun, alias arg)
 {
     static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
     {
+        import std.traits : ReturnType;
         ReturnType!fun partial(Parameters!fun[1..$] args2)
         {
             return fun(arg, args2);
@@ -823,7 +825,7 @@ template adjoin(F...) if (F.length > 1)
 ///
 unittest
 {
-    import std.functional, std.typecons;
+    import std.functional, std.typecons : Tuple;
     static bool f1(int a) { return a != 0; }
     static int f2(int a) { return a / 2; }
     auto x = adjoin!(f1, f2)(5);
@@ -833,7 +835,7 @@ unittest
 
 unittest
 {
-    import std.typecons;
+    import std.typecons : Tuple;
     static bool F1(int a) { return a != 0; }
     auto x1 = adjoin!(F1)(5);
     static int F2(int a) { return a / 2; }
@@ -910,7 +912,8 @@ template compose(fun...)
 ///
 unittest
 {
-    import std.algorithm : equal, map;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
     import std.array : split;
     import std.conv : to;
 
@@ -982,6 +985,7 @@ is useful to memoize an impure function, too.
 */
 template memoize(alias fun)
 {
+    import std.traits : ReturnType;
     // alias Args = Parameters!fun; // Bugzilla 13580
 
     ReturnType!fun memoize(Parameters!fun args)
@@ -1000,9 +1004,11 @@ template memoize(alias fun)
 /// ditto
 template memoize(alias fun, uint maxSize)
 {
+    import std.traits : ReturnType;
     // alias Args = Parameters!fun; // Bugzilla 13580
     ReturnType!fun memoize(Parameters!fun args)
     {
+        import std.traits : hasIndirections;
         import std.typecons : tuple;
         static struct Value { Parameters!fun args; ReturnType!fun res; }
         static Value[] memo;
@@ -1010,7 +1016,7 @@ template memoize(alias fun, uint maxSize)
 
         if (!memo.length)
         {
-            import core.memory;
+            import core.memory : GC;
 
             enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
             memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
@@ -1108,7 +1114,7 @@ unittest
 
 unittest
 {
-    import core.math;
+    import core.math : sqrt;
     alias msqrt = memoize!(function double(double x) { return sqrt(x); });
     auto y = msqrt(2.0);
     assert(y == msqrt(2.0));
@@ -1154,7 +1160,7 @@ unittest
 
 private struct DelegateFaker(F)
 {
-    import std.typecons;
+    import std.typecons : FuncInfo, MemberFunctionGenerator;
 
     // for @safe
     static F castToF(THIS)(THIS x) @trusted
@@ -1203,7 +1209,7 @@ private struct DelegateFaker(F)
     alias FuncInfo_doIt = FuncInfo!(F);
 
     // Generate the member function doIt().
-    mixin( std.typecons.MemberFunctionGenerator!(GeneratingPolicy!())
+    mixin( MemberFunctionGenerator!(GeneratingPolicy!())
             .generateFunction!("FuncInfo_doIt", "doIt", F) );
 }
 
@@ -1371,8 +1377,6 @@ Forwards function arguments with saving ref-ness.
 */
 template forward(args...)
 {
-    import std.meta;
-
     static if (args.length)
     {
         import std.algorithm.mutation : move;
