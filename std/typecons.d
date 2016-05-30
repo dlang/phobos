@@ -1822,15 +1822,17 @@ if (is(S == struct))
             S payload;
         }
 
-        this()(S s) @trusted
+        this(S s) @trusted
         {
             // we preserve tail immutable guarantees so mutable union is OK
             payload = s;
         }
 
-        void opAssign()(S s)
+        void opAssign(S s) @trusted
         {
-            this = Rebindable(s);
+            auto rs = Rebindable(s);
+            import std.algorithm.mutation : swap;
+            swap(mutPayload, rs.mutPayload);
         }
 
         static if (!is(S == immutable))
