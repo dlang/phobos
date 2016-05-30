@@ -1821,7 +1821,7 @@ if (is(S == struct))
             Unqual!S mutPayload = void;
             S payload;
         }
-        
+
     @trusted:
 
         this(S s)
@@ -1835,6 +1835,11 @@ if (is(S == struct))
             auto rs = Rebindable(s);
             import std.algorithm.mutation : swap;
             swap(mutPayload, rs.mutPayload);
+        }
+
+        void opAssign(typeof(this) other)
+        {
+            this = other.payload;
         }
 
         static if (!is(S == immutable))
@@ -1918,6 +1923,25 @@ if (is(S == struct))
     ri = si;
     ri = S();
     assert(ri.ptr is null);
+
+    // Test RB!immutable -> RB!const
+    Rebindable!(const S) rc = ri;
+    assert(rc.ptr is null);
+    ri = S(new int);
+    rc = ri;
+    assert(rc.ptr !is null);
+
+    // test rebindable, opAssign
+    rc.destroy;
+    assert(rc.ptr is null);
+    rc = rebindable(cs3);
+    rc = rebindable(si);
+    assert(rc.ptr !is null);
+
+    ri.destroy;
+    assert(ri.ptr is null);
+    ri = rebindable(si);
+    assert(ri.ptr !is null);
 }
 
 // Test Rebindable!mutable
