@@ -272,7 +272,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
  */
 BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
 (alias pred = "a == b", Range)
-(Range needle) if (isRandomAccessRange!(Range) || isSomeString!Range)
+(Range needle) if ((isRandomAccessRange!(Range) && hasSlicing!Range) || isSomeString!Range)
 {
     return typeof(return)(needle);
 }
@@ -1768,14 +1768,14 @@ if (isForwardRange!R1 && isForwardRange!R2
 
 /// ditto
 R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-if (isRandomAccessRange!R1 && isBidirectionalRange!R2
+if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     if (needle.empty) return haystack;
     const needleLength = walkLength(needle.save);
     if (needleLength > haystack.length)
     {
-        return haystack[$ .. $];
+        return haystack[haystack.length .. haystack.length];
     }
     // @@@BUG@@@
     // auto needleBack = moveBack(needle);
@@ -2573,7 +2573,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     }
 
     static if (isSomeString!R1 && isSomeString!R2
-            || isRandomAccessRange!R1 && hasLength!R2)
+            || (isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && hasLength!R2))
     {
         auto balance = find!pred(haystack, needle);
         immutable pos1 = haystack.length - balance.length;
@@ -2637,7 +2637,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     }
 
     static if (isSomeString!R1 && isSomeString!R2
-            || isRandomAccessRange!R1 && hasLength!R2)
+            || (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && hasLength!R2))
     {
         auto balance = find!pred(haystack, needle);
         immutable pos = haystack.length - balance.length;
@@ -2697,7 +2697,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     }
 
     static if (isSomeString!R1 && isSomeString!R2
-            || isRandomAccessRange!R1 && hasLength!R2)
+            || isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && hasLength!R2)
     {
         auto balance = find!pred(haystack, needle);
         immutable pos = balance.empty ? 0 : haystack.length - balance.length + needle.length;
@@ -3315,7 +3315,7 @@ Range minPos(alias pred = "a < b", Range)(Range range)
                 pos = i;
             }
         }
-        return range[pos .. $];
+        return range[pos .. range.length];
     }
     else
     {
