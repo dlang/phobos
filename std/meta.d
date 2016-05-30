@@ -39,12 +39,12 @@
  *           $(LREF staticMap)
  *           $(LREF staticSort)
  * ))
- * $(TR $(TD Alias sequence indexing) $(TD
+ * $(TR $(TD Alias sequence searching) $(TD
+ *           $(LREF allSatisfy)
+ *           $(LREF anySatisfy)
  *           $(LREF staticIndexOf)
  * ))
  * $(TR $(TD Boolean template predicate operators) $(TD
- *           $(LREF allSatisfy)
- *           $(LREF anySatisfy)
  *           $(LREF templateAnd)
  *           $(LREF templateNot)
  *           $(LREF templateOr)
