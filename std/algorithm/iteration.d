@@ -4562,7 +4562,7 @@ if (isInputRange!R && !isInfinite!R)
             static if (isRandomAccessRange!R && hasSlicing!R)
             {
                 store[idx] = sumPairwise16!F(data);
-                data = data[16 .. $];
+                data = data[16 .. data.length];
             }
             else store[idx] = sumPairwiseN!(16, false, F)(data);
 
