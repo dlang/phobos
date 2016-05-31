@@ -29,8 +29,8 @@
  * -------
  * import std.zlib;
  * import std.stdio;
- * import std.conv: to;
- * import std.algorithm: map;
+ * import std.conv : to;
+ * import std.algorithm : map;
  *
  * UnCompress decmp = new UnCompress;
  * foreach (chunk; stdin.byChunk(4096).map!(x => decmp.uncompress(x)))
@@ -334,7 +334,7 @@ enum HeaderFormat {
 
 class Compress
 {
-    import std.conv: to;
+    import std.conv : to;
 
   private:
     z_stream zs;
@@ -511,7 +511,7 @@ class Compress
 
 class UnCompress
 {
-    import std.conv: to;
+    import std.conv : to;
 
   private:
     z_stream zs;

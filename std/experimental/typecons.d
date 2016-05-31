@@ -23,7 +23,7 @@ module std.experimental.typecons;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
 
-import std.typecons: Tuple, tuple, Bind, DerivedFunctionType,
+import std.typecons : Tuple, tuple, Bind, DerivedFunctionType,
        isImplicitlyConvertible, mixinAll, staticIota,
        GetOverloadedMethods;
 
@@ -568,7 +568,7 @@ template unwrap(Target)
                         break;
                 }
             } while (upCastSource);
-            import std.conv: ConvException;
+            import std.conv : ConvException;
             throw new ConvException(unwrapExceptionText!(Source,Target));
         }
         // structural downcast for class target

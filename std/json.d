@@ -1652,7 +1652,7 @@ EOF";
 // handling of special float values (NaN, Inf, -Inf)
 unittest
 {
-    import std.math      : isNaN, isInfinity;
+    import std.math : isNaN, isInfinity;
     import std.exception : assertThrown;
 
     // expected representations of NaN and Inf

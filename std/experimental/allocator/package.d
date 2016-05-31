@@ -1208,7 +1208,7 @@ unittest
 
 unittest //bugzilla 15721
 {
-    import std.experimental.allocator.mallocator: Mallocator;
+    import std.experimental.allocator.mallocator : Mallocator;
 
     interface Foo {}
     class Bar: Foo {}

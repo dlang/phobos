@@ -20,7 +20,7 @@ module std.container.rbtree;
 unittest
 {
     import std.container.rbtree;
-    import std.algorithm: equal;
+    import std.algorithm : equal;
 
     auto rbt = redBlackTree(3, 1, 4, 2, 5);
     assert(rbt.front == 1);
@@ -41,7 +41,7 @@ unittest
     assert(rbt.upperBound(3).equal([4, 5]));
 
     // A Red Black tree with the highest element at front:
-    import std.range: iota;
+    import std.range : iota;
     auto maxTree = redBlackTree!"a > b"(iota(5));
     assert(equal(maxTree[], [4, 3, 2, 1, 0]));
 
@@ -1853,8 +1853,8 @@ auto redBlackTree(alias less, bool allowDuplicates, E)(E[] elems...)
 }
 
 
-import std.range.primitives: isInputRange, isSomeString, ElementType;
-import std.traits: isArray;
+import std.range.primitives : isInputRange, isSomeString, ElementType;
+import std.traits : isArray;
 
 /++ Ditto +/
 auto redBlackTree(Stuff)(Stuff range)

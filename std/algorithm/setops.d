@@ -339,7 +339,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 // Issue 13091
 pure nothrow @safe @nogc unittest
 {
-    import std.algorithm: cartesianProduct;
+    import std.algorithm : cartesianProduct;
     int[1] a = [1];
     foreach (t; cartesianProduct(a[], a[])) {}
 }

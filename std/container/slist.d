@@ -20,8 +20,8 @@ module std.container.slist;
 ///
 unittest
 {
-    import std.container: SList;
-    import std.algorithm: equal;
+    import std.container : SList;
+    import std.algorithm : equal;
 
     auto s = SList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));
@@ -33,8 +33,8 @@ unittest
     assert(equal(s[], [5, 6, 2, 3]));
 
     // If you want to apply range operations, simply slice it.
-    import std.algorithm: countUntil;
-    import std.range: popFrontN, walkLength;
+    import std.algorithm : countUntil;
+    import std.range : popFrontN, walkLength;
 
     auto sl = SList!int(1, 2, 3, 4, 5);
     assert(countUntil(sl[], 2) == 1);
@@ -727,7 +727,7 @@ unittest
 unittest
 {
     static import std.algorithm;
-    import std.range: take;
+    import std.range : take;
 
     // insertAfter documentation example
     auto sl = SList!string(["a", "b", "d"]);

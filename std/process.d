@@ -355,7 +355,7 @@ private Pid spawnProcessImpl(in char[][] args,
                              in char[] workDir)
     @trusted // TODO: Should be @safe
 {
-    import core.exception: RangeError;
+    import core.exception : RangeError;
     import std.path : isDirSeparator;
     import std.algorithm : any;
     import std.string : toStringz;
@@ -562,7 +562,7 @@ private Pid spawnProcessImpl(in char[] commandLine,
                              in char[] workDir)
     @trusted
 {
-    import core.exception: RangeError;
+    import core.exception : RangeError;
 
     if (commandLine.empty) throw new RangeError("Command line is empty");
 
@@ -1474,7 +1474,7 @@ $(D SIGTERM) signal will be sent.  (This matches the behaviour of the
 $(LINK2 http://pubs.opengroup.org/onlinepubs/9699919799/utilities/kill.html,
 $(D _kill)) shell command.)
 ---
-import core.sys.posix.signal: SIGKILL;
+import core.sys.posix.signal : SIGKILL;
 auto pid = spawnProcess("some_app");
 kill(pid, SIGKILL);
 assert (wait(pid) == -SIGKILL); // Negative return value on POSIX!
@@ -1490,7 +1490,7 @@ void kill(Pid pid)
     version (Windows) kill(pid, 1);
     else version (Posix)
     {
-        import core.sys.posix.signal: SIGTERM;
+        import core.sys.posix.signal : SIGTERM;
         kill(pid, SIGTERM);
     }
 }
@@ -1527,7 +1527,7 @@ unittest // tryWait() and kill()
     }
     else version (Posix)
     {
-        import core.sys.posix.signal: SIGTERM, SIGKILL;
+        import core.sys.posix.signal : SIGTERM, SIGKILL;
         TestScript prog = "while true; do sleep 1; done";
     }
     auto pid = spawnProcess(prog.path);
@@ -3468,7 +3468,7 @@ version (StdDdoc)
     }
     else version (Windows)
     {
-        import core.stdc.stdlib: _exit;
+        import core.stdc.stdlib : _exit;
         _exit(wait(spawnProcess(commandLine)));
     }
     ---
@@ -3492,7 +3492,7 @@ version (StdDdoc)
     else version (Windows)
     {
         spawnProcess(commandLine);
-        import core.stdc.stdlib: _exit;
+        import core.stdc.stdlib : _exit;
         _exit(0);
     }
     ---

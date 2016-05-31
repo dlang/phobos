@@ -2614,7 +2614,7 @@ unittest
 
 unittest
 {
-    import std.meta: AliasSeq;
+    import std.meta : AliasSeq;
     void foo() {
         foreach (T; AliasSeq!(real, double, float))
         {
@@ -7466,7 +7466,7 @@ T nextPow2(T)(const T val) if (isFloatingPoint!T)
 
 @safe @nogc pure nothrow unittest
 {
-    import std.meta: AliasSeq;
+    import std.meta : AliasSeq;
 
     foreach (T; AliasSeq!(float, double, real))
     {
@@ -7594,7 +7594,7 @@ T truncPow2(T)(const T val) if (isFloatingPoint!T)
 
 @safe @nogc pure nothrow unittest
 {
-    import std.meta: AliasSeq;
+    import std.meta : AliasSeq;
 
     foreach (T; AliasSeq!(float, double, real))
     {

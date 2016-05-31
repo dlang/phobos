@@ -1468,7 +1468,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
     }
     else
     {
-        import std.uni: toLower;
+        import std.uni : toLower;
         if (needles.length <= 16 && needles.walkLength(17))
         {
             size_t si = 0;
@@ -2287,7 +2287,7 @@ S capitalize(S)(S input) @trusted pure
     if (isSomeString!S)
 {
     import std.uni : asCapitalized;
-    import std.conv: to;
+    import std.conv : to;
     import std.array;
 
     return input.asCapitalized.array.to!S;
@@ -6356,7 +6356,7 @@ size_t column(Range)(Range str, in size_t tabsize = 8)
     static if (is(Unqual!(ElementEncodingType!Range) == char))
     {
         // decoding needed for chars
-        import std.utf: byDchar;
+        import std.utf : byDchar;
 
         return str.byDchar.column(tabsize);
     }
@@ -6477,7 +6477,7 @@ unittest
 S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
         S indent = null, in size_t tabsize = 8) if (isSomeString!S)
 {
-    import std.uni: isWhite;
+    import std.uni : isWhite;
     typeof(s.dup) result;
     bool inword;
     bool first = true;

@@ -90,7 +90,7 @@ struct GCAllocator
         if (n <= 16)
             return 16;
 
-        import core.bitop: bsr;
+        import core.bitop : bsr;
 
         auto largestBit = bsr(n-1) + 1;
         if (largestBit <= 12) // 4096 or less
@@ -132,7 +132,7 @@ unittest
 
 unittest
 {
-    import core.memory: GC;
+    import core.memory : GC;
 
     // test allocation sizes
     assert(GCAllocator.instance.goodAllocSize(1) == 16);

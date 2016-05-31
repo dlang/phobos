@@ -536,8 +536,8 @@ follow this pattern:
 */
 private template optionValidator(A...)
 {
-    import std.typecons: staticIota;
-    import std.format: format;
+    import std.typecons : staticIota;
+    import std.format : format;
 
     enum fmt = "getopt validator: %s (at position %d)";
     enum isReceiver(T) = isPointer!T || (is(T==function)) || (is(T==delegate));

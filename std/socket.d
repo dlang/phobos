@@ -2027,7 +2027,7 @@ static if (is(sockaddr_un))
     unittest
     {
         import core.stdc.stdio : remove;
-        import std.file: deleteme;
+        import std.file : deleteme;
 
         immutable ubyte[] data = [1, 2, 3, 4];
         Socket[2] pair;

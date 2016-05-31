@@ -2949,7 +2949,7 @@ unittest
 @safe unittest //12569
 {
     import std.algorithm.comparison : max, min;
-    import std.typecons: tuple;
+    import std.typecons : tuple;
     dchar c = 'a';
     reduce!(min, max)(tuple(c, c), "hello"); // OK
     static assert(!is(typeof(reduce!(min, max)(tuple(c), "hello"))));
@@ -3029,7 +3029,7 @@ template fold(fun...) if (fun.length >= 1)
         }
         else
         {
-            import std.typecons: tuple;
+            import std.typecons : tuple;
             return reduce!fun(tuple(seed), r);
         }
     }
@@ -3046,8 +3046,8 @@ template fold(fun...) if (fun.length >= 1)
     // Sum all elements with explicit seed
     assert(arr.fold!((a, b) => a + b)(6) == 21);
 
-    import std.algorithm.comparison: min, max;
-    import std.typecons: tuple;
+    import std.algorithm.comparison : min, max;
+    import std.typecons : tuple;
 
     // Compute minimum and maximum at the same time
     assert(arr.fold!(min, max) == tuple(1, 5));

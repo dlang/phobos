@@ -753,8 +753,8 @@ unittest
 
 unittest // const/immutable dchars
 {
-    import std.algorithm: map;
-    import std.array: array;
+    import std.algorithm : map;
+    import std.array : array;
     const(dchar)[] c = "foo,bar\n";
     assert(csvReader(c).map!array.array == [["foo", "bar"]]);
     immutable(dchar)[] i = "foo,bar\n";

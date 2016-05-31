@@ -20,8 +20,8 @@ module std.container.dlist;
 ///
 unittest
 {
-    import std.container: DList;
-    import std.algorithm: equal;
+    import std.container : DList;
+    import std.algorithm : equal;
 
     auto s = DList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));
@@ -37,8 +37,8 @@ unittest
     assert(equal(s[], [4, 5, 2, 6, 7]));
 
     // If you want to apply range operations, simply slice it.
-    import std.algorithm: countUntil;
-    import std.range: popFrontN, popBackN, walkLength;
+    import std.algorithm : countUntil;
+    import std.range : popFrontN, popBackN, walkLength;
 
     auto sl = DList!int([1, 2, 3, 4, 5]);
     assert(countUntil(sl[], 2) == 1);

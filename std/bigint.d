@@ -1420,7 +1420,7 @@ unittest
 
 unittest
 {
-    import std.math:abs;
+    import std.math : abs;
     auto r = abs(BigInt(-1000)); // 6486
     assert(r == 1000);
 

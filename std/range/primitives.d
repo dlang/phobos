@@ -2160,7 +2160,7 @@ version(unittest)
 void popBack(T)(ref T[] a) @safe pure
 if (isNarrowString!(T[]))
 {
-    import std.utf: strideBack;
+    import std.utf : strideBack;
     assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
     a = a[0 .. $ - strideBack(a, $)];
 }

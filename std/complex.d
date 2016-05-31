@@ -356,7 +356,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
-        import std.math: exp, log, cos, sin;
+        import std.math : exp, log, cos, sin;
         immutable r = abs(this);
         immutable t = arg(this);
         immutable ab = r^^z.re * exp(-t*z.im);
@@ -388,7 +388,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
     {
-        import std.math: cos, sin;
+        import std.math : cos, sin;
         immutable ab = abs(this)^^r;
         immutable ar = arg(this)*r;
         re = ab*cos(ar);

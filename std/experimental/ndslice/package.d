@@ -168,8 +168,8 @@ Returns:
 Slice!(3, C*) movingWindowByChannel(alias filter, C)
 (Slice!(3, C*) image, size_t nr, size_t nc)
 {
-    import std.algorithm.iteration: map;
-    import std.array: array;
+    import std.algorithm.iteration : map;
+    import std.array : array;
 
         // 0. 3D
         // The last dimension represents the color channel.
@@ -219,7 +219,7 @@ Returns:
 +/
 T median(Range, T)(Range r, T[] buf)
 {
-    import std.algorithm.sorting: topN;
+    import std.algorithm.sorting : topN;
     size_t n;
     foreach (e; r)
         buf[n++] = e;
@@ -234,9 +234,9 @@ The `main` function:
 -------
 void main(string[] args)
 {
-    import std.conv: to;
-    import std.getopt: getopt, defaultGetoptPrinter;
-    import std.path: stripExtension;
+    import std.conv : to;
+    import std.getopt : getopt, defaultGetoptPrinter;
+    import std.path : stripExtension;
 
     uint nr, nc, def = 3;
     auto helpInformation = args.getopt(
@@ -339,8 +339,8 @@ unittest
     static Slice!(3, ubyte*) movingWindowByChannel
     (Slice!(3, ubyte*) image, size_t nr, size_t nc, ubyte delegate(Slice!(2, ubyte*)) filter)
     {
-        import std.algorithm.iteration: map;
-        import std.array: array;
+        import std.algorithm.iteration : map;
+        import std.array : array;
         auto wnds = image
             .pack!1
             .windows(nr, nc)
@@ -356,7 +356,7 @@ unittest
 
     static T median(Range, T)(Range r, T[] buf)
     {
-        import std.algorithm.sorting: topN;
+        import std.algorithm.sorting : topN;
         size_t n;
         foreach (e; r)
             buf[n++] = e;
@@ -365,9 +365,9 @@ unittest
         return buf[m];
     }
 
-    import std.conv: to;
-    import std.getopt: getopt, defaultGetoptPrinter;
-    import std.path: stripExtension;
+    import std.conv : to;
+    import std.getopt : getopt, defaultGetoptPrinter;
+    import std.path : stripExtension;
 
     auto args = ["std"];
     uint nr, nc, def = 3;
@@ -396,8 +396,8 @@ unittest
 
 @safe @nogc pure nothrow unittest
 {
-    import std.algorithm.comparison: equal;
-    import std.range: iota;
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
     immutable r = 1000.iota;
 
     auto t0 = r.sliced(1000);
@@ -425,9 +425,9 @@ unittest
 
 pure nothrow unittest
 {
-    import std.algorithm.comparison: equal;
-    import std.array: array;
-    import std.range: iota;
+    import std.algorithm.comparison : equal;
+    import std.array : array;
+    import std.range : iota;
     auto r = 1000.iota.array;
 
     auto t0 = r.sliced(1000);
@@ -517,7 +517,7 @@ pure nothrow unittest
 
 @safe @nogc pure nothrow unittest
 {
-    import std.range: iota;
+    import std.range : iota;
     auto r = (10_000L * 2 * 3 * 4).iota;
 
     auto t0 = r.sliced(10, 20, 30, 40);
@@ -530,10 +530,10 @@ pure nothrow unittest
 
 pure nothrow unittest
 {
-    import std.experimental.ndslice.internal: Iota;
-    import std.meta: AliasSeq;
+    import std.experimental.ndslice.internal : Iota;
+    import std.meta : AliasSeq;
     import std.range;
-    import std.typecons: Tuple;
+    import std.typecons : Tuple;
     foreach (R; AliasSeq!(
         int*, int[], typeof(1.iota),
         const(int)*, const(int)[],
@@ -561,7 +561,7 @@ pure nothrow unittest
 
 pure nothrow unittest
 {
-    import std.experimental.ndslice.selection: pack;
+    import std.experimental.ndslice.selection : pack;
     auto slice = new int[24].sliced(2, 3, 4);
     auto r0 = slice.pack!1[1, 2];
     slice.pack!1[1, 2][] = 4;

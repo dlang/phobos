@@ -111,8 +111,8 @@ See_Also:
 size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
     if (isInputRange!Range1 && isForwardRange!Range2)
 {
-    import std.range: take, Take;
-    import std.array: sameHead;
+    import std.range : take, Take;
+    import std.array : sameHead;
     enum bool sameHeadExists = is(typeof(front.sameHead(back)));
     size_t result;
     for (bool semidone; !front.empty && !back.empty; )
@@ -758,7 +758,7 @@ void initializeAll(Range)(Range range)
 ///
 unittest
 {
-    import core.stdc.stdlib: malloc, free;
+    import core.stdc.stdlib : malloc, free;
 
     struct S
     {
@@ -2416,7 +2416,7 @@ void swapAt(R)(auto ref R r, size_t i1, size_t i2)
 ///
 pure @safe nothrow unittest
 {
-    import std.algorithm.comparison: equal;
+    import std.algorithm.comparison : equal;
     auto a = [1, 2, 3];
     a.swapAt(1, 2);
     assert(a.equal([1, 3, 2]));
@@ -2424,7 +2424,7 @@ pure @safe nothrow unittest
 
 pure @safe nothrow unittest
 {
-    import std.algorithm.comparison: equal;
+    import std.algorithm.comparison : equal;
     auto a = [4, 5, 6];
     a.swapAt(1, 1);
     assert(a.equal([4, 5, 6]));
@@ -2433,8 +2433,8 @@ pure @safe nothrow unittest
 pure @safe nothrow unittest
 {
     // test non random access ranges
-    import std.algorithm.comparison: equal;
-    import std.array: array;
+    import std.algorithm.comparison : equal;
+    import std.array : array;
 
     char[] b = ['a', 'b', 'c'];
     b.swapAt(1, 2);

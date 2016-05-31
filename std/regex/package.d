@@ -1092,7 +1092,7 @@ package void replaceFmt(R, Capt, OutR)
         isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
     import std.algorithm, std.conv;
-    import std.ascii: isDigit, isAlpha;
+    import std.ascii : isDigit, isAlpha;
     enum State { Normal, Dollar }
     auto state = State.Normal;
     size_t offset;
@@ -1209,7 +1209,7 @@ public R replaceFirst(alias fun, R, RegEx)(R input, RegEx re)
 ///
 unittest
 {
-    import std.conv: to;
+    import std.conv : to;
     string list = "#21 out of 46";
     string newList = replaceFirst!(cap => to!string(to!int(cap.hit)+1))
         (list, regex(`[0-9]+`));
@@ -1577,7 +1577,7 @@ public Splitter!(keepSeparators, Range, RegEx) splitter(
 ///
 unittest
 {
-    import std.algorithm: equal;
+    import std.algorithm : equal;
     auto s1 = ", abc, de,  fg, hi, ";
     assert(equal(splitter(s1, regex(", *")),
         ["", "abc", "de", "fg", "hi", ""]));

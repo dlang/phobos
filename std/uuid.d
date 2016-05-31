@@ -897,7 +897,7 @@ public struct UUID
          */
         @trusted pure nothrow string toString() const
         {
-            import std.exception: assumeUnique;
+            import std.exception : assumeUnique;
             auto result = new char[36];
             toString(result);
             return result.assumeUnique;
@@ -913,7 +913,7 @@ public struct UUID
 
         @safe pure nothrow @nogc unittest
         {
-            import std.meta: AliasSeq;
+            import std.meta : AliasSeq;
             foreach (Char; AliasSeq!(char, wchar, dchar))
             {
                 alias String = immutable(Char)[];
@@ -934,7 +934,7 @@ public struct UUID
 
         pure nothrow @nogc unittest
         {
-            import std.encoding: Char = AsciiChar;
+            import std.encoding : Char = AsciiChar;
             enum  utfstr = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
             alias String = immutable(Char)[];
             enum String s = cast(String)utfstr;
