@@ -102,7 +102,8 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 char* R2;
 
                 Rsize *= 2;
-                if (Rsize > 1024) {
+                if (Rsize > 1024)
+                {
                     R2 = (new char[Rsize]).ptr;
                 }
                 else
@@ -182,7 +183,8 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 char *R2;
 
                 Rsize = 2 * (Rlen + L * 3);
-                if (Rsize > 1024) {
+                if (Rsize > 1024)
+                {
                     R2 = (new char[Rsize]).ptr;
                 }
                 else
@@ -232,7 +234,8 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
 
     // Preallocate result buffer R guaranteed to be large enough for result
     auto Rsize = len;
-    if (Rsize > 1024 / dchar.sizeof) {
+    if (Rsize > 1024 / dchar.sizeof)
+    {
         R = (new dchar[Rsize]).ptr;
     }
     else
@@ -428,7 +431,8 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
     if (s.length <= 4)
         return -1;
 
-    if (s.length > 7 && icmp(s[0 .. 7], "http://") == 0) {
+    if (s.length > 7 && icmp(s[0 .. 7], "http://") == 0)
+    {
         i = 7;
     }
     else

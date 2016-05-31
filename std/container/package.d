@@ -1051,6 +1051,7 @@ Complexity: $(BIGOH n)
     }
 }
 
-unittest {
+unittest
+{
     TotalContainer!int test;
 }

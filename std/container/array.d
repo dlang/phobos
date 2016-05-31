@@ -1291,7 +1291,8 @@ unittest
 }
 
 // Test issue 11194
-unittest {
+unittest
+{
     static struct S {
         int i = 1337;
         void* p;

@@ -2396,7 +2396,8 @@ Params:
 */
 void swapAt(R)(auto ref R r, size_t i1, size_t i2)
 {
-    static if (is(typeof(&r.swapAt))) {
+    static if (is(typeof(&r.swapAt)))
+    {
         r.swapAt(i1, i2);
     }
     else static if (is(typeof(&r[i1])))

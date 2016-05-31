@@ -2966,7 +2966,8 @@ if (isDynamicArray!A)
 }
 
 ///
-unittest{
+unittest
+{
     auto app = appender!string();
     string b = "abcdefg";
     foreach (char c; b)

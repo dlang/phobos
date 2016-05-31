@@ -970,7 +970,8 @@ template arity(alias func)
 }
 
 ///
-unittest {
+unittest
+{
     void foo(){}
     static assert(arity!foo==0);
     void bar(uint){}
@@ -6739,9 +6740,12 @@ template getUDAs(alias symbol, alias attribute)
     import std.typetuple : Filter;
 
     template isDesiredUDA(alias S) {
-        static if (__traits(compiles, is(typeof(S) == attribute))) {
+        static if (__traits(compiles, is(typeof(S) == attribute)))
+        {
             enum isDesiredUDA = is(typeof(S) == attribute);
-        } else {
+        }
+        else
+        {
             enum isDesiredUDA = isInstanceOf!(attribute, typeof(S));
         }
     }

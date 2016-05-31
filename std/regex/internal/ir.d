@@ -174,7 +174,8 @@ static assert (IRL!(IR.LookaheadStart) == 3);
 
 //how many parameters follow the IR, should be optimized fixing some IR bits
 int immediateParamsIR(IR i){
-    switch (i){
+    switch (i)
+    {
     case IR.OrEnd,IR.InfiniteEnd,IR.InfiniteQEnd:
         return 1;  // merge table index
     case IR.InfiniteBloomEnd:
@@ -740,7 +741,8 @@ struct BitTable {
     uint[4] filter;
 
     this(CodepointSet set){
-        foreach (iv; set.byInterval){
+        foreach (iv; set.byInterval)
+        {
             foreach (v; iv.a..iv.b)
                 add(v);
         }

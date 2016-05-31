@@ -262,7 +262,8 @@ unittest
    It is defined in this way to allow cache-efficient multiplication.
    This function is equivalent to:
     ----
-    for (size_t i = 0; i< right.length; ++i) {
+    for (size_t i = 0; i< right.length; ++i)
+    {
         dest[left.length + i] = multibyteMulAdd(dest[i..left.length+i],
                 left, right[i], 0);
     }

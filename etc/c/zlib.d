@@ -1284,7 +1284,8 @@ void gzclearerr (gzFile file);
 
      uint adler = adler32(0L, Z_NULL, 0);
 
-     while (read_buffer(buffer, length) != EOF) {
+     while (read_buffer(buffer, length) != EOF)
+     {
        adler = adler32(adler, buffer, length);
      }
      if (adler != original_adler) error();
@@ -1308,7 +1309,8 @@ uint crc32(uint crc, ubyte* buf, uint len);
 
      uint crc = crc32(0L, Z_NULL, 0);
 
-     while (read_buffer(buffer, length) != EOF) {
+     while (read_buffer(buffer, length) != EOF)
+     {
        crc = crc32(crc, buffer, length);
      }
      if (crc != original_crc) error();

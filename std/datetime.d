@@ -30314,7 +30314,8 @@ private:
                     throw new DateTimeException(format("Both timezone files %s and %s do not exist.",
                         combinedFile, indexFile));
 
-                foreach (Unused; 0 .. indexEntries) {
+                foreach (Unused; 0 .. indexEntries)
+                {
                     string tzName = to!string(readVal!(char[])(tzFile, 40).ptr);
                     uint tzOffset = readVal!uint(tzFile);
                     readVal!(uint[])(tzFile, 2);

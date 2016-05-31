@@ -60,7 +60,8 @@ nothrow:
   (b) compiler bugs prevent the use of .ptr when a frame pointer is used.
 */
 
-version(D_InlineAsm_X86) {
+version(D_InlineAsm_X86)
+{
 
 private:
 
@@ -72,12 +73,15 @@ private:
 string indexedLoopUnroll(int n, string s) pure @safe
 {
     string u;
-    for (int i = 0; i<n; ++i) {
+    for (int i = 0; i<n; ++i)
+    {
         string nstr= (i>9 ? ""~ cast(char)('0'+i/10) : "") ~ cast(char)('0' + i%10);
 
         int last = 0;
-        for (int j = 0; j<s.length; ++j) {
-            if (s[j]=='@') {
+        for (int j = 0; j<s.length; ++j)
+        {
+            if (s[j]=='@')
+            {
                 u ~= s[last..j] ~ nstr;
                 last = j+1;
             }
@@ -203,7 +207,8 @@ unittest
     assert(a[11]==0);
     for (int i=0; i<10; ++i) if (i!=5) assert(a[i]==0);
 
-    for (int q=3; q<36;++q) {
+    for (int q=3; q<36;++q)
+    {
         for (int i=0; i<a.length; ++i)
         {
             a[i]=b[i]=c[i]=0;
@@ -741,9 +746,12 @@ uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
     // ESI = src
 
     enum string OP = (op=='+')? "add" : "sub";
-    version(D_PIC) {
+    version(D_PIC)
+    {
         enum { zero = 0 }
-    } else {
+    }
+    else
+    {
         // use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
         // when initializing registers to zero.
         __gshared int zero = 0;
@@ -804,7 +812,8 @@ unittest
    It is defined in this way to allow cache-efficient multiplication.
    This function is equivalent to:
     ----
-    for (int i = 0; i< right.length; ++i) {
+    for (int i = 0; i< right.length; ++i)
+    {
         dest[left.length + i] = multibyteMulAdd(dest[i..left.length+i],
                 left, right[i], 0);
     }
@@ -821,9 +830,12 @@ void multibyteMultiplyAccumulate(uint [] dest, const uint[] left,
     // ESI = end of left. never changes
     // [ESP] = M = right[i] = multiplier for this pass through the loop.
     // right.length is changed into dest.ptr+dest.length
-    version(D_PIC) {
+    version(D_PIC)
+    {
         enum { zero = 0 }
-    } else {
+    }
+    else
+    {
         // use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
         // when initializing registers to zero.
         __gshared int zero = 0;
@@ -1070,7 +1082,8 @@ unittest
 
 void multibyteTriangleAccumulateD(uint[] dest, uint[] x) pure
 {
-    for (int i = 0; i < x.length-3; ++i) {
+    for (int i = 0; i < x.length-3; ++i)
+    {
         dest[i+x.length] = multibyteMulAdd!('+')(
              dest[i+i+1 .. i+x.length], x[i+1..$], x[i], 0);
     }
@@ -1101,9 +1114,12 @@ void multibyteTriangleAccumulateAsm(uint[] dest, const uint[] src) pure
     // ESI = end of src. never changes
     // [ESP] = M = src[i] = multiplier for this pass through the loop.
     // dest.length is changed into dest.ptr+dest.length
-    version(D_PIC) {
+    version(D_PIC)
+    {
         enum { zero = 0 }
-    } else {
+    }
+    else
+    {
         // use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
         // when initializing registers to zero.
         __gshared int zero = 0;
@@ -1242,7 +1258,8 @@ unittest
 
 void multibyteSquare(BigDigit[] result, const BigDigit [] x) pure
 {
-    if (x.length < 4) {
+    if (x.length < 4)
+    {
         // Special cases, not worth doing triangular.
         result[x.length] = multibyteMul(result[0..x.length], x, x[0], 0);
         multibyteMultiplyAccumulate(result[1..$], x, x[1..$]);
@@ -1259,7 +1276,8 @@ void multibyteSquare(BigDigit[] result, const BigDigit [] x) pure
     multibyteAddDiagonalSquares(result, x);
 }
 
-version(BignumPerformanceTest) {
+version(BignumPerformanceTest)
+{
 import core.stdc.stdio;
 int clock() { asm { push EBX; xor EAX, EAX; cpuid; pop EBX; rdtsc; } }
 

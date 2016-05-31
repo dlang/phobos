@@ -1022,7 +1022,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     client.onReceiveHeader = (in char[] key,
                               in char[] value)
     {
-        if (key == "content-length") {
+        if (key == "content-length")
+        {
             import std.conv : to;
             content.reserve(value.to!size_t);
         }

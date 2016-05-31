@@ -223,10 +223,13 @@ public:
         }
         else static if (op=="*")
         {
-            if (y == 0) {
+            if (y == 0)
+            {
                 sign = false;
                 data = 0UL;
-            } else {
+            }
+            else
+            {
                 sign = ( sign != (y<0) );
                 data = BigUint.mulInt(data, u);
             }
@@ -1095,7 +1098,8 @@ Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
 }
 
 nothrow pure
-unittest {
+unittest
+{
     BigInt a, b;
     a = 1;
     b = 2;
@@ -1103,7 +1107,8 @@ unittest {
 }
 
 nothrow pure
-unittest {
+unittest
+{
     long a;
     BigInt b;
     auto c = a + b;
@@ -1111,7 +1116,8 @@ unittest {
 }
 
 nothrow pure
-unittest {
+unittest
+{
     BigInt x = 1, y = 2;
     assert(x <  y);
     assert(x <= y);
@@ -1134,7 +1140,8 @@ unittest {
     assert(incr == BigInt(1));
 }
 
-unittest {
+unittest
+{
     // Radix conversion
     assert( toDecimalString(BigInt("-1_234_567_890_123_456_789"))
         == "-1234567890123456789");

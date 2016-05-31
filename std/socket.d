@@ -3027,7 +3027,9 @@ public:
             return buf.length
                    ? .recv(sock, buf.ptr, capToInt(buf.length), cast(int)flags)
                    : 0;
-        } else {
+        }
+        else
+        {
             return buf.length
                    ? .recv(sock, buf.ptr, buf.length, cast(int)flags)
                    : 0;
@@ -3060,7 +3062,9 @@ public:
             assert(from.addressFamily == _family);
             // if (!read) //connection closed
             return read;
-        } else {
+        }
+        else
+        {
             auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name, &nameLen);
             assert(from.addressFamily == _family);
             // if (!read) //connection closed
@@ -3087,7 +3091,9 @@ public:
             auto read = .recvfrom(sock, buf.ptr, capToInt(buf.length), cast(int)flags, null, null);
             // if (!read) //connection closed
             return read;
-        } else {
+        }
+        else
+        {
             auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, null, null);
             // if (!read) //connection closed
             return read;

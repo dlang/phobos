@@ -1123,7 +1123,8 @@ T intpow(T)(T x, ulong n) pure nothrow @safe
 
     default:
         p = 1;
-        while (1){
+        while (1)
+        {
             if (n & 1)
                 p *= x;
             n >>= 1;

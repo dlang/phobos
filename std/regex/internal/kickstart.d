@@ -136,7 +136,8 @@ public:
         ulong hash(uint[] tab)
         {
             ulong h = 0xcbf29ce484222325;
-            foreach (v; tab){
+            foreach (v; tab)
+            {
                 h ^= v;
                 h *= 0x100000001b3;
             }

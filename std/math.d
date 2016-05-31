@@ -3500,7 +3500,8 @@ real modf(real x, ref real i) @trusted nothrow @nogc
  */
 real scalbn(real x, int n) @trusted nothrow @nogc
 {
-    version(InlineAsm_X86_Any) {
+    version(InlineAsm_X86_Any)
+    {
         // scalbnl is not supported on DMD-Windows, so use asm pure nothrow @nogc.
         version (Win64)
         {
@@ -4393,7 +4394,8 @@ private:
         }
     }
 public:
-    version (IeeeFlagsSupport) {
+    version (IeeeFlagsSupport)
+    {
 
      /// The result cannot be represented exactly, so rounding occurred.
      /// (example: x = sin(0.1); )
@@ -6033,7 +6035,8 @@ typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n) @nogc @trusted pur
     default:
         v = x;
         p = 1;
-        while (1){
+        while (1)
+        {
             if (m & 1)
                 p *= v;
             m >>= 1;
@@ -6722,7 +6725,8 @@ body
     assert(poly(x, pp) == y);
 }
 
-unittest {
+unittest
+{
     static assert(poly(3.0, [1.0, 2.0, 3.0]) == 34);
 }
 

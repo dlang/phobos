@@ -1154,12 +1154,14 @@ private struct FilterResult(alias pred, Range)
     static assert(isInfinite!(typeof(infinite)));
     static assert(isForwardRange!(typeof(infinite)));
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType d;
         auto f = filter!"a & 1"(d);
         assert(equal(f, [1,3,5,7,9]));
 
-        static if (isForwardRange!DummyType) {
+        static if (isForwardRange!DummyType)
+        {
             static assert(isForwardRange!(typeof(f)));
         }
     }
@@ -1416,7 +1418,8 @@ struct Group(alias pred, R) if (isInputRange!R)
         return _current;
     }
 
-    static if (isForwardRange!R) {
+    static if (isForwardRange!R)
+    {
         ///
         @property typeof(this) save() {
             typeof(this) ret = this;
@@ -1451,7 +1454,8 @@ struct Group(alias pred, R) if (isInputRange!R)
                             tuple(4, 3u), tuple(5, 1u) ][]));
     static assert(isForwardRange!(typeof(group(arr))));
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType d;
         auto g = group(d);
 
@@ -2480,7 +2484,8 @@ unittest
     // Can't use array() or equal() directly because they fail with transient
     // .front.
     int[] result;
-    foreach (c; rr.joiner()) {
+    foreach (c; rr.joiner())
+    {
         result ~= c;
     }
 
@@ -2525,7 +2530,8 @@ unittest
     // Can't use array() or equal() directly because they fail with transient
     // .front.
     dchar[] result;
-    foreach (c; rr.joiner()) {
+    foreach (c; rr.joiner())
+    {
         result ~= c;
     }
 
@@ -3715,7 +3721,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(split.back == "r ");
 
     foreach (DummyType; AllDummyRanges) {  // Bug 4408
-        static if (isRandomAccessRange!DummyType) {
+        static if (isRandomAccessRange!DummyType)
+        {
             static assert(isBidirectionalRange!DummyType);
             DummyType d;
             auto s = splitter(d, 5);
@@ -4369,8 +4376,10 @@ if (isSomeChar!C)
     lines[0] = "line one".dup;
     lines[1] = "line \ttwo".dup;
     lines[2] = "yah            last   line\ryah".dup;
-    foreach (line; lines) {
-       foreach (word; splitter(strip(line))) {
+    foreach (line; lines)
+    {
+       foreach (word; splitter(strip(line)))
+       {
             if (word in dictionary) continue; // Nothing to do
             auto newID = dictionary.length;
             dictionary[to!string(word)] = cast(uint)newID;
@@ -4843,7 +4852,8 @@ private struct UniqResult(alias pred, Range)
         @property bool empty() { return _input.empty; }
     }
 
-    static if (isForwardRange!Range) {
+    static if (isForwardRange!Range)
+    {
         @property typeof(this) save() {
             return typeof(this)(_input.save);
         }
@@ -4865,14 +4875,16 @@ private struct UniqResult(alias pred, Range)
     assert(equal(r, [ 1, 2, 3, 4, 5 ][]));
     assert(equal(retro(r), retro([ 1, 2, 3, 4, 5 ][])));
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType d;
         auto u = uniq(d);
         assert(equal(u, [1,2,3,4,5,6,7,8,9,10]));
 
         static assert(d.rt == RangeType.Input || isForwardRange!(typeof(u)));
 
-        static if (d.rt >= RangeType.Bidirectional) {
+        static if (d.rt >= RangeType.Bidirectional)
+        {
             assert(equal(retro(u), [10,9,8,7,6,5,4,3,2,1]));
         }
     }

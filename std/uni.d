@@ -5304,7 +5304,8 @@ unittest
     alias fails8 = AliasSeq!("\xC1", "\x80\x00","\xC0\x00", "\xCF\x79",
         "\xFF\x00\0x00\0x00\x00", "\xC0\0x80\0x80\x80", "\x80\0x00\0x00\x00",
         "\xCF\x00\0x00\0x00\x00");
-    foreach (msg; fails8){
+    foreach (msg; fails8)
+    {
         assert(collectException((){
             auto s = msg;
             size_t idx = 0;
@@ -5313,7 +5314,8 @@ unittest
     }
     //decode failure cases UTF-16
     alias fails16 = AliasSeq!([0xD811], [0xDC02]);
-    foreach (msg; fails16){
+    foreach (msg; fails16)
+    {
         assert(collectException((){
             auto s = msg.map!(x => cast(wchar)x);
             utf16.test(s);
@@ -5580,7 +5582,8 @@ unittest
     auto trie4 = buildTrie!(bool, size_t, max4,
             sliceBits!(13, 16), sliceBits!(9, 13), sliceBits!(6, 9) , sliceBits!(0, 6)
         )(redundant4.byInterval);
-    foreach (i; 0..max4){
+    foreach (i; 0..max4)
+    {
         if (i in redundant4)
             assert(trie4[i], text(cast(uint)i));
     }
@@ -5899,7 +5902,8 @@ else
         target |= asSet(uniProps.So);
         target |= asSet(uniProps.Po);
     }
-    else if (ucmp(name, "graphical") == 0){
+    else if (ucmp(name, "graphical") == 0)
+    {
         target = asSet(uniProps.Alphabetic);
 
         target |= asSet(uniProps.Mn);
@@ -7287,7 +7291,8 @@ ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 }
 
 ///
-unittest{
+unittest
+{
     // shorten the code
     alias CC = combiningClass;
 
@@ -7362,7 +7367,8 @@ public dchar compose(dchar first, dchar second) pure nothrow
 }
 
 ///
-unittest{
+unittest
+{
     assert(compose('A','\u0308') == '\u00C4');
     assert(compose('A', 'B') == dchar.init);
     assert(compose('C', '\u0301') == '\u0106');
@@ -7780,14 +7786,16 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
                 // current was merged so its CCC shouldn't affect
                 // composing with the next one
             }
-            else {
+            else
+            {
                 // if it was a starter then accumCC is now 0, end of loop
                 accumCC = curCC;
                 if (accumCC == 0)
                     break;
             }
         }
-        else{
+        else
+        {
             // ditto here
             accumCC = curCC;
             if (accumCC == 0)

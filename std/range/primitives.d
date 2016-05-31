@@ -1854,14 +1854,21 @@ void popBackExactly(Range)(ref Range r, size_t n)
 */
 ElementType!R moveFront(R)(R r)
 {
-    static if (is(typeof(&r.moveFront))) {
+    static if (is(typeof(&r.moveFront)))
+    {
         return r.moveFront();
-    } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    {
         return r.front;
-    } else static if (is(typeof(&(r.front())) == ElementType!R*)) {
+    }
+    else static if (is(typeof(&(r.front())) == ElementType!R*))
+    {
         import std.algorithm.mutation : move;
         return move(r.front);
-    } else {
+    }
+    else
+    {
         static assert(0,
                 "Cannot move front of a range with a postblit and an rvalue front.");
     }
@@ -1905,14 +1912,21 @@ ElementType!R moveFront(R)(R r)
 */
 ElementType!R moveBack(R)(R r)
 {
-    static if (is(typeof(&r.moveBack))) {
+    static if (is(typeof(&r.moveBack)))
+    {
         return r.moveBack();
-    } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    {
         return r.back;
-    } else static if (is(typeof(&(r.back())) == ElementType!R*)) {
+    }
+    else static if (is(typeof(&(r.back())) == ElementType!R*))
+    {
         import std.algorithm.mutation : move;
         return move(r.back);
-    } else {
+    }
+    else
+    {
         static assert(0,
                 "Cannot move back of a range with a postblit and an rvalue back.");
     }
@@ -1944,14 +1958,21 @@ ElementType!R moveBack(R)(R r)
 */
 ElementType!R moveAt(R)(R r, size_t i)
 {
-    static if (is(typeof(&r.moveAt))) {
+    static if (is(typeof(&r.moveAt)))
+    {
         return r.moveAt(i);
-    } else static if (!hasElaborateCopyConstructor!(ElementType!(R))) {
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!(R)))
+    {
         return r[i];
-    } else static if (is(typeof(&r[i]) == ElementType!R*)) {
+    }
+    else static if (is(typeof(&r[i]) == ElementType!R*))
+    {
         import std.algorithm.mutation : move;
         return move(r[i]);
-    } else {
+    }
+    else
+    {
         static assert(0,
                 "Cannot move element of a range with a postblit and rvalue elements.");
     }
@@ -1971,15 +1992,18 @@ ElementType!R moveAt(R)(R r, size_t i)
 {
     import std.internal.test.dummyrange;
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         auto d = DummyType.init;
         assert(moveFront(d) == 1);
 
-        static if (isBidirectionalRange!DummyType) {
+        static if (isBidirectionalRange!DummyType)
+        {
             assert(moveBack(d) == 10);
         }
 
-        static if (isRandomAccessRange!DummyType) {
+        static if (isRandomAccessRange!DummyType)
+        {
             assert(moveAt(d, 2) == 3);
         }
     }

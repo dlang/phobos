@@ -148,7 +148,8 @@ class CFile : Stream {
   }
 
   // run a few tests
-  unittest {
+  unittest
+  {
     import std.file : deleteme;
     import std.internal.cstring : tempCString;
 
@@ -203,7 +204,8 @@ class CFile : Stream {
     file.writeLine("That was blank");
     file.position = 0;
     char[][] lines;
-    foreach (char[] line; file) {
+    foreach (char[] line; file)
+    {
       lines ~= line.dup;
     }
     assert( lines.length == 5 );
@@ -213,7 +215,8 @@ class CFile : Stream {
     assert( lines[3] == "That was blank");
     file.position = 0;
     lines = new char[][5];
-    foreach (ulong n, char[] line; file) {
+    foreach (ulong n, char[] line; file)
+    {
       lines[cast(size_t)(n-1)] = line.dup;
     }
     assert( lines[0] == "Testing stream.d:");

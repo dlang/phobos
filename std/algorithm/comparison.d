@@ -923,13 +923,15 @@ private struct Levenshtein(Range, alias equals, CostType = size_t)
         EditOp[] result;
         size_t i = rows - 1, j = cols - 1;
         // restore the path
-        while (i || j) {
+        while (i || j)
+        {
             auto cIns = j == 0 ? CostType.max : matrix(i,j - 1);
             auto cDel = i == 0 ? CostType.max : matrix(i - 1,j);
             auto cSub = i == 0 || j == 0
                 ? CostType.max
                 : matrix(i - 1,j - 1);
-            switch (min_index(cSub, cIns, cDel)) {
+            switch (min_index(cSub, cIns, cDel))
+            {
             case 0:
                 result ~= matrix(i - 1,j - 1) == matrix(i,j)
                     ? EditOp.none
@@ -968,7 +970,8 @@ private:
     void AllocMatrix(size_t r, size_t c) @trusted {
         rows = r;
         cols = c;
-        if (_matrix.length < r * c) {
+        if (_matrix.length < r * c)
+        {
             import core.stdc.stdlib : realloc;
             import core.exception : onOutOfMemoryError;
             auto m = cast(CostType *)realloc(_matrix.ptr, r * c * _matrix[0].sizeof);

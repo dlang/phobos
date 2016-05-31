@@ -617,7 +617,8 @@ unittest
         //issue 4574
         //empty successful match still advances the input
         string[] pres, posts, hits;
-        foreach (m; matchFn("abcabc", regex("","g"))) {
+        foreach (m; matchFn("abcabc", regex("","g")))
+        {
             pres ~= m.pre;
             posts ~= m.post;
             assert(m.hit.empty);
@@ -719,7 +720,8 @@ unittest
     auto w2 = ["", "abc", "de", "fg", "hi"];
 
     uint cnt;
-    foreach (e; sp2) {
+    foreach (e; sp2)
+    {
         assert(w2[cnt++] == e);
     }
     assert(equal(sp2, w2));

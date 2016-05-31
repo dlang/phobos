@@ -807,7 +807,8 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-unittest{
+unittest
+{
     import std.math;
     import std.complex;
     assert(cos(complex(0.0)) == 1.0);

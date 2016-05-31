@@ -373,7 +373,8 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
     return fun.length == 0;
 }
 
-unittest {
+unittest
+{
 
     static assert(!_ctfeMatchBinary("sqrt(ё)", "ё", "b"));
     static assert(!_ctfeMatchBinary("ё.sqrt", "ё", "b"));
@@ -1272,7 +1273,8 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
     }
 }
 
-unittest {
+unittest
+{
     static int inc(ref uint num) {
         num++;
         return 8675309;
