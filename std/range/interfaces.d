@@ -275,7 +275,9 @@ class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
 
 
 /**Returns the interface type that best matches $(D R).*/
-template MostDerivedInputRange(R) if (isInputRange!(Unqual!R)) {
+template MostDerivedInputRange(R)
+if (isInputRange!(Unqual!R))
+{
     private alias E = ElementType!R;
 
     static if (isRandomAccessRange!R)
@@ -332,7 +334,9 @@ template MostDerivedInputRange(R) if (isInputRange!(Unqual!R)) {
  * all relevant range primitives in virtual functions.  If $(D R) is already
  * derived from the $(D InputRange) interface, aliases itself away.
  */
-template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
+template InputRangeObject(R)
+if (isInputRange!(Unqual!R))
+{
     static if (is(R : InputRange!(ElementType!R)))
     {
         alias InputRangeObject = R;
@@ -465,7 +469,9 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
 /**Convenience function for creating an $(D InputRangeObject) of the proper type.
  * See $(LREF InputRange) for an example.
  */
-InputRangeObject!R inputRangeObject(R)(R range) if (isInputRange!R) {
+InputRangeObject!R inputRangeObject(R)(R range)
+if (isInputRange!R)
+{
     static if (is(R : InputRange!(ElementType!R)))
     {
         return range;

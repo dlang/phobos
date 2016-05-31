@@ -828,7 +828,8 @@ public:
      * auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
      *       (str, ';', '^');
      *
-     * foreach (record; records) {
+     * foreach (record; records)
+     * {
      *    assert(equal(record, ans));
      * }
      * -------
@@ -852,7 +853,8 @@ public:
      *       (str, ["high","low"], ';', '^');
      *
      * int[] ans = [76,22];
-     * foreach (record; records) {
+     * foreach (record; records)
+     * {
      *    assert(equal(record, ans));
      * }
      * -------

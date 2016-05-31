@@ -3683,7 +3683,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
     static assert(isForwardRange!(typeof(splitter(a, 0))));
 
-    // foreach (x; splitter(a, 0)) {
+    // foreach (x; splitter(a, 0))
+    // {
     //     writeln("[", x, "]");
     // }
     assert(equal(splitter(a, 0), w));

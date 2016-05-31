@@ -719,7 +719,9 @@ public:
         Warning: Casting to/from $(D const) or $(D immutable) may break type
         system guarantees. Use with care.
      */
-    T opCast(T)() pure nothrow @nogc const if (is(Unqual!T == BigInt)) {
+    T opCast(T)() pure nothrow @nogc const
+    if (is(Unqual!T == BigInt))
+    {
         return this;
     }
 

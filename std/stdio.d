@@ -1,4 +1,4 @@
-﻿// Written in the D programming language.
+// Written in the D programming language.
 
 /**
 Standard I/O functions that extend $(B core.stdc.stdio).  $(B core.stdc.stdio)
@@ -2583,7 +2583,7 @@ $(D Range) that locks the file and allows fast writing to it.
         }
 
         // @@@BUG@@@ 2340
-        //void front(C)(C c) if (is(C : dchar)) {
+        //void front(C)(C c) if (is(C : dchar))
         /// ditto
         void put(C)(C c) @safe if (is(C : const(dchar)))
         {
