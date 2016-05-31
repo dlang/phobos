@@ -2085,6 +2085,8 @@ version(unittest)
 void popFront(C)(ref C[] str) @trusted pure nothrow
 if (isNarrowString!(C[]))
 {
+    import std.algorithm : min;
+
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 
     static if (is(Unqual!C == char))
@@ -2104,13 +2106,14 @@ if (isNarrowString!(C[]))
                  //Invalid UTF-8
                  msbs = 1;
              }
-             str = str[msbs .. $];
+             str = str.ptr[min(msbs, str.length) .. str.length];
         }
     }
     else static if (is(Unqual!C == wchar))
     {
         immutable u = str[0];
-        str = str[1 + (u >= 0xD800 && u <= 0xDBFF) .. $];
+        immutable seqLen = 1 + (u >= 0xD800 && u <= 0xDBFF);
+        str = str.ptr[min(seqLen, str.length) .. str.length];
     }
     else static assert(0, "Bad template constraint.");
 }
@@ -2148,6 +2151,26 @@ if (isNarrowString!(C[]))
     static assert(checkCTFE.empty);
     enum checkCTFEW = _eatString("ウェブサイト@La_Verité.com"w);
     static assert(checkCTFEW.empty);
+}
+
+unittest // issue 16090
+{
+    string s = "\u00E4";
+    assert(s.length == 2);
+    s = s[0 .. 1];
+    assert(s.length == 1);
+    s.popFront;
+    assert(s.empty);
+}
+
+unittest
+{
+    wstring s = "\U00010000";
+    assert(s.length == 2);
+    s = s[0 .. 1];
+    assert(s.length == 1);
+    s.popFront;
+    assert(s.empty);
 }
 
 /**
