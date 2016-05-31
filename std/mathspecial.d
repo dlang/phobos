@@ -128,13 +128,15 @@ real sgnGamma(real x)
         return real.nan;
     }
     long n = rndtol(x);
-    if (x == n) {
+    if (x == n)
+    {
         return x == 0 ?  copysign(1, x) : real.nan;
     }
     return n & 1 ? 1.0 : -1.0;
 }
 
-unittest {
+unittest
+{
     assert(sgnGamma(5.0) == 1.0);
     assert(isNaN(sgnGamma(-3.0)));
     assert(sgnGamma(-0.1) == -1.0);
@@ -151,12 +153,14 @@ unittest {
  */
 real beta(real x, real y)
 {
-    if ((x+y)> MAXGAMMA) {
+    if ((x+y)> MAXGAMMA)
+    {
         return exp(logGamma(x) + logGamma(y) - logGamma(x+y));
     } else return gamma(x) * gamma(y) / gamma(x+y);
 }
 
-unittest {
+unittest
+{
     assert(isIdentical(beta(NaN(0xABC), 4), NaN(0xABC)));
     assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
 }

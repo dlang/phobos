@@ -311,7 +311,9 @@ The example above creates a tagged reference to an Object in the struct A. This 
 as $(D taggedPointer), except the first argument which must be a class type instead of a pointer type.
 */
 
-template taggedClassRef(T, string name, Ts...) if (is(T == class)) {
+template taggedClassRef(T, string name, Ts...)
+if (is(T == class))
+{
     enum taggedClassRef = createTaggedReference!(T, 8, name, Ts).result;
 }
 

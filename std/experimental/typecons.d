@@ -131,7 +131,8 @@ if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
     alias implementsInterface = .implementsInterface!(Source, staticMap!(Unqual, Targets));
 }
 
-unittest {
+unittest
+{
     interface Foo {
         void foo();
     }

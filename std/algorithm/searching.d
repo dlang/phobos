@@ -305,7 +305,8 @@ is ignored.
         import std.algorithm.comparison : equal;
         ptrdiff_t virtual_begin = needle.length - offset - portion;
         ptrdiff_t ignore = 0;
-        if (virtual_begin < 0) {
+        if (virtual_begin < 0)
+        {
             ignore = -virtual_begin;
             virtual_begin = 0;
         }
@@ -2173,7 +2174,8 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     assert(find(a, b) == [ 1, 2, 3, 4, 5 ]);
     assert(find(b, a).empty);
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType d;
         auto findRes = find(d, 5);
         assert(equal(findRes, [5,6,7,8,9,10]));
@@ -2206,7 +2208,8 @@ Range1 find(Range1, alias pred, Range2)(
         "(.gnu.linkonce.tmain+0x74): In function `main' undefined reference"~
         " to `_Dmain':";
     string[] ns = ["libphobos", "function", " undefined", "`", ":"];
-    foreach (n ; ns) {
+    foreach (n ; ns)
+    {
         auto p = find(h, boyerMooreFinder(n));
         assert(!p.empty);
     }

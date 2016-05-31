@@ -329,7 +329,8 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
     if (patterns.length > 1)
     {
         auto app = appender!S();
-        foreach (i, p; patterns){
+        foreach (i, p; patterns)
+        {
             if (i != 0)
                 app.put("|");
             app.put("(?:");

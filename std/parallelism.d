@@ -1215,7 +1215,8 @@ private:
             tail = task;
             tail.prev = null;
         }
-        else {
+        else
+        {
             assert(tail);
             task.prev = tail;
             tail.next = task;
@@ -2740,7 +2741,8 @@ public:
     {
         auto filesHandles = new File[taskPool.size + 1];
         scope(exit) {
-            foreach (ref handle; fileHandles) {
+            foreach (ref handle; fileHandles)
+            {
                 handle.close();
             }
         }
@@ -2825,7 +2827,8 @@ public:
             {
                 return num;
             }
-            else {
+            else
+            {
                 return ((num / cacheLineSize) + 1) * cacheLineSize;
             }
         }
@@ -3299,7 +3302,8 @@ Example:
 // default TaskPool instance.
 auto logs = new double[1_000_000];
 
-foreach (i, ref elem; parallel(logs)) {
+foreach (i, ref elem; parallel(logs))
+{
     elem = log(i + 1.0);
 }
 ---

@@ -3958,7 +3958,8 @@ bool isHangT(dchar ch) @safe pure nothrow
     return false;
 }
 
-static if (size_t.sizeof == 8) {
+static if (size_t.sizeof == 8)
+{
 //1536 bytes
 enum lowerCaseTrieEntries = TrieEntry!(bool, 8, 4, 9)([0x0, 0x20, 0x40],
         [0x100, 0x80, 0x2000], [0x402030202020100, 0x206020202020205,
@@ -7430,7 +7431,8 @@ enum toTitleSimpleIndexTrieEntries = TrieEntry!(ushort, 8, 7, 6)([0x0, 0x20,
 
 }
 
-static if (size_t.sizeof == 4) {
+static if (size_t.sizeof == 4)
+{
 //1536 bytes
 enum lowerCaseTrieEntries = TrieEntry!(bool, 8, 4, 9)([0x0, 0x40, 0x80],
         [0x100, 0x80, 0x2000], [0x2020100, 0x4020302, 0x2020205, 0x2060202,

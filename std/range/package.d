@@ -349,10 +349,14 @@ if (isBidirectionalRange!(Unqual!Range))
 {
     import std.internal.test.dummyrange;
 
-    foreach (DummyType; AllDummyRanges) {
-        static if (!isBidirectionalRange!DummyType) {
+    foreach (DummyType; AllDummyRanges)
+    {
+        static if (!isBidirectionalRange!DummyType)
+        {
             static assert(!__traits(compiles, Retro!DummyType));
-        } else {
+        }
+        else
+        {
             DummyType dummyRange;
             dummyRange.reinit();
 
@@ -363,11 +367,13 @@ if (isBidirectionalRange!(Unqual!Range))
             assert(myRetro.moveFront() == 10);
             assert(myRetro.moveBack() == 1);
 
-            static if (isRandomAccessRange!DummyType && hasLength!DummyType) {
+            static if (isRandomAccessRange!DummyType && hasLength!DummyType)
+            {
                 assert(myRetro[0] == myRetro.front);
                 assert(myRetro.moveAt(2) == 8);
 
-                static if (DummyType.r == ReturnBy.Reference) {
+                static if (DummyType.r == ReturnBy.Reference)
+                {
                     {
                         myRetro[9]++;
                         scope(exit) myRetro[9]--;
@@ -689,7 +695,8 @@ debug unittest
     // Check for infiniteness propagation.
     static assert(isInfinite!(typeof(stride(repeat(1), 3))));
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType dummyRange;
         dummyRange.reinit();
 
@@ -697,23 +704,27 @@ debug unittest
 
         // Should fail if no length and bidirectional b/c there's no way
         // to know how much slack we have.
-        static if (hasLength!DummyType || !isBidirectionalRange!DummyType) {
+        static if (hasLength!DummyType || !isBidirectionalRange!DummyType)
+        {
             static assert(propagatesRangeType!(typeof(myStride), DummyType));
         }
         assert(myStride.front == 1);
         assert(myStride.moveFront() == 1);
         assert(equal(myStride, [1, 5, 9]));
 
-        static if (hasLength!DummyType) {
+        static if (hasLength!DummyType)
+        {
             assert(myStride.length == 3);
         }
 
-        static if (isBidirectionalRange!DummyType && hasLength!DummyType) {
+        static if (isBidirectionalRange!DummyType && hasLength!DummyType)
+        {
             assert(myStride.back == 9);
             assert(myStride.moveBack() == 9);
         }
 
-        static if (isRandomAccessRange!DummyType && hasLength!DummyType) {
+        static if (isRandomAccessRange!DummyType && hasLength!DummyType)
+        {
             assert(myStride[0] == 1);
             assert(myStride[1] == 5);
             assert(myStride.moveAt(1) == 5);
@@ -722,7 +733,8 @@ debug unittest
             static assert(hasSlicing!(typeof(myStride)));
         }
 
-        static if (DummyType.r == ReturnBy.Reference) {
+        static if (DummyType.r == ReturnBy.Reference)
+        {
             // Make sure reference is propagated.
 
             {
@@ -736,7 +748,8 @@ debug unittest
                 assert(dummyRange.front == 4);
             }
 
-            static if (isBidirectionalRange!DummyType && hasLength!DummyType) {
+            static if (isBidirectionalRange!DummyType && hasLength!DummyType)
+            {
                 {
                     myStride.back++;
                     scope(exit) myStride.back--;
@@ -748,7 +761,8 @@ debug unittest
                     assert(myStride.back == 111);
                 }
 
-                static if (isRandomAccessRange!DummyType) {
+                static if (isRandomAccessRange!DummyType)
+                {
                     {
                         myStride[1]++;
                         scope(exit) myStride[1]--;
@@ -1172,9 +1186,11 @@ unittest
     // Check that chain at least instantiates and compiles with every possible
     // pair of DummyRange types, in either order.
 
-    foreach (DummyType1; AllDummyRanges) {
+    foreach (DummyType1; AllDummyRanges)
+    {
         DummyType1 dummy1;
-        foreach (DummyType2; AllDummyRanges) {
+        foreach (DummyType2; AllDummyRanges)
+        {
             DummyType2 dummy2;
             auto myChain = chain(dummy1, dummy2);
 
@@ -1183,7 +1199,8 @@ unittest
             );
 
             assert(myChain.front == 1);
-            foreach (i; 0..dummyLength) {
+            foreach (i; 0..dummyLength)
+            {
                 myChain.popFront();
             }
             assert(myChain.front == 1);
@@ -2030,18 +2047,22 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     takeMyStrAgain = take(takeMyStr, 10);
     assert(equal(takeMyStrAgain, "This is"));
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType dummy;
         auto t = take(dummy, 5);
         alias T = typeof(t);
 
-        static if (isRandomAccessRange!DummyType) {
+        static if (isRandomAccessRange!DummyType)
+        {
             static assert(isRandomAccessRange!T);
             assert(t[4] == 5);
 
             assert(moveAt(t, 1) == t[1]);
             assert(t.back == moveBack(t));
-        } else static if (isForwardRange!DummyType) {
+        }
+        else static if (isForwardRange!DummyType)
+        {
             static assert(isForwardRange!T);
         }
 
@@ -4011,7 +4032,8 @@ unittest
 
     alias FOO = Zip!(immutable(int)[], immutable(float)[]);
 
-    foreach (t; stuff.expand) {
+    foreach (t; stuff.expand)
+    {
         auto arr1 = t[0];
         auto arr2 = t[1];
         auto zShortest = zip(arr1, arr2);
@@ -4052,15 +4074,18 @@ unittest
     // make -fwin32.mak unittest makes the compiler completely run out of RAM.
     // You need to test just this module.
     /+
-     foreach (DummyType1; AllDummyRanges) {
+     foreach (DummyType1; AllDummyRanges)
+     {
          DummyType1 d1;
-         foreach (DummyType2; AllDummyRanges) {
+         foreach (DummyType2; AllDummyRanges)
+         {
              DummyType2 d2;
              auto r = zip(d1, d2);
              assert(equal(map!"a[0]"(r), [1,2,3,4,5,6,7,8,9,10]));
              assert(equal(map!"a[1]"(r), [1,2,3,4,5,6,7,8,9,10]));
 
-             static if (isForwardRange!DummyType1 && isForwardRange!DummyType2) {
+             static if (isForwardRange!DummyType1 && isForwardRange!DummyType2)
+             {
                  static assert(isForwardRange!(typeof(r)));
              }
 
@@ -4401,7 +4426,8 @@ unittest
         uint[] res1;
         float[] res2;
 
-        foreach (a, ref b; l) {
+        foreach (a, ref b; l)
+        {
             res1 ~= a;
             res2 ~= b;
         }
@@ -4760,7 +4786,8 @@ auto sequence(alias fun, State...)(State args)
 
     auto odds = Sequence!("a[0] + n * a[1]", Tuple!(int, int))(
         tuple(1, 2));
-    for (int currentOdd = 1; currentOdd <= 21; currentOdd += 2) {
+    for (int currentOdd = 1; currentOdd <= 21; currentOdd += 2)
+    {
         assert(odds.front == odds[0]);
         assert(odds[0] == currentOdd);
         odds.popFront();
@@ -5671,17 +5698,20 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 
     static assert(is(FrontTransversal!(immutable int[][])));
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         auto dummies =
             [DummyType.init, DummyType.init, DummyType.init, DummyType.init];
 
-        foreach (i, ref elem; dummies) {
+        foreach (i, ref elem; dummies)
+        {
             // Just violate the DummyRange abstraction to get what I want.
             elem.arr = elem.arr[i..$ - (3 - i)];
         }
 
         auto ft = frontTransversal!(TransverseOptions.assumeNotJagged)(dummies);
-        static if (isForwardRange!DummyType) {
+        static if (isForwardRange!DummyType)
+        {
             static assert(isForwardRange!(typeof(ft)));
         }
 
@@ -5699,7 +5729,8 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
         // Test infiniteness propagation.
         static assert(isInfinite!(typeof(frontTransversal(repeat("foo")))));
 
-        static if (DummyType.r == ReturnBy.Reference) {
+        static if (DummyType.r == ReturnBy.Reference)
+        {
             {
                 ft.front++;
                 scope(exit) ft.front--;
@@ -6004,7 +6035,8 @@ Transversal!(RangeOfRanges, opt) transversal
     // Test w/o ref return.
     alias D = DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random);
     auto drs = [D.init, D.init];
-    foreach (num; 0..10) {
+    foreach (num; 0..10)
+    {
         auto t = transversal!(TransverseOptions.enforceNotJagged)(drs, num);
         assert(t[0] == t[1]);
         assert(t[1] == num + 1);

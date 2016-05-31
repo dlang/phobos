@@ -998,7 +998,8 @@ private size_t getPivot(alias less, Range)(Range r)
                             ((cast(uint) (pred(r[0], r[len - 1]))) << 1) |
                             (cast(uint) (pred(r[mid], r[len - 1])));
 
-    switch (result) {
+    switch (result)
+    {
         case 0b001:
             r.swapAt(0, len - 1);
             r.swapAt(0, mid);
@@ -1070,7 +1071,8 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 
     auto rnd = Random(1);
     auto a = new int[uniform(100, 200, rnd)];
-    foreach (ref e; a) {
+    foreach (ref e; a)
+    {
         e = uniform(-100, 100, rnd);
     }
 
@@ -1216,7 +1218,8 @@ unittest
     // sort using delegate
     auto a = new int[100];
     auto rnd = Random(unpredictableSeed);
-    foreach (ref e; a) {
+    foreach (ref e; a)
+    {
         e = uniform(-100, 100, rnd);
     }
 
@@ -1231,7 +1234,8 @@ unittest
     assert(isSorted!("a < b")(a));
 
     // sort using function; all elements equal
-    foreach (ref e; a) {
+    foreach (ref e; a)
+    {
         e = 5;
     }
     static bool less(int a, int b) { return a < b; }
@@ -2223,7 +2227,8 @@ unittest
 
     static double entropy(double[] probs) {
         double result = 0;
-        foreach (p; probs) {
+        foreach (p; probs)
+        {
             if (!p) continue;
             //enforce(p > 0 && p <= 1, "Wrong probability passed to entropy");
             result -= p * log2(p);
@@ -2256,7 +2261,8 @@ unittest
 
     static double entropy(double[] probs) {
         double result = 0;
-        foreach (p; probs) {
+        foreach (p; probs)
+        {
             if (!p) continue;
             //enforce(p > 0 && p <= 1, "Wrong probability passed to entropy");
             result -= p * log2(p);
@@ -2799,7 +2805,8 @@ bool nextPermutation(alias less="a < b", BidirectionalRange)
             break;
     }
 
-    if (i.empty) {
+    if (i.empty)
+    {
         // Entire range is decreasing: it's lexicographically the greatest. So
         // wrap it around.
         range.reverse();

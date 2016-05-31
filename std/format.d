@@ -4884,7 +4884,8 @@ private TypeInfo primitiveTypeInfo(Mangle m)
 {
     // BUG: should fix this in static this() to avoid double checked locking bug
     __gshared TypeInfo[Mangle] dic;
-    if (!dic.length) {
+    if (!dic.length)
+    {
         dic = [
             Mangle.Tvoid : typeid(void),
             Mangle.Tbool : typeid(bool),

@@ -1,4 +1,4 @@
-﻿// Written in the D programming language.
+// Written in the D programming language.
 
 /**
 Standard I/O functions that extend $(B core.stdc.stdio).  $(B core.stdc.stdio)
@@ -1628,11 +1628,16 @@ is recommended if you want to process a complete file.
         auto last = terminator.back;
         C[] buf2;
         swap(buf, buf2);
-        for (;;) {
-            if (!readln(buf2, last) || endsWith(buf2, terminator)) {
-                if (buf.empty) {
+        for (;;)
+        {
+            if (!readln(buf2, last) || endsWith(buf2, terminator))
+            {
+                if (buf.empty)
+                {
                     buf = buf2;
-                } else {
+                }
+                else
+                {
                     buf ~= buf2;
                 }
                 break;
@@ -2578,7 +2583,7 @@ $(D Range) that locks the file and allows fast writing to it.
         }
 
         // @@@BUG@@@ 2340
-        //void front(C)(C c) if (is(C : dchar)) {
+        //void front(C)(C c) if (is(C : dchar))
         /// ditto
         void put(C)(C c) @safe if (is(C : const(dchar)))
         {
@@ -3950,7 +3955,8 @@ unittest
     alias TestedWith =
           AliasSeq!(string, wstring, dstring,
                     char[], wchar[], dchar[]);
-    foreach (T; TestedWith) {
+    foreach (T; TestedWith)
+    {
         // test looping with an empty file
         std.file.write(deleteme, "");
         auto f = File(deleteme, "r");
@@ -3991,7 +3997,8 @@ unittest
 
     // test with ubyte[] inputs
     alias TestedWith2 = AliasSeq!(immutable(ubyte)[], ubyte[]);
-    foreach (T; TestedWith2) {
+    foreach (T; TestedWith2)
+    {
         // test looping with an empty file
         std.file.write(deleteme, "");
         auto f = File(deleteme, "r");
@@ -4124,9 +4131,12 @@ private struct ChunksImpl
                 if (!f.eof) throw new StdioException(null);
                 buffer.length = r;
             }
-            static if (is(typeof(dg(tally, buffer)))) {
+            static if (is(typeof(dg(tally, buffer))))
+            {
                 if ((result = dg(tally, buffer)) != 0) break;
-            } else {
+            }
+            else
+            {
                 if ((result = dg(buffer)) != 0) break;
             }
             ++tally;
@@ -4451,9 +4461,11 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
          */
       L1:
         int c;
-        while ((c = FGETC(fp)) != -1) {
+        while ((c = FGETC(fp)) != -1)
+        {
             app.putchar(cast(char) c);
-            if (c == terminator) {
+            if (c == terminator)
+            {
                 buf = app.data;
                 return buf.length;
             }
@@ -4535,9 +4547,11 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     app.initialize(buf);
 
     int c;
-    while ((c = FGETC(fp)) != -1) {
+    while ((c = FGETC(fp)) != -1)
+    {
         app.putchar(cast(char) c);
-        if (c == terminator) {
+        if (c == terminator)
+        {
             buf = app.data;
             return buf.length;
         }

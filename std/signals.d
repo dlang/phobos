@@ -351,7 +351,8 @@ unittest
     a.value = 7;
 }
 
-unittest {
+unittest
+{
     class Observer
     {
         int    i;

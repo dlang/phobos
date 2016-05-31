@@ -614,7 +614,8 @@ unittest
        (str, ["b","a"], ',', '"');
 
     auto ans2 = [["Hello","65"],["World","123"]];
-    foreach (record; records2) {
+    foreach (record; records2)
+    {
         assert(equal(record, ans2.front));
         ans2.popFront();
     }
@@ -624,7 +625,8 @@ unittest
        (str, ["a","b","c","d"], ',', '"');
 
     ans2 = [["Joe","Carpenter"],["Fred","Fly"]];
-    foreach (record; records2) {
+    foreach (record; records2)
+    {
         assert(equal(record, ans2.front));
         ans2.popFront();
     }
@@ -826,7 +828,8 @@ public:
      * auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
      *       (str, ';', '^');
      *
-     * foreach (record; records) {
+     * foreach (record; records)
+     * {
      *    assert(equal(record, ans));
      * }
      * -------
@@ -850,7 +853,8 @@ public:
      *       (str, ["high","low"], ';', '^');
      *
      * int[] ans = [76,22];
-     * foreach (record; records) {
+     * foreach (record; records)
+     * {
      *    assert(equal(record, ans));
      * }
      * -------
@@ -1161,7 +1165,8 @@ public:
         // to eliminate so many tokens. This calculates
         // how many will be skipped to get to the next header column
         size_t normalizer;
-        foreach (ref c; _popCount) {
+        foreach (ref c; _popCount)
+        {
             static if (ErrorLevel == Malformed.ignore)
             {
                 // If we are not throwing exceptions
@@ -1244,7 +1249,9 @@ public:
                                   "previous length of %s.", _input.row,
                                   _input.col, _input.rowLength));
             return;
-        } else {
+        }
+        else
+        {
             static if (ErrorLevel == Malformed.throwException)
                 if (_input.rowLength != 0)
                     if (_input.col > _input.rowLength)
@@ -1314,7 +1321,8 @@ public:
         if (!_popCount.empty)
             _popCount.popFront();
 
-        if (skipNum == size_t.max) {
+        if (skipNum == size_t.max)
+        {
             while (!recordEnd())
                 prime(1);
             _empty = true;

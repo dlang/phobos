@@ -378,7 +378,8 @@ struct JSONValue
         {
             static assert(is(Key : string), "AA key must be string");
             type_tag = JSON_TYPE.OBJECT;
-            static if (is(Value : JSONValue)) {
+            static if (is(Value : JSONValue))
+            {
                 store.object = arg;
             }
             else
@@ -848,7 +849,8 @@ if (isInputRange!T)
     }
 
     bool tryGetSpecialFloat(string str, out double val) {
-        switch (str) {
+        switch (str)
+        {
             case JSONFloatLiteral.nan:
                 val = double.nan;
                 return true;
@@ -1233,25 +1235,32 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
 
                 auto val = value.store.floating;
 
-                if (val.isNaN) {
-                    if (options & JSONOptions.specialFloatLiterals) {
+                if (val.isNaN)
+                {
+                    if (options & JSONOptions.specialFloatLiterals)
+                    {
                         toString(JSONFloatLiteral.nan);
                     }
-                    else {
+                    else
+                    {
                         throw new JSONException(
                             "Cannot encode NaN. Consider passing the specialFloatLiterals flag.");
                     }
                 }
-                else if (val.isInfinity) {
-                    if (options & JSONOptions.specialFloatLiterals) {
+                else if (val.isInfinity)
+                {
+                    if (options & JSONOptions.specialFloatLiterals)
+                    {
                         toString((val > 0) ?  JSONFloatLiteral.inf : JSONFloatLiteral.negativeInf);
                     }
-                    else {
+                    else
+                    {
                         throw new JSONException(
                             "Cannot encode Infinity. Consider passing the specialFloatLiterals flag.");
                     }
                 }
-                else {
+                else
+                {
                     json.put(to!string(val));
                 }
                 break;
@@ -1570,7 +1579,8 @@ unittest
 }`);
 }
 
-unittest {
+unittest
+{
   auto json = `"hello\nworld"`;
   const jv = parseJSON(json);
   assert(jv.toString == json);

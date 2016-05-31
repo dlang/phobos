@@ -2001,7 +2001,8 @@ pure unittest
     assert(array(rt4[]) == ["hello"]);
 }
 
-unittest {
+unittest
+{
     import std.conv : to;
 
     auto rt1 = redBlackTree!string();

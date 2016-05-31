@@ -141,7 +141,8 @@ class MmFile
         size_t initial_map = (window && 2*window<size)
             ? 2*window : cast(size_t)size;
         auto p = mmap(address, initial_map, prot, flags, fd, 0);
-        if (p == MAP_FAILED) {
+        if (p == MAP_FAILED)
+        {
             errnoEnforce(false, "Could not map file into memory");
         }
         data = p[0 .. initial_map];
@@ -501,9 +502,12 @@ class MmFile
     private void unmap()
     {
         debug (MMFILE) printf("MmFile.unmap()\n");
-        version(Windows) {
+        version(Windows)
+        {
             wenforce(!data.ptr || UnmapViewOfFile(data.ptr) != FALSE, "UnmapViewOfFile");
-        } else {
+        }
+        else
+        {
             errnoEnforce(!data.ptr || munmap(cast(void*)data, data.length) == 0,
                     "munmap failed");
         }
@@ -517,11 +521,14 @@ class MmFile
         void* p;
         if (start+len > size)
             len = cast(size_t)(size-start);
-        version(Windows) {
+        version(Windows)
+        {
             uint hi = cast(uint)(start>>32);
             p = MapViewOfFileEx(hFileMap, dwDesiredAccess, hi, cast(uint)start, len, address);
             wenforce(p, "MapViewOfFileEx");
-        } else {
+        }
+        else
+        {
             p = mmap(address, len, prot, flags, fd, cast(off_t)start);
             errnoEnforce(p != MAP_FAILED);
         }
@@ -533,11 +540,15 @@ class MmFile
     private void ensureMapped(ulong i)
     {
         debug (MMFILE) printf("MmFile.ensureMapped(%lld)\n", i);
-        if (!mapped(i)) {
+        if (!mapped(i))
+        {
             unmap();
-            if (window == 0) {
+            if (window == 0)
+            {
                 map(0,cast(size_t)size);
-            } else {
+            }
+            else
+            {
                 ulong block = i/window;
                 if (block == 0)
                     map(0,2*window);
@@ -551,16 +562,23 @@ class MmFile
     private void ensureMapped(ulong i, ulong j)
     {
         debug (MMFILE) printf("MmFile.ensureMapped(%lld, %lld)\n", i, j);
-        if (!mapped(i) || !mapped(j-1)) {
+        if (!mapped(i) || !mapped(j-1))
+        {
             unmap();
-            if (window == 0) {
+            if (window == 0)
+            {
                 map(0,cast(size_t)size);
-            } else {
+            }
+            else
+            {
                 ulong iblock = i/window;
                 ulong jblock = (j-1)/window;
-                if (iblock == 0) {
+                if (iblock == 0)
+                {
                     map(0,cast(size_t)(window*(jblock+2)));
-                } else {
+                }
+                else
+                {
                     map(window*(iblock-1),cast(size_t)(window*(jblock-iblock+3)));
                 }
             }
@@ -619,13 +637,16 @@ unittest
 
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
-    version(Windows) {
+    version(Windows)
+    {
         /+ these aren't defined in core.sys.windows.windows so let's use default
          SYSTEM_INFO sysinfo;
          GetSystemInfo(&sysinfo);
          win = sysinfo.dwAllocationGranularity;
          +/
-    } else version (linux) {
+    }
+    else version (linux)
+    {
         // getpagesize() is not defined in the unix D headers so use the guess
     }
     string test_file = std.file.deleteme ~ "-testing.txt";

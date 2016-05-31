@@ -1574,7 +1574,8 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 }
 
 ///
-@safe pure unittest {
+@safe pure unittest
+{
     import std.conv : to;
 
     ptrdiff_t i = "helloWorld".indexOfAny("Wr");
