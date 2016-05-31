@@ -97,7 +97,6 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
         $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones,
               List of Time Zones)<br>
 
-    Copyright: Copyright 2010 - 2015
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
     Source:    $(PHOBOSSRC std/_datetime.d)
