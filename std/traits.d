@@ -4137,22 +4137,20 @@ template isImplicitlyConvertible(From, To)
     }));
 }
 
+///
 unittest
 {
     static assert( isImplicitlyConvertible!(immutable(char), char));
     static assert( isImplicitlyConvertible!(const(char), char));
     static assert( isImplicitlyConvertible!(char, wchar));
-
     static assert(!isImplicitlyConvertible!(wchar, char));
 
-    // bug6197
     static assert(!isImplicitlyConvertible!(const(ushort), ubyte));
     static assert(!isImplicitlyConvertible!(const(uint), ubyte));
     static assert(!isImplicitlyConvertible!(const(ulong), ubyte));
 
-    // from std.conv.implicitlyConverts
-    assert(!isImplicitlyConvertible!(const(char)[], string));
-    assert( isImplicitlyConvertible!(string, const(char)[]));
+    static assert(!isImplicitlyConvertible!(const(char)[], string));
+    static assert( isImplicitlyConvertible!(string, const(char)[]));
 }
 
 /**
