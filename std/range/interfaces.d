@@ -54,8 +54,6 @@ $(BOOKTABLE ,
 
 Source: $(PHOBOSSRC std/range/_interfaces.d)
 
-Copyright: Copyright by authors 2008-.
-
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(WEB erdani.com, Andrei Alexandrescu), David Simcha,
