@@ -7,7 +7,6 @@
  * persistent objects across a network.
  *
 $(SCRIPT inhibitQuickIndex = 1;)
-
 $(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)

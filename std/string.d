@@ -4,7 +4,6 @@
 String handling functions.
 
 $(SCRIPT inhibitQuickIndex = 1;)
-
 $(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions) )

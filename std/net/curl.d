@@ -6,7 +6,6 @@ libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
 $(SCRIPT inhibitQuickIndex = 1;)
-
 $(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)

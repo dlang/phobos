@@ -72,7 +72,6 @@
     $(LI Unicode properties such as Scripts, Blocks and common binary properties e.g Alphabetic, White_Space, Hex_Digit etc.)
     $(LI Arbitrary length and complexity lookbehind, including lookahead in lookbehind and vise-versa.)
   )
-
   $(REG_START Pattern syntax )
   $(I std.regex operates on codepoint level,
     'character' in this table denotes a single Unicode codepoint.)

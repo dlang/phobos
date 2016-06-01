@@ -5,8 +5,8 @@ This is a submodule of $(MREF std, experimental, ndslice).
 
 Selectors create new views and iteration patterns over the same data, without copying.
 
-$(H2 Subspace selectors)
-
+$(H2 Subspace selectors
+)
 Subspace selectors serve to generalize and combine other selectors easily.
 For a slice of `Slice!(N, Range)` type `slice.pack!K` creates a slice of
 slices of `Slice!(N-K, Slice!(K+1, Range))` type by packing
@@ -17,7 +17,6 @@ $(LREF evertPack). Examples of use of subspace selectors are available for selec
 $(SUBREF slice, Slice.shape), and $(SUBREF slice, Slice.elementsCount).
 
 $(BOOKTABLE ,
-
 $(TR $(TH Function Name) $(TH Description))
 $(T2 pack     , returns slice of slices)
 $(T2 unpack   , merges all dimension packs)
@@ -25,7 +24,6 @@ $(T2 evertPack, reverses dimension packs)
 )
 
 $(BOOKTABLE $(H2 Selectors),
-
 $(TR $(TH Function Name) $(TH Description))
 $(T2 byElement, flat, random access range of all elements with `index` property)
 $(T2 byElementInStandardSimplex, an input range of all elements in standard simplex of hypercube with `index` property.

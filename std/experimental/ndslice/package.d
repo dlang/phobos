@@ -72,7 +72,6 @@ instead of a regular array, which makes it
 possible to carry out tests without memory allocation.
 
 $(SCRIPT inhibitQuickIndex = 1;)
-
 $(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Submodule) $(TH Declarations)
@@ -128,10 +127,10 @@ $(TR $(TDNW Advanced Level $(BR)
         $(SUBREF selection, ReshapeException)
     )
 )
-))
-
-$(H2 Example: Image Processing)
-
+)
+)
+$(H2 Example: Image Processing
+)
 A median filter is implemented as an example. The function
 `movingWindowByChannel` can also be used with other filters that use a sliding
 window as the argument, in particular with convolution matrices such as the
@@ -286,8 +285,8 @@ options:
 -h --help This help information.
 -------
 
-$(H2 Compared with `numpy.ndarray`)
-
+$(H2 Compared with `numpy.ndarray`
+)
 numpy is undoubtedly one of the most effective software packages that has
 facilitated the work of many engineers and scientists. However, due to the
 specifics of implementation of Python, a programmer who wishes to use the

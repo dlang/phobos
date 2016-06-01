@@ -6,9 +6,7 @@ This is a submodule of $(MREF std, experimental, ndslice).
 Operators only change strides and lengths of a slice.
 The range of a slice remains unmodified.
 All operators return slice of the same type as the type of the argument.
-
 $(BOOKTABLE $(H2 Transpose operators),
-
 $(TR $(TH Function Name) $(TH Description))
 $(T2 transposed, Permutes dimensions. $(BR)
     `iotaSlice(3, 4, 5, 6, 7).transposed!(4, 0, 1).shape` returns `[7, 3, 4, 5, 6]`.)
@@ -20,7 +18,6 @@ $(T2 everted, Reverses the order of dimensions $(BR)
 See also $(SUBREF selection, evertPack).
 
 $(BOOKTABLE $(H2 Iteration operators),
-
 $(TR $(TH Function Name) $(TH Description))
 $(T2 strided, Multiplies the stride of a selected dimension by a factor.$(BR)
     `iotaSlice(13, 40).strided!(0, 1)(2, 5).shape` equals to `[7, 8]`.)
@@ -36,8 +33,8 @@ $(T2 rotated, Rotates two selected dimensions by `k*90` degrees. $(BR)
     `iotaSlice(2, 3).rotated` equals to `[[2, 5], [1, 4], [0, 3]]`.)
 )
 
-$(H4 Drop operators)
-
+$(H4 Drop operators
+)
 $(LREF dropToHypercube)
 $(LREF drop) $(LREF dropBack)
 $(LREF dropOne) $(LREF dropBackOne)
@@ -60,8 +57,8 @@ $(GNAME DropSuffix):
     $(D One)
     $(D Exactly)
 )
-
-$(H2 Bifacial operators)
+$(H2 Bifacial operators
+)
 
 Some operators are bifacial,
 i.e. they have two versions: one with template parameters, and another one
@@ -69,7 +66,6 @@ with function parameters. Versions with template parameters are preferable
 because they allow compile time checks and can be optimized better.
 
 $(BOOKTABLE ,
-
 $(TR $(TH Function Name) $(TH Variadic) $(TH Template) $(TH Function))
 $(T4 swapped, No, `slice.swapped!(2, 3)`, `slice.swapped(2, 3)`)
 $(T4 rotated, No, `slice.rotated!(2, 3)(-1)`, `slice.rotated(2, 3, -1)`)
