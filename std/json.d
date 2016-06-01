@@ -226,7 +226,8 @@ struct JSONValue
         return store.uinteger;
     }
 
-    /// Value getter/setter for $(D JSON_TYPE.FLOAT).
+    /// Value getter/setter for $(D JSON_TYPE.FLOAT). Note that despite
+    /// the name, this is a $(B 64)-bit `double`, not a 32-bit `float`.
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.FLOAT).
     @property inout(double) floating() inout pure @safe
@@ -1261,7 +1262,12 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 }
                 else
                 {
-                    json.put(to!string(val));
+                    import std.format : format;
+                    // The correct formula for the number of decimal digits needed for lossless round
+                    // trips is actually:
+                    //     ceil(log(pow(2.0, double.mant_dig - 1)) / log(10.0) + 1) == (double.dig + 2)
+                    // Anything less will round off (1 + double.epsilon)
+                    json.put("%.18g".format(val));
                 }
                 break;
 
@@ -1361,7 +1367,7 @@ unittest
     assert(jv.type == JSON_TYPE.UINTEGER);
     assertNotThrown(jv.uinteger);
 
-    jv = 3.0f;
+    jv = 3.0;
     assert(jv.type == JSON_TYPE.FLOAT);
     assertNotThrown(jv.floating);
 
@@ -1435,9 +1441,9 @@ unittest
     assert(jv.type == JSON_TYPE.UINTEGER);
     assert(jv.uinteger == 2u);
 
-    jv.floating = 1.5f;
+    jv.floating = 1.5;
     assert(jv.type == JSON_TYPE.FLOAT);
-    assert(jv.floating == 1.5f);
+    assert(jv.floating == 1.5);
 
     jv.object = ["key" : JSONValue("value")];
     assert(jv.type == JSON_TYPE.OBJECT);
@@ -1508,8 +1514,8 @@ unittest
         `0`,
         `123`,
         `-4321`,
-        `0.23`,
-        `-0.23`,
+        `0.25`,
+        `-0.25`,
         `""`,
         `"hello\nworld"`,
         `"\"\\\/\b\f\n\r\t"`,
@@ -1517,14 +1523,15 @@ unittest
         `[12,"foo",true,false]`,
         `{}`,
         `{"a":1,"b":null}`,
-        `{"goodbye":[true,"or",false,["test",42,{"nested":{"a":23.54,"b":0.0012}}]],`
+        `{"goodbye":[true,"or",false,["test",42,{"nested":{"a":23.5,"b":0.140625}}]],`
         ~`"hello":{"array":[12,null,{}],"json":"is great"}}`,
     ];
 
+    enum dbl1_844 = `1.8446744073709568`;
     version (MinGW)
-        jsons ~= `1.223e+024`;
+        jsons ~= dbl1_844 ~ `e+019`;
     else
-        jsons ~= `1.223e+24`;
+        jsons ~= dbl1_844 ~ `e+19`;
 
     JSONValue val;
     string result;
@@ -1729,3 +1736,31 @@ pure nothrow @safe unittest // issue 15884
     Test!dchar();
 }
 
+unittest // issue 15885
+{
+    static bool test(const double num0)
+    {
+        import std.math : feqrel;
+        const json0 = JSONValue(num0);
+        const num1 = to!double(toJSON(json0));
+        version(Win32)
+            return feqrel(num1, num0) >= (double.mant_dig - 1);
+        else
+            return num1 == num0;
+    }
+
+    assert(test( 0.23));
+    assert(test(-0.23));
+    assert(test(1.223e+24));
+    assert(test(23.4));
+    assert(test(0.0012));
+    assert(test(30738.22));
+
+    assert(test(1 + double.epsilon));
+    assert(test(-double.max));
+    assert(test(double.min_normal));
+
+    const minSub = double.min_normal * double.epsilon;
+    assert(test(minSub));
+    assert(test(3*minSub));
+}
