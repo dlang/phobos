@@ -351,7 +351,7 @@ TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange targe
         auto len = source.length;
         foreach (idx; 0 .. len)
             target[idx] = source[idx];
-        return target[len .. $];
+        return target[len .. target.length];
     }
     else
     {
