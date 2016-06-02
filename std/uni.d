@@ -7939,7 +7939,7 @@ else
 // trusted -> avoid bounds check
 @trusted pure nothrow @nogc private
 {
-    import std.internal.unicode_tables : toLowerTable, toTitleTable, toUpperTable; // generated file
+    import std.internal.unicode_tables; // : toLowerTable, toTitleTable, toUpperTable; // generated file
 
     // hide template instances behind functions (Bugzilla 13232)
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
