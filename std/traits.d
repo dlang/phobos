@@ -5409,9 +5409,20 @@ unittest
  */
 enum bool isDynamicArray(T) = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
 
+///
 unittest
 {
-    foreach (T; TypeTuple!(int[], char[], string, long[3][], double[string][]))
+    static assert( isDynamicArray!(int[]));
+    static assert( isDynamicArray!(string));
+    static assert( isDynamicArray!(long[3][]));
+
+    static assert(!isDynamicArray!(int[5]));
+    static assert(!isDynamicArray!(typeof(null)));
+}
+
+unittest
+{
+    foreach (T; AliasSeq!(int[], char[], string, long[3][], double[string][]))
     {
         foreach (Q; TypeQualifierList)
         {
@@ -5419,12 +5430,6 @@ unittest
             static assert(!isDynamicArray!( SubTypeOf!(Q!T) ));
         }
     }
-
-    static assert(!isDynamicArray!(int[5]));
-    static assert(!isDynamicArray!(typeof(null)));
-
-    //enum EDA : int[] { a = [1], b = [2] }
-    //static assert( isDynamicArray!EDA);
 }
 
 /**
@@ -5433,9 +5438,21 @@ unittest
  */
 enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 
+///
 unittest
 {
-    foreach (T; TypeTuple!(int[], int[5], void[]))
+    static assert( isArray!(int[]));
+    static assert( isArray!(int[5]));
+    static assert( isArray!(string));
+
+    static assert(!isArray!uint);
+    static assert(!isArray!(uint[uint]));
+    static assert(!isArray!(typeof(null)));
+}
+
+unittest
+{
+    foreach (T; AliasSeq!(int[], int[5], void[]))
     {
         foreach (Q; TypeQualifierList)
         {
@@ -5443,10 +5460,6 @@ unittest
             static assert(!isArray!(SubTypeOf!(Q!T)));
         }
     }
-
-    static assert(!isArray!uint);
-    static assert(!isArray!(uint[uint]));
-    static assert(!isArray!(typeof(null)));
 }
 
 /**
