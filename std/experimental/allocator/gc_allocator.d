@@ -72,7 +72,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    static void[] resolveInternalPointer(void* p)
+    static void[] resolveInternalPointer(void* p) @trusted
     {
         auto info = GC.query(p);
         if (!info.base) return null;
@@ -106,8 +106,8 @@ struct GCAllocator
 
     /**
     Returns the global instance of this allocator type. The garbage collected
-    allocator is thread-safe, therefore all of its methods and `instance` itself
-    are $(D shared).
+    allocator is thread-safe and based entirely on external storage, therefore
+    all of its methods and `instance` itself can be $(D shared).
     */
 
     static shared GCAllocator instance;
