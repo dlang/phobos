@@ -1815,41 +1815,45 @@ if (is(S == struct))
     else
     struct Rebindable
     {
-        // fields of mutPayload must be treated as tail const
-        private union
+    private:
+        // mutPayload's pointers must be treated as tail const
+        void[S.sizeof] mutPayload;
+
+        @trusted swapPayload(ref S s)
         {
-            Unqual!S mutPayload = void;
-            S payload;
+            // we preserve tail immutable guarantees so casts are OK
+            auto pOurs = cast(Unqual!S*)mutPayload.ptr;
+            auto pTheirs = cast(Unqual!S*)&s;
+            import std.algorithm.mutation : swap;
+            swap(*pOurs, *pTheirs);
         }
 
+        @trusted swapPayload(ref Rebindable rs)
+        {
+            swapPayload(*cast(S*)rs.mutPayload.ptr);
+        }
+
+    public:
         this(S s)
         {
-            // we preserve tail immutable guarantees so mutable union is OK
-            payload = s;
-        }
-
-        private
-        void swapPayloads(ref Rebindable rs) @trusted
-        {
-            import std.algorithm.mutation : swap;
-            swap(mutPayload, rs.mutPayload);
+            swapPayload(s);
         }
 
         void opAssign(S s)
         {
-            auto rs = Rebindable(s);
-            swapPayloads(rs);
+            swapPayload(s);
+        }
+
+        void opAssign(Rebindable other)
+        {
+            swapPayload(other);
         }
 
         private
-        ref getPayload() @trusted
+        ref const getPayload() @trusted
         {
-            return payload;
-        }
-
-        void opAssign(typeof(this) other)
-        {
-            this = other.getPayload;
+            // can only cast to const, not immutable
+            return *cast(const Unqual!S*)mutPayload.ptr;
         }
 
         static if (!is(S == immutable))
@@ -1862,7 +1866,7 @@ if (is(S == struct))
         static if (is(S == immutable))
         S Rebindable_get() @property
         {
-            // we return a copy so mutable union is OK
+            // we return a copy for immutable S
             return getPayload;
         }
 
@@ -1875,7 +1879,7 @@ if (is(S == struct))
         auto movePayload() @trusted
         {
             import std.algorithm : move;
-            return cast(S)move(mutPayload);
+            return cast(S)move(*cast(Unqual!S*)mutPayload.ptr);
         }
 
         ~this()
