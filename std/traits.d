@@ -5433,9 +5433,21 @@ unittest
  */
 enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 
+///
 unittest
 {
-    foreach (T; TypeTuple!(int[], int[5], void[]))
+    static assert( isArray!(int[]));
+    static assert( isArray!(int[5]));
+    static assert( isArray!(string));
+
+    static assert(!isArray!uint);
+    static assert(!isArray!(uint[uint]));
+    static assert(!isArray!(typeof(null)));
+}
+
+unittest
+{
+    foreach (T; AliasSeq!(int[], int[5], void[]))
     {
         foreach (Q; TypeQualifierList)
         {
@@ -5443,10 +5455,6 @@ unittest
             static assert(!isArray!(SubTypeOf!(Q!T)));
         }
     }
-
-    static assert(!isArray!uint);
-    static assert(!isArray!(uint[uint]));
-    static assert(!isArray!(typeof(null)));
 }
 
 /**
