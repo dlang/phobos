@@ -48,12 +48,14 @@ Individual $(D Logger) and the global log functions share commonly named
 functions to log data.
 
 The names of the functions are as follows:
-$(LI $(D log))
-$(LI $(D trace))
-$(LI $(D info))
-$(LI $(D warning))
-$(LI $(D critical))
-$(LI $(D fatal))
+$(UL
+    $(LI $(D log))
+    $(LI $(D trace))
+    $(LI $(D info))
+    $(LI $(D warning))
+    $(LI $(D critical))
+    $(LI $(D fatal))
+)
 The default $(D Logger) will by default log to $(D stderr) and has a default
 $(D LogLevel) of $(D LogLevel.all). The default Logger can be accessed by
 using the property called $(D sharedLog). This property a reference to the
