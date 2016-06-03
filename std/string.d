@@ -193,12 +193,17 @@ public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 public import std.format : format, sformat;
 import std.typecons : Flag;
 
-import std.meta;
-import std.range.primitives;
-import std.traits;
+import std.meta; // AliasSeq, staticIndexOf
+import std.range.primitives; // back, ElementEncodingType, ElementType, front,
+    // hasLength, hasSlicing, isBidirectionalRange, isForwardRange, isInfinite,
+    // isInputRange, isOutputRange, isRandomAccessRange, popBack, popFront, put,
+    // save;
+import std.traits; // isConvertibleToString, isNarrowString, isSomeChar,
+    // isSomeString, StringTypeOf, Unqual
 
 //public imports for backward compatibility
-public import std.algorithm : startsWith, endsWith, cmp, count;
+public import std.algorithm.comparison : cmp;
+public import std.algorithm.searching : startsWith, endsWith, count;
 public import std.array : join, replace, replaceInPlace, split, empty;
 
 /* ************* Exceptions *************** */
@@ -580,10 +585,11 @@ unittest
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
+    import std.traits : EnumMembers;
+    import std.utf : byChar, byWchar, byDchar;
     debug(string) trustedPrintf("string.indexOf.unittest\n");
 
-    import std.exception;
-    import std.utf : byChar, byWchar, byDchar;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -636,9 +642,10 @@ unittest
 @safe pure unittest
 {
     import std.conv : to;
+    import std.traits : EnumMembers;
+    import std.utf : byCodeUnit, byChar, byWchar;
     debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
-    import std.utf : byCodeUnit, byChar, byWchar;
     assert("hello".byCodeUnit.indexOf(cast(dchar)'l', 1) == 2);
     assert("hello".byWchar.indexOf(cast(dchar)'l', 1) == 2);
     assert("hello".byWchar.indexOf(cast(dchar)'l', 6) == -1);
@@ -710,12 +717,11 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         isSomeChar!Char)
 {
-    import std.uni : toLower;
     alias Char1 = Unqual!(ElementEncodingType!Range);
 
     static if (isSomeString!Range)
     {
-        import std.algorithm : find;
+        import std.algorithm.searching : find;
 
         const(Char1)[] balance;
         if (cs == CaseSensitive.yes)
@@ -830,9 +836,10 @@ unittest
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
+    import std.traits : EnumMembers;
     debug(string) trustedPrintf("string.indexOf.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -883,6 +890,7 @@ unittest
 @safe pure @nogc nothrow
 unittest
 {
+    import std.traits : EnumMembers;
     import std.utf : byWchar;
 
     foreach (cs; EnumMembers!CaseSensitive)
@@ -900,6 +908,7 @@ unittest
 @safe pure unittest
 {
     import std.conv : to;
+    import std.traits : EnumMembers;
     debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1071,9 +1080,10 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
+    import std.traits : EnumMembers;
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1111,6 +1121,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.traits : EnumMembers;
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
@@ -1165,9 +1176,10 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char1 && isSomeChar!Char2)
 {
-    import std.utf : strideBack;
+    import std.algorithm.searching : endsWith;
     import std.conv : to;
-    import std.algorithm : endsWith;
+    import std.range.primitives : walkLength;
+    import std.utf : strideBack;
     if (sub.empty)
         return -1;
 
@@ -1289,10 +1301,11 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
+    import std.traits : EnumMembers;
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1367,6 +1380,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.traits : EnumMembers;
 
     debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
@@ -1419,14 +1433,13 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
-    import std.algorithm : canFind;
+    import std.algorithm.searching : canFind, findAmong;
     if (cs == CaseSensitive.yes)
     {
         static if (forward)
         {
             static if (any)
             {
-                import std.algorithm : findAmong;
                 size_t n = haystack.findAmong(needles).length;
                 return n ? haystack.length - n : -1;
             }
@@ -1445,9 +1458,8 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
         {
             static if (any)
             {
-                import std.utf : strideBack;
-                import std.algorithm : findAmong;
                 import std.range : retro;
+                import std.utf : strideBack;
                 size_t n = haystack.retro.findAmong(needles).source.length;
                 if (n)
                 {
@@ -1468,7 +1480,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
     }
     else
     {
-        import std.uni : toLower;
+        import std.range.primitives: walkLength;
         if (needles.length <= 16 && needles.walkLength(17))
         {
             size_t si = 0;
@@ -1615,11 +1627,11 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 
 @safe pure unittest
 {
+    import std.exception : assertCTFEable;
     import std.conv : to;
 
     debug(string) trustedPrintf("string.indexOfAny.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1657,6 +1669,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.traits : EnumMembers;
 
     debug(string) trustedPrintf("string.indexOfAny(startIdx).unittest\n");
 
@@ -1783,10 +1796,10 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.lastIndexOfAny.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1838,10 +1851,10 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.lastIndexOfAny(index).unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1965,10 +1978,10 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.indexOf.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -2011,10 +2024,10 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.indexOfNeither(index).unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -2123,10 +2136,10 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.lastIndexOfNeither.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -2170,10 +2183,10 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.lastIndexOfNeither(index).unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -2227,6 +2240,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     if (isSomeChar!Char)
 {
+    import std.traits : ModifyTypePreservingTQ;
     alias ToRepType(T) = AliasSeq!(ubyte, ushort, uint)[T.sizeof / 2];
     return cast(ModifyTypePreservingTQ!(ToRepType, Char)[])s;
 }
@@ -2242,8 +2256,9 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
 
 @trusted pure unittest
 {
-    import std.exception;
-    import std.typecons;
+    import std.exception : assertCTFEable;
+    import std.traits : Fields;
+    import std.typecons : Tuple;
 
     assertCTFEable!(
     {
@@ -2287,9 +2302,9 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
 S capitalize(S)(S input) @trusted pure
     if (isSomeString!S)
 {
-    import std.uni : asCapitalized;
+    import std.array : array;
     import std.conv : to;
-    import std.array;
+    import std.uni : asCapitalized;
 
     return input.asCapitalized.array.to!S;
 }
@@ -2314,10 +2329,10 @@ auto capitalize(S)(auto ref S s)
 
 @safe pure unittest
 {
+    import std.algorithm.comparison : cmp;
     import std.conv : to;
-    import std.algorithm : cmp;
+    import std.exception : assertCTFEable;
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
@@ -2381,8 +2396,8 @@ alias KeepTerminator = Flag!"keepTerminator";
 S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pure
     if (isSomeString!S)
 {
-    import std.uni : lineSep, paraSep;
     import std.array : appender;
+    import std.uni : lineSep, paraSep;
 
     size_t iStart = 0;
     auto retval = appender!(S[])();
@@ -2482,10 +2497,10 @@ unittest
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.splitLines.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -2547,8 +2562,8 @@ unittest
 
 private struct LineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)
 {
-    import std.uni : lineSep, paraSep;
     import std.conv : unsigned;
+    import std.uni : lineSep, paraSep;
 private:
     Range _input;
 
@@ -2731,12 +2746,12 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref R
 
 @safe pure unittest
 {
-    import std.conv : to;
     import std.array : array;
+    import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.lineSplitter.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -2852,10 +2867,10 @@ auto stripLeft(Range)(Range input)
         }
         else
         {
-            auto save = input.save;
+            auto inputSave = input.save;
             auto dc = decodeFront(input);
             if (!std.uni.isWhite(dc))
-                return save;
+                return inputSave;
         }
     }
     return input;
@@ -2876,8 +2891,8 @@ auto stripLeft(Range)(Range input)
     assert(stripLeft([paraSep] ~ "hello world" ~ paraSep) ==
            "hello world" ~ [paraSep]);
 
+    import std.array : array;
     import std.utf : byChar;
-    import std.array;
     assert(stripLeft("     hello world     "w.byChar).array ==
            "hello world     ");
 }
@@ -3031,9 +3046,9 @@ unittest
 
 unittest
 {
-    import std.utf;
-    import std.array;
+    import std.array : array;
     import std.uni : lineSep, paraSep;
+    import std.utf : byChar, byDchar, byUTF, byWchar, invalidUTFstrings;
     assert(stripRight("     hello world     ".byChar).array == "     hello world");
     assert(stripRight("\n\t\v\rhello world\n\t\v\r"w.byWchar).array == "\n\t\v\rhello world"w);
     assert(stripRight("hello world"d.byDchar).array == "hello world"d);
@@ -3105,12 +3120,12 @@ auto strip(Range)(auto ref Range str)
 
 @safe pure unittest
 {
+    import std.algorithm.comparison : equal;
     import std.conv : to;
-    import std.algorithm : equal;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.strip.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!( char[], const  char[],  string,
@@ -3142,8 +3157,8 @@ auto strip(Range)(auto ref Range str)
 
 @safe pure unittest
 {
-    import std.exception;
-    import std.range;
+    import std.array : sameHead, sameTail;
+    import std.exception : assertCTFEable;
     assertCTFEable!(
     {
     wstring s = " ";
@@ -3239,7 +3254,7 @@ Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
 
     static if (is(Unqual!C1 == Unqual!C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
     {
-        import std.algorithm : endsWith;
+        import std.algorithm.searching : endsWith;
         if (str.endsWith(delimiter))
             return str[0 .. $ - delimiter.length];
         return str;
@@ -3269,8 +3284,8 @@ Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
 @safe pure
 unittest
 {
-    import std.utf : decode;
     import std.uni : lineSep, paraSep, nelSep;
+    import std.utf : decode;
     assert(chomp(" hello world  \n\r") == " hello world  \n");
     assert(chomp(" hello world  \r\n") == " hello world  ");
     assert(chomp(" hello world  \f") == " hello world  ");
@@ -3312,11 +3327,11 @@ unittest
 unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.chomp.unittest\n");
     string s;
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -3356,8 +3371,8 @@ unittest
     });
 
     // Ranges
+    import std.array : array;
     import std.utf : byChar, byWchar, byDchar;
-    import std.array;
     assert(chomp("hello world\r\n" .byChar ).array == "hello world");
     assert(chomp("hello world\r\n"w.byWchar).array == "hello world"w);
     assert(chomp("hello world\r\n"d.byDchar).array == "hello world"d);
@@ -3392,7 +3407,7 @@ Range chompPrefix(Range, C2)(Range str, const(C2)[] delimiter)
 
     static if (is(Unqual!C1 == Unqual!C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
     {
-        import std.algorithm : startsWith;
+        import std.algorithm.searching : startsWith;
         if (str.startsWith(delimiter))
             return str[delimiter.length .. $];
         return str;
@@ -3436,9 +3451,9 @@ StringTypeOf!Range chompPrefix(Range, C2)(auto ref Range str, const(C2)[] delimi
 @safe pure
 unittest
 {
+    import std.algorithm.comparison : equal;
     import std.conv : to;
-    import std.algorithm : equal;
-    import std.exception;
+    import std.exception : assertCTFEable;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -3455,8 +3470,8 @@ unittest
     });
 
     // Ranges
+    import std.array : array;
     import std.utf : byChar, byWchar, byDchar;
-    import std.array;
     assert(chompPrefix("hello world" .byChar , "hello"d).array == " world");
     assert(chompPrefix("hello world"w.byWchar, "hello" ).array == " world"w);
     assert(chompPrefix("hello world"d.byDchar, "hello"w).array == " world"d);
@@ -3567,8 +3582,8 @@ unittest
 
 @safe pure unittest
 {
+    import std.array : array;
     import std.utf : byChar, byWchar, byDchar, byCodeUnit, invalidUTFstrings;
-    import std.array;
 
     assert(chop("hello world".byChar).array == "hello worl");
     assert(chop("hello world\n"w.byWchar).array == "hello world"w);
@@ -3601,12 +3616,12 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     import std.conv : to;
-    import std.algorithm : equal;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.chop.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -3642,7 +3657,7 @@ unittest
 S leftJustify(S)(S s, size_t width, dchar fillChar = ' ')
     if (isSomeString!S)
 {
-    import std.array;
+    import std.array : array;
     return leftJustifier(s, width, fillChar).array;
 }
 
@@ -3743,7 +3758,7 @@ auto leftJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
 @safe pure @nogc nothrow
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.utf : byChar;
     assert(leftJustifier("hello", 2).equal("hello".byChar));
     assert(leftJustifier("hello", 7).equal("hello  ".byChar));
@@ -3790,7 +3805,7 @@ unittest
 S rightJustify(S)(S s, size_t width, dchar fillChar = ' ')
     if (isSomeString!S)
 {
-    import std.array;
+    import std.array : array;
     return rightJustifier(s, width, fillChar).array;
 }
 
@@ -3860,7 +3875,8 @@ auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
                 else
                 {
                     // Lookahead to see now many fill characters are needed
-                    import std.range : walkLength, take;
+                    import std.range : take;
+                    import std.range.primitives : walkLength;
                     nfill = _width - walkLength(_input.save.take(_width), _width);
                 }
                 inited = true;
@@ -3921,7 +3937,7 @@ auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
 @safe pure @nogc nothrow
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.utf : byChar;
     assert(rightJustifier("hello", 2).equal("hello".byChar));
     assert(rightJustifier("hello", 7).equal("  hello".byChar));
@@ -3978,7 +3994,7 @@ unittest
 S center(S)(S s, size_t width, dchar fillChar = ' ')
     if (isSomeString!S)
 {
-    import std.array;
+    import std.array : array;
     return centerJustifier(s, width, fillChar).array;
 }
 
@@ -3994,10 +4010,10 @@ S center(S)(S s, size_t width, dchar fillChar = ' ')
 unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.justify.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -4063,7 +4079,8 @@ auto centerJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
     }
     else static if (C.sizeof == 4)
     {
-        import std.range : chain, repeat, walkLength;
+        import std.range : chain, repeat;
+        import std.range.primitives : walkLength;
 
         auto len = walkLength(r.save, width);
         if (len > width)
@@ -4080,7 +4097,7 @@ auto centerJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
 @safe pure @nogc nothrow
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.utf : byChar;
     assert(centerJustifier("hello", 2).equal("hello".byChar));
     assert(centerJustifier("hello", 8).equal(" hello  ".byChar));
@@ -4152,15 +4169,13 @@ auto detab(Range)(auto ref Range s, size_t tabSize = 8) pure
     if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
         || __traits(compiles, StringTypeOf!Range))
 {
-    import std.array;
+    import std.array : array;
     return detabber(s, tabSize).array;
 }
 
 ///
 @trusted pure unittest
 {
-    import std.array;
-
     assert(detab(" \n\tx", 9) == " \n         x");
 }
 
@@ -4314,7 +4329,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
 ///
 @trusted pure unittest
 {
-    import std.array;
+    import std.array : array;
 
     assert(detabber(" \n\tx", 9).array == " \n         x");
 }
@@ -4332,12 +4347,12 @@ unittest
 
 @trusted pure unittest
 {
+    import std.algorithm.comparison : cmp;
     import std.conv : to;
-    import std.algorithm : cmp;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.detab.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -4365,8 +4380,8 @@ unittest
 ///
 @trusted pure unittest
 {
-    import std.utf;
-    import std.array;
+    import std.array : array;
+    import std.utf : byChar, byWchar;
 
     assert(detabber(" \u2029\t".byChar, 9).array == " \u2029         ");
     auto r = "hel\tx".byWchar.detabber();
@@ -4654,7 +4669,7 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
 ///
 unittest
 {
-    import std.array;
+    import std.array : array;
     assert(entabber("        x \n").array == "\tx\n");
 }
 
@@ -4673,10 +4688,10 @@ unittest
 unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.entab.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     assert(entab(cast(string) null) is null);
@@ -4721,8 +4736,8 @@ unittest
 @safe pure
 unittest
 {
+    import std.array : array;
     import std.utf : byChar;
-    import std.array;
     assert(entabber(" \u0085 aa".byChar).array == "\u0085 aa");
     assert(entabber(" \u2028\t aa \t".byChar).array == "\u2028\t aa");
 
@@ -4790,8 +4805,8 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
 @trusted pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
@@ -4847,8 +4862,8 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
 @trusted pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
@@ -5110,8 +5125,8 @@ body
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (C; AliasSeq!(char, const char, immutable char))
@@ -5249,10 +5264,10 @@ bool inPattern(S)(dchar c, in S pattern) @safe pure @nogc if (isSomeString!S)
 @safe pure @nogc unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("std.string.inPattern.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     assert(inPattern('x', "x") == 1);
@@ -5312,10 +5327,10 @@ size_t countchars(S, S1)(S s, in S1 pattern) @safe pure @nogc if (isSomeString!S
 @safe pure @nogc unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("std.string.count.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     assert(countchars("abc", "a-c") == 3);
@@ -5360,10 +5375,10 @@ S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("std.string.removechars.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     assert(removechars("abc", "a-c").length == 0);
@@ -5426,10 +5441,10 @@ S squeeze(S)(S s, in S pattern = null)
 @trusted pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("std.string.squeeze.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     string s;
@@ -5558,10 +5573,10 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("std.string.succ.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     assert(succ(string.init) is null);
@@ -5616,9 +5631,9 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
 C1[] tr(C1, C2, C3, C4 = immutable char)
        (C1[] str, const(C2)[] from, const(C3)[] to, const(C4)[] modifiers = null)
 {
+    import std.array : appender;
     import std.conv : conv_to = to;
     import std.utf : decode;
-    import std.array : appender;
 
     bool mod_c;
     bool mod_d;
@@ -5729,10 +5744,11 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("std.string.tr.unittest\n");
-    import std.algorithm : equal;
 
     // Complete list of test types; too slow to test'em all
     // alias TestTypes = AliasSeq!(
@@ -5743,7 +5759,6 @@ unittest
     // Reduced list of test types
     alias TestTypes = AliasSeq!(char[], const(wchar)[], immutable(dchar)[]);
 
-    import std.exception;
     assertCTFEable!(
     {
     foreach (S; TestTypes)
@@ -5998,7 +6013,6 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
 // Test string types
 @safe unittest
 {
-    import std.meta : AliasSeq;
     import std.conv : to;
 
     foreach (T; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
@@ -6043,10 +6057,10 @@ unittest
 @trusted unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("isNumeric(in string, bool = false).unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     // Test the isNumeric(in string) function
@@ -6226,7 +6240,7 @@ body
 
 @safe pure nothrow unittest
 {
-    import std.exception;
+    import std.exception : assertCTFEable;
     assertCTFEable!(
     {
     char[4] buffer;
@@ -6270,7 +6284,7 @@ body
     assert(soundex("Hardin") == "H635");
     assert(soundex("Martinez") == "M635");
 
-    import std.utf;
+    import std.utf : byChar, byDchar, byWchar;
     assert(soundexer("Martinez".byChar ) == "M635");
     assert(soundexer("Martinez".byWchar) == "M635");
     assert(soundexer("Martinez".byDchar) == "M635");
@@ -6295,7 +6309,7 @@ unittest
 
 string[string] abbrev(string[] values) @safe pure
 {
-    import std.algorithm : sort;
+    import std.algorithm.sorting : sort;
 
     string[string] result;
 
@@ -6348,7 +6362,7 @@ unittest
     import std.string;
 
     static string[] list = [ "food", "foxy" ];
-    auto abbrevs = std.string.abbrev(list);
+    auto abbrevs = abbrev(list);
     assert(abbrevs == ["fox": "foxy", "food": "food",
                        "foxy": "foxy", "foo": "food"]);
 }
@@ -6356,12 +6370,12 @@ unittest
 
 @trusted pure unittest
 {
+    import std.algorithm.sorting : sort;
     import std.conv : to;
-    import std.algorithm : sort;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.abbrev.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     string[] values;
@@ -6501,10 +6515,10 @@ unittest
 @safe @nogc unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.column.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     assert(column(string.init) == 0);
@@ -6615,10 +6629,10 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.wrap.unittest\n");
 
-    import std.exception;
     assertCTFEable!(
     {
     assert(wrap(string.init) == "\n");
@@ -6695,7 +6709,7 @@ void main() {
  */
 S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
 {
-    import std.algorithm : startsWith;
+    import std.algorithm.searching : startsWith;
 
     if (lines.empty)
     {
@@ -6755,6 +6769,7 @@ S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
 @safe pure unittest
 {
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.outdent.unittest\n");
 
@@ -6782,7 +6797,6 @@ S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
 ";
     }
 
-    import std.exception;
     assertCTFEable!(
     {
 
@@ -6864,6 +6878,7 @@ See_Also: $(LREF representation)
 auto assumeUTF(T)(T[] arr) pure
     if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 {
+    import std.traits : ModifyTypePreservingTQ;
     import std.utf : validate;
     alias ToUTFType(U) = AliasSeq!(char, wchar, dchar)[U.sizeof / 2];
     auto asUTF = cast(ModifyTypePreservingTQ!(ToUTFType, T)[])arr;
@@ -6883,7 +6898,7 @@ auto assumeUTF(T)(T[] arr) pure
 
 pure unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     foreach (T; AliasSeq!(char[], wchar[], dchar[]))
     {
         immutable T jti = "Hello World";
