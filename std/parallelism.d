@@ -78,7 +78,7 @@ import core.thread; // : Thread;
 
 import std.traits; // : ReturnType;
 
-version(OSX)
+/*version(OSX)
 {
     version = useSysctlbyname;
 }
@@ -89,7 +89,8 @@ else version(FreeBSD)
 else version(NetBSD)
 {
     version = useSysctlbyname;
-}
+}*/
+version = useSysctlbyname;
 
 
 version(Windows)
@@ -98,6 +99,7 @@ version(Windows)
     shared static this()
     {
         import core.sys.windows.windows;
+        import core.sys.windows.winbase;
         import std.algorithm.comparison : max;
 
         SYSTEM_INFO si;
@@ -106,26 +108,26 @@ version(Windows)
     }
 
 }
-else version(linux)
-{
+//else version(linux)
+//{
     import core.sys.posix.unistd;
 
     shared static this()
     {
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
-}
-else version(Solaris)
-{
+//}
+//else version(Solaris)
+//{
     import core.sys.posix.unistd;
 
     shared static this()
     {
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
-}
-else version(useSysctlbyname)
-{
+//}
+//else version(useSysctlbyname)
+//{
     extern(C) int sysctlbyname(
         const char *, void *, size_t *, void *, size_t
     );
@@ -140,10 +142,10 @@ else version(useSysctlbyname)
         {
             auto nameStr = "hw.ncpu\0".ptr;
         }
-        else version(NetBSD)
-        {
+        //else version(NetBSD)
+        //{
             auto nameStr = "hw.ncpu\0".ptr;
-        }
+        //}
 
         uint ans;
         size_t len = uint.sizeof;
@@ -151,9 +153,9 @@ else version(useSysctlbyname)
         totalCPUs = ans;
     }
 
-}
-else
-{
+//}
+//else
+version(none){
     static assert(0, "Don't know how to get N CPUs on this OS.");
 }
 
@@ -695,10 +697,10 @@ struct Task(alias fun, Args...)
             if (job !is null)
             {
 
-                version(verboseUnittest)
-                {
+                //version(verboseUnittest)
+                //{
                     stderr.writeln("Doing workForce work.");
-                }
+                //}
 
                 pool.doJob(job);
 
@@ -716,10 +718,10 @@ struct Task(alias fun, Args...)
             }
             else
             {
-                version(verboseUnittest)
-                {
+                //version(verboseUnittest)
+                //{
                     stderr.writeln("Yield from workForce.");
-                }
+                //}
 
                 return yieldForce;
             }
@@ -3619,7 +3621,7 @@ enum string parallelApplyMixinInputRange = q{
     // Handle empty thread pool as special case.
     import core.atomic : atomicLoad, atomicStore, atomicOp;
     import core.sync.condition : Condition, Mutex;
-    import std.array : empty;
+    import std.array : empty, front, popFront;
     import std.algorithm.mutation : swap;
     import std.array : uninitializedArray;
     import std.traits : Parameters;
@@ -3959,19 +3961,19 @@ private struct RoundRobinBuffer(C1, C2)
     }
 }
 
-version(unittest)
-{
+//version(unittest)
+//{
     // This was the only way I could get nested maps to work.
     __gshared TaskPool poolInstance;
 
     import std.stdio;
-}
+//}
 
 // These test basic functionality but don't stress test for threading bugs.
 // These are the tests that should be run every time Phobos is compiled.
 unittest
 {
-    import std.algorithm.iteration : filter, map, reduce;
+    static import std.algorithm.iteration;
     import std.algorithm.comparison : equal, max, min;
     import std.conv : text;
     import std.exception : assertThrown;
@@ -4090,7 +4092,7 @@ unittest
     assert(addScopedTask.yieldForce == 3);
 
     // Test parallel foreach with non-random access range.
-    auto range = filter!"a != 666"([0, 1, 2, 3, 4]);
+    auto range = std.algorithm.iteration.filter!"a != 666"([0, 1, 2, 3, 4]);
 
     foreach (i, elem; poolInstance.parallel(range))
     {
@@ -4145,7 +4147,7 @@ unittest
     assert(poolInstance.reduce!("a + b", "a * b")(tuple(0, 1), [1,2,3,4]) ==
            tuple(10, 24));
 
-    immutable serialAns = reduce!"a + b"(iota(1000));
+    immutable serialAns = std.algorithm.iteration.reduce!"a + b"(iota(1000));
     assert(poolInstance.reduce!"a + b"(0, iota(1000)) == serialAns);
     assert(poolInstance.reduce!"a + b"(iota(1000)) == serialAns);
 
@@ -4207,30 +4209,30 @@ unittest
 
     assert(equal(
                poolInstance.map!"a * a"(iota(30_000_001), 10_000),
-               map!"a * a"(iota(30_000_001))
+               std.algorithm.iteration.map!"a * a"(iota(30_000_001))
            ));
 
     // The filter is to kill random access and test the non-random access
     // branch.
     assert(equal(
                poolInstance.map!"a * a"(
-                   filter!"a == a"(iota(30_000_001)
+                   std.algorithm.iteration.filter!"a == a"(iota(30_000_001)
                                   ), 10_000, 1000),
-               map!"a * a"(iota(30_000_001))
+               std.algorithm.iteration.map!"a * a"(iota(30_000_001))
            ));
 
     assert(
-        reduce!"a + b"(0UL,
+        std.algorithm.iteration.reduce!"a + b"(0UL,
                        poolInstance.map!"a * a"(iota(3_000_001), 10_000)
                       ) ==
-        reduce!"a + b"(0UL,
-                       map!"a * a"(iota(3_000_001))
+        std.algorithm.iteration.reduce!"a + b"(0UL,
+                       std.algorithm.iteration.map!"a * a"(iota(3_000_001))
                       )
     );
 
     assert(equal(
                iota(1_000_002),
-               poolInstance.asyncBuf(filter!"a == a"(iota(1_000_002)))
+               poolInstance.asyncBuf(std.algorithm.iteration.filter!"a == a"(iota(1_000_002)))
            ));
 
     {
@@ -4381,10 +4383,12 @@ unittest
 
 // These are more like stress tests than real unit tests.  They print out
 // tons of stuff and should not be run every time make unittest is run.
-version(parallelismStressTest)
-{
+//version(parallelismStressTest)
+//{
     unittest
     {
+        static import std.algorithm.iteration;
+        import std.range : iota;
         size_t attempt;
         for (; attempt < 10; attempt++)
             foreach (poolSize; [0, 4])
@@ -4408,7 +4412,7 @@ version(parallelismStressTest)
             stderr.writeln("Done creating nums.");
 
 
-            auto myNumbers = filter!"a % 7 > 0"( iota(0, 1000));
+            auto myNumbers = std.algorithm.iteration.filter!"a % 7 > 0"( iota(0, 1000));
             foreach (num; poolInstance.parallel(myNumbers))
             {
                 assert(num % 7 > 0 && num < 1000);
@@ -4423,7 +4427,7 @@ version(parallelismStressTest)
             }
             stderr.writeln("Done squares.");
 
-            auto sumFuture = task!( reduce!"a + b" )(numbers);
+            auto sumFuture = task!( std.algorithm.iteration.reduce!"a + b" )(numbers);
             poolInstance.put(sumFuture);
 
             ulong sumSquares = 0;
@@ -4468,6 +4472,12 @@ version(parallelismStressTest)
     // as examples.
     unittest
     {
+        import std.range : iota;
+        import std.conv : text;
+        import core.atomic : atomicOp;
+        import std.math : approxEqual, sqrt;
+        static import std.algorithm.iteration;
+
         foreach (attempt; 0..10)
         foreach (poolSize; [0, 4])
         {
@@ -4483,7 +4493,7 @@ version(parallelismStressTest)
             {
                 workerLocalStorage.get++;
             }
-            assert(reduce!"a + b"(workerLocalStorage.toRange) ==
+            assert(std.algorithm.iteration.reduce!"a + b"(workerLocalStorage.toRange) ==
             1_000_000 + poolInstance.size + 1);
 
             // Make sure work is reasonably balanced among threads.  This test is
@@ -4568,6 +4578,7 @@ version(parallelismStressTest)
             stderr.writeln("Done sum of square roots.");
 
             // Test whether tasks work with function pointers.
+            bool isNaN(double v) { static import std.math; return std.math.isNaN(v); }
             auto nanTask = task(&isNaN, 1.0L);
             poolInstance.put(nanTask);
             assert(nanTask.spinForce == false);
@@ -4599,6 +4610,7 @@ version(parallelismStressTest)
             int[] nums = [1,2,3,4,5];
             static struct RemoveRandom
             {
+                import std.array : empty, front, popFront;
                 int[] arr;
 
                 ref int front()
@@ -4626,7 +4638,7 @@ version(parallelismStressTest)
             poolInstance.stop();
         }
     }
-}
+//}
 
 version(unittest)
 {
