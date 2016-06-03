@@ -3,7 +3,8 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _sorting algorithms.
 
-$(BOOKTABLE Cheat Sheet,
+$(TC table, simple-cheatsheet,
+$(T caption, Cheat Sheet)
 $(TR $(TH Function Name) $(TH Description))
 $(T2 completeSort,
         If $(D a = [10, 20, 30]) and $(D b = [40, 6, 15]), then

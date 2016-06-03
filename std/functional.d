@@ -7,7 +7,8 @@ This module provides functions for compile time function composition. These
 functions are helpful when constructing predicates for the algorithms in
 $(MREF std, algorithm) or $(MREF std, range).
 
-$(BOOKTABLE ,
+$(TC table, simple-cheatsheet,
+$(T caption, Cheat Sheet)
 $(TR $(TH Function Name) $(TH Description)
 )
     $(TR $(TD $(D $(LREF adjoin)))
