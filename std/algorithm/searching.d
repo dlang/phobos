@@ -3,8 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _searching algorithms.
 
-$(TC table, simple-cheatsheet,
-$(T caption, Cheat Sheet)
+$(SIMPLE_CHEATSHEET
 $(TR $(TH Function Name) $(TH Description))
 $(T2 all,
         $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements

@@ -3,8 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _mutation algorithms.
 
-$(TC table, simple-cheatsheet,
-$(T caption, Cheat Sheet)
+$(SIMPLE_CHEATSHEET
 $(TR $(TH Function Name) $(TH Description))
 $(T2 bringToFront,
         If $(D a = [1, 2, 3]) and $(D b = [4, 5, 6, 7]),

@@ -3,8 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _comparison algorithms.
 
-$(TC table, simple-cheatsheet,
-$(T caption, Cheat Sheet)
+$(SIMPLE_CHEATSHEET
 $(TR $(TH Function Name) $(TH Description))
 $(T2 among,
         Checks if a value is among a set of values, e.g.
