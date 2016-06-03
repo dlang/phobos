@@ -348,12 +348,13 @@ struct File
 {
     import std.traits : isScalarType, isArray;
     import std.range.primitives : ElementEncodingType;
+    import core.atomic : atomicOp, atomicLoad;
     enum Orientation { unknown, narrow, wide }
 
     private struct Impl
     {
         FILE * handle = null; // Is null iff this Impl is closed by another File
-        uint refs = uint.max / 2;
+        shared uint refs = uint.max / 2;
         bool isPopened; // true iff the stream has been created by popen()
         Orientation orientation;
     }
@@ -449,11 +450,11 @@ Throws: $(D ErrnoException) if the file could not be opened.
         detach();
     }
 
-    this(this) @safe nothrow
+    this(this) @trusted nothrow
     {
         if (!_p) return;
-        assert(_p.refs);
-        ++_p.refs;
+        assert(atomicLoad(_p.refs));
+        atomicOp!"+="(_p.refs, 1);
     }
 
 /**
@@ -651,15 +652,15 @@ Detaches from the underlying file. If the sole owner, calls $(D close).
 
 Throws: $(D ErrnoException) on failure if closing the file.
   */
-    void detach() @safe
+    void detach() @trusted
     {
         if (!_p) return;
-        if (_p.refs == 1)
+        if (atomicLoad(_p.refs) == 1)
             close();
         else
         {
-            assert(_p.refs);
-            --_p.refs;
+            assert(atomicLoad(_p.refs));
+            atomicOp!"-="(_p.refs, 1);
             _p = null;
         }
     }
@@ -698,8 +699,8 @@ Throws: $(D ErrnoException) on error.
         if (!_p) return; // succeed vacuously
         scope(exit)
         {
-            assert(_p.refs);
-            if (!--_p.refs)
+            assert(atomicLoad(_p.refs));
+            if (!atomicOp!"-="(_p.refs, 1))
                 free(_p);
             _p = null; // start a new life
         }
