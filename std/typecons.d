@@ -1819,34 +1819,31 @@ if (is(S == struct))
         // mutPayload's pointers must be treated as tail const
         void[S.sizeof] mutPayload;
 
-        @trusted swapPayload(ref S s)
+        void emplace(ref S s)
         {
-            // we preserve tail immutable guarantees so casts are OK
-            auto pOurs = cast(Unqual!S*)mutPayload.ptr;
-            auto pTheirs = cast(Unqual!S*)&s;
-            import std.algorithm.mutation : swap;
-            swap(*pOurs, *pTheirs);
-        }
-
-        @trusted swapPayload(ref Rebindable rs)
-        {
-            swapPayload(*cast(S*)rs.mutPayload.ptr);
+            import std.conv : emplace;
+            static if (__traits(compiles, () @safe {S tmp = s;}))
+                () @trusted {emplace!S(mutPayload, s);}();
+            else
+                emplace!S(mutPayload, s);
         }
 
     public:
+        // TODO: auto ref & for opAssign?
         this(S s)
         {
-            swapPayload(s);
+            emplace(s);
         }
 
         void opAssign(S s)
         {
-            swapPayload(s);
+            movePayload;
+            emplace(s);
         }
 
         void opAssign(Rebindable other)
         {
-            swapPayload(other);
+            this = other.getPayload;
         }
 
         private
