@@ -170,7 +170,7 @@ sort(a);                   // no predicate, "a < b" is implicit
 
 Macros:
 SUBMODULE = $(MREF std, algorithm, $1)
-SUBREF = $(LINK2 std_algorithm_$1.html#.$2, $(TT $2))$(NBSP)
+SUBREF = $(REF_ALTTEXT $(TT $2), $2, std, algorithm, $1)$(NBSP)
 
 Copyright: Andrei Alexandrescu 2008-.
 
