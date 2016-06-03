@@ -129,7 +129,7 @@ version (Win64)
 
 static import core.math;
 static import core.stdc.math;
-import std.traits;// CommonType, isFloatingPoint, isIntegral, isSigned, isUnsigned, Largest, Unqual
+import std.traits; // CommonType, isFloatingPoint, isIntegral, isSigned, isUnsigned, Largest, Unqual
 
 version(LDC)
 {
@@ -158,7 +158,7 @@ else version(D_InlineAsm_X86_64)
 
 version(unittest)
 {
-    import core.stdc.stdio : sprintf;
+    import core.stdc.stdio; // : sprintf;
 
     static if (real.sizeof > double.sizeof)
         enum uint useDigits = 16;
@@ -5267,7 +5267,6 @@ int signbit(X)(X x) @nogc @trusted pure nothrow
 ///
 @nogc @safe pure nothrow unittest
 {
-    debug (math) printf("math.signbit.unittest\n");
     assert(!signbit(float.nan));
     assert(signbit(-float.nan));
     assert(!signbit(168.1234f));

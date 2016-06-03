@@ -616,13 +616,16 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 +/
 module std.uni;
 
-import std.meta;// AliasSeq
-import std.range.primitives;// ElementEncodingType, ElementType, isForwardRange, isInputRange, isRandomAccessRange
-import std.traits;// isConvertibleToString, isIntegral, isSomeChar, isSomeString, Unqual
+import std.meta; // AliasSeq
+import std.range.primitives; // back, ElementEncodingType, ElementType, empty,
+    // front, isForwardRange, isInputRange, isRandomAccessRange, popFront, put,
+    // save
+import std.traits; // isConvertibleToString, isIntegral, isSomeChar,
+    // isSomeString, Unqual
 
 // debug = std_uni;
 
-debug(std_uni) import std.stdio;
+debug(std_uni) import std.stdio; // writefln, writeln
 
 private:
 
@@ -1497,9 +1500,9 @@ private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure 
 
 string genUnrolledSwitchSearch(size_t size)
 {
-    import std.conv : to;
     import core.bitop : bsr;
     import std.array : replace;
+    import std.conv : to;
     assert(isPowerOf2(size));
     string code = `
     import core.bitop : bsr;
@@ -1595,8 +1598,8 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
 unittest
 {
-    import std.range : assumeSorted, iota;
     import std.array : array;
+    import std.range : assumeSorted, iota;
 
     auto stdLowerBound(T)(T[] range, T needle)
     {
@@ -2318,7 +2321,6 @@ public:
                   FormatSpec!char fmt) /* const */
     {
         import std.format : formatValue;
-        import std.range.primitives : put;
         auto range = byInterval;
         if (range.empty)
             return;
@@ -2539,7 +2541,6 @@ public:
         import std.algorithm.searching : countUntil;
         import std.array : array;
         import std.format : format;
-        import std.range.primitives : empty;
         enum maxBinary = 3;
         static string linearScope(R)(R ivals, string indent)
         {
@@ -3435,9 +3436,9 @@ version(unittest)
 //test constructor to work with any order of intervals
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.conv : text, to;
     import std.range : chain, iota;
-    import std.algorithm.comparison : equal;
     import std.typecons : tuple;
     //ensure constructor handles bad ordering and overlap
     auto c1 = CodepointSet('а', 'я'+1, 'А','Я'+1);
@@ -3592,9 +3593,9 @@ version(unittest)
 
 @safe unittest// iteration & opIndex
 {
+    import std.algorithm.comparison : equal;
     import std.conv : text;
     import std.typecons : tuple, Tuple;
-    import std.algorithm.comparison : equal;
 
     foreach (CodeList; AliasSeq!(InversionList!(ReallocPolicy)))
     {
@@ -3607,6 +3608,7 @@ version(unittest)
         // same @@@BUG as in issue 8949 ?
         version(bug8949)
         {
+            import std.range : retro;
             assert(equal(retro(a.byInterval),
                 [tuple(cast(uint)'a', cast(uint)'n'), tuple(cast(uint)'A', cast(uint)'N')]
             ), text(retro(a.byInterval)));
@@ -3831,6 +3833,7 @@ private:
                 next_lvl_index = force!NextIdx(j/pageSize);
                 version(none)
                 {
+                import std.stdio : writefln, writeln;
                 writefln("LEVEL(%s) page mapped idx: %s: 0..%s  ---> [%s..%s]"
                         ,level
                         ,indices[level-1], pageSize, j, j+pageSize);
@@ -3854,6 +3857,7 @@ private:
             // allocate next page
             version(none)
             {
+            import std.stdio : writefln;
             writefln("LEVEL(%s) page allocated: %s"
                      , level, arrayRepr(slice[0..pageSize]));
             writefln("LEVEL(%s) index: %s ; page at this index %s"
@@ -4291,7 +4295,6 @@ package template cmpK0(alias Pred)
 private template buildTrie(Value, Key, Args...)
     if (isValidArgsForTrie!(Key, Args))
 {
-    import std.range.primitives : front;
     static if (is(typeof(Args[0]) : Key)) // prefix starts with upper bound on Key
     {
         alias Prefix = Args[1..$];
@@ -5295,9 +5298,9 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
 // cover decode fail cases of Matcher
 unittest
 {
+    import std.algorithm.iteration : map;
     import std.exception : collectException;
     import std.format : format;
-    import std.algorithm.iteration : map;
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto utf8 = utfMatcher!char(unicode.L);
     //decode failure cases UTF-8
@@ -5505,11 +5508,11 @@ template Sequence(size_t start, size_t end)
 //---- TRIE TESTS ----
 unittest
 {
-    import std.conv : text, to;
     import std.algorithm.iteration : map;
     import std.algorithm.sorting : sort;
-    import std.range : iota;
     import std.array : array;
+    import std.conv : text, to;
+    import std.range : iota;
     static trieStats(TRIE)(TRIE t)
     {
         version(std_uni_stats)
@@ -5654,9 +5657,9 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 @safe pure int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
     if (is(Char1 : dchar) && is(Char2 : dchar))
 {
-    import std.ascii : toLower;
     import std.algorithm.comparison : cmp;
     import std.algorithm.iteration : map, filter;
+    import std.ascii : toLower;
     static bool pred(dchar c) {return !c.isWhite && c != '-' && c != '_';}
     return cmp(
         a.map!toLower.filter!pred,
@@ -5734,8 +5737,8 @@ package ubyte[] compressIntervals(Range)(Range intervals)
 
 @safe pure unittest
 {
-    import std.typecons : tuple;
     import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
 
     auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
     ubyte[] enc = [cast(ubyte)80, 47, 1, (0b1_00<<5) | (1<<2), 0];
@@ -5817,8 +5820,8 @@ else
 // helper for looking up code point sets
 @trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name) pure
 {
-    import std.range : assumeSorted;
     import std.algorithm.iteration : map;
+    import std.range : assumeSorted;
     auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
         (table.map!"a.name"());
     size_t idx = range.lowerBound(name).length;
@@ -5942,7 +5945,6 @@ else
 @safe bool isPrettyPropertyName(C)(in C[] name)
 {
     import std.algorithm.searching : find;
-    import std.range.primitives : empty;
     auto names = [
         "L", "Letter",
         "LC", "Cased Letter",
@@ -6203,7 +6205,6 @@ template genericDecodeGrapheme(bool getValue)
 
     Value genericDecodeGrapheme(Input)(ref Input range)
     {
-        import std.range.primitives : empty, front, popFront;
         import std.internal.unicode_tables : isHangL, isHangT, isHangV; // generated file
         enum GraphemeState {
             Start,
@@ -6416,7 +6417,6 @@ auto byGrapheme(Range)(Range range)
 
         void popFront()
         {
-            import std.range.primitives : empty;
             _front = _range.empty ? Grapheme.init : _range.decodeGrapheme();
         }
 
@@ -6424,7 +6424,6 @@ auto byGrapheme(Range)(Range range)
         {
             Result save() @property
             {
-                import std.range.primitives : save;
                 return Result(_range.save, _front);
             }
         }
@@ -6438,9 +6437,9 @@ auto byGrapheme(Range)(Range range)
 ///
 unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range : take, drop;
     import std.range.primitives : walkLength;
-    import std.algorithm.comparison : equal;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
@@ -6457,17 +6456,17 @@ private static struct InputRangeString
 {
     private string s;
 
-    bool empty() @property { import std.range.primitives : empty; return s.empty; }
-    dchar front() @property { import std.range.primitives : front; return s.front; }
-    void popFront() { import std.range.primitives : popFront; s.popFront(); }
+    bool empty() @property { return s.empty; }
+    dchar front() @property { return s.front; }
+    void popFront() { s.popFront(); }
 }
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     import std.array : array;
     import std.range : retro;
     import std.range.primitives : walkLength;
-    import std.algorithm.comparison : equal;
     assert("".byGrapheme.walkLength == 0);
 
     auto reverse = "le\u0308on";
@@ -6552,8 +6551,8 @@ Range byCodePoint(Range)(Range range)
 ///
 unittest
 {
-    import std.conv : text;
     import std.array : array;
+    import std.conv : text;
     import std.range : retro;
 
     string s = "noe\u0308l"; // noël
@@ -6839,8 +6838,8 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
 ///
 unittest
 {
-    import std.algorithm.iteration : filter;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter;
 
     string bold = "ku\u0308hn";
 
@@ -6884,10 +6883,10 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
     import std.conv : text;
     import std.range : iota;
-    import std.algorithm.iteration : map;
-    import std.algorithm.comparison : equal;
 
     // not valid clusters (but it just a test)
     auto g  = Grapheme('a', 'b', 'c', 'd', 'e');
@@ -7083,7 +7082,6 @@ int icmp(S1, S2)(S1 str1, S2 str2)
     if (isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
     && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
 {
-    import std.range.primitives : empty, front, popFront;
     for (;;)
     {
         if (str1.empty)
@@ -7144,9 +7142,9 @@ unittest
 
 unittest
 {
+    import std.algorithm.sorting : sort;
     import std.conv : to;
     import std.exception : assertCTFEable;
-    import std.algorithm.sorting : sort;
     assertCTFEable!(
     {
     foreach (cfunc; AliasSeq!(icmp, sicmp))
@@ -7265,10 +7263,10 @@ package auto simpleCaseFoldings(dchar ch)
 
 unittest
 {
-    import std.exception : assertCTFEable;
-    import std.algorithm.searching : canFind;
     import std.algorithm.comparison : equal;
+    import std.algorithm.searching : canFind;
     import std.array : array;
+    import std.exception : assertCTFEable;
     assertCTFEable!((){
         auto r = simpleCaseFoldings('Э').array;
         assert(r.length == 2);
@@ -7347,8 +7345,8 @@ enum {
 +/
 public dchar compose(dchar first, dchar second) pure nothrow
 {
-    import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
     import std.algorithm.iteration : map;
+    import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
     import std.range : assumeSorted;
     size_t packed = compositionJumpTrie[first];
     if (packed == ushort.max)
@@ -7394,8 +7392,8 @@ unittest
 +/
 public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 {
-    import std.internal.unicode_decomp : decompCompatTable, decompCanonTable;
     import std.algorithm.searching : until;
+    import std.internal.unicode_decomp : decompCompatTable, decompCanonTable;
     static if (decompType == Canonical)
     {
         alias table = decompCanonTable;
@@ -7564,8 +7562,8 @@ unittest
 
 unittest
 {
-    import std.conv : text;
     import std.algorithm.comparison : equal;
+    import std.conv : text;
 
     static void testDecomp(UnicodeDecomposition T)(dchar ch, string r)
     {
@@ -7626,8 +7624,8 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 {
     import std.algorithm.mutation : SwapStrategy;
     import std.algorithm.sorting : sort;
-    import std.range : zip;
     import std.array : appender;
+    import std.range : zip;
 
     auto anchors = splitNormalized!norm(input);
     if (anchors[0] == input.length && anchors[1] == input.length)
@@ -7840,9 +7838,8 @@ private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 
 private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
 {
-    import std.utf : codeLength;
-    import std.range.primitives : back, empty, popFront;
     import std.typecons : tuple;
+    import std.utf : codeLength;
 
     auto br = input[0..idx];
     size_t region_start = 0;// default
@@ -8128,14 +8125,12 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
     {
         @property bool empty()
         {
-            import std.range.primitives : empty;
             return !nLeft && r.empty;
         }
 
         @property auto front()
         {
             import std.ascii : isASCII;
-            import std.range.primitives : front;
 
             if (!nLeft)
             {
@@ -8177,7 +8172,6 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
 
         void popFront()
         {
-            import std.range.primitives : popFront;
             if (!nLeft)
                 front;
             assert(nLeft);
@@ -8190,7 +8184,6 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
         {
             @property auto save()
             {
-                import std.range.primitives : save;
                 auto ret = this;
                 ret.r = r.save;
                 return ret;
@@ -8342,13 +8335,11 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
     {
         @property bool empty()
         {
-            import std.range.primitives : empty;
             return lower ? lwr.empty : !nLeft && r.empty;
         }
 
         @property auto front()
         {
-            import std.range.primitives : front;
             if (lower)
                 return lwr.front;
 
@@ -8384,7 +8375,6 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
 
         void popFront()
         {
-            import std.range.primitives : popFront;
             if (lower)
                 lwr.popFront();
             else
@@ -8406,7 +8396,6 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
         {
             @property auto save()
             {
-                import std.range.primitives : save;
                 auto ret = this;
                 ret.r = r.save;
                 ret.lwr = lwr.save;
@@ -8991,8 +8980,8 @@ dchar toUpper(dchar c)
 ///
 unittest
 {
-    import std.algorithm.mutation : copy;
     import std.algorithm.iteration : map;
+    import std.algorithm.mutation : copy;
     import std.array : appender;
 
     auto abuf = appender!(char[])();

@@ -5439,6 +5439,7 @@ unittest
 
 unittest
 {
+    import std.meta : AliasSeq;
     foreach (T; AliasSeq!(int[], char[], string, long[3][], double[string][]))
     {
         foreach (Q; TypeQualifierList)
@@ -5469,6 +5470,7 @@ unittest
 
 unittest
 {
+    import std.meta : AliasSeq;
     foreach (T; AliasSeq!(int[], int[5], void[]))
     {
         foreach (Q; TypeQualifierList)
@@ -6826,7 +6828,7 @@ unittest
  * nested structs or unions.
  */
 template getSymbolsByUDA(alias symbol, alias attribute) {
-    import std.string : format;
+    import std.format : format;
     import std.meta : AliasSeq, Filter;
 
     // translate a list of strings into symbols. mixing in the entire alias
@@ -6919,7 +6921,7 @@ unittest
 unittest
 {
     // HasPrivateMembers has, well, private members, one of which has a UDA.
-    import std.internal.test.uda;
+    import std.internal.test.uda : Attr, HasPrivateMembers;
     static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 2);
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[1], Attr));
