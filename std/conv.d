@@ -1728,19 +1728,19 @@ private void testFloatingToIntegral(Floating, Integral)()
 
 
 /**
-String to non-string conversion runs parsing.
+String, or string-like input range, to non-string conversion runs parsing.
 $(UL
   $(LI When the source is a wide string, it is first converted to a narrow
        string and then parsed.)
   $(LI When the source is a narrow string, normal text parsing occurs.))
 */
 private T toImpl(T, S)(S value)
-    if ( isExactSomeString!S && isDynamicArray!S &&
+    if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
         !isExactSomeString!T && is(typeof(parse!T(value))))
 {
     scope(success)
     {
-        if (value.length)
+        if (!value.empty)
         {
             throw convError!(S, T)(value);
         }
@@ -1750,12 +1750,12 @@ private T toImpl(T, S)(S value)
 
 /// ditto
 private T toImpl(T, S)(S value, uint radix)
-    if ( isExactSomeString!S && isDynamicArray!S &&
+    if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
         !isExactSomeString!T && is(typeof(parse!T(value, radix))))
 {
     scope(success)
     {
-        if (value.length)
+        if (!value.empty)
         {
             throw convError!(S, T)(value);
         }
@@ -1782,6 +1782,24 @@ private T toImpl(T, S)(S value, uint radix)
     // 6255
     auto n = to!int("FF", 16);
     assert(n == 255);
+}
+
+// bugzilla 15800
+unittest
+{
+    import std.utf : byCodeUnit, byChar, byWchar, byDchar;
+
+    assert(to!int(byCodeUnit("10")) == 10);
+    assert(to!int(byCodeUnit("10"), 10) == 10);
+    assert(to!int(byCodeUnit("10"w)) == 10);
+    assert(to!int(byCodeUnit("10"w), 10) == 10);
+
+    assert(to!int(byChar("10")) == 10);
+    assert(to!int(byChar("10"), 10) == 10);
+    assert(to!int(byWchar("10")) == 10);
+    assert(to!int(byWchar("10"), 10) == 10);
+    assert(to!int(byDchar("10")) == 10);
+    assert(to!int(byDchar("10"), 10) == 10);
 }
 
 /**
