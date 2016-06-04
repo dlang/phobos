@@ -14,12 +14,13 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
 module std.stdio;
 
 public import core.stdc.stdio;
-import core.stdc.stddef;// wchar_t
+import core.stdc.stddef; // wchar_t
 import std.algorithm.mutation; // copy
-import std.range.primitives;// ElementEncodingType, front, isBidirectionalRange, isInputRange
+import std.range.primitives; // ElementEncodingType, empty, front,
+    // isBidirectionalRange, isInputRange, put
 import std.stdiobase;
-import std.traits;// isSomeChar, isSomeString, Unqual
-import std.typecons;// Flag
+import std.traits; // isSomeChar, isSomeString, Unqual
+import std.typecons; // Flag
 
 
 /++
@@ -279,7 +280,6 @@ public:
         import std.conv : text;
         import std.exception : enforce;
         import std.format : formattedRead;
-        import std.range.primitives : empty;
         import std.string : chomp;
 
         enforce(file.isOpen, "ByRecord: File must be open");
@@ -346,8 +346,8 @@ Hello, Jimmy!
  */
 struct File
 {
-    import std.traits : isScalarType, isArray;
     import std.range.primitives : ElementEncodingType;
+    import std.traits : isScalarType, isArray;
     enum Orientation { unknown, narrow, wide }
 
     private struct Impl
@@ -513,8 +513,8 @@ Throws: $(D ErrnoException) in case of error.
 
     package void fdopen(int fd, in char[] stdioOpenmode, string name) @trusted
     {
-        import std.internal.cstring : tempCString;
         import std.exception : errnoEnforce;
+        import std.internal.cstring : tempCString;
 
         auto modez = stdioOpenmode.tempCString();
         detach();
@@ -708,8 +708,8 @@ Throws: $(D ErrnoException) on error.
         scope(exit) _p.handle = null; // nullify the handle anyway
         version (Posix)
         {
-            import std.format : format;
             import core.sys.posix.stdio : pclose;
+            import std.format : format;
 
             if (_p.isPopened)
             {
@@ -820,7 +820,7 @@ $(D rawRead) always reads in binary mode on Windows.
             scope(exit) ._setmode(fd, mode);
             version(DIGITAL_MARS_STDIO)
             {
-                import core.atomic;
+                import core.atomic : atomicOp;
 
                 // @@@BUG@@@ 4243
                 immutable info = __fhnd_info[fd];
@@ -877,7 +877,7 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
             scope(exit) ._setmode(fd, mode);
             version(DIGITAL_MARS_STDIO)
             {
-                import core.atomic;
+                import core.atomic : atomicOp;
 
                 // @@@BUG@@@ 4243
                 immutable info = __fhnd_info[fd];
@@ -918,8 +918,8 @@ Throws: $(D Exception) if the file is not opened.
  */
     void seek(long offset, int origin = SEEK_SET) @trusted
     {
-        import std.exception : enforce, errnoEnforce;
         import std.conv : to, text;
+        import std.exception : enforce, errnoEnforce;
 
         enforce(isOpen, "Attempting to seek() in an unopened file");
         version (Windows)
@@ -947,6 +947,7 @@ Throws: $(D Exception) if the file is not opened.
     unittest
     {
         static import std.file;
+        import std.conv : text;
 
         auto deleteme = testFilename();
         auto f = File(deleteme, "w+");
@@ -954,8 +955,6 @@ Throws: $(D Exception) if the file is not opened.
         f.rawWrite("abcdefghijklmnopqrstuvwxyz");
         f.seek(7);
         assert(f.readln() == "hijklmnopqrstuvwxyz");
-
-        import std.conv : text;
 
         version (CRuntime_DigitalMars)
             auto bigOffset = int.max - 100;
@@ -1099,9 +1098,9 @@ Throws: $(D Exception) if the file is not opened.
         private int lockImpl(int operation, short l_type,
             ulong start, ulong length)
         {
-            import std.conv : to;
             import core.sys.posix.fcntl : fcntl, flock, off_t;
             import core.sys.posix.unistd : getpid;
+            import std.conv : to;
 
             flock fl = void;
             fl.l_type   = l_type;
@@ -1316,7 +1315,6 @@ Throws: $(D Exception) if the file is not opened.
             }
             else static if (isSomeString!A)
             {
-                import std.range.primitives : put;
                 put(w, arg);
             }
             else static if (isIntegral!A)
@@ -1331,7 +1329,6 @@ Throws: $(D Exception) if the file is not opened.
             }
             else static if (isSomeChar!A)
             {
-                import std.range.primitives : put;
                 put(w, arg);
             }
             else
@@ -1623,7 +1620,7 @@ is recommended if you want to process a complete file.
     {
         import std.algorithm.mutation : swap;
         import std.algorithm.searching : endsWith;
-        import std.range.primitives : back, empty;
+        import std.range.primitives : back;
 
         auto last = terminator.back;
         C[] buf2;
@@ -1853,7 +1850,6 @@ Allows to directly use range operations on lines of a file.
             void popFront()
             {
                 import std.algorithm.searching : endsWith;
-                import std.range.primitives : empty;
                 assert(file.isOpen);
                 line = buffer;
                 file.readln(line, terminator);
@@ -2130,9 +2126,9 @@ $(REF readText, std,file)
         void test(Terminator)(string txt, in string[] witness,
                 KeepTerminator kt, Terminator term, bool popFirstLine = false)
         {
+            import std.algorithm.sorting : sort;
             import std.array : array;
             import std.conv : text;
-            import std.algorithm.sorting : sort;
             import std.range.primitives : walkLength;
 
             uint i;
@@ -2722,7 +2718,7 @@ See $(LREF byChunk) for an example.
                 oldMode = ._setmode(fd, _O_BINARY);
                 version (DIGITAL_MARS_STDIO)
                 {
-                    import core.atomic;
+                    import core.atomic : atomicOp;
 
                     // @@@BUG@@@ 4243
                     oldInfo = __fhnd_info[fd];
@@ -2838,11 +2834,10 @@ void main()
 
     unittest
     {
-        import std.algorithm.mutation : reverse;
         static import std.file;
+        import std.algorithm.mutation : reverse;
         import std.exception : collectException;
         import std.range : only, retro;
-        import std.range.primitives : put;
         import std.string : format;
 
         auto deleteme = testFilename();
@@ -3896,8 +3891,8 @@ struct lines
     // no UTF checking
     int opApplyRaw(D)(scope D dg)
     {
-        import std.exception : assumeUnique;
         import std.conv : to;
+        import std.exception : assumeUnique;
         import std.traits : Parameters;
 
         alias Parms = Parameters!(dg);
@@ -4533,8 +4528,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
 version (MICROSOFT_STDIO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation /*ignored*/)
 {
-    import core.memory;
-
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
 
@@ -4567,7 +4560,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
 version (HAS_GETDELIM)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation)
 {
-    import core.memory;
     import core.stdc.stdlib : free;
     import core.stdc.wchar_ : fwide;
 

@@ -1627,8 +1627,8 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 
 @safe pure unittest
 {
-    import std.exception : assertCTFEable;
     import std.conv : to;
+    import std.exception : assertCTFEable;
 
     debug(string) trustedPrintf("string.indexOfAny.unittest\n");
 
@@ -2867,10 +2867,10 @@ auto stripLeft(Range)(Range input)
         }
         else
         {
-            auto inputSave = input.save;
+            auto save = input.save;
             auto dc = decodeFront(input);
             if (!std.uni.isWhite(dc))
-                return inputSave;
+                return save;
         }
     }
     return input;
@@ -6028,8 +6028,8 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
 // test ranges
 pure unittest
 {
-    import std.utf : byCodeUnit;
     import std.range : refRange;
+    import std.utf : byCodeUnit;
 
     assert("123".byCodeUnit.isNumeric());
     assert("123UL".byCodeUnit.isNumeric());
