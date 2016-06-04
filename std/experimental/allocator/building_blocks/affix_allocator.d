@@ -90,7 +90,10 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             if (result is null) return null;
             static if (stateSize!Prefix)
             {
-                assert(result.ptr.alignedAt(Prefix.alignof));
+                import std.conv;
+                assert(result.ptr.alignedAt(Prefix.alignof),
+                    text("Pointer ", result.ptr, " is not aligned to ",
+                    Prefix.alignof, " bytes."));
                 emplace!Prefix(cast(Prefix*)result.ptr);
             }
             static if (stateSize!Suffix)
