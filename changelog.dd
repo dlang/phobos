@@ -69,7 +69,7 @@ $(LI $(LNAME2 process, Process creation in `std.process` was sped up on Posix.)
     $(P Previously, Posix systems would attempt to close every file descriptor
         from 3 to the maximum file descriptor number if `inheritFDs` was not
         specified with `spawnProcess`, `pipeProcess`, etc.
-        $(STDMODREF process, std.process) now uses `poll()` to determine which
+        $(MREF std,process) now uses `poll()` to determine which
         descriptors need closing.
     )
 )
@@ -155,7 +155,7 @@ $(LI $(LNAME2 slice_ptr, `ptr` property and public constructor were added to
         soon as LDC (LLVM D compiler) supports D version 2.072..
     ) 
     $(P Public constructor for `Slice` was added to support
-        $(STDMODREF ndslice, std.experimental.ndslice) integration
+        $(MREF std,experimental,ndslice) integration
         with other languages and libraries such as Julia language and NumPy library.
     )
 )
@@ -168,7 +168,7 @@ $(LI $(LNAME2 slice_alloc, `slice`, `shape`, `ndarray`, and other utilities
         $(REF makeSlice, std,experimental,ndslice,slice),
         $(REF ndarray, std,experimental,ndslice,slice), and
         $(REF makeNdarray, std,experimental,ndslice,slice)
-        allocation utilities were added to $(STDMODREF ndslice.slice, std.experimental.ndslice)
+        allocation utilities were added to $(MREF std,experimental,ndslice)
         )
     $(P Example: Transposing common 2D array using `ndslice`)
 -----
@@ -250,13 +250,5 @@ Macros:
 
     RELATIVE_LINK2=<a href="#$1">$+</a>
     LNAME2=<a class="anchor" title="Permalink to this section" id="$1" href="#$1">$+</a>
-
-    STDMODREF = <a href="phobos/std_$1.html">$2</a>
-    XREF = <a href="phobos/std_$1.html#$2">$2</a>
-    CXREF = <a href="phobos/core_$1.html#$2">$2</a>
-    OXREF = <a href="phobos/object.html#$2">$2</a>
-    NXREF = <a href="phobos/std_$1.html#.$2">$2</a>
-    NCXREF = <a href="phobos/core_$1.html#.$2">$2</a>
-    NOXREF = <a href="phobos/object.html#.$2">$2</a>
 
     BOOKTABLE = <table><caption>$1</caption>$+</table>
