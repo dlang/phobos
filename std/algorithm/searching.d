@@ -1806,7 +1806,8 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
                 if (!binaryFun!pred(haystack[k + i], needle[i]))
                     break;
             }
-            if (skip == 0) {
+            if (skip == 0)
+            {
                 skip = 1;
                 while (skip < needleLength && needle[needleLength - 1 - skip] != needle[needleLength - 1])
                 {
