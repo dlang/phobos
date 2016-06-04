@@ -2329,7 +2329,7 @@ struct HTTP
 {
     mixin Protocol;
 
-    /// Authentication method equal to $(ECXREF curl, CurlAuth)
+    /// Authentication method equal to $(REF CurlAuth, etc,c,curl)
     alias AuthMethod = CurlAuth;
 
     static private uint defaultMaxRedirects = 10;
@@ -2421,7 +2421,7 @@ struct HTTP
 
     private RefCounted!Impl p;
 
-    /** Time condition enumeration as an alias of $(ECXREF curl, CurlTimeCond)
+    /** Time condition enumeration as an alias of $(REF CurlTimeCond, etc,c,curl)
 
         $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
     */
@@ -3834,7 +3834,7 @@ class CurlTimeoutException : CurlException
     }
 }
 
-/// Equal to $(ECXREF curl, CURLcode)
+/// Equal to $(REF CURLcode, etc,c,curl)
 alias CurlCode = CURLcode;
 
 import std.typecons : Flag;
@@ -4117,7 +4117,7 @@ struct Curl
     /**
        Set a string curl option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
        value = The string
     */
     void set(CurlOption option, const(char)[] value)
@@ -4129,7 +4129,7 @@ struct Curl
     /**
        Set a long curl option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
        value = The long
     */
     void set(CurlOption option, long value)
@@ -4141,7 +4141,7 @@ struct Curl
     /**
        Set a void* curl option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
        value = The pointer
     */
     void set(CurlOption option, void* value)
@@ -4153,7 +4153,7 @@ struct Curl
     /**
        Clear a pointer option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
     */
     void clear(CurlOption option)
     {
@@ -4165,7 +4165,7 @@ struct Curl
        Clear a pointer option. Does not raise an exception if the underlying
        libcurl does not support the option. Use sparingly.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
     */
     void clearIfSupported(CurlOption option)
     {
@@ -4310,11 +4310,11 @@ struct Curl
       *
       * Params:
       * callback = the callback that receives a seek offset and a seek position
-      *            $(ECXREF curl, CurlSeekPos)
+      *            $(REF CurlSeekPos, etc,c,curl)
       *
       * Returns:
       * The callback returns the success state of the seeking
-      * $(ECXREF curl, CurlSeek)
+      * $(REF CurlSeek, etc,c,curl)
       *
       * Example:
       * ----
@@ -4347,7 +4347,7 @@ struct Curl
       *
       * Params:
       * callback = the callback that receives the socket and socket type
-      * $(ECXREF curl, CurlSockType)
+      * $(REF CurlSockType, etc,c,curl)
       *
       * Returns:
       * Return 0 from the callback to signal success, return 1 to signal error
