@@ -283,7 +283,7 @@ Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
 $(REF StdioException, std,stdio) on failure to pass one of the streams
     to the child process (Windows only).$(BR)
-$(CXREF exception,RangeError) if $(D args) is empty.
+$(REF RangeError, core,exception) if $(D args) is empty.
 */
 Pid spawnProcess(in char[][] args,
                  File stdin = std.stdio.stdin,
@@ -2350,7 +2350,7 @@ version (Windows) private immutable string shellSwitch = "/C";
  * which is guaranteed to be unique within the current process.
  *
  * Returns:
- * A $(CXREF thread, ThreadID) value for the calling thread.
+ * A $(REF ThreadID, core,thread) value for the calling thread.
  *
  * Example:
  * ---
