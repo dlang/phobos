@@ -134,10 +134,6 @@ See_Also:
     for functions that work with unicode strings
     )
 
-Macros:
-        SHORTXREF=$(REF_ALTTEXT $(TT $2), $2, std,$1)
-        SHORTXREF_PACK=$(REF_ALTTEXT $(TT $3), $3, std,$1,$2)
-
 Copyright: Copyright Digital Mars 2007-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
