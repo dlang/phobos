@@ -201,8 +201,7 @@ or `import` `std.experimental.building_blocks`, which imports them all
 `public`ly. The building blocks can be assembled in unbounded ways and also
 combined with your own. For a collection of typical and useful preassembled
 allocators and for inspiration in defining more such assemblies, refer to
-$(LINK2 std_experimental_allocator_showcase.html,
-`std.experimental.allocator.building_blocks.showcase`).)
+$(MREF std,experimental,allocator,showcase).)
 
 $(BOOKTABLE,
 $(TR $(TH Allocator$(BR)) $(TH Description))
@@ -280,9 +279,8 @@ pointers on top of another allocator.)))
 )
 
 Macros:
-MYREF = $(LINK2 std_experimental_allocator_building_blocks_$2.html, $1)&nbsp;
-MYREF2 = $(LINK2 std_experimental_allocator_building_blocks_$2.html#$1, $1)&nbsp;
-MYREF3 = $(LINK2 std_experimental_allocator_$2.html#$1, $1)&nbsp;
+MYREF2 = $(REF_SHORT $1, std,experimental,allocator,building_blocks,$2)
+MYREF3 = $(REF_SHORT $1, std,experimental,allocator,$2)
 TDC = $(TDNW $(D $1)$+)
 TDC2 = $(TDNW $(D $(MYREF2 $1,$+))$(BR)$(SMALL
 $(D std.experimental.allocator.building_blocks.$2)))
