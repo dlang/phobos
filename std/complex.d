@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /** This module contains the $(LREF Complex) type, which is used to represent
     _complex numbers, along with related mathematical operations and functions.
 

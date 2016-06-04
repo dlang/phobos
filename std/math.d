@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Contains the elementary mathematical functions (powers, roots,
  * and trigonometric functions), and low-level floating-point operations.

@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * This test program pulls in all the library modules in order to run the unit
  * tests on them.  Then, it prints out the arguments passed to main().

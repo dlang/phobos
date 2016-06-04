@@ -1,4 +1,3 @@
-// Written in the D programming language.
 /**
 Allocator that collects useful statistics about allocations, both global and per
 calling point. The statistics collected can be configured statically by choosing

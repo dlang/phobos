@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Convert Win32 error code to string.
  *

@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 This module implements experimental additions/modifications to $(MREF std, _typecons).
 

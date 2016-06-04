@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /** This module is used to manipulate _path strings.
 
     All functions, with the exception of $(LREF expandTilde) (and in some

@@ -1,4 +1,3 @@
-// Written in the D programming language.
 /**
  * Computes SHA1 and SHA2 hashes of arbitrary data. SHA hashes are 20 to 64 byte
  * quantities (depending on the SHA algorithm) that are like a checksum or CRC,

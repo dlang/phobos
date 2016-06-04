@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Computes SHA1 digests of arbitrary data, using an optimized algorithm with SSSE3 instructions.
  *

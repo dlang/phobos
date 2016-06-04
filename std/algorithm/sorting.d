@@ -1,4 +1,3 @@
-// Written in the D programming language.
 /**
 This is a submodule of $(MREF std, algorithm).
 It contains generic _sorting algorithms.

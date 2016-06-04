@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Templates to manipulate template argument lists (also known as type lists).
  *

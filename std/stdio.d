@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 Standard I/O functions that extend $(B core.stdc.stdio).  $(B core.stdc.stdio)
 is $(D_PARAM public)ally imported when importing $(B std.stdio).

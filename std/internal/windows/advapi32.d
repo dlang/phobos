@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * The only purpose of this module is to do the static construction for
  * std.windows.registry, to eliminate cyclic construction errors.

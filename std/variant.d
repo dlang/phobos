@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 This module implements a
 $(WEB erdani.org/publications/cuj-04-2002.html,discriminated union)

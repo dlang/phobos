@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 Functions for starting and interacting with other processes, and for
 working with the current _process' execution environment.

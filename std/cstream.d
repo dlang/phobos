@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * $(RED Deprecated: This module is considered out-dated and not up to Phobos'
  *       current standards. It will be remove in October 2016.)

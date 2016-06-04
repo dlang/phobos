@@ -1,4 +1,3 @@
-// Written in the D programming language.
 /**
 
 High-level interface for allocators. Implements bundled allocation/creation

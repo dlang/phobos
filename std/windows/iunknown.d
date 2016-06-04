@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 // @@@DEPRECATED_2017-06@@@
 
 /++

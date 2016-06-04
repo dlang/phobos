@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /++
     This module defines functions related to exceptions and general error
     handling. It also defines functions intended to aid in unit testing.

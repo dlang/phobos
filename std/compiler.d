@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Identify the compiler used and its various features.
  *

@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 This module defines the notion of a range. Ranges generalize the concept of
 arrays, lists, or anything that involves sequential access. This abstraction

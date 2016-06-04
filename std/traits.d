@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Templates which extract information about types and symbols at compile time.
  *

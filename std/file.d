@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 Utilities for manipulating files and scanning directories. Functions
 in this module handle files as a unit, e.g., read or write one _file
