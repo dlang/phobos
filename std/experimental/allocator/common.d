@@ -7,6 +7,7 @@ Authors: $(WEB erdani.com, Andrei Alexandrescu), Timon Gehr (`Ternary`)
 */
 module std.experimental.allocator.common;
 import std.algorithm, std.traits;
+import std.math : isPowerOf2;
 
 /**
 Returns the size in bytes of the state that needs to be allocated to hold an
@@ -305,33 +306,6 @@ package void* alignUpTo(void* ptr, uint alignment)
     assert(alignment.isPowerOf2);
     immutable uint slack = cast(size_t) ptr & (alignment - 1U);
     return slack ? ptr + alignment - slack : ptr;
-}
-
-// Credit: Matthias Bentrup
-/**
-Returns `true` if `x` is a nonzero power of two.
-*/
-@safe @nogc nothrow pure
-package bool isPowerOf2(uint x)
-{
-    return (x & -x) > (x - 1);
-}
-
-@safe @nogc nothrow pure
-unittest
-{
-    assert(!isPowerOf2(0));
-    assert(isPowerOf2(1));
-    assert(isPowerOf2(2));
-    assert(!isPowerOf2(3));
-    assert(isPowerOf2(4));
-    assert(!isPowerOf2(5));
-    assert(!isPowerOf2(6));
-    assert(!isPowerOf2(7));
-    assert(isPowerOf2(8));
-    assert(!isPowerOf2(9));
-    assert(!isPowerOf2(10));
-    assert(isPowerOf2(1UL << 31));
 }
 
 @safe @nogc nothrow pure

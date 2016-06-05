@@ -163,6 +163,7 @@ struct Region(ParentAllocator = NullAllocator,
     */
     void[] alignedAllocate(size_t n, uint a)
     {
+        import std.math : isPowerOf2;
         assert(a.isPowerOf2);
         static if (growDownwards)
         {

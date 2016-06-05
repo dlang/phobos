@@ -4632,7 +4632,8 @@ if (isForwardRange!R && !isRandomAccessRange!R)
 private auto sumPairwiseN(size_t N, bool needEmptyChecks, F, R)(ref R r)
 if (isForwardRange!R && !isRandomAccessRange!R)
 {
-    static assert(!(N & (N-1))); //isPow2
+    import std.math : isPowerOf2;
+    static assert(isPowerOf2(N));
     static if (N == 2) return sumPair!(needEmptyChecks, F)(r);
     else return sumPairwiseN!(N/2, needEmptyChecks, F)(r)
         + sumPairwiseN!(N/2, needEmptyChecks, F)(r);

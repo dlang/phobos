@@ -2630,7 +2630,7 @@ private:
     in
     {
         assert(range.length >= 4);
-        assert(isPowerOfTwo(range.length));
+        assert(isPowerOf2(range.length));
     }
     body
     {
@@ -2664,7 +2664,7 @@ private:
     in
     {
         assert(range.length >= 4);
-        assert(isPowerOfTwo(range.length));
+        assert(isPowerOf2(range.length));
     }
     body
     {
@@ -2772,7 +2772,7 @@ private:
     void butterfly(R)(R buf) const
     in
     {
-        assert(isPowerOfTwo(buf.length));
+        assert(isPowerOf2(buf.length));
     }
     body
     {
@@ -2859,7 +2859,7 @@ private:
             return;
         }
 
-        enforce(isPowerOfTwo(size),
+        enforce(isPowerOf2(size),
             "Can only do FFTs on ranges with a size that is a power of two.");
         auto table = new lookup_t[][bsf(size) + 1];
 
@@ -3285,13 +3285,6 @@ void slowFourier4(Ret, R)(R range, Ret buf)
     buf[1] = range[0] - range[1] * C(0, 1) - range[2] + range[3] * C(0, 1);
     buf[2] = range[0] - range[1] + range[2] - range[3];
     buf[3] = range[0] + range[1] * C(0, 1) - range[2] - range[3] * C(0, 1);
-}
-
-bool isPowerOfTwo(N)(N num)
-    if (isScalarType!N && !isFloatingPoint!N)
-{
-    import core.bitop : bsf, bsr;
-    return bsr(num) == bsf(num);
 }
 
 N roundDownToPowerOf2(N)(N num)

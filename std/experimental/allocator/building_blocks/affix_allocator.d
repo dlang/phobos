@@ -21,6 +21,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     import std.conv, std.experimental.allocator.common, std.traits;
     import std.algorithm : min;
     import std.typecons : Ternary;
+    import std.math : isPowerOf2;
 
     static assert(
         !stateSize!Prefix || Allocator.alignment >= Prefix.alignof,

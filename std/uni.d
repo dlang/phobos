@@ -1105,7 +1105,7 @@ template PackedPtr(T)
 @trusted struct PackedPtrImpl(T, size_t bits)
 {
 pure nothrow:
-    static assert(isPowerOf2(bits));
+    static assert(isPow2OrZero(bits));
 
     this(inout(size_t)* ptr)inout @safe @nogc
     {
@@ -1503,7 +1503,7 @@ string genUnrolledSwitchSearch(size_t size)
     import core.bitop : bsr;
     import std.array : replace;
     import std.conv : to;
-    assert(isPowerOf2(size));
+    assert(isPow2OrZero(size));
     string code = `
     import core.bitop : bsr;
     auto power = bsr(m)+1;
@@ -1533,15 +1533,16 @@ string genUnrolledSwitchSearch(size_t size)
     return code;
 }
 
-bool isPowerOf2(size_t sz) @safe pure nothrow @nogc
+bool isPow2OrZero(size_t sz) @safe pure nothrow @nogc
 {
+    // See also: std.math.isPowerOf2()
     return (sz & (sz-1)) == 0;
 }
 
 size_t uniformLowerBound(alias pred, Range, T)(Range range, T needle)
     if (is(T : ElementType!Range))
 {
-    assert(isPowerOf2(range.length));
+    assert(isPow2OrZero(range.length));
     size_t idx = 0, m = range.length/2;
     while (m != 0)
     {
@@ -1557,7 +1558,7 @@ size_t uniformLowerBound(alias pred, Range, T)(Range range, T needle)
 size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
     if (is(T : ElementType!Range))
 {
-    assert(isPowerOf2(range.length));
+    assert(isPow2OrZero(range.length));
     size_t idx = 0, m = range.length/2;
     enum max = 1<<10;
     while (m >= max)
@@ -1580,7 +1581,7 @@ template sharMethod(alias uniLowerBound)
         alias pred = binaryFun!_pred;
         if (range.length == 0)
             return 0;
-        if (isPowerOf2(range.length))
+        if (isPow2OrZero(range.length))
             return uniLowerBound!pred(range, needle);
         size_t n = truncPow2(range.length);
         if (pred(range[n-1], needle))
