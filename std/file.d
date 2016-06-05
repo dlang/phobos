@@ -412,14 +412,10 @@ S readText(S = string, R)(R name)
 ///
 @safe unittest
 {
-    import std.string;
-    write(deleteme, "abc\n"); // deleteme is the name of a temporary file
-    scope(exit)
-    {
-        assert(exists(deleteme));
-        remove(deleteme);
-    }
-    enforce(chomp(readText(deleteme)) == "abc");
+    write(deleteme, "abc"); // deleteme is the name of a temporary file
+    scope(exit) remove(deleteme);
+    string content = readText(deleteme);
+    enforce(content == "abc");
 }
 
 S readText(S = string, R)(auto ref R name)
