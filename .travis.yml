@@ -17,8 +17,8 @@ script:
  # enforce whitespace between statements
  - grep -nE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $(find . -name '*.d'); test $? -eq 1
  # enforce whitespace between colon(:) for import statements (doesn't catch everything)
- - grep -n 'import [^/,=]*:' $(find . -name '*.d') | grep -vE 'import ([^ ]+) : '; echo $?
+ - grep -n 'import [^/,=]*:.*;' $(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; echo $?
  # enforce all-man style
- - grep -nE "(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$"  $(find . -name '*.d'); test $? -eq 1
+ - grep -nE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$'  $(find . -name '*.d'); test $? -eq 1
  # at the moment libdparse has problems to parse some modules (->excludes)
  - ./dsc --config .dscanner.ini --styleCheck $(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.

@@ -1480,7 +1480,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
     }
     else
     {
-        import std.range.primitives: walkLength;
+        import std.range.primitives : walkLength;
         if (needles.length <= 16 && needles.walkLength(17))
         {
             size_t si = 0;
