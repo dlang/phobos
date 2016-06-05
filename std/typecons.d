@@ -5057,7 +5057,7 @@ unittest
  * Returns:
  *   An initialized $(D RefCounted) containing $(D val).
  * See_Also:
- *   $(WEB http://en.cppreference.com/w/cpp/memory/shared_ptr/make_shared, C++'s make_shared)
+ *   $(WEB en.cppreference.com/w/cpp/memory/shared_ptr/make_shared, C++'s make_shared)
  */
 RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
 {
@@ -7152,7 +7152,7 @@ $(UL
 Also known as trinary, trivalent, or trilean.
 
 See_Also:
-    $(WEB https://en.wikipedia.org/wiki/Three-valued_logic,
+    $(WEB en.wikipedia.org/wiki/Three-valued_logic,
         Three Valued Logic on Wikipedia)
 */
 struct Ternary
