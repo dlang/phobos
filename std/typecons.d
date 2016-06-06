@@ -1829,15 +1829,27 @@ if (is(S == struct))
         }
 
     public:
-        // TODO: auto ref & for opAssign?
-        this(S s)
+        this()(auto ref S s)
         {
             emplace(s);
         }
 
-        void opAssign(S s)
+        // immutable S cannot be passed to auto ref S above
+        static if (!is(S == immutable))
+        this()(immutable S s)
+        {
+            emplace(s);
+        }
+
+        void opAssign()(auto ref S s)
         {
             movePayload;
+            emplace(s);
+        }
+
+        static if (!is(S == immutable))
+        void opAssign()(immutable S s)
+        {
             emplace(s);
         }
 
@@ -1986,11 +1998,11 @@ unittest
     }
     static assert(!__traits(compiles, Rebindable!ND()));
 
-    Rebindable!(const ND) rb = ND(1);
+    Rebindable!(const ND) rb = const ND(1);
     assert(rb.i == 1);
     rb = immutable ND(2);
     assert(rb.i == 2);
-    rb = rebindable(ND(3));
+    rb = rebindable(const ND(3));
     assert(rb.i == 3);
     static assert(!__traits(compiles, rb.i++));
 }
