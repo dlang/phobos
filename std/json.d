@@ -702,7 +702,7 @@ struct JSONValue
 
 /**
 Parses a serialized string and returns a tree of JSON values.
-Throws: $(REF JSONException, std,json) if the depth exceeds the max depth.
+Throws: $(LREF JSONException) if the depth exceeds the max depth.
 Params:
     json = json-formatted string to parse
     maxDepth = maximum depth of nesting allowed, -1 disables depth checking
