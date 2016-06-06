@@ -1,3 +1,4 @@
+///
 module std.experimental.logger.core;
 
 import std.array;

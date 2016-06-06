@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.segregator;
 
 import std.experimental.allocator.common;
