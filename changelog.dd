@@ -5,6 +5,8 @@ $(COMMENT Pending changelog for 2.072. This will get copied to dlang.org and
 )
 
 $(BUGSTITLE Library Changes,
+    $(LI $(RELATIVE_LINK2 std-digest-murmurhash, Implementation of MurmurHash
+        digest.))
     $(LI $(RELATIVE_LINK2 process, Process creation in `std.process` was sped up
         on Posix.))
     $(LI $(RELATIVE_LINK2 std-algorithm-iteration-cumulativeFold,
@@ -50,6 +52,18 @@ $(BUGSTITLE Library Changes,
 )
 
 $(BUGSTITLE Library Changes,
+
+$(LI $(LNAME2 std-digest-murmurhash, Implementation of $(XREF std.digest, murmurhash).)
+    $(P MurmurHash is a non-cryptographic hash function suitable for general
+      hash-based lookup. It is optimized for x86 architectures.
+    )
+------
+// Computing the 32-bits hash value of an int array using the convenient digest template.
+import std.digest.murmurhash;
+
+ubyte[4] hashed = digest!MurmurHash3_32_opt32([1, 2, 3, 4]);
+------
+)
 
 $(LI $(LNAME2 process, Process creation in `std.process` was sped up on Posix.)
     $(P Previously, Posix systems would attempt to close every file descriptor
