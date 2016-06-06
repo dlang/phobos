@@ -1843,28 +1843,28 @@ if (is(S == struct))
 
         void opAssign(Rebindable other)
         {
-            this = other.getPayload;
+            this = other.trustedPayload;
         }
 
+        // must not escape when S is immutable
         private
-        ref const getPayload() @trusted
+        ref trustedPayload() @trusted
         {
-            // can only cast to const, not immutable
-            return *cast(const Unqual!S*)mutPayload.ptr;
+            return *cast(S*)mutPayload.ptr;
         }
 
         static if (!is(S == immutable))
         ref S Rebindable_getRef() @property
         {
             // payload exposed as const ref when S is const
-            return getPayload;
+            return trustedPayload;
         }
 
         static if (is(S == immutable))
         S Rebindable_get() @property
         {
             // we return a copy for immutable S
-            return getPayload;
+            return trustedPayload;
         }
 
         static if (is(S == immutable))
