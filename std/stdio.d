@@ -3568,7 +3568,7 @@ unittest
 /**
  * Read data from $(D stdin) according to the specified
  * $(LINK2 std_format.html#format-string, format specifier) using
- * $(REF formattedRead, std,format).
+ * $(REF formattedRead, std,_format).
  */
 uint readf(A...)(in char[] format, A args)
 {
