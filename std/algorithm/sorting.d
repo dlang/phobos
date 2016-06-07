@@ -2058,13 +2058,18 @@ schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, R)(R r)
     if (isRandomAccessRange!R && hasLength!R)
 {
-    import core.stdc.stdlib : malloc, free;
     import std.conv : emplace;
     import std.string : representation;
     import std.range : zip, SortedRange;
 
     alias T = typeof(unaryFun!transform(r.front));
-    auto xform1 = (cast(T*) malloc(r.length * T.sizeof))[0 .. r.length];
+    static trustedMalloc(size_t len) @trusted
+    {
+        import core.stdc.stdlib : malloc;
+        return (cast(T*) malloc(len * T.sizeof))[0 .. len];
+    }
+    auto xform1 = trustedMalloc(r.length);
+
     size_t length;
     scope(exit)
     {
@@ -2072,11 +2077,16 @@ schwartzSort(alias transform, alias less = "a < b",
         {
             foreach (i; 0 .. length) collectException(destroy(xform1[i]));
         }
-        free(xform1.ptr);
+        static void trustedFree(T* p) @trusted
+        {
+            import core.stdc.stdlib : free;
+            free(p);
+        }
+        trustedFree(xform1.ptr);
     }
     for (; length != r.length; ++length)
     {
-        emplace(xform1.ptr + length, unaryFun!transform(r[length]));
+        emplace(&xform1[length], unaryFun!transform(r[length]));
     }
     // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
     // for the intermediate array, lest zip gets confused.
@@ -2092,7 +2102,7 @@ schwartzSort(alias transform, alias less = "a < b",
     return typeof(return)(r);
 }
 
-unittest
+@safe unittest
 {
     // issue 4909
     import std.typecons : Tuple;
