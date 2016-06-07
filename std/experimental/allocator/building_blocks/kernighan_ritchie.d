@@ -7,8 +7,8 @@ version(unittest) import std.conv : text;
 
 // KRRegion
 /**
-$(D KRRegion) draws inspiration from the $(LINK2
-std_experimental_allocator_region.html, region allocation strategy) and also the
+$(D KRRegion) draws inspiration from the $(MREF_ALTTEXT region allocation
+strategy, std,experimental,allocator,building_blocks,region) and also the
 $(WEB stackoverflow.com/questions/13159564/explain-this-implementation-of-malloc-from-the-kr-book,
 famed allocator) described by Brian Kernighan and Dennis Ritchie in section 8.7
 of the book $(WEB amazon.com/exec/obidos/ASIN/0131103628/classicempire, "The C
