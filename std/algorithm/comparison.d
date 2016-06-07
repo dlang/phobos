@@ -736,6 +736,27 @@ template equal(alias pred = "a == b")
         {
             return r1 == r2;
         }
+        // if one of the arguments is a string and the other isn't, then auto-decoding
+        // can be avoided if they have the same ElementEncodingType
+        else static if (is(typeof(pred) == string) && pred == "a == b" &&
+            isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
+            is(ElementEncodingType!Range1 == ElementEncodingType!Range2))
+        {
+            import std.utf : byCodeUnit;
+
+            static if (isAutodecodableString!Range1)
+            {
+                auto codeUnits = r1.byCodeUnit;
+                alias other = r2;
+            }
+            else
+            {
+                auto codeUnits = r2.byCodeUnit;
+                alias other = r1;
+            }
+
+            return equal(codeUnits, other);
+        }
         //Try a fast implementation when the ranges have comparable lengths
         else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
         {
@@ -861,6 +882,18 @@ range of range (of range...) comparisons.
     //Test with an infinte range
     ReferenceInfiniteForwardRange!int ifr = new ReferenceInfiniteForwardRange!int;
     assert(!equal(a, ifr));
+}
+
+@safe pure unittest
+{
+    import std.utf : byChar, byWchar, byDchar;
+
+    assert(equal("æøå".byChar, "æøå"));
+    assert(equal("æøå", "æøå".byChar));
+    assert(equal("æøå".byWchar, "æøå"w));
+    assert(equal("æøå"w, "æøå".byWchar));
+    assert(equal("æøå".byDchar, "æøå"d));
+    assert(equal("æøå"d, "æøå".byDchar));
 }
 
 // MaxType
