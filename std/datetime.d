@@ -11636,7 +11636,7 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(CXREF tiem, Duration) from
+        Gives the result of adding or subtracting a $(CXREF time, Duration) from
         this $(LREF Date).
 
         The legal types of arithmetic for $(LREF Date) using this operator are
