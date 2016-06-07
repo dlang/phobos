@@ -87,31 +87,31 @@ $(TR $(TH Module) $(TH Functions) )
 $(LEADINGROW Publicly imported functions)
     $(TR $(TD std.algorithm)
         $(TD
-         $(SHORTXREF_PACK algorithm,comparison,cmp)
-         $(SHORTXREF_PACK algorithm,searching,count)
-         $(SHORTXREF_PACK algorithm,searching,endsWith)
-         $(SHORTXREF_PACK algorithm,searching,startsWith)
+         $(REF_SHORT cmp, std,algorithm,comparison)
+         $(REF_SHORT count, std,algorithm,searching)
+         $(REF_SHORT endsWith, std,algorithm,searching)
+         $(REF_SHORT startsWith, std,algorithm,searching)
     ))
     $(TR $(TD std.array)
         $(TD
-         $(SHORTXREF array, join)
-         $(SHORTXREF array, replace)
-         $(SHORTXREF array, replaceInPlace)
-         $(SHORTXREF array, split)
-         $(SHORTXREF array, empty)
+         $(REF_SHORT join, std,array)
+         $(REF_SHORT replace, std,array)
+         $(REF_SHORT replaceInPlace, std,array)
+         $(REF_SHORT split, std,array)
+         $(REF_SHORT empty, std,array)
     ))
     $(TR $(TD std.format)
         $(TD
-         $(SHORTXREF format, format)
-         $(SHORTXREF format, sformat)
+         $(REF_SHORT format, std,format)
+         $(REF_SHORT sformat, std,format)
     ))
     $(TR $(TD std.uni)
         $(TD
-         $(SHORTXREF uni, icmp)
-         $(SHORTXREF uni, toLower)
-         $(SHORTXREF uni, toLowerInPlace)
-         $(SHORTXREF uni, toUpper)
-         $(SHORTXREF uni, toUpperInPlace)
+         $(REF_SHORT icmp, std,uni)
+         $(REF_SHORT toLower, std,uni)
+         $(REF_SHORT toLowerInPlace, std,uni)
+         $(REF_SHORT toUpper, std,uni)
+         $(REF_SHORT toUpperInPlace, std,uni)
     ))
 )
 
@@ -133,10 +133,6 @@ See_Also:
     $(MREF std, uni)
     for functions that work with unicode strings
     )
-
-Macros:
-        SHORTXREF=$(REF_ALTTEXT $(TT $2), $2, std,$1)
-        SHORTXREF_PACK=$(REF_ALTTEXT $(TT $3), $3, std,$1,$2)
 
 Copyright: Copyright Digital Mars 2007-.
 

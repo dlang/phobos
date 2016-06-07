@@ -825,11 +825,11 @@ unittest
 
 /**
  * Tries to receive but will give up if no matches arrive within duration.
- * Won't wait at all if provided $(CXREF time, Duration) is negative.
+ * Won't wait at all if provided $(REF Duration, core,time) is negative.
  *
  * Same as $(D receive) except that rather than wait forever for a message,
  * it waits until either it receives a message or the given
- * $(CXREF time, Duration) has passed. It returns $(D true) if it received a
+ * $(REF Duration, core,time) has passed. It returns $(D true) if it received a
  * message and $(D false) if it timed out waiting for one.
  */
 bool receiveTimeout(T...)( Duration duration, T ops )

@@ -18,8 +18,8 @@
 
     Closely related to std.datetime is <a href="core_time.html">$(D core.time)</a>,
     and some of the time types used in std.datetime come from there - such as
-    $(CXREF time, Duration), $(CXREF time, TickDuration), and
-    $(CXREF time, FracSec).
+    $(REF Duration, core,time), $(REF TickDuration, core,time), and
+    $(REF FracSec, core,time).
     core.time is publically imported into std.datetime, it isn't necessary
     to import it separately.
 
@@ -82,10 +82,10 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     weren't).
 
     Note:
-        $(LREF DateTimeException) is an alias for $(CXREF time, TimeException),
+        $(LREF DateTimeException) is an alias for $(REF TimeException, core,time),
         so you don't need to worry about core.time functions and std.datetime
         functions throwing different exception types (except in the rare case
-        that they throw something other than $(CXREF time, TimeException) or
+        that they throw something other than $(REF TimeException, core,time) or
         $(LREF DateTimeException)).
 
     See_Also:
@@ -294,7 +294,7 @@ immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minute
 //==============================================================================
 
 /++
-    Exception type used by std.datetime. It's an alias to $(CXREF time, TimeException).
+    Exception type used by std.datetime. It's an alias to $(REF TimeException, core,time).
     Either can be caught without concern about which
     module it came from.
   +/
@@ -312,7 +312,7 @@ public:
         Returns the current time in the given time zone.
 
         Params:
-            clockType = The $(CXREF time, ClockType) indicates which system
+            clockType = The $(REF ClockType, core,time) indicates which system
                         clock to use to get the current time. Very few programs
                         need to use anything other than the default.
             tz = The time zone for the SysTime that's returned.
@@ -365,7 +365,7 @@ public:
         current time.
 
         Params:
-            clockType = The $(CXREF time, ClockType) indicates which system
+            clockType = The $(REF ClockType, core,time) indicates which system
                         clock to use to get the current time. Very few programs
                         need to use anything other than the default.
 
@@ -515,8 +515,8 @@ public:
 
     // @@@DEPRECATED_2017-01@@@
     /++
-        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
-              in favor of $(CXREF time, MonoTime). Use $(D MonoTime.currTime)
+        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
+              in favor of $(REF MonoTime, core,time). Use $(D MonoTime.currTime)
               instead. currSystemTick will be removed in January 2017.)
 
         The current system tick. The number of ticks per second varies from
@@ -547,8 +547,8 @@ public:
 
     // @@@DEPRECATED_2017-01@@@
     /++
-        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
-              in favor of $(CXREF time, MonoTime). To duplicate the behavior
+        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
+              in favor of $(REF MonoTime, core,time). To duplicate the behavior
               of currAppTick with $(D MonoTime), store the value of
               $(D MonoTime.currTime) when the program starts, and then subtract
               it from the current value of $(D MonoTime.currTime) in order to
@@ -750,7 +750,7 @@ public:
     // @@@DEPRECATED_2016-08@@@
     /++
         $(RED Deprecated. Please use the overload which takes a
-              $(CXREF time, Duration) for the fractional seconds. This overload
+              $(REF Duration, core,time) for the fractional seconds. This overload
               will be removed in August 2016.)
 
         Params:
@@ -2175,8 +2175,8 @@ public:
     // @@@DEPRECATED_2016-08@@@
     /++
         $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
-              uses a $(CXREF time, Duration) to represent the fractional seconds
-              instead of a $(CXREF time, FracSec). This overload will be removed
+              uses a $(REF Duration, core,time) to represent the fractional seconds
+              instead of a $(REF FracSec, core,time). This overload will be removed
               in August 2016.)
 
         Fractional seconds past the second.
@@ -2249,8 +2249,8 @@ public:
     // @@@DEPRECATED_2016-08@@@
     /++
         $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
-              uses a $(CXREF time, Duration) to represent the fractional seconds
-              instead of a $(CXREF time, FracSec). This overload will be removed
+              uses a $(REF Duration, core,time) to represent the fractional seconds
+              instead of a $(REF FracSec, core,time). This overload will be removed
               in August 2016.)
 
         Fractional seconds past the second.
@@ -6264,7 +6264,7 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        Gives the result of adding or subtracting a $(REF Duration, core,time) from
         this $(LREF SysTime).
 
         The legal types of arithmetic for $(LREF SysTime) using this operator
@@ -6276,7 +6276,7 @@ public:
         )
 
         Params:
-            duration = The $(CXREF time, Duration) to add to or subtract from
+            duration = The $(REF Duration, core,time) to add to or subtract from
                        this $(LREF SysTime).
       +/
     SysTime opBinary(string op)(Duration duration) @safe const pure nothrow
@@ -6476,12 +6476,12 @@ public:
 
     // @@@DEPRECATED_2017-01@@@
     /++
-        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
-              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
+              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
               Use $(D Duration) instead. This overload will be removed in
               January 2017.)
 
-        Defines + and - with $(CXREF time, TickDuration).
+        Defines + and - with $(REF TickDuration, core,time).
       +/
     deprecated("Use Duration instead of TickDuration.")
     SysTime opBinary(string op)(TickDuration td) @safe const pure nothrow
@@ -6511,7 +6511,7 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        Gives the result of adding or subtracting a $(REF Duration, core,time) from
         this $(LREF SysTime), as well as assigning the result to this
         $(LREF SysTime).
 
@@ -6523,7 +6523,7 @@ public:
         )
 
         Params:
-            duration = The $(CXREF time, Duration) to add to or subtract from
+            duration = The $(REF Duration, core,time) to add to or subtract from
                        this $(LREF SysTime).
       +/
     ref SysTime opOpAssign(string op)(Duration duration) @safe pure nothrow
@@ -6716,12 +6716,12 @@ public:
 
     // @@@DEPRECATED_2017-01@@@
     /++
-        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
-              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
+              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
               Use $(D Duration) instead. This overload will be removed in
               January 2017.)
 
-        Defines += and -= with $(CXREF time, TickDuration).
+        Defines += and -= with $(REF TickDuration, core,time).
       +/
     deprecated("Use Duration instead of TickDuration.")
     ref SysTime opOpAssign(string op)(TickDuration td) @safe pure nothrow
@@ -6864,9 +6864,9 @@ public:
 
         To get the difference in years, subtract the year property
         of two $(LREF SysTime)s. To get the difference in days or weeks,
-        subtract the $(LREF SysTime)s themselves and use the $(CXREF time, Duration)
+        subtract the $(LREF SysTime)s themselves and use the $(REF Duration, core,time)
         that results. Because converting between months and smaller
-        units requires a specific date (which $(CXREF time, Duration)s don't have),
+        units requires a specific date (which $(REF Duration, core,time)s don't have),
         getting the difference in months requires some math using both
         the year and month properties, so this is a convenience function for
         getting the difference in months.
@@ -11636,8 +11636,7 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(CXREF time, Duration) from
-        this $(LREF Date).
+        Gives the result of adding or subtracting a $(REF Duration, core,time) from
 
         The legal types of arithmetic for $(LREF Date) using this operator are
 
@@ -11647,7 +11646,7 @@ public:
         )
 
         Params:
-            duration = The $(CXREF time, Duration) to add to or subtract from
+            duration = The $(REF Duration, core,time) to add to or subtract from
                        this $(LREF Date).
       +/
     Date opBinary(string op)(Duration duration) @safe const pure nothrow
@@ -11722,12 +11721,12 @@ public:
 
     // @@@DEPRECATED_2017-01@@@
     /++
-        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
-              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
+              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
               Use $(D Duration) instead. This overload will be removed in
               January 2017.)
 
-        Defines + and - with $(CXREF time, TickDuration).
+        Defines + and - with $(REF TickDuration, core,time).
       +/
     deprecated("Use Duration instead of TickDuration.")
     Date opBinary(string op)(TickDuration td) @safe const pure nothrow
@@ -11756,7 +11755,7 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        Gives the result of adding or subtracting a $(REF Duration, core,time) from
         this $(LREF Date), as well as assigning the result to this $(LREF Date).
 
         The legal types of arithmetic for $(LREF Date) using this operator are
@@ -11767,7 +11766,7 @@ public:
         )
 
         Params:
-            duration = The $(CXREF time, Duration) to add to or subtract from
+            duration = The $(REF Duration, core,time) to add to or subtract from
                        this $(LREF Date).
       +/
     ref Date opOpAssign(string op)(Duration duration) @safe pure nothrow
@@ -11836,12 +11835,12 @@ public:
 
     // @@@DEPRECATED_2017-01@@@
     /++
-        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
-              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
+              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
               Use $(D Duration) instead. This overload will be removed in
               January 2017.)
 
-        Defines += and -= with $(CXREF time, TickDuration).
+        Defines += and -= with $(REF TickDuration, core,time).
       +/
     deprecated("Use Duration instead of TickDuration.")
     ref Date opOpAssign(string op)(TickDuration td) @safe pure nothrow
@@ -11931,9 +11930,9 @@ public:
 
         To get the difference in years, subtract the year property
         of two $(LREF SysTime)s. To get the difference in days or weeks,
-        subtract the $(LREF SysTime)s themselves and use the $(CXREF time, Duration)
+        subtract the $(LREF SysTime)s themselves and use the $(REF Duration, core,time)
         that results. Because converting between months and smaller
-        units requires a specific date (which $(CXREF time, Duration)s don't have),
+        units requires a specific date (which $(REF Duration, core,time)s don't have),
         getting the difference in months requires some math using both
         the year and month properties, so this is a convenience function for
         getting the difference in months.
@@ -14109,7 +14108,7 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        Gives the result of adding or subtracting a $(REF Duration, core,time) from
         this $(LREF TimeOfDay).
 
         The legal types of arithmetic for $(LREF TimeOfDay) using this operator
@@ -14121,7 +14120,7 @@ public:
         )
 
         Params:
-            duration = The $(CXREF time, Duration) to add to or subtract from
+            duration = The $(REF Duration, core,time) to add to or subtract from
                        this $(LREF TimeOfDay).
       +/
     TimeOfDay opBinary(string op)(Duration duration) @safe const pure nothrow
@@ -14192,12 +14191,12 @@ public:
 
     // @@@DEPRECATED_2017-01@@@
     /++
-        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
-              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
+              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
               Use $(D Duration) instead. This overload will be removed in
               January 2017.)
 
-        Defines + and - with $(CXREF time, TickDuration).
+        Defines + and - with $(REF TickDuration, core,time).
       +/
     deprecated("Use Duration instead of TickDuration.")
     TimeOfDay opBinary(string op)(TickDuration td) @safe const pure nothrow
@@ -14226,7 +14225,7 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        Gives the result of adding or subtracting a $(REF Duration, core,time) from
         this $(LREF TimeOfDay), as well as assigning the result to this
         $(LREF TimeOfDay).
 
@@ -14239,7 +14238,7 @@ public:
         )
 
         Params:
-            duration = The $(CXREF time, Duration) to add to or subtract from
+            duration = The $(REF Duration, core,time) to add to or subtract from
                        this $(LREF TimeOfDay).
       +/
     ref TimeOfDay opOpAssign(string op)(Duration duration) @safe pure nothrow
@@ -14295,12 +14294,12 @@ public:
 
     // @@@DEPRECATED_2017-01@@@
     /++
-        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
-              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
+              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
               Use $(D Duration) instead. This overload will be removed in
               January 2017.)
 
-        Defines += and -= with $(CXREF time, TickDuration).
+        Defines += and -= with $(REF TickDuration, core,time).
       +/
     deprecated("Use Duration instead of TickDuration.")
     ref TimeOfDay opOpAssign(string op)(TickDuration td) @safe pure nothrow
@@ -16843,7 +16842,7 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(CXREF time, Duration) from
+        Gives the result of adding or subtracting a $(REF Duration, core,time) from
         this $(LREF DateTime).
 
         The legal types of arithmetic for $(LREF DateTime) using this operator
@@ -16855,7 +16854,7 @@ public:
         )
 
         Params:
-            duration = The $(CXREF time, Duration) to add to or subtract from
+            duration = The $(REF Duration, core,time) to add to or subtract from
                        this $(LREF DateTime).
       +/
     DateTime opBinary(string op)(Duration duration) @safe const pure nothrow
@@ -16933,12 +16932,12 @@ public:
 
     // @@@DEPRECATED_2017-01@@@
     /++
-        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
-              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
+              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
               Use $(D Duration) instead. This overload will be removed in
               January 2017.)
 
-        Defines + and - with $(CXREF time, TickDuration).
+        Defines + and - with $(REF TickDuration, core,time).
       +/
     deprecated("Use Duration instead of TickDuration.")
     DateTime opBinary(string op)(in TickDuration td) @safe const pure nothrow
@@ -17083,12 +17082,12 @@ public:
 
     // @@@DEPRECATED_2017-01@@@
     /++
-        $(RED Deprecated. $(CXREF time, TickDuration) is going to be deprecated
-              in favor of $(CXREF time, MonoTime) and $(CXREF time, Duration).
+        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
+              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
               Use $(D Duration) instead. This overload will be removed in
               January 2017.)
 
-        Defines += and -= with $(CXREF time, TickDuration).
+        Defines += and -= with $(REF TickDuration, core,time).
       +/
     deprecated("Use Duration instead of TickDuration.")
     ref DateTime opOpAssign(string op)(TickDuration td) @safe pure nothrow
@@ -17222,9 +17221,9 @@ public:
 
         To get the difference in years, subtract the year property
         of two $(LREF SysTime)s. To get the difference in days or weeks,
-        subtract the $(LREF SysTime)s themselves and use the $(CXREF time, Duration)
+        subtract the $(LREF SysTime)s themselves and use the $(REF Duration, core,time)
         that results. Because converting between months and smaller
-        units requires a specific date (which $(CXREF time, Duration)s don't have),
+        units requires a specific date (which $(REF Duration, core,time)s don't have),
         getting the difference in months requires some math using both
         the year and month properties, so this is a convenience function for
         getting the difference in months.
@@ -26334,7 +26333,7 @@ unittest
     number of years, month, and duration later.
 
     The difference between this version of $(D everyDuration) and the version
-    which just takes a $(CXREF time, Duration) is that this one also takes the number of
+    which just takes a $(REF Duration, core,time) is that this one also takes the number of
     years and months (along with an $(D AllowDayOverflow) to indicate whether
     adding years and months should allow the days to overflow).
 
@@ -28830,7 +28829,7 @@ public:
 
 
     /++
-        Returns a $(CXREF time, Duration) of 0.
+        Returns a $(REF Duration, core,time) of 0.
 
         Params:
             stdTime = The UTC time for which to get the offset from UTC for this
@@ -28943,7 +28942,7 @@ public:
 
 
     /++
-        Returns utcOffset as a $(CXREF time, Duration).
+        Returns utcOffset as a $(REF Duration, core,time).
 
         Params:
             stdTime = The UTC time for which to get the offset from UTC for this
@@ -31935,12 +31934,12 @@ private:
         n   = The number of times each function is to be executed.
 
     Returns:
-        The amount of time (as a $(CXREF time, TickDuration)) that it took to
+        The amount of time (as a $(REF TickDuration, core,time)) that it took to
         call each function $(D n) times. The first value is the length of time
         that it took to call $(D fun[0]) $(D n) times. The second value is the
         length of time it took to call $(D fun[1]) $(D n) times. Etc.
 
-    Note that casting the TickDurations to $(CXREF time, Duration)s will make
+    Note that casting the TickDurations to $(REF Duration, core,time)s will make
     the results easier to deal with (and it may change in the future that
     benchmark will return an array of Durations rather than TickDurations).
 
@@ -32094,13 +32093,13 @@ unittest
        value of $(D T) as $(Unqual!T).
 
     3. $(D T) must define an $(D opBinary) for addition and subtraction that
-       accepts $(CXREF time, Duration) and returns $(D Unqual!T).
+       accepts $(REF Duration, core,time) and returns $(D Unqual!T).
 
     4. $(D T) must define an $(D opOpAssign) for addition and subtraction that
-       accepts $(CXREF time, Duration) and returns $(D ref Unqual!T).
+       accepts $(REF Duration, core,time) and returns $(D ref Unqual!T).
 
     5. $(D T) must define a $(D opBinary) for subtraction which accepts $(D T)
-       and returns returns $(CXREF time, Duration).
+       and returns returns $(REF Duration, core,time).
   +/
 template isTimePoint(T)
 {
@@ -32223,7 +32222,7 @@ unittest
     the standard, much as it's based on it, so the name "std time" isn't
     particularly good, but there isn't an official name for it. C# uses "ticks"
     for the same thing, but they aren't actually clock ticks, and the term
-    "ticks" $(I is) used for actual clock ticks for $(CXREF time, MonoTime), so
+    "ticks" $(I is) used for actual clock ticks for $(REF MonoTime, core,time), so
     it didn't make sense to use the term ticks here. So, for better or worse,
     std.datetime uses the term "std time" for this.
 
@@ -32287,7 +32286,7 @@ unittest
     the standard, much as it's based on it, so the name "std time" isn't
     particularly good, but there isn't an official name for it. C# uses "ticks"
     for the same thing, but they aren't actually clock ticks, and the term
-    "ticks" $(I is) used for actual clock ticks for $(CXREF time, MonoTime), so
+    "ticks" $(I is) used for actual clock ticks for $(REF MonoTime, core,time), so
     it didn't make sense to use the term ticks here. So, for better or worse,
     std.datetime uses the term "std time" for this.
 
@@ -33947,7 +33946,7 @@ version(StdDdoc)
 
         When the value that is returned by this function is destroyed,
         $(D func) will run. $(D func) is a unary function that takes a
-        $(CXREF time, TickDuration).
+        $(REF TickDuration, core,time).
 
         Example:
 --------------------
