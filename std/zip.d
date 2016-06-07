@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * Read/write data in the $(LINK2 http://www.info-_zip.org, zip archive) format.
+ * Read/write data in the $(LINK2 http://www.info-zip.org, _zip archive) format.
  * Makes use of the etc.c.zlib compression library.
  *
  * Bugs:
