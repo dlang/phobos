@@ -4683,7 +4683,7 @@ template Utf8Matcher()
         }
         enum dispatch = genDispatch();
 
-        public bool match(Range)(ref Range inp) const pure @trusted
+        public bool match(Range)(ref Range inp) const pure
             if (isRandomAccessRange!Range && is(ElementType!Range : char))
         {
             enum mode = Mode.skipOnMatch;
