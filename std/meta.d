@@ -1147,35 +1147,13 @@ unittest
   */
 template ApplyLeft(alias Template, args...)
 {
-    static if (args.length)
-    {
-        template ApplyLeft(right...)
-        {
-            static if (is(typeof(Template!(args, right))))
-                enum ApplyLeft = Template!(args, right); // values
-            else
-                alias ApplyLeft = Template!(args, right); // symbols
-        }
-    }
-    else
-        alias ApplyLeft = Template;
+    alias ApplyLeft(right...) = Template!(args, right);
 }
 
 /// Ditto
 template ApplyRight(alias Template, args...)
 {
-    static if (args.length)
-    {
-        template ApplyRight(left...)
-        {
-            static if (is(typeof(Template!(left, args))))
-                enum ApplyRight = Template!(left, args); // values
-            else
-                alias ApplyRight = Template!(left, args); // symbols
-        }
-    }
-    else
-        alias ApplyRight = Template;
+    alias ApplyRight(left...) = Template!(left, args);
 }
 
 ///
@@ -1243,6 +1221,34 @@ unittest
     static assert(is(staticMap!(ApplyRight!(
         SetFunctionAttributes, "D", FunctionAttribute.safe),
         typeof(&foo), typeof(&bar)) == SafeFunctions));
+}
+
+unittest // values
+{
+    enum Templ1(int x) = x;
+    alias Partial1 = ApplyLeft!(Templ1, 1);
+    static assert(Partial1!() == 1);
+
+    enum Templ2(int x) = x;
+    alias Partial2 = ApplyLeft!Templ2;
+    static assert(Partial2!2 == 2);
+
+    enum Templ3(int a, double b, string c) = AliasSeq!(a, b, c);
+    alias Partial3 = ApplyLeft!(Templ3, 3, 3.3);
+    static assert(Partial3!"3" == AliasSeq!(3, 3.3, "3"));
+}
+
+unittest // issue 16070
+{
+    alias Templ(T, string name) = AliasSeq!(T, name);
+    alias PartialL = ApplyLeft!(Templ, int);
+    alias FullL = PartialL!"foo";
+    static assert(is(FullL[0] == int));
+    static assert(FullL[1] == "foo");
+    alias PartialR = ApplyRight!(Templ, "bar");
+    alias FullR = PartialR!int;
+    static assert(is(FullR[0] == int));
+    static assert(FullR[1] == "bar");
 }
 
 /**
