@@ -115,21 +115,10 @@ unittest
  * See_Also:
  * To alias more than one thing at once, use $(LREF AliasSeq)
  */
-template Alias(alias a)
-{
-    static if (__traits(compiles, { alias x = a; }))
-        alias Alias = a;
-    else static if (__traits(compiles, { enum x = a; }))
-        enum Alias = a;
-    else
-        static assert(0, "Cannot alias " ~ a.stringof);
-}
+alias Alias(alias a) = a;
 
 /// Ditto
-template Alias(T)
-{
-    alias Alias = T;
-}
+alias Alias(T) = T;
 
 ///
 unittest
@@ -1147,35 +1136,24 @@ unittest
   */
 template ApplyLeft(alias Template, args...)
 {
-    static if (args.length)
-    {
-        template ApplyLeft(right...)
-        {
-            static if (is(typeof(Template!(args, right))))
-                enum ApplyLeft = Template!(args, right); // values
-            else
-                alias ApplyLeft = Template!(args, right); // symbols
-        }
-    }
-    else
-        alias ApplyLeft = Template;
+    alias ApplyLeft(right...) = SmartAlias!(Template!(args, right));
 }
 
 /// Ditto
 template ApplyRight(alias Template, args...)
 {
-    static if (args.length)
+    alias ApplyRight(left...) = SmartAlias!(Template!(left, args));
+}
+
+private template SmartAlias(T...) {
+    static if (T.length == 1)
     {
-        template ApplyRight(left...)
-        {
-            static if (is(typeof(Template!(left, args))))
-                enum ApplyRight = Template!(left, args); // values
-            else
-                alias ApplyRight = Template!(left, args); // symbols
-        }
+        alias SmartAlias = Alias!T;
     }
     else
-        alias ApplyRight = Template;
+    {
+        alias SmartAlias = AliasSeq!T;
+    }
 }
 
 ///
@@ -1189,6 +1167,25 @@ unittest
 
     static assert(is(Filter!(ApplyRight!(isImplicitlyConvertible, short),
         ubyte, string, short, float, int) == AliasSeq!(ubyte, short)));
+}
+
+unittest
+{
+    static assert(is(typeof({
+        alias T(T0, int a, double b, alias T1, string c) = AliasSeq!(T0, a, b, T1, c);
+        alias T0 = ApplyRight!(ApplyLeft, ApplyRight);
+        alias T1 = T0!ApplyLeft;
+        alias T2 = T1!T;
+        alias T3 = T2!(3, "foo");
+        alias T4 = T3!(short, 3, 3.3);
+        static assert(Pack!T4.equals!(short, 3, 3.3, 3, "foo"));
+
+        import std.traits : isImplicitlyConvertible;
+        alias U1 = ApplyLeft!(ApplyRight, isImplicitlyConvertible);
+        alias U2 = U1!int;
+        enum U3 = U2!short;
+        static assert(U3);
+    })));
 }
 
 ///
