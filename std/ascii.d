@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /++
     Functions which operate on ASCII characters.
 

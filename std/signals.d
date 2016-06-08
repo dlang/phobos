@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Signals and Slots are an implementation of the Observer Pattern.
  * Essentially, when a Signal is emitted, a list of connected Observers

@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use

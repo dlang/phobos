@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /++
     Encode and decode UTF-8, UTF-16 and UTF-32 strings.
 

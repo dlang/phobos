@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Support UTF-8 on Windows 95, 98 and ME systems.
  *

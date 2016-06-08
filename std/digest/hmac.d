@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 This package implements the hash-based message authentication code (_HMAC)
 algorithm as defined in $(WEB tools.ietf.org/html/rfc2104, RFC2104). See also

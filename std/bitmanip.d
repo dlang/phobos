@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 Bit-level manipulation facilities.
 

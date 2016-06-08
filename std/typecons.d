@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 This module implements a variety of type constructors, i.e., templates
 that allow construction of new, useful general-purpose types.

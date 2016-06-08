@@ -1,4 +1,3 @@
-// Written in the D programming language.
 /**
 Functions and types that manipulate built-in arrays and associative arrays.
 

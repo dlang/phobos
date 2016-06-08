@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 This module is a port of a growing fragment of the $(D_PARAM numeric)
 header in Alexander Stepanov's $(LINK2 http://sgi.com/tech/stl,

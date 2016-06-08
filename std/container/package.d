@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 This module defines generic containers.
 

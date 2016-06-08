@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Information about the target operating system, environment, and CPU.
  *

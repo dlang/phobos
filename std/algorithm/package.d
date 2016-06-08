@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 This package implements generic algorithms oriented towards the processing of
 sequences. Sequences processed by these functions define range-based

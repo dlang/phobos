@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Read and write memory mapped files.
  * Copyright: Copyright Digital Mars 2004 - 2009.

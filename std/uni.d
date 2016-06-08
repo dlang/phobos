@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /++
     $(P The $(D std.uni) module provides an implementation
     of fundamental Unicode algorithms and data structures.

@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
    This module implements the formatting functionality for strings and
    I/O. It's comparable to C99's $(D vsprintf()) and uses a similar

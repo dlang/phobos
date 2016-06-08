@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Demangle D mangled names.
  *

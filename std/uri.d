@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Encode and decode Uniform Resource Identifiers (URIs).
  * URIs are used in internet transfer protocols.

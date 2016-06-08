@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 Classes and functions for handling and transcoding between various encodings.
 

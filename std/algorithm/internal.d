@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /// Helper functions for std.algorithm package.
 module std.algorithm.internal;
 

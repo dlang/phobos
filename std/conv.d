@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 A one-stop shop for converting values from one type to another.
 

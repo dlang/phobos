@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 Facilities for random number generation.
 

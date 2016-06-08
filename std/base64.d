@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
  * Support for Base64 encoding and decoding.
  *
