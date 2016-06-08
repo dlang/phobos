@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.scoped_allocator;
 
 import std.experimental.allocator.common;
