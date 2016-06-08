@@ -187,7 +187,7 @@ assert(ar == [[0, 3], [1, 4], [2, 5]]);
 )
 
 $(LI $(LNAME2 slice_iota, `iotaSlice` lazy tensor was added to `std.experimental.ndslice.selection`.)
-    %(P $(REF iotaSlice, std,experimental,ndslice,selection) is the fastest possible `Slice`.)
+    $(P $(REF iotaSlice, std,experimental,ndslice,selection) is the fastest possible `Slice`.)
 ---
 import std.experimental.ndslice;
 
