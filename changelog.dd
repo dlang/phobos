@@ -53,9 +53,10 @@ $(BUGSTITLE Library Changes,
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(LNAME2 std-digest-murmurhash, Implementation of $(XREF std.digest, murmurhash).)
-    $(P MurmurHash is a non-cryptographic hash function suitable for general
-      hash-based lookup. It is optimized for x86 architectures.
+$(LI $(LNAME2 std-digest-murmurhash, Implementation of `std.digest.murmurhash`).
+    $(P $(MREF std,digest,murmurhash) has been added. MurmurHash is a
+      non-cryptographic hash function suitable for general hash-based lookup. It
+      is optimized for x86 architectures.
     )
 ------
 // Computing the 32-bits hash value of an int array using the convenient digest template.
@@ -116,7 +117,7 @@ assert(m.front[1] == "12");
 -------
 )
 
-$(LI $(LNAME2 regex-with-matches, $(REF splitter, std,regex) now supports keeping the
+$(LI $(LNAME2 regex-with-matches, `std.regex.splitter` now supports keeping the
 pattern matches in the resulting range.)
 -------
 import std.regex;
