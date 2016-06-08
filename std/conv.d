@@ -807,8 +807,6 @@ private T toImpl(T, S)(S value)
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias srcmod = AddModifier!m1;
         alias tgtmod = AddModifier!m2;
-        //pragma(msg, srcmod!Object, " -> ", tgtmod!Object, ", convertible = ",
-        //            isImplicitlyConvertible!(srcmod!Object, tgtmod!Object));
 
         // Compile time convertible equals to modifier convertible.
         static if (isImplicitlyConvertible!(srcmod!Object, tgtmod!Object))
@@ -1061,7 +1059,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     assertCTFEable!dg;
 }
 
-@safe pure /+nothrow+/ unittest
+@safe pure unittest
 {
     // Conversion representing bool value with string
     bool b;
@@ -1094,7 +1092,6 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     {
         s2 ~= to!string(c);
     }
-    //printf("%.*s", s2);
     assert(s2 == "foo");
 }
 
@@ -1186,7 +1183,7 @@ unittest
     assert(to!string(s8080) == "<S>");
 }
 
-/+nothrow+/ unittest
+unittest
 {
     // Conversion representing enum value with string
     enum EB : bool { a = true }
@@ -1454,9 +1451,6 @@ private T toImpl(T, S)(S value)
     auto b = to!(float[])(a);
     assert(b == [ 1.0f, 2, 3 ]);
 
-    //auto c = to!(string[])(b);
-    //assert(c[0] == "1" && c[1] == "2" && c[2] == "3");
-
     immutable(int)[3] d = [ 1, 2, 3 ];
     b = to!(float[])(d);
     assert(b == [ 1.0f, 2, 3 ]);
@@ -1489,7 +1483,8 @@ private T toImpl(T, S)(S value)
                 ex ? ex.msg : "Exception was not thrown!");
     }
 }
-/*@safe pure */unittest
+
+unittest
 {
     auto b = [ 1.0f, 2, 3 ];
 
@@ -1522,7 +1517,7 @@ private T toImpl(T, S)(S value)
     return cast(T)result;
 }
 
-@safe /*pure */unittest
+@safe unittest
 {
     // hash to hash conversions
     int[string] a;
@@ -1531,7 +1526,7 @@ private T toImpl(T, S)(S value)
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
 }
-@safe /*pure */unittest // Bugzilla 8705, from doc
+@safe unittest // Bugzilla 8705, from doc
 {
     import std.exception;
     int[string][double[int[]]] a;
@@ -1597,8 +1592,6 @@ private void testFloatingToIntegral(Floating, Integral)()
     assert(convFails!(Floating, Integral, ConvOverflowException)(a)
             || Floating.sizeof <= Integral.sizeof);
     a = 0.0 + Integral.max;
-//   fwritefln(stderr, "%s a=%g, %s conv=%s", Floating.stringof, a,
-//             Integral.stringof, to!Integral(a));
     assert(to!Integral(a) == Integral.max || Floating.sizeof <= Integral.sizeof);
     ++a; // no more representable as an Integral
     assert(convFails!(Floating, Integral, ConvOverflowException)(a)
@@ -1644,10 +1637,8 @@ private void testFloatingToIntegral(Floating, Integral)()
         assert(to!long(to!double(b)) == b);
         assert(to!long(to!double(-b)) == -b);
         // real
-        // @@@ BUG IN COMPILER @@@
-//     ulong c = 18_446_744_073_709_551_615UL; // 2^64 - 1
-//     assert(to!ulong(to!real(c)) == c);
-//     assert(to!ulong(-to!real(c)) == c);
+        ulong c = 18_446_744_073_709_551_615UL; // 2^64 - 1
+        assert(to!ulong(to!real(c)) == c);
     }
     // test conversions floating => integral
     {
@@ -1693,7 +1684,8 @@ private void testFloatingToIntegral(Floating, Integral)()
         }
     }
 }
-/*@safe pure */unittest
+
+unittest
 {
     alias AllInts = AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong);
     alias AllFloats = AliasSeq!(float, double, real);
@@ -1704,13 +1696,13 @@ private void testFloatingToIntegral(Floating, Integral)()
         {
             T a = 42;
             assert(to!string(a) == "42");
-            //assert(to!wstring(a) == "42"w);
-            //assert(to!dstring(a) == "42"d);
+            assert(to!wstring(a) == "42"w);
+            assert(to!dstring(a) == "42"d);
             // array test
-//       T[] b = new T[2];
-//       b[0] = 42;
-//       b[1] = 33;
-//       assert(to!string(b) == "[42,33]");
+            T[] b = new T[2];
+            b[0] = 42;
+            b[1] = 33;
+            assert(to!string(b) == "[42, 33]");
         }
     }
     // test array to string conversion
@@ -1720,10 +1712,10 @@ private void testFloatingToIntegral(Floating, Integral)()
         assert(to!string(a) == "[1, 2, 3]");
     }
     // test enum to int conversion
-    // enum Testing { Test1, Test2 };
-    // Testing t;
-    // auto a = to!string(t);
-    // assert(a == "0");
+    enum Testing { Test1, Test2 }
+    Testing t;
+    auto a = to!string(t);
+    assert(a == "Test1");
 }
 
 
@@ -2450,8 +2442,6 @@ Target parse(Target, Source)(ref Source p)
     static immutable real[13] postab =
         [ 1e+4096L,1e+2048L,1e+1024L,1e+512L,1e+256L,1e+128L,1e+64L,1e+32L,
                 1e+16L,1e+8L,1e+4L,1e+2L,1e+1L ];
-    // static immutable string infinity = "infinity";
-    // static immutable string nans = "nans";
 
     ConvException bailOut()(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
     {
@@ -3050,11 +3040,6 @@ unittest
     x1 = *cast(longdouble *)&ld1;
     assert(x1 == x && ld1 == ld);
 
-    // for (i = 4; i >= 0; i--)
-    // {
-    //     printf("%04x ", x.value[i]);
-    // }
-    // printf("\n");
     assert(!errno);
 
     s2 = "1.0e5";
@@ -3063,12 +3048,6 @@ unittest
     x = *cast(longdouble *)&ld;
     ld1 = strtold("1.0e5", null);
     x1 = *cast(longdouble *)&ld1;
-
-    // for (i = 4; i >= 0; i--)
-    // {
-    //     printf("%04x ", x.value[i]);
-    // }
-    // printf("\n");
 }
 
 @safe pure unittest
@@ -4673,20 +4652,6 @@ unittest
         sa.foo();
         assert(i == 2);
     }
-
-    ////NOTE: THESE WILL COMPILE
-    ////But will not correctly emplace the context pointer
-    ////The problem lies with voldemort, and not emplace.
-    //{
-    //    struct S3
-    //    {
-    //        int k;
-    //        void foo(){++i;}
-    //    }
-    //}
-    //S3 s3 = void;
-    //emplace(&s3);    //S3.init has no context pointer information
-    //emplace(&s3, 1); //No way to obtain context pointer once inside emplace
 }
 
 //Alias this
