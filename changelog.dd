@@ -53,9 +53,10 @@ $(BUGSTITLE Library Changes,
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(LNAME2 std-digest-murmurhash, Implementation of $(XREF std.digest, murmurhash).)
-    $(P MurmurHash is a non-cryptographic hash function suitable for general
-      hash-based lookup. It is optimized for x86 architectures.
+$(LI $(LNAME2 std-digest-murmurhash, Implementation of `std.digest.murmurhash`).
+    $(P $(MREF std,digest,murmurhash) has been added. MurmurHash is a
+      non-cryptographic hash function suitable for general hash-based lookup. It
+      is optimized for x86 architectures.
     )
 ------
 // Computing the 32-bits hash value of an int array using the convenient digest template.
@@ -75,7 +76,7 @@ $(LI $(LNAME2 process, Process creation in `std.process` was sped up on Posix.)
 )
 
 $(LI $(LNAME2 std-algorithm-iteration-cumulativeFold,
-    `algorithm.iteration.cumulativeFold` was added.))
+    `algorithm.iteration.cumulativeFold` was added.)
 
     $(P $(REF cumulativeFold, std,algorithm,iteration) returns the successive
         reduced values of an input range.)
@@ -116,7 +117,7 @@ assert(m.front[1] == "12");
 -------
 )
 
-$(LI $(LNAME2 regex-with-matches, $(REF splitter, std,regex) now supports keeping the
+$(LI $(LNAME2 regex-with-matches, `std.regex.splitter` now supports keeping the
 pattern matches in the resulting range.)
 -------
 import std.regex;
@@ -162,14 +163,15 @@ $(LI $(LNAME2 slice_ptr, `ptr` property and public constructor were added to
 
 $(LI $(LNAME2 slice_alloc, `slice`, `shape`, `ndarray`, and other utilities
     were added to `std.experimental.ndslice.slice`.)
-    $(P 
-        $(REF shape, std,experimental,ndslice,slice)
-        $(REF slice, std,experimental,ndslice,slice),
-        $(REF makeSlice, std,experimental,ndslice,slice),
-        $(REF ndarray, std,experimental,ndslice,slice), and
-        $(REF makeNdarray, std,experimental,ndslice,slice)
-        allocation utilities were added to $(MREF std,experimental,ndslice)
-        )
+    $(P These utility functions have been added to
+        $(MREF std,experimental,ndslice):)
+    $(UL
+        $(LI $(REF shape, std,experimental,ndslice,slice),)
+        $(LI $(REF slice, std,experimental,ndslice,slice),)
+        $(LI $(REF makeSlice, std,experimental,ndslice,slice),)
+        $(LI $(REF ndarray, std,experimental,ndslice,slice), and)
+        $(LI $(REF makeNdarray, std,experimental,ndslice,slice).)
+    )
     $(P Example: Transposing common 2D array using `ndslice`)
 -----
 import std.experimental.ndslice;
@@ -186,7 +188,7 @@ assert(ar == [[0, 3], [1, 4], [2, 5]]);
 )
 
 $(LI $(LNAME2 slice_iota, `iotaSlice` lazy tensor was added to `std.experimental.ndslice.selection`.)
-    %(P $(REF iotaSlice, std,experimental,ndslice,selection) is the fastest possible `Slice`.)
+    $(P $(REF iotaSlice, std,experimental,ndslice,selection) is the fastest possible `Slice`.)
 ---
 import std.experimental.ndslice;
 
