@@ -44,10 +44,11 @@
  *           $(LREF anySatisfy)
  *           $(LREF staticIndexOf)
  * ))
- * $(TR $(TD Boolean template predicate operators) $(TD
+ * $(TR $(TD Template predicates) $(TD
  *           $(LREF templateAnd)
  *           $(LREF templateNot)
  *           $(LREF templateOr)
+ *           $(LREF staticIsSorted)
  * ))
  * $(TR $(TD Template instantiation) $(TD
  *           $(LREF ApplyLeft)
@@ -1424,20 +1425,7 @@ private template staticMerge(alias cmp, int half, Seq...)
     }
     else
     {
-        private enum Result = cmp!(Seq[0], Seq[half]);
-        static if (is(typeof(Result) == bool))
-        {
-            private enum Check = Result;
-        }
-        else static if (is(typeof(Result) : int))
-        {
-            private enum Check = Result <= 0;
-        }
-        else
-        {
-            static assert(0, typeof(Result).stringof ~ " is not a value comparison type");
-        }
-        static if (Check)
+        static if (isLessEq!(cmp, Seq[0], Seq[half]))
         {
             alias staticMerge = AliasSeq!(Seq[0], staticMerge!(cmp, half - 1, Seq[1 .. $]));
         }
@@ -1447,6 +1435,61 @@ private template staticMerge(alias cmp, int half, Seq...)
                 Seq[0 .. half], Seq[half + 1 .. $]));
         }
     }
+}
+
+private template isLessEq(alias cmp, Seq...)
+    if (Seq.length == 2)
+{
+    private enum Result = cmp!(Seq[1], Seq[0]);
+    static if (is(typeof(Result) == bool))
+        enum isLessEq = !Result;
+    else static if (is(typeof(Result) : int))
+        enum isLessEq = Result >= 0;
+    else
+        static assert(0, typeof(Result).stringof ~ " is not a value comparison type");
+}
+
+/**
+ * Checks if an $(LREF AliasSeq) is sorted according to $(D cmp).
+ *
+ * Parameters:
+ *     cmp = A template that returns a $(D bool) (if its first argument is less than the second one)
+ *         or an $(D int) (-1 means less than, 0 means equal, 1 means greater than)
+ *
+ *     Seq = The  $(LREF AliasSeq) to check
+ *
+ * Returns: `true` if `Seq` is sorted; otherwise `false`
+ */
+template staticIsSorted(alias cmp, Seq...)
+{
+    static if (Seq.length <= 1)
+        enum staticIsSorted = true;
+    else static if (Seq.length == 2)
+        enum staticIsSorted = isLessEq!(cmp, Seq[0], Seq[1]);
+    else
+    {
+        enum staticIsSorted =
+            isLessEq!(cmp, Seq[($ / 2) - 1], Seq[$ / 2]) &&
+            staticIsSorted!(cmp, Seq[0 .. $ / 2]) &&
+            staticIsSorted!(cmp, Seq[$ / 2 .. $]);
+    }
+}
+
+///
+unittest
+{
+    enum Comp(int N1, int N2) = N1 < N2;
+    static assert( staticIsSorted!(Comp, 2, 2));
+    static assert( staticIsSorted!(Comp, 2, 3, 7, 23));
+    static assert(!staticIsSorted!(Comp, 7, 2, 3, 23));
+}
+
+///
+unittest
+{
+    enum Comp(T1, T2) = __traits(isUnsigned, T2) - __traits(isUnsigned, T1);
+    static assert( staticIsSorted!(Comp, uint, ubyte, ulong, short, long));
+    static assert(!staticIsSorted!(Comp, uint, short, ubyte, long, ulong));
 }
 
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
