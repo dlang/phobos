@@ -3490,19 +3490,29 @@ int impureVariable;
 }
 
 /****************************
- * Iterate an input range of characters by char type C.
+ * Iterate an input range of characters by char type `C` by
+ * encoding the elements of the range.
  *
- * UTF sequences that cannot be converted to UTF-8 are replaced by U+FFFD
- * per "5.22 Best Practice for U+FFFD Substitution" of the Unicode Standard 6.2.
- * Hence byUTF is not symmetric.
+ * UTF sequences that cannot be converted to the specified encoding are
+ * replaced by U+FFFD per "5.22 Best Practice for U+FFFD Substitution"
+ * of the Unicode Standard 6.2. Hence byUTF is not symmetric.
  * This algorithm is lazy, and does not allocate memory.
- * Purity, nothrow, and safety are inferred from the r parameter.
+ * `@nogc`, `pure`-ity, `nothrow`, and `@safe`-ty are inferred from the
+ * `r` parameter.
  *
  * Params:
- *      C = char, wchar, or dchar
+ *      C = `char`, `wchar`, or `dchar`
  *      r = input range of characters, or array of characters
  * Returns:
- *      input range of type C
+ *      A forward range if r is a range and not auto-decodable, as defined by
+ *      $(REF isAutodecodableString, std, traits), and if the base range is
+ *      also a forward range.
+ *
+ *      Or, if r is a range and it is auto-decodable and
+ *      `is(ElementEncodingType!typeof(r) == C)`, then the range is passed
+ *      to $(LREF byCodeUnit).
+ *
+ *      Otherwise, an input range of characters.
  */
 template byUTF(C) if (isSomeChar!C)
 {
@@ -3580,12 +3590,18 @@ template byUTF(C) if (isSomeChar!C)
 }
 
 ///
-@safe pure nothrow @nogc unittest
+@safe pure nothrow unittest
 {
-    foreach (c; "h".byUTF!char())
-        assert(c == 'h');
-    foreach (c; "h".byUTF!wchar())
-        assert(c == 'h');
-    foreach (c; "h".byUTF!dchar())
-        assert(c == 'h');
+    import std.algorithm.comparison : equal;
+
+    // hellö as a range of `char`s, which are UTF-8
+    "hell\u00F6".byUTF!char().equal(['h', 'e', 'l', 'l', 0xC3, 0xB6]);
+
+    // `wchar`s are able to hold the ö in a single element (UTF-16 code unit)
+    "hell\u00F6".byUTF!wchar().equal(['h', 'e', 'l', 'l', 'ö']);
+
+    // 𐐷 is four code units in UTF-8, two in UTF-16, and one in UTF-32
+    "𐐷".byUTF!char().equal([0xF0, 0x90, 0x90, 0xB7]);
+    "𐐷".byUTF!wchar().equal([0xD801, 0xDC37]);
+    "𐐷".byUTF!dchar().equal([0x00010437]);
 }
