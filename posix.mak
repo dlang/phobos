@@ -30,6 +30,10 @@ QUIET:=
 
 include osmodel.mak
 
+ifeq (osx,$(OS))
+	export MACOSX_DEPLOYMENT_TARGET=10.7
+endif
+
 # Default to a release built, override with BUILD=debug
 ifeq (,$(BUILD))
 BUILD_WAS_SPECIFIED=0
