@@ -161,6 +161,9 @@ else version (MICROSOFT_STDIO)
     alias FLOCK = _lock_file;
     alias FUNLOCK = _unlock_file;
 
+    alias setmode = _setmode;
+    alias fileno = _fileno;
+
     enum
     {
         _O_RDONLY = 0x0000,
