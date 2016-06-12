@@ -387,7 +387,7 @@ See_Also:
 */
 Range partition(alias predicate,
         SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
-    if ((ss == SwapStrategy.stable && isRandomAccessRange!(Range))
+    if ((ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
             || (ss != SwapStrategy.stable && isForwardRange!(Range)))
 {
     alias pred = unaryFun!(predicate);
@@ -403,7 +403,7 @@ Range partition(alias predicate,
         const middle = r.length / 2;
         alias recurse = .partition!(pred, ss, Range);
         auto lower = recurse(r[0 .. middle]);
-        auto upper = recurse(r[middle .. $]);
+        auto upper = recurse(r[middle .. r.length]);
         bringToFront(lower, r[middle .. r.length - upper.length]);
         return r[r.length - lower.length - upper.length .. r.length];
     }
@@ -440,7 +440,7 @@ Range partition(alias predicate,
             {
                 for (;;)
                 {
-                    if (lo > hi) return r[lo .. $];
+                    if (lo > hi) return r[lo .. r.length];
                     if (!pred(r[lo])) break;
                     ++lo;
                 }
@@ -448,7 +448,7 @@ Range partition(alias predicate,
                 assert(lo <= hi);
                 for (;;)
                 {
-                    if (lo == hi) return r[lo .. $];
+                    if (lo == hi) return r[lo .. r.length];
                     if (pred(r[hi])) break;
                     --hi;
                 }
@@ -602,7 +602,7 @@ BUGS: stable $(D partition3) has not been implemented yet.
 auto partition3(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range, E)
 (Range r, E pivot)
 if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
-        && hasSwappableElements!Range && hasLength!Range
+        && hasSwappableElements!Range && hasLength!Range && hasSlicing!Range
         && is(typeof(binaryFun!less(r.front, pivot)) == bool)
         && is(typeof(binaryFun!less(pivot, r.front)) == bool)
         && is(typeof(binaryFun!less(r.front, r.front)) == bool))
@@ -2322,7 +2322,8 @@ $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
 $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
 (if stable) evaluations of $(D less) and $(D swap).
 
-If $(D n >= r.length), the algorithm has no effect and returns `r[0 .. $]`.
+If $(D n >= r.length), the algorithm has no effect and returns
+`r[0 .. r.length]`.
 
 Params:
     less = The predicate to sort by.
@@ -2347,7 +2348,7 @@ auto topN(alias less = "a < b",
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
 
-    if (nth >= r.length) return r[0 .. $];
+    if (nth >= r.length) return r[0 .. r.length];
 
     auto ret = r[0 .. nth];
     for (;;)
@@ -2388,7 +2389,7 @@ auto topN(alias less = "a < b",
             break;
         }
         ++pivot; // skip the pivot
-        r = r[pivot .. $];
+        r = r[pivot .. r.length];
         nth -= pivot;
     }
     return ret;
