@@ -720,7 +720,6 @@ Throws: $(D ErrnoException) on error.
                 return;
             }
         }
-        //fprintf(core.stdc.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
         errnoEnforce(.fclose(_p.handle) == 0,
                 "Could not close file `"~_name~"'");
     }
@@ -1748,7 +1747,7 @@ Returns the $(D FILE*) corresponding to this object.
 /**
 Returns the file number corresponding to this object.
  */
-    /*version(Posix) */@property int fileno() const @trusted
+    @property int fileno() const @trusted
     {
         import std.exception : enforce;
 
@@ -2108,7 +2107,6 @@ $(REF readText, std,file)
         static import std.file;
         import std.algorithm.comparison : equal;
 
-        //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
         auto deleteme = testFilename();
         std.file.write(deleteme, "");
@@ -2578,8 +2576,6 @@ $(D Range) that locks the file and allows fast writing to it.
             }
         }
 
-        // @@@BUG@@@ 2340
-        //void front(C)(C c) if (is(C : dchar))
         /// ditto
         void put(C)(C c) @safe if (is(C : const(dchar)))
         {
@@ -3196,7 +3192,6 @@ unittest
     assert(x == 2);
     f.readf("%d ", &x);
     assert(x == 3);
-    //pragma(msg, "--- todo: readf ---");
 }
 
 unittest // bugzilla 13686
@@ -3286,7 +3281,6 @@ unittest
 {
     static import std.file;
 
-    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     void[] buf;
     if (false) write(buf);
@@ -3297,15 +3291,6 @@ unittest
     f.close();
     scope(exit) { std.file.remove(deleteme); }
     assert(cast(char[]) std.file.read(deleteme) == "Hello, world number 42!");
-    // // test write on stdout
-    //auto saveStdout = stdout;
-    //scope(exit) stdout = saveStdout;
-    //stdout.open(file, "w");
-    Object obj;
-    //write("Hello, ",  "world number ", 42, "! ", obj);
-    //stdout.close();
-    // auto result = cast(char[]) std.file.read(file);
-    // assert(result == "Hello, world number 42! null", result);
 }
 
 /***********************************
@@ -3374,7 +3359,6 @@ unittest
 {
     static import std.file;
 
-    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
 
     // test writeln
@@ -3498,7 +3482,6 @@ unittest
 {
     static import std.file;
 
-    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
 
     // test writef
@@ -3529,7 +3512,6 @@ unittest
 {
     static import std.file;
 
-    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
 
     // test writefln
@@ -3545,24 +3527,6 @@ unittest
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, nice world number 42!\n",
                 cast(char[]) std.file.read(deleteme));
-    // test write on stdout
-    // auto saveStdout = stdout;
-    // scope(exit) stdout = saveStdout;
-    // stdout.open(file, "w");
-    // assert(stdout.isOpen);
-    // writefln("Hello, %s world number %s!", "nice", 42);
-    // foreach (F ; AliasSeq!(ifloat, idouble, ireal))
-    // {
-    //     F a = 5i;
-    //     F b = a % 2;
-    //     writeln(b);
-    // }
-    // stdout.close();
-    // auto read = cast(char[]) std.file.read(file);
-    // version (Windows)
-    //     assert(read == "Hello, nice world number 42!\r\n1\r\n1\r\n1\r\n", read);
-    // else
-    //     assert(read == "Hello, nice world number 42!\n1\n1\n1\n", "["~read~"]");
 }
 
 /**
@@ -3815,7 +3779,6 @@ struct lines
 {
     private File f;
     private dchar terminator = '\n';
-    // private string fileName;  // Curretly, no use
 
     /**
     Constructor.
@@ -3829,24 +3792,8 @@ struct lines
         this.terminator = terminator;
     }
 
-    // Keep these commented lines for later, when Walter fixes the
-    // exception model.
-
-//     static lines opCall(string fName, dchar terminator = '\n')
-//     {
-//         auto f = enforce(fopen(fName),
-//             new StdioException("Cannot open file `"~fName~"' for reading"));
-//         auto result = lines(f, terminator);
-//         result.fileName = fName;
-//         return result;
-//     }
-
     int opApply(D)(scope D dg)
     {
-//         scope(exit) {
-//             if (fileName.length && fclose(f))
-//                 StdioException("Could not close file `"~fileName~"'");
-//         }
         import std.traits : Parameters;
         alias Parms = Parameters!(dg);
         static if (isSomeString!(Parms[$ - 1]))
@@ -3941,7 +3888,6 @@ unittest
     static import std.file;
     import std.meta : AliasSeq;
 
-    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
 
     auto deleteme = testFilename();
@@ -4096,15 +4042,6 @@ private struct ChunksImpl
         this.size = size;
     }
 
-//     static chunks opCall(string fName, size_t size)
-//     {
-//         auto f = enforce(fopen(fName),
-//             new StdioException("Cannot open file `"~fName~"' for reading"));
-//         auto result = chunks(f, size);
-//         result.fileName  = fName;
-//         return result;
-//     }
-
     int opApply(D)(scope D dg)
     {
         import core.stdc.stdlib : alloca;
@@ -4144,7 +4081,6 @@ unittest
 {
     static import std.file;
 
-    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
 
     auto deleteme = testFilename();
@@ -4481,7 +4417,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             char c;
             while (1)
             {
-                if (i == u)                // if end of buffer
+                if (i == u)         // if end of buffer
                     goto L1;        // give up
                 c = p[i];
                 i++;
@@ -4508,7 +4444,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         {
             while (1)
             {
-                if (i == u)                // if end of buffer
+                if (i == u)         // if end of buffer
                     goto L1;        // give up
                 auto c = p[i];
                 i++;
@@ -4770,12 +4706,10 @@ unittest
     File f = File(deleteme, "rb");
 
     char[] ln = new char[2];
-    //assert(ln.capacity > 5);
     char* lnptr = ln.ptr;
     f.readln(ln);
 
     assert(ln == "abcd\n");
-    //assert(lnptr == ln.ptr); // should not reallocate
     char[] t = ln[0..2];
     t ~= 't';
     assert(t == "abt");
@@ -4783,11 +4717,9 @@ unittest
 
     // it can also stomp the array length
     ln = new char[4];
-    //assert(ln.capacity < 16);
     lnptr = ln.ptr;
     f.readln(ln);
     assert(ln == "0123456789abcde\n");
-    //assert(ln.ptr != lnptr);  // used to write to ln, overwriting allocation length byte
 
     char[100] buf;
     ln = buf[];
