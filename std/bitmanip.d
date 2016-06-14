@@ -9,7 +9,7 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
            Jonathan M Davis,
            Alex Rønne Petersen,
-           Damian Ziemba
+           Damian Ziemba,
            Amaury SECHET
 Source: $(PHOBOSSRC std/_bitmanip.d)
 */
