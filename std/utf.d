@@ -2729,7 +2729,8 @@ private P toUTFzImpl(P, S)(S str) @safe pure
     {
         typeof(*P.init)[] retval = ['\0'];
 
-        return retval.ptr;
+        auto trustedPtr() @trusted { return retval.ptr; }
+        return trustedPtr();
     }
 
     alias C = Unqual!(ElementEncodingType!S);
