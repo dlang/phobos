@@ -988,7 +988,7 @@ struct FormatSpec(Char)
                 const widthOrArgIndex = parse!uint(tmp);
                 enforceFmt(tmp.length,
                     text("Incorrect format specifier %", trailing[i .. $]));
-                i = tmp.ptr - trailing.ptr;
+                i = arrayPtrDiff(tmp, trailing);
                 if (tmp.startsWith('$'))
                 {
                     // index of the form %n$
@@ -1008,7 +1008,7 @@ struct FormatSpec(Char)
                     {
                         indexEnd = parse!(typeof(indexEnd))(tmp);
                     }
-                    i = tmp.ptr - trailing.ptr;
+                    i = arrayPtrDiff(tmp, trailing);
                     enforceFmt(trailing[i++] == '$',
                         "$ expected");
                 }
@@ -1044,13 +1044,13 @@ struct FormatSpec(Char)
                     precision = 0;
                     auto tmp = trailing[i .. $];
                     parse!int(tmp); // skip digits
-                    i = tmp.ptr - trailing.ptr;
+                    i = arrayPtrDiff(tmp, trailing);
                 }
                 else if (isDigit(trailing[i]))
                 {
                     auto tmp = trailing[i .. $];
                     precision = parse!int(tmp);
-                    i = tmp.ptr - trailing.ptr;
+                    i = arrayPtrDiff(tmp, trailing);
                 }
                 else
                 {
@@ -6548,4 +6548,15 @@ unittest
 
     assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
     });
+}
+
+/*****************************
+ * The .ptr is unsafe because it could be dereferenced and the length of the array may be 0.
+ * Returns:
+ *      the difference between the starts of the arrays
+ */
+@trusted private pure nothrow @nogc
+    ptrdiff_t arrayPtrDiff(const void[] array1, const void[] array2)
+{
+    return array1.ptr - array2.ptr;
 }
