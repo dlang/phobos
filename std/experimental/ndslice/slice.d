@@ -1,7 +1,7 @@
 /**
 This is a submodule of $(MREF std, experimental, ndslice).
 
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   Ilya Yaroshenko
 

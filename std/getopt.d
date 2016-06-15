@@ -11,9 +11,9 @@ with the more traditional single-letter approach, is provided but not
 enabled by default.
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2015.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
-Credits:   This module and its documentation are inspired by Perl's $(WEB
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
+Credits:   This module and its documentation are inspired by Perl's $(HTTP
            perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
            D's $(D getopt) is simpler than its Perl counterpart because $(D
            getopt) infers the expected parameter types from the static types of

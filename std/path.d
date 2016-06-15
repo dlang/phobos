@@ -33,19 +33,19 @@
     allocates, this is explicitly mentioned in the documentation.
 
     Upgrading:
-        $(WEB digitalmars.com/d/1.0/phobos/std_path.html#fnmatch) can
+        $(HTTP digitalmars.com/d/1.0/phobos/std_path.html#fnmatch) can
         be replaced with $(D globMatch).
 
     Authors:
         Lars Tandle Kyllingstad,
-        $(WEB digitalmars.com, Walter Bright),
+        $(HTTP digitalmars.com, Walter Bright),
         Grzegorz Adam Hankiewicz,
         Thomas K$(UUML)hne,
-        $(WEB erdani.org, Andrei Alexandrescu)
+        $(HTTP erdani.org, Andrei Alexandrescu)
     Copyright:
         Copyright (c) 2000-2014, the authors. All rights reserved.
     License:
-        $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
+        $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Source:
         $(PHOBOSSRC std/_path.d)
 */

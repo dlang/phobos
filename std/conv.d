@@ -5,10 +5,10 @@ A one-stop shop for converting values from one type to another.
 
 Copyright: Copyright Digital Mars 2007-.
 
-License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu),
+Authors:   $(HTTP digitalmars.com, Walter Bright),
+           $(HTTP erdani.org, Andrei Alexandrescu),
            Shin Fujishiro,
            Adam D. Ruppe,
            Kenji Hara

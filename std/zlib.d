@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * Compress/decompress data using the $(WEB www._zlib.net, _zlib library).
+ * Compress/decompress data using the $(HTTP www._zlib.net, _zlib library).
  *
  * Examples:
  *
@@ -41,11 +41,11 @@
  * -------
  *
  * References:
- *  $(WEB en.wikipedia.org/wiki/Zlib, Wikipedia)
+ *  $(HTTP en.wikipedia.org/wiki/Zlib, Wikipedia)
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_zlib.d)
  */
 /*          Copyright Digital Mars 2000 - 2011.

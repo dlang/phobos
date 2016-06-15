@@ -91,13 +91,13 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     See_Also:
         $(DDLINK intro-to-_datetime, Introduction to std.datetime,
                  Introduction to std&#46;_datetime)<br>
-        $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601)<br>
-        $(WEB en.wikipedia.org/wiki/Tz_database,
+        $(HTTP en.wikipedia.org/wiki/ISO_8601, ISO 8601)<br>
+        $(HTTP en.wikipedia.org/wiki/Tz_database,
               Wikipedia entry on TZ Database)<br>
-        $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones,
+        $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones,
               List of Time Zones)<br>
 
-    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
     Source:    $(PHOBOSSRC std/_datetime.d)
     Macros:
@@ -7657,7 +7657,7 @@ public:
         The ISO 8601 week of the year that this $(LREF SysTime) is in.
 
         See_Also:
-            $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date).
+            $(HTTP en.wikipedia.org/wiki/ISO_week_date, ISO Week Date).
       +/
     @property ubyte isoWeek() @safe const nothrow
     {
@@ -7859,7 +7859,7 @@ public:
 
 
     /++
-        The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day)
+        The $(HTTP en.wikipedia.org/wiki/Julian_day, Julian day)
         for this $(LREF SysTime) at the given time. For example,
         prior to noon, 1996-03-31 would be the Julian day number 2_450_173, so
         this function returns 2_450_173, while from noon onward, the Julian
@@ -7906,7 +7906,7 @@ public:
 
 
     /++
-        The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
+        The modified $(HTTP en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
         Julian day changes at midnight).
       +/
     @property long modJulianDay() @safe const nothrow
@@ -9261,7 +9261,7 @@ private:
 
 /++
     Represents a date in the
-    $(WEB en.wikipedia.org/wiki/Proleptic_Gregorian_calendar, Proleptic Gregorian Calendar)
+    $(HTTP en.wikipedia.org/wiki/Proleptic_Gregorian_calendar, Proleptic Gregorian Calendar)
     ranging from
     32,768 B.C. to 32,767 A.D. Positive years are A.D. Non-positive years are
     B.C.
@@ -9271,7 +9271,7 @@ private:
 
     $(D Date) uses the Proleptic Gregorian Calendar, so it assumes the Gregorian
     leap year calculations for its entire length. As per
-    $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601), it treats 1 B.C. as
+    $(HTTP en.wikipedia.org/wiki/ISO_8601, ISO 8601), it treats 1 B.C. as
     year 0, i.e. 1 B.C. is 0, 2 B.C. is -1, etc. Use $(LREF yearBC) to use B.C. as
     a positive integer with 1 B.C. being the year prior to 1 A.D.
 
@@ -12484,7 +12484,7 @@ public:
         The ISO 8601 week of the year that this $(LREF Date) is in.
 
         See_Also:
-            $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
+            $(HTTP en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
       +/
     @property ubyte isoWeek() @safe const pure nothrow
     {
@@ -12730,7 +12730,7 @@ public:
 
 
     /++
-        The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for this $(LREF Date) at noon (since the Julian day changes
+        The $(HTTP en.wikipedia.org/wiki/Julian_day, Julian day) for this $(LREF Date) at noon (since the Julian day changes
         at noon).
       +/
     @property long julianDay() @safe const pure nothrow
@@ -12757,7 +12757,7 @@ public:
 
 
     /++
-        The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
+        The modified $(HTTP en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
         Julian day changes at midnight).
       +/
     @property long modJulianDay() @safe const pure nothrow
@@ -17467,7 +17467,7 @@ public:
         The ISO 8601 week of the year that this $(LREF DateTime) is in.
 
         See_Also:
-            $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
+            $(HTTP en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
       +/
     @property ubyte isoWeek() @safe const pure nothrow
     {
@@ -17605,7 +17605,7 @@ public:
 
 
     /++
-        The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for this
+        The $(HTTP en.wikipedia.org/wiki/Julian_day, Julian day) for this
         $(LREF DateTime) at the given time. For example, prior to noon,
         1996-03-31 would be the Julian day number 2_450_173, so this function
         returns 2_450_173, while from noon onward, the julian day number would
@@ -17653,7 +17653,7 @@ public:
 
 
     /++
-        The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any
+        The modified $(HTTP en.wikipedia.org/wiki/Julian_day, Julian day) for any
         time on this date (since, the modified Julian day changes at midnight).
       +/
     @property long modJulianDay() @safe const pure nothrow
@@ -27646,9 +27646,9 @@ public:
         get a $(LREF2 .TimeZone, TimeZone) by name with $(D TimeZone.getTimeZone).
 
         See_Also:
-            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+            $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
               Database)<br>
-            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
+            $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
               Time Zones)
       +/
     @property string name() @safe const nothrow
@@ -27762,11 +27762,11 @@ public:
         the same time zone names on both Windows and Posix systems.
 
         See_Also:
-            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+            $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
               Database)<br>
-            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
+            $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
               Time Zones)<br>
-            $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
+            $(HTTP unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
                   Windows <-> TZ Database Name Conversion Table)
 
         Params:
@@ -28243,9 +28243,9 @@ public:
             Database name of the local time zone.
 
             See_Also:
-                $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+                $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
                   Database)<br>
-                $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
+                $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
                   of Time Zones)
           +/
         @property override string name() @safe const nothrow;
@@ -29459,9 +29459,9 @@ private:
         in the file).
 
     See_Also:
-        $(WEB www.iana.org/time-zones, Home of the TZ Database files)<br>
-        $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)<br>
-        $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time
+        $(HTTP www.iana.org/time-zones, Home of the TZ Database files)<br>
+        $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)<br>
+        $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time
           Zones)
   +/
 final class PosixTimeZone : TimeZone
@@ -29610,9 +29610,9 @@ public:
         given directory.
 
         See_Also:
-            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+            $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
               Database)<br>
-            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
+            $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
               Time Zones)
 
         Params:
@@ -30401,7 +30401,7 @@ version(StdDdoc)
          $(D WindowsTimeZone) on Windows systems).
 
         See_Also:
-            $(WEB www.iana.org/time-zones, Home of the TZ Database files)
+            $(HTTP www.iana.org/time-zones, Home of the TZ Database files)
       +/
     final class WindowsTimeZone : TimeZone
     {
@@ -30458,9 +30458,9 @@ version(StdDdoc)
             registry.
 
             See_Also:
-                $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+                $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
                   Database)<br>
-                $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
+                $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
                   of Time Zones)
 
             Params:
@@ -30883,7 +30883,7 @@ else version(Posix)
     Windows uses a different set of time zone names than the IANA time zone
     database does, and how they correspond to one another changes over time
     (particularly when Microsoft updates Windows).
-    $(WEB unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
+    $(HTTP unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
     provides the current conversions (which may or may not match up with what's
     on a particular Windows box depending on how up-to-date it is), and
     parseTZConversions reads in those conversions from windowsZones.xml so that
@@ -30902,7 +30902,7 @@ else version(Posix)
 
     Params:
         windowsZonesXMLFileText The text from
-        $(WEB unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
+        $(HTTP unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
 
     Throws:
         Exception if there is an error while parsing the given XML.
@@ -31100,7 +31100,7 @@ For terms of use, see http://www.unicode.org/copyright.html
     Returns null if the given time zone name cannot be converted.
 
     See_Also:
-        $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
+        $(HTTP unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
               Windows <-> TZ Database Name Conversion Table)
 
     Params:
@@ -31569,7 +31569,7 @@ version(Windows) unittest
     Returns null if the given time zone name cannot be converted.
 
     See_Also:
-        $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
+        $(HTTP unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
               Windows <-> TZ Database Name Conversion Table)
 
     Params:
@@ -32804,7 +32804,7 @@ unittest
 /++
     The given array of $(D char) or random-access range of $(D char) or
     $(D ubyte) is expected to be in the format specified in
-    $(WEB tools.ietf.org/html/rfc5322, RFC 5322) section 3.3 with the
+    $(HTTP tools.ietf.org/html/rfc5322, RFC 5322) section 3.3 with the
     grammar rule $(I date-time). It is the date-time format commonly used in
     internet messages such as e-mail and HTTP. The corresponding
     $(LREF SysTime) will be returned.

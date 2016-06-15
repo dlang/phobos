@@ -31,9 +31,9 @@ void bar()
 ----
 
 Copyright: Copyright the respective authors, 2008-
-License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu),
-           $(WEB bartoszmilewski.wordpress.com, Bartosz Milewski),
+License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
+           $(HTTP bartoszmilewski.wordpress.com, Bartosz Milewski),
            Don Clugston,
            Shin Fujishiro,
            Kenji Hara
@@ -3037,7 +3037,7 @@ auto-implemented function just returns the default value of the return type
 without doing anything.
 
 The name came from
-$(WEB search.cpan.org/~sburke/Class-_BlackHole-0.04/lib/Class/_BlackHole.pm, Class::_BlackHole)
+$(HTTP search.cpan.org/~sburke/Class-_BlackHole-0.04/lib/Class/_BlackHole.pm, Class::_BlackHole)
 Perl module by Sean M. Burke.
 
 Params:
@@ -3117,7 +3117,7 @@ simply throw an $(D Error) and never return. `Whitehole` is useful for
 trapping the use of class member functions that haven't been implemented.
 
 The name came from
-$(WEB search.cpan.org/~mschwern/Class-_WhiteHole-0.04/lib/Class/_WhiteHole.pm, Class::_WhiteHole)
+$(HTTP search.cpan.org/~mschwern/Class-_WhiteHole-0.04/lib/Class/_WhiteHole.pm, Class::_WhiteHole)
 Perl module by Michael G Schwern.
 
 Params:
@@ -5057,7 +5057,7 @@ unittest
  * Returns:
  *   An initialized $(D RefCounted) containing $(D val).
  * See_Also:
- *   $(WEB en.cppreference.com/w/cpp/memory/shared_ptr/make_shared, C++'s make_shared)
+ *   $(HTTP en.cppreference.com/w/cpp/memory/shared_ptr/make_shared, C++'s make_shared)
  */
 RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
 {
@@ -7152,7 +7152,7 @@ $(UL
 Also known as trinary, trivalent, or trilean.
 
 See_Also:
-    $(WEB en.wikipedia.org/wiki/Three-valued_logic,
+    $(HTTP en.wikipedia.org/wiki/Three-valued_logic,
         Three Valued Logic on Wikipedia)
 */
 struct Ternary

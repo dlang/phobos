@@ -84,7 +84,7 @@
             $(S_LINK Unicode properties, Supported sets) include Script,
             Block and General Category. The exact contents of a set can be
             observed in the CLDR utility, on the
-            $(WEB www.unicode.org/cldr/utility/properties.jsp, property index) page
+            $(HTTP www.unicode.org/cldr/utility/properties.jsp, property index) page
             of the Unicode website.
             See $(LREF unicode) for easy and (optionally) compile-time checked set
             queries.
@@ -155,7 +155,7 @@
     $(P The following is a list of important Unicode notions
     and definitions. Any conventions used specifically in this
     module alone are marked as such. The descriptions are based on the formal
-    definition as found in $(WEB www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
+    definition as found in $(HTTP www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
     chapter three of The Unicode Standard Core Specification.)
     )
     $(P $(DEF Abstract character) A unit of information used for the organization,
@@ -188,11 +188,11 @@
         mappings found in the Unicode Character Database
         and these described in Conjoining Jamo Behavior
         (section 12 of
-        $(WEB www.unicode.org/uni2book/ch03.pdf, Unicode Conformance)).
+        $(HTTP www.unicode.org/uni2book/ch03.pdf, Unicode Conformance)).
     )
     $(P $(DEF Canonical composition)
         The precise definition of the Canonical composition
-        is the algorithm as specified in $(WEB www.unicode.org/uni2book/ch03.pdf,
+        is the algorithm as specified in $(HTTP www.unicode.org/uni2book/ch03.pdf,
         Unicode Conformance) section 11.
         Informally it's the process that does the reverse of the canonical
         decomposition with the addition of certain rules
@@ -261,7 +261,7 @@
     )
     $(P $(DEF Grapheme cluster) Defined as the text between
         grapheme boundaries  as specified by Unicode Standard Annex #29,
-        $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation).
+        $(HTTP www.unicode.org/reports/tr29/, Unicode text segmentation).
         Important general properties of a grapheme:
         $(UL
             $(LI The grapheme cluster represents a horizontally segmentable
@@ -348,7 +348,7 @@
     )
     $(P The recommended solution (see Unicode Implementation Guidelines)
         is using multi-stage tables that are an implementation of the
-        $(WEB en.wikipedia.org/wiki/Trie, Trie) data structure with integer
+        $(HTTP en.wikipedia.org/wiki/Trie, Trie) data structure with integer
         keys and a fixed number of stages. For the remainder of the section
         this will be called a fixed trie. The following describes a particular
         implementation that is aimed for the speed of access at the expense
@@ -400,7 +400,7 @@
     )
     $(P This is a full list of Unicode properties accessible through $(LREF unicode)
         with specific helpers per category nested within. Consult the
-        $(WEB www.unicode.org/cldr/utility/properties.jsp, CLDR utility)
+        $(HTTP www.unicode.org/cldr/utility/properties.jsp, CLDR utility)
         when in doubt about the contents of a particular set.
     )
     $(P General category sets listed below are only accessible with the
@@ -585,23 +585,23 @@
             $(TR $(TD V)   $(TD Vowel_Jamo))
     )
     References:
-        $(WEB www.digitalmars.com/d/ascii-table.html, ASCII Table),
-        $(WEB en.wikipedia.org/wiki/Unicode, Wikipedia),
-        $(WEB www.unicode.org, The Unicode Consortium),
-        $(WEB www.unicode.org/reports/tr15/, Unicode normalization forms),
-        $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation)
-        $(WEB www.unicode.org/uni2book/ch05.pdf,
+        $(HTTP www.digitalmars.com/d/ascii-table.html, ASCII Table),
+        $(HTTP en.wikipedia.org/wiki/Unicode, Wikipedia),
+        $(HTTP www.unicode.org, The Unicode Consortium),
+        $(HTTP www.unicode.org/reports/tr15/, Unicode normalization forms),
+        $(HTTP www.unicode.org/reports/tr29/, Unicode text segmentation)
+        $(HTTP www.unicode.org/uni2book/ch05.pdf,
             Unicode Implementation Guidelines)
-        $(WEB www.unicode.org/uni2book/ch03.pdf,
+        $(HTTP www.unicode.org/uni2book/ch03.pdf,
             Unicode Conformance)
     Trademarks:
         Unicode(tm) is a trademark of Unicode, Inc.
 
     Copyright: Copyright 2013 -
-    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Dmitry Olshansky
     Source:    $(PHOBOSSRC std/_uni.d)
-    Standards: $(WEB www.unicode.org/versions/Unicode6.2.0/, Unicode v6.2)
+    Standards: $(HTTP www.unicode.org/versions/Unicode6.2.0/, Unicode v6.2)
 
 Macros:
 
@@ -1923,7 +1923,7 @@ pure:
 
     $(P Memory usage is 8 bytes per each contiguous interval in a set.
     The value semantics are achieved by using the
-    $(WEB en.wikipedia.org/wiki/Copy-on-write, COW) technique
+    $(HTTP en.wikipedia.org/wiki/Copy-on-write, COW) technique
     and thus it's $(RED not) safe to cast this type to $(D_KEYWORD shared).
     )
 

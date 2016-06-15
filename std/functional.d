@@ -48,8 +48,8 @@ $(TR $(TH Function Name) $(TH Description)
 )
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
-License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
 Source:    $(PHOBOSSRC std/_functional.d)
 */
 /*
@@ -958,7 +958,7 @@ unittest
  * computation. The memoization structure is a hash table keyed by a
  * tuple of the function's arguments. There is a speed gain if the
  * function is repeatedly called with the same arguments and is more
- * expensive than a hash table lookup. For more information on memoization, refer to $(WEB docs.google.com/viewer?url=http%3A%2F%2Fhop.perl.plover.com%2Fbook%2Fpdf%2F03CachingAndMemoization.pdf, this book chapter).
+ * expensive than a hash table lookup. For more information on memoization, refer to $(HTTP docs.google.com/viewer?url=http%3A%2F%2Fhop.perl.plover.com%2Fbook%2Fpdf%2F03CachingAndMemoization.pdf, this book chapter).
 
 Example:
 ----

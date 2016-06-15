@@ -40,12 +40,12 @@ Source:    $(PHOBOSSRC std/_random.d)
 Macros:
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009, Joseph Rushton Wakeling 2012.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
            Masahiro Nakagawa (Xorshift random generator)
-           $(WEB braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
+           $(HTTP braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
 Credits:   The entire random number library architecture is derived from the
-           excellent $(WEB open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
+           excellent $(HTTP open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
            researchers at the Fermi laboratory (excluding Xorshift).
 */
@@ -437,7 +437,7 @@ Always $(D false) (random generators are infinite ranges).
 /**
 Define $(D_PARAM LinearCongruentialEngine) generators with well-chosen
 parameters. $(D MinstdRand0) implements Park and Miller's "minimal
-standard" $(WEB
+standard" $(HTTP
 wikipedia.org/wiki/Park%E2%80%93Miller_random_number_generator,
 generator) that uses 16807 for the multiplier. $(D MinstdRand)
 implements a variant that has slightly better spectral behavior by
@@ -721,7 +721,7 @@ Always $(D false).
 
 /**
 A $(D MersenneTwisterEngine) instantiated with the parameters of the
-original engine $(WEB math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html,
+original engine $(HTTP math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html,
 MT19937), generating uniformly-distributed 32-bit numbers with a
 period of 2 to the power of 19937. Recommended for random number
 generation unless memory is severely restricted, in which case a $(D
@@ -818,7 +818,7 @@ unittest
 /**
  * Xorshift generator using 32bit algorithm.
  *
- * Implemented according to $(WEB www.jstatsoft.org/v08/i14/paper, Xorshift RNGs).
+ * Implemented according to $(HTTP www.jstatsoft.org/v08/i14/paper, Xorshift RNGs).
  *
  * $(BOOKTABLE $(TEXTWITHCOMMAS Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.),
  *  $(TR $(TH bits) $(TH period))
@@ -2278,7 +2278,7 @@ Returns:
     and $(D rng) are forward ranges, an input range otherwise.
 
 $(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D
-(see Vitter $(WEB dx.doi.org/10.1145/358105.893, 1984), $(WEB
+(see Vitter $(HTTP dx.doi.org/10.1145/358105.893, 1984), $(HTTP
 dx.doi.org/10.1145/23002.23003, 1987)), which selects a sample
 of size $(D n) in O(n) steps and requiring O(n) random variates,
 regardless of the size of the data being sampled.  The exception

@@ -72,11 +72,11 @@ $(LI
 Authors:
     $(LINK2 https://github.com/kyllingstad, Lars Tandle Kyllingstad),
     $(LINK2 https://github.com/schveiguy, Steven Schveighoffer),
-    $(WEB thecybershadow.net, Vladimir Panteleev)
+    $(HTTP thecybershadow.net, Vladimir Panteleev)
 Copyright:
     Copyright (c) 2013, the authors. All rights reserved.
 License:
-   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Source:
     $(PHOBOSSRC std/_process.d)
 Macros:
@@ -1333,7 +1333,7 @@ its exit status.
 
 In general one should always _wait for child processes to terminate
 before exiting the parent process.  Otherwise, they may become
-"$(WEB en.wikipedia.org/wiki/Zombie_process,zombies)" – processes
+"$(HTTP en.wikipedia.org/wiki/Zombie_process,zombies)" – processes
 that are defunct, yet still occupy a slot in the OS process table.
 
 If the process has already terminated, this function returns directly.
@@ -3256,10 +3256,10 @@ unittest
 
 /*
 Copyright: Copyright Digital Mars 2007 - 2009.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu),
-           $(WEB thecybershadow.net, Vladimir Panteleev)
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP digitalmars.com, Walter Bright),
+           $(HTTP erdani.org, Andrei Alexandrescu),
+           $(HTTP thecybershadow.net, Vladimir Panteleev)
 Source:    $(PHOBOSSRC std/_process.d)
 */
 /*

@@ -86,9 +86,9 @@ $(T2 until,
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_searching.d)
 
@@ -1344,7 +1344,7 @@ that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
 such position exists, returns an empty $(D haystack).
 
 See_Also:
-     $(WEB sgi.com/tech/stl/_find.html, STL's _find)
+     $(HTTP sgi.com/tech/stl/_find.html, STL's _find)
  */
 InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, Element needle)
 if (isInputRange!InputRange &&
@@ -1628,7 +1628,7 @@ that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
 such position exists, returns an empty $(D haystack).
 
 See_Also:
-     $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
+     $(HTTP sgi.com/tech/stl/find_if.html, STL's find_if)
 */
 InputRange find(alias pred, InputRange)(InputRange haystack)
 if (isInputRange!InputRange)
@@ -2390,7 +2390,7 @@ the given predicate. If there are no such two elements, returns $(D r) advanced
 until empty.
 
 See_Also:
-     $(WEB sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
+     $(HTTP sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
 */
 Range findAdjacent(alias pred = "a == b", Range)(Range r)
     if (isForwardRange!(Range))
@@ -2467,7 +2467,7 @@ $(D seq) advanced to the first matching element, or until empty if there are no
 matching elements.
 
 See_Also:
-    $(WEB sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
+    $(HTTP sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
 */
 Range1 findAmong(alias pred = "a == b", Range1, Range2)(
     Range1 seq, Range2 choices)

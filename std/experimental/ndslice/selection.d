@@ -40,7 +40,7 @@ $(T2 windows, n-dimensional slice of n-dimensional overlapping windows.
     If the slice has two dimensions, it is a sliding window.)
 )
 
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   Ilya Yaroshenko
 

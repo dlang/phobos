@@ -6,7 +6,7 @@ import std.typecons : Flag, Yes, No;
 
 /**
 
-$(WEB en.wikipedia.org/wiki/Free_list, Free list allocator), stackable on top of
+$(HTTP en.wikipedia.org/wiki/Free_list, Free list allocator), stackable on top of
 another allocator. Allocation requests between $(D min) and $(D max) bytes are
 rounded up to $(D max) and served from a singly-linked list of buffers
 deallocated in the past. All other allocations are directed to $(D

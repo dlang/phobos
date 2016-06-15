@@ -11,9 +11,9 @@
  * $(LI Binary exponentiation)
  * )
  *
- * For very large numbers, consider using the $(WEB gmplib.org, GMP library) instead.
+ * For very large numbers, consider using the $(HTTP gmplib.org, GMP library) instead.
  *
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Don Clugston
  * Source: $(PHOBOSSRC std/_bigint.d)
  */

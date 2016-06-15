@@ -1,6 +1,6 @@
 //Written in the D programming language
 /**
- * License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
  * Authors: Dmitry Olshansky
  *

@@ -4,8 +4,8 @@
 Serialize data to $(D ubyte) arrays.
 
  * Copyright: Copyright Digital Mars 2000 - 2015.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_outbuffer.d)
  */
 module std.outbuffer;

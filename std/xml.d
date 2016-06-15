@@ -113,7 +113,7 @@ void main()
 }
 -------------------------------------------------------------------------------
 Copyright: Copyright Janice Caron 2008 - 2009.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron
 Source:    $(PHOBOSSRC std/_xml.d)
 */

@@ -4,7 +4,7 @@
 This package implements generic algorithms oriented towards the processing of
 sequences. Sequences processed by these functions define range-based
 interfaces.  See also $(LINK2 std_range.html, Reference on ranges) and
-$(WEB ddili.org/ders/d.en/ranges.html, tutorial on ranges).
+$(HTTP ddili.org/ders/d.en/ranges.html, tutorial on ranges).
 
 $(SCRIPT inhibitQuickIndex = 1;)
 
@@ -174,9 +174,9 @@ SUBREF = $(REF_ALTTEXT $(TT $2), $2, std, algorithm, $1)$(NBSP)
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/_algorithm/package.d)
  */

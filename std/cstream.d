@@ -8,7 +8,7 @@
  * Both core.stdc.stdio and std.stream are publicly imported by std.cstream.
  *
  * Copyright: Copyright Ben Hinkle 2007 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Ben Hinkle
  * Source:    $(PHOBOSSRC std/_cstream.d)
  */

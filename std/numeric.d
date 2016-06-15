@@ -7,8 +7,8 @@ Standard Template Library), with a few additions.
 
 Macros:
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu),
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
                    Don Clugston, Robert Jacques, Ilya Yaroshenko
 Source:    $(PHOBOSSRC std/_numeric.d)
 */
@@ -700,7 +700,7 @@ unittest
 }
 
 /**
-Implements the $(WEB tinyurl.com/2zb9yr, secant method) for finding a
+Implements the $(HTTP tinyurl.com/2zb9yr, secant method) for finding a
 root of the function $(D fun) starting from points $(D [xn_1, x_n])
 (ideally close to the root). $(D Num) may be $(D float), $(D double),
 or $(D real).
@@ -783,7 +783,7 @@ public:
  *
  * References: "On Enclosing Simple Roots of Nonlinear Equations",
  * G. Alefeld, F.A. Potra, Yixun Shi, Mathematics of Computation 61,
- * pp733-744 (1993).  Fortran code available from $(WEB
+ * pp733-744 (1993).  Fortran code available from $(HTTP
  * www.netlib.org,www.netlib.org) as algorithm TOMS478.
  *
  */
@@ -2273,7 +2273,7 @@ t.length). The time complexity is $(BIGOH s.length * t.length) time
 for computing each step. Continuing on the previous example:
 
 The implementation is based on the pseudocode in Fig. 4 of the paper
-$(WEB jmlr.csail.mit.edu/papers/volume6/rousu05a/rousu05a.pdf,
+$(HTTP jmlr.csail.mit.edu/papers/volume6/rousu05a/rousu05a.pdf,
 "Efﬁcient Computation of Gapped Substring Kernels on Large Alphabets")
 by Rousu et al., with additional algorithmic and systems-level
 optimizations.
@@ -2608,7 +2608,7 @@ private alias lookup_t = float;
  * one-off FFT.
  *
  * References:
- * $(WEB en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm)
+ * $(HTTP en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm)
  */
 final class Fft
 {

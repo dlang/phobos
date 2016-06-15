@@ -36,9 +36,9 @@
 /**
  * Socket primitives.
  * Example: See $(SAMPLESRC listener.d) and $(SAMPLESRC htmlget.d)
- * License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger),
- *      $(WEB thecybershadow.net, Vladimir Panteleev)
+ * License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors: Christopher E. Miller, $(HTTP klickverbot.at, David Nadlinger),
+ *      $(HTTP thecybershadow.net, Vladimir Panteleev)
  * Source:  $(PHOBOSSRC std/_socket.d)
  */
 

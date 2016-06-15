@@ -7,14 +7,14 @@ at a time. For opening files and manipulating them via handles refer
 to module $(MREF std, stdio).
 
 Copyright: Copyright Digital Mars 2007 - 2011.
-See_Also:  The $(WEB ddili.org/ders/d.en/files.html, official tutorial) for an
+See_Also:  The $(HTTP ddili.org/ders/d.en/files.html, official tutorial) for an
 introduction to working with files in D, module
 $(MREF std, stdio) for opening files and manipulating them via handles,
 and module $(MREF std, path) for manipulating path strings.
 
-License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu),
+License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP digitalmars.com, Walter Bright),
+           $(HTTP erdani.org, Andrei Alexandrescu),
            Jonathan M Davis
 Source:    $(PHOBOSSRC std/_file.d)
  */
@@ -1295,7 +1295,7 @@ unittest
     file does not exist, returns $(D returnIfMissing).
 
     A frequent usage pattern occurs in build automation tools such as
-    $(WEB gnu.org/software/make, make) or $(WEB
+    $(HTTP gnu.org/software/make, make) or $(HTTP
     en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
     target) must be rebuilt from file $(D source) (i.e., $(D target) is
     older than $(D source) or does not exist), use the comparison
@@ -1471,10 +1471,10 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
 
  Note that the file attributes on Windows and Posix systems are
  completely different. On Windows, they're what is returned by
- $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
+ $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
  GetFileAttributes), whereas on Posix systems, they're the $(LUCKY
  st_mode) value which is part of the $(D stat struct) gotten by
- calling the $(WEB en.wikipedia.org/wiki/Stat_%28Unix%29, $(D stat))
+ calling the $(HTTP en.wikipedia.org/wiki/Stat_%28Unix%29, $(D stat))
  function.
 
  On Posix systems, if the given file is a symbolic link, then
@@ -2780,7 +2780,7 @@ assert(!de2.isFile);
             Note that the file attributes on Windows and Posix systems are
             completely different. On, Windows, they're what is returned by
             $(D GetFileAttributes)
-            $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
+            $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
             Whereas, an Posix systems, they're the $(D st_mode) value which is
             part of the $(D stat) struct gotten by calling $(D stat).
 

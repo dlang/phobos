@@ -58,11 +58,11 @@
 
   The basic syntax shouldn't surprise experienced users of regular expressions.
   For an introduction to $(D std.regex) see a
-  $(WEB dlang.org/regular-expression.html, short tour) of the module API
+  $(HTTP dlang.org/regular-expression.html, short tour) of the module API
   and its abilities.
 
   There are other web resources on regular expressions to help newcomers,
-  and a good $(WEB www.regular-expressions.info, reference with tutorial)
+  and a good $(HTTP www.regular-expressions.info, reference with tutorial)
   can easily be found.
 
   This library uses a remarkably common ECMAScript syntax flavor
@@ -196,7 +196,7 @@
   $(SECTION Unicode support)
 
   This library provides full Level 1 support* according to
-    $(WEB unicode.org/reports/tr18/, UTS 18). Specifically:
+    $(HTTP unicode.org/reports/tr18/, UTS 18). Specifically:
   $(UL
     $(LI 1.1 Hex notation via any of \uxxxx, \U00YYYYYY, \xZZ.)
     $(LI 1.2 Unicode properties.)
@@ -242,7 +242,7 @@
 
     Copyright: Copyright Dmitry Olshansky, 2011-
 
-  License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+  License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
   Authors: Dmitry Olshansky,
 

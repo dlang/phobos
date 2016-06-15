@@ -40,7 +40,7 @@ This library provides a mechanism whereby other modules may add $(D
 EncodingScheme) subclasses for any other _encoding.
 
 Copyright: Copyright Janice Caron 2008 - 2009.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron
 Source:    $(PHOBOSSRC std/_encoding.d)
 */

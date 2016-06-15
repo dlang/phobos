@@ -136,10 +136,10 @@ See_Also:
 
 Copyright: Copyright Digital Mars 2007-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB digitalmars.com, Walter Bright),
-         $(WEB erdani.org, Andrei Alexandrescu),
+Authors: $(HTTP digitalmars.com, Walter Bright),
+         $(HTTP erdani.org, Andrei Alexandrescu),
         Jonathan M Davis,
         and David L. 'SpottedTiger' Davis
 
@@ -2373,7 +2373,7 @@ auto capitalize(S)(auto ref S s)
     Allocates memory; use $(LREF lineSplitter) for an alternative that
     does not.
 
-    Adheres to $(WEB www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
+    Adheres to $(HTTP www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
 
   Params:
     s = a string of $(D chars), $(D wchars), or $(D dchars), or any custom
@@ -2698,7 +2698,7 @@ public:
     Does not throw on invalid UTF; such is simply passed unchanged
     to the output.
 
-    Adheres to $(WEB www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
+    Adheres to $(HTTP www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
 
     Does not allocate memory.
 
@@ -5590,7 +5590,7 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
     the corresponding characters in $(D to) and returns the resulting string.
 
     $(D tr) is based on
-    $(WEB pubs.opengroup.org/onlinepubs/9699919799/utilities/_tr.html, Posix's tr),
+    $(HTTP pubs.opengroup.org/onlinepubs/9699919799/utilities/_tr.html, Posix's tr),
     though it doesn't do everything that the Posix utility does.
 
     Params:

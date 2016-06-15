@@ -11,9 +11,9 @@ functionality.
 Source:    $(PHOBOSSRC std/experimental/_typecons.d)
 
 Copyright: Copyright the respective authors, 2008-
-License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu),
-           $(WEB bartoszmilewski.wordpress.com, Bartosz Milewski),
+License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
+           $(HTTP bartoszmilewski.wordpress.com, Bartosz Milewski),
            Don Clugston,
            Shin Fujishiro,
            Kenji Hara

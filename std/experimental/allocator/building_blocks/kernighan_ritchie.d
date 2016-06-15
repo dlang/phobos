@@ -10,9 +10,9 @@ version(unittest) import std.conv : text;
 /**
 $(D KRRegion) draws inspiration from the $(MREF_ALTTEXT region allocation
 strategy, std,experimental,allocator,building_blocks,region) and also the
-$(WEB stackoverflow.com/questions/13159564/explain-this-implementation-of-malloc-from-the-kr-book,
+$(HTTP stackoverflow.com/questions/13159564/explain-this-implementation-of-malloc-from-the-kr-book,
 famed allocator) described by Brian Kernighan and Dennis Ritchie in section 8.7
-of the book $(WEB amazon.com/exec/obidos/ASIN/0131103628/classicempire, "The C
+of the book $(HTTP amazon.com/exec/obidos/ASIN/0131103628/classicempire, "The C
 Programming Language"), Second Edition, Prentice Hall, 1988.
 
 $(H4 `KRRegion` = `Region` + Kernighan-Ritchie Allocator)

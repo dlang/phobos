@@ -54,9 +54,9 @@ $(T2 uniq,
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_iteration.d)
 
@@ -451,7 +451,7 @@ Returns:
     fun, the element type will be $(D Tuple) containing one element for each fun.
 
 See_Also:
-    $(WEB en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
+    $(HTTP en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
 */
 template map(fun...) if (fun.length >= 1)
 {
@@ -1041,7 +1041,7 @@ Returns:
     which $(D predicate(x)) returns $(D true).
 
 See_Also:
-    $(WEB en.wikipedia.org/wiki/Filter_(higher-order_function), Filter (higher-order function))
+    $(HTTP en.wikipedia.org/wiki/Filter_(higher-order_function), Filter (higher-order function))
  */
 template filter(alias predicate) if (is(typeof(unaryFun!predicate)))
 {
@@ -2571,7 +2571,7 @@ Returns:
     the accumulated $(D result)
 
 See_Also:
-    $(WEB en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
+    $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 
     $(LREF fold) is functionally equivalent to $(LREF reduce) with the argument order reversed,
     and without the need to use $(LREF tuple) for multiple seeds. This makes it easier
@@ -3017,7 +3017,7 @@ Returns:
     the accumulated $(D result)
 
 See_Also:
-    $(WEB en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
+    $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 
     $(LREF sum) is similar to $(D fold!((a, b) => a + b)) that offers
     precise summing of floating point numbers.
@@ -3085,17 +3085,17 @@ The one-argument version $(D cumulativeFold!(fun)(range)) works similarly, but
 it returns the first element unchanged and uses it as seed for the next
 elements.
 This function is also known as
-    $(WEB en.cppreference.com/w/cpp/algorithm/partial_sum, partial_sum),
-    $(WEB docs.python.org/3/library/itertools.html#itertools.accumulate, accumulate),
-    $(WEB hackage.haskell.org/package/base-4.8.2.0/docs/Prelude.html#v:scanl, scan),
-    $(WEB mathworld.wolfram.com/CumulativeSum.html, Cumulative Sum).
+    $(HTTP en.cppreference.com/w/cpp/algorithm/partial_sum, partial_sum),
+    $(HTTP docs.python.org/3/library/itertools.html#itertools.accumulate, accumulate),
+    $(HTTP hackage.haskell.org/package/base-4.8.2.0/docs/Prelude.html#v:scanl, scan),
+    $(HTTP mathworld.wolfram.com/CumulativeSum.html, Cumulative Sum).
 Returns:
     The function returns a range containing the consecutive reduced values. If
     there is more than one `fun`, the element type will be $(REF Tuple,
     std,typecons) containing one element for each `fun`.
 
 See_Also:
-    $(WEB en.wikipedia.org/wiki/Prefix_sum, Prefix Sum)
+    $(HTTP en.wikipedia.org/wiki/Prefix_sum, Prefix Sum)
 +/
 template cumulativeFold(fun...)
 if (fun.length >= 1)
@@ -4479,11 +4479,11 @@ $(LI If $(D $(REF ElementType, std,range,primitives)!R) is a floating-point
 type and $(D R) is a
 $(REF_ALTTEXT random-access range, isRandomAccessRange, std,range,primitives) with
 length and slicing, then $(D sum) uses the
-$(WEB en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
+$(HTTP en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
 algorithm.)
 $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
 finite input range (but not a random-access range with slicing), then
-$(D sum) uses the $(WEB en.wikipedia.org/wiki/Kahan_summation,
+$(D sum) uses the $(HTTP en.wikipedia.org/wiki/Kahan_summation,
 Kahan summation) algorithm.)
 $(LI In all other cases, a simple element by element addition is done.)
 )
@@ -4761,7 +4761,7 @@ unittest
 // uniq
 /**
 Lazily iterates unique consecutive elements of the given range (functionality
-akin to the $(WEB wikipedia.org/wiki/_Uniq, _uniq) system
+akin to the $(HTTP wikipedia.org/wiki/_Uniq, _uniq) system
 utility). Equivalence of elements is assessed by using the predicate
 $(D pred), by default $(D "a == b"). The predicate is passed to
 $(REF binaryFun, std,functional), and can either accept a string, or any callable
@@ -4892,7 +4892,7 @@ private struct UniqResult(alias pred, Range)
 }
 
 /**
-Lazily computes all _permutations of $(D r) using $(WEB
+Lazily computes all _permutations of $(D r) using $(HTTP
 en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
 
 Returns:

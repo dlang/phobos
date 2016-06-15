@@ -85,7 +85,7 @@ is identical to that of $(LREF strided).
 Bifacial interface of $(LREF dropOne) and $(LREF dropBackOne)
 is identical to that of $(LREF reversed).
 
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   Ilya Yaroshenko
 
