@@ -523,6 +523,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
 
 pure @safe nothrow @nogc unittest
 {
+    import std.range.primitives : isForwardRange;
     int[2] A = [1,2];
     auto C = cartesianProduct(A[], A[], A[]);
     assert(isForwardRange!(typeof(C)));
@@ -954,6 +955,7 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range.primitives : isForwardRange;
 
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -1243,6 +1245,7 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range.primitives : isForwardRange;
 
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];

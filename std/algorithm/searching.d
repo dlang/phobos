@@ -1487,6 +1487,7 @@ if (isInputRange!InputRange &&
 {
     import std.algorithm.comparison : equal;
     import std.container : SList;
+    import std.range.primitives : empty;
 
     assert(find("hello, world", ',') == ", world");
     assert(find([1, 2, 3, 5], 4) == []);
@@ -1736,6 +1737,8 @@ if (isForwardRange!R1 && isForwardRange!R2
 @safe unittest
 {
     import std.container : SList;
+    import std.range.primitives : empty;
+    import std.typecons : Tuple;
 
     assert(find("hello, world", "World").empty);
     assert(find("hello, world", "wo") == "world");
@@ -2126,6 +2129,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 ///
 @safe unittest
 {
+    import std.typecons : tuple;
     int[] a = [ 1, 4, 2, 3 ];
     assert(find(a, 4) == [ 4, 2, 3 ]);
     assert(find(a, [ 1, 4 ]) == [ 1, 4, 2, 3 ]);
@@ -2258,6 +2262,7 @@ Range1 find(Range1, alias pred, Range2)(
 ///
 @safe unittest
 {
+    import std.range.primitives : empty;
     int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
     int[] b = [ 1, 2, 3 ];
 
@@ -2529,6 +2534,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 ///
 @safe unittest
 {
+    import std.range.primitives : empty;
     // Needle is found; s is replaced by the substring following the first
     // occurrence of the needle.
     string s = "abcdef";
@@ -2787,6 +2793,8 @@ if (isForwardRange!R1 && isForwardRange!R2)
 ///
 @safe pure nothrow unittest
 {
+    import std.range.primitives : empty;
+
     auto a = "Carl Sagan Memorial Station";
     auto r = findSplit(a, "Velikovsky");
     import std.typecons : isTuple;
@@ -2812,6 +2820,8 @@ if (isForwardRange!R1 && isForwardRange!R2)
 
 @safe pure nothrow unittest
 {
+    import std.range.primitives : empty;
+
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto r = findSplit(a, [9, 1]);
     assert(!r);
@@ -3037,6 +3047,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 unittest
 {
     import std.conv : text;
+    import std.typecons : tuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3171,6 +3182,7 @@ auto minElement(alias map = "a", Range, RangeElementType = ElementType!Range)
 @safe pure unittest
 {
     import std.range : enumerate;
+    import std.typecons : tuple;
 
     assert([2, 1, 4, 3].minElement == 1);
 
@@ -3261,6 +3273,7 @@ auto maxElement(alias map = "a", Range, RangeElementType = ElementType!Range)
 @safe pure unittest
 {
     import std.range : enumerate;
+    import std.typecons : tuple;
     assert([2, 1, 4, 3].maxElement == 4);
 
     // allows to get the index of an element too
@@ -3795,6 +3808,8 @@ bool startsWith(alias pred, R)(R doesThisStart)
     assert(startsWith("abc", "x", "aa", "ab") == 3);
     assert(startsWith("abc", "x", "aaa", "sab") == 0);
     assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
+
+    import std.typecons : Tuple;
     alias C = Tuple!(int, "x", int, "y");
     assert(startsWith!"a.x == b"([ C(1,1), C(1,2), C(2,2) ], [1, 1]));
     assert(startsWith!"a.x == b"([ C(1,1), C(2,1), C(2,2) ], [1, 1], [1, 2], [1, 3]) == 2);

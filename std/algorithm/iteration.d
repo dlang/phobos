@@ -1870,6 +1870,7 @@ unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
+    import std.range.primitives;
 
     // Grouping by particular attribute of each element:
     auto range =

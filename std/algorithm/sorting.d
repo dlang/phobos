@@ -501,6 +501,8 @@ Range partition(alias predicate,
 {
     import std.algorithm.searching : count, find;
     import std.conv : text;
+    import std.range.primitives : empty;
+    import std.algorithm.mutation : SwapStrategy;
 
     auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto arr = Arr.dup;
@@ -933,6 +935,7 @@ template multiSort(less...) //if (less.length > 1)
 ///
 @safe unittest
 {
+    import std.algorithm.mutation : SwapStrategy;
     static struct Point { int x, y; }
     auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
     auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
@@ -1185,6 +1188,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 unittest
 {
     // Showcase stable sorting
+    import std.algorithm.mutation : SwapStrategy;
     string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
     sort!("toUpper(a) < toUpper(b)", SwapStrategy.stable)(words);
     assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
