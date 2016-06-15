@@ -153,8 +153,8 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 # packages and their modules.
 STD_PACKAGES = std $(addprefix std/,\
   algorithm container digest experimental/allocator \
-  experimental/allocator/building_blocks experimental/logger \
-  experimental/ndslice \
+  experimental/allocator/building_blocks experimental/checkedint \
+  experimental/logger experimental/ndslice \
   net \
   experimental range regex)
 
@@ -180,6 +180,7 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   fallback_allocator free_list free_tree bitmapped_block \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
+PACKAGE_std_experimental_checkedint = asserts flags noex package throws traits
 PACKAGE_std_experimental_ndslice = package iteration selection slice
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives

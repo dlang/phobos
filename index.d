@@ -306,6 +306,10 @@ $(BOOKTABLE ,
         $(TDNW $(LINK2 std_bigint.html, std.bigint))
         $(TD An arbitrary-precision integer type.)
     )
+    $(
+        $(TDNW $(LINK2 std_experimental_checkedint.html, std.experimental.checkedint))
+        $(TD Checked integer arithmetic functions and types with improved handling of errors and corner cases.)
+    )
     $(TR
         $(TDNW $(LINK2 std_complex.html, std.complex))
         $(TD A complex number type.)

@@ -321,6 +321,14 @@ SRC_STD_EXP_ALLOC= \
 	std\experimental\allocator\package.d \
 	$(SRC_STD_EXP_ALLOC_BB)
 
+SRC_STD_EXP_CHECKEDINT= \
+    std\experimental\checkedint\asserts.d \
+    std\experimental\checkedint\flags.d \
+    std\experimental\checkedint\noex.d \
+    std\experimental\checkedint\package.d \
+    std\experimental\checkedint\throws.d \
+    std\experimental\checkedint\traits.d
+
 SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\core.d \
 	std\experimental\logger\filelogger.d \
@@ -363,6 +371,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_INTERNAL_WINDOWS) \
 	$(SRC_STD_EXP) \
 	$(SRC_STD_EXP_ALLOC) \
+	$(SRC_STD_EXP_CHECKEDINT) \
 	$(SRC_STD_EXP_LOGGER) \
 	$(SRC_STD_EXP_NDSLICE) \
 	$(SRC_ETC) \
@@ -527,6 +536,12 @@ DOCS= \
 	$(DOC)\std_experimental_allocator_showcase.html \
 	$(DOC)\std_experimental_allocator_typed.html \
 	$(DOC)\std_experimental_allocator.html \
+    $(DOC)\std_experimental_checkedint_asserts.html \
+    $(DOC)\std_experimental_checkedint_flags.html \
+    $(DOC)\std_experimental_checkedint_noex.html \
+    $(DOC)\std_experimental_checkedint_throws.html \
+    $(DOC)\std_experimental_checkedint_traits.html \
+    $(DOC)\std_experimental_checkedint.html \
 	$(DOC)\std_experimental_ndslice_iteration.html \
 	$(DOC)\std_experimental_ndslice_selection.html \
 	$(DOC)\std_experimental_ndslice_slice.html \
@@ -576,7 +591,8 @@ UNITTEST_OBJS= \
 		unittest8d.obj \
 		unittest8e.obj \
 		unittest8f.obj \
-		unittest9a.obj
+        unittest9a.obj \
+		unittest9b.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1)
@@ -595,7 +611,8 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_NDSLICE)
+    $(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_CHECKEDINT)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9b.obj $(SRC_STD_EXP_NDSLICE)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
@@ -1068,6 +1085,24 @@ $(DOC)\std_experimental_allocator_typed.html : $(STDDOC) std\experimental\alloca
 
 $(DOC)\std_experimental_allocator.html : $(STDDOC) std\experimental\allocator\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_allocator.html $(STDDOC) std\experimental\allocator\package.d
+
+$(DOC)\std_experimental_checkedint_asserts.html : $(STDDOC) std\experimental\checkedint\asserts.d
+    $(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_checkedint_asserts.html $(STDDOC) std\experimental\checkedint\asserts.d
+
+$(DOC)\std_experimental_checkedint_flags.html : $(STDDOC) std\experimental\checkedint\flags.d
+    $(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_checkedint_flags.html $(STDDOC) std\experimental\checkedint\flags.d
+
+$(DOC)\std_experimental_checkedint_noex.html : $(STDDOC) std\experimental\checkedint\noex.d
+    $(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_checkedint_noex.html $(STDDOC) std\experimental\checkedint\noex.d
+
+$(DOC)\std_experimental_checkedint_throws.html : $(STDDOC) std\experimental\checkedint\asserts.d
+    $(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_checkedint_throws.html $(STDDOC) std\experimental\checkedint\throws.d
+
+$(DOC)\std_experimental_checkedint_traits.html : $(STDDOC) std\experimental\checkedint\traits.d
+    $(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_checkedint_traits.html $(STDDOC) std\experimental\checkedint\traits.d
+
+$(DOC)\std_experimental_checkedint.html : $(STDDOC) std\experimental\checkedint\package.d
+    $(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_checkedint.html $(STDDOC) std\experimental\checkedint\package.d
 
 $(DOC)\std_experimental_typecons.html : $(STDDOC) std\experimental\typecons.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_typecons.html $(STDDOC) std\experimental\typecons.d
