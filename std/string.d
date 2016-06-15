@@ -2373,7 +2373,7 @@ auto capitalize(S)(auto ref S s)
     Allocates memory; use $(LREF lineSplitter) for an alternative that
     does not.
 
-    Adheres to $(WEB http://www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
+    Adheres to $(WEB www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
 
   Params:
     s = a string of $(D chars), $(D wchars), or $(D dchars), or any custom
@@ -2698,7 +2698,7 @@ public:
     Does not throw on invalid UTF; such is simply passed unchanged
     to the output.
 
-    Adheres to $(WEB http://www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
+    Adheres to $(WEB www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
 
     Does not allocate memory.
 

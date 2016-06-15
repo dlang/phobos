@@ -30883,7 +30883,7 @@ else version(Posix)
     Windows uses a different set of time zone names than the IANA time zone
     database does, and how they correspond to one another changes over time
     (particularly when Microsoft updates Windows).
-    $(WEB http://unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
+    $(WEB unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
     provides the current conversions (which may or may not match up with what's
     on a particular Windows box depending on how up-to-date it is), and
     parseTZConversions reads in those conversions from windowsZones.xml so that
@@ -30902,7 +30902,7 @@ else version(Posix)
 
     Params:
         windowsZonesXMLFileText The text from
-        $(WEB http://unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
+        $(WEB unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
 
     Throws:
         Exception if there is an error while parsing the given XML.
