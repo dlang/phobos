@@ -28151,7 +28151,11 @@ public:
 
                 version(unittest)
                 {
-                    assert(tzName !is null, format("TZName which is missing: %s", winName));
+                    if(tzName is null)
+                    {
+                        import std.stdio : writefln;
+                        writefln("TZName which is missing: %s", winName);
+                    }
                 }
 
                 if (tzName !is null && tzName.startsWith(subName))
@@ -31584,6 +31588,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Afghanistan Standard Time": return "Asia/Kabul";
         case "Haiti Standard Time": return "America/Port-au-Prince";
         case "Alaskan Standard Time": return "America/Anchorage";
+        case "Aleutian Standard Time": return "Pacific/Honolulu";
         case "Altai Standard Time": return "Asia/Barnaul";
         case "Arab Standard Time": return "Asia/Riyadh";
         case "Arabian Standard Time": return "Asia/Dubai";
