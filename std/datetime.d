@@ -28151,7 +28151,11 @@ public:
 
                 version(unittest)
                 {
-                    assert(tzName !is null, format("TZName which is missing: %s", winName));
+                    if(tzName is null)
+                    {
+                        import std.stdio : writefln;
+                        writefln("TZName which is missing: %s", winName));
+                    }
                 }
 
                 if (tzName !is null && tzName.startsWith(subName))
