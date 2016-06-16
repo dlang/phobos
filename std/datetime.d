@@ -31162,6 +31162,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Africa/Tripoli": return "Libya Standard Time";
         case "Africa/Tunis": return "W. Central Africa Standard Time";
         case "Africa/Windhoek": return "Namibia Standard Time";
+        case "America/Adak": return "Aleutian Standard Time";
         case "America/Anchorage": return "Alaskan Standard Time";
         case "America/Anguilla": return "SA Western Standard Time";
         case "America/Antigua": return "SA Western Standard Time";
@@ -31173,6 +31174,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "America/Argentina/San_Luis": return "Argentina Standard Time";
         case "America/Argentina/Tucuman": return "Argentina Standard Time";
         case "America/Argentina/Ushuaia": return "Argentina Standard Time";
+        case "America/Arguaina": return "Tocantins Standard Time";
         case "America/Aruba": return "SA Western Standard Time";
         case "America/Asuncion": return "Paraguay Standard Time";
         case "America/Bahia": return "Bahia Standard Time";
@@ -31213,14 +31215,14 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "America/Glace_Bay": return "Atlantic Standard Time";
         case "America/Godthab": return "Greenland Standard Time";
         case "America/Goose_Bay": return "Atlantic Standard Time";
-        case "America/Grand_Turk": return "SA Western Standard Time";
+        case "America/Grand_Turk": return "Turks And Caicos Standard Time";
         case "America/Grenada": return "SA Western Standard Time";
         case "America/Guadeloupe": return "SA Western Standard Time";
         case "America/Guatemala": return "Central America Standard Time";
         case "America/Guayaquil": return "SA Pacific Standard Time";
         case "America/Guyana": return "SA Western Standard Time";
         case "America/Halifax": return "Atlantic Standard Time";
-        case "America/Havana": return "Eastern Standard Time";
+        case "America/Havana": return "Cuba Standard Time";
         case "America/Hermosillo": return "US Mountain Standard Time";
         case "America/Indiana/Knox": return "Central Standard Time";
         case "America/Indiana/Marengo": return "US Eastern Standard Time";
@@ -31253,6 +31255,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "America/Menominee": return "Central Standard Time";
         case "America/Merida": return "Central Standard Time (Mexico)";
         case "America/Mexico_City": return "Central Standard Time (Mexico)";
+        case "America/Miquelon": return "Saint Pierre Standard Time";
         case "America/Moncton": return "Atlantic Standard Time";
         case "America/Monterrey": return "Central Standard Time (Mexico)";
         case "America/Montevideo": return "Montevideo Standard Time";
@@ -31341,8 +31344,9 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Dili": return "Tokyo Standard Time";
         case "Asia/Dubai": return "Arabian Standard Time";
         case "Asia/Dushanbe": return "West Asia Standard Time";
+        case "Asia/Hebron": return "West Bank Standard Time";
         case "Asia/Hong_Kong": return "China Standard Time";
-        case "Asia/Hovd": return "SE Asia Standard Time";
+        case "Asia/Hovd": return "W. Mongolia Standard Time";
         case "Asia/Irkutsk": return "North Asia East Standard Time";
         case "Asia/Jakarta": return "SE Asia Standard Time";
         case "Asia/Jayapura": return "Tokyo Standard Time";
@@ -31386,6 +31390,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Tehran": return "Iran Standard Time";
         case "Asia/Thimphu": return "Bangladesh Standard Time";
         case "Asia/Tokyo": return "Tokyo Standard Time";
+        case "Asia/Tomsk": return "Tomsk Standard Time";
         case "Asia/Ulaanbaatar": return "Ulaanbaatar Standard Time";
         case "Asia/Urumqi": return "Central Asia Standard Time";
         case "Asia/Ust-Nera": return "Vladivostok Standard Time";
@@ -31409,8 +31414,10 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Australia/Broken_Hill": return "Cen. Australia Standard Time";
         case "Australia/Currie": return "Tasmania Standard Time";
         case "Australia/Darwin": return "AUS Central Standard Time";
+        case "Australia/Eucla": return "Aus Central W. Standard Time";
         case "Australia/Hobart": return "Tasmania Standard Time";
         case "Australia/Lindeman": return "E. Australia Standard Time";
+        case "Australia/Lord_Howe": return "Lord Howe Standard Time";
         case "Australia/Melbourne": return "AUS Eastern Standard Time";
         case "Australia/Perth": return "W. Australia Standard Time";
         case "Australia/Sydney": return "AUS Eastern Standard Time";
@@ -31427,6 +31434,8 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Etc/GMT+5": return "SA Pacific Standard Time";
         case "Etc/GMT+6": return "Central America Standard Time";
         case "Etc/GMT+7": return "US Mountain Standard Time";
+        case "Etc/GMT+8": return "UTC-08";
+        case "Etc/GMT+9": return "UTC-09";
         case "Etc/GMT-1": return "W. Central Africa Standard Time";
         case "Etc/GMT-10": return "West Pacific Standard Time";
         case "Etc/GMT-11": return "Central Pacific Standard Time";
@@ -31513,7 +31522,8 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "PST8PDT": return "Pacific Standard Time";
         case "Pacific/Apia": return "Samoa Standard Time";
         case "Pacific/Auckland": return "New Zealand Standard Time";
-        case "Pacific/Bougainville": return "Central Pacific Standard Time";
+        case "Pacific/Bougainville": return "Bougainville Standard Time";
+        case "Pacific/Chatham": return "Chatham Islands Standard Time";
         case "Pacific/Easter": return "Easter Island Standard Time";
         case "Pacific/Efate": return "Central Pacific Standard Time";
         case "Pacific/Enderbury": return "Tonga Standard Time";
@@ -31529,10 +31539,12 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Pacific/Kosrae": return "Central Pacific Standard Time";
         case "Pacific/Kwajalein": return "UTC+12";
         case "Pacific/Majuro": return "UTC+12";
+        case "Pacific/Marquesas": return "Marquesas Standard Time";
         case "Pacific/Midway": return "UTC-11";
         case "Pacific/Nauru": return "UTC+12";
         case "Pacific/Niue": return "UTC-11";
         case "Pacific/Noumea": return "Central Pacific Standard Time";
+        case "Pacific/Norfolk": return "Norfolk Standard Time";
         case "Pacific/Pago_Pago": return "UTC-11";
         case "Pacific/Palau": return "Tokyo Standard Time";
         case "Pacific/Ponape": return "Central Pacific Standard Time";
@@ -31581,9 +31593,11 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
     {
         case "AUS Central Standard Time": return "Australia/Darwin";
         case "AUS Eastern Standard Time": return "Australia/Sydney";
+        case "Aus Central W. Standard Time": return "Australia/Eucla";
         case "Afghanistan Standard Time": return "Asia/Kabul";
         case "Haiti Standard Time": return "America/Port-au-Prince";
         case "Alaskan Standard Time": return "America/Anchorage";
+        case "Aleutian Standard Time": return "America/Adak";
         case "Altai Standard Time": return "Asia/Barnaul";
         case "Arab Standard Time": return "Asia/Riyadh";
         case "Arabian Standard Time": return "Asia/Dubai";
@@ -31596,6 +31610,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Bahia Standard Time": return "America/Bahia";
         case "Bangladesh Standard Time": return "Asia/Dhaka";
         case "Belarus Standard Time": return "Europe/Minsk";
+        case "Bougainville Standard Time": return "Pacific/Bougainville";
         case "Canada Central Standard Time": return "America/Regina";
         case "Cape Verde Standard Time": return "Atlantic/Cape_Verde";
         case "Caucasus Standard Time": return "Asia/Yerevan";
@@ -31608,7 +31623,9 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Central Pacific Standard Time": return "Pacific/Guadalcanal";
         case "Central Standard Time": return "America/Chicago";
         case "Central Standard Time (Mexico)": return "America/Mexico_City";
+        case "Chatham Islands Standard Time": return "Pacific/Chatham";
         case "China Standard Time": return "Asia/Shanghai";
+        case "Cuba Standard Time": return "America/Havana";
         case "Dateline Standard Time": return "Etc/GMT+12";
         case "E. Africa Standard Time": return "Africa/Nairobi";
         case "E. Australia Standard Time": return "Australia/Brisbane";
@@ -31640,7 +31657,9 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Korea Standard Time": return "Asia/Seoul";
         case "Libya Standard Time": return "Africa/Tripoli";
         case "Line Islands Standard Time": return "Pacific/Kiritimati";
+        case "Lord Howe Standard Time": return "Australia/Lord_Howe";
         case "Magadan Standard Time": return "Asia/Magadan";
+        case "Marquesas Standard Time": return "Pacific/Marquesas";
         case "Mauritius Standard Time": return "Indian/Mauritius";
         // Same as with E. Europe Standard Time.
         case "Mexico Standard Time": return "America/Mexico_City";
@@ -31659,6 +31678,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Nepal Standard Time": return "Asia/Katmandu";
         case "New Zealand Standard Time": return "Pacific/Auckland";
         case "Newfoundland Standard Time": return "America/St_Johns";
+        case "Norfolk Standard Time": return "Pacific/Norfolk";
         case "North Asia East Standard Time": return "Asia/Irkutsk";
         case "North Asia Standard Time": return "Asia/Krasnoyarsk";
         case "North Korea Standard Time": return "Asia/Pyongyang";
@@ -31677,6 +31697,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "SA Western Standard Time": return "America/La_Paz";
         case "SE Asia Standard Time": return "Asia/Bangkok";
         case "Sakhalin Standard Time": return "Asia/Sakhalin";
+        case "Saint Pierre Standard Time": return "America/Miquelon";
         case "Samoa Standard Time": return "Pacific/Apia";
         case "Singapore Standard Time": return "Asia/Singapore";
         case "South Africa Standard Time": return "Africa/Johannesburg";
@@ -31684,15 +31705,20 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Syria Standard Time": return "Asia/Damascus";
         case "Taipei Standard Time": return "Asia/Taipei";
         case "Tasmania Standard Time": return "Australia/Hobart";
+        case "Tocantins Standard Time": return "America/Arguaina";
         case "Tokyo Standard Time": return "Asia/Tokyo";
+        case "Tomsk Standard Time": return "Asia/Tomsk";
         case "Tonga Standard Time": return "Pacific/Tongatapu";
         case "Transbaikal Standard Time": return "Asia/Chita";
         case "Turkey Standard Time": return "Europe/Istanbul";
+        case "Turks And Caicos Standard Time": return "America/Grand_Turk";
         case "US Eastern Standard Time": return "America/Indianapolis";
         case "US Mountain Standard Time": return "America/Phoenix";
         case "UTC": return "Etc/GMT";
         case "UTC+12": return "Etc/GMT-12";
         case "UTC-02": return "Etc/GMT+2";
+        case "UTC-08": return "Etc/GMT+8";
+        case "UTC-09": return "Etc/GMT+9";
         case "UTC-11": return "Etc/GMT+11";
         case "Ulaanbaatar Standard Time": return "Asia/Ulaanbaatar";
         case "Venezuela Standard Time": return "America/Caracas";
@@ -31700,7 +31726,9 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "W. Australia Standard Time": return "Australia/Perth";
         case "W. Central Africa Standard Time": return "Africa/Lagos";
         case "W. Europe Standard Time": return "Europe/Berlin";
+        case "W. Mongolia Standard Time": return "Asia/Hovd";
         case "West Asia Standard Time": return "Asia/Tashkent";
+        case "West Bank Standard Time": return "Asia/Hebron";
         case "West Pacific Standard Time": return "Pacific/Port_Moresby";
         case "Yakutsk Standard Time": return "Asia/Yakutsk";
         default: return null;
