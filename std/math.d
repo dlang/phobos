@@ -47,7 +47,7 @@ $(TR $(TDNW Floating-point operations) $(TD
 $(TR $(TDNW Introspection) $(TD
     $(MYREF isFinite) $(MYREF isIdentical) $(MYREF isInfinity) $(MYREF isNaN)
     $(MYREF isNormal) $(MYREF isSubnormal) $(MYREF signbit) $(MYREF sgn)
-    $(MYREF copysign)
+    $(MYREF copysign) $(MYREF isPowerOf2)
 ))
 $(TR $(TDNW Complex Numbers) $(TD
   $(MYREF abs) $(MYREF conj) $(MYREF sin) $(MYREF cos) $(MYREF expi)
@@ -7617,5 +7617,118 @@ T truncPow2(T)(const T val) if (isFloatingPoint!T)
 
         assert(truncPow2(T.infinity) == T.infinity);
         assert(truncPow2(T.init).isNaN);
+    }
+}
+
+/**
+Check whether a number is an integer power of two.
+
+Note that only positive numbers can be integer powers of two. This
+function always return `false` if `x` is negative or zero.
+
+Params:
+    x = the number to test
+
+Returns:
+    `true` if `x` is an integer power of two.
+*/
+bool isPowerOf2(X)(const X x) pure @safe nothrow @nogc
+    if (isNumeric!X)
+{
+    static if (isFloatingPoint!X)
+    {
+        int exp;
+        const X sig = frexp(x, exp);
+
+        return (exp != int.min) && (sig is cast(X)0.5L);
+    }
+    else
+    {
+        static if (isSigned!X)
+            alias W = typeof(x + 0);
+        else
+            alias W = typeof(x + 0u); // For ubyte and ushort W should be uint
+
+        static if (is(X == W))
+        {
+            static if (isSigned!X)
+                return ((x & -x) == x) && (x > -x);
+            else
+                return (x & -x) > (x - 1);
+        }
+        else
+        {
+            pragma(inline, true);
+            return isPowerOf2(cast(W)x);
+        }
+    }
+}
+///
+unittest
+{
+    assert( isPowerOf2(1.0L));
+    assert( isPowerOf2(2.0L));
+    assert( isPowerOf2(0.5L));
+    assert( isPowerOf2(pow(2.0L, 96)));
+    assert( isPowerOf2(pow(2.0L, -77)));
+
+    assert(!isPowerOf2(-2.0L));
+    assert(!isPowerOf2(-0.5L));
+    assert(!isPowerOf2(0.0L));
+    assert(!isPowerOf2(4.315));
+    assert(!isPowerOf2(1.0L / 3.0L));
+
+    assert(!isPowerOf2(real.nan));
+    assert(!isPowerOf2(real.infinity));
+}
+///
+unittest
+{
+    assert( isPowerOf2(1));
+    assert( isPowerOf2(2));
+    assert( isPowerOf2(1uL << 63));
+
+    assert(!isPowerOf2(-4));
+    assert(!isPowerOf2(0));
+    assert(!isPowerOf2(1337u));
+}
+
+unittest
+{
+    import std.meta : AliasSeq;
+
+    immutable smallP2 = pow(2.0L, -62);
+    immutable bigP2 = pow(2.0L, 50);
+    immutable smallP7 = pow(7.0L, -35);
+    immutable bigP7 = pow(7.0L, 30);
+
+    foreach (X; AliasSeq!(float, double, real))
+    {
+        immutable min_sub = X.min_normal * X.epsilon;
+
+        foreach (x; AliasSeq!(smallP2, min_sub, X.min_normal, .25L, 0.5L, 1.0L, 2.0L, 8.0L, pow(2.0L, X.max_exp - 1), bigP2))
+        {
+            assert( isPowerOf2(cast(X) x));
+            assert(!isPowerOf2(cast(X)-x));
+        }
+
+        foreach (x; AliasSeq!(0.0L, 3 * min_sub, smallP7, 0.1L, 1337.0L, bigP7, X.max, real.nan, real.infinity))
+        {
+            assert(!isPowerOf2(cast(X) x));
+            assert(!isPowerOf2(cast(X)-x));
+        }
+    }
+
+    foreach (X; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        foreach (x; [1, 2, 4, 8, (X.max >>> 1) + 1])
+        {
+            assert( isPowerOf2(cast(X) x));
+            static if (isSigned!X)
+                assert(!isPowerOf2(cast(X)-x));
+        }
+
+        foreach (x; [0, 3, 5, 13, 77, X.min, X.max])
+            assert(!isPowerOf2(cast(X)x));
     }
 }
