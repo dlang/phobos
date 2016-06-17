@@ -49,6 +49,8 @@ $(BUGSTITLE Library Changes,
     `std.algorithm.searching.{min,max}Element` for ranges have been added.))
     $(LI $(REF Ternary, std,typecons) was added to represent three valued
     logic.)
+    $(LI $(RELATIVE_LINK2 quantize, Added `std.math.quantize`, for rounding to
+        the nearest multiple of some number.))
 )
 
 $(BUGSTITLE Library Changes,
@@ -241,6 +243,27 @@ import std.typecons;
 assert([3, 1, 4].minElement == 1);
 assert([4, 7, 5].enumerate.maxElement!`a.value` == tuple(1, 7));
 -------
+)
+
+$(LI $(LNAME2 quantize, Added `std.math.quantize`.)
+    $(P $(XREF math, quantize) rounds to the nearest multiple of some number.
+        Features:)
+    $(UL
+        $(LI The rounding method can be specified using the `rfunc` parameter. By
+            default, the current rounding mode will be used, which is typically
+            "banker's rounding".)
+        $(LI Overloads are included for the common case of rounding to the $(I Nth)
+            digit place in some base.)
+        $(LI If known at compile time, the base and exponent (digit place) can be
+            supplied as template parameters for better performance.)
+    )
+---
+import std.math;
+
+assert(12345.6789L.quantize(20.0L) == 12340.0L);
+assert(12345.6789L.quantize!(10, -2) == 12345.68L);
+assert(12345.6789L.quantize!(10, floor)(-2) == 12345.67L);
+---
 )
 
 )
