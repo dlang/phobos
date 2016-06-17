@@ -581,7 +581,7 @@ private extern(C) int brk(shared void*);
 /**
 
 Allocator backed by $(D $(LUCKY sbrk)) for Posix systems. Due to the fact that
-$(D sbrk) is not thread-safe $(WEB lifecs.likai.org/2010/02/sbrk-is-not-thread-
+$(D sbrk) is not thread-safe $(HTTP lifecs.likai.org/2010/02/sbrk-is-not-thread-
 safe.html, by design), $(D SbrkRegion) uses a mutex internally. This implies
 that uncontrolled calls to $(D brk) and $(D sbrk) may affect the workings of $(D
 SbrkRegion) adversely.

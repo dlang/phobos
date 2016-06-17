@@ -44,9 +44,9 @@ $(T2 predSwitch,
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_comparison.d)
 
@@ -725,7 +725,7 @@ template equal(alias pred = "a == b")
         for element, according to binary predicate $(D pred).
 
     See_Also:
-        $(WEB sgi.com/tech/stl/_equal.html, STL's _equal)
+        $(HTTP sgi.com/tech/stl/_equal.html, STL's _equal)
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
     if (isInputRange!Range1 && isInputRange!Range2 && is(typeof(binaryFun!pred(r1.front, r2.front))))
@@ -921,7 +921,7 @@ private template MaxType(T...)
 
 // levenshteinDistance
 /**
-Encodes $(WEB realityinteractive.com/rgrzywinski/archives/000249.html,
+Encodes $(HTTP realityinteractive.com/rgrzywinski/archives/000249.html,
 edit operations) necessary to transform one sequence into
 another. Given sequences $(D s) (source) and $(D t) (target), a
 sequence of $(D EditOp) encodes the steps that need to be taken to
@@ -1116,7 +1116,7 @@ private:
 }
 
 /**
-Returns the $(WEB wikipedia.org/wiki/Levenshtein_distance, Levenshtein
+Returns the $(HTTP wikipedia.org/wiki/Levenshtein_distance, Levenshtein
 distance) between $(D s) and $(D t). The Levenshtein distance computes
 the minimal amount of edit operations necessary to transform $(D s)
 into $(D t).  Performs $(BIGOH s.length * t.length) evaluations of $(D
@@ -1490,7 +1490,7 @@ two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
 evaluations of $(D pred).
 
 See_Also:
-    $(WEB sgi.com/tech/stl/_mismatch.html, STL's _mismatch)
+    $(HTTP sgi.com/tech/stl/_mismatch.html, STL's _mismatch)
 */
 Tuple!(Range1, Range2)
 mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)

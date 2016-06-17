@@ -186,9 +186,9 @@ $(LREF allocatorObject)) only once, at client level.
 
 Copyright: Andrei Alexandrescu 2013-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/experimental/_allocator)
 

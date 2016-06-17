@@ -11,8 +11,8 @@
         $(LINK http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8)<br>
         $(LINK http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335)
     Copyright: Copyright Digital Mars 2000 - 2012.
-    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   $(WEB digitalmars.com, Walter Bright) and Jonathan M Davis
+    License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    Authors:   $(HTTP digitalmars.com, Walter Bright) and Jonathan M Davis
     Source:    $(PHOBOSSRC std/_utf.d)
    +/
 module std.utf;
@@ -248,7 +248,7 @@ pure nothrow @safe @nogc unittest
 
     Returns:
         The number of code units in the UTF sequence. For UTF-8, this is a
-        value between 1 and 4 (as per $(WEB tools.ietf.org/html/rfc3629#section-3, RFC 3629$(COMMA) section 3)).
+        value between 1 and 4 (as per $(HTTP tools.ietf.org/html/rfc3629#section-3, RFC 3629$(COMMA) section 3)).
         For UTF-16, it is either 1 or 2. For UTF-32, it is always 1.
 
     Throws:
@@ -567,7 +567,7 @@ unittest
 
     Returns:
         The number of code units in the UTF sequence. For UTF-8, this is a
-        value between 1 and 4 (as per $(WEB tools.ietf.org/html/rfc3629#section-3, RFC 3629$(COMMA) section 3)).
+        value between 1 and 4 (as per $(HTTP tools.ietf.org/html/rfc3629#section-3, RFC 3629$(COMMA) section 3)).
         For UTF-16, it is either 1 or 2. For UTF-32, it is always 1.
 
     Throws:

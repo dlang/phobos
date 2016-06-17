@@ -2,10 +2,10 @@
 
 /**
 This module implements a
-$(WEB erdani.org/publications/cuj-04-2002.html,discriminated union)
+$(HTTP erdani.org/publications/cuj-04-2002.html,discriminated union)
 type (a.k.a.
-$(WEB en.wikipedia.org/wiki/Tagged_union,tagged union),
-$(WEB en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
+$(HTTP en.wikipedia.org/wiki/Tagged_union,tagged union),
+$(HTTP en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
 Such types are useful
 for type-uniform binary interfaces, interfacing with scripting
 languages, and comfortable exploratory programming.
@@ -59,8 +59,8 @@ Credits: Reviewed by Brad Roberts. Daniel Keep provided a detailed code review
 prompting the following improvements: (1) better support for arrays; (2) support
 for associative arrays; (3) friendlier behavior towards the garbage collector.
 Copyright: Copyright Andrei Alexandrescu 2007 - 2015.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
 Source:    $(PHOBOSSRC std/_variant.d)
 */
 module std.variant;

@@ -5,7 +5,7 @@
     std.process in order to eliminate cyclic construction errors.
 
     Copyright: Copyright 2011 -
-    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
     Source:    $(PHOBOSSRC std/internal/_processinit.d)
   +/

@@ -6,9 +6,9 @@ is $(D_PARAM public)ally imported when importing $(B std.stdio).
 
 Source: $(PHOBOSSRC std/_stdio.d)
 Copyright: Copyright Digital Mars 2007-.
-License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu),
+License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP digitalmars.com, Walter Bright),
+           $(HTTP erdani.org, Andrei Alexandrescu),
            Alex Rønne Petersen
  */
 module std.stdio;
@@ -390,7 +390,7 @@ Params:
     name = range or string representing the file _name
     stdioOpenmode = range or string represting the open mode
         (with the same semantics as in the C standard library
-        $(WEB cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
+        $(HTTP cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
         function)
 
 Throws: $(D ErrnoException) if the file could not be opened.
@@ -474,7 +474,7 @@ file.
 /**
 First calls $(D detach) (throwing on failure), and then attempts to
 _open file $(D name) with mode $(D stdioOpenmode). The mode has the
-same semantics as in the C standard library $(WEB
+same semantics as in the C standard library $(HTTP
 cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
 
 Throws: $(D ErrnoException) in case of error.
@@ -487,7 +487,7 @@ Throws: $(D ErrnoException) in case of error.
 
 /**
 First calls $(D detach) (throwing on failure), and then runs a command
-by calling the C standard library function $(WEB
+by calling the C standard library function $(HTTP
 opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
 
 Throws: $(D ErrnoException) in case of error.
@@ -606,7 +606,7 @@ Throws: $(D ErrnoException) in case of error.
     }
 
 /**
-Returns $(D true) if the file is at end (see $(WEB
+Returns $(D true) if the file is at end (see $(HTTP
 cplusplus.com/reference/clibrary/cstdio/feof.html, feof)).
 
 Throws: $(D Exception) if the file is not opened.
@@ -629,7 +629,7 @@ it has no name.*/
 
 /**
 If the file is not opened, returns $(D true). Otherwise, returns
-$(WEB cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
+$(HTTP cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
 the file handle.
  */
     @property bool error() const @trusted pure nothrow
@@ -684,7 +684,7 @@ Throws: $(D ErrnoException) on failure if closing the file.
 
 /**
 If the file was unopened, succeeds vacuously. Otherwise closes the
-file (by calling $(WEB
+file (by calling $(HTTP
 cplusplus.com/reference/clibrary/cstdio/fclose.html, fclose)),
 throwing on error. Even if an exception is thrown, afterwards the $(D
 File) object is empty. This is different from $(D detach) in that it
@@ -729,7 +729,7 @@ Throws: $(D ErrnoException) on error.
 
 /**
 If the file is not opened, succeeds vacuously. Otherwise, returns
-$(WEB cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
+$(HTTP cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
 _clearerr) for the file handle.
  */
     void clearerr() @safe pure nothrow
@@ -741,7 +741,7 @@ _clearerr) for the file handle.
 /**
 Flushes the C $(D FILE) buffers.
 
-Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush)
+Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush)
 for the file handle.
 
 Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) fails.
@@ -773,9 +773,9 @@ Forces any data buffered by the OS to be written to disk.
 Call $(LREF flush) before calling this function to flush the C $(D FILE) buffers first.
 
 This function calls
-$(WEB msdn.microsoft.com/en-us/library/windows/desktop/aa364439%28v=vs.85%29.aspx,
+$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/aa364439%28v=vs.85%29.aspx,
 $(D FlushFileBuffers)) on Windows and
-$(WEB pubs.opengroup.org/onlinepubs/7908799/xsh/fsync.html,
+$(HTTP pubs.opengroup.org/onlinepubs/7908799/xsh/fsync.html,
 $(D fsync)) on POSIX for the file handle.
 
 Throws: $(D Exception) if the file is not opened or if the OS call fails.
@@ -796,7 +796,7 @@ Throws: $(D Exception) if the file is not opened or if the OS call fails.
     }
 
 /**
-Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
+Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
 file handle. The number of items to read and the size of
 each item is inferred from the size and type of the input array, respectively.
 
@@ -857,7 +857,7 @@ $(D rawRead) always reads in binary mode on Windows.
     }
 
 /**
-Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
+Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
 handle. The number of items to write and the size of each
 item is inferred from the size and type of the input array, respectively. An
 error is thrown if the buffer could not be written in its entirety.
@@ -912,7 +912,7 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
     }
 
 /**
-Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
+Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
 for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
@@ -975,7 +975,7 @@ Throws: $(D Exception) if the file is not opened.
     }
 
 /**
-Calls $(WEB cplusplus.com/reference/clibrary/cstdio/ftell.html, ftell) for the
+Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/ftell.html, ftell) for the
 managed file handle.
 
 Throws: $(D Exception) if the file is not opened.
@@ -1020,7 +1020,7 @@ Throws: $(D Exception) if the file is not opened.
     }
 
 /**
-Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_rewind.html, _rewind)
+Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_rewind.html, _rewind)
 for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
@@ -1034,7 +1034,7 @@ Throws: $(D Exception) if the file is not opened.
     }
 
 /**
-Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html, _setvbuf) for
+Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_setvbuf.html, _setvbuf) for
 the file handle.
 
 Throws: $(D Exception) if the file is not opened.
@@ -1050,7 +1050,7 @@ Throws: $(D Exception) if the file is not opened.
     }
 
 /**
-Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
+Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
 _setvbuf) for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
@@ -1705,7 +1705,7 @@ is recommended if you want to process a complete file.
     }
 
 /**
- Returns a temporary file by calling $(WEB
+ Returns a temporary file by calling $(HTTP
  cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).
  Note that the created file has no $(LREF name).*/
     static File tmpfile() @safe
@@ -4118,7 +4118,7 @@ unittest
 Writes an array or range to a file.
 Shorthand for $(D data.copy(File(fileName, "wb").lockingBinaryWriter)).
 Similar to $(REF write, std,file), strings are written as-is,
-rather than encoded according to the $(D File)'s $(WEB
+rather than encoded according to the $(D File)'s $(HTTP
 en.cppreference.com/w/c/io#Narrow_and_wide_orientation,
 orientation).
 */

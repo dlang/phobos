@@ -59,9 +59,9 @@ $(T2 uninitializedFill,
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_mutation.d)
 
@@ -106,7 +106,7 @@ Returns:
     The number of elements brought to the front, i.e., the length of $(D back).
 
 See_Also:
-    $(WEB sgi.com/tech/stl/_rotate.html, STL's rotate)
+    $(HTTP sgi.com/tech/stl/_rotate.html, STL's rotate)
 */
 size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
     if (isInputRange!Range1 && isForwardRange!Range2)
@@ -303,7 +303,7 @@ Returns:
     The unfilled part of target
 
 See_Also:
-    $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
+    $(HTTP sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
     if (areCopyCompatibleArrays!(SourceRange, TargetRange))
@@ -413,7 +413,7 @@ use $(LREF filter):
 
 /**
 $(REF retro, std,range) can be used to achieve behavior similar to
-$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
+$(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 */
 @safe unittest
 {
@@ -1892,7 +1892,7 @@ Params:
     r = a bidirectional range with swappable elements or a random access range with a length member
 
 See_Also:
-    $(WEB sgi.com/tech/stl/_reverse.html, STL's _reverse)
+    $(HTTP sgi.com/tech/stl/_reverse.html, STL's _reverse)
 */
 void reverse(Range)(Range r)
 if (isBidirectionalRange!Range && !isRandomAccessRange!Range

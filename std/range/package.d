@@ -8,7 +8,7 @@ std.algorithm)) to be used with a vast variety of different concrete types. For
 example, a linear search algorithm such as $(LINK2 std_algorithm.html#find,
 std.algorithm.find) works not just for arrays, but for linked-lists, input
 files, incoming network data, etc. See also Ali Çehreli's
-$(WEB ddili.org/ders/d.en/ranges.html, tutorial on ranges) for the basics
+$(HTTP ddili.org/ders/d.en/ranges.html, tutorial on ranges) for the basics
 of working with and creating range-based code.
 
 For more detailed information about the conceptual aspect of ranges and the
@@ -175,11 +175,11 @@ _range operations that take advantage of the fact that the _range is sorted.
 
 Source: $(PHOBOSSRC std/_range/_package.d)
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu), David Simcha, Jonathan M Davis,
+Authors: $(HTTP erdani.com, Andrei Alexandrescu), David Simcha, Jonathan M Davis,
 and Jack Stouffer. Credit for some of the ideas in building this module goes
-to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
+to $(HTTP fantascienza.net/leonardo/so/, Leonardo Maffi).
  */
 module std.range;
 
@@ -2603,7 +2603,7 @@ auto takeNone(R)(R range)
  + $(D _range).
  +
  + Intended as the _range equivalent of the Unix
- + $(WEB en.wikipedia.org/wiki/Tail_%28Unix%29, _tail) utility. When the length
+ + $(HTTP en.wikipedia.org/wiki/Tail_%28Unix%29, _tail) utility. When the length
  + of $(D _range) is less than or equal to $(D _n), $(D _range) is returned
  + as-is.
  +
@@ -4650,7 +4650,7 @@ recurrence(alias fun, State...)(State initial)
 
 /**
    $(D Sequence) is similar to $(D Recurrence) except that iteration is
-   presented in the so-called $(WEB en.wikipedia.org/wiki/Closed_form,
+   presented in the so-called $(HTTP en.wikipedia.org/wiki/Closed_form,
    closed form). This means that the $(D n)th element in the series is
    computable directly from the initial values and $(D n) itself. This
    implies that the interface offered by $(D Sequence) is a random-access
@@ -7975,7 +7975,7 @@ if (isInputRange!Range)
    the range with elements strictly smaller than $(D value)). The search
    schedule and its complexity are documented in
    $(LREF SearchPolicy).  See also STL's
-   $(WEB sgi.com/tech/stl/lower_bound.html, lower_bound).
+   $(HTTP sgi.com/tech/stl/lower_bound.html, lower_bound).
 */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
@@ -8006,7 +8006,7 @@ is the only policy allowed (and it must be specified explicitly lest it exposes
 user code to unexpected inefficiencies). For random-access searches, all
 policies are allowed, and $(D SearchPolicy.binarySearch) is the default.
 
-See_Also: STL's $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
+See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
 */
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
@@ -8050,7 +8050,7 @@ See_Also: STL's $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
    policies are justified by the fact that the two boundaries are likely
    to be near the first found value (i.e., equal ranges are relatively
    small). Completes the entire search in $(BIGOH log(n)) time. See also
-   STL's $(WEB sgi.com/tech/stl/equal_range.html, equal_range).
+   STL's $(HTTP sgi.com/tech/stl/equal_range.html, equal_range).
 */
     auto equalRange(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
@@ -8166,7 +8166,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
 /**
 Returns $(D true) if and only if $(D value) can be found in $(D
 range), which is assumed to be sorted. Performs $(BIGOH log(r.length))
-evaluations of $(D pred). See also STL's $(WEB
+evaluations of $(D pred). See also STL's $(HTTP
 sgi.com/tech/stl/binary_search.html, binary_search).
  */
 

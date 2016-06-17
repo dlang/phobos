@@ -120,7 +120,7 @@ enum Options : ulong
     bytesNotMoved = 1u << 15,
     /**
     Measures the sum of extra bytes allocated beyond the bytes requested, i.e.
-    the $(WEB goo.gl/YoKffF, internal fragmentation). This is the current
+    the $(HTTP goo.gl/YoKffF, internal fragmentation). This is the current
     effective number of slack bytes, and it goes up and down with time.
     */
     bytesSlack = 1u << 16,

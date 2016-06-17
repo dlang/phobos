@@ -31,7 +31,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
  * to specify decreasing order for the correct result. The $(LREF crcHexString)
  * alias can also be used for this purpose.
  *
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
  * Authors:   Pavel "EvilOne" Minayev, Alex Rønne Petersen, Johannes Pfau
  *

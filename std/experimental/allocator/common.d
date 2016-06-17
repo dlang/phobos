@@ -3,7 +3,7 @@ Utility and ancillary artifacts of `std.experimental.allocator`. This module
 shouldn't be used directly; its functionality will be migrated into more
 appropriate parts of `std`.
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu), Timon Gehr (`Ternary`)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu), Timon Gehr (`Ternary`)
 */
 module std.experimental.allocator.common;
 import std.algorithm, std.traits;

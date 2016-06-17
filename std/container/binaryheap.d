@@ -10,10 +10,10 @@ Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Othe
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 
 License: Distributed under the Boost Software License, Version 1.0.
-(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+(See accompanying file LICENSE_1_0.txt or copy at $(HTTP
 boost.org/LICENSE_1_0.txt)).
 
-Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+Authors: Steven Schveighoffer, $(HTTP erdani.com, Andrei Alexandrescu)
 */
 module std.container.binaryheap;
 
@@ -36,7 +36,7 @@ unittest
 
 // BinaryHeap
 /**
-Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
+Implements a $(HTTP en.wikipedia.org/wiki/Binary_heap, binary heap)
 container on top of a given random-access range type (usually $(D
 T[])) or a random-access container type (usually $(D Array!T)). The
 documentation of $(D BinaryHeap) will refer to the underlying range or

@@ -5,8 +5,8 @@
  * std.stdio, to eliminate cyclic construction errors.
  *
  * Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
  * Source:    $(PHOBOSSRC std/_stdiobase.d)
  */
 /*          Copyright Andrei Alexandrescu 2008 - 2009.

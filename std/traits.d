@@ -137,13 +137,13 @@
  * )
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright),
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright),
  *            Tomasz Stachowiak ($(D isExpressions)),
- *            $(WEB erdani.org, Andrei Alexandrescu),
+ *            $(HTTP erdani.org, Andrei Alexandrescu),
  *            Shin Fujishiro,
- *            $(WEB octarineparrot.com, Robert Clipsham),
- *            $(WEB klickverbot.at, David Nadlinger),
+ *            $(HTTP octarineparrot.com, Robert Clipsham),
+ *            $(HTTP klickverbot.at, David Nadlinger),
  *            Kenji Hara,
  *            Shoichi Kato
  * Source:    $(PHOBOSSRC std/_traits.d)

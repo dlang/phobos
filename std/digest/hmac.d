@@ -2,14 +2,14 @@
 
 /**
 This package implements the hash-based message authentication code (_HMAC)
-algorithm as defined in $(WEB tools.ietf.org/html/rfc2104, RFC2104). See also
-the corresponding $(WEB en.wikipedia.org/wiki/Hash-based_message_authentication_code, Wikipedia article).
+algorithm as defined in $(HTTP tools.ietf.org/html/rfc2104, RFC2104). See also
+the corresponding $(HTTP en.wikipedia.org/wiki/Hash-based_message_authentication_code, Wikipedia article).
 
 $(SCRIPT inhibitQuickIndex = 1;)
 
 Macros:
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Source: $(PHOBOSSRC std/digest/_hmac.d)
  */

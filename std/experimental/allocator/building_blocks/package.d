@@ -14,7 +14,7 @@ allocated. Put simply, the client must pass the allocated size upon
 deallocation. Storing the size in the _allocator has significant negative
 performance implications, and is virtually always redundant because client code
 needs knowledge of the allocated size in order to avoid buffer overruns. (See
-more discussion in a $(WEB open-
+more discussion in a $(HTTP open-
 std.org/JTC1/SC22/WG21/docs/papers/2013/n3536.html, proposal) for sized
 deallocation in C++.) For this reason, allocators herein traffic in $(D void[])
 as opposed to $(D void*).)
@@ -42,7 +42,7 @@ alignedReallocate) APIs.))
 $(TR $(TDC size_t goodAllocSize(size_t n);, $(POST $(RES) >= n)) $(TD Allocators
 customarily allocate memory in discretely-sized chunks. Therefore, a request for
 $(D n) bytes may result in a larger allocation. The extra memory allocated goes
-unused and adds to the so-called $(WEB goo.gl/YoKffF,internal fragmentation).
+unused and adds to the so-called $(HTTP goo.gl/YoKffF,internal fragmentation).
 The function $(D goodAllocSize(n)) returns the actual number of bytes that would
 be allocated upon a request for $(D n) bytes. This module defines a default
 implementation that returns $(D n) rounded up to a multiple of the allocator's
@@ -135,7 +135,7 @@ thread-safe or not, this instance may be $(D shared).))
 
 $(H2 Sample Assembly)
 
-The example below features an _allocator modeled after $(WEB goo.gl/m7329l,
+The example below features an _allocator modeled after $(HTTP goo.gl/m7329l,
 jemalloc), which uses a battery of free-list allocators spaced so as to keep
 internal fragmentation to a minimum. The $(D FList) definitions specify no
 bounds for the freelist because the $(D Segregator) does all size selection in
@@ -219,8 +219,8 @@ to leak.))
 
 $(TR $(TDC3 AlignedMallocator, mallocator) $(TD Interface to OS-specific _allocators that
 support specifying alignment:
-$(WEB man7.org/linux/man-pages/man3/posix_memalign.3.html, $(D posix_memalign))
-on Posix and $(WEB msdn.microsoft.com/en-us/library/fs9stz4e(v=vs.80).aspx,
+$(HTTP man7.org/linux/man-pages/man3/posix_memalign.3.html, $(D posix_memalign))
+on Posix and $(HTTP msdn.microsoft.com/en-us/library/fs9stz4e(v=vs.80).aspx,
 $(D __aligned_xxx)) on Windows.))
 
 $(TR $(TDC2 AffixAllocator, affix_allocator) $(TD Allocator that allows and manages allocating
@@ -235,7 +235,7 @@ $(TR $(TDC2 FallbackAllocator, fallback_allocator) $(TD Allocator that combines 
  upon failure are passed to the fallback. Useful for small and fast allocators
  fronting general-purpose ones.))
 
-$(TR $(TDC2 FreeList, free_list) $(TD Allocator that implements a $(WEB
+$(TR $(TDC2 FreeList, free_list) $(TD Allocator that implements a $(HTTP
 wikipedia.org/wiki/Free_list, free list) on top of any other allocator. The
 preferred size, tolerance, and maximum elements are configurable at compile- and
 run time.))

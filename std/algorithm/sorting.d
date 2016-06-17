@@ -56,9 +56,9 @@ $(T2 topNIndex,
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_sorting.d)
 
@@ -382,8 +382,8 @@ the relative ordering of all elements $(D a), $(D b) in the left part of $(D r)
 for which $(D predicate(a) == predicate(b)).
 
 See_Also:
-    STL's $(WEB sgi.com/tech/stl/_partition.html, _partition)$(BR)
-    STL's $(WEB sgi.com/tech/stl/stable_partition.html, stable_partition)
+    STL's $(HTTP sgi.com/tech/stl/_partition.html, _partition)$(BR)
+    STL's $(HTTP sgi.com/tech/stl/stable_partition.html, stable_partition)
 */
 Range partition(alias predicate,
         SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
@@ -1114,8 +1114,8 @@ Params:
 Returns: The initial range wrapped as a $(D SortedRange) with the predicate
 $(D binaryFun!less).
 
-Algorithms: $(WEB en.wikipedia.org/wiki/Introsort) is used for unstable sorting and
-$(WEB en.wikipedia.org/wiki/Timsort, Timsort) is used for stable sorting.
+Algorithms: $(HTTP en.wikipedia.org/wiki/Introsort) is used for unstable sorting and
+$(HTTP en.wikipedia.org/wiki/Timsort, Timsort) is used for stable sorting.
 Each algorithm has benefits beyond stability. Introsort is generally faster but
 Timsort may achieve greater speeds on data with low entropy or if predicate calls
 are expensive. Introsort performs no allocations whereas Timsort will perform one
@@ -2123,7 +2123,7 @@ repeatedly computing it. Conversely, if the cost of `transform` is small
 compared to the cost of allocating and filling the precomputed array, `sort`
 may be faster and therefore preferable.
 
-This approach to sorting is akin to the $(WEB
+This approach to sorting is akin to the $(HTTP
 wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also known as
 the decorate-sort-undecorate pattern in Python and Lisp. The complexity is the
 same as that of the corresponding `sort`, but `schwartzSort` evaluates
@@ -2350,7 +2350,7 @@ Params:
 
 See_Also:
     $(LREF topNIndex),
-    $(WEB sgi.com/tech/stl/nth_element.html, STL's nth_element)
+    $(HTTP sgi.com/tech/stl/nth_element.html, STL's nth_element)
 
 BUGS:
 
@@ -2570,7 +2570,7 @@ Copies the top $(D n) elements of the input range $(D source) into the
 random-access range $(D target), where $(D n =
 target.length). Elements of $(D source) are not touched. If $(D
 sorted) is $(D true), the target is sorted. Otherwise, the target
-respects the $(WEB en.wikipedia.org/wiki/Binary_heap, heap property).
+respects the $(HTTP en.wikipedia.org/wiki/Binary_heap, heap property).
 
 Params:
     less = The predicate to sort by.

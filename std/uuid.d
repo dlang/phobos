@@ -82,7 +82,7 @@ $(TR $(TDNW UUID namespaces)
  * $(LINK http://en.wikipedia.org/wiki/Universally_unique_identifier)
  *
  * Copyright: Copyright Johannes Pfau 2011 - .
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Johannes Pfau
  * Source:    $(PHOBOSSRC std/_uuid.d)
  *

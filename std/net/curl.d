@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
+Networking client functionality as provided by $(HTTP _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
@@ -142,10 +142,10 @@ synchronous.
 Source: $(PHOBOSSRC std/net/_curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
-License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Jonas Drewsen. Some of the SMTP code contributed by Jimmy Cao.
 
-Credits: The functionally is based on $(WEB _curl.haxx.se/libcurl, libcurl).
+Credits: The functionally is based on $(HTTP _curl.haxx.se/libcurl, libcurl).
          LibCurl is licensed under an MIT/X derivative license.
 */
 /*
@@ -1927,7 +1927,7 @@ private mixin template Protocol()
     // Network settings
 
     /** Proxy
-     *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+     *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
      */
     @property void proxy(const(char)[] host)
     {
@@ -1935,7 +1935,7 @@ private mixin template Protocol()
     }
 
     /** Proxy port
-     *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+     *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
      */
     @property void proxyPort(ushort port)
     {
@@ -1946,7 +1946,7 @@ private mixin template Protocol()
     alias CurlProxy = etc.c.curl.CurlProxy;
 
     /** Proxy type
-     *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+     *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
      */
     @property void proxyType(CurlProxy type)
     {
@@ -2011,7 +2011,7 @@ private mixin template Protocol()
     }
 
     /** Set the tcp no-delay socket option on or off.
-        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+        See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
     */
     @property void tcpNoDelay(bool on)
     {
@@ -2019,7 +2019,7 @@ private mixin template Protocol()
     }
 
     /** Sets whether SSL peer certificates should be verified.
-        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
+        See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
     */
     @property void verifyPeer(bool on)
     {
@@ -2027,7 +2027,7 @@ private mixin template Protocol()
     }
 
     /** Sets whether the host within an SSL certificate should be verified.
-        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
+        See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
     */
     @property void verifyHost(bool on)
     {
@@ -2322,7 +2322,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.perform();
   * ---
   *
-  * See_Also: $(WEB www.ietf.org/rfc/rfc2616.txt, RFC2616)
+  * See_Also: $(HTTP www.ietf.org/rfc/rfc2616.txt, RFC2616)
   *
   */
 struct HTTP
@@ -2423,7 +2423,7 @@ struct HTTP
 
     /** Time condition enumeration as an alias of $(REF CurlTimeCond, etc,c,curl)
 
-        $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
+        $(HTTP www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
     */
     alias TimeCond = CurlTimeCond;
 
@@ -2594,12 +2594,12 @@ struct HTTP
         // Network settings
 
         /** Proxy
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
          */
         @property void proxy(const(char)[] host);
 
         /** Proxy port
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
          */
         @property void proxyPort(ushort port);
 
@@ -2607,7 +2607,7 @@ struct HTTP
         alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
          */
         @property void proxyType(CurlProxy type);
 
@@ -2650,7 +2650,7 @@ struct HTTP
         @property void localPortRange(ushort range);
 
         /** Set the tcp no-delay socket option on or off.
-            See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+            See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
         */
         @property void tcpNoDelay(bool on);
 
@@ -2901,7 +2901,7 @@ struct HTTP
        cond =  $(D CurlTimeCond.{none,ifmodsince,ifunmodsince,lastmod})
        timestamp = Timestamp for the condition
 
-       $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
+       $(HTTP www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
     */
     void setTimeCondition(HTTP.TimeCond cond, SysTime timestamp)
     {
@@ -3093,7 +3093,7 @@ struct HTTP
     }
 
     /** <a name="HTTP.Method"/>The standard HTTP methods :
-     *  $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
+     *  $(HTTP www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
      */
     enum Method
     {
@@ -3144,7 +3144,7 @@ struct HTTP
 /**
    FTP client functionality.
 
-   See_Also: $(WEB tools.ietf.org/html/rfc959, RFC959)
+   See_Also: $(HTTP tools.ietf.org/html/rfc959, RFC959)
 */
 struct FTP
 {
@@ -3276,12 +3276,12 @@ struct FTP
         // Network settings
 
         /** Proxy
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
          */
         @property void proxy(const(char)[] host);
 
         /** Proxy port
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
          */
         @property void proxyPort(ushort port);
 
@@ -3289,7 +3289,7 @@ struct FTP
         alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
          */
         @property void proxyType(CurlProxy type);
 
@@ -3332,7 +3332,7 @@ struct FTP
         @property void localPortRange(ushort range);
 
         /** Set the tcp no-delay socket option on or off.
-            See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+            See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
         */
         @property void tcpNoDelay(bool on);
 
@@ -3475,7 +3475,7 @@ struct FTP
   * smtp.perform();
   * ---
   *
-  * See_Also: $(WEB www.ietf.org/rfc/rfc2821.txt, RFC2821)
+  * See_Also: $(HTTP www.ietf.org/rfc/rfc2821.txt, RFC2821)
   */
 struct SMTP
 {
@@ -3626,12 +3626,12 @@ struct SMTP
         // Network settings
 
         /** Proxy
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
          */
         @property void proxy(const(char)[] host);
 
         /** Proxy port
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
          */
         @property void proxyPort(ushort port);
 
@@ -3639,7 +3639,7 @@ struct SMTP
         alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
          */
         @property void proxyType(CurlProxy type);
 
@@ -3682,7 +3682,7 @@ struct SMTP
         @property void localPortRange(ushort range);
 
         /** Set the tcp no-delay socket option on or off.
-            See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+            See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
         */
         @property void tcpNoDelay(bool on);
 

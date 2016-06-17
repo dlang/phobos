@@ -13,10 +13,10 @@
 
     References:
         $(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
-        $(WEB en.wikipedia.org/wiki/Ascii, Wikipedia)
+        $(HTTP en.wikipedia.org/wiki/Ascii, Wikipedia)
 
-    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   $(WEB digitalmars.com, Walter Bright) and Jonathan M Davis
+    License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    Authors:   $(HTTP digitalmars.com, Walter Bright) and Jonathan M Davis
     Source:    $(PHOBOSSRC std/_ascii.d)
   +/
 module std.ascii;

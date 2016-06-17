@@ -7,7 +7,7 @@
  * Comma Separated Values provide a simple means to transfer and store
  * tabular data. It has been common for programs to use their own
  * variant of the CSV format. This parser will loosely follow the
- * $(WEB tools.ietf.org/html/rfc4180, RFC-4180). CSV input should adhere
+ * $(HTTP tools.ietf.org/html/rfc4180, RFC-4180). CSV input should adhere
  * to the following criteria (differences from RFC-4180 in parentheses):
  *
  * $(UL
@@ -81,11 +81,11 @@
  * closed.
  *
  *   See_Also:
- *      $(WEB en.wikipedia.org/wiki/Comma-separated_values, Wikipedia
+ *      $(HTTP en.wikipedia.org/wiki/Comma-separated_values, Wikipedia
  *      Comma-separated values)
  *
  *   Copyright: Copyright 2011
- *   License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ *   License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *   Authors:   Jesse Phillips
  *   Source:    $(PHOBOSSRC std/_csv.d)
  */

@@ -45,11 +45,11 @@
  * -----
  *
  * References:
- * $(WEB tools.ietf.org/html/rfc4648, RFC 4648 - The Base16, Base32, and Base64
+ * $(HTTP tools.ietf.org/html/rfc4648, RFC 4648 - The Base16, Base32, and Base64
  * Data Encodings)
  *
  * Copyright: Masahiro Nakagawa 2010-.
- * License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Masahiro Nakagawa, Daniel Murphy (Single value Encoder and Decoder)
  * Source:    $(PHOBOSSRC std/_base64.d)
  * Macros:

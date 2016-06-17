@@ -46,9 +46,9 @@ $(TR $(TH Function Name) $(TH Description)
    used for the plumbing.
    Copyright: Copyright Digital Mars 2000-2013.
 
-   License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+   License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-   Authors: $(WEB walterbright.com, Walter Bright), $(WEB erdani.com,
+   Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
    Andrei Alexandrescu), and Kenji Hara
 
    Source: $(PHOBOSSRC std/_format.d)
@@ -107,7 +107,7 @@ private alias enforceFmt = enforceEx!FormatException;
    must satisfy $(D $(REF isOutputRange, std,range,primitives)!(Writer, Char)).
 
    The variadic arguments are normally consumed in order. POSIX-style
-   $(WEB opengroup.org/onlinepubs/009695399/functions/printf.html,
+   $(HTTP opengroup.org/onlinepubs/009695399/functions/printf.html,
    positional parameter syntax) is also supported. Each argument is
    formatted into a sequence of chars according to the format
    specification, and the characters are passed to $(D w). As many

@@ -301,7 +301,7 @@ At the same time, while working with `ndslice`, an engineer has access to the
 whole set of standard D library, so the functions he creates will be as
 efficient as if they were written in C.
 
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   Ilya Yaroshenko
 

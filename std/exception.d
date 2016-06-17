@@ -34,8 +34,8 @@
     --------------------
 
     Copyright: Copyright Andrei Alexandrescu 2008-, Jonathan M Davis 2011-.
-    License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Authors:   $(WEB erdani.org, Andrei Alexandrescu) and Jonathan M Davis
+    License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
+    Authors:   $(HTTP erdani.org, Andrei Alexandrescu) and Jonathan M Davis
     Source:    $(PHOBOSSRC std/_exception.d)
 
  +/
@@ -891,7 +891,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * For more on infering uniqueness see the $(B unique) and
  * $(B lent) keywords in the
- * $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
+ * $(HTTP archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
  * language.
  *
  * The downside of using $(D assumeUnique)'s
