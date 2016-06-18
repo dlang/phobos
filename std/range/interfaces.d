@@ -264,6 +264,7 @@ class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
     // DMD won't let me put them in.
     private R _range;
 
+    ///
     this(R range) {
         this._range = range;
     }

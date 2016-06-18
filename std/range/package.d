@@ -1799,18 +1799,20 @@ if (isInputRange!(Unqual!Range) &&
 {
     private alias R = Unqual!Range;
 
-    // User accessible in read and write
+    /// User accessible in read and write
     public R source;
 
     private size_t _maxAvailable;
 
     alias Source = R;
 
+    /// Range primitives
     @property bool empty()
     {
         return _maxAvailable == 0 || source.empty;
     }
 
+    /// ditto
     @property auto ref front()
     {
         assert(!empty,
@@ -1819,6 +1821,7 @@ if (isInputRange!(Unqual!Range) &&
         return source.front;
     }
 
+    /// ditto
     void popFront()
     {
         assert(!empty,
@@ -1829,12 +1832,14 @@ if (isInputRange!(Unqual!Range) &&
     }
 
     static if (isForwardRange!R)
+        /// ditto
         @property Take save()
         {
             return Take(source.save, _maxAvailable);
         }
 
     static if (hasAssignableElements!R)
+        /// ditto
         @property auto front(ElementType!R v)
         {
             assert(!empty,
@@ -1846,6 +1851,7 @@ if (isInputRange!(Unqual!Range) &&
 
     static if (hasMobileElements!R)
     {
+        /// ditto
         auto moveFront()
         {
             assert(!empty,
@@ -1857,15 +1863,18 @@ if (isInputRange!(Unqual!Range) &&
 
     static if (isInfinite!R)
     {
+        /// ditto
         @property size_t length() const
         {
             return _maxAvailable;
         }
 
+        /// ditto
         alias opDollar = length;
 
         //Note: Due to Take/hasSlicing circular dependency,
         //This needs to be a restrained template.
+        /// ditto
         auto opSlice()(size_t i, size_t j)
         if (hasSlicing!R)
         {
@@ -1877,6 +1886,7 @@ if (isInputRange!(Unqual!Range) &&
     }
     else static if (hasLength!R)
     {
+        /// ditto
         @property size_t length()
         {
             import std.algorithm.comparison : min;
@@ -1888,6 +1898,7 @@ if (isInputRange!(Unqual!Range) &&
 
     static if (isRandomAccessRange!R)
     {
+        /// ditto
         void popBack()
         {
             assert(!empty,
@@ -1896,6 +1907,7 @@ if (isInputRange!(Unqual!Range) &&
             --_maxAvailable;
         }
 
+        /// ditto
         @property auto ref back()
         {
             assert(!empty,
@@ -1904,6 +1916,7 @@ if (isInputRange!(Unqual!Range) &&
             return source[this.length - 1];
         }
 
+        /// ditto
         auto ref opIndex(size_t index)
         {
             assert(index < length,
@@ -1914,6 +1927,7 @@ if (isInputRange!(Unqual!Range) &&
 
         static if (hasAssignableElements!R)
         {
+            /// ditto
             @property auto back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
@@ -1923,6 +1937,7 @@ if (isInputRange!(Unqual!Range) &&
                 source[this.length - 1] = v;
             }
 
+            /// ditto
             void opIndexAssign(ElementType!R v, size_t index)
             {
                 assert(index < length,
@@ -1934,6 +1949,7 @@ if (isInputRange!(Unqual!Range) &&
 
         static if (hasMobileElements!R)
         {
+            /// ditto
             auto moveBack()
             {
                 assert(!empty,
@@ -1942,6 +1958,7 @@ if (isInputRange!(Unqual!Range) &&
                 return source.moveAt(this.length - 1);
             }
 
+            /// ditto
             auto moveAt(size_t index)
             {
                 assert(index < length,
@@ -1952,23 +1969,17 @@ if (isInputRange!(Unqual!Range) &&
         }
     }
 
-    // Nonstandard
+    /**
+    Access to maximal length of the range.
+    Note: the actual length of the range depends on the underlying range.
+    If it has fewer elements, it will stop before maxLength is reached.
+    */
     @property size_t maxLength() const
     {
         return _maxAvailable;
     }
 }
 
-// This template simply aliases itself to R and is useful for consistency in
-// generic code.
-template Take(R)
-if (isInputRange!(Unqual!R) &&
-    ((!isInfinite!(Unqual!R) && hasSlicing!(Unqual!R)) || is(R T == Take!T)))
-{
-    alias Take = R;
-}
-
-// take for finite ranges with slicing
 /// ditto
 Take!R take(R)(R input, size_t n)
 if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &&
@@ -1978,6 +1989,17 @@ if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &
     //return input[0 .. min(n, $)];
     import std.algorithm.comparison : min;
     return input[0 .. min(n, input.length)];
+}
+
+/**
+This template simply aliases itself to R and is useful for consistency in
+generic code.
+*/
+template Take(R)
+if (isInputRange!(Unqual!R) &&
+    ((!isInfinite!(Unqual!R) && hasSlicing!(Unqual!R)) || is(R T == Take!T)))
+{
+    alias Take = R;
 }
 
 ///
@@ -2007,7 +2029,7 @@ if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &
     assert(equal(t, [ 1, 2, 3 ]));
 }
 
-// take(take(r, n1), n2)
+/// ditto
 Take!R take(R)(R input, size_t n)
 if (is(R T == Take!T))
 {
@@ -2015,7 +2037,7 @@ if (is(R T == Take!T))
     return R(input.source, min(n, input._maxAvailable));
 }
 
-// Regular take for input ranges
+/// ditto
 Take!(R) take(R)(R input, size_t n)
 if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) && !is(R T == Take!T)))
 {
@@ -2913,13 +2935,28 @@ private:
     UT _value;
 
 public:
+    /// Range primitives
     @property inout(T) front() inout { return _value; }
+
+    /// ditto
     @property inout(T) back() inout { return _value; }
+
+    /// ditto
     enum bool empty = false;
+
+    /// ditto
     void popFront() {}
+
+    /// ditto
     void popBack() {}
+
+    /// ditto
     @property auto save() inout { return this; }
+
+    /// ditto
     inout(T) opIndex(size_t) inout { return _value; }
+
+    /// ditto
     auto opSlice(size_t i, size_t j)
     in
     {
@@ -2930,7 +2967,11 @@ public:
         return this.takeExactly(j - i);
     }
     private static struct DollarToken {}
+
+    /// ditto
     enum opDollar = DollarToken.init;
+
+    /// ditto
     auto opSlice(size_t, DollarToken) inout { return this; }
 }
 
@@ -3083,14 +3124,17 @@ private:
         alias fun = Fun[0];
 
 public:
+    /// Range primitives
     enum empty = false;
 
+    /// ditto
     auto ref front() @property
     {
         return fun();
     }
 
-    void popFront() { }
+    /// ditto
+    void popFront() {}
 }
 
 @safe unittest
@@ -3139,12 +3183,14 @@ struct Cycle(R)
         private R _original;
         private size_t _index;
 
+        /// Range primitives
         this(R input, size_t index = 0)
         {
             _original = input;
             _index = index % _original.length;
         }
 
+        /// ditto
         @property auto ref front()
         {
             return _original[_index];
@@ -3152,6 +3198,7 @@ struct Cycle(R)
 
         static if (is(typeof((cast(const R)_original)[_index])))
         {
+            /// ditto
             @property auto ref front() const
             {
                 return _original[_index];
@@ -3160,14 +3207,17 @@ struct Cycle(R)
 
         static if (hasAssignableElements!R)
         {
+            /// ditto
             @property auto front(ElementType!R val)
             {
                 _original[_index] = val;
             }
         }
 
+        /// ditto
         enum bool empty = false;
 
+        /// ditto
         void popFront()
         {
             ++_index;
@@ -3175,6 +3225,7 @@ struct Cycle(R)
                 _index = 0;
         }
 
+        /// ditto
         auto ref opIndex(size_t n)
         {
             return _original[(n + _index) % _original.length];
@@ -3183,6 +3234,7 @@ struct Cycle(R)
         static if (is(typeof((cast(const R)_original)[_index])) &&
                    is(typeof((cast(const R)_original).length)))
         {
+            /// ditto
             auto ref opIndex(size_t n) const
             {
                 return _original[(n + _index) % _original.length];
@@ -3191,12 +3243,14 @@ struct Cycle(R)
 
         static if (hasAssignableElements!R)
         {
+            /// ditto
             auto opIndexAssign(ElementType!R val, size_t n)
             {
                 _original[(n + _index) % _original.length] = val;
             }
         }
 
+        /// ditto
         @property Cycle save()
         {
             //No need to call _original.save, because Cycle never actually modifies _original
@@ -3204,8 +3258,11 @@ struct Cycle(R)
         }
 
         private static struct DollarToken {}
+
+        /// ditto
         enum opDollar = DollarToken.init;
 
+        /// ditto
         auto opSlice(size_t i, size_t j)
         in
         {
@@ -3216,6 +3273,7 @@ struct Cycle(R)
             return this[i .. $].takeExactly(j - i);
         }
 
+        /// ditto
         auto opSlice(size_t i, DollarToken)
         {
             return typeof(this)(_original, _index + i);
@@ -3226,12 +3284,14 @@ struct Cycle(R)
         private R _original;
         private R _current;
 
+        /// ditto
         this(R input)
         {
             _original = input;
             _current = input.save;
         }
 
+        /// ditto
         @property auto ref front()
         {
             return _current.front;
@@ -3239,6 +3299,7 @@ struct Cycle(R)
 
         static if (is(typeof((cast(const R)_current).front)))
         {
+            /// ditto
             @property auto ref front() const
             {
                 return _current.front;
@@ -3247,14 +3308,17 @@ struct Cycle(R)
 
         static if (hasAssignableElements!R)
         {
+            /// ditto
             @property auto front(ElementType!R val)
             {
                 return _current.front = val;
             }
         }
 
+        /// ditto
         enum bool empty = false;
 
+        /// ditto
         void popFront()
         {
             _current.popFront();
@@ -3262,6 +3326,7 @@ struct Cycle(R)
                 _current = _original.save;
         }
 
+        /// ditto
         @property Cycle save()
         {
             //No need to call _original.save, because Cycle never actually modifies _original
@@ -3273,12 +3338,14 @@ struct Cycle(R)
     }
 }
 
+/// ditto
 template Cycle(R)
     if (isInfinite!R)
 {
     alias Cycle = R;
 }
 
+///
 struct Cycle(R)
     if (isStaticArray!R)
 {
@@ -3287,12 +3354,15 @@ struct Cycle(R)
     private size_t _index;
 
 nothrow:
+
+    /// Range primitives
     this(ref R input, size_t index = 0) @system
     {
         _ptr = input.ptr;
         _index = index % R.length;
     }
 
+    /// ditto
     @property ref inout(ElementType) front() inout @safe
     {
         static ref auto trustedPtrIdx(typeof(_ptr) p, size_t idx) @trusted
@@ -3302,8 +3372,10 @@ nothrow:
         return trustedPtrIdx(_ptr, _index);
     }
 
+    /// ditto
     enum bool empty = false;
 
+    /// ditto
     void popFront() @safe
     {
         ++_index;
@@ -3311,6 +3383,7 @@ nothrow:
             _index = 0;
     }
 
+    /// ditto
     ref inout(ElementType) opIndex(size_t n) inout @safe
     {
         static ref auto trustedPtrIdx(typeof(_ptr) p, size_t idx) @trusted
@@ -3320,14 +3393,17 @@ nothrow:
         return trustedPtrIdx(_ptr, n + _index);
     }
 
+    /// ditto
     @property inout(Cycle) save() inout @safe
     {
         return this;
     }
 
     private static struct DollarToken {}
+    /// ditto
     enum opDollar = DollarToken.init;
 
+    /// ditto
     auto opSlice(size_t i, size_t j) @safe
     in
     {
@@ -3338,6 +3414,7 @@ nothrow:
         return this[i .. $].takeExactly(j - i);
     }
 
+    /// ditto
     inout(typeof(this)) opSlice(size_t i, DollarToken) inout @safe
     {
         static auto trustedCtor(typeof(_ptr) p, size_t idx) @trusted
@@ -3377,12 +3454,14 @@ Cycle!R cycle(R)(R input, size_t index = 0)
     return Cycle!R(input, index);
 }
 
+/// Ditto
 Cycle!R cycle(R)(R input)
     if (isInfinite!R)
 {
     return input;
 }
 
+/// Ditto
 Cycle!R cycle(R)(ref R input, size_t index = 0) @system
     if (isStaticArray!R)
 {
@@ -3582,9 +3661,9 @@ struct Zip(Ranges...)
     import std.typecons : Tuple;
 
     alias R = Ranges;
-    R ranges;
+    private R ranges;
     alias ElementType = Tuple!(staticMap!(.ElementType, R));
-    StoppingPolicy stoppingPolicy = StoppingPolicy.shortest;
+    private StoppingPolicy stoppingPolicy = StoppingPolicy.shortest;
 
 /**
    Builds an object. Usually this is invoked indirectly by using the
@@ -3609,6 +3688,7 @@ struct Zip(Ranges...)
     }
     else
     {
+        ///
         @property bool empty()
         {
             import std.exception : enforce;
@@ -3650,6 +3730,7 @@ struct Zip(Ranges...)
 
     static if (allSatisfy!(isForwardRange, R))
     {
+        ///
         @property Zip save()
         {
             //Zip(ranges[0].save, ranges[1].save, ..., stoppingPolicy)
@@ -4286,6 +4367,7 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
 struct Lockstep(Ranges...)
     if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 {
+    ///
     this(R ranges, StoppingPolicy sp = StoppingPolicy.shortest)
     {
         import std.exception : enforce;
