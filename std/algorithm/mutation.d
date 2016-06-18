@@ -2501,7 +2501,7 @@ pure @safe nothrow unittest
     assert(f.payload.equal([10, 12, 11]));
 }
 
-void swapFront(R1, R2)(R1 r1, R2 r2)
+private void swapFront(R1, R2)(R1 r1, R2 r2)
     if (isInputRange!R1 && isInputRange!R2)
 {
     static if (is(typeof(swap(r1.front, r2.front))))
