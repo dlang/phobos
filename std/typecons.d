@@ -40,6 +40,7 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
  */
 module std.typecons;
 
+import core.stdc.stdint : uintptr_t;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
 
@@ -6100,7 +6101,7 @@ template scoped(T)
 
         @property inout(T) Scoped_payload() inout
         {
-            void* alignedStore = cast(void*) aligned(cast(size_t) Scoped_store.ptr);
+            void* alignedStore = cast(void*) aligned(cast(uintptr_t) Scoped_store.ptr);
             // As `Scoped` can be unaligned moved in memory class instance should be moved accordingly.
             immutable size_t d = alignedStore - Scoped_store.ptr;
             size_t* currD = cast(size_t*) &Scoped_store[$ - size_t.sizeof];
@@ -6133,7 +6134,7 @@ template scoped(T)
         import std.conv : emplace;
 
         Scoped result = void;
-        void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
+        void* alignedStore = cast(void*) aligned(cast(uintptr_t) result.Scoped_store.ptr);
         immutable size_t d = alignedStore - result.Scoped_store.ptr;
         *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
         emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
@@ -6223,7 +6224,7 @@ unittest
     destroy(*b2); // calls A's destructor for b2.a
 }
 
-private size_t _alignUp(size_t alignment)(size_t n)
+private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
     if (alignment > 0 && !((alignment - 1) & alignment))
 {
     enum badEnd = alignment - 1; // 0b11, 0b111, ...
@@ -6262,8 +6263,8 @@ unittest // Issue 6580 testcase
         auto c1long = scoped!C1long(3, var);
         assert(var == 6);
         auto c2long = scoped!C2long();
-        assert(cast(size_t)&c1long.long_ % longAlignment == 0);
-        assert(cast(size_t)&c2long.long_ % longAlignment == 0);
+        assert(cast(uint)&c1long.long_ % longAlignment == 0);
+        assert(cast(uint)&c2long.long_ % longAlignment == 0);
         assert(c1long.long_ == 3 && c1long.byte_ == 4);
         assert(c2long.byte_ == [5, 6] && c2long.long_ == 7);
     }
@@ -6298,8 +6299,8 @@ unittest // Original Issue 6580 testcase
     class C { int i; byte b; }
 
     auto sa = [scoped!C(), scoped!C()];
-    assert(cast(size_t)&sa[0].i % int.alignof == 0);
-    assert(cast(size_t)&sa[1].i % int.alignof == 0); // fails
+    assert(cast(uint)&sa[0].i % int.alignof == 0);
+    assert(cast(uint)&sa[1].i % int.alignof == 0); // fails
 }
 
 unittest
