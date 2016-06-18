@@ -1580,7 +1580,7 @@ private mixin template RebindableCommon(T, U, alias This)
             opAssign(initializer);
         }
 
-        @property ref inout(T) get() inout
+        @property inout(T) get() inout
         {
             return original;
         }
@@ -1655,6 +1655,13 @@ unittest
     // a.x = 5;
     // Fine
     a = new Widget;
+}
+
+unittest // issue 16054
+{
+    Rebindable!(immutable Object) r;
+    static assert(__traits(compiles, r.get()));
+    static assert(!__traits(compiles, &r.get()));
 }
 
 /**
