@@ -241,7 +241,7 @@ void[] read(R)(R name, size_t upTo = size_t.max)
     write(deleteme, "1234"); // deleteme is the name of a temporary file
     assert(read(deleteme, 2) == "12");
     assert(read(deleteme.byChar) == "1234");
-    assert((cast(ubyte[])read(deleteme)).length == 4);
+    assert((cast(const(ubyte)[])read(deleteme)).length == 4);
 }
 
 void[] read(R)(auto ref R name, size_t upTo = size_t.max)
