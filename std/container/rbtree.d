@@ -1715,7 +1715,7 @@ assert(equal(rbt[], [5]));
       element type can be formatted. Otherwise, the default toString from
       Object is used.
      */
-    static if(is(typeof((){FormatSpec!(char) fmt; formatValue((const(char)[]) {}, ConstRange.init, fmt);})))
+    static if (is(typeof((){FormatSpec!(char) fmt; formatValue((const(char)[]) {}, ConstRange.init, fmt);})))
     {
         void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) const {
             sink("RedBlackTree(");
