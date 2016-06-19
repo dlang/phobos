@@ -146,23 +146,33 @@ mixin template Signal(T1...)
     /***
      * Remove a slot from the list of slots to be called when emit() is called.
      */
-    final void disconnect(slot_t slot)
-    {
-        debug (signal) writefln("Signal.disconnect(slot)");
-        for (size_t i = 0; i < slots_idx; )
-        {
-            if (slots[i] == slot)
-            {   slots_idx--;
-                slots[i] = slots[slots_idx];
-                slots[slots_idx] = null;        // not strictly necessary
+     final void disconnect(slot_t slot)
+     {
+         size_t disconnectedSlots = 0;
+ 		 size_t instancePreviousSlots = 0;
 
-                Object o = _d_toObject(slot.ptr);
-                rt_detachDisposeEvent(o, &unhook);
-            }
-            else
+         for (size_t i = 0; i < slots_idx; )
+         {
+             if (slots[i].ptr == slot.ptr &&
+                ++instancePreviousSlots &&
+                slots[i] == slot)
+             {
+                 slots_idx--;
+     			 disconnectedSlots++;
+                 slots[i] = slots[slots_idx];
+                 slots[slots_idx] = null;        // not strictly necessary
+             }
+             else
                 i++;
-        }
-    }
+         }
+
+         // detach object from dispose event if all its slots have been removed
+ 		if (instancePreviousSlots == disconnectedSlots)
+ 		{
+ 			Object o = _d_toObject(slot.ptr);
+            rt_detachDisposeEvent(o, &unhook);
+ 		}
+     }
 
     /* **
      * Special function called when o is destroyed.
@@ -528,6 +538,34 @@ unittest
     a.value4 = 44;
     a.value5 = 45;
     a.value6 = 46;
+}
+
+// Triggers bug from issue 15341
+unittest
+{
+    class Observer
+    {
+       void watch() { }
+       void watch2() { }
+    }
+
+    class Bar
+    {
+       mixin Signal!();
+    }
+
+   auto a = new Bar;
+   auto o = new Observer;
+
+   //Connect both observer methods for the same instance
+   a.connect(&o.watch);
+   a.connect(&o.watch2); // not connecting watch2() or disconnecting it manually fixes the issue
+
+   //Disconnect a single method of the two
+   a.disconnect(&o.watch); // NOT disconnecting watch() fixes the issue
+
+   destroy(o); // destroying o should automatically call unhook and disconnect the slot for watch2
+   a.emit(); // should not raise segfault since &o.watch2 is no longer connected
 }
 
 version(none) // Disabled because of dmd @@@BUG5028@@@
