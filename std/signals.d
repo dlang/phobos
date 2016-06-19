@@ -157,10 +157,10 @@ mixin template Signal(T1...)
                 ++instancePreviousSlots &&
                 slots[i] == slot)
             {
-                 slots_idx--;
-     			 disconnectedSlots++;
-                 slots[i] = slots[slots_idx];
-                 slots[slots_idx] = null;        // not strictly necessary
+                slots_idx--;
+                disconnectedSlots++;
+                slots[i] = slots[slots_idx];
+                slots[slots_idx] = null;        // not strictly necessary
             }
             else
                 i++;
