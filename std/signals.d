@@ -146,32 +146,32 @@ mixin template Signal(T1...)
     /***
      * Remove a slot from the list of slots to be called when emit() is called.
      */
-     final void disconnect(slot_t slot)
-     {
-         size_t disconnectedSlots = 0;
- 		 size_t instancePreviousSlots = 0;
+    final void disconnect(slot_t slot)
+    {
+        size_t disconnectedSlots = 0;
+        size_t instancePreviousSlots = 0;
 
-         for (size_t i = 0; i < slots_idx; )
-         {
-             if (slots[i].ptr == slot.ptr &&
+        for (size_t i = 0; i < slots_idx; )
+        {
+            if (slots[i].ptr == slot.ptr &&
                 ++instancePreviousSlots &&
                 slots[i] == slot)
-             {
+            {
                  slots_idx--;
      			 disconnectedSlots++;
                  slots[i] = slots[slots_idx];
                  slots[slots_idx] = null;        // not strictly necessary
-             }
-             else
+            }
+            else
                 i++;
-         }
+        }
 
          // detach object from dispose event if all its slots have been removed
- 		if (instancePreviousSlots == disconnectedSlots)
- 		{
- 			Object o = _d_toObject(slot.ptr);
+        if (instancePreviousSlots == disconnectedSlots)
+        {
+            Object o = _d_toObject(slot.ptr);
             rt_detachDisposeEvent(o, &unhook);
- 		}
+        }
      }
 
     /* **
