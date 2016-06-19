@@ -51,3 +51,5 @@ Furthermore the [D Wishlist](https://wiki.dlang.org/Wish_list) contains more abs
 
 If you want to write new modules for Phobos, we highly encourage you to stay in touch with the community early on.
 Apart from receiving vital feedback and avoiding duplicate efforts, the approval of the community is needed for new additions. In particular, be sure to keep in touch with Andrei Alexandrescu, who manages Phobos and can **veto** new additions.
+
+For more information see [CONTRIBUTING.md file](CONTRIBUTING.md).
