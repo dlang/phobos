@@ -456,7 +456,7 @@
             $(TR $(TD Hyphen)  $(TD Other_Lowercase) )
             $(TR $(TD ID_Continue) $(TD Other_Math)  )
     )
-    $(P Bellow is the table with block names accepted by $(LREF unicode.block).
+    $(P Below is the table with block names accepted by $(LREF unicode.block).
         Note that the shorthand version $(LREF unicode) requires "In"
         to be prepended to the names of blocks so as to disambiguate
         scripts and blocks.
@@ -537,7 +537,7 @@
         $(TR $(TD Enclosed Ideographic Supplement)   $(TD Miscellaneous Technical)   )
         $(TR $(TD Ethiopic)  $(TD Modifier Tone Letters) )
     )
-    $(P Bellow is the table with script names accepted by $(LREF unicode.script)
+    $(P Below is the table with script names accepted by $(LREF unicode.script)
         and by the shorthand version $(LREF unicode):)
         $(BOOKTABLE $(B Scripts),
             $(TR $(TD Arabic)  $(TD Hanunoo) $(TD Old_Italic))
@@ -575,7 +575,7 @@
             $(TR $(TD Han) $(TD Ogham)   $(TD Vai))
             $(TR $(TD Hangul)  $(TD Ol_Chiki)    $(TD Yi))
     )
-    $(P Bellow is the table of names accepted by $(LREF unicode.hangulSyllableType).)
+    $(P Below is the table of names accepted by $(LREF unicode.hangulSyllableType).)
         $(BOOKTABLE $(B Hangul syllable type),
             $(TR $(TH Abb.) $(TH Long form))
             $(TR $(TD L)   $(TD Leading_Jamo))
