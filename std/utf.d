@@ -3104,17 +3104,34 @@ enum dchar replacementDchar = '\uFFFD';
  * Iterate a range of char, wchar, or dchars by code unit.
  *
  * The purpose is to bypass the special case decoding that
- * $(REF front, std,array) does to character arrays.
+ * $(REF front, std,range,primitives) does to character arrays. As a result,
+ * using ranges with `byCodeUnit` can be `nothrow` while $(REF front, std,range,primitives)
+ * throws when it encounters invalid Unicode sequences.
+ *
+ * A code unit is a building block of the UTF encodings. Generally, an
+ * individual code unit does not represent what's perceived as a full
+ * character (a.k.a. a grapheme cluster in Unicode terminology). Many characters
+ * are encoded with multiple code units. For example, the UTF-8 code units for
+ * `ø` are `0xC3 0xB8`. That means, an individual element of `byCodeUnit`
+ * often does not form a character on its own. Attempting to treat it as
+ * one while iterating over the resulting range will give nonsensical results.
+ *
  * Params:
- *      r = input range of characters, or array of characters
+ *      r = an input range of characters, or an array of characters
  * Returns:
- *      input range
+ *     If `r` is not an auto-decodable string, then `r` is returned.
+ *
+ *      Otherwise, an input range with a length if $(REF isAggregateType, std,traits)
+ *      is `true` for `R`. Otherwise, this returns a finite random access range
+ *      with slicing.
+ * See_Also:
+ *      Refer to the $(MREF std, uni) docs for a reference on Unicode terminology.
+ *
+ *      For a range that iterates by grapheme cluster (written character) see
+ *      $(REF byGrapheme, std,uni).
  */
-
 auto byCodeUnit(R)(R r) if (isAutodecodableString!R)
 {
-    /* Turn an array into an InputRange.
-     */
     static struct ByCodeUnitImpl
     {
     pure nothrow @nogc:
@@ -3171,6 +3188,38 @@ auto ref byCodeUnit(R)(R r)
 {
     // byCodeUnit for ranges and dchar[] is a no-op
     return r;
+}
+
+///
+unittest
+{
+    auto r = "Hello, World!".byCodeUnit();
+    static assert(hasLength!(typeof(r)));
+    static assert(hasSlicing!(typeof(r)));
+    static assert(isRandomAccessRange!(typeof(r)));
+    static assert(is(ElementType!(typeof(r)) == immutable char));
+
+    // contrast with the range capabilities of standard strings
+    auto s = "Hello, World!";
+    static assert(isBidirectionalRange!(typeof(r)));
+    static assert(is(ElementType!(typeof(s)) == dchar));
+
+    static assert(!isRandomAccessRange!(typeof(s)));
+    static assert(!hasSlicing!(typeof(s)));
+    static assert(!hasLength!(typeof(s)));
+}
+
+/// `byCodeUnit` does no Unicode decoding
+unittest
+{
+    string noel1 = "noe\u0308l"; // noël using e + combining diaeresis
+    assert(noel1.byCodeUnit[2] != 'ë');
+    assert(noel1.byCodeUnit[2] == 'e');
+
+    string noel2 = "no\u00EBl"; // noël using a precomposed ë character
+    // Because string is UTF-8, the code unit at index 2 is just
+    // the first of a sequence that encodes 'ë'
+    assert(noel2.byCodeUnit[2] != 'ë');
 }
 
 pure nothrow @nogc unittest
