@@ -1,4 +1,5 @@
-#![D Logo](http://dlang.org/images/dlogo.png) Phobos Standard Library
+![D Logo](http://dlang.org/images/dlogo.png) Phobos Standard Library
+====================================================================
 
 
 Phobos is the standard library that comes with the
@@ -10,8 +11,8 @@ Phobos is the standard library that comes with the
 * [API Documentation](http://dlang.org/phobos/)
 * [Wiki](http://wiki.dlang.org/)
 
-# Download
-
+Download
+========
 
 Phobos is packaged together with the compiler.
 You should
@@ -23,17 +24,16 @@ there is a [description in the wiki](http://wiki.dlang.org/Building_DMD).
 Phobos is distributed under Boost Software Licence.
 See the [licence file](LICENSE_1_0.txt).
 
-#I Want to Contribute
+I Want to Contribute
+====================
 
-
-## New packages in Phobos
-
+New packages in Phobos
+-------------------------
 
 Phobos is the standard library of the D programming language and thus tries to standardize APIs to ease development for many other programmers.
 Hence it's great if you want to contribute and make Phobos even better, but there are some important points that you should pay attention too.
 
 ### Blocking points for additions
-
 
 In general there are some indications why something fits better to dub than to the standard library:
 
@@ -46,11 +46,8 @@ With dub potential users can easily use your library and if it proves to be very
 
 ### Finding good points to contribute
 
-
 If you want to help improving Phobos, a good starting point to find meaningful tasks is the [issue tracker](https://issues.dlang.org/buglist.cgi?component=phobos&list_id=209027&product=D&resolution=---). 
 Furthermore the [D Wishlist](https://wiki.dlang.org/Wish_list) contains more abstract, high-level goals.
 
 If you want to write new modules for Phobos, we highly encourage you to stay in touch with the community early on.
-Apart from receiving vital feedback and avoiding duplicate efforts, the approval of the community is needed for new additions.
-In particular you should stay in contact with [Andrei](http://erdani.com/) as he can give amazing advises for your design and since he is in charge of managing Phobos he also has absolute **veto rights** against new additions, which would be quite frustrating after a lot of work.
-
+Apart from receiving vital feedback and avoiding duplicate efforts, the approval of the community is needed for new additions. In particular, be sure to keep in touch with Andrei Alexandrescu, who manages Phobos and can **veto** new additions.
