@@ -1715,6 +1715,13 @@ range. Iteration spans the entire range.
 
 When `startingIndex` is 0 the range will be fully iterated in order
 and in reverse order when `r.length` is given.
+
+Params:
+    r = a random access range with length and slicing
+    startingIndex = the index to begin iteration from
+
+Returns:
+    A forward range with length
  */
 auto radial(Range, I)(Range r, I startingIndex)
 if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral!I)
