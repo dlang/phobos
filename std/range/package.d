@@ -429,6 +429,15 @@ random-access range, moves by indexing into the range; otherwise,
 moves by successive calls to $(D popFront). Applying stride twice to
 the same range results in a stride with a step that is the
 product of the two applications. It is an error for $(D n) to be 0.
+
+Params:
+    r = the input range to stride over
+    n = the number of elements to skip over
+
+Returns:
+    At minimum, an input range. The resulting range will adopt the
+    range primitives of the underlying range as long as
+    $(REF, hasLength, std,range,primitives) is `true`.
  */
 auto stride(Range)(Range r, size_t n)
 if (isInputRange!(Unqual!Range))
