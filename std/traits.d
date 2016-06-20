@@ -14,12 +14,14 @@
  *           $(LREF packageName)
  * ))
  * $(TR $(TD Function _traits) $(TD
+ *           $(LREF isFunction)
  *           $(LREF arity)
  *           $(LREF functionAttributes)
  *           $(LREF functionLinkage)
  *           $(LREF FunctionTypeOf)
  *           $(LREF isSafe)
  *           $(LREF isUnsafe)
+ *           $(LREF isFinal)
  *           $(LREF ParameterDefaults)
  *           $(LREF ParameterIdentifierTuple)
  *           $(LREF ParameterStorageClassTuple)
@@ -76,6 +78,7 @@
  *           $(LREF BuiltinTypeOf)
  * ))
  * $(TR $(TD Categories of types) $(TD
+ *           $(LREF isType)
  *           $(LREF isAggregateType)
  *           $(LREF isArray)
  *           $(LREF isAssociativeArray)
@@ -6969,4 +6972,119 @@ unittest
     static assert(allSatisfy!(ifTestable, AliasSeq!(bool, int, float, double, string)));
     struct BoolWrapper { bool value; }
     static assert(!ifTestable!(bool, a => BoolWrapper(a)));
+}
+
+/**
+ * Detect whether `X` is a type. Analogous to `is(X)`. This is useful when used
+ * in conjunction with other templates, e.g. `allSatisfy!(isType, X)`.
+ *
+ * Returns:
+ *      `true` if `X` is a type, `false` otherwise
+ */
+template isType(X...) if (X.length == 1)
+{
+    enum isType = is(X[0]);
+}
+
+///
+unittest
+{
+    struct S {
+        template Test() {}
+    }
+    class C {}
+    interface I {}
+    union U {}
+    static assert(isType!int);
+    static assert(isType!string);
+    static assert(isType!(int[int]));
+    static assert(isType!S);
+    static assert(isType!C);
+    static assert(isType!I);
+    static assert(isType!U);
+
+    int n;
+    void func(){}
+    static assert(!isType!n);
+    static assert(!isType!func);
+    static assert(!isType!(S.Test));
+    static assert(!isType!(S.Test!()));
+}
+
+/**
+ * Detect whether symbol or type `X` is a function. This is different that finding
+ * if a symbol is callable or satisfying `is(X == function)`, it finds
+ * specifically if the symbol represents a normal function declaration, i.e.
+ * not a delegate or a function pointer.
+ *
+ * Returns:
+ *     `true` if `X` is a function, `false` otherwise
+ *
+ * See_Also:
+ *     Use $(REF isFunctionPointer) or $(REF isDelegate) for detecting those types
+ *     respectively.
+ */
+template isFunction(X...) if (X.length == 1)
+{
+    static if (is(typeof(&X[0]) U : U*) && is(U == function) ||
+               is(typeof(&X[0]) U == delegate))
+    {
+        // x is a (nested) function symbol.
+        enum isFunction = true;
+    }
+    else static if (is(X[0] T))
+    {
+        // x is a type.  Take the type of it and examine.
+        enum isFunction = is(T == function);
+    }
+    else
+        enum isFunction = false;
+}
+
+///
+unittest
+{
+    static void func(){}
+    static assert(isFunction!func);
+
+    struct S
+    {
+        void func(){}
+    }
+    static assert(isFunction!(S.func));
+}
+
+/**
+ * Detect whether `X` is a final method or class.
+ *
+ * Returns:
+ *     `true` if `X` is final, `false` otherwise
+ */
+template isFinal(X...) if (X.length == 1)
+{
+    static if (is(X[0] == class))
+        enum isFinal = __traits(isFinalClass, X[0]);
+    else static if (isFunction!X)
+        enum isFinal = __traits(isFinalFunction, X[0]);
+    else
+        enum isFinal = false;
+}
+
+///
+unittest
+{
+    class C
+    {
+        void nf() {}
+        static void sf() {}
+        final void ff() {}
+    }
+    final class FC { }
+
+    static assert(!isFinal!(C));
+    static assert( isFinal!(FC));
+
+    static assert(!isFinal!(C.nf));
+    static assert(!isFinal!(C.sf));
+    static assert( isFinal!(C.ff));
 }
