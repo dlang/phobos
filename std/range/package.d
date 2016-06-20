@@ -1787,9 +1787,21 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 }
 
 /**
-Lazily takes only up to $(D n) elements of a range. This is
-particularly useful when using with infinite ranges. If the range
-offers random access and $(D length), $(D Take) offers them as well.
+Lazily takes only up to `n` elements of a range. This is
+particularly useful when using with infinite ranges.
+
+Unlike $(LREF takeExactly), `take` does not require that there
+are `n` or more elements in `r`. As a consequence, length
+information is not applied to the result unless `r` also has
+length information.
+
+Params:
+    r = an input range to iterate over up to `n` times
+    n = the number of elements to take
+
+Returns:
+    At minimum, an input range. If the range offers random access
+    and `length`, `take` offers them as well.
  */
 struct Take(Range)
 if (isInputRange!(Unqual!Range) &&
