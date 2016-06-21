@@ -36,6 +36,7 @@ import core.stdc.config;
   (zlib format), rfc1951.txt (deflate format) and rfc1952.txt (gzip format).
 */
 
+nothrow:
 extern (C):
 
 const char[] ZLIB_VERSION = "1.2.8";
