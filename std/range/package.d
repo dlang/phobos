@@ -1712,11 +1712,14 @@ Iterates a random-access range starting from a given point and
 progressively extending left and right from that point. If no initial
 point is given, iteration starts from the middle of the
 range. Iteration spans the entire range.
+
+When `startingIndex` is 0 the range will be fully iterated in order
+and in reverse order when `r.length` is given.
  */
 auto radial(Range, I)(Range r, I startingIndex)
 if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral!I)
 {
-    if (!r.empty) ++startingIndex;
+    if (startingIndex != r.length) ++startingIndex;
     return roundRobin(retro(r[0 .. startingIndex]), r[startingIndex .. r.length]);
 }
 
@@ -1767,7 +1770,9 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
     test([ 1, 2, 3, 4, 5, 6 ], [ 3, 4, 2, 5, 1, 6 ]);
 
     int[] a = [ 1, 2, 3, 4, 5 ];
-    assert(equal(radial(a, 1), [ 2, 3, 1, 4, 5 ][]));
+    assert(equal(radial(a, 1), [ 2, 3, 1, 4, 5 ]));
+    assert(equal(radial(a, 0), [ 1, 2, 3, 4, 5 ])); // only right subrange
+    assert(equal(radial(a, a.length), [ 5, 4, 3, 2, 1 ])); // only left subrange
     static assert(isForwardRange!(typeof(radial(a, 1))));
 
     auto r = radial([1,2,3,4,5]);
