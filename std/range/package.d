@@ -1703,6 +1703,9 @@ Iterates a random-access range starting from a given point and
 progressively extending left and right from that point. If no initial
 point is given, iteration starts from the middle of the
 range. Iteration spans the entire range.
+
+When `startingIndex` is 0 the range will be fully iterated in order
+and in reverse order when `r.length` is given.
  */
 auto radial(Range, I)(Range r, I startingIndex)
 if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral!I)
