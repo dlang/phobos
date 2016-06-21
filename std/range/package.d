@@ -197,6 +197,14 @@ import std.traits; // CommonType, isCallable, isFloatingPoint, isIntegral,
 Iterates a bidirectional range backwards. The original range can be
 accessed by using the $(D source) property. Applying retro twice to
 the same range yields the original range.
+
+Params:
+    r = the bidirectional range to iterate backwards
+
+Returns:
+    A bidirectional range with length if `r` also provides a length. Or,
+    if `r` is a random access range, then the return value will be random
+    access as well.
  */
 auto retro(Range)(Range r)
 if (isBidirectionalRange!(Unqual!Range))
