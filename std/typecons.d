@@ -6926,8 +6926,8 @@ template ReplaceType(From, To, T...)
         }
         else static if (is(T[0] == function))
         {
-            static assert(0, "Function types not supported,"
-                " use a function pointer type instead of "~T[0].stringof);
+            static assert(0, "Function types not supported," ~
+                " use a function pointer type instead of " ~ T[0].stringof);
         }
         else static if (is(T[0] : U!V, alias U, V...))
         {
