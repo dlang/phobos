@@ -7412,24 +7412,31 @@ unittest
 }
 
 /**
-Iterate over $(D range) with an attached index variable.
+Iterate over `range` with an attached index variable.
 
 Each element is a $(REF Tuple, std,typecons) containing the index
 and the element, in that order, where the index member is named $(D index)
-and the element member is named $(D value).
+and the element member is named `value`.
 
-The index starts at $(D start) and is incremented by one on every iteration.
-
-Bidirectionality is propagated only if $(D range) has length.
+The index starts at `start` and is incremented by one on every iteration.
 
 Overflow:
-If $(D range) has length, then it is an error to pass a value for $(D start)
-so that $(D start + range.length) is bigger than $(D Enumerator.max), thus it is
-ensured that overflow cannot happen.
+    If `range` has length, then it is an error to pass a value for `start`
+    so that `start + range.length` is bigger than `Enumerator.max`, thus
+    it is ensured that overflow cannot happen.
 
-If $(D range) does not have length, and $(D popFront) is called when
-$(D front.index == Enumerator.max), the index will overflow and
-continue from $(D Enumerator.min).
+    If `range` does not have length, and `popFront` is called when
+    `front.index == Enumerator.max`, the index will overflow and
+    continue from `Enumerator.min`.
+
+Params:
+    range = the input range to attach indexes to
+    start = the number to start the index counter from
+
+Returns:
+    At minimum, an input range. All other range primitives are given in the
+    resulting range if `range` has them. The exceptions are the bidirectional
+    primitives, which are propagated only if `range` has length.
 
 Example:
 Useful for using $(D foreach) with an index loop variable:
