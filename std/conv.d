@@ -5697,7 +5697,7 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
             Result opSlice(size_t lwr, size_t upr)
             {
                 Result result = void;
-                result.value = value >>> ((len - upr - 1) * SHIFT);
+                result.value = value >>> ((len - upr) * SHIFT);
                 result.len = cast(ubyte)(upr - lwr);
                 return result;
             }
@@ -5797,3 +5797,11 @@ unittest
     }
 }
 
+unittest // issue 16192
+{
+    import std.algorithm : equal;
+    assert(toChars! 2(    0b101_1001_11u)[3 .. 7].equal("1001"));
+    assert(toChars! 8(octal!123_4567_01u)[3 .. 7].equal("4567"));
+    assert(toChars!16(    0x567_89AB_CDu)[3 .. 7].equal("89ab"));
+    assert(toChars!10(      123_4567_89u)[3 .. 7].equal("4567"));
+}
