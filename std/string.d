@@ -1179,7 +1179,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     if (sub.empty)
         return -1;
 
-    if (walkLength(sub) == 1)
+    if (sub.walkLength(2) == 1)
         return lastIndexOf(s, sub.front, cs);
 
     if (cs == CaseSensitive.yes)
