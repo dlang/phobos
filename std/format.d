@@ -774,6 +774,8 @@ struct FormatSpec(Char)
     /**
        In case of a compound format specifier, $(D _sep) contains the
        string positioning after $(D "%|").
+       `sep is null` means no separator else `sep.empty` means 0 length
+        separator.
      */
     const(Char)[] sep;
 
@@ -954,7 +956,7 @@ struct FormatSpec(Char)
                 else
                 {
                     nested = trailing[i + 1 .. j - 1];
-                    sep = null; // use null (issue 12135)
+                    sep = null; // no separator
                 }
                 //this = FormatSpec(innerTrailingSpec);
                 spec = '(';
@@ -2468,7 +2470,7 @@ if (isInputRange!T)
                 formatValue(w, val.front, fmt);
             else
                 formatElement(w, val.front, fmt);
-            if (f.sep.ptr)
+            if (f.sep !is null)
             {
                 put(w, fmt.trailing);
                 val.popFront();
@@ -4775,9 +4777,9 @@ body
                 enforce(i <= T.length, "Too many format specifiers for static array of length %d".format(T.length));
             }
 
-            if (spec.sep != null)
+            if (spec.sep !is null)
                 fmt.readUpToNextSpec(input);
-            auto sep = spec.sep != null ? spec.sep
+            auto sep = spec.sep !is null ? spec.sep
                          : fmt.trailing;
             debug (unformatRange) {
             if (!sep.empty && !input.empty) printf("-> %c, sep = %.*s\n", input.front, sep);
