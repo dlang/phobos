@@ -1288,7 +1288,7 @@ unittest
 
     uint myNum = 0;
     auto incMyNumDel = toDelegate(&inc);
-    static assert(is(typeof(incMyNumDel) == int delegate(ref uint)));
+    int delegate(ref uint) dg = incMyNumDel;
     auto returnVal = incMyNumDel(myNum);
     assert(myNum == 1);
 
@@ -1327,37 +1327,29 @@ unittest
         static int func_trusted() @trusted { return 5; }
         static int func_system() @system { return 6; }
         static int func_pure_nothrow() pure nothrow { return 7; }
-        static int func_pure_nothrow_safe() pure @safe { return 8; }
+        static int func_pure_nothrow_safe() pure nothrow @safe { return 8; }
 
         auto dg_ref = toDelegate(&func_ref);
-        auto dg_pure = toDelegate(&func_pure);
-        auto dg_nothrow = toDelegate(&func_nothrow);
-        auto dg_property = toDelegate(&func_property);
-        auto dg_safe = toDelegate(&func_safe);
-        auto dg_trusted = toDelegate(&func_trusted);
-        auto dg_system = toDelegate(&func_system);
-        auto dg_pure_nothrow = toDelegate(&func_pure_nothrow);
-        auto dg_pure_nothrow_safe = toDelegate(&func_pure_nothrow_safe);
+        int delegate() pure dg_pure = toDelegate(&func_pure);
+        int delegate() nothrow dg_nothrow = toDelegate(&func_nothrow);
+        int delegate() @property dg_property = toDelegate(&func_property);
+        int delegate() @safe dg_safe = toDelegate(&func_safe);
+        int delegate() @trusted dg_trusted = toDelegate(&func_trusted);
+        int delegate() @system dg_system = toDelegate(&func_system);
+        int delegate() pure nothrow dg_pure_nothrow = toDelegate(&func_pure_nothrow);
+        int delegate() @safe pure nothrow dg_pure_nothrow_safe = toDelegate(&func_pure_nothrow_safe);
 
         //static assert(is(typeof(dg_ref) == ref int delegate())); // [BUG@DMD]
-        static assert(is(typeof(dg_pure) == int delegate() pure));
-        static assert(is(typeof(dg_nothrow) == int delegate() nothrow));
-        static assert(is(typeof(dg_property) == int delegate() @property));
-        //static assert(is(typeof(dg_safe) == int delegate() @safe));
-        static assert(is(typeof(dg_trusted) == int delegate() @trusted));
-        static assert(is(typeof(dg_system) == int delegate() @system));
-        static assert(is(typeof(dg_pure_nothrow) == int delegate() pure nothrow));
-        //static assert(is(typeof(dg_pure_nothrow_safe) == int delegate() @safe pure nothrow));
 
         assert(dg_ref() == refvar);
         assert(dg_pure() == 1);
         assert(dg_nothrow() == 2);
         assert(dg_property() == 3);
-        //assert(dg_safe() == 4);
+        assert(dg_safe() == 4);
         assert(dg_trusted() == 5);
         assert(dg_system() == 6);
         assert(dg_pure_nothrow() == 7);
-        //assert(dg_pure_nothrow_safe() == 8);
+        assert(dg_pure_nothrow_safe() == 8);
     }
     /* test for linkage */
     {
