@@ -3452,18 +3452,19 @@ unittest
         return i + k;
     }
 
-    int delegate(short) @nogc bar() nothrow
+    @system int delegate(short) @nogc bar() nothrow pure
     {
+        int* p = new int;
         return &foo;
     }
 
-    assert(to!string(&bar) == "int delegate(short) @nogc delegate() nothrow");
+    assert(to!string(&bar) == "int delegate(short) @nogc delegate() pure nothrow @system");
 }
 
 unittest
 {
-    void func() {}
-    formatTest( &func, "void delegate()" );
+    void func() @system { __gshared int x; ++x; throw new Exception("msg"); }
+    version (linux) formatTest( &func, "void delegate() @system" );
 }
 
 /*
