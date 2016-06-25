@@ -858,38 +858,33 @@ public struct UUID
             assert(u3.toHash() != u1.toHash());
         }
 
+
         /**
-         * Write the UUID into `result` as an ASCII string in the canonical form.
+         * Write the UUID into `sink` as an ASCII string in the canonical form,
+         * which is 36 characters in the form "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+         * Params:
+         *      sink = OutputRange or writeable array at least 36 entries long
          */
-        @safe pure nothrow @nogc void toString(Range)(Range result) const
-            if (isRandomAccessRange!Range && hasAssignableElements!Range &&
-                hasLength!Range && (isSomeChar!(typeof(Range.init[0])) || isUnsigned!(typeof(Range.init[0]))) ||
-                isSomeString!Range && isMutable!(typeof(Range.init[0])))
-        in {
-            assert(result.length >= 36, "Result's length for UUID.toString must be greater or equal 36.");
-        }
-        body {
-            alias Char = typeof(Range.init[0]);
+        void toString(Writer)(scope Writer sink) const
+        {
+            char[36] result = void;
             foreach (pos; skipSeq)
-                result[pos] = cast(Char)('-');
+                result[pos] = '-';
             foreach (i, pos; byteSeq)
             {
                 const uint entry = this.data[i];
                 const uint hi = entry >> 4;
-                result[pos  ] = toChar!Char(hi);
+                result[pos  ] = toChar!char(hi);
                 const uint lo = (entry) & 0x0F;
-                result[pos+1] = toChar!Char(lo);
+                result[pos+1] = toChar!char(lo);
             }
-        }
-
-        /**
-         * Call a delegate with a string in the canonical form.
-         */
-        void toString(scope void delegate(const(char)[]) sink) const
-        {
-            char[36] result = void;
-            toString(result[]);
-            sink(result[]);
+            foreach (i, c; result)
+            {
+                static if (__traits(compiles, put(sink, c)))
+                    put(sink, c);
+                else
+                    sink[i] = cast(typeof(sink[i]))c;
+            }
         }
 
         /**
