@@ -206,7 +206,7 @@ unittest
 {
     import std.conv : to;
 
-    static struct TestArray { int x; string toString() { return to!string(x); } }
+    static struct TestArray { int x; string toString() @safe { return to!string(x); } }
 
     static struct OpAssign
     {
@@ -244,7 +244,7 @@ unittest
     {
         int x;
         this(int y) { x = y; }
-        override string toString() const { return to!string(x); }
+        override string toString() const @safe { return to!string(x); }
     }
     auto c = array([new C(1), new C(2)][]);
     //writeln(c);
@@ -2958,15 +2958,15 @@ if (isDynamicArray!A)
         }
     }
 
-    void toString()(scope void delegate(const(char)[]) sink)
+    void toString(Writer)(scope Writer w)
     {
         import std.format : formattedWrite;
-        sink.formattedWrite(typeof(this).stringof ~ "(%s)", data);
+        w.formattedWrite(typeof(this).stringof ~ "(%s)", data);
     }
 }
 
 ///
-unittest
+@safe unittest
 {
     auto app = appender!string();
     string b = "abcdefg";
@@ -2981,7 +2981,7 @@ unittest
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     auto app = appender!(int[])();
