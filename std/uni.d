@@ -2318,7 +2318,7 @@ public:
      * $(LI $(B %x) formats the intervals as a [low..high$(RPAREN) range of lowercase hex characters)
      * $(LI $(B %X) formats the intervals as a [low..high$(RPAREN) range of uppercase hex characters)
      */
-    void toString(scope void delegate(const(char)[]) sink,
+    void toString(Writer)(scope Writer sink,
                   FormatSpec!char fmt) /* const */
     {
         import std.format : formatValue;
@@ -2342,7 +2342,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.conv : to;
         import std.format : format;
@@ -2363,7 +2363,7 @@ public:
             ~"[0XA640..0XA698) [0XA69F..0XA6A0)");
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertThrown;
         import std.format : format;
