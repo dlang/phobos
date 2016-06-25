@@ -98,6 +98,7 @@ unittest
 struct Complex(T)  if (isFloatingPoint!T)
 {
     import std.format : FormatSpec;
+    import std.range.primitives : isOutputRange;
 
     /** The real part of the number. */
     T re;
@@ -114,19 +115,20 @@ struct Complex(T)  if (isFloatingPoint!T)
     See the $(MREF std, format) and $(REF format, std,string)
     documentation for more information.
     */
-    string toString() const /* TODO: @safe pure nothrow */
+    string toString() const @safe /* TODO: pure nothrow */
     {
         import std.exception : assumeUnique;
         char[] buf;
         buf.reserve(100);
         auto fmt = FormatSpec!char("%s");
         toString((const(char)[] s) { buf ~= s; }, fmt);
-        return assumeUnique(buf);
+        static trustedAssumeUnique(T)(T t) @trusted { return assumeUnique(t); }
+        return trustedAssumeUnique(buf);
     }
 
     static if (is(T == double))
     ///
-    unittest
+    @safe unittest
     {
         auto c = complex(1.2, 3.4);
 
@@ -142,15 +144,18 @@ struct Complex(T)  if (isFloatingPoint!T)
     }
 
     /// ditto
-    void toString(Char)(scope void delegate(const(Char)[]) sink,
+    void toString(Writer, Char)(scope Writer w,
                         FormatSpec!Char formatSpec) const
+        if (isOutputRange!(Writer, const(Char)[]))
     {
         import std.math : signbit;
         import std.format : formatValue;
-        formatValue(sink, re, formatSpec);
-        if (signbit(im) == 0) sink("+");
-        formatValue(sink, im, formatSpec);
-        sink("i");
+        import std.range.primitives : put;
+        formatValue(w, re, formatSpec);
+        if (signbit(im) == 0)
+           put(w, "+");
+        formatValue(w, im, formatSpec);
+        put(w, "i");
     }
 
 @safe pure nothrow @nogc:
