@@ -1093,9 +1093,11 @@ struct FormatSpec(Char)
         // Parse the spec
         while (trailing.length)
         {
-            if (*trailing.ptr == '%')
+            const c = trailing[0];
+            if (c == '%' && trailing.length > 1)
             {
-                if (trailing.length > 1 && trailing.ptr[1] == '%')
+                const c2 = trailing[1];
+                if (c2 == '%')
                 {
                     assert(!r.empty);
                     // Require a '%'
@@ -1105,9 +1107,9 @@ struct FormatSpec(Char)
                 }
                 else
                 {
-                    enforce(isLower(trailing[1]) || trailing[1] == '*' ||
-                            trailing[1] == '(',
-                            text("'%", trailing[1],
+                    enforce(isLower(c2) || c2 == '*' ||
+                            c2 == '(',
+                            text("'%", c2,
                                     "' not supported with formatted read"));
                     trailing = trailing[1 .. $];
                     fillUp();
@@ -1116,7 +1118,7 @@ struct FormatSpec(Char)
             }
             else
             {
-                if (trailing.ptr[0] == ' ')
+                if (c == ' ')
                 {
                     while (!r.empty && isWhite(r.front)) r.popFront();
                     //r = std.algorithm.find!(not!(isWhite))(r);
@@ -1124,8 +1126,8 @@ struct FormatSpec(Char)
                 else
                 {
                     enforce(!r.empty,
-                            text("parseToFormatSpec: Cannot find character `",
-                                    trailing.ptr[0], "' in the input string."));
+                            text("parseToFormatSpec: Cannot find character '",
+                                    c, "' in the input string."));
                     if (r.front != trailing.front) break;
                     r.popFront();
                 }
