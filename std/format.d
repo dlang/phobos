@@ -1185,9 +1185,9 @@ struct FormatSpec(Char)
 
         while (tr.length)
         {
-            if (*tr.ptr == '%')
+            if (tr[0] == '%')
             {
-                if (tr.length > 1 && tr.ptr[1] == '%')
+                if (tr.length > 1 && tr[1] == '%')
                 {
                     tr = tr[2 .. $];
                     w.put('%');
