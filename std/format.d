@@ -1672,7 +1672,6 @@ Params:
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    import core.stdc.stdio : snprintf;
     import std.algorithm : find, min;
     FormatSpec!Char fs = f; // fs is copy for change its values.
     FloatingPointTypeOf!T val = obj;
@@ -1756,6 +1755,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     char[512] buf = void;
 
     immutable n = ()@trusted{
+        import core.stdc.stdio : snprintf;
         return snprintf(buf.ptr, buf.length,
                         sprintfSpec.ptr,
                         fs.width,
@@ -2235,6 +2235,7 @@ unittest
     // 6640
     struct Range
     {
+      @safe:
         string value;
         @property bool empty() const { return !value.length; }
         @property dchar front() const { return value.front; }
@@ -2969,7 +2970,7 @@ unittest
 /++
    The following code compares the use of $(D formatValue) and $(D formattedWrite).
  +/
-unittest
+@safe unittest
 {
    import std.format;
    import std.array : appender;
@@ -3561,7 +3562,7 @@ void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __F
 }
 
 version(unittest)
-void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
+void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception;
     import std.array : appender;
@@ -3592,7 +3593,7 @@ void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = _
 }
 
 version(unittest)
-void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
+void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception;
     import std.conv : text;
@@ -3617,7 +3618,7 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
     assert(stream.data == "1.1", stream.data);
 }
 
-pure unittest
+@safe pure unittest
 {
     import std.algorithm;
     import std.array;
@@ -3633,7 +3634,7 @@ pure unittest
     assert(stream.data == "6");
 }
 
-pure unittest
+@safe pure unittest
 {
     import std.array;
     auto stream = appender!string();
@@ -3641,7 +3642,7 @@ pure unittest
     assert(stream.data == "42", stream.data);
 }
 
-pure unittest
+@safe pure unittest
 {
     // testing raw writes
     import std.array;
@@ -3656,7 +3657,7 @@ pure unittest
         && w.data[2] == 3 && w.data[3] == 2);
 }
 
-pure unittest
+@safe pure unittest
 {
     // testing positional parameters
     import std.array;
@@ -3674,7 +3675,7 @@ pure unittest
     assert(w.data == "2345", w.data);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text, octal;
     import std.array : appender;
@@ -3924,8 +3925,8 @@ unittest
     assert(stream.data == "ghi");
 
 here:
-    void* p = cast(void*)0xDEADBEEF;
-    stream.clear(); formattedWrite(stream, "%s", p);
+    @trusted void* deadBeef() { return cast(void*)0xDEADBEEF; }
+    stream.clear(); formattedWrite(stream, "%s", deadBeef());
     assert(stream.data == "DEADBEEF", stream.data);
 
     stream.clear(); formattedWrite(stream, "%#x", 0xabcd);
@@ -3997,9 +3998,13 @@ here:
     stream.clear(); formattedWrite(stream, "%X", 15);
     assert(stream.data == "F");
 
-    Object c = null;
-    stream.clear(); formattedWrite(stream, "%s", c);
-    assert(stream.data == "null");
+    @trusted void ObjectTest()
+    {
+        Object c = null;
+        stream.clear(); formattedWrite(stream, "%s", c);
+        assert(stream.data == "null");
+    }
+    ObjectTest();
 
     enum TestEnum
     {
@@ -4031,7 +4036,7 @@ here:
     assert(stream.data == "7", ">" ~ stream.data ~ "<");
 }
 
-unittest
+@safe unittest
 {
     import std.array;
     import std.stdio;
