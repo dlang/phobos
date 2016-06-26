@@ -5176,6 +5176,8 @@ void main()
 }
 ------------------------
  */
+deprecated("It will be removed from Phobos in October 2016. If you still need it, go to https://github.com/DigitalMars/undeaD")
+// @@@DEPRECATED_2016-10@@@
 void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list ap)
 {
     import std.utf : toUCSindex, isValidDchar, UTFException, toUTF8;
