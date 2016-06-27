@@ -41,7 +41,7 @@
  +/
 module std.exception;
 
-import std.range;
+import std.range.primitives;
 import std.traits;
 
 import core.stdc.errno;
@@ -1941,6 +1941,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
             }
             else static if (is(typeof(Range.init[size_t.init .. $])))
             {
+                import std.range : Take, takeExactly;
                 static struct DollarToken {}
                 enum opDollar = DollarToken.init;
 
@@ -2131,6 +2132,7 @@ pure nothrow @safe unittest
 
     static struct Infinite
     {
+        import std.range : Take;
         pure @safe:
         enum bool empty = false;
         int front() { assert(false); }
