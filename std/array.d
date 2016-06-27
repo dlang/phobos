@@ -1542,18 +1542,18 @@ unittest
 private enum bool hasCheapIteration(R) = isArray!R;
 
 /++
-   Concatenates all of the ranges in $(D ror) together into one array using
-   $(D sep) as the separator if present.
+   Eagerly concatenates all of the ranges in `ror` together (with the GC)
+   into one array using `sep` as the separator if present.
 
    Params:
-        ror = Range of Ranges of Elements
-        sep = Range of Elements
+        ror = An input range of input ranges
+        sep = An input range, or a single element, to join the ranges on
 
    Returns:
-        an allocated array of Elements
+        An array of elements
 
    See_Also:
-        $(REF joiner, std,algorithm,iteration)
+        For a lazy version, see $(REF joiner, std,algorithm,iteration)
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if (isInputRange!RoR &&
