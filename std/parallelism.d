@@ -86,7 +86,7 @@ import std.exception;
 import std.functional;
 import std.math;
 import std.meta;
-import std.range;
+import std.range.primitives;
 import std.traits;
 import std.typecons;
 
@@ -1666,6 +1666,8 @@ public:
             }
             else
             {
+                import std.array : uninitializedArray;
+
                 auto buf = uninitializedArray!(MapType!(Args[0], functions)[])(len);
                 alias args2 = args;
                 alias Args2 = Args;
@@ -1978,6 +1980,7 @@ public:
                 {
                     static if (isRandomAccessRange!S)
                     {
+                        import std.range : take;
                         auto toMap = take(source, buf.length);
                         scope(success) popSource();
                     }
@@ -3611,6 +3614,7 @@ enum string parallelApplyMixinInputRange = q{
             size_t makeTemp()
             {
                 import std.algorithm.internal : addressOf;
+                import std.array : uninitializedArray;
 
                 if (temp is null)
                 {
@@ -3642,6 +3646,8 @@ enum string parallelApplyMixinInputRange = q{
             // Returns:  The previous value of nPopped.
             static if (!bufferTrick) size_t makeTemp()
             {
+                import std.array : uninitializedArray;
+
                 if (temp is null)
                 {
                     temp = uninitializedArray!Temp(workUnitSize);
@@ -3897,6 +3903,8 @@ version(unittest)
 // These are the tests that should be run every time Phobos is compiled.
 unittest
 {
+    import std.range : iota;
+
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
 
@@ -4151,6 +4159,7 @@ unittest
            ));
 
     {
+        import std.array : join, split;
         import std.file : deleteme;
 
         string temp_file = deleteme ~ "-tempDelMe.txt";
