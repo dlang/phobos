@@ -45,7 +45,6 @@ import std.range.primitives;
 import std.traits;
 
 import core.stdc.errno;
-import core.stdc.string;
 
 /++
     Asserts that the given expression does $(I not) throw the given type
@@ -1483,15 +1482,19 @@ class ErrnoException : Exception
     private uint _errno;
     this(string msg, string file = null, size_t line = 0) @trusted
     {
+        import core.stdc.string : strlen;
+
         _errno = .errno;
         version (CRuntime_Glibc)
         {
+            import core.stdc.string : strerror_r;
             char[1024] buf = void;
-            auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
+            auto s = strerror_r(errno, buf.ptr, buf.length);
         }
         else
         {
-            auto s = core.stdc.string.strerror(errno);
+            import core.stdc.string : strerror;
+            auto s = strerror(errno);
         }
         super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
     }
