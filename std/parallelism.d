@@ -4292,253 +4292,248 @@ unittest
 }
 
 //version = parallelismStressTest;
+version(parallelismStressTest)
+    private enum stressRounds = 10;
+else
+    private enum stressRounds = 1;
 
 // These are more like stress tests than real unit tests.  They print out
 // tons of stuff and should not be run every time make unittest is run.
-version(parallelismStressTest)
+unittest
 {
-    unittest
+    foreach (attempt; 0..stressRounds)
+    foreach (poolSize; [0, 4])
     {
-        size_t attempt;
-        for (; attempt < 10; attempt++)
-            foreach (poolSize; [0, 4])
+        poolInstance = new TaskPool(poolSize);
+
+        uint[] numbers = new uint[1_000];
+
+        foreach (i; poolInstance.parallel( iota(0, numbers.length)) )
         {
-
-            poolInstance = new TaskPool(poolSize);
-
-            uint[] numbers = new uint[1_000];
-
-            foreach (i; poolInstance.parallel( iota(0, numbers.length)) )
-            {
-                numbers[i] = cast(uint) i;
-            }
-
-            // Make sure it works.
-            foreach (i; 0..numbers.length)
-            {
-                assert(numbers[i] == i);
-            }
-
-            stderr.writeln("Done creating nums.");
-
-
-            auto myNumbers = filter!"a % 7 > 0"( iota(0, 1000));
-            foreach (num; poolInstance.parallel(myNumbers))
-            {
-                assert(num % 7 > 0 && num < 1000);
-            }
-            stderr.writeln("Done modulus test.");
-
-            uint[] squares = poolInstance.amap!"a * a"(numbers, 100);
-            assert(squares.length == numbers.length);
-            foreach (i, number; numbers)
-            {
-                assert(squares[i] == number * number);
-            }
-            stderr.writeln("Done squares.");
-
-            auto sumFuture = task!( reduce!"a + b" )(numbers);
-            poolInstance.put(sumFuture);
-
-            ulong sumSquares = 0;
-            foreach (elem; numbers)
-            {
-                sumSquares += elem * elem;
-            }
-
-            uint mySum = sumFuture.spinForce();
-            assert(mySum == 999 * 1000 / 2);
-
-            auto mySumParallel = poolInstance.reduce!"a + b"(numbers);
-            assert(mySum == mySumParallel);
-            stderr.writeln("Done sums.");
-
-            auto myTask = task(
-            {
-                synchronized writeln("Our lives are parallel...Our lives are parallel.");
-            });
-            poolInstance.put(myTask);
-
-            auto nestedOuter = "abcd";
-            auto nestedInner =  iota(0, 10, 2);
-
-            foreach (i, letter; poolInstance.parallel(nestedOuter, 1))
-            {
-                foreach (j, number; poolInstance.parallel(nestedInner, 1))
-                {
-                    synchronized writeln(i, ": ", letter, "  ", j, ": ", number);
-                }
-            }
-
-            poolInstance.stop();
+            numbers[i] = cast(uint) i;
         }
 
-        assert(attempt == 10);
-        writeln("Press enter to go to next round of unittests.");
-        readln();
-    }
-
-    // These unittests are intended more for actual testing and not so much
-    // as examples.
-    unittest
-    {
-        foreach (attempt; 0..10)
-        foreach (poolSize; [0, 4])
+        // Make sure it works.
+        foreach (i; 0..numbers.length)
         {
-            poolInstance = new TaskPool(poolSize);
+            assert(numbers[i] == i);
+        }
 
-            // Test indexing.
-            stderr.writeln("Creator Raw Index:  ", poolInstance.threadIndex);
-            assert(poolInstance.workerIndex() == 0);
+        stderr.writeln("Done creating nums.");
 
-            // Test worker-local storage.
-            auto workerLocalStorage = poolInstance.workerLocalStorage!uint(1);
-            foreach (i; poolInstance.parallel(iota(0U, 1_000_000)))
+
+        auto myNumbers = filter!"a % 7 > 0"( iota(0, 1000));
+        foreach (num; poolInstance.parallel(myNumbers))
+        {
+            assert(num % 7 > 0 && num < 1000);
+        }
+        stderr.writeln("Done modulus test.");
+
+        uint[] squares = poolInstance.amap!"a * a"(numbers, 100);
+        assert(squares.length == numbers.length);
+        foreach (i, number; numbers)
+        {
+            assert(squares[i] == number * number);
+        }
+        stderr.writeln("Done squares.");
+
+        auto sumFuture = task!( reduce!"a + b" )(numbers);
+        poolInstance.put(sumFuture);
+
+        ulong sumSquares = 0;
+        foreach (elem; numbers)
+        {
+            sumSquares += elem * elem;
+        }
+
+        uint mySum = sumFuture.spinForce();
+        assert(mySum == 999 * 1000 / 2);
+
+        auto mySumParallel = poolInstance.reduce!"a + b"(numbers);
+        assert(mySum == mySumParallel);
+        stderr.writeln("Done sums.");
+
+        auto myTask = task(
+        {
+            synchronized writeln("Our lives are parallel...Our lives are parallel.");
+        });
+        poolInstance.put(myTask);
+
+        auto nestedOuter = "abcd";
+        auto nestedInner =  iota(0, 10, 2);
+
+        foreach (i, letter; poolInstance.parallel(nestedOuter, 1))
+        {
+            foreach (j, number; poolInstance.parallel(nestedInner, 1))
             {
-                workerLocalStorage.get++;
+                synchronized writeln(i, ": ", letter, "  ", j, ": ", number);
             }
-            assert(reduce!"a + b"(workerLocalStorage.toRange) ==
+        }
+
+        poolInstance.stop();
+    }
+}
+
+// These unittests are intended more for actual testing and not so much
+// as examples.
+unittest
+{
+    foreach (attempt; 0..stressRounds)
+    foreach (poolSize; [0, 4])
+    {
+        poolInstance = new TaskPool(poolSize);
+
+        // Test indexing.
+        stderr.writeln("Creator Raw Index:  ", poolInstance.threadIndex);
+        assert(poolInstance.workerIndex() == 0);
+
+        // Test worker-local storage.
+        auto workerLocalStorage = poolInstance.workerLocalStorage!uint(1);
+        foreach (i; poolInstance.parallel(iota(0U, 1_000_000)))
+        {
+            workerLocalStorage.get++;
+        }
+        assert(reduce!"a + b"(workerLocalStorage.toRange) ==
             1_000_000 + poolInstance.size + 1);
 
-            // Make sure work is reasonably balanced among threads.  This test is
-            // non-deterministic and is more of a sanity check than something that
-            // has an absolute pass/fail.
-            shared(uint)[void*] nJobsByThread;
-            foreach (thread; poolInstance.pool)
-            {
-                nJobsByThread[cast(void*) thread] = 0;
-            }
-            nJobsByThread[ cast(void*) Thread.getThis()] = 0;
-
-            foreach (i; poolInstance.parallel( iota(0, 1_000_000), 100 ))
-            {
-                atomicOp!"+="( nJobsByThread[ cast(void*) Thread.getThis() ], 1);
-            }
-
-            stderr.writeln("\nCurrent thread is:  ",
-            cast(void*) Thread.getThis());
-            stderr.writeln("Workload distribution:  ");
-            foreach (k, v; nJobsByThread)
-            {
-                stderr.writeln(k, '\t', v);
-            }
-
-            // Test whether amap can be nested.
-            real[][] matrix = new real[][](1000, 1000);
-            foreach (i; poolInstance.parallel( iota(0, matrix.length) ))
-            {
-                foreach (j; poolInstance.parallel( iota(0, matrix[0].length) ))
-                {
-                    matrix[i][j] = i * j;
-                }
-            }
-
-            // Get around weird bugs having to do w/ sqrt being an intrinsic:
-            static real mySqrt(real num)
-            {
-                return sqrt(num);
-            }
-
-            static real[] parallelSqrt(real[] nums)
-            {
-                return poolInstance.amap!mySqrt(nums);
-            }
-
-            real[][] sqrtMatrix = poolInstance.amap!parallelSqrt(matrix);
-
-            foreach (i, row; sqrtMatrix)
-            {
-                foreach (j, elem; row)
-                {
-                    real shouldBe = sqrt( cast(real) i * j);
-                    assert(approxEqual(shouldBe, elem));
-                    sqrtMatrix[i][j] = shouldBe;
-                }
-            }
-
-            auto saySuccess = task(
-            {
-                stderr.writeln(
-                    "Success doing matrix stuff that involves nested pool use.");
-            });
-            poolInstance.put(saySuccess);
-            saySuccess.workForce();
-
-            // A more thorough test of amap, reduce:  Find the sum of the square roots of
-            // matrix.
-
-            static real parallelSum(real[] input)
-            {
-                return poolInstance.reduce!"a + b"(input);
-            }
-
-            auto sumSqrt = poolInstance.reduce!"a + b"(
-                               poolInstance.amap!parallelSum(
-                                   sqrtMatrix
-                               )
-                           );
-
-            assert(approxEqual(sumSqrt, 4.437e8));
-            stderr.writeln("Done sum of square roots.");
-
-            // Test whether tasks work with function pointers.
-            auto nanTask = task(&isNaN!real, 1.0L);
-            poolInstance.put(nanTask);
-            assert(nanTask.spinForce == false);
-
-            if (poolInstance.size > 0)
-            {
-                // Test work waiting.
-                static void uselessFun()
-                {
-                    foreach (i; 0..1_000_000) {}
-                }
-
-                auto uselessTasks = new typeof(task(&uselessFun))[1000];
-                foreach (ref uselessTask; uselessTasks)
-                {
-                    uselessTask = task(&uselessFun);
-                }
-                foreach (ref uselessTask; uselessTasks)
-                {
-                    poolInstance.put(uselessTask);
-                }
-                foreach (ref uselessTask; uselessTasks)
-                {
-                    uselessTask.workForce();
-                }
-            }
-
-            // Test the case of non-random access + ref returns.
-            int[] nums = [1,2,3,4,5];
-            static struct RemoveRandom
-            {
-                int[] arr;
-
-                ref int front()
-                {
-                    return arr.front;
-                }
-                void popFront()
-                {
-                    arr.popFront();
-                }
-                bool empty()
-                {
-                    return arr.empty;
-                }
-            }
-
-            auto refRange = RemoveRandom(nums);
-            foreach (ref elem; poolInstance.parallel(refRange))
-            {
-                elem++;
-            }
-            assert(nums == [2,3,4,5,6], text(nums));
-            stderr.writeln("Nums:  ", nums);
-
-            poolInstance.stop();
+        // Make sure work is reasonably balanced among threads.  This test is
+        // non-deterministic and is more of a sanity check than something that
+        // has an absolute pass/fail.
+        shared(uint)[void*] nJobsByThread;
+        foreach (thread; poolInstance.pool)
+        {
+            nJobsByThread[cast(void*) thread] = 0;
         }
+        nJobsByThread[ cast(void*) Thread.getThis()] = 0;
+
+        foreach (i; poolInstance.parallel( iota(0, 1_000_000), 100 ))
+        {
+            atomicOp!"+="( nJobsByThread[ cast(void*) Thread.getThis() ], 1);
+        }
+
+        stderr.writeln("\nCurrent thread is:  ",
+        cast(void*) Thread.getThis());
+        stderr.writeln("Workload distribution:  ");
+        foreach (k, v; nJobsByThread)
+        {
+            stderr.writeln(k, '\t', v);
+        }
+
+        // Test whether amap can be nested.
+        real[][] matrix = new real[][](1000, 1000);
+        foreach (i; poolInstance.parallel( iota(0, matrix.length) ))
+        {
+            foreach (j; poolInstance.parallel( iota(0, matrix[0].length) ))
+            {
+                matrix[i][j] = i * j;
+            }
+        }
+
+        // Get around weird bugs having to do w/ sqrt being an intrinsic:
+        static real mySqrt(real num)
+        {
+            return sqrt(num);
+        }
+
+        static real[] parallelSqrt(real[] nums)
+        {
+            return poolInstance.amap!mySqrt(nums);
+        }
+
+        real[][] sqrtMatrix = poolInstance.amap!parallelSqrt(matrix);
+
+        foreach (i, row; sqrtMatrix)
+        {
+            foreach (j, elem; row)
+            {
+                real shouldBe = sqrt( cast(real) i * j);
+                assert(approxEqual(shouldBe, elem));
+                sqrtMatrix[i][j] = shouldBe;
+            }
+        }
+
+        auto saySuccess = task(
+        {
+            stderr.writeln(
+                "Success doing matrix stuff that involves nested pool use.");
+        });
+        poolInstance.put(saySuccess);
+        saySuccess.workForce();
+
+        // A more thorough test of amap, reduce:  Find the sum of the square roots of
+        // matrix.
+
+        static real parallelSum(real[] input)
+        {
+            return poolInstance.reduce!"a + b"(input);
+        }
+
+        auto sumSqrt = poolInstance.reduce!"a + b"(
+                           poolInstance.amap!parallelSum(
+                               sqrtMatrix
+                           )
+                       );
+
+        assert(approxEqual(sumSqrt, 4.437e8));
+        stderr.writeln("Done sum of square roots.");
+
+        // Test whether tasks work with function pointers.
+        auto nanTask = task(&isNaN!real, 1.0L);
+        poolInstance.put(nanTask);
+        assert(nanTask.spinForce == false);
+
+        if (poolInstance.size > 0)
+        {
+            // Test work waiting.
+            static void uselessFun()
+            {
+                foreach (i; 0..1_000_000) {}
+            }
+
+            auto uselessTasks = new typeof(task(&uselessFun))[1000];
+            foreach (ref uselessTask; uselessTasks)
+            {
+                uselessTask = task(&uselessFun);
+            }
+            foreach (ref uselessTask; uselessTasks)
+            {
+                poolInstance.put(uselessTask);
+            }
+            foreach (ref uselessTask; uselessTasks)
+            {
+                uselessTask.workForce();
+            }
+        }
+
+        // Test the case of non-random access + ref returns.
+        int[] nums = [1,2,3,4,5];
+        static struct RemoveRandom
+        {
+            int[] arr;
+
+            ref int front()
+            {
+                return arr.front;
+            }
+            void popFront()
+            {
+                arr.popFront();
+            }
+            bool empty()
+            {
+                return arr.empty;
+            }
+        }
+
+        auto refRange = RemoveRandom(nums);
+        foreach (ref elem; poolInstance.parallel(refRange))
+        {
+            elem++;
+        }
+        assert(nums == [2,3,4,5,6], text(nums));
+        stderr.writeln("Nums:  ", nums);
+
+        poolInstance.stop();
     }
 }
 
