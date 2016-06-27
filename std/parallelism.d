@@ -4482,7 +4482,7 @@ version(parallelismStressTest)
             stderr.writeln("Done sum of square roots.");
 
             // Test whether tasks work with function pointers.
-            auto nanTask = task(&isNaN, 1.0L);
+            auto nanTask = task(&isNaN!real, 1.0L);
             poolInstance.put(nanTask);
             assert(nanTask.spinForce == false);
 
