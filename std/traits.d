@@ -1408,10 +1408,10 @@ unittest
     static assert(functionAttributes!(S.pureF) == (FA.pure_ | FA.system));
     static assert(functionAttributes!(typeof(S.pureF)) == (FA.pure_ | FA.system));
 
-    int pure_nothrow() nothrow pure { return 0; }
-    void safe_nothrow() @safe nothrow { }
-    static ref int static_ref_property() @property { return *(new int); }
-    ref int ref_property() @property { return *(new int); }
+    int pure_nothrow() nothrow pure;
+    void safe_nothrow() @safe nothrow;
+    static ref int static_ref_property() @property;
+    ref int ref_property() @property;
 
     static assert(functionAttributes!(pure_nothrow) == (FA.pure_ | FA.nothrow_ | FA.system));
     static assert(functionAttributes!(typeof(pure_nothrow)) == (FA.pure_ | FA.nothrow_ | FA.system));
@@ -1845,9 +1845,9 @@ unittest
 
 unittest
 {
-    int test(int a) { return 0; }
-    int propGet() @property { return 0; }
-    int propSet(int a) @property { return 0; }
+    int test(int a);
+    int propGet() @property;
+    int propSet(int a) @property;
     int function(int) test_fp;
     int delegate(int) test_dg;
     static assert(is( typeof(test) == FunctionTypeOf!(typeof(test)) ));
@@ -6640,7 +6640,7 @@ unittest
     assert(foo_demangled[0 .. 4] == "int " && foo_demangled[$-3 .. $] == "foo",
         foo_demangled);
 
-    void bar(){}
+    void bar();
     auto bar_demangled = demangle(mangledName!bar);
     assert(bar_demangled[0 .. 5] == "void " && bar_demangled[$-5 .. $] == "bar()");
 }
