@@ -84,7 +84,6 @@ import std.algorithm;
 import std.conv;
 import std.exception;
 import std.functional;
-import std.math;
 import std.meta;
 import std.range.primitives;
 import std.traits;
@@ -3903,6 +3902,7 @@ version(unittest)
 // These are the tests that should be run every time Phobos is compiled.
 unittest
 {
+    import std.math : log, approxEqual, sqrt;
     import std.range : iota;
 
     poolInstance = new TaskPool(2);
