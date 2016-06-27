@@ -44,8 +44,6 @@ module std.exception;
 import std.range.primitives;
 import std.traits;
 
-import core.stdc.errno;
-
 /++
     Asserts that the given expression does $(I not) throw the given type
     of $(D Throwable). If a $(D Throwable) of the given type is thrown,
@@ -1482,9 +1480,10 @@ class ErrnoException : Exception
     private uint _errno;
     this(string msg, string file = null, size_t line = 0) @trusted
     {
+        import core.stdc.errno : errno;
         import core.stdc.string : strlen;
 
-        _errno = .errno;
+        _errno = errno;
         version (CRuntime_Glibc)
         {
             import core.stdc.string : strerror_r;
