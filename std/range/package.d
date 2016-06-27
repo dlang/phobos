@@ -2551,6 +2551,7 @@ auto takeNone(R)(R range)
     {
         mixin template genInput()
         {
+        @safe:
             @property bool empty() { return _arr.empty; }
             @property auto front() { return _arr.front; }
             void popFront() { _arr.popFront(); }
@@ -2603,6 +2604,7 @@ auto takeNone(R)(R range)
 
     static class SliceClass
     {
+    @safe:
         this(int[] arr) { _arr = arr; }
         mixin genInput;
         @property auto save() { return new typeof(this)(_arr); }
@@ -2613,6 +2615,7 @@ auto takeNone(R)(R range)
 
     static class TakeNoneClass
     {
+    @safe:
         this(int[] arr) { _arr = arr; }
         mixin genInput;
         auto takeNone() { return new typeof(this)(null); }
