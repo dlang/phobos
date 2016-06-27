@@ -82,7 +82,6 @@ import core.thread;
 
 import std.algorithm;
 import std.conv;
-import std.exception;
 import std.functional;
 import std.meta;
 import std.range.primitives;
@@ -536,6 +535,7 @@ struct Task(alias fun, Args...)
 
     private void enforcePool()
     {
+        import std.exception : enforce;
         enforce(this.pool !is null, "Job not submitted yet.");
     }
 
@@ -1528,6 +1528,7 @@ public:
     */
     ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
     {
+        import std.exception : enforce;
         enforce(workUnitSize > 0, "workUnitSize must be > 0.");
         alias RetType = ParallelForeach!R;
         return RetType(this, range, workUnitSize);
@@ -1652,6 +1653,7 @@ public:
                 is(MapType!(Args[0], functions) : ElementType!(Args[$ - 1]))
                 )
             {
+                import std.exception : enforce;
                 alias buf = args[$ - 1];
                 alias args2 = args[0..$ - 1];
                 alias Args2 = Args[0..$ - 1];
@@ -1827,6 +1829,8 @@ public:
         map(S)(S source, size_t bufSize = 100, size_t workUnitSize = size_t.max)
         if (isInputRange!S)
         {
+            import std.exception : enforce;
+
             enforce(workUnitSize == size_t.max || workUnitSize <= bufSize,
                     "Work unit size must be smaller than buffer size.");
             alias fun = adjoin!(staticMap!(unaryFun, functions));
@@ -2478,6 +2482,8 @@ public:
             }
             else
             {
+                import std.exception : enforce;
+
                 static assert(args2.length == 1);
                 alias range = args2[0];
 
@@ -3185,6 +3191,7 @@ public:
     @trusted void put(alias fun, Args...)(Task!(fun, Args)* task)
     if (isSafeReturn!(typeof(*task)))
     {
+        import std.exception : enforce;
         enforce(task !is null, "Cannot put a null Task on a TaskPool queue.");
         put(*task);
     }
@@ -3902,6 +3909,7 @@ version(unittest)
 // These are the tests that should be run every time Phobos is compiled.
 unittest
 {
+    import std.exception : assertThrown;
     import std.math : log, approxEqual, sqrt;
     import std.range : iota;
 
