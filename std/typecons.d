@@ -4510,10 +4510,10 @@ unittest
     static assert(__traits(identifier, methods[1]) == "value"    && is(typeof(&methods[1]) == F2*));
     static assert(__traits(identifier, methods[2]) == "run"      && is(typeof(&methods[2]) == F1*));
 
-    int draw() { return 0; }
-    @property int value() { return 0; }
-    void opEquals() {}
-    int nomatch() { return 0; }
+    int draw();
+    @property int value();
+    void opEquals();
+    int nomatch();
     static assert(findCovariantFunction!(UnittestFuncInfo!draw,     A, methods) == 0);
     static assert(findCovariantFunction!(UnittestFuncInfo!value,    A, methods) == 1);
     static assert(findCovariantFunction!(UnittestFuncInfo!opEquals, A, methods) == -1);
