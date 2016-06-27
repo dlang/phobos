@@ -2870,6 +2870,13 @@ R dropBack(R)(R range, size_t n)
     on an empty range, which is undefined behavior. So, only use
     $(D popFrontExactly) when it is guaranteed that $(D range) holds at least
     $(D n) elements.
+
+    Params:
+        range = the input range to drop from
+        n = the number of elements to drop
+
+    Returns:
+        `range` with `n` elements dropped
 +/
 R dropExactly(R)(R range, size_t n)
     if (isInputRange!R)
