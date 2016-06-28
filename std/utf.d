@@ -980,10 +980,10 @@ unittest
 alias UseReplacementDchar = Flag!"useReplacementDchar";
 
 /++
-    Decodes and returns the code point starting at $(D str[index]). $(D index)
-    is advanced to one past the decoded code point. If the code point is not
-    well-formed, then a $(D UTFException) is thrown and $(D index) remains
-    unchanged.
+    Decodes and returns the code point starting at $(D str[index]). If $(D index)
+    is an lvalue, then it is advanced to one past the decoded code point. If the
+    code point is not well-formed, then a $(D UTFException) is thrown and $(D index)
+    remains unchanged.
 
     decode will only work with strings and random access ranges of code units
     with length and slicing, whereas $(LREF decodeFront) will work with any
@@ -992,7 +992,8 @@ alias UseReplacementDchar = Flag!"useReplacementDchar";
     Params:
         useReplacementDchar = if invalid UTF, return replacementDchar rather than throwing
         str = input string or indexable Range
-        index = starting index into s[]; incremented by number of code units processed
+        index = starting index into s[]; incremented by number of code units processed if it's
+        an lvalue
 
     Returns:
         decoded character
@@ -1001,7 +1002,7 @@ alias UseReplacementDchar = Flag!"useReplacementDchar";
         $(LREF UTFException) if $(D str[index]) is not the start of a valid UTF
         sequence and useReplacementDchar is UseReplacementDchar.no
   +/
-dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
+dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, auto ref size_t index)
     if (!isSomeString!S &&
         isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
 in
@@ -1021,7 +1022,7 @@ body
 }
 
 dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
-    auto ref S str, ref size_t index) @trusted pure if (isSomeString!S)
+    auto ref S str, auto ref size_t index) @trusted pure if (isSomeString!S)
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
