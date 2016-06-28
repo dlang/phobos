@@ -1695,16 +1695,13 @@ unittest
 {
     import std.algorithm.comparison : equal;
 
-    auto interleave(R, E)(R range, E element) if (isInputRange!R)
+    auto interleave(R, E)(R range, E element)
+        if ((isInputRange!R && hasLength!R) || isForwardRange!R)
     {
         static if (hasLength!R)
-        {
             immutable len = range.length;
-        }
         else
-        {
-            immutable len = range.walkLength;
-        }
+            immutable len = range.save.walkLength;
 
         return roundRobin(
             range,
