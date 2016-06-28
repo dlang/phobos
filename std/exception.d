@@ -41,11 +41,8 @@
  +/
 module std.exception;
 
-import std.range;
+import std.range.primitives;
 import std.traits;
-
-import core.stdc.errno;
-import core.stdc.string;
 
 /++
     Asserts that the given expression does $(I not) throw the given type
@@ -1483,15 +1480,20 @@ class ErrnoException : Exception
     private uint _errno;
     this(string msg, string file = null, size_t line = 0) @trusted
     {
-        _errno = .errno;
+        import core.stdc.errno : errno;
+        import core.stdc.string : strlen;
+
+        _errno = errno;
         version (CRuntime_Glibc)
         {
+            import core.stdc.string : strerror_r;
             char[1024] buf = void;
-            auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
+            auto s = strerror_r(errno, buf.ptr, buf.length);
         }
         else
         {
-            auto s = core.stdc.string.strerror(errno);
+            import core.stdc.string : strerror;
+            auto s = strerror(errno);
         }
         super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
     }
@@ -1941,6 +1943,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
             }
             else static if (is(typeof(Range.init[size_t.init .. $])))
             {
+                import std.range : Take, takeExactly;
                 static struct DollarToken {}
                 enum opDollar = DollarToken.init;
 
@@ -2131,6 +2134,7 @@ pure nothrow @safe unittest
 
     static struct Infinite
     {
+        import std.range : Take;
         pure @safe:
         enum bool empty = false;
         int front() { assert(false); }
