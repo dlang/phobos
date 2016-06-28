@@ -1842,10 +1842,10 @@ unittest
 unittest
 {
     static struct Structure { int data; }
-    alias VariantTest = Algebraic!(Structure delegate());
+    alias VariantTest = Algebraic!(Structure delegate() pure nothrow @nogc @safe);
 
     bool called = false;
-    Structure example()
+    Structure example() pure nothrow @nogc @safe
     {
         called = true;
         return Structure.init;
