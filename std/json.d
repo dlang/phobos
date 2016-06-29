@@ -3,41 +3,6 @@
 /**
 JavaScript Object Notation
 
-Synopsis:
-----
-    //parse a file or string of json into a usable structure
-    string s = "{ \"language\": \"D\", \"rating\": 3.14, \"code\": \"42\" }";
-    JSONValue j = parseJSON(s);
-    writeln("Language: ", j["language"].str(),
-            " Rating: ", j["rating"].floating()
-    );
-
-    // j and j["language"] return JSONValue,
-    // j["language"].str returns a string
-
-    //check a type
-    long x;
-    if (const(JSONValue)* code = "code" in j)
-    {
-        if (code.type() == JSON_TYPE.INTEGER)
-            x = code.integer;
-        else
-            x = to!int(code.str);
-    }
-
-    // create a json struct
-    JSONValue jj = [ "language": "D" ];
-    // rating doesnt exist yet, so use .object to assign
-    jj.object["rating"] = JSONValue(3.14);
-    // create an array to assign to list
-    jj.object["list"] = JSONValue( ["a", "b", "c"] );
-    // list already exists, so .object optional
-    jj["list"].array ~= JSONValue("D");
-
-    s = j.toString();
-    writeln(s);
-----
-
 Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Jeremie Pelletier, David Herberth
@@ -56,6 +21,40 @@ import std.conv;
 import std.range.primitives;
 import std.array;
 import std.traits;
+
+///
+unittest
+{
+    // parse a file or string of json into a usable structure
+    string s = `{ "language": "D", "rating": 3.5, "code": "42" }`;
+    JSONValue j = parseJSON(s);
+    // j and j["language"] return JSONValue,
+    // j["language"].str returns a string
+    assert(j["language"].str == "D");
+    assert(j["rating"].floating == 3.5);
+
+    // check a type
+    long x;
+    if (const(JSONValue)* code = "code" in j)
+    {
+        if (code.type() == JSON_TYPE.INTEGER)
+            x = code.integer;
+        else
+            x = to!int(code.str);
+    }
+
+    // create a json struct
+    JSONValue jj = [ "language": "D" ];
+    // rating doesnt exist yet, so use .object to assign
+    jj.object["rating"] = JSONValue(3.5);
+    // create an array to assign to list
+    jj.object["list"] = JSONValue( ["a", "b", "c"] );
+    // list already exists, so .object optional
+    jj["list"].array ~= JSONValue("D");
+
+    string jjStr = `{"language":"D","list":["a","b","c","D"],"rating":3.5}`;
+    assert(jj.toString == jjStr);
+}
 
 /**
 String literals used to represent special float values within JSON strings.
