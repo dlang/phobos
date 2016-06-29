@@ -78,7 +78,7 @@ bool isAlphaNum(dchar c) @safe pure nothrow @nogc
     assert(!isAlphaNum('á'));
 }
 
-unittest
+@safe unittest
 {
     foreach (c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
         assert(isAlphaNum(c));
@@ -109,7 +109,7 @@ bool isAlpha(dchar c) @safe pure nothrow @nogc
     assert(!isAlpha('á'));
 }
 
-unittest
+@safe unittest
 {
     foreach (c; chain(letters, lowercase, uppercase))
         assert(isAlpha(c));
@@ -140,7 +140,7 @@ bool isLower(dchar c) @safe pure nothrow @nogc
     assert(!isLower('Á'));
 }
 
-unittest
+@safe unittest
 {
     foreach (c; lowercase)
         assert(isLower(c));
@@ -171,7 +171,7 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
     assert(!isUpper('Á'));
 }
 
-unittest
+@safe unittest
 {
     foreach (c; uppercase)
         assert(isUpper(c));
@@ -203,7 +203,7 @@ bool isDigit(dchar c) @safe pure nothrow @nogc
     assert(!isDigit('４')); // full-width digit four (U+FF14)
 }
 
-unittest
+@safe unittest
 {
     foreach (c; digits)
         assert(isDigit(c));
@@ -232,7 +232,7 @@ bool isOctalDigit(dchar c) @safe pure nothrow @nogc
     assert(!isOctalDigit('#'));
 }
 
-unittest
+@safe unittest
 {
     foreach (c; octalDigits)
         assert(isOctalDigit(c));
@@ -262,7 +262,7 @@ bool isHexDigit(dchar c) @safe pure nothrow @nogc
     assert(!isHexDigit('#'));
 }
 
-unittest
+@safe unittest
 {
     foreach (c; fullHexDigits)
         assert(isHexDigit(c));
@@ -299,7 +299,7 @@ bool isWhite(dchar c) @safe pure nothrow @nogc
     assert(!isWhite('\u00A0')); // std.ascii.isWhite
 }
 
-unittest
+@safe unittest
 {
     foreach (c; whitespace)
         assert(isWhite(c));
@@ -335,7 +335,7 @@ bool isControl(dchar c) @safe pure nothrow @nogc
     assert(!isControl('\u2029'));
 }
 
-unittest
+@safe unittest
 {
     foreach (dchar c; 0 .. 32)
         assert(isControl(c));
@@ -379,7 +379,7 @@ bool isPunctuation(dchar c) @safe pure nothrow @nogc
     assert(!isPunctuation('\u2012')); // (U+2012 = en-dash)
 }
 
-unittest
+@safe unittest
 {
     foreach (dchar c; 0 .. 128)
     {
@@ -415,7 +415,7 @@ bool isGraphical(dchar c) @safe pure nothrow @nogc
     assert(!isGraphical('á'));
 }
 
-unittest
+@safe unittest
 {
     foreach (dchar c; 0 .. 128)
     {
@@ -450,7 +450,7 @@ bool isPrintable(dchar c) @safe pure nothrow @nogc
     assert(!isPrintable('á'));
 }
 
-unittest
+@safe unittest
 {
     foreach (dchar c; 0 .. 128)
     {
@@ -480,7 +480,7 @@ bool isASCII(dchar c) @safe pure nothrow @nogc
     assert(!isASCII('á'));
 }
 
-unittest
+@safe unittest
 {
     foreach (dchar c; 0 .. 128)
         assert(isASCII(c));
@@ -612,7 +612,7 @@ auto toUpper(C)(C c)
 }
 
 
-unittest //Test both toUpper and toLower with non-builtin
+@safe unittest //Test both toUpper and toLower with non-builtin
 {
     //User Defined [Char|Wchar|Dchar]
     static struct UDC {  char c; alias c this; }
