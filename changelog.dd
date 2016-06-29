@@ -265,6 +265,7 @@ assert(12345.6789L.quantize(20.0L) == 12340.0L);
 assert(12345.6789L.quantize!(10, -2) == 12345.68L);
 assert(12345.6789L.quantize!(10, floor)(-2) == 12345.67L);
 ---
+)
 
 $(LI $(LNAME2 traits, Three new traits were added to `std.traits`.)
     $(P $(XREF traits, isType), $(XREF traits, isFunction), and
