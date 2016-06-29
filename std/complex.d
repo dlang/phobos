@@ -53,7 +53,7 @@ auto complex(R, I)(R re, I im)  @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = complex(1.0);
     static assert (is(typeof(a) == Complex!double));
@@ -429,7 +429,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     }
 }
 
-unittest
+@safe unittest
 {
     import std.math;
     import std.complex;
@@ -580,7 +580,7 @@ unittest
     assert (c1pcf.im == c1pcr.im);
 }
 
-unittest
+@safe unittest
 {
     // Initialization
     Complex!double a = 1;
@@ -591,7 +591,7 @@ unittest
     assert (c.re == 1.0 && c.im == 2);
 }
 
-unittest
+@safe unittest
 {
     // Assignments and comparisons
     Complex!double z;
@@ -638,7 +638,7 @@ template Complex(T) if (is(T R == Complex!R))
     alias Complex = T;
 }
 
-unittest
+@safe unittest
 {
     static assert (is(Complex!(Complex!real) == Complex!real));
 
@@ -667,7 +667,7 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     static import std.math;
     assert (abs(complex(1.0)) == 1.0);
@@ -689,7 +689,7 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math;
     assert (sqAbs(complex(0.0)) == 0.0);
@@ -707,7 +707,7 @@ T sqAbs(T)(T x) @safe pure nothrow @nogc
     return x*x;
 }
 
-unittest
+@safe unittest
 {
     import std.math;
     assert (sqAbs(0.0) == 0.0);
@@ -728,7 +728,7 @@ T arg(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math;
     assert (arg(complex(1.0)) == 0.0);
@@ -747,7 +747,7 @@ Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     assert (conj(complex(1.0)) == complex(1.0));
     assert (conj(complex(1.0, 2.0)) == complex(1.0, -2.0));
@@ -770,7 +770,7 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math;
     auto z = fromPolar(std.math.sqrt(2.0), PI_4);
@@ -794,7 +794,7 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     static import std.math;
     assert(sin(complex(0.0)) == 0.0);
@@ -812,7 +812,7 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math;
     import std.complex;
@@ -839,7 +839,7 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     static import std.math;
 
@@ -900,7 +900,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     static import std.math;
     assert (sqrt(complex(0.0)) == 0.0);
@@ -909,7 +909,7 @@ unittest
 }
 
 // Issue 10881: support %f formatting of complex numbers
-unittest
+@safe unittest
 {
     import std.format : format;
 
@@ -920,7 +920,7 @@ unittest
     assert(format("%.2f", y) == "1.20-3.40i");
 }
 
-unittest
+@safe unittest
 {
     // Test wide string formatting
     import std.format;
@@ -936,7 +936,7 @@ unittest
     assert(wformat("%.2f", x) == "1.20+3.40i"w);
 }
 
-unittest
+@safe unittest
 {
     // Test ease of use (vanilla toString() should be supported)
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
