@@ -336,7 +336,7 @@ class OutBuffer
     }
 
     ///
-    unittest
+    @safe unittest
     {
         OutBuffer b = new OutBuffer();
         b.writef("a%sb", 16);
@@ -363,7 +363,7 @@ class OutBuffer
     }
 
     ///
-    unittest
+    @safe unittest
     {
         OutBuffer b = new OutBuffer();
         b.writefln("a%sb", 16);
@@ -394,7 +394,7 @@ class OutBuffer
         }
 }
 
-unittest
+@safe unittest
 {
     //printf("Starting OutBuffer test\n");
 
@@ -412,7 +412,7 @@ unittest
     assert(cmp(buf.toString(), "hello world 6") == 0);
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     static assert(isOutputRange!(OutBuffer, char));
