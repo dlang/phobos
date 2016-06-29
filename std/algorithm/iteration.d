@@ -1115,6 +1115,7 @@ private struct FilterResult(alias pred, Range)
 
     @property auto ref front()
     {
+        assert(!empty);
         return _input.front;
     }
 
@@ -1297,6 +1298,7 @@ private struct FilterBidiResult(alias pred, Range)
 
     @property auto ref front()
     {
+        assert(!empty);
         return _input.front;
     }
 
@@ -1310,6 +1312,7 @@ private struct FilterBidiResult(alias pred, Range)
 
     @property auto ref back()
     {
+        assert(!empty);
         return _input.back;
     }
 
