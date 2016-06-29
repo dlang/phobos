@@ -358,7 +358,11 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     cenforce(trustedGetFileSize(h, fileSize), name, namez);
     size_t size = min(upTo, fileSize);
     auto buf = uninitializedArray!(ubyte[])(size);
-    scope(failure) delete buf;
+
+    scope(failure)
+    {
+        () @trusted { delete buf; } ();
+    }
 
     cenforce(trustedReadFile(h, buf.ptr, size), name, namez);
     return buf[0 .. size];
