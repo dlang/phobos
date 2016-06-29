@@ -735,7 +735,7 @@ unittest
 
 /// Ditto
 T[] makeArray(T, Allocator, R)(auto ref Allocator alloc, R range)
-if (isInputRange!R)
+if (isInputRange!R && !isInfinite!R)
 {
     static if (isForwardRange!R)
     {
