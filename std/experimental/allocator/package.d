@@ -737,9 +737,13 @@ unittest
 T[] makeArray(T, Allocator, R)(auto ref Allocator alloc, R range)
 if (isInputRange!R)
 {
-    static if (isForwardRange!R)
+    static if (isForwardRange!R || hasLength!R)
     {
-        size_t length = walkLength(range.save);
+        static if (hasLength!R)
+            immutable length = range.length;
+        else
+            immutable length = range.save.walkLength;
+
         if (!length) return null;
         auto m = alloc.allocate(T.sizeof * length);
         if (!m.ptr) return null;
