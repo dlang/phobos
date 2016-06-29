@@ -7275,7 +7275,11 @@ auto only(Values...)(auto ref Values values)
     assert(only("one", "two", "three").joiner(" ").equal("one two three"));
 
     string title = "The D Programming Language";
-    assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
+    assert(title
+        .filter!isUpper // take the upper case letters
+        .map!only       // make each letter its own range
+        .joiner(".")    // join the ranges together lazily
+        .equal("T.D.P.L"));
 }
 
 unittest
