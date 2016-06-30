@@ -3778,22 +3778,26 @@ Example:
 // Iterate a directory in depth
 foreach (string name; dirEntries("destroy/me", SpanMode.depth))
 {
- remove(name);
+    remove(name);
 }
+
 // Iterate the current directory in breadth
 foreach (string name; dirEntries("", SpanMode.breadth))
 {
- writeln(name);
+    writeln(name);
 }
+
 // Iterate a directory and get detailed info about it
 foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 {
- writeln(e.name, "\t", e.size);
+    writeln(e.name, "\t", e.size);
 }
+
 // Iterate over all *.d files in current directory and all its subdirectories
 auto dFiles = dirEntries("", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
 foreach (d; dFiles)
     writeln(d.name);
+
 // Hook it up with std.parallelism to compile them all in parallel:
 foreach (d; parallel(dFiles, 1)) //passes by 1 file to each thread
 {
