@@ -193,7 +193,7 @@ private
         }
     }
 
-    @property ref ThreadInfo thisInfo()
+    @property ref ThreadInfo thisInfo() nothrow
     {
         if ( scheduler is null )
             return ThreadInfo.thisInfo;
@@ -219,7 +219,7 @@ static ~this()
  */
 class MessageMismatch : Exception
 {
-    this( string msg = "Unexpected message type" )
+    this( string msg = "Unexpected message type" ) @safe pure
     {
         super( msg );
     }
@@ -232,7 +232,7 @@ class MessageMismatch : Exception
  */
 class OwnerTerminated : Exception
 {
-    this( Tid t, string msg = "Owner terminated" )
+    this( Tid t, string msg = "Owner terminated" ) @safe pure
     {
         super( msg );
         tid = t;
@@ -247,7 +247,7 @@ class OwnerTerminated : Exception
  */
 class LinkTerminated : Exception
 {
-    this( Tid t, string msg = "Link terminated" )
+    this( Tid t, string msg = "Link terminated" ) @safe pure
     {
         super( msg );
         tid = t;
@@ -283,7 +283,7 @@ class PriorityMessageException : Exception
  */
 class MailboxFull : Exception
 {
-    this( Tid t, string msg = "Mailbox full" )
+    this( Tid t, string msg = "Mailbox full" ) @safe pure
     {
         super( msg );
         tid = t;
@@ -890,19 +890,19 @@ enum OnCrowding
 
 private
 {
-    bool onCrowdingBlock( Tid tid )
+    bool onCrowdingBlock( Tid tid ) @safe pure
     {
         return true;
     }
 
 
-    bool onCrowdingThrow( Tid tid )
+    bool onCrowdingThrow( Tid tid ) @safe pure
     {
         throw new MailboxFull( tid );
     }
 
 
-    bool onCrowdingIgnore( Tid tid )
+    bool onCrowdingIgnore( Tid tid ) @safe pure
     {
         return false;
     }
@@ -1716,16 +1716,7 @@ void yield(T)(T value)
     yield(value);
 }
 
-
-version (Win64)
-{
-    // fibers are broken on Win64
-}
-else version (Win32)
-{
-    // fibers are broken in Win32 under server 2012: bug 13821
-}
-else @system unittest
+unittest
 {
     import core.exception;
     import std.exception;
