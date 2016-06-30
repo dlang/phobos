@@ -56,8 +56,8 @@ struct SList(T)
 {
     import std.exception : enforce;
     import std.range : Take;
-    import std.range.primitives;
-    import std.traits;
+    import std.range.primitives : isInputRange, isForwardRange, ElementType;
+    import std.traits : isImplicitlyConvertible;
 
     private struct Node
     {
