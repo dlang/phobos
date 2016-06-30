@@ -123,16 +123,33 @@ r.popFront();     // can invoke popFront()
 auto h = r.front; // can get the front of the range of non-void type
 ----
 
-The semantics of an input range (not checkable during compilation) are
-assumed to be the following ($(D r) is an object of type $(D R)):
+The following are rules of input ranges are assumed to hold true in all
+Phobos code. These rules are not checkable at compile-time, so not conforming
+to these rules when writing ranges or range based code will result in
+undefined behavior.
 
-$(UL $(LI $(D r.empty) returns $(D false) iff there is more data
-available in the range.)  $(LI $(D r.front) returns the current
-element in the range. It may return by value or by reference. Calling
-$(D r.front) is allowed only if calling $(D r.empty) has, or would
-have, returned $(D false).) $(LI $(D r.popFront) advances to the next
-element in the range. Calling $(D r.popFront) is allowed only if
-calling $(D r.empty) has, or would have, returned $(D false).))
+$(UL
+    $(LI `r.empty` returns `false` if and only if there is more data
+    available in the range.)
+    $(LI `r.empty` evaluated multiple times, without calling
+    `r.popFront`, or otherwise mutating the range object or the
+    underlying data, yields the same result for every evaluation.)
+    $(LI `r.front` returns the current element in the range.
+    It may return by value or by reference.)
+    $(LI `r.front` can be legally evaluated if and only if evaluating
+    `r.empty` has, or would have, equaled `false`.)
+    $(LI `r.front` evaluated multiple times, without calling
+    `r.popFront`, or otherwise mutating the range object or the
+    underlying data, yields the same result for every evaluation.)
+    $(LI `r.popFront` advances to the next element in the range.)
+    $(LI `r.popFront` can be called if and only if evaluating `r.empty`
+    has, or would have, equaled `false`.)
+)
+
+Also, note that Phobos code assumes that the primitives `r.front` and
+`r.empty` are $(BIGOH 1) time complexity wise or "cheap" in terms of
+running time. $(BIGOH) statements in the documentation of range functions
+are made with this assumption.
 
 Params:
     R = type to be tested
