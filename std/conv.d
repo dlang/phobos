@@ -3695,6 +3695,14 @@ dstring dtext(T...)(T args) if (T.length > 0) { return textImpl!dstring(args); }
 deprecated("Calling `dtext` with 0 arguments is deprecated")
 dstring dtext(T...)(T args) if (T.length == 0) { return textImpl!dstring(args); }
 
+///
+unittest
+{
+    assert( text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"c);
+    assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
+    assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
+}
+
 private S textImpl(S, U...)(U args)
 {
     static if (U.length == 0)
@@ -3710,13 +3718,7 @@ private S textImpl(S, U...)(U args)
     }
 }
 
-///
-unittest
-{
-    assert( text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"c);
-    assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
-    assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
-}
+
 
 
 /***************************************************************
