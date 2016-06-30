@@ -439,7 +439,8 @@ public:
             }
             else version(FreeBSD)
             {
-                import core.sys.freebsd.time;
+                import core.sys.freebsd.time : clock_gettime, CLOCK_REALTIME,
+                    CLOCK_REALTIME_FAST, CLOCK_REALTIME_PRECISE, CLOCK_SECOND;
                 static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME_FAST;
                 else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
                 else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME_PRECISE;
@@ -473,7 +474,7 @@ public:
                     return unixTimeToStdTime(core.stdc.time.time(null));
                 else
                 {
-                    import core.sys.solaris.time;
+                    import core.sys.solaris.time : CLOCK_REALTIME;
                     static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME;
                     else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
                     else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
