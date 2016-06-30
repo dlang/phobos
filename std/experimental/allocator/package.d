@@ -1132,7 +1132,7 @@ if (is(T == class) || is(T == interface))
     {
         version(Windows)
         {
-            import core.sys.windows.unknwn;
+            import core.sys.windows.unknwn : IUnknown;
             static assert(!is(T: IUnknown), "COM interfaces can't be destroyed in "
                 ~ __PRETTY_FUNCTION__);
         }
