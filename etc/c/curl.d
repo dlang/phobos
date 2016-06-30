@@ -1507,10 +1507,10 @@ char * curl_version();
  * %XX versions). This function returns a new allocated string or NULL if an
  * error occurred.
  */
-char * curl_easy_escape(CURL *handle, in char *string, int length) @trusted;
+char * curl_easy_escape(CURL *handle, in char *string, int length);
 
 /** the previous version: */
-char * curl_escape(in char *string, int length) @trusted;
+char * curl_escape(in char *string, int length);
 
 
 /**
@@ -1524,10 +1524,10 @@ char * curl_escape(in char *string, int length) @trusted;
  * Conversion Note: On non-ASCII platforms the ASCII %XX codes are
  * converted into the host encoding.
  */
-char * curl_easy_unescape(CURL *handle, in char *string, int length, int *outlength) @trusted;
+char * curl_easy_unescape(CURL *handle, in char *string, int length, int *outlength);
 
 /** the previous version */
-char * curl_unescape(in char *string, int length) @trusted;
+char * curl_unescape(in char *string, int length);
 
 /**
  * Name: curl_free()
