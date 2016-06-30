@@ -3691,10 +3691,6 @@ wstring wtext(T...)(T args) if (T.length == 0) { return textImpl!wstring(args); 
 ///ditto
 dstring dtext(T...)(T args) if (T.length > 0) { return textImpl!dstring(args); }
 
-// @@@DEPRECATED_2017-06@@@
-deprecated("Calling `dtext` with 0 arguments is deprecated")
-dstring dtext(T...)(T args) if (T.length == 0) { return textImpl!dstring(args); }
-
 ///
 unittest
 {
@@ -3702,6 +3698,11 @@ unittest
     assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
 }
+
+// @@@DEPRECATED_2017-06@@@
+deprecated("Calling `dtext` with 0 arguments is deprecated")
+dstring dtext(T...)(T args) if (T.length == 0) { return textImpl!dstring(args); }
+
 
 private S textImpl(S, U...)(U args)
 {
