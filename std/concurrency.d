@@ -333,7 +333,7 @@ public:
      */
     void toString(scope void delegate(const(char)[]) sink)
     {
-        import std.format;
+        import std.format : formattedWrite;
         formattedWrite(sink, "Tid(%x)", cast(void*)mbox);
     }
 
@@ -1387,7 +1387,7 @@ private:
 
         override bool wait( Duration period ) nothrow
         {
-            import core.time;
+            import core.time : MonoTime;
             scope(exit) notified = false;
 
             for ( auto limit = MonoTime.currTime + period;
@@ -2055,7 +2055,7 @@ private
 
             static if ( timedWait )
             {
-                import core.time;
+                import core.time : MonoTime;
                 auto limit = MonoTime.currTime + period;
             }
 
@@ -2606,7 +2606,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 {
     // check that var is global, can't take address of a TLS variable
     static assert(is(typeof({__gshared p = &var;})), "var must be 'static shared' or '__gshared'.");
-    import core.atomic;
+    import core.atomic : atomicLoad, MemoryOrder, atomicStore;
 
     static shared bool flag;
     if (!atomicLoad!(MemoryOrder.acq)(flag))
