@@ -152,8 +152,8 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
     if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
         precision + exponentWidth > 0)
 {
-    import std.bitmanip;
-    import std.meta;
+    import std.bitmanip : bitfields;
+    import std.meta : staticIndexOf;
 private:
     // get the correct unsigned bitfield type to support > 32 bits
     template uType(uint bits)
@@ -2159,7 +2159,7 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
 {
     import std.functional : binaryFun;
     import std.algorithm : swap;
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc, free;
 
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
@@ -2281,7 +2281,7 @@ optimizations.
 struct GapWeightedSimilarityIncremental(Range, F = double)
     if (isRandomAccessRange!(Range) && hasLength!(Range))
 {
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc, realloc, alloca, free;
 
 private:
     Range s, t;
