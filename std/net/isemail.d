@@ -1752,12 +1752,12 @@ enum AsciiToken
  */
 T max (T) (T[] arr)
 {
-    import std.algorithm/* : max*/;
+    static import std.algorithm.comparison;
 
     auto max = arr.front;
 
     foreach (i ; 0 .. arr.length - 1)
-        max = std.algorithm.max(max, arr[i + 1]);
+        max = std.algorithm.comparison.max(max, arr[i + 1]);
 
     return max;
 }
