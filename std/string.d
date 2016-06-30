@@ -323,7 +323,7 @@ immutable(char)* toStringz(in string s) @trusted pure nothrow
 }
 
 ///
-pure nothrow unittest
+@system pure nothrow unittest
 {
     import core.stdc.string : strlen;
     import std.conv : to;
@@ -573,7 +573,7 @@ ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
     return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/'));
 }
@@ -630,7 +630,7 @@ unittest
     });
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/', 3));
 }
@@ -824,7 +824,7 @@ ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub,
     return indexOf!(StringTypeOf!Range)(s, sub, cs);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!indexOf("std/string.d", "string"));
 }
@@ -2473,7 +2473,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
 }
 
 ///
-unittest
+@safe unittest
 {
     string s = "Hello\nmy\rname\nis";
     assert(splitLines(s) == ["Hello", "my", "name", "is"]);
@@ -2485,7 +2485,7 @@ auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = KeepTerminator.no)
     return splitLines!(StringTypeOf!S)(s, keepTerm);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!splitLines("hello\nworld"));
 }
@@ -2822,7 +2822,7 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref R
     assert(i == witness.length);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     auto s = "std/string.d";
@@ -2899,7 +2899,7 @@ auto stripLeft(Range)(auto ref Range str)
     return stripLeft!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!stripLeft("  hello"));
 }
@@ -3035,12 +3035,12 @@ auto stripRight(Range)(auto ref Range str)
     return stripRight!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!stripRight("hello   "));
 }
 
-unittest
+@safe unittest
 {
     import std.array : array;
     import std.uni : lineSep, paraSep;
@@ -3314,13 +3314,13 @@ StringTypeOf!Range chomp(Range, C2)(auto ref Range str, const(C2)[] delimiter)
     return chomp!(StringTypeOf!Range, C2)(str, delimiter);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!chomp(" hello world  \n\r"));
     assert(testAliasedString!chomp(" hello world", "orld"));
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -3480,7 +3480,7 @@ unittest
     assert(chompPrefix("\u2020world"d.byDchar, "\u2020"d).array == "world"d);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!chompPrefix("hello world", "hello"));
 }
@@ -3571,7 +3571,7 @@ StringTypeOf!Range chop(Range)(auto ref Range str)
     return chop!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!chop("hello world"));
 }
@@ -3610,7 +3610,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -3767,7 +3767,7 @@ auto leftJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
     return leftJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
-unittest
+@safe unittest
 {
     auto r = "hello".leftJustifier(8);
     r.popFront();
@@ -3777,7 +3777,7 @@ unittest
     assert(save.front == 'e');
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!leftJustifier("hello", 2));
 }
@@ -3946,12 +3946,12 @@ auto rightJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
     return rightJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!rightJustifier("hello", 2));
 }
 
-unittest
+@safe unittest
 {
     auto r = "hello"d.rightJustifier(6);
     r.popFront();
@@ -4106,14 +4106,14 @@ auto centerJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' '
     return centerJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!centerJustifier("hello", 8));
 }
 
-unittest
+@safe unittest
 {
-    static auto byFwdRange(dstring s)
+    static auto byFwdRange(dstring s) @safe
     {
         static struct FRange
         {
@@ -4175,7 +4175,7 @@ auto detab(Range)(auto ref Range s, size_t tabSize = 8) pure
     assert(detab(" \n\tx", 9) == " \n         x");
 }
 
-unittest
+@safe unittest
 {
     static struct TestStruct
     {
@@ -4336,7 +4336,7 @@ auto detabber(Range)(auto ref Range r, size_t tabSize = 8)
     return detabber!(StringTypeOf!Range)(r, tabSize);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!detabber(  "  ab\t asdf ", 8));
 }
@@ -4412,7 +4412,7 @@ auto entab(Range)(Range s, size_t tabSize = 8)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(entab("        x \n") == "\tx\n");
 }
@@ -4424,7 +4424,7 @@ auto entab(Range)(auto ref Range s, size_t tabSize = 8)
     return entab!(StringTypeOf!Range)(s, tabSize);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!entab("        x \n"));
 }
@@ -4663,7 +4663,7 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : array;
     assert(entabber("        x \n").array == "\tx\n");
@@ -4675,7 +4675,7 @@ auto entabber(Range)(auto ref Range r, size_t tabSize = 8)
     return entabber!(StringTypeOf!Range)(r, tabSize);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!entabber("  ab    asdf ", 8));
 }
@@ -5738,7 +5738,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
     return result.data;
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -6022,7 +6022,8 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
 }
 
 // test ranges
-pure unittest
+// @system because it takes the address of local variable `z`
+@system pure unittest
 {
     import std.range : refRange;
     import std.utf : byCodeUnit;
@@ -6041,7 +6042,7 @@ pure unittest
 }
 
 /// isNumeric works with CTFE
-unittest
+@safe unittest
 {
     enum a = isNumeric("123.00E-5+1234.45E-12Li");
     enum b = isNumeric("12345xxxx890");
@@ -6287,7 +6288,7 @@ body
     });
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!soundexer("Martinez"));
 }
@@ -6353,7 +6354,7 @@ string[string] abbrev(string[] values) @safe pure
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.string;
 
@@ -6462,7 +6463,7 @@ size_t column(Range)(Range str, in size_t tabsize = 8)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.utf : byChar, byWchar, byDchar;
 
@@ -6503,7 +6504,7 @@ size_t column(Range)(auto ref Range str, in size_t tabsize = 8)
     return column!(StringTypeOf!Range)(str, tabsize);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!column("abc\u00861"));
 }
@@ -6892,7 +6893,7 @@ auto assumeUTF(T)(T[] arr) pure
     assert(a == c);
 }
 
-pure unittest
+@system pure unittest
 {
     import std.algorithm.comparison : equal;
     foreach (T; AliasSeq!(char[], wchar[], dchar[]))
@@ -6927,4 +6928,3 @@ pure unittest
         assert(equal(jt, hti));
     }
 }
-
