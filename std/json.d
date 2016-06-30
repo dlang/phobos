@@ -1177,7 +1177,6 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                     }
 
                     import std.algorithm : sort;
-                    import std.array;
                     // @@@BUG@@@ 14439
                     // auto names = obj.keys;  // aa.keys can't be called in @safe code
                     auto names = new string[obj.length];
