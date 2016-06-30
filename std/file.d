@@ -665,7 +665,7 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
     }
     else version(Posix)
     {
-        import core.stdc.stdio;
+        static import core.stdc.stdio;
 
         cenforce(core.stdc.stdio.rename(fromz, toz) == 0, t, toz);
     }
@@ -723,7 +723,7 @@ private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
     }
     else version(Posix)
     {
-        import core.stdc.stdio;
+        static import core.stdc.stdio;
 
         if (!name)
         {
@@ -3288,7 +3288,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     }
     else version(Posix)
     {
-        import core.stdc.stdio;
+        static import core.stdc.stdio;
         static import std.conv;
 
         immutable fdr = core.sys.posix.fcntl.open(fromz, O_RDONLY);
@@ -3677,7 +3677,7 @@ private struct DirIteratorImpl
             alias pathnameStr = pathname;
         else
         {
-            import std.array;
+            import std.array : array;
             string pathnameStr = pathname.array;
         }
         if (stepIn(pathnameStr))
