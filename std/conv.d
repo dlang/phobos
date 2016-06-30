@@ -3672,14 +3672,28 @@ Target parseElement(Target, Source)(ref Source s)
 
 
 /***************************************************************
- * Convenience functions for converting any number and types of
- * arguments into _text (the three character widths).
+ * Convenience functions for converting one or more arguments
+ * of any type into _text (the three character widths).
  */
-string text(T...)(T args) { return textImpl!string(args); }
+string text(T...)(T args) if (T.length > 0) { return textImpl!string(args); }
+
+// @@@DEPRECATED_2017-06@@@
+deprecated("Calling `text` with 0 arguments is deprecated")
+string text(T...)(T args) if (T.length == 0) { return textImpl!string(args); }
+
 ///ditto
-wstring wtext(T...)(T args) { return textImpl!wstring(args); }
+wstring wtext(T...)(T args) if (T.length > 0) { return textImpl!wstring(args); }
+
+// @@@DEPRECATED_2017-06@@@
+deprecated("Calling `wtext` with 0 arguments is deprecated")
+wstring wtext(T...)(T args) if (T.length == 0) { return textImpl!wstring(args); }
+
 ///ditto
-dstring dtext(T...)(T args) { return textImpl!dstring(args); }
+dstring dtext(T...)(T args) if (T.length > 0) { return textImpl!dstring(args); }
+
+// @@@DEPRECATED_2017-06@@@
+deprecated("Calling `dtext` with 0 arguments is deprecated")
+dstring dtext(T...)(T args) if (T.length == 0) { return textImpl!dstring(args); }
 
 private S textImpl(S, U...)(U args)
 {
@@ -3695,18 +3709,13 @@ private S textImpl(S, U...)(U args)
         return result;
     }
 }
+
 ///
 unittest
 {
     assert( text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"c);
     assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
-}
-unittest
-{
-    assert(text() is null);
-    assert(wtext() is null);
-    assert(dtext() is null);
 }
 
 
