@@ -552,7 +552,7 @@ auto csvReader(Contents = string,
 }
 
 // Test struct & header interface and same unicode
-unittest
+@safe unittest
 {
     import std.math : abs;
 
@@ -587,7 +587,7 @@ unittest
 }
 
 // Test header interface
-unittest
+@safe unittest
 {
     import std.algorithm;
 
@@ -633,7 +633,7 @@ unittest
 }
 
 // Test null header interface
-unittest
+@safe unittest
 {
     string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
     auto records = csvReader(str, ["a"]);
@@ -699,7 +699,7 @@ unittest
 
 
 // Test associative array support with unicode separator
-unittest
+@safe unittest
 {
   string str = "1❁2❁3\n34❁65❁63\n34❁65❁63";
 
@@ -715,7 +715,7 @@ unittest
 }
 
 // Test restricted range
-unittest
+@safe unittest
 {
     import std.typecons;
     struct InputRange
@@ -753,7 +753,7 @@ unittest
             (ir,cast(string[])null)) {}
 }
 
-unittest // const/immutable dchars
+@safe unittest // const/immutable dchars
 {
     import std.algorithm : map;
     import std.array : array;
@@ -1115,7 +1115,8 @@ public:
 }
 
 // Bugzilla 15545
-pure unittest
+// @system due to the catch for Throwable
+@system pure unittest
 {
     enum failData =
     "name, surname, age
@@ -1465,7 +1466,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     string str = "65,63\n123,3673";
