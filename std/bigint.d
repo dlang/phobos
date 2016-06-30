@@ -1086,7 +1086,7 @@ Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
 {
     static if (isSigned!T)
     {
-        import std.conv;
+        import std.conv : unsigned;
         /* This returns the correct result even when x = T.min
          * on two's complement machines because unsigned(T.min) = |T.min|
          * even though -T.min = T.min.
