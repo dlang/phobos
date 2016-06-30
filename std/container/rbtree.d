@@ -739,9 +739,9 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     if (is(typeof(binaryFun!less(T.init, T.init))))
 {
     import std.meta : allSatisfy;
-    import std.range.primitives;
+    import std.range.primitives : isInputRange, walkLength;
     import std.range : Take;
-    import std.traits;
+    import std.traits : isIntegral, isDynamicArray, isImplicitlyConvertible;
 
     alias _less = binaryFun!less;
 
@@ -1631,7 +1631,7 @@ assert(equal(rbt[], [5]));
          */
         void printTree(Node n, int indent = 0)
         {
-            import std.stdio;
+            import std.stdio : write, writeln;
             if (n !is null)
             {
                 printTree(n.right, indent + 2);
@@ -1661,7 +1661,7 @@ assert(equal(rbt[], [5]));
             //
             int recurse(Node n, string path)
             {
-                import std.stdio;
+                import std.stdio : writeln;
                 if (n is null)
                     return 1;
                 if (n.parent.left !is n && n.parent.right !is n)
