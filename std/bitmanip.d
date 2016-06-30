@@ -35,7 +35,7 @@ version(unittest)
 
 private string myToString(ulong n)
 {
-    import core.internal.string;
+    import core.internal.string : UnsignedStringBuf, unsignedToTempString;
     UnsignedStringBuf buf;
     auto s = unsignedToTempString(n, buf);
     return cast(string)s ~ (n > uint.max ? "UL" : "U");
