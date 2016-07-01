@@ -121,7 +121,7 @@ uint adler32(uint adler, const(void)[] buf)
 }
 
 ///
-unittest
+@system unittest
 {
     static ubyte[] data = [1,2,3,4,5,6,7,8,9,10];
 
@@ -129,7 +129,7 @@ unittest
     assert(adler == 0xdc0037);
 }
 
-unittest
+@system unittest
 {
     static string data = "test";
 
@@ -163,7 +163,7 @@ uint crc32(uint crc, const(void)[] buf)
     return crc;
 }
 
-unittest
+@system unittest
 {
     static ubyte[] data = [1,2,3,4,5,6,7,8,9,10];
 
@@ -277,7 +277,7 @@ void[] uncompress(const(void)[] srcbuf, size_t destlen = 0u, int winbits = 15)
     assert(0);
 }
 
-unittest
+@system unittest
 {
     auto src =
 "the quick brown fox jumps over the lazy dog\r
@@ -294,7 +294,7 @@ the quick brown fox jumps over the lazy dog\r
     assert(result == src);
 }
 
-unittest
+@system unittest
 {
     ubyte[] src = new ubyte[1000000];
     ubyte[] dst;
@@ -667,7 +667,7 @@ class UnCompress
 private import std.stdio;
 private import std.random;
 
-unittest // by Dave
+@system unittest // by Dave
 {
     debug(zlib) writeln("std.zlib.unittest");
 
@@ -727,7 +727,7 @@ unittest // by Dave
 }
 
 
-unittest // by Artem Rebrov
+@system unittest // by Artem Rebrov
 {
     Compress cmp = new Compress;
     UnCompress decmp = new UnCompress;
@@ -744,7 +744,7 @@ unittest // by Artem Rebrov
     assert( output[] == input[] );
 }
 
-unittest
+@system unittest
 {
     static assert(__traits(compiles, etc.c.zlib.gzclose(null)));        // bugzilla 15457
 }
