@@ -2956,9 +2956,13 @@ R dropBackOne(R)(R range)
 }
 
 /**
-Repeats one value forever.
+Create a range which repeats one value forever.
 
-Models an infinite bidirectional and random access range, with slicing.
+Params:
+    value = the value to repeat
+
+Returns:
+    An infinite random access range with slicing.
 */
 struct Repeat(T)
 {
