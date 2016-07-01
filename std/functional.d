@@ -1100,7 +1100,7 @@ template memoize(alias fun, uint maxSize)
  * When the $(D maxSize) parameter is specified, memoize will used
  * a fixed size hash table to limit the number of cached entries.
  */
-unittest // not @safe due to memoize
+@system unittest // not @safe due to memoize
 {
     ulong fact(ulong n)
     {
@@ -1112,7 +1112,7 @@ unittest // not @safe due to memoize
     assert(fact(10) == 3628800);
 }
 
-unittest // not @safe due to memoize
+@system unittest // not @safe due to memoize
 {
     import core.math : sqrt;
     alias msqrt = memoize!(function double(double x) { return sqrt(x); });
@@ -1279,7 +1279,7 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
     }
 }
 
-unittest // not @safe due to toDelegate
+@system unittest // not @safe due to toDelegate
 {
     static int inc(ref uint num) {
         num++;
