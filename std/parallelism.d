@@ -109,7 +109,7 @@ version(Windows)
     // BUGS:  Only works on Windows 2000 and above.
     shared static this()
     {
-        import core.sys.windows.windows;
+        import core.sys.windows.windows : SYSTEM_INFO, GetSystemInfo;
 
         SYSTEM_INFO si;
         GetSystemInfo(&si);
@@ -119,19 +119,17 @@ version(Windows)
 }
 else version(linux)
 {
-    import core.sys.posix.unistd;
-
     shared static this()
     {
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
 else version(Solaris)
 {
-    import core.sys.posix.unistd;
-
     shared static this()
     {
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
@@ -2604,7 +2602,7 @@ public:
             byte[maxStack] buf = void;
             immutable size_t nBytesNeeded = nWorkUnits * RTask.sizeof;
 
-            import core.stdc.stdlib;
+            import core.stdc.stdlib : malloc, free;
             if (nBytesNeeded < maxStack)
             {
                 tasks = (cast(RTask*) buf.ptr)[0..nWorkUnits];
@@ -3344,7 +3342,7 @@ private void submitAndExecute(
     immutable nThreads = pool.size + 1;
 
     alias PTask = typeof(scopedTask(doIt));
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc, free;
     import core.stdc.string : memcpy;
 
     // The logical thing to do would be to just use alloca() here, but that
