@@ -2329,7 +2329,7 @@ public:
     {
         version (Windows)
         {
-            import std.algorithm;
+            import std.algorithm.searching : canFind;
             return fds.canFind(s) ? 1 : 0;
         }
         else
