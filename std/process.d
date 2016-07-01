@@ -391,7 +391,7 @@ private Pid spawnProcessImpl(in char[][] args,
     scope(exit) if (workDirFD >= 0) close(workDirFD);
     if (workDir.length)
     {
-        import core.sys.posix.fcntl;
+        import core.sys.posix.fcntl : open, O_RDONLY, stat_t, fstat, S_ISDIR;
         workDirFD = open(workDir.tempCString(), O_RDONLY);
         if (workDirFD < 0)
             throw ProcessException.newFromErrno("Failed to open working directory");
@@ -452,8 +452,8 @@ private Pid spawnProcessImpl(in char[][] args,
         setCLOEXEC(STDERR_FILENO, false);
         if (!(config & Config.inheritFDs))
         {
-            import core.sys.posix.poll;
-            import core.sys.posix.sys.resource;
+            import core.sys.posix.poll : pollfd, poll, POLLNVAL;
+            import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
 
             // Get the maximum number of file descriptors that could be open.
             rlimit r;
@@ -793,7 +793,7 @@ version (Posix) unittest
 version (Posix)
 private void setCLOEXEC(int fd, bool on) nothrow @nogc
 {
-    import core.sys.posix.fcntl;
+    import core.sys.posix.fcntl : fcntl, F_GETFD, FD_CLOEXEC, F_SETFD;
     auto flags = fcntl(fd, F_GETFD);
     if (flags >= 0)
     {
@@ -2171,7 +2171,6 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     in char[] workDir = null,
     ExtraPipeFuncArgs extraArgs = ExtraPipeFuncArgs.init)
 {
-    import std.string;
     import std.typecons : Tuple;
     import std.array : appender;
     import std.algorithm : min;
@@ -2263,17 +2262,18 @@ class ProcessException : Exception
                                          string file = __FILE__,
                                          size_t line = __LINE__)
     {
-        import core.stdc.errno;
-        import core.stdc.string;
+        import core.stdc.errno : errno;
         version (CRuntime_Glibc)
         {
+            import core.stdc.string : strerror_r;
             char[1024] buf;
             auto errnoMsg = to!string(
                 core.stdc.string.strerror_r(errno, buf.ptr, buf.length));
         }
         else
         {
-            auto errnoMsg = to!string(core.stdc.string.strerror(errno));
+            import core.stdc.string : strerror;
+            auto errnoMsg = to!string(strerror(errno));
         }
         auto msg = customMsg.empty ? errnoMsg
                                    : customMsg ~ " (" ~ errnoMsg ~ ')';
@@ -2364,7 +2364,7 @@ version (Windows) private immutable string shellSwitch = "/C";
     else
     version (Posix)
     {
-        import core.sys.posix.pthread;
+        import core.sys.posix.pthread : pthread_self;
         return pthread_self();
     }
 }
@@ -2400,7 +2400,8 @@ private struct TestScript
 {
     this(string code)
     {
-        import std.ascii, std.file;
+        import std.ascii : newline;
+        import std.file : write;
         version (Windows)
         {
             auto ext = ".cmd";
@@ -2412,17 +2413,17 @@ private struct TestScript
             auto firstLine = "#!" ~ nativeShell;
         }
         path = uniqueTempPath()~ext;
-        std.file.write(path, firstLine~std.ascii.newline~code~std.ascii.newline);
+        write(path, firstLine ~ newline ~ code ~ newline);
         version (Posix)
         {
-            import core.sys.posix.sys.stat;
+            import core.sys.posix.sys.stat : chmod;
             chmod(path.tempCString(), octal!777);
         }
     }
 
     ~this()
     {
-        import std.file;
+        import std.file : remove, exists;
         if (!path.empty && exists(path))
         {
             try { remove(path); }
@@ -2439,7 +2440,8 @@ private struct TestScript
 version (unittest)
 private string uniqueTempPath()
 {
-    import std.file, std.uuid;
+    import std.file : tempDir, buildPath;
+    import std.uuid : randomUUID;
     // Path should contain spaces to test escaping whitespace
     return buildPath(tempDir(), "std.process temporary file " ~
         randomUUID().toString());
