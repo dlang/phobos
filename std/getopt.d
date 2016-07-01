@@ -442,7 +442,7 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
 }
 
 ///
-unittest
+@system unittest
 {
     auto args = ["prog", "--foo", "-b"];
 
@@ -630,7 +630,7 @@ private template optionValidator(A...)
     static assert(optionValidator!(C,A,P,C,A,S,F) == "");
 }
 
-unittest // bugzilla 15914
+@system unittest // bugzilla 15914
 {
     bool opt;
     string[] args = ["program", "-a"];
@@ -924,7 +924,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
 }
 
 // 5316 - arrays with arraySep
-unittest
+@system unittest
 {
     import std.conv;
 
@@ -953,7 +953,7 @@ unittest
 }
 
 // 5316 - associative arrays with arraySep
-unittest
+@system unittest
 {
     import std.conv;
 
@@ -1107,7 +1107,7 @@ private void setConfig(ref configuration cfg, config option)
     }
 }
 
-unittest
+@system unittest
 {
     import std.conv;
     import std.math;
@@ -1289,7 +1289,7 @@ unittest
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
 }
 
-unittest
+@system unittest
 {
     // From bugzilla 2142
     bool f_linenum, f_filename;
@@ -1306,7 +1306,7 @@ unittest
     assert(f_filename);
 }
 
-unittest
+@system unittest
 {
     // From bugzilla 6887
     string[] p;
@@ -1316,7 +1316,7 @@ unittest
     assert(p[0] == "a");
 }
 
-unittest
+@system unittest
 {
     // From bugzilla 6888
     int[string] foo;
@@ -1325,7 +1325,7 @@ unittest
     assert(foo == ["a":1]);
 }
 
-unittest
+@system unittest
 {
     // From bugzilla 9583
     int opt;
@@ -1334,7 +1334,7 @@ unittest
     assert(args == ["prog", "--a", "--b", "--c"]);
 }
 
-unittest
+@system unittest
 {
     string foo, bar;
     auto args = ["prog", "-thello", "-dbar=baz"];
@@ -1369,7 +1369,7 @@ unittest
     assert(o == "str");
 }
 
-unittest // 5228
+@system unittest // 5228
 {
     import std.exception;
     import std.conv;
@@ -1382,7 +1382,7 @@ unittest // 5228
     assertThrown!ConvException(getopt(args, "abc", &abc));
 }
 
-unittest // From bugzilla 7693
+@system unittest // From bugzilla 7693
 {
     import std.exception;
 
@@ -1402,7 +1402,7 @@ unittest // From bugzilla 7693
     assertNotThrown(getopt(args, "foo", &foo));
 }
 
-unittest // same bug as 7693 only for bool
+@system unittest // same bug as 7693 only for bool
 {
     import std.exception;
 
@@ -1414,7 +1414,7 @@ unittest // same bug as 7693 only for bool
     assert(foo);
 }
 
-unittest
+@system unittest
 {
     bool foo;
     auto args = ["prog", "--foo"];
@@ -1422,7 +1422,7 @@ unittest
     assert(foo);
 }
 
-unittest
+@system unittest
 {
     bool foo;
     bool bar;
@@ -1433,7 +1433,7 @@ unittest
     assert(bar);
 }
 
-unittest
+@system unittest
 {
     bool foo;
     bool bar;
@@ -1445,7 +1445,7 @@ unittest
     assert(bar);
 }
 
-unittest
+@system unittest
 {
     import std.exception;
 
@@ -1457,7 +1457,7 @@ unittest
         config.passThrough));
 }
 
-unittest
+@system unittest
 {
     import std.exception;
 
@@ -1471,7 +1471,7 @@ unittest
     assert(!bar);
 }
 
-unittest
+@system unittest
 {
     bool foo;
     auto args = ["prog", "-f"];
@@ -1480,7 +1480,7 @@ unittest
     assert(!r.helpWanted);
 }
 
-unittest // implicit help option without config.passThrough
+@safe unittest // implicit help option without config.passThrough
 {
     string[] args = ["program", "--help"];
     auto r = getopt(args);
@@ -1488,7 +1488,7 @@ unittest // implicit help option without config.passThrough
 }
 
 // Issue 13316 - std.getopt: implicit help option breaks the next argument
-unittest
+@system unittest
 {
     string[] args = ["program", "--help", "--", "something"];
     getopt(args);
@@ -1505,7 +1505,7 @@ unittest
 }
 
 // Issue 13317 - std.getopt: endOfOptions broken when it doesn't look like an option
-unittest
+@system unittest
 {
     auto endOfOptionsBackup = endOfOptions;
     scope(exit) endOfOptions = endOfOptionsBackup;
@@ -1583,7 +1583,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
     }
 }
 
-unittest
+@system unittest
 {
     import std.conv;
 
@@ -1612,7 +1612,7 @@ unittest
     assert(wanted == helpMsg);
 }
 
-unittest
+@system unittest
 {
     import std.conv;
     import std.string;
@@ -1641,7 +1641,7 @@ unittest
     assert(wanted == helpMsg, helpMsg ~ wanted);
 }
 
-unittest // Issue 14724
+@system unittest // Issue 14724
 {
     bool a;
     auto args = ["prog", "--help"];
