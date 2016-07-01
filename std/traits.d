@@ -1062,7 +1062,7 @@ unittest
     void noparam() {}
     static assert(ParameterStorageClassTuple!noparam.length == 0);
 
-    void test(scope int, ref int, out int, lazy int, int, return ref int) { }
+    void test(scope int*, ref int, out int, lazy int, int, return ref int) { }
     alias test_pstc = ParameterStorageClassTuple!test;
     static assert(test_pstc.length == 6);
     static assert(test_pstc[0] == STC.scope_);
@@ -4541,10 +4541,10 @@ unittest
     static assert( isCovariantWith!(DerivA_2.test, DerivA_2.test));
 
     // scope parameter
-    interface BaseB            {          void test(      int,       int); }
-    interface DerivB_1 : BaseB { override void test(scope int,       int); }
-    interface DerivB_2 : BaseB { override void test(      int, scope int); }
-    interface DerivB_3 : BaseB { override void test(scope int, scope int); }
+    interface BaseB            {          void test(      int*,       int*); }
+    interface DerivB_1 : BaseB { override void test(scope int*,       int*); }
+    interface DerivB_2 : BaseB { override void test(      int*, scope int*); }
+    interface DerivB_3 : BaseB { override void test(scope int*, scope int*); }
     static assert( isCovariantWith!(DerivB_1.test, BaseB.test));
     static assert( isCovariantWith!(DerivB_2.test, BaseB.test));
     static assert( isCovariantWith!(DerivB_3.test, BaseB.test));
