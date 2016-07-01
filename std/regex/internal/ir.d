@@ -325,7 +325,7 @@ struct Bytecode
     //human readable name of instruction
     @trusted @property string mnemonic()() const
     {//@@@BUG@@@ to is @system
-        import std.conv;
+        import std.conv : to;
         return to!string(code);
     }
 
@@ -372,7 +372,7 @@ struct Group(DataIndex)
     DataIndex begin, end;
     @trusted string toString()() const
     {
-        import std.format;
+        import std.format : formattedWrite;
         auto a = appender!string();
         formattedWrite(a, "%s..%s", begin, end);
         return a.data;
@@ -382,7 +382,8 @@ struct Group(DataIndex)
 //debugging tool, prints out instruction along with opcodes
 @trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
 {
-    import std.array, std.format;
+    import std.array : appender;
+    import std.format : formattedWrite;
     auto output = appender!string();
     formattedWrite(output,"%s", irb[pc].mnemonic);
     switch (irb[pc].code)
@@ -445,7 +446,7 @@ struct Group(DataIndex)
 //disassemble the whole chunk
 @trusted void printBytecode()(in Bytecode[] slice, in NamedGroup[] dict=[])
 {
-    import std.stdio;
+    import std.stdio : writeln;
     for (uint pc=0; pc<slice.length; pc += slice[pc].length)
         writeln("\t", disassemble(slice, pc, dict));
 }
@@ -568,7 +569,7 @@ package(std.regex):
 /*public*/ struct StaticRegex(Char)
 {
 package(std.regex):
-    import std.regex.internal.backtracking;
+    import std.regex.internal.backtracking : BacktrackingMatcher;
     alias Matcher = BacktrackingMatcher!(true);
     alias MatchFn = bool function(ref Matcher!Char) @trusted;
     MatchFn nativeFn;
@@ -592,7 +593,7 @@ package(std.regex):
 struct Input(Char)
     if (is(Char :dchar))
 {
-    import std.utf;
+    import std.utf : decode;
     alias DataIndex = size_t;
     enum bool isLoopback = false;
     alias String = const(Char)[];
@@ -614,7 +615,7 @@ struct Input(Char)
         // but can live with single statement if/else bodies
         bool n = !(_index == _origin.length);
         if (n)
-            res = std.utf.decode(_origin, _index);
+            res = decode(_origin, _index);
         return n;
     }
     @property bool atEnd(){
@@ -640,7 +641,7 @@ struct Input(Char)
 
 struct BackLooperImpl(Input)
 {
-    import std.utf;
+    import std.utf : strideBack;
     alias DataIndex = size_t;
     alias String = Input.String;
     enum bool isLoopback = true;
@@ -658,11 +659,11 @@ struct BackLooperImpl(Input)
             return false;
 
         res = _origin[0.._index].back;
-        _index -= std.utf.strideBack(_origin, _index);
+        _index -= strideBack(_origin, _index);
 
         return true;
     }
-    @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
+    @property atEnd(){ return _index == 0 || _index == strideBack(_origin, _index); }
     auto loopBack(size_t index){   return Input(_origin, index); }
 
     //support for backtracker engine, might not be present
@@ -690,7 +691,7 @@ template BackLooper(E)
 //unsafe, no initialization of elements
 @system T[] mallocArray(T)(size_t len)
 {
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc;
     return (cast(T*)malloc(len * T.sizeof))[0 .. len];
 }
 
@@ -705,7 +706,7 @@ template BackLooper(E)
 //
 @trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
-    import std.conv;
+    import std.conv : text;
     import std.algorithm : map, equal;
 
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
