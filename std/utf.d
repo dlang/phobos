@@ -33,7 +33,7 @@ debug (utf) import core.stdc.stdio : printf;
   +/
 class UTFException : Exception
 {
-    import core.internal.string;
+    import core.internal.string : unsignedToTempString, UnsignedStringBuf;
 
     uint[4] sequence;
     size_t  len;
@@ -1581,7 +1581,6 @@ version(unittest) private void testDecode(R)(R range,
                                              size_t expectedIndex,
                                              size_t line = __LINE__)
 {
-    import std.exception;
     import std.string : format;
     import core.exception : AssertError;
 
@@ -1610,7 +1609,6 @@ version(unittest) private void testDecodeFront(R)(ref R range,
                                                   size_t expectedNumCodeUnits,
                                                   size_t line = __LINE__)
 {
-    import std.exception;
     import std.string : format;
     import core.exception : AssertError;
 
@@ -1642,7 +1640,6 @@ version(unittest) private void testBothDecode(R)(R range,
 
 version(unittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
 {
-    import std.exception;
     import std.string : format;
     import core.exception : AssertError;
 
