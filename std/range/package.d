@@ -817,6 +817,14 @@ length), $(D Chain) offers them as well.
 If only one range is offered to $(D Chain) or $(D chain), the $(D
 Chain) type exits the picture by aliasing itself directly to that
 range's type.
+
+Params:
+    rs = the input ranges to chain together
+
+Returns:
+    An input range at minimum. If all of the ranges in `rs` provide
+    a range primitive, the returned range will also provide that range
+    primitive.
  */
 auto chain(Ranges...)(Ranges rs)
 if (Ranges.length > 0 &&
@@ -1145,6 +1153,28 @@ unittest
     assert(s.length == 7);
     assert(s[5] == 6);
     assert(equal(s, [1, 2, 3, 4, 5, 6, 7][]));
+}
+
+/**
+ * Range primitives are carried over to the returned range if
+ * all of the ranges provide them
+ */
+unittest
+{
+    import std.algorithm.sorting : sort;
+    import std.algorithm.comparison : equal;
+
+    int[] arr1 = [5, 2, 8];
+    int[] arr2 = [3, 7, 9];
+    int[] arr3 = [1, 4, 6];
+
+    // in-place sorting across all of the arrays
+    auto s = arr1.chain(arr2, arr3).sort;
+
+    assert(s.equal([1, 2, 3, 4, 5, 6, 7, 8, 9]));
+    assert(arr1.equal([1, 2, 3]));
+    assert(arr2.equal([4, 5, 6]));
+    assert(arr3.equal([7, 8, 9]));
 }
 
 @safe unittest
