@@ -52,6 +52,14 @@ $(BUGSTITLE Library Changes,
     $(LI $(RELATIVE_LINK2 quantize, Added `std.math.quantize`, for rounding to
         the nearest multiple of some number.))
     $(LI $(RELATIVE_LINK2 traits, Three new traits were added to `std.traits`.))
+    $(LI Wrong
+        $(LINK2 $(ROOT_DIR)spec/function.html#trusted-functions, `@trusted`)
+        attributes have been
+        removed from  $(MREF etc,c,curl) functions
+        $(REF_ALTTEXT `curl_easy_escape`, curl_easy_escape, etc,c,curl),
+        $(REF_ALTTEXT `curl_escape`, curl_escape, etc,c,curl),
+        $(REF_ALTTEXT `curl_easy_unescape`, curl_easy_unescape, etc,c,curl), and
+        $(REF_ALTTEXT `curl_unescape`, curl_unescape, etc,c,curl).)
 )
 
 $(BUGSTITLE Library Changes,
