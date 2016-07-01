@@ -214,7 +214,7 @@ mixin template Signal(T1...)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.signals;
 
@@ -281,7 +281,7 @@ unittest
 // so the unittest will run.
 void linkin() { }
 
-unittest
+@system unittest
 {
     class Observer
     {
@@ -351,7 +351,7 @@ unittest
     a.value = 7;
 }
 
-unittest
+@system unittest
 {
     class Observer
     {
@@ -531,7 +531,7 @@ unittest
 }
 
 version(none) // Disabled because of dmd @@@BUG5028@@@
-unittest
+@system unittest
 {
     class A
     {
