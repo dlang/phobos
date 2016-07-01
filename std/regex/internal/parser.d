@@ -689,7 +689,7 @@ struct Parser(R, Generator)
     //
     @trusted void parseFlags(S)(S flags)
     {//@@@BUG@@@ text is @system
-        import std.conv;
+        import std.conv : text;
         foreach (ch; flags)//flags are ASCII anyway
         {
         L_FlagSwitch:
@@ -1512,7 +1512,7 @@ struct Parser(R, Generator)
     //
     @trusted void error(string msg)
     {
-        import std.format;
+        import std.format : formattedWrite;
         auto app = appender!string();
         formattedWrite(app, "%s\nPattern with error: `%s` <--HERE-- `%s`",
                        msg, origin[0..$-pat.length], pat);
@@ -1691,7 +1691,7 @@ void optimize(Char)(ref Regex!Char zis)
 //IR code validator - proper nesting, illegal instructions, etc.
 @trusted void validateRe(Char)(ref Regex!Char zis)
 {//@@@BUG@@@ text is @system
-    import std.conv;
+    import std.conv : text;
     with(zis)
     {
         for (uint pc = 0; pc < ir.length; pc += ir[pc].length)
