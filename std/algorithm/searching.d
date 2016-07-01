@@ -355,7 +355,7 @@ public:
         if (!needle.length) return haystack;
         if (needle.length > haystack.length) return haystack[$ .. $];
         /* Search: */
-        auto limit = haystack.length - needle.length;
+        immutable limit = haystack.length - needle.length;
         for (size_t hpos = 0; hpos <= limit; )
         {
             size_t npos = needle.length - 1;
