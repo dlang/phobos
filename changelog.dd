@@ -60,6 +60,8 @@ $(BUGSTITLE Library Changes,
         $(REF_ALTTEXT `curl_escape`, curl_escape, etc,c,curl),
         $(REF_ALTTEXT `curl_easy_unescape`, curl_easy_unescape, etc,c,curl), and
         $(REF_ALTTEXT `curl_unescape`, curl_unescape, etc,c,curl).)
+    $(LI $(RELATIVE_LINK2 generate, `std.range.generate` fixed to be a proper
+        range.))
 )
 
 $(BUGSTITLE Library Changes,
@@ -325,6 +327,15 @@ static assert( isFinal!(FC));
 static assert(!isFinal!(C.nf));
 static assert( isFinal!(C.ff));
 -------
+)
+
+$(LI $(LNAME2 generate, `std.range.generate` fixed to be a proper range.)
+    $(P $(XREF range, generate) was set up to return a different value on each
+    call to `front`. In addition, `popFront` did nothing. This means that
+    manipulation functions like $(XREF range, drop) did nothing. The new
+    version uses a one-element cache to meet the expectations of the range
+    definition. It preserves the ref-ness of the generator as well.
+    )
 )
 
 )

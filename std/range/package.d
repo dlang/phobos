@@ -3146,21 +3146,20 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 }
 
 /**
-Given callable ($(REF isCallable, std,traits)) $(D fun), create as a range
-whose front is defined by successive calls to $(D fun()).
+Given callable ($(REF isCallable, std,traits)) `fun`, create as a range
+whose front is defined by successive calls to `fun()`.
 This is especially useful to call function with global side effects (random
 functions), or to create ranges expressed as a single delegate, rather than
-an entire $(D front)/$(D popFront)/$(D empty) structure.
-$(D fun) maybe be passed either a template alias parameter (existing
-function, delegate, struct type defining static $(D opCall)... ) or
-a run-time value argument (delegate, function object... ).
+an entire `front`/`popFront`/`empty` structure.
+`fun` maybe be passed either a template alias parameter (existing
+function, delegate, struct type defining `static opCall`) or
+a run-time value argument (delegate, function object).
 The result range models an InputRange
 ($(REF isInputRange, std,range,primitives)).
-The resulting range will call $(D fun()) on construction, and every call to
-$(D popFront), and the cached value returned when $(D front) is called.
+The resulting range will call `fun()` on construction, and every call to
+`popFront`, and the cached value will be returned when `front` is called.
 
-Returns: an $(D inputRange) that returns a range where each element represents
-    another call to fun.
+Returns: an `inputRange` where each element represents another call to fun.
 */
 auto generate(Fun)(Fun fun)
     if (isCallable!fun)
@@ -3226,9 +3225,8 @@ private:
     else
         alias fun = Fun[0];
 
-    import std.traits: ReturnType, functionAttributes, FunctionAttribute;
     enum returnByRef_ = (functionAttributes!fun & FunctionAttribute.ref_) ? true : false;
-    static if(returnByRef_)
+    static if (returnByRef_)
         ReturnType!fun *elem_;
     else
         ReturnType!fun elem_;
@@ -3236,7 +3234,7 @@ public:
     /// Range primitives
     enum empty = false;
 
-    static if(returnByRef_)
+    static if (returnByRef_)
     {
         /// ditto
         ref front() @property
@@ -3301,12 +3299,23 @@ public:
         return arr[x];
     }
     int y = 1;
-    foreach(ref x; generate!(fun).take(20))
+    foreach (ref x; generate!(fun).take(20))
     {
         x += y++;
     }
     import std.algorithm.comparison : equal;
     assert(equal(arr[], iota(12, 32, 2)));
+}
+
+// assure front isn't the mechanism to make generate go to the next element.
+@safe unittest
+{
+    int i;
+    auto g = generate!(() => ++i);
+    auto f = g.front;
+    assert(f == g.front);
+    g = g.drop(5); // reassign because generate caches
+    assert(g.front == f + 5);
 }
 
 /**
