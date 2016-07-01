@@ -323,7 +323,7 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
 @trusted public auto regex(S)(S[] patterns, const(char)[] flags="")
     if (isSomeString!(S))
 {
-    import std.functional;
+    import std.functional : memoize;
     enum cacheSize = 8; //TODO: invent nice interface to control regex caching
     S pat;
     if (patterns.length > 1)
@@ -373,7 +373,7 @@ unittest
 public auto regexImpl(S)(S pattern, const(char)[] flags="")
     if (isSomeString!(S))
 {
-    import std.regex.internal.parser;
+    import std.regex.internal.parser : Parser, CodeGen;
     auto parser = Parser!(Unqual!(typeof(pattern)), CodeGen)(pattern, flags);
     auto r = parser.program;
     return r;
@@ -423,7 +423,7 @@ enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
     alias DataIndex = DIndex;
     alias String = R;
 private:
-    import std.conv;
+    import std.conv : text;
     R _input;
     int _nMatch;
     enum smallString = 3;
@@ -463,7 +463,7 @@ private:
 
     void newMatches(uint n)
     {
-        import core.stdc.stdlib;
+        import core.stdc.stdlib : calloc;
         if (n > smallString)
         {
             auto p = cast(Group!DataIndex*)enforce(
@@ -494,7 +494,7 @@ public:
     }
     ~this()
     {
-        import core.stdc.stdlib;
+        import core.stdc.stdlib : free;
         if (!(_refcount & SMALL_MASK))
         {
             if (--_refcount == 0)
@@ -653,7 +653,7 @@ unittest
     if (isSomeString!R)
 {
 private:
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc, free;
     alias Char = BasicElementOf!R;
     alias EngineType = Engine!Char;
     EngineType _engine;
@@ -770,7 +770,7 @@ public:
 
 private @trusted auto matchOnce(alias Engine, RegEx, R)(R input, RegEx re)
 {
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc, free;
     alias Char = BasicElementOf!R;
     alias EngineType = Engine!Char;
 
@@ -888,7 +888,7 @@ private R replaceAllWith(alias output,
 public auto match(R, RegEx)(R input, RegEx re)
     if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
-    import std.regex.internal.thompson;
+    import std.regex.internal.thompson : ThompsonMatcher;
     return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(input, re);
 }
 
@@ -896,14 +896,14 @@ public auto match(R, RegEx)(R input, RegEx re)
 public auto match(R, String)(R input, String re)
     if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.thompson;
+    import std.regex.internal.thompson : ThompsonMatcher;
     return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(input, regex(re));
 }
 
 public auto match(R, RegEx)(R input, RegEx re)
     if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
-    import std.regex.internal.backtracking;
+    import std.regex.internal.backtracking : BacktrackingMatcher;
     return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(input, re);
 }
 
@@ -928,7 +928,7 @@ public auto match(R, RegEx)(R input, RegEx re)
 public auto matchFirst(R, RegEx)(R input, RegEx re)
     if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
-    import std.regex.internal.thompson;
+    import std.regex.internal.thompson : ThompsonMatcher;
     return matchOnce!ThompsonMatcher(input, re);
 }
 
@@ -936,7 +936,7 @@ public auto matchFirst(R, RegEx)(R input, RegEx re)
 public auto matchFirst(R, String)(R input, String re)
     if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.thompson;
+    import std.regex.internal.thompson : ThompsonMatcher;
     return matchOnce!ThompsonMatcher(input, regex(re));
 }
 
@@ -944,14 +944,14 @@ public auto matchFirst(R, String)(R input, String re)
 public auto matchFirst(R, String)(R input, String[] re...)
     if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.thompson;
+    import std.regex.internal.thompson : ThompsonMatcher;
     return matchOnce!ThompsonMatcher(input, regex(re));
 }
 
 public auto matchFirst(R, RegEx)(R input, RegEx re)
     if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
-    import std.regex.internal.backtracking;
+    import std.regex.internal.backtracking : BacktrackingMatcher;
     return matchOnce!(BacktrackingMatcher!true)(input, re);
 }
 
@@ -979,7 +979,7 @@ public auto matchFirst(R, RegEx)(R input, RegEx re)
 public auto matchAll(R, RegEx)(R input, RegEx re)
     if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
-    import std.regex.internal.thompson;
+    import std.regex.internal.thompson : ThompsonMatcher;
     return matchMany!ThompsonMatcher(input, re);
 }
 
@@ -987,7 +987,7 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
 public auto matchAll(R, String)(R input, String re)
     if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.thompson;
+    import std.regex.internal.thompson : ThompsonMatcher;
     return matchMany!ThompsonMatcher(input, regex(re));
 }
 
@@ -995,14 +995,14 @@ public auto matchAll(R, String)(R input, String re)
 public auto matchAll(R, String)(R input, String[] re...)
     if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.thompson;
+    import std.regex.internal.thompson : ThompsonMatcher;
     return matchMany!ThompsonMatcher(input, regex(re));
 }
 
 public auto matchAll(R, RegEx)(R input, RegEx re)
     if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
-    import std.regex.internal.backtracking;
+    import std.regex.internal.backtracking : BacktrackingMatcher;
     return matchMany!(BacktrackingMatcher!true)(input, re);
 }
 
@@ -1067,7 +1067,7 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
 public auto bmatch(R, RegEx)(R input, RegEx re)
     if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
-    import std.regex.internal.backtracking;
+    import std.regex.internal.backtracking : BacktrackingMatcher;
     return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(input, re);
 }
 
@@ -1075,14 +1075,14 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
 public auto bmatch(R, String)(R input, String re)
     if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.backtracking;
+    import std.regex.internal.backtracking : BacktrackingMatcher;
     return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(input, regex(re));
 }
 
 public auto bmatch(R, RegEx)(R input, RegEx re)
     if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
-    import std.regex.internal.backtracking;
+    import std.regex.internal.backtracking : BacktrackingMatcher;
     return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(input, re);
 }
 
@@ -1092,7 +1092,8 @@ package void replaceFmt(R, Capt, OutR)
     if (isOutputRange!(OutR, ElementEncodingType!R[]) &&
         isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
-    import std.algorithm, std.conv;
+    import std.algorithm.searching : find;
+    import std.conv : text, parse;
     import std.ascii : isDigit, isAlpha;
     enum State { Normal, Dollar }
     auto state = State.Normal;
