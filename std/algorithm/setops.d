@@ -1209,7 +1209,7 @@ public:
     @property auto ref front()
     {
         assert(!empty);
-        bool chooseR1 = r2.empty || !r1.empty && comp(r1.front, r2.front);
+        immutable chooseR1 = r2.empty || !r1.empty && comp(r1.front, r2.front);
         assert(chooseR1 || r1.empty || comp(r2.front, r1.front));
         return chooseR1 ? r1.front : r2.front;
     }

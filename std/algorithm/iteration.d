@@ -4650,8 +4650,8 @@ private auto sumKahan(Result, R)(Result result, R r)
     Result c = 0;
     for (; !r.empty; r.popFront())
     {
-        auto y = r.front - c;
-        auto t = result + y;
+        immutable y = r.front - c;
+        immutable t = result + y;
         c = (t - result) - y;
         result = t;
     }

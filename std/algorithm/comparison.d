@@ -252,7 +252,7 @@ auto castSwitch(choices...)(Object switchObject)
     {
 
         // Checking for exact matches:
-        ClassInfo classInfo = typeid(switchObject);
+        const classInfo = typeid(switchObject);
         foreach (index, choice; choices)
         {
             static assert(isCallable!choice,
@@ -760,8 +760,8 @@ template equal(alias pred = "a == b")
         //Try a fast implementation when the ranges have comparable lengths
         else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
         {
-            auto len1 = r1.length;
-            auto len2 = r2.length;
+            immutable len1 = r1.length;
+            immutable len2 = r2.length;
             if (len1 != len2) return false; //Short circuit return
 
             //Lengths are the same, so we need to do an actual comparison

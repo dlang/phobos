@@ -627,7 +627,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
             && is(typeof(range.length > filler.length)))
         {
             //Case we have access to length
-            auto len = filler.length;
+            immutable len = filler.length;
             //Start by bulk copies
             while (range.length > len)
             {
@@ -1644,7 +1644,7 @@ if (s != SwapStrategy.stable
         assert(blackouts[left].pos >= steps);
         tgt.popFrontExactly(blackouts[left].pos - steps);
         steps = blackouts[left].pos;
-        auto toMove = min(
+        immutable toMove = min(
             blackouts[left].len,
             range.length - (blackouts[right].pos + blackouts[right].len));
         foreach (i; 0 .. toMove)
