@@ -631,7 +631,7 @@ private:
     // }
 }
 
-unittest
+@system unittest
 {
     import std.file : deleteme;
 
@@ -673,7 +673,7 @@ unittest
 }
 
 version(linux)
-unittest // Issue 14868
+@system unittest // Issue 14868
 {
     import std.typecons : scoped;
     import std.file : deleteme;
@@ -696,7 +696,7 @@ unittest // Issue 14868
     assert(.close(fd) == -1);
 }
 
-unittest // Issue 14994, 14995
+@system unittest // Issue 14994, 14995
 {
     import std.file : deleteme;
     import std.typecons : scoped;
