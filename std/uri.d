@@ -402,8 +402,10 @@ package string urlEncode(in string[string] values)
     return enc.data;
 }
 
-unittest
+@system unittest
 {
+    // @system because urlEncode -> encodeComponent -> URI_Encode
+    // URI_Encode uses alloca and pointer slicing
     string[string] a;
     assert(urlEncode(a) == "");
     assert(urlEncode(["name1" : "value1"]) == "name1=value1");
@@ -471,7 +473,7 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
 }
 
 ///
-unittest
+@safe unittest
 {
     string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
     assert (uriLength(s1) == 49);
@@ -535,7 +537,7 @@ ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
 }
 
 ///
-unittest
+@safe unittest
 {
     string s1 = "my.e-mail@www.example-domain.com with garbage added";
     assert (emailLength(s1) == 32);
@@ -545,8 +547,9 @@ unittest
 }
 
 
-unittest
+@system unittest
 {
+    //@system because of encode -> URI_Encode
     debug(uri) writeln("uri.encodeURI.unittest");
 
     string source = "http://www.digitalmars.com/~fred/fred's RX.html#foo";
