@@ -386,7 +386,10 @@ interface OutputStream {
 
 // not really abstract, but its instances will do nothing useful
 class Stream : InputStream, OutputStream {
-  private import std.string, std.digest.crc, core.stdc.stdlib, core.stdc.stdio;
+    import std.string : toStringz;
+    import std.digest.crc : CRC32;
+    import core.stdc.stdlib : alloca;
+    import core.stdc.stdio : vsnprintf;
 
   // stream abilities
   bool readable = false;        /// Indicates whether this stream can be read from.

@@ -622,7 +622,7 @@ Parameters for the generator.
         mti = n;
         if (range.empty && j < n)
         {
-            import core.internal.string;
+            import core.internal.string : UnsignedStringBuf, unsignedToTempString;
 
             UnsignedStringBuf buf = void;
             string s = "MersenneTwisterEngine.seed: Input range didn't provide enough elements: Need ";

@@ -129,7 +129,7 @@ private:
 public:
     @trusted this(ref Regex!Char re, uint[] memory)
     {
-        import std.conv;
+        import std.conv : text;
         assert(memory.length == 256);
         fChar = uint.max;
         // FNV-1a flavored hash (uses 32bits at a time)
@@ -392,7 +392,8 @@ public:
     // (that given the haystack in question is valid UTF string)
     @trusted size_t search(const(Char)[] haystack, size_t idx)
     {//@BUG: apparently assumes little endian machines
-        import std.conv, core.stdc.string;
+        import std.conv : text;
+        import core.stdc.string : memchr;
         assert(!empty);
         auto p = cast(const(ubyte)*)(haystack.ptr+idx);
         uint state = uint.max;
@@ -500,7 +501,7 @@ public:
 
     @system debug static void dump(uint[] table)
     {//@@@BUG@@@ writef(ln) is @system
-        import std.stdio;
+        import std.stdio : writefln;
         for (size_t i = 0; i < table.length; i += 4)
         {
             writefln("%32b %32b %32b %32b",table[i], table[i+1], table[i+2], table[i+3]);

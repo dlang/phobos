@@ -1582,7 +1582,7 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     @trusted pure nothrow
     if (isSomeChar!C)
 {
-    import std.array;
+    import std.array : array;
 
     const(C)[] result;
     foreach (path; paths)
@@ -2572,11 +2572,11 @@ unittest
 string absolutePath(string path, lazy string base = getcwd())
     @safe pure
 {
+    import std.array : array;
     if (path.empty)  return null;
     if (isAbsolute(path))  return path;
     auto baseVar = base;
     if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
-    import std.array;
     return chainPath(baseVar, path).array;
 }
 
@@ -2829,7 +2829,7 @@ auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     import std.range.primitives : walkLength;
     import std.range : repeat, chain, choose;
     import std.algorithm : mismatch, joiner;
-    import std.array;
+    import std.array : array;
     import std.utf : byCodeUnit, byChar;
 
     // Remove matching prefix from basePS and pathPS
@@ -2949,7 +2949,7 @@ int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b
     if (isDirSeparator(a) && isDirSeparator(b)) return 0;
     static if (!cs)
     {
-        import std.uni;
+        import std.uni : toLower;
         a = toLower(a);
         b = toLower(b);
     }
@@ -3638,7 +3638,7 @@ bool isValidPath(Range)(Range path)
         }
         else if (isDriveSeparator(path[1]))
         {
-            import std.ascii;
+            import std.ascii : isAlpha;
             if (!isAlpha(path[0])) return false;
             remainder = path[2 .. $];
         }

@@ -571,6 +571,7 @@ Throws: $(D ErrnoException) in case of error.
     {
         import std.exception : errnoEnforce;
         import std.format : format;
+        import core.stdc.stdint : intptr_t;
 
         // Create file descriptors from the handles
         version (DIGITAL_MARS_STDIO)
@@ -782,15 +783,19 @@ Throws: $(D Exception) if the file is not opened or if the OS call fails.
  */
     void sync() @trusted
     {
-        import std.exception : enforce, errnoEnforce;
+        import std.exception : enforce;
 
         enforce(isOpen, "Attempting to sync() an unopened file");
 
         version (Windows)
+        {
+            import core.sys.windows.windows : FlushFileBuffers;
             wenforce(FlushFileBuffers(windowsHandle), "FlushFileBuffers failed");
+        }
         else
         {
             import core.sys.posix.unistd : fsync;
+            import std.exception : errnoEnforce;
             errnoEnforce(fsync(fileno) == 0, "fsync failed");
         }
     }
@@ -1069,7 +1074,7 @@ Throws: $(D Exception) if the file is not opened.
 
     version(Windows)
     {
-        import core.sys.windows.windows;
+        import core.sys.windows.windows : ULARGE_INTEGER, OVERLAPPED, BOOL;
 
         private BOOL lockImpl(alias F, Flags...)(ulong start, ulong length,
             Flags flags)
@@ -1089,7 +1094,7 @@ Throws: $(D Exception) if the file is not opened.
 
         private static T wenforce(T)(T cond, string str)
         {
-            import std.windows.syserror;
+            import std.windows.syserror : sysErrorString, GetLastError;
 
             if (cond) return cond;
             throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
@@ -1131,11 +1136,12 @@ $(UL
     void lock(LockType lockType = LockType.readWrite,
         ulong start = 0, ulong length = 0)
     {
-        import std.exception : enforce, errnoEnforce;
+        import std.exception : enforce;
 
         enforce(isOpen, "Attempting to call lock() on an unopened file");
         version (Posix)
         {
+            import std.exception : errnoEnforce;
             import core.sys.posix.fcntl : F_RDLCK, F_SETLKW, F_WRLCK;
             immutable short type = lockType == LockType.readWrite
                 ? F_WRLCK : F_RDLCK;
@@ -1145,6 +1151,7 @@ $(UL
         else
         version(Windows)
         {
+            import core.sys.windows.windows : LockFileEx, LOCKFILE_EXCLUSIVE_LOCK;
             immutable type = lockType == LockType.readWrite ?
                 LOCKFILE_EXCLUSIVE_LOCK : 0;
             wenforce(lockImpl!LockFileEx(start, length, type),
@@ -1163,11 +1170,12 @@ specified file segment was already locked.
     bool tryLock(LockType lockType = LockType.readWrite,
         ulong start = 0, ulong length = 0)
     {
-        import std.exception : enforce, errnoEnforce;
+        import std.exception : enforce;
 
         enforce(isOpen, "Attempting to call tryLock() on an unopened file");
         version (Posix)
         {
+            import std.exception : errnoEnforce;
             import core.stdc.errno : EACCES, EAGAIN, errno;
             import core.sys.posix.fcntl : F_RDLCK, F_SETLK, F_WRLCK;
             immutable short type = lockType == LockType.readWrite
@@ -1181,6 +1189,8 @@ specified file segment was already locked.
         else
         version(Windows)
         {
+            import core.sys.windows.windows : GetLastError, LockFileEx, LOCKFILE_EXCLUSIVE_LOCK,
+                ERROR_IO_PENDING, ERROR_LOCK_VIOLATION, LOCKFILE_FAIL_IMMEDIATELY;
             immutable type = lockType == LockType.readWrite
                 ? LOCKFILE_EXCLUSIVE_LOCK : 0;
             immutable res = lockImpl!LockFileEx(start, length,
@@ -1200,11 +1210,12 @@ Removes the lock over the specified file segment.
  */
     void unlock(ulong start = 0, ulong length = 0)
     {
-        import std.exception : enforce, errnoEnforce;
+        import std.exception : enforce;
 
         enforce(isOpen, "Attempting to call unlock() on an unopened file");
         version (Posix)
         {
+            import std.exception : errnoEnforce;
             import core.sys.posix.fcntl : F_SETLK, F_UNLCK;
             errnoEnforce(lockImpl(F_SETLK, F_UNLCK, start, length) != -1,
                     "Could not remove lock for file `"~_name~"'");
@@ -1212,6 +1223,7 @@ Removes the lock over the specified file segment.
         else
         version(Windows)
         {
+            import core.sys.windows.windows : UnlockFileEx;
             wenforce(lockImpl!UnlockFileEx(start, length),
                 "Could not remove lock for file `"~_name~"'");
         }
@@ -4175,7 +4187,7 @@ Initialize with a message and an error code.
         {
             import core.stdc.string : strerror;
 
-            auto s = core.stdc.string.strerror(errno);
+            auto s = strerror(errno);
         }
         auto sysmsg = to!string(s);
         // If e is 0, we don't use the system error message.  (The message

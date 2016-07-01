@@ -117,7 +117,7 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
 
 class WindowsException : Exception
 {
-    import core.sys.windows.windows;
+    import core.sys.windows.windows : DWORD;
 
     final @property DWORD code() { return _code; } /// $(D GetLastError)'s return value.
     private DWORD _code;

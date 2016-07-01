@@ -659,7 +659,7 @@ template BacktrackingMatcher(bool CTregex)
                 return false;
             else
             {
-                import core.stdc.stdlib;
+                import core.stdc.stdlib : free;
                 free(memory.ptr);//last segment is freed in RegexMatch
                 immutable size = initialStack*(stateSize + 2*re.ngroup);
                 memory = prev[0..size];
@@ -760,7 +760,7 @@ template BacktrackingMatcher(bool CTregex)
 //very shitty string formatter, $$ replaced with next argument converted to string
 @trusted string ctSub( U...)(string format, U args)
 {
-    import std.conv;
+    import std.conv : to;
     bool seenDollar;
     foreach (i, ch; format)
     {
@@ -790,7 +790,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 
 struct CtContext
 {
-    import std.conv;
+    import std.conv : to, text;
     //dirty flags
     bool counter;
     //to mark the portion of matches to save
