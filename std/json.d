@@ -23,7 +23,7 @@ import std.array;
 import std.traits;
 
 ///
-unittest
+@system unittest
 {
     // parse a file or string of json into a usable structure
     string s = `{ "language": "D", "rating": 3.5, "code": "42" }`;
@@ -120,7 +120,7 @@ struct JSONValue
         return type_tag;
     }
     ///
-    unittest
+    @safe unittest
     {
           string s = "{ \"language\": \"D\" }";
           JSONValue j = parseJSON(s);
@@ -181,7 +181,7 @@ struct JSONValue
         return v;
     }
     ///
-    unittest
+    @safe unittest
     {
         JSONValue j = [ "language": "D" ];
 
@@ -460,7 +460,7 @@ struct JSONValue
         type_tag = arg.type;
     }
     ///
-    unittest
+    @safe unittest
     {
         JSONValue j = JSONValue( "a string" );
         j = JSONValue(42);
@@ -492,7 +492,7 @@ struct JSONValue
         return a[i];
     }
     ///
-    unittest
+    @safe unittest
     {
         JSONValue j = JSONValue( [42, 43, 44] );
         assert( j[0].integer == 42 );
@@ -508,7 +508,7 @@ struct JSONValue
                                         "Key not found: " ~ k);
     }
     ///
-    unittest
+    @safe unittest
     {
         JSONValue j = JSONValue( ["language": "D"] );
         assert( j["language"].str == "D" );
@@ -535,7 +535,7 @@ struct JSONValue
         this.object = aa;
     }
     ///
-    unittest
+    @safe unittest
     {
             JSONValue j = JSONValue( ["language": "D"] );
             j["language"].str = "Perl";
@@ -551,7 +551,7 @@ struct JSONValue
         this.array = a;
     }
     ///
-    unittest
+    @safe unittest
     {
             JSONValue j = JSONValue( ["Perl", "C"] );
             j[1].str = "D";
@@ -610,7 +610,7 @@ struct JSONValue
         return k in this.objectNoRef;
     }
     ///
-    unittest
+    @safe unittest
     {
         JSONValue j = [ "language": "D", "author": "walter" ];
         string a = ("author" in j).str;
@@ -1032,7 +1032,7 @@ if (isInputRange!T)
     return root;
 }
 
-unittest
+@safe unittest
 {
     enum issue15742objectOfObject = `{ "key1": { "key2": 1 }}`;
     static assert(parseJSON(issue15742objectOfObject).type == JSON_TYPE.OBJECT);
@@ -1049,7 +1049,7 @@ unittest
     assert(a.toString == `{"key1":{"key2":1}}`);
 }
 
-unittest
+@system unittest
 {
     // Ensure we can parse JSON from a @system range.
     struct Range
@@ -1344,7 +1344,7 @@ class JSONException : Exception
 }
 
 
-unittest
+@system unittest
 {
     import std.exception;
     JSONValue jv = "123";
@@ -1421,7 +1421,7 @@ unittest
     assert(jv3.str == "\u001C");
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 11504
 
@@ -1463,7 +1463,7 @@ unittest
     assert(jv.type == JSON_TYPE.TRUE);
 }
 
-pure unittest
+@system pure unittest
 {
     // Adding new json element via array() / object() directly
 
@@ -1478,7 +1478,7 @@ pure unittest
     assert(jobj.object.length == 10);
 }
 
-pure unittest
+@system pure unittest
 {
     // Adding new json element without array() / object() access
 
@@ -1498,8 +1498,9 @@ pure unittest
     assert(jarr[0] == JSONValue(10));
 }
 
-unittest
+@system unittest
 {
+    // @system because JSONValue.array is @system
     import std.exception;
 
     // An overly simple test suite, if it can parse a serializated string and
@@ -1585,7 +1586,7 @@ unittest
 }`);
 }
 
-unittest
+@safe unittest
 {
   auto json = `"hello\nworld"`;
   const jv = parseJSON(json);
@@ -1593,7 +1594,7 @@ unittest
   assert(jv.toPrettyString == json);
 }
 
-deprecated unittest
+@safe deprecated unittest
 {
     // Bugzilla 12332
     import std.exception;
@@ -1618,7 +1619,7 @@ deprecated unittest
     assert(jv.type == JSON_TYPE.TRUE);
 }
 
-pure unittest
+@system pure unittest
 {
     // Bugzilla 12969
 
@@ -1648,7 +1649,7 @@ pure unittest
     assert( jv[3].integer == 2 );
 }
 
-unittest
+@safe unittest
 {
     auto s = q"EOF
 [
@@ -1666,7 +1667,7 @@ EOF";
 }
 
 // handling of special float values (NaN, Inf, -Inf)
-unittest
+@safe unittest
 {
     import std.math : isNaN, isInfinity;
     import std.exception : assertThrown;
@@ -1735,7 +1736,7 @@ pure nothrow @safe unittest // issue 15884
     Test!dchar();
 }
 
-unittest // issue 15885
+@safe unittest // issue 15885
 {
     static bool test(const double num0)
     {
