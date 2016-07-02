@@ -123,7 +123,7 @@ template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags 
 }
 
 ///
-unittest
+@safe unittest
 {
     // Define a 16-bit floating point values
     CustomFloat!16                                x;     // Using the number of bits
@@ -608,7 +608,7 @@ public:
     }
 }
 
-unittest
+@safe unittest
 {
     import std.meta;
     alias FPTypes =
@@ -644,8 +644,9 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
+    // @system due to to!string(CustomFloat)
     import std.conv;
     CustomFloat!(5, 10) y = CustomFloat!(5, 10)(0.125);
     assert(y.to!string == "0.125");
@@ -684,7 +685,7 @@ template FPTemporary(F)
 }
 
 ///
-unittest
+@safe unittest
 {
     // Average numbers in an array
     double avg(in double[] a)
@@ -727,7 +728,7 @@ template secantMethod(alias fun)
 }
 
 ///
-unittest
+@safe unittest
 {
     float f(float x)
     {
@@ -737,8 +738,9 @@ unittest
     assert(approxEqual(x, 0.865474));
 }
 
-unittest
+@system unittest
 {
+    // @system because of __gshared stderr
     scope(failure) stderr.writeln("Failure testing secantMethod");
     float f(float x)
     {
@@ -1164,7 +1166,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
     return findRoot!(T, R delegate(T), bool delegate(T lo, T hi))(f, a, b, tolerance);
 }
 
-nothrow unittest
+@safe nothrow unittest
 {
     int numProblems = 0;
     int numCalls;
@@ -1375,8 +1377,9 @@ nothrow unittest
 }
 
 //regression control
-unittest
+@system unittest
 {
+    // @system due to the case in the 2nd line
     static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
     static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
     static assert(__traits(compiles, findRoot((real x)=>cast(double)x, real.init, real.init)));
@@ -1563,14 +1566,14 @@ body
 }
 
 ///
-unittest
+@safe unittest
 {
     auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
     assert(ret.x.approxEqual(4.0));
     assert(ret.y.approxEqual(0.0));
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(double, float, real))
@@ -1658,7 +1661,7 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
     return sqrt(result);
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(double, const double, immutable double))
@@ -1748,8 +1751,9 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
     return sum0;
 }
 
-unittest
+@system unittest
 {
+    // @system due to dotProduct and assertCTFEable
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(double, const double, immutable double))
     {
@@ -1792,7 +1796,7 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
     return dotprod / sqrt(norma * normb);
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(double, const double, immutable double))
@@ -1856,7 +1860,7 @@ bool normalize(R)(R range, ElementType!(R) sum = 1)
 }
 
 ///
-unittest
+@safe unittest
 {
     double[] a = [];
     assert(!normalize(a));
@@ -1894,7 +1898,7 @@ ElementType!Range sumOfLog2s(Range)(Range r)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(sumOfLog2s(new double[0]) == 0);
     assert(sumOfLog2s([0.0L]) == -real.infinity);
@@ -1942,7 +1946,7 @@ if (isInputRange!Range &&
     return result;
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(double, const double, immutable double))
@@ -1988,7 +1992,7 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
 }
 
 ///
-unittest
+@safe unittest
 {
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(kullbackLeiblerDivergence(p, p) == 0);
@@ -2069,7 +2073,7 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 }
 
 ///
-unittest
+@safe unittest
 {
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(jensenShannonDivergence(p, p) == 0);
@@ -2199,7 +2203,7 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
     return result;
 }
 
-unittest
+@system unittest
 {
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
@@ -2254,7 +2258,7 @@ gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
 }
 
 ///
-unittest
+@system unittest
 {
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
@@ -2475,7 +2479,7 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
 }
 
 ///
-unittest
+@system unittest
 {
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
@@ -2489,7 +2493,7 @@ unittest
     assert(simIter.empty);     // no more match
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     string[] s = ["Hello", "brave", "new", "world"];
@@ -2531,7 +2535,7 @@ unittest
     assert(simIter.front == 0.5, text(simIter.front)); // one 2-gram match, 1 gap
 }
 
-unittest
+@system unittest
 {
     GapWeightedSimilarityIncremental!(string[]) sim =
         GapWeightedSimilarityIncremental!(string[])(
@@ -2586,7 +2590,7 @@ T gcd(T)(T a, T b)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(gcd(2 * 5 * 7 * 7, 5 * 7 * 11) == 5 * 7);
     const int a = 5 * 13 * 23 * 23, b = 13 * 59;
@@ -3098,7 +3102,7 @@ void inverseFft(Ret, R)(R range, Ret buf)
     return fftObj.inverseFft!(Ret, R)(range, buf);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm;
     import std.range;
@@ -3294,7 +3298,7 @@ N roundDownToPowerOf2(N)(N num)
     return num & (cast(N) 1 << bsr(num));
 }
 
-unittest
+@safe unittest
 {
     assert(roundDownToPowerOf2(7) == 4);
     assert(roundDownToPowerOf2(4) == 4);
@@ -3306,7 +3310,7 @@ template isComplexLike(T)
         is(typeof(T.init.im));
 }
 
-unittest
+@safe unittest
 {
     static assert(isComplexLike!(Complex!double));
     static assert(!isComplexLike!(uint));
