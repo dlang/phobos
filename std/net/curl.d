@@ -3865,7 +3865,7 @@ private struct CurlAPI
 
     static ref API instance() @property
     {
-        import std.concurrency;
+        import std.concurrency : initOnce;
         initOnce!_handle(loadAPI());
         return _api;
     }
@@ -3874,12 +3874,13 @@ private struct CurlAPI
     {
         version (Posix)
         {
-            import core.sys.posix.dlfcn;
+            import core.sys.posix.dlfcn : dlsym, dlopen, dlclose, RTLD_LAZY;
             alias loadSym = dlsym;
         }
         else version (Windows)
         {
-            import core.sys.windows.windows;
+            import core.sys.windows.windows : GetProcAddress, GetModuleHandleA,
+                LoadLibraryA;
             alias loadSym = GetProcAddress;
         }
         else
@@ -3941,12 +3942,12 @@ private struct CurlAPI
         _api.global_cleanup();
         version (Posix)
         {
-            import core.sys.posix.dlfcn;
+            import core.sys.posix.dlfcn : dlclose;
             dlclose(_handle);
         }
         else version (Windows)
         {
-            import core.sys.windows.windows;
+            import core.sys.windows.windows : FreeLibrary;
             FreeLibrary(_handle);
         }
         else

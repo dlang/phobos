@@ -45,9 +45,8 @@ block size to the constructor.
 struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     ParentAllocator = NullAllocator)
 {
-    import std.typecons;
+    import std.typecons : tuple, Tuple;
     import std.traits : hasMember;
-    version(unittest) import std.stdio;
     import std.conv : text;
     import std.typecons : Ternary;
 
@@ -656,7 +655,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
     void dump()
     {
-        import std.stdio;
+        import std.stdio : writefln, writeln;
         writefln("%s @ %s {", typeid(this), cast(void*) _control._rep.ptr);
         scope(exit) writeln("}");
         assert(_payload.length == blockSize * _blocks);

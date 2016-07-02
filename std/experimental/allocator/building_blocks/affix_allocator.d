@@ -19,7 +19,10 @@ The following methods are defined if $(D Allocator) defines them, and forward to
  */
 struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
-    import std.conv, std.experimental.allocator.common, std.traits;
+    import std.conv : emplace;
+    import std.experimental.allocator.common : stateSize, forwardToMember,
+        roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf;
+    import std.traits : hasMember;
     import std.algorithm : min;
     import std.typecons : Ternary;
     import std.math : isPowerOf2;
@@ -51,6 +54,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     {
         size_t goodAllocSize(size_t s)
         {
+            import std.experimental.allocator.common : goodAllocSize;
             auto a = actualAllocationSize(s);
             return roundUpToMultipleOf(parent.goodAllocSize(a)
                     - stateSize!Prefix - stateSize!Suffix,

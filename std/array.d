@@ -627,7 +627,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         else
         {
             import core.stdc.string : memset;
-            import core.memory;
+            import core.memory : GC;
             auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E);
             static if (minimallyInitialized && hasIndirections!E)
                 memset(ptr, 0, size * E.sizeof);
@@ -791,7 +791,7 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
 
 private void copyBackwards(T)(T[] src, T[] dest)
 {
-    import core.stdc.string;
+    import core.stdc.string : memmove;
 
     assert(src.length == dest.length);
 
@@ -929,7 +929,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         @trusted static void moveToRight(T[] arr, size_t gap)
         {
             static assert(!hasElaborateCopyConstructor!T);
-            import core.stdc.string;
+            import core.stdc.string : memmove;
             if (__ctfe)
             {
                 for (size_t i = arr.length - gap; i; --i)
@@ -2641,7 +2641,7 @@ efficient.
 struct Appender(A)
 if (isDynamicArray!A)
 {
-    import core.memory;
+    import core.memory : GC;
 
     private alias T = ElementEncodingType!A;
     private struct Data

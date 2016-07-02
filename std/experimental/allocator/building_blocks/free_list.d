@@ -759,7 +759,7 @@ struct SharedFreeList(ParentAllocator,
     static assert(maxSize >= (void*).sizeof,
         "Maximum size must accommodate a pointer.");
 
-    private import core.atomic;
+    import core.atomic : atomicOp, cas;
 
     static if (minSize != chooseAtRuntime)
     {

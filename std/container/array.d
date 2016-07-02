@@ -249,10 +249,10 @@ instead of $(D array.map!)). The container itself is not a range.
 struct Array(T)
 if (!is(Unqual!T == bool))
 {
-    import core.stdc.stdlib;
-    import core.stdc.string;
+    import core.stdc.stdlib : malloc, realloc, free;
+    import core.stdc.string : memcpy, memmove, memset;
 
-    import core.memory;
+    import core.memory : GC;
 
     import std.algorithm : initializeAll, copy;
     import std.exception : enforce;

@@ -34,7 +34,7 @@ if (is(T == struct) || is(T == class))
         // Issue #13872.
         static if (arguments.length == 0)
         {
-            import std.range;
+            import std.range.primitives : ElementType;
             alias ET = ElementType!(T.Range);
             return T(ET[].init);
         }

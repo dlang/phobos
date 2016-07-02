@@ -3551,7 +3551,7 @@ private int getNthInt(A...)(uint index, A args)
 version(unittest)
 void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
-    import core.exception;
+    import core.exception : AssertError;
     import std.array : appender;
     import std.conv : text;
     FormatSpec!char f;
@@ -3565,7 +3565,7 @@ void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __F
 version(unittest)
 void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
-    import core.exception;
+    import core.exception : AssertError;
     import std.array : appender;
     import std.conv : text;
     auto w = appender!string();
@@ -3578,7 +3578,7 @@ void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, str
 version(unittest)
 void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
-    import core.exception;
+    import core.exception : AssertError;
     import std.conv : text;
     import std.array : appender;
     FormatSpec!char f;
@@ -3596,7 +3596,7 @@ void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = _
 version(unittest)
 void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
-    import core.exception;
+    import core.exception : AssertError;
     import std.conv : text;
     import std.array : appender;
     auto w = appender!string();
@@ -4075,7 +4075,7 @@ unittest
 version(unittest)
 void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
-    import core.exception;
+    import core.exception : AssertError;
     import std.array : appender;
     auto w = appender!string();
     formattedWrite(w, fmt, val);
@@ -4117,7 +4117,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
 version(unittest)
 void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
-    import core.exception;
+    import core.exception : AssertError;
     import std.array : appender;
     auto w = appender!string();
     formattedWrite(w, fmt, val);
