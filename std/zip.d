@@ -77,7 +77,7 @@ module std.zip;
  */
 class ZipException : Exception
 {
-    this(string msg)
+    this(string msg) @safe
     {
         super("ZipException: " ~ msg);
     }
@@ -143,7 +143,7 @@ final class ArchiveMember
     @property ubyte[] expandedData()     { return _expandedData; }
 
     /// Write data of member in uncompressed form.
-    @property void expandedData(ubyte[] ed)
+    @property @safe void expandedData(ubyte[] ed)
     {
         _expandedData = ed;
         _expandedSize  = to!uint(_expandedData.length);
@@ -157,7 +157,7 @@ final class ArchiveMember
      * Set the OS specific file attributes, as obtained by
      * $(REF getAttributes, std,file) or $(REF DirEntry.attributes, std,file), for this archive member.
      */
-    @property void fileAttributes(uint attr)
+    @property @safe void fileAttributes(uint attr)
     {
         version (Posix)
         {
@@ -176,7 +176,7 @@ final class ArchiveMember
         }
     }
 
-    version (Posix) unittest
+    version (Posix) @safe unittest
     {
         auto am = new ArchiveMember();
         am.fileAttributes = octal!100644;
@@ -234,7 +234,7 @@ final class ArchiveMember
      * See_Also:
      *     CompressionMethod
      **/
-    @property CompressionMethod compressionMethod() { return _compressionMethod; }
+    @property @safe CompressionMethod compressionMethod() { return _compressionMethod; }
 
     /**
      * Write compression method used for this member
@@ -298,23 +298,23 @@ final class ZipArchive
     static const int eocd64Length = 56;
 
     /// Read Only: array representing the entire contents of the archive.
-    @property ubyte[] data()       { return _data; }
+    @property @safe ubyte[] data() { return _data; }
 
     /// Read Only: 0 since multi-disk zip archives are not supported.
-    @property uint diskNumber()    { return _diskNumber; }
+    @property @safe uint diskNumber()    { return _diskNumber; }
 
     /// Read Only: 0 since multi-disk zip archives are not supported
-    @property uint diskStartDir()  { return _diskStartDir; }
+    @property @safe uint diskStartDir()  { return _diskStartDir; }
 
     /// Read Only: number of ArchiveMembers in the directory.
-    @property uint numEntries()    { return _numEntries; }
-    @property uint totalEntries()  { return _totalEntries; }    /// ditto
+    @property @safe uint numEntries()    { return _numEntries; }
+    @property @safe uint totalEntries()  { return _totalEntries; }    /// ditto
 
     /// True when the archive is in Zip64 format.
-    @property bool isZip64()  { return _isZip64; }
+    @property @safe bool isZip64()  { return _isZip64; }
 
     /// Set this to true to force building a Zip64 archive.
-    @property void isZip64(bool value) { _isZip64 = value; }
+    @property @safe void isZip64(bool value) { _isZip64 = value; }
     /**
      * Read Only: array indexed by the name of each member of the archive.
      *  All the members of the archive can be accessed with a foreach loop:
@@ -327,13 +327,13 @@ final class ZipArchive
      * }
      * --------------------
      */
-    @property ArchiveMember[string] directory() { return _directory; }
+    @property @safe ArchiveMember[string] directory() { return _directory; }
 
     private ArchiveMember[string] _directory;
 
     debug (print)
     {
-    void print()
+    @safe void print()
     {
         printf("\tdiskNumber = %u\n", diskNumber);
         printf("\tdiskStartDir = %u\n", diskStartDir);
@@ -347,20 +347,20 @@ final class ZipArchive
 
     /** Constructor to use when creating a new archive.
      */
-    this()
+    this() @safe
     {
     }
 
     /** Add de to the archive.
      */
-    void addMember(ArchiveMember de)
+    @safe void addMember(ArchiveMember de)
     {
         _directory[de.name] = de;
     }
 
     /** Delete de from the archive.
      */
-    void deleteMember(ArchiveMember de)
+    @safe void deleteMember(ArchiveMember de)
     {
         _directory.remove(de.name);
     }
@@ -772,35 +772,35 @@ final class ZipArchive
 
     /* ============ Utility =================== */
 
-    ushort getUshort(int i)
+    @safe ushort getUshort(int i)
     {
         ubyte[2] result = data[i .. i + 2];
         return littleEndianToNative!ushort(result);
     }
 
-    uint getUint(int i)
+    @safe uint getUint(int i)
     {
         ubyte[4] result = data[i .. i + 4];
         return littleEndianToNative!uint(result);
     }
 
-    ulong getUlong(int i)
+    @safe ulong getUlong(int i)
     {
         ubyte[8] result = data[i .. i + 8];
         return littleEndianToNative!ulong(result);
     }
 
-    void putUshort(int i, ushort us)
+    @safe void putUshort(int i, ushort us)
     {
         data[i .. i + 2] = nativeToLittleEndian(us);
     }
 
-    void putUint(int i, uint ui)
+    @safe void putUint(int i, uint ui)
     {
         data[i .. i + 4] = nativeToLittleEndian(ui);
     }
 
-    void putUlong(int i, ulong ul)
+    @safe void putUlong(int i, ulong ul)
     {
         data[i .. i + 8] = nativeToLittleEndian(ul);
     }
@@ -808,7 +808,7 @@ final class ZipArchive
 
 debug(print)
 {
-    void arrayPrint(ubyte[] array)
+    @safe void arrayPrint(ubyte[] array)
     {
         printf("array %p,%d\n", cast(void*)array, array.length);
         for (int i = 0; i < array.length; i++)
@@ -821,8 +821,9 @@ debug(print)
     }
 }
 
-unittest
+@system unittest
 {
+    // @system due to (at least) ZipArchive.build
     auto zip1 = new ZipArchive();
     auto zip2 = new ZipArchive();
     auto am1 = new ArchiveMember();
@@ -873,7 +874,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import std.zlib;
 
@@ -886,8 +887,9 @@ the quick brown fox jumps over the lazy dog\r
     assert(src == after);
 }
 
-unittest
+@system unittest
 {
+    // @system due to ZipArchive.build
     import std.datetime;
     ubyte[] buf = [1, 2, 3, 4, 5, 0, 7, 8, 9];
 
@@ -912,7 +914,7 @@ unittest
 // Non-Android Posix-only, because we can't rely on the unzip command being
 // available on Android or Windows
 version(Android) {} else
-version(Posix) unittest
+version(Posix) @system unittest
 {
     import std.datetime, std.file, std.format, std.path, std.process, std.stdio;
 
