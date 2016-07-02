@@ -339,8 +339,9 @@ public:
 
 }
 
-unittest
+@system unittest
 {
+    // text!Tid is @system
     import std.conv : text;
     Tid tid;
     assert(text(tid) == "Tid(0)");
@@ -381,7 +382,7 @@ unittest
     return thisInfo.owner;
 }
 
-unittest
+@system unittest
 {
     static void fun()
     {
@@ -540,7 +541,7 @@ private Tid _spawn(F, T...)( bool linked, F fn, T args )
     return spawnTid;
 }
 
-unittest
+@system unittest
 {
     void function()                                fn1;
     void function(int)                             fn2;
@@ -691,20 +692,20 @@ body
 }
 
 
-unittest
+@safe unittest
 {
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receive( (Variant x) {} );
                           receive( (int x) {}, (Variant x) {} );
                       } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receive( (Variant x) {}, (int x) {} );
                        } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receive( (int x) {}, (int x) {} );
                        } ) );
@@ -715,9 +716,9 @@ version (unittest)
 {
     private void receiveFunction(int x) {}
 }
-unittest
+@safe unittest
 {
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receive( &receiveFunction );
                           receive( &receiveFunction, (Variant x) {} );
@@ -802,7 +803,7 @@ body
         return ret;
 }
 
-unittest
+@system unittest
 {
     static void t1(Tid mainTid)
     {
@@ -846,25 +847,25 @@ body
     return thisInfo.ident.mbox.get( duration, ops );
 }
 
-unittest
+@safe unittest
 {
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receiveTimeout( msecs(0), (Variant x) {} );
                           receiveTimeout( msecs(0), (int x) {}, (Variant x) {} );
                       } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receiveTimeout( msecs(0), (Variant x) {}, (int x) {} );
                        } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receiveTimeout( msecs(0), (int x) {}, (int x) {} );
                        } ) );
 
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receiveTimeout( msecs(10), (int x) {}, (Variant x) {} );
                       } ) );
@@ -1466,7 +1467,7 @@ private:
 }
 
 
-unittest
+@system unittest
 {
     static void receive(Condition cond, ref size_t received)
     {
@@ -1724,7 +1725,7 @@ else version (Win32)
 {
     // fibers are broken in Win32 under server 2012: bug 13821
 }
-else unittest
+else @system unittest
 {
     import core.exception;
     import std.exception;
@@ -2500,13 +2501,13 @@ version( unittest )
     }
 
 
-    unittest
+    @system unittest
     {
         simpleTest();
     }
 
 
-    unittest
+    @system unittest
     {
         scheduler = new ThreadScheduler;
         simpleTest();
@@ -2551,7 +2552,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
 }
 
 /// A typical use-case is to perform lazy but thread-safe initialization.
-unittest
+@system unittest
 {
     static class MySingleton
     {
@@ -2564,7 +2565,7 @@ unittest
     assert(MySingleton.instance !is null);
 }
 
-unittest
+@system unittest
 {
     static class MySingleton
     {
@@ -2624,7 +2625,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 }
 
 /// Use a separate mutex when init blocks on another thread that might also call initOnce.
-unittest
+@system unittest
 {
     static shared bool varA, varB;
     __gshared Mutex m;
@@ -2641,7 +2642,7 @@ unittest
     assert(varB == true);
 }
 
-unittest
+@system unittest
 {
      static shared bool a;
      __gshared bool b;
