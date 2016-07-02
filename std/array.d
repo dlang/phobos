@@ -147,7 +147,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 
 @safe pure nothrow unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     struct Foo
     {
         int a;
@@ -158,7 +158,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 
 @system unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     struct Foo
     {
         int a;
@@ -306,7 +306,7 @@ unittest
 unittest
 {
     import std.exception;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : repeat;
 
     static struct S
@@ -404,7 +404,7 @@ associative array.
 auto byPair(Key, Value)(Value[Key] aa)
 {
     import std.typecons : tuple;
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
 
     return aa.byKeyValue.map!(pair => tuple(pair.key, pair.value));
 }
@@ -413,7 +413,7 @@ auto byPair(Key, Value)(Value[Key] aa)
 unittest
 {
     import std.typecons : tuple, Tuple;
-    import std.algorithm : sort;
+    import std.algorithm.sorting : sort;
 
     auto aa = ["a": 1, "b": 2, "c": 3];
     Tuple!(string, int)[] pairs;
@@ -1007,10 +1007,11 @@ private template isInputRangeOrConvertible(E)
 
 unittest
 {
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter;
     import core.exception;
     import std.conv : to;
     import std.exception;
-    import std.algorithm;
 
 
     bool test(T, U, V)(T orig, size_t pos, U toInsert, V result,
@@ -1023,14 +1024,14 @@ unittest
                 auto a = orig.idup;
 
             a.insertInPlace(pos, toInsert);
-            if (!std.algorithm.equal(a, result))
+            if (!equal(a, result))
                 return false;
         }
 
         static if (isInputRange!U)
         {
             orig.insertInPlace(pos, filter!"true"(toInsert));
-            return std.algorithm.equal(orig, result);
+            return equal(orig, result);
         }
         else
             return true;
@@ -1080,7 +1081,7 @@ unittest
         auto result = args[$-1];
 
         a.insertInPlace(pos, args[0..$-1]);
-        if (!std.algorithm.equal(a, result))
+        if (!equal(a, result))
             return false;
         return true;
     }
@@ -1101,7 +1102,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     // insertInPlace interop with postblit
     static struct Int
     {
@@ -1458,7 +1459,7 @@ alias splitter = std.algorithm.iteration.splitter;
 auto split(Range, Separator)(Range range, Separator sep)
 if (isForwardRange!Range && is(typeof(ElementType!Range.init == Separator.init)))
 {
-    import std.algorithm : splitter;
+    import std.algorithm.iteration : splitter;
     return range.splitter(sep).array;
 }
 ///ditto
@@ -1466,21 +1467,21 @@ auto split(Range, Separator)(Range range, Separator sep) if (
         isForwardRange!Range && isForwardRange!Separator
         && is(typeof(ElementType!Range.init == ElementType!Separator.init)))
 {
-    import std.algorithm : splitter;
+    import std.algorithm.iteration : splitter;
     return range.splitter(sep).array;
 }
 ///ditto
 auto split(alias isTerminator, Range)(Range range)
 if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
 {
-    import std.algorithm : splitter;
+    import std.algorithm.iteration : splitter;
     return range.splitter!isTerminator.array;
 }
 
 unittest
 {
     import std.conv;
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.split\n");
     foreach (S; AliasSeq!(string, wstring, dstring,
@@ -1926,7 +1927,7 @@ unittest
 unittest
 {
     // Test that the range is iterated only once.
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     int c = 0;
     auto j1 = [1, 2, 3].map!(_ => [c++]).join;
     assert(c == 3);
@@ -2022,7 +2023,7 @@ unittest
 unittest
 {
     import std.conv : to;
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.replace.unittest\n");
 
@@ -2055,7 +2056,7 @@ unittest
 unittest
 {
     import std.conv : to;
-    import std.algorithm : skipOver;
+    import std.algorithm.searching : skipOver;
 
     struct CheckOutput(C)
     {
@@ -2086,7 +2087,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
 {
     static if (hasLength!Range && is(ElementEncodingType!Range : T))
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         assert(from <= to);
         immutable sliceLen = to - from;
         auto retval = new Unqual!(T)[](subject.length - sliceLen + stuff.length);
@@ -2122,7 +2123,7 @@ unittest
     import core.exception;
     import std.conv : to;
     import std.exception;
-    import std.algorithm;
+    import std.algorithm.iteration : filter;
 
 
     auto a = [ 1, 2, 3, 4 ];
@@ -2203,7 +2204,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
               !isNarrowString!(T[]))
     {
         // optimized for homogeneous arrays that can be overwritten.
-        import std.algorithm : remove;
+        import std.algorithm.mutation : remove;
         import std.typecons : tuple;
 
         if (overlap(array, stuff).length)
@@ -2276,7 +2277,7 @@ unittest
     void testStringReplaceInPlace(T, U)()
     {
         import std.conv;
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
         auto a = unicoded.to!(U[]);
         auto b = unicodedLong.to!(U[]);
 
@@ -2309,7 +2310,7 @@ unittest
 unittest
 {
     // the constraint for the first overload used to match this, which wouldn't compile.
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     long[] a = [1L, 2, 3];
     int[] b = [4, 5, 6];
     a.replaceInPlace(1, 2, b);
@@ -2318,10 +2319,11 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter;
     import core.exception;
     import std.conv : to;
     import std.exception;
-    import std.algorithm;
 
 
     bool test(T, U, V)(T orig, size_t from, size_t to, U toReplace, V result,
@@ -2334,14 +2336,14 @@ unittest
                 auto a = orig.idup;
 
             a.replaceInPlace(from, to, toReplace);
-            if (!std.algorithm.equal(a, result))
+            if (!equal(a, result))
                 return false;
         }
 
         static if (isInputRange!U)
         {
             orig.replaceInPlace(from, to, filter!"true"(toReplace));
-            return std.algorithm.equal(orig, result);
+            return equal(orig, result);
         }
         else
             return true;
@@ -2398,7 +2400,6 @@ if (isDynamicArray!(E[]) &&
     isForwardRange!R1 && is(typeof(appender!(E[])().put(from[0 .. 1]))) &&
     isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
 {
-    import std.algorithm : countUntil;
     if (from.empty) return subject;
     static if (isSomeString!(E[]))
     {
@@ -2407,7 +2408,7 @@ if (isDynamicArray!(E[]) &&
     }
     else
     {
-        import std.algorithm : countUntil;
+        import std.algorithm.searching : countUntil;
         immutable idx = subject.countUntil(from);
     }
     if (idx == -1)
@@ -2445,7 +2446,7 @@ unittest
 unittest
 {
     import std.conv : to;
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
@@ -2507,7 +2508,7 @@ if (isDynamicArray!(E[]) &&
     }
     else
     {
-        import std.algorithm : countUntil;
+        import std.algorithm.searching : countUntil;
         auto idx = retro(subject).countUntil(retro(from));
     }
 
@@ -2553,7 +2554,7 @@ unittest
 unittest
 {
     import std.conv : to;
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.replaceLast.unittest\n");
 
@@ -2621,7 +2622,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
     debug(std_array) printf("array.replaceSlice.unittest\n");
 
     string s = "hello";
@@ -2999,7 +3000,7 @@ if (isDynamicArray!A)
 private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
 {
     import core.bitop : bsr;
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     if (curLen == 0)
         return max(reqLen,8);
     ulong mult = 100 + (1000UL) / (bsr(curLen * TSizeOf) + 1);
@@ -3349,7 +3350,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     //10753
     struct Foo {
        immutable dchar d;
@@ -3398,7 +3399,7 @@ unittest
 unittest //Test large allocations (for GC.extend)
 {
     import std.range;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     Appender!(char[]) app;
     app.reserve(1); //cover reserve on non-initialized
     foreach (_; 0 .. 100_000)
