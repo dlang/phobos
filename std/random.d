@@ -448,7 +448,7 @@ alias MinstdRand0 = LinearCongruentialEngine!(uint, 16807, 0, 2147483647);
 alias MinstdRand = LinearCongruentialEngine!(uint, 48271, 0, 2147483647);
 
 ///
-unittest
+@safe unittest
 {
     // seed with a constant
     auto rnd0 = MinstdRand0(1);
@@ -458,7 +458,7 @@ unittest
     n = rnd0.front; // different across runs
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     static assert(isForwardRange!MinstdRand);
@@ -634,7 +634,7 @@ Parameters for the generator.
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : map;
         import std.range : repeat;
@@ -733,7 +733,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
                                        0xefc60000, 18);
 
 ///
-unittest
+@safe unittest
 {
     // seed with a constant
     Mt19937 gen;
@@ -743,7 +743,7 @@ unittest
     n = gen.front; // different across runs
 }
 
-nothrow unittest
+@safe nothrow unittest
 {
     import std.algorithm;
     import std.range;
@@ -757,7 +757,7 @@ nothrow unittest
     assert(gen.front == 4123659995);
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     import std.range;
@@ -788,7 +788,7 @@ unittest
     assert(a != b);
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     // Check .save works
@@ -1035,7 +1035,7 @@ alias Xorshift192 = XorshiftEngine!(uint, 192, 2,  1,  4);  /// ditto
 alias Xorshift    = Xorshift128;                            /// ditto
 
 ///
-unittest
+@safe unittest
 {
     // Seed with a constant
     auto rnd = Xorshift(1);
@@ -1046,7 +1046,7 @@ unittest
     num = rnd.front; // different across rnd
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     static assert(isForwardRange!Xorshift);
@@ -1102,7 +1102,7 @@ unittest
  * object is compatible with all the pseudo-random number generators
  * available.  It is enabled only in unittest mode.
  */
-unittest
+@safe unittest
 {
     foreach (Rng; PseudoRngTypes)
     {
@@ -1153,7 +1153,7 @@ method being used.
 
 alias Random = Mt19937;
 
-unittest
+@safe unittest
 {
     static assert(isUniformRNG!Random);
     static assert(isUniformRNG!(Random, uint));
@@ -1213,7 +1213,7 @@ auto uniform(string boundaries = "[)", T1, T2)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto gen = Random(unpredictableSeed);
     // Generate an integer in [0, 1023]
@@ -1835,7 +1835,7 @@ void randomShuffle(Range)(Range r)
     return randomShuffle(r, rndGen);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm;
     foreach (RandomGen; PseudoRngTypes)
@@ -1890,7 +1890,7 @@ void partialShuffle(Range)(Range r, in size_t n)
     return partialShuffle(r, n, rndGen);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm;
     foreach (RandomGen; PseudoRngTypes)
@@ -1976,7 +1976,7 @@ if (isNumeric!Num)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
     auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
@@ -2012,7 +2012,7 @@ body
     assert(false);
 }
 
-unittest
+@safe unittest
 {
     auto rnd = Random(unpredictableSeed);
     auto i = dice(rnd, 0.0, 100.0);
@@ -2203,7 +2203,7 @@ auto randomCover(Range)(Range r)
     return RandomCover!(Range, void)(r);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm;
     import std.conv;
@@ -2238,7 +2238,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // Bugzilla 12589
     int[] r = [];
@@ -2743,8 +2743,9 @@ auto randomSample(Range, UniformRNG)(Range r, size_t n, auto ref UniformRNG rng)
     return RandomSample!(Range, UniformRNG)(r, n, r.length, rng);
 }
 
-unittest
+@system unittest
 {
+    // @system because it takes the address of a local
     import std.exception;
     import std.range;
     import std.conv : text;
