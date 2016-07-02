@@ -4298,7 +4298,7 @@ if (isSomeChar!C)
     static struct Result
     {
     private:
-        import core.exception;
+        import core.exception : RangeError;
         C[] _s;
         size_t _frontLength;
 
