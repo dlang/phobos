@@ -65,8 +65,7 @@ Source:    $(PHOBOSSRC std/_variant.d)
 */
 module std.variant;
 
-import core.stdc.string, std.meta, std.traits,
-    std.typecons;
+import std.meta, std.traits, std.typecons;
 
 /++
     Gives the $(D sizeof) the largest type given.
@@ -597,6 +596,7 @@ public:
 
             static if (T.sizeof <= size)
             {
+                import core.stdc.string : memcpy;
                 // If T is a class we're only copying the reference, so it
                 // should be safe to cast away shared so the memcpy will work.
                 //
@@ -614,6 +614,7 @@ public:
             }
             else
             {
+                import core.stdc.string : memcpy;
                 static if (__traits(compiles, {new T(T.init);}))
                 {
                     auto p = new T(rhs);
