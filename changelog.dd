@@ -255,7 +255,7 @@ assert([4, 7, 5].enumerate.maxElement!`a.value` == tuple(1, 7));
 )
 
 $(LI $(LNAME2 quantize, Added `std.math.quantize`.)
-    $(P $(XREF math, quantize) rounds to the nearest multiple of some number.
+    $(P $(REF quantize, std,math) rounds to the nearest multiple of some number.
         Features:)
     $(UL
         $(LI The rounding method can be specified using the `rfunc` parameter. By
@@ -276,8 +276,8 @@ assert(12345.6789L.quantize!(10, floor)(-2) == 12345.67L);
 )
 
 $(LI $(LNAME2 traits, Three new traits were added to `std.traits`.)
-    $(P $(XREF traits, isType), $(XREF traits, isFunction), and
-    $(XREF traits, isFinal) were added to `std.traits`.
+    $(P $(REF isType, std,traits), $(REF isFunction, std,traits), and
+    $(REF isFinal, std,traits) were added to `std.traits`.
     )
 
 -------
