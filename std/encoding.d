@@ -748,17 +748,17 @@ template EncoderInstance(CharType : AsciiChar)
     alias E = AsciiChar;
     alias EString = AsciiString;
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "ASCII";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe pure nothrow @nogc
     {
         return c < 0x80;
     }
 
-    bool isValidCodeUnit(AsciiChar c)
+    bool isValidCodeUnit(AsciiChar c) @safe pure nothrow @nogc
     {
         return c < 0x80;
     }
@@ -831,17 +831,17 @@ template EncoderInstance(CharType : Latin1Char)
     alias E = Latin1Char;
     alias EString = Latin1String;
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "ISO-8859-1";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe pure nothrow @nogc
     {
         return c < 0x100;
     }
 
-    bool isValidCodeUnit(Latin1Char c)
+    bool isValidCodeUnit(Latin1Char c) @safe pure nothrow @nogc
     {
         return true;
     }
@@ -910,7 +910,7 @@ private template EncoderInstance(CharType : Latin2Char)
     alias E = Latin2Char;
     alias EString = Latin2String;
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "ISO-8859-2";
     }
@@ -990,7 +990,7 @@ private template EncoderInstance(CharType : Windows1250Char)
     alias E = Windows1250Char;
     alias EString = Windows1250String;
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "windows-1250";
     }
@@ -1083,7 +1083,7 @@ template EncoderInstance(CharType : Windows1252Char)
     alias E = Windows1252Char;
     alias EString = Windows1252String;
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "windows-1252";
     }
@@ -1121,17 +1121,17 @@ template EncoderInstance(CharType : char)
     alias E = char;
     alias EString = immutable(char)[];
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "UTF-8";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe pure nothrow @nogc
     {
         return isValidCodePoint(c);
     }
 
-    bool isValidCodeUnit(char c)
+    bool isValidCodeUnit(char c) @safe pure nothrow @nogc
     {
         return (c < 0xC0 || (c >= 0xC2 && c < 0xF5));
     }
@@ -1270,7 +1270,7 @@ template EncoderInstance(CharType : char)
         return c;
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @safe pure nothrow @nogc
     {
         return "\uFFFD";
     }
@@ -1287,17 +1287,17 @@ template EncoderInstance(CharType : wchar)
     alias E = wchar;
     alias EString = immutable(wchar)[];
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "UTF-16";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe pure nothrow @nogc
     {
         return isValidCodePoint(c);
     }
 
-    bool isValidCodeUnit(wchar c)
+    bool isValidCodeUnit(wchar c) @safe pure nothrow @nogc
     {
         return true;
     }
@@ -1367,7 +1367,7 @@ template EncoderInstance(CharType : wchar)
         return 0x10000 + (d << 10) + c;
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @safe pure nothrow @nogc
     {
         return "\uFFFD"w;
     }
@@ -1384,7 +1384,7 @@ template EncoderInstance(CharType : dchar)
     alias E = dchar;
     alias EString = immutable(dchar)[];
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "UTF-32";
     }
@@ -1435,7 +1435,7 @@ template EncoderInstance(CharType : dchar)
         return cast(dchar)read();
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @safe pure nothrow @nogc
     {
         return "\uFFFD"d;
     }
@@ -1462,7 +1462,7 @@ Returns true if c is a valid code point
  Params:
     c = the code point to be tested
  */
-bool isValidCodePoint(dchar c)
+bool isValidCodePoint(dchar c) @safe pure nothrow @nogc
 {
     return c < 0xD800 || (c >= 0xE000 && c < 0x110000);
 }
@@ -1482,7 +1482,7 @@ bool isValidCodePoint(dchar c)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(encodingName!(char) == "UTF-8");
     assert(encodingName!(wchar) == "UTF-16");
@@ -1527,7 +1527,7 @@ unittest
 }
 
 /// How to check an entire string
-unittest
+@safe pure unittest
 {
     import std.algorithm.searching : find;
     import std.utf : byDchar;
@@ -2020,7 +2020,7 @@ if (isNativeOutputRange!(R, E))
     }
 }
 
-unittest
+@safe pure unittest
 {
     import std.array;
     Appender!(char[]) r;
@@ -2305,11 +2305,11 @@ unittest
 //=============================================================================
 
 /** The base class for exceptions thrown by this module */
-class EncodingException : Exception { this(string msg) { super(msg); } }
+class EncodingException : Exception { this(string msg) @safe pure { super(msg); } }
 
 class UnrecognizedEncodingException : EncodingException
 {
-    private this(string msg) { super(msg); }
+    private this(string msg) @safe pure { super(msg); }
 }
 
 /** Abstract base class of all encoding schemes */
@@ -2642,7 +2642,7 @@ class EncodingSchemeASCII : EncodingScheme
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -2660,7 +2660,7 @@ class EncodingSchemeASCII : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "ASCII";
         }
@@ -2727,7 +2727,7 @@ class EncodingSchemeLatin1 : EncodingScheme
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -2743,7 +2743,7 @@ class EncodingSchemeLatin1 : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "ISO-8859-1";
         }
@@ -2806,7 +2806,7 @@ class EncodingSchemeLatin2 : EncodingScheme
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -2818,7 +2818,7 @@ class EncodingSchemeLatin2 : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "ISO-8859-2";
         }
@@ -2877,7 +2877,7 @@ class EncodingSchemeWindows1250 : EncodingScheme
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -2885,7 +2885,7 @@ class EncodingSchemeWindows1250 : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "windows-1250";
         }
@@ -2944,7 +2944,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -2952,7 +2952,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "windows-1252";
         }
@@ -3011,7 +3011,7 @@ class EncodingSchemeUtf8 : EncodingScheme
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -3019,7 +3019,7 @@ class EncodingSchemeUtf8 : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "UTF-8";
         }
@@ -3082,12 +3082,12 @@ class EncodingSchemeUtf16Native : EncodingScheme
         version(LittleEndian) { enum string NAME = "UTF-16LE"; }
         version(BigEndian)    { enum string NAME = "UTF-16BE"; }
 
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return [ NAME ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return NAME;
         }
@@ -3177,12 +3177,12 @@ class EncodingSchemeUtf32Native : EncodingScheme
         version(LittleEndian) { enum string NAME = "UTF-32LE"; }
         version(BigEndian)    { enum string NAME = "UTF-32BE"; }
 
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return [ NAME ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return NAME;
         }
@@ -3473,7 +3473,7 @@ unittest
     }
 }
 
-unittest
+@safe pure unittest
 {
     struct BOMInputRange
     {
