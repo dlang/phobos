@@ -225,7 +225,7 @@ unittest
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.common : unbounded;
     import std.typecons : Ternary;
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     Bucketizer!(
         FreeList!(
             AllocatorList!(

@@ -284,7 +284,7 @@ private auto ref forward(alias arg)()
     }
     else
     {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
         return move(arg);
     }
 }
@@ -327,7 +327,6 @@ FallbackAllocator!(Primary, Fallback)
 fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
 {
     alias R = FallbackAllocator!(Primary, Fallback);
-    import std.algorithm : move;
 
     static if (stateSize!Primary)
         static if (stateSize!Fallback)

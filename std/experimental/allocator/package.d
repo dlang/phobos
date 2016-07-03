@@ -433,7 +433,7 @@ propagates the exception.
 */
 auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.conv : emplace;
     auto m = alloc.allocate(max(stateSize!T, 1));
     if (!m.ptr) return null;
@@ -922,7 +922,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     immutable oldLength = array.length;
     array = cast(T[]) buf;
     scope(failure) array[oldLength .. $].uninitializedFillDefault;
-    import std.algorithm : uninitializedFill;
+    import std.algorithm.mutation : uninitializedFill;
     array[oldLength .. $].uninitializedFill(init);
     return true;
 }
@@ -1261,7 +1261,7 @@ if (!isPointer!A)
         // This is sensitive... create on the stack and then move
         enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
         ulong[s] state;
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
         emplace!(CAllocatorImpl!A)(state[], move(a));
         auto dynState = a.allocate(stateSize!(CAllocatorImpl!A));
         // Bitblast the object in its final destination

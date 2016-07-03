@@ -65,7 +65,6 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
 {
     import std.traits : hasMember;
     import std.conv : emplace;
-    import std.algorithm : min, move;
     import std.typecons : Ternary;
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
@@ -535,7 +534,7 @@ template AllocatorList(alias factoryFunction,
 ///
 version(Posix) unittest
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
     import std.experimental.allocator.building_blocks.segregator : Segregator;
@@ -578,7 +577,7 @@ version(Posix) unittest
 unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
     AllocatorList!((n) => Region!GCAllocator(new void[max(n, 1024 * 4096)]),
         NullAllocator) a;
@@ -592,7 +591,7 @@ unittest
 unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
     AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
@@ -604,7 +603,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
     import std.typecons : Ternary;
     AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;

@@ -52,7 +52,8 @@ struct FreeTree(ParentAllocator)
     static assert(ParentAllocator.alignment % size_t.alignof == 0,
         "FreeTree must be on top of a word-aligned allocator");
 
-    import std.algorithm : min, max, swap;
+    import std.algorithm.comparison : min, max;
+    import std.algorithm.mutation : swap;
     import std.traits : hasMember;
 
     // State
