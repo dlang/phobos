@@ -4013,7 +4013,26 @@ unittest
 
 
 /**
-Reads an entire file into an array.
+ * Reads a file line by line and parses the line into a single value or a
+ * $(REF Tuple, std,typecons) of values depending on the length of `Types`.
+ * The lines are parsed using the specified format string. The format string is
+ * passed to $(REF formattedRead, std,format), and therefore must conform to the
+ * format string specification outlined in $(MREF format).
+ *
+ * Params:
+ *     Types = the types that each of the elements in the line should be returned as
+ *     filename = the name of the file to read
+ *     format = the format string to use when reading
+ *
+ * Returns:
+ *     If only one type is passed, then an array of that type. Otherwise, an
+ *     array of $(REF Tuple, std,typecons)s.
+ *
+ * Throws:
+ *     `Exception` if the format string is malformed. Also, throws `Exception`
+ *     if any of the lines in the file are not fully consumed by the call
+ *     to $(REF formattedRead, std,format). Meaning that no empty lines or lines
+ *     with extra characters are allowed.
  */
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
