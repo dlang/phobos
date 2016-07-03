@@ -175,7 +175,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
 }
 
-unittest
+@safe unittest
 {
     // Issue 12315
     static struct Bug12315 { immutable int i; }
@@ -183,7 +183,7 @@ unittest
     static assert(bug12315[0].i == 123456789);
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     static struct S{int* p;}
@@ -202,8 +202,9 @@ ElementType!String[] array(String)(String str) if (isNarrowString!String)
     return cast(typeof(return)) str.toUTF32;
 }
 
-unittest
+@system unittest
 {
+    // @system due to array!string
     import std.conv : to;
 
     static struct TestArray { int x; string toString() @safe { return to!string(x); } }
@@ -263,7 +264,7 @@ unittest
 }
 
 //Bug# 8233
-unittest
+@safe unittest
 {
     assert(array("hello world"d) == "hello world"d);
     immutable a = [1, 2, 3, 4, 5];
@@ -290,7 +291,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     //9824
     static struct S
@@ -303,7 +304,7 @@ unittest
 }
 
 // Bugzilla 10220
-unittest
+@safe unittest
 {
     import std.exception;
     import std.algorithm.comparison : equal;
@@ -323,7 +324,7 @@ unittest
     });
 }
 
-unittest
+@safe unittest
 {
     //Turn down infinity:
     static assert(!is(typeof(
@@ -361,7 +362,7 @@ auto assocArray(Range)(Range r)
 }
 
 ///
-/*@safe*/ pure /*nothrow*/ unittest
+@safe pure /*nothrow*/ unittest
 {
     import std.range;
     import std.typecons;
@@ -375,7 +376,7 @@ auto assocArray(Range)(Range r)
 }
 
 // @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
-unittest
+@safe unittest
 {
     import std.typecons;
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
@@ -384,7 +385,7 @@ unittest
 }
 
 // Issue 13909
-unittest
+@safe unittest
 {
     import std.typecons;
     auto a = [tuple!(const string, string)("foo", "bar")];
@@ -410,7 +411,7 @@ auto byPair(Key, Value)(Value[Key] aa)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
     import std.algorithm.sorting : sort;
@@ -434,7 +435,7 @@ unittest
     ]);
 }
 
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -644,7 +645,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     return ret;
 }
 
-nothrow pure unittest
+@safe nothrow pure unittest
 {
     auto s1 = uninitializedArray!(int[])();
     auto s2 = minimallyInitializedArray!(int[])();
@@ -652,7 +653,7 @@ nothrow pure unittest
     assert(s2.length == 0);
 }
 
-nothrow pure unittest //@@@9803@@@
+@safe nothrow pure unittest //@@@9803@@@
 {
     auto a = minimallyInitializedArray!(int*[])(1);
     assert(a[0] == null);
@@ -662,7 +663,7 @@ nothrow pure unittest //@@@9803@@@
     assert(c[0][0] == null);
 }
 
-unittest //@@@10637@@@
+@safe unittest //@@@10637@@@
 {
     static struct S
     {
@@ -687,7 +688,7 @@ unittest //@@@10637@@@
     enum b = minimallyInitializedArray!(S[])(1);
 }
 
-nothrow unittest
+@safe nothrow unittest
 {
     static struct S1
     {
@@ -742,7 +743,7 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
     assert(overlap(a, b).empty);
 }
 
-/*@safe nothrow*/ unittest
+@safe /*nothrow*/ unittest
 {
     static void test(L, R)(L l, R r)
     {
@@ -1005,8 +1006,9 @@ private template isInputRangeOrConvertible(E)
     }
 }
 
-unittest
+@system unittest
 {
+    // @system due to insertInPlace
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
     import core.exception;
@@ -1100,7 +1102,7 @@ unittest
                     "flip_xyz\U00010143_abc__flop"));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     // insertInPlace interop with postblit
@@ -1157,7 +1159,7 @@ unittest
     });
 }
 
-unittest // bugzilla 6874
+@system unittest // bugzilla 6874
 {
     import core.memory;
     // allocate some space
@@ -1283,7 +1285,7 @@ if (isInputRange!S && !isDynamicArray!S)
 
 
 ///
-unittest
+@safe unittest
 {
     auto a = "abc";
     auto s = replicate(a, 3);
@@ -1300,7 +1302,7 @@ unittest
     assert(d == []);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
 
@@ -1366,7 +1368,7 @@ if (isSomeString!S)
     return result;
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.format;
@@ -1398,7 +1400,7 @@ unittest
     assert(split(s) == ["peter", "paul", "jerry"]);
 }
 
-unittest //safety, purity, ctfe ...
+@safe unittest //purity, ctfe ...
 {
     import std.exception;
     void dg() @safe pure {
@@ -1411,7 +1413,7 @@ unittest //safety, purity, ctfe ...
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(split("hello world") == ["hello","world"]);
     assert(split("192.168.0.1", ".") == ["192", "168", "0", "1"]);
@@ -1478,7 +1480,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
     return range.splitter!isTerminator.array;
 }
 
-unittest
+@safe unittest
 {
     import std.conv;
     import std.algorithm.comparison : cmp;
@@ -1626,7 +1628,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     }
 }
 
-unittest // Issue 14230
+@safe unittest // Issue 14230
 {
    string[] ary = ["","aa","bb","cc"]; // leaded by _empty_ element
    assert(ary.join(" @") == " @aa @bb @cc"); // OK in 2.067b1 and olders
@@ -1698,7 +1700,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
     }
 }
 
-unittest // Issue 10895
+@safe unittest // Issue 10895
 {
     class A
     {
@@ -1712,7 +1714,7 @@ unittest // Issue 10895
     assert(a[0].length == 3);
 }
 
-unittest // Issue 14230
+@safe unittest // Issue 14230
 {
    string[] ary = ["","aa","bb","cc"];
    assert(ary.join('@') == "@aa@bb@cc");
@@ -1807,7 +1809,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     assert(arr.join(',') == "apple,banana");
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.algorithm;
@@ -1915,7 +1917,7 @@ unittest
 }
 
 // Issue 10683
-unittest
+@safe unittest
 {
     import std.range : join;
     import std.typecons : tuple;
@@ -1924,7 +1926,7 @@ unittest
 }
 
 // Issue 13877
-unittest
+@safe unittest
 {
     // Test that the range is iterated only once.
     import std.algorithm.iteration : map;
@@ -1971,7 +1973,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 }
 
 ///
-unittest
+@safe unittest
 {
     assert("Hello Wörld".replace("o Wö", "o Wo") == "Hello World");
     assert("Hello Wörld".replace("l", "h") == "Hehho Wörhd");
@@ -2008,7 +2010,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 }
 
 ///
-unittest
+@safe unittest
 {
     auto arr = [1, 2, 3, 4, 5];
     auto from = [2, 3];
@@ -2020,7 +2022,7 @@ unittest
     assert(sink.data == [1, 4, 6, 4, 5]);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.algorithm.comparison : cmp;
@@ -2053,7 +2055,7 @@ unittest
     assert(replace(s, "foo", "silly") == "This is a silly silly list");
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.algorithm.searching : skipOver;
@@ -2110,7 +2112,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 4 ];
     auto b = a.replace(1, 3, [ 9, 9, 9 ]);
@@ -2118,7 +2120,7 @@ unittest
     assert(b == [ 1, 9, 9, 9, 4 ]);
 }
 
-unittest
+@system unittest
 {
     import core.exception;
     import std.conv : to;
@@ -2237,7 +2239,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [1, 4, 5];
     replaceInPlace(a, 1u, 2u, [2, 3, 4]);
@@ -2248,7 +2250,7 @@ unittest
     assert(a == [1, 4, 5, 5]);
 }
 
-unittest
+@safe unittest
 {
     // Bug# 12889
     int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
@@ -2257,7 +2259,7 @@ unittest
     assert(arr == [[0], [1], [2], [3], [0], [1], [6]]);
 }
 
-unittest
+@system unittest
 {
     // Bug# 14925
     char[] a = "mon texte 1".dup;
@@ -2307,7 +2309,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // the constraint for the first overload used to match this, which wouldn't compile.
     import std.algorithm.comparison : equal;
@@ -2317,7 +2319,7 @@ unittest
     assert(equal(a, [1L, 4, 5, 6, 3]));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -2432,7 +2434,7 @@ if (isDynamicArray!(E[]) &&
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [1, 2, 2, 3, 4, 5];
     auto b = a.replaceFirst([2], [1337]);
@@ -2443,7 +2445,7 @@ unittest
     assert(r == "This is a silly foo list");
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.algorithm.comparison : cmp;
@@ -2482,7 +2484,7 @@ unittest
 }
 
 //Bug# 8187
-unittest
+@safe unittest
 {
     auto res = ["a", "a"];
     assert(replace(res, "a", "b") == ["b", "b"]);
@@ -2540,7 +2542,7 @@ if (isDynamicArray!(E[]) &&
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [1, 2, 2, 3, 4, 5];
     auto b = a.replaceLast([2], [1337]);
@@ -2551,7 +2553,7 @@ unittest
     assert(r == "This is a foo silly list", r);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.algorithm.comparison : cmp;
@@ -2612,7 +2614,7 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     auto a = [1, 2, 3, 4, 5];
     auto b = replaceSlice(a, a[1..4], [0, 0, 0]);
@@ -2620,7 +2622,7 @@ unittest
     assert(b == [1, 0, 0, 0, 5]);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : cmp;
     debug(std_array) printf("array.replaceSlice.unittest\n");
@@ -3266,7 +3268,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     }
 }
 
-unittest
+@safe unittest
 {
     import std.typecons;
     import std.algorithm;
@@ -3275,7 +3277,7 @@ unittest
     [tuple("A")].filter!(t => true).array; // error
 }
 
-unittest
+@system unittest
 {
     import std.range;
     //Coverage for put(Range)
@@ -3298,7 +3300,7 @@ unittest
     au2.put(sc2.repeat().take(10));
 }
 
-unittest
+@system unittest
 {
     struct S
     {
@@ -3331,7 +3333,7 @@ unittest
     a2.put([s2]);
 }
 
-unittest
+@safe unittest
 {
     //9528
     const(E)[] fastCopy(E)(E[] src) {
@@ -3348,7 +3350,7 @@ unittest
     auto t = fastCopy(s); // Does not compile
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : map;
     //10753
@@ -3362,7 +3364,7 @@ unittest
     [1, 2].map!Bar.array;
 }
 
-unittest
+@safe unittest
 {
     //New appender signature tests
     alias mutARR = int[];
@@ -3396,7 +3398,7 @@ unittest
     {auto app = appender!(char[])(null);}
 }
 
-unittest //Test large allocations (for GC.extend)
+@safe unittest //Test large allocations (for GC.extend)
 {
     import std.range;
     import std.algorithm.comparison : equal;
@@ -3407,7 +3409,7 @@ unittest //Test large allocations (for GC.extend)
     assert(equal(app.data, 'a'.repeat(100_000)));
 }
 
-unittest
+@safe unittest
 {
     auto reference = new ubyte[](2048 + 1); //a number big enough to have a full page (EG: the GC extends)
     auto arr = reference.dup;
@@ -3417,13 +3419,13 @@ unittest
     assert(reference[] == arr[]);
 }
 
-unittest // clear method is supported only for mutable element types
+@safe unittest // clear method is supported only for mutable element types
 {
     Appender!string app;
     static assert(!__traits(compiles, app.clear()));
 }
 
-unittest
+@safe unittest
 {
     static struct D//dynamic
     {
@@ -3452,7 +3454,7 @@ unittest
     static assert(!is(typeof(appender(foo()))));
 }
 
-unittest
+@system unittest
 {
     // Issue 13077
     static class A {}
@@ -3480,7 +3482,7 @@ RefAppender!(E[]) appender(A : E[]*, E)(A array)
     return RefAppender!(E[])(array);
 }
 
-unittest
+@system unittest
 {
     import std.exception;
     {
@@ -3535,13 +3537,13 @@ unittest
     assert(app3.data == [1, 2, 3]);
 }
 
-unittest // issue 14605
+@safe unittest // issue 14605
 {
     static assert(isOutputRange!(Appender!(int[]), int));
     static assert(isOutputRange!(RefAppender!(int[]), int));
 }
 
-unittest
+@safe unittest
 {
     Appender!(int[]) app;
     short[] range = [1, 2, 3];
@@ -3549,7 +3551,7 @@ unittest
     assert(app.data == [1, 2, 3]);
 }
 
-unittest
+@safe unittest
 {
     string s = "hello".idup;
     char[] a = "hello".dup;
