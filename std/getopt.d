@@ -656,7 +656,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     enum validationMessage = optionValidator!T;
     static assert(validationMessage == "", validationMessage);
 
-    import std.algorithm : remove;
+    import std.algorithm.mutation : remove;
     import std.conv : to;
     static if (opts.length)
     {
@@ -751,7 +751,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 private bool handleOption(R)(string option, R receiver, ref string[] args,
     ref configuration cfg, bool incremental)
 {
-    import std.algorithm : map, splitter;
+    import std.algorithm.iteration : map, splitter;
     import std.ascii : isAlpha;
     import std.conv : text, to;
     // Scan arguments looking for a match for this option
@@ -1558,7 +1558,7 @@ Params:
 void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 {
     import std.format : formattedWrite;
-    import std.algorithm : min, max;
+    import std.algorithm.comparison : min, max;
 
     output.formattedWrite("%s\n", text);
 
