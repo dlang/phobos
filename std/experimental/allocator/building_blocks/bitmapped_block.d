@@ -53,7 +53,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
-        import std.algorithm : max;
+        import std.algorithm.comparison : max;
         auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
             max(theAlignment, cast(uint) size_t.sizeof));
         scope(exit) AlignedMallocator.instance.deallocate(m);
@@ -127,7 +127,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     {
         auto blocks = capacity.divideRoundUp(blockSize);
         auto leadingUlongs = blocks.divideRoundUp(64);
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
         immutable initialAlignment = min(parentAlignment,
             1U << trailingZeros(leadingUlongs * 8));
         auto maxSlack = alignment <= initialAlignment
@@ -712,7 +712,7 @@ unittest
 {
     static void testAllocateAll(size_t bs)(uint blocks, uint blocksAtATime)
     {
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
         assert(bs);
         import std.experimental.allocator.gc_allocator : GCAllocator;
         auto a = BitmappedBlock!(bs, min(bs, platformAlignment))(
