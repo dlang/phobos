@@ -3210,11 +3210,8 @@ unittest
     static struct SS8 { S8 s; }
     static struct SS9 { S9 s; }
     static assert( hasElaborateAssign!SS6);
-    version (none) // Enable once DMD P.R. 5854 / issue 16142 have been fixed.
-    {
-        static assert(!hasElaborateAssign!SS7);
-        static assert(!hasElaborateAssign!SS8);
-    }
+    static assert(!hasElaborateAssign!SS7);
+    static assert(!hasElaborateAssign!SS8);
     static assert( hasElaborateAssign!SS9);
 }
 
