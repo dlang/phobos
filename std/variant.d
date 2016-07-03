@@ -65,7 +65,7 @@ Source:    $(PHOBOSSRC std/_variant.d)
 */
 module std.variant;
 
-import core.stdc.string, std.conv, std.exception, std.meta, std.traits,
+import core.stdc.string, std.exception, std.meta, std.traits,
     std.typecons;
 
 /++
@@ -205,6 +205,7 @@ private:
     // Handler for all of a type's operations
     static ptrdiff_t handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
     {
+        import std.conv : to;
         static A* getPtr(void* untyped)
         {
             if (untyped)
@@ -472,11 +473,13 @@ private:
         case OpID.apply:
             static if (!isFunctionPointer!A && !isDelegate!A)
             {
+                import std.conv : text;
                 enforce(0, text("Cannot apply `()' to a value of type `",
                                 A.stringof, "'."));
             }
             else
             {
+                import std.conv : text;
                 alias ParamTypes = Parameters!A;
                 auto p = cast(Variant*) parm;
                 auto argCount = p.get!size_t;
@@ -777,6 +780,7 @@ public:
 
     @property T coerce(T)()
     {
+        import std.conv : to, text;
         static if (isNumeric!T || isBoolean!T)
         {
             if (convertsTo!real)
@@ -1157,6 +1161,7 @@ public:
         }
         else
         {
+            import std.conv : text;
             enforce(false, text("Variant type ", type,
                             " not iterable with values of type ",
                             A.stringof));
@@ -1167,6 +1172,7 @@ public:
 
 unittest
 {
+    import std.conv : to;
     Variant v;
     int foo() { return 42; }
     v = &foo;
@@ -1486,6 +1492,7 @@ unittest
 
 unittest
 {
+    import std.conv : ConvException;
     // try it with an oddly small size
     VariantN!(1) test;
     assert(test.size > 1);
@@ -1820,6 +1827,7 @@ unittest
     }
 
     static char[] t3(int p) {
+        import std.conv : text;
         return p.text.dup;
     }
 
