@@ -88,7 +88,6 @@ module std.process;
 version (Posix)
 {
     import core.stdc.errno;
-    import core.stdc.string;
     import core.sys.posix.stdio;
     import core.sys.posix.unistd;
     import core.sys.posix.sys.wait;
