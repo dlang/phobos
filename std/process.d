@@ -102,7 +102,6 @@ version (Windows)
 }
 
 import std.range.primitives;
-import std.conv;
 import std.exception;
 import std.path;
 import std.stdio;
@@ -356,6 +355,7 @@ private Pid spawnProcessImpl(in char[][] args,
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
+    import std.conv : text;
     import std.path : isDirSeparator;
     import std.algorithm : any;
     import std.string : toStringz;
@@ -756,6 +756,7 @@ version (Posix)
 private string searchPathFor(in char[] executable)
     @trusted //TODO: @safe nothrow
 {
+    import std.conv : to;
     import std.algorithm : splitter;
 
     auto pathz = core.stdc.stdlib.getenv("PATH");
@@ -2263,6 +2264,7 @@ class ProcessException : Exception
                                          size_t line = __LINE__)
     {
         import core.stdc.errno : errno;
+        import std.conv : to;
         version (CRuntime_Glibc)
         {
             import core.stdc.string : strerror_r;
@@ -3096,6 +3098,7 @@ static:
     */
     string[string] toAA() @trusted
     {
+        import std.conv : to;
         string[string] aa;
         version (Posix)
         {
@@ -3376,6 +3379,7 @@ private import core.sys.posix.sys.wait;
 deprecated("Please use spawnProcess instead")
 int _spawnvp(int mode, in char *pathname, in char **argv)
 {
+    import std.conv : to;
     int retval = 0;
     pid_t pid = core.sys.posix.unistd.fork();
 
@@ -3589,6 +3593,7 @@ private int execvpe_(in string pathname, in string[] argv, in string[] envp)
 version(Posix)
 {
     import std.array : split;
+    import std.conv : to;
     // Is pathname rooted?
     if (pathname[0] == '/')
     {
