@@ -65,7 +65,7 @@ Source:    $(PHOBOSSRC std/_variant.d)
 */
 module std.variant;
 
-import core.stdc.string, std.exception, std.meta, std.traits,
+import core.stdc.string, std.meta, std.traits,
     std.typecons;
 
 /++
@@ -474,12 +474,14 @@ private:
             static if (!isFunctionPointer!A && !isDelegate!A)
             {
                 import std.conv : text;
+                import std.exception : enforce;
                 enforce(0, text("Cannot apply `()' to a value of type `",
                                 A.stringof, "'."));
             }
             else
             {
                 import std.conv : text;
+                import std.exception : enforce;
                 alias ParamTypes = Parameters!A;
                 auto p = cast(Variant*) parm;
                 auto argCount = p.get!size_t;
@@ -803,6 +805,7 @@ public:
             }
             else
             {
+                import std.exception : enforce;
                 enforce(false, text("Type ", type, " does not convert to ",
                                 typeid(T)));
                 assert(0);
@@ -1162,6 +1165,7 @@ public:
         else
         {
             import std.conv : text;
+            import std.exception : enforce;
             enforce(false, text("Variant type ", type,
                             " not iterable with values of type ",
                             A.stringof));
@@ -1493,6 +1497,7 @@ unittest
 unittest
 {
     import std.conv : ConvException;
+    import std.exception : assertThrown, collectException;
     // try it with an oddly small size
     VariantN!(1) test;
     assert(test.size > 1);
@@ -1866,6 +1871,7 @@ unittest
 // Ordering comparisons of incompatible types, e.g. issue 7990.
 unittest
 {
+    import std.exception : assertThrown;
     assertThrown!VariantException(Variant(3) < "a");
     assertThrown!VariantException("a" < Variant(3));
     assertThrown!VariantException(Variant(3) < Variant("a"));
@@ -1877,6 +1883,7 @@ unittest
 // Handling of unordered types, e.g. issue 9043.
 unittest
 {
+    import std.exception : assertThrown;
     static struct A { int a; }
 
     assert(Variant(A(3)) != A(4));
@@ -2118,6 +2125,7 @@ unittest
 
 unittest
 {
+    import std.exception : assertThrown;
     Algebraic!(int, string) variant;
 
     variant = 10;
@@ -2309,6 +2317,7 @@ unittest
 }
 unittest
 {
+    import std.exception : assertThrown;
     // http://d.puremagic.com/issues/show_bug.cgi?id=7069
     Variant v;
 
@@ -2571,6 +2580,7 @@ unittest
 
 unittest
 {
+    import std.exception : assertThrown, assertNotThrown;
     // Make sure Variant can handle types with opDispatch but no length field.
     struct SWithNoLength
     {
