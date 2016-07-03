@@ -87,7 +87,6 @@ module std.process;
 
 version (Posix)
 {
-    import core.sys.posix.stdio;
     import core.sys.posix.unistd;
     import core.sys.posix.sys.wait;
 }
@@ -413,6 +412,7 @@ private Pid spawnProcessImpl(in char[][] args,
 
     void forkChild() nothrow @nogc
     {
+        static import core.sys.posix.stdio;
         pragma(inline, true);
 
         // Child process
@@ -1596,6 +1596,7 @@ $(REF StdioException, std,stdio) on failure.
 version (Posix)
 Pipe pipe() @trusted //TODO: @safe
 {
+    import core.sys.posix.stdio : fdopen;
     int[2] fds;
     if (core.sys.posix.unistd.pipe(fds) != 0)
         throw new StdioException("Unable to create pipe");
