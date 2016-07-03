@@ -103,7 +103,6 @@ version (Windows)
 
 import std.range.primitives;
 import std.exception;
-import std.path;
 import std.stdio;
 import std.internal.processinit;
 import std.internal.cstring;
@@ -758,6 +757,7 @@ private string searchPathFor(in char[] executable)
 {
     import std.conv : to;
     import std.algorithm : splitter;
+    import std.path : buildPath;
 
     auto pathz = core.stdc.stdlib.getenv("PATH");
     if (pathz == null)  return null;
@@ -870,6 +870,7 @@ unittest // Environment variables in spawnProcess().
 unittest // Stream redirection in spawnProcess().
 {
     import std.string;
+    import std.path : buildPath;
     version (Windows) TestScript prog =
        "set /p INPUT=
         echo %INPUT% output %~1
@@ -917,6 +918,7 @@ unittest // Error handling in spawnProcess()
 
 unittest // Specifying a working directory.
 {
+    import std.path;
     TestScript prog = "echo foo>bar";
 
     auto directory = uniqueTempPath();
