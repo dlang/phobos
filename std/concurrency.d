@@ -2522,12 +2522,12 @@ version( unittest )
 private @property Mutex initOnceLock()
 {
     __gshared Mutex lock;
-    if (auto mtx = atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
+    if (auto mtx = cast() atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
         return mtx;
     auto mtx = new Mutex;
     if (cas(cast(shared)&lock, cast(shared)null, cast(shared)mtx))
         return mtx;
-    return atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
+    return cast() atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
 }
 
 /**

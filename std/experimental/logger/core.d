@@ -1654,7 +1654,8 @@ if (sharedLog !is myLogger)
 {
     static auto trustedLoad(ref shared Logger logger) @trusted
     {
-        return atomicLoad!(MemoryOrder.acq)(logger);
+        return cast() atomicLoad!(MemoryOrder.acq)(logger);
+            //FIXME: Casting shared away here. Not good. See issue 16232.
     }
 
     // If we have set up our own logger use that
