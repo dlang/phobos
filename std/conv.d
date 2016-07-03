@@ -1929,7 +1929,7 @@ unittest
 unittest
 {
     import std.exception;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     struct InputString
     {
         string _s;
@@ -2372,7 +2372,7 @@ Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         is(Target == enum))
 {
-    import std.algorithm : startsWith;
+    import std.algorithm.searching : startsWith;
     Target result;
     size_t longest_match = 0;
 
@@ -4879,7 +4879,7 @@ unittest
 
 unittest //@@@9559@@@
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.typecons : Nullable;
     import std.array : array;
     alias I = Nullable!int;
@@ -5153,7 +5153,8 @@ unittest
 
 unittest
 {
-    import std.algorithm : equal, map;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
     // Check fix for http://d.puremagic.com/issues/show_bug.cgi?id=2971
     assert(equal(map!(to!int)(["42", "34", "345"]), [42, 34, 345]));
 }
