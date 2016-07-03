@@ -598,7 +598,7 @@ interface Digest
          */
         @trusted nothrow ubyte[] finish();
         ///ditto
-        nothrow ubyte[] finish(scope ubyte[] buf);
+        nothrow ubyte[] finish(ubyte[] buf);
         //@@@BUG@@@ http://d.puremagic.com/issues/show_bug.cgi?id=6549
         /*in
         {
@@ -608,7 +608,7 @@ interface Digest
         /**
          * This is a convenience function to calculate the hash of a value using the OOP API.
          */
-        final @trusted nothrow ubyte[] digest(scope const(void[])[] data...)
+        final @trusted nothrow ubyte[] digest(const(void[])[] data...)
         {
             this.reset();
             foreach (datum; data)
@@ -909,7 +909,7 @@ class WrapperDigest(T) if (isDigest!T) : Digest
          * //length
          * --------
          */
-        nothrow ubyte[] finish(scope ubyte[] buf)
+        nothrow ubyte[] finish(ubyte[] buf)
         in
         {
             assert(buf.length >= this.length);
@@ -939,13 +939,13 @@ class WrapperDigest(T) if (isDigest!T) : Digest
              *
              * These functions are only available if $(D hasPeek!T) is true.
              */
-            @trusted ubyte[] peek(scope ubyte[] buf) const;
+            @trusted ubyte[] peek(ubyte[] buf) const;
             ///ditto
             @trusted ubyte[] peek() const;
         }
         else static if (hasPeek!T)
         {
-            @trusted ubyte[] peek(scope ubyte[] buf) const
+            @trusted ubyte[] peek(ubyte[] buf) const
             in
             {
                 assert(buf.length >= this.length);
