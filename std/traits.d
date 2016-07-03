@@ -1062,7 +1062,7 @@ unittest
     void noparam() {}
     static assert(ParameterStorageClassTuple!noparam.length == 0);
 
-    void test(scope int*, ref int, out int, lazy int, int, return ref int) { }
+    ref int test(scope int*, ref int, out int, lazy int, int, return ref int i) { return i; }
     alias test_pstc = ParameterStorageClassTuple!test;
     static assert(test_pstc.length == 6);
     static assert(test_pstc[0] == STC.scope_);
