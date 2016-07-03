@@ -702,7 +702,7 @@ template Tuple(Specs...)
         void opAssign(R)(auto ref R rhs)
         if (areCompatibleTuples!(typeof(this), R, "="))
         {
-            import std.algorithm : swap;
+            import std.algorithm.mutation : swap;
 
             static if (is(R : Tuple!Types) && !__traits(isRef, rhs))
             {
@@ -4881,7 +4881,7 @@ Assignment operators
  */
     void opAssign(typeof(this) rhs)
     {
-        import std.algorithm : swap;
+        import std.algorithm.mutation : swap;
 
         swap(_refCounted._store, rhs._refCounted._store);
     }
@@ -4889,7 +4889,7 @@ Assignment operators
 /// Ditto
     void opAssign(T rhs)
     {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
 
         static if (autoInit == RefCountedAutoInitialize.yes)
         {
@@ -5012,7 +5012,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : swap;
+    import std.algorithm.mutation : swap;
 
     RefCounted!int p1, p2;
     swap(p1, p2);
@@ -6181,7 +6181,7 @@ unittest
     // Restrictions
     version(Bug)
     {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
         auto invalid = a1.move; // illegal, scoped objects can't be moved
     }
     static assert(!is(typeof({
