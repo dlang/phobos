@@ -601,7 +601,7 @@ unittest
 // Issue 12477
 unittest
 {
-    import std.algorithm : canFind;
+    import std.algorithm.searching : canFind;
     import std.bitmanip : bitfields;
     import core.exception : AssertError;
 
@@ -1862,7 +1862,7 @@ public:
             _ptr[wordsToShift] = rollLeft(_ptr[0], 0, bitsToShift);
         }
 
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
         foreach (i; 0 .. min(wordsToShift, dim))
         {
             _ptr[i] = 0;
@@ -1903,7 +1903,7 @@ public:
                                                     bitsToShift);
         }
 
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
         foreach (i; 0 .. min(wordsToShift, dim))
         {
             _ptr[dim - i - 1] = 0;
@@ -2035,7 +2035,7 @@ public:
      */
     @property auto bitsSet() const nothrow
     {
-        import std.algorithm : filter, map, joiner;
+        import std.algorithm.iteration : filter, map, joiner;
         import std.range : iota;
 
         return iota(dim).
@@ -2047,7 +2047,7 @@ public:
     ///
     unittest
     {
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
 
         auto b1 = BitArray([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
         assert(b1.bitsSet.equal([4, 5, 6, 7, 12, 13, 14, 15]));
@@ -2062,7 +2062,7 @@ public:
 
     unittest
     {
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
         import std.range : iota;
 
         debug(bitarray) printf("BitArray.bitsSet unittest\n");
@@ -2967,7 +2967,7 @@ unittest
 
 unittest
 {
-    import std.algorithm;
+    import std.algorithm.iteration : filter;
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 7];
     auto range = filter!"true"(buffer);
     assert(range.peek!uint() == 17110537);
@@ -3203,7 +3203,7 @@ unittest
 
 unittest
 {
-    import std.algorithm;
+    import std.algorithm.iteration : filter;
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
     auto range = filter!"true"(buffer);
     assert(walkLength(range) == 7);
@@ -3967,7 +3967,7 @@ auto bitsSet(T)(T value) @nogc pure nothrow
 ///
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : iota;
 
     assert(bitsSet(1).equal([0]));
@@ -3978,7 +3978,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : iota;
 
     import std.meta;
