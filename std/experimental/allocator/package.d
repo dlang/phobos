@@ -236,8 +236,9 @@ unittest
     tuMalloc.deallocate(c);
 }
 
-import std.exception, std.range.primitives, std.traits,
-    std.typecons;
+import std.range.primitives;
+import std.traits;
+import std.typecons;
 version(unittest) import std.random, std.stdio;
 
 /**
