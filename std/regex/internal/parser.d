@@ -5,7 +5,7 @@
 module std.regex.internal.parser;
 
 import std.regex.internal.ir;
-import std.algorithm, std.range, std.uni, std.meta,
+import std.algorithm, std.range.primitives, std.uni, std.meta,
     std.traits, std.typecons, std.exception;
 static import std.ascii;
 
@@ -365,6 +365,8 @@ struct CodeGen
 
     void genNamedGroup(string name)
     {
+        import std.array : insertInPlace;
+        import std.range : assumeSorted;
         nesting++;
         pushFixup(length);
         uint nglob = groupStack.top++;
@@ -430,6 +432,7 @@ struct CodeGen
     // repetition of {x,y}
     void fixRepetition(uint offset, uint min, uint max, bool greedy)
     {
+        import std.array : insertInPlace;
         bool replace = ir[offset].code == IR.Nop;
         uint len = cast(uint)ir.length - offset - replace;
         if (max != infinite)
@@ -493,6 +496,7 @@ struct CodeGen
 
     void fixAlternation()
     {
+        import std.array : insertInPlace;
         uint fix = fixupStack.top;
         if (ir.length > fix && ir[fix].code == IR.Option)
         {
@@ -1512,6 +1516,7 @@ struct Parser(R, Generator)
     //
     @trusted void error(string msg)
     {
+        import std.array : appender;
         import std.format : formattedWrite;
         auto app = appender!string();
         formattedWrite(app, "%s\nPattern with error: `%s` <--HERE-- `%s`",
@@ -1644,6 +1649,7 @@ void fixupBytecode()(Bytecode[] ir)
 
 void optimize(Char)(ref Regex!Char zis)
 {
+    import std.array : insertInPlace;
     CodepointSet nextSet(uint idx)
     {
         CodepointSet set;
