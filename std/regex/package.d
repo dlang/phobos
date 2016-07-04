@@ -263,7 +263,7 @@ module std.regex;
 
 import std.regex.internal.ir;
 import std.regex.internal.thompson; //TODO: get rid of this dependency
-import std.exception, std.traits, std.range;
+import std.exception, std.traits, std.range.primitives;
 import std.typecons; // : Flag, Yes, No;
 
 /++
@@ -323,6 +323,7 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
 @trusted public auto regex(S)(S[] patterns, const(char)[] flags="")
     if (isSomeString!(S))
 {
+    import std.array : appender;
     import std.functional : memoize;
     enum cacheSize = 8; //TODO: invent nice interface to control regex caching
     S pat;
@@ -846,6 +847,7 @@ private void replaceMatchesInto(alias output, Sink, R, T)
 private R replaceFirstWith(alias output, R, RegEx)(R input, RegEx re)
     if (isSomeString!R && isRegexFor!(RegEx, R))
 {
+    import std.array : appender;
     auto data = matchFirst(input, re);
     if (data.empty)
         return input;
@@ -860,6 +862,7 @@ private R replaceAllWith(alias output,
         alias method=matchAll, R, RegEx)(R input, RegEx re)
     if (isSomeString!R && isRegexFor!(RegEx, R))
 {
+    import std.array : appender;
     auto matches = method(input, re); //inout(C)[] fails
     if (matches.empty)
         return input;
@@ -1392,6 +1395,7 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
 // exercise all of the replace APIs
 @system unittest
 {
+    import std.array : appender;
     import std.conv;
     // try and check first/all simple substitution
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
@@ -1605,6 +1609,7 @@ unittest
 public @trusted String[] split(String, RegEx)(String input, RegEx rx)
     if (isSomeString!String  && isRegexFor!(RegEx, String))
 {
+    import std.array : appender;
     auto a = appender!(String[])();
     foreach (e; splitter(input, rx))
         a.put(e);
