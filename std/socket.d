@@ -475,7 +475,7 @@ class Protocol
 // Skip this test on Android because getprotobyname/number are
 // unimplemented in bionic.
 version(CRuntime_Bionic) {} else
-unittest
+@safe unittest
 {
     softUnittest({
         Protocol proto = new Protocol;
@@ -576,7 +576,7 @@ class Service
 }
 
 
-unittest
+@safe unittest
 {
     softUnittest({
         Service serv = new Service;
@@ -825,7 +825,7 @@ class InternetHost
 }
 
 
-unittest
+@safe unittest
 {
     InternetHost ih = new InternetHost;
 
@@ -1147,7 +1147,7 @@ Address[] getAddress(in char[] hostname, ushort port)
 }
 
 
-unittest
+@safe unittest
 {
     softUnittest({
         auto addresses = getAddress("63.105.9.61");
@@ -1227,7 +1227,7 @@ Address parseAddress(in char[] hostaddr, ushort port)
 }
 
 
-unittest
+@safe unittest
 {
     softUnittest({
         auto address = parseAddress("63.105.9.61");
@@ -1694,7 +1694,7 @@ public:
 }
 
 
-unittest
+@safe unittest
 {
     softUnittest({
         const InternetAddress ia = new InternetAddress("63.105.9.61", 80);
@@ -1901,7 +1901,7 @@ public:
 }
 
 
-unittest
+@safe unittest
 {
     softUnittest({
         const Internet6Address ia = new Internet6Address("::1", 80);
@@ -2024,7 +2024,7 @@ static if (is(sockaddr_un))
         }
     }
 
-    unittest
+    @safe unittest
     {
         import core.stdc.stdio : remove;
         import std.file : deleteme;
@@ -2380,7 +2380,7 @@ public:
     }
 }
 
-unittest
+@safe unittest
 {
     auto fds = cast(socket_t[])
         [cast(socket_t)1, 2, 0, 1024, 17, 42, 1234, 77, 77+32, 77+64];
@@ -2402,7 +2402,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     softUnittest({
         enum PAIRS = 768;
@@ -2477,7 +2477,7 @@ unittest
     });
 }
 
-unittest // Issue 14012, 14013
+@safe unittest // Issue 14012, 14013
 {
     auto set = new SocketSet(1);
     assert(set.max >= 0);
@@ -2578,7 +2578,7 @@ private:
     // behavior.
     enum WINSOCK_TIMEOUT_SKEW = 500;
 
-    unittest
+    @safe unittest
     {
         version(SlowTests)
         softUnittest({
@@ -3550,7 +3550,7 @@ Socket[2] socketPair() @trusted
 }
 
 ///
-unittest
+@safe unittest
 {
     immutable ubyte[] data = [1, 2, 3, 4];
     auto pair = socketPair();
