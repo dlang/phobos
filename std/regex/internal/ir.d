@@ -9,7 +9,7 @@ module std.regex.internal.ir;
 
 package(std.regex):
 
-import std.exception, std.uni, std.meta, std.traits, std.range;
+import std.exception, std.uni, std.meta, std.traits, std.range.primitives;
 
 debug(std_regex_parser) import std.stdio;
 // just a common trait, may be moved elsewhere
@@ -372,6 +372,7 @@ struct Group(DataIndex)
     DataIndex begin, end;
     @trusted string toString()() const
     {
+        import std.array : appender;
         import std.format : formattedWrite;
         auto a = appender!string();
         formattedWrite(a, "%s..%s", begin, end);
@@ -706,6 +707,7 @@ template BackLooper(E)
 //
 @trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
+    import std.range : assumeSorted;
     import std.conv : text;
     import std.algorithm : map, equal;
 
