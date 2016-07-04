@@ -239,7 +239,6 @@ unittest
 import std.range.primitives;
 import std.traits;
 import std.typecons;
-version(unittest) import std.random, std.stdio;
 
 /**
 Dynamic allocator interface. Code that defines allocators ultimately implements
