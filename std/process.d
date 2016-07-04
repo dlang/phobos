@@ -87,9 +87,6 @@ module std.process;
 
 version (Posix)
 {
-    import core.stdc.errno;
-    import core.stdc.string;
-    import core.sys.posix.stdio;
     import core.sys.posix.unistd;
     import core.sys.posix.sys.wait;
 }
@@ -102,9 +99,6 @@ version (Windows)
 }
 
 import std.range.primitives;
-import std.conv;
-import std.exception;
-import std.path;
 import std.stdio;
 import std.internal.processinit;
 import std.internal.cstring;
@@ -356,6 +350,7 @@ private Pid spawnProcessImpl(in char[][] args,
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
+    import std.conv : text;
     import std.path : isDirSeparator;
     import std.algorithm : any;
     import std.string : toStringz;
@@ -417,6 +412,7 @@ private Pid spawnProcessImpl(in char[][] args,
 
     void forkChild() nothrow @nogc
     {
+        static import core.sys.posix.stdio;
         pragma(inline, true);
 
         // Child process
@@ -756,7 +752,9 @@ version (Posix)
 private string searchPathFor(in char[] executable)
     @trusted //TODO: @safe nothrow
 {
+    import std.conv : to;
     import std.algorithm : splitter;
+    import std.path : buildPath;
 
     auto pathz = core.stdc.stdlib.getenv("PATH");
     if (pathz == null)  return null;
@@ -869,6 +867,7 @@ unittest // Environment variables in spawnProcess().
 unittest // Stream redirection in spawnProcess().
 {
     import std.string;
+    import std.path : buildPath;
     version (Windows) TestScript prog =
        "set /p INPUT=
         echo %INPUT% output %~1
@@ -910,12 +909,14 @@ unittest // Stream redirection in spawnProcess().
 
 unittest // Error handling in spawnProcess()
 {
+    import std.exception : assertThrown;
     assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
     assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
 }
 
 unittest // Specifying a working directory.
 {
+    import std.path;
     TestScript prog = "echo foo>bar";
 
     auto directory = uniqueTempPath();
@@ -929,6 +930,7 @@ unittest // Specifying a working directory.
 
 unittest // Specifying a bad working directory.
 {
+    import std.exception : assertThrown;
     TestScript prog = "echo";
 
     auto directory = uniqueTempPath();
@@ -1519,6 +1521,7 @@ void kill(Pid pid, int codeOrSignal)
 unittest // tryWait() and kill()
 {
     import core.thread;
+    import std.exception : assertThrown;
     // The test script goes into an infinite loop.
     version (Windows)
     {
@@ -1593,6 +1596,7 @@ $(REF StdioException, std,stdio) on failure.
 version (Posix)
 Pipe pipe() @trusted //TODO: @safe
 {
+    import core.sys.posix.stdio : fdopen;
     int[2] fds;
     if (core.sys.posix.unistd.pipe(fds) != 0)
         throw new StdioException("Unable to create pipe");
@@ -1982,6 +1986,7 @@ unittest
 
 unittest
 {
+    import std.exception : assertThrown;
     TestScript prog = "exit 0";
     assertThrown!StdioException(pipeProcess(
         prog.path,
@@ -2255,6 +2260,7 @@ unittest
 /// An exception that signals a problem with starting or waiting for a process.
 class ProcessException : Exception
 {
+    import std.exception : basicExceptionCtors;
     mixin basicExceptionCtors;
 
     // Creates a new ProcessException based on errno.
@@ -2263,6 +2269,7 @@ class ProcessException : Exception
                                          size_t line = __LINE__)
     {
         import core.stdc.errno : errno;
+        import std.conv : to;
         version (CRuntime_Glibc)
         {
             import core.stdc.string : strerror_r;
@@ -2603,6 +2610,7 @@ private string escapeWindowsShellCommand(in char[] command) @safe pure
 private string escapeShellArguments(in char[][] args...)
     @trusted pure nothrow
 {
+    import std.exception : assumeUnique;
     char[] buf;
 
     @safe nothrow
@@ -2645,7 +2653,7 @@ string escapeWindowsArgument(in char[] arg) @trusted pure nothrow
     // Rationale for leaving this function as public:
     // this algorithm of escaping paths is also used in other software,
     // e.g. DMD's response files.
-
+    import std.exception : assumeUnique;
     auto buf = escapeWindowsArgumentImpl!charAllocator(arg);
     return assumeUnique(buf);
 }
@@ -2785,6 +2793,7 @@ version(Windows) version(unittest)
 
 private string escapePosixArgument(in char[] arg) @trusted pure nothrow
 {
+    import std.exception : assumeUnique;
     auto buf = escapePosixArgumentImpl!charAllocator(arg);
     return assumeUnique(buf);
 }
@@ -2991,6 +3000,7 @@ static:
     */
     string opIndex(in char[] name) @safe
     {
+        import std.exception : enforce;
         string value;
         enforce(getImpl(name, value), "Environment variable not found: "~name);
         return value;
@@ -3046,6 +3056,7 @@ static:
     {
         version (Posix)
         {
+            import std.exception : enforce, errnoEnforce;
             if (core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), 1) != -1)
             {
                 return value;
@@ -3060,6 +3071,7 @@ static:
         }
         else version (Windows)
         {
+            import std.exception : enforce;
             enforce(
                 SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW()),
                 sysErrorString(GetLastError())
@@ -3096,6 +3108,7 @@ static:
     */
     string[string] toAA() @trusted
     {
+        import std.conv : to;
         string[string] aa;
         version (Posix)
         {
@@ -3120,6 +3133,7 @@ static:
         }
         else version (Windows)
         {
+            import std.exception : enforce;
             import std.uni : toUpper;
             auto envBlock = GetEnvironmentStringsW();
             enforce(envBlock, "Failed to retrieve environment variables.");
@@ -3198,6 +3212,7 @@ private:
 
 unittest
 {
+    import std.exception : assertThrown;
     // New variable
     environment["std_process"] = "foo";
     assert (environment["std_process"] == "foo");
@@ -3376,6 +3391,7 @@ private import core.sys.posix.sys.wait;
 deprecated("Please use spawnProcess instead")
 int _spawnvp(int mode, in char *pathname, in char **argv)
 {
+    import std.conv : to;
     int retval = 0;
     pid_t pid = core.sys.posix.unistd.fork();
 
@@ -3589,6 +3605,7 @@ private int execvpe_(in string pathname, in string[] argv, in string[] envp)
 version(Posix)
 {
     import std.array : split;
+    import std.conv : to;
     // Is pathname rooted?
     if (pathname[0] == '/')
     {
@@ -3649,6 +3666,7 @@ string shell(string cmd)
     version(Windows)
     {
         import std.array : appender;
+        import std.exception : errnoEnforce;
         // Generate a random filename
         auto a = appender!string();
         foreach (ref e; 0 .. 8)
@@ -3684,6 +3702,7 @@ string shell(string cmd)
 
 deprecated unittest
 {
+    import std.exception : assertThrown;
     auto x = shell("echo wyda");
     // @@@ This fails on wine
     //assert(x == "wyda" ~ newline, text(x.length));
@@ -3715,6 +3734,7 @@ else version(Posix)
     deprecated("Please use environment.opIndexAssign instead.")
     void setenv(in char[] name, in char[] value, bool overwrite)
 {
+    import std.exception : errnoEnforce;
     errnoEnforce(
         core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), overwrite) == 0);
 }
@@ -3725,6 +3745,7 @@ else version(Posix)
     deprecated("Please use environment.remove instead")
     void unsetenv(in char[] name)
 {
+    import std.exception : errnoEnforce;
     errnoEnforce(core.sys.posix.stdlib.unsetenv(name.tempCString()) == 0);
 }
 
