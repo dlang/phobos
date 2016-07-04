@@ -56,7 +56,7 @@ import std.traits;
 import std.typecons;
 import std.range.primitives;
 
-unittest
+@system unittest
 {
     static ubyte[][] validStrings =
     [
@@ -1510,7 +1510,7 @@ bool canEncode(E)(dchar c)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert( canEncode!(Latin1Char)('A'));
     assert( canEncode!(Latin2Char)('A'));
@@ -1555,7 +1555,7 @@ bool isValidCodeUnit(E)(E c)
 }
 
 ///
-unittest
+@system unittest
 {
     assert(!isValidCodeUnit(cast(char)0xC0));
     assert(!isValidCodeUnit(cast(char)0xFF));
@@ -1588,7 +1588,7 @@ bool isValid(E)(const(E)[] s)
 }
 
 ///
-unittest
+@system unittest
 {
     assert( isValid("\u20AC100"));
     assert(!isValid(cast(char[3])[167, 133, 175]));
@@ -1673,7 +1673,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
 }
 
 ///
-unittest
+@system unittest
 {
     assert(sanitize("hello \xF0\x80world") == "hello \xEF\xBF\xBDworld");
 }
@@ -1705,7 +1705,7 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     assert(firstSequence("\u20AC1000") == "\u20AC".length);
     assert(firstSequence("hel") == "h".length);
@@ -1737,7 +1737,7 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     assert(lastSequence("1000\u20AC") == "\u20AC".length);
     assert(lastSequence("hellö") == "ö".length);
@@ -1773,7 +1773,7 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     assert(index("\u20AC100",1) == 3);
     assert(index("hällo",2) == 3);
@@ -2126,7 +2126,7 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     string s = "hello";
     string t;
@@ -2167,7 +2167,7 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     char[] a;
     foreach (c;codeUnits!(char)(cast(dchar)'\u20AC'))
@@ -2249,7 +2249,7 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     wstring ws;
     // transcode from UTF-8 to UTF-16
@@ -2262,7 +2262,7 @@ unittest
     assert(ws == "hello world");
 }
 
-unittest
+@system unittest
 {
     import std.meta;
     import std.range;
@@ -3140,7 +3140,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         }
     }
 }
-unittest
+@system unittest
 {
     version(LittleEndian)
     {
@@ -3235,7 +3235,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         }
     }
 }
-unittest
+@system unittest
 {
     version(LittleEndian)
     {
@@ -3438,7 +3438,7 @@ immutable(BOMSeq) getBOM(Range)(Range input)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.format : format;
 
@@ -3455,7 +3455,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import std.format : format;
 
