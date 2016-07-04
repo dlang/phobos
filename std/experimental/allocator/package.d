@@ -202,6 +202,7 @@ public import std.experimental.allocator.common,
 // Example in the synopsis above
 unittest
 {
+    import std.algorithm.comparison : min, max;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.segregator : Segregator;
@@ -235,7 +236,7 @@ unittest
     tuMalloc.deallocate(c);
 }
 
-import std.algorithm, std.conv, std.exception, std.range, std.traits,
+import std.conv, std.exception, std.range, std.traits,
     std.typecons;
 version(unittest) import std.random, std.stdio;
 
@@ -545,6 +546,7 @@ unittest
 private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
 {
     import core.stdc.string : memcpy;
+    import std.algorithm.comparison : min;
     if (!array.length) return;
     memcpy(array.ptr, &filler, T.sizeof);
     // Fill the array from the initialized portion of itself exponentially.
@@ -647,6 +649,7 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto a = theAllocator.makeArray!(shared int)(5);
     static assert(is(typeof(a) == shared(int)[]));
     assert(a.length == 5);
@@ -702,6 +705,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
 ///
 unittest
 {
+    import std.algorithm.comparison : equal;
     static void test(T)()
     {
         T[] a = theAllocator.makeArray!T(2);
