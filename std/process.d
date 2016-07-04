@@ -144,7 +144,7 @@ version (Posix)
         extern(C) extern __gshared const char** environ;
     }
 
-    unittest
+    @system unittest
     {
         new Thread({assert(environ !is null);}).start();
     }
@@ -674,7 +674,7 @@ private const(char*)* createEnv(const string[string] childEnv,
     return envz.ptr;
 }
 
-version (Posix) unittest
+version (Posix) @system unittest
 {
     auto e1 = createEnv(null, false);
     assert (e1 != null && *e1 == null);
@@ -738,7 +738,7 @@ private LPVOID createEnv(const string[string] childEnv,
     return envz.data.ptr;
 }
 
-version (Windows) unittest
+version (Windows) @system unittest
 {
     assert (createEnv(null, true) == null);
     assert ((cast(wchar*) createEnv(null, false))[0 .. 2] == "\0\0"w);
@@ -776,7 +776,7 @@ private bool isExecutable(in char[] path) @trusted nothrow @nogc //TODO: @safe
     return (access(path.tempCString(), X_OK) == 0);
 }
 
-version (Posix) unittest
+version (Posix) @safe unittest
 {
     import std.algorithm;
     auto lsPath = searchPathFor("ls");
@@ -802,7 +802,7 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
     assert (flags != -1 || .errno == EBADF);
 }
 
-unittest // Command line arguments in spawnProcess().
+@system unittest // Command line arguments in spawnProcess().
 {
     version (Windows) TestScript prog =
        "if not [%~1]==[foo] ( exit 1 )
@@ -819,7 +819,7 @@ unittest // Command line arguments in spawnProcess().
     assert (wait(spawnProcess([prog.path, "foo", "bar"])) == 0);
 }
 
-unittest // Environment variables in spawnProcess().
+@system unittest // Environment variables in spawnProcess().
 {
     // We really should use set /a on Windows, but Wine doesn't support it.
     version (Windows) TestScript envProg =
@@ -864,7 +864,7 @@ unittest // Environment variables in spawnProcess().
     assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
 }
 
-unittest // Stream redirection in spawnProcess().
+@system unittest // Stream redirection in spawnProcess().
 {
     import std.string;
     import std.path : buildPath;
@@ -907,14 +907,14 @@ unittest // Stream redirection in spawnProcess().
     remove(pathe);
 }
 
-unittest // Error handling in spawnProcess()
+@system unittest // Error handling in spawnProcess()
 {
     import std.exception : assertThrown;
     assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
     assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
 }
 
-unittest // Specifying a working directory.
+@system unittest // Specifying a working directory.
 {
     import std.path;
     TestScript prog = "echo foo>bar";
@@ -928,7 +928,7 @@ unittest // Specifying a working directory.
     assert(exists(buildPath(directory, "bar")));
 }
 
-unittest // Specifying a bad working directory.
+@system unittest // Specifying a bad working directory.
 {
     import std.exception : assertThrown;
     TestScript prog = "echo";
@@ -941,7 +941,7 @@ unittest // Specifying a bad working directory.
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
 }
 
-unittest // Specifying empty working directory.
+@system unittest // Specifying empty working directory.
 {
     TestScript prog = "";
 
@@ -950,7 +950,7 @@ unittest // Specifying empty working directory.
     spawnProcess([prog.path], null, Config.none, directory).wait();
 }
 
-unittest // Reopening the standard streams (issue 13258)
+@system unittest // Reopening the standard streams (issue 13258)
 {
     import std.string;
     void fun()
@@ -976,7 +976,7 @@ unittest // Reopening the standard streams (issue 13258)
 }
 
 version (Windows)
-unittest // MSVCRT workaround (issue 14422)
+@system unittest // MSVCRT workaround (issue 14422)
 {
     auto fn = uniqueTempPath();
     std.file.write(fn, "AAAAAAAAAA");
@@ -1059,7 +1059,7 @@ Pid spawnShell(in char[] command,
                       shellPath);
 }
 
-unittest
+@system unittest
 {
     version (Windows)
         auto cmd = "echo %FOO%";
@@ -1080,7 +1080,7 @@ unittest
 }
 
 version (Windows)
-unittest
+@system unittest
 {
     import std.string;
     TestScript prog = "echo %0 %*";
@@ -1366,7 +1366,7 @@ int wait(Pid pid) @safe
 }
 
 
-unittest // Pid and wait()
+@system unittest // Pid and wait()
 {
     version (Windows)    TestScript prog = "exit %~1";
     else version (Posix) TestScript prog = "exit $1";
@@ -1518,7 +1518,7 @@ void kill(Pid pid, int codeOrSignal)
     }
 }
 
-unittest // tryWait() and kill()
+@system unittest // tryWait() and kill()
 {
     import core.thread;
     import std.exception : assertThrown;
@@ -1680,7 +1680,7 @@ private:
     File _read, _write;
 }
 
-unittest
+@system unittest
 {
     import std.string;
     auto p = pipe();
@@ -1927,7 +1927,7 @@ enum Redirect
     stdoutToStderr = 16,
 }
 
-unittest
+@system unittest
 {
     import std.string;
     version (Windows) TestScript prog =
@@ -1984,7 +1984,7 @@ unittest
     assert (wait(pp.pid) == 1);
 }
 
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
     TestScript prog = "exit 0";
@@ -2205,7 +2205,7 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     return Tuple!(int, "status", string, "output")(wait(p.pid), cast(string) a.data);
 }
 
-unittest
+@system unittest
 {
     import std.string;
     // To avoid printing the newline characters, we use the echo|set trick on
@@ -2230,7 +2230,7 @@ unittest
     assert (s.output.stripRight() == "HelloWorld");
 }
 
-unittest
+@safe unittest
 {
     import std.string;
     auto r1 = executeShell("echo foo");
@@ -2244,7 +2244,7 @@ unittest
     assert (r3.output.empty);
 }
 
-unittest
+@safe unittest
 {
     import std.typecons : Tuple;
     void foo() //Just test the compilation
@@ -2377,7 +2377,7 @@ version (Windows) private immutable string shellSwitch = "/C";
 }
 
 
-unittest
+@system unittest
 {
     int pidA, pidB;
     ThreadID tidA, tidB;
@@ -2405,8 +2405,9 @@ unittest
 version (unittest)
 private struct TestScript
 {
-    this(string code)
+    this(string code) @system
     {
+        // @system due to chmod
         import std.ascii : newline;
         import std.file : write;
         version (Windows)
@@ -2445,7 +2446,7 @@ private struct TestScript
 }
 
 version (unittest)
-private string uniqueTempPath()
+private string uniqueTempPath() @safe
 {
     import std.file : tempDir, buildPath;
     import std.uuid : randomUUID;
@@ -2525,7 +2526,7 @@ string escapeShellCommand(in char[][] args...) @safe pure
     }
 }
 
-unittest
+@safe unittest
 {
     // This is a simple unit test without any special requirements,
     // in addition to the unittest_burnin one below which requires
@@ -2763,7 +2764,7 @@ version(Windows) version(unittest)
             .array();
     }
 
-    unittest
+    @system unittest
     {
         string[] testStrings = [
             `Hello`,
@@ -2861,7 +2862,7 @@ string escapeShellFileName(in char[] fileName) @trusted pure nothrow
 //version = unittest_burnin;
 
 version(unittest_burnin)
-unittest
+@system unittest
 {
     // There are no readily-available commands on all platforms suitable
     // for properly testing command escaping. The behavior of CMD's "echo"
@@ -3210,7 +3211,7 @@ private:
     }
 }
 
-unittest
+@safe unittest
 {
     import std.exception : assertThrown;
     // New variable
@@ -3700,7 +3701,7 @@ string shell(string cmd)
         static assert(0, "shell not implemented for this OS.");
 }
 
-deprecated unittest
+deprecated @system unittest
 {
     import std.exception : assertThrown;
     auto x = shell("echo wyda");
@@ -3749,7 +3750,7 @@ else version(Posix)
     errnoEnforce(core.sys.posix.stdlib.unsetenv(name.tempCString()) == 0);
 }
 
-version (Posix) deprecated unittest
+version (Posix) deprecated @system unittest
 {
     setenv("wyda", "geeba", true);
     assert(getenv("wyda") == "geeba");
