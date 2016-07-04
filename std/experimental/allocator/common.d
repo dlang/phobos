@@ -7,7 +7,6 @@ Authors: $(HTTP erdani.com, Andrei Alexandrescu), Timon Gehr (`Ternary`)
 */
 module std.experimental.allocator.common;
 import std.algorithm.comparison, std.traits;
-import std.math : isPowerOf2;
 
 /**
 Returns the size in bytes of the state that needs to be allocated to hold an
@@ -105,6 +104,7 @@ Returns `n` rounded up to a multiple of alignment, which must be a power of 2.
 @safe @nogc nothrow pure
 package size_t roundUpToAlignment(size_t n, uint alignment)
 {
+    import std.math : isPowerOf2;
     assert(alignment.isPowerOf2);
     immutable uint slack = cast(uint) n & (alignment - 1);
     const result = slack
@@ -129,6 +129,7 @@ Returns `n` rounded down to a multiple of alignment, which must be a power of 2.
 @safe @nogc nothrow pure
 package size_t roundDownToAlignment(size_t n, uint alignment)
 {
+    import std.math : isPowerOf2;
     assert(alignment.isPowerOf2);
     return n & ~size_t(alignment - 1);
 }
@@ -292,6 +293,7 @@ than or equal to the given pointer.
 @nogc nothrow pure
 package void* alignDownTo(void* ptr, uint alignment)
 {
+    import std.math : isPowerOf2;
     assert(alignment.isPowerOf2);
     return cast(void*) (cast(size_t) ptr & ~(alignment - 1UL));
 }
@@ -303,6 +305,7 @@ than or equal to the given pointer.
 @nogc nothrow pure
 package void* alignUpTo(void* ptr, uint alignment)
 {
+    import std.math : isPowerOf2;
     assert(alignment.isPowerOf2);
     immutable uint slack = cast(size_t) ptr & (alignment - 1U);
     return slack ? ptr + alignment - slack : ptr;
@@ -311,12 +314,14 @@ package void* alignUpTo(void* ptr, uint alignment)
 @safe @nogc nothrow pure
 package bool isGoodStaticAlignment(uint x)
 {
+    import std.math : isPowerOf2;
     return x.isPowerOf2;
 }
 
 @safe @nogc nothrow pure
 package bool isGoodDynamicAlignment(uint x)
 {
+    import std.math : isPowerOf2;
     return x.isPowerOf2 && x >= (void*).sizeof;
 }
 
@@ -406,6 +411,7 @@ package void testAllocator(alias make)()
 {
     import std.conv : text;
     import std.stdio : writeln, stderr;
+    import std.math : isPowerOf2;
     import std.typecons : Ternary;
     alias A = typeof(make());
     scope(failure) stderr.writeln("testAllocator failed for ", A.stringof);
