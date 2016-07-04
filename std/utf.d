@@ -302,7 +302,7 @@ body
     return msbs;
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -369,7 +369,7 @@ unittest
     });
 }
 
-unittest // invalid start bytes
+@safe unittest // invalid start bytes
 {
     import std.exception : assertThrown;
     immutable char[] invalidStartBytes = [
@@ -410,7 +410,7 @@ uint stride(S)(auto ref S str)
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -489,7 +489,7 @@ uint stride(S)(auto ref S str, size_t index = 0)
     return 1;
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -635,7 +635,7 @@ uint strideBack(S)(auto ref S str)
     throw new UTFException("The last code unit is not the end of the UTF-8 sequence");
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -732,7 +732,7 @@ uint strideBack(S)(auto ref S str)
     return 1 + (0xDC00 <= c2 && c2 <= 0xE000);
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -817,7 +817,7 @@ uint strideBack(S)(auto ref S str)
     return 1;
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -918,7 +918,7 @@ size_t toUCSindex(C)(const(C)[] str, size_t index) @safe pure
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(toUCSindex(`hello world`, 7) == 7);
     assert(toUCSindex(`hello world`w, 7) == 7);
@@ -958,7 +958,7 @@ size_t toUTFindex(C)(const(C)[] str, size_t n) @safe pure
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(toUTFindex(`hello world`, 7) == 7);
     assert(toUTFindex(`hello world`w, 7) == 7);
@@ -1484,7 +1484,7 @@ private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar 
     return cast(dchar)u;
 }
 
-pure @nogc nothrow
+@safe pure @nogc nothrow
 unittest
 {
     // Add tests for useReplacemendDchar==true path
@@ -1548,7 +1548,7 @@ private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar 
     }
 }
 
-pure @nogc nothrow
+@safe pure @nogc nothrow
 unittest
 {
     // Add tests for useReplacemendDchar==true path
@@ -1664,7 +1664,7 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
         assertThrown!UTFException(decodeFront(range, index), null, __FILE__, line);
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -1728,7 +1728,7 @@ unittest
     });
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -1770,7 +1770,7 @@ unittest
     });
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception;
@@ -1811,7 +1811,7 @@ unittest
     });
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -1832,7 +1832,7 @@ unittest
     });
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     char[4] val;
@@ -1905,7 +1905,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     goto L3;
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -1962,7 +1962,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     goto L1;
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2001,7 +2001,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     return 1;
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2087,7 +2087,7 @@ void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     str = r;
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     debug(utf) printf("utf.encode.unittest\n");
@@ -2110,7 +2110,7 @@ unittest
     });
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2175,7 +2175,7 @@ void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     str = r;
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2213,7 +2213,7 @@ void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     str ~= c;
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -2267,7 +2267,7 @@ ubyte codeLength(C)(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-pure nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
     assert(codeLength!char('a') == 1);
     assert(codeLength!wchar('a') == 1);
@@ -2303,7 +2303,7 @@ size_t codeLength(C, InputRange)(InputRange input)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.conv : to;
     assert(codeLength!char("hello world") ==
@@ -2326,7 +2326,7 @@ unittest
            `, ça, ce ne serait pas bien.`);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.exception;
@@ -2372,7 +2372,7 @@ if (isSomeChar!C)
     else
         static assert(0);
 }
-unittest
+@safe unittest
 {
     assert( canSearchInCodeUnits! char('a'));
     assert( canSearchInCodeUnits!wchar('a'));
@@ -2410,7 +2410,7 @@ void validate(S)(in S str) @safe pure
 }
 
 
-unittest // bugzilla 12923
+@safe unittest // bugzilla 12923
 {
     import std.exception;
     assertThrown((){
@@ -2929,7 +2929,7 @@ const(wchar)* toUTF16z(C)(const(C)[] str) @safe pure
 
 /* ================================ tests ================================== */
 
-pure unittest
+@safe pure unittest
 {
     import std.exception;
     debug(utf) printf("utf.toUTF.unittest\n");
@@ -2976,7 +2976,7 @@ size_t count(C)(const(C)[] str) @trusted pure nothrow @nogc
     return walkLength(str);
 }
 
-pure nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
     import std.exception;
     assertCTFEable!(
@@ -3188,7 +3188,7 @@ auto ref byCodeUnit(R)(R r)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto r = "Hello, World!".byCodeUnit();
     static assert(hasLength!(typeof(r)));
@@ -3207,7 +3207,7 @@ unittest
 }
 
 /// `byCodeUnit` does no Unicode decoding
-unittest
+@safe unittest
 {
     string noel1 = "noe\u0308l"; // noël using e + combining diaeresis
     assert(noel1.byCodeUnit[2] != 'ë');
@@ -3317,7 +3317,7 @@ alias byWchar = byUTF!wchar;
 /// Ditto
 alias byDchar = byUTF!dchar;
 
-pure nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
   {
     char[5] s;
@@ -3364,7 +3364,7 @@ pure nothrow @nogc unittest
   }
 }
 
-pure nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
   {
     wchar[11] s;
@@ -3406,7 +3406,7 @@ pure nothrow @nogc unittest
   }
 }
 
-pure nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
   {
     dchar[9] s;
