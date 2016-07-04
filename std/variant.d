@@ -65,8 +65,7 @@ Source:    $(PHOBOSSRC std/_variant.d)
 */
 module std.variant;
 
-import core.stdc.string, std.conv, std.exception, std.meta, std.traits,
-    std.typecons;
+import std.meta, std.traits, std.typecons;
 
 /++
     Gives the $(D sizeof) the largest type given.
@@ -205,6 +204,7 @@ private:
     // Handler for all of a type's operations
     static ptrdiff_t handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
     {
+        import std.conv : to;
         static A* getPtr(void* untyped)
         {
             if (untyped)
@@ -472,11 +472,15 @@ private:
         case OpID.apply:
             static if (!isFunctionPointer!A && !isDelegate!A)
             {
+                import std.conv : text;
+                import std.exception : enforce;
                 enforce(0, text("Cannot apply `()' to a value of type `",
                                 A.stringof, "'."));
             }
             else
             {
+                import std.conv : text;
+                import std.exception : enforce;
                 alias ParamTypes = Parameters!A;
                 auto p = cast(Variant*) parm;
                 auto argCount = p.get!size_t;
@@ -592,6 +596,7 @@ public:
 
             static if (T.sizeof <= size)
             {
+                import core.stdc.string : memcpy;
                 // If T is a class we're only copying the reference, so it
                 // should be safe to cast away shared so the memcpy will work.
                 //
@@ -609,6 +614,7 @@ public:
             }
             else
             {
+                import core.stdc.string : memcpy;
                 static if (__traits(compiles, {new T(T.init);}))
                 {
                     auto p = new T(rhs);
@@ -777,6 +783,7 @@ public:
 
     @property T coerce(T)()
     {
+        import std.conv : to, text;
         static if (isNumeric!T || isBoolean!T)
         {
             if (convertsTo!real)
@@ -799,6 +806,7 @@ public:
             }
             else
             {
+                import std.exception : enforce;
                 enforce(false, text("Type ", type, " does not convert to ",
                                 typeid(T)));
                 assert(0);
@@ -1157,6 +1165,8 @@ public:
         }
         else
         {
+            import std.conv : text;
+            import std.exception : enforce;
             enforce(false, text("Variant type ", type,
                             " not iterable with values of type ",
                             A.stringof));
@@ -1167,6 +1177,7 @@ public:
 
 unittest
 {
+    import std.conv : to;
     Variant v;
     int foo() { return 42; }
     v = &foo;
@@ -1486,6 +1497,8 @@ unittest
 
 unittest
 {
+    import std.conv : ConvException;
+    import std.exception : assertThrown, collectException;
     // try it with an oddly small size
     VariantN!(1) test;
     assert(test.size > 1);
@@ -1820,6 +1833,7 @@ unittest
     }
 
     static char[] t3(int p) {
+        import std.conv : text;
         return p.text.dup;
     }
 
@@ -1858,6 +1872,7 @@ unittest
 // Ordering comparisons of incompatible types, e.g. issue 7990.
 unittest
 {
+    import std.exception : assertThrown;
     assertThrown!VariantException(Variant(3) < "a");
     assertThrown!VariantException("a" < Variant(3));
     assertThrown!VariantException(Variant(3) < Variant("a"));
@@ -1869,6 +1884,7 @@ unittest
 // Handling of unordered types, e.g. issue 9043.
 unittest
 {
+    import std.exception : assertThrown;
     static struct A { int a; }
 
     assert(Variant(A(3)) != A(4));
@@ -2110,6 +2126,7 @@ unittest
 
 unittest
 {
+    import std.exception : assertThrown;
     Algebraic!(int, string) variant;
 
     variant = 10;
@@ -2301,6 +2318,7 @@ unittest
 }
 unittest
 {
+    import std.exception : assertThrown;
     // http://d.puremagic.com/issues/show_bug.cgi?id=7069
     Variant v;
 
@@ -2563,6 +2581,7 @@ unittest
 
 unittest
 {
+    import std.exception : assertThrown, assertNotThrown;
     // Make sure Variant can handle types with opDispatch but no length field.
     struct SWithNoLength
     {
