@@ -7062,13 +7062,16 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
 }
 
 /++
-    $(P Does case insensitive comparison of $(D str1) and $(D str2).
+    Does case insensitive comparison of `r1` and `r2`.
     Follows the rules of full case-folding mapping.
     This includes matching as equal german ß with "ss" and
     other 1:M $(CODEPOINT) mappings unlike $(LREF sicmp).
-    The cost of $(D icmp) being pedantically correct is
+    The cost of `icmp` being pedantically correct is
     slightly worse performance.
-    )
+
+    Params:
+        r1 = a forward range of characters
+        r2 = a forward range of characters
 
     Returns:
         An $(D int) that is 0 if the strings match,
@@ -7079,10 +7082,15 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
         $(LREF sicmp)
         $(REF cmp, std,algorithm,comparison)
 +/
-int icmp(S1, S2)(S1 str1, S2 str2)
-    if (isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
-    && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
+int icmp(S1, S2)(S1 r1, S2 r2)
+    if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
+    && isForwardRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
+    import std.utf : byDchar;
+
+    auto str1 = r1.byDchar;
+    auto str2 = r2.byDchar;
+
     for (;;)
     {
         if (str1.empty)
@@ -7128,6 +7136,17 @@ unittest
 
     assert(icmp("Rußland".byDchar, "Russland".byDchar) == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9".byDchar, "\u1F61\u03B9 -> ᾲ".byDchar) == 0);
+}
+
+// test different character types
+unittest
+{
+    assert(icmp("Rußland", "Russland") == 0);
+    assert(icmp("Rußland"w, "Russland") == 0);
+    assert(icmp("Rußland", "Russland"w) == 0);
+    assert(icmp("Rußland"w, "Russland"w) == 0);
+    assert(icmp("Rußland"d, "Russland"w) == 0);
+    assert(icmp("Rußland"w, "Russland"d) == 0);
 }
 
 // overloads for the most common cases to reduce compile time
