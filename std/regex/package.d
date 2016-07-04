@@ -263,7 +263,7 @@ module std.regex;
 
 import std.regex.internal.ir;
 import std.regex.internal.thompson; //TODO: get rid of this dependency
-import std.exception, std.traits, std.range;
+import std.traits, std.range.primitives;
 import std.typecons; // : Flag, Yes, No;
 
 /++
@@ -323,6 +323,7 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
 @trusted public auto regex(S)(S[] patterns, const(char)[] flags="")
     if (isSomeString!(S))
 {
+    import std.array : appender;
     import std.functional : memoize;
     enum cacheSize = 8; //TODO: invent nice interface to control regex caching
     S pat;
@@ -464,6 +465,7 @@ private:
     void newMatches(uint n)
     {
         import core.stdc.stdlib : calloc;
+        import std.exception : enforce;
         if (n > smallString)
         {
             auto p = cast(Group!DataIndex*)enforce(
@@ -663,6 +665,7 @@ private:
 
     this(RegEx)(R input, RegEx prog)
     {
+        import std.exception : enforce;
         _input = input;
         immutable size = EngineType.initialMemory(prog)+size_t.sizeof;
         _memory = (enforce(malloc(size), "malloc failed")[0..size]);
@@ -736,7 +739,7 @@ public:
     ///ditto
     void popFront()
     {
-
+        import std.exception : enforce;
         if (counter != 1)
         {//do cow magic first
             counter--;//we abandon this reference
@@ -771,6 +774,7 @@ public:
 private @trusted auto matchOnce(alias Engine, RegEx, R)(R input, RegEx re)
 {
     import core.stdc.stdlib : malloc, free;
+    import std.exception : enforce;
     alias Char = BasicElementOf!R;
     alias EngineType = Engine!Char;
 
@@ -846,6 +850,7 @@ private void replaceMatchesInto(alias output, Sink, R, T)
 private R replaceFirstWith(alias output, R, RegEx)(R input, RegEx re)
     if (isSomeString!R && isRegexFor!(RegEx, R))
 {
+    import std.array : appender;
     auto data = matchFirst(input, re);
     if (data.empty)
         return input;
@@ -860,6 +865,7 @@ private R replaceAllWith(alias output,
         alias method=matchAll, R, RegEx)(R input, RegEx re)
     if (isSomeString!R && isRegexFor!(RegEx, R))
 {
+    import std.array : appender;
     auto matches = method(input, re); //inout(C)[] fails
     if (matches.empty)
         return input;
@@ -1095,6 +1101,7 @@ package void replaceFmt(R, Capt, OutR)
     import std.algorithm.searching : find;
     import std.conv : text, parse;
     import std.ascii : isDigit, isAlpha;
+    import std.exception : enforce;
     enum State { Normal, Dollar }
     auto state = State.Normal;
     size_t offset;
@@ -1392,6 +1399,7 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
 // exercise all of the replace APIs
 @system unittest
 {
+    import std.array : appender;
     import std.conv;
     // try and check first/all simple substitution
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
@@ -1605,6 +1613,7 @@ unittest
 public @trusted String[] split(String, RegEx)(String input, RegEx rx)
     if (isSomeString!String  && isRegexFor!(RegEx, String))
 {
+    import std.array : appender;
     auto a = appender!(String[])();
     foreach (e; splitter(input, rx))
         a.put(e);

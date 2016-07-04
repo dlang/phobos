@@ -11,7 +11,7 @@ module std.regex.internal.thompson;
 package(std.regex):
 
 import std.regex.internal.ir;
-import std.range;
+import std.range.primitives;
 
 //State of VM thread
 struct Thread(DataIndex)
