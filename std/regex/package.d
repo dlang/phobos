@@ -263,7 +263,7 @@ module std.regex;
 
 import std.regex.internal.ir;
 import std.regex.internal.thompson; //TODO: get rid of this dependency
-import std.exception, std.traits, std.range.primitives;
+import std.traits, std.range.primitives;
 import std.typecons; // : Flag, Yes, No;
 
 /++
@@ -465,6 +465,7 @@ private:
     void newMatches(uint n)
     {
         import core.stdc.stdlib : calloc;
+        import std.exception : enforce;
         if (n > smallString)
         {
             auto p = cast(Group!DataIndex*)enforce(
@@ -664,6 +665,7 @@ private:
 
     this(RegEx)(R input, RegEx prog)
     {
+        import std.exception : enforce;
         _input = input;
         immutable size = EngineType.initialMemory(prog)+size_t.sizeof;
         _memory = (enforce(malloc(size), "malloc failed")[0..size]);
@@ -737,7 +739,7 @@ public:
     ///ditto
     void popFront()
     {
-
+        import std.exception : enforce;
         if (counter != 1)
         {//do cow magic first
             counter--;//we abandon this reference
@@ -772,6 +774,7 @@ public:
 private @trusted auto matchOnce(alias Engine, RegEx, R)(R input, RegEx re)
 {
     import core.stdc.stdlib : malloc, free;
+    import std.exception : enforce;
     alias Char = BasicElementOf!R;
     alias EngineType = Engine!Char;
 
@@ -1098,6 +1101,7 @@ package void replaceFmt(R, Capt, OutR)
     import std.algorithm.searching : find;
     import std.conv : text, parse;
     import std.ascii : isDigit, isAlpha;
+    import std.exception : enforce;
     enum State { Normal, Dollar }
     auto state = State.Normal;
     size_t offset;
