@@ -6,7 +6,7 @@ appropriate parts of `std`.
 Authors: $(HTTP erdani.com, Andrei Alexandrescu), Timon Gehr (`Ternary`)
 */
 module std.experimental.allocator.common;
-import std.algorithm, std.traits;
+import std.algorithm.comparison, std.traits;
 import std.math : isPowerOf2;
 
 /**
@@ -68,7 +68,7 @@ enum unbounded = size_t.max;
 The alignment that is guaranteed to accommodate any D object allocation on the
 current platform.
 */
-enum uint platformAlignment = std.algorithm.max(double.alignof, real.alignof);
+enum uint platformAlignment = std.algorithm.comparison.max(double.alignof, real.alignof);
 
 /**
 The default good size allocation is deduced as $(D n) rounded up to the
