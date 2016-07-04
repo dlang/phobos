@@ -141,7 +141,7 @@ enum cdata = "<![CDATA[";
  * Params:
  *    c = the character to be tested
  */
-bool isChar(dchar c) // rule 2
+bool isChar(dchar c) @safe // rule 2
 {
     if (c <= 0xD7FF)
     {
@@ -165,7 +165,7 @@ bool isChar(dchar c) // rule 2
     return false;
 }
 
-unittest
+@safe unittest
 {
 //  const CharTable=[0x9,0x9,0xA,0xA,0xD,0xD,0x20,0xD7FF,0xE000,0xFFFD,
 //        0x10000,0x10FFFF];
@@ -229,7 +229,7 @@ bool isDigit(dchar c)
         return lookup(DigitTable,c);
 }
 
-unittest
+@safe unittest
 {
     debug (stdxml_TestHardcodedChecks)
     {
@@ -260,7 +260,7 @@ bool isLetter(dchar c) // rule 84
  * Params:
  *    c = the character to be tested
  */
-bool isIdeographic(dchar c)
+bool isIdeographic(dchar c) @safe
 {
     if (c == 0x3007)
         return true;
@@ -271,7 +271,7 @@ bool isIdeographic(dchar c)
     return false;
 }
 
-unittest
+@safe unittest
 {
     assert(isIdeographic('\u4E00'));
     assert(isIdeographic('\u9FA5'));
@@ -379,7 +379,7 @@ S encode(S)(S s)
     return result.data;
 }
 
-unittest
+@safe unittest
 {
     auto s = "hello";
     assert(encode(s) is s);
@@ -436,7 +436,7 @@ enum DecodeMode
  * writefln(decode("a &gt; b")); // writes "a > b"
  * --------------
  */
-string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
+string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @system
 {
     if (mode == DecodeMode.NONE) return s;
 
@@ -489,7 +489,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
     return (buffer.length == 0) ? s : cast(string)buffer;
 }
 
-unittest
+@system unittest
 {
     void assertNot(string s)
     {
@@ -577,7 +577,7 @@ class Document : Element
      * Params:
      *      tag = the start tag of the document.
      */
-    this(const(Tag) tag)
+    this(const(Tag) tag) @safe
     {
         super(tag);
     }
@@ -647,7 +647,7 @@ class Document : Element
     }
 }
 
-unittest
+@system unittest
 {
     // https://issues.dlang.org/show_bug.cgi?id=14966
     auto xml = `<?xml version="1.0" encoding="UTF-8"?><foo></foo>`;
@@ -706,7 +706,7 @@ class Element : Item
      * Params:
      *      tag_ = the start or empty tag of the element.
      */
-    this(const(Tag) tag_)
+    this(const(Tag) tag_) @safe
     {
         this.tag = new Tag(tag_.name);
         tag.type = TagType.EMPTY;
@@ -1040,7 +1040,7 @@ class Tag
      * tag.attr["src"] = "http://example.com/example.jpg";
      * --------------
      */
-    this(string name, TagType type=TagType.START)
+    this(string name, TagType type=TagType.START) @safe
     {
         this.name = name;
         this.type = type;
@@ -1056,8 +1056,9 @@ class Tag
      * The second parameter is a dummy parameter only, required solely to
      * distinguish this constructor from the public one.
      */
-    private this(ref string s, bool dummy)
+    private this(ref string s, bool dummy) @system
     {
+        // @system because of decode
         tagString = s;
         try
         {
@@ -1725,7 +1726,7 @@ class ElementParser
         Handler textHandler = null;
 
         // Private constructor for start tags
-        this(ElementParser parent)
+        this(ElementParser parent) @safe
         {
             s = parent.s;
             this();
@@ -1745,7 +1746,7 @@ class ElementParser
      * The Tag at the start of the element being parsed. You can read this to
      * determine the tag's name and attributes.
      */
-    @property const(Tag) tag() const { return tag_; }
+    @property @safe const(Tag) tag() const { return tag_; }
 
     /**
      * Register a handler which will be called whenever a start tag is
@@ -1814,7 +1815,7 @@ class ElementParser
      */
     ElementHandler[string] onEndTag;
 
-    protected this()
+    protected this() @safe
     {
         elementStart = *s;
     }
@@ -1837,7 +1838,7 @@ class ElementParser
      * };
      * --------------
      */
-    @property void onText(Handler handler) { textHandler = handler; }
+    @property @safe void onText(Handler handler) { textHandler = handler; }
 
     /**
      * Register an alternative handler which will be called whenever text
@@ -1863,7 +1864,7 @@ class ElementParser
      * };
      * --------------
      */
-    void onTextRaw(Handler handler) { rawTextHandler = handler; }
+    @safe void onTextRaw(Handler handler) { rawTextHandler = handler; }
 
     /**
      * Register a handler which will be called whenever a character data
@@ -1884,7 +1885,7 @@ class ElementParser
      * };
      * --------------
      */
-    @property void onCData(Handler handler) { cdataHandler = handler; }
+    @property @safe void onCData(Handler handler) { cdataHandler = handler; }
 
     /**
      * Register a handler which will be called whenever a comment is
@@ -1905,7 +1906,7 @@ class ElementParser
      * };
      * --------------
      */
-    @property void onComment(Handler handler) { commentHandler = handler; }
+    @property @safe void onComment(Handler handler) { commentHandler = handler; }
 
     /**
      * Register a handler which will be called whenever a processing
@@ -1926,7 +1927,7 @@ class ElementParser
      * };
      * --------------
      */
-    @property void onPI(Handler handler) { piHandler = handler; }
+    @property @safe void onPI(Handler handler) { piHandler = handler; }
 
     /**
      * Register a handler which will be called whenever an XML instruction is
@@ -1949,7 +1950,7 @@ class ElementParser
      * };
      * --------------
      */
-    @property void onXI(Handler handler) { xiHandler = handler; }
+    @property @safe void onXI(Handler handler) { xiHandler = handler; }
 
     /**
      * Parse an XML element.
@@ -2100,7 +2101,7 @@ private
     {
         string old = s;
 
-        void fail()
+        void fail() @safe
         {
             s = old;
             throw new Err(s,msg);
@@ -2143,7 +2144,7 @@ private
         catch (Err e) { fail(e); }
     }
 
-    void checkChars(ref string s) // rule 2
+    void checkChars(ref string s) @safe // rule 2
     {
         // TO DO - Fix std.utf stride and decode functions, then use those
         // instead
@@ -2463,7 +2464,7 @@ private
         catch (Err e) { fail(e); }
     }
 
-    void checkCharRef(ref string s, out dchar c) // rule 66
+    void checkCharRef(ref string s, out dchar c) @safe // rule 66
     {
         mixin Check!("CharRef");
 
@@ -2564,7 +2565,7 @@ private
 
     // Helper functions
 
-    void checkLiteral(string literal,ref string s)
+    void checkLiteral(string literal,ref string s) @safe
     {
         mixin Check!("Literal");
 
@@ -2654,10 +2655,8 @@ void check(string s)
     }
 }
 
-unittest
+@system unittest
 {
-  version (none) // WHY ARE WE NOT RUNNING THIS UNIT TEST?
-  {
     try
     {
         check(q"[<?xml version="1.0"?>
@@ -2693,18 +2692,17 @@ unittest
            </book>
         </catalog>
         ]");
-    assert(false);
+        assert(false);
     }
     catch (CheckException e)
     {
-        int n = e.toString().indexOf("end tag name \"genres\" differs"~
-            " from start tag name \"genre\"");
+        auto n = e.toString().indexOf("end tag name \"genres\" differs"~
+                                      " from start tag name \"genre\"");
         assert(n != -1);
     }
-  }
 }
 
-unittest
+@system unittest
 {
     string s = q"EOS
 <?xml version="1.0"?>
@@ -2724,7 +2722,7 @@ EOS";
     }
 }
 
-unittest
+@system unittest
 {
     string s = q"EOS
 <?xml version="1.0" encoding="utf-8"?> <Tests>
@@ -2743,7 +2741,7 @@ EOS";
     xml.parse();
 }
 
-unittest
+@system unittest
 {
     string s = `<tag attr="&quot;value&gt;" />`;
     auto doc = new Document(s);
@@ -2751,41 +2749,41 @@ unittest
 }
 
 /** The base class for exceptions thrown by this module */
-class XMLException : Exception { this(string msg) { super(msg); } }
+class XMLException : Exception { this(string msg) @safe { super(msg); } }
 
 // Other exceptions
 
 /// Thrown during Comment constructor
 class CommentException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown during CData constructor
 class CDataException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown during XMLInstruction constructor
 class XIException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown during ProcessingInstruction constructor
 class PIException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown during Text constructor
 class TextException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown during decode()
 class DecodeException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown if comparing with wrong type
 class InvalidTypeException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown when parsing for Tags
 class TagException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /**
  * Thrown during check()
@@ -2802,7 +2800,7 @@ class CheckException : XMLException
     size_t line = 0; /// Line number at which parse failure occurred
     size_t column = 0; /// Column number at which parse failure occurred
 
-    private this(string tail,string msg,Err err=null)
+    private this(string tail,string msg,Err err=null) @safe
     {
         super(null);
         this.tail = tail;
@@ -2821,7 +2819,7 @@ class CheckException : XMLException
         if (err !is null) err.complete(entire);
     }
 
-    override string toString() const
+    override string toString() const @safe
     {
         string s;
         if (line != 0) s = format("Line %d, column %d: ",line,column);
@@ -2849,7 +2847,7 @@ private
         return t;
     }
 
-    string chop(ref string s, size_t n)
+    string chop(ref string s, size_t n) @safe
     {
         if (n == -1) n = s.length;
         string t = s[0..n];
@@ -2857,14 +2855,14 @@ private
         return t;
     }
 
-    bool optc(ref string s, char c)
+    bool optc(ref string s, char c) @safe
     {
         bool b = s.length != 0 && s[0] == c;
         if (b) s = s[1..$];
         return b;
     }
 
-    void reqc(ref string s, char c)
+    void reqc(ref string s, char c) @safe
     {
         if (s.length == 0 || s[0] != c) throw new TagException("");
         s = s[1..$];
