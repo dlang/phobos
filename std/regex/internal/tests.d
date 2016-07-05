@@ -5,7 +5,7 @@ module std.regex.internal.tests;
 
 package(std.regex):
 
-import std.algorithm, std.conv, std.exception, std.meta, std.range,
+import std.conv, std.exception, std.meta, std.range,
     std.typecons, std.regex;
 
 import std.regex.internal.parser : Escapables; // characters that need escaping
@@ -404,6 +404,7 @@ unittest
 
     void ct_tests()
     {
+        import std.algorithm.comparison : equal;
         version(std_regex_ct1)
         {
             pragma(msg, "Testing 1st part of ctRegex");
@@ -500,6 +501,7 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto cr8 = ctRegex!("^(a)(b)?(c*)");
     auto m8 = bmatch("abcc",cr8);
     assert(m8);
@@ -514,6 +516,7 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto rtr = regex("a|b|c");
     enum ctr = regex("a|b|c");
     assert(equal(rtr.ir,ctr.ir));
@@ -526,6 +529,8 @@ unittest
 
 unittest
 {
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
     enum cx = ctRegex!"(A|B|C)";
     auto mx = match("B",cx);
     assert(mx);
@@ -555,6 +560,8 @@ unittest
 
 unittest
 {
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
 //global matching
     void test_body(alias matchFn)()
     {
@@ -596,6 +603,8 @@ unittest
 //tests for accumulated std.regex issues and other regressions
 unittest
 {
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
     void test_body(alias matchFn)()
     {
         //issue 5857
@@ -710,6 +719,7 @@ unittest
 // tests for splitter
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto s1 = ", abc, de,     fg, hi, ";
     auto sp1 = splitter(s1, regex(", *"));
     auto w1 = ["", "abc", "de", "fg", "hi", ""];
@@ -735,6 +745,7 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto s1 = ", abc, de,  fg, hi, ";
     auto w1 = ["", "abc", "de", "fg", "hi", ""];
     assert(equal(split(s1, regex(", *")), w1[]));
@@ -775,6 +786,7 @@ unittest
 }
 unittest
 {// bugzilla 7679
+    import std.algorithm.comparison : equal;
     foreach (S; AliasSeq!(string, wstring, dstring))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         enum re = ctRegex!(to!S(r"\."));
@@ -830,6 +842,7 @@ unittest
 // bugzilla 9211
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto rx_1 =  regex(r"^(\w)*(\d)");
     auto m = match("1234", rx_1);
     assert(equal(m.front, ["1234", "3", "4"]));
@@ -915,6 +928,7 @@ unittest
 // bugzilla 11839
 unittest
 {
+    import std.algorithm.comparison : equal;
     assert(regex(`(?P<var1>\w+)`).namedCaptures.equal(["var1"]));
     assert(collectException(regex(`(?P<1>\w+)`)));
     assert(regex(`(?P<v1>\w+)`).namedCaptures.equal(["v1"]));
