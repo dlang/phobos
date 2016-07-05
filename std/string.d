@@ -1175,6 +1175,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     import std.algorithm.searching : endsWith;
     import std.conv : to;
     import std.range.primitives : walkLength;
+    static import std.uni;
     import std.utf : strideBack;
     if (sub.empty)
         return -1;
