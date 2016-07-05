@@ -884,7 +884,7 @@ struct CtContext
     //
     CtState ctGenGroup(ref Bytecode[] ir, int addr)
     {
-        import std.algorithm : max;
+        import std.algorithm.comparison : max;
         auto bailOut = "goto L_backtrack;";
         auto nextInstr = ctSub("goto case $$;", addr+1);
         CtState r;
