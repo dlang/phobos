@@ -2635,7 +2635,8 @@ public:
             // making a closure.
             static auto scopedAddress(D)(scope D del)
             {
-                return del;
+                auto tmp = del;
+                return tmp;
             }
 
             size_t curPos = 0;
