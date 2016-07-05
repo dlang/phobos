@@ -608,7 +608,7 @@ interface Digest
         /**
          * This is a convenience function to calculate the hash of a value using the OOP API.
          */
-        final @trusted nothrow ubyte[] digest(const(void[])[] data...)
+        final @trusted nothrow ubyte[] digest(scope const(void[])[] data...)
         {
             this.reset();
             foreach (datum; data)
