@@ -1016,7 +1016,8 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
 @system unittest
 {
     import std.conv : to;
-    import std.algorithm : map, equal;
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
 
     foreach (String; AliasSeq!(string, wstring, const(dchar)[]))
     {
@@ -1507,7 +1508,7 @@ public:
     ///Forward range primitives.
     @property Range front()
     {
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
 
         assert(!empty && _offset <= _match.pre.length
                 && _match.pre.length <= _input.length);
@@ -1587,7 +1588,7 @@ public Splitter!(keepSeparators, Range, RegEx) splitter(
 ///
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto s1 = ", abc, de,  fg, hi, ";
     assert(equal(splitter(s1, regex(", *")),
         ["", "abc", "de", "fg", "hi", ""]));
@@ -1665,14 +1666,16 @@ auto escaper(Range)(Range r)
 ///
 unittest
 {
-    import std.regex, std.algorithm;
+    import std.regex;
+    import std.algorithm.comparison;
     string s = `This is {unfriendly} to *regex*`;
     assert(s.escaper.equal(`This is \{unfriendly\} to \*regex\*`));
 }
 
 unittest
 {
-    import std.conv, std.algorithm;
+    import std.conv;
+    import std.algorithm.comparison;
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
       auto s = "^".to!S;

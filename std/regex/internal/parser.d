@@ -5,7 +5,7 @@
 module std.regex.internal.parser;
 
 import std.regex.internal.ir;
-import std.algorithm, std.range.primitives, std.uni, std.meta,
+import std.range.primitives, std.uni, std.meta,
     std.traits, std.typecons, std.exception;
 static import std.ascii;
 
@@ -45,6 +45,7 @@ auto makeRegex(S)(S arg)
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto re = makeRegex(`(?P<name>\w+) = (?P<var>\d+)`);
     auto nc = re.namedCaptures;
     static assert(isRandomAccessRange!(typeof(nc)));
@@ -182,6 +183,7 @@ dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
 
 @system unittest //BUG canFind is system
 {
+    import std.algorithm.searching : canFind;
     string[] non_hex = [ "000j", "000z", "FffG", "0Z"];
     string[] hex = [ "01", "ff", "00af", "10FFFF" ];
     int[] value = [ 1, 0xFF, 0xAF, 0x10FFFF ];
@@ -279,6 +281,7 @@ struct CodeGen
 
     bool isOpenGroup(uint n)
     {
+        import std.algorithm.searching : canFind;
         // walk the fixup stack and see if there are groups labeled 'n'
         // fixup '0' is reserved for alternations
         return fixupStack.data[1..$].
@@ -319,7 +322,7 @@ struct CodeGen
         }
         else
         {
-            import std.algorithm : countUntil;
+            import std.algorithm.searching : countUntil;
             auto ivals = set.byInterval;
             auto n = charsets.countUntil(set);
             if (n >= 0)
@@ -394,6 +397,7 @@ struct CodeGen
 
     void endPattern(uint num)
     {
+        import std.algorithm.comparison : max;
         put(Bytecode(IR.End, num));
         ngroup = max(ngroup, groupStack.top);
         groupStack.top = 1; // reset group counter
@@ -421,6 +425,7 @@ struct CodeGen
     // repetition of {1,1}
     void fixRepetition(uint offset)
     {
+        import std.algorithm.mutation : copy;
         bool replace = ir[offset].code == IR.Nop;
         if (replace)
         {
@@ -432,6 +437,8 @@ struct CodeGen
     // repetition of {x,y}
     void fixRepetition(uint offset, uint min, uint max, bool greedy)
     {
+        static import std.algorithm.comparison;
+        import std.algorithm.mutation : copy;
         import std.array : insertInPlace;
         bool replace = ir[offset].code == IR.Nop;
         uint len = cast(uint)ir.length - offset - replace;
@@ -449,7 +456,7 @@ struct CodeGen
                 putRaw(1);
                 putRaw(min);
                 putRaw(max);
-                counterDepth = std.algorithm.max(counterDepth, nesting+1);
+                counterDepth = std.algorithm.comparison.max(counterDepth, nesting+1);
             }
         }
         else if (min) //&& max is infinite
@@ -467,7 +474,7 @@ struct CodeGen
                 putRaw(1);
                 putRaw(min);
                 putRaw(min);
-                counterDepth = std.algorithm.max(counterDepth, nesting+1);
+                counterDepth = std.algorithm.comparison.max(counterDepth, nesting+1);
             }
             else if (replace)
             {
@@ -1392,7 +1399,7 @@ struct Parser(R, Generator)
     //parse and generate IR for escape stand alone escape sequence
     @trusted void parseEscape()
     {//accesses array of appender
-
+        import std.algorithm.iteration : sum;
         switch (current)
         {
         case 'f':   next(); g.put(Bytecode(IR.Char, '\f')); break;

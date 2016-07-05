@@ -7,7 +7,7 @@ module std.regex.internal.kickstart;
 package(std.regex):
 
 import std.regex.internal.ir;
-import std.algorithm, std.range, std.utf;
+import std.range.primitives, std.utf;
 
 //utility for shiftOr, returns a minimum number of bytes to test in a Char
 uint effectiveSize(Char)()
@@ -129,7 +129,10 @@ private:
 public:
     @trusted this(ref Regex!Char re, uint[] memory)
     {
+        static import std.algorithm.comparison;
+        import std.algorithm.searching : countUntil;
         import std.conv : text;
+        import std.range : assumeSorted;
         assert(memory.length == 256);
         fChar = uint.max;
         // FNV-1a flavored hash (uses 32bits at a time)
@@ -368,7 +371,7 @@ public:
                 L_StopThread:
                     assert(re.ir[t.pc].code >= 0x80, text(re.ir[t.pc].code));
                     debug (fred_search) writeln("ShiftOr stumbled on ",re.ir[t.pc].mnemonic);
-                    n_length = min(t.idx, n_length);
+                    n_length = std.algorithm.comparison.min(t.idx, n_length);
                     break L_Eval_Thread;
                 }
             }

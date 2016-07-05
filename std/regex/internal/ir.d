@@ -709,7 +709,8 @@ template BackLooper(E)
 {//equal is @system?
     import std.range : assumeSorted;
     import std.conv : text;
-    import std.algorithm : map, equal;
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
 
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
     enforce(fnd < dict.length && equal(dict[fnd].name, name),
