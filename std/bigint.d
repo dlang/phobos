@@ -120,8 +120,9 @@ public:
         sign = neg;
     }
 
-    unittest
+    @system unittest
     {
+        // system because of the dummy ranges eventually call std.array!string
         import std.internal.test.dummyrange;
         import std.exception : assertThrown;
 
@@ -149,8 +150,9 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
+        // @system due to failure in FreeBSD32
         ulong data = 1_000_000_000_000;
         auto bigData = BigInt(data);
         assert(data == BigInt("1_000_000_000_000"));
@@ -163,7 +165,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         const(BigInt) b1 = BigInt("1_234_567_890");
         BigInt b2 = BigInt(b1);
@@ -179,7 +181,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto b = BigInt("123");
         b = 456;
@@ -195,7 +197,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto b1 = BigInt("123");
         auto b2 = BigInt("456");
@@ -295,8 +297,9 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
+        //@system because opOpAssign is @system
         auto b = BigInt("1_000_000_000");
 
         b += 12345;
@@ -356,8 +359,9 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
+        // @system because opOpAssign is @system
         auto x = BigInt("123");
         auto y = BigInt("321");
         x += y;
@@ -377,7 +381,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto x = BigInt("123");
         auto y = BigInt("456");
@@ -398,7 +402,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto x = BigInt("123");
         x *= 300;
@@ -450,7 +454,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto  x  = BigInt("1_000_000_500");
         long  l  = 1_000_000L;
@@ -475,7 +479,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto x = BigInt("100");
         BigInt y = 123 + x;
@@ -569,7 +573,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto x = BigInt("1234");
         assert(-x == BigInt("-1234"));
@@ -596,7 +600,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto x = BigInt("12345");
         auto y = BigInt("12340");
@@ -619,7 +623,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         // Non-zero values are regarded as true
         auto x = BigInt("1");
@@ -666,7 +670,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         import std.conv : to, ConvOverflowException;
         import std.exception : assertThrown;
@@ -679,7 +683,7 @@ public:
         assertThrown!ConvOverflowException(BigInt("-1").to!ubyte);
     }
 
-    unittest
+    @system unittest
     {
         import std.conv : to, ConvOverflowException;
         import std.exception : assertThrown;
@@ -726,7 +730,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         const(BigInt) x = BigInt("123");
         BigInt y = cast() x;    // cast away const
@@ -764,7 +768,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto x = BigInt("100");
         auto y = BigInt("10");
@@ -790,7 +794,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto b = BigInt("12345");
         long l = b.toLong();
@@ -810,7 +814,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         auto big = BigInt("5_000_000");
         auto i = big.toInt();
@@ -927,7 +931,7 @@ public:
         $(D toString) is rarely directly invoked; the usual way of using it is via
         $(REF format, std, format):
      */
-    unittest
+    @system unittest
     {
         import std.format : format;
 
@@ -954,7 +958,7 @@ public:
         $(D toHash) is rarely directly invoked; it is implicitly used when
         BigInt is used as the key of an associative array.
      */
-    unittest
+    @safe unittest
     {
         string[BigInt] aa;
         aa[BigInt(123)] = "abc";
@@ -988,7 +992,7 @@ private:
 }
 
 ///
-unittest
+@system unittest
 {
     BigInt a = "9588669891916142";
     BigInt b = "7452469135154800";
@@ -1034,7 +1038,7 @@ string toDecimalString(const(BigInt) x)
 }
 
 ///
-unittest
+@system unittest
 {
     auto x = BigInt("123");
     x *= 1000;
@@ -1062,7 +1066,7 @@ string toHex(const(BigInt) x)
 }
 
 ///
-unittest
+@system unittest
 {
     auto x = BigInt("123");
     x *= 1000;
@@ -1099,7 +1103,7 @@ Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
     }
 }
 
-nothrow pure
+nothrow pure @system
 unittest
 {
     BigInt a, b;
@@ -1108,7 +1112,7 @@ unittest
     auto c = a + b;
 }
 
-nothrow pure
+nothrow pure @system
 unittest
 {
     long a;
@@ -1117,7 +1121,7 @@ unittest
     auto d = b + a;
 }
 
-nothrow pure
+nothrow pure @system
 unittest
 {
     BigInt x = 1, y = 2;
@@ -1142,7 +1146,7 @@ unittest
     assert(incr == BigInt(1));
 }
 
-unittest
+@system unittest
 {
     // Radix conversion
     assert( toDecimalString(BigInt("-1_234_567_890_123_456_789"))
@@ -1180,7 +1184,7 @@ unittest
         == "1234567");
 }
 
-unittest // Minimum signed value bug tests.
+@system unittest // Minimum signed value bug tests.
 {
     assert(BigInt("-0x8000000000000000") == BigInt(long.min));
     assert(BigInt("-0x8000000000000000")+1 > BigInt(long.min));
@@ -1201,7 +1205,7 @@ unittest // Minimum signed value bug tests.
     assert((BigInt(int.min)-1)%int.min == -1);
 }
 
-unittest // Recursive division, bug 5568
+@system unittest // Recursive division, bug 5568
 {
     enum Z = 4843;
     BigInt m = (BigInt(1) << (Z*8) ) - 1;
@@ -1247,7 +1251,7 @@ unittest // Recursive division, bug 5568
     a8165[0] = a8165[1] = 1;
 }
 
-unittest
+@system unittest
 {
     import std.array;
     import std.format;
@@ -1298,7 +1302,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import std.array;
     import std.format;
@@ -1349,7 +1353,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import std.array;
     import std.format;
@@ -1401,7 +1405,7 @@ unittest
 }
 
 // 6448
-unittest
+@system unittest
 {
     import std.array;
     import std.format;
@@ -1427,7 +1431,7 @@ unittest
     assert(y.toLong() == -2);
 }
 
-unittest
+@safe unittest
 {
     import std.math : abs;
     auto r = abs(BigInt(-1000)); // 6486
@@ -1443,7 +1447,7 @@ unittest
     assert(one && !zero);
 }
 
-unittest // 6850
+@system unittest // 6850
 {
     pure long pureTest() {
         BigInt a = 1;
@@ -1455,7 +1459,7 @@ unittest // 6850
     assert(pureTest() == 1337);
 }
 
-unittest // 8435 & 10118
+@system unittest // 8435 & 10118
 {
     auto i = BigInt(100);
     auto j = BigInt(100);
@@ -1479,7 +1483,7 @@ unittest // 8435 & 10118
     assert(keys.empty);
 }
 
-unittest // 11148
+@system unittest // 11148
 {
     void foo(BigInt) {}
     const BigInt cbi = 3;
@@ -1516,13 +1520,13 @@ unittest // 11148
     n *= 2;
 }
 
-unittest // 8167
+@safe unittest // 8167
 {
     BigInt a = BigInt(3);
     BigInt b = BigInt(a);
 }
 
-unittest // 9061
+@safe unittest // 9061
 {
     long l1 = 0x12345678_90ABCDEF;
     long l2 = 0xFEDCBA09_87654321;
@@ -1541,7 +1545,7 @@ unittest // 9061
     assert(l5 == b5);
 }
 
-unittest // 11600
+@system unittest // 11600
 {
     import std.conv;
     import std.exception : assertThrown;
@@ -1556,13 +1560,13 @@ unittest // 11600
     assertThrown!ConvException(to!BigInt("-123four"));
 }
 
-unittest // 11583
+@safe unittest // 11583
 {
     BigInt x = 0;
     assert((x > 0) == false);
 }
 
-unittest // 13391
+@system unittest // 13391
 {
     BigInt x1 = "123456789";
     BigInt x2 = "123456789123456789";
@@ -1593,7 +1597,7 @@ unittest // 13391
     assert(x2 == 1);
 }
 
-unittest // 13963
+@system unittest // 13963
 {
     BigInt x = 1;
     import std.meta : AliasSeq;
@@ -1635,7 +1639,7 @@ unittest // 13963
     assert(-x2 % ulong.max == -x2);
 }
 
-unittest // 14124
+@system unittest // 14124
 {
     auto x = BigInt(-3);
     x %= 3;
@@ -1659,7 +1663,7 @@ unittest // 14124
 }
 
 // issue 15678
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
     assertThrown!ConvException(BigInt(""));
