@@ -2725,15 +2725,21 @@ EOS";
 
 @system unittest
 {
-    string test_xml = `<?xml version="1.0" encoding='UTF-8'?><stream:stream
+    string test_xml = `<?xml version="1.0" encoding='UTF-8'?><r><stream:stream
                         xmlns:stream="http://etherx.'jabber'.org/streams"
                         xmlns="jabber:'client'" from='jid.pl' id="587a5767"
-                        xml:lang="en" version="1.0"></stream:stream>`;
+                        xml:lang="en" version="1.0" attr='a"b"c'>
+                        </stream:stream></r>`;
 
     DocumentParser parser = new DocumentParser(test_xml);
+    parser.onStartTag["stream:stream"] = (ElementParser p) {
+        assert(p.tag.attr["xmlns"] == "jabber:'client'");
+        assert(p.tag.attr["from"] == "jid.pl");
+        assert(p.tag.attr["attr"] == "a\"b\"c");
+    };
 }
 
-unittest
+@system unittest
 {
     string s = q"EOS
 <?xml version="1.0" encoding="utf-8"?> <Tests>
@@ -2879,7 +2885,7 @@ private
         s = s[1..$];
     }
 
-    char requireOneOf(ref string s, string chars)
+    char requireOneOf(ref string s, string chars) @safe
     {
         if (s.length == 0 || indexOf(chars,s[0]) == -1)
             throw new TagException("");
@@ -3000,5 +3006,3 @@ private
         throw new XMLException(s);
     }
 }
-
-
