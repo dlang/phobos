@@ -100,7 +100,6 @@ version (Windows)
 
 import std.range.primitives;
 import std.stdio;
-import std.internal.processinit;
 import std.internal.cstring;
 
 
