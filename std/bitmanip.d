@@ -284,7 +284,7 @@ template taggedPointer(T : T*, string name, Ts...) {
 }
 
 ///
-unittest
+@safe unittest
 {
     struct A
     {
@@ -318,7 +318,7 @@ if (is(T == class))
 }
 
 ///
-unittest
+@safe unittest
 {
     struct A
     {
@@ -399,7 +399,7 @@ unittest
     t4b.a = -5; assert(t4b.a == -5L);
 }
 
-unittest
+@system unittest
 {
     struct Test5
     {
@@ -439,7 +439,7 @@ unittest
     assert(t6.b == true);
 }
 
-unittest
+@safe unittest
 {
     static assert(!__traits(compiles,
         taggedPointer!(
@@ -463,7 +463,7 @@ unittest
     static assert(!__traits(compiles, bar(s)));
 }
 
-unittest
+@safe unittest
 {
     // Bug #6686
     union  S {
@@ -480,7 +480,7 @@ unittest
     assert(num.bits == 0xFFFF_FFFF_8000_0001uL);
 }
 
-unittest
+@safe unittest
 {
     // Bug #5942
     struct S
@@ -497,7 +497,7 @@ unittest
     assert(data.b == 42);
 }
 
-unittest
+@safe unittest
 {
     struct Test
     {
@@ -522,7 +522,7 @@ unittest
     test();
 }
 
-unittest
+@safe unittest
 {
     {
         static struct Integrals {
@@ -599,7 +599,7 @@ unittest
 }
 
 // Issue 12477
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
     import std.bitmanip : bitfields;
@@ -689,7 +689,7 @@ struct DoubleRep
     enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
 
-unittest
+@safe unittest
 {
     // test reading
     DoubleRep x;
@@ -717,7 +717,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // Issue #15305
     struct S {
@@ -762,7 +762,7 @@ private:
     {
         return (size_t(1) << endBits) - 1;
     }
-    static size_t lenToDim(size_t len) @nogc pure nothrow
+    static size_t lenToDim(size_t len) @nogc pure nothrow @safe
     {
         return (len + (bitsPerSizeT-1)) / bitsPerSizeT;
     }
@@ -771,7 +771,7 @@ public:
     /**********************************************
      * Gets the amount of native words backing this $(D BitArray).
      */
-    @property size_t dim() const @nogc pure nothrow
+    @property size_t dim() const @nogc pure nothrow @safe
     {
         return lenToDim(_len);
     }
@@ -779,7 +779,7 @@ public:
     /**********************************************
      * Gets the amount of bits in the $(D BitArray).
      */
-    @property size_t length() const @nogc pure nothrow
+    @property size_t length() const @nogc pure nothrow @safe
     {
         return _len;
     }
@@ -790,7 +790,7 @@ public:
      * final word up to the next word boundary. i.e. D dynamic
      * array extension semantics are not followed.)
      */
-    @property size_t length(size_t newlen) pure nothrow
+    @property size_t length(size_t newlen) pure nothrow @system
     {
         if (newlen != _len)
         {
@@ -823,7 +823,7 @@ public:
         return cast(bool) bt(_ptr, i);
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opIndex.unittest\n");
 
@@ -868,7 +868,7 @@ public:
         return ba;
     }
 
-    unittest
+    @system unittest
     {
         BitArray a;
         BitArray b;
@@ -950,7 +950,7 @@ public:
         return result;
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opApply unittest\n");
 
@@ -1011,7 +1011,7 @@ public:
         return this;
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.reverse.unittest\n");
 
@@ -1075,7 +1075,7 @@ public:
         return this;
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.sort.unittest\n");
 
@@ -1109,7 +1109,7 @@ public:
         return (p1[i] & endMask) == (p2[i] & endMask);
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opEquals unittest\n");
 
@@ -1175,7 +1175,7 @@ public:
         return (this.length > a2.length) - (this.length < a2.length);
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opCmp unittest\n");
 
@@ -1274,7 +1274,7 @@ public:
     /***************************************
      * Set this $(D BitArray) to the contents of $(D ba).
      */
-    this(bool[] ba) pure nothrow
+    this(bool[] ba) pure nothrow @system
     {
         length = ba.length;
         foreach (i, b; ba)
@@ -1315,7 +1315,7 @@ public:
         }
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.init unittest\n");
 
@@ -1355,7 +1355,7 @@ public:
         return _ptr[0 .. dim];
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opCast unittest\n");
 
@@ -1387,7 +1387,7 @@ public:
         return result;
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opCom unittest\n");
 
@@ -1433,7 +1433,7 @@ public:
         return result;
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opAnd unittest\n");
 
@@ -1452,7 +1452,7 @@ public:
         assert(c[4] == 0);
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opOr unittest\n");
 
@@ -1471,7 +1471,7 @@ public:
         assert(c[4] == 1);
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opXor unittest\n");
 
@@ -1490,7 +1490,7 @@ public:
         assert(c[4] == 1);
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opSub unittest\n");
 
@@ -1542,7 +1542,7 @@ public:
         return this;
     }
 
-    unittest
+    @system unittest
     {
         static bool[] ba = [1,0,1,0,1,1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
@@ -1558,7 +1558,7 @@ public:
         assert(a[9] == 1);
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opAndAssign unittest\n");
 
@@ -1576,7 +1576,7 @@ public:
         assert(a[4] == 0);
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opOrAssign unittest\n");
 
@@ -1594,7 +1594,7 @@ public:
         assert(a[4] == 1);
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opXorAssign unittest\n");
 
@@ -1612,7 +1612,7 @@ public:
         assert(a[4] == 1);
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opSubAssign unittest\n");
 
@@ -1645,7 +1645,7 @@ public:
         return this;
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opCatAssign unittest\n");
 
@@ -1678,7 +1678,7 @@ public:
         return this;
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opCatAssign unittest\n");
 
@@ -1735,7 +1735,7 @@ public:
         return r;
     }
 
-    unittest
+    @system unittest
     {
         debug(bitarray) printf("BitArray.opCat unittest\n");
 
@@ -1780,7 +1780,7 @@ public:
         return (upper << (bitsPerSizeT - nbits)) | (lower >> nbits);
     }
 
-    unittest
+    @safe unittest
     {
         static if (size_t.sizeof == 8)
         {
@@ -1815,7 +1815,7 @@ public:
         return (upper << nbits) | (lower >> (bitsPerSizeT - nbits));
     }
 
-    unittest
+    @safe unittest
     {
         static if (size_t.sizeof == 8)
         {
@@ -1910,7 +1910,7 @@ public:
         }
     }
 
-    unittest
+    @system unittest
     {
         import std.format : format;
 
@@ -1938,7 +1938,7 @@ public:
     }
 
     // Test multi-word case
-    unittest
+    @system unittest
     {
         import std.format : format;
 
@@ -2016,7 +2016,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         import std.format : format;
 
@@ -2045,7 +2045,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal;
 
@@ -2060,7 +2060,7 @@ public:
         assert(b2.bitsSet.equal([333, 666, 999]));
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2124,7 +2124,7 @@ public:
     }
 }
 
-unittest
+@system unittest
 {
     import std.format : format;
 
@@ -2195,7 +2195,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
     return res << 32 | bswap(cast(uint)(val >> 32));
 }
 
-unittest
+@safe unittest
 {
     import std.meta;
     foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
@@ -2278,7 +2278,7 @@ auto nativeToBigEndian(T)(T val) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     int i = 12345;
     ubyte[4] swappedI = nativeToBigEndian(i);
@@ -2311,7 +2311,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
         return floatEndianImpl!(T, false)(val);
 }
 
-unittest
+@safe unittest
 {
     import std.meta;
     foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
@@ -2400,7 +2400,7 @@ T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     ushort i = 12345;
     ubyte[2] swappedI = nativeToBigEndian(i);
@@ -2452,7 +2452,7 @@ auto nativeToLittleEndian(T)(T val) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     int i = 12345;
     ubyte[4] swappedI = nativeToLittleEndian(i);
@@ -2485,7 +2485,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
         return floatEndianImpl!(T, false)(val);
 }
 
-unittest
+@safe unittest
 {
     import std.meta;
     foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
@@ -2547,7 +2547,7 @@ T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     ushort i = 12345;
     ubyte[2] swappedI = nativeToLittleEndian(i);
@@ -2615,7 +2615,7 @@ private template isFloatOrDouble(T)
                            !is(Unqual!(FloatingPointTypeOf!T) == real);
 }
 
-unittest
+@safe unittest
 {
     import std.meta;
     foreach (T; AliasSeq!(float, double))
@@ -2644,7 +2644,7 @@ private template canSwapEndianness(T)
                              isFloatOrDouble!T;
 }
 
-unittest
+@safe unittest
 {
     import std.meta;
     foreach (T; AliasSeq!(bool, ubyte, byte, ushort, short, uint, int, ulong,
@@ -2742,7 +2742,7 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
 }
 
 ///
-unittest
+@system unittest
 {
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
     assert(buffer.peek!uint() == 17110537);
@@ -2764,7 +2764,7 @@ unittest
     assert(index == 7);
 }
 
-unittest
+@system unittest
 {
     {
         //bool
@@ -2965,7 +2965,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : filter;
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 7];
@@ -3013,7 +3013,7 @@ T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
 }
 
 ///
-unittest
+@safe unittest
 {
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
     assert(buffer.length == 7);
@@ -3028,7 +3028,7 @@ unittest
     assert(buffer.empty);
 }
 
-unittest
+@safe unittest
 {
     {
         //bool
@@ -3201,7 +3201,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : filter;
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
@@ -3262,7 +3262,7 @@ void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t*
 }
 
 ///
-unittest
+@system unittest
 {
     {
         ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3305,7 +3305,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     {
         //bool
@@ -3588,7 +3588,7 @@ void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array;
     auto buffer = appender!(const ubyte[])();
@@ -3602,7 +3602,7 @@ unittest
     assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
 }
 
-unittest
+@safe unittest
 {
     import std.array;
     {
@@ -3733,7 +3733,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import std.format : format;
     import std.array;
@@ -3789,7 +3789,7 @@ private uint countTrailingZeros(T)(T value) @nogc pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(countTrailingZeros(1) == 0);
     assert(countTrailingZeros(0) == 32);
@@ -3797,7 +3797,7 @@ unittest
     assert(countTrailingZeros(256) == 8);
 }
 
-unittest
+@safe unittest
 {
     import std.meta;
     foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
@@ -3870,7 +3870,7 @@ private uint countBitsSet(T)(T value) @nogc pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(countBitsSet(1) == 1);
     assert(countBitsSet(0) == 0);
@@ -3878,7 +3878,7 @@ unittest
     assert(countBitsSet(uint.max) == 32);
 }
 
-unittest
+@safe unittest
 {
     import std.meta;
     foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
@@ -3965,7 +3965,7 @@ auto bitsSet(T)(T value) @nogc pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;
@@ -3976,7 +3976,7 @@ unittest
     assert(bitsSet(int.min).equal([31]));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;
