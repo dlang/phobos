@@ -1236,7 +1236,7 @@ class Comment : Item
      */
     this(string content)
     {
-        if (content == "-" || content.indexOf("==") != -1)
+        if (content == "-" || content.indexOf("--") != -1)
             throw new CommentException(content);
         this.content = content;
     }
@@ -1291,6 +1291,14 @@ class Comment : Item
     override string toString() const { return "<!--" ~ content ~ "-->"; }
 
     override @property bool isEmptyXML() const { return false; } /// Returns false always
+}
+
+unittest // issue 16241
+{
+    import std.exception : assertThrown;
+    auto c = new Comment("==");
+    assert(c.content == "==");
+    assertThrown!CommentException(new Comment("--"));
 }
 
 /**
