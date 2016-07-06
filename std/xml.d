@@ -1072,9 +1072,10 @@ class Tag
                 munch(s,whitespace);
                 reqc(s,'=');
                 munch(s,whitespace);
-                reqc(s,'"');
-                string val = decode(munch(s,"^\""), DecodeMode.LOOSE);
-                reqc(s,'"');
+                char quote = requireOneOf(s,"'\"");
+                char[2] notQuote = ['^', quote];
+                string val = decode(munch(s,notQuote[]), DecodeMode.LOOSE);
+                reqc(s,quote);
                 munch(s,whitespace);
                 attr[key] = val;
             }
@@ -2724,6 +2725,26 @@ EOS";
 
 @system unittest
 {
+    string test_xml = `<?xml version="1.0" encoding='UTF-8'?><r><stream:stream
+                        xmlns:stream="http://etherx.'jabber'.org/streams"
+                        xmlns="jabber:'client'" from='jid.pl' id="587a5767"
+                        xml:lang="en" version="1.0" attr='a"b"c'>
+                        </stream:stream></r>`;
+
+    DocumentParser parser = new DocumentParser(test_xml);
+    bool tested = false;
+    parser.onStartTag["stream:stream"] = (ElementParser p) {
+        assert(p.tag.attr["xmlns"] == "jabber:'client'");
+        assert(p.tag.attr["from"] == "jid.pl");
+        assert(p.tag.attr["attr"] == "a\"b\"c");
+        tested = true;
+    };
+    parser.parse();
+    assert(tested);
+}
+
+@system unittest
+{
     string s = q"EOS
 <?xml version="1.0" encoding="utf-8"?> <Tests>
     <Test thing="What &amp; Up">What &amp; Up Second</Test>
@@ -2866,6 +2887,15 @@ private
     {
         if (s.length == 0 || s[0] != c) throw new TagException("");
         s = s[1..$];
+    }
+
+    char requireOneOf(ref string s, string chars) @safe
+    {
+        if (s.length == 0 || indexOf(chars,s[0]) == -1)
+            throw new TagException("");
+        char ch = s[0];
+        s = s[1..$];
+        return ch;
     }
 
     size_t hash(string s,size_t h=0) @trusted nothrow
