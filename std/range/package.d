@@ -5354,9 +5354,6 @@ unittest
 
 unittest
 {
-    import std.parallelism : parallel;
-
-    assert(__traits(compiles, { foreach (i; iota(0, 100UL).parallel) {} }));
     assert(iota(1UL, 0UL).length == 0);
     assert(iota(1UL, 0UL, 1).length == 0);
     assert(iota(0, 1, 1).length == 1);
