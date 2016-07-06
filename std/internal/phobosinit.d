@@ -23,7 +23,7 @@ version(OSX)
 
 shared static this()
 {
-    import std.encoding;
+    import std.encoding : EncodingScheme;
     EncodingScheme.register("std.encoding.EncodingSchemeASCII");
     EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
     EncodingScheme.register("std.encoding.EncodingSchemeLatin2");
