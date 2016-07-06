@@ -4561,3 +4561,9 @@ unittest
 
     auto result = taskPool.amap!__genPair_12733(data);
 }
+
+unittest
+{
+    // this test was in std.range, but caused cycles.
+    assert(__traits(compiles, { foreach (i; iota(0, 100UL).parallel) {} }));
+}
