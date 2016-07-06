@@ -2732,11 +2732,15 @@ EOS";
                         </stream:stream></r>`;
 
     DocumentParser parser = new DocumentParser(test_xml);
+    bool tested = false;
     parser.onStartTag["stream:stream"] = (ElementParser p) {
         assert(p.tag.attr["xmlns"] == "jabber:'client'");
         assert(p.tag.attr["from"] == "jid.pl");
         assert(p.tag.attr["attr"] == "a\"b\"c");
+        tested = true;
     };
+    parser.parse();
+    assert(tested);
 }
 
 @system unittest
