@@ -5703,7 +5703,7 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
             enum SHIFT = 4;
         else
             static assert(0);
-        struct Result
+        static struct Result
         {
             this(UT value)
             {
@@ -5744,7 +5744,7 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
             Result opSlice(size_t lwr, size_t upr)
             {
                 Result result = void;
-                result.value = value >>> ((len - upr - 1) * SHIFT);
+                result.value = value >>> ((len - upr) * SHIFT);
                 result.len = cast(ubyte)(upr - lwr);
                 return result;
             }
@@ -5844,3 +5844,51 @@ unittest
     }
 }
 
+unittest // opSlice (issue 16192)
+{
+    import std.meta: AliasSeq;
+
+    static struct Test { ubyte radix; uint number; }
+
+    alias tests = AliasSeq!(
+        Test(2, 0b1_0110_0111u),
+        Test(2, 0b10_1100_1110u),
+        Test(8, octal!123456701u),
+        Test(8, octal!1234567012u),
+        Test(10, 123456789u),
+        Test(10, 1234567890u),
+        Test(16, 0x789ABCDu),
+        Test(16, 0x789ABCDEu),
+    );
+
+    foreach (test; tests)
+    {
+        enum ubyte radix = test.radix;
+        auto original = toChars!radix(test.number);
+
+        // opSlice vs popFront
+        auto r = original.save;
+        size_t i = 0;
+        for (; !r.empty; r.popFront(), ++i)
+        {
+            assert(original[i .. original.length].tupleof == r.tupleof);
+                // tupleof is used to work around issue 16216.
+        }
+
+        // opSlice vs popBack
+        r = original.save;
+        i = 0;
+        for (; !r.empty; r.popBack(), ++i)
+        {
+            assert(original[0 .. original.length - i].tupleof == r.tupleof);
+        }
+
+        // opSlice vs both popFront and popBack
+        r = original.save;
+        i = 0;
+        for (; r.length >= 2; r.popFront(), r.popBack(), ++i)
+        {
+            assert(original[i .. original.length - i].tupleof == r.tupleof);
+        }
+    }
+}
