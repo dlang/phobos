@@ -1636,7 +1636,10 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                 foreach (i, R; Rs)
                 {
                     case i:
-                        assert(!source[i].empty);
+                        assert(
+                            !source[i].empty,
+                            "Attempting to fetch the front of an empty roundRobin"
+                        );
                         return source[i].front;
                 }
             }
@@ -2454,20 +2457,40 @@ auto takeOne(R)(R source) if (isInputRange!R)
             private R _source;
             private bool _empty = true;
             @property bool empty() const { return _empty; }
-            @property auto ref front() { assert(!empty); return _source.front; }
-            void popFront() { assert(!empty); _empty = true; }
-            void popBack() { assert(!empty); _empty = true; }
+            @property auto ref front()
+            {
+                assert(!empty, "Attempting to fetch the front of an empty takeOne");
+                return _source.front;
+            }
+            void popFront()
+            {
+                assert(!empty, "Attempting to popFront an empty takeOne");
+                _empty = true;
+            }
+            void popBack()
+            {
+                assert(!empty, "Attempting to popBack an empty takeOne");
+                _empty = true;
+            }
             static if (isForwardRange!(Unqual!R))
             {
                 @property auto save() { return Result(_source.save, empty); }
             }
-            @property auto ref back() { assert(!empty); return _source.front; }
+            @property auto ref back()
+            {
+                assert(!empty, "Attempting to fetch the back of an empty takeOne");
+                return _source.front;
+            }
             @property size_t length() const { return !empty; }
             alias opDollar = length;
-            auto ref opIndex(size_t n) { assert(n < length); return _source.front; }
+            auto ref opIndex(size_t n)
+            {
+                assert(n < length, "Attempting to index a takeOne out of bounds");
+                return _source.front;
+            }
             auto opSlice(size_t m, size_t n)
             {
-                assert(m <= n && n < length);
+                assert(m <= n && n < length, "Attempting to index a takeOne out of bounds");
                 return n > m ? this : Result(_source, false);
             }
             // Non-standard property
@@ -3042,7 +3065,10 @@ public:
     auto opSlice(size_t i, size_t j)
     in
     {
-        assert(i <= j);
+        assert(
+            i <= j,
+            "Attempting to slice a Repeat with a larger first argument than the second."
+        );
     }
     body
     {
@@ -3489,7 +3515,10 @@ nothrow:
     auto opSlice(size_t i, size_t j) @safe
     in
     {
-        assert(i <= j);
+        assert(
+            i <= j,
+            "Attempting to slice a Repeat with a larger first argument than the second."
+        );
     }
     body
     {
@@ -3511,7 +3540,7 @@ nothrow:
 Cycle!R cycle(R)(R input)
     if (isForwardRange!R && !isInfinite!R)
 {
-    assert(!input.empty);
+    assert(!input.empty, "Attempting to pass an empty input to cycle");
     return Cycle!R(input);
 }
 
@@ -3532,7 +3561,7 @@ Cycle!R cycle(R)(R input)
 Cycle!R cycle(R)(R input, size_t index = 0)
     if (isRandomAccessRange!R && !isInfinite!R)
 {
-    assert(!input.empty);
+    assert(!input.empty, "Attempting to pass an empty input to cycle");
     return Cycle!R(input, index);
 }
 
@@ -4876,7 +4905,10 @@ public:
     auto opSlice(size_t lower, size_t upper)
     in
     {
-        assert(upper >= lower);
+        assert(
+            upper >= lower,
+            "Attempting to slice a Sequence with a larger first argument than the second."
+        );
     }
     body
     {
