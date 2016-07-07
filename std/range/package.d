@@ -5251,8 +5251,9 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
 /// Ditto
 auto iota(E)(E end)
+if (is(typeof(iota(E(0), end))))
 {
-    E begin = 0;
+    E begin = E(0);
     return iota(begin, end);
 }
 
