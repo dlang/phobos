@@ -68,7 +68,9 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 {
     import std.functional : binaryFun;
     import std.exception : enforce;
-    import std.algorithm : move, min, HeapOps, swapAt;
+    import std.algorithm.comparison : min;
+    import std.algorithm.mutation : move, swapAt;
+    import std.algorithm.sorting : HeapOps;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
     static if (isRandomAccessRange!Store)
@@ -367,7 +369,7 @@ must be collected.
 /// Example from "Introduction to Algorithms" Cormen et al, p 146
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
     auto h = heapify(a);
     // largest element
@@ -380,7 +382,7 @@ unittest
 /// lazy iteration of the underlying range in descending order.
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : take;
     int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
     auto top5 = heapify(a).take(5);
@@ -430,7 +432,7 @@ unittest
 unittest
 {
     // Test range interface.
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
     auto h = heapify(a);
     static assert(isInputRange!(typeof(h)));

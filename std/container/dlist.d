@@ -21,7 +21,7 @@ module std.container.dlist;
 unittest
 {
     import std.container : DList;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto s = DList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));
@@ -37,7 +37,7 @@ unittest
     assert(equal(s[], [4, 5, 2, 6, 7]));
 
     // If you want to apply range operations, simply slice it.
-    import std.algorithm : countUntil;
+    import std.algorithm.searching : countUntil;
     import std.range : popFrontN, popBackN, walkLength;
 
     auto sl = DList!int([1, 2, 3, 4, 5]);
@@ -517,7 +517,7 @@ Complexity: $(BIGOH 1).
      */
     T removeAny()
     {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
 
         assert(!empty, "DList.removeAny: List is empty");
         auto result = move(back);
@@ -726,7 +726,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     //Tests construction signatures
     alias IntList = DList!int;
@@ -745,7 +745,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     alias IntList = DList!int;
     IntList list = IntList([0,1,2,3]);
@@ -762,7 +762,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : take;
 
     alias IntList = DList!int;
@@ -821,7 +821,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto dl = DList!string(["a", "b", "d"]);
     dl.insertAfter(dl[], "e"); // insert at the end
@@ -834,7 +834,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto dl = DList!string(["a", "b", "d"]);
     dl.insertBefore(dl[], "e"); // insert at the front
@@ -888,7 +888,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     //Verify all flavors of ~
     auto a = DList!int();
@@ -924,7 +924,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     //8905
     auto a = DList!int([1, 2, 3, 4]);

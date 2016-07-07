@@ -20,7 +20,6 @@ module std.container.array;
 import std.range.primitives;
 import std.traits;
 import core.exception : RangeError;
-import std.algorithm : move;
 
 public import std.container.util;
 
@@ -140,6 +139,8 @@ private struct RangeT(A)
 
     static if (isMutable!A)
     {
+        import std.algorithm.mutation : move;
+
         E moveFront()
         {
             version (assert) if (empty || _a >= _outer.length) throw new RangeError();
@@ -254,7 +255,6 @@ if (!is(Unqual!T == bool))
 
     import core.memory : GC;
 
-    import std.algorithm : initializeAll, copy;
     import std.exception : enforce;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
@@ -311,6 +311,8 @@ if (!is(Unqual!T == bool))
         // length
         @property void length(size_t newLength)
         {
+            import std.algorithm.mutation : initializeAll;
+
             if (length >= newLength)
             {
                 // shorten
@@ -961,6 +963,8 @@ $(D r)
      */
     Range linearRemove(Range r)
     {
+        import std.algorithm.mutation : copy;
+
         enforce(r._outer._data is _data);
         enforce(_data.refCountedStore.isInitialized);
         enforce(r._a <= r._b && r._b <= length);
@@ -1093,7 +1097,7 @@ unittest
 // Give the Range object some testing.
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : retro;
     auto a = Array!int(0, 1, 2, 3, 4, 5, 6)[];
     auto b = Array!int(6, 5, 4, 3, 2, 1, 0)[];
@@ -1166,7 +1170,7 @@ unittest
 // test replace!Stuff with range Stuff
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int([1, 42, 5]);
     a.replace(a[1 .. 2], [2, 3, 4]);
     assert(equal(a[], [1, 2, 3, 4, 5]));
@@ -1175,28 +1179,28 @@ unittest
 // test insertBefore and replace with empty Arrays
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], 1);
     assert(equal(a[], [1]));
 }
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.replace(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.replace(a[], 1);
     assert(equal(a[], [1]));
@@ -1247,7 +1251,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     //Test "array-wide" operations
     auto a = Array!int([0, 1, 2]); //Array
@@ -1318,7 +1322,7 @@ unittest //11459
 
 unittest //11884
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
     auto a = Array!int([1, 2, 2].filter!"true"());
 }
 
@@ -1809,7 +1813,7 @@ if (is(Unqual!T == bool))
 
     unittest
     {
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
         Array!bool a;
         a.insertBack([true, false, true, true]);
         Array!bool b;
@@ -1838,7 +1842,7 @@ if (is(Unqual!T == bool))
 
     unittest
     {
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
         Array!bool a;
         a.insertBack([true, false, true, true]);
         Array!bool b;
@@ -2105,7 +2109,7 @@ if (is(Unqual!T == bool))
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
-        import std.algorithm : bringToFront;
+        import std.algorithm.mutation : bringToFront;
         // TODO: make this faster, it moves one bit at a time
         immutable inserted = stableInsertBack(stuff);
         immutable tailLength = length - inserted;
@@ -2134,7 +2138,7 @@ if (is(Unqual!T == bool))
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        import std.algorithm : bringToFront;
+        import std.algorithm.mutation : bringToFront;
         // TODO: make this faster, it moves one bit at a time
         immutable inserted = stableInsertBack(stuff);
         immutable tailLength = length - inserted;
@@ -2198,7 +2202,7 @@ if (is(Unqual!T == bool))
      */
     Range linearRemove(Range r)
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         copy(this[r._b .. length], this[r._a .. length]);
         length = length - r.length;
         return this[r._a .. length];
