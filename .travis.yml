@@ -2,23 +2,35 @@ sudo: false
 os: linux
 language: d
 d: dmd-2.071.0
+git:
+  depth: 1
 install:
- - wget "https://raw.githubusercontent.com/dlang/dmd/master/src/checkwhitespace.d" -O ../checkwhitespace.d
+ - mkdir phobos
+ - ls -1 | grep -v ^phobos | xargs -I{} mv {} phobos
+ - git clone --depth=1 https://github.com/dlang/dmd
+ - git clone --depth=1 https://github.com/dlang/druntime
+ # whitespace check
+ - wget "https://raw.githubusercontent.com/dlang/dmd/master/src/checkwhitespace.d" -O checkwhitespace.d
+ # dscanner
  - git clone https://github.com/Hackerpilot/Dscanner
  - (cd Dscanner && git checkout tags/v0.4.0-alpha6)
  - (cd Dscanner && git submodule update --init --recursive)
  # debug build is faster, but disable 'missing import' messages (missing core from druntime)
  - (cd Dscanner && sed 's/dparse_verbose/StdLoggerDisableWarning/' -i makefile && make githash debug)
  # avoid checking it's dscanner's directory
- - mv Dscanner/dsc .
- - rm -rf Dscanner
 script:
- - (cd .. && rdmd ./checkwhitespace.d $(find phobos -name '*.d'))
+ - rdmd ./checkwhitespace.d $(find phobos -name '*.d')
  # enforce whitespace between statements
- - grep -nE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $(find . -name '*.d'); test $? -eq 1
+ - (cd phobos && grep -nE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $(find . -name '*.d'); test $? -eq 1)
  # enforce whitespace between colon(:) for import statements (doesn't catch everything)
- - grep -n 'import [^/,=]*:.*;' $(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $? -eq 1
+ - (cd phobos && grep -n 'import [^/,=]*:.*;' $(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $? -eq 1)
  # enforce all-man style
- - grep -nE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$'  $(find . -name '*.d'); test $? -eq 1
+ - (cd phobos && grep -nE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$'  $(find . -name '*.d'); test $? -eq 1)
  # at the moment libdparse has problems to parse some modules (->excludes)
- - ./dsc --config .dscanner.ini --styleCheck $(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.
+ - (cd phobos && ../Dscanner/dsc --config ../.dscanner.ini --styleCheck $(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.)
+ # test code coverage
+ - (cd dmd && make -f posix.mak)
+ - (cd druntime && make -f posix.mak)
+ - (cd phobos && make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/" | grep -vE '(std.encoding|net.curl)' ))
+after_success:
+ - (cd phobos && bash <(curl -s https://codecov.io/bash))
