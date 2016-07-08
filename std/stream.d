@@ -1487,7 +1487,7 @@ class Stream : InputStream, OutputStream {
         }
         return cast(string) result[0 .. pos];
     }
-    catch (Throwable)
+    catch (Exception)
     {
         return super.toString();
     }
@@ -1524,7 +1524,7 @@ class Stream : InputStream, OutputStream {
         res.crcVal = crc.finish();
         return res.hash;
     }
-    catch (Throwable)
+    catch (Exception)
     {
         return super.toHash();
     }
