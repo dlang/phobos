@@ -898,7 +898,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
             {
                 import std.utf : encode;
                 T[dchar.sizeof/T.sizeof] buf;
-                size_t len = encode(buf, ch);
+                immutable len = encode(buf, ch);
                 final switch (len)
                 {
                     static if (T.sizeof == char.sizeof)
@@ -2677,7 +2677,7 @@ if (isDynamicArray!A)
         // We only do this for mutable types that can be extended.
         static if (isMutable!T && is(typeof(arr.length = size_t.max)))
         {
-            auto cap = arr.capacity; //trusted
+            immutable cap = arr.capacity; //trusted
             // Replace with "GC.setAttr( Not Appendable )" once pure (and fixed)
             if (cap > arr.length)
                 arr.length = cap;
@@ -2761,7 +2761,7 @@ if (isDynamicArray!A)
             // first, try extending the current block
             if (_data.canExtend)
             {
-                auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
+                immutable u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
                 if (u)
                 {
                     // extend worked, update the capacity
