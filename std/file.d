@@ -250,7 +250,7 @@ void[] read(R)(auto ref R name, size_t upTo = size_t.max)
     return read!(StringTypeOf!R)(name, upTo);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, read(TestAliasedString(null))));
 }
@@ -428,7 +428,7 @@ S readText(S = string, R)(auto ref R name)
     return readText!(S, StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, readText(TestAliasedString(null))));
 }
@@ -455,7 +455,7 @@ void write(R)(R name, const void[] buffer)
 }
 
 ///
-unittest
+@system unittest
 {
    scope(exit)
    {
@@ -474,7 +474,7 @@ void write(R)(auto ref R name, const void[] buffer)
     write!(StringTypeOf!R)(name, buffer);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, write(TestAliasedString(null), null)));
 }
@@ -499,7 +499,7 @@ void append(R)(R name, const void[] buffer)
 }
 
 ///
-unittest
+@system unittest
 {
    scope(exit)
    {
@@ -520,7 +520,7 @@ void append(R)(auto ref R name, const void[] buffer)
     append!(StringTypeOf!R)(name, buffer);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, append(TestAliasedString("foo"), [0, 1, 2, 3])));
 }
@@ -633,7 +633,7 @@ void rename(RF, RT)(auto ref RF from, auto ref RT to)
     rename!Types(from, to);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, rename(TestAliasedString(null), TestAliasedString(null))));
     static assert(__traits(compiles, rename("", TestAliasedString(null))));
@@ -710,7 +710,7 @@ void remove(R)(auto ref R name)
     remove!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, remove(TestAliasedString("foo"))));
 }
@@ -816,7 +816,7 @@ ulong getSize(R)(auto ref R name)
     return getSize!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, getSize(TestAliasedString("foo"))));
 }
@@ -910,13 +910,13 @@ void getTimes(R)(auto ref R name,
     return getTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
 
-unittest
+@safe unittest
 {
     SysTime atime, mtime;
     static assert(__traits(compiles, getTimes(TestAliasedString("foo"), atime, mtime)));
 }
 
-unittest
+@system unittest
 {
     import std.stdio : writefln;
 
@@ -1024,7 +1024,7 @@ else version(Windows)
     }
 }
 
-version(Windows) unittest
+version(Windows) @system unittest
 {
     import std.stdio : writefln;
     auto currTime = Clock.currTime();
@@ -1212,7 +1212,7 @@ void setTimes(R)(auto ref R name,
         setTimes(TestAliasedString("foo"), SysTime.init, SysTime.init);
 }
 
-unittest
+@system unittest
 {
     import std.stdio : File;
     string newdir = deleteme ~ r".dir";
@@ -1289,7 +1289,7 @@ SysTime timeLastModified(R)(auto ref R name)
     return timeLastModified!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, timeLastModified(TestAliasedString("foo"))));
 }
@@ -1354,7 +1354,7 @@ SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
     }
 }
 
-unittest
+@safe unittest
 {
     //std.process.system("echo a > deleteme") == 0 || assert(false);
     if (exists(deleteme))
@@ -1383,7 +1383,7 @@ unittest
 //   timestamps with 1-second precision.
 version (FreeBSD) {} else
 version (OSX) {} else
-unittest
+@system unittest
 {
     import core.thread;
 
@@ -1536,7 +1536,7 @@ uint getAttributes(R)(auto ref R name)
     return getAttributes!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, getAttributes(TestAliasedString(null))));
 }
@@ -1591,7 +1591,7 @@ uint getLinkAttributes(R)(auto ref R name)
     return getLinkAttributes!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, getLinkAttributes(TestAliasedString(null))));
 }
@@ -1645,7 +1645,7 @@ void setAttributes(R)(auto ref R name, uint attributes)
     return setAttributes!(StringTypeOf!R)(name, attributes);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, setAttributes(TestAliasedString(null), 0)));
 }
@@ -1688,7 +1688,7 @@ assert("/usr/share/include".isDir);
     return name.isDir!(StringTypeOf!R);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isDir));
 }
@@ -1713,7 +1713,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     version(Windows)
         enum dir = "C:\\Program Files\\";
@@ -1834,13 +1834,13 @@ assert(!"/usr/share/include".isFile);
     return isFile!(StringTypeOf!R)(name);
 }
 
-unittest // bugzilla 15658
+@system unittest // bugzilla 15658
 {
     DirEntry e = DirEntry(".");
     static assert(is(typeof(isFile(e))));
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isFile));
 }
@@ -1968,12 +1968,12 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
     return name.isSymlink!(StringTypeOf!R);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isSymlink));
 }
 
-unittest
+@system unittest
 {
     version(Windows)
     {
@@ -2114,7 +2114,7 @@ void chdir(R)(auto ref R pathname)
     return chdir!(StringTypeOf!R)(pathname);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, chdir(TestAliasedString(null))));
 }
@@ -2164,7 +2164,7 @@ void mkdir(R)(auto ref R pathname)
     return mkdir!(StringTypeOf!R)(pathname);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, mkdir(TestAliasedString(null))));
 }
@@ -2212,7 +2212,7 @@ void mkdirRecurse(in char[] pathname)
     }
 }
 
-unittest
+@system unittest
 {
     {
         immutable basepath = deleteme ~ "_dir";
@@ -2298,7 +2298,7 @@ void rmdir(R)(auto ref R pathname)
     rmdir!(StringTypeOf!R)(pathname);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, rmdir(TestAliasedString(null))));
 }
@@ -2389,7 +2389,7 @@ version(Posix) @safe unittest
     }
 }
 
-version(Posix) unittest
+version(Posix) @safe unittest
 {
     static assert(__traits(compiles,
         symlink(TestAliasedString(null), TestAliasedString(null))));
@@ -2481,7 +2481,7 @@ version(Posix) @safe unittest
     static assert(__traits(compiles, readLink(TestAliasedString("foo"))));
 }
 
-version(Posix) unittest // input range of dchars
+version(Posix) @system unittest // input range of dchars
 {
     mkdirRecurse(deleteme);
     scope(exit) if (deleteme.exists) rmdirRecurse(deleteme);
@@ -2547,7 +2547,7 @@ else version (Posix) string getcwd()
     return p[0 .. core.stdc.string.strlen(p)].idup;
 }
 
-unittest
+@system unittest
 {
     auto s = getcwd();
     assert(s.length);
@@ -3123,7 +3123,7 @@ else version(Posix)
     }
 }
 
-unittest
+@system unittest
 {
     version(Windows)
     {
@@ -3261,7 +3261,7 @@ void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve 
     copy!Types(from, to, preserve);
 }
 
-unittest // issue 15319
+@system unittest // issue 15319
 {
     import std.file : dirEntries;
     auto fs = dirEntries(tempDir(), SpanMode.depth);
@@ -3354,7 +3354,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm, std.file; // issue 14817
     auto t1 = deleteme, t2 = deleteme~"2";
@@ -3371,7 +3371,7 @@ unittest
     assert(readText(t2.byChar) == "2");
 }
 
-version(Posix) unittest //issue 11434
+@safe version(Posix) unittest //issue 11434
 {
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
@@ -3382,7 +3382,7 @@ version(Posix) unittest //issue 11434
     assert(getAttributes(t2) == octal!100767);
 }
 
-unittest // issue 15865
+@safe unittest // issue 15865
 {
     auto t = deleteme;
     write(t, "a");
@@ -3449,7 +3449,7 @@ void rmdirRecurse(DirEntry de)
     rmdirRecurse(de);
 }
 
-version(Windows) unittest
+version(Windows) @system unittest
 {
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
     mkdirRecurse(d);
@@ -3457,7 +3457,7 @@ version(Windows) unittest
     enforce(!exists(deleteme ~ ".dir"));
 }
 
-version(Posix) unittest
+version(Posix) @system unittest
 {
     import std.process : executeShell;
     collectException(rmdirRecurse(deleteme));
@@ -3480,7 +3480,7 @@ version(Posix) unittest
     enforce(!exists(deleteme));
 }
 
-unittest
+@system unittest
 {
     void[] buf;
 
@@ -3813,7 +3813,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 }
 
 /// Duplicate functionality of D1's $(D std.file.listdir()):
-unittest
+@safe unittest
 {
     string[] listdir(string pathname)
     {
@@ -3837,7 +3837,7 @@ unittest
      }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm;
     import std.range;
@@ -3935,7 +3935,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     return filter!f(DirIterator(path, mode, followSymlink));
 }
 
-unittest
+@system unittest
 {
     import std.stdio : writefln;
     immutable dpath = deleteme ~ "_dir";
@@ -4057,7 +4057,7 @@ slurp(Types...)(string filename, in char[] format)
 }
 
 ///
-unittest
+@system unittest
 {
     scope(exit)
     {
