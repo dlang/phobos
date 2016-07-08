@@ -668,7 +668,7 @@ struct FormatSpec(Char)
     if (is(Unqual!Char == Char))
 {
     import std.ascii : isDigit;
-    import std.algorithm : startsWith;
+    import std.algorithm.searching : startsWith;
     import std.conv : parse, text, to;
 
     /**
@@ -1674,7 +1674,8 @@ Params:
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    import std.algorithm : find, min;
+    import std.algorithm.searching : find;
+    import std.algorithm.comparison : min;
     FormatSpec!Char fs = f; // fs is copy for change its values.
     FloatingPointTypeOf!T val = obj;
 
@@ -4296,7 +4297,7 @@ private template acceptedSpecs(T)
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && is(Unqual!T == bool))
 {
-    import std.algorithm : find;
+    import std.algorithm.searching : find;
     import std.conv : parse, text;
     if (spec.spec == 's')
     {
@@ -4366,7 +4367,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isIntegral!T && !is(T == enum))
 {
-    import std.algorithm : find;
+    import std.algorithm.searching : find;
     import std.conv : parse, text;
     enforce(find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
@@ -4388,7 +4389,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isFloatingPoint!T && !is(T == enum))
 {
-    import std.algorithm : find;
+    import std.algorithm.searching : find;
     import std.conv : parse, text;
     if (spec.spec == 'r')
     {
@@ -4470,7 +4471,7 @@ pure unittest
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isSomeChar!T && !is(T == enum))
 {
-    import std.algorithm : find;
+    import std.algorithm.searching : find;
     import std.conv : to, text;
     if (spec.spec == 's' || spec.spec == 'c')
     {
