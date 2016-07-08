@@ -8136,16 +8136,16 @@ public:
             auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
             if (_timezone is LocalTime())
-                return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs);
+                return dateTime.toISOString() ~ fracSecStr;
 
             if (_timezone is UTC())
-                return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toISOString() ~ fracSecStr ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
             return format("%s%s%s",
                           dateTime.toISOString(),
-                          fracSecsToISOString(cast(int)hnsecs),
+                          fracSecStr,
                           SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch (Exception e)
@@ -8266,16 +8266,16 @@ public:
             auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
             if (_timezone is LocalTime())
-                return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs);
+                return dateTime.toISOExtString() ~ fracSecStr;
 
             if (_timezone is UTC())
-                return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toISOExtString() ~ fracSecStr ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
             return format("%s%s%s",
                           dateTime.toISOExtString(),
-                          fracSecsToISOString(cast(int)hnsecs),
+                          fracSecStr,
                           SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch (Exception e)
@@ -8400,16 +8400,16 @@ public:
             auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
             if (_timezone is LocalTime())
-                return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs);
+                return dateTime.toSimpleString() ~ fracSecStr;
 
             if (_timezone is UTC())
-                return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toSimpleString() ~ fracSecStr ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
             return format("%s%s%s",
                           dateTime.toSimpleString(),
-                          fracSecsToISOString(cast(int)hnsecs),
+                          fracSecStr,
                           SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch (Exception e)
@@ -10007,8 +10007,6 @@ public:
     ref Date add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if (units == "years")
     {
-        immutable newYear = _year + value;
-
         _year += value;
 
         if (_month == Month.feb && _day == 29 && !yearIsLeapYear(_year))
@@ -29840,7 +29838,7 @@ public:
 
             _enforceValidTZFile(tzFile.readln().strip().empty);
 
-            auto posixEnvStr = tzFile.readln().strip();
+            cast(void) tzFile.readln();
 
             version(Android)
             {
@@ -29911,7 +29909,6 @@ public:
                 auto tempTransition = tempTransitions[i];
                 auto transitionTimeT = tempTransition.timeT;
                 auto ttInfo = tempTransition.ttInfo;
-                auto ttype = tempTransition.ttype;
 
                 _enforceValidTZFile(i == 0 || transitionTimeT > tempTransitions[i - 1].timeT);
 
