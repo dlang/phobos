@@ -1156,7 +1156,6 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         else //use Tim Sort for semistable & stable
             TimSortImpl!(lessFun, Range).sort(r, null);
 
-        enum maxLen = 8;
         assert(isSorted!lessFun(r), "Failed to sort range of type " ~ Range.stringof);
     }
     else
