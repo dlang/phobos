@@ -480,7 +480,7 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     {
         if (std.ascii.isASCII(c))
         {                                                   // Plain old ASCII
-            auto c1 = cast(char) std.ascii.toLower(c);
+            immutable c1 = cast(char) std.ascii.toLower(c);
 
             ptrdiff_t i;
             foreach (const c2; s.byCodeUnit())
@@ -492,7 +492,7 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
         }
         else
         {                                                   // c is a universal character
-            auto c1 = std.uni.toLower(c);
+            immutable c1 = std.uni.toLower(c);
 
             ptrdiff_t i;
             foreach (const c2; s.byDchar())
@@ -2978,10 +2978,10 @@ auto stripRight(Range)(Range str)
                 {
                     if (i)
                     {
-                        auto c1 = str[i - 1];
+                        immutable c1 = str[i - 1];
                         if (c1 >= 0xD800 && c1 < 0xDC00)
                         {
-                            dchar c = ((c1 - 0xD7C0) << 10) + (c2 - 0xDC00);
+                            immutable dchar c = ((c1 - 0xD7C0) << 10) + (c2 - 0xDC00);
                             if (isWhite(c))
                             {
                                 --i;
@@ -3883,7 +3883,7 @@ auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
                 assert(_width);
                 static if (hasLength!Range)
                 {
-                    auto len = _input.length;
+                    immutable len = _input.length;
                     nfill = (_width > len) ? _width - len : 0;
                 }
                 else
@@ -4517,7 +4517,7 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
             {
                 if (_input.empty)
                     return true;
-                C c = _input.front;
+                immutable c = _input.front;
                 if (c != ' ' && c != '\t')
                     return false;
                 auto t = _input.save;
@@ -4549,7 +4549,7 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
                 if (c == ' ' || c == '\t')
                 {
                     // Consume input until a non-blank is encountered
-                    size_t startcol = column;
+                    immutable startcol = column;
                     C cx;
                     static if (isSomeString!Range)
                     {
@@ -4582,7 +4582,7 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
                         }
                     }
                     // Compute ntabs+nspaces to get from startcol to column
-                    auto n = column - startcol;
+                    immutable n = column - startcol;
                     if (n == 1)
                     {
                         nspaces = 1;
@@ -5685,10 +5685,10 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
         for (size_t i = 0; i < from.length; )
         {
-            dchar f = decode(from, i);
+            immutable f = decode(from, i);
             if (f == '-' && lastf != dchar.init && i < from.length)
             {
-                dchar nextf = decode(from, i);
+                immutable nextf = decode(from, i);
                 if (lastf <= c && c <= nextf)
                 {
                     n += c - lastf - 1;
@@ -5718,7 +5718,8 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
         // Find the nth character in to[]
         dchar nextt;
         for (size_t i = 0; i < to.length; )
-        {   dchar t = decode(to, i);
+        {
+            immutable t = decode(to, i);
             if (t == '-' && lastt != dchar.init && i < to.length)
             {
                 nextt = decode(to, i);
@@ -5872,7 +5873,7 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
             ("nan", "nani", "nan+nani", "inf", "-inf"))
         return true;
 
-    auto frontResult = codeUnits.front;
+    immutable frontResult = codeUnits.front;
     if (frontResult == '-' || frontResult == '+')
         codeUnits.popFront;
 
@@ -6755,7 +6756,7 @@ S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
     S shortestIndent;
     foreach (ref line; lines)
     {
-        auto stripped = line.stripLeft();
+        const stripped = line.stripLeft();
 
         if (stripped.empty)
         {
@@ -6763,7 +6764,7 @@ S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
         }
         else
         {
-            auto indent = leadingWhiteOf(line);
+            const indent = leadingWhiteOf(line);
 
             // Comparing number of code units instead of code points is OK here
             // because this function throws upon inconsistent indentation.
@@ -6778,7 +6779,7 @@ S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
 
     foreach (ref line; lines)
     {
-        auto stripped = line.stripLeft();
+        const stripped = line.stripLeft();
 
         if (stripped.empty)
         {
