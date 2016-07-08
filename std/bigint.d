@@ -445,7 +445,7 @@ public:
         }
         else
         {
-            uint u = absUnsign(y);
+            immutable uint u = absUnsign(y);
             int rem = BigUint.modInt(data, u);
             // x%y always has the same sign as x.
             // This is not the same as mathematical mod.
@@ -523,8 +523,8 @@ public:
             // x%y always has the same sign as x.
             if (data.ulongLength > 1)
                 return x;
-            ulong u = absUnsign(x);
-            ulong rem = u % data.peekUlong(0);
+            immutable u = absUnsign(x);
+            immutable rem = u % data.peekUlong(0);
             // x%y always has the same sign as x.
             return cast(T)((x<0) ? -rem : rem);
         }
@@ -763,7 +763,7 @@ public:
     {
         if (sign!=y.sign)
             return sign ? -1 : 1;
-        int cmp = data.opCmp(y.data);
+        immutable cmp = data.opCmp(y.data);
         return sign? -cmp: cmp;
     }
 
@@ -866,7 +866,7 @@ public:
     /// ditto
     void toString(scope void delegate(const(char)[]) sink, ref FormatSpec!char f) const
     {
-        auto hex = (f.spec == 'x' || f.spec == 'X');
+        immutable hex = (f.spec == 'x' || f.spec == 'X');
         if (!(f.spec == 's' || f.spec == 'd' || f.spec =='o' || hex))
             throw new FormatException("Format specifier not understood: %" ~ f.spec);
 
@@ -906,8 +906,8 @@ public:
             }
         }
 
-        auto maxw = minw < f.width ? f.width : minw;
-        auto difw = maxw - minw;
+        immutable maxw = minw < f.width ? f.width : minw;
+        immutable difw = maxw - minw;
 
         if (!f.flDash && !f.flZero)
             foreach (i; 0 .. difw)
