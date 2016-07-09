@@ -288,7 +288,7 @@ template to(T)
  * `to!(double[])` applies _to an `int[]`. The conversion might throw an
  * exception because `to!short` might fail the range check.
  */
-unittest
+@safe unittest
 {
     int[string][double[int[]]] a;
     auto b = to!(short[wstring][string[double[]]])(a);
@@ -342,8 +342,9 @@ unittest
  *        If pointer is $(D char*), treat it as C-style strings.
  *        In that case, this function is $(D @system).))
  */
-pure unittest
+@system pure unittest
 {
+    // @system due to cast and ptr
     // Conversion representing dynamic/static array with string
     long[] a = [ 1, 3, 5 ];
     assert(to!string(a) == "[1, 3, 5]");
@@ -952,13 +953,13 @@ private T toImpl(T, S)(S value)
 }
 
 // Bugzilla 14042
-unittest
+@system unittest
 {
     immutable(char)* ptr = "hello".ptr;
     auto result = ptr.to!(char[]);
 }
 // Bugzilla 8384
-unittest
+@system unittest
 {
     void test1(T)(T lp, string cmp)
     {
@@ -999,7 +1000,7 @@ private template isSwitchable(E)
 }
 
 //
-unittest
+@safe unittest
 {
     static assert(isSwitchable!int);
     static assert(!isSwitchable!double);
@@ -1130,13 +1131,13 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     });
 }
 
-/*@safe pure */unittest // sprintf issue
+@safe unittest // sprintf issue
 {
     double[2] a = [ 1.5, 2.5 ];
     assert(to!string(a) == "[1.5, 2.5]");
 }
 
-unittest
+@system unittest
 {
     // Conversion representing class object with string
     class A
@@ -1155,7 +1156,7 @@ unittest
     assert(to!string(s) == "C");
 }
 
-unittest
+@safe unittest
 {
     // Conversion representing struct object with string
     struct S1
@@ -1183,7 +1184,7 @@ unittest
     assert(to!string(s8080) == "<S>");
 }
 
-unittest
+@safe unittest
 {
     // Conversion representing enum value with string
     enum EB : bool { a = true }
@@ -1207,7 +1208,7 @@ unittest
     assert(to!dstring(o) == "cast(EU)5"d);
 }
 
-unittest
+@safe unittest
 {
     enum E
     {
@@ -1377,7 +1378,7 @@ private T toImpl(T, S)(S value)
     dchar to4 = to!dchar(from4);
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
 
@@ -1484,7 +1485,7 @@ private T toImpl(T, S)(S value)
     }
 }
 
-unittest
+@safe unittest
 {
     auto b = [ 1.0f, 2, 3 ];
 
@@ -1534,7 +1535,7 @@ private T toImpl(T, S)(S value)
     a = [null:["hello":int.max]];
     assertThrown!ConvOverflowException(to!(short[wstring][string[double[]]])(a));
 }
-unittest // Extra cases for AA with qualifiers conversion
+@system unittest // Extra cases for AA with qualifiers conversion
 {
     int[][int[]] a;// = [[], []];
     auto b = to!(immutable(short[])[immutable short[]])(a);
@@ -1685,7 +1686,7 @@ private void testFloatingToIntegral(Floating, Integral)()
     }
 }
 
-unittest
+@safe unittest
 {
     alias AllInts = AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong);
     alias AllFloats = AliasSeq!(float, double, real);
@@ -1777,7 +1778,7 @@ private T toImpl(T, S)(S value, uint radix)
 }
 
 // bugzilla 15800
-unittest
+@safe unittest
 {
     import std.utf : byCodeUnit, byChar, byWchar, byDchar;
 
@@ -1846,7 +1847,7 @@ template roundTo(Target)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(roundTo!int(3.14) == 3);
     assert(roundTo!int(3.49) == 3);
@@ -1859,7 +1860,7 @@ unittest
     assert(roundTo!(const int)(to!(const double)(-3.999)) == -4);
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     // boundary values
@@ -1912,7 +1913,7 @@ Lerr:
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.string : munch;
     string test = "123 \t  76.14";
@@ -1926,7 +1927,7 @@ unittest
     assert(test == "");
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     import std.algorithm.comparison : equal;
@@ -2397,7 +2398,7 @@ Target parse(Target, Source)(ref Source s)
         ~ to!string(s) ~ "'");
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
 
@@ -2829,7 +2830,7 @@ Target parse(Target, Source)(ref Source p)
     return (sign) ? -ldval : ldval;
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     import std.math : isNaN, fabs;
@@ -2915,7 +2916,7 @@ unittest
 }
 
 //Tests for the double implementation
-unittest
+@safe unittest
 {
     static if (real.mant_dig == 53)
     {
@@ -2987,7 +2988,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import core.stdc.errno;
     import core.stdc.stdlib;
@@ -3265,21 +3266,21 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     return result;
 }
 
-unittest
+@safe unittest
 {
     int[] a = [1, 2, 3, 4, 5];
     auto s = to!string(a);
     assert(to!(int[])(s) == a);
 }
 
-unittest
+@safe unittest
 {
     int[][] a = [ [1, 2] , [3], [4, 5] ];
     auto s = to!string(a);
     assert(to!(int[][])(s) == a);
 }
 
-unittest
+@safe unittest
 {
     int[][][] ia = [ [[1,2],[3,4],[5]] , [[6],[],[7,8,9]] , [[]] ];
 
@@ -3692,7 +3693,7 @@ wstring wtext(T...)(T args) if (T.length == 0) { return textImpl!wstring(args); 
 dstring dtext(T...)(T args) if (T.length > 0) { return textImpl!dstring(args); }
 
 ///
-unittest
+@safe unittest
 {
     assert( text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"c);
     assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
@@ -3758,7 +3759,7 @@ template octal(alias decimalInteger)
 }
 
 ///
-unittest
+@safe unittest
 {
     // same as 0177
     auto x = octal!177;
@@ -3795,7 +3796,7 @@ private T octal(T)(string num)
 }
 
 ///
-unittest
+@system unittest
 {
     int a = octal!int("10");
     assert(a == 8);
@@ -3889,7 +3890,7 @@ private bool isOctalLiteral(string num)
     return true;
 }
 
-unittest
+@safe unittest
 {
     // ensure that you get the right types, even with embedded underscores
     auto w = octal!"100_000_000_000";
@@ -4065,7 +4066,7 @@ T* emplace(T)(T* chunk) @safe pure nothrow
 }
 
 ///
-unittest
+@system unittest
 {
     static struct S
     {
@@ -4077,7 +4078,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     interface I {}
     class K : I {}
@@ -4111,14 +4112,14 @@ if (is(T == struct) || Args.length == 1)
 }
 
 ///
-unittest
+@system unittest
 {
     int a;
     int b = 42;
     assert(*emplace!int(&a, b) == 42);
 }
 
-unittest
+@system unittest
 {
     shared int i;
     emplace(&i, 42);
@@ -4178,7 +4179,7 @@ if (is(T == class))
 }
 
 ///
-unittest
+@system unittest
 {
     static class C
     {
@@ -4224,7 +4225,7 @@ T* emplace(T, Args...)(void[] chunk, auto ref Args args)
 }
 
 ///
-unittest
+@system unittest
 {
     struct S
     {
@@ -4240,7 +4241,7 @@ unittest
 
 // Bulk of emplace unittests starts here
 
-unittest /* unions */
+@system unittest /* unions */
 {
     static union U
     {
@@ -4295,7 +4296,7 @@ version(unittest) private class __conv_EmplaceTestClass
     }
 }
 
-unittest // bugzilla 15772
+@system unittest // bugzilla 15772
 {
     abstract class Foo {}
     class Bar: Foo {}
@@ -4308,7 +4309,7 @@ unittest // bugzilla 15772
     static assert( is(typeof(emplace!Bar(memory))));
 }
 
-unittest
+@system unittest
 {
     struct S { @disable this(); }
     S s = void;
@@ -4316,7 +4317,7 @@ unittest
     emplace(&s, S.init);
 }
 
-unittest
+@system unittest
 {
     struct S1
     {}
@@ -4336,7 +4337,7 @@ unittest
     emplace(&as2);
 }
 
-unittest
+@system unittest
 {
     static struct S1
     {
@@ -4356,7 +4357,7 @@ unittest
     emplace(&ss2, s2);
 }
 
-unittest
+@system unittest
 {
     struct S
     {
@@ -4375,7 +4376,7 @@ unittest
 
 //Start testing emplace-args here
 
-unittest
+@system unittest
 {
     interface I {}
     class K : I {}
@@ -4391,7 +4392,7 @@ unittest
     assert(i is k);
 }
 
-unittest
+@system unittest
 {
     static struct S
     {
@@ -4407,7 +4408,7 @@ unittest
 //Start testing emplace-struct here
 
 // Test constructor branch
-unittest
+@system unittest
 {
     struct S
     {
@@ -4426,14 +4427,14 @@ unittest
     assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
 }
 
-unittest
+@system unittest
 {
     __conv_EmplaceTest k = void;
     emplace(&k, 5);
     assert(k.i == 5);
 }
 
-unittest
+@system unittest
 {
     int var = 6;
     __conv_EmplaceTest k = void;
@@ -4443,7 +4444,7 @@ unittest
 }
 
 // Test matching fields branch
-unittest
+@system unittest
 {
     struct S { uint n; }
     S s;
@@ -4451,14 +4452,14 @@ unittest
     assert(s.n == 2);
 }
 
-unittest
+@safe unittest
 {
     struct S { int a, b; this(int){} }
     S s;
     static assert(!__traits(compiles, emplace!S(&s, 2, 3)));
 }
 
-unittest
+@system unittest
 {
     struct S { int a, b = 7; }
     S s1 = void, s2 = void;
@@ -4471,7 +4472,7 @@ unittest
 }
 
 //opAssign
-unittest
+@system unittest
 {
     static struct S
     {
@@ -4489,7 +4490,7 @@ unittest
 }
 
 //postblit precedence
-unittest
+@system unittest
 {
     //Works, but breaks in "-w -O" because of @@@9332@@@.
     //Uncomment test when 9332 is fixed.
@@ -4520,7 +4521,7 @@ unittest
 }
 
 //nested structs and postblit
-unittest
+@system unittest
 {
     static struct S
     {
@@ -4548,7 +4549,7 @@ unittest
 }
 
 //disabled postblit
-unittest
+@system unittest
 {
     static struct S1
     {
@@ -4595,7 +4596,7 @@ unittest
 }
 
 //Imutability
-unittest
+@system unittest
 {
     //Castable immutability
     {
@@ -4622,7 +4623,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     static struct S
     {
@@ -4636,7 +4637,7 @@ unittest
 }
 
 //Context pointer
-unittest
+@system unittest
 {
     int i = 0;
     {
@@ -4665,7 +4666,7 @@ unittest
 }
 
 //Alias this
-unittest
+@system unittest
 {
     static struct S
     {
@@ -4720,7 +4721,7 @@ version(unittest)
         alias foo this;
     }
     static assert(is(__std_conv_SS : __std_conv_S));
-    unittest
+    @system unittest
     {
         __std_conv_S s = void;
         __std_conv_SS ss = __std_conv_SS(1);
@@ -4732,7 +4733,7 @@ version(unittest)
 }
 
 //Nested classes
-unittest
+@system unittest
 {
     class A{}
     static struct S
@@ -4746,7 +4747,7 @@ unittest
 }
 
 //safety & nothrow & CTFE
-unittest
+@system unittest
 {
     //emplace should be safe for anything with no elaborate opassign
     static struct S1
@@ -4803,7 +4804,7 @@ unittest
 }
 
 
-unittest
+@system unittest
 {
     struct S
     {
@@ -4828,7 +4829,7 @@ unittest
 }
 
 //disable opAssign
-unittest
+@system unittest
 {
     static struct S
     {
@@ -4839,7 +4840,7 @@ unittest
 }
 
 //opCall
-unittest
+@system unittest
 {
     int i;
     //Without constructor
@@ -4877,7 +4878,7 @@ unittest
     }
 }
 
-unittest //@@@9559@@@
+@safe unittest //@@@9559@@@
 {
     import std.algorithm.iteration : map;
     import std.typecons : Nullable;
@@ -4887,7 +4888,7 @@ unittest //@@@9559@@@
     auto asArray = array(ints);
 }
 
-unittest //http://forum.dlang.org/post/nxbdgtdlmwscocbiypjs@forum.dlang.org
+@system unittest //http://forum.dlang.org/post/nxbdgtdlmwscocbiypjs@forum.dlang.org
 {
     import std.array : array;
     import std.datetime : SysTime, UTC;
@@ -4928,7 +4929,7 @@ unittest //http://forum.dlang.org/post/nxbdgtdlmwscocbiypjs@forum.dlang.org
 }
 
 //static arrays
-unittest
+@system unittest
 {
     static struct S
     {
@@ -4951,7 +4952,7 @@ unittest
     static assert(!__traits(compiles, emplace(&s, uu)));
 }
 
-unittest
+@system unittest
 {
     int[2]  sii;
     int[2]  sii2;
@@ -4971,7 +4972,7 @@ unittest
     emplace(&uii, uii2[]);
 }
 
-unittest
+@system unittest
 {
     bool allowDestruction = false;
     struct S
@@ -4993,7 +4994,7 @@ unittest
     allowDestruction = true;
 }
 
-unittest
+@system unittest
 {
     //Checks postblit, construction, and context pointer
     int count = 0;
@@ -5018,7 +5019,7 @@ unittest
     assert(count == 0);
 }
 
-unittest
+@system unittest
 {
     struct S
     {
@@ -5029,7 +5030,7 @@ unittest
     emplace(&sss, s);
 }
 
-unittest //Constness
+@system unittest //Constness
 {
     import std.stdio;
 
@@ -5094,7 +5095,7 @@ pure nothrow @safe /* @nogc */ unittest
     static assert(!__traits(compiles, emplaceRef(uninitializedUnsafeArr, unsafeArr)));
 }
 
-unittest
+@system unittest
 {
     // Issue 15313
     static struct Node
@@ -5114,7 +5115,7 @@ unittest
     assert(n.refs == 10);
 }
 
-unittest
+@system unittest
 {
     int var = 6;
     auto k = emplace!__conv_EmplaceTest(new void[__conv_EmplaceTest.sizeof], 5, var);
@@ -5122,7 +5123,7 @@ unittest
     assert(var == 7);
 }
 
-unittest
+@system unittest
 {
     class A
     {
@@ -5151,7 +5152,7 @@ unittest
 }
 // Bulk of emplace unittests ends here
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -5182,7 +5183,7 @@ void toTextRange(T, W)(T value, W writer)
     put(writer, buffer[i .. $]);
 }
 
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto result = appender!(char[])();
@@ -5206,7 +5207,7 @@ auto unsigned(T)(T x) if (isIntegral!T)
 }
 
 ///
-unittest
+@safe unittest
 {
     immutable int s = 42;
     auto u1 = unsigned(s); //not qualified
@@ -5216,7 +5217,7 @@ unittest
     immutable u3 = unsigned(s); //explicitly qualified
 }
 
-unittest
+@safe unittest
 {
     foreach (T; AliasSeq!(byte, ubyte))
     {
@@ -5254,7 +5255,7 @@ auto unsigned(T)(T x) if (isSomeChar!T)
     return cast(Unqual!T) x;
 }
 
-unittest
+@safe unittest
 {
     foreach (T; AliasSeq!(char, wchar, dchar))
     {
@@ -5280,7 +5281,7 @@ auto signed(T)(T x) if (isIntegral!T)
 }
 
 ///
-unittest
+@safe unittest
 {
     immutable uint u = 42;
     auto s1 = signed(u); //not qualified
@@ -5290,7 +5291,7 @@ unittest
     immutable s3 = signed(u); //explicitly qualified
 }
 
-unittest
+@safe unittest
 {
     foreach (T; AliasSeq!(byte, ubyte))
     {
@@ -5321,7 +5322,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // issue 10874
     enum Test { a = 0 }
@@ -5369,7 +5370,7 @@ template castFrom(From)
     }
 
     ///
-    unittest
+    @safe unittest
     {
         // Regular cast, which has been verified to be legal by the programmer:
         {
@@ -5441,7 +5442,7 @@ private bool isHexLiteral(String)(in String hexData)
 }
 
 ///
-unittest
+@safe unittest
 {
     // test all the hex digits
     static assert( ("0123456789abcdefABCDEF").isHexLiteral);
@@ -5451,7 +5452,7 @@ unittest
     static assert( "A\r\n\tB".isHexLiteral);
 }
 
-unittest
+@safe unittest
 {
     import std.ascii;
     // empty/whites
@@ -5537,7 +5538,7 @@ if (hexData.isHexLiteral)
 }
 
 ///
-unittest
+@safe unittest
 {
     // conversion at compile time
     auto string1 = hexString!"304A314B";
@@ -5587,7 +5588,7 @@ private auto hexStrImpl(String)(String hexData)
     return result;
 }
 
-unittest
+@safe unittest
 {
     // compile time
     assert(hexString!"46 47 48 49 4A 4B" == "FGHIJK");
@@ -5759,7 +5760,7 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
 }
 
 
-unittest
+@safe unittest
 {
     import std.array;
     import std.range;
@@ -5844,7 +5845,7 @@ unittest
     }
 }
 
-unittest // opSlice (issue 16192)
+@safe unittest // opSlice (issue 16192)
 {
     import std.meta: AliasSeq;
 
