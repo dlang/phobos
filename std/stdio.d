@@ -847,7 +847,7 @@ $(D rawRead) always reads in binary mode on Windows.
     }
 
     ///
-    unittest
+    @system unittest
     {
         static import std.file;
 
@@ -903,7 +903,7 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
     }
 
     ///
-    unittest
+    @system unittest
     {
         static import std.file;
 
@@ -951,7 +951,7 @@ Throws: $(D Exception) if the file is not opened.
                 "Could not seek in file `"~_name~"'");
     }
 
-    unittest
+    @system unittest
     {
         static import std.file;
         import std.conv : text;
@@ -1009,7 +1009,7 @@ Throws: $(D Exception) if the file is not opened.
     }
 
     ///
-    unittest
+    @system unittest
     {
         static import std.file;
         import std.conv : text;
@@ -1232,7 +1232,7 @@ Removes the lock over the specified file segment.
     }
 
     version(Windows)
-    unittest
+    @system unittest
     {
         static import std.file;
         auto deleteme = testFilename();
@@ -1251,7 +1251,7 @@ Removes the lock over the specified file segment.
     }
 
     version(Posix)
-    unittest
+    @system unittest
     {
         static import std.file;
         auto deleteme = testFilename();
@@ -1437,7 +1437,7 @@ void main()
         return cast(S)buf;
     }
 
-    unittest
+    @system unittest
     {
         static import std.file;
         import std.algorithm.comparison : equal;
@@ -1461,7 +1461,7 @@ void main()
         }
     }
 
-    unittest
+    @system unittest
     {
         static import std.file;
         import std.typecons : Tuple;
@@ -1588,8 +1588,9 @@ is recommended if you want to process a complete file.
         }
     }
 
-    unittest
+    @system unittest
     {
+        // @system due to readln
         static import std.file;
         auto deleteme = testFilename();
         std.file.write(deleteme, "123\n456789");
@@ -1605,8 +1606,9 @@ is recommended if you want to process a complete file.
         assert(buffer[beyond] == 'a');
     }
 
-    unittest // bugzilla 15293
+    @system unittest // bugzilla 15293
     {
+        // @system due to readln
         static import std.file;
         auto deleteme = testFilename();
         std.file.write(deleteme, "a\n\naa");
@@ -1696,8 +1698,9 @@ is recommended if you want to process a complete file.
     }
 
     ///
-    unittest
+    @system unittest
     {
+        // @system due to readf
         static import std.file;
 
         auto deleteme = testFilename();
@@ -1753,7 +1756,7 @@ Returns the $(D FILE*) corresponding to this object.
         return _p.handle;
     }
 
-    unittest
+    @system unittest
     {
         static import core.stdc.stdio;
         assert(stdout.getFP() == core.stdc.stdio.stdout);
@@ -1971,7 +1974,7 @@ the contents may well have changed).
         return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
-    unittest
+    @system unittest
     {
         static import std.file;
         auto deleteme = testFilename();
@@ -2109,7 +2112,7 @@ $(REF readText, std,file)
         return ByLineCopy!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
-    unittest
+    @safe unittest
     {
         static assert(is(typeof(File("").byLine.front) == char[]));
         static assert(is(typeof(File("").byLineCopy.front) == string));
@@ -2117,7 +2120,7 @@ $(REF readText, std,file)
             is(typeof(File("").byLineCopy!(char, char).front) == char[]));
     }
 
-    unittest
+    @system unittest
     {
         static import std.file;
         import std.algorithm.comparison : equal;
@@ -2196,7 +2199,7 @@ $(REF readText, std,file)
         test("sue\r", ["sue\r"], kt, '\r');
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : drop, take;
@@ -2247,7 +2250,7 @@ $(REF readText, std,file)
         assert(!file.isOpen);
     }
 
-    unittest
+    @system unittest
     {
         static import std.file;
         auto deleteme = testFilename();
@@ -2287,7 +2290,7 @@ $(REF readText, std,file)
     }
 
     ///
-    unittest
+    @system unittest
     {
          static import std.file;
          import std.typecons : tuple;
@@ -2461,7 +2464,7 @@ $(D StdioException).
         return ByChunk(this, buffer);
     }
 
-    unittest
+    @system unittest
     {
         static import std.file;
 
@@ -2486,7 +2489,7 @@ $(D StdioException).
         assert(i == witness.length);
     }
 
-    unittest
+    @system unittest
     {
         static import std.file;
 
@@ -2843,7 +2846,7 @@ void main()
         return LockingBinaryWriter(this);
     }
 
-    unittest
+    @system unittest
     {
         static import std.file;
         import std.algorithm.mutation : reverse;
@@ -2915,7 +2918,7 @@ void main()
     }
 }
 
-unittest
+@system unittest
 {
     @system struct SystemToString
     {
@@ -3053,7 +3056,7 @@ unittest
     safeTests();
 }
 
-unittest
+@safe unittest
 {
     static import std.file;
     import std.exception : collectException;
@@ -3066,8 +3069,9 @@ unittest
     assert(f.tell == 0);
 }
 
-unittest
+@system unittest
 {
+    // @system due to readln
     static import std.file;
     import std.range : chain, only, repeat;
     import std.range.primitives : isOutputRange;
@@ -3190,8 +3194,9 @@ struct LockingTextReader
     }
 }
 
-unittest
+@system unittest
 {
+    // @system due to readf
     static import std.file;
     import std.range.primitives : isInputRange;
 
@@ -3209,7 +3214,7 @@ unittest
     assert(x == 3);
 }
 
-unittest // bugzilla 13686
+@system unittest // bugzilla 13686
 {
     static import std.file;
     import std.algorithm.comparison : equal;
@@ -3227,7 +3232,7 @@ unittest // bugzilla 13686
     assert(equal(ltr, "Тест".byDchar));
 }
 
-unittest // bugzilla 12320
+@system unittest // bugzilla 12320
 {
     static import std.file;
     auto deleteme = testFilename();
@@ -3241,8 +3246,9 @@ unittest // bugzilla 12320
     assert(ltr.empty);
 }
 
-unittest // bugzilla 14861
+@system unittest // bugzilla 14861
 {
+    // @system due to readf
     static import std.file;
     auto deleteme = testFilename();
     File fw = File(deleteme, "w");
@@ -3268,7 +3274,7 @@ template isFileHandle(T)
         is(T : File);
 }
 
-unittest
+@safe unittest
 {
     static assert(isFileHandle!(FILE*));
     static assert(isFileHandle!(File));
@@ -3292,7 +3298,7 @@ void write(T...)(T args) if (!is(T[0] : File))
     trustedStdout.write(args);
 }
 
-unittest
+@system unittest
 {
     static import std.file;
 
@@ -3370,7 +3376,7 @@ void writeln(T...)(T args)
     }
 }
 
-unittest
+@system unittest
 {
     static import std.file;
 
@@ -3416,7 +3422,7 @@ unittest
             "Hello!\nHello!\nHello!\nembedded\0null\n");
 }
 
-unittest
+@system unittest
 {
     static import std.file;
 
@@ -3450,7 +3456,7 @@ unittest
                 "A\nB\nA\nB\nA\nB\nA\nB\n");
 }
 
-unittest
+@system unittest
 {
     static auto useInit(T)(T ltw)
     {
@@ -3493,7 +3499,7 @@ void writef(T...)(T args)
     trustedStdout.writef(args);
 }
 
-unittest
+@system unittest
 {
     static import std.file;
 
@@ -3523,7 +3529,7 @@ void writefln(T...)(T args)
     trustedStdout.writefln(args);
 }
 
-unittest
+@system unittest
 {
     static import std.file;
 
@@ -3554,7 +3560,7 @@ uint readf(A...)(in char[] format, A args)
     return stdin.readf(format, args);
 }
 
-unittest
+@system unittest
 {
     float f;
     if (false) uint x = readf("%s", &f);
@@ -3642,7 +3648,7 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
     return stdin.readln(buf, terminator);
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -3898,7 +3904,7 @@ struct lines
     }
 }
 
-unittest
+@system unittest
 {
     static import std.file;
     import std.meta : AliasSeq;
@@ -4092,7 +4098,7 @@ private struct ChunksImpl
     }
 }
 
-unittest
+@system unittest
 {
     static import std.file;
 
@@ -4140,7 +4146,7 @@ void toFile(T)(T data, string fileName)
     copy(data, File(fileName, "wb").lockingBinaryWriter);
 }
 
-unittest
+@system unittest
 {
     static import std.file;
 
@@ -4233,7 +4239,7 @@ __gshared
      */
     File stdin;
     ///
-    unittest
+    @safe unittest
     {
         // Read stdin, sort lines, write to stdout
         import std.stdio, std.array, std.algorithm : sort, copy;
@@ -4252,7 +4258,7 @@ __gshared
     File stderr; /// The standard error stream.
 }
 
-unittest
+@system unittest
 {
     static import std.file;
     import std.typecons : tuple;
@@ -4711,7 +4717,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     return buf.length;
 }
 
-unittest
+@system unittest
 {
     static import std.file;
     auto deleteme = testFilename();
