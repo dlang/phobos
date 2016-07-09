@@ -2447,7 +2447,8 @@ private struct TestScript
 version (unittest)
 private string uniqueTempPath() @safe
 {
-    import std.file : tempDir, buildPath;
+    import std.file : tempDir;
+    import std.path : buildPath;
     import std.uuid : randomUUID;
     // Path should contain spaces to test escaping whitespace
     return buildPath(tempDir(), "std.process temporary file " ~
@@ -3180,6 +3181,7 @@ private:
     {
         version (Windows)
         {
+            import std.conv : to;
             const namezTmp = name.tempCStringW();
             immutable len = varLength(namezTmp);
             if (len == 0) return false;

@@ -22,11 +22,8 @@ module std.file;
 
 import core.stdc.stdlib, core.stdc.string, core.stdc.errno;
 
-import std.conv;
 import std.datetime;
-import std.exception;
 import std.meta;
-import std.path;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
@@ -58,7 +55,10 @@ else
 
 package @property string deleteme() @safe
 {
+    import std.conv : to;
+    import std.path : buildPath;
     import std.process : thisProcessID;
+
     static _deleteme = "deleteme.dmd.unittest.pid";
     static _first = true;
 
@@ -96,6 +96,8 @@ else version(Posix)
  +/
 class FileException : Exception
 {
+    import std.conv : text, to;
+
     /++
         OS error code.
      +/
@@ -260,6 +262,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
     import std.algorithm : min;
     import std.array : uninitializedArray;
     import core.memory : GC;
+    import std.conv : to;
 
     // A few internal configuration parameters {
     enum size_t
@@ -416,6 +419,7 @@ S readText(S = string, R)(R name)
 ///
 @safe unittest
 {
+    import std.exception : enforce;
     write(deleteme, "abc"); // deleteme is the name of a temporary file
     scope(exit) remove(deleteme);
     string content = readText(deleteme);
@@ -530,6 +534,8 @@ void append(R)(auto ref R name, const void[] buffer)
 version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
         in void[] buffer, bool append) @trusted
 {
+    import std.conv : octal;
+
     // append or write
     auto mode = append ? O_CREAT | O_WRONLY | O_APPEND
                        : O_CREAT | O_WRONLY | O_TRUNC;
@@ -646,11 +652,13 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
 {
     version(Windows)
     {
+        import std.exception : enforce;
+
         auto result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
         if (!result)
         {
             import core.stdc.wchar_ : wcslen;
-            import std.conv : to;
+            import std.conv : to, text;
 
             if (!f)
                 f = to!(typeof(f))(fromz[0 .. wcslen(fromz)]);
@@ -747,6 +755,7 @@ version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R nam
     {
         static void getFA(const(char)[] name, const(FSChar)* namez, out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
         {
+            import std.exception : enforce;
             enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
                 new FileException(name.idup));
         }
@@ -758,6 +767,7 @@ version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R nam
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
+            import std.exception : enforce;
 
             enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
                 new FileException(namez[0 .. wcslen(namez)].to!string));
@@ -2146,6 +2156,8 @@ void mkdir(R)(R pathname)
     }
     else version(Posix)
     {
+        import std.conv : octal;
+
         static auto trustedMkdir(const(FSChar)* pathz, mode_t mode) @trusted
         {
             return core.sys.posix.sys.stat.mkdir(pathz, mode);
@@ -2166,6 +2178,7 @@ void mkdir(R)(auto ref R pathname)
 
 @safe unittest
 {
+    import std.path : mkdir;
     static assert(__traits(compiles, mkdir(TestAliasedString(null))));
 }
 
@@ -2174,6 +2187,8 @@ void mkdir(R)(auto ref R pathname)
 //   "false" if it already existed.
 private bool ensureDirExists(in char[] pathname)
 {
+    import std.exception : enforce;
+
     version(Windows)
     {
         if (CreateDirectoryW(pathname.tempCStringW(), null))
@@ -2182,6 +2197,8 @@ private bool ensureDirExists(in char[] pathname)
     }
     else version(Posix)
     {
+        import std.conv : octal;
+
         if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
             return true;
         cenforce(errno == EEXIST || errno == EISDIR, pathname);
@@ -2201,6 +2218,8 @@ private bool ensureDirExists(in char[] pathname)
 
 void mkdirRecurse(in char[] pathname)
 {
+    import std.path : dirName, baseName;
+
     const left = dirName(pathname);
     if (left.length != pathname.length && !exists(left))
     {
@@ -2214,7 +2233,10 @@ void mkdirRecurse(in char[] pathname)
 
 @system unittest
 {
+    import std.exception : assertThrown;
     {
+        import std.path : buildPath, buildNormalizedPath;
+
         immutable basepath = deleteme ~ "_dir";
         scope(exit) rmdirRecurse(basepath);
 
@@ -2338,6 +2360,7 @@ else version(Posix) void symlink(RO, RL)(RO original, RL link)
     }
     else
     {
+        import std.conv : text;
         auto oz = original.tempCString();
         auto lz = link.tempCString();
         alias posixSymlink = core.sys.posix.unistd.symlink;
@@ -2420,6 +2443,8 @@ else version(Posix) string readLink(R)(R link)
     }
     else
     {
+        import std.conv : to;
+        import std.exception : assumeUnique;
         alias posixReadlink = core.sys.posix.unistd.readlink;
         enum bufferLen = 2048;
         enum maxCodeUnits = 6;
@@ -2460,7 +2485,9 @@ else version(Posix) string readLink(R)(R link)
 
 version(Posix) @safe unittest
 {
+    import std.exception : assertThrown;
     import std.string;
+
     foreach (file; [system_directory, system_file])
     {
         if (file.exists)
@@ -2504,6 +2531,7 @@ version(Posix) @system unittest // input range of dchars
  */
 version(Windows) string getcwd()
 {
+    import std.conv : to;
     import std.utf : toUTF8;
     /* GetCurrentDirectory's return value:
         1. function succeeds: the number of characters that are written to
@@ -2573,6 +2601,8 @@ else version (NetBSD)
     version (OSX)
     {
         import core.sys.posix.stdlib : realpath;
+        import std.conv : to;
+        import std.exception : errnoEnforce;
 
         uint size;
 
@@ -2597,6 +2627,9 @@ else version (NetBSD)
     }
     else version (Windows)
     {
+        import std.conv : to;
+        import std.exception : enforce;
+
         wchar[MAX_PATH] buf;
         wchar[] buffer = buf[];
 
@@ -2611,6 +2644,7 @@ else version (NetBSD)
     }
     else version (FreeBSD)
     {
+        import std.exception : errnoEnforce, assumeUnique;
         enum
         {
             CTL_KERN = 1,
@@ -2648,6 +2682,7 @@ else version (NetBSD)
 
 @safe unittest
 {
+    import std.path : isAbsolute;
     auto path = thisExePath();
 
     assert(path.exists);
@@ -2845,6 +2880,7 @@ else version(Windows)
         private this(string path, in WIN32_FIND_DATAW *fd)
         {
             import core.stdc.wchar_ : wcslen;
+            import std.path : buildPath;
 
             size_t clength = wcslen(fd.cFileName.ptr);
             _name = toUTF8(fd.cFileName[0 .. clength]);
@@ -2941,6 +2977,8 @@ else version(Posix)
 
         private this(string path, core.sys.posix.dirent.dirent* fd)
         {
+            import std.path : buildPath;
+
             immutable len = core.stdc.string.strlen(fd.d_name.ptr);
             _name = buildPath(path, fd.d_name[0 .. len]);
 
@@ -3053,6 +3091,8 @@ else version(Posix)
          +/
         void _ensureStatDone() @safe
         {
+            import std.exception : enforce;
+
             static auto trustedStat(in char[] path, stat_t* buf) @trusted
             {
                 return stat(path.tempCString(), buf);
@@ -3097,6 +3137,8 @@ else version(Posix)
          +/
         void _ensureLStatDone()
         {
+            import std.exception : enforce;
+
             if (_didLStat)
                 return;
 
@@ -3151,6 +3193,8 @@ else version(Posix)
     }
     else version(Posix)
     {
+        import std.exception : assertThrown;
+
         if (system_directory.exists)
         {
             {
@@ -3289,7 +3333,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     else version(Posix)
     {
         static import core.stdc.stdio;
-        static import std.conv;
+        import std.conv : to, octal;
 
         immutable fdr = core.sys.posix.fcntl.open(fromz, O_RDONLY);
         cenforce(fdr != -1, f, fromz);
@@ -3341,7 +3385,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
                 size -= toxfer;
             }
             if (preserve)
-                cenforce(fchmod(fdw, std.conv.to!mode_t(statbufr.st_mode)) == 0, f, fromz);
+                cenforce(fchmod(fdw, to!mode_t(statbufr.st_mode)) == 0, f, fromz);
         }
 
         cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
@@ -3373,6 +3417,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
 
 @safe version(Posix) unittest //issue 11434
 {
+    import std.conv : octal;
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
     write(t1, "1");
@@ -3384,6 +3429,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
 
 @safe unittest // issue 15865
 {
+    import std.exception : assertThrown;
     auto t = deleteme;
     write(t, "a");
     scope(exit) t.remove();
@@ -3451,6 +3497,7 @@ void rmdirRecurse(DirEntry de)
 
 version(Windows) @system unittest
 {
+    import std.exception : enforce;
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
     mkdirRecurse(d);
     rmdirRecurse(deleteme ~ ".dir");
@@ -3459,6 +3506,7 @@ version(Windows) @system unittest
 
 version(Posix) @system unittest
 {
+    import std.exception : enforce, collectException;
     import std.process : executeShell;
     collectException(rmdirRecurse(deleteme));
     auto d = deleteme~"/a/b/c/d/e/f/g";
@@ -3554,6 +3602,8 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
+            import std.path : chainPath;
+
             auto search_pattern = chainPath(directory, "*.*");
             WIN32_FIND_DATAW findinfo;
             HANDLE h = FindFirstFileW(search_pattern.tempCString!FSChar(), &findinfo);
@@ -3839,9 +3889,15 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 
 @system unittest
 {
-    import std.algorithm;
-    import std.range;
-    import std.process;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.algorithm.searching : startsWith;
+    import std.array : array;
+    import std.conv : to;
+    import std.path : dirEntries, buildPath, absolutePath;
+    import std.process : thisProcessID;
+    import std.range.primitives : walkLength;
+
     version(Android)
         string testdir = deleteme; // This has to be an absolute path when
                                    // called from a shared library on Android,
@@ -3856,10 +3912,11 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     // testing range interface
     size_t equalEntries(string relpath, SpanMode mode)
     {
+        import std.exception : enforce;
         auto len = enforce(walkLength(dirEntries(absolutePath(relpath), mode)));
         assert(walkLength(dirEntries(relpath, mode)) == len);
         assert(equal(
-                   map!(a => std.path.absolutePath(a.name))(dirEntries(relpath, mode)),
+                   map!(a => absolutePath(a.name))(dirEntries(relpath, mode)),
                    map!(a => a.name)(dirEntries(absolutePath(relpath), mode))));
         return len;
     }
@@ -3931,6 +3988,8 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)
 {
     import std.algorithm : filter;
+    import std.path : globMatch, baseName;
+
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
     return filter!f(DirIterator(path, mode, followSymlink));
 }
@@ -4040,6 +4099,9 @@ slurp(Types...)(string filename, in char[] format)
     import std.stdio : File;
     import std.format : formattedRead;
     import std.array : appender;
+    import std.conv : text;
+    import std.exception : enforce;
+
     typeof(return) result;
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;
