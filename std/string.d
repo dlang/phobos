@@ -2251,7 +2251,7 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
 }
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.exception : assertCTFEable;
     import std.traits : Fields;
@@ -4188,7 +4188,7 @@ auto detab(Range)(auto ref Range s, size_t tabSize = 8) pure
 }
 
 ///
-@trusted pure unittest
+@system pure unittest
 {
     assert(detab(" \n\tx", 9) == " \n         x");
 }
@@ -4341,7 +4341,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
 }
 
 ///
-@trusted pure unittest
+@system pure unittest
 {
     import std.array : array;
 
@@ -4359,7 +4359,7 @@ auto detabber(Range)(auto ref Range r, size_t tabSize = 8)
     assert(testAliasedString!detabber(  "  ab\t asdf ", 8));
 }
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
@@ -4392,7 +4392,7 @@ auto detabber(Range)(auto ref Range r, size_t tabSize = 8)
 }
 
 ///
-@trusted pure unittest
+@system pure unittest
 {
     import std.array : array;
     import std.utf : byChar, byWchar;
@@ -4816,7 +4816,7 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
     assert(translate("hello world", transTable2) == "h5llorange worangerld");
 }
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -4873,7 +4873,7 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
     return buffer.data;
 }
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -5457,7 +5457,7 @@ S squeeze(S)(S s, in S pattern = null)
     return changed ? ((r is null) ? s[0 .. lasti] : cast(S) r) : s;
 }
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -6086,7 +6086,7 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
     static assert(!b);
 }
 
-@trusted unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -6400,7 +6400,7 @@ string[string] abbrev(string[] values) @safe pure
 }
 
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.algorithm.sorting : sort;
     import std.conv : to;
@@ -6970,4 +6970,3 @@ pure unittest
         assert(equal(jt, hti));
     }
 }
-
