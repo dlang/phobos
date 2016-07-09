@@ -975,10 +975,15 @@ unittest
     assert(arr == [0, 1, 2, 3, 4]);
 
     // opApply iterators work as well
-    static assert(is(typeof({
-        import std.parallelism;
-        arr.parallel.each!"a++";
-    })));
+    static class S
+    {
+        int x;
+        int opApply(int delegate(ref int _x) dg) { return dg(x); }
+    }
+
+    auto s = new S;
+    s.each!"a++";
+    assert(s.x == 1);
 }
 
 // binary foreach with two ref args
