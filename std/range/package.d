@@ -6991,14 +6991,14 @@ struct EvenChunks(Source)
     /// Forward range primitives. Always present.
     @property auto front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty evenChunks");
         return _source.save.take(_chunkPos(1));
     }
 
     /// Ditto
     void popFront()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to popFront an empty evenChunks");
         _source.popFrontN(_chunkPos(1));
         _chunkCount--;
     }
@@ -7173,25 +7173,25 @@ private struct OnlyResult(T, size_t arity)
 
     T front() @property
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty Only range");
         return data[frontIndex];
     }
 
     void popFront()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to popFront an empty Only range");
         ++frontIndex;
     }
 
     T back() @property
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the back of an empty Only range");
         return data[backIndex - 1];
     }
 
     void popBack()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to popBack an empty Only range");
         --backIndex;
     }
 
@@ -7211,7 +7211,7 @@ private struct OnlyResult(T, size_t arity)
     {
         // when i + idx points to elements popped
         // with popBack
-        assert(idx < length);
+        assert(idx < length, "Attempting to fetch an out of bounds index from an Only range");
         return data[frontIndex + idx];
     }
 
@@ -7225,7 +7225,14 @@ private struct OnlyResult(T, size_t arity)
         OnlyResult result = this;
         result.frontIndex += from;
         result.backIndex = this.frontIndex + to;
-        assert(from <= to && to <= length);
+        assert(
+            from <= to,
+            "Attempting to slice an Only range with a larger first argument than the second."
+        );
+        assert(
+            to <= length,
+            "Attempting to slice using an out of bounds index on an Only range"
+        );
         return result;
     }
 
@@ -7248,13 +7255,29 @@ private struct OnlyResult(T, size_t arity)
 // Specialize for single-element results
 private struct OnlyResult(T, size_t arity : 1)
 {
-    @property T front() { assert(!_empty); return _value; }
-    @property T back() { assert(!_empty); return _value; }
+    @property T front()
+    {
+        assert(!empty, "Attempting to fetch the front of an empty Only range");
+        return _value;
+    }
+    @property T back()
+    {
+        assert(!empty, "Attempting to fetch the back of an empty Only range");
+        return _value;
+    }
     @property bool empty() const { return _empty; }
     @property size_t length() const { return !_empty; }
     @property auto save() { return this; }
-    void popFront() { assert(!_empty); _empty = true; }
-    void popBack() { assert(!_empty); _empty = true; }
+    void popFront()
+    {
+        assert(!_empty, "Attempting to popFront an empty Only range");
+        _empty = true;
+    }
+    void popBack()
+    {
+        assert(!_empty, "Attempting to popBack an empty Only range");
+        _empty = true;
+    }
     alias opDollar = length;
 
     private this()(auto ref T value)
@@ -7265,7 +7288,7 @@ private struct OnlyResult(T, size_t arity : 1)
 
     T opIndex(size_t i)
     {
-        assert(!_empty && i == 0);
+        assert(!_empty && i == 0, "Attempting to fetch an out of bounds index from an Only range");
         return _value;
     }
 
@@ -7276,7 +7299,14 @@ private struct OnlyResult(T, size_t arity : 1)
 
     OnlyResult opSlice(size_t from, size_t to)
     {
-        assert(from <= to && to <= length);
+        assert(
+            from <= to,
+            "Attempting to slice an Only range with a larger first argument than the second."
+        );
+        assert(
+            to <= length,
+            "Attempting to slice using an out of bounds index on an Only range"
+        );
         OnlyResult copy = this;
         copy._empty = _empty || from == to;
         return copy;
@@ -7615,7 +7645,7 @@ body
         public:
         ElemType front() @property
         {
-            assert(!range.empty);
+            assert(!range.empty, "Attempting to fetch the front of an empty enumerate");
             return typeof(return)(index, range.front);
         }
 
@@ -7631,7 +7661,7 @@ body
 
         void popFront()
         {
-            assert(!range.empty);
+            assert(!range.empty, "Attempting to popFront an empty enumerate");
             range.popFront();
             ++index; // When !hasLength!Range, overflow is expected
         }
@@ -7657,13 +7687,13 @@ body
             {
                 ElemType back() @property
                 {
-                    assert(!range.empty);
+                    assert(!range.empty, "Attempting to fetch the back of an empty enumerate");
                     return typeof(return)(cast(Enumerator)(index + range.length - 1), range.back);
                 }
 
                 void popBack()
                 {
-                    assert(!range.empty);
+                    assert(!range.empty, "Attempting to popBack an empty enumerate");
                     range.popBack();
                 }
             }
@@ -8090,7 +8120,10 @@ if (isInputRange!Range)
     static if (hasSlicing!Range)
         auto opSlice(size_t a, size_t b)
         {
-            assert(a <= b);
+            assert(
+                a <= b,
+                "Attempting to slice a SortedRange with a larger first argument than the second."
+            );
             typeof(this) result = this;
             result._input = _input[a .. b];// skip checking
             return result;
@@ -9552,7 +9585,7 @@ if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
 
         void popFront()
         {
-            assert(!_input.empty);
+            assert(!_input.empty, "Attempting to popFront an empty tee");
             static if (pipeOnPop)
             {
                 put(_output, _input.front);
@@ -9566,6 +9599,7 @@ if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
 
         @property auto ref front()
         {
+            assert(!_input.empty, "Attempting to fetch the front of an empty tee");
             static if (!pipeOnPop)
             {
                 if (!_frontAccessed)
