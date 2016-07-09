@@ -122,6 +122,12 @@ version(Windows)
     import core.sys.windows.windows;
     import core.sys.windows.winsock2;
     import std.windows.registry;
+
+    // Uncomment and run unittests to print missing Windows TZ translations.
+    // Please subscribe to Microsoft Daylight Saving Time & Time Zone Blog
+    // (https://blogs.technet.microsoft.com/dst2007/) if you feel responsible
+    // for updating the translations.
+    // version = UpdateWindowsTZTranslations;
 }
 else version(Posix)
 {
@@ -27270,7 +27276,6 @@ public:
         {
             import std.array : appender;
             import std.algorithm : startsWith, sort;
-            import std.format : format;
 
             auto windowsNames = WindowsTimeZone.getInstalledTZNames();
             auto retval = appender!(string[])();
@@ -27278,13 +27283,6 @@ public:
             foreach(winName; windowsNames)
             {
                 auto tzName = windowsTZNameToTZDatabaseName(winName);
-
-                version(unittest)
-                {
-                    import std.string;
-                    assert(tzName !is null, format("TZName which is missing: %s", winName));
-                }
-
                 if(tzName !is null && tzName.startsWith(subName))
                     retval.put(tzName);
             }
@@ -30660,11 +30658,15 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) unittest
+version(Windows) version(UpdateWindowsTZTranslations) unittest
 {
-    import std.format : format;
+    import std.stdio : stderr;
+
     foreach(tzName; TimeZone.getInstalledTZNames())
-        assert(tzDatabaseNameToWindowsTZName(tzName) !is null, format("TZName which failed: %s", tzName));
+    {
+        if (tzDatabaseNameToWindowsTZName(tzName) is null)
+            stderr.writeln("Missing TZName to Windows translation: ", tzName);
+    }
 }
 
 
@@ -30818,11 +30820,15 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) unittest
+version(Windows) version(UpdateWindowsTZTranslations) unittest
 {
-    import std.format : format;
-    foreach(tzName; WindowsTimeZone.getInstalledTZNames())
-        assert(windowsTZNameToTZDatabaseName(tzName) !is null, format("TZName which failed: %s", tzName));
+    import std.stdio : stderr;
+
+    foreach(winName; WindowsTimeZone.getInstalledTZNames())
+    {
+        if (windowsTZNameToTZDatabaseName(winName) is null)
+            stderr.writeln("Missing Windows to TZName translation: ", winName);
+    }
 }
 
 
