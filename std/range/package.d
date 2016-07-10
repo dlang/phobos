@@ -5576,6 +5576,9 @@ unittest
 
 /* Generic overload that handles arbitrary types that support arithmetic
  * operations.
+ *
+ * User-defined types such as $(REF BigInt, std,bigint) are also supported, as long
+ * as they can be incremented with $(D ++) and compared with $(D <) or $(D ==).
  */
 /// ditto
 auto iota(B, E)(B begin, E end)
@@ -5607,26 +5610,6 @@ auto iota(B, E)(B begin, E end)
         }
     }
     return Result(begin, end);
-}
-
-/**
-User-defined types such as $(REF BigInt, std,bigint) are also supported, as long
-as they can be incremented with $(D ++) and compared with $(D <) or $(D ==).
-*/
-// Issue 6447
-unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.bigint : BigInt;
-
-    auto s = BigInt(1_000_000_000_000);
-    auto e = BigInt(1_000_000_000_003);
-    auto r = iota(s, e);
-    assert(r.equal([
-        BigInt(1_000_000_000_000),
-        BigInt(1_000_000_000_001),
-        BigInt(1_000_000_000_002)
-    ]));
 }
 
 unittest

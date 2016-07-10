@@ -1670,3 +1670,20 @@ unittest
     assertThrown!ConvException(BigInt("0x1234BARF"));
     assertThrown!ConvException(BigInt("1234PUKE"));
 }
+
+// Issue 6447
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
+
+    auto s = BigInt(1_000_000_000_000);
+    auto e = BigInt(1_000_000_000_003);
+    auto r = iota(s, e);
+    assert(r.equal([
+        BigInt(1_000_000_000_000),
+        BigInt(1_000_000_000_001),
+        BigInt(1_000_000_000_002)
+    ]));
+}
+
