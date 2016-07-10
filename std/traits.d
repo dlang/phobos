@@ -284,7 +284,7 @@ template SharedConstOf(T) { alias SharedConstOf = shared(const(T)); }
 /// ditto.
 template ImmutableOf(T)   { alias ImmutableOf   =    immutable(T) ; }
 
-unittest
+@safe unittest
 {
     static assert(is(    MutableOf!int ==              int));
     static assert(is(      InoutOf!int ==        inout int));
@@ -307,7 +307,7 @@ template QualifierOf(T)
     else                                         alias QualifierOf = MutableOf;
 }
 
-unittest
+@safe unittest
 {
     alias Qual1 = QualifierOf!(             int);   static assert(is(Qual1!long ==              long));
     alias Qual2 = QualifierOf!(       inout int);   static assert(is(Qual2!long ==        inout long));
@@ -353,13 +353,13 @@ template packageName(alias T)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.traits;
     static assert(packageName!packageName == "std");
 }
 
-unittest
+@safe unittest
 {
     import std.array;
 
@@ -409,13 +409,13 @@ template moduleName(alias T)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.traits;
     static assert(moduleName!moduleName == "std.traits");
 }
 
-unittest
+@safe unittest
 {
     import std.array;
 
@@ -463,7 +463,7 @@ template fullyQualifiedName(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(fullyQualifiedName!fullyQualifiedName == "std.traits.fullyQualifiedName");
 }
@@ -552,7 +552,7 @@ private template fqnSym(alias T)
     enum fqnSym = parentPrefix ~ adjustIdent(__traits(identifier, T));
 }
 
-unittest
+@safe unittest
 {
     alias fqn = fullyQualifiedName;
 
@@ -788,7 +788,7 @@ private template fqnType(T,
         static assert(0, "Unrecognized type " ~ T.stringof ~ ", can't convert to fully qualified string");
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     alias fqn = fullyQualifiedName;
@@ -867,13 +867,13 @@ template ReturnType(func...)
 }
 
 ///
-unittest
+@safe unittest
 {
     int foo();
     ReturnType!foo x;   // x is declared as int
 }
 
-unittest
+@safe unittest
 {
     struct G
     {
@@ -926,7 +926,7 @@ template Parameters(func...)
 }
 
 ///
-unittest
+@safe unittest
 {
     int foo(int, long);
     void bar(Parameters!foo);      // declares void bar(int, long);
@@ -938,7 +938,7 @@ unittest
  */
 alias ParameterTypeTuple = Parameters;
 
-unittest
+@safe unittest
 {
     int foo(int i, bool b) { return 0; }
     static assert(is(ParameterTypeTuple!foo == TypeTuple!(int, bool)));
@@ -973,7 +973,7 @@ template arity(alias func)
 }
 
 ///
-unittest
+@safe unittest
 {
     void foo(){}
     static assert(arity!foo==0);
@@ -1041,7 +1041,7 @@ template ParameterStorageClassTuple(func...)
 }
 
 ///
-unittest
+@safe unittest
 {
     alias STC = ParameterStorageClass; // shorten the enum name
 
@@ -1055,7 +1055,7 @@ unittest
     static assert(pstc[2] == STC.none);
 }
 
-unittest
+@safe unittest
 {
     alias STC = ParameterStorageClass;
 
@@ -1096,7 +1096,7 @@ unittest
     static assert(ParameterStorageClassTuple!(typeof(func))[0] == STC.none);
 }
 
-unittest
+@safe unittest
 {
     // Bugzilla 14253
     static struct Foo {
@@ -1150,13 +1150,13 @@ template ParameterIdentifierTuple(func...)
 }
 
 ///
-unittest
+@safe unittest
 {
     int foo(int num, string name, int);
     static assert([ParameterIdentifierTuple!foo] == ["num", "name", ""]);
 }
 
-unittest
+@safe unittest
 {
     alias PIT = ParameterIdentifierTuple;
 
@@ -1244,7 +1244,7 @@ template ParameterDefaults(func...)
 }
 
 ///
-unittest
+@safe unittest
 {
     int foo(int num, string name = "hello", int[] = [1,2,3]);
     static assert(is(ParameterDefaults!foo[0] == void));
@@ -1257,7 +1257,7 @@ unittest
  */
 alias ParameterDefaultValueTuple = ParameterDefaults;
 
-unittest
+@safe unittest
 {
     alias PDVT = ParameterDefaultValueTuple;
 
@@ -1329,7 +1329,7 @@ template functionAttributes(func...)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.traits : functionAttributes, FunctionAttribute;
 
@@ -1344,7 +1344,7 @@ unittest
     static assert(!(functionAttributes!func & FA.trusted)); // not @trusted
 }
 
-unittest
+@system unittest
 {
     alias FA = FunctionAttribute;
 
@@ -1493,7 +1493,7 @@ template isSafe(alias func)
 }
 
 ///
-unittest
+@safe unittest
 {
     @safe    int add(int a, int b) {return a+b;}
     @trusted int sub(int a, int b) {return a-b;}
@@ -1505,7 +1505,7 @@ unittest
 }
 
 
-unittest
+@safe unittest
 {
     //Member functions
     interface Set
@@ -1570,7 +1570,7 @@ template isUnsafe(alias func)
 }
 
 ///
-unittest
+@safe unittest
 {
     @safe    int add(int a, int b) {return a+b;}
     @trusted int sub(int a, int b) {return a-b;}
@@ -1581,7 +1581,7 @@ unittest
     static assert( isUnsafe!mul);
 }
 
-unittest
+@safe unittest
 {
     //Member functions
     interface Set
@@ -1657,7 +1657,7 @@ template areAllSafe(funcs...)
 }
 
 // Verify Example
-deprecated unittest
+@safe deprecated unittest
 {
     @safe    int add(int a, int b) {return a+b;}
     @trusted int sub(int a, int b) {return a-b;}
@@ -1668,7 +1668,7 @@ deprecated unittest
     static assert(!areAllSafe!(sub, mul));
 }
 
-deprecated unittest
+@safe deprecated unittest
 {
     interface Set
     {
@@ -1701,7 +1701,7 @@ template functionLinkage(func...)
 }
 
 ///
-unittest
+@safe unittest
 {
     extern(D) void Dfunc() {}
     extern(C) void Cfunc() {}
@@ -1716,7 +1716,7 @@ unittest
     assert(b == "C");
 }
 
-unittest
+@safe unittest
 {
     interface Test
     {
@@ -1764,7 +1764,7 @@ template variadicFunctionStyle(func...)
 }
 
 ///
-unittest
+@safe unittest
 {
     void func() {}
     static assert(variadicFunctionStyle!func == Variadic.no);
@@ -1773,7 +1773,7 @@ unittest
     static assert(variadicFunctionStyle!printf == Variadic.c);
 }
 
-unittest
+@safe unittest
 {
     import core.vararg;
 
@@ -1833,7 +1833,7 @@ template FunctionTypeOf(func...)
 }
 
 ///
-unittest
+@safe unittest
 {
     class C
     {
@@ -1843,7 +1843,7 @@ unittest
     static assert(is( FunctionTypeOf!(C.value) == function ));
 }
 
-unittest
+@system unittest
 {
     int test(int a);
     int propGet() @property;
@@ -1992,7 +1992,7 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
 }
 
 ///
-unittest
+@safe unittest
 {
     alias ExternC(T) = SetFunctionAttributes!(T, "C", functionAttributes!T);
 
@@ -2013,7 +2013,7 @@ version (unittest)
     extern(D) int dstyle(...);
     extern(D) int typesafe(int[]...);
 }
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : reduce;
 
@@ -2075,7 +2075,7 @@ template isNested(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     static struct S { }
     static assert(!isNested!S);
@@ -2102,7 +2102,7 @@ template hasNested(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     static struct S { }
 
@@ -2113,7 +2113,7 @@ unittest
     static assert(hasNested!(NS[2]));
 }
 
-unittest
+@safe unittest
 {
     static assert(!__traits(compiles, isNested!int));
     static assert(!hasNested!int);
@@ -2184,7 +2184,7 @@ template Fields(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct S { int x; float y; }
     static assert(is(Fields!S == TypeTuple!(int, float)));
@@ -2195,7 +2195,7 @@ unittest
  */
 alias FieldTypeTuple = Fields;
 
-unittest
+@safe unittest
 {
     static assert(is(FieldTypeTuple!int == TypeTuple!int));
 
@@ -2240,14 +2240,14 @@ template FieldNameTuple(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct S { int x; float y; }
     static assert(FieldNameTuple!S == TypeTuple!("x", "y"));
     static assert(FieldNameTuple!int == TypeTuple!"");
 }
 
-unittest
+@safe unittest
 {
     static assert(FieldNameTuple!int == TypeTuple!"");
 
@@ -2315,7 +2315,7 @@ template RepresentationTypeTuple(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct S1 { int a; float b; }
     struct S2 { char[] a; union { S1 b; S1 * c; } }
@@ -2325,7 +2325,7 @@ unittest
         && is(R[2] == float) && is(R[3] == S1*));
 }
 
-unittest
+@safe unittest
 {
     alias S1 = RepresentationTypeTuple!int;
     static assert(is(S1 == TypeTuple!int));
@@ -2389,7 +2389,7 @@ private template hasRawAliasing(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     // simple types
     static assert(!hasRawAliasing!int);
@@ -2406,7 +2406,7 @@ unittest
     static assert(!hasRawAliasing!S2);
 }
 
-unittest
+@safe unittest
 {
     // struct with a pointer member
     struct S3 { int a; double * b; }
@@ -2485,7 +2485,7 @@ private template hasRawUnsharedAliasing(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     // simple types
     static assert(!hasRawUnsharedAliasing!int);
@@ -2509,7 +2509,7 @@ unittest
     static assert(!hasRawUnsharedAliasing!S4);
 }
 
-unittest
+@safe unittest
 {
     // struct with a pointer member
     struct S3 { int a; double * b; }
@@ -2712,7 +2712,7 @@ template hasAliasing(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct S1 { int a; Object b; }
     struct S2 { string a; }
@@ -2724,7 +2724,7 @@ unittest
     static assert(!hasAliasing!S4);
 }
 
-unittest
+@safe unittest
 {
     static assert( hasAliasing!(uint[uint]));
     static assert(!hasAliasing!(immutable(uint[uint])));
@@ -2808,7 +2808,7 @@ template hasIndirections(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert( hasIndirections!(int[string]));
     static assert( hasIndirections!(void delegate()));
@@ -2821,7 +2821,7 @@ unittest
     static assert(!hasIndirections!(byte[1]));
 }
 
-unittest
+@safe unittest
 {
     // void static array hides actual type of bits, so "may have indirections".
     static assert( hasIndirections!(void[1]));
@@ -2880,7 +2880,7 @@ unittest
     static assert( hasIndirections!S26);
 }
 
-unittest //12000
+@safe unittest //12000
 {
     static struct S(T)
     {
@@ -2938,7 +2938,7 @@ template hasUnsharedAliasing(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct S1 { int a; Object b; }
     struct S2 { string a; }
@@ -2957,7 +2957,7 @@ unittest
     static assert(!hasUnsharedAliasing!S7);
 }
 
-unittest
+@safe unittest
 {
     /* Issue 6642 */
     import std.typecons : Rebindable;
@@ -2973,7 +2973,7 @@ unittest
     static assert(!hasUnsharedAliasing!(void delegate() shared const));
 }
 
-unittest
+@safe unittest
 {
     import std.typecons : Rebindable;
     static assert( hasUnsharedAliasing!(const(void delegate())));
@@ -3099,7 +3099,7 @@ template hasElaborateCopyConstructor(S)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(!hasElaborateCopyConstructor!int);
 
@@ -3157,7 +3157,7 @@ template hasElaborateAssign(S)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(!hasElaborateAssign!int);
 
@@ -3175,7 +3175,7 @@ unittest
     static assert(!hasElaborateAssign!(S3[0]));
 }
 
-unittest
+@safe unittest
 {
     static struct S  { void opAssign(S) {} }
     static struct S4
@@ -3243,7 +3243,7 @@ template hasElaborateDestructor(S)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(!hasElaborateDestructor!int);
 
@@ -3275,7 +3275,7 @@ package alias Identity(alias A) = A;
 enum hasMember(T, string name) = __traits(hasMember, T, name);
 
 ///
-unittest
+@safe unittest
 {
     static assert(!hasMember!(int, "blah"));
     struct S1 { int blah; }
@@ -3288,7 +3288,7 @@ unittest
     static assert(hasMember!(C2, "blah"));
 }
 
-unittest
+@safe unittest
 {
     // 8321
     struct S {
@@ -3320,7 +3320,7 @@ unittest
     static assert(hasMember!(R2!S, "T"));
 }
 
-unittest
+@safe unittest
 {
     static struct S
     {
@@ -3443,7 +3443,7 @@ template EnumMembers(E)
     alias EnumMembers = EnumSpecificMembers!(__traits(allMembers, E));
 }
 
-unittest
+@safe unittest
 {
     enum A { a }
     static assert([ EnumMembers!A ] == [ A.a ]);
@@ -3451,7 +3451,7 @@ unittest
     static assert([ EnumMembers!B ] == [ B.a, B.b, B.c, B.d, B.e ]);
 }
 
-unittest    // typed enums
+@safe unittest    // typed enums
 {
     enum A : string { a = "alpha", b = "beta" }
     static assert([ EnumMembers!A ] == [ A.a, A.b ]);
@@ -3465,7 +3465,7 @@ unittest    // typed enums
     static assert([ EnumMembers!B ] == [ B.a, B.b, B.c ]);
 }
 
-unittest    // duplicated values
+@safe unittest    // duplicated values
 {
     enum A
     {
@@ -3475,7 +3475,7 @@ unittest    // duplicated values
     static assert([ EnumMembers!A ] == [ A.a, A.b, A.c, A.d, A.e ]);
 }
 
-unittest // Bugzilla 14561: huge enums
+@safe unittest // Bugzilla 14561: huge enums
 {
     string genEnum()
     {
@@ -3500,7 +3500,7 @@ unittest // Bugzilla 14561: huge enums
     static assert(EnumMembers!TLAs[$-1] == TLAs._2999);
 }
 
-unittest
+@safe unittest
 {
     enum E { member, a = 0, b = 0 }
     static assert(__traits(identifier, EnumMembers!E[0]) == "member");
@@ -3527,7 +3527,7 @@ template BaseTypeTuple(A)
 }
 
 ///
-unittest
+@safe unittest
 {
     interface I1 { }
     interface I2 { }
@@ -3539,7 +3539,7 @@ unittest
     static assert(is(BaseTypeTuple!I123 == TypeTuple!(I1, I2, I3)));
 }
 
-unittest
+@safe unittest
 {
     interface I1 { }
     interface I2 { }
@@ -3580,7 +3580,7 @@ template BaseClassesTuple(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     class C1 { }
     class C2 : C1 { }
@@ -3591,7 +3591,7 @@ unittest
     static assert(is(BaseClassesTuple!C3 == TypeTuple!(C2, C1, Object)));
 }
 
-unittest
+@safe unittest
 {
     struct S { }
     static assert(!__traits(compiles, BaseClassesTuple!S));
@@ -3632,7 +3632,7 @@ template InterfacesTuple(T)
         alias InterfacesTuple = TypeTuple!();
 }
 
-unittest
+@safe unittest
 {
     // doc example
     interface I1 {}
@@ -3644,7 +3644,7 @@ unittest
     static assert(is(TL[0] == I1) && is(TL[1] == I2));
 }
 
-unittest
+@safe unittest
 {
     interface Iaa {}
     interface Iab {}
@@ -3679,7 +3679,7 @@ template TransitiveBaseTypeTuple(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     interface J1 {}
     interface J2 {}
@@ -3803,7 +3803,7 @@ template MemberFunctionsTuple(C, string name)
 }
 
 ///
-unittest
+@safe unittest
 {
     interface I { I foo(); }
     class B
@@ -3820,7 +3820,7 @@ unittest
     static assert(__traits(isSame, foos[1], B.foo));
 }
 
-unittest // Issue 15920
+@safe unittest // Issue 15920
 {
     import std.meta : AliasSeq;
     class A
@@ -3839,7 +3839,7 @@ unittest // Issue 15920
     assert(__traits(isSame, fs[1], bfs[0]) || __traits(isSame, fs[1], bfs[1]));
 }
 
-unittest
+@safe unittest
 {
     interface I     { I test(); }
     interface J : I { J test(); }
@@ -3895,13 +3895,13 @@ template TemplateOf(T : Base!Args, alias Base, Args...)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct Foo(T, U) {}
     static assert(__traits(isSame, TemplateOf!(Foo!(int, real)), Foo));
 }
 
-unittest
+@safe unittest
 {
     template Foo1(A) {}
     template Foo2(A, B) {}
@@ -3940,13 +3940,13 @@ template TemplateArgsOf(T : Base!Args, alias Base, Args...)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct Foo(T, U) {}
     static assert(is(TemplateArgsOf!(Foo!(int, real)) == TypeTuple!(int, real)));
 }
 
-unittest
+@safe unittest
 {
     template Foo1(A) {}
     template Foo2(A, B) {}
@@ -3996,7 +3996,7 @@ template classInstanceAlignment(T) if (is(T == class))
 }
 
 ///
-unittest
+@safe unittest
 {
     class A { byte b; }
     class B { long l; }
@@ -4043,14 +4043,14 @@ template CommonType(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     alias X = CommonType!(int, long, short);
     assert(is(X == long));
     alias Y = CommonType!(int, char[], short);
     assert(is(Y == void));
 }
-unittest
+@safe unittest
 {
     static assert(is(CommonType!(3) == int));
     static assert(is(CommonType!(double, 4, float) == double));
@@ -4132,7 +4132,7 @@ template ImplicitConversionTargets(T)
         alias ImplicitConversionTargets = TypeTuple!();
 }
 
-unittest
+@safe unittest
 {
     static assert(is(ImplicitConversionTargets!(double)[0] == real));
     static assert(is(ImplicitConversionTargets!(string)[0] == const(char)[]));
@@ -4153,7 +4153,7 @@ template isImplicitlyConvertible(From, To)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert( isImplicitlyConvertible!(immutable(char), char));
     static assert( isImplicitlyConvertible!(const(char), char));
@@ -4179,7 +4179,7 @@ If you omit $(D Rhs), $(D isAssignable) will check identity assignable of $(D Lh
 enum isAssignable(Lhs, Rhs = Lhs) = isRvalueAssignable!(Lhs, Rhs) && isLvalueAssignable!(Lhs, Rhs);
 
 ///
-unittest
+@safe unittest
 {
     static assert( isAssignable!(long, int));
     static assert(!isAssignable!(int, long));
@@ -4199,7 +4199,7 @@ private enum isRvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, lvalueOf!Lh
 // ditto
 private enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, lvalueOf!Lhs = lvalueOf!Rhs);
 
-unittest
+@safe unittest
 {
     static assert(!isAssignable!(immutable int, int));
     static assert( isAssignable!(int, immutable int));
@@ -4287,7 +4287,7 @@ package template isBlitAssignable(T)
         enum isBlitAssignable = isMutable!T;
 }
 
-unittest
+@safe unittest
 {
     static assert( isBlitAssignable!int);
     static assert(!isBlitAssignable!(const int));
@@ -4374,7 +4374,7 @@ private template isStorageClassImplicitlyConvertible(From, To)
             ModifyTypePreservingTQ!(Pointify,   To) );
 }
 
-unittest
+@safe unittest
 {
     static assert( isStorageClassImplicitlyConvertible!(          int, const int));
     static assert( isStorageClassImplicitlyConvertible!(immutable int, const int));
@@ -4499,7 +4499,7 @@ template isCovariantWith(F, G)
 }
 
 ///
-unittest
+@safe unittest
 {
     interface I { I clone(); }
     interface J { J clone(); }
@@ -4519,7 +4519,7 @@ unittest
     static assert(!isCovariantWith!(typeof(C.clone), typeof(J.clone)));
 }
 
-unittest
+@safe unittest
 {
     enum bool isCovariantWith(alias f, alias g) = .isCovariantWith!(typeof(f), typeof(g));
 
@@ -4611,7 +4611,7 @@ int i = rvalueOf!int; // error, no actual value is returned
 // Note: unittest can't be used as an example here as function overloads
 // aren't allowed inside functions.
 
-unittest
+@system unittest
 {
     void needLvalue(T)(ref T);
     static struct S { }
@@ -4664,7 +4664,7 @@ template BooleanTypeOf(T)
         static assert(0, T.stringof~" is not boolean type");
 }
 
-unittest
+@safe unittest
 {
     // unexpected failure, maybe dmd type-merging bug
     foreach (T; TypeTuple!bool)
@@ -4682,7 +4682,7 @@ unittest
         }
 }
 
-unittest
+@safe unittest
 {
     struct B
     {
@@ -4716,7 +4716,7 @@ template IntegralTypeOf(T)
         static assert(0, T.stringof~" is not an integral type");
 }
 
-unittest
+@safe unittest
 {
     foreach (T; IntegralTypeList)
         foreach (Q; TypeQualifierList)
@@ -4751,7 +4751,7 @@ template FloatingPointTypeOf(T)
         static assert(0, T.stringof~" is not a floating point type");
 }
 
-unittest
+@safe unittest
 {
     foreach (T; FloatingPointTypeList)
         foreach (Q; TypeQualifierList)
@@ -4780,7 +4780,7 @@ template NumericTypeOf(T)
         static assert(0, T.stringof~" is not a numeric type");
 }
 
-unittest
+@safe unittest
 {
     foreach (T; NumericTypeList)
         foreach (Q; TypeQualifierList)
@@ -4841,7 +4841,7 @@ template CharTypeOf(T)
         static assert(0, T.stringof~" is not a character type");
 }
 
-unittest
+@safe unittest
 {
     foreach (T; CharTypeList)
         foreach (Q; TypeQualifierList)
@@ -4880,7 +4880,7 @@ template StaticArrayTypeOf(T)
         static assert(0, T.stringof~" is not a static array type");
 }
 
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
         foreach (Q; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
@@ -4917,7 +4917,7 @@ template DynamicArrayTypeOf(T)
         static assert(0, T.stringof~" is not a dynamic array");
 }
 
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(/*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
         foreach (Q; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
@@ -4972,7 +4972,7 @@ template StringTypeOf(T)
         static assert(0, T.stringof~" is not a string type");
 }
 
-unittest
+@safe unittest
 {
     foreach (T; CharTypeList)
         foreach (Q; TypeTuple!(MutableOf, ConstOf, ImmutableOf, InoutOf))
@@ -4996,7 +4996,7 @@ unittest
         }
 }
 
-unittest
+@safe unittest
 {
     static assert(is(StringTypeOf!(char[4]) == char[]));
 }
@@ -5018,7 +5018,7 @@ template AssocArrayTypeOf(T)
         static assert(0, T.stringof~" is not an associative array type");
 }
 
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
         foreach (P; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
@@ -5064,7 +5064,7 @@ template BuiltinTypeOf(T)
 enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
 
 ///
-unittest
+@safe unittest
 {
     static assert( isBoolean!bool);
     enum EB : bool { a = true }
@@ -5078,7 +5078,7 @@ unittest
  */
 enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 
-unittest
+@safe unittest
 {
     foreach (T; IntegralTypeList)
     {
@@ -5102,7 +5102,7 @@ unittest
  */
 enum bool isFloatingPoint(T) = is(FloatingPointTypeOf!T) && !isAggregateType!T;
 
-unittest
+@safe unittest
 {
     enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
 
@@ -5129,7 +5129,7 @@ point).
  */
 enum bool isNumeric(T) = is(NumericTypeOf!T) && !isAggregateType!T;
 
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(NumericTypeList))
     {
@@ -5147,7 +5147,7 @@ Detect whether $(D T) is a scalar type (a built-in numeric, character or boolean
 enum bool isScalarType(T) = isNumeric!T || isSomeChar!T || isBoolean!T;
 
 ///
-unittest
+@safe unittest
 {
     static assert(!isScalarType!void);
     static assert( isScalarType!(immutable(int)));
@@ -5162,7 +5162,7 @@ Detect whether $(D T) is a basic type (scalar type or void).
 enum bool isBasicType(T) = isScalarType!T || is(T == void);
 
 ///
-unittest
+@safe unittest
 {
     static assert(isBasicType!void);
     static assert(isBasicType!(immutable(int)));
@@ -5176,7 +5176,7 @@ Detect whether $(D T) is a built-in unsigned numeric type.
  */
 enum bool isUnsigned(T) = is(UnsignedTypeOf!T) && !isAggregateType!T;
 
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(UnsignedIntTypeList))
     {
@@ -5193,7 +5193,7 @@ Detect whether $(D T) is a built-in signed numeric type.
  */
 enum bool isSigned(T) = is(SignedTypeOf!T) && !isAggregateType!T;
 
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(SignedIntTypeList))
     {
@@ -5213,7 +5213,7 @@ The built-in char types are any of $(D char), $(D wchar) or $(D dchar), with or 
 enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
 
 ///
-unittest
+@safe unittest
 {
     //Char types
     static assert( isSomeChar!char);
@@ -5232,7 +5232,7 @@ unittest
     static assert(!isSomeChar!(char[4]));
 }
 
-unittest
+@safe unittest
 {
     enum EC : char { a = 'x', b = 'y' }
 
@@ -5258,7 +5258,7 @@ built-in string types.
 enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStaticArray!T;
 
 ///
-unittest
+@safe unittest
 {
     //String types
     static assert( isSomeString!string);
@@ -5278,7 +5278,7 @@ unittest
     static assert(!isSomeString!(char[4]));
 }
 
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(char[], dchar[], string, wstring, dstring))
     {
@@ -5296,7 +5296,7 @@ unittest
 enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isAggregateType!T && !isStaticArray!T;
 
 ///
-unittest
+@safe unittest
 {
     static assert(isNarrowString!string);
     static assert(isNarrowString!wstring);
@@ -5307,7 +5307,7 @@ unittest
     static assert(!isNarrowString!(dchar[]));
 }
 
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(char[], string, wstring))
     {
@@ -5338,7 +5338,7 @@ template isConvertibleToString(T)
     enum isConvertibleToString = (isAggregateType!T || isStaticArray!T) && is(StringTypeOf!T);
 }
 
-unittest
+@safe unittest
 {
     static struct AliasedString
     {
@@ -5377,7 +5377,7 @@ package template convertToString(T)
 enum bool isAutodecodableString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isStaticArray!T;
 
 ///
-unittest
+@safe unittest
 {
     static struct Stringish
     {
@@ -5395,7 +5395,7 @@ unittest
 enum bool isStaticArray(T) = is(StaticArrayTypeOf!T) && !isAggregateType!T;
 
 ///
-unittest
+@safe unittest
 {
     static assert(!isStaticArray!(const(int)[]));
     static assert(!isStaticArray!(immutable(int)[]));
@@ -5407,7 +5407,7 @@ unittest
     static assert(!isStaticArray!int);
 }
 
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(int[51], int[][2],
                            char[][int][11], immutable char[13u],
@@ -5430,7 +5430,7 @@ unittest
 enum bool isDynamicArray(T) = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
 
 ///
-unittest
+@safe unittest
 {
     static assert( isDynamicArray!(int[]));
     static assert( isDynamicArray!(string));
@@ -5440,7 +5440,7 @@ unittest
     static assert(!isDynamicArray!(typeof(null)));
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(int[], char[], string, long[3][], double[string][]))
@@ -5460,7 +5460,7 @@ unittest
 enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 
 ///
-unittest
+@safe unittest
 {
     static assert( isArray!(int[]));
     static assert( isArray!(int[5]));
@@ -5471,7 +5471,7 @@ unittest
     static assert(!isArray!(typeof(null)));
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(int[], int[5], void[]))
@@ -5489,7 +5489,7 @@ unittest
  */
 enum bool isAssociativeArray(T) = is(AssocArrayTypeOf!T) && !isAggregateType!T;
 
-unittest
+@safe unittest
 {
     struct Foo
     {
@@ -5521,7 +5521,7 @@ unittest
 enum bool isBuiltinType(T) = is(BuiltinTypeOf!T) && !isAggregateType!T;
 
 ///
-unittest
+@safe unittest
 {
     class C;
     union U;
@@ -5544,7 +5544,7 @@ unittest
  */
 enum bool isSIMDVector(T) = is(T : __vector(V[N]), V, size_t N);
 
-unittest
+@safe unittest
 {
     static if (is(__vector(float[4])))
     {
@@ -5561,7 +5561,7 @@ unittest
  */
 enum bool isPointer(T) = is(T == U*, U) && !isAggregateType!T;
 
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(int*, void*, char[]*))
     {
@@ -5587,7 +5587,7 @@ alias PointerTarget(T : T*) = T;
 deprecated("Please use PointerTarget instead.")
 alias pointerTarget = PointerTarget;
 
-unittest
+@safe unittest
 {
     static assert( is(PointerTarget!(int*) == int));
     static assert( is(PointerTarget!(long*) == long));
@@ -5602,7 +5602,7 @@ enum bool isAggregateType(T) = is(T == struct) || is(T == union) ||
                                is(T == class) || is(T == interface);
 
 ///
-unittest
+@safe unittest
 {
     class C;
     union U;
@@ -5630,7 +5630,7 @@ unittest
 enum bool isIterable(T) = is(typeof({ foreach (elem; T.init) {} }));
 
 ///
-unittest
+@safe unittest
 {
     struct OpApply
     {
@@ -5659,7 +5659,7 @@ unittest
 enum bool isMutable(T) = !is(T == const) && !is(T == immutable) && !is(T == inout);
 
 ///
-unittest
+@safe unittest
 {
     static assert( isMutable!int);
     static assert( isMutable!string);
@@ -5679,7 +5679,7 @@ unittest
 enum bool isInstanceOf(alias S, T) = is(T == S!Args, Args...);
 
 ///
-unittest
+@safe unittest
 {
     static struct Foo(T...) { }
     static struct Bar(T...) { }
@@ -5713,7 +5713,7 @@ template isExpressions(T ...)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(isExpressions!(1, 2.0, "a"));
     static assert(!isExpressions!(int, double, string));
@@ -5726,7 +5726,7 @@ unittest
 
 alias isExpressionTuple = isExpressions;
 
-unittest
+@safe unittest
 {
     void foo();
     static int bar() { return 42; }
@@ -5763,14 +5763,14 @@ template isTypeTuple(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(isTypeTuple!(int, float, string));
     static assert(!isTypeTuple!(1, 2.0, "a"));
     static assert(!isTypeTuple!(1, double, string));
 }
 
-unittest
+@safe unittest
 {
     class C {}
     void func(int) {}
@@ -5807,7 +5807,7 @@ template isFunctionPointer(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     static void foo() {}
     void bar() {}
@@ -5846,7 +5846,7 @@ template isDelegate(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     static void sfunc() { }
     int x;
@@ -5886,7 +5886,7 @@ template isSomeFunction(T...)
         enum bool isSomeFunction = false;
 }
 
-unittest
+@safe unittest
 {
     static real func(ref int) { return 0; }
     static void prop() @property { }
@@ -5941,7 +5941,7 @@ template isCallable(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     interface I { real value() @property; }
     struct S { static int opCall(int) { return 0; } }
@@ -5967,7 +5967,7 @@ template isAbstractFunction(T...)
     enum bool isAbstractFunction = __traits(isAbstractFunction, T[0]);
 }
 
-unittest
+@safe unittest
 {
     struct S { void foo() { } }
     class C { void foo() { } }
@@ -5987,7 +5987,7 @@ template isFinalFunction(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct S { void bar() { } }
     final class FC { void foo(); }
@@ -6010,7 +6010,7 @@ template isNestedFunction(alias f)
     enum isNestedFunction = __traits(isNested, f);
 }
 
-unittest
+@safe unittest
 {
     static void f() { }
     void g() { }
@@ -6028,7 +6028,7 @@ template isAbstractClass(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct S { }
     class C { }
@@ -6048,7 +6048,7 @@ template isFinalClass(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     class C { }
     abstract class AC { }
@@ -6092,7 +6092,7 @@ template Unqual(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(is(Unqual!int == int));
     static assert(is(Unqual!(const int) == int));
@@ -6101,7 +6101,7 @@ unittest
     static assert(is(Unqual!(shared(const int)) == int));
 }
 
-unittest
+@safe unittest
 {
     static assert(is(Unqual!(                   int) == int));
     static assert(is(Unqual!(             const int) == int));
@@ -6131,7 +6131,7 @@ package template ModifyTypePreservingTQ(alias Modifier, T)
     else                                             alias ModifyTypePreservingTQ =                    Modifier!T;
 }
 
-unittest
+@safe unittest
 {
     alias Intify(T) = int;
     static assert(is(ModifyTypePreservingTQ!(Intify,                    real) ==                    int));
@@ -6163,12 +6163,12 @@ template CopyTypeQualifiers(FromType, ToType)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(is(CopyTypeQualifiers!(inout const real, int) == inout const int));
 }
 
-unittest
+@safe unittest
 {
     static assert(is(CopyTypeQualifiers!(                   real, int) ==                    int));
     static assert(is(CopyTypeQualifiers!(             const real, int) ==              const int));
@@ -6195,7 +6195,7 @@ template CopyConstness(FromType, ToType)
 }
 
 ///
-unittest
+@safe unittest
 {
     const(int) i;
     CopyConstness!(typeof(i), float) f;
@@ -6219,7 +6219,7 @@ unittest
     assert( is(CstT == const(int)));
 }
 
-unittest
+@safe unittest
 {
     struct Test
     {
@@ -6235,13 +6235,13 @@ unittest
     assert(is(CopyConstness!(typeof(Test.method3), string) == immutable(string)));
 }
 
-unittest
+@safe unittest
 {
     assert(is(CopyConstness!(inout(int)[], int[]) == int[]));
     assert(is(CopyConstness!(inout(int[]), int[]) == inout(int[])));
 }
 
-unittest
+@safe unittest
 {
     static assert(is(CopyConstness!(                   int, real) ==             real));
     static assert(is(CopyConstness!(const              int, real) ==       const real));
@@ -6275,7 +6275,7 @@ template ForeachType(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(is(ForeachType!(uint[]) == uint));
     static assert(is(ForeachType!string == immutable(char)));
@@ -6299,7 +6299,7 @@ template OriginalType(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     enum E : real { a }
     enum F : E    { a = E.a }
@@ -6315,7 +6315,7 @@ unittest
 alias KeyType(V : V[K], K) = K;
 
 ///
-unittest
+@safe unittest
 {
     import std.traits;
     alias Hash = int[string];
@@ -6331,7 +6331,7 @@ unittest
 alias ValueType(V : V[K], K) = V;
 
 ///
-unittest
+@safe unittest
 {
     import std.traits;
     alias Hash = int[string];
@@ -6369,7 +6369,7 @@ template Unsigned(T)
     alias Unsigned = ModifyTypePreservingTQ!(Impl, OriginalType!T);
 }
 
-unittest
+@safe unittest
 {
     alias U1 = Unsigned!int;
     alias U2 = Unsigned!(const(int));
@@ -6427,7 +6427,7 @@ template Largest(T...) if (T.length >= 1)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(is(Largest!(uint, ubyte, ushort, real) == real));
     static assert(is(Largest!(ulong, double) == ulong));
@@ -6466,7 +6466,7 @@ template Signed(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     alias S1 = Signed!uint;
     static assert(is(S1 == int));
@@ -6481,7 +6481,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     static assert(is(Signed!float == float));
     static if (is(__vector(int[4])) && is(__vector(uint[4])))
@@ -6509,7 +6509,7 @@ template mostNegative(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(mostNegative!float == -float.max);
     static assert(mostNegative!double == -double.max);
@@ -6518,7 +6518,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     foreach (T; TypeTuple!(bool, byte, short, int, long))
         static assert(mostNegative!T == T.min);
@@ -6612,7 +6612,7 @@ private string removeDummyEnvelope(string s)
     return s;
 }
 
-unittest
+@safe unittest
 {
     class C { int value() @property { return 0; } }
     static assert(mangledName!int == int.mangleof);
@@ -6628,8 +6628,9 @@ unittest
     static assert(mangledName!((int a) { return a+x; }) == "DFNbNiNfiZi");  // nothrow @safe @nnogc
 }
 
-unittest
+@system unittest
 {
+    // @system due to demangle
     // Test for bug 5718
     import std.demangle : demangle;
     int foo;
@@ -6657,7 +6658,7 @@ template Select(bool condition, T...) if (T.length == 2)
 }
 
 ///
-unittest
+@safe unittest
 {
     // can select types
     static assert(is(Select!(true, int, long) == int));
@@ -6686,7 +6687,7 @@ A select(bool cond : true, A, B)(A a, lazy B b) { return a; }
 /// Ditto
 B select(bool cond : false, A, B)(lazy A a, B b) { return b; }
 
-unittest
+@safe unittest
 {
     real pleasecallme() { return 0; }
     int dontcallme() { assert(0); }
@@ -6721,7 +6722,7 @@ template hasUDA(alias symbol, alias attribute)
 }
 
 ///
-unittest
+@safe unittest
 {
     enum E;
     struct S;
@@ -6786,7 +6787,7 @@ template getUDAs(alias symbol, alias attribute)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct Attr
     {
@@ -6856,7 +6857,7 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
 }
 
 ///
-unittest
+@safe unittest
 {
     enum Attr;
 
@@ -6921,7 +6922,7 @@ unittest
 }
 
 // #15335: getSymbolsByUDA fails if type has private members
-unittest
+@safe unittest
 {
     // HasPrivateMembers has, well, private members, one of which has a UDA.
     import std.internal.test.uda : Attr, HasPrivateMembers;
@@ -6946,7 +6947,7 @@ template allSameType(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(allSameType!(int, int));
     static assert(allSameType!(int, int, int));
@@ -6963,7 +6964,7 @@ unittest
 */
 enum ifTestable(T, alias pred = a => a) = __traits(compiles, { if (pred(T.init)) {} });
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq, allSatisfy;
     static assert(allSatisfy!(ifTestable, AliasSeq!(bool, int, float, double, string)));
@@ -6984,7 +6985,7 @@ template isType(X...) if (X.length == 1)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct S {
         template Test() {}
@@ -7039,7 +7040,7 @@ template isFunction(X...) if (X.length == 1)
 }
 
 ///
-unittest
+@safe unittest
 {
     static void func(){}
     static assert(isFunction!func);
@@ -7068,7 +7069,7 @@ template isFinal(X...) if (X.length == 1)
 }
 
 ///
-unittest
+@safe unittest
 {
     class C
     {
