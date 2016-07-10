@@ -5809,8 +5809,8 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
 @system pure unittest
 {
-    import std.exception: assertThrown;
-    import core.exception: AssertError;
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
     assertThrown!AssertError(tr("abcdef", "cd", "CD", "X"));
 }
 
