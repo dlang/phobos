@@ -5410,12 +5410,14 @@ The result is true if and only if the input string is composed of whitespace
 characters (\f\n\r\t\v lineSep paraSep nelSep) and
 an even number of hexadecimal digits (regardless of the case).
 */
-private bool isHexLiteral(String)(in String hexData)
+bool isHexLiteral(String)(String hexData)
+if (isInputRange!String && isSomeChar!(ElementEncodingType!String))
 {
     import std.ascii : isHexDigit;
     import std.uni : lineSep, paraSep, nelSep;
+    import std.utf : byDchar;
     size_t i;
-    foreach (const dchar c; hexData)
+    foreach (c; hexData.byDchar)
     {
         switch (c)
         {
@@ -5442,7 +5444,7 @@ private bool isHexLiteral(String)(in String hexData)
 }
 
 ///
-@safe unittest
+@safe @nogc pure unittest
 {
     // test all the hex digits
     static assert( ("0123456789abcdefABCDEF").isHexLiteral);
@@ -5452,9 +5454,9 @@ private bool isHexLiteral(String)(in String hexData)
     static assert( "A\r\n\tB".isHexLiteral);
 }
 
-@safe unittest
+@safe @nogc pure unittest
 {
-    import std.ascii;
+    import std.ascii : whitespace;
     // empty/whites
     static assert( "".isHexLiteral);
     static assert( " \r".isHexLiteral);
@@ -5501,7 +5503,7 @@ private bool isHexLiteral(String)(in String hexData)
 }
 
 /**
-Converts a hex literal to a string at compile time.
+Converts a hex literal to a string at compile-time.
 
 Takes a string made of hexadecimal digits and returns
 the matching string by converting each pair of digits to a character.
@@ -5516,86 +5518,164 @@ Params:
 
 Returns:
     a $(D string), a $(D wstring) or a $(D dstring), according to the type of hexData.
- */
-template hexString(string hexData)
+*/
+template hexString(alias hexData)
 if (hexData.isHexLiteral)
 {
-    immutable hexString = hexStrImpl(hexData);
+    import std.array : array;
+    enum hexString = HexStringRange!(typeof(hexData))(hexData).array;
 }
-
-/// ditto
-template hexString(wstring hexData)
-if (hexData.isHexLiteral)
-{
-    immutable hexString = hexStrImpl(hexData);
-}
-
-/// ditto
-template hexString(dstring hexData)
-if (hexData.isHexLiteral)
-{
-    immutable hexString = hexStrImpl(hexData);
-}
-
 ///
-@safe unittest
+@nogc @safe pure unittest
 {
-    // conversion at compile time
-    auto string1 = hexString!"304A314B";
-    assert(string1 == "0J1K");
-    auto string2 = hexString!"304A314B"w;
-    assert(string2 == "0J1K"w);
-    auto string3 = hexString!"304A314B"d;
-    assert(string3 == "0J1K"d);
+    static assert(hexString!"304A314B" == "0J1K");
+    static assert(hexString!"304A314B"w == "0J1K"w);
+    static assert(hexString!"304A314B"d == "0J1K"d);
+}
+
+/**
+Does exactly the same thing as the $(LREF _hexString) template but at run-time.
+
+Params:
+    hexData = An input range of characters. This parameter should be checked
+        manually with `isHexLiteral`.
+
+Returns:
+    An input range of `char`, `wchar` or `dchar`, according to the character type
+    of hexData.
+*/
+auto hexString(String)(String hexData)
+if (isInputRange!String && isSomeChar!(ElementEncodingType!String))
+{
+    return HexStringRange!String(hexData);
+}
+///
+@safe pure unittest
+{
+    import std.array : array;
+    assert(hexString("304A314B").array == "0J1K");
+    assert(hexString("304A314B"w).array == "0J1K"w);
+    assert(hexString("304A314B"d).array == "0J1K"d);
 }
 
 /*
-    Takes a hexadecimal string literal and returns its representation.
-    hexData is granted to be a valid string by the caller.
-    C is granted to be a valid char type by the caller.
+    Input range that converts a range of hexadecimal digits to its representation.
+    The correctness of the input range that's processed is granted by the caller.
 */
-@safe nothrow pure
-private auto hexStrImpl(String)(String hexData)
+private struct HexStringRange(String)
+if (isInputRange!String && isSomeChar!(ElementEncodingType!String))
 {
-    import std.ascii;
+    import std.ascii : isHexDigit;
     alias C = Unqual!(ElementEncodingType!String);
-    C[] result;
-    result.length = hexData.length / 2;
-    size_t cnt;
-    ubyte v;
-    foreach (c; hexData)
+
+    String _s;
+    C _front;
+
+    // goto next char: this assumes that non-hex digits are always blanks
+    // because isHexLiteral should be used before using a HexStringRange.
+    bool advances()
     {
-        if (c.isHexDigit)
+        if (_s.empty)
+            return false;
+        while (true)
         {
-            ubyte x;
-            if (c >= '0' && c <= '9')
-                x = cast(ubyte)(c - '0');
-            else if (c >= 'a' && c <= 'f')
-                x = cast(ubyte)(c - ('a' - 10));
-            else if (c >= 'A' && c <= 'F')
-                x = cast(ubyte)(c - ('A' - 10));
-            if (cnt & 1)
-            {
-                v = cast(ubyte)((v << 4) | x);
-                result[cnt / 2] = v;
-            }
-            else
-                v = x;
-            ++cnt;
+            _s.popFront;
+            if (_s.empty)
+                return false;
+            if (_s.front.isHexDigit)
+                return true;
         }
     }
-    result.length = cnt / 2;
-    return result;
+
+    void cacheFront()
+    {
+        ubyte cnt;
+        if (_s.empty)
+            return;
+        while (cnt != 2)
+        {
+            C c = cast(C) _s.front;
+            if (c.isHexDigit)
+            {
+                ubyte x;
+                if (c >= '0' && c <= '9')
+                    x = cast(ubyte)(c - '0');
+                else if (c >= 'a' && c <= 'f')
+                    x = cast(ubyte)(c - ('a' - 10));
+                else if (c >= 'A' && c <= 'F')
+                    x = cast(ubyte)(c - ('A' - 10));
+                if (cnt & 1)
+                    _front = cast(ubyte)((_front << 4) | x);
+                else
+                    _front = x;
+                ++cnt;
+            }
+            if (!advances)
+                return;
+        }
+    }
+
+    this(String s)
+    {
+        _s = s;
+        cacheFront;
+    }
+
+    C front() nothrow
+    {
+        return _front;
+    }
+
+    bool empty() nothrow
+    {
+        return _s.empty && _front == C.init;
+    }
+
+    void popFront()
+    {
+        _front = C.init;
+        cacheFront;
+    }
 }
 
-@safe unittest
+@safe @nogc pure unittest
 {
-    // compile time
-    assert(hexString!"46 47 48 49 4A 4B" == "FGHIJK");
-    assert(hexString!"30\r\n\t\f\v31 32 33 32 31 30" == "0123210");
-    assert(hexString!"ab cd" == hexString!"ABCD");
+    static assert(hexString!"46 47 48 49 4A 4B" == "FGHIJK");
+    static assert(hexString!"30\r\n\t\f\v31 32 33 32 31 30" == "0123210");
+    static assert(hexString!"ab cd" == hexString!"ABCD");
 }
 
+@safe pure unittest
+{
+    import std.array : array;
+    assert(hexString("46 47 48 49 4A 4B").array == "FGHIJK");
+    assert(hexString("30\r\n\t\f\v31 32 33 32 31 30").array == "0123210");
+    assert(hexString("ab cd").array == hexString!"ABCD");
+    assert(hexString("\t\t").array == "");
+    assert(hexString("\t\t46\v").array == "F");
+    assert(hexString(""w).array == ""w);
+    assert(hexString(""d).array == ""d);
+}
+
+@safe pure unittest
+{
+    static struct Ir(S)
+    {
+        S data;
+        @safe void popFront(){data.popFront;}
+        @safe bool empty(){return data.empty;}
+        @safe auto front(){return data.front;}
+    }
+    assert(isHexLiteral(Ir!string("46 47")));
+    assert(isHexLiteral(Ir!wstring("46 47"w)));
+    assert(isHexLiteral(Ir!dstring("46 47"d)));
+    assert(!isHexLiteral(Ir!dstring("46FLIES"d)));
+    assert(!isHexLiteral(Ir!wstring("47BEES"w)));
+    import std.array : array;
+    assert(hexString(Ir!string("46 47")).array == "FG");
+    assert(hexString(Ir!wstring("\t\v\n47\v"w)).array == "G"d);
+    assert(hexString(Ir!dstring("\t\v\n47\v"d)).array == "G"d);
+}
 
 /**
  * Convert integer to a range of characters.
