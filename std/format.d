@@ -632,7 +632,7 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
 }
 
 ///
-unittest
+@system unittest
 {
     string s = "hello!124:34.5";
     string a;
@@ -642,7 +642,7 @@ unittest
     assert(a == "hello" && b == 124 && c == 34.5);
 }
 
-unittest
+@system unittest
 {
     import std.math;
     string s = " 1.2 3.4 ";
@@ -844,7 +844,7 @@ struct FormatSpec(Char)
         return false;
     }
 
-    unittest
+    @safe unittest
     {
         import std.array;
         auto w = appender!(char[])();
@@ -1167,7 +1167,7 @@ struct FormatSpec(Char)
         return w.data;
     }
 
-    unittest
+    @safe unittest
     {
         // issue 5237
         import std.array;
@@ -1248,7 +1248,7 @@ struct FormatSpec(Char)
 }
 
 // Issue 14059
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto a = appender!(string)();
@@ -1293,7 +1293,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto spec = singleSpec("%2.3e");
 
@@ -1344,7 +1344,7 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -1362,7 +1362,7 @@ unittest
         formatTest( true,  "true"  );
     });
 }
-unittest
+@system unittest
 {
     class C1 { bool val; alias val this; this(bool v){ val = v; } }
     class C2 { bool val; alias val this; this(bool v){ val = v; }
@@ -1381,7 +1381,7 @@ unittest
     formatTest( S2(true),  "S" );
 }
 
-unittest
+@safe unittest
 {
     string t1 = format("[%6s] [%6s] [%-6s]", true, false, true);
     assert(t1 == "[  true] [ false] [true  ]");
@@ -1408,7 +1408,7 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -1480,7 +1480,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -1605,7 +1605,7 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
         formatTest( 10, "10" );
     });
 }
-unittest
+@system unittest
 {
     class C1 { long val; alias val this; this(long v){ val = v; } }
     class C2 { long val; alias val this; this(long v){ val = v; }
@@ -1621,7 +1621,7 @@ unittest
 }
 
 // bugzilla 9117
-unittest
+@safe unittest
 {
     static struct Frop {}
 
@@ -1773,7 +1773,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -1796,7 +1796,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     formatTest( 2.25, "2.25" );
 
@@ -1852,7 +1852,7 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
     }
 }
 
-unittest
+@system unittest
 {
     formatTest( 3+2.25i, "3+2.25i" );
 
@@ -1897,7 +1897,7 @@ if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
     }
 }
 
-unittest
+@system unittest
 {
     formatTest( 2.25i, "2.25i" );
 
@@ -1941,7 +1941,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -1959,7 +1959,7 @@ unittest
     });
 }
 
-unittest
+@system unittest
 {
     class C1 { char val; alias val this; this(char v){ val = v; } }
     class C2 { char val; alias val this; this(char v){ val = v; }
@@ -2005,7 +2005,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2015,12 +2015,12 @@ unittest
     assert(w.data == "hello");
 }
 
-unittest
+@safe unittest
 {
     formatTest( "abc", "abc" );
 }
 
-unittest
+@system unittest
 {
     // Test for bug 5371 for classes
     class C1 { const string var; alias var this; this(string s){ var = s; } }
@@ -2035,7 +2035,7 @@ unittest
     formatTest( S2("s2"), "s2" );
 }
 
-unittest
+@system unittest
 {
     class  C3 { string val; alias val this; this(string s){ val = s; }
                 override string toString() const { return "C"; } }
@@ -2082,7 +2082,7 @@ if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2093,7 +2093,7 @@ unittest
     assert(w.data == "ab");
 }
 
-unittest    // Test for issue 8310
+@safe unittest    // Test for issue 8310
 {
     import std.array : appender;
     FormatSpec!char f;
@@ -2139,7 +2139,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2151,7 +2151,7 @@ unittest
 }
 
 // alias this, input range I/F, and toString()
-unittest
+@system unittest
 {
     struct S(int flags)
     {
@@ -2206,7 +2206,7 @@ unittest
     formatTest(new C!0b111([0, 1, 2]), "C");
 }
 
-unittest
+@system unittest
 {
     // void[]
     void[] val0;
@@ -2222,7 +2222,7 @@ unittest
     formatTest( sval, "[1, 2, 3]" );
 }
 
-unittest
+@safe unittest
 {
     // const(T[]) -> const(T)[]
     const short[] a = [1, 2, 3];
@@ -2233,7 +2233,7 @@ unittest
     formatTest( s, "[1, 2, 3]" );
 }
 
-unittest
+@safe unittest
 {
     // 6640
     struct Range
@@ -2261,7 +2261,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     // string literal from valid UTF sequence is encoding free.
     foreach (StrType; AliasSeq!(string, wstring, dstring))
@@ -2307,14 +2307,14 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // nested range formatting with array of string
     formatTest( "%({%(%02x %)}%| %)", ["test", "msg"],
                 `{74 65 73 74} {6d 73 67}` );
 }
 
-unittest
+@safe unittest
 {
     // stop auto escaping inside range formatting
     auto arr = ["hello", "world"];
@@ -2591,7 +2591,7 @@ if (is(StringTypeOf!T) && !is(T == enum))
         formatValue(w, str, f);
 }
 
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2601,7 +2601,7 @@ unittest
     assert(w.data == "\"Hello World\"");
 }
 
-unittest
+@safe unittest
 {
     // Test for bug 8015
     import std.typecons;
@@ -2633,7 +2633,7 @@ if (is(CharTypeOf!T) && !is(T == enum))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2708,7 +2708,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2719,7 +2719,7 @@ unittest
     assert(w.data == "[\"H\":\"W\"]", w.data);
 }
 
-unittest
+@safe unittest
 {
     int[string] aa0;
     formatTest( aa0, `[]` );
@@ -2746,7 +2746,7 @@ unittest
     formatTest("%(%s:<%s>%|%)" , [1:2], "1:<2>");
 }
 
-unittest
+@system unittest
 {
     class C1 { int[char] val; alias val this; this(int[char] v){ val = v; } }
     class C2 { int[char] val; alias val this; this(int[char] v){ val = v; }
@@ -2761,7 +2761,7 @@ unittest
     formatTest( S2(['c':1, 'd':2]), "S" );
 }
 
-unittest  // Issue 8921
+@safe unittest  // Issue 8921
 {
     enum E : char { A = 'a', B = 'b', C = 'c' }
     E[3] e = [E.A, E.B, E.C];
@@ -2833,7 +2833,7 @@ void enforceValidFormatSpec(T, Char)(ref FormatSpec!Char f)
     }
 }
 
-unittest
+@system unittest
 {
     static interface IF1 { }
     class CIF1 : IF1 { }
@@ -2946,7 +2946,7 @@ if (is(T == class) && !is(T == enum))
 /++
    $(D formatValue) allows to reuse existing format specifiers:
  +/
-unittest
+@system unittest
 {
    import std.format;
 
@@ -2988,7 +2988,7 @@ unittest
    assert(writer1.data == writer2.data && writer1.data == "00101010");
 }
 
-unittest
+@system unittest
 {
     import std.array : appender;
     import std.range.interfaces;
@@ -3000,7 +3000,7 @@ unittest
     formatTest( c, "null" );
 }
 
-unittest
+@system unittest
 {
     // 5354
     // If the class has both range I/F and custom toString, the use of custom
@@ -3089,7 +3089,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
     }
 }
 
-unittest
+@system unittest
 {
     // interface
     import std.range.interfaces;
@@ -3179,7 +3179,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     }
 }
 
-unittest
+@safe unittest
 {
     // bug 4638
     struct U8  {  string toString() const { return "blah"; } }
@@ -3190,7 +3190,7 @@ unittest
     formatTest( U32(), "blah" );
 }
 
-unittest
+@safe unittest
 {
     // 3890
     struct Int{ int n; }
@@ -3199,7 +3199,7 @@ unittest
                 `Pair("hello", Int(5))` );
 }
 
-unittest
+@system unittest
 {
     // union formatting without toString
     union U1
@@ -3222,7 +3222,7 @@ unittest
     formatTest( u2, "hello" );
 }
 
-unittest
+@system unittest
 {
     import std.array;
     // 7230
@@ -3246,7 +3246,7 @@ unittest
     assert(w.data == `Bug7230("hello", #{overlap a, b, c}, 10)`);
 }
 
-unittest
+@safe unittest
 {
     import std.array;
     static struct S{ @disable this(this); }
@@ -3288,7 +3288,7 @@ if (is(T == enum))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -3301,25 +3301,25 @@ unittest
     assert(w.data == "second");
 }
 
-unittest
+@safe unittest
 {
     enum A { first, second, third }
     formatTest( A.second, "second" );
     formatTest( cast(A)72, "cast(A)72" );
 }
-unittest
+@safe unittest
 {
     enum A : string { one = "uno", two = "dos", three = "tres" }
     formatTest( A.three, "three" );
     formatTest( cast(A)"mill\&oacute;n", "cast(A)mill\&oacute;n" );
 }
-unittest
+@safe unittest
 {
     enum A : bool { no, yes }
     formatTest( A.yes, "yes" );
     formatTest( A.no, "no" );
 }
-unittest
+@safe unittest
 {
     // Test for bug 6892
     enum Foo { A = 10 }
@@ -3389,7 +3389,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
     formatTest( q, "FFEECCAA" );
 }
 
-pure unittest
+@system pure unittest
 {
     // Test for issue 7869
     struct S
@@ -3403,7 +3403,7 @@ pure unittest
     formatTest( q, "FFEECCAA" );
 }
 
-unittest
+@system unittest
 {
     // Test for issue 8186
     class B
@@ -3415,14 +3415,14 @@ unittest
     formatTest( B.init, "null" );
 }
 
-pure unittest
+@system pure unittest
 {
     // Test for issue 9336
     shared int i;
     format("%s", &i);
 }
 
-pure unittest
+@system pure unittest
 {
     // Test for issue 11778
     int* p = null;
@@ -3430,7 +3430,7 @@ pure unittest
     assertThrown(format("%04d", p + 2));
 }
 
-pure unittest
+@safe pure unittest
 {
     // Test for issue 12505
     void* p = null;
@@ -3447,7 +3447,7 @@ void formatValue(Writer, T, Char)(Writer w, scope T, ref FormatSpec!Char f)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.conv : to;
 
@@ -3467,7 +3467,7 @@ unittest
     assert(to!string(&bar) == "int delegate(short) @nogc delegate() pure nothrow @system");
 }
 
-unittest
+@safe unittest
 {
     void func() @system { __gshared int x; ++x; throw new Exception("msg"); }
     version (linux) formatTest( &func, "void delegate() @system" );
@@ -3510,7 +3510,7 @@ private void formatNth(Writer, Char, A...)(Writer w, ref FormatSpec!Char f, size
     }
 }
 
-pure unittest
+@safe pure unittest
 {
     int[] a = [ 1, 3, 2 ];
     formatTest( "testing %(%s & %) embedded", a,
@@ -4065,7 +4065,7 @@ here:
     formattedWrite(stream, "%s", aa);
 }
 
-unittest
+@system unittest
 {
     string s = "hello!124:34.5";
     string a;
@@ -4166,7 +4166,7 @@ void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn =
             input, fn, ln);
 }
 
-unittest
+@system unittest
 {
     void booleanTest()
     {
@@ -4309,7 +4309,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     return unformatValue!long(input, spec) != 0;
 }
 
-pure unittest
+@system pure unittest
 {
     string line;
 
@@ -4442,7 +4442,7 @@ version(none)unittest
     assert(witness == a.typed);
 }
 
-pure unittest
+@system pure unittest
 {
     import std.typecons;
     char[] line = "1 2".dup;
@@ -4492,7 +4492,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         static assert(0);
 }
 
-pure unittest
+@system pure unittest
 {
     string line;
 
@@ -4559,7 +4559,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         return app.data;
 }
 
-pure unittest
+@system pure unittest
 {
     string line;
 
@@ -4602,7 +4602,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     return parse!T(input);
 }
 
-pure unittest
+@system pure unittest
 {
     string line;
 
@@ -4612,7 +4612,7 @@ pure unittest
     assert(s1 == [1,2,3]);
 }
 
-pure unittest
+@system pure unittest
 {
     string line;
 
@@ -4637,7 +4637,7 @@ pure unittest
     assert(s4 == ["hello", "world"]);
 }
 
-pure unittest
+@system pure unittest
 {
     string line;
 
@@ -4655,7 +4655,7 @@ pure unittest
     assertThrown(formattedRead(line, "%s", &sa3));
 }
 
-pure unittest
+@system pure unittest
 {
     string input;
 
@@ -4669,7 +4669,7 @@ pure unittest
     assertThrown(formattedRead(input, "[%(%s,%)]", &sa2));
 }
 
-pure unittest
+@safe pure unittest
 {
     // 7241
     string input = "a";
@@ -4696,7 +4696,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     return parse!T(input);
 }
 
-pure unittest
+@system pure unittest
 {
     string line;
 
@@ -6101,7 +6101,7 @@ private bool needToSwapEndianess(Char)(ref FormatSpec!Char f)
 
 /* ======================== Unit Tests ====================================== */
 
-unittest
+@system unittest
 {
     import std.conv : octal;
 
@@ -6407,7 +6407,7 @@ unittest
     assert(format("%8s", "b\u00e9ll\u00f4") == " b\u00e9ll\u00f4");
 }
 
-unittest
+@safe unittest
 {
     // bugzilla 3479
     import std.array;
@@ -6416,7 +6416,7 @@ unittest
     assert(stream.data == "000000000010", stream.data);
 }
 
-unittest
+@safe unittest
 {
     // bug 6893
     import std.array;
@@ -6450,7 +6450,7 @@ immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar
     return w.data;
 }
 
-unittest
+@safe unittest
 {
     import std.format;
     import core.exception;
@@ -6536,7 +6536,7 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
     return buf[0 .. i];
 }
 
-unittest
+@system unittest
 {
     import core.exception;
     import std.format;
