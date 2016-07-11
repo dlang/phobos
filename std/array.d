@@ -920,7 +920,6 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
                 return ptr;
             }
         }
-        immutable oldLen = array.length;
         size_t to_insert = 0;
         //count up the number of *codeunits* to insert
         foreach (i, E; U)
