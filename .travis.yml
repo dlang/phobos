@@ -17,7 +17,7 @@ script:
  # enforce whitespace between statements
  - grep -nE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $(find . -name '*.d'); test $? -eq 1
  # enforce whitespace between colon(:) for import statements (doesn't catch everything)
- - grep -n 'import [^/,=]*:.*;' $(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; echo $?
+ - grep -n 'import [^/,=]*:.*;' $(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $? -eq 1
  # enforce all-man style
  - grep -nE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$'  $(find . -name '*.d'); test $? -eq 1
  # at the moment libdparse has problems to parse some modules (->excludes)

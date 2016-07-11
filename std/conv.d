@@ -5847,7 +5847,7 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
 
 @safe unittest // opSlice (issue 16192)
 {
-    import std.meta: AliasSeq;
+    import std.meta : AliasSeq;
 
     static struct Test { ubyte radix; uint number; }
 
