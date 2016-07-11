@@ -5737,7 +5737,7 @@ struct FrontTransversal(Ror,
     /// Ditto
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty FrontTransversal");
         return _input.front.front;
     }
 
@@ -5761,7 +5761,7 @@ struct FrontTransversal(Ror,
     /// Ditto
     void popFront()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to popFront an empty FrontTransversal");
         _input.popFront();
         prime();
     }
@@ -5787,13 +5787,13 @@ struct FrontTransversal(Ror,
 */
         @property auto ref back()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the back of an empty FrontTransversal");
             return _input.back.front;
         }
         /// Ditto
         void popBack()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to popBack an empty FrontTransversal");
             _input.popBack();
             prime();
         }
@@ -6023,7 +6023,7 @@ struct Transversal(Ror,
     /// Ditto
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty Transversal");
         return _input.front[_n];
     }
 
@@ -6049,7 +6049,7 @@ struct Transversal(Ror,
     /// Ditto
     void popFront()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to popFront an empty Transversal");
         _input.popFront();
         prime();
     }
@@ -6073,13 +6073,14 @@ struct Transversal(Ror,
 */
         @property auto ref back()
         {
+            assert(!empty, "Attempting to fetch the back of an empty Transversal");
             return _input.back[_n];
         }
 
         /// Ditto
         void popBack()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to popBack an empty Transversal");
             _input.popBack();
             prime();
         }
@@ -6410,14 +6411,14 @@ struct Indexed(Source, Indices)
     /// Range primitives
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty Indexed");
         return _source[_indices.front];
     }
 
     /// Ditto
     void popFront()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to popFront an empty Indexed");
         _indices.popFront();
     }
 
@@ -6470,14 +6471,14 @@ struct Indexed(Source, Indices)
         /// Ditto
         @property auto ref back()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the back of an empty Indexed");
             return _source[_indices.back];
         }
 
         /// Ditto
         void popBack()
         {
-           assert(!empty);
+           assert(!empty, "Attempting to popBack an empty Indexed");
            _indices.popBack();
         }
 
@@ -6666,14 +6667,14 @@ struct Chunks(Source)
     /// Forward range primitives. Always present.
     @property auto front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty Chunks");
         return _source.save.take(_chunkSize);
     }
 
     /// Ditto
     void popFront()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to popFront and empty Chunks");
         _source.popFrontN(_chunkSize);
     }
 
@@ -9934,11 +9935,13 @@ auto padRight(R, E)(R r, E e, size_t n) if (
 
         auto front() @property
         {
+            assert(!empty, "Attempting to fetch the front of an empty padRight");
             return data.empty ? element : data.front;
         }
 
         void popFront()
         {
+            assert(!empty, "Attempting to popFront an empty padRight");
             ++counter;
 
             if (!data.empty)
@@ -9970,11 +9973,13 @@ auto padRight(R, E)(R r, E e, size_t n) if (
         {
             auto back() @property
             {
+                assert(!empty, "Attempting to fetch the back of an empty padRight");
                 return backPosition > data.length ? element : data.back;
             }
 
             void popBack()
             {
+                assert(!empty, "Attempting to popBack an empty padRight");
                 if (backPosition > data.length)
                 {
                     --backPosition;
@@ -10001,6 +10006,14 @@ auto padRight(R, E)(R r, E e, size_t n) if (
         {
             auto opSlice(size_t a, size_t b)
             {
+                assert(
+                    a <= b,
+                    "Attempting to slice a padRight with a larger first argument than the second."
+                );
+                assert(
+                    b <= length,
+                    "Attempting to slice using an out of bounds index on a padRight"
+                );
                 return Result((b <= data.length) ? data[a .. b] : data[a .. $],
                     element, b - a);
             }
