@@ -5955,9 +5955,16 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 }
 
 /**
-   Given a range of ranges, iterate transversally through the the $(D
-   n)th element of each of the enclosed ranges. All elements of the
-   enclosing range must offer random access.
+    Given a range of ranges, iterate transversally through the
+    `n`th element of each of the enclosed ranges.
+
+    Params:
+        opt = Controls the assumptions the function makes about the lengths
+        of the ranges
+        rr = An input range of random access ranges
+    Returns:
+        At minimum, an input range. Range primitives such as bidirectionality
+        and random access are given if the element type of `rr` provides them.
 */
 struct Transversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
