@@ -922,7 +922,7 @@ private:
     size_t[] storage;
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     enum dg = (){
@@ -995,7 +995,7 @@ unittest
     auto rt = dg();
 }
 
-unittest
+@system unittest
 {// more bitpacking tests
     import std.conv : text;
 
@@ -1452,7 +1452,7 @@ SliceOverIndexed!T sliceOverIndexed(T)(size_t a, size_t b, T* x)
     return SliceOverIndexed!T(a, b, x);
 }
 
-unittest
+@system unittest
 {
     int[] idxArray = [2, 3, 5, 8, 13];
     auto sliced = sliceOverIndexed(0, idxArray.length, &idxArray);
@@ -1597,7 +1597,7 @@ template sharMethod(alias uniLowerBound)
 alias sharLowerBound = sharMethod!uniformLowerBound;
 alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
-unittest
+@safe unittest
 {
     import std.array : array;
     import std.range : assumeSorted, iota;
@@ -1783,7 +1783,7 @@ unittest
 //build hack
 alias _RealArray = CowArray!ReallocPolicy;
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2025,7 +2025,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
 
@@ -2070,7 +2070,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto gothic = unicode.Gothic;
         // Gothic letter ahsa
@@ -2155,7 +2155,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2221,7 +2221,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert('я' in unicode.Cyrillic);
         assert(!('z' in unicode.Cyrillic));
@@ -2283,7 +2283,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2381,7 +2381,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         CodepointSet someSet;
         someSet.add('0', '5').add('A','Z'+1);
@@ -2418,7 +2418,7 @@ private:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(unicode.Cyrillic.intersect('-').byInterval.empty);
     }
@@ -2486,7 +2486,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto set = unicode.ASCII;
         // union with the inverse gets all of the code points in the Unicode
@@ -2641,7 +2641,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         CodepointSet emptySet;
         assert(emptySet.length == 0);
@@ -4211,7 +4211,7 @@ public template codepointTrie(T, sizes...)
 }
 
 ///
-pure unittest
+@system pure unittest
 {
     import std.algorithm.comparison : max;
     import std.algorithm.searching : count;
@@ -4552,7 +4552,7 @@ public enum isUtfMatcher(M, C) = __traits(compiles, (){
     assert(is(typeof(m.test(s)) == bool));
 });
 
-unittest
+@safe unittest
 {
     alias CharMatcher = typeof(utfMatcher!char(CodepointSet.init));
     alias WcharMatcher = typeof(utfMatcher!wchar(CodepointSet.init));
@@ -5297,7 +5297,7 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
 }
 
 // cover decode fail cases of Matcher
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.exception : collectException;
@@ -5507,7 +5507,7 @@ template Sequence(size_t start, size_t end)
 }
 
 //---- TRIE TESTS ----
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.sorting : sort;
@@ -6031,7 +6031,7 @@ template SetSearcher(alias table, string kind)
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.exception : collectException;
         auto ascii = unicode.ASCII;
@@ -6084,7 +6084,7 @@ template SetSearcher(alias table, string kind)
     }
 
     ///
-    unittest
+    @safe unittest
     {
         // use .block for explicitness
         assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
@@ -6103,7 +6103,7 @@ template SetSearcher(alias table, string kind)
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto arabicScript = unicode.script.arabic;
         auto arabicBlock = unicode.block.arabic;
@@ -6134,7 +6134,7 @@ template SetSearcher(alias table, string kind)
     }
 
     ///
-    unittest
+    @safe unittest
     {
         // L here is syllable type not Letter as in unicode.L short-cut
         auto leadingVowel = unicode.hangulSyllableType("L");
@@ -6173,7 +6173,7 @@ private:
     //@disable ~this();
 }
 
-unittest
+@safe unittest
 {
     import std.internal.unicode_tables : blocks, uniProps; // generated file
     assert(unicode("InHebrew") == asSet(blocks.Hebrew));
@@ -6370,7 +6370,7 @@ Grapheme decodeGrapheme(Input)(ref Input inp)
     return genericDecodeGrapheme!true(inp);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -6436,7 +6436,7 @@ auto byGrapheme(Range)(Range range)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : take, drop;
@@ -6462,7 +6462,7 @@ private static struct InputRangeString
     void popFront() { s.popFront(); }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.array : array;
@@ -6550,7 +6550,7 @@ Range byCodePoint(Range)(Range range)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : array;
     import std.conv : text;
@@ -6568,7 +6568,7 @@ unittest
     assert(reverse == "le\u0308on"); // lëon
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives : walkLength;
@@ -6643,7 +6643,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto g = Grapheme("A\u0302");
         assert(g[0] == 'A');
@@ -6716,7 +6716,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal;
         auto g = Grapheme("A");
@@ -6837,7 +6837,7 @@ private:
 static assert(Grapheme.sizeof == size_t.sizeof*4);
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -6872,7 +6872,7 @@ unittest
     assert(g[].equal("A\u0301B"));
 }
 
-unittest
+@safe unittest
 {
     auto g = Grapheme("A\u0302");
     assert(g[0] == 'A');
@@ -6882,7 +6882,7 @@ unittest
     assert(!g.valid);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -6998,7 +6998,7 @@ int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(sicmp("Август", "авгусТ") == 0);
     // Greek also works as long as there is no 1:M mapping in sight
@@ -7120,7 +7120,7 @@ int icmp(S1, S2)(S1 r1, S2 r2)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
@@ -7139,7 +7139,7 @@ unittest
 }
 
 // test different character types
-unittest
+@safe unittest
 {
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("Rußland"w, "Russland") == 0);
@@ -7160,7 +7160,7 @@ unittest
     { return icmp!(const(dchar)[], const(dchar)[])(str1, str2); }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.sorting : sort;
     import std.conv : to;
@@ -7281,7 +7281,7 @@ package auto simpleCaseFoldings(dchar ch)
     return Range(start, entry.size);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.searching : canFind;
@@ -7309,7 +7309,7 @@ ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     // shorten the code
     alias CC = combiningClass;
@@ -7385,7 +7385,7 @@ public dchar compose(dchar first, dchar second) pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(compose('A','\u0308') == '\u00C4');
     assert(compose('A', 'B') == dchar.init);
@@ -7432,7 +7432,7 @@ public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -7540,7 +7540,7 @@ Grapheme decomposeHangul(dchar ch)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
@@ -7569,7 +7569,7 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothr
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
     // leaving out T-vowel, or passing any codepoint
@@ -7580,7 +7580,7 @@ unittest
     assert(composeJamo('A', '\u1171') == dchar.init);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
@@ -7733,7 +7733,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 }
 
 ///
-unittest
+@safe unittest
 {
     // any encoding works
     wstring greet = "Hello world";
@@ -7747,7 +7747,7 @@ unittest
     assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -7899,7 +7899,7 @@ public bool allowedIn(NormalizationForm norm)(dchar ch)
 }
 
 ///
-unittest
+@safe unittest
 {
     // e.g. Cyrillic is always allowed, so is ASCII
     assert(allowedIn!NFC('я'));
@@ -7925,7 +7925,7 @@ private bool notAllowedIn(NormalizationForm norm)(dchar ch)
     return qcTrie[ch];
 }
 
-unittest
+@safe unittest
 {
     assert(allowedIn!NFC('я'));
     assert(allowedIn!NFD('я'));
@@ -8122,7 +8122,7 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, 
     return s;
 }
 
-unittest //12428
+@safe unittest //12428
 {
     import std.array : replicate;
     auto s = "abcdefghij".replicate(300);
@@ -8297,13 +8297,13 @@ auto asUpperCase(Range)(auto ref Range str)
     return asUpperCase!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!asLowerCase("hEllo"));
     assert(testAliasedString!asUpperCase("hEllo"));
 }
 
-unittest
+@safe unittest
 {
     import std.array : array;
 
@@ -8485,7 +8485,7 @@ auto asCapitalized(Range)(auto ref Range str)
     return asCapitalized!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!asCapitalized("hEllo"));
 }
@@ -8496,7 +8496,7 @@ unittest
     assert(r.front == 'H');
 }
 
-unittest
+@safe unittest
 {
     import std.array : array;
 
@@ -8578,7 +8578,7 @@ private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure nothrow @
     return idx;
 }
 
-unittest
+@safe unittest
 {
     char[] s = "abcd".dup;
     size_t i = 0;
@@ -8725,7 +8725,7 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
     }
 }
 
-unittest
+@safe unittest
 {
     alias toLowerLength = toCaseLength!(LowerTriple);
     assert(toLowerLength("abcd") == 4);
@@ -8883,7 +8883,7 @@ S toLower(S)(S s) @trusted pure
 }
 
 
-@trusted unittest //@@@BUG std.format is not @safe
+@system unittest //@@@BUG std.format is not @safe
 {
     import std.format : format;
     static import std.ascii;
@@ -8903,7 +8903,7 @@ S toLower(S)(S s) @trusted pure
 }
 
 //bugzilla 9629
-unittest
+@safe unittest
 {
     wchar[] test = "hello þ world"w.dup;
     auto piece = test[6..7];
@@ -8912,7 +8912,7 @@ unittest
 }
 
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : cmp;
     string s1 = "FoL";
@@ -8998,7 +8998,7 @@ dchar toUpper(dchar c)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.mutation : copy;
@@ -9009,7 +9009,7 @@ unittest
     assert(abuf.data == "HELLO");
 }
 
-@trusted unittest
+@safe unittest
 {
     import std.format : format;
     static import std.ascii;
@@ -9048,7 +9048,7 @@ S toUpper(S)(S s) @trusted pure
     { return toUpper!dstring(s); }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : cmp;
 
@@ -9077,7 +9077,7 @@ unittest
     assert(s2 !is s1);
 }
 
-unittest
+@system unittest
 {
     static void doTest(C)(const(C)[] s, const(C)[] trueUp, const(C)[] trueLow)
     {
@@ -9279,7 +9279,7 @@ bool isPunctuation(dchar c)
     }
 }
 
-unittest
+@safe unittest
 {
     assert(isPunctuation('\u0021'));
     assert(isPunctuation('\u0028'));
@@ -9302,7 +9302,7 @@ bool isSymbol(dchar c)
    return symbolTrie[c];
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     assert(isSymbol('\u0024'));
@@ -9326,7 +9326,7 @@ bool isSpace(dchar c)
     return isSpaceGen(c);
 }
 
-unittest
+@safe unittest
 {
     assert(isSpace('\u0020'));
     auto space = unicode.Zs;
@@ -9349,7 +9349,7 @@ bool isGraphical(dchar c)
 }
 
 
-unittest
+@safe unittest
 {
     auto set = unicode("Graphical");
     import std.format : format;
@@ -9371,7 +9371,7 @@ bool isControl(dchar c)
     return isControlGen(c);
 }
 
-unittest
+@safe unittest
 {
     assert(isControl('\u0000'));
     assert(isControl('\u0081'));
@@ -9396,7 +9396,7 @@ bool isFormat(dchar c)
 }
 
 
-unittest
+@safe unittest
 {
     assert(isFormat('\u00AD'));
     foreach (ch; unicode("Format").byCodepoint)
@@ -9457,7 +9457,7 @@ bool isNonCharacter(dchar c)
     return nonCharacterTrie[c];
 }
 
-unittest
+@safe unittest
 {
     auto set = unicode("Cn");
     foreach (ch; set.byCodepoint)
