@@ -4102,7 +4102,6 @@ slurp(Types...)(string filename, in char[] format)
     import std.conv : text;
     import std.exception : enforce;
 
-    typeof(return) result;
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;
     auto f = File(filename);
