@@ -25344,7 +25344,7 @@ private:
 }
 
 //Test NegInfInterval's intersection().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25477,7 +25477,7 @@ unittest
 }
 
 //Test NegInfInterval's isAdjacent().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25573,7 +25573,7 @@ unittest
 }
 
 //Test NegInfInterval's merge().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25693,7 +25693,7 @@ unittest
 }
 
 //Test NegInfInterval's span().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25815,7 +25815,7 @@ unittest
 }
 
 //Test NegInfInterval's shift().
-unittest
+@safe unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25845,7 +25845,7 @@ unittest
 }
 
 //Test NegInfInterval's shift(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -25895,7 +25895,7 @@ unittest
 }
 
 //Test NegInfInterval's expand().
-unittest
+@safe unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25925,7 +25925,7 @@ unittest
 }
 
 //Test NegInfInterval's expand(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -25970,7 +25970,7 @@ unittest
 }
 
 //Test NegInfInterval's bwdRange().
-unittest
+@system unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -26023,7 +26023,7 @@ unittest
 }
 
 //Test NegInfInterval's toString().
-unittest
+@safe unittest
 {
     assert(NegInfInterval!Date(Date(2012, 1, 7)).toString() == "[-∞ - 2012-Jan-07)");
 
@@ -26075,7 +26075,7 @@ static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayO
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
     auto func = everyDayOfWeek!Date(DayOfWeek.mon);
@@ -26097,7 +26097,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     auto funcFwd = everyDayOfWeek!Date(DayOfWeek.mon);
     auto funcBwd = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.mon);
@@ -26189,7 +26189,7 @@ static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int mont
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
     auto func = everyMonth!(Date)(Month.feb);
@@ -26217,7 +26217,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     auto funcFwd = everyMonth!Date(Month.jun);
     auto funcBwd = everyMonth!(Date, Direction.bwd)(Month.jun);
@@ -26296,7 +26296,7 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
     auto func = everyDuration!Date(dur!"days"(8));
@@ -26318,7 +26318,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     auto funcFwd = everyDuration!Date(dur!"days"(27));
     auto funcBwd = everyDuration!(Date, Direction.bwd)(dur!"days"(27));
@@ -26415,7 +26415,7 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
     auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
@@ -26437,7 +26437,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     {
         auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"days"(3));
@@ -26727,7 +26727,7 @@ private:
 }
 
 //Test that IntervalRange satisfies the range predicates that it's supposed to satisfy.
-unittest
+@safe unittest
 {
     import std.range.primitives : hasAssignableElements, hasSwappableElements,
         isBidirectionalRange, isForwardRange, isInfinite, isInputRange;
@@ -26752,7 +26752,7 @@ unittest
 }
 
 //Test construction of IntervalRange.
-unittest
+@safe unittest
 {
     {
         Date dateFunc(in Date date)
@@ -26803,7 +26803,7 @@ unittest
 }
 
 //Test IntervalRange's empty().
-unittest
+@system unittest
 {
     //fwd
     {
@@ -26843,7 +26843,7 @@ unittest
 }
 
 //Test IntervalRange's front.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -26895,7 +26895,7 @@ unittest
 }
 
 //Test IntervalRange's popFront().
-unittest
+@system unittest
 {
     import std.range.primitives : walkLength;
     //fwd
@@ -26955,7 +26955,7 @@ unittest
 }
 
 //Test IntervalRange's save.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -26977,7 +26977,7 @@ unittest
 }
 
 //Test IntervalRange's interval.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -27005,7 +27005,7 @@ unittest
 }
 
 //Test IntervalRange's func.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -27027,7 +27027,7 @@ unittest
 }
 
 //Test IntervalRange's direction.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -27201,7 +27201,7 @@ private:
 }
 
 //Test that PosInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
-unittest
+@safe unittest
 {
     import std.range.primitives : hasAssignableElements, hasSwappableElements,
         isBidirectionalRange, isForwardRange, isInfinite, isInputRange;
@@ -27225,7 +27225,7 @@ unittest
 }
 
 //Test construction of PosInfIntervalRange.
-unittest
+@safe unittest
 {
     {
         Date dateFunc(in Date date)
@@ -27273,7 +27273,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's front.
-unittest
+@system unittest
 {
     auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
     assert(range.front == Date(2010, 7, 4));
@@ -27286,7 +27286,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's popFront().
-unittest
+@system unittest
 {
     import std.range : take;
     auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
@@ -27303,7 +27303,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's save.
-unittest
+@system unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
@@ -27313,7 +27313,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's interval.
-unittest
+@system unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
@@ -27326,7 +27326,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's func.
-unittest
+@system unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
@@ -27491,7 +27491,7 @@ private:
 }
 
 //Test that NegInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
-unittest
+@safe unittest
 {
     import std.range.primitives : hasAssignableElements, hasSwappableElements,
         isBidirectionalRange, isForwardRange, isInfinite, isInputRange;
@@ -27514,7 +27514,7 @@ unittest
 }
 
 //Test construction of NegInfIntervalRange.
-unittest
+@safe unittest
 {
     {
         Date dateFunc(in Date date)
@@ -27562,7 +27562,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's front.
-unittest
+@system unittest
 {
     auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
     assert(range.front == Date(2012, 1, 7));
@@ -27577,7 +27577,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's popFront().
-unittest
+@system unittest
 {
     import std.range : take;
 
@@ -27597,7 +27597,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's save.
-unittest
+@system unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
     auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
@@ -27607,7 +27607,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's interval.
-unittest
+@system unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
     auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
