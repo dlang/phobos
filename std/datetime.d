@@ -32686,7 +32686,7 @@ else version(Windows)
         return sysTime;
     }
 
-    unittest
+    @system unittest
     {
         auto sysTime = Clock.currTime(UTC());
         SYSTEMTIME st = void;
@@ -32721,7 +32721,7 @@ else version(Windows)
         return stdTimeToFILETIME(sysTime.stdTime);
     }
 
-    unittest
+    @system unittest
     {
         SYSTEMTIME st = void;
         GetSystemTime(&st);
@@ -32773,7 +32773,7 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
         throw new DateTimeException("Invalid DosFileTime", __FILE__, __LINE__, dte);
 }
 
-unittest
+@safe unittest
 {
     assert(DosFileTimeToSysTime(0b00000000001000010000000000000000) ==
                     SysTime(DateTime(1980, 1, 1, 0, 0, 0)));
@@ -32817,7 +32817,7 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
     return cast(DosFileTime)retval;
 }
 
-unittest
+@safe unittest
 {
     assert(SysTimeToDosFileTime(SysTime(DateTime(1980, 1, 1, 0, 0, 0))) ==
                     0b00000000001000010000000000000000);
@@ -33076,7 +33076,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
 }
 
 ///
-unittest
+@safe unittest
 {
     auto tz = new immutable SimpleTimeZone(hours(-8));
     assert(parseRFC822DateTime("Sat, 6 Jan 1990 12:14:19 -0800") ==
@@ -33107,7 +33107,7 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
     throw new AssertError("No DateTimeException was thrown", __FILE__, line);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.array : array;
@@ -33378,7 +33378,7 @@ unittest
 }
 
 // Obsolete Format per section 4.3 of RFC 5322.
-unittest
+@system unittest
 {
     import std.algorithm.iteration : filter, map;
     import std.ascii : letters;
@@ -33651,7 +33651,7 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
     return 0;
 }
 
-unittest
+@safe unittest
 {
     foreach (i, outerUnits; timeStrings)
     {
@@ -33711,7 +33711,7 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
     return 0;
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     import std.meta : AliasSeq;
@@ -33763,7 +33763,7 @@ bool valid(string units)(int value) @safe pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(valid!"hours"(12));
     assert(!valid!"hours"(32));
@@ -33875,7 +33875,7 @@ static int monthsToMonth(int currMonth, int month) @safe pure
     return (Month.dec - currMonth) + month;
 }
 
-unittest
+@safe unittest
 {
     assert(monthsToMonth(Month.jan, Month.jan) == 0);
     assert(monthsToMonth(Month.jan, Month.feb) == 1);
@@ -33950,7 +33950,7 @@ static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
     return (DayOfWeek.sat - currDoW) + dow + 1;
 }
 
-unittest
+@safe unittest
 {
     assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.sun) == 0);
     assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.mon) == 1);
@@ -34088,7 +34088,7 @@ else
 }
 
 // Verify Example.
-unittest
+@safe unittest
 {
     {
         auto mt = measureTime!((TickDuration a)
@@ -34127,7 +34127,7 @@ unittest
     +/
 }
 
-unittest
+@safe unittest
 {
     import std.math : isNaN;
 
@@ -34148,7 +34148,7 @@ unittest
 }
 
 //Bug# 8450
-unittest
+@system unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
@@ -34252,7 +34252,7 @@ long splitUnitsFromHNSecs(string units)(ref long hnsecs) @safe pure nothrow
     return value;
 }
 
-unittest
+@safe unittest
 {
     auto hnsecs = 2595000000007L;
     immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
@@ -34286,7 +34286,7 @@ long getUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     return convert!("hnsecs", units)(hnsecs);
 }
 
-unittest
+@safe unittest
 {
     auto hnsecs = 2595000000007L;
     immutable days = getUnitsFromHNSecs!"days"(hnsecs);
@@ -34318,7 +34318,7 @@ long removeUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     return hnsecs - convert!(units, "hnsecs")(value);
 }
 
-unittest
+@safe unittest
 {
     auto hnsecs = 2595000000007L;
     auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
@@ -34354,7 +34354,7 @@ body
     }
 }
 
-unittest
+@safe unittest
 {
     //Test A.D.
     assert(maxDay(1999, 1) == 31);
@@ -34435,7 +34435,7 @@ DayOfWeek getDayOfWeek(int day) @safe pure nothrow
     }
 }
 
-unittest
+@safe unittest
 {
     //Test A.D.
     assert(getDayOfWeek(SysTime(Date(1, 1, 1)).dayOfGregorianCal) == DayOfWeek.mon);
@@ -34484,7 +34484,7 @@ string monthToString(Month month) @safe pure
     return _monthNames[month - Month.jan];
 }
 
-unittest
+@safe unittest
 {
     assert(monthToString(Month.jan) == "Jan");
     assert(monthToString(Month.feb) == "Feb");
@@ -34544,7 +34544,7 @@ Month monthFromString(string monthStr) @safe pure
     }
 }
 
-unittest
+@safe unittest
 {
     import std.stdio : writeln;
     import std.traits : EnumMembers;
@@ -34574,7 +34574,7 @@ template nextSmallerTimeUnits(string units)
     enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings, units) - 1];
 }
 
-unittest
+@safe unittest
 {
     assert(nextSmallerTimeUnits!"years" == "months");
     assert(nextSmallerTimeUnits!"months" == "weeks");
@@ -34600,7 +34600,7 @@ template nextLargerTimeUnits(string units)
     enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings, units) + 1];
 }
 
-unittest
+@safe unittest
 {
     assert(nextLargerTimeUnits!"hnsecs" == "usecs");
     assert(nextLargerTimeUnits!"usecs" == "msecs");
@@ -34640,7 +34640,7 @@ static string fracSecsToISOString(int hnsecs) @safe pure nothrow
         assert(0, "format() threw.");
 }
 
-unittest
+@safe unittest
 {
     assert(fracSecsToISOString(0) == "");
     assert(fracSecsToISOString(1) == ".0000001");
@@ -34703,7 +34703,7 @@ static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
     return hnsecs(to!int(fullISOString[]));
 }
 
-unittest
+@safe unittest
 {
     static void testFSInvalid(string isoString)
     {
@@ -34840,7 +34840,7 @@ R _stripCFWS(R)(R range)
     return range[e .. e];
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -34962,7 +34962,7 @@ T _convDigits(T, R)(R str)
     return num;
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.range : chain, iota;
@@ -35255,7 +35255,7 @@ version(unittest)
                                DayOfYear(365, MonthDay(12, 30)),
                                DayOfYear(366, MonthDay(12, 31))];
 
-    void initializeTests()
+    void initializeTests() @safe
     {
         import std.algorithm.sorting : sort;
         import std.typecons : Rebindable;
@@ -35321,7 +35321,7 @@ version(unittest)
 }
 
 
-unittest
+@safe unittest
 {
     import std.traits : hasUnsharedAliasing;
     /* Issue 6642 */
