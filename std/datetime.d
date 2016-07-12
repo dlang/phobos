@@ -17403,7 +17403,7 @@ public:
         assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal == 734_137);
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17427,7 +17427,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date.init, TimeOfDay(12, 0, 0));
         dt.dayOfGregorianCal = 1;
@@ -17455,7 +17455,7 @@ public:
         assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17475,7 +17475,7 @@ public:
         return _date.isoWeek;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17499,7 +17499,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth ==
                DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
@@ -17514,7 +17514,7 @@ public:
                DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(1999, 1, 1, 0, 13, 26).endOfMonth == DateTime(1999, 1, 31, 23, 59, 59));
@@ -17562,7 +17562,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).daysInMonth == 31);
         assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).daysInMonth == 28);
@@ -17570,7 +17570,7 @@ public:
         assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17588,7 +17588,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1, 1, 1), TimeOfDay(12, 7, 0)).isAD);
         assert(DateTime(Date(2010, 12, 31), TimeOfDay(0, 0, 0)).isAD);
@@ -17596,7 +17596,7 @@ public:
         assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17620,7 +17620,7 @@ public:
             return _date.julianDay;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(-4713, 11, 24), TimeOfDay(0, 0, 0)).julianDay == -1);
         assert(DateTime(Date(-4713, 11, 24), TimeOfDay(12, 0, 0)).julianDay == 0);
@@ -17662,7 +17662,7 @@ public:
         return _date.modJulianDay;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1858, 11, 17), TimeOfDay(0, 0, 0)).modJulianDay == 0);
         assert(DateTime(Date(1858, 11, 17), TimeOfDay(12, 0, 0)).modJulianDay == 0);
@@ -17690,7 +17690,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() ==
                "20100704T070612");
@@ -17705,7 +17705,7 @@ public:
                "-00040105T000002");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOString() == "00091204T000000");
@@ -17743,7 +17743,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() ==
                "2010-07-04T07:06:12");
@@ -17758,7 +17758,7 @@ public:
                "-0004-01-05T00:00:02");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtString() == "0009-12-04T00:00:00");
@@ -17795,7 +17795,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() ==
                "2010-Jul-04 07:06:12");
@@ -17810,7 +17810,7 @@ public:
                "-0004-Jan-05 00:00:02");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toSimpleString() == "0009-Dec-04 00:00:00");
@@ -17842,7 +17842,7 @@ public:
         return toSimpleString();
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17887,7 +17887,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime.fromISOString("20100704T070612") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
@@ -17905,7 +17905,7 @@ public:
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(DateTime.fromISOString(""));
         assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
@@ -17975,7 +17975,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime.fromISOExtString("2010-07-04T07:06:12") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
@@ -17993,7 +17993,7 @@ public:
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(DateTime.fromISOExtString(""));
         assertThrown!DateTimeException(DateTime.fromISOExtString("20100704000000"));
@@ -18061,7 +18061,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime.fromSimpleString("2010-Jul-04 07:06:12") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
@@ -18075,7 +18075,7 @@ public:
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(DateTime.fromISOString(""));
         assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
@@ -18151,7 +18151,7 @@ public:
         return dt;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.min.year < 0);
         assert(DateTime.min < DateTime.max);
@@ -18181,7 +18181,7 @@ public:
         return dt;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.max.year > 0);
         assert(DateTime.max > DateTime.min);
@@ -18227,7 +18227,7 @@ private:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
         {
@@ -19927,7 +19927,7 @@ private:
 }
 
 //Test Interval's constructors.
-unittest
+@safe unittest
 {
     assertThrown!DateTimeException(Interval!Date(Date(2010, 1, 1), Date(1, 1, 1)));
 
@@ -19967,7 +19967,7 @@ unittest
 }
 
 //Test Interval's begin.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(1, 1, 1), Date(2010, 1, 1)).begin == Date(1, 1, 1));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).begin == Date(2010, 1, 1));
@@ -19983,7 +19983,7 @@ unittest
 }
 
 //Test Interval's end.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(1, 1, 1), Date(2010, 1, 1)).end == Date(2010, 1, 1));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).end == Date(2010, 1, 1));
@@ -19999,7 +19999,7 @@ unittest
 }
 
 //Test Interval's length.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).length == dur!"days"(0));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).length == dur!"days"(90));
@@ -20021,7 +20021,7 @@ unittest
 }
 
 //Test Interval's empty.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).empty);
     assert(!Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).empty);
@@ -20040,7 +20040,7 @@ unittest
 }
 
 //Test Interval's contains(time point).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20070,7 +20070,7 @@ unittest
 }
 
 //Test Interval's contains(Interval).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20178,7 +20178,7 @@ unittest
 }
 
 //Test Interval's isBefore(time point).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20208,7 +20208,7 @@ unittest
 }
 
 //Test Interval's isBefore(Interval).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20317,7 +20317,7 @@ unittest
 }
 
 //Test Interval's isAfter(time point).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20347,7 +20347,7 @@ unittest
 }
 
 //Test Interval's isAfter(Interval).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20455,7 +20455,7 @@ unittest
 }
 
 //Test Interval's intersects().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
