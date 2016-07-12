@@ -27620,7 +27620,7 @@ private:
 }
 
 //Test NegInfIntervalRange's func.
-unittest
+@system unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
     auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
@@ -27802,7 +27802,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
@@ -27828,7 +27828,7 @@ public:
     //Since reading in the time zone files could be expensive, most unit tests
     //are consolidated into this one unittest block which minimizes how often it
     //reads a time zone file.
-    unittest
+    @system unittest
     {
         import std.conv : to;
         import std.file : exists, isFile;
@@ -28164,7 +28164,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         import std.stdio : writefln;
@@ -28308,7 +28308,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         assert(LocalTime().stdName !is null);
 
@@ -28380,7 +28380,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         assert(LocalTime().dstName !is null);
 
@@ -28446,7 +28446,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         LocalTime().hasDST;
 
@@ -28504,7 +28504,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         auto currTime = Clock.currStdTime;
         LocalTime().dstInEffect(currTime);
@@ -28542,7 +28542,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         LocalTime().utcToTZ(0);
     }
@@ -28595,7 +28595,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.typecons : tuple;
@@ -28810,7 +28810,7 @@ public:
         return stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         assert(UTC().utcToTZ(0) == 0);
 
@@ -28842,7 +28842,7 @@ public:
         return adjTime;
     }
 
-    unittest
+    @safe unittest
     {
         assert(UTC().tzToUTC(0) == 0);
 
@@ -28931,7 +28931,7 @@ public:
         return stdTime + _utcOffset.total!"hnsecs";
     }
 
-    unittest
+    @safe unittest
     {
         auto west = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto east = new immutable SimpleTimeZone(dur!"hours"(8));
@@ -28958,7 +28958,7 @@ public:
         return adjTime - _utcOffset.total!"hnsecs";
     }
 
-    unittest
+    @safe unittest
     {
         auto west = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto east = new immutable SimpleTimeZone(dur!"hours"(8));
@@ -29008,7 +29008,7 @@ public:
         this(dur!"minutes"(utcOffset), stdName);
     }
 
-    unittest
+    @safe unittest
     {
         auto stz = new immutable SimpleTimeZone(dur!"hours"(-8), "PST");
         assert(stz.name == "");
@@ -29051,7 +29051,7 @@ private:
         return format(utcOffset < Duration.zero ? "-%02d%02d" : "+%02d%02d", hours, minutes);
     }
 
-    unittest
+    @safe unittest
     {
         static string testSTZInvalid(Duration offset)
         {
@@ -29104,7 +29104,7 @@ private:
         return format(utcOffset < Duration.zero ? "-%02d:%02d" : "+%02d:%02d", hours, minutes);
     }
 
-    unittest
+    @safe unittest
     {
         static string testSTZInvalid(Duration offset)
         {
@@ -29180,7 +29180,7 @@ private:
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29242,7 +29242,7 @@ private:
         test("-23", hours(-23));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29332,7 +29332,7 @@ private:
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29394,7 +29394,7 @@ private:
         test("-23", hours(-23));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29952,7 +29952,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         version(Posix)
         {
@@ -30035,7 +30035,7 @@ public:
         return timezones.data;
     }
 
-    version(Posix) unittest
+    version(Posix) @system unittest
     {
         import std.exception : assertNotThrown;
         import std.stdio : writefln;
@@ -30601,7 +30601,7 @@ else version(Windows)
             return timezones.data;
         }
 
-        unittest
+        @safe unittest
         {
             import std.exception : assertNotThrown;
             import std.stdio : writefln;
@@ -30694,7 +30694,7 @@ else version(Windows)
                 assert(0, "DateTime's constructor threw.");
         }
 
-        unittest
+        @system unittest
         {
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
@@ -30997,7 +30997,7 @@ TZConversions parseTZConversions(string windowsZonesXMLText) @safe pure
     return TZConversions(nix2Win, win2Nix);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : uniq;
@@ -31562,7 +31562,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) unittest
+version(Windows) @system unittest
 {
     import std.format : format;
     foreach (tzName; TimeZone.getInstalledTZNames())
@@ -31736,7 +31736,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) unittest
+version(Windows) @system unittest
 {
     import std.format : format;
     foreach (tzName; WindowsTimeZone.getInstalledTZNames())
@@ -31835,7 +31835,7 @@ public:
         _timeStart = TickDuration.currSystemTick;
     }
 
-    @nogc @trusted unittest
+    @nogc @system unittest
     {
         StopWatch sw;
         sw.start();
@@ -31861,7 +31861,7 @@ public:
         _timeMeasured += TickDuration.currSystemTick - _timeStart;
     }
 
-    @nogc @trusted unittest
+    @nogc @system unittest
     {
         StopWatch sw;
         sw.start();
@@ -32033,7 +32033,7 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.conv : to;
     int a;
@@ -32132,7 +32132,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
 }
 
 //Bug# 8450
-unittest
+@system unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
@@ -32214,7 +32214,7 @@ private:
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(isTimePoint!Date);
     static assert(isTimePoint!DateTime);
@@ -32226,7 +32226,7 @@ unittest
     static assert(!isTimePoint!(Interval!SysTime));
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -32258,7 +32258,7 @@ static bool yearIsLeapYear(int year) @safe pure nothrow
     return year % 4 == 0;
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     foreach (year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
@@ -32308,7 +32308,7 @@ long unixTimeToStdTime(long unixTime) @safe pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     // Midnight, January 1st, 1970
     assert(unixTimeToStdTime(0) == 621_355_968_000_000_000L);
@@ -32324,7 +32324,7 @@ unittest
            SysTime(DateTime(1969, 12, 30, 12, 41, 13), UTC()));
 }
 
-unittest
+@safe unittest
 {
     // Midnight, January 2nd, 1970
     assert(unixTimeToStdTime(86_400) == 621_355_968_000_000_000L + 864_000_000_000L);
@@ -32403,7 +32403,7 @@ T stdTimeToUnixTime(T = time_t)(long stdTime) @safe pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     // Midnight, January 1st, 1970 UTC
     assert(stdTimeToUnixTime(621_355_968_000_000_000L) == 0);
@@ -32412,7 +32412,7 @@ unittest
     assert(stdTimeToUnixTime(642_830_804_470_000_000L) == int.max);
 }
 
-unittest
+@safe unittest
 {
     enum unixEpochAsStdTime = (Date(1970, 1, 1) - Date.init).total!"hnsecs";
 
@@ -32613,7 +32613,7 @@ else version(Windows)
         return SysTime(dt, msecs(st.wMilliseconds), tz);
     }
 
-    unittest
+    @system unittest
     {
         auto sysTime = Clock.currTime(UTC());
         SYSTEMTIME st = void;
@@ -32645,7 +32645,7 @@ else version(Windows)
         return st;
     }
 
-    unittest
+    @system unittest
     {
         SYSTEMTIME st = void;
         GetSystemTime(&st);
