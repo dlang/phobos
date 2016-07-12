@@ -2562,7 +2562,7 @@ public:
         assert(ca.toUnixTime() == 1_198_340_085);
     }
 
-    unittest
+    @safe unittest
     {
         import std.meta : AliasSeq;
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
@@ -2596,7 +2596,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromUnixTime(0) ==
                SysTime(DateTime(1970, 1, 1), UTC()));
@@ -2616,7 +2616,7 @@ public:
         assert(st2 == SysTime(DateTime(2007, 12, 22, 0, 14, 45), pst));
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromUnixTime(0) == SysTime(DateTime(1970, 1, 1), UTC()));
         assert(SysTime.fromUnixTime(1) == SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()));
@@ -2651,7 +2651,7 @@ public:
         return timeval(tv_sec, tv_usec);
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toTimeVal() == timeval(0, 0));
         assert(SysTime(DateTime(1970, 1, 1), hnsecs(9), UTC()).toTimeVal() == timeval(0, 0));
@@ -2695,7 +2695,7 @@ public:
             return timespec(tv_sec, tv_nsec);
         }
 
-        unittest
+        @safe unittest
         {
             assert(SysTime(DateTime(1970, 1, 1), UTC()).toTimeSpec() == timespec(0, 0));
             assert(SysTime(DateTime(1970, 1, 1), hnsecs(9), UTC()).toTimeSpec() == timespec(0, 900));
@@ -2761,7 +2761,7 @@ public:
         return timeInfo;
     }
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         version(Posix)
@@ -2869,7 +2869,7 @@ public:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
         st1.add!"months"(11);
@@ -2889,7 +2889,7 @@ public:
     }
 
     //Test add!"years"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -3091,7 +3091,7 @@ public:
     }
 
     //Test add!"years"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -3296,7 +3296,7 @@ public:
     }
 
     //Test add!"months"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -3642,7 +3642,7 @@ public:
     }
 
     //Test add!"months"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -4009,7 +4009,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
         st1.roll!"months"(1);
@@ -4036,7 +4036,7 @@ public:
         assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -4076,7 +4076,7 @@ public:
     }
 
     //Test roll!"months"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -4454,7 +4454,7 @@ public:
     }
 
     //Test roll!"months"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -4875,7 +4875,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st1 = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
         st1.roll!"days"(1);
@@ -4927,7 +4927,7 @@ public:
         assert(st11 == SysTime(dt, hnsecs(9_999_999)));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -5246,7 +5246,7 @@ public:
     }
 
     //Test roll!"hours"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int hours, in SysTime expected, size_t line = __LINE__)
         {
@@ -5464,7 +5464,7 @@ public:
     }
 
     //Test roll!"minutes"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int minutes, in SysTime expected, size_t line = __LINE__)
         {
@@ -5675,7 +5675,7 @@ public:
     }
 
     //Test roll!"seconds"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int seconds, in SysTime expected, size_t line = __LINE__)
         {
@@ -5895,7 +5895,7 @@ public:
 
 
     //Test roll!"msecs"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int milliseconds, in SysTime expected, size_t line = __LINE__)
         {
@@ -6001,7 +6001,7 @@ public:
     }
 
     //Test roll!"usecs"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, long microseconds, in SysTime expected, size_t line = __LINE__)
         {
@@ -6131,7 +6131,7 @@ public:
     }
 
     //Test roll!"hnsecs"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
         {
@@ -6299,7 +6299,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2015, 12, 31, 23, 59, 59)) + seconds(1) ==
                SysTime(DateTime(2016, 1, 1, 0, 0, 0)));
@@ -6314,7 +6314,7 @@ public:
                SysTime(DateTime(2015, 12, 31, 23, 59, 59)));
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
 
@@ -6503,7 +6503,7 @@ public:
         return retval;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -6544,7 +6544,7 @@ public:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         auto before = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         assert(before + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
@@ -6742,7 +6742,7 @@ public:
         return this;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -6788,7 +6788,7 @@ public:
         return dur!"hnsecs"(_stdTime - rhs._stdTime);
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1998, 7, 6, 12, 30, 33)) ==
                     dur!"seconds"(31_536_000));
@@ -6896,7 +6896,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(Date(1999, 2, 1)).diffMonths(
                     SysTime(Date(1999, 1, 31))) == 1);
@@ -6911,7 +6911,7 @@ public:
                     SysTime(Date(1999, 3, 31))) == -2);
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -6938,7 +6938,7 @@ public:
         return (cast(Date)this).isLeapYear;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -6957,7 +6957,7 @@ public:
         return getDayOfWeek(dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -6977,14 +6977,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 1, 1, 12, 22, 7)).dayOfYear == 1);
         assert(SysTime(DateTime(1999, 12, 31, 7, 2, 59)).dayOfYear == 365);
         assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -7016,7 +7016,7 @@ public:
         adjTime = newDaysHNSecs + theRest;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -7048,7 +7048,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
         assert(SysTime(DateTime(1, 12, 31, 23, 59, 59)).dayOfGregorianCal == 365);
@@ -7062,7 +7062,7 @@ public:
         assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
@@ -7233,7 +7233,7 @@ public:
 
     //Test that the logic for the day of the Gregorian Calendar is consistent
     //between Date and SysTime.
-    unittest
+    @safe unittest
     {
         void test(Date date, SysTime st, size_t line = __LINE__)
         {
@@ -7422,7 +7422,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(0, 1, 1, 12, 0, 0));
         st.dayOfGregorianCal = 1;
@@ -7450,7 +7450,7 @@ public:
         assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         void testST(SysTime orig, int day, in SysTime expected, size_t line = __LINE__)
         {
