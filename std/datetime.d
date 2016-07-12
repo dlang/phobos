@@ -15213,7 +15213,7 @@ public:
         _date = date;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime.init;
         dt.date = Date(1999, 7, 6);
@@ -15235,7 +15235,7 @@ public:
         return _tod;
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime.init;
@@ -15266,7 +15266,7 @@ public:
         _tod = tod;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime.init;
         dt.timeOfDay = TimeOfDay(12, 30, 33);
@@ -15289,7 +15289,7 @@ public:
         return _date.year;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.init.year == 1);
         assert(Date(1999, 7, 6).year == 1999);
@@ -15319,14 +15319,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).year == 1999);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime dt, int year, in DateTime expected, size_t line = __LINE__)
         {
@@ -15369,14 +15369,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)).yearBC == 1);
         assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
         assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((in DateTime dt){dt.yearBC;}(DateTime(Date(1, 1, 1))));
 
@@ -15405,7 +15405,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(7, 30, 0));
         dt.yearBC = 1;
@@ -15415,7 +15415,7 @@ public:
         assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((DateTime dt){dt.yearBC = -1;}(DateTime(Date(1, 1, 1))));
 
@@ -15438,14 +15438,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).month == 7);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.month == 1);
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)).month == 7);
@@ -15472,7 +15472,7 @@ public:
         _date.month = month;
     }
 
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime dt, Month month, in DateTime expected = DateTime.init, size_t line = __LINE__)
         {
@@ -15511,14 +15511,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -15559,7 +15559,7 @@ public:
         _date.day = day;
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         static void testDT(DateTime dt, int day)
@@ -15652,7 +15652,7 @@ public:
         return _tod.hour;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.hour == 0);
         assert(DateTime(Date.init, TimeOfDay(12, 0, 0)).hour == 12);
@@ -15679,7 +15679,7 @@ public:
         _tod.hour = hour;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)).hour = 24;}());
 
@@ -15702,7 +15702,7 @@ public:
         return _tod.minute;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.minute == 0);
         assert(DateTime(1, 1, 1, 0, 30, 0).minute == 30);
@@ -15729,7 +15729,7 @@ public:
         _tod.minute = minute;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){DateTime.init.minute = 60;}());
 
@@ -15752,7 +15752,7 @@ public:
         return _tod.second;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.second == 0);
         assert(DateTime(1, 1, 1, 0, 0, 33).second == 33);
@@ -15779,7 +15779,7 @@ public:
         _tod.second = second;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){DateTime.init.second = 60;}());
 
@@ -15823,7 +15823,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt1 = DateTime(2010, 1, 1, 12, 30, 33);
         dt1.add!"months"(11);
@@ -15842,7 +15842,7 @@ public:
         assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(2000, 1, 31);
         dt.add!"years"(7).add!"months"(-4);
@@ -15886,7 +15886,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt1 = DateTime(2010, 1, 1, 12, 33, 33);
         dt1.roll!"months"(1);
@@ -15913,7 +15913,7 @@ public:
         assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(2000, 1, 31);
         dt.roll!"years"(7).roll!"months"(-4);
@@ -15951,7 +15951,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt1 = DateTime(2010, 1, 1, 11, 23, 12);
         dt1.roll!"days"(1);
@@ -15970,7 +15970,7 @@ public:
         assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(2000, 1, 31);
         dt.roll!"days"(7).roll!"days"(-4);
@@ -15994,7 +15994,7 @@ public:
     }
 
     //Test roll!"hours"().
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int hours, in DateTime expected, size_t line = __LINE__)
         {
@@ -16297,7 +16297,7 @@ public:
     }
 
     //Test roll!"minutes"().
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int minutes, in DateTime expected, size_t line = __LINE__)
         {
@@ -16597,7 +16597,7 @@ public:
     }
 
     //Test roll!"seconds"().
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
         {
@@ -16880,7 +16880,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(2015, 12, 31, 23, 59, 59) + seconds(1) ==
                DateTime(2016, 1, 1, 0, 0, 0));
@@ -16895,7 +16895,7 @@ public:
                DateTime(2015, 12, 31, 23, 59, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
 
@@ -16962,7 +16962,7 @@ public:
         mixin("return retval._addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -17011,7 +17011,7 @@ public:
         mixin(format(`return _addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"weeks"(7) == DateTime(Date(1999,
             8, 24), TimeOfDay(12, 30, 33)));
@@ -17112,7 +17112,7 @@ public:
         mixin("return _addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -17163,7 +17163,7 @@ public:
         return dur!"hnsecs"(dateResult.total!"hnsecs" + todResult.total!"hnsecs");
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(1999, 7, 6, 12, 30, 33);
 
@@ -17257,7 +17257,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(
                     DateTime(1999, 1, 31, 23, 59, 59)) == 1);
@@ -17272,7 +17272,7 @@ public:
                     DateTime(1999, 3, 31, 0, 30, 58)) == -2);
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17299,7 +17299,7 @@ public:
         return _date.isLeapYear;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17318,7 +17318,7 @@ public:
         return _date.dayOfWeek;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17338,14 +17338,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 1, 1), TimeOfDay(12, 22, 7)).dayOfYear == 1);
         assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
         assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17368,7 +17368,7 @@ public:
         _date.dayOfYear = day;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17389,7 +17389,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal == 1);
         assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal == 365);
