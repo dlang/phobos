@@ -12955,7 +12955,7 @@ public:
         return toSimpleString();
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
@@ -13011,7 +13011,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
         assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
@@ -13020,7 +13020,7 @@ public:
         assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(Date.fromISOString(""));
         assertThrown!DateTimeException(Date.fromISOString("990704"));
@@ -13138,7 +13138,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
         assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
@@ -13147,7 +13147,7 @@ public:
         assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(Date.fromISOExtString(""));
         assertThrown!DateTimeException(Date.fromISOExtString("990704"));
@@ -13262,7 +13262,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
         assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
@@ -13271,7 +13271,7 @@ public:
         assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(Date.fromSimpleString(""));
         assertThrown!DateTimeException(Date.fromSimpleString("990704"));
@@ -13352,7 +13352,7 @@ public:
         return date;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.min.year < 0);
         assert(Date.min < Date.max);
@@ -13373,7 +13373,7 @@ public:
         return date;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.max.year > 0);
         assert(Date.max > Date.min);
@@ -13420,7 +13420,7 @@ private:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -13625,7 +13625,7 @@ public:
         _second = cast(ubyte)second;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0) == TimeOfDay.init);
 
@@ -13686,7 +13686,7 @@ public:
         return 0;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0, 0).opCmp(TimeOfDay.init) == 0);
 
@@ -13731,7 +13731,7 @@ public:
         return _hour;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.init.hour == 0);
         assert(TimeOfDay(12, 0, 0).hour == 12);
@@ -13759,7 +13759,7 @@ public:
         _hour = cast(ubyte)hour;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).hour = 24;}());
 
@@ -13782,7 +13782,7 @@ public:
         return _minute;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.init.minute == 0);
         assert(TimeOfDay(0, 30, 0).minute == 30);
@@ -13810,7 +13810,7 @@ public:
         _minute = cast(ubyte)minute;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).minute = 60;}());
 
@@ -13833,7 +13833,7 @@ public:
         return _second;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.init.second == 0);
         assert(TimeOfDay(0, 0, 33).second == 33);
@@ -13861,7 +13861,7 @@ public:
         _second = cast(ubyte)second;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).second = 60;}());
 
@@ -13899,7 +13899,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto tod1 = TimeOfDay(7, 12, 0);
         tod1.roll!"hours"(1);
@@ -13926,7 +13926,7 @@ public:
         assert(tod6 == TimeOfDay(0, 0, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 27, 2);
         tod.roll!"hours"(22).roll!"hours"(-7);
@@ -13963,7 +13963,7 @@ public:
     }
 
     //Test roll!"minutes"().
-    unittest
+    @safe unittest
     {
         static void testTOD(TimeOfDay orig, int minutes, in TimeOfDay expected, size_t line = __LINE__)
         {
@@ -14047,7 +14047,7 @@ public:
     }
 
     //Test roll!"seconds"().
-    unittest
+    @safe unittest
     {
         static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
         {
@@ -14145,7 +14145,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(12, 12, 12) + seconds(1) == TimeOfDay(12, 12, 13));
         assert(TimeOfDay(12, 12, 12) + minutes(1) == TimeOfDay(12, 13, 12));
@@ -14158,7 +14158,7 @@ public:
         assert(TimeOfDay(0, 0, 0) - seconds(1) == TimeOfDay(23, 59, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
 
@@ -14220,7 +14220,7 @@ public:
         mixin("return retval._addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -14261,7 +14261,7 @@ public:
         mixin("return _addSeconds(" ~ op ~ "seconds);");
     }
 
-    unittest
+    @safe unittest
     {
         auto duration = dur!"hours"(12);
 
@@ -14322,7 +14322,7 @@ public:
         mixin("return _addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -14376,7 +14376,7 @@ public:
         return dur!"seconds"(lhsSec - rhsSec);
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
 
@@ -14418,13 +14418,13 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
         assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
@@ -14448,13 +14448,13 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
         assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
@@ -14473,7 +14473,7 @@ public:
         return toISOExtString();
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
@@ -14520,14 +14520,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
         assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
         assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(TimeOfDay.fromISOString(""));
         assertThrown!DateTimeException(TimeOfDay.fromISOString("0"));
@@ -14633,14 +14633,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
         assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
         assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(TimeOfDay.fromISOExtString(""));
         assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0"));
@@ -14712,7 +14712,7 @@ public:
         return TimeOfDay.init;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.min.hour == 0);
         assert(TimeOfDay.min.minute == 0);
@@ -14734,7 +14734,7 @@ public:
         return tod;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.max.hour == 23);
         assert(TimeOfDay.max.minute == 59);
@@ -14779,7 +14779,7 @@ private:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
         {
@@ -14905,7 +14905,7 @@ public:
         _tod = tod;
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime.init;
@@ -14942,7 +14942,7 @@ public:
         _tod = TimeOfDay(hour, minute, second);
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime(1999, 7 ,6);
@@ -14978,7 +14978,7 @@ public:
         return _tod.opCmp(rhs._tod);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date.init, TimeOfDay.init).opCmp(DateTime.init) == 0);
@@ -15183,7 +15183,7 @@ public:
         return _date;
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime.init;
