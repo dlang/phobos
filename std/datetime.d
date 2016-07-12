@@ -20565,7 +20565,7 @@ private:
 }
 
 //Test Interval's intersection().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20717,7 +20717,7 @@ unittest
 }
 
 //Test Interval's isAdjacent().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20844,7 +20844,7 @@ unittest
 }
 
 //Test Interval's merge().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -21015,7 +21015,7 @@ unittest
 }
 
 //Test Interval's span().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -21194,7 +21194,7 @@ unittest
 }
 
 //Test Interval's shift(duration).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -21231,7 +21231,7 @@ unittest
 }
 
 //Test Interval's shift(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -21283,7 +21283,7 @@ unittest
 }
 
 //Test Interval's expand(Duration).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2000, 7, 4), Date(2012, 1, 7));
 
@@ -21324,7 +21324,7 @@ unittest
 }
 
 //Test Interval's expand(int, int, AllowDayOverflow, Direction)
-unittest
+@safe unittest
 {
     {
         auto interval = Interval!Date(Date(2000, 7, 4), Date(2012, 1, 7));
@@ -21433,7 +21433,7 @@ unittest
 }
 
 //Test Interval's fwdRange.
-unittest
+@system unittest
 {
     {
         auto interval = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21));
@@ -21503,7 +21503,7 @@ unittest
 }
 
 //Test Interval's bwdRange.
-unittest
+@system unittest
 {
     {
         auto interval = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21));
@@ -21571,7 +21571,7 @@ unittest
 }
 
 //Test Interval's toString().
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).toString() == "[2010-Jul-04 - 2012-Jan-07)");
 
@@ -22611,7 +22611,7 @@ private:
 }
 
 //Test PosInfInterval's constructor.
-unittest
+@safe unittest
 {
     PosInfInterval!Date(Date.init);
     PosInfInterval!TimeOfDay(TimeOfDay.init);
@@ -22623,7 +22623,7 @@ unittest
 }
 
 //Test PosInfInterval's begin.
-unittest
+@safe unittest
 {
     assert(PosInfInterval!Date(Date(1, 1, 1)).begin == Date(1, 1, 1));
     assert(PosInfInterval!Date(Date(2010, 1, 1)).begin == Date(2010, 1, 1));
@@ -22639,7 +22639,7 @@ unittest
 }
 
 //Test PosInfInterval's empty.
-unittest
+@safe unittest
 {
     assert(!PosInfInterval!Date(Date(2010, 1, 1)).empty);
     assert(!PosInfInterval!TimeOfDay(TimeOfDay(0, 30, 0)).empty);
@@ -22656,7 +22656,7 @@ unittest
 }
 
 //Test PosInfInterval's contains(time point).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22683,7 +22683,7 @@ unittest
 }
 
 //Test PosInfInterval's contains(Interval).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22777,7 +22777,7 @@ unittest
 }
 
 //Test PosInfInterval's isBefore(time point).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22804,7 +22804,7 @@ unittest
 }
 
 //Test PosInfInterval's isBefore(Interval).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22897,7 +22897,7 @@ unittest
 }
 
 //Test PosInfInterval's isAfter(time point).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22924,7 +22924,7 @@ unittest
 }
 
 //Test PosInfInterval's isAfter(Interval).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23019,7 +23019,7 @@ unittest
 }
 
 //Test PosInfInterval's intersects().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23114,7 +23114,7 @@ unittest
 }
 
 //Test PosInfInterval's intersection().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23247,7 +23247,7 @@ unittest
 }
 
 //Test PosInfInterval's isAdjacent().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23341,7 +23341,7 @@ unittest
 }
 
 //Test PosInfInterval's merge().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23461,7 +23461,7 @@ unittest
 }
 
 //Test PosInfInterval's span().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23583,7 +23583,7 @@ unittest
 }
 
 //Test PosInfInterval's shift().
-unittest
+@safe unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23613,7 +23613,7 @@ unittest
 }
 
 //Test PosInfInterval's shift(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = PosInfInterval!Date(Date(2010, 7, 4));
@@ -23658,7 +23658,7 @@ unittest
 }
 
 //Test PosInfInterval's expand().
-unittest
+@safe unittest
 {
     auto interval = PosInfInterval!Date(Date(2000, 7, 4));
 
@@ -23688,7 +23688,7 @@ unittest
 }
 
 //Test PosInfInterval's expand(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = PosInfInterval!Date(Date(2000, 7, 4));
@@ -23733,7 +23733,7 @@ unittest
 }
 
 //Test PosInfInterval's fwdRange().
-unittest
+@system unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 9, 19));
 
@@ -23785,7 +23785,7 @@ unittest
 }
 
 //Test PosInfInterval's toString().
-unittest
+@safe unittest
 {
     assert(PosInfInterval!Date(Date(2010, 7, 4)).toString() == "[2010-Jul-04 - ∞)");
 
@@ -24840,7 +24840,7 @@ private:
 }
 
 //Test NegInfInterval's constructor.
-unittest
+@safe unittest
 {
     NegInfInterval!Date(Date.init);
     NegInfInterval!TimeOfDay(TimeOfDay.init);
@@ -24849,7 +24849,7 @@ unittest
 }
 
 //Test NegInfInterval's end.
-unittest
+@safe unittest
 {
     assert(NegInfInterval!Date(Date(2010, 1, 1)).end == Date(2010, 1, 1));
     assert(NegInfInterval!Date(Date(2010, 1, 1)).end == Date(2010, 1, 1));
@@ -24865,7 +24865,7 @@ unittest
 }
 
 //Test NegInfInterval's empty.
-unittest
+@safe unittest
 {
     assert(!NegInfInterval!Date(Date(2010, 1, 1)).empty);
     assert(!NegInfInterval!TimeOfDay(TimeOfDay(0, 30, 0)).empty);
@@ -24882,7 +24882,7 @@ unittest
 }
 
 //Test NegInfInterval's contains(time point).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -24910,7 +24910,7 @@ unittest
 }
 
 //Test NegInfInterval's contains(Interval).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25004,7 +25004,7 @@ unittest
 }
 
 //Test NegInfInterval's isBefore(time point).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25032,7 +25032,7 @@ unittest
 }
 
 //Test NegInfInterval's isBefore(Interval).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25127,7 +25127,7 @@ unittest
 }
 
 //Test NegInfInterval's isAfter(time point).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25150,7 +25150,7 @@ unittest
 }
 
 //Test NegInfInterval's isAfter(Interval).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25249,7 +25249,7 @@ unittest
 }
 
 //Test NegInfInterval's intersects().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
