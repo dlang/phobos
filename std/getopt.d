@@ -1572,8 +1572,6 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
         hasRequired = hasRequired || it.required;
     }
 
-    size_t argLength = ls + ll + 2;
-
     string re = " Required: ";
 
     foreach (it; opt)
