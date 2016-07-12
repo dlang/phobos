@@ -10046,7 +10046,7 @@ public:
     }
 
     //Test add!"years"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -10148,7 +10148,7 @@ public:
     }
 
     //Test add!"years"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -10288,7 +10288,7 @@ public:
     }
 
     //Test add!"months"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -10530,7 +10530,7 @@ public:
     }
 
     //Test add!"months"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -10793,7 +10793,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto d1 = Date(2010, 1, 1);
         d1.roll!"months"(1);
@@ -10820,7 +10820,7 @@ public:
         assert(d6 == Date(2001, 2, 28));
     }
 
-    unittest
+    @safe unittest
     {
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
@@ -10867,7 +10867,7 @@ public:
     }
 
     //Test roll!"months"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -11141,7 +11141,7 @@ public:
     }
 
     //Test roll!"months"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -11444,7 +11444,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto d = Date(2010, 1, 1);
         d.roll!"days"(1);
@@ -11455,7 +11455,7 @@ public:
         assert(d == Date(2010, 1, 25));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -11670,7 +11670,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2015, 12, 31) + days(1) == Date(2016, 1, 1));
         assert(Date(2004, 2, 26) + days(4) == Date(2004, 3, 1));
@@ -11679,7 +11679,7 @@ public:
         assert(Date(2004, 3, 1) - days(4) == Date(2004, 2, 26));
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
 
@@ -11749,7 +11749,7 @@ public:
         mixin("return retval._addDays(" ~ op ~ "days);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -11788,7 +11788,7 @@ public:
         mixin("return _addDays(" ~ op ~ "days);");
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6) + dur!"weeks"(7) == Date(1999, 8, 24));
         assert(Date(1999, 7, 6) + dur!"weeks"(-7) == Date(1999, 5, 18));
@@ -11862,7 +11862,7 @@ public:
         mixin("return _addDays(" ~ op ~ "days);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -11910,7 +11910,7 @@ public:
         return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
 
@@ -11967,7 +11967,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
         assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
@@ -11975,7 +11975,7 @@ public:
         assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
 
@@ -12201,7 +12201,7 @@ public:
         return yearIsLeapYear(_year);
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
@@ -12220,7 +12220,7 @@ public:
         return getDayOfWeek(dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
@@ -12247,14 +12247,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 1, 1).dayOfYear == 1);
         assert(Date(1999, 12, 31).dayOfYear == 365);
         assert(Date(2000, 12, 31).dayOfYear == 366);
     }
 
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : filter;
         import std.range : chain;
@@ -12315,7 +12315,7 @@ public:
         assert(0, "Invalid day of the year.");
     }
 
-    unittest
+    @safe unittest
     {
         static void test(Date date, int day, MonthDay expected, size_t line = __LINE__)
         {
@@ -12400,7 +12400,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1, 1, 1).dayOfGregorianCal == 1);
         assert(Date(1, 12, 31).dayOfGregorianCal == 365);
@@ -12414,7 +12414,7 @@ public:
         assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -12441,7 +12441,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto date = Date.init;
         date.dayOfGregorianCal = 1;
@@ -12469,7 +12469,7 @@ public:
         assert(date == Date(2010, 12, 31));
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
@@ -12521,7 +12521,7 @@ public:
             assert(0, "Date's constructor threw.");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(2009, 12, 28).isoWeek == 53);
@@ -12595,7 +12595,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
         assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
@@ -12603,7 +12603,7 @@ public:
         assert(Date(2000, 6, 4).endOfMonth == Date(2000, 6, 30));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(1999, 1, 1).endOfMonth == Date(1999, 1, 31));
@@ -12651,7 +12651,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 1, 6).daysInMonth == 31);
         assert(Date(1999, 2, 7).daysInMonth == 28);
@@ -12659,7 +12659,7 @@ public:
         assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(1999, 1, 1).daysInMonth == 31);
@@ -12707,7 +12707,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1, 1, 1).isAD);
         assert(Date(2010, 12, 31).isAD);
@@ -12715,7 +12715,7 @@ public:
         assert(!Date(-2010, 1, 1).isAD);
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).isAD);
         assert(Date(1, 1, 1).isAD);
@@ -12739,7 +12739,7 @@ public:
         return dayOfGregorianCal + 1_721_425;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(-4713, 11, 24).julianDay == 0);
         assert(Date(0, 12, 31).julianDay == 1_721_425);
@@ -12766,7 +12766,7 @@ public:
         return julianDay - 2_400_001;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(1858, 11, 17).modJulianDay == 0);
         assert(Date(2010, 8, 24).modJulianDay == 55_432);
@@ -12803,7 +12803,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).toISOString() == "20100704");
         assert(Date(1998, 12, 25).toISOString() == "19981225");
@@ -12811,7 +12811,7 @@ public:
         assert(Date(-4, 1, 5).toISOString() == "-00040105");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(9, 12, 4).toISOString() == "00091204");
@@ -12859,7 +12859,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
         assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
@@ -12867,7 +12867,7 @@ public:
         assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(9, 12, 4).toISOExtString() == "0009-12-04");
@@ -12915,7 +12915,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
         assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
@@ -12923,7 +12923,7 @@ public:
         assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(9, 12, 4).toSimpleString() == "0009-Dec-04");
