@@ -129,13 +129,13 @@ else version(Posix)
     import core.sys.posix.sys.types; // time_t
 }
 
-unittest
+@safe unittest
 {
     initializeTests();
 }
 
 //Verify module example.
-unittest
+@safe unittest
 {
     auto currentTime = Clock.currTime();
     auto timeString = currentTime.toISOExtString();
@@ -143,7 +143,7 @@ unittest
 }
 
 //Verify Examples for core.time.Duration which couldn't be in core.time.
-unittest
+@safe unittest
 {
     assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
            std.datetime.Date(2010, 9, 12));
@@ -320,7 +320,7 @@ public:
         return SysTime(currStdTime!clockType, tz);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.stdio : writefln;
@@ -492,7 +492,7 @@ public:
         else static assert(0, "Unsupported OS");
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.math : abs;
@@ -543,7 +543,7 @@ public:
         return TickDuration.currSystemTick;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         assert(Clock.currSystemTick.length > 0);
     }
@@ -590,7 +590,7 @@ public:
         return currSystemTick - TickDuration.appOrigin;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         auto a = Clock.currSystemTick;
         auto b = Clock.currAppTick;
@@ -675,7 +675,7 @@ public:
             assert(0, "SysTime's constructor threw when it shouldn't have.");
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         static void test(DateTime dt, immutable TimeZone tz, long expected)
@@ -727,7 +727,7 @@ public:
         this(standardTime, nonNullTZ);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         static void test(DateTime dt, Duration fracSecs, immutable TimeZone tz, long expected)
@@ -791,7 +791,7 @@ public:
             assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         import std.format : format;
 
@@ -843,7 +843,7 @@ public:
             assert(0, "Date's constructor through when it shouldn't have.");
     }
 
-    unittest
+    @safe unittest
     {
         static void test(Date d, immutable TimeZone tz, long expected)
         {
@@ -882,7 +882,7 @@ public:
         _timezone = tz is null ? LocalTime() : tz;
     }
 
-    unittest
+    @safe unittest
     {
         static void test(long stdTime, immutable TimeZone tz)
         {
@@ -942,7 +942,7 @@ public:
         return _stdTime == rhs._stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         assert(SysTime(DateTime.init, UTC()) == SysTime(0, UTC()));
@@ -1008,7 +1008,7 @@ public:
         return 0;
     }
 
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : map;
         import std.array : array;
@@ -1078,7 +1078,7 @@ public:
         return (cast(Date)this).year;
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime sysTime, long expected)
@@ -1145,14 +1145,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).year == 1999);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).year == 2010);
         assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime st, int year, in SysTime expected)
@@ -1212,14 +1212,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(0, 1, 1, 12, 30, 33)).yearBC == 1);
         assert(SysTime(DateTime(-1, 1, 1, 10, 7, 2)).yearBC == 2);
         assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         import std.format : format;
@@ -1270,7 +1270,7 @@ public:
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(2010, 1, 1, 7, 30, 0));
         st.yearBC = 1;
@@ -1280,7 +1280,7 @@ public:
         assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime st, int year, in SysTime expected)
@@ -1348,14 +1348,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).month == 7);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).month == 10);
         assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime sysTime, Month expected)
@@ -1420,7 +1420,7 @@ public:
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : filter;
         import std.range : chain;
@@ -1509,14 +1509,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).day == 6);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).day == 4);
         assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -1583,7 +1583,7 @@ public:
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1673,7 +1673,7 @@ public:
         return cast(ubyte)getUnitsFromHNSecs!"hours"(hnsecs);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1750,7 +1750,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1798,7 +1798,7 @@ public:
         return cast(ubyte)getUnitsFromHNSecs!"minutes"(hnsecs);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1878,7 +1878,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1927,7 +1927,7 @@ public:
         return cast(ubyte)getUnitsFromHNSecs!"seconds"(hnsecs);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -2009,7 +2009,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -2053,7 +2053,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(1982, 4, 1, 20, 59, 22);
         assert(SysTime(dt, msecs(213)).fracSecs == msecs(213));
@@ -2065,7 +2065,7 @@ public:
         assert(SysTime(dt, nsecs(123456789)).fracSecs == nsecs(123456700));
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -2138,7 +2138,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1982, 4, 1, 20, 59, 22));
         assert(st.fracSecs == Duration.zero);
@@ -2155,7 +2155,7 @@ public:
         assert(st.fracSecs == hnsecs(1234567));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -2210,7 +2210,7 @@ public:
             assert(0, "FracSec.from!\"hnsecs\"() threw.");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         import std.range;
         import std.format : format;
@@ -2302,7 +2302,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         import std.range;
         import std.format : format;
@@ -2337,7 +2337,7 @@ public:
         return _stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(0).stdTime == 0);
         assert(SysTime(1).stdTime == 1);
@@ -2364,7 +2364,7 @@ public:
         _stdTime = stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         static void test(long stdTime, in SysTime expected, size_t line = __LINE__)
         {
@@ -2445,7 +2445,7 @@ public:
         return SysTime(_stdTime, LocalTime());
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto sysTime = SysTime(DateTime(1982, 1, 4, 8, 59, 7), hnsecs(27));
@@ -2477,7 +2477,7 @@ public:
         return SysTime(_stdTime, UTC());
     }
 
-    unittest
+    @safe unittest
     {
         auto sysTime = SysTime(DateTime(1982, 1, 4, 8, 59, 7), hnsecs(27));
         assert(sysTime == sysTime.toUTC());
@@ -2500,7 +2500,7 @@ public:
             return SysTime(_stdTime, tz);
     }
 
-    unittest
+    @safe unittest
     {
         auto stz = new immutable SimpleTimeZone(dur!"minutes"(11 * 60));
         auto sysTime = SysTime(DateTime(1982, 1, 4, 8, 59, 7), hnsecs(27));
@@ -2548,7 +2548,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
 
