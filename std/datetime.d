@@ -7665,7 +7665,7 @@ public:
         return (cast(Date)this).isoWeek;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -7706,7 +7706,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth ==
                SysTime(DateTime(1999, 1, 31, 23, 59, 59),
@@ -7728,7 +7728,7 @@ public:
                        hnsecs(9_999_999)));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(Date(1999, 1, 1)).endOfMonth == SysTime(DateTime(1999, 1, 31, 23, 59, 59), hnsecs(9_999_999)));
@@ -7779,7 +7779,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
         assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
@@ -7787,7 +7787,7 @@ public:
         assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime(1999, 1, 1, 12, 1, 13)).daysInMonth == 31);
@@ -7835,7 +7835,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1, 1, 1, 12, 7, 0)).isAD);
         assert(SysTime(DateTime(2010, 12, 31, 0, 0, 0)).isAD);
@@ -7843,7 +7843,7 @@ public:
         assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 12, 0, 9)).isAD);
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).isAD);
@@ -7873,7 +7873,7 @@ public:
         return hour < 12 ? jd - 1 : jd;
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(-4713, 11, 24, 0, 0, 0)).julianDay == -1);
         assert(SysTime(DateTime(-4713, 11, 24, 12, 0, 0)).julianDay == 0);
@@ -7915,7 +7915,7 @@ public:
         return (dayOfGregorianCal + 1_721_425) - 2_400_001;
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1858, 11, 17, 0, 0, 0)).modJulianDay == 0);
         assert(SysTime(DateTime(1858, 11, 17, 12, 0, 0)).modJulianDay == 0);
@@ -7939,7 +7939,7 @@ public:
         return Date(dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         assert(cast(Date)SysTime(Date(1999, 7, 6)) == Date(1999, 7, 6));
         assert(cast(Date)SysTime(Date(2000, 12, 31)) == Date(2000, 12, 31));
@@ -7991,7 +7991,7 @@ public:
             assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
     }
 
-    unittest
+    @safe unittest
     {
         assert(cast(DateTime)SysTime(DateTime(1, 1, 6, 7, 12, 22)) == DateTime(1, 1, 6, 7, 12, 22));
         assert(cast(DateTime)SysTime(DateTime(1, 1, 6, 7, 12, 22), msecs(22)) == DateTime(1, 1, 6, 7, 12, 22));
@@ -8047,7 +8047,7 @@ public:
             assert(0, "TimeOfDay's constructor threw.");
     }
 
-    unittest
+    @safe unittest
     {
         assert(cast(TimeOfDay)SysTime(Date(1999, 7, 6)) == TimeOfDay(0, 0, 0));
         assert(cast(TimeOfDay)SysTime(Date(2000, 12, 31)) == TimeOfDay(0, 0, 0));
@@ -8153,7 +8153,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
                "20100704T070612");
@@ -8170,7 +8170,7 @@ public:
                "-00040105T000002.052092");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime.init, UTC()).toISOString() == "00010101T000000Z");
@@ -8283,7 +8283,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
                "2010-07-04T07:06:12");
@@ -8300,7 +8300,7 @@ public:
                "-0004-01-05T00:00:02.052092");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime.init, UTC()).toISOExtString() == "0001-01-01T00:00:00Z");
@@ -8417,7 +8417,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
                "2010-Jul-04 07:06:12");
@@ -8434,7 +8434,7 @@ public:
                 "-0004-Jan-05 00:00:02.052092");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime.init, UTC()).toString() == "0001-Jan-01 00:00:00Z");
@@ -8502,7 +8502,7 @@ public:
         return toSimpleString();
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -8618,7 +8618,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromISOString("20100704T070612") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
@@ -8647,7 +8647,7 @@ public:
                        new immutable SimpleTimeZone(hours(8))));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -8854,7 +8854,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromISOExtString("2010-07-04T07:06:12") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
@@ -8882,7 +8882,7 @@ public:
                        new immutable SimpleTimeZone(hours(8))));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -9067,7 +9067,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
@@ -9096,7 +9096,7 @@ public:
                        new immutable SimpleTimeZone(hours(8))));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -9201,7 +9201,7 @@ public:
         return SysTime(long.min, UTC());
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime.min.year < 0);
         assert(SysTime.min < SysTime.max);
@@ -9219,7 +9219,7 @@ public:
         return SysTime(long.max, UTC());
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime.max.year > 0);
         assert(SysTime.max > SysTime.min);
@@ -9303,7 +9303,7 @@ public:
         _day   = cast(ubyte)day;
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         assert(Date(1, 1, 1) == Date.init);
@@ -9492,7 +9492,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -9532,7 +9532,7 @@ public:
         return 0;
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(1, 1, 1).opCmp(Date.init) == 0);
@@ -9626,14 +9626,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).year == 1999);
         assert(Date(2010, 10, 4).year == 2010);
         assert(Date(-7, 4, 5).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.init.year == 1);
         assert(Date(1999, 7, 6).year == 1999);
@@ -9663,14 +9663,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).year == 1999);
         assert(Date(2010, 10, 4).year == 2010);
         assert(Date(-7, 4, 5).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         static void testDateInvalid(Date date, int year)
         {
@@ -9712,14 +9712,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(0, 1, 1).yearBC == 1);
         assert(Date(-1, 1, 1).yearBC == 2);
         assert(Date(-100, 1, 1).yearBC == 101);
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((in Date date){date.yearBC;}(Date(1, 1, 1)));
 
@@ -9750,7 +9750,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto date = Date(2010, 1, 1);
         date.yearBC = 1;
@@ -9760,7 +9760,7 @@ public:
         assert(date == Date(-9, 1, 1));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((Date date){date.yearBC = -1;}(Date(1, 1, 1)));
 
@@ -9783,14 +9783,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).month == 7);
         assert(Date(2010, 10, 4).month == 10);
         assert(Date(-7, 4, 5).month == 4);
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.init.month == 1);
         assert(Date(1999, 7, 6).month == 7);
@@ -9819,7 +9819,7 @@ public:
         _month = cast(Month)month;
     }
 
-    unittest
+    @safe unittest
     {
         static void testDate(Date date, Month month, in Date expected = Date.init)
         {
@@ -9852,14 +9852,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).day == 6);
         assert(Date(2010, 10, 4).day == 4);
         assert(Date(-7, 4, 5).day == 5);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -9898,7 +9898,7 @@ public:
         _day = cast(ubyte)day;
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         static void testDate(Date date, int day)
@@ -10026,7 +10026,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto d1 = Date(2010, 1, 1);
         d1.add!"months"(11);
