@@ -1883,8 +1883,21 @@ $(OL
     $(LI It advances the input to the position following the conversion.)
     $(LI It does not throw if it could not convert the entire input.))
 
-It still throws if an overflow occurred during conversion or if no character
-of the input was meaningfully converted.
+This overload converts an character input range to a `bool`.
+
+Params:
+    Target = the type to convert to
+    s = the lvalue of an input range
+
+Returns:
+    A `bool`
+
+Throws:
+    A $(LREF ConvException) if the range does not represent a `bool`.
+
+Note:
+    All character input range conversions using $(LREF to) are forwarded
+    to `parse` and do not require lvalues.
 */
 Target parse(Target, Source)(ref Source s)
     if (isInputRange!Source &&
@@ -1915,16 +1928,9 @@ Lerr:
 ///
 @safe unittest
 {
-    import std.string : munch;
-    string test = "123 \t  76.14";
-    auto a = parse!uint(test);
-    assert(a == 123);
-    assert(test == " \t  76.14"); // parse bumps string
-    munch(test, " \t\n\r"); // skip ws
-    assert(test == "76.14");
-    auto b = parse!double(test);
-    assert(b == 76.14);
-    assert(test == "");
+    auto s = "true";
+    bool b = parse!bool(s);
+    assert(b);
 }
 
 @safe unittest
@@ -1960,6 +1966,20 @@ Lerr:
     }
 }
 
+/**
+Parses a character input range to an integral value.
+
+Params:
+    Target = the integral type to convert to
+    s = the lvalue of an input range
+
+Returns:
+    A number of type `Target`
+
+Throws:
+    A $(LREF ConvException) If an overflow occurred during conversion or
+    if no character of the input was meaningfully converted.
+*/
 Target parse(Target, Source)(ref Source s)
     if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
@@ -2039,10 +2059,30 @@ Lerr:
     }
 }
 
+///
 @safe pure unittest
 {
     string s = "123";
     auto a = parse!int(s);
+    assert(a == 123);
+
+    // parse only accepts lvalues
+    static assert(!__traits(compiles, parse!int("123")));
+}
+
+///
+@safe pure unittest
+{
+    import std.string : munch;
+    string test = "123 \t  76.14";
+    auto a = parse!uint(test);
+    assert(a == 123);
+    assert(test == " \t  76.14"); // parse bumps string
+    munch(test, " \t\n\r"); // skip ws
+    assert(test == "76.14");
+    auto b = parse!double(test);
+    assert(b == 76.14);
+    assert(test == "");
 }
 
 @safe pure unittest
