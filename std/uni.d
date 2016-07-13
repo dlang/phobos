@@ -2433,7 +2433,6 @@ private:
     ref sub(U)(U rhs)
         if (isCodepointSet!U)
     {
-        uint top;
         Marker mark;
         foreach (i; rhs.byInterval)
         {
@@ -7696,7 +7695,6 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
         static if (norm == NFC || norm == NFKC)
         {
             import std.algorithm.searching : countUntil;
-            size_t idx = 0;
             auto first = countUntil(ccc, 0);
             if (first >= 0) // no starters?? no recomposition
             {
@@ -7774,7 +7772,6 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
 {
     assert(input.length == ccc.length);
     int accumCC = -1;// so that it's out of 0..255 range
-    bool foundSolidStarter = false;
     // writefln("recomposing %( %04x %)", input);
     // first one is always a starter thus we start at i == 1
     size_t i = start+1;
@@ -7830,7 +7827,6 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
 private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 {
     import std.typecons : tuple;
-    auto result = input;
     ubyte lastCC = 0;
 
     foreach (idx, dchar ch; input)

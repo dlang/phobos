@@ -2168,7 +2168,6 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
 
-    immutable tl1 = t.length + 1;
     auto dpvi = enforce(cast(F*) malloc(F.sizeof * 2 * t.length));
     auto dpvi1 = dpvi + t.length;
     scope(exit) free(dpvi < dpvi1 ? dpvi : dpvi1);

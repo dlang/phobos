@@ -594,7 +594,6 @@ final class ZipArchive
         if (isZip64)
         {
             // Read Zip64 record data
-            uint eocd64LocStart = i;
             ulong eocdOffset = getUlong(i + 8);
             if (eocdOffset + eocd64Length > _data.length)
                 throw new ZipException("corrupted directory");
@@ -660,7 +659,6 @@ final class ZipArchive
              *  comment
              */
 
-            uint offset;
             uint namelen;
             uint extralen;
             uint commentlen;
