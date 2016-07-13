@@ -129,13 +129,13 @@ else version(Posix)
     import core.sys.posix.sys.types; // time_t
 }
 
-unittest
+@safe unittest
 {
     initializeTests();
 }
 
 //Verify module example.
-unittest
+@safe unittest
 {
     auto currentTime = Clock.currTime();
     auto timeString = currentTime.toISOExtString();
@@ -143,7 +143,7 @@ unittest
 }
 
 //Verify Examples for core.time.Duration which couldn't be in core.time.
-unittest
+@safe unittest
 {
     assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
            std.datetime.Date(2010, 9, 12));
@@ -320,7 +320,7 @@ public:
         return SysTime(currStdTime!clockType, tz);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.stdio : writefln;
@@ -492,7 +492,7 @@ public:
         else static assert(0, "Unsupported OS");
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.math : abs;
@@ -543,7 +543,7 @@ public:
         return TickDuration.currSystemTick;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         assert(Clock.currSystemTick.length > 0);
     }
@@ -590,7 +590,7 @@ public:
         return currSystemTick - TickDuration.appOrigin;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         auto a = Clock.currSystemTick;
         auto b = Clock.currAppTick;
@@ -675,7 +675,7 @@ public:
             assert(0, "SysTime's constructor threw when it shouldn't have.");
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         static void test(DateTime dt, immutable TimeZone tz, long expected)
@@ -727,7 +727,7 @@ public:
         this(standardTime, nonNullTZ);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         static void test(DateTime dt, Duration fracSecs, immutable TimeZone tz, long expected)
@@ -791,7 +791,7 @@ public:
             assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         import std.format : format;
 
@@ -843,7 +843,7 @@ public:
             assert(0, "Date's constructor through when it shouldn't have.");
     }
 
-    unittest
+    @safe unittest
     {
         static void test(Date d, immutable TimeZone tz, long expected)
         {
@@ -882,7 +882,7 @@ public:
         _timezone = tz is null ? LocalTime() : tz;
     }
 
-    unittest
+    @safe unittest
     {
         static void test(long stdTime, immutable TimeZone tz)
         {
@@ -942,7 +942,7 @@ public:
         return _stdTime == rhs._stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         assert(SysTime(DateTime.init, UTC()) == SysTime(0, UTC()));
@@ -1008,7 +1008,7 @@ public:
         return 0;
     }
 
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : map;
         import std.array : array;
@@ -1078,7 +1078,7 @@ public:
         return (cast(Date)this).year;
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime sysTime, long expected)
@@ -1145,14 +1145,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).year == 1999);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).year == 2010);
         assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime st, int year, in SysTime expected)
@@ -1212,14 +1212,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(0, 1, 1, 12, 30, 33)).yearBC == 1);
         assert(SysTime(DateTime(-1, 1, 1, 10, 7, 2)).yearBC == 2);
         assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         import std.format : format;
@@ -1270,7 +1270,7 @@ public:
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(2010, 1, 1, 7, 30, 0));
         st.yearBC = 1;
@@ -1280,7 +1280,7 @@ public:
         assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime st, int year, in SysTime expected)
@@ -1348,14 +1348,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).month == 7);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).month == 10);
         assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime sysTime, Month expected)
@@ -1420,7 +1420,7 @@ public:
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : filter;
         import std.range : chain;
@@ -1509,14 +1509,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).day == 6);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).day == 4);
         assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -1583,7 +1583,7 @@ public:
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1673,7 +1673,7 @@ public:
         return cast(ubyte)getUnitsFromHNSecs!"hours"(hnsecs);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1750,7 +1750,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1798,7 +1798,7 @@ public:
         return cast(ubyte)getUnitsFromHNSecs!"minutes"(hnsecs);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1878,7 +1878,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1927,7 +1927,7 @@ public:
         return cast(ubyte)getUnitsFromHNSecs!"seconds"(hnsecs);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -2009,7 +2009,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -2053,7 +2053,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(1982, 4, 1, 20, 59, 22);
         assert(SysTime(dt, msecs(213)).fracSecs == msecs(213));
@@ -2065,7 +2065,7 @@ public:
         assert(SysTime(dt, nsecs(123456789)).fracSecs == nsecs(123456700));
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -2138,7 +2138,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1982, 4, 1, 20, 59, 22));
         assert(st.fracSecs == Duration.zero);
@@ -2155,7 +2155,7 @@ public:
         assert(st.fracSecs == hnsecs(1234567));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -2210,7 +2210,7 @@ public:
             assert(0, "FracSec.from!\"hnsecs\"() threw.");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         import std.range;
         import std.format : format;
@@ -2302,7 +2302,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         import std.range;
         import std.format : format;
@@ -2337,7 +2337,7 @@ public:
         return _stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(0).stdTime == 0);
         assert(SysTime(1).stdTime == 1);
@@ -2364,7 +2364,7 @@ public:
         _stdTime = stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         static void test(long stdTime, in SysTime expected, size_t line = __LINE__)
         {
@@ -2445,7 +2445,7 @@ public:
         return SysTime(_stdTime, LocalTime());
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto sysTime = SysTime(DateTime(1982, 1, 4, 8, 59, 7), hnsecs(27));
@@ -2477,7 +2477,7 @@ public:
         return SysTime(_stdTime, UTC());
     }
 
-    unittest
+    @safe unittest
     {
         auto sysTime = SysTime(DateTime(1982, 1, 4, 8, 59, 7), hnsecs(27));
         assert(sysTime == sysTime.toUTC());
@@ -2500,7 +2500,7 @@ public:
             return SysTime(_stdTime, tz);
     }
 
-    unittest
+    @safe unittest
     {
         auto stz = new immutable SimpleTimeZone(dur!"minutes"(11 * 60));
         auto sysTime = SysTime(DateTime(1982, 1, 4, 8, 59, 7), hnsecs(27));
@@ -2548,7 +2548,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
 
@@ -2562,7 +2562,7 @@ public:
         assert(ca.toUnixTime() == 1_198_340_085);
     }
 
-    unittest
+    @safe unittest
     {
         import std.meta : AliasSeq;
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
@@ -2596,7 +2596,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromUnixTime(0) ==
                SysTime(DateTime(1970, 1, 1), UTC()));
@@ -2616,7 +2616,7 @@ public:
         assert(st2 == SysTime(DateTime(2007, 12, 22, 0, 14, 45), pst));
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromUnixTime(0) == SysTime(DateTime(1970, 1, 1), UTC()));
         assert(SysTime.fromUnixTime(1) == SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()));
@@ -2651,7 +2651,7 @@ public:
         return timeval(tv_sec, tv_usec);
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toTimeVal() == timeval(0, 0));
         assert(SysTime(DateTime(1970, 1, 1), hnsecs(9), UTC()).toTimeVal() == timeval(0, 0));
@@ -2695,7 +2695,7 @@ public:
             return timespec(tv_sec, tv_nsec);
         }
 
-        unittest
+        @safe unittest
         {
             assert(SysTime(DateTime(1970, 1, 1), UTC()).toTimeSpec() == timespec(0, 0));
             assert(SysTime(DateTime(1970, 1, 1), hnsecs(9), UTC()).toTimeSpec() == timespec(0, 900));
@@ -2761,7 +2761,7 @@ public:
         return timeInfo;
     }
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         version(Posix)
@@ -2869,7 +2869,7 @@ public:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
         st1.add!"months"(11);
@@ -2889,7 +2889,7 @@ public:
     }
 
     //Test add!"years"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -3091,7 +3091,7 @@ public:
     }
 
     //Test add!"years"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -3296,7 +3296,7 @@ public:
     }
 
     //Test add!"months"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -3642,7 +3642,7 @@ public:
     }
 
     //Test add!"months"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -4009,7 +4009,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
         st1.roll!"months"(1);
@@ -4036,7 +4036,7 @@ public:
         assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -4076,7 +4076,7 @@ public:
     }
 
     //Test roll!"months"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -4454,7 +4454,7 @@ public:
     }
 
     //Test roll!"months"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -4875,7 +4875,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st1 = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
         st1.roll!"days"(1);
@@ -4927,7 +4927,7 @@ public:
         assert(st11 == SysTime(dt, hnsecs(9_999_999)));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -5246,7 +5246,7 @@ public:
     }
 
     //Test roll!"hours"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int hours, in SysTime expected, size_t line = __LINE__)
         {
@@ -5464,7 +5464,7 @@ public:
     }
 
     //Test roll!"minutes"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int minutes, in SysTime expected, size_t line = __LINE__)
         {
@@ -5675,7 +5675,7 @@ public:
     }
 
     //Test roll!"seconds"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int seconds, in SysTime expected, size_t line = __LINE__)
         {
@@ -5895,7 +5895,7 @@ public:
 
 
     //Test roll!"msecs"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int milliseconds, in SysTime expected, size_t line = __LINE__)
         {
@@ -6001,7 +6001,7 @@ public:
     }
 
     //Test roll!"usecs"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, long microseconds, in SysTime expected, size_t line = __LINE__)
         {
@@ -6131,7 +6131,7 @@ public:
     }
 
     //Test roll!"hnsecs"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
         {
@@ -6299,7 +6299,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2015, 12, 31, 23, 59, 59)) + seconds(1) ==
                SysTime(DateTime(2016, 1, 1, 0, 0, 0)));
@@ -6314,7 +6314,7 @@ public:
                SysTime(DateTime(2015, 12, 31, 23, 59, 59)));
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
 
@@ -6503,7 +6503,7 @@ public:
         return retval;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -6544,7 +6544,7 @@ public:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         auto before = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         assert(before + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
@@ -6742,7 +6742,7 @@ public:
         return this;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -6788,7 +6788,7 @@ public:
         return dur!"hnsecs"(_stdTime - rhs._stdTime);
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1998, 7, 6, 12, 30, 33)) ==
                     dur!"seconds"(31_536_000));
@@ -6896,7 +6896,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(Date(1999, 2, 1)).diffMonths(
                     SysTime(Date(1999, 1, 31))) == 1);
@@ -6911,7 +6911,7 @@ public:
                     SysTime(Date(1999, 3, 31))) == -2);
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -6938,7 +6938,7 @@ public:
         return (cast(Date)this).isLeapYear;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -6957,7 +6957,7 @@ public:
         return getDayOfWeek(dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -6977,14 +6977,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 1, 1, 12, 22, 7)).dayOfYear == 1);
         assert(SysTime(DateTime(1999, 12, 31, 7, 2, 59)).dayOfYear == 365);
         assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -7016,7 +7016,7 @@ public:
         adjTime = newDaysHNSecs + theRest;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -7048,7 +7048,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
         assert(SysTime(DateTime(1, 12, 31, 23, 59, 59)).dayOfGregorianCal == 365);
@@ -7062,7 +7062,7 @@ public:
         assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
@@ -7233,7 +7233,7 @@ public:
 
     //Test that the logic for the day of the Gregorian Calendar is consistent
     //between Date and SysTime.
-    unittest
+    @safe unittest
     {
         void test(Date date, SysTime st, size_t line = __LINE__)
         {
@@ -7422,7 +7422,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(0, 1, 1, 12, 0, 0));
         st.dayOfGregorianCal = 1;
@@ -7450,7 +7450,7 @@ public:
         assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         void testST(SysTime orig, int day, in SysTime expected, size_t line = __LINE__)
         {
@@ -7665,7 +7665,7 @@ public:
         return (cast(Date)this).isoWeek;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -7706,7 +7706,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth ==
                SysTime(DateTime(1999, 1, 31, 23, 59, 59),
@@ -7728,7 +7728,7 @@ public:
                        hnsecs(9_999_999)));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(Date(1999, 1, 1)).endOfMonth == SysTime(DateTime(1999, 1, 31, 23, 59, 59), hnsecs(9_999_999)));
@@ -7779,7 +7779,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
         assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
@@ -7787,7 +7787,7 @@ public:
         assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime(1999, 1, 1, 12, 1, 13)).daysInMonth == 31);
@@ -7835,7 +7835,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1, 1, 1, 12, 7, 0)).isAD);
         assert(SysTime(DateTime(2010, 12, 31, 0, 0, 0)).isAD);
@@ -7843,7 +7843,7 @@ public:
         assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 12, 0, 9)).isAD);
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).isAD);
@@ -7873,7 +7873,7 @@ public:
         return hour < 12 ? jd - 1 : jd;
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(-4713, 11, 24, 0, 0, 0)).julianDay == -1);
         assert(SysTime(DateTime(-4713, 11, 24, 12, 0, 0)).julianDay == 0);
@@ -7915,7 +7915,7 @@ public:
         return (dayOfGregorianCal + 1_721_425) - 2_400_001;
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1858, 11, 17, 0, 0, 0)).modJulianDay == 0);
         assert(SysTime(DateTime(1858, 11, 17, 12, 0, 0)).modJulianDay == 0);
@@ -7939,7 +7939,7 @@ public:
         return Date(dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         assert(cast(Date)SysTime(Date(1999, 7, 6)) == Date(1999, 7, 6));
         assert(cast(Date)SysTime(Date(2000, 12, 31)) == Date(2000, 12, 31));
@@ -7991,7 +7991,7 @@ public:
             assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
     }
 
-    unittest
+    @safe unittest
     {
         assert(cast(DateTime)SysTime(DateTime(1, 1, 6, 7, 12, 22)) == DateTime(1, 1, 6, 7, 12, 22));
         assert(cast(DateTime)SysTime(DateTime(1, 1, 6, 7, 12, 22), msecs(22)) == DateTime(1, 1, 6, 7, 12, 22));
@@ -8047,7 +8047,7 @@ public:
             assert(0, "TimeOfDay's constructor threw.");
     }
 
-    unittest
+    @safe unittest
     {
         assert(cast(TimeOfDay)SysTime(Date(1999, 7, 6)) == TimeOfDay(0, 0, 0));
         assert(cast(TimeOfDay)SysTime(Date(2000, 12, 31)) == TimeOfDay(0, 0, 0));
@@ -8153,7 +8153,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
                "20100704T070612");
@@ -8170,7 +8170,7 @@ public:
                "-00040105T000002.052092");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime.init, UTC()).toISOString() == "00010101T000000Z");
@@ -8283,7 +8283,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
                "2010-07-04T07:06:12");
@@ -8300,7 +8300,7 @@ public:
                "-0004-01-05T00:00:02.052092");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime.init, UTC()).toISOExtString() == "0001-01-01T00:00:00Z");
@@ -8417,7 +8417,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
                "2010-Jul-04 07:06:12");
@@ -8434,7 +8434,7 @@ public:
                 "-0004-Jan-05 00:00:02.052092");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime.init, UTC()).toString() == "0001-Jan-01 00:00:00Z");
@@ -8502,7 +8502,7 @@ public:
         return toSimpleString();
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -8618,7 +8618,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromISOString("20100704T070612") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
@@ -8647,7 +8647,7 @@ public:
                        new immutable SimpleTimeZone(hours(8))));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -8854,7 +8854,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromISOExtString("2010-07-04T07:06:12") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
@@ -8882,7 +8882,7 @@ public:
                        new immutable SimpleTimeZone(hours(8))));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -9067,7 +9067,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
@@ -9096,7 +9096,7 @@ public:
                        new immutable SimpleTimeZone(hours(8))));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -9201,7 +9201,7 @@ public:
         return SysTime(long.min, UTC());
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime.min.year < 0);
         assert(SysTime.min < SysTime.max);
@@ -9219,7 +9219,7 @@ public:
         return SysTime(long.max, UTC());
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime.max.year > 0);
         assert(SysTime.max > SysTime.min);
@@ -9303,7 +9303,7 @@ public:
         _day   = cast(ubyte)day;
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         assert(Date(1, 1, 1) == Date.init);
@@ -9492,7 +9492,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -9532,7 +9532,7 @@ public:
         return 0;
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(1, 1, 1).opCmp(Date.init) == 0);
@@ -9626,14 +9626,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).year == 1999);
         assert(Date(2010, 10, 4).year == 2010);
         assert(Date(-7, 4, 5).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.init.year == 1);
         assert(Date(1999, 7, 6).year == 1999);
@@ -9663,14 +9663,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).year == 1999);
         assert(Date(2010, 10, 4).year == 2010);
         assert(Date(-7, 4, 5).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         static void testDateInvalid(Date date, int year)
         {
@@ -9712,14 +9712,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(0, 1, 1).yearBC == 1);
         assert(Date(-1, 1, 1).yearBC == 2);
         assert(Date(-100, 1, 1).yearBC == 101);
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((in Date date){date.yearBC;}(Date(1, 1, 1)));
 
@@ -9750,7 +9750,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto date = Date(2010, 1, 1);
         date.yearBC = 1;
@@ -9760,7 +9760,7 @@ public:
         assert(date == Date(-9, 1, 1));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((Date date){date.yearBC = -1;}(Date(1, 1, 1)));
 
@@ -9783,14 +9783,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).month == 7);
         assert(Date(2010, 10, 4).month == 10);
         assert(Date(-7, 4, 5).month == 4);
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.init.month == 1);
         assert(Date(1999, 7, 6).month == 7);
@@ -9819,7 +9819,7 @@ public:
         _month = cast(Month)month;
     }
 
-    unittest
+    @safe unittest
     {
         static void testDate(Date date, Month month, in Date expected = Date.init)
         {
@@ -9852,14 +9852,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).day == 6);
         assert(Date(2010, 10, 4).day == 4);
         assert(Date(-7, 4, 5).day == 5);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -9898,7 +9898,7 @@ public:
         _day = cast(ubyte)day;
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         static void testDate(Date date, int day)
@@ -10024,7 +10024,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto d1 = Date(2010, 1, 1);
         d1.add!"months"(11);
@@ -10044,7 +10044,7 @@ public:
     }
 
     //Test add!"years"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -10146,7 +10146,7 @@ public:
     }
 
     //Test add!"years"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -10286,7 +10286,7 @@ public:
     }
 
     //Test add!"months"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -10528,7 +10528,7 @@ public:
     }
 
     //Test add!"months"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -10791,7 +10791,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto d1 = Date(2010, 1, 1);
         d1.roll!"months"(1);
@@ -10818,7 +10818,7 @@ public:
         assert(d6 == Date(2001, 2, 28));
     }
 
-    unittest
+    @safe unittest
     {
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
@@ -10865,7 +10865,7 @@ public:
     }
 
     //Test roll!"months"() with AllowDayOverlow.yes
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -11139,7 +11139,7 @@ public:
     }
 
     //Test roll!"months"() with AllowDayOverlow.no
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -11442,7 +11442,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto d = Date(2010, 1, 1);
         d.roll!"days"(1);
@@ -11453,7 +11453,7 @@ public:
         assert(d == Date(2010, 1, 25));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -11668,7 +11668,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2015, 12, 31) + days(1) == Date(2016, 1, 1));
         assert(Date(2004, 2, 26) + days(4) == Date(2004, 3, 1));
@@ -11677,7 +11677,7 @@ public:
         assert(Date(2004, 3, 1) - days(4) == Date(2004, 2, 26));
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
 
@@ -11747,7 +11747,7 @@ public:
         mixin("return retval._addDays(" ~ op ~ "days);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -11786,7 +11786,7 @@ public:
         mixin("return _addDays(" ~ op ~ "days);");
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6) + dur!"weeks"(7) == Date(1999, 8, 24));
         assert(Date(1999, 7, 6) + dur!"weeks"(-7) == Date(1999, 5, 18));
@@ -11860,7 +11860,7 @@ public:
         mixin("return _addDays(" ~ op ~ "days);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -11908,7 +11908,7 @@ public:
         return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
 
@@ -11965,7 +11965,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
         assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
@@ -11973,7 +11973,7 @@ public:
         assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
 
@@ -12199,7 +12199,7 @@ public:
         return yearIsLeapYear(_year);
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
@@ -12218,7 +12218,7 @@ public:
         return getDayOfWeek(dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
@@ -12245,14 +12245,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 1, 1).dayOfYear == 1);
         assert(Date(1999, 12, 31).dayOfYear == 365);
         assert(Date(2000, 12, 31).dayOfYear == 366);
     }
 
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : filter;
         import std.range : chain;
@@ -12313,7 +12313,7 @@ public:
         assert(0, "Invalid day of the year.");
     }
 
-    unittest
+    @safe unittest
     {
         static void test(Date date, int day, MonthDay expected, size_t line = __LINE__)
         {
@@ -12398,7 +12398,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1, 1, 1).dayOfGregorianCal == 1);
         assert(Date(1, 12, 31).dayOfGregorianCal == 365);
@@ -12412,7 +12412,7 @@ public:
         assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -12439,7 +12439,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto date = Date.init;
         date.dayOfGregorianCal = 1;
@@ -12467,7 +12467,7 @@ public:
         assert(date == Date(2010, 12, 31));
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
@@ -12519,7 +12519,7 @@ public:
             assert(0, "Date's constructor threw.");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(2009, 12, 28).isoWeek == 53);
@@ -12593,7 +12593,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
         assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
@@ -12601,7 +12601,7 @@ public:
         assert(Date(2000, 6, 4).endOfMonth == Date(2000, 6, 30));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(1999, 1, 1).endOfMonth == Date(1999, 1, 31));
@@ -12649,7 +12649,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 1, 6).daysInMonth == 31);
         assert(Date(1999, 2, 7).daysInMonth == 28);
@@ -12657,7 +12657,7 @@ public:
         assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(1999, 1, 1).daysInMonth == 31);
@@ -12705,7 +12705,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1, 1, 1).isAD);
         assert(Date(2010, 12, 31).isAD);
@@ -12713,7 +12713,7 @@ public:
         assert(!Date(-2010, 1, 1).isAD);
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).isAD);
         assert(Date(1, 1, 1).isAD);
@@ -12737,7 +12737,7 @@ public:
         return dayOfGregorianCal + 1_721_425;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(-4713, 11, 24).julianDay == 0);
         assert(Date(0, 12, 31).julianDay == 1_721_425);
@@ -12764,7 +12764,7 @@ public:
         return julianDay - 2_400_001;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(1858, 11, 17).modJulianDay == 0);
         assert(Date(2010, 8, 24).modJulianDay == 55_432);
@@ -12801,7 +12801,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).toISOString() == "20100704");
         assert(Date(1998, 12, 25).toISOString() == "19981225");
@@ -12809,7 +12809,7 @@ public:
         assert(Date(-4, 1, 5).toISOString() == "-00040105");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(9, 12, 4).toISOString() == "00091204");
@@ -12857,7 +12857,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
         assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
@@ -12865,7 +12865,7 @@ public:
         assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(9, 12, 4).toISOExtString() == "0009-12-04");
@@ -12913,7 +12913,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
         assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
@@ -12921,7 +12921,7 @@ public:
         assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(9, 12, 4).toSimpleString() == "0009-Dec-04");
@@ -12953,7 +12953,7 @@ public:
         return toSimpleString();
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
@@ -13009,7 +13009,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
         assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
@@ -13018,7 +13018,7 @@ public:
         assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(Date.fromISOString(""));
         assertThrown!DateTimeException(Date.fromISOString("990704"));
@@ -13136,7 +13136,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
         assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
@@ -13145,7 +13145,7 @@ public:
         assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(Date.fromISOExtString(""));
         assertThrown!DateTimeException(Date.fromISOExtString("990704"));
@@ -13260,7 +13260,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
         assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
@@ -13269,7 +13269,7 @@ public:
         assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(Date.fromSimpleString(""));
         assertThrown!DateTimeException(Date.fromSimpleString("990704"));
@@ -13350,7 +13350,7 @@ public:
         return date;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.min.year < 0);
         assert(Date.min < Date.max);
@@ -13371,7 +13371,7 @@ public:
         return date;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.max.year > 0);
         assert(Date.max > Date.min);
@@ -13418,7 +13418,7 @@ private:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -13623,7 +13623,7 @@ public:
         _second = cast(ubyte)second;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0) == TimeOfDay.init);
 
@@ -13684,7 +13684,7 @@ public:
         return 0;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0, 0).opCmp(TimeOfDay.init) == 0);
 
@@ -13729,7 +13729,7 @@ public:
         return _hour;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.init.hour == 0);
         assert(TimeOfDay(12, 0, 0).hour == 12);
@@ -13757,7 +13757,7 @@ public:
         _hour = cast(ubyte)hour;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).hour = 24;}());
 
@@ -13780,7 +13780,7 @@ public:
         return _minute;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.init.minute == 0);
         assert(TimeOfDay(0, 30, 0).minute == 30);
@@ -13808,7 +13808,7 @@ public:
         _minute = cast(ubyte)minute;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).minute = 60;}());
 
@@ -13831,7 +13831,7 @@ public:
         return _second;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.init.second == 0);
         assert(TimeOfDay(0, 0, 33).second == 33);
@@ -13859,7 +13859,7 @@ public:
         _second = cast(ubyte)second;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).second = 60;}());
 
@@ -13897,7 +13897,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto tod1 = TimeOfDay(7, 12, 0);
         tod1.roll!"hours"(1);
@@ -13924,7 +13924,7 @@ public:
         assert(tod6 == TimeOfDay(0, 0, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 27, 2);
         tod.roll!"hours"(22).roll!"hours"(-7);
@@ -13961,7 +13961,7 @@ public:
     }
 
     //Test roll!"minutes"().
-    unittest
+    @safe unittest
     {
         static void testTOD(TimeOfDay orig, int minutes, in TimeOfDay expected, size_t line = __LINE__)
         {
@@ -14045,7 +14045,7 @@ public:
     }
 
     //Test roll!"seconds"().
-    unittest
+    @safe unittest
     {
         static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
         {
@@ -14143,7 +14143,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(12, 12, 12) + seconds(1) == TimeOfDay(12, 12, 13));
         assert(TimeOfDay(12, 12, 12) + minutes(1) == TimeOfDay(12, 13, 12));
@@ -14156,7 +14156,7 @@ public:
         assert(TimeOfDay(0, 0, 0) - seconds(1) == TimeOfDay(23, 59, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
 
@@ -14218,7 +14218,7 @@ public:
         mixin("return retval._addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -14259,7 +14259,7 @@ public:
         mixin("return _addSeconds(" ~ op ~ "seconds);");
     }
 
-    unittest
+    @safe unittest
     {
         auto duration = dur!"hours"(12);
 
@@ -14320,7 +14320,7 @@ public:
         mixin("return _addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -14374,7 +14374,7 @@ public:
         return dur!"seconds"(lhsSec - rhsSec);
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
 
@@ -14416,13 +14416,13 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
         assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
@@ -14446,13 +14446,13 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
         assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
@@ -14471,7 +14471,7 @@ public:
         return toISOExtString();
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
@@ -14518,14 +14518,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
         assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
         assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(TimeOfDay.fromISOString(""));
         assertThrown!DateTimeException(TimeOfDay.fromISOString("0"));
@@ -14631,14 +14631,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
         assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
         assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(TimeOfDay.fromISOExtString(""));
         assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0"));
@@ -14710,7 +14710,7 @@ public:
         return TimeOfDay.init;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.min.hour == 0);
         assert(TimeOfDay.min.minute == 0);
@@ -14732,7 +14732,7 @@ public:
         return tod;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.max.hour == 23);
         assert(TimeOfDay.max.minute == 59);
@@ -14777,7 +14777,7 @@ private:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
         {
@@ -14903,7 +14903,7 @@ public:
         _tod = tod;
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime.init;
@@ -14940,7 +14940,7 @@ public:
         _tod = TimeOfDay(hour, minute, second);
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime(1999, 7 ,6);
@@ -14976,7 +14976,7 @@ public:
         return _tod.opCmp(rhs._tod);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date.init, TimeOfDay.init).opCmp(DateTime.init) == 0);
@@ -15181,7 +15181,7 @@ public:
         return _date;
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime.init;
@@ -15211,7 +15211,7 @@ public:
         _date = date;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime.init;
         dt.date = Date(1999, 7, 6);
@@ -15233,7 +15233,7 @@ public:
         return _tod;
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime.init;
@@ -15264,7 +15264,7 @@ public:
         _tod = tod;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime.init;
         dt.timeOfDay = TimeOfDay(12, 30, 33);
@@ -15287,7 +15287,7 @@ public:
         return _date.year;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.init.year == 1);
         assert(Date(1999, 7, 6).year == 1999);
@@ -15317,14 +15317,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).year == 1999);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime dt, int year, in DateTime expected, size_t line = __LINE__)
         {
@@ -15367,14 +15367,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)).yearBC == 1);
         assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
         assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((in DateTime dt){dt.yearBC;}(DateTime(Date(1, 1, 1))));
 
@@ -15403,7 +15403,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(7, 30, 0));
         dt.yearBC = 1;
@@ -15413,7 +15413,7 @@ public:
         assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((DateTime dt){dt.yearBC = -1;}(DateTime(Date(1, 1, 1))));
 
@@ -15436,14 +15436,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).month == 7);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.month == 1);
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)).month == 7);
@@ -15470,7 +15470,7 @@ public:
         _date.month = month;
     }
 
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime dt, Month month, in DateTime expected = DateTime.init, size_t line = __LINE__)
         {
@@ -15509,14 +15509,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -15557,7 +15557,7 @@ public:
         _date.day = day;
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         static void testDT(DateTime dt, int day)
@@ -15650,7 +15650,7 @@ public:
         return _tod.hour;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.hour == 0);
         assert(DateTime(Date.init, TimeOfDay(12, 0, 0)).hour == 12);
@@ -15677,7 +15677,7 @@ public:
         _tod.hour = hour;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)).hour = 24;}());
 
@@ -15700,7 +15700,7 @@ public:
         return _tod.minute;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.minute == 0);
         assert(DateTime(1, 1, 1, 0, 30, 0).minute == 30);
@@ -15727,7 +15727,7 @@ public:
         _tod.minute = minute;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){DateTime.init.minute = 60;}());
 
@@ -15750,7 +15750,7 @@ public:
         return _tod.second;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.second == 0);
         assert(DateTime(1, 1, 1, 0, 0, 33).second == 33);
@@ -15777,7 +15777,7 @@ public:
         _tod.second = second;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){DateTime.init.second = 60;}());
 
@@ -15821,7 +15821,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt1 = DateTime(2010, 1, 1, 12, 30, 33);
         dt1.add!"months"(11);
@@ -15840,7 +15840,7 @@ public:
         assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(2000, 1, 31);
         dt.add!"years"(7).add!"months"(-4);
@@ -15884,7 +15884,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt1 = DateTime(2010, 1, 1, 12, 33, 33);
         dt1.roll!"months"(1);
@@ -15911,7 +15911,7 @@ public:
         assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(2000, 1, 31);
         dt.roll!"years"(7).roll!"months"(-4);
@@ -15949,7 +15949,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt1 = DateTime(2010, 1, 1, 11, 23, 12);
         dt1.roll!"days"(1);
@@ -15968,7 +15968,7 @@ public:
         assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(2000, 1, 31);
         dt.roll!"days"(7).roll!"days"(-4);
@@ -15992,7 +15992,7 @@ public:
     }
 
     //Test roll!"hours"().
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int hours, in DateTime expected, size_t line = __LINE__)
         {
@@ -16295,7 +16295,7 @@ public:
     }
 
     //Test roll!"minutes"().
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int minutes, in DateTime expected, size_t line = __LINE__)
         {
@@ -16595,7 +16595,7 @@ public:
     }
 
     //Test roll!"seconds"().
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
         {
@@ -16878,7 +16878,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(2015, 12, 31, 23, 59, 59) + seconds(1) ==
                DateTime(2016, 1, 1, 0, 0, 0));
@@ -16893,7 +16893,7 @@ public:
                DateTime(2015, 12, 31, 23, 59, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
 
@@ -16960,7 +16960,7 @@ public:
         mixin("return retval._addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -17009,7 +17009,7 @@ public:
         mixin(format(`return _addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"weeks"(7) == DateTime(Date(1999,
             8, 24), TimeOfDay(12, 30, 33)));
@@ -17110,7 +17110,7 @@ public:
         mixin("return _addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -17161,7 +17161,7 @@ public:
         return dur!"hnsecs"(dateResult.total!"hnsecs" + todResult.total!"hnsecs");
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(1999, 7, 6, 12, 30, 33);
 
@@ -17255,7 +17255,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(
                     DateTime(1999, 1, 31, 23, 59, 59)) == 1);
@@ -17270,7 +17270,7 @@ public:
                     DateTime(1999, 3, 31, 0, 30, 58)) == -2);
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17297,7 +17297,7 @@ public:
         return _date.isLeapYear;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17316,7 +17316,7 @@ public:
         return _date.dayOfWeek;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17336,14 +17336,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 1, 1), TimeOfDay(12, 22, 7)).dayOfYear == 1);
         assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
         assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17366,7 +17366,7 @@ public:
         _date.dayOfYear = day;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17387,7 +17387,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal == 1);
         assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal == 365);
@@ -17401,7 +17401,7 @@ public:
         assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal == 734_137);
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17425,7 +17425,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date.init, TimeOfDay(12, 0, 0));
         dt.dayOfGregorianCal = 1;
@@ -17453,7 +17453,7 @@ public:
         assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17473,7 +17473,7 @@ public:
         return _date.isoWeek;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17497,7 +17497,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth ==
                DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
@@ -17512,7 +17512,7 @@ public:
                DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(1999, 1, 1, 0, 13, 26).endOfMonth == DateTime(1999, 1, 31, 23, 59, 59));
@@ -17560,7 +17560,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).daysInMonth == 31);
         assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).daysInMonth == 28);
@@ -17568,7 +17568,7 @@ public:
         assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17586,7 +17586,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1, 1, 1), TimeOfDay(12, 7, 0)).isAD);
         assert(DateTime(Date(2010, 12, 31), TimeOfDay(0, 0, 0)).isAD);
@@ -17594,7 +17594,7 @@ public:
         assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17618,7 +17618,7 @@ public:
             return _date.julianDay;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(-4713, 11, 24), TimeOfDay(0, 0, 0)).julianDay == -1);
         assert(DateTime(Date(-4713, 11, 24), TimeOfDay(12, 0, 0)).julianDay == 0);
@@ -17660,7 +17660,7 @@ public:
         return _date.modJulianDay;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1858, 11, 17), TimeOfDay(0, 0, 0)).modJulianDay == 0);
         assert(DateTime(Date(1858, 11, 17), TimeOfDay(12, 0, 0)).modJulianDay == 0);
@@ -17688,7 +17688,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() ==
                "20100704T070612");
@@ -17703,7 +17703,7 @@ public:
                "-00040105T000002");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOString() == "00091204T000000");
@@ -17741,7 +17741,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() ==
                "2010-07-04T07:06:12");
@@ -17756,7 +17756,7 @@ public:
                "-0004-01-05T00:00:02");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtString() == "0009-12-04T00:00:00");
@@ -17793,7 +17793,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() ==
                "2010-Jul-04 07:06:12");
@@ -17808,7 +17808,7 @@ public:
                "-0004-Jan-05 00:00:02");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toSimpleString() == "0009-Dec-04 00:00:00");
@@ -17840,7 +17840,7 @@ public:
         return toSimpleString();
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17885,7 +17885,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime.fromISOString("20100704T070612") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
@@ -17903,7 +17903,7 @@ public:
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(DateTime.fromISOString(""));
         assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
@@ -17973,7 +17973,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime.fromISOExtString("2010-07-04T07:06:12") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
@@ -17991,7 +17991,7 @@ public:
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(DateTime.fromISOExtString(""));
         assertThrown!DateTimeException(DateTime.fromISOExtString("20100704000000"));
@@ -18059,7 +18059,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime.fromSimpleString("2010-Jul-04 07:06:12") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
@@ -18073,7 +18073,7 @@ public:
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(DateTime.fromISOString(""));
         assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
@@ -18149,7 +18149,7 @@ public:
         return dt;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.min.year < 0);
         assert(DateTime.min < DateTime.max);
@@ -18179,7 +18179,7 @@ public:
         return dt;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.max.year > 0);
         assert(DateTime.max > DateTime.min);
@@ -18225,7 +18225,7 @@ private:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
         {
@@ -19925,7 +19925,7 @@ private:
 }
 
 //Test Interval's constructors.
-unittest
+@safe unittest
 {
     assertThrown!DateTimeException(Interval!Date(Date(2010, 1, 1), Date(1, 1, 1)));
 
@@ -19965,7 +19965,7 @@ unittest
 }
 
 //Test Interval's begin.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(1, 1, 1), Date(2010, 1, 1)).begin == Date(1, 1, 1));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).begin == Date(2010, 1, 1));
@@ -19981,7 +19981,7 @@ unittest
 }
 
 //Test Interval's end.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(1, 1, 1), Date(2010, 1, 1)).end == Date(2010, 1, 1));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).end == Date(2010, 1, 1));
@@ -19997,7 +19997,7 @@ unittest
 }
 
 //Test Interval's length.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).length == dur!"days"(0));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).length == dur!"days"(90));
@@ -20019,7 +20019,7 @@ unittest
 }
 
 //Test Interval's empty.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).empty);
     assert(!Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).empty);
@@ -20038,7 +20038,7 @@ unittest
 }
 
 //Test Interval's contains(time point).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20068,7 +20068,7 @@ unittest
 }
 
 //Test Interval's contains(Interval).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20176,7 +20176,7 @@ unittest
 }
 
 //Test Interval's isBefore(time point).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20206,7 +20206,7 @@ unittest
 }
 
 //Test Interval's isBefore(Interval).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20315,7 +20315,7 @@ unittest
 }
 
 //Test Interval's isAfter(time point).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20345,7 +20345,7 @@ unittest
 }
 
 //Test Interval's isAfter(Interval).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20453,7 +20453,7 @@ unittest
 }
 
 //Test Interval's intersects().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20563,7 +20563,7 @@ unittest
 }
 
 //Test Interval's intersection().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20715,7 +20715,7 @@ unittest
 }
 
 //Test Interval's isAdjacent().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20842,7 +20842,7 @@ unittest
 }
 
 //Test Interval's merge().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -21013,7 +21013,7 @@ unittest
 }
 
 //Test Interval's span().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -21192,7 +21192,7 @@ unittest
 }
 
 //Test Interval's shift(duration).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -21229,7 +21229,7 @@ unittest
 }
 
 //Test Interval's shift(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -21281,7 +21281,7 @@ unittest
 }
 
 //Test Interval's expand(Duration).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2000, 7, 4), Date(2012, 1, 7));
 
@@ -21322,7 +21322,7 @@ unittest
 }
 
 //Test Interval's expand(int, int, AllowDayOverflow, Direction)
-unittest
+@safe unittest
 {
     {
         auto interval = Interval!Date(Date(2000, 7, 4), Date(2012, 1, 7));
@@ -21431,7 +21431,7 @@ unittest
 }
 
 //Test Interval's fwdRange.
-unittest
+@system unittest
 {
     {
         auto interval = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21));
@@ -21501,7 +21501,7 @@ unittest
 }
 
 //Test Interval's bwdRange.
-unittest
+@system unittest
 {
     {
         auto interval = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21));
@@ -21569,7 +21569,7 @@ unittest
 }
 
 //Test Interval's toString().
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).toString() == "[2010-Jul-04 - 2012-Jan-07)");
 
@@ -22609,7 +22609,7 @@ private:
 }
 
 //Test PosInfInterval's constructor.
-unittest
+@safe unittest
 {
     PosInfInterval!Date(Date.init);
     PosInfInterval!TimeOfDay(TimeOfDay.init);
@@ -22621,7 +22621,7 @@ unittest
 }
 
 //Test PosInfInterval's begin.
-unittest
+@safe unittest
 {
     assert(PosInfInterval!Date(Date(1, 1, 1)).begin == Date(1, 1, 1));
     assert(PosInfInterval!Date(Date(2010, 1, 1)).begin == Date(2010, 1, 1));
@@ -22637,7 +22637,7 @@ unittest
 }
 
 //Test PosInfInterval's empty.
-unittest
+@safe unittest
 {
     assert(!PosInfInterval!Date(Date(2010, 1, 1)).empty);
     assert(!PosInfInterval!TimeOfDay(TimeOfDay(0, 30, 0)).empty);
@@ -22654,7 +22654,7 @@ unittest
 }
 
 //Test PosInfInterval's contains(time point).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22681,7 +22681,7 @@ unittest
 }
 
 //Test PosInfInterval's contains(Interval).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22775,7 +22775,7 @@ unittest
 }
 
 //Test PosInfInterval's isBefore(time point).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22802,7 +22802,7 @@ unittest
 }
 
 //Test PosInfInterval's isBefore(Interval).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22895,7 +22895,7 @@ unittest
 }
 
 //Test PosInfInterval's isAfter(time point).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22922,7 +22922,7 @@ unittest
 }
 
 //Test PosInfInterval's isAfter(Interval).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23017,7 +23017,7 @@ unittest
 }
 
 //Test PosInfInterval's intersects().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23112,7 +23112,7 @@ unittest
 }
 
 //Test PosInfInterval's intersection().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23245,7 +23245,7 @@ unittest
 }
 
 //Test PosInfInterval's isAdjacent().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23339,7 +23339,7 @@ unittest
 }
 
 //Test PosInfInterval's merge().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23459,7 +23459,7 @@ unittest
 }
 
 //Test PosInfInterval's span().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23581,7 +23581,7 @@ unittest
 }
 
 //Test PosInfInterval's shift().
-unittest
+@safe unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23611,7 +23611,7 @@ unittest
 }
 
 //Test PosInfInterval's shift(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = PosInfInterval!Date(Date(2010, 7, 4));
@@ -23656,7 +23656,7 @@ unittest
 }
 
 //Test PosInfInterval's expand().
-unittest
+@safe unittest
 {
     auto interval = PosInfInterval!Date(Date(2000, 7, 4));
 
@@ -23686,7 +23686,7 @@ unittest
 }
 
 //Test PosInfInterval's expand(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = PosInfInterval!Date(Date(2000, 7, 4));
@@ -23731,7 +23731,7 @@ unittest
 }
 
 //Test PosInfInterval's fwdRange().
-unittest
+@system unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 9, 19));
 
@@ -23783,7 +23783,7 @@ unittest
 }
 
 //Test PosInfInterval's toString().
-unittest
+@safe unittest
 {
     assert(PosInfInterval!Date(Date(2010, 7, 4)).toString() == "[2010-Jul-04 - ∞)");
 
@@ -24838,7 +24838,7 @@ private:
 }
 
 //Test NegInfInterval's constructor.
-unittest
+@safe unittest
 {
     NegInfInterval!Date(Date.init);
     NegInfInterval!TimeOfDay(TimeOfDay.init);
@@ -24847,7 +24847,7 @@ unittest
 }
 
 //Test NegInfInterval's end.
-unittest
+@safe unittest
 {
     assert(NegInfInterval!Date(Date(2010, 1, 1)).end == Date(2010, 1, 1));
     assert(NegInfInterval!Date(Date(2010, 1, 1)).end == Date(2010, 1, 1));
@@ -24863,7 +24863,7 @@ unittest
 }
 
 //Test NegInfInterval's empty.
-unittest
+@safe unittest
 {
     assert(!NegInfInterval!Date(Date(2010, 1, 1)).empty);
     assert(!NegInfInterval!TimeOfDay(TimeOfDay(0, 30, 0)).empty);
@@ -24880,7 +24880,7 @@ unittest
 }
 
 //Test NegInfInterval's contains(time point).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -24908,7 +24908,7 @@ unittest
 }
 
 //Test NegInfInterval's contains(Interval).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25002,7 +25002,7 @@ unittest
 }
 
 //Test NegInfInterval's isBefore(time point).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25030,7 +25030,7 @@ unittest
 }
 
 //Test NegInfInterval's isBefore(Interval).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25125,7 +25125,7 @@ unittest
 }
 
 //Test NegInfInterval's isAfter(time point).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25148,7 +25148,7 @@ unittest
 }
 
 //Test NegInfInterval's isAfter(Interval).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25247,7 +25247,7 @@ unittest
 }
 
 //Test NegInfInterval's intersects().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25342,7 +25342,7 @@ unittest
 }
 
 //Test NegInfInterval's intersection().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25475,7 +25475,7 @@ unittest
 }
 
 //Test NegInfInterval's isAdjacent().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25571,7 +25571,7 @@ unittest
 }
 
 //Test NegInfInterval's merge().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25691,7 +25691,7 @@ unittest
 }
 
 //Test NegInfInterval's span().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25813,7 +25813,7 @@ unittest
 }
 
 //Test NegInfInterval's shift().
-unittest
+@safe unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25843,7 +25843,7 @@ unittest
 }
 
 //Test NegInfInterval's shift(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -25893,7 +25893,7 @@ unittest
 }
 
 //Test NegInfInterval's expand().
-unittest
+@safe unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25923,7 +25923,7 @@ unittest
 }
 
 //Test NegInfInterval's expand(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -25968,7 +25968,7 @@ unittest
 }
 
 //Test NegInfInterval's bwdRange().
-unittest
+@system unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -26021,7 +26021,7 @@ unittest
 }
 
 //Test NegInfInterval's toString().
-unittest
+@safe unittest
 {
     assert(NegInfInterval!Date(Date(2012, 1, 7)).toString() == "[-∞ - 2012-Jan-07)");
 
@@ -26073,7 +26073,7 @@ static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayO
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
     auto func = everyDayOfWeek!Date(DayOfWeek.mon);
@@ -26095,7 +26095,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     auto funcFwd = everyDayOfWeek!Date(DayOfWeek.mon);
     auto funcBwd = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.mon);
@@ -26187,7 +26187,7 @@ static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int mont
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
     auto func = everyMonth!(Date)(Month.feb);
@@ -26215,7 +26215,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     auto funcFwd = everyMonth!Date(Month.jun);
     auto funcBwd = everyMonth!(Date, Direction.bwd)(Month.jun);
@@ -26294,7 +26294,7 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
     auto func = everyDuration!Date(dur!"days"(8));
@@ -26316,7 +26316,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     auto funcFwd = everyDuration!Date(dur!"days"(27));
     auto funcBwd = everyDuration!(Date, Direction.bwd)(dur!"days"(27));
@@ -26413,7 +26413,7 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
     auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
@@ -26435,7 +26435,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     {
         auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"days"(3));
@@ -26725,7 +26725,7 @@ private:
 }
 
 //Test that IntervalRange satisfies the range predicates that it's supposed to satisfy.
-unittest
+@safe unittest
 {
     import std.range.primitives : hasAssignableElements, hasSwappableElements,
         isBidirectionalRange, isForwardRange, isInfinite, isInputRange;
@@ -26750,7 +26750,7 @@ unittest
 }
 
 //Test construction of IntervalRange.
-unittest
+@safe unittest
 {
     {
         Date dateFunc(in Date date)
@@ -26801,7 +26801,7 @@ unittest
 }
 
 //Test IntervalRange's empty().
-unittest
+@system unittest
 {
     //fwd
     {
@@ -26841,7 +26841,7 @@ unittest
 }
 
 //Test IntervalRange's front.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -26893,7 +26893,7 @@ unittest
 }
 
 //Test IntervalRange's popFront().
-unittest
+@system unittest
 {
     import std.range.primitives : walkLength;
     //fwd
@@ -26953,7 +26953,7 @@ unittest
 }
 
 //Test IntervalRange's save.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -26975,7 +26975,7 @@ unittest
 }
 
 //Test IntervalRange's interval.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -27003,7 +27003,7 @@ unittest
 }
 
 //Test IntervalRange's func.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -27025,7 +27025,7 @@ unittest
 }
 
 //Test IntervalRange's direction.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -27199,7 +27199,7 @@ private:
 }
 
 //Test that PosInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
-unittest
+@safe unittest
 {
     import std.range.primitives : hasAssignableElements, hasSwappableElements,
         isBidirectionalRange, isForwardRange, isInfinite, isInputRange;
@@ -27223,7 +27223,7 @@ unittest
 }
 
 //Test construction of PosInfIntervalRange.
-unittest
+@safe unittest
 {
     {
         Date dateFunc(in Date date)
@@ -27271,7 +27271,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's front.
-unittest
+@system unittest
 {
     auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
     assert(range.front == Date(2010, 7, 4));
@@ -27284,7 +27284,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's popFront().
-unittest
+@system unittest
 {
     import std.range : take;
     auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
@@ -27301,7 +27301,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's save.
-unittest
+@system unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
@@ -27311,7 +27311,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's interval.
-unittest
+@system unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
@@ -27324,7 +27324,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's func.
-unittest
+@system unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
@@ -27489,7 +27489,7 @@ private:
 }
 
 //Test that NegInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
-unittest
+@safe unittest
 {
     import std.range.primitives : hasAssignableElements, hasSwappableElements,
         isBidirectionalRange, isForwardRange, isInfinite, isInputRange;
@@ -27512,7 +27512,7 @@ unittest
 }
 
 //Test construction of NegInfIntervalRange.
-unittest
+@safe unittest
 {
     {
         Date dateFunc(in Date date)
@@ -27560,7 +27560,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's front.
-unittest
+@system unittest
 {
     auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
     assert(range.front == Date(2012, 1, 7));
@@ -27575,7 +27575,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's popFront().
-unittest
+@system unittest
 {
     import std.range : take;
 
@@ -27595,7 +27595,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's save.
-unittest
+@system unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
     auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
@@ -27605,7 +27605,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's interval.
-unittest
+@system unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
     auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
@@ -27618,7 +27618,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's func.
-unittest
+@system unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
     auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
@@ -27800,7 +27800,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
@@ -27826,7 +27826,7 @@ public:
     //Since reading in the time zone files could be expensive, most unit tests
     //are consolidated into this one unittest block which minimizes how often it
     //reads a time zone file.
-    unittest
+    @system unittest
     {
         import std.conv : to;
         import std.file : exists, isFile;
@@ -28162,7 +28162,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         import std.stdio : writefln;
@@ -28306,7 +28306,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         assert(LocalTime().stdName !is null);
 
@@ -28378,7 +28378,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         assert(LocalTime().dstName !is null);
 
@@ -28444,7 +28444,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         LocalTime().hasDST;
 
@@ -28502,7 +28502,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         auto currTime = Clock.currStdTime;
         LocalTime().dstInEffect(currTime);
@@ -28540,7 +28540,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         LocalTime().utcToTZ(0);
     }
@@ -28593,7 +28593,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.typecons : tuple;
@@ -28808,7 +28808,7 @@ public:
         return stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         assert(UTC().utcToTZ(0) == 0);
 
@@ -28840,7 +28840,7 @@ public:
         return adjTime;
     }
 
-    unittest
+    @safe unittest
     {
         assert(UTC().tzToUTC(0) == 0);
 
@@ -28929,7 +28929,7 @@ public:
         return stdTime + _utcOffset.total!"hnsecs";
     }
 
-    unittest
+    @safe unittest
     {
         auto west = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto east = new immutable SimpleTimeZone(dur!"hours"(8));
@@ -28956,7 +28956,7 @@ public:
         return adjTime - _utcOffset.total!"hnsecs";
     }
 
-    unittest
+    @safe unittest
     {
         auto west = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto east = new immutable SimpleTimeZone(dur!"hours"(8));
@@ -29006,7 +29006,7 @@ public:
         this(dur!"minutes"(utcOffset), stdName);
     }
 
-    unittest
+    @safe unittest
     {
         auto stz = new immutable SimpleTimeZone(dur!"hours"(-8), "PST");
         assert(stz.name == "");
@@ -29049,7 +29049,7 @@ private:
         return format(utcOffset < Duration.zero ? "-%02d%02d" : "+%02d%02d", hours, minutes);
     }
 
-    unittest
+    @safe unittest
     {
         static string testSTZInvalid(Duration offset)
         {
@@ -29102,7 +29102,7 @@ private:
         return format(utcOffset < Duration.zero ? "-%02d:%02d" : "+%02d:%02d", hours, minutes);
     }
 
-    unittest
+    @safe unittest
     {
         static string testSTZInvalid(Duration offset)
         {
@@ -29178,7 +29178,7 @@ private:
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29240,7 +29240,7 @@ private:
         test("-23", hours(-23));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29330,7 +29330,7 @@ private:
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29392,7 +29392,7 @@ private:
         test("-23", hours(-23));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29949,7 +29949,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         version(Posix)
         {
@@ -30032,7 +30032,7 @@ public:
         return timezones.data;
     }
 
-    version(Posix) unittest
+    version(Posix) @system unittest
     {
         import std.exception : assertNotThrown;
         import std.stdio : writefln;
@@ -30598,7 +30598,7 @@ else version(Windows)
             return timezones.data;
         }
 
-        unittest
+        @safe unittest
         {
             import std.exception : assertNotThrown;
             import std.stdio : writefln;
@@ -30691,7 +30691,7 @@ else version(Windows)
                 assert(0, "DateTime's constructor threw.");
         }
 
-        unittest
+        @system unittest
         {
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
@@ -30994,7 +30994,7 @@ TZConversions parseTZConversions(string windowsZonesXMLText) @safe pure
     return TZConversions(nix2Win, win2Nix);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : uniq;
@@ -31559,7 +31559,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) unittest
+version(Windows) @system unittest
 {
     import std.format : format;
     foreach (tzName; TimeZone.getInstalledTZNames())
@@ -31733,7 +31733,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) unittest
+version(Windows) @system unittest
 {
     import std.format : format;
     foreach (tzName; WindowsTimeZone.getInstalledTZNames())
@@ -31832,7 +31832,7 @@ public:
         _timeStart = TickDuration.currSystemTick;
     }
 
-    @nogc @trusted unittest
+    @nogc @system unittest
     {
         StopWatch sw;
         sw.start();
@@ -31858,7 +31858,7 @@ public:
         _timeMeasured += TickDuration.currSystemTick - _timeStart;
     }
 
-    @nogc @trusted unittest
+    @nogc @system unittest
     {
         StopWatch sw;
         sw.start();
@@ -32030,7 +32030,7 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.conv : to;
     int a;
@@ -32129,7 +32129,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
 }
 
 //Bug# 8450
-unittest
+@system unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
@@ -32211,7 +32211,7 @@ private:
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(isTimePoint!Date);
     static assert(isTimePoint!DateTime);
@@ -32223,7 +32223,7 @@ unittest
     static assert(!isTimePoint!(Interval!SysTime));
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -32255,7 +32255,7 @@ static bool yearIsLeapYear(int year) @safe pure nothrow
     return year % 4 == 0;
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     foreach (year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
@@ -32305,7 +32305,7 @@ long unixTimeToStdTime(long unixTime) @safe pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     // Midnight, January 1st, 1970
     assert(unixTimeToStdTime(0) == 621_355_968_000_000_000L);
@@ -32321,7 +32321,7 @@ unittest
            SysTime(DateTime(1969, 12, 30, 12, 41, 13), UTC()));
 }
 
-unittest
+@safe unittest
 {
     // Midnight, January 2nd, 1970
     assert(unixTimeToStdTime(86_400) == 621_355_968_000_000_000L + 864_000_000_000L);
@@ -32400,7 +32400,7 @@ T stdTimeToUnixTime(T = time_t)(long stdTime) @safe pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     // Midnight, January 1st, 1970 UTC
     assert(stdTimeToUnixTime(621_355_968_000_000_000L) == 0);
@@ -32409,7 +32409,7 @@ unittest
     assert(stdTimeToUnixTime(642_830_804_470_000_000L) == int.max);
 }
 
-unittest
+@safe unittest
 {
     enum unixEpochAsStdTime = (Date(1970, 1, 1) - Date.init).total!"hnsecs";
 
@@ -32610,7 +32610,7 @@ else version(Windows)
         return SysTime(dt, msecs(st.wMilliseconds), tz);
     }
 
-    unittest
+    @system unittest
     {
         auto sysTime = Clock.currTime(UTC());
         SYSTEMTIME st = void;
@@ -32642,7 +32642,7 @@ else version(Windows)
         return st;
     }
 
-    unittest
+    @system unittest
     {
         SYSTEMTIME st = void;
         GetSystemTime(&st);
@@ -32683,7 +32683,7 @@ else version(Windows)
         return sysTime;
     }
 
-    unittest
+    @system unittest
     {
         auto sysTime = Clock.currTime(UTC());
         SYSTEMTIME st = void;
@@ -32718,7 +32718,7 @@ else version(Windows)
         return stdTimeToFILETIME(sysTime.stdTime);
     }
 
-    unittest
+    @system unittest
     {
         SYSTEMTIME st = void;
         GetSystemTime(&st);
@@ -32770,7 +32770,7 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
         throw new DateTimeException("Invalid DosFileTime", __FILE__, __LINE__, dte);
 }
 
-unittest
+@safe unittest
 {
     assert(DosFileTimeToSysTime(0b00000000001000010000000000000000) ==
                     SysTime(DateTime(1980, 1, 1, 0, 0, 0)));
@@ -32814,7 +32814,7 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
     return cast(DosFileTime)retval;
 }
 
-unittest
+@safe unittest
 {
     assert(SysTimeToDosFileTime(SysTime(DateTime(1980, 1, 1, 0, 0, 0))) ==
                     0b00000000001000010000000000000000);
@@ -33073,7 +33073,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
 }
 
 ///
-unittest
+@safe unittest
 {
     auto tz = new immutable SimpleTimeZone(hours(-8));
     assert(parseRFC822DateTime("Sat, 6 Jan 1990 12:14:19 -0800") ==
@@ -33104,7 +33104,7 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
     throw new AssertError("No DateTimeException was thrown", __FILE__, line);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.array : array;
@@ -33375,7 +33375,7 @@ unittest
 }
 
 // Obsolete Format per section 4.3 of RFC 5322.
-unittest
+@system unittest
 {
     import std.algorithm.iteration : filter, map;
     import std.ascii : letters;
@@ -33648,7 +33648,7 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
     return 0;
 }
 
-unittest
+@safe unittest
 {
     foreach (i, outerUnits; timeStrings)
     {
@@ -33708,7 +33708,7 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
     return 0;
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     import std.meta : AliasSeq;
@@ -33760,7 +33760,7 @@ bool valid(string units)(int value) @safe pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(valid!"hours"(12));
     assert(!valid!"hours"(32));
@@ -33872,7 +33872,7 @@ static int monthsToMonth(int currMonth, int month) @safe pure
     return (Month.dec - currMonth) + month;
 }
 
-unittest
+@safe unittest
 {
     assert(monthsToMonth(Month.jan, Month.jan) == 0);
     assert(monthsToMonth(Month.jan, Month.feb) == 1);
@@ -33947,7 +33947,7 @@ static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
     return (DayOfWeek.sat - currDoW) + dow + 1;
 }
 
-unittest
+@safe unittest
 {
     assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.sun) == 0);
     assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.mon) == 1);
@@ -34085,7 +34085,7 @@ else
 }
 
 // Verify Example.
-unittest
+@safe unittest
 {
     {
         auto mt = measureTime!((TickDuration a)
@@ -34124,7 +34124,7 @@ unittest
     +/
 }
 
-unittest
+@safe unittest
 {
     import std.math : isNaN;
 
@@ -34145,7 +34145,7 @@ unittest
 }
 
 //Bug# 8450
-unittest
+@system unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
@@ -34249,7 +34249,7 @@ long splitUnitsFromHNSecs(string units)(ref long hnsecs) @safe pure nothrow
     return value;
 }
 
-unittest
+@safe unittest
 {
     auto hnsecs = 2595000000007L;
     immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
@@ -34283,7 +34283,7 @@ long getUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     return convert!("hnsecs", units)(hnsecs);
 }
 
-unittest
+@safe unittest
 {
     auto hnsecs = 2595000000007L;
     immutable days = getUnitsFromHNSecs!"days"(hnsecs);
@@ -34315,7 +34315,7 @@ long removeUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     return hnsecs - convert!(units, "hnsecs")(value);
 }
 
-unittest
+@safe unittest
 {
     auto hnsecs = 2595000000007L;
     auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
@@ -34351,7 +34351,7 @@ body
     }
 }
 
-unittest
+@safe unittest
 {
     //Test A.D.
     assert(maxDay(1999, 1) == 31);
@@ -34432,7 +34432,7 @@ DayOfWeek getDayOfWeek(int day) @safe pure nothrow
     }
 }
 
-unittest
+@safe unittest
 {
     //Test A.D.
     assert(getDayOfWeek(SysTime(Date(1, 1, 1)).dayOfGregorianCal) == DayOfWeek.mon);
@@ -34481,7 +34481,7 @@ string monthToString(Month month) @safe pure
     return _monthNames[month - Month.jan];
 }
 
-unittest
+@safe unittest
 {
     assert(monthToString(Month.jan) == "Jan");
     assert(monthToString(Month.feb) == "Feb");
@@ -34541,7 +34541,7 @@ Month monthFromString(string monthStr) @safe pure
     }
 }
 
-unittest
+@safe unittest
 {
     import std.stdio : writeln;
     import std.traits : EnumMembers;
@@ -34571,7 +34571,7 @@ template nextSmallerTimeUnits(string units)
     enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings, units) - 1];
 }
 
-unittest
+@safe unittest
 {
     assert(nextSmallerTimeUnits!"years" == "months");
     assert(nextSmallerTimeUnits!"months" == "weeks");
@@ -34597,7 +34597,7 @@ template nextLargerTimeUnits(string units)
     enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings, units) + 1];
 }
 
-unittest
+@safe unittest
 {
     assert(nextLargerTimeUnits!"hnsecs" == "usecs");
     assert(nextLargerTimeUnits!"usecs" == "msecs");
@@ -34637,7 +34637,7 @@ static string fracSecsToISOString(int hnsecs) @safe pure nothrow
         assert(0, "format() threw.");
 }
 
-unittest
+@safe unittest
 {
     assert(fracSecsToISOString(0) == "");
     assert(fracSecsToISOString(1) == ".0000001");
@@ -34700,7 +34700,7 @@ static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
     return hnsecs(to!int(fullISOString[]));
 }
 
-unittest
+@safe unittest
 {
     static void testFSInvalid(string isoString)
     {
@@ -34837,7 +34837,7 @@ R _stripCFWS(R)(R range)
     return range[e .. e];
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -34959,7 +34959,7 @@ T _convDigits(T, R)(R str)
     return num;
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.range : chain, iota;
@@ -35252,7 +35252,7 @@ version(unittest)
                                DayOfYear(365, MonthDay(12, 30)),
                                DayOfYear(366, MonthDay(12, 31))];
 
-    void initializeTests()
+    void initializeTests() @safe
     {
         import std.algorithm.sorting : sort;
         import std.typecons : Rebindable;
@@ -35318,7 +35318,7 @@ version(unittest)
 }
 
 
-unittest
+@safe unittest
 {
     import std.traits : hasUnsharedAliasing;
     /* Issue 6642 */
