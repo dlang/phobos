@@ -426,8 +426,8 @@ private struct _Cache(R, bool bidir)
             }
             body
             {
-                import std.range : take;
-                return this[low .. $].take(high - low);
+                import std.range : takeExactly;
+                return this[low .. $].takeExactly(high - low);
             }
         }
     }
@@ -637,8 +637,8 @@ private struct MapResult(alias fun, Range)
 
             auto opSlice(opSlice_t low, opSlice_t high)
             {
-                import std.range : take;
-                return this[low .. $].take(high - low);
+                import std.range : takeExactly;
+                return this[low .. $].takeExactly(high - low);
             }
         }
     }
