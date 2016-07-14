@@ -38,7 +38,7 @@ $(BR) $(LINK2 https://en.wikipedia.org/wiki/MurmurHash, Wikipedia)
 module std.digest.murmurhash;
 
 ///
-unittest
+@safe unittest
 {
     // MurmurHash3!32, MurmurHash3!(128, 32) and MurmurHash3!(128, 64) implement
     // the std.digest.digest Template API.
@@ -48,7 +48,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     // One can also hash ubyte data piecewise by instanciating a hasher and call
     // the 'put' method.
@@ -65,7 +65,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     // Using `putElements`, `putRemainder` and `finalize` you gain full
     // control over which part of the algorithm to run.
@@ -491,7 +491,8 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
     Adds data to the digester. This function can be called many times in a row
     after start but before finish.
     +/
-    void put(scope const(ubyte)[] data...) pure nothrow
+    void put(T)(scope const(T)[] data...) @trusted @nogc
+    if (is(T == ubyte) || is(T == byte) || is(T == char))
     {
         // Buffer should never be full while entering this function.
         assert(bufferSize < Element.sizeof);
@@ -499,13 +500,13 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
         // Check if we have some leftover data in the buffer. Then fill the first block buffer.
         if (bufferSize + data.length < Element.sizeof)
         {
-            buffer.data[bufferSize .. bufferSize + data.length] = data[];
+            buffer.data[bufferSize .. bufferSize + data.length] = cast(ubyte[]) data[];
             bufferSize += data.length;
             return;
         }
         const bufferLeeway = Element.sizeof - bufferSize;
         assert(bufferLeeway <= Element.sizeof);
-        buffer.data[bufferSize .. $] = data[0 .. bufferLeeway];
+        buffer.data[bufferSize .. $] = cast(ubyte[]) data[0 .. bufferLeeway];
         putElement(buffer.block);
         data = data[bufferLeeway .. $];
 
@@ -523,7 +524,14 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
         // Now add remaining data to buffer.
         assert(data.length < Element.sizeof);
         bufferSize = data.length;
-        buffer.data[0 .. data.length] = data[];
+        buffer.data[0 .. data.length] = cast(ubyte[]) data[];
+    }
+
+    // Backward compatibility overload that allows to put int literals.
+    version(D_Ddoc){} else
+    void put(scope const(ubyte)[] data...) @safe @nogc pure nothrow
+    {
+        put!ubyte(data);
     }
 
     /++
@@ -632,7 +640,7 @@ version (unittest)
     }
 }
 
-unittest
+@safe unittest
 {
     // dfmt off
     checkResult!(MurmurHash3!32)([
@@ -666,7 +674,7 @@ unittest
     // dfmt on
 }
 
-unittest
+@safe unittest
 {
     // dfmt off
     checkResult!(MurmurHash3!(128,32))([
@@ -700,7 +708,7 @@ unittest
     // dfmt on
 }
 
-unittest
+@safe unittest
 {
     // dfmt off
     checkResult!(MurmurHash3!(128,64))([
@@ -734,7 +742,7 @@ unittest
     // dfmt on
 }
 
-unittest
+@safe unittest
 {
     // Pushing unaligned data and making sure the result is still coherent.
     void testUnalignedHash(H)()

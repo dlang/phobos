@@ -31,7 +31,7 @@ import std.meta : allSatisfy;
 
 version(StdDdoc)
 /// Computes an HMAC over data read from stdin.
-unittest
+@safe unittest
 {
     import std.stdio, std.digest.hmac, std.digest.sha;
     import std.string : representation;
@@ -141,17 +141,26 @@ if (hashBlockSize % 8 == 0)
     }
 
     /**
-     * Feeds a piece of data into the hash computation. This method allows the
-     * type to be used as an $(REF OutputRange, std,range).
+     * Feeds a piece of data into the hash computation.
+     * Also implements the $(REF isOutputRange, std,range,primitives)
+     * interface for single elements or array of const elements of type
+     * `ubyte`, `byte` and `char`.
      *
      * Returns:
      * A reference to the digest for convenient chaining.
      */
-
-    ref HMAC!(H, blockSize) put(in ubyte[] data...) return
+    ref HMAC!(H, blockSize) put(T)(in T[] data...) return
+    if (is(T == ubyte) || is(T == byte) || is(T == char))
     {
         digest.put(data);
         return this;
+    }
+
+    // Backward compatibility overload that allows to put int literals.
+    version(D_Ddoc){} else
+    auto ref put(in ubyte[] data...) @safe @nogc pure nothrow
+    {
+        return put!ubyte(data);
     }
 
     ///
@@ -300,7 +309,7 @@ unittest
     static assert(hasBlockSize!(HMAC!MD5) && HMAC!MD5.blockSize == MD5.blockSize);
 }
 
-@system pure nothrow
+pure nothrow
 unittest
 {
     import std.digest.md : MD5;

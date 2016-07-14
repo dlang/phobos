@@ -48,7 +48,7 @@ module std.digest.md;
 public import std.digest.digest;
 
 ///
-unittest
+@safe unittest
 {
     //Template API
     import std.digest.md;
@@ -289,7 +289,8 @@ struct MD5
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for single elements or array of const elements of type
+         * `ubyte`, `byte` and `char`.
          *
          * Example:
          * ----
@@ -300,7 +301,8 @@ struct MD5
          * dig.put(buf); //buffer
          * ----
          */
-        void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
+        void put(T)(scope const(T)[] data...) @trusted @nogc
+        if (is(T == ubyte) || is(T == byte) || is(T == char))
         {
             uint i, index, partLen;
             auto inputLen = data.length;
@@ -316,7 +318,7 @@ struct MD5
             //Transform as many times as possible
             if (inputLen >= partLen)
             {
-                (&_buffer[index])[0 .. partLen] = data.ptr[0 .. partLen];
+                (&_buffer[index])[0 .. partLen] = cast(ubyte[]) data.ptr[0 .. partLen];
                 transform(&_buffer);
 
                 for (i = partLen; i + 63 < inputLen; i += 64)
@@ -333,7 +335,14 @@ struct MD5
 
             /* Buffer remaining input */
             if (inputLen - i)
-                (&_buffer[index])[0 .. inputLen-i] = (&data[i])[0 .. inputLen-i];
+                (&_buffer[index])[0 .. inputLen-i] = cast(ubyte[]) (&data[i])[0 .. inputLen-i];
+        }
+
+        // Backward compatibility overload that allows to put int literals.
+        version(D_Ddoc){} else
+        void put(scope const(ubyte)[] data...) @safe @nogc pure nothrow
+        {
+            put!ubyte(data);
         }
 
         /**
@@ -402,7 +411,7 @@ struct MD5
 }
 
 ///
-unittest
+@safe unittest
 {
     //Simple example, hashing a string using md5Of helper function
     ubyte[16] hash = md5Of("abc");
@@ -411,7 +420,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     //Using the basic API
     MD5 hash;
@@ -423,7 +432,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     //Let's use the template features:
     void doSomething(T)(ref T hash) if (isDigest!T)
@@ -436,7 +445,7 @@ unittest
     assert(toHexString(md5.finish()) == "93B885ADFE0DA089CDF634904FD59F71");
 }
 
-unittest
+@safe unittest
 {
     assert(isDigest!MD5);
 }
@@ -448,35 +457,35 @@ unittest
     ubyte[16] digest;
 
     MD5 md5;
-    md5.put(cast(ubyte[])"abcdef");
+    md5.put("abcdef");
     md5.start();
-    md5.put(cast(ubyte[])"");
-    assert(md5.finish() == cast(ubyte[])x"d41d8cd98f00b204e9800998ecf8427e");
+    md5.put("");
+    assert(md5.finish() == x"d41d8cd98f00b204e9800998ecf8427e");
 
     digest = md5Of("");
-    assert(digest == cast(ubyte[])x"d41d8cd98f00b204e9800998ecf8427e");
+    assert(digest == x"d41d8cd98f00b204e9800998ecf8427e");
 
     digest = md5Of("a");
-    assert(digest == cast(ubyte[])x"0cc175b9c0f1b6a831c399e269772661");
+    assert(digest == x"0cc175b9c0f1b6a831c399e269772661");
 
     digest = md5Of("abc");
-    assert(digest == cast(ubyte[])x"900150983cd24fb0d6963f7d28e17f72");
+    assert(digest == x"900150983cd24fb0d6963f7d28e17f72");
 
     digest = md5Of("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
-    assert(digest == cast(ubyte[])x"8215ef0796a20bcaaae116d3876c664a");
+    assert(digest == x"8215ef0796a20bcaaae116d3876c664a");
 
     digest = md5Of("message digest");
-    assert(digest == cast(ubyte[])x"f96b697d7cb7938d525a2f31aaf161d0");
+    assert(digest == x"f96b697d7cb7938d525a2f31aaf161d0");
 
     digest = md5Of("abcdefghijklmnopqrstuvwxyz");
-    assert(digest == cast(ubyte[])x"c3fcd3d76192e4007dfb496cca67e13b");
+    assert(digest == x"c3fcd3d76192e4007dfb496cca67e13b");
 
     digest = md5Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-    assert(digest == cast(ubyte[])x"d174ab98d277d9f5a5611c2c9f419d9f");
+    assert(digest == x"d174ab98d277d9f5a5611c2c9f419d9f");
 
     digest = md5Of("1234567890123456789012345678901234567890"~
                     "1234567890123456789012345678901234567890");
-    assert(digest == cast(ubyte[])x"57edf4a22be3c955ac49da2e2107b67a");
+    assert(digest == x"57edf4a22be3c955ac49da2e2107b67a");
 
     assert(toHexString(cast(ubyte[16])x"c3fcd3d76192e4007dfb496cca67e13b")
         == "C3FCD3D76192E4007DFB496CCA67E13B");
@@ -484,11 +493,11 @@ unittest
     ubyte[] onemilliona = new ubyte[1000000];
     onemilliona[] = 'a';
     digest = md5Of(onemilliona);
-    assert(digest == cast(ubyte[])x"7707D6AE4E027C70EEA2A935C2296F21");
+    assert(digest == x"7707D6AE4E027C70EEA2A935C2296F21");
 
     auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
     digest = md5Of(oneMillionRange);
-    assert(digest == cast(ubyte[])x"7707D6AE4E027C70EEA2A935C2296F21");
+    assert(digest == x"7707D6AE4E027C70EEA2A935C2296F21");
 }
 
 /**
@@ -502,7 +511,7 @@ auto md5Of(T...)(T data)
 }
 
 ///
-unittest
+@safe unittest
 {
     ubyte[16] hash = md5Of("abc");
     assert(hash == digest!MD5("abc"));
@@ -548,15 +557,15 @@ unittest
 {
     auto md5 = new MD5Digest();
 
-    md5.put(cast(ubyte[])"abcdef");
+    md5.put("abcdef");
     md5.reset();
-    md5.put(cast(ubyte[])"");
-    assert(md5.finish() == cast(ubyte[])x"d41d8cd98f00b204e9800998ecf8427e");
+    md5.put("");
+    assert(md5.finish() == x"d41d8cd98f00b204e9800998ecf8427e");
 
-    md5.put(cast(ubyte[])"abcdefghijklmnopqrstuvwxyz");
+    md5.put("abcdefghijklmnopqrstuvwxyz");
     ubyte[20] result;
     auto result2 = md5.finish(result[]);
-    assert(result[0 .. 16] == result2 && result2 == cast(ubyte[])x"c3fcd3d76192e4007dfb496cca67e13b");
+    assert(result[0 .. 16] == result2 && result2 == x"c3fcd3d76192e4007dfb496cca67e13b");
 
     debug
     {
@@ -566,24 +575,24 @@ unittest
 
     assert(md5.length == 16);
 
-    assert(md5.digest("") == cast(ubyte[])x"d41d8cd98f00b204e9800998ecf8427e");
+    assert(md5.digest("") == x"d41d8cd98f00b204e9800998ecf8427e");
 
-    assert(md5.digest("a") == cast(ubyte[])x"0cc175b9c0f1b6a831c399e269772661");
+    assert(md5.digest("a") == x"0cc175b9c0f1b6a831c399e269772661");
 
-    assert(md5.digest("abc") == cast(ubyte[])x"900150983cd24fb0d6963f7d28e17f72");
+    assert(md5.digest("abc") == x"900150983cd24fb0d6963f7d28e17f72");
 
     assert(md5.digest("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")
-           == cast(ubyte[])x"8215ef0796a20bcaaae116d3876c664a");
+           == x"8215ef0796a20bcaaae116d3876c664a");
 
-    assert(md5.digest("message digest") == cast(ubyte[])x"f96b697d7cb7938d525a2f31aaf161d0");
+    assert(md5.digest("message digest") == x"f96b697d7cb7938d525a2f31aaf161d0");
 
     assert(md5.digest("abcdefghijklmnopqrstuvwxyz")
-           == cast(ubyte[])x"c3fcd3d76192e4007dfb496cca67e13b");
+           == x"c3fcd3d76192e4007dfb496cca67e13b");
 
     assert(md5.digest("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
-           == cast(ubyte[])x"d174ab98d277d9f5a5611c2c9f419d9f");
+           == x"d174ab98d277d9f5a5611c2c9f419d9f");
 
     assert(md5.digest("1234567890123456789012345678901234567890",
                                    "1234567890123456789012345678901234567890")
-           == cast(ubyte[])x"57edf4a22be3c955ac49da2e2107b67a");
+           == x"57edf4a22be3c955ac49da2e2107b67a");
 }

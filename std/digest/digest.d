@@ -542,7 +542,7 @@ unittest
 {
     import std.digest.md;
     auto md5 = makeDigest!MD5();
-    md5.put(0);
+    md5.put(ubyte(0));
     assert(toHexString(md5.finish()) == "93B885ADFE0DA089CDF634904FD59F71");
 }
 
@@ -563,7 +563,7 @@ interface Digest
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for `ubyte` and `const(ubyte)[])`.
          *
          * Example:
          * ----
@@ -577,6 +577,16 @@ interface Digest
          * ----
          */
         @trusted nothrow void put(scope const(ubyte)[] data...);
+
+        /**
+         * This is a conveniance function to digest strings (with `char`
+         * as element encoding type) or `byte[]`.
+         */
+        @trusted final void put(T)(scope const(T)[] data...)
+        if (is(T == char) || is(T == byte))
+        {
+            put(cast(const(ubyte)[]) data);
+        }
 
         /**
          * Resets the internal state of the digest.
@@ -649,7 +659,7 @@ unittest
     assert(crcHexString(crc32) == "414FA339");
 }
 
-unittest
+@safe unittest
 {
     import std.range : isOutputRange;
     assert(!isDigest!(Digest));
@@ -657,7 +667,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     void test(Digest dig)
     {
@@ -697,8 +707,8 @@ enum Order : bool
  * using the GC. The versions returning static arrays use pass-by-value for
  * the return value, effectively avoiding dynamic allocation.
  */
-char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase letterCase = LetterCase.upper)
-(in ubyte[num] digest)
+char[num*2] toHexString(Order order = Order.increasing, size_t num,
+    LetterCase letterCase = LetterCase.upper) (in ubyte[num] digest) @safe
 {
     static if (letterCase == LetterCase.upper)
     {
@@ -865,12 +875,14 @@ class WrapperDigest(T) if (isDigest!T) : Digest
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for `ubyte` and `const(ubyte)[])`.
          */
         @trusted nothrow void put(scope const(ubyte)[] data...)
         {
             _digest.put(data);
         }
+
+        alias put = Digest.put;
 
         /**
          * Resets the internal state of the digest.
