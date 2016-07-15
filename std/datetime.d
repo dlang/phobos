@@ -6842,7 +6842,10 @@ public:
         assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)) ==
                         dur!"hnsecs"(-1));
 
-        auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+        version(Posix)
+            immutable tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
+        else version(Windows)
+            immutable tz = WindowsTimeZone.getTimeZone("Pacific Standard Time");
 
         {
             auto dt = DateTime(2011, 1, 13, 8, 17, 2);
@@ -27738,14 +27741,14 @@ public:
         return dur!"hnsecs"(utcToTZ(stdTime) - stdTime);
     }
 
-
+    // @@@DEPRECATED_2017-07@@@
     /++
-        $(RED Please use either PosixTimeZone.getTimeZone or
-              WindowsTimeZone.getTimeZone ($(LREF parseTZConversions) can be
-              used to convert time zone names if necessary). This function will
-              be deprecated in 2.072, because Microsoft changes their time zones
-              too often for us to compile the conversions into Phobos and have
-              them be properly up-to-date.)
+        $(RED Deprecated. Use either PosixTimeZone.getTimeZone or
+              WindowsTimeZone.getTimeZone. ($(LREF parseTZConversions) can be
+              used to convert time zone names if necessary). Microsoft changes
+              their time zones too often for us to compile the conversions into
+              Phobos and have them be properly up-to-date. TimeZone.getTimeZone
+              will be removed in July 2017.)
 
         Returns a $(LREF2 .TimeZone, TimeZone) with the give name per the TZ Database.
 
@@ -27774,6 +27777,7 @@ public:
         Throws:
             $(LREF DateTimeException) if the given time zone could not be found.
       +/
+    deprecated("Use PosixTimeZone.getTimeZone or WindowsTimeZone.getTimeZone instead")
     static immutable(TimeZone) getTimeZone(string name) @safe
     {
         version(Posix)
@@ -27800,7 +27804,7 @@ public:
     }
 
     ///
-    @safe unittest
+    deprecated @safe unittest
     {
         auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
@@ -27835,6 +27839,9 @@ public:
         import std.stdio : writefln;
         import std.typecons : tuple;
 
+        version(Posix) alias getTimeZone = PosixTimeZone.getTimeZone;
+        else version(Windows) alias getTimeZone = WindowsTimeZone.getTimeZone;
+
         version(Posix) scope(exit) clearTZEnvVar();
 
         static immutable(TimeZone) testTZ(string tzName,
@@ -27846,13 +27853,18 @@ public:
         {
             scope(failure) writefln("Failed time zone: %s", tzName);
 
-            immutable tz = TimeZone.getTimeZone(tzName);
-            immutable hasDST = dstOffset != dur!"hnsecs"(0);
-
             version(Posix)
+            {
+                immutable tz = PosixTimeZone.getTimeZone(tzName);
                 assert(tz.name == tzName);
+            }
             else version(Windows)
+            {
+                immutable tz = WindowsTimeZone.getTimeZone(tzName);
                 assert(tz.name == stdName);
+            }
+
+            immutable hasDST = dstOffset != Duration.zero;
 
             //assert(tz.stdName == stdName);  //Locale-dependent
             //assert(tz.dstName == dstName);  //Locale-dependent
@@ -27970,21 +27982,21 @@ public:
         }
         else version(Windows)
         {
-            auto tzs = [testTZ("America/Los_Angeles", "Pacific Standard Time",
+            auto tzs = [testTZ("Pacific Standard Time", "Pacific Standard Time",
                                "Pacific Daylight Time", dur!"hours"(-8), dur!"hours"(1)),
-                        testTZ("America/New_York", "Eastern Standard Time",
+                        testTZ("Eastern Standard Time", "Eastern Standard Time",
                                "Eastern Daylight Time", dur!"hours"(-5), dur!"hours"(1)),
-                        //testTZ("America/Santiago", "Pacific SA Standard Time",
+                        //testTZ("Pacific SA Standard Time", "Pacific SA Standard Time",
                                //"Pacific SA Daylight Time", dur!"hours"(-4), dur!"hours"(1), false),
-                        testTZ("Europe/London", "GMT Standard Time",
+                        testTZ("GMT Standard Time", "GMT Standard Time",
                                "GMT Daylight Time", dur!"hours"(0), dur!"hours"(1)),
-                        testTZ("Europe/Paris", "Romance Standard Time",
+                        testTZ("Romance Standard Time", "Romance Standard Time",
                                "Romance Daylight Time", dur!"hours"(1), dur!"hours"(1)),
-                        testTZ("Australia/Adelaide", "Cen. Australia Standard Time",
+                        testTZ("Cen. Australia Standard Time", "Cen. Australia Standard Time",
                                "Cen. Australia Daylight Time",
                                dur!"hours"(9) + dur!"minutes"(30), dur!"hours"(1), false)];
 
-            testTZ("Atlantic/Reykjavik", "Greenwich Standard Time",
+            testTZ("Greenwich Standard Time", "Greenwich Standard Time",
                    "Greenwich Daylight Time", dur!"hours"(0), dur!"hours"(0));
             assertThrown!DateTimeException(WindowsTimeZone.getTimeZone("hello_world"));
         }
@@ -28110,7 +28122,15 @@ public:
     }
 
 
+    // @@@DEPRECATED_2017-07@@@
     /++
+        $(RED Deprecated. Use either PosixTimeZone.getInstalledTZNames or
+              WindowsTimeZone.getInstalledTZNames. ($(LREF parseTZConversions)
+              can be used to convert time zone names if necessary). Microsoft
+              changes their time zones too often for us to compile the
+              conversions into Phobos and have them be properly up-to-date.
+              TimeZone.getInstalledTZNames will be removed in July 2017.)
+
         Returns a list of the names of the time zones installed on the system.
 
         Providing a sub-name narrows down the list of time zones (which
@@ -28131,6 +28151,7 @@ public:
             $(LREF DateTimeException) on Windows systems if it fails to read the
             registry.
       +/
+    deprecated("Use PosixTimeZone.getInstalledTZNames or WindowsTimeZone.getInstalledTZNames instead")
     static string[] getInstalledTZNames(string subName = "") @safe
     {
         version(Posix)
@@ -28162,7 +28183,7 @@ public:
         }
     }
 
-    @safe unittest
+    deprecated @safe unittest
     {
         import std.exception : assertNotThrown;
         import std.stdio : writefln;
@@ -30470,7 +30491,7 @@ version(StdDdoc)
 
             Example:
     --------------------
-    auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+    auto tz = WindowsTimeZone.getTimeZone("Pacific Standard Time");
     --------------------
           +/
         static immutable(WindowsTimeZone) getTimeZone(string name) @safe;
@@ -31077,11 +31098,12 @@ For terms of use, see http://www.unicode.org/copyright.html
 }
 
 
+// @@@DEPRECATED_2017-07@@@
 /++
-    $(RED Please use $(LREF parseTZConversions) instead. This function will be
-          deprecated in 2.072, because Microsoft changes their time zones too
-          often for us to compile the conversions into Phobos and have them be
-          properly up-to-date.)
+    $(RED Deprecated. Use $(LREF parseTZConversions) instead. Microsoft changes
+          their time zones too often for us to compile the conversions into
+          Phobos and have them be properly up-to-date.
+          tzDatabaseNameToWindowsTZName will be removed in July 2017.)
 
     Converts the given TZ Database name to the corresponding Windows time zone
     name.
@@ -31104,6 +31126,7 @@ For terms of use, see http://www.unicode.org/copyright.html
     Params:
         tzName = The TZ Database name to convert.
   +/
+deprecated("Use parseTZConversions instead")
 string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
 {
     switch (tzName)
@@ -31559,7 +31582,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) @system unittest
+version(Windows) deprecated @system unittest
 {
     import std.format : format;
     foreach (tzName; TimeZone.getInstalledTZNames())
@@ -31567,11 +31590,12 @@ version(Windows) @system unittest
 }
 
 
+// @@@DEPRECATED_2017-07@@@
 /++
-    $(RED Please use $(LREF parseTZConversions) instead. This function will be
-          deprecated in 2.072, because Microsoft changes their time zones too
-          often for us to compile the conversions into Phobos and have them be
-          properly up-to-date.)
+    $(RED Deprecated. Use $(LREF parseTZConversions) instead. Microsoft changes
+          their time zones too often for us to compile the conversions into
+          Phobos and have them be properly up-to-date.
+          windowsTZNameToTZDatabaseName will be removed in July 2017.)
 
     Converts the given Windows time zone name to a corresponding TZ Database
     name.
@@ -31585,6 +31609,7 @@ version(Windows) @system unittest
     Params:
         tzName = The TZ Database name to convert.
   +/
+deprecated("Use parseTZConversions instead")
 string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
 {
     switch (tzName)
@@ -31733,7 +31758,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) @system unittest
+version(Windows) deprecated @system unittest
 {
     import std.format : format;
     foreach (tzName; WindowsTimeZone.getInstalledTZNames())
@@ -35259,8 +35284,17 @@ version(unittest)
         immutable lt = LocalTime().utcToTZ(0);
         currLocalDiffFromUTC = dur!"hnsecs"(lt);
 
-        immutable otherTZ = lt < 0 ? TimeZone.getTimeZone("Australia/Sydney")
-                                   : TimeZone.getTimeZone("America/Denver");
+        version(Posix)
+        {
+            immutable otherTZ = lt < 0 ? PosixTimeZone.getTimeZone("Australia/Sydney")
+                                       : PosixTimeZone.getTimeZone("America/Denver");
+        }
+        else version(Windows)
+        {
+            immutable otherTZ = lt < 0 ? WindowsTimeZone.getTimeZone("AUS Eastern Standard Time")
+                                       : WindowsTimeZone.getTimeZone("Mountain Standard Time");
+        }
+
         immutable ot = otherTZ.utcToTZ(0);
 
         auto diffs = [0L, lt, ot];
