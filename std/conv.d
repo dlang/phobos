@@ -3089,11 +3089,20 @@ Target parse(Target, Source)(ref Source p)
 }
 
 /**
-Parsing one character off a string returns the character and bumps the
-string up one position.
+Parsing one character off a range returns the first element and calls `popFront`.
+
+Params:
+    Target = the type to convert to
+    s = the lvalue of an input range
+
+Returns:
+    A character of type `Target`
+
+Throws:
+    A $(LREF ConvException) if the range is empty.
  */
 Target parse(Target, Source)(ref Source s)
-    if (isExactSomeString!Source &&
+    if (isSomeString!Source && !is(Source == enum) &&
         staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
 {
     if (s.empty)
@@ -3130,6 +3139,7 @@ Target parse(Target, Source)(ref Source s)
     }
 }
 
+/// ditto
 Target parse(Target, Source)(ref Source s)
     if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
@@ -3139,6 +3149,15 @@ Target parse(Target, Source)(ref Source s)
     Target result = s.front;
     s.popFront();
     return result;
+}
+
+///
+@safe pure unittest
+{
+    auto s = "Hello, World!";
+    char first = parse!char(s);
+    assert(first == 'H');
+    assert(s == "ello, World!");
 }
 
 
