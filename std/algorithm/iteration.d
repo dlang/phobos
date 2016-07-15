@@ -422,7 +422,7 @@ private struct _Cache(R, bool bidir)
             auto opSlice(size_t low, size_t high)
             in
             {
-                assert(low <= high);
+                assert(low <= high, "Bounds error when slicing cache.");
             }
             body
             {
@@ -552,11 +552,13 @@ private struct MapResult(alias fun, Range)
     {
         @property auto ref back()()
         {
+            assert(!empty, "Attempting to fetch the back of an empty map.");
             return fun(_input.back);
         }
 
         void popBack()()
         {
+            assert(!empty, "Attempting to popBack an empty map.");
             _input.popBack();
         }
     }
@@ -581,11 +583,13 @@ private struct MapResult(alias fun, Range)
 
     void popFront()
     {
+        assert(!empty, "Attempting to popFront an empty map.");
         _input.popFront();
     }
 
     @property auto ref front()
     {
+        assert(!empty, "Attempting to fetch the front of an empty map.");
         return fun(_input.front);
     }
 
@@ -1120,7 +1124,7 @@ private struct FilterResult(alias pred, Range)
 
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty filter.");
         return _input.front;
     }
 
@@ -1303,7 +1307,7 @@ private struct FilterBidiResult(alias pred, Range)
 
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty filterBidirectional.");
         return _input.front;
     }
 
@@ -1317,7 +1321,7 @@ private struct FilterBidiResult(alias pred, Range)
 
     @property auto ref back()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the back of an empty filterBidirectional.");
         return _input.back;
     }
 
@@ -1422,7 +1426,7 @@ struct Group(alias pred, R) if (isInputRange!R)
     ///
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty Group.");
         return _current;
     }
 
@@ -2157,13 +2161,13 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         @property ElementType!(ElementType!RoR) front()
         {
             if (!_currentSep.empty) return _currentSep.front;
-            assert(!_current.empty);
+            assert(!_current.empty, "Attempting to fetch the front of an empty joiner.");
             return _current.front;
         }
 
         void popFront()
         {
-            assert(!_items.empty);
+            assert(!_items.empty, "Attempting to popFront an empty joiner.");
             // Using separator?
             if (!_currentSep.empty)
             {
@@ -2385,12 +2389,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         }
         @property auto ref front()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the front of an empty joiner.");
             return _current.front;
         }
         void popFront()
         {
-            assert(!_current.empty);
+            assert(!_current.empty, "Attempting to popFront an empty joiner.");
             _current.popFront();
             if (_current.empty)
             {
@@ -3204,7 +3208,7 @@ if (fun.length >= 1)
 
             @property auto front()
             {
-                assert(!empty);
+                assert(!empty, "Attempting to fetch the front of an empty cumulativeFold.");
                 static if (fun.length > 1)
                 {
                     import std.typecons : tuple;
@@ -3218,6 +3222,7 @@ if (fun.length >= 1)
 
             void popFront()
             {
+                assert(!empty, "Attempting to popFront an empty cumulativeFold.");
                 source.popFront;
 
                 if (source.empty)
@@ -3570,7 +3575,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
         @property Range front()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the front of an empty splitter.");
             if (_frontLength == _unComputed)
             {
                 auto r = _input.find!pred(_separator);
@@ -3581,7 +3586,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
         void popFront()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to popFront an empty splitter.");
             if (_frontLength == _unComputed)
             {
                 front;
@@ -3616,7 +3621,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         {
             @property Range back()
             {
-                assert(!empty);
+                assert(!empty, "Attempting to fetch the back of an empty splitter.");
                 if (_backLength == _unComputed)
                 {
                     immutable lastIndex = lastIndexOf(_input, _separator);
@@ -3634,7 +3639,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
             void popBack()
             {
-                assert(!empty);
+                assert(!empty, "Attempting to popBack an empty splitter.");
                 if (_backLength == _unComputed)
                 {
                     // evaluate back to make sure it's computed
@@ -3842,7 +3847,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
         @property Range front()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the front of an empty splitter.");
             ensureFrontLength();
             return _input[0 .. _frontLength];
         }
@@ -3861,7 +3866,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
         void popFront()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to popFront an empty splitter.");
             ensureFrontLength();
             if (_frontLength == _input.length)
             {
@@ -4829,6 +4834,7 @@ private struct UniqResult(alias pred, Range)
 
     void popFront()
     {
+        assert(!empty, "Attempting to popFront an empty uniq.");
         auto last = _input.front;
         do
         {
@@ -4837,12 +4843,17 @@ private struct UniqResult(alias pred, Range)
         while (!_input.empty && pred(last, _input.front));
     }
 
-    @property ElementType!Range front() { return _input.front; }
+    @property ElementType!Range front()
+    {
+        assert(!empty, "Attempting to fetch the front of an empty uniq.");
+        return _input.front;
+    }
 
     static if (isBidirectionalRange!Range)
     {
         void popBack()
         {
+            assert(!empty, "Attempting to popBack an empty uniq.");
             auto last = _input.back;
             do
             {
@@ -4851,7 +4862,11 @@ private struct UniqResult(alias pred, Range)
             while (!_input.empty && pred(last, _input.back));
         }
 
-        @property ElementType!Range back() { return _input.back; }
+        @property ElementType!Range back()
+        {
+            assert(!empty, "Attempting to fetch the back of an empty uniq.");
+            return _input.back;
+        }
     }
 
     static if (isInfinite!Range)
