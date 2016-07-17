@@ -1067,16 +1067,15 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 
 @safe unittest
 {
-    import std.random : Random, uniform;
+    import std.random : uniform;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    auto rnd = Random(1);
-    auto a = new int[uniform(100, 200, rnd)];
+    auto a = new int[uniform(100, 200)];
     foreach (ref e; a)
     {
-        e = uniform(-100, 100, rnd);
+        e = uniform(-100, 100);
     }
 
     optimisticInsertionSort!(binaryFun!("a < b"), int[])(a);
