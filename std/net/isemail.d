@@ -59,7 +59,8 @@ import std.traits;
 EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no,
     EmailStatusCode errorLevel = EmailStatusCode.none) if (isSomeChar!(Char))
 {
-    import std.algorithm : uniq, canFind;
+    import std.algorithm.iteration : uniq;
+    import std.algorithm.searching : canFind;
     import std.exception : enforce;
     import std.array : array, split;
     import std.conv : to;
@@ -1887,7 +1888,7 @@ int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, b
     if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
 {
     import std.uni : icmp;
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
     auto s1End = length <= s1.length ? length : s1.length;
     auto s2End = length <= s2.length ? length : s2.length;
 
@@ -1921,7 +1922,7 @@ unittest
 auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
 {
     import std.regex : match;
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
     auto dg = invert ? (ElementType!(Range) e) { return e.match(pattern).empty; } :
                        (ElementType!(Range) e) { return !e.match(pattern).empty; };
 
@@ -1931,7 +1932,7 @@ auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
 ///
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.regex;
     assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
     assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`4567`), true), ["abc", "0123", "defg"]));
