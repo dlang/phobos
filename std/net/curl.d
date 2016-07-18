@@ -2233,8 +2233,6 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
                                                      EncodingScheme scheme,
                                                      Terminator terminator)
 {
-    auto startLen = src.length;
-    size_t charsDecoded = 0;
     // if there is anything in the basesrc then try to decode that
     // first.
     if (basesrc.length != 0)
@@ -3499,7 +3497,6 @@ struct SMTP
             curl.onSend = delegate size_t(void[] data)
             {
                 if (!msg.length) return 0;
-                auto m = cast(void[])msg;
                 size_t to_copy = min(data.length, _message.length);
                 data[0..to_copy] = (cast(void[])_message)[0..to_copy];
                 _message = _message[to_copy..$];
