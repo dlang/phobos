@@ -2409,8 +2409,22 @@ Lerr:
         assertThrown!ConvOverflowException(s.parse!ubyte(16));
 }
 
+/**
+ * Takes a string representing an `enum` type and returns that type.
+ *
+ * Params:
+ *     Target = the `enum` type to convert to
+ *     s = the lvalue of the range to _parse
+ *
+ * Returns:
+ *     An `enum` of type `Target`
+ *
+ * Throws:
+ *     A $(LREF ConvException) if type `Target` does not have a member
+ *     represented by `s`.
+ */
 Target parse(Target, Source)(ref Source s)
-    if (isExactSomeString!Source &&
+    if (isSomeString!Source && !is(Source == enum) &&
         is(Target == enum))
 {
     import std.algorithm.searching : startsWith;
@@ -2436,6 +2450,15 @@ Target parse(Target, Source)(ref Source s)
     throw new ConvException(
         Target.stringof ~ " does not have a member named '"
         ~ to!string(s) ~ "'");
+}
+
+///
+@safe unittest
+{
+    enum EnumType : bool { a = true, b = false, c = a }
+
+    auto str = "a";
+    assert(parse!EnumType(str) == EnumType.a);
 }
 
 @safe unittest
@@ -2469,6 +2492,20 @@ Target parse(Target, Source)(ref Source s)
     assert(parse!A(s) == A.member111 && s == "1");
 }
 
+/**
+ * Parses a character range to a floating point number.
+ *
+ * Params:
+ *     Target = a floating point type
+ *     p = the lvalue of the range to _parse
+ *
+ * Returns:
+ *     A floating point number of type `Target`
+ *
+ * Throws:
+ *     A $(LREF ConvException) if `p` is empty, if no number could be
+ *     parsed, or if an overflow occurred.
+ */
 Target parse(Target, Source)(ref Source p)
     if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
         isFloatingPoint!Target && !is(Target == enum))
@@ -2868,6 +2905,15 @@ Target parse(Target, Source)(ref Source p)
 
   L1:
     return (sign) ? -ldval : ldval;
+}
+
+///
+@safe unittest
+{
+    import std.math : approxEqual;
+    auto str = "123.456";
+
+    assert(parse!double(str).approxEqual(123.456));
 }
 
 @safe unittest
