@@ -1575,8 +1575,8 @@ private static struct AsyncLineInputRange(Char)
  * // Get a line in a background thread and wait in
  * // main thread for 2 seconds for it to arrive.
  * auto range3 = byLineAsync("dlang.com");
- * if (range.wait(dur!"seconds"(2)))
- *     writeln(range.front);
+ * if (range3.wait(dur!"seconds"(2)))
+ *     writeln(range3.front);
  * else
  *     writeln("No line received after 2 seconds!");
  * ----
@@ -1726,8 +1726,8 @@ private static struct AsyncChunkInputRange
  * // Get a line in a background thread and wait in
  * // main thread for 2 seconds for it to arrive.
  * auto range3 = byChunkAsync("dlang.com", 10);
- * if (range.wait(dur!"seconds"(2)))
- *     writeln(range.front);
+ * if (range3.wait(dur!"seconds"(2)))
+ *     writeln(range3.front);
  * else
  *     writeln("No chunk received after 2 seconds!");
  * ----
