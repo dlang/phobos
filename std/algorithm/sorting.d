@@ -1086,15 +1086,20 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 // sort
 /**
 Sorts a random-access range according to the predicate $(D less). Performs
-$(BIGOH r.length * log(r.length)) evaluations of $(D less). Stable sorting
-requires $(D hasAssignableElements!Range) to be true.
+$(BIGOH r.length * log(r.length)) evaluations of $(D less). If `less` involves
+expensive computations on the _sort key, it may be worthwhile to use
+$(LREF schwartzSort) instead.
 
-$(D sort) returns a $(REF SortedRange, std,range) over the original range, which
-functions that can take advantage of sorted data can then use to know that the
+Stable sorting requires $(D hasAssignableElements!Range) to be true.
+
+$(D sort) returns a $(REF SortedRange, std,range) over the original range,
+allowing functions that can take advantage of sorted data to know that the
 range is sorted and adjust accordingly. The $(REF SortedRange, std,range) is a
-wrapper around the original range, so both it and the original range are sorted,
-but other functions won't know that the original range has been sorted, whereas
+wrapper around the original range, so both it and the original range are sorted.
+Other functions can't know that the original range has been sorted, but
 they $(I can) know that $(REF SortedRange, std,range) has been sorted.
+
+Preconditions:
 
 The predicate is expected to satisfy certain rules in order for $(D sort) to
 behave as expected - otherwise, the program may fail on certain inputs (but not
@@ -1105,9 +1110,6 @@ imply $(D !less(a,c)). Note that the default predicate ($(D "a < b")) does not
 always satisfy these conditions for floating point types, because the expression
 will always be $(D false) when either $(D a) or $(D b) is NaN.
 Use $(REF cmp, std,math) instead.
-
-If `less` involves expensive computations on the _sort key, it may be
-worthwhile to use $(LREF schwartzSort) instead.
 
 Params:
     less = The predicate to sort by.
