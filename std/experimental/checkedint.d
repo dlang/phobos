@@ -594,9 +594,34 @@ unittest
 
 // ProperCompare
 /**
+
+Implements a hook that provides arithmetically correct comparisons for equality
+and ordering. Comparing an object of type $(D Checked!(X, ProperCompare))
+against another integral (for equality or ordering) ensures that no surprising
+conversions from signed to unsigned integral occur before the comparison. Using
+$(D Checked!(X, ProperCompare)) on either side of a comparison for equality
+against a floating-point number makes sure the integral can be properly
+converted to the floating point type, thus making sure equality is transitive.
+
 */
 struct ProperCompare
 {
+    /**
+    Hook for `==` and `!=` that ensures comparison against integral values has
+    the behavior expected by the usual arithmetic rules. The built-in semantics
+    yield surprising behavior when comparing signed values against unsigned
+    values for equality, for example $(D uint.max == -1) or $(D -1_294_967_296 ==
+    3_000_000_000u). The call $(D hookOpEquals(x, y)) returns `true` if and only
+    if `x` and `y` represent the same arithmetic number.
+
+    If one of the numbers is an integral and the other is a floating-point
+    number, $(D hookOpEquals(x, y)) returns `true` if and only if the integral
+    can be converted exactly (without approximation) to the floating-point
+    number. This is in order to preserve transitivity of equality: if $(D
+    hookOpEquals(x, y)) and $(D hookOpEquals(y, z)) then $(D hookOpEquals(y,
+    z)), in case `x`, `y`, and `z` are a mix of integral and floating-point
+    numbers.
+    */
     static bool hookOpEquals(L, R)(L lhs, R rhs)
     {
         alias C = typeof(lhs + rhs);
@@ -641,6 +666,19 @@ struct ProperCompare
         }
     }
 
+    /**
+    Hook for `<`, `<=`, `>`, and `>=` that ensures comparison against integral
+    values has the behavior expected by the usual arithmetic rules. The built-in
+    semantics yield surprising behavior when comparing signed values against
+    unsigned values, for example $(D 0u < -1). The call $(D hookOpCmp(x, y))
+    returns `-1` if and only if `x` is smaller than `y` in abstract arithmetic
+    sense.
+
+    If one of the numbers is an integral and the other is a floating-point
+    number, $(D hookOpEquals(x, y)) returns a floating-point number that is `-1`
+    if `x < y`, `0` if `x == y`, `1` if `x > y`, and `NaN` if the floating-point
+    number is `NaN`.
+    */
     static auto hookOpCmp(L, R)(L lhs, R rhs)
     {
         alias C = typeof(lhs + rhs);
@@ -666,15 +704,19 @@ struct ProperCompare
     }
 }
 
+///
 unittest
 {
     alias opEqualsProper = ProperCompare.hookOpEquals;
     assert(opEqualsProper(42, 42));
     assert(opEqualsProper(42u, 42));
     assert(opEqualsProper(42, 42u));
-    assert(!opEqualsProper(-1, uint(-1)));
+    assert(-1 == 4294967295u);
+    assert(!opEqualsProper(-1, 4294967295u));
     assert(!opEqualsProper(uint(-1), -1));
     assert(!opEqualsProper(uint(-1), -1.0));
+    assert(3_000_000_000U == -1_294_967_296);
+    assert(!opEqualsProper(3_000_000_000U, -1_294_967_296));
 }
 
 unittest
