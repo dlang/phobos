@@ -1923,10 +1923,10 @@ result is greater than or equal to $(D max).
 ElementType!Range entropy(Range)(Range r) if (isInputRange!Range)
 {
     Unqual!(typeof(return)) result = 0.0;
-    foreach (e; r)
+    for (;!r.empty; r.popFront)
     {
-        if (!e) continue;
-        result -= e * log2(e);
+        if (!r.front) continue;
+        result -= r.front * log2(r.front);
     }
     return result;
 }
@@ -1937,10 +1937,10 @@ if (isInputRange!Range &&
     !is(CommonType!(ElementType!Range, F) == void))
 {
     Unqual!(typeof(return)) result = 0.0;
-    foreach (e; r)
+    for (;!r.empty; r.popFront)
     {
-        if (!e) continue;
-        result -= e * log2(e);
+        if (!r.front) continue;
+        result -= r.front * log2(r.front);
         if (result >= max) break;
     }
     return result;

@@ -31,6 +31,6 @@ script:
  # test code coverage
  - (cd dmd && make -f posix.mak)
  - (cd druntime && make -f posix.mak)
- - (cd phobos && make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/" | grep -vE '(std.encoding|net.curl)' ))
+ - (cd phobos && make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/" | grep -vE '(std.algorithm.sorting|std.encoding|net.curl)' ))
 after_success:
  - (cd phobos && bash <(curl -s https://codecov.io/bash))
