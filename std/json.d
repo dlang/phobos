@@ -344,7 +344,8 @@ struct JSONValue
         else static if (is(T : string))
         {
             type_tag = JSON_TYPE.STRING;
-            store.str = arg;
+            string t = arg;
+            () @trusted { store.str = t; }();
         }
         else static if (isSomeString!T) // issue 15884
         {
@@ -380,14 +381,15 @@ struct JSONValue
             type_tag = JSON_TYPE.OBJECT;
             static if (is(Value : JSONValue))
             {
-                store.object = arg;
+                JSONValue[string] t = arg;
+                () @trusted { store.object = t; }();
             }
             else
             {
                 JSONValue[string] aa;
                 foreach (key, value; arg)
                     aa[key] = JSONValue(value);
-                store.object = aa;
+                () @trusted { store.object = aa; }();
             }
         }
         else static if (isArray!T)
@@ -395,14 +397,15 @@ struct JSONValue
             type_tag = JSON_TYPE.ARRAY;
             static if (is(ElementEncodingType!T : JSONValue))
             {
-                store.array = arg;
+                JSONValue[] t = arg;
+                () @trusted { store.array = t; }();
             }
             else
             {
                 JSONValue[] new_arg = new JSONValue[arg.length];
                 foreach (i, e; arg)
                     new_arg[i] = JSONValue(e);
-                store.array = new_arg;
+                () @trusted { store.array = new_arg; }();
             }
         }
         else static if (is(T : JSONValue))
