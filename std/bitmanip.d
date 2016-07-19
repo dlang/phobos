@@ -795,7 +795,7 @@ public:
         if (newlen != _len)
         {
             size_t olddim = dim;
-            size_t newdim = lenToDim(newlen);
+            immutable newdim = lenToDim(newlen);
 
             if (newdim != olddim)
             {
@@ -911,7 +911,7 @@ public:
 
         foreach (i; 0 .. _len)
         {
-            bool b = opIndex(i);
+            immutable b = opIndex(i);
             result = dg(b);
             if (result)
                 break;
@@ -942,7 +942,7 @@ public:
 
         foreach (i; 0 .. _len)
         {
-            bool b = opIndex(i);
+            immutable b = opIndex(i);
             result = dg(i, b);
             if (result)
                 break;
@@ -1141,9 +1141,9 @@ public:
      */
     int opCmp(BitArray a2) const @nogc pure nothrow
     {
-        auto lesser = this.length < a2.length ? &this : &a2;
-        size_t fullWords = lesser.fullWords;
-        size_t endBits = lesser.endBits;
+        const lesser = this.length < a2.length ? &this : &a2;
+        immutable fullWords = lesser.fullWords;
+        immutable endBits = lesser.endBits;
         auto p1 = this._ptr;
         auto p2 = a2._ptr;
 
@@ -3914,7 +3914,7 @@ private struct BitsSet(T)
     this(T value, size_t startIndex = 0)
     {
         _value = value;
-        uint n = countTrailingZeros(value);
+        immutable n = countTrailingZeros(value);
         _index = startIndex + n;
         _value >>>= n;
     }
@@ -3934,7 +3934,7 @@ private struct BitsSet(T)
         assert(_value, "Cannot call popFront on empty range.");
 
         _value >>>= 1;
-        uint n = countTrailingZeros(_value);
+        immutable n = countTrailingZeros(_value);
         _value >>>= n;
         _index += n + 1;
     }
