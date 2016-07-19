@@ -5014,14 +5014,6 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
     assert(!isNaN(cast(real)-53.6));
 }
 
-// Explicitly undocumented. It will be removed in July 2016. @@@DEPRECATED_2016-07@@@
-deprecated("isNaN is not defined for integer types")
-bool isNaN(X)(X x) @nogc @trusted pure nothrow
-    if (isIntegral!(X))
-{
-    return isNaN(cast(float)x);
-}
-
 @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
@@ -5092,14 +5084,6 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
     assert(isFinite(real.min_normal));
     assert(!isFinite(real.nan));
     assert(!isFinite(real.infinity));
-}
-
-// Explicitly undocumented. It will be removed in July 2016. @@@DEPRECATED_2016-07@@@
-deprecated("isFinite is not defined for integer types")
-int isFinite(X)(X x) @trusted pure nothrow @nogc
-    if (isIntegral!(X))
-{
-    return isFinite(cast(float)x);
 }
 
 
@@ -5216,14 +5200,6 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
         for (f = 1.0; !isSubnormal(f); f /= 2)
             assert(f != 0);
     }
-}
-
-// Explicitly undocumented. It will be removed in July 2016. @@@DEPRECATED_2016-07@@@
-deprecated("isSubnormal is not defined for integer types")
-int isSubnormal(X)(X x) @trusted pure nothrow @nogc
-    if (isIntegral!X)
-{
-    return isSubnormal(cast(double)x);
 }
 
 /*********************************
@@ -5414,14 +5390,6 @@ int signbit(X)(X x) @nogc @trusted pure nothrow
 }
 
 
-// Explicitly undocumented. It will be removed in July 2016. @@@DEPRECATED_2016-07@@@
-deprecated("signbit is not defined for integer types")
-int signbit(X)(X x) @nogc @trusted pure nothrow
-    if (isIntegral!X)
-{
-    return signbit(cast(float)x);
-}
-
 /*********************************
  * Return a value composed of to with from's sign bit.
  */
@@ -5479,14 +5447,6 @@ R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
             }
         }();
     }
-}
-
-// Explicitly undocumented. It will be removed in July 2016. @@@DEPRECATED_2016-07@@@
-deprecated("copysign : from can't be of integer type")
-R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
-    if (isIntegral!R)
-{
-    return copysign(to, cast(float)from);
 }
 
 /*********************************

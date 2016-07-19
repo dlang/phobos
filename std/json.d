@@ -128,43 +128,6 @@ struct JSONValue
           assert(j["language"].type == JSON_TYPE.STRING);
     }
 
-    // Explicitly undocumented. It will be removed in June 2016. @@@DEPRECATED_2016-06@@@
-    deprecated("Please assign the value with the adequate type to JSONValue directly.")
-    @property JSON_TYPE type(JSON_TYPE newType) @safe
-    {
-        if (type_tag != newType
-         && ((type_tag != JSON_TYPE.INTEGER && type_tag != JSON_TYPE.UINTEGER)
-          || (newType  != JSON_TYPE.INTEGER && newType  != JSON_TYPE.UINTEGER)))
-        {
-            final switch (newType)
-            {
-                case JSON_TYPE.STRING:
-                    str = null;
-                    break;
-                case JSON_TYPE.INTEGER:
-                    integer = long.init;
-                    break;
-                case JSON_TYPE.UINTEGER:
-                    uinteger = ulong.init;
-                    break;
-                case JSON_TYPE.FLOAT:
-                    floating = double.init;
-                    break;
-                case JSON_TYPE.OBJECT:
-                    object = null;
-                    break;
-                case JSON_TYPE.ARRAY:
-                    array = null;
-                    break;
-                case JSON_TYPE.TRUE:
-                case JSON_TYPE.FALSE:
-                case JSON_TYPE.NULL:
-                    break;
-            }
-        }
-        return type_tag = newType;
-    }
-
     /// Value getter/setter for $(D JSON_TYPE.STRING).
     /// Throws: $(D JSONException) for read access if $(D type) is not
     /// $(D JSON_TYPE.STRING).
@@ -1594,31 +1557,6 @@ class JSONException : Exception
   const jv = parseJSON(json);
   assert(jv.toString == json);
   assert(jv.toPrettyString == json);
-}
-
-@safe deprecated unittest
-{
-    // Bugzilla 12332
-    import std.exception;
-
-    JSONValue jv;
-    jv.type = JSON_TYPE.INTEGER;
-    jv = 1;
-    assert(jv.type == JSON_TYPE.INTEGER);
-    assert(jv.integer == 1);
-    jv.type = JSON_TYPE.UINTEGER;
-    assert(jv.uinteger == 1);
-
-    jv.type = JSON_TYPE.STRING;
-    assertThrown!JSONException(jv.integer == 1);
-    assert(jv.str is null);
-    jv.str = "123";
-    assert(jv.str == "123");
-    jv.type = JSON_TYPE.STRING;
-    assert(jv.str == "123");
-
-    jv.type = JSON_TYPE.TRUE;
-    assert(jv.type == JSON_TYPE.TRUE);
 }
 
 @system pure unittest

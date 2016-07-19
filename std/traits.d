@@ -1637,51 +1637,6 @@ template isUnsafe(alias func)
 }
 
 
-// Explicitly undocumented. It will be removed in June 2016. @@@DEPRECATED_2016-06@@@
-deprecated("Please use allSatisfy(isSafe, ...) instead.")
-template areAllSafe(funcs...)
-    if (funcs.length > 0)
-{
-    static if (funcs.length == 1)
-    {
-        enum areAllSafe = isSafe!(funcs[0]);
-    }
-    else static if (isSafe!(funcs[0]))
-    {
-        enum areAllSafe = areAllSafe!(funcs[1..$]);
-    }
-    else
-    {
-        enum areAllSafe = false;
-    }
-}
-
-// Verify Example
-@safe deprecated unittest
-{
-    @safe    int add(int a, int b) {return a+b;}
-    @trusted int sub(int a, int b) {return a-b;}
-    @system  int mul(int a, int b) {return a*b;}
-
-    static assert( areAllSafe!(add, add));
-    static assert( areAllSafe!(add, sub));
-    static assert(!areAllSafe!(sub, mul));
-}
-
-@safe deprecated unittest
-{
-    interface Set
-    {
-        int systemF() @system;
-        int trustedF() @trusted;
-        int safeF() @safe;
-    }
-    static assert( areAllSafe!((int a){}, Set.safeF));
-    static assert( areAllSafe!((int a){}, Set.safeF, Set.trustedF));
-    static assert(!areAllSafe!(Set.trustedF, Set.systemF));
-}
-
-
 /**
 Returns the calling convention of function as a string.
 */
@@ -5582,18 +5537,6 @@ enum bool isPointer(T) = is(T == U*, U) && !isAggregateType!T;
 Returns the target type of a pointer.
 */
 alias PointerTarget(T : T*) = T;
-
-// Explicitly undocumented. It will be removed in June 2016. @@@DEPRECATED_2016-06@@@
-deprecated("Please use PointerTarget instead.")
-alias pointerTarget = PointerTarget;
-
-@safe unittest
-{
-    static assert( is(PointerTarget!(int*) == int));
-    static assert( is(PointerTarget!(long*) == long));
-
-    static assert(!is(PointerTarget!int));
-}
 
 /**
  * Detect whether type $(D T) is an aggregate type.
