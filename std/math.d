@@ -700,8 +700,8 @@ float sin(float x) @safe pure nothrow @nogc { return sin(cast(real)x); }
  */
 creal sin(creal z) @safe pure nothrow @nogc
 {
-    creal cs = expi(z.re);
-    creal csh = coshisinh(z.im);
+    const creal cs = expi(z.re);
+    const creal csh = coshisinh(z.im);
     return cs.im * csh.re + cs.re * csh.im * 1i;
 }
 
@@ -725,8 +725,8 @@ ireal sin(ireal y) @safe pure nothrow @nogc
  */
 creal cos(creal z) @safe pure nothrow @nogc
 {
-    creal cs = expi(z.re);
-    creal csh = coshisinh(z.im);
+    const creal cs = expi(z.re);
+    const creal csh = coshisinh(z.im);
     return cs.re * csh.re - cs.im * csh.im * 1i;
 }
 
@@ -892,7 +892,7 @@ Lret: {}
         }
 
         z = ((x - y * P1) - y * P2) - y * P3;
-        real zz = z * z;
+        const real zz = z * z;
 
         if (zz > 1.0e-20L)
             y = z + z * (zz * poly(zz, P) / poly(zz, Q));
@@ -1089,7 +1089,7 @@ real atan(real x) @safe pure nothrow @nogc
             y = 0.0;
 
         // Rational form in x^^2.
-        real z = x * x;
+        const real z = x * x;
         y = y + (poly(z, P) / poly(z, Q)) * z * x + x;
 
         return (sign) ? -y : y;
@@ -1232,7 +1232,7 @@ real cosh(real x) @safe pure nothrow @nogc
 {
     //  cosh = (exp(x)+exp(-x))/2.
     // The naive implementation works correctly.
-    real y = exp(x);
+    const real y = exp(x);
     return (y + 1.0/y) * 0.5;
 }
 
@@ -1267,7 +1267,7 @@ real sinh(real x) @safe pure nothrow @nogc
         return copysign(0.5 * exp(fabs(x)), x);
     }
 
-    real y = expm1(x);
+    const real y = expm1(x);
     return 0.5 * y / (y+1) * (y+2);
 }
 
@@ -1299,7 +1299,7 @@ real tanh(real x) @safe pure nothrow @nogc
         return copysign(1, x);
     }
 
-    real y = expm1(2*x);
+    const real y = expm1(2*x);
     return y / (y + 2);
 }
 
@@ -1324,12 +1324,12 @@ creal coshisinh(real x) @safe pure nothrow @nogc
     // See comments for cosh, sinh.
     if (fabs(x) > real.mant_dig * LN2)
     {
-        real y = exp(fabs(x));
+        const real y = exp(fabs(x));
         return y * 0.5 + 0.5i * copysign(y, x);
     }
     else
     {
-        real y = expm1(x);
+        const real y = expm1(x);
         return (y + 1.0 + 1.0/(y + 1.0)) * 0.5 + 0.5i * y / (y+1) * (y+2);
     }
 }
@@ -1544,8 +1544,8 @@ creal sqrt(creal z) @nogc @safe pure nothrow
     }
     else
     {
-        real z_re = z.re;
-        real z_im = z.im;
+        const real z_re = z.re;
+        const real z_im = z.im;
 
         x = fabs(z_re);
         y = fabs(z_im);
@@ -1680,8 +1680,8 @@ real exp(real x) @trusted pure nothrow @nogc
 
         // Rational approximation for exponential of the fractional part:
         //  e^^x = 1 + 2x P(x^^2) / (Q(x^^2) - P(x^^2))
-        real xx = x * x;
-        real px = x * poly(xx, P);
+        const real xx = x * x;
+        const real px = x * poly(xx, P);
         x = px / (poly(xx, Q) - px);
         x = 1.0 + ldexp(x, 1);
 
@@ -1931,7 +1931,7 @@ L_largenegative:
         //  exp(x) - 1 = x + 0.5 x^^2 + x^^3 P(x) / Q(x)
         real px = x * poly(x, P);
         real qx = poly(x, Q);
-        real xx = x * x;
+        const real xx = x * x;
         qx = x + (0.5 * xx + xx * px / qx);
 
         // We have qx = exp(remainder LN2) - 1, so:
@@ -2188,8 +2188,8 @@ L_was_nan:
 
         // Rational approximation:
         //  exp2(x) = 1.0 + 2x P(x^^2) / (Q(x^^2) - P(x^^2))
-        real xx = x * x;
-        real px = x * poly(xx, P);
+        const real xx = x * x;
+        const real px = x * poly(xx, P);
         x = px / (poly(xx, Q) - px);
         x = 1.0 + ldexp(x, 1);
 
@@ -2738,8 +2738,8 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            ulong msb = y.vul[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF;
-            ulong lsb = y.vul[MANTISSA_LSB];
+            const ulong msb = y.vul[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF;
+            const ulong lsb = y.vul[MANTISSA_LSB];
             if (msb)
                 return ex - F.EXPBIAS - T.mant_dig + 1 + bsr(msb) + 64;
             else
@@ -2798,7 +2798,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
         else
         {
             // subnormal
-            uint mantissa = y.vui[0] & F.MANTISSAMASK_INT;
+            const uint mantissa = y.vui[0] & F.MANTISSAMASK_INT;
             return ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1 + bsr(mantissa);
         }
     }
@@ -4142,7 +4142,7 @@ long lrint(real x) @trusted pure nothrow @nogc
             uint msb = vi[MANTISSA_MSB];
             uint lsb = vi[MANTISSA_LSB];
             int exp = ((msb >> 20) & 0x7ff) - 0x3ff;
-            int sign = msb >> 31;
+            const int sign = msb >> 31;
             msb &= 0xfffff;
             msb |= 0x100000;
 
@@ -4153,7 +4153,7 @@ long lrint(real x) @trusted pure nothrow @nogc
                 else
                 {
                     // Adjust x and check result.
-                    real j = sign ? -OF : OF;
+                    const real j = sign ? -OF : OF;
                     x = (j + x) - j;
                     msb = vi[MANTISSA_MSB];
                     lsb = vi[MANTISSA_LSB];
@@ -4191,12 +4191,12 @@ long lrint(real x) @trusted pure nothrow @nogc
 
             // Find the exponent and sign
             int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-            int sign = (vu[F.EXPPOS_SHORT] >> 15) & 1;
+            const int sign = (vu[F.EXPPOS_SHORT] >> 15) & 1;
 
             if (exp < 63)
             {
                 // Adjust x and check result.
-                real j = sign ? -OF : OF;
+                const real j = sign ? -OF : OF;
                 x = (j + x) - j;
                 exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
@@ -4758,7 +4758,7 @@ public:
             // If exceptions are not supported, we set the bit but read it back as zero
             // https://sourceware.org/ml/libc-ports/2012-06/msg00091.html
             setControlState(oldState | (divByZeroException & EXCEPTION_MASK));
-            bool result = (getControlState() & EXCEPTION_MASK) != 0;
+            immutable result = (getControlState() & EXCEPTION_MASK) != 0;
             setControlState(oldState);
             return result;
         }
@@ -5642,7 +5642,7 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
 
     // ignore implicit bit and quiet bit
 
-    ulong f = m & 0x3FFF_FF00_0000_0000L;
+    const ulong f = m & 0x3FFF_FF00_0000_0000L;
 
     ulong w = f >>> 40;
             w |= (m & 0x00FF_FFFF_F800L) << (22 - 11);
@@ -6704,7 +6704,7 @@ body
             m &= 0x7FFF_FFFF_FFFF_FFFFL;
         }
         // Now do a multi-byte right shift
-        uint c = e & 1; // carry
+        const uint c = e & 1; // carry
         e >>= 1;
         m >>>= 1;
         if (c)
@@ -7358,7 +7358,7 @@ int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
         // IBM Extended doubledouble does not follow the general
         // sign-exponent-significand layout, so has to be handled generically
 
-        int xSign = signbit(x),
+        const int xSign = signbit(x),
             ySign = signbit(y);
 
         if (xSign == 1 && ySign == 1)
