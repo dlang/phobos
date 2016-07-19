@@ -38,7 +38,7 @@ Croak)).)
 
 $(LI `ProperCompare` fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`,
 and `>=` to return correct results in all circumstances, at a slight cost in
-efficiency. For example, $(D Checked!(uint, ProperCompare)(1) > -1) is `true`,
+    efficiency. For example, $(D Checked!(uint, ProperCompare)(1) > -1) is `true`,
 which is not the case with the built-in comparison. Also, comparing numbers for
 equality with floating-point numbers only passes if the integral can be
 converted to the floating-point number precisely, so as to preserve transitivity
@@ -76,7 +76,6 @@ intercepts comparisons before the numbers involved are tested for NaN.)
 */
 module std.experimental.checkedint;
 import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
-import std.conv : unsigned;
 
 /**
 Checked integral type wraps an integral `T` and customizes its behavior with the
@@ -86,14 +85,14 @@ help of a `Hook` type. The type wrapped must be one of the predefined integrals
 struct Checked(T, Hook = Croak)
 if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
 {
-    import std.algorithm : among;
+    import std.algorithm.comparison : among;
     import std.traits : hasMember;
     import std.experimental.allocator.common : stateSize;
 
     /**
     The type of the integral subject to checking.
     */
-    alias Payload = T;
+    alias Representation = T;
 
     // state {
     static if (hasMember!(Hook, "defaultValue"))
@@ -144,13 +143,14 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     /**
     Constructor taking a value properly convertible to the underlying type. `U`
     may be either an integral that can be converted to `T` without a loss, or
-    another `Checked` instance whose payload may be in turn converted to `T`
-    without a loss.
+    another `Checked` instance whose representation may be in turn converted to
+    `T` without a loss.
     */
     this(U)(U rhs)
     if (valueConvertible!(U, T) ||
         !isIntegral!T && is(typeof(T(rhs))) ||
-        is(U == Checked!(V, W), V, W) && is(typeof(Checked(rhs.payload))))
+        is(U == Checked!(V, W), V, W) &&
+            is(typeof(Checked(rhs.representation))))
     {
         static if (isIntegral!U)
             payload = rhs;
@@ -179,15 +179,16 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
 
     If a cast to a floating-point type is requested and `Hook` defines
     `onBadCast`, the cast is verified by ensuring $(D representation == cast(T)
-    U(representation)). If that is not `true`, `hook.onBadCast!U(payload)` is
-    returned.
+    U(representation)). If that is not `true`,
+    `hook.onBadCast!U(representation)` is returned.
 
     If a cast to an integral type is requested and `Hook` defines `onBadCast`,
     the cast is verified by ensuring `representation` and $(D cast(U)
     representation) are the same arithmetic number. (Note that `int(-1)` and
     `uint(1)` are different values arithmetically although they have the same
     bitwise representation and compare equal by language rules.) If the numbers
-    are not arithmetically equal, `hook.onBadCast!U(payload)` is returned.
+    are not arithmetically equal, `hook.onBadCast!U(representation)` is
+    returned.
 
     */
     U opCast(U)()
@@ -236,7 +237,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     Compares `this` against `rhs` for equality. If `Hook` defines
     `hookOpEquals`, the function forwards to $(D
     hook.hookOpEquals(representation, rhs)). Otherwise, the result of the
-    built-in operation $(D payload == rhs) is returned.
+    built-in operation $(D representation == rhs) is returned.
 
     If `U` is an instance of `Checked`
     */
@@ -260,7 +261,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
             {
                 return hook.hookOpEquals(payload, rhs.payload);
             }
-            else static if (hasMember!(Hook1, "hookOpEquals"))
+            else static if (hasMember!(W, "hookOpEquals"))
             {
                 return rhs.hook.hookOpEquals(rhs.payload, payload);
             }
@@ -342,13 +343,13 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
             auto r = hook.hookOpUnary!op(payload);
             return Checked!(typeof(r), Hook)(r);
         }
-        else static if (!isUnsigned!T && op == "-" &&
+        else static if (isIntegral!T && !isUnsigned!T && op == "-" &&
                 hasMember!(Hook, "onOverflow"))
         {
             import core.checkedint;
-            alias R = typeof(-payload);
+            static assert(is(typeof(-payload) == typeof(payload)));
             bool overflow;
-            auto r = negs(R(payload), overflow);
+            auto r = negs(payload, overflow);
             if (overflow) r = hook.onOverflow!op(payload);
             return Checked(r);
         }
@@ -425,7 +426,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     /// ditto
     auto opBinary(string op, U, Hook1)(Checked!(U, Hook1) rhs)
     {
-        alias R = typeof(payload + rhs.payload);
+        alias R = typeof(representation + rhs.payload);
         static if (valueConvertible!(T, R) && valueConvertible!(T, R) ||
             is(Hook == Hook1))
         {
@@ -526,8 +527,11 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
             else
             {
                 static if (isUnsigned!T && !isUnsigned!R)
+                {
                     // Example: ushort += int
-                    const bad = r < 0 || r > max.payload;
+                    import std.conv : unsigned;
+                    const bad = unsigned(r) > max.payload;
+                }
                 else
                     // Some narrowing is afoot
                     static if (R.min < min.payload)
@@ -576,11 +580,11 @@ static:
     }
     typeof(~Lhs()) onOverflow(string op, Lhs)(Lhs lhs)
     {
-        assert(0);
+        assert(0, "Overflow on unary \"" ~ op ~ "\"");
     }
     typeof(Lhs() + Rhs()) onOverflow(string op, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        assert(0);
+        assert(0, "Overflow on binary \"" ~ op ~ "\"");
     }
 }
 
@@ -733,7 +737,7 @@ unittest
 unittest
 {
     auto x1 = Checked!(uint, ProperCompare)(42u);
-    assert(x1.payload < -1);
+    assert(x1.representation < -1);
     assert(x1 > -1);
 }
 
@@ -815,20 +819,34 @@ static:
     auto hookOpBinary(string x, L, R)(L lhs, R rhs)
     {
         alias Result = typeof(lhs + rhs);
-        return lhs != defaultValue!L
-            ? mixin("lhs"~x~"rhs")
-            : defaultValue!Result;
+        if (lhs != defaultValue!L)
+        {
+            bool error;
+            auto result = opChecked!x(lhs, rhs, error);
+            if (!error) return result;
+        }
+        return defaultValue!Result;
     }
     auto hookOpBinaryRight(string x, L, R)(L lhs, R rhs)
     {
         alias Result = typeof(lhs + rhs);
-        return rhs != defaultValue!R
-            ? mixin("lhs"~op~"rhs")
-            : defaultValue!Result;
+        if (rhs != defaultValue!R)
+        {
+            bool error;
+            auto result = opChecked!x(lhs, rhs, error);
+            if (!error) return result;
+        }
+        return defaultValue!Result;
     }
     void hookOpOpAssign(string x, L, R)(ref L lhs, R rhs)
     {
-        if (lhs != defaultValue!L) mixin("lhs"~x~"=rhs;");
+        if (lhs == defaultValue!L)
+            return;
+        bool error;
+        auto temp = opChecked!x(lhs, rhs, error);
+        lhs = error
+            ? defaultValue!L
+            : hookOpCast!L(temp);
     }
 }
 
@@ -836,15 +854,15 @@ static:
 unittest
 {
     auto x1 = Checked!(int, WithNaN)();
-    assert(x1.payload == int.min);
+    assert(x1.representation == int.min);
     assert(x1 != x1);
     assert(!(x1 < x1));
     assert(!(x1 > x1));
     assert(!(x1 == x1));
     ++x1;
-    assert(x1.payload == int.min);
+    assert(x1.representation == int.min);
     --x1;
-    assert(x1.payload == int.min);
+    assert(x1.representation == int.min);
     x1 = 42;
     assert(x1 == x1);
     assert(x1 <= x1);
@@ -910,16 +928,17 @@ additional work.
 
 */
 typeof(L() + R()) opChecked(string x, L, R)(const L lhs, const R rhs,
-    ref bool overflow)
+    ref bool error)
 if (isIntegral!L && isIntegral!R)
 {
     alias Result = typeof(lhs + rhs);
     import core.checkedint;
-    import std.algorithm : among;
+    import std.algorithm.comparison : among;
     static if (x.among("<<", ">>", ">>>"))
     {
         // Handle shift separately from all others. The test below covers
         // negative rhs as well.
+        import std.conv : unsigned;
         if (unsigned(rhs) > 8 * Result.sizeof) goto fail;
         return mixin("lhs"~x~"rhs");
     }
@@ -931,7 +950,7 @@ if (isIntegral!L && isIntegral!R)
     else static if (x == "^^")
     {
         // Exponentiation is weird, handle separately
-        return pow(lhs, rhs, overflow);
+        return pow(lhs, rhs, error);
     }
     else static if (valueConvertible!(L, Result) &&
             valueConvertible!(R, Result))
@@ -946,13 +965,13 @@ if (isIntegral!L && isIntegral!R)
         {
             static if (isUnsigned!Result) alias impl = addu;
             else alias impl = adds;
-            return impl(Result(lhs), Result(rhs), overflow);
+            return impl(Result(lhs), Result(rhs), error);
         }
         else static if (x == "-")
         {
             static if (isUnsigned!Result) alias impl = subu;
             else alias impl = subs;
-            return impl(Result(lhs), Result(rhs), overflow);
+            return impl(Result(lhs), Result(rhs), error);
         }
         else static if (x == "*")
         {
@@ -963,7 +982,7 @@ if (isIntegral!L && isIntegral!R)
             }
             static if (isUnsigned!Result) alias impl = mulu;
             else alias impl = muls;
-            return impl(Result(lhs), Result(rhs), overflow);
+            return impl(Result(lhs), Result(rhs), error);
         }
         else static if (x == "/" || x == "%")
         {
@@ -986,14 +1005,14 @@ if (isIntegral!L && isIntegral!R)
             static if (!isUnsigned!L)
             {
                 if (lhs < 0)
-                    return subu(Result(rhs), Result(-lhs), overflow);
+                    return subu(Result(rhs), Result(-lhs), error);
             }
             else static if (!isUnsigned!R)
             {
                 if (rhs < 0)
-                    return subu(Result(lhs), Result(-rhs), overflow);
+                    return subu(Result(lhs), Result(-rhs), error);
             }
-            return addu(Result(lhs), Result(rhs), overflow);
+            return addu(Result(lhs), Result(rhs), error);
         }
         else static if (x == "-")
         {
@@ -1004,9 +1023,9 @@ if (isIntegral!L && isIntegral!R)
             else static if (!isUnsigned!R)
             {
                 if (rhs < 0)
-                    return addu(Result(lhs), Result(-rhs), overflow);
+                    return addu(Result(lhs), Result(-rhs), error);
             }
-            return subu(Result(lhs), Result(rhs), overflow);
+            return subu(Result(lhs), Result(rhs), error);
         }
         else static if (x == "*")
         {
@@ -1018,7 +1037,7 @@ if (isIntegral!L && isIntegral!R)
             {
                 if (rhs < 0) goto fail;
             }
-            return mulu(Result(lhs), Result(rhs), overflow);
+            return mulu(Result(lhs), Result(rhs), error);
         }
         else static if (x == "/" || x == "%")
         {
@@ -1036,7 +1055,7 @@ if (isIntegral!L && isIntegral!R)
     }
     debug assert(false);
 fail:
-    overflow = true;
+    error = true;
     return 0;
 }
 
@@ -1255,7 +1274,7 @@ version(unittest) private struct CountOpBinary
     assert(x1.hook.calls == 1);
     assert(x1 << 2 == 42 << 2);
     assert(x1.hook.calls == 1);
-    assert(x1 << 42 == x1.payload << x1.payload);
+    assert(x1 << 42 == x1.representation << x1.representation);
     assert(x1.hook.calls == 2);
 
     auto x2 = Checked!(int, CountOpBinary)(42);
@@ -1343,13 +1362,13 @@ unittest
 {
     Checked!(int, void) x;
     x = 42;
-    assert(x.payload == 42);
+    assert(x.representation == 42);
     x = x;
-    assert(x.payload == 42);
+    assert(x.representation == 42);
     x = short(43);
-    assert(x.payload == 43);
+    assert(x.representation == 43);
     x = ushort(44);
-    assert(x.payload == 44);
+    assert(x.representation == 44);
 }
 
 unittest
@@ -1357,8 +1376,8 @@ unittest
     static assert(!is(typeof(Checked!(short, void)(ushort(42)))));
     static assert(!is(typeof(Checked!(int, void)(long(42)))));
     static assert(!is(typeof(Checked!(int, void)(ulong(42)))));
-    assert(Checked!(short, void)(short(42)).payload == 42);
-    assert(Checked!(int, void)(ushort(42)).payload == 42);
+    assert(Checked!(short, void)(short(42)).representation == 42);
+    assert(Checked!(int, void)(ushort(42)).representation == 42);
 }
 
 // opCast
