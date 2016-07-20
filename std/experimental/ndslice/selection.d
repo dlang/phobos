@@ -405,7 +405,6 @@ pure nothrow unittest
 /// 3D, diagonal plain
 @nogc @safe pure nothrow unittest
 {
-    import std.experimental.ndslice.iteration : dropOne;
     //  -----------
     // |  0   1  2 |
     // |  3   4  5 |
