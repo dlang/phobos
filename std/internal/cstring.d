@@ -20,9 +20,9 @@ unittest
 {
     version(Posix)
     {
-        import core.stdc.stdlib: free;
-        import core.sys.posix.stdlib: setenv;
-        import std.exception: enforce;
+        import core.stdc.stdlib : free;
+        import core.sys.posix.stdlib : setenv;
+        import std.exception : enforce;
 
         void setEnvironment(in char[] name, in char[] value)
         { enforce(setenv(name.tempCString(), value.tempCString(), 1) != -1); }
@@ -30,8 +30,8 @@ unittest
 
     version(Windows)
     {
-        import core.sys.windows.windows: SetEnvironmentVariableW;
-        import std.exception: enforce;
+        import core.sys.windows.windows : SetEnvironmentVariableW;
+        import std.exception : enforce;
 
         void setEnvironment(in char[] name, in char[] value)
         { enforce(SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW())); }
@@ -43,12 +43,12 @@ import std.range;
 
 version(unittest)
 @property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc @trusted
-if(isSomeChar!C)
+if (isSomeChar!C)
 in { assert(cstr); }
 body
 {
     size_t length = 0;
-    while(cstr[length])
+    while (cstr[length])
         ++length;
     return cstr[0 .. length];
 }
@@ -149,7 +149,7 @@ auto tempCString(To = char, From)(From str)
     {
         pragma(inline, false);  // because it's rarely called
 
-        import core.exception   : onOutOfMemoryError;
+        import core.exception : onOutOfMemoryError;
         import core.stdc.string : memcpy;
         import core.stdc.stdlib : malloc, realloc;
 

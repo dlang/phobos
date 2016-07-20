@@ -1,7 +1,7 @@
 /**
  * Implementation of the gamma and beta functions, and their integrals.
  *
- * License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Copyright: Based on the CEPHES math library, which is
  *            Copyright (C) 1994 Stephen L. Moshier (moshier@world.std.com).
  * Authors:   Stephen L. Moshier (original C code). Conversion to D by Don Clugston
@@ -102,26 +102,32 @@ real gammaStirling(real x)
 
     real w = 1.0L/x;
     real y = exp(x);
-    if ( x > 1024.0L ) {
+    if ( x > 1024.0L )
+    {
         // For large x, use rational coefficients from the analytical expansion.
         w = poly(w, LargeStirlingCoeffs);
         // Avoid overflow in pow()
         real v = pow( x, 0.5L * x - 0.25L );
         y = v * (v / y);
     }
-    else {
+    else
+    {
         w = 1.0L + w * poly( w, SmallStirlingCoeffs);
-        static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble) {
+        static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
+        {
             // Avoid overflow in pow() for 64-bit reals
-            if (x > 143.0) {
+            if (x > 143.0)
+            {
                 real v = pow( x, 0.5 * x - 0.25 );
                 y = v * (v / y);
             }
-            else {
+            else
+            {
                 y = pow( x, x - 0.5 ) / y;
             }
         }
-        else {
+        else
+        {
             y = pow( x, x - 0.5L ) / y;
         }
     }
@@ -211,10 +217,10 @@ real igammaTemmeLarge(real a, real x)
     ];
 
     // avoid nans when one of the arguments is inf:
-    if(x == real.infinity && a != real.infinity)
+    if (x == real.infinity && a != real.infinity)
         return 0;
 
-    if(x != real.infinity && a == real.infinity)
+    if (x != real.infinity && a == real.infinity)
         return 1;
 
     real sigma = (x - a) / a;
@@ -222,16 +228,16 @@ real igammaTemmeLarge(real a, real x)
 
     real y = a * phi;
     real z = sqrt(2 * phi);
-    if(x < a)
+    if (x < a)
         z = -z;
 
     real[13] workspace;
-    foreach(i; 0 .. coef.length)
+    foreach (i; 0 .. coef.length)
         workspace[i] = poly(z, coef[i]);
 
     real result = poly(1 / a, workspace);
     result *= exp(-y) / sqrt(2 * PI * a);
-    if(x < a)
+    if (x < a)
         result = -result;
 
     result += erfc(sqrt(y)) / 2;
@@ -291,12 +297,14 @@ real gamma(real x)
 
     q = fabs(x);
 
-    if ( q > 13.0L )    {
+    if ( q > 13.0L )
+    {
         // Large arguments are handled by Stirling's
         // formula. Large negative arguments are made positive using
         // the reflection formula.
 
-        if ( x < 0.0L ) {
+        if ( x < 0.0L )
+        {
             if (x < -1/real.epsilon)
             {
                 // Large negatives lose all precision
@@ -310,7 +318,8 @@ real gamma(real x)
             if ( (intpart & 1) == 0 )
                 sgngam = -1;
             z = q - p;
-            if ( z > 0.5L ) {
+            if ( z > 0.5L )
+            {
                 p += 1.0L;
                 z = q - p;
             }
@@ -318,7 +327,9 @@ real gamma(real x)
             z = fabs(z) * gammaStirling(q);
             if ( z <= PI/real.max ) return sgngam * real.infinity;
             return sgngam * PI/z;
-        } else {
+        }
+        else
+        {
             return gammaStirling(x);
         }
     }
@@ -328,30 +339,38 @@ real gamma(real x)
     // interval (2,3).
 
     z = 1.0L;
-    while ( x >= 3.0L ) {
+    while ( x >= 3.0L )
+    {
         x -= 1.0L;
         z *= x;
     }
 
-    while ( x < -0.03125L ) {
+    while ( x < -0.03125L )
+    {
         z /= x;
         x += 1.0L;
     }
 
-    if ( x <= 0.03125L ) {
+    if ( x <= 0.03125L )
+    {
         if ( x == 0.0L )
             return real.nan;
-        else {
-            if ( x < 0.0L ) {
+        else
+        {
+            if ( x < 0.0L )
+            {
                 x = -x;
                 return z / (x * poly( x, GammaSmallNegCoeffs ));
-            } else {
+            }
+            else
+            {
                 return z / (x * poly( x, GammaSmallCoeffs ));
             }
         }
     }
 
-    while ( x < 2.0L ) {
+    while ( x < 2.0L )
+    {
         z /= x;
         x += 1.0L;
     }
@@ -361,10 +380,12 @@ real gamma(real x)
     return z * poly( x, GammaNumeratorCoeffs ) / poly( x, GammaDenominatorCoeffs );
 }
 
-unittest {
+unittest
+{
     // gamma(n) = factorial(n-1) if n is an integer.
     real fact = 1.0L;
-    for (int i=1; fact<real.max; ++i) {
+    for (int i=1; fact<real.max; ++i)
+    {
         // Require exact equality for small factorials
         if (i<14) assert(gamma(i*1.0L) == fact);
         assert(feqrel(gamma(i*1.0L), fact) >= real.mant_dig-15);
@@ -429,7 +450,7 @@ real logGamma(real x)
     if (isNaN(x)) return x;
     if (fabs(x) == x.infinity) return x.infinity;
 
-    if( x < -34.0L )
+    if ( x < -34.0L )
     {
         q = -x;
         w = logGamma(q);
@@ -441,7 +462,8 @@ real logGamma(real x)
         if ( (intpart & 1) == 0 )
             sgngam = -1;
         z = q - p;
-        if ( z > 0.5L ) {
+        if ( z > 0.5L )
+        {
             p += 1.0L;
             z = p - q;
         }
@@ -453,18 +475,20 @@ real logGamma(real x)
         return z;
     }
 
-    if( x < 13.0L )
+    if ( x < 13.0L )
     {
         z = 1.0L;
         nx = floor( x +  0.5L );
         f = x - nx;
-        while ( x >= 3.0L ) {
+        while ( x >= 3.0L )
+        {
             nx -= 1.0L;
             x = nx + f;
             z *= x;
         }
-        while ( x < 2.0L ) {
-            if( fabs(x) <= 0.03125 )
+        while ( x < 2.0L )
+        {
+            if ( fabs(x) <= 0.03125 )
             {
                 if ( x == 0.0L )
                     return real.infinity;
@@ -489,7 +513,7 @@ real logGamma(real x)
     }
 
     // const real MAXLGM = 1.04848146839019521116e+4928L;
-    //  if( x > MAXLGM ) return sgngaml * real.infinity;
+    //  if ( x > MAXLGM ) return sgngaml * real.infinity;
 
     const real LOGSQRT2PI  =  0.91893853320467274178L; // log( sqrt( 2*pi ) )
 
@@ -500,7 +524,8 @@ real logGamma(real x)
     return q ;
 }
 
-unittest {
+unittest
+{
     assert(isIdentical(logGamma(NaN(0xDEF)), NaN(0xDEF)));
     assert(logGamma(real.infinity) == real.infinity);
     assert(logGamma(-1.0) == real.infinity);
@@ -531,9 +556,11 @@ unittest {
     -3.5L,  -1.30902099609375L  + 1.43111007079536392848E-5L, 1.38887092635952890151E0L
     ];
    // TODO: test derivatives as well.
-    for (int i=0; i<testpoints.length; i+=3) {
+    for (int i=0; i<testpoints.length; i+=3)
+    {
         assert( feqrel(logGamma(testpoints[i]), testpoints[i+1]) > real.mant_dig-5);
-        if (testpoints[i]<MAXGAMMA) {
+        if (testpoints[i]<MAXGAMMA)
+        {
             assert( feqrel(log(fabs(gamma(testpoints[i]))), testpoints[i+1]) > real.mant_dig-5);
         }
     }
@@ -548,11 +575,13 @@ unittest {
 
 
 private {
-static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended) {
+static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
+{
     enum real MAXLOG = 0x1.62e42fefa39ef358p+13L;  // log(real.max)
     enum real MINLOG = -0x1.6436716d5406e6d8p+13L; // log(real.min_normal*real.epsilon) = log(smallest denormal)
 }
-else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble) {
+else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
+{
     enum real MAXLOG = 0x1.62e42fefa39efp+9L;  // log(real.max)
     enum real MINLOG = -0x1.74385446d71c3p+9L; // log(real.min_normal*real.epsilon) = log(smallest denormal)
 }
@@ -591,13 +620,15 @@ real betaIncomplete(real aa, real bb, real xx )
          if ( isNaN(bb) ) return bb;
          return real.nan; // domain error
     }
-    if (!(xx>0 && xx<1.0)) {
+    if (!(xx>0 && xx<1.0))
+    {
         if (isNaN(xx)) return xx;
         if ( xx == 0.0L ) return 0.0;
         if ( xx == 1.0L )  return 1.0;
         return real.nan; // domain error
     }
-    if ( (bb * xx) <= 1.0L && xx <= 0.95L)   {
+    if ( (bb * xx) <= 1.0L && xx <= 0.95L)
+    {
         return betaDistPowerSeries(aa, bb, xx);
     }
     real x;
@@ -607,21 +638,25 @@ real betaIncomplete(real aa, real bb, real xx )
     int flag = 0;
 
     /* Reverse a and b if x is greater than the mean. */
-    if( xx > (aa/(aa+bb)) ) {
+    if ( xx > (aa/(aa+bb)) )
+    {
         // here x > aa/(aa+bb) and (bb*x>1 or x>0.95)
         flag = 1;
         a = bb;
         b = aa;
         xc = xx;
         x = 1.0L - xx;
-    } else {
+    }
+    else
+    {
         a = aa;
         b = bb;
         xc = 1.0L - xx;
         x = xx;
     }
 
-    if( flag == 1 && (b * x) <= 1.0L && x <= 0.95L) {
+    if ( flag == 1 && (b * x) <= 1.0L && x <= 0.95L)
+    {
         // here xx > aa/(aa+bb) and  ((bb*xx>1) or xx>0.95) and (aa*(1-xx)<=1) and xx > 0.05
         return 1.0 - betaDistPowerSeries(a, b, x); // note loss of precision
     }
@@ -631,9 +666,12 @@ real betaIncomplete(real aa, real bb, real xx )
     // One is for x * (a+b+2) < (a+1),
     // the other is for x * (a+b+2) > (a+1).
     real y = x * (a+b-2.0L) - (a-1.0L);
-    if( y < 0.0L ) {
+    if ( y < 0.0L )
+    {
         w = betaDistExpansion1( a, b, x );
-    } else {
+    }
+    else
+    {
         w = betaDistExpansion2( a, b, x ) / xc;
     }
 
@@ -643,13 +681,16 @@ real betaIncomplete(real aa, real bb, real xx )
 
     y = a * log(x);
     real t = b * log(xc);
-    if ( (a+b) < MAXGAMMA && fabs(y) < MAXLOG && fabs(t) < MAXLOG ) {
+    if ( (a+b) < MAXGAMMA && fabs(y) < MAXLOG && fabs(t) < MAXLOG )
+    {
         t = pow(xc,b);
         t *= pow(x,a);
         t /= a;
         t *= w;
         t *= gamma(a+b) / (gamma(a) * gamma(b));
-    } else {
+    }
+    else
+    {
         /* Resort to logarithms.  */
         y += t + logGamma(a+b) - logGamma(a) - logGamma(b);
         y += log(w/a);
@@ -658,16 +699,21 @@ real betaIncomplete(real aa, real bb, real xx )
 /+
         // There seems to be a bug in Cephes at this point.
         // Problems occur for y > MAXLOG, not y < MINLOG.
-        if( y < MINLOG ) {
+        if ( y < MINLOG )
+        {
             t = 0.0L;
-        } else {
+        }
+        else
+        {
             t = exp(y);
         }
 +/
     }
-    if( flag == 1 ) {
+    if ( flag == 1 )
+    {
 /+   // CEPHES includes this code, but I think it is erroneous.
-        if( t <= real.epsilon ) {
+        if ( t <= real.epsilon )
+        {
             t = 1.0L - real.epsilon;
         } else
 +/
@@ -692,15 +738,16 @@ real betaIncompleteInv(real aa, real bb, real yy0 )
     if (isNaN(yy0)) return yy0;
     if (isNaN(aa)) return aa;
     if (isNaN(bb)) return bb;
-    if( yy0 <= 0.0L )
+    if ( yy0 <= 0.0L )
         return 0.0L;
-    if( yy0 >= 1.0L )
+    if ( yy0 >= 1.0L )
         return 1.0L;
     x0 = 0.0L;
     yl = 0.0L;
     x1 = 1.0L;
     yh = 1.0L;
-    if( aa <= 1.0L || bb <= 1.0L ) {
+    if ( aa <= 1.0L || bb <= 1.0L )
+    {
         dithresh = 1.0e-7L;
         rflg = 0;
         a = aa;
@@ -710,7 +757,9 @@ real betaIncompleteInv(real aa, real bb, real yy0 )
         y = betaIncomplete( a, b, x );
         nflg = 0;
         goto ihalve;
-    } else {
+    }
+    else
+    {
         nflg = 0;
         dithresh = 1.0e-4L;
     }
@@ -719,13 +768,16 @@ real betaIncompleteInv(real aa, real bb, real yy0 )
 
     yp = -normalDistributionInvImpl( yy0 );
 
-    if( yy0 > 0.5L ) {
+    if ( yy0 > 0.5L )
+    {
         rflg = 1;
         a = bb;
         b = aa;
         y0 = 1.0L - yy0;
         yp = -yp;
-    } else {
+    }
+    else
+    {
         rflg = 0;
         a = aa;
         b = bb;
@@ -738,14 +790,15 @@ real betaIncompleteInv(real aa, real bb, real yy0 )
         - ( 1.0L/(2.0L * b - 1.0L) - 1.0L/(2.0L * a - 1.0L) )
         * (lgm + (5.0L/6.0L) - 2.0L/(3.0L * x));
     d = 2.0L * d;
-    if( d < MINLOG ) {
+    if ( d < MINLOG )
+    {
         x = 1.0L;
         goto under;
     }
     x = a/( a + b * exp(d) );
     y = betaIncomplete( a, b, x );
     yp = (y - y0)/y0;
-    if( fabs(yp) < 0.2 )
+    if ( fabs(yp) < 0.2 )
         goto newt;
 
     /* Resort to interval halving if not close enough. */
@@ -753,46 +806,56 @@ ihalve:
 
     dir = 0;
     di = 0.5L;
-    for( i=0; i<400; i++ ) {
-        if( i != 0 ) {
+    for ( i=0; i<400; i++ )
+    {
+        if ( i != 0 )
+        {
             x = x0  +  di * (x1 - x0);
-            if( x == 1.0L ) {
+            if ( x == 1.0L )
+            {
                 x = 1.0L - real.epsilon;
             }
-            if( x == 0.0L ) {
+            if ( x == 0.0L )
+            {
                 di = 0.5;
                 x = x0  +  di * (x1 - x0);
-                if( x == 0.0 )
+                if ( x == 0.0 )
                     goto under;
             }
             y = betaIncomplete( a, b, x );
             yp = (x1 - x0)/(x1 + x0);
-            if( fabs(yp) < dithresh )
+            if ( fabs(yp) < dithresh )
                 goto newt;
             yp = (y-y0)/y0;
-            if( fabs(yp) < dithresh )
+            if ( fabs(yp) < dithresh )
                 goto newt;
         }
-        if( y < y0 ) {
+        if ( y < y0 )
+        {
             x0 = x;
             yl = y;
-            if( dir < 0 ) {
+            if ( dir < 0 )
+            {
                 dir = 0;
                 di = 0.5L;
-            } else if( dir > 3 )
+            } else if ( dir > 3 )
                 di = 1.0L - (1.0L - di) * (1.0L - di);
-            else if( dir > 1 )
+            else if ( dir > 1 )
                 di = 0.5L * di + 0.5L;
             else
                 di = (y0 - y)/(yh - yl);
             dir += 1;
-            if( x0 > 0.95L ) {
-                if( rflg == 1 ) {
+            if ( x0 > 0.95L )
+            {
+                if ( rflg == 1 )
+                {
                     rflg = 0;
                     a = aa;
                     b = bb;
                     y0 = yy0;
-                } else {
+                }
+                else
+                {
                     rflg = 1;
                     a = bb;
                     b = aa;
@@ -806,32 +869,38 @@ ihalve:
                 yh = 1.0;
                 goto ihalve;
             }
-        } else {
+        }
+        else
+        {
             x1 = x;
-            if( rflg == 1 && x1 < real.epsilon ) {
+            if ( rflg == 1 && x1 < real.epsilon )
+            {
                 x = 0.0L;
                 goto done;
             }
             yh = y;
-            if( dir > 0 ) {
+            if ( dir > 0 )
+            {
                 dir = 0;
                 di = 0.5L;
             }
-            else if( dir < -3 )
+            else if ( dir < -3 )
                 di = di * di;
-            else if( dir < -1 )
+            else if ( dir < -1 )
                 di = 0.5L * di;
             else
                 di = (y - y0)/(yh - yl);
             dir -= 1;
             }
         }
-    if( x0 >= 1.0L ) {
+    if ( x0 >= 1.0L )
+    {
         // partial loss of precision
         x = 1.0L - real.epsilon;
         goto done;
     }
-    if( x <= 0.0L ) {
+    if ( x <= 0.0L )
+    {
 under:
         // underflow has occurred
         x = real.min_normal * real.min_normal;
@@ -840,50 +909,63 @@ under:
 
 newt:
 
-    if ( nflg ) {
+    if ( nflg )
+    {
         goto done;
     }
     nflg = 1;
     lgm = logGamma(a+b) - logGamma(a) - logGamma(b);
 
-    for( i=0; i<15; i++ ) {
+    for ( i=0; i<15; i++ )
+    {
         /* Compute the function at this point. */
         if ( i != 0 )
             y = betaIncomplete(a,b,x);
-        if ( y < yl ) {
+        if ( y < yl )
+        {
             x = x0;
             y = yl;
-        } else if( y > yh ) {
+        }
+        else if ( y > yh )
+        {
             x = x1;
             y = yh;
-        } else if( y < y0 ) {
+        }
+        else if ( y < y0 )
+        {
             x0 = x;
             yl = y;
-        } else {
+        }
+        else
+        {
             x1 = x;
             yh = y;
         }
-        if( x == 1.0L || x == 0.0L )
+        if ( x == 1.0L || x == 0.0L )
             break;
         /* Compute the derivative of the function at this point. */
         d = (a - 1.0L) * log(x) + (b - 1.0L) * log(1.0L - x) + lgm;
-        if ( d < MINLOG ) {
+        if ( d < MINLOG )
+        {
             goto done;
         }
-        if ( d > MAXLOG ) {
+        if ( d > MAXLOG )
+        {
             break;
         }
         d = exp(d);
         /* Compute the step to the next approximation of x. */
         d = (y - y0)/d;
         xt = x - d;
-        if ( xt <= x0 ) {
+        if ( xt <= x0 )
+        {
             y = (x - x0) / (x1 - x0);
             xt = x0 + 0.5L * y * (x - x0);
-            if( xt <= 0.0L )
+            if ( xt <= 0.0L )
                 break;
         }
-        if ( xt >= x1 ) {
+        if ( xt >= x1 )
+        {
             y = (x1 - x) / (x1 - x0);
             xt = x1 - 0.5L * y * (x1 - x);
             if ( xt >= 1.0L )
@@ -898,8 +980,9 @@ newt:
     goto ihalve;
 
 done:
-    if ( rflg ) {
-        if( x <= real.epsilon )
+    if ( rflg )
+    {
+        if ( x <= real.epsilon )
             x = 1.0L - real.epsilon;
         else
             x = 1.0L - x;
@@ -951,7 +1034,10 @@ unittest { // also tested by the normal distribution
         assert(betaIncompleteInv(0.01, 8e-48, 9e-26) == 1-real.epsilon);
 
         // Beware: a one-bit change in pow() changes almost all digits in the result!
-        assert(feqrel(betaIncompleteInv(0x1.b3d151fbba0eb18p+1, 1.2265e-19, 2.44859e-18), 0x1.c0110c8531d0952cp-1L) > 10);
+        assert(feqrel(
+            betaIncompleteInv(0x1.b3d151fbba0eb18p+1, 1.2265e-19, 2.44859e-18),
+            0x1.c0110c8531d0952cp-1L
+        ) > 10);
         // This next case uncovered a one-bit difference in the FYL2X instruction
         // between Intel and AMD processors. This difference gets magnified by 2^^38.
         // WolframAlpha crashes attempting to calculate this.
@@ -1020,16 +1106,19 @@ real betaDistExpansion1(real a, real b, real x )
         qkm2 = qkm1;
         qkm1 = qk;
 
-        if( qk != 0.0L )
+        if ( qk != 0.0L )
             r = pk/qk;
-        if( r != 0.0L ) {
+        if ( r != 0.0L )
+        {
             t = fabs( (ans - r)/r );
             ans = r;
-        } else {
+        }
+        else
+        {
            t = 1.0L;
         }
 
-        if( t < thresh )
+        if ( t < thresh )
             return ans;
 
         k1 += 1.0L;
@@ -1041,20 +1130,22 @@ real betaDistExpansion1(real a, real b, real x )
         k7 += 2.0L;
         k8 += 2.0L;
 
-        if( (fabs(qk) + fabs(pk)) > BETA_BIG ) {
+        if ( (fabs(qk) + fabs(pk)) > BETA_BIG )
+        {
             pkm2 *= BETA_BIGINV;
             pkm1 *= BETA_BIGINV;
             qkm2 *= BETA_BIGINV;
             qkm1 *= BETA_BIGINV;
             }
-        if( (fabs(qk) < BETA_BIGINV) || (fabs(pk) < BETA_BIGINV) ) {
+        if ( (fabs(qk) < BETA_BIGINV) || (fabs(pk) < BETA_BIGINV) )
+        {
             pkm2 *= BETA_BIG;
             pkm1 *= BETA_BIG;
             qkm2 *= BETA_BIG;
             qkm1 *= BETA_BIG;
             }
         }
-    while( ++n < 400 );
+    while ( ++n < 400 );
 // loss of precision has occurred
 // mtherr( "incbetl", PLOSS );
     return ans;
@@ -1104,15 +1195,16 @@ real betaDistExpansion2(real a, real b, real x )
         qkm2 = qkm1;
         qkm1 = qk;
 
-        if( qk != 0.0L )
+        if ( qk != 0.0L )
             r = pk/qk;
-        if( r != 0.0L ) {
+        if ( r != 0.0L )
+        {
             t = fabs( (ans - r)/r );
             ans = r;
         } else
             t = 1.0L;
 
-        if( t < thresh )
+        if ( t < thresh )
             return ans;
         k1 += 1.0L;
         k2 -= 1.0L;
@@ -1123,19 +1215,21 @@ real betaDistExpansion2(real a, real b, real x )
         k7 += 2.0L;
         k8 += 2.0L;
 
-        if( (fabs(qk) + fabs(pk)) > BETA_BIG ) {
+        if ( (fabs(qk) + fabs(pk)) > BETA_BIG )
+        {
             pkm2 *= BETA_BIGINV;
             pkm1 *= BETA_BIGINV;
             qkm2 *= BETA_BIGINV;
             qkm1 *= BETA_BIGINV;
         }
-        if( (fabs(qk) < BETA_BIGINV) || (fabs(pk) < BETA_BIGINV) ) {
+        if ( (fabs(qk) < BETA_BIGINV) || (fabs(pk) < BETA_BIGINV) )
+        {
             pkm2 *= BETA_BIG;
             pkm1 *= BETA_BIG;
             qkm2 *= BETA_BIG;
             qkm1 *= BETA_BIG;
         }
-    } while( ++n < 400 );
+    } while ( ++n < 400 );
 // loss of precision has occurred
 //mtherr( "incbetl", PLOSS );
     return ans;
@@ -1153,7 +1247,8 @@ real betaDistPowerSeries(real a, real b, real x )
     real n = 2.0L;
     real s = 0.0L;
     real z = real.epsilon * ai;
-    while( fabs(v) > z ) {
+    while ( fabs(v) > z )
+    {
         u = (n - b) * x / n;
         t *= u;
         v = t / (a + n);
@@ -1164,13 +1259,17 @@ real betaDistPowerSeries(real a, real b, real x )
     s += ai;
 
     u = a * log(x);
-    if ( (a+b) < MAXGAMMA && fabs(u) < MAXLOG ) {
+    if ( (a+b) < MAXGAMMA && fabs(u) < MAXLOG )
+    {
         t = gamma(a+b)/(gamma(a)*gamma(b));
         s = s * t * pow(x,a);
-    } else {
+    }
+    else
+    {
         t = logGamma(a+b) - logGamma(a) - logGamma(b) + u + log(s);
 
-        if( t < MINLOG ) {
+        if ( t < MINLOG )
+        {
             s = 0.0L;
         } else
             s = exp(t);
@@ -1218,7 +1317,7 @@ body {
 
     real ax = a * log(x) - x - logGamma(a);
 /+
-    if( ax < MINLOGL ) return 0; // underflow
+    if ( ax < MINLOGL ) return 0; // underflow
     //  { mtherr( "igaml", UNDERFLOW ); return( 0.0L ); }
 +/
     ax = exp(ax);
@@ -1232,7 +1331,7 @@ body {
         r += 1.0L;
         c *= x/r;
         ans += c;
-    } while( c/ans > real.epsilon );
+    } while ( c/ans > real.epsilon );
 
     return ans * ax/a;
 }
@@ -1282,11 +1381,14 @@ body {
         real yc = y * c;
         pk = pkm1 * z  -  pkm2 * yc;
         qk = qkm1 * z  -  qkm2 * yc;
-        if( qk != 0.0L ) {
+        if ( qk != 0.0L )
+        {
             real r = pk/qk;
             t = fabs( (ans - r)/r );
             ans = r;
-        } else {
+        }
+        else
+        {
             t = 1.0L;
         }
     pkm2 = pkm1;
@@ -1296,7 +1398,8 @@ body {
 
         const real BIG = 9.223372036854775808e18L;
 
-        if ( fabs(pk) > BIG ) {
+        if ( fabs(pk) > BIG )
+        {
             pkm2 /= BIG;
             pkm1 /= BIG;
             qkm2 /= BIG;
@@ -1346,16 +1449,20 @@ body {
 
     lgm = logGamma(a);
 
-    for( i=0; i<10; i++ ) {
-        if( x > x0 || x < x1 )
+    for ( i=0; i<10; i++ )
+    {
+        if ( x > x0 || x < x1 )
             goto ihalve;
         y = gammaIncompleteCompl(a,x);
         if ( y < yl || y > yh )
             goto ihalve;
-        if ( y < y0 ) {
+        if ( y < y0 )
+        {
             x0 = x;
             yl = y;
-        } else {
+        }
+        else
+        {
             x1 = x;
             yh = y;
         }
@@ -1374,13 +1481,16 @@ body {
     /* Resort to interval halving if Newton iteration did not converge. */
 ihalve:
     d = 0.0625L;
-    if ( x0 == real.max ) {
-        if( x <= 0.0L )
+    if ( x0 == real.max )
+    {
+        if ( x <= 0.0L )
             x = 1.0L;
-        while( x0 == real.max ) {
+        while ( x0 == real.max )
+        {
             x = (1.0L + d) * x;
             y = gammaIncompleteCompl( a, x );
-            if ( y < y0 ) {
+            if ( y < y0 )
+            {
                 x0 = x;
                 yl = y;
                 break;
@@ -1391,7 +1501,8 @@ ihalve:
     d = 0.5L;
     dir = 0;
 
-    for( i=0; i<400; i++ ) {
+    for ( i=0; i<400; i++ )
+    {
         x = x1  +  d * (x0 - x1);
         y = gammaIncompleteCompl( a, x );
         lgm = (x0 - x1)/(x1 + x0);
@@ -1402,10 +1513,12 @@ ihalve:
             break;
         if ( x <= 0.0L )
             break;
-        if ( y > y0 ) {
+        if ( y > y0 )
+        {
             x1 = x;
             yh = y;
-            if ( dir < 0 ) {
+            if ( dir < 0 )
+            {
                 dir = 0;
                 d = 0.5L;
             } else if ( dir > 1 )
@@ -1413,10 +1526,13 @@ ihalve:
             else
                 d = (y0 - yl)/(yh - yl);
             dir += 1;
-        } else {
+        }
+        else
+        {
             x0 = x;
             yl = y;
-            if ( dir > 0 ) {
+            if ( dir > 0 )
+            {
                 dir = 0;
                 d = 0.5L;
             } else if ( dir < -1 )
@@ -1427,13 +1543,14 @@ ihalve:
         }
     }
     /+
-    if( x == 0.0L )
+    if ( x == 0.0L )
         mtherr( "igamil", UNDERFLOW );
     +/
     return x;
 }
 
-unittest {
+unittest
+{
 //Values from Excel's GammaInv(1-p, x, 1)
 assert(fabs(gammaIncompleteComplInv(1, 0.5) - 0.693147188044814) < 0.00000005);
 assert(fabs(gammaIncompleteComplInv(12, 0.99) - 5.42818075054289) < 0.00000005);
@@ -1486,36 +1603,44 @@ real digamma(real x)
     negative = 0;
     nz = 0.0;
 
-    if ( x <= 0.0 ) {
+    if ( x <= 0.0 )
+    {
         negative = 1;
         q = x;
         p = floor(q);
-        if( p == q ) {
+        if ( p == q )
+        {
             return real.nan; // singularity.
         }
     /* Remove the zeros of tan(PI x)
      * by subtracting the nearest integer from x
      */
         nz = q - p;
-        if ( nz != 0.5 ) {
-            if ( nz > 0.5 ) {
+        if ( nz != 0.5 )
+        {
+            if ( nz > 0.5 )
+            {
                 p += 1.0;
                 nz = q - p;
             }
             nz = PI/tan(PI*nz);
-        } else {
+        }
+        else
+        {
             nz = 0.0;
         }
         x = 1.0 - x;
     }
 
     // check for small positive integer
-    if ((x <= 13.0) && (x == floor(x)) ) {
+    if ((x <= 13.0) && (x == floor(x)) )
+    {
         y = 0.0;
         n = lrint(x);
         // DAC: CEPHES bugfix. Cephes did this in reverse order, which
         // created a larger roundoff error.
-        for (i=n-1; i>0; --i) {
+        for (i=n-1; i>0; --i)
+        {
             y+=1.0L/i;
         }
         y -= EULERGAMMA;
@@ -1524,12 +1649,14 @@ real digamma(real x)
 
     s = x;
     w = 0.0;
-    while ( s < 10.0 ) {
+    while ( s < 10.0 )
+    {
         w += 1.0/s;
         s += 1.0;
     }
 
-    if ( s < 1.0e17 ) {
+    if ( s < 1.0e17 )
+    {
         z = 1.0/(s * s);
         y = z * poly(z, Bn_n);
     } else
@@ -1538,13 +1665,15 @@ real digamma(real x)
     y = log(s)  -  0.5L/s  -  y  -  w;
 
 done:
-    if ( negative ) {
+    if ( negative )
+    {
         y -= nz;
     }
     return y;
 }
 
-unittest {
+unittest
+{
     // Exact values
     assert(digamma(1.0)== -EULERGAMMA);
     assert(feqrel(digamma(0.25), -PI/2 - 3* LN2 - EULERGAMMA) >= real.mant_dig-7);
@@ -1553,9 +1682,11 @@ unittest {
     assert(feqrel(digamma(2.5), -EULERGAMMA - 2*LN2 + 2.0 + 2.0L/3) >= real.mant_dig-9);
     assert(isIdentical(digamma(NaN(0xABC)), NaN(0xABC)));
 
-    for (int k=1; k<40; ++k) {
+    for (int k=1; k<40; ++k)
+    {
         real y=0;
-        for (int u=k; u>=1; --u) {
+        for (int u=k; u>=1; --u)
+        {
             y += 1.0L/u;
         }
         assert(feqrel(digamma(k+1.0), -EULERGAMMA + y) >= real.mant_dig-2);
@@ -1584,13 +1715,15 @@ real logmdigamma(real x)
 
     real s = x;
     real w = 0.0;
-    while ( s < 10.0 ) {
+    while ( s < 10.0 )
+    {
         w += 1.0/s;
         s += 1.0;
     }
 
     real y;
-    if ( s < 1.0e17 ) {
+    if ( s < 1.0e17 )
+    {
         immutable real z = 1.0/(s * s);
         y = z * poly(z, Bn_n);
     } else
@@ -1599,13 +1732,14 @@ real logmdigamma(real x)
     return x == s ? y + 0.5L/s : (log(x/s) + 0.5L/s + y + w);
 }
 
-unittest {
+unittest
+{
     assert(logmdigamma(-5.0).isNaN());
     assert(isIdentical(logmdigamma(NaN(0xABC)), NaN(0xABC)));
     assert(logmdigamma(0.0) == real.infinity);
-    for(auto x = 0.01; x < 1.0; x += 0.1)
+    for (auto x = 0.01; x < 1.0; x += 0.1)
         assert(approxEqual(digamma(x), log(x) - logmdigamma(x)));
-    for(auto x = 1.0; x < 15.0; x += 1.0)
+    for (auto x = 1.0; x < 15.0; x += 1.0)
         assert(approxEqual(digamma(x), log(x) - logmdigamma(x)));
 }
 
@@ -1622,7 +1756,7 @@ unittest {
  */
 real logmdigammaInverse(real y)
 {
-    import std.numeric: findRoot;
+    import std.numeric : findRoot;
     // FIXME: should be returned back to enum.
     // Fix requires CTFEable `log` on non-x86 targets (check both LDC and GDC).
     immutable maxY = logmdigamma(real.min_normal);
@@ -1651,7 +1785,8 @@ real logmdigammaInverse(real y)
     return y; //NaN
 }
 
-unittest {
+unittest
+{
     import std.typecons;
     //WolframAlpha, 22.02.2015
     immutable Tuple!(real, real)[5] testData = [

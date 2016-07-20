@@ -47,7 +47,8 @@ alias multibyteSub = multibyteAddSub!('-');
 
 
 private import core.cpuid;
-private import std.traits : Unqual;
+private import std.traits;
+private import std.range.primitives;
 public import std.ascii : LetterCase;
 
 shared static this()
@@ -75,7 +76,7 @@ else static if (BigDigit.sizeof == long.sizeof)
 else static assert(0, "Unsupported BigDigit size");
 
 private import std.exception : assumeUnique;
-private import std.traits:isIntegral;
+private import std.traits : isIntegral;
 enum BigDigitBits = BigDigit.sizeof*8;
 template maxBigDigits(T) if (isIntegral!T)
 {
@@ -211,7 +212,7 @@ public:
     }
 
     ///
-    int opCmp(Tulong)(Tulong y) pure nothrow @nogc const @safe if(is (Tulong == ulong))
+    int opCmp(Tulong)(Tulong y) pure nothrow @nogc const @safe if (is (Tulong == ulong))
     {
         if (data.length > maxBigDigits!Tulong)
             return 1;
@@ -344,36 +345,65 @@ public:
         return buff[z-frontExtraBytes..$];
     }
 
-    // return false if invalid character found
-    bool fromHexString(const(char)[] s) pure nothrow @safe
+    /**
+     * Convert to an octal string.
+     */
+    char[] toOctalString() const
     {
+        auto predictLength = 1 + data.length*BigDigitBits / 3;
+        char[] buff = new char[predictLength];
+        size_t firstNonZero = biguintToOctal(buff, data);
+        return buff[firstNonZero .. $];
+    }
+
+    // return false if invalid character found
+    bool fromHexString(Range)(Range s) if (
+        isBidirectionalRange!Range && isSomeChar!(ElementType!Range))
+    {
+        import std.range : walkLength;
+
         //Strip leading zeros
-        int firstNonZero = 0;
-        while ((firstNonZero < s.length - 1) &&
-            (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
+        while (!s.empty && s.front == '0')
+            s.popFront;
+
+        if (s.empty)
         {
-                ++firstNonZero;
+            data = ZERO;
+            return true;
         }
-        auto len = (s.length - firstNonZero + 15)/4;
-        auto tmp = new BigDigit[len+1];
-        uint part = 0;
-        uint sofar = 0;
-        uint partcount = 0;
-        assert(s.length>0);
-        for (ptrdiff_t i = s.length - 1; i>=firstNonZero; --i)
+
+        auto len = (s.save.walkLength + 15) / 4;
+        auto tmp = new BigDigit[len + 1];
+        uint part, sofar, partcount;
+
+        foreach_reverse (character; s)
         {
-            assert(i>=0);
-            char c = s[i];
-            if (s[i]=='_') continue;
-            uint x = (c>='0' && c<='9') ? c - '0'
-                   : (c>='A' && c<='F') ? c - 'A' + 10
-                   : (c>='a' && c<='f') ? c - 'a' + 10
-                   : 100;
-            if (x==100) return false;
+            if (character == '_')
+                continue;
+
+            uint x;
+            if (character >= '0' && character <= '9')
+            {
+                x = character - '0';
+            }
+            else if (character >= 'A' && character <= 'F')
+            {
+                x = character - 'A' + 10;
+            }
+            else if (character >= 'a' && character <= 'f')
+            {
+                x = character - 'a' + 10;
+            }
+            else
+            {
+                return false;
+            }
+
             part >>= 4;
-            part |= (x<<(32-4));
+            part |= (x << (32 - 4));
             ++partcount;
-            if (partcount==8)
+
+            if (partcount == 8)
             {
                 tmp[sofar] = part;
                 ++sofar;
@@ -396,25 +426,26 @@ public:
     }
 
     // return true if OK; false if erroneous characters found
-    // FIXME: actually throws `ConvException` on error.
-    bool fromDecimalString(const(char)[] s) pure @trusted
+    bool fromDecimalString(Range)(Range s) if (
+        isForwardRange!Range && isSomeChar!(ElementType!Range))
     {
-        //Strip leading zeros
-        int firstNonZero = 0;
-        while ((firstNonZero < s.length) &&
-            (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
+        import std.range : walkLength;
+
+        while (!s.empty && s.front == '0')
         {
-                ++firstNonZero;
+            s.popFront;
         }
-        if (firstNonZero == s.length && s.length >= 1)
+
+        if (s.empty)
         {
             data = ZERO;
             return true;
         }
-        auto predictlength = (18*2 + 2*(s.length-firstNonZero)) / 19;
-        auto tmp = new BigDigit[predictlength];
 
-        uint hi = biguintFromDecimal(tmp, s[firstNonZero..$]);
+        auto predict_length = (18 * 2 + 2 * s.save.walkLength) / 19;
+        auto tmp = new BigDigit[predict_length];
+
+        uint hi = biguintFromDecimal(tmp, s);
         tmp.length = hi;
 
         data = trustedAssumeUnique(tmp);
@@ -731,7 +762,7 @@ public:
             ++evenbits;
         }
 
-        if ((x.data.length- firstnonzero == 2))
+        if (x.data.length- firstnonzero == 2)
         {
             // Check for a single digit straddling a digit boundary
             BigDigit x1 = x.data[firstnonzero+1];
@@ -836,14 +867,14 @@ public:
             BigDigit [] r2;
 
             int shifts = 63; // num bits in a long
-            while(!(y & 0x8000_0000_0000_0000L))
+            while (!(y & 0x8000_0000_0000_0000L))
             {
                 y <<= 1;
                 --shifts;
             }
             y <<=1;
 
-            while(y!=0)
+            while (y!=0)
             {
                 // For each bit of y: Set r1 =  r1 * r1
                 // If the bit is 1, set r1 = r1 * x
@@ -902,7 +933,7 @@ public:
                 r1[$ - 1] = carry;
             }
         }
-        while(r1[$ - 1]==0)
+        while (r1[$ - 1]==0)
         {
             r1=r1[0 .. $ - 1];
         }
@@ -935,7 +966,7 @@ public:
 inout(BigDigit) [] removeLeadingZeros(inout(BigDigit) [] x) pure nothrow @safe
 {
     size_t k = x.length;
-    while(k>1 && x[k - 1]==0) --k;
+    while (k>1 && x[k - 1]==0) --k;
     return x[0 .. k];
 }
 
@@ -1092,7 +1123,8 @@ T intpow(T)(T x, ulong n) pure nothrow @safe
 
     default:
         p = 1;
-        while (1){
+        while (1)
+        {
             if (n & 1)
                 p *= x;
             n >>= 1;
@@ -1549,6 +1581,70 @@ char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0,
     return buff;
 }
 
+/**
+ * Convert a big uint into an octal string.
+ *
+ * Params:
+ *  buff = The destination buffer for the octal string. Must be large enough to
+ *      store the result, including leading zeroes, which is
+ *      ceil(data.length * BigDigitBits / 3) characters.
+ *      The buffer is filled from back to front, starting from `buff[$-1]`.
+ *  data = The biguint to be converted.
+ *
+ * Returns: The index of the leading non-zero digit in `buff`. Will be
+ * `buff.length - 1` if the entire big uint is zero.
+ */
+size_t biguintToOctal(char[] buff, const(BigDigit)[] data)
+    pure nothrow @safe @nogc
+{
+    ubyte carry = 0;
+    int shift = 0;
+    size_t penPos = buff.length - 1;
+    size_t lastNonZero = buff.length - 1;
+
+    pragma(inline) void output(uint digit) @nogc nothrow
+    {
+        if (digit != 0)
+            lastNonZero = penPos;
+        buff[penPos--] = cast(char)('0' + digit);
+    }
+
+    foreach (bigdigit; data)
+    {
+        if (shift < 0)
+        {
+            // Some bits were carried over from previous word.
+            assert(shift > -3);
+            output(((bigdigit << -shift) | carry) & 0b111);
+            shift += 3;
+            assert(shift > 0);
+        }
+
+        while (shift <= BigDigitBits - 3)
+        {
+            output((bigdigit >>> shift) & 0b111);
+            shift += 3;
+        }
+
+        if (shift < BigDigitBits)
+        {
+            // Some bits need to be carried forward.
+            carry = (bigdigit >>> shift) & 0b11;
+        }
+        shift -= BigDigitBits;
+        assert(shift >= -2 && shift <= 0);
+    }
+
+    if (shift < 0)
+    {
+        // Last word had bits that haven't been output yet.
+        assert(shift > -3);
+        output(carry);
+    }
+
+    return lastNonZero;
+}
+
 /** Convert a big uint into a decimal string.
  *
  * Params:
@@ -1567,7 +1663,7 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data) pure nothrow
     // Might be better to divide by (10^38/2^32) since that gives 38 digits for
     // the price of 3 divisions and a shr; this version only gives 27 digits
     // for 3 divisions.
-    while(data.length>1)
+    while (data.length>1)
     {
         uint rem = multibyteDivAssign(data, 10_0000_0000, 0);
         itoaZeroPadded(buff[sofar-9 .. sofar], rem);
@@ -1580,7 +1676,7 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data) pure nothrow
     itoaZeroPadded(buff[sofar-10 .. sofar], data[0]);
     sofar -= 10;
     // and strip off the leading zeros
-    while(sofar!= buff.length-1 && buff[sofar] == '0')
+    while (sofar!= buff.length-1 && buff[sofar] == '0')
         sofar++;
     return sofar;
 }
@@ -1598,10 +1694,14 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data) pure nothrow
  * Returns:
  *    the highest index of data which was used.
  */
-int biguintFromDecimal(BigDigit [] data, const(char)[] s) pure
+int biguintFromDecimal(Range)(BigDigit[] data, Range s) if (
+    isInputRange!Range &&
+    isSomeChar!(ElementType!Range) &&
+    !isInfinite!Range)
 in
 {
-    assert((data.length >= 2) || (data.length == 1 && s.length == 1));
+    static if (hasLength!Range)
+        assert((data.length >= 2) || (data.length == 1 && s.length == 1));
 }
 body
 {
@@ -1624,14 +1724,15 @@ body
     if (data.length > 1)
         data[1] = 0;
 
-    for (int i= (s[0]=='-' || s[0]=='+')? 1 : 0; i<s.length; ++i)
+    foreach (character; s)
     {
-        if (s[i] == '_')
+        if (character == '_')
             continue;
-        if (s[i] < '0' || s[i] > '9')
+
+        if (character < '0' || character > '9')
             throw new ConvException("invalid digit");
         x *= 10;
-        x += s[i] - '0';
+        x += character - '0';
         ++lo;
         if (lo == 9)
         {
@@ -1849,7 +1950,7 @@ bool less(const(BigDigit)[] x, const(BigDigit)[] y) pure nothrow
 {
     assert(x.length >= y.length);
     auto k = x.length-1;
-    while(x[k]==0 && k>=y.length)
+    while (x[k]==0 && k>=y.length)
         --k;
     if (k>=y.length)
         return false;
@@ -2185,7 +2286,7 @@ void toHexZeroPadded(char[] output, uint value,
     ptrdiff_t x = output.length - 1;
     static immutable string upperHexDigits = "0123456789ABCDEF";
     static immutable string lowerHexDigits = "0123456789abcdef";
-    for( ; x>=0; --x)
+    for ( ; x>=0; --x)
     {
         if (letterCase == LetterCase.upper)
         {
@@ -2352,7 +2453,7 @@ void adjustRemainder(BigDigit[] quot, BigDigit[] rem, const(BigDigit)[] v,
         carry = scratch[$-1] + subAssignSimple(rem, scratch[0..$-1]);
     else
         carry = subAssignSimple(rem, scratch);
-    while(carry)
+    while (carry)
     {
         multibyteIncrementAssign!('-')(quot, 1); // quot--
         carry -= multibyteAdd(rem, rem, v, 0);
@@ -2428,4 +2529,42 @@ unittest
     r = b[0..a.length];
     assert(r[] == r1[]);
     assert(q[] == q1[]);
+}
+
+// biguintToOctal
+unittest
+{
+    enum bufSize = 5 * BigDigitBits / 3 + 1;
+    auto buf = new char[bufSize];
+    size_t i;
+    BigDigit[] data = [ 342391 ];
+
+    // Basic functionality with single word
+    i = biguintToOctal(buf, data);
+    assert(i == bufSize - 7 && buf[i .. $] == "1234567");
+
+    // Test carrying bits between words
+    data = [ 0x77053977, 0x39770539, 0x00000005 ];
+    i = biguintToOctal(buf, data);
+    assert(i == bufSize - 23 && buf[i .. $] == "12345670123456701234567");
+
+    // Test carried bits in the last word
+    data = [ 0x80000000 ];
+    i = biguintToOctal(buf, data);
+    assert(buf[i .. $] == "20000000000");
+
+    // Test boundary between 3rd and 4th word where the number of bits is
+    // divisible by 3 and no bits should be carried.
+    //
+    // The 0xC0000000's are for "poisoning" the carry to be non-zero when the
+    // rollover happens, so that if any bugs happen in wrongly adding the carry
+    // to the next word, non-zero bits will show up in the output.
+    data = [ 0xC0000000, 0xC0000000, 0xC0000000, 0x00000010 ];
+    i = biguintToOctal(buf, data);
+    assert(buf[i .. $] == "2060000000001400000000030000000000");
+
+    // Boundary case: 0
+    data = [ 0 ];
+    i = biguintToOctal(buf, data);
+    assert(buf[i .. $] == "0");
 }

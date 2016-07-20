@@ -5,8 +5,8 @@
  * tests on them.  Then, it prints out the arguments passed to main().
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  *
  *          Copyright Digital Mars 2000 - 2009.
  * Distributed under the Boost Software License, Version 1.0.

@@ -4,92 +4,91 @@
     $(P The $(D std.uni) module provides an implementation
     of fundamental Unicode algorithms and data structures.
     This doesn't include UTF encoding and decoding primitives,
-    see $(XREF _utf, decode) and $(XREF _utf, encode) in std.utf
+    see $(REF decode, std,_utf) and $(REF encode, std,_utf) in std.utf
     for this functionality. )
 
     $(P All primitives listed operate on Unicode characters and
-    sets of characters. For functions which operate on ASCII characters
-    and ignore Unicode $(CHARACTERS), see $(LINK2 std_ascii.html, std.ascii).
-    For definitions of Unicode $(CHARACTER), $(CODEPOINT) and other terms
-    used throughout this module see the $(S_LINK Terminology, terminology) section
-    below.
+        sets of characters. For functions which operate on ASCII characters
+        and ignore Unicode $(CHARACTERS), see $(MREF std, ascii).
+        For definitions of Unicode $(CHARACTER), $(CODEPOINT) and other terms
+        used throughout this module see the $(S_LINK Terminology, terminology) section
+        below.
     )
-
     $(P The focus of this module is the core needs of developing Unicode-aware
-    applications. To that effect it provides the following optimized primitives:
+        applications. To that effect it provides the following optimized primitives:
     )
     $(UL
-    $(LI Character classification by category and common properties:
-        $(LREF isAlpha), $(LREF isWhite) and others.
-    )
-    $(LI
-        Case-insensitive string comparison ($(LREF sicmp), $(LREF icmp)).
-    )
-    $(LI
-        Converting text to any of the four normalization forms via $(LREF normalize).
-    )
-    $(LI
-        Decoding ($(LREF decodeGrapheme))  and iteration ($(LREF byGrapheme), $(LREF graphemeStride))
-        by user-perceived characters, that is by $(LREF Grapheme) clusters.
-    )
-    $(LI
-        Decomposing and composing of individual character(s) according to canonical
-        or compatibility rules, see $(LREF compose) and $(LREF decompose),
-        including the specific version for Hangul syllables $(LREF composeJamo)
-        and $(LREF decomposeHangul).
-    )
+        $(LI Character classification by category and common properties:
+            $(LREF isAlpha), $(LREF isWhite) and others.
+        )
+        $(LI
+            Case-insensitive string comparison ($(LREF sicmp), $(LREF icmp)).
+        )
+        $(LI
+            Converting text to any of the four normalization forms via $(LREF normalize).
+        )
+        $(LI
+            Decoding ($(LREF decodeGrapheme))  and iteration ($(LREF byGrapheme), $(LREF graphemeStride))
+            by user-perceived characters, that is by $(LREF Grapheme) clusters.
+        )
+        $(LI
+            Decomposing and composing of individual character(s) according to canonical
+            or compatibility rules, see $(LREF compose) and $(LREF decompose),
+            including the specific version for Hangul syllables $(LREF composeJamo)
+            and $(LREF decomposeHangul).
+        )
     )
     $(P It's recognized that an application may need further enhancements
-    and extensions, such as less commonly known algorithms,
-    or tailoring existing ones for region specific needs. To help users
-    with building any extra functionality beyond the core primitives,
-    the module provides:
+        and extensions, such as less commonly known algorithms,
+        or tailoring existing ones for region specific needs. To help users
+        with building any extra functionality beyond the core primitives,
+        the module provides:
     )
     $(UL
-    $(LI
-        $(LREF CodepointSet), a type for easy manipulation of sets of characters.
-        Besides the typical set algebra it provides an unusual feature:
-        a D source code generator for detection of $(CODEPOINTS) in this set.
-        This is a boon for meta-programming parser frameworks,
-        and is used internally to power classification in small
-        sets like $(LREF isWhite).
-    )
-    $(LI
-        A way to construct optimal packed multi-stage tables also known as a
-        special case of $(LUCKY Trie).
-        The functions $(LREF codepointTrie), $(LREF codepointSetTrie)
-        construct custom tries that map dchar to value.
-        The end result is a fast and predictable $(BIGOH 1) lookup that powers
-        functions like $(LREF isAlpha) and $(LREF combiningClass),
-        but for user-defined data sets.
-    )
-    $(LI
-        A useful technique for Unicode-aware parsers that perform
-        character classification of encoded $(CODEPOINTS)
-        is to avoid unnecassary decoding at all costs.
-        $(LREF utfMatcher) provides an improvement over the usual workflow
-        of decode-classify-process, combining the decoding and classification
-        steps. By extracting necessary bits directly from encoded
-        $(S_LINK Code unit, code units) matchers achieve
-        significant performance improvements. See $(LREF MatcherConcept) for
-        the common interface of UTF matchers.
-    )
-    $(LI
-        Generally useful building blocks for customized normalization:
-        $(LREF combiningClass) for querying combining class
-        and $(LREF allowedIn) for testing the Quick_Check
-        property of a given normalization form.
-    )
-    $(LI
-        Access to a large selection of commonly used sets of $(CODEPOINTS).
-        $(S_LINK Unicode properties, Supported sets) include Script,
-        Block and General Category. The exact contents of a set can be
-        observed in the CLDR utility, on the
-        $(WEB www.unicode.org/cldr/utility/properties.jsp, property index) page
-        of the Unicode website.
-        See $(LREF unicode) for easy and (optionally) compile-time checked set
-        queries.
-    )
+        $(LI
+            $(LREF CodepointSet), a type for easy manipulation of sets of characters.
+            Besides the typical set algebra it provides an unusual feature:
+            a D source code generator for detection of $(CODEPOINTS) in this set.
+            This is a boon for meta-programming parser frameworks,
+            and is used internally to power classification in small
+            sets like $(LREF isWhite).
+        )
+        $(LI
+            A way to construct optimal packed multi-stage tables also known as a
+            special case of $(LUCKY Trie).
+            The functions $(LREF codepointTrie), $(LREF codepointSetTrie)
+            construct custom tries that map dchar to value.
+            The end result is a fast and predictable $(BIGOH 1) lookup that powers
+            functions like $(LREF isAlpha) and $(LREF combiningClass),
+            but for user-defined data sets.
+        )
+        $(LI
+            A useful technique for Unicode-aware parsers that perform
+            character classification of encoded $(CODEPOINTS)
+            is to avoid unnecassary decoding at all costs.
+            $(LREF utfMatcher) provides an improvement over the usual workflow
+            of decode-classify-process, combining the decoding and classification
+            steps. By extracting necessary bits directly from encoded
+            $(S_LINK Code unit, code units) matchers achieve
+            significant performance improvements. See $(LREF MatcherConcept) for
+            the common interface of UTF matchers.
+        )
+        $(LI
+            Generally useful building blocks for customized normalization:
+            $(LREF combiningClass) for querying combining class
+            and $(LREF allowedIn) for testing the Quick_Check
+            property of a given normalization form.
+        )
+        $(LI
+            Access to a large selection of commonly used sets of $(CODEPOINTS).
+            $(S_LINK Unicode properties, Supported sets) include Script,
+            Block and General Category. The exact contents of a set can be
+            observed in the CLDR utility, on the
+            $(HTTP www.unicode.org/cldr/utility/properties.jsp, property index) page
+            of the Unicode website.
+            See $(LREF unicode) for easy and (optionally) compile-time checked set
+            queries.
+        )
     )
     $(SECTION Synopsis)
     ---
@@ -151,84 +150,78 @@
         assert(normalize!NFKD("2¹⁰") == "210");
     }
     ---
-    $(SECTION Terminology)
+    $(SECTION Terminology
+    )
     $(P The following is a list of important Unicode notions
     and definitions. Any conventions used specifically in this
     module alone are marked as such. The descriptions are based on the formal
-    definition as found in $(WEB www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
+    definition as found in $(HTTP www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
     chapter three of The Unicode Standard Core Specification.)
     )
-
     $(P $(DEF Abstract character) A unit of information used for the organization,
-    control, or representation of textual data.
-    Note that:
+        control, or representation of textual data.
+        Note that:
         $(UL
-        $(LI When representing data, the nature of that data
-        is generally symbolic as opposed to some other
-        kind of data (for example, visual).)
-
-        $(LI An abstract character has no concrete form
-        and should not be confused with a $(S_LINK Glyph, glyph).)
-
-        $(LI An abstract character does not necessarily
-        correspond to what a user thinks of as a “character”
-         and should not be confused with a $(LREF Grapheme).)
-
-        $(LI The abstract characters encoded (see Encoded character)
-        are known as Unicode abstract characters.)
-
-        $(LI Abstract characters not directly
-        encoded by the Unicode Standard can often be
-        represented by the use of combining character sequences.)
+            $(LI When representing data, the nature of that data
+                is generally symbolic as opposed to some other
+                kind of data (for example, visual).
+            )
+             $(LI An abstract character has no concrete form
+                and should not be confused with a $(S_LINK Glyph, glyph).
+            )
+            $(LI An abstract character does not necessarily
+                correspond to what a user thinks of as a “character”
+                and should not be confused with a $(LREF Grapheme).
+            )
+            $(LI The abstract characters encoded (see Encoded character)
+                are known as Unicode abstract characters.
+            )
+            $(LI Abstract characters not directly
+                encoded by the Unicode Standard can often be
+                represented by the use of combining character sequences.
+            )
         )
     )
-
     $(P $(DEF Canonical decomposition)
-    The decomposition of a character or character sequence
-    that results from recursively applying the canonical
-    mappings found in the Unicode Character Database
-    and these described in Conjoining Jamo Behavior
-    (section 12 of
-    $(WEB www.unicode.org/uni2book/ch03.pdf, Unicode Conformance)).
+        The decomposition of a character or character sequence
+        that results from recursively applying the canonical
+        mappings found in the Unicode Character Database
+        and these described in Conjoining Jamo Behavior
+        (section 12 of
+        $(HTTP www.unicode.org/uni2book/ch03.pdf, Unicode Conformance)).
     )
-
     $(P $(DEF Canonical composition)
-    The precise definition of the Canonical composition
-    is the algorithm as specified in $(WEB www.unicode.org/uni2book/ch03.pdf,
-    Unicode Conformance) section 11.
-    Informally it's the process that does the reverse of the canonical
-    decomposition with the addition of certain rules
-    that e.g. prevent legacy characters from appearing in the composed result.
+        The precise definition of the Canonical composition
+        is the algorithm as specified in $(HTTP www.unicode.org/uni2book/ch03.pdf,
+        Unicode Conformance) section 11.
+        Informally it's the process that does the reverse of the canonical
+        decomposition with the addition of certain rules
+        that e.g. prevent legacy characters from appearing in the composed result.
     )
-
     $(P $(DEF Canonical equivalent)
-    Two character sequences are said to be canonical equivalents if
-    their full canonical decompositions are identical.
+        Two character sequences are said to be canonical equivalents if
+        their full canonical decompositions are identical.
     )
-
     $(P $(DEF Character) Typically differs by context.
-    For the purpose of this documentation the term $(I character)
-    implies $(I encoded character), that is, a code point having
-    an assigned abstract character (a symbolic meaning).
+        For the purpose of this documentation the term $(I character)
+        implies $(I encoded character), that is, a code point having
+        an assigned abstract character (a symbolic meaning).
     )
-
     $(P $(DEF Code point) Any value in the Unicode codespace;
-    that is, the range of integers from 0 to 10FFFF (hex).
-    Not all code points are assigned to encoded characters.
+        that is, the range of integers from 0 to 10FFFF (hex).
+        Not all code points are assigned to encoded characters.
     )
-
     $(P $(DEF Code unit) The minimal bit combination that can represent
-    a unit of encoded text for processing or interchange.
-    Depending on the encoding this could be:
-    8-bit code units in the UTF-8 ($(D char)),
-    16-bit code units in the UTF-16 ($(D wchar)),
-    and 32-bit code units in the UTF-32 ($(D dchar)).
-    $(I Note that in UTF-32, a code unit is a code point
-    and is represented by the D $(D dchar) type.)
+        a unit of encoded text for processing or interchange.
+        Depending on the encoding this could be:
+        8-bit code units in the UTF-8 ($(D char)),
+        16-bit code units in the UTF-16 ($(D wchar)),
+        and 32-bit code units in the UTF-32 ($(D dchar)).
+        $(I Note that in UTF-32, a code unit is a code point
+        and is represented by the D $(D dchar) type.)
     )
-
     $(P $(DEF Combining character) A character with the General Category
-     of Combining Mark(M).
+        of Combining Mark(M).
         $(UL
             $(LI All characters with non-zero canonical combining class
             are combining characters, but the reverse is not the case:
@@ -241,41 +234,34 @@
             )
         )
     )
-
     $(P $(DEF Combining class)
         A numerical value used by the Unicode Canonical Ordering Algorithm
         to determine which sequences of combining marks are to be
         considered canonically equivalent and  which are not.
     )
-
     $(P $(DEF Compatibility decomposition)
-    The decomposition of a character or character sequence that results
-    from recursively applying both the compatibility mappings and
-    the canonical mappings found in the Unicode Character Database, and those
-    described in Conjoining Jamo Behavior no characters
-    can be further decomposed.
+        The decomposition of a character or character sequence that results
+        from recursively applying both the compatibility mappings and
+        the canonical mappings found in the Unicode Character Database, and those
+        described in Conjoining Jamo Behavior no characters
+        can be further decomposed.
     )
-
     $(P $(DEF Compatibility equivalent)
-    Two character sequences are said to be compatibility
-    equivalents if their full compatibility decompositions are identical.
+        Two character sequences are said to be compatibility
+        equivalents if their full compatibility decompositions are identical.
     )
-
     $(P $(DEF Encoded character) An association (or mapping)
-    between an abstract character and a code point.
+        between an abstract character and a code point.
     )
-
     $(P $(DEF Glyph) The actual, concrete image of a glyph representation
-    having been rasterized or otherwise imaged onto some display surface.
+        having been rasterized or otherwise imaged onto some display surface.
     )
-
     $(P $(DEF Grapheme base) A character with the property
-     Grapheme_Base, or any standard Korean syllable block.
+        Grapheme_Base, or any standard Korean syllable block.
     )
-
     $(P $(DEF Grapheme cluster) Defined as the text between
         grapheme boundaries  as specified by Unicode Standard Annex #29,
-        $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation).
+        $(HTTP www.unicode.org/reports/tr29/, Unicode text segmentation).
         Important general properties of a grapheme:
         $(UL
             $(LI The grapheme cluster represents a horizontally segmentable
@@ -301,83 +287,73 @@
         as defined in the aforementioned standard annex.
         )
     )
-
-
     $(P $(DEF Nonspacing mark) A combining character with the
         General Category of Nonspacing Mark (Mn) or Enclosing Mark (Me).
     )
-
-    $(P $(DEF Spacing mark) A combining character that is not a nonspacing mark.)
-
-
-    $(SECTION Normalization)
-
+    $(P $(DEF Spacing mark) A combining character that is not a nonspacing mark.
+    )
+    $(SECTION Normalization
+    )
     $(P The concepts of $(S_LINK Canonical equivalent, canonical equivalent)
-     or $(S_LINK Compatibility equivalent, compatibility equivalent)
-    characters in the Unicode Standard make it necessary to have a full, formal
-    definition of equivalence for Unicode strings.
-    String equivalence is determined by a process called normalization,
-    whereby strings are converted into forms which are compared
-    directly for identity. This is the primary goal of the normalization process,
-    see the function $(LREF normalize) to convert into any of
-    the four defined forms.
+        or $(S_LINK Compatibility equivalent, compatibility equivalent)
+        characters in the Unicode Standard make it necessary to have a full, formal
+        definition of equivalence for Unicode strings.
+        String equivalence is determined by a process called normalization,
+        whereby strings are converted into forms which are compared
+        directly for identity. This is the primary goal of the normalization process,
+        see the function $(LREF normalize) to convert into any of
+        the four defined forms.
     )
-
     $(P A very important attribute of the Unicode Normalization Forms
-    is that they must remain stable between versions of the Unicode Standard.
-    A Unicode string normalized to a particular Unicode Normalization Form
-    in one version of the standard is guaranteed to remain in that Normalization
-    Form for implementations of future versions of the standard.
+        is that they must remain stable between versions of the Unicode Standard.
+        A Unicode string normalized to a particular Unicode Normalization Form
+        in one version of the standard is guaranteed to remain in that Normalization
+        Form for implementations of future versions of the standard.
     )
-
     $(P The Unicode Standard specifies four normalization forms.
-    Informally, two of these forms are defined by maximal decomposition
-    of equivalent sequences, and two of these forms are defined
-    by maximal $(I composition) of equivalent sequences.
-        $(UL
-        $(LI Normalization Form D (NFD): The $(S_LINK Canonical decomposition,
-            canonical decomposition) of a character sequence.)
-        $(LI Normalization Form KD (NFKD): The $(S_LINK Compatibility decomposition,
-            compatibility decomposition) of a character sequence.)
-        $(LI Normalization Form C (NFC): The canonical composition of the
-            $(S_LINK Canonical decomposition, canonical decomposition)
-            of a coded character sequence.)
-        $(LI Normalization Form KC (NFKC): The canonical composition
-        of the $(S_LINK Compatibility decomposition,
-            compatibility decomposition) of a character sequence)
-        )
+        Informally, two of these forms are defined by maximal decomposition
+        of equivalent sequences, and two of these forms are defined
+        by maximal $(I composition) of equivalent sequences.
+            $(UL
+            $(LI Normalization Form D (NFD): The $(S_LINK Canonical decomposition,
+                canonical decomposition) of a character sequence.)
+            $(LI Normalization Form KD (NFKD): The $(S_LINK Compatibility decomposition,
+                compatibility decomposition) of a character sequence.)
+            $(LI Normalization Form C (NFC): The canonical composition of the
+                $(S_LINK Canonical decomposition, canonical decomposition)
+                of a coded character sequence.)
+            $(LI Normalization Form KC (NFKC): The canonical composition
+            of the $(S_LINK Compatibility decomposition,
+                compatibility decomposition) of a character sequence)
+            )
     )
-
     $(P The choice of the normalization form depends on the particular use case.
-    NFC is the best form for general text, since it's more compatible with
-    strings converted from legacy encodings. NFKC is the preferred form for
-    identifiers, especially where there are security concerns. NFD and NFKD
-    are the most useful for internal processing.
+        NFC is the best form for general text, since it's more compatible with
+        strings converted from legacy encodings. NFKC is the preferred form for
+        identifiers, especially where there are security concerns. NFD and NFKD
+        are the most useful for internal processing.
     )
-
-    $(SECTION Construction of lookup tables)
-
+    $(SECTION Construction of lookup tables
+    )
     $(P The Unicode standard describes a set of algorithms that
-    depend on having the ability to quickly look up various properties
-    of a code point. Given the the codespace of about 1 million $(CODEPOINTS),
-    it is not a trivial task to provide a space-efficient solution for
-    the multitude of properties.)
-
-    $(P Common approaches such as hash-tables or binary search over
-     sorted code point intervals (as in $(LREF InversionList)) are insufficient.
-     Hash-tables have enormous memory footprint and binary search
-     over intervals is not fast enough for some heavy-duty algorithms.
-     )
-
-    $(P The recommended solution (see Unicode Implementation Guidelines)
-    is using multi-stage tables that are an implementation of the
-    $(WEB en.wikipedia.org/wiki/Trie, Trie) data structure with integer
-    keys and a fixed number of stages. For the remainder of the section
-    this will be called a fixed trie. The following describes a particular
-    implementation that is aimed for the speed of access at the expense
-    of ideal size savings.
+        depend on having the ability to quickly look up various properties
+        of a code point. Given the the codespace of about 1 million $(CODEPOINTS),
+        it is not a trivial task to provide a space-efficient solution for
+        the multitude of properties.
     )
-
+    $(P Common approaches such as hash-tables or binary search over
+        sorted code point intervals (as in $(LREF InversionList)) are insufficient.
+        Hash-tables have enormous memory footprint and binary search
+        over intervals is not fast enough for some heavy-duty algorithms.
+    )
+    $(P The recommended solution (see Unicode Implementation Guidelines)
+        is using multi-stage tables that are an implementation of the
+        $(HTTP en.wikipedia.org/wiki/Trie, Trie) data structure with integer
+        keys and a fixed number of stages. For the remainder of the section
+        this will be called a fixed trie. The following describes a particular
+        implementation that is aimed for the speed of access at the expense
+        of ideal size savings.
+    )
     $(P Taking a 2-level Trie as an example the principle of operation is as follows.
         Split the number of bits in a key (code point, 21 bits) into 2 components
         (e.g. 15 and 8).  The first is the number of bits in the index of the trie
@@ -385,7 +361,6 @@
         The layout of the trie is then an array of size 2^^bits-of-index followed
         an array of memory chunks of size 2^^bits-of-page/bits-per-element.
     )
-
     $(P The number of pages is variable (but not less then 1)
         unlike the number of entries in the index. The slots of the index
         all have to contain a number of a page that is present. The lookup is then
@@ -401,93 +376,91 @@
     pages[index[n >> bits_per_page]][n & (elemsPerPage - 1)];
     ---
     $(P Where if $(D elemsPerPage) is a power of 2 the whole process is
-    a handful of simple instructions and 2 array reads. Subsequent levels
-    of the trie are introduced by recursing on this notion - the index array
-    is treated as values. The number of bits in index is then again
-    split into 2 parts, with pages over 'current-index' and the new 'upper-index'.
+        a handful of simple instructions and 2 array reads. Subsequent levels
+        of the trie are introduced by recursing on this notion - the index array
+        is treated as values. The number of bits in index is then again
+        split into 2 parts, with pages over 'current-index' and the new 'upper-index'.
     )
 
     $(P For completeness a level 1 trie is simply an array.
-    The current implementation takes advantage of bit-packing values
-    when the range is known to be limited in advance (such as $(D bool)).
-    See also $(LREF BitPacked) for enforcing it manually.
-    The major size advantage however comes from the fact
-    that multiple $(B identical pages on every level are merged) by construction.
+        The current implementation takes advantage of bit-packing values
+        when the range is known to be limited in advance (such as $(D bool)).
+        See also $(LREF BitPacked) for enforcing it manually.
+        The major size advantage however comes from the fact
+        that multiple $(B identical pages on every level are merged) by construction.
     )
-
     $(P The process of constructing a trie is more involved and is hidden from
-    the user in a form of the convenience functions $(LREF codepointTrie),
-    $(LREF codepointSetTrie) and the even more convenient $(LREF toTrie).
-    In general a set or built-in AA with $(D dchar) type
-    can be turned into a trie. The trie object in this module
-    is read-only (immutable); it's effectively frozen after construction.
+        the user in a form of the convenience functions $(LREF codepointTrie),
+        $(LREF codepointSetTrie) and the even more convenient $(LREF toTrie).
+        In general a set or built-in AA with $(D dchar) type
+        can be turned into a trie. The trie object in this module
+        is read-only (immutable); it's effectively frozen after construction.
     )
-
-    $(SECTION Unicode properties)
-
+    $(SECTION Unicode properties
+    )
     $(P This is a full list of Unicode properties accessible through $(LREF unicode)
-    with specific helpers per category nested within. Consult the
-    $(WEB www.unicode.org/cldr/utility/properties.jsp, CLDR utility)
-    when in doubt about the contents of a particular set.)
-
+        with specific helpers per category nested within. Consult the
+        $(HTTP www.unicode.org/cldr/utility/properties.jsp, CLDR utility)
+        when in doubt about the contents of a particular set.
+    )
     $(P General category sets listed below are only accessible with the
-    $(LREF unicode) shorthand accessor.)
-    $(BOOKTABLE $(B General category ),
-         $(TR $(TH Abb.) $(TH Long form)
-            $(TH Abb.) $(TH Long form)$(TH Abb.) $(TH Long form))
-        $(TR $(TD L) $(TD Letter)
-            $(TD Cn) $(TD Unassigned)  $(TD Po) $(TD Other_Punctuation))
-        $(TR $(TD Ll) $(TD Lowercase_Letter)
-            $(TD Co) $(TD Private_Use) $(TD Ps) $(TD Open_Punctuation))
-        $(TR $(TD Lm) $(TD Modifier_Letter)
-            $(TD Cs) $(TD Surrogate)   $(TD S) $(TD Symbol))
-        $(TR $(TD Lo) $(TD Other_Letter)
-            $(TD N) $(TD Number)  $(TD Sc) $(TD Currency_Symbol))
-        $(TR $(TD Lt) $(TD Titlecase_Letter)
-          $(TD Nd) $(TD Decimal_Number)  $(TD Sk) $(TD Modifier_Symbol))
-        $(TR $(TD Lu) $(TD Uppercase_Letter)
-          $(TD Nl) $(TD Letter_Number)   $(TD Sm) $(TD Math_Symbol))
-        $(TR $(TD M) $(TD Mark)
-          $(TD No) $(TD Other_Number)    $(TD So) $(TD Other_Symbol))
-        $(TR $(TD Mc) $(TD Spacing_Mark)
-          $(TD P) $(TD Punctuation) $(TD Z) $(TD Separator))
-        $(TR $(TD Me) $(TD Enclosing_Mark)
-          $(TD Pc) $(TD Connector_Punctuation)   $(TD Zl) $(TD Line_Separator))
-        $(TR $(TD Mn) $(TD Nonspacing_Mark)
-          $(TD Pd) $(TD Dash_Punctuation)    $(TD Zp) $(TD Paragraph_Separator))
-        $(TR $(TD C) $(TD Other)
-          $(TD Pe) $(TD Close_Punctuation) $(TD Zs) $(TD Space_Separator))
-        $(TR $(TD Cc) $(TD Control) $(TD Pf)
-          $(TD Final_Punctuation)   $(TD -) $(TD Any))
-        $(TR $(TD Cf) $(TD Format)
-          $(TD Pi) $(TD Initial_Punctuation) $(TD -) $(TD ASCII))
+        $(LREF unicode) shorthand accessor.)
+        $(BOOKTABLE $(B General category ),
+             $(TR $(TH Abb.) $(TH Long form)
+                $(TH Abb.) $(TH Long form)$(TH Abb.) $(TH Long form))
+            $(TR $(TD L) $(TD Letter)
+                $(TD Cn) $(TD Unassigned)  $(TD Po) $(TD Other_Punctuation))
+            $(TR $(TD Ll) $(TD Lowercase_Letter)
+                $(TD Co) $(TD Private_Use) $(TD Ps) $(TD Open_Punctuation))
+            $(TR $(TD Lm) $(TD Modifier_Letter)
+                $(TD Cs) $(TD Surrogate)   $(TD S) $(TD Symbol))
+            $(TR $(TD Lo) $(TD Other_Letter)
+                $(TD N) $(TD Number)  $(TD Sc) $(TD Currency_Symbol))
+            $(TR $(TD Lt) $(TD Titlecase_Letter)
+              $(TD Nd) $(TD Decimal_Number)  $(TD Sk) $(TD Modifier_Symbol))
+            $(TR $(TD Lu) $(TD Uppercase_Letter)
+              $(TD Nl) $(TD Letter_Number)   $(TD Sm) $(TD Math_Symbol))
+            $(TR $(TD M) $(TD Mark)
+              $(TD No) $(TD Other_Number)    $(TD So) $(TD Other_Symbol))
+            $(TR $(TD Mc) $(TD Spacing_Mark)
+              $(TD P) $(TD Punctuation) $(TD Z) $(TD Separator))
+            $(TR $(TD Me) $(TD Enclosing_Mark)
+              $(TD Pc) $(TD Connector_Punctuation)   $(TD Zl) $(TD Line_Separator))
+            $(TR $(TD Mn) $(TD Nonspacing_Mark)
+              $(TD Pd) $(TD Dash_Punctuation)    $(TD Zp) $(TD Paragraph_Separator))
+            $(TR $(TD C) $(TD Other)
+              $(TD Pe) $(TD Close_Punctuation) $(TD Zs) $(TD Space_Separator))
+            $(TR $(TD Cc) $(TD Control) $(TD Pf)
+              $(TD Final_Punctuation)   $(TD -) $(TD Any))
+            $(TR $(TD Cf) $(TD Format)
+              $(TD Pi) $(TD Initial_Punctuation) $(TD -) $(TD ASCII))
     )
     $(P Sets for other commonly useful properties that are
-    accessible with $(LREF unicode):)
-    $(BOOKTABLE $(B Common binary properties),
-        $(TR $(TH Name) $(TH Name) $(TH Name))
-        $(TR $(TD Alphabetic)  $(TD Ideographic) $(TD Other_Uppercase))
-        $(TR $(TD ASCII_Hex_Digit) $(TD IDS_Binary_Operator) $(TD Pattern_Syntax))
-        $(TR $(TD Bidi_Control)    $(TD ID_Start)    $(TD Pattern_White_Space))
-        $(TR $(TD Cased)   $(TD IDS_Trinary_Operator)    $(TD Quotation_Mark))
-        $(TR $(TD Case_Ignorable)  $(TD Join_Control)    $(TD Radical))
-        $(TR $(TD Dash)    $(TD Logical_Order_Exception) $(TD Soft_Dotted))
-        $(TR $(TD Default_Ignorable_Code_Point)    $(TD Lowercase)   $(TD STerm))
-        $(TR $(TD Deprecated)  $(TD Math)    $(TD Terminal_Punctuation))
-        $(TR $(TD Diacritic)   $(TD Noncharacter_Code_Point) $(TD Unified_Ideograph))
-        $(TR $(TD Extender)    $(TD Other_Alphabetic)    $(TD Uppercase))
-        $(TR $(TD Grapheme_Base)   $(TD Other_Default_Ignorable_Code_Point)  $(TD Variation_Selector))
-        $(TR $(TD Grapheme_Extend) $(TD Other_Grapheme_Extend)   $(TD White_Space))
-        $(TR $(TD Grapheme_Link)   $(TD Other_ID_Continue)   $(TD XID_Continue))
-        $(TR $(TD Hex_Digit)   $(TD Other_ID_Start)  $(TD XID_Start))
-        $(TR $(TD Hyphen)  $(TD Other_Lowercase) )
-        $(TR $(TD ID_Continue) $(TD Other_Math)  )
+        accessible with $(LREF unicode):)
+        $(BOOKTABLE $(B Common binary properties),
+            $(TR $(TH Name) $(TH Name) $(TH Name))
+            $(TR $(TD Alphabetic)  $(TD Ideographic) $(TD Other_Uppercase))
+            $(TR $(TD ASCII_Hex_Digit) $(TD IDS_Binary_Operator) $(TD Pattern_Syntax))
+            $(TR $(TD Bidi_Control)    $(TD ID_Start)    $(TD Pattern_White_Space))
+            $(TR $(TD Cased)   $(TD IDS_Trinary_Operator)    $(TD Quotation_Mark))
+            $(TR $(TD Case_Ignorable)  $(TD Join_Control)    $(TD Radical))
+            $(TR $(TD Dash)    $(TD Logical_Order_Exception) $(TD Soft_Dotted))
+            $(TR $(TD Default_Ignorable_Code_Point)    $(TD Lowercase)   $(TD STerm))
+            $(TR $(TD Deprecated)  $(TD Math)    $(TD Terminal_Punctuation))
+            $(TR $(TD Diacritic)   $(TD Noncharacter_Code_Point) $(TD Unified_Ideograph))
+            $(TR $(TD Extender)    $(TD Other_Alphabetic)    $(TD Uppercase))
+            $(TR $(TD Grapheme_Base)   $(TD Other_Default_Ignorable_Code_Point)  $(TD Variation_Selector))
+            $(TR $(TD Grapheme_Extend) $(TD Other_Grapheme_Extend)   $(TD White_Space))
+            $(TR $(TD Grapheme_Link)   $(TD Other_ID_Continue)   $(TD XID_Continue))
+            $(TR $(TD Hex_Digit)   $(TD Other_ID_Start)  $(TD XID_Start))
+            $(TR $(TD Hyphen)  $(TD Other_Lowercase) )
+            $(TR $(TD ID_Continue) $(TD Other_Math)  )
     )
-    $(P Bellow is the table with block names accepted by $(LREF unicode.block).
-    Note that the shorthand version $(LREF unicode) requires "In"
-    to be prepended to the names of blocks so as to disambiguate
-    scripts and blocks.)
-
+    $(P Below is the table with block names accepted by $(LREF unicode.block).
+        Note that the shorthand version $(LREF unicode) requires "In"
+        to be prepended to the names of blocks so as to disambiguate
+        scripts and blocks.
+    )
     $(BOOKTABLE $(B Blocks),
         $(TR $(TD Aegean Numbers)    $(TD Ethiopic Extended) $(TD Mongolian))
         $(TR $(TD Alchemical Symbols)    $(TD Ethiopic Extended-A)   $(TD Musical Symbols))
@@ -564,76 +537,71 @@
         $(TR $(TD Enclosed Ideographic Supplement)   $(TD Miscellaneous Technical)   )
         $(TR $(TD Ethiopic)  $(TD Modifier Tone Letters) )
     )
-
-    $(P Bellow is the table with script names accepted by $(LREF unicode.script)
-    and by the shorthand version $(LREF unicode):)
-    $(BOOKTABLE $(B Scripts),
-        $(TR $(TD Arabic)  $(TD Hanunoo) $(TD Old_Italic))
-        $(TR $(TD Armenian)    $(TD Hebrew)  $(TD Old_Persian))
-        $(TR $(TD Avestan) $(TD Hiragana)    $(TD Old_South_Arabian))
-        $(TR $(TD Balinese)    $(TD Imperial_Aramaic)    $(TD Old_Turkic))
-        $(TR $(TD Bamum)   $(TD Inherited)   $(TD Oriya))
-        $(TR $(TD Batak)   $(TD Inscriptional_Pahlavi)   $(TD Osmanya))
-        $(TR $(TD Bengali) $(TD Inscriptional_Parthian)  $(TD Phags_Pa))
-        $(TR $(TD Bopomofo)    $(TD Javanese)    $(TD Phoenician))
-        $(TR $(TD Brahmi)  $(TD Kaithi)  $(TD Rejang))
-        $(TR $(TD Braille) $(TD Kannada) $(TD Runic))
-        $(TR $(TD Buginese)    $(TD Katakana)    $(TD Samaritan))
-        $(TR $(TD Buhid)   $(TD Kayah_Li)    $(TD Saurashtra))
-        $(TR $(TD Canadian_Aboriginal) $(TD Kharoshthi)  $(TD Sharada))
-        $(TR $(TD Carian)  $(TD Khmer)   $(TD Shavian))
-        $(TR $(TD Chakma)  $(TD Lao) $(TD Sinhala))
-        $(TR $(TD Cham)    $(TD Latin)   $(TD Sora_Sompeng))
-        $(TR $(TD Cherokee)    $(TD Lepcha)  $(TD Sundanese))
-        $(TR $(TD Common)  $(TD Limbu)   $(TD Syloti_Nagri))
-        $(TR $(TD Coptic)  $(TD Linear_B)    $(TD Syriac))
-        $(TR $(TD Cuneiform)   $(TD Lisu)    $(TD Tagalog))
-        $(TR $(TD Cypriot) $(TD Lycian)  $(TD Tagbanwa))
-        $(TR $(TD Cyrillic)    $(TD Lydian)  $(TD Tai_Le))
-        $(TR $(TD Deseret) $(TD Malayalam)   $(TD Tai_Tham))
-        $(TR $(TD Devanagari)  $(TD Mandaic) $(TD Tai_Viet))
-        $(TR $(TD Egyptian_Hieroglyphs)    $(TD Meetei_Mayek)    $(TD Takri))
-        $(TR $(TD Ethiopic)    $(TD Meroitic_Cursive)    $(TD Tamil))
-        $(TR $(TD Georgian)    $(TD Meroitic_Hieroglyphs)    $(TD Telugu))
-        $(TR $(TD Glagolitic)  $(TD Miao)    $(TD Thaana))
-        $(TR $(TD Gothic)  $(TD Mongolian)   $(TD Thai))
-        $(TR $(TD Greek)   $(TD Myanmar) $(TD Tibetan))
-        $(TR $(TD Gujarati)    $(TD New_Tai_Lue) $(TD Tifinagh))
-        $(TR $(TD Gurmukhi)    $(TD Nko) $(TD Ugaritic))
-        $(TR $(TD Han) $(TD Ogham)   $(TD Vai))
-        $(TR $(TD Hangul)  $(TD Ol_Chiki)    $(TD Yi))
+    $(P Below is the table with script names accepted by $(LREF unicode.script)
+        and by the shorthand version $(LREF unicode):)
+        $(BOOKTABLE $(B Scripts),
+            $(TR $(TD Arabic)  $(TD Hanunoo) $(TD Old_Italic))
+            $(TR $(TD Armenian)    $(TD Hebrew)  $(TD Old_Persian))
+            $(TR $(TD Avestan) $(TD Hiragana)    $(TD Old_South_Arabian))
+            $(TR $(TD Balinese)    $(TD Imperial_Aramaic)    $(TD Old_Turkic))
+            $(TR $(TD Bamum)   $(TD Inherited)   $(TD Oriya))
+            $(TR $(TD Batak)   $(TD Inscriptional_Pahlavi)   $(TD Osmanya))
+            $(TR $(TD Bengali) $(TD Inscriptional_Parthian)  $(TD Phags_Pa))
+            $(TR $(TD Bopomofo)    $(TD Javanese)    $(TD Phoenician))
+            $(TR $(TD Brahmi)  $(TD Kaithi)  $(TD Rejang))
+            $(TR $(TD Braille) $(TD Kannada) $(TD Runic))
+            $(TR $(TD Buginese)    $(TD Katakana)    $(TD Samaritan))
+            $(TR $(TD Buhid)   $(TD Kayah_Li)    $(TD Saurashtra))
+            $(TR $(TD Canadian_Aboriginal) $(TD Kharoshthi)  $(TD Sharada))
+            $(TR $(TD Carian)  $(TD Khmer)   $(TD Shavian))
+            $(TR $(TD Chakma)  $(TD Lao) $(TD Sinhala))
+            $(TR $(TD Cham)    $(TD Latin)   $(TD Sora_Sompeng))
+            $(TR $(TD Cherokee)    $(TD Lepcha)  $(TD Sundanese))
+            $(TR $(TD Common)  $(TD Limbu)   $(TD Syloti_Nagri))
+            $(TR $(TD Coptic)  $(TD Linear_B)    $(TD Syriac))
+            $(TR $(TD Cuneiform)   $(TD Lisu)    $(TD Tagalog))
+            $(TR $(TD Cypriot) $(TD Lycian)  $(TD Tagbanwa))
+            $(TR $(TD Cyrillic)    $(TD Lydian)  $(TD Tai_Le))
+            $(TR $(TD Deseret) $(TD Malayalam)   $(TD Tai_Tham))
+            $(TR $(TD Devanagari)  $(TD Mandaic) $(TD Tai_Viet))
+            $(TR $(TD Egyptian_Hieroglyphs)    $(TD Meetei_Mayek)    $(TD Takri))
+            $(TR $(TD Ethiopic)    $(TD Meroitic_Cursive)    $(TD Tamil))
+            $(TR $(TD Georgian)    $(TD Meroitic_Hieroglyphs)    $(TD Telugu))
+            $(TR $(TD Glagolitic)  $(TD Miao)    $(TD Thaana))
+            $(TR $(TD Gothic)  $(TD Mongolian)   $(TD Thai))
+            $(TR $(TD Greek)   $(TD Myanmar) $(TD Tibetan))
+            $(TR $(TD Gujarati)    $(TD New_Tai_Lue) $(TD Tifinagh))
+            $(TR $(TD Gurmukhi)    $(TD Nko) $(TD Ugaritic))
+            $(TR $(TD Han) $(TD Ogham)   $(TD Vai))
+            $(TR $(TD Hangul)  $(TD Ol_Chiki)    $(TD Yi))
     )
-
-    $(P Bellow is the table of names accepted by $(LREF unicode.hangulSyllableType).)
-    $(BOOKTABLE $(B Hangul syllable type),
-        $(TR $(TH Abb.) $(TH Long form))
-        $(TR $(TD L)   $(TD Leading_Jamo))
-        $(TR $(TD LV)  $(TD LV_Syllable))
-        $(TR $(TD LVT) $(TD LVT_Syllable) )
-        $(TR $(TD T)   $(TD Trailing_Jamo))
-        $(TR $(TD V)   $(TD Vowel_Jamo))
+    $(P Below is the table of names accepted by $(LREF unicode.hangulSyllableType).)
+        $(BOOKTABLE $(B Hangul syllable type),
+            $(TR $(TH Abb.) $(TH Long form))
+            $(TR $(TD L)   $(TD Leading_Jamo))
+            $(TR $(TD LV)  $(TD LV_Syllable))
+            $(TR $(TD LVT) $(TD LVT_Syllable) )
+            $(TR $(TD T)   $(TD Trailing_Jamo))
+            $(TR $(TD V)   $(TD Vowel_Jamo))
     )
     References:
-        $(WEB www.digitalmars.com/d/ascii-table.html, ASCII Table),
-        $(WEB en.wikipedia.org/wiki/Unicode, Wikipedia),
-        $(WEB www.unicode.org, The Unicode Consortium),
-        $(WEB www.unicode.org/reports/tr15/, Unicode normalization forms),
-        $(WEB www.unicode.org/reports/tr29/, Unicode text segmentation)
-        $(WEB www.unicode.org/uni2book/ch05.pdf,
+        $(HTTP www.digitalmars.com/d/ascii-table.html, ASCII Table),
+        $(HTTP en.wikipedia.org/wiki/Unicode, Wikipedia),
+        $(HTTP www.unicode.org, The Unicode Consortium),
+        $(HTTP www.unicode.org/reports/tr15/, Unicode normalization forms),
+        $(HTTP www.unicode.org/reports/tr29/, Unicode text segmentation)
+        $(HTTP www.unicode.org/uni2book/ch05.pdf,
             Unicode Implementation Guidelines)
-        $(WEB www.unicode.org/uni2book/ch03.pdf,
+        $(HTTP www.unicode.org/uni2book/ch03.pdf,
             Unicode Conformance)
     Trademarks:
         Unicode(tm) is a trademark of Unicode, Inc.
 
-    Macros:
-        WIKI=Phobos/StdUni
-
     Copyright: Copyright 2013 -
-    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Dmitry Olshansky
     Source:    $(PHOBOSSRC std/_uni.d)
-    Standards: $(WEB www.unicode.org/versions/Unicode6.2.0/, Unicode v6.2)
+    Standards: $(HTTP www.unicode.org/versions/Unicode6.2.0/, Unicode v6.2)
 
 Macros:
 
@@ -648,14 +616,16 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 +/
 module std.uni;
 
-import core.stdc.stdlib;
-import std.meta, std.traits;
-import std.range.primitives;
-
+import std.meta; // AliasSeq
+import std.range.primitives; // back, ElementEncodingType, ElementType, empty,
+    // front, isForwardRange, isInputRange, isRandomAccessRange, popFront, put,
+    // save
+import std.traits; // isConvertibleToString, isIntegral, isSomeChar,
+    // isSomeString, Unqual
 
 // debug = std_uni;
 
-debug(std_uni) import std.stdio;
+debug(std_uni) import std.stdio; // writefln, writeln
 
 private:
 
@@ -687,23 +657,17 @@ private:
     }
 }
 
-version(std_uni_bootstrap){}
-else
-{
-    import std.internal.unicode_tables; // generated file
-}
-
 void copyBackwards(T,U)(T[] src, U[] dest)
 {
     assert(src.length == dest.length);
-    for(size_t i=src.length; i-- > 0; )
+    for (size_t i=src.length; i-- > 0; )
         dest[i] = src[i];
 }
 
 void copyForward(T,U)(T[] src, U[] dest)
 {
     assert(src.length == dest.length);
-    for(size_t i=0; i<src.length; i++)
+    for (size_t i=0; i<src.length; i++)
         dest[i] = src[i];
 }
 
@@ -722,7 +686,7 @@ public enum dchar nelSep  = '\u0085'; /// Constant $(CODEPOINT) (0x0085) - next 
 // test the intro example
 @safe unittest
 {
-    import std.algorithm : find;
+    import std.algorithm.searching : find;
     // initialize code point sets using script/block or property name
     // set contains code points from both scripts.
     auto set = unicode("Cyrillic") | unicode("Armenian");
@@ -781,21 +745,21 @@ public enum dchar nelSep  = '\u0085'; /// Constant $(CODEPOINT) (0x0085) - next 
 enum lastDchar = 0x10FFFF;
 
 auto force(T, F)(F from)
-    if(isIntegral!T && !is(T == F))
+    if (isIntegral!T && !is(T == F))
 {
     assert(from <= T.max && from >= T.min);
     return cast(T)from;
 }
 
 auto force(T, F)(F from)
-    if(isBitPacked!T && !is(T == F))
+    if (isBitPacked!T && !is(T == F))
 {
     assert(from <= 2^^bitSizeOf!T-1);
     return T(cast(TypeOfBitPacked!T)from);
 }
 
 auto force(T, F)(F from)
-    if(is(T == F))
+    if (is(T == F))
 {
     return from;
 }
@@ -803,16 +767,16 @@ auto force(T, F)(F from)
 // repeat X times the bit-pattern in val assuming it's length is 'bits'
 size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @nogc
 {
-    static if(times == 1)
+    static if (times == 1)
         return val;
-    else static if(bits == 1)
+    else static if (bits == 1)
     {
-        static if(times == size_t.sizeof*8)
+        static if (times == size_t.sizeof*8)
             return val ? size_t.max : 0;
         else
             return val ? (1<<times)-1 : 0;
     }
-    else static if(times % 2)
+    else static if (times % 2)
         return (replicateBits!(times-1, bits)(val)<<bits) | val;
     else
         return replicateBits!(times/2, bits*2)((val<<bits) | val);
@@ -820,11 +784,11 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
 
 @safe pure nothrow @nogc unittest // for replicate
 {
-    import std.algorithm : sum, map;
+    import std.algorithm.iteration : sum, map;
     import std.range : iota;
     size_t m = 0b111;
     size_t m2 = 0b01;
-    foreach(i; AliasSeq!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+    foreach (i; AliasSeq!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
     {
         assert(replicateBits!(i, 3)(m)+1 == (1<<(3*i)));
         assert(replicateBits!(i, 2)(m2) == iota(0, i).map!"2^^(2*a)"().sum());
@@ -834,15 +798,16 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
 // multiple arrays squashed into one memory block
 struct MultiArray(Types...)
 {
+    import std.range.primitives : isOutputRange;
     this(size_t[] sizes...) @safe pure nothrow
     {
         assert(dim == sizes.length);
         size_t full_size;
-        foreach(i, v; Types)
+        foreach (i, v; Types)
         {
             full_size += spaceFor!(bitSizeOf!v)(sizes[i]);
             sz[i] = sizes[i];
-            static if(i >= 1)
+            static if (i >= 1)
                 offsets[i] = offsets[i-1] +
                     spaceFor!(bitSizeOf!(Types[i-1]))(sizes[i-1]);
         }
@@ -876,7 +841,7 @@ struct MultiArray(Types...)
 
         @property void length(size_t new_size)
         {
-            if(new_size > sz[n])
+            if (new_size > sz[n])
             {// extend
                 size_t delta = (new_size - sz[n]);
                 sz[n] += delta;
@@ -884,7 +849,7 @@ struct MultiArray(Types...)
                 storage.length +=  delta;// extend space at end
                 // raw_slice!x must follow resize as it could be moved!
                 // next stmts move all data past this array, last-one-goes-first
-                static if(n != dim-1)
+                static if (n != dim-1)
                 {
                     auto start = raw_ptr!(n+1);
                     // len includes delta
@@ -894,24 +859,24 @@ struct MultiArray(Types...)
 
                     start[0..delta] = 0;
                     // offsets are used for raw_slice, ptr etc.
-                    foreach(i; n+1..dim)
+                    foreach (i; n+1..dim)
                         offsets[i] += delta;
                 }
             }
-            else if(new_size < sz[n])
+            else if (new_size < sz[n])
             {// shrink
                 size_t delta = (sz[n] - new_size);
                 sz[n] -= delta;
                 delta = spaceFor!(bitSizeOf!(Types[n]))(delta);
                 // move all data past this array, forward direction
-                static if(n != dim-1)
+                static if (n != dim-1)
                 {
                     auto start = raw_ptr!(n+1);
                     size_t len = (storage.ptr+storage.length-start);
                     copyForward(start[0..len-delta], start[delta..len]);
 
                     // adjust offsets last, they affect raw_slice
-                    foreach(i; n+1..dim)
+                    foreach (i; n+1..dim)
                         offsets[i] -= delta;
                 }
                 storage.length -= delta;
@@ -922,27 +887,28 @@ struct MultiArray(Types...)
 
     @property size_t bytes(size_t n=size_t.max)() const
     {
-        static if(n == size_t.max)
+        static if (n == size_t.max)
             return storage.length*size_t.sizeof;
-        else static if(n != Types.length-1)
+        else static if (n != Types.length-1)
             return (raw_ptr!(n+1)-raw_ptr!n)*size_t.sizeof;
         else
             return (storage.ptr+storage.length - raw_ptr!n)*size_t.sizeof;
     }
 
     void store(OutRange)(scope OutRange sink) const
-        if(isOutputRange!(OutRange, char))
+        if (isOutputRange!(OutRange, char))
     {
-        import std.format;
+        import std.format : formattedWrite;
         formattedWrite(sink, "[%( 0x%x, %)]", offsets[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", sz[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", storage);
     }
 
 private:
+    import std.meta : staticMap;
     @property auto raw_ptr(size_t n)()inout pure nothrow @nogc
     {
-        static if(n == 0)
+        static if (n == 0)
             return storage.ptr;
         else
         {
@@ -956,9 +922,9 @@ private:
     size_t[] storage;
 }
 
-unittest
+@system unittest
 {
-    import std.conv;
+    import std.conv : text;
     enum dg = (){
         // sizes are:
         // lvl0: 3, lvl1 : 2, lvl2: 1
@@ -966,25 +932,25 @@ unittest
 
         static void check(size_t k, T)(ref T m, int n)
         {
-            foreach(i; 0..n)
+            foreach (i; 0..n)
                 assert(m.slice!(k)[i] == i+1, text("level:",i," : ",m.slice!(k)[0..n]));
         }
 
         static void checkB(size_t k, T)(ref T m, int n)
         {
-            foreach(i; 0..n)
+            foreach (i; 0..n)
                 assert(m.slice!(k)[i] == n-i, text("level:",i," : ",m.slice!(k)[0..n]));
         }
 
         static void fill(size_t k, T)(ref T m, int n)
         {
-            foreach(i; 0..n)
+            foreach (i; 0..n)
                 m.slice!(k)[i] = force!ubyte(i+1);
         }
 
         static void fillB(size_t k, T)(ref T m, int n)
         {
-            foreach(i; 0..n)
+            foreach (i; 0..n)
                 m.slice!(k)[i] = force!ubyte(n-i);
         }
 
@@ -1029,9 +995,9 @@ unittest
     auto rt = dg();
 }
 
-unittest
+@system unittest
 {// more bitpacking tests
-    import std.conv;
+    import std.conv : text;
 
     alias Bitty =
       MultiArray!(BitPacked!(size_t, 3)
@@ -1044,12 +1010,12 @@ unittest
     alias fn3 = sliceBits!( 6,  9);
     alias fn4 = sliceBits!( 0,  6);
     static void check(size_t lvl, MA)(ref MA arr){
-        for(size_t i = 0; i< arr.length!lvl; i++)
+        for (size_t i = 0; i< arr.length!lvl; i++)
             assert(arr.slice!(lvl)[i] == i, text("Mismatch on lvl ", lvl, " idx ", i, " value: ", arr.slice!(lvl)[i]));
     }
 
     static void fillIdx(size_t lvl, MA)(ref MA arr){
-        for(size_t i = 0; i< arr.length!lvl; i++)
+        for (size_t i = 0; i< arr.length!lvl; i++)
             arr.slice!(lvl)[i] = i;
     }
     Bitty m1;
@@ -1062,7 +1028,7 @@ unittest
 
     m1.length!4 = 2^^16;
 
-    for(size_t i = 0; i< m1.length!4; i++)
+    for (size_t i = 0; i< m1.length!4; i++)
         m1.slice!(4)[i] = i % 2;
 
     fillIdx!1(m1);
@@ -1076,7 +1042,7 @@ unittest
     check!3(m1);
     check!2(m1);
     check!1(m1);
-    for(size_t i=0; i < 2^^16; i++)
+    for (size_t i=0; i < 2^^16; i++)
     {
         m1.slice!(4)[i] = i % 2;
         m1.slice!(0)[fn1(i)] = fn1(i);
@@ -1084,7 +1050,7 @@ unittest
         m1.slice!(2)[fn3(i)] = fn3(i);
         m1.slice!(3)[fn4(i)] = fn4(i);
     }
-    for(size_t i=0; i < 2^^16; i++)
+    for (size_t i=0; i < 2^^16; i++)
     {
         assert(m1.slice!(4)[i] == i % 2);
         assert(m1.slice!(0)[fn1(i)] == fn1(i));
@@ -1096,8 +1062,9 @@ unittest
 
 size_t spaceFor(size_t _bits)(size_t new_len) @safe pure nothrow @nogc
 {
-    enum bits = _bits == 1 ? 1 : ceilPowerOf2(_bits);// see PackedArrayView
-    static if(bits > 8*size_t.sizeof)
+    import std.math : nextPow2;
+    enum bits = _bits == 1 ? 1 : nextPow2(_bits - 1);// see PackedArrayView
+    static if (bits > 8*size_t.sizeof)
     {
         static assert(bits % (size_t.sizeof*8) == 0);
         return new_len * bits/(8*size_t.sizeof);
@@ -1117,26 +1084,28 @@ template isBitPackableType(T)
 
 //============================================================================
 template PackedArrayView(T)
-    if((is(T dummy == BitPacked!(U, sz), U, size_t sz)
+    if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
         && isBitPackableType!U) || isBitPackableType!T)
 {
+    import std.math : nextPow2;
     private enum bits = bitSizeOf!T;
-    alias PackedArrayView = PackedArrayViewImpl!(T, bits > 1 ? ceilPowerOf2(bits) : 1);
+    alias PackedArrayView = PackedArrayViewImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
 
 //unsafe and fast access to a chunk of RAM as if it contains packed values
 template PackedPtr(T)
-    if((is(T dummy == BitPacked!(U, sz), U, size_t sz)
+    if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
         && isBitPackableType!U) || isBitPackableType!T)
 {
+    import std.math : nextPow2;
     private enum bits = bitSizeOf!T;
-    alias PackedPtr = PackedPtrImpl!(T, bits > 1 ? ceilPowerOf2(bits) : 1);
+    alias PackedPtr = PackedPtrImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
 
 @trusted struct PackedPtrImpl(T, size_t bits)
 {
 pure nothrow:
-    static assert(isPowerOf2(bits));
+    static assert(isPow2OrZero(bits));
 
     this(inout(size_t)* ptr)inout @safe @nogc
     {
@@ -1153,7 +1122,7 @@ pure nothrow:
     private void simpleWrite(TypeOfBitPacked!T val, size_t n)
     in
     {
-        static if(isIntegral!T)
+        static if (isIntegral!T)
             assert(val <= mask);
     }
     body
@@ -1166,18 +1135,18 @@ pure nothrow:
             | (cast(size_t)val << tgt_shift);
     }
 
-    static if(factor == bytesPerWord// can safely pack by byte
+    static if (factor == bytesPerWord// can safely pack by byte
          || factor == 1 // a whole word at a time
          || ((factor == bytesPerWord/2 || factor == bytesPerWord/4)
                 && hasUnalignedReads)) // this needs unaligned reads
     {
-        static if(factor == bytesPerWord)
+        static if (factor == bytesPerWord)
             alias U = ubyte;
-        else static if(factor == bytesPerWord/2)
+        else static if (factor == bytesPerWord/2)
             alias U = ushort;
-        else static if(factor == bytesPerWord/4)
+        else static if (factor == bytesPerWord/4)
             alias U = uint;
-        else static if(size_t.sizeof == 8 && factor == bytesPerWord/8)
+        else static if (size_t.sizeof == 8 && factor == bytesPerWord/8)
             alias U = ulong;
 
         T opIndex(size_t idx) inout
@@ -1186,7 +1155,7 @@ pure nothrow:
                 cast(inout(T))(cast(U*)origin)[idx];
         }
 
-        static if(isBitPacked!T) // lack of user-defined implicit conversion
+        static if (isBitPacked!T) // lack of user-defined implicit conversion
         {
             void opIndexAssign(T val, size_t idx)
             {
@@ -1196,7 +1165,7 @@ pure nothrow:
 
         void opIndexAssign(TypeOfBitPacked!T val, size_t idx)
         {
-            if(__ctfe)
+            if (__ctfe)
                 simpleWrite(val, idx);
             else
                 (cast(U*)origin)[idx] = cast(U)val;
@@ -1209,7 +1178,7 @@ pure nothrow:
             return simpleIndex(n);
         }
 
-        static if(isBitPacked!T) // lack of user-defined implicit conversion
+        static if (isBitPacked!T) // lack of user-defined implicit conversion
         {
             void opIndexAssign(T val, size_t idx)
             {
@@ -1257,21 +1226,21 @@ pure nothrow:
         if ( s >= e)
         {
             foreach (i; s..e)
-                if(ptr[i])
+                if (ptr[i])
                     return false;
             return true;
         }
         size_t pad_e = roundDown(e);
         size_t i;
-        for(i=s; i<pad_s; i++)
-            if(ptr[i])
+        for (i=s; i<pad_s; i++)
+            if (ptr[i])
                 return false;
         // all in between is x*factor elements
-        for(size_t j=i/factor; i<pad_e; i+=factor, j++)
-            if(ptr.origin[j])
+        for (size_t j=i/factor; i<pad_e; i+=factor, j++)
+            if (ptr.origin[j])
                 return false;
-        for(; i<e; i++)
-            if(ptr[i])
+        for (; i<e; i++)
+            if (ptr[i])
                 return false;
         return true;
     }
@@ -1286,7 +1255,7 @@ pure nothrow:
         return ptr[ofs + idx];
     }
 
-    static if(isBitPacked!T) // lack of user-defined implicit conversion
+    static if (isBitPacked!T) // lack of user-defined implicit conversion
     {
         void opIndexAssign(T val, size_t idx)
         {
@@ -1304,7 +1273,7 @@ pure nothrow:
         ptr[ofs + idx] = val;
     }
 
-    static if(isBitPacked!T) // lack of user-defined implicit conversions
+    static if (isBitPacked!T) // lack of user-defined implicit conversions
     {
         void opSliceAssign(T val, size_t start, size_t end)
         {
@@ -1325,25 +1294,25 @@ pure nothrow:
         end += ofs;
         // rounded to factor granularity
         size_t pad_start = roundUp(start);// rounded up
-        if(pad_start >= end) //rounded up >= then end of slice
+        if (pad_start >= end) //rounded up >= then end of slice
         {
             //nothing to gain, use per element assignment
-            foreach(i; start..end)
+            foreach (i; start..end)
                 ptr[i] = val;
             return;
         }
         size_t pad_end = roundDown(end); // rounded down
         size_t i;
-        for(i=start; i<pad_start; i++)
+        for (i=start; i<pad_start; i++)
             ptr[i] = val;
         // all in between is x*factor elements
-        if(pad_start != pad_end)
+        if (pad_start != pad_end)
         {
             size_t repval = replicateBits!(factor, bits)(val);
-            for(size_t j=i/factor; i<pad_end; i+=factor, j++)
+            for (size_t j=i/factor; i<pad_end; i+=factor, j++)
                 ptr.origin[j] = repval;// so speed it up by factor
         }
-        for(; i<end; i++)
+        for (; i<end; i++)
             ptr[i] = val;
     }
 
@@ -1362,17 +1331,17 @@ pure nothrow:
 
     bool opEquals(T)(auto ref T arr) const
     {
-        if(limit != arr.limit)
+        if (limit != arr.limit)
            return false;
         size_t s1 = ofs, s2 = arr.ofs;
         size_t e1 = s1 + limit, e2 = s2 + limit;
-        if(s1 % factor == 0 && s2 % factor == 0 && length % factor == 0)
+        if (s1 % factor == 0 && s2 % factor == 0 && length % factor == 0)
         {
             return ptr.origin[s1/factor .. e1/factor]
                 == arr.ptr.origin[s2/factor .. e2/factor];
         }
-        for(size_t i=0;i<limit; i++)
-            if(this[i] != arr[i])
+        for (size_t i=0;i<limit; i++)
+            if (this[i] != arr[i])
                 return false;
         return true;
     }
@@ -1403,7 +1372,7 @@ private struct SliceOverIndexed(T)
         return (*arr)[from+idx];
     }
 
-    static if(assignableIndex)
+    static if (assignableIndex)
     void opIndexAssign(Item val, size_t idx)
     in
     {
@@ -1419,7 +1388,7 @@ private struct SliceOverIndexed(T)
         return typeof(this)(from+a, from+b, arr);
     }
 
-    // static if(assignableSlice)
+    // static if (assignableSlice)
     void opSliceAssign(T)(T val, size_t start, size_t end)
     {
         (*arr)[start+from .. end+from] = val;
@@ -1438,12 +1407,12 @@ private struct SliceOverIndexed(T)
 
     @property auto front()const { return (*arr)[from]; }
 
-    static if(assignableIndex)
+    static if (assignableIndex)
     @property void front(Item val) { (*arr)[from] = val; }
 
     @property auto back()const { return (*arr)[to-1]; }
 
-    static if(assignableIndex)
+    static if (assignableIndex)
     @property void back(Item val) { (*arr)[to-1] = val; }
 
     @property auto save() inout { return this; }
@@ -1454,10 +1423,10 @@ private struct SliceOverIndexed(T)
 
     bool opEquals(T)(auto ref T arr) const
     {
-        if(arr.length != length)
+        if (arr.length != length)
             return false;
-        for(size_t i=0; i <length; i++)
-            if(this[i] != arr[i])
+        for (size_t i=0; i <length; i++)
+            if (this[i] != arr[i])
                 return false;
         return true;
     }
@@ -1469,9 +1438,8 @@ private:
 
 static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
 
-// BUG? forward reference to return type of sliceOverIndexed!Grapheme
 SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
-    if(is(Unqual!T == T))
+    if (is(Unqual!T == T))
 {
     return SliceOverIndexed!(const(T))(a, b, x);
 }
@@ -1479,12 +1447,12 @@ SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
 // BUG? inout is out of reach
 //...SliceOverIndexed.arr only parameters or stack based variables can be inout
 SliceOverIndexed!T sliceOverIndexed(T)(size_t a, size_t b, T* x)
-    if(is(Unqual!T == T))
+    if (is(Unqual!T == T))
 {
     return SliceOverIndexed!T(a, b, x);
 }
 
-unittest
+@system unittest
 {
     int[] idxArray = [2, 3, 5, 8, 13];
     auto sliced = sliceOverIndexed(0, idxArray.length, &idxArray);
@@ -1532,21 +1500,21 @@ private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure 
 
 string genUnrolledSwitchSearch(size_t size)
 {
-    import std.conv : to;
     import core.bitop : bsr;
     import std.array : replace;
-    assert(isPowerOf2(size));
+    import std.conv : to;
+    assert(isPow2OrZero(size));
     string code = `
     import core.bitop : bsr;
     auto power = bsr(m)+1;
-    switch(power){`;
+    switch (power){`;
     size_t i = bsr(size);
-    foreach_reverse(val; 0..bsr(size))
+    foreach_reverse (val; 0..bsr(size))
     {
         auto v = 2^^val;
         code ~= `
         case pow:
-            if(pred(range[idx+m], needle))
+            if (pred(range[idx+m], needle))
                 idx +=  m;
             goto case;
         `.replace("m", to!string(v))
@@ -1555,7 +1523,7 @@ string genUnrolledSwitchSearch(size_t size)
     }
     code ~= `
         case 0:
-            if(pred(range[idx], needle))
+            if (pred(range[idx], needle))
                 idx += 1;
             goto default;
         `;
@@ -1565,36 +1533,37 @@ string genUnrolledSwitchSearch(size_t size)
     return code;
 }
 
-bool isPowerOf2(size_t sz) @safe pure nothrow @nogc
+bool isPow2OrZero(size_t sz) @safe pure nothrow @nogc
 {
+    // See also: std.math.isPowerOf2()
     return (sz & (sz-1)) == 0;
 }
 
 size_t uniformLowerBound(alias pred, Range, T)(Range range, T needle)
-    if(is(T : ElementType!Range))
+    if (is(T : ElementType!Range))
 {
-    assert(isPowerOf2(range.length));
+    assert(isPow2OrZero(range.length));
     size_t idx = 0, m = range.length/2;
-    while(m != 0)
+    while (m != 0)
     {
-        if(pred(range[idx+m], needle))
+        if (pred(range[idx+m], needle))
             idx += m;
         m /= 2;
     }
-    if(pred(range[idx], needle))
+    if (pred(range[idx], needle))
         idx += 1;
     return idx;
 }
 
 size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
-    if(is(T : ElementType!Range))
+    if (is(T : ElementType!Range))
 {
-    assert(isPowerOf2(range.length));
+    assert(isPow2OrZero(range.length));
     size_t idx = 0, m = range.length/2;
     enum max = 1<<10;
-    while(m >= max)
+    while (m >= max)
     {
-        if(pred(range[idx+m], needle))
+        if (pred(range[idx+m], needle))
             idx += m;
         m /= 2;
     }
@@ -1602,36 +1571,22 @@ size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
     return idx;
 }
 
-//
-size_t floorPowerOf2(size_t arg) @safe pure nothrow @nogc
-{
-    import core.bitop : bsr;
-    assert(arg > 1); // else bsr is undefined
-    return 1<<bsr(arg-1);
-}
-
-size_t ceilPowerOf2(size_t arg) @safe pure nothrow @nogc
-{
-    import core.bitop : bsr;
-    assert(arg > 1); // else bsr is undefined
-    return 1<<bsr(arg-1)+1;
-}
-
 template sharMethod(alias uniLowerBound)
 {
     size_t sharMethod(alias _pred="a<b", Range, T)(Range range, T needle)
-        if(is(T : ElementType!Range))
+        if (is(T : ElementType!Range))
     {
-        import std.functional;
+        import std.functional : binaryFun;
+        import std.math : nextPow2, truncPow2;
         alias pred = binaryFun!_pred;
-        if(range.length == 0)
+        if (range.length == 0)
             return 0;
-        if(isPowerOf2(range.length))
+        if (isPow2OrZero(range.length))
             return uniLowerBound!pred(range, needle);
-        size_t n = floorPowerOf2(range.length);
-        if(pred(range[n-1], needle))
+        size_t n = truncPow2(range.length);
+        if (pred(range[n-1], needle))
         {// search in another 2^^k area that fully covers the tail of range
-            size_t k = ceilPowerOf2(range.length - n + 1);
+            size_t k = nextPow2(range.length - n + 1);
             return range.length - k + uniLowerBound!pred(range[$-k..$], needle);
         }
         else
@@ -1642,9 +1597,11 @@ template sharMethod(alias uniLowerBound)
 alias sharLowerBound = sharMethod!uniformLowerBound;
 alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
-unittest
+@safe unittest
 {
-    import std.range;
+    import std.array : array;
+    import std.range : assumeSorted, iota;
+
     auto stdLowerBound(T)(T[] range, T needle)
     {
         return assumeSorted(range).lowerBound(needle).length;
@@ -1652,7 +1609,7 @@ unittest
     immutable MAX = 5*1173;
     auto arr = array(iota(5, MAX, 5));
     assert(arr.length == MAX/5-1);
-    foreach(i; 0..MAX+5)
+    foreach (i; 0..MAX+5)
     {
         auto st = stdLowerBound(arr, i);
         assert(st == sharLowerBound(arr, i));
@@ -1673,13 +1630,13 @@ unittest
 @trusted size_t genericReplace(Policy=void, T, Range)
     (ref T dest, size_t from, size_t to, Range stuff)
 {
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     size_t delta = to - from;
     size_t stuff_end = from+stuff.length;
-    if(stuff.length > delta)
+    if (stuff.length > delta)
     {// replace increases length
         delta = stuff.length - delta;// now, new is > old  by delta
-        static if(is(Policy == void))
+        static if (is(Policy == void))
             dest.length = dest.length+delta;//@@@BUG lame @property
         else
             dest = Policy.realloc(dest, dest.length+delta);
@@ -1687,7 +1644,7 @@ unittest
             dest[to+delta..dest.length]);
         copyForward(stuff, dest[from..stuff_end]);
     }
-    else if(stuff.length == delta)
+    else if (stuff.length == delta)
     {
         copy(stuff, dest[from..to]);
     }
@@ -1697,7 +1654,7 @@ unittest
         copy(stuff, dest[from..stuff_end]);
         copyForward(dest[to..dest.length],
             dest[stuff_end..dest.length-delta]);
-        static if(is(Policy == void))
+        static if (is(Policy == void))
             dest.length = dest.length - delta;//@@@BUG lame @property
         else
             dest = Policy.realloc(dest, dest.length-delta);
@@ -1707,8 +1664,10 @@ unittest
 
 
 // Simple storage manipulation policy
-@trusted public struct GcPolicy
+@trusted private struct GcPolicy
 {
+    import std.traits : isDynamicArray;
+
     static T[] dup(T)(const T[] arr)
     {
         return arr.dup;
@@ -1731,19 +1690,19 @@ unittest
     }
 
     static void append(T, V)(ref T[] arr, V value)
-        if(!isInputRange!V)
+        if (!isInputRange!V)
     {
         arr ~= force!T(value);
     }
 
     static void append(T, V)(ref T[] arr, V value)
-        if(isInputRange!V)
+        if (isInputRange!V)
     {
         insertInPlace(arr, arr.length, value);
     }
 
     static void destroy(T)(ref T arr)
-        if(isDynamicArray!T && is(Unqual!T == T))
+        if (isDynamicArray!T && is(Unqual!T == T))
     {
         debug
         {
@@ -1753,7 +1712,7 @@ unittest
     }
 
     static void destroy(T)(ref T arr)
-        if(isDynamicArray!T && !is(Unqual!T == T))
+        if (isDynamicArray!T && !is(Unqual!T == T))
     {
         arr = null;
     }
@@ -1762,6 +1721,8 @@ unittest
 // ditto
 @trusted struct ReallocPolicy
 {
+    import std.range.primitives : hasLength;
+
     static T[] dup(T)(const T[] arr)
     {
         auto result = alloc!T(arr.length);
@@ -1771,6 +1732,7 @@ unittest
 
     static T[] alloc(T)(size_t size)
     {
+        import core.stdc.stdlib : malloc;
         import std.exception : enforce;
         auto ptr = cast(T*)enforce(malloc(T.sizeof*size), "out of memory on C heap");
         return ptr[0..size];
@@ -1778,13 +1740,14 @@ unittest
 
     static T[] realloc(T)(T[] arr, size_t size)
     {
+        import core.stdc.stdlib : realloc;
         import std.exception : enforce;
-        if(!size)
+        if (!size)
         {
             destroy(arr);
             return null;
         }
-        auto ptr = cast(T*)enforce(core.stdc.stdlib.realloc(
+        auto ptr = cast(T*)enforce(realloc(
                              arr.ptr, T.sizeof*size), "out of memory on C heap");
         return ptr[0..size];
     }
@@ -1795,14 +1758,14 @@ unittest
     }
 
     static void append(T, V)(ref T[] arr, V value)
-        if(!isInputRange!V)
+        if (!isInputRange!V)
     {
         arr = realloc(arr, arr.length+1);
         arr[$-1] = force!T(value);
     }
 
     static void append(T, V)(ref T[] arr, V value)
-        if(isInputRange!V && hasLength!V)
+        if (isInputRange!V && hasLength!V)
     {
         arr = realloc(arr, arr.length+value.length);
         copy(value, arr[$-value.length..$]);
@@ -1810,7 +1773,8 @@ unittest
 
     static void destroy(T)(ref T[] arr)
     {
-        if(arr.ptr)
+        import core.stdc.stdlib : free;
+        if (arr.ptr)
             free(arr.ptr);
         arr = null;
     }
@@ -1819,8 +1783,10 @@ unittest
 //build hack
 alias _RealArray = CowArray!ReallocPolicy;
 
-unittest
+@safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     with(ReallocPolicy)
     {
         bool test(T, U, V)(T orig, size_t from, size_t to, U toReplace, V result,
@@ -1829,7 +1795,7 @@ unittest
             {
                 replaceImpl(orig, from, to, toReplace);
                 scope(exit) destroy(orig);
-                if(!equalS(orig, result))
+                if (!equal(orig, result))
                     return false;
             }
             return true;
@@ -1852,7 +1818,7 @@ unittest
 */
 public template isCodepointSet(T)
 {
-    static if(is(T dummy == InversionList!(Args), Args...))
+    static if (is(T dummy == InversionList!(Args), Args...))
         enum isCodepointSet = true;
     else
         enum isCodepointSet = false;
@@ -1889,7 +1855,7 @@ public alias CodepointSet = InversionList!GcPolicy;
 // public alias CodepointInterval = Tuple!(uint, "a", uint, "b");
 
 /**
-    The recommended type of $(XREF _typecons, Tuple)
+    The recommended type of $(REF Tuple, std,_typecons)
     to represent [a, b$(RPAREN) intervals of $(CODEPOINTS). As used in $(LREF InversionList).
     Any interval type should pass $(LREF isIntegralPair) trait.
 */
@@ -1913,23 +1879,6 @@ pure:
     @property ref inout(uint) a() inout { return _tuple[0]; }
     @property ref inout(uint) b() inout { return _tuple[1]; }
 }
-
-//@@@BUG another forward reference workaround
-@trusted bool equalS(R1, R2)(R1 lhs, R2 rhs)
-{
-    for(;;){
-        if(lhs.empty)
-            return rhs.empty;
-        if(rhs.empty)
-            return false;
-        if(lhs.front != rhs.front)
-            return false;
-        lhs.popFront();
-        rhs.popFront();
-    }
-}
-
-
 
 /**
     $(P
@@ -1975,7 +1924,7 @@ pure:
 
     $(P Memory usage is 8 bytes per each contiguous interval in a set.
     The value semantics are achieved by using the
-    $(WEB en.wikipedia.org/wiki/Copy-on-write, COW) technique
+    $(HTTP en.wikipedia.org/wiki/Copy-on-write, COW) technique
     and thus it's $(RED not) safe to cast this type to $(D_KEYWORD shared).
     )
 
@@ -1998,10 +1947,10 @@ public:
         Construct from another code point set of any type.
     */
     this(Set)(Set set) pure
-        if(isCodepointSet!Set)
+        if (isCodepointSet!Set)
     {
         uint[] arr;
-        foreach(v; set.byInterval)
+        foreach (v; set.byInterval)
         {
             arr ~= v.a;
             arr ~= v.b;
@@ -2013,10 +1962,10 @@ public:
         Construct a set from a forward range of code point intervals.
     */
     this(Range)(Range intervals) pure
-        if(isForwardRange!Range && isIntegralPair!(ElementType!Range))
+        if (isForwardRange!Range && isIntegralPair!(ElementType!Range))
     {
         uint[] arr;
-        foreach(v; intervals)
+        foreach (v; intervals)
         {
             SP.append(arr, v.a);
             SP.append(arr, v.b);
@@ -2028,7 +1977,7 @@ public:
     //helper function that avoids sanity check to be CTFE-friendly
     private static fromIntervals(Range)(Range intervals) pure
     {
-        import std.algorithm : map;
+        import std.algorithm.iteration : map;
         import std.range : roundRobin;
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
             intervals.save.map!"a[1]"());
@@ -2076,15 +2025,15 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
 
         auto set = CodepointSet('a', 'z'+1, 'а', 'я'+1);
-        foreach(v; 'a'..'z'+1)
+        foreach (v; 'a'..'z'+1)
             assert(set[v]);
         // Cyrillic lowercase interval
-        foreach(v; 'а'..'я'+1)
+        foreach (v; 'а'..'я'+1)
             assert(set[v]);
         //specific order is not required, intervals may interesect
         auto set2 = CodepointSet('а', 'я'+1, 'a', 'd', 'b', 'z'+1);
@@ -2121,7 +2070,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto gothic = unicode.Gothic;
         // Gothic letter ahsa
@@ -2137,8 +2086,8 @@ public:
     package auto scanFor()(dchar ch) const
     {
         immutable len = data.length;
-        for(size_t i = 0; i < len; i++)
-            if(ch < data[i])
+        for (size_t i = 0; i < len; i++)
+            if (ch < data[i])
                 return i & 1;
         return 0;
     }
@@ -2147,7 +2096,7 @@ public:
     @property size_t length()
     {
         size_t sum = 0;
-        foreach(iv; byInterval)
+        foreach (iv; byInterval)
         {
             sum += iv.b - iv.a;
         }
@@ -2169,11 +2118,11 @@ public:
         )
     */
     This opBinary(string op, U)(U rhs)
-        if(isCodepointSet!U || is(U:dchar))
+        if (isCodepointSet!U || is(U:dchar))
     {
-        static if(op == "&" || op == "|" || op == "~")
+        static if (op == "&" || op == "|" || op == "~")
         {// symmetric ops thus can swap arguments to reuse r-value
-            static if(is(U:dchar))
+            static if (is(U:dchar))
             {
                 auto tmp = this;
                 mixin("tmp "~op~"= rhs; ");
@@ -2181,7 +2130,7 @@ public:
             }
             else
             {
-                static if(is(Unqual!U == U))
+                static if (is(Unqual!U == U))
                 {
                     // try hard to reuse r-value
                     mixin("rhs "~op~"= this;");
@@ -2195,7 +2144,7 @@ public:
                 }
             }
         }
-        else static if(op == "-") // anti-symmetric
+        else static if (op == "-") // anti-symmetric
         {
             auto tmp = this;
             tmp -= rhs;
@@ -2206,7 +2155,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2234,11 +2183,11 @@ public:
 
     /// The 'op=' versions of the above overloaded operators.
     ref This opOpAssign(string op, U)(U rhs)
-        if(isCodepointSet!U || is(U:dchar))
+        if (isCodepointSet!U || is(U:dchar))
     {
-        static if(op == "|")    // union
+        static if (op == "|")    // union
         {
-            static if(is(U:dchar))
+            static if (is(U:dchar))
             {
                 this.addInterval(rhs, rhs+1);
                 return this;
@@ -2246,11 +2195,11 @@ public:
             else
                 return this.add(rhs);
         }
-        else static if(op == "&")   // intersection
+        else static if (op == "&")   // intersection
                 return this.intersect(rhs);// overloaded
-        else static if(op == "-")   // set difference
+        else static if (op == "-")   // set difference
                 return this.sub(rhs);// overloaded
-        else static if(op == "~")   // symmetric set difference
+        else static if (op == "~")   // symmetric set difference
         {
             auto copy = this & rhs;
             this |= rhs;
@@ -2266,13 +2215,13 @@ public:
         the same as $(LREF opIndex).
     */
     bool opBinaryRight(string op: "in", U)(U ch) const
-        if(is(U : dchar))
+        if (is(U : dchar))
     {
         return this[ch];
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert('я' in unicode.Cyrillic);
         assert(!('z' in unicode.Cyrillic));
@@ -2300,7 +2249,7 @@ public:
             this(This set)
             {
                 r = set.byInterval;
-                if(!r.empty)
+                if (!r.empty)
                     cur = r.front.a;
             }
 
@@ -2317,10 +2266,10 @@ public:
             void popFront()
             {
                 cur++;
-                while(cur >= r.front.b)
+                while (cur >= r.front.b)
                 {
                     r.popFront();
-                    if(r.empty)
+                    if (r.empty)
                         break;
                     cur = r.front.a;
                 }
@@ -2334,7 +2283,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2348,8 +2297,8 @@ public:
         open-right intervals and feed it to $(D sink).
         )
         $(P Used by various standard formatting facilities such as
-         $(XREF _format, formattedWrite), $(XREF _stdio, write),
-         $(XREF _stdio, writef), $(XREF _conv, to) and others.
+         $(REF formattedWrite, std,_format), $(REF write, std,_stdio),
+         $(REF writef, std,_stdio), $(REF to, std,_conv) and others.
         )
         Example:
         ---
@@ -2369,12 +2318,12 @@ public:
      * $(LI $(B %x) formats the intervals as a [low..high$(RPAREN) range of lowercase hex characters)
      * $(LI $(B %X) formats the intervals as a [low..high$(RPAREN) range of uppercase hex characters)
      */
-    void toString(scope void delegate(const(char)[]) sink,
+    void toString(Writer)(scope Writer sink,
                   FormatSpec!char fmt) /* const */
     {
-        import std.format;
+        import std.format : formatValue;
         auto range = byInterval;
-        if(range.empty)
+        if (range.empty)
             return;
 
         while (1)
@@ -2393,7 +2342,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.conv : to;
         import std.format : format;
@@ -2406,13 +2355,15 @@ public:
         assert(format("%d", unicode.Cyrillic) == unicode.Cyrillic.to!string);
 
         assert(format("%#x", unicode.Cyrillic) ==
-            "[0x400..0x485) [0x487..0x528) [0x1d2b..0x1d2c) [0x1d78..0x1d79) [0x2de0..0x2e00) [0xa640..0xa698) [0xa69f..0xa6a0)");
+            "[0x400..0x485) [0x487..0x528) [0x1d2b..0x1d2c) [0x1d78..0x1d79) [0x2de0..0x2e00) "
+            ~"[0xa640..0xa698) [0xa69f..0xa6a0)");
 
         assert(format("%#X", unicode.Cyrillic) ==
-            "[0X400..0X485) [0X487..0X528) [0X1D2B..0X1D2C) [0X1D78..0X1D79) [0X2DE0..0X2E00) [0XA640..0XA698) [0XA69F..0XA6A0)");
+            "[0X400..0X485) [0X487..0X528) [0X1D2B..0X1D2C) [0X1D78..0X1D79) [0X2DE0..0X2E00) "
+            ~"[0XA640..0XA698) [0XA69F..0XA6A0)");
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertThrown;
         import std.format : format;
@@ -2430,7 +2381,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         CodepointSet someSet;
         someSet.add('0', '5').add('A','Z'+1);
@@ -2445,10 +2396,10 @@ private:
 
   package(std)  // used from: std.regex.internal.parser
     ref intersect(U)(U rhs)
-        if(isCodepointSet!U)
+        if (isCodepointSet!U)
     {
         Marker mark;
-        foreach( i; rhs.byInterval)
+        foreach ( i; rhs.byInterval)
         {
             mark = this.dropUpTo(i.a, mark);
             mark = this.skipUpTo(i.b, mark);
@@ -2459,15 +2410,15 @@ private:
 
     ref intersect()(dchar ch)
     {
-        foreach(i; byInterval)
-            if(i.a <= ch && ch < i.b)
+        foreach (i; byInterval)
+            if (i.a <= ch && ch < i.b)
                 return this = This.init.add(ch, ch+1);
         this = This.init;
         return this;
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(unicode.Cyrillic.intersect('-').byInterval.empty);
     }
@@ -2480,11 +2431,10 @@ private:
     // same as the above except that skip & drop parts are swapped
   package(std)  // used from: std.regex.internal.parser
     ref sub(U)(U rhs)
-        if(isCodepointSet!U)
+        if (isCodepointSet!U)
     {
-        uint top;
         Marker mark;
-        foreach(i; rhs.byInterval)
+        foreach (i; rhs.byInterval)
         {
             mark = this.skipUpTo(i.a, mark);
             mark = this.dropUpTo(i.b, mark);
@@ -2494,10 +2444,10 @@ private:
 
   package(std)  // used from: std.regex.internal.parse
     ref add(U)(U rhs)
-        if(isCodepointSet!U)
+        if (isCodepointSet!U)
     {
         Marker start;
-        foreach(i; rhs.byInterval)
+        foreach (i; rhs.byInterval)
         {
             start = addInterval(i.a, i.b, start);
         }
@@ -2515,16 +2465,16 @@ public:
     @property auto inverted()
     {
         InversionList inversion = this;
-        if(inversion.data.length == 0)
+        if (inversion.data.length == 0)
         {
             inversion.addInterval(0, lastDchar+1);
             return inversion;
         }
-        if(inversion.data[0] != 0)
+        if (inversion.data[0] != 0)
             genericReplace(inversion.data, 0, 0, [0]);
         else
             genericReplace(inversion.data, 0, 1, cast(uint[])null);
-        if(data[data.length-1] != lastDchar+1)
+        if (data[data.length-1] != lastDchar+1)
             genericReplace(inversion.data,
                 inversion.data.length, inversion.data.length, [lastDchar+1]);
         else
@@ -2535,7 +2485,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto set = unicode.ASCII;
         // union with the inverse gets all of the code points in the Unicode
@@ -2571,16 +2521,16 @@ public:
         ---
         bool func(dchar ch)  @safe pure nothrow @nogc
         {
-            if(ch < 45)
+            if (ch < 45)
             {
-                if(ch == 10 || ch == 11) return true;
+                if (ch == 10 || ch == 11) return true;
                 return false;
             }
             else if (ch < 65) return true;
             else
             {
-                if(ch < 100) return false;
-                if(ch < 200) return true;
+                if (ch < 100) return false;
+                if (ch < 200) return true;
                 return false;
             }
         }
@@ -2588,32 +2538,32 @@ public:
     */
     string toSourceCode(string funcName="")
     {
+        import std.algorithm.searching : countUntil;
         import std.array : array;
         import std.format : format;
-        import std.algorithm : countUntil;
         enum maxBinary = 3;
         static string linearScope(R)(R ivals, string indent)
         {
             string result = indent~"{\n";
             string deeper = indent~"    ";
-            foreach(ival; ivals)
+            foreach (ival; ivals)
             {
                 auto span = ival[1] - ival[0];
                 assert(span != 0);
-                if(span == 1)
+                if (span == 1)
                 {
-                    result ~= format("%sif(ch == %s) return true;\n", deeper, ival[0]);
+                    result ~= format("%sif (ch == %s) return true;\n", deeper, ival[0]);
                 }
-                else if(span == 2)
+                else if (span == 2)
                 {
-                    result ~= format("%sif(ch == %s || ch == %s) return true;\n",
+                    result ~= format("%sif (ch == %s || ch == %s) return true;\n",
                         deeper, ival[0], ival[0]+1);
                 }
                 else
                 {
-                    if(ival[0] != 0) // dchar is unsigned and  < 0 is useless
-                        result ~= format("%sif(ch < %s) return false;\n", deeper, ival[0]);
-                    result ~= format("%sif(ch < %s) return true;\n", deeper, ival[1]);
+                    if (ival[0] != 0) // dchar is unsigned and  < 0 is useless
+                        result ~= format("%sif (ch < %s) return false;\n", deeper, ival[0]);
+                    result ~= format("%sif (ch < %s) return true;\n", deeper, ival[1]);
                 }
             }
             result ~= format("%sreturn false;\n%s}\n", deeper, indent); // including empty range of intervals
@@ -2623,7 +2573,7 @@ public:
         static string binaryScope(R)(R ivals, string indent)
         {
             // time to do unrolled comparisons?
-            if(ivals.length < maxBinary)
+            if (ivals.length < maxBinary)
                 return linearScope(ivals, indent);
             else
                 return bisect(ivals, ivals.length/2, indent);
@@ -2633,11 +2583,11 @@ public:
         // and GDC is doing fine job either way
         static string switchScope(R)(R ivals, string indent)
         {
-            string result = indent~"switch(ch){\n";
+            string result = indent~"switch (ch){\n";
             string deeper = indent~"    ";
-            foreach(ival; ivals)
+            foreach (ival; ivals)
             {
-                if(ival[0]+1 == ival[1])
+                if (ival[0]+1 == ival[1])
                 {
                     result ~= format("%scase %s: return true;\n",
                         deeper, ival[0]);
@@ -2658,7 +2608,7 @@ public:
             // bisect on one [a, b) interval at idx
             string result = indent~"{\n";
             // less branch, < a
-            result ~= format("%sif(ch < %s)\n%s",
+            result ~= format("%sif (ch < %s)\n%s",
                 deeper, range[idx][0], binaryScope(range[0..idx], deeper));
             // middle point,  >= a && < b
             result ~= format("%selse if (ch < %s) return true;\n",
@@ -2674,7 +2624,7 @@ public:
         auto range = byInterval.array();
         // special case first bisection to be on ASCII vs beyond
         auto tillAscii = countUntil!"a[0] > 0x80"(range);
-        if(tillAscii <= 0) // everything is ASCII or nothing is ascii (-1 & 0)
+        if (tillAscii <= 0) // everything is ASCII or nothing is ascii (-1 & 0)
             code ~= binaryScope(range, "");
         else
             code ~= bisect(range, tillAscii, "");
@@ -2690,7 +2640,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         CodepointSet emptySet;
         assert(emptySet.length == 0);
@@ -2790,7 +2740,9 @@ private:
     // to make sure invariants hold
     void sanitize()
     {
-        import std.algorithm : sort, SwapStrategy, max;
+        import std.algorithm.comparison : max;
+        import std.algorithm.mutation : SwapStrategy;
+        import std.algorithm.sorting : sort;
         if (data.length == 0)
             return;
         alias Ival = CodepointInterval;
@@ -2836,7 +2788,7 @@ private:
     ref subChar(dchar ch)
     {
         auto mark = skipUpTo(ch);
-        if(mark != data.length
+        if (mark != data.length
             && data[mark] == ch && data[mark-1] == ch)
         {
             // it has split, meaning that ch happens to be in one of intervals
@@ -2857,7 +2809,7 @@ private:
         auto range = assumeSorted(data[]);
         size_t pos;
         size_t a_idx = hint + range[hint..$].lowerBound!(SearchPolicy.gallop)(a).length;
-        if(a_idx == range.length)
+        if (a_idx == range.length)
         {
             //  [---+++----++++----++++++]
             //  [                         a  b]
@@ -2871,11 +2823,11 @@ private:
         {
             writefln("a_idx=%d; b_idx=%d;", a_idx, b_idx);
         }
-        if(b_idx == range.length)
+        if (b_idx == range.length)
         {
             //  [-------++++++++----++++++-]
             //  [      s     a                 b]
-            if(a_idx & 1)// a in positive
+            if (a_idx & 1)// a in positive
             {
                 buf[0] = b;
                 to_insert = 1;
@@ -2897,9 +2849,9 @@ private:
             writefln("a_idx=%d; b_idx=%d;", a_idx, b_idx);
             writefln("a=%s; b=%s; top=%s;", a, b, top);
         }
-        if(a_idx & 1)
+        if (a_idx & 1)
         {// a in positive
-            if(b_idx & 1)// b in positive
+            if (b_idx & 1)// b in positive
             {
                 //  [-------++++++++----++++++-]
                 //  [       s    a        b    ]
@@ -2910,7 +2862,7 @@ private:
             {
                 //  [-------++++++++----++++++-]
                 //  [       s    a   b         ]
-                if(top == b)
+                if (top == b)
                 {
                     assert(b_idx+1 < data.length);
                     buf[0] = data[b_idx+1];
@@ -2924,7 +2876,7 @@ private:
         }
         else
         { // a in negative
-            if(b_idx & 1) // b in positive
+            if (b_idx & 1) // b in positive
             {
                 //  [----------+++++----++++++-]
                 //  [     a     b              ]
@@ -2936,7 +2888,7 @@ private:
             {
                 //  [----------+++++----++++++-]
                 //  [  a       s      b        ]
-                if(top == b)
+                if (top == b)
                 {
                     assert(b_idx+1 < data.length);
                     buf[0] = a;
@@ -2968,7 +2920,7 @@ private:
     body
     {
         auto range = assumeSorted!"a<=b"(data[pos..data.length]);
-        if(range.empty)
+        if (range.empty)
             return pos;
         size_t idx = pos;
         idx += range.lowerBound(a).length;
@@ -2978,9 +2930,9 @@ private:
             writeln("dropUpTo full length=", data.length);
             writeln(pos,"~~~", idx);
         }
-        if(idx == data.length)
+        if (idx == data.length)
             return genericReplace(data, pos, idx, cast(uint[])[]);
-        if(idx & 1)
+        if (idx & 1)
         {   // a in positive
             //[--+++----++++++----+++++++------...]
             //      |<---si       s  a  t
@@ -3008,17 +2960,17 @@ private:
         auto range = assumeSorted!"a<=b"(data[pos..data.length]);
         size_t idx = pos+range.lowerBound(a).length;
 
-        if(idx >= data.length) // could have Marker point to recently removed stuff
+        if (idx >= data.length) // could have Marker point to recently removed stuff
             return data.length;
 
-        if(idx & 1)// inside of interval, check for split
+        if (idx & 1)// inside of interval, check for split
         {
 
             uint top = data[idx];
-            if(top == a)// no need to split, it's end
+            if (top == a)// no need to split, it's end
                 return idx+1;
             uint start = data[idx-1];
-            if(a == start)
+            if (a == start)
                 return idx-1;
             // split it up
             genericReplace(data, idx, idx+1, [a, a, top]);
@@ -3032,7 +2984,7 @@ private:
 
 @system unittest
 {
-    import std.conv;
+    import std.conv : to;
     assert(unicode.ASCII.to!string() == "[0..128)");
 }
 
@@ -3088,7 +3040,7 @@ private:
 
 uint read24(const ubyte* ptr, size_t idx) @safe pure nothrow @nogc
 {
-    static if(hasUnalignedReads)
+    static if (hasUnalignedReads)
         return __ctfe ? safeRead24(ptr, idx) : unalignedRead24(ptr, idx);
     else
         return safeRead24(ptr, idx);
@@ -3096,13 +3048,15 @@ uint read24(const ubyte* ptr, size_t idx) @safe pure nothrow @nogc
 
 void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
 {
-    static if(hasUnalignedReads)
+    static if (hasUnalignedReads)
         return __ctfe ? safeWrite24(ptr, val, idx) : unalignedWrite24(ptr, val, idx);
     else
         return safeWrite24(ptr, val, idx);
 }
 @trusted struct CowArray(SP=GcPolicy)
 {
+    import std.range.primitives : hasLength;
+
     static auto reuse(uint[] arr)
     {
         CowArray cow;
@@ -3114,17 +3068,18 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     }
 
     this(Range)(Range range)
-        if(isInputRange!Range && hasLength!Range)
+        if (isInputRange!Range && hasLength!Range)
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         length = range.length;
         copy(range, data[0..$-1]);
     }
 
     this(Range)(Range range)
-        if(isForwardRange!Range && !hasLength!Range)
+        if (isForwardRange!Range && !hasLength!Range)
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
+        import std.range.primitives : walkLength;
         auto len = walkLength(range.save);
         length = len;
         copy(range, data[0..$-1]);
@@ -3132,7 +3087,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
 
     this(this)
     {
-        if(!empty)
+        if (!empty)
         {
             refCount = refCount + 1;
         }
@@ -3140,10 +3095,10 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
 
     ~this()
     {
-        if(!empty)
+        if (!empty)
         {
             auto cnt = refCount;
-            if(cnt == 1)
+            if (cnt == 1)
                 SP.destroy(data);
             else
                 refCount = cnt - 1;
@@ -3162,22 +3117,23 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     //+ an extra slot for ref-count
     @property void length(size_t len)
     {
-        import std.algorithm : min, copy;
-        if(len == 0)
+        import std.algorithm.comparison : min;
+        import std.algorithm.mutation : copy;
+        if (len == 0)
         {
-            if(!empty)
+            if (!empty)
                 freeThisReference();
             return;
         }
         immutable total = len + 1; // including ref-count
-        if(empty)
+        if (empty)
         {
             data = SP.alloc!uint(total);
             refCount = 1;
             return;
         }
         auto cur_cnt = refCount;
-        if(cur_cnt != 1) // have more references to this memory
+        if (cur_cnt != 1) // have more references to this memory
         {
             refCount = cur_cnt - 1;
             auto new_data = SP.alloc!uint(total);
@@ -3205,7 +3161,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     void opIndexAssign(uint val, size_t idx)
     {
         auto cnt = refCount;
-        if(cnt != 1)
+        if (cnt != 1)
             dupThisReference(cnt);
         data[idx] = val;
     }
@@ -3213,10 +3169,10 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     //
     auto opSlice(size_t from, size_t to)
     {
-        if(!empty)
+        if (!empty)
         {
             auto cnt = refCount;
-            if(cnt != 1)
+            if (cnt != 1)
                 dupThisReference(cnt);
         }
         return data[from .. to];
@@ -3242,7 +3198,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     }
 
     void append(Range)(Range range)
-        if(isInputRange!Range && hasLength!Range && is(ElementType!Range : uint))
+        if (isInputRange!Range && hasLength!Range && is(ElementType!Range : uint))
     {
         size_t nl = length + range.length;
         length = nl;
@@ -3257,7 +3213,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
 
     bool opEquals()(auto const ref CowArray rhs)const
     {
-        if(empty ^ rhs.empty)
+        if (empty ^ rhs.empty)
             return false; // one is empty and the other isn't
         return empty || data[0..$-1] == rhs.data[0..$-1];
     }
@@ -3277,7 +3233,7 @@ private:
     void freeThisReference()
     {
         auto count = refCount;
-        if(count != 1) // have more references to this memory
+        if (count != 1) // have more references to this memory
         {
             // dec shared ref-count
             refCount = count - 1;
@@ -3295,7 +3251,7 @@ private:
     }
     body
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         // dec shared ref-count
         refCount = count - 1;
         // copy to the new chunk of RAM
@@ -3311,9 +3267,11 @@ private:
 
 @safe unittest// Uint24 tests
 {
-    import std.algorithm;
-    import std.conv;
-    import std.range;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.mutation : copy;
+    import std.conv : text;
+    import std.range : iota, chain;
+    import std.range.primitives : isBidirectionalRange, isOutputRange;
     void funcRef(T)(ref T u24)
     {
         u24.length = 2;
@@ -3323,13 +3281,13 @@ private:
         u24.length = 0;
         assert(u24.empty);
         u24.append([1, 2]);
-        assert(equalS(u24[], [1, 2]));
+        assert(equal(u24[], [1, 2]));
         u24.append(111);
-        assert(equalS(u24[], [1, 2, 111]));
+        assert(equal(u24[], [1, 2, 111]));
         assert(!u24_c.empty && u24_c[1] == 1024);
         u24.length = 3;
         copy(iota(0, 3), u24[]);
-        assert(equalS(u24[], iota(0, 3)));
+        assert(equal(u24[], iota(0, 3)));
         assert(u24_c[1] == 1024);
     }
 
@@ -3339,15 +3297,15 @@ private:
         T u24_3;
         u24_3 = u24_2;
         assert(u24_2 == u24_3);
-        assert(equalS(u24[], u24_2[]));
-        assert(equalS(u24_2[], u24_3[]));
+        assert(equal(u24[], u24_2[]));
+        assert(equal(u24_2[], u24_3[]));
         funcRef(u24_3);
 
-        assert(equalS(u24_3[], iota(0, 3)));
-        assert(!equalS(u24_2[], u24_3[]));
-        assert(equalS(u24_2[], u24[]));
+        assert(equal(u24_3[], iota(0, 3)));
+        assert(!equal(u24_2[], u24_3[]));
+        assert(equal(u24_2[], u24[]));
         u24_2 = u24_3;
-        assert(equalS(u24_2[], iota(0, 3)));
+        assert(equal(u24_2[], iota(0, 3)));
         // to test that passed arg is intact outside
         // plus try out opEquals
         u24 = u24_3;
@@ -3358,7 +3316,7 @@ private:
         assert(u24 != u24_2);
     }
 
-    foreach(Policy; AliasSeq!(GcPolicy, ReallocPolicy))
+    foreach (Policy; AliasSeq!(GcPolicy, ReallocPolicy))
     {
         alias Range = typeof(CowArray!Policy.init[]);
         alias U24A = CowArray!Policy;
@@ -3382,14 +3340,14 @@ private:
         assert(arr[0] == 72);
         assert(arr2[0] == 11);
         // set this to about 100M to stress-test COW memory management
-        foreach(v; 0..10_000)
+        foreach (v; 0..10_000)
             func2(arr);
-        assert(equalS(arr[], [72, 0xFE_FEFE, 100]));
+        assert(equal(arr[], [72, 0xFE_FEFE, 100]));
 
         auto r2 = U24A(iota(0, 100));
-        assert(equalS(r2[], iota(0, 100)), text(r2[]));
+        assert(equal(r2[], iota(0, 100)), text(r2[]));
         copy(iota(10, 170, 2), r2[10..90]);
-        assert(equalS(r2[], chain(iota(0, 10), iota(10, 170, 2), iota(90, 100)))
+        assert(equal(r2[], chain(iota(0, 10), iota(10, 170, 2), iota(90, 100)))
                , text(r2[]));
     }
 }
@@ -3401,8 +3359,8 @@ version(unittest)
 
 @safe unittest// core set primitives test
 {
-    import std.conv;
-    foreach(CodeList; AllSets)
+    import std.conv : text;
+    foreach (CodeList; AllSets)
     {
         CodeList a;
         //"plug a hole" test
@@ -3478,11 +3436,13 @@ version(unittest)
 //test constructor to work with any order of intervals
 @safe unittest
 {
-    import std.conv, std.range, std.algorithm;
-    import std.typecons;
+    import std.algorithm.comparison : equal;
+    import std.conv : text, to;
+    import std.range : chain, iota;
+    import std.typecons : tuple;
     //ensure constructor handles bad ordering and overlap
     auto c1 = CodepointSet('а', 'я'+1, 'А','Я'+1);
-    foreach(ch; chain(iota('а', 'я'+1), iota('А','Я'+1)))
+    foreach (ch; chain(iota('а', 'я'+1), iota('А','Я'+1)))
         assert(ch in c1, to!string(ch));
 
     //contiguos
@@ -3520,8 +3480,8 @@ version(unittest)
 
 @safe unittest
 {   // full set operations
-    import std.conv;
-    foreach(CodeList; AllSets)
+    import std.conv : text;
+    foreach (CodeList; AllSets)
     {
         CodeList a, b, c, d;
 
@@ -3625,7 +3585,7 @@ version(unittest)
 
 @safe unittest// vs single dchar
 {
-    import std.conv;
+    import std.conv : text;
     CodepointSet a = CodepointSet(10, 100, 120, 200);
     assert(a - 'A' == CodepointSet(10, 65, 66, 100, 120, 200), text(a - 'A'));
     assert((a & 'B') == CodepointSet(66, 67));
@@ -3633,38 +3593,41 @@ version(unittest)
 
 @safe unittest// iteration & opIndex
 {
-    import std.conv;
-    import std.typecons;
-    foreach(CodeList; AliasSeq!(InversionList!(ReallocPolicy)))
+    import std.algorithm.comparison : equal;
+    import std.conv : text;
+    import std.typecons : tuple, Tuple;
+
+    foreach (CodeList; AliasSeq!(InversionList!(ReallocPolicy)))
     {
         auto arr = "ABCDEFGHIJKLMabcdefghijklm"d;
         auto a = CodeList('A','N','a', 'n');
-        assert(equalS(a.byInterval,
+        assert(equal(a.byInterval,
                 [tuple(cast(uint)'A', cast(uint)'N'), tuple(cast(uint)'a', cast(uint)'n')]
             ), text(a.byInterval));
 
         // same @@@BUG as in issue 8949 ?
         version(bug8949)
         {
-            assert(equalS(retro(a.byInterval),
+            import std.range : retro;
+            assert(equal(retro(a.byInterval),
                 [tuple(cast(uint)'a', cast(uint)'n'), tuple(cast(uint)'A', cast(uint)'N')]
             ), text(retro(a.byInterval)));
         }
         auto achr = a.byCodepoint;
-        assert(equalS(achr, arr), text(a.byCodepoint));
-        foreach(ch; a.byCodepoint)
+        assert(equal(achr, arr), text(a.byCodepoint));
+        foreach (ch; a.byCodepoint)
             assert(a[ch]);
         auto x = CodeList(100, 500, 600, 900, 1200, 1500);
-        assert(equalS(x.byInterval, [ tuple(100, 500), tuple(600, 900), tuple(1200, 1500)]), text(x.byInterval));
-        foreach(ch; x.byCodepoint)
+        assert(equal(x.byInterval, [ tuple(100, 500), tuple(600, 900), tuple(1200, 1500)]), text(x.byInterval));
+        foreach (ch; x.byCodepoint)
             assert(x[ch]);
-        static if(is(CodeList == CodepointSet))
+        static if (is(CodeList == CodepointSet))
         {
             auto y = CodeList(x.byInterval);
-            assert(equalS(x.byInterval, y.byInterval));
+            assert(equal(x.byInterval, y.byInterval));
         }
-        assert(equalS(CodepointSet.init.byInterval, cast(Tuple!(uint, uint)[])[]));
-        assert(equalS(CodepointSet.init.byCodepoint, cast(dchar[])[]));
+        assert(equal(CodepointSet.init.byInterval, cast(Tuple!(uint, uint)[])[]));
+        assert(equal(CodepointSet.init.byCodepoint, cast(dchar[])[]));
     }
 }
 
@@ -3676,7 +3639,7 @@ version(unittest)
 auto arrayRepr(T)(T x)
 {
     import std.conv : text;
-    if(x.length > 32)
+    if (x.length > 32)
     {
         return text(x[0..16],"~...~", x[x.length-16..x.length]);
     }
@@ -3695,11 +3658,11 @@ auto arrayRepr(T)(T x)
 template mapTrieIndex(Prefix...)
 {
     size_t mapTrieIndex(Key)(Key key)
-        if(isValidPrefixForTrie!(Key, Prefix))
+        if (isValidPrefixForTrie!(Key, Prefix))
     {
         alias p = Prefix;
         size_t idx;
-        foreach(i, v; p[0..$-1])
+        foreach (i, v; p[0..$-1])
         {
             idx |= p[i](key);
             idx <<= p[i+1].bitSize;
@@ -3715,26 +3678,26 @@ template mapTrieIndex(Prefix...)
 
     See $(LREF buildTrie) for generic helpers built on top of it.
 */
-@trusted struct TrieBuilder(Value, Key, Args...)
-    if(isBitPackableType!Value && isValidArgsForTrie!(Key, Args))
+@trusted private struct TrieBuilder(Value, Key, Args...)
+    if (isBitPackableType!Value && isValidArgsForTrie!(Key, Args))
 {
     import std.exception : enforce;
 
 private:
     // last index is not stored in table, it is used as an offset to values in a block.
-    static if(is(Value == bool))// always pack bool
+    static if (is(Value == bool))// always pack bool
         alias V = BitPacked!(Value, 1);
     else
         alias V = Value;
     static auto deduceMaxIndex(Preds...)()
     {
         size_t idx = 1;
-        foreach(v; Preds)
+        foreach (v; Preds)
             idx *= 2^^v.bitSize;
         return idx;
     }
 
-    static if(is(typeof(Args[0]) : Key)) // Args start with upper bound on Key
+    static if (is(typeof(Args[0]) : Key)) // Args start with upper bound on Key
     {
         alias Prefix = Args[1..$];
         enum lastPageSize = 2^^Prefix[$-1].bitSize;
@@ -3780,12 +3743,12 @@ private:
     {
         alias j = idx!level;
         enum pageSize = 1<<Prefix[level].bitSize;
-        if(numVals == 0)
+        if (numVals == 0)
             return;
         auto ptr = table.slice!(level);
-        if(numVals == 1)
+        if (numVals == 1)
         {
-            static if(level == Prefix.length-1)
+            static if (level == Prefix.length-1)
                 ptr[j] = val;
             else
             {// can incur narrowing conversion
@@ -3793,7 +3756,7 @@ private:
                 ptr[j] = force!(typeof(ptr[j]))(val);
             }
             j++;
-            if(j % pageSize == 0)
+            if (j % pageSize == 0)
                 spillToNextPage!level(ptr);
             return;
         }
@@ -3801,13 +3764,13 @@ private:
         // get to the next page boundary
         size_t nextPB = (j + pageSize) & ~(pageSize-1);
         size_t n =  nextPB - j;// can fill right in this page
-        if(numVals < n) //fits in current page
+        if (numVals < n) //fits in current page
         {
             ptr[j..j+numVals]  = val;
             j += numVals;
             return;
         }
-        static if(level != 0)//on the first level it always fits
+        static if (level != 0)//on the first level it always fits
         {
             numVals -= n;
             //write till the end of current page
@@ -3816,7 +3779,7 @@ private:
             //spill to the next page
             spillToNextPage!level(ptr);
             // page at once loop
-            if(state[level].idx_zeros != size_t.max && val == T.init)
+            if (state[level].idx_zeros != size_t.max && val == T.init)
             {
                 alias NextIdx = typeof(table.slice!(level-1)[0]);
                 addValue!(level-1)(force!NextIdx(state[level].idx_zeros),
@@ -3826,7 +3789,7 @@ private:
             }
             else
             {
-                while(numVals >= pageSize)
+                while (numVals >= pageSize)
                 {
                     numVals -= pageSize;
                     ptr[j..j+pageSize]  = val;
@@ -3834,7 +3797,7 @@ private:
                     spillToNextPage!level(ptr);
                 }
             }
-            if(numVals)
+            if (numVals)
             {
                 // the leftovers, an incomplete page
                 ptr[j..j+numVals]  = val;
@@ -3847,7 +3810,7 @@ private:
     {
         // last level (i.e. topmost) has 1 "page"
         // thus it need not to add a new page on upper level
-        static if(level != 0)
+        static if (level != 0)
             spillToNextPageImpl!(level)(ptr);
     }
 
@@ -3862,15 +3825,16 @@ private:
         auto last = idx!level-pageSize;
         auto slice = ptr[idx!level - pageSize..idx!level];
         size_t j;
-        for(j=0; j<last; j+=pageSize)
+        for (j=0; j<last; j+=pageSize)
         {
-            if(ptr[j..j+pageSize] == slice)
+            if (ptr[j..j+pageSize] == slice)
             {
                 // get index to it, reuse ptr space for the next block
                 next_lvl_index = force!NextIdx(j/pageSize);
                 version(none)
                 {
-                writefln("LEVEL(%s) page maped idx: %s: 0..%s  ---> [%s..%s]"
+                import std.stdio : writefln, writeln;
+                writefln("LEVEL(%s) page mapped idx: %s: 0..%s  ---> [%s..%s]"
                         ,level
                         ,indices[level-1], pageSize, j, j+pageSize);
                 writeln("LEVEL(", level
@@ -3882,17 +3846,18 @@ private:
                 break;
             }
         }
-        if(j == last)
+        if (j == last)
         {
     L_allocate_page:
             next_lvl_index = force!NextIdx(idx!level/pageSize - 1);
-            if(state[level].idx_zeros == size_t.max && ptr.zeros(j, j+pageSize))
+            if (state[level].idx_zeros == size_t.max && ptr.zeros(j, j+pageSize))
             {
                 state[level].idx_zeros = next_lvl_index;
             }
             // allocate next page
             version(none)
             {
+            import std.stdio : writefln;
             writefln("LEVEL(%s) page allocated: %s"
                      , level, arrayRepr(slice[0..pageSize]));
             writefln("LEVEL(%s) index: %s ; page at this index %s"
@@ -3946,11 +3911,11 @@ public:
         curIndex = 0;
         defValue = filler;
         // zeros-page index, ones-page index
-        foreach(ref v; state)
+        foreach (ref v; state)
             v = ConstructState(size_t.max, size_t.max);
         table = typeof(table)(indices);
         // one page per level is a bootstrap minimum
-        foreach(i, Pred; Prefix)
+        foreach (i, Pred; Prefix)
             table.length!i = (1<<Pred.bitSize);
     }
 
@@ -3984,14 +3949,14 @@ public:
     /// Finishes construction of Trie, yielding an immutable Trie instance.
     auto build()
     {
-        static if(maxIndex != 0) // doesn't cover full range of size_t
+        static if (maxIndex != 0) // doesn't cover full range of size_t
         {
             assert(curIndex <= maxIndex);
             addValue!lastLevel(defValue, maxIndex - curIndex);
         }
         else
         {
-            if(curIndex != 0 // couldn't wrap around
+            if (curIndex != 0 // couldn't wrap around
                 || (Prefix.length != 1 && indices[lastLevel] == 0)) // can be just empty
             {
                 addValue!lastLevel(defValue, size_t.max - curIndex);
@@ -4003,7 +3968,7 @@ public:
     }
 }
 
-/*
+/**
     $(P A generic Trie data-structure for a fixed number of stages.
     The design goal is optimal speed with smallest footprint size.
     )
@@ -4013,21 +3978,22 @@ public:
     )
 
 */
-@trusted public struct Trie(Value, Key, Args...)
-    if(isValidPrefixForTrie!(Key, Args)
+@trusted private struct Trie(Value, Key, Args...)
+    if (isValidPrefixForTrie!(Key, Args)
         || (isValidPrefixForTrie!(Key, Args[1..$])
             && is(typeof(Args[0]) : size_t)))
 {
-    static if(is(typeof(Args[0]) : size_t))
+    import std.range.primitives : isOutputRange;
+    static if (is(typeof(Args[0]) : size_t))
     {
-        enum maxIndex = Args[0];
-        enum hasBoundsCheck = true;
-        alias Prefix = Args[1..$];
+        private enum maxIndex = Args[0];
+        private enum hasBoundsCheck = true;
+        private alias Prefix = Args[1..$];
     }
     else
     {
-        enum hasBoundsCheck = false;
-        alias Prefix = Args;
+        private enum hasBoundsCheck = false;
+        private alias Prefix = Args;
     }
 
     private this()(typeof(_table) table)
@@ -4042,7 +4008,7 @@ public:
         _table = typeof(_table)(offsets, sizes, data);
     }
 
-    /*
+    /**
         $(P Lookup the $(D key) in this $(D Trie). )
 
         $(P The lookup always succeeds if key fits the domain
@@ -4057,32 +4023,34 @@ public:
         Domain range-checking is only enabled in debug builds
         and results in assertion failure.
     */
-    // templated to auto-detect pure, @safe and nothrow
     TypeOfBitPacked!Value opIndex()(Key key) const
     {
-        static if(hasBoundsCheck)
+        static if (hasBoundsCheck)
             assert(mapTrieIndex!Prefix(key) < maxIndex);
         size_t idx;
         alias p = Prefix;
         idx = cast(size_t)p[0](key);
-        foreach(i, v; p[0..$-1])
+        foreach (i, v; p[0..$-1])
             idx = cast(size_t)((_table.ptr!i[idx]<<p[i+1].bitSize) + p[i+1](key));
         return _table.ptr!(p.length-1)[idx];
     }
 
+    ///
     @property size_t bytes(size_t n=size_t.max)() const
     {
         return _table.bytes!n;
     }
 
+    ///
     @property size_t pages(size_t n)() const
     {
         return (bytes!n+2^^(Prefix[n].bitSize-1))
                 /2^^Prefix[n].bitSize;
     }
 
+    ///
     void store(OutRange)(scope OutRange sink) const
-        if(isOutputRange!(OutRange, char))
+        if (isOutputRange!(OutRange, char))
     {
         _table.store(sink);
     }
@@ -4095,7 +4063,7 @@ private:
 // left-to-right, the most significant bits first
 template GetBitSlicing(size_t top, sizes...)
 {
-    static if(sizes.length > 0)
+    static if (sizes.length > 0)
         alias GetBitSlicing =
             AliasSeq!(sliceBits!(top - sizes[0], top),
                       GetBitSlicing!(top - sizes[0], sizes[1..$]));
@@ -4107,7 +4075,7 @@ template callableWith(T)
 {
     template callableWith(alias Pred)
     {
-        static if(!is(typeof(Pred(T.init))))
+        static if (!is(typeof(Pred(T.init))))
             enum callableWith = false;
         else
         {
@@ -4125,6 +4093,7 @@ template callableWith(T)
 */
 template isValidPrefixForTrie(Key, Prefix...)
 {
+    import std.meta : allSatisfy;
     enum isValidPrefixForTrie = allSatisfy!(callableWith!Key, Prefix); // TODO: tighten the screws
 }
 
@@ -4134,7 +4103,7 @@ template isValidPrefixForTrie(Key, Prefix...)
 */
 template isValidArgsForTrie(Key, Args...)
 {
-    static if(Args.length > 1)
+    static if (Args.length > 1)
     {
         enum isValidArgsForTrie = isValidPrefixForTrie!(Key, Args)
             || (isValidPrefixForTrie!(Key, Args[1..$]) && is(typeof(Args[0]) : Key));
@@ -4146,7 +4115,7 @@ template isValidArgsForTrie(Key, Args...)
 @property size_t sumOfIntegerTuple(ints...)()
 {
     size_t count=0;
-    foreach(v; ints)
+    foreach (v; ints)
         count += v;
     return count;
 }
@@ -4167,11 +4136,11 @@ template isValidArgsForTrie(Key, Args...)
         auto set = unicode("Number");
         auto trie = codepointSetTrie!(8, 5, 8)(set);
         writeln("Input code points to test:");
-        foreach(line; stdin.byLine)
+        foreach (line; stdin.byLine)
         {
             int count=0;
-            foreach(dchar ch; line)
-                if(trie[ch])// is number
+            foreach (dchar ch; line)
+                if (trie[ch])// is number
                     count++;
             writefln("Contains %d number code points.", count);
         }
@@ -4179,13 +4148,13 @@ template isValidArgsForTrie(Key, Args...)
     ---
 */
 public template codepointSetTrie(sizes...)
-    if(sumOfIntegerTuple!sizes == 21)
+    if (sumOfIntegerTuple!sizes == 21)
 {
     auto codepointSetTrie(Set)(Set set)
-        if(isCodepointSet!Set)
+        if (isCodepointSet!Set)
     {
         auto builder = TrieBuilder!(bool, dchar, lastDchar+1, GetBitSlicing!(21, sizes))(false);
-        foreach(ival; set.byInterval)
+        foreach (ival; set.byInterval)
             builder.putRange(ival[0], ival[1], true);
         return builder.build();
     }
@@ -4193,7 +4162,7 @@ public template codepointSetTrie(sizes...)
 
 /// Type of Trie generated by codepointSetTrie function.
 public template CodepointSetTrie(sizes...)
-    if(sumOfIntegerTuple!sizes == 21)
+    if (sumOfIntegerTuple!sizes == 21)
 {
     alias Prefix = GetBitSlicing!(21, sizes);
     alias CodepointSetTrie = typeof(TrieBuilder!(bool, dchar, lastDchar+1, Prefix)(false).build());
@@ -4210,14 +4179,14 @@ public template CodepointSetTrie(sizes...)
     only to bool mapping $(D Trie)s.
 */
 public template codepointTrie(T, sizes...)
-    if(sumOfIntegerTuple!sizes == 21)
+    if (sumOfIntegerTuple!sizes == 21)
 {
     alias Prefix = GetBitSlicing!(21, sizes);
 
-    static if(is(TypeOfBitPacked!T == bool))
+    static if (is(TypeOfBitPacked!T == bool))
     {
         auto codepointTrie(Set)(in Set set)
-            if(isCodepointSet!Set)
+            if (isCodepointSet!Set)
         {
             return codepointSetTrie(set);
         }
@@ -4230,7 +4199,7 @@ public template codepointTrie(T, sizes...)
 
     // unsorted range of pairs
     auto codepointTrie(R)(R range, T defValue=T.init)
-        if(isInputRange!R
+        if (isInputRange!R
             && is(typeof(ElementType!R.init[0]) : T)
             && is(typeof(ElementType!R.init[1]) : dchar))
     {
@@ -4241,7 +4210,7 @@ public template codepointTrie(T, sizes...)
 }
 
 ///
-pure unittest
+@system pure unittest
 {
     import std.algorithm.comparison : max;
     import std.algorithm.searching : count;
@@ -4258,13 +4227,13 @@ pure unittest
         // e.g. arabic letter DDAL (\u0688) has a "luck factor" of 2
         ubyte[6] nibbles; // 6 4-bit chunks of code point
         uint value = ch;
-        foreach(i; 0..6)
+        foreach (i; 0..6)
         {
             nibbles[i] = value & 0xF;
             value >>= 4;
         }
         uint luck;
-        foreach(n; nibbles)
+        foreach (n; nibbles)
             luck = cast(uint)max(luck, count(nibbles[], n));
         return luck;
     }
@@ -4274,14 +4243,14 @@ pure unittest
 
     // create a temporary associative array (AA)
     LuckFactor[dchar] map;
-    foreach(ch; set.byCodepoint)
+    foreach (ch; set.byCodepoint)
         map[ch] = LuckFactor(luckFactor(ch));
 
     // bits per stage are chosen randomly, fell free to optimize
     auto trie = codepointTrie!(LuckFactor, 8, 5, 8)(map);
 
     // from now on the AA is not needed
-    foreach(ch; set.byCodepoint)
+    foreach (ch; set.byCodepoint)
         assert(trie[ch] == luckFactor(ch)); // verify
     // CJK is not Greek, thus it has the default value
     assert(trie['\u4444'] == 0);
@@ -4295,16 +4264,15 @@ pure unittest
 
 /// Type of Trie as generated by codepointTrie function.
 public template CodepointTrie(T, sizes...)
-    if(sumOfIntegerTuple!sizes == 21)
+    if (sumOfIntegerTuple!sizes == 21)
 {
     alias Prefix = GetBitSlicing!(21, sizes);
     alias CodepointTrie = typeof(TrieBuilder!(T, dchar, lastDchar+1, Prefix)(T.init).build());
 }
 
-// @@@BUG multiSort can's access private symbols from uni
-public template cmpK0(alias Pred)
+package template cmpK0(alias Pred)
 {
-    import std.typecons;
+    import std.typecons : Tuple;
     static bool cmpK0(Value, Key)
         (Tuple!(Value, Key) a, Tuple!(Value, Key) b)
     {
@@ -4312,7 +4280,7 @@ public template cmpK0(alias Pred)
     }
 }
 
-/*
+/**
     The most general utility for construction of $(D Trie)s
     short of using $(D TrieBuilder) directly.
 
@@ -4324,10 +4292,10 @@ public template cmpK0(alias Pred)
     then the whole tuple of $(D Args) is treated as predicates
     and the maximum Key is deduced from predicates.
 */
-public template buildTrie(Value, Key, Args...)
-    if(isValidArgsForTrie!(Key, Args))
+private template buildTrie(Value, Key, Args...)
+    if (isValidArgsForTrie!(Key, Args))
 {
-    static if(is(typeof(Args[0]) : Key)) // prefix starts with upper bound on Key
+    static if (is(typeof(Args[0]) : Key)) // prefix starts with upper bound on Key
     {
         alias Prefix = Args[1..$];
     }
@@ -4339,7 +4307,7 @@ public template buildTrie(Value, Key, Args...)
     // for multi-sort
     template GetComparators(size_t n)
     {
-        static if(n > 0)
+        static if (n > 0)
             alias GetComparators =
                 AliasSeq!(GetComparators!(n-1), cmpK0!(Prefix[n-1]));
         else
@@ -4357,16 +4325,16 @@ public template buildTrie(Value, Key, Args...)
         In other words $(LREF mapTrieIndex) should be a
         monotonically increasing function that maps $(D Key) to an integer.
 
-        See_Also: $(XREF _algorithm, sort),
-        $(XREF _range, SortedRange),
-        $(XREF _algorithm, setUnion).
+        See_Also: $(REF sort, std,_algorithm),
+        $(REF SortedRange, std,_range),
+        $(REF setUnion, std,_algorithm).
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
-        if(isInputRange!Range && is(typeof(Range.init.front[0]) : Value)
+        if (isInputRange!Range && is(typeof(Range.init.front[0]) : Value)
             && is(typeof(Range.init.front[1]) : Key))
     {
         auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
-        foreach(v; range)
+        foreach (v; range)
             builder.putValue(v[1], v[0]);
         return builder.build();
     }
@@ -4382,24 +4350,24 @@ public template buildTrie(Value, Key, Args...)
         and $(D filler) is false.
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
-        if(is(TypeOfBitPacked!Value ==  bool)
+        if (is(TypeOfBitPacked!Value ==  bool)
             && isInputRange!Range && is(typeof(Range.init.front[0]) : Key)
             && is(typeof(Range.init.front[1]) : Key))
     {
         auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
-        foreach(ival; range)
+        foreach (ival; range)
             builder.putRange(ival[0], ival[1], !filler);
         return builder.build();
     }
 
     auto buildTrie(Range)(Range range, Value filler, bool unsorted)
-        if(isInputRange!Range
+        if (isInputRange!Range
             && is(typeof(Range.init.front[0]) : Value)
             && is(typeof(Range.init.front[1]) : Key))
     {
-        import std.algorithm : multiSort;
+        import std.algorithm.sorting : multiSort;
         alias Comps = GetComparators!(Prefix.length);
-        if(unsorted)
+        if (unsorted)
             multiSort!(Comps)(range);
         return buildTrie(range, filler);
     }
@@ -4414,11 +4382,11 @@ public template buildTrie(Value, Key, Args...)
         If no filler provided keys map to true, and $(D filler) is false.
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
-        if(is(TypeOfBitPacked!Value ==  bool)
+        if (is(TypeOfBitPacked!Value ==  bool)
             && isInputRange!Range && is(typeof(Range.init.front) : Key))
     {
         auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
-        foreach(v; range)
+        foreach (v; range)
             builder.putValue(v, !filler);
         return builder.build();
     }
@@ -4428,10 +4396,10 @@ public template buildTrie(Value, Key, Args...)
         of values where array index serves as key.
     */
     auto buildTrie()(Value[] array, Value filler=Value.init)
-        if(isUnsigned!Key)
+        if (isUnsigned!Key)
     {
         auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
-        foreach(idx, v; array)
+        foreach (idx, v; array)
             builder.putValue(idx, v);
         return builder.build();
     }
@@ -4441,7 +4409,8 @@ public template buildTrie(Value, Key, Args...)
     */
     auto buildTrie(Key, Value)(Value[Key] map, Value filler=Value.init)
     {
-        import std.range : zip, array;
+        import std.array : array;
+        import std.range : zip;
         auto range = array(zip(map.values, map.keys));
         return buildTrie(range, filler, true); // sort it
     }
@@ -4489,21 +4458,21 @@ public struct MatcherConcept
         of the result of test.)
     */
     public bool match(Range)(ref Range inp)
-        if(isRandomAccessRange!Range && is(ElementType!Range : char))
+        if (isRandomAccessRange!Range && is(ElementType!Range : char))
     {
        assert(false);
     }
 
     ///ditto
     public bool skip(Range)(ref Range inp)
-        if(isRandomAccessRange!Range && is(ElementType!Range : char))
+        if (isRandomAccessRange!Range && is(ElementType!Range : char))
     {
         assert(false);
     }
 
     ///ditto
     public bool test(Range)(ref Range inp)
-        if(isRandomAccessRange!Range && is(ElementType!Range : char))
+        if (isRandomAccessRange!Range && is(ElementType!Range : char))
     {
         assert(false);
     }
@@ -4523,7 +4492,7 @@ public struct MatcherConcept
         assert(truth == "= 4"); // test never affects argument
     }
 
-    /*
+    /**
         Advanced feature - provide direct access to a subset of matcher based a
         set of known encoding lengths. Lengths are provided in
         $(S_LINK Code unit, code units). The sub-matcher then may do less
@@ -4573,7 +4542,7 @@ public enum isUtfMatcher(M, C) = __traits(compiles, (){
     M m;
     assert(is(typeof(m.match(d)) == bool));
     assert(is(typeof(m.test(d)) == bool));
-    static if(is(typeof(m.skip(d))))
+    static if (is(typeof(m.skip(d))))
     {
         assert(is(typeof(m.skip(d)) == bool));
         assert(is(typeof(m.skip(s)) == bool));
@@ -4582,7 +4551,7 @@ public enum isUtfMatcher(M, C) = __traits(compiles, (){
     assert(is(typeof(m.test(s)) == bool));
 });
 
-unittest
+@safe unittest
 {
     alias CharMatcher = typeof(utfMatcher!char(CodepointSet.init));
     alias WcharMatcher = typeof(utfMatcher!wchar(CodepointSet.init));
@@ -4613,7 +4582,7 @@ template Utf8Matcher()
 
     void badEncoding() pure @safe
     {
-        import std.utf;
+        import std.utf : UTFException;
         throw new UTFException("Invalid UTF-8 sequence");
     }
 
@@ -4659,14 +4628,14 @@ template Utf8Matcher()
     }
 
     static auto encode(size_t sz)(dchar ch)
-        if(sz > 1)
+        if (sz > 1)
     {
         import std.utf : encode;
         char[4] buf;
         std.utf.encode(buf, ch);
         char[sz] ret;
         buf[0] &= leadMask!sz;
-        foreach(n; 1..sz)
+        foreach (n; 1..sz)
             buf[n] = buf[n] & 0x3f; //keep 6 lower bits
         ret[] = buf[0..sz];
         return ret;
@@ -4674,7 +4643,7 @@ template Utf8Matcher()
 
     auto build(Set)(Set set)
     {
-        import std.algorithm : map;
+        import std.algorithm.iteration : map;
         auto ascii = set & unicode.ASCII;
         auto utf8_2 = set & CodepointSet(0x80, 0x800);
         auto utf8_3 = set & CodepointSet(0x800, 0x1_0000);
@@ -4692,6 +4661,7 @@ template Utf8Matcher()
     mixin template DefMatcher()
     {
         import std.format : format;
+        import std.meta : Erase, staticIndexOf;
         enum hasASCII = staticIndexOf!(1, Sizes) >= 0;
         alias UniSizes = Erase!(1, Sizes);
 
@@ -4699,7 +4669,7 @@ template Utf8Matcher()
         static auto genDispatch()
         {
             string code;
-            foreach(size; UniSizes)
+            foreach (size; UniSizes)
                 code ~= format(q{
                     if ((ch & ~leadMask!%d) == encMask!(%d))
                         return lookup!(%d, mode)(inp);
@@ -4713,18 +4683,18 @@ template Utf8Matcher()
         }
         enum dispatch = genDispatch();
 
-        public bool match(Range)(ref Range inp) const pure @trusted
-            if(isRandomAccessRange!Range && is(ElementType!Range : char))
+        public bool match(Range)(ref Range inp) const pure
+            if (isRandomAccessRange!Range && is(ElementType!Range : char))
         {
             enum mode = Mode.skipOnMatch;
             assert(!inp.empty);
             auto ch = inp[0];
-            static if(hasASCII)
+            static if (hasASCII)
             {
                 if (ch < 0x80)
                 {
                     bool r = tab!1[ch];
-                    if(r)
+                    if (r)
                         inp.popFront();
                     return r;
                 }
@@ -4735,15 +4705,15 @@ template Utf8Matcher()
                 mixin(dispatch);
         }
 
-        static if(Sizes.length == 4) // can skip iff can detect all encodings
+        static if (Sizes.length == 4) // can skip iff can detect all encodings
         {
             public bool skip(Range)(ref Range inp) const pure @trusted
-                if(isRandomAccessRange!Range && is(ElementType!Range : char))
+                if (isRandomAccessRange!Range && is(ElementType!Range : char))
             {
                 enum mode = Mode.alwaysSkip;
                 assert(!inp.empty);
                 auto ch = inp[0];
-                static if(hasASCII)
+                static if (hasASCII)
                 {
                     if (ch < 0x80)
                     {
@@ -4759,12 +4729,12 @@ template Utf8Matcher()
         }
 
         public bool test(Range)(ref Range inp) const pure @trusted
-            if(isRandomAccessRange!Range && is(ElementType!Range : char))
+            if (isRandomAccessRange!Range && is(ElementType!Range : char))
         {
             enum mode = Mode.neverSkip;
             assert(!inp.empty);
             auto ch = inp[0];
-            static if(hasASCII)
+            static if (hasASCII)
             {
                 if (ch < 0x80)
                     return tab!1[ch];
@@ -4776,19 +4746,19 @@ template Utf8Matcher()
         }
 
         bool match(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
+            if (isSomeChar!C)
         {
             return fwdStr!"match"(str);
         }
 
         bool skip(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
+            if (isSomeChar!C)
         {
             return fwdStr!"skip"(str);
         }
 
         bool test(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
+            if (isSomeChar!C)
         {
             return fwdStr!"test"(str);
         }
@@ -4798,6 +4768,7 @@ template Utf8Matcher()
 
     struct Impl(Sizes...)
     {
+        import std.meta : allSatisfy, staticMap;
         static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
@@ -4815,46 +4786,46 @@ template Utf8Matcher()
 
         bool lookup(int size, Mode mode, Range)(ref Range inp) const pure @trusted
         {
-            import std.typecons;
-            if(inp.length < size)
+            import std.typecons : staticIota;
+            if (inp.length < size)
             {
                 badEncoding();
                 return false;
             }
             char[size] needle = void;
             needle[0] = leadMask!size & inp[0];
-            foreach(i; staticIota!(1, size))
+            foreach (i; staticIota!(1, size))
             {
                 needle[i] = truncate(inp[i]);
             }
             //overlong encoding checks
-            static if(size == 2)
+            static if (size == 2)
             {
                 //0x80-0x7FF
                 //got 6 bits in needle[1], must use at least 8 bits
                 //must use at least 2 bits in needle[1]
-                if(needle[0] < 2) badEncoding();
+                if (needle[0] < 2) badEncoding();
             }
-            else static if(size == 3)
+            else static if (size == 3)
             {
                 //0x800-0xFFFF
                 //got 6 bits in needle[2], must use at least 12bits
                 //must use 6 bits in needle[1] or anything in needle[0]
-                if(needle[0] == 0 && needle[1] < 0x20) badEncoding();
+                if (needle[0] == 0 && needle[1] < 0x20) badEncoding();
             }
-            else static if(size == 4)
+            else static if (size == 4)
             {
                 //0x800-0xFFFF
                 //got 2x6=12 bits in needle[2..3] must use at least 17bits
                 //must use 5 bits (or above) in needle[1] or anything in needle[0]
-                if(needle[0] == 0 && needle[1] < 0x10) badEncoding();
+                if (needle[0] == 0 && needle[1] < 0x10) badEncoding();
             }
-            static if(mode == Mode.alwaysSkip)
+            static if (mode == Mode.alwaysSkip)
             {
                 inp.popFrontN(size);
                 return tab!size[needle];
             }
-            else static if(mode == Mode.neverSkip)
+            else static if (mode == Mode.neverSkip)
             {
                 return tab!size[needle];
             }
@@ -4874,6 +4845,7 @@ template Utf8Matcher()
 
     struct CherryPick(I, Sizes...)
     {
+        import std.meta : allSatisfy;
         static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
@@ -4893,7 +4865,7 @@ template Utf16Matcher()
 
     void badEncoding() pure
     {
-        import std.utf;
+        import std.utf : UTFException;
         throw new UTFException("Invalid UTF-16 sequence");
     }
 
@@ -4925,7 +4897,7 @@ template Utf16Matcher()
 
     auto build(Set)(Set set)
     {
-        import std.algorithm : map;
+        import std.algorithm.iteration : map;
         auto ascii = set & unicode.ASCII;
         auto bmp = (set & CodepointSet.fromIntervals(0x80, 0xFFFF+1))
             - CodepointSet.fromIntervals(0xD800, 0xDFFF+1);
@@ -4942,12 +4914,12 @@ template Utf16Matcher()
     mixin template DefMatcher()
     {
         public bool match(Range)(ref Range inp) const pure @trusted
-            if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
+            if (isRandomAccessRange!Range && is(ElementType!Range : wchar))
         {
             enum mode = Mode.skipOnMatch;
             assert(!inp.empty);
             auto ch = inp[0];
-            static if(sizeFlags & 1)
+            static if (sizeFlags & 1)
             {
                 if (ch < 0x80)
                 {
@@ -4965,15 +4937,15 @@ template Utf16Matcher()
                 return lookupUni!mode(inp);
         }
 
-        static if(Sizes.length == 2)
+        static if (Sizes.length == 2)
         {
             public bool skip(Range)(ref Range inp) const pure @trusted
-                if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
+                if (isRandomAccessRange!Range && is(ElementType!Range : wchar))
             {
                 enum mode = Mode.alwaysSkip;
                 assert(!inp.empty);
                 auto ch = inp[0];
-                static if(sizeFlags & 1)
+                static if (sizeFlags & 1)
                 {
                     if (ch < 0x80)
                     {
@@ -4989,31 +4961,31 @@ template Utf16Matcher()
         }
 
         public bool test(Range)(ref Range inp) const pure @trusted
-            if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
+            if (isRandomAccessRange!Range && is(ElementType!Range : wchar))
         {
             enum mode = Mode.neverSkip;
             assert(!inp.empty);
             auto ch = inp[0];
-            static if(sizeFlags & 1)
+            static if (sizeFlags & 1)
                 return ch < 0x80 ? ascii[ch] : lookupUni!mode(inp);
             else
                 return lookupUni!mode(inp);
         }
 
         bool match(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
+            if (isSomeChar!C)
         {
             return fwdStr!"match"(str);
         }
 
         bool skip(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
+            if (isSomeChar!C)
         {
             return fwdStr!"skip"(str);
         }
 
         bool test(C)(ref C[] str) const pure @trusted
-            if(isSomeChar!C)
+            if (isSomeChar!C)
         {
             return fwdStr!"test"(str);
         }
@@ -5022,22 +4994,23 @@ template Utf16Matcher()
     }
 
     struct Impl(Sizes...)
-        if(Sizes.length >= 1 && Sizes.length <= 2)
+        if (Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
+        import std.meta : allSatisfy;
         static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
-        static if(Sizes.length > 1)
+        static if (Sizes.length > 1)
             enum sizeFlags = Sizes[0] | Sizes[1];
         else
             enum sizeFlags = Sizes[0];
 
-        static if(sizeFlags & 1)
+        static if (sizeFlags & 1)
         {
             Ascii ascii;
             Bmp bmp;
         }
-        static if(sizeFlags & 2)
+        static if (sizeFlags & 2)
         {
             Uni uni;
         }
@@ -5052,16 +5025,16 @@ template Utf16Matcher()
         {
             wchar x = cast(wchar)(inp[0] - 0xD800);
             //not a high surrogate
-            if(x > 0x3FF)
+            if (x > 0x3FF)
             {
                 //low surrogate
-                if(x <= 0x7FF) badEncoding();
-                static if(sizeFlags & 1)
+                if (x <= 0x7FF) badEncoding();
+                static if (sizeFlags & 1)
                 {
                     auto ch = inp[0];
-                    static if(mode == Mode.alwaysSkip)
+                    static if (mode == Mode.alwaysSkip)
                         inp.popFront();
-                    static if(mode == Mode.skipOnMatch)
+                    static if (mode == Mode.skipOnMatch)
                     {
                         if (bmp[ch])
                         {
@@ -5079,18 +5052,18 @@ template Utf16Matcher()
             }
             else
             {
-                static if(sizeFlags & 2)
+                static if (sizeFlags & 2)
                 {
-                    if(inp.length < 2)
+                    if (inp.length < 2)
                         badEncoding();
                     wchar y = cast(wchar)(inp[1] - 0xDC00);
                     //not a low surrogate
-                    if(y > 0x3FF)
+                    if (y > 0x3FF)
                         badEncoding();
                     wchar[2] needle = [inp[0] & 0x3ff, inp[1] & 0x3ff];
-                    static if(mode == Mode.alwaysSkip)
+                    static if (mode == Mode.alwaysSkip)
                         inp.popFrontN(2);
-                    static if(mode == Mode.skipOnMatch)
+                    static if (mode == Mode.skipOnMatch)
                     {
                         if (uni[needle])
                         {
@@ -5110,13 +5083,14 @@ template Utf16Matcher()
     }
 
     struct CherryPick(I, Sizes...)
-        if(Sizes.length >= 1 && Sizes.length <= 2)
+        if (Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
+        import std.meta : allSatisfy;
         I* m;
         enum sizeFlags = I.sizeFlags;
 
-        static if(sizeFlags & 1)
+        static if (sizeFlags & 1)
         {
             @property ref ascii()() const pure{ return m.ascii; }
         }
@@ -5149,13 +5123,13 @@ private auto utf16Matcher(Set)(Set set) @trusted
     See $(LREF MatcherConcept) for API outline.
 */
 public auto utfMatcher(Char, Set)(Set set) @trusted
-    if(isCodepointSet!Set)
+    if (isCodepointSet!Set)
 {
-    static if(is(Char : char))
+    static if (is(Char : char))
         return utf8Matcher(set);
-    else static if(is(Char : wchar))
+    else static if (is(Char : wchar))
         return utf16Matcher(set);
-    else static if(is(Char : dchar))
+    else static if (is(Char : dchar))
         static assert(false, "UTF-32 needs no decoding,
             and thus not supported by utfMatcher");
     else
@@ -5165,7 +5139,7 @@ public auto utfMatcher(Char, Set)(Set set) @trusted
 
 //a range of code units, packed with index to speed up forward iteration
 package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
-    if(is(C : wchar) || is(C : char))
+    if (is(C : wchar) || is(C : char))
 {
     static struct Decoder
     {
@@ -5194,7 +5168,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
     range of $(S_LINK Code unit, code units).
 */
 package auto units(C)(C[] s) @safe pure nothrow @nogc
-    if(is(C : wchar) || is(C : char))
+    if (is(C : wchar) || is(C : char))
 {
     static struct Units
     {
@@ -5219,7 +5193,6 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
 
 @safe unittest
 {
-    import std.range;
     string rs = "hi! ﾈемног砀 текста";
     auto codec = rs.decoder;
     auto utf8 =  utf8Matcher(unicode.Letter);
@@ -5243,7 +5216,7 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
     assert(!utf8.test(codec));
     assert(!utf8.skip(codec));
     assert(utf8.test(codec));
-    foreach(i; 0..7)
+    foreach (i; 0..7)
     {
         assert(!asc.test(codec));
         assert(uni.test(codec));
@@ -5262,7 +5235,7 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
     assert(!utf8.skip(codec));
     assert(!utf8.skip(codec));
 
-    foreach(i; 0..7)
+    foreach (i; 0..7)
     {
         assert(!asc.test(codec));
         assert(utf8.test(codec));
@@ -5275,7 +5248,7 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
 
 @safe unittest
 {
-    import std.range;
+    import std.range : stride;
     static bool testAll(Matcher, Range)(ref Matcher m, ref Range r)
     {
         bool t = m.test(r);
@@ -5283,7 +5256,7 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
         assert(t == m.match(r));
         assert(r.idx == save || t); //ether no change or was match
         r.idx = save;
-        static if(is(typeof(m.skip(r))))
+        static if (is(typeof(m.skip(r))))
         {
             assert(t == m.skip(r));
             assert(r.idx != save); //always changed
@@ -5299,7 +5272,7 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
     auto uni2 = utf8.subMatcher!2;
     auto uni3 = utf8.subMatcher!3;
     auto uni24 = utf8.subMatcher!(2,4);
-    foreach(ch; unicode.L.byCodepoint.stride(3))
+    foreach (ch; unicode.L.byCodepoint.stride(3))
     {
         import std.utf : encode;
         char[4] buf;
@@ -5323,29 +5296,29 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
 }
 
 // cover decode fail cases of Matcher
-unittest
+@system unittest
 {
+    import std.algorithm.iteration : map;
     import std.exception : collectException;
     import std.format : format;
-    import std.algorithm;
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto utf8 = utfMatcher!char(unicode.L);
     //decode failure cases UTF-8
     alias fails8 = AliasSeq!("\xC1", "\x80\x00","\xC0\x00", "\xCF\x79",
         "\xFF\x00\0x00\0x00\x00", "\xC0\0x80\0x80\x80", "\x80\0x00\0x00\x00",
         "\xCF\x00\0x00\0x00\x00");
-    foreach(msg; fails8){
+    foreach (msg; fails8)
+    {
         assert(collectException((){
             auto s = msg;
-            import std.utf;
             size_t idx = 0;
-            //decode(s, idx);
             utf8.test(s);
         }()), format("%( %2x %)", cast(ubyte[])msg));
     }
     //decode failure cases UTF-16
     alias fails16 = AliasSeq!([0xD811], [0xDC02]);
-    foreach(msg; fails16){
+    foreach (msg; fails16)
+    {
         assert(collectException((){
             auto s = msg.map!(x => cast(wchar)x);
             utf16.test(s);
@@ -5373,15 +5346,15 @@ unittest
 
 +/
 public auto toTrie(size_t level, Set)(Set set)
-    if(isCodepointSet!Set)
+    if (isCodepointSet!Set)
 {
-    static if(level == 1)
+    static if (level == 1)
         return codepointSetTrie!(21)(set);
-    else static if(level == 2)
+    else static if (level == 2)
         return codepointSetTrie!(10, 11)(set);
-    else static if(level == 3)
+    else static if (level == 3)
         return codepointSetTrie!(8, 5, 8)(set);
-    else static if(level == 4)
+    else static if (level == 4)
          return codepointSetTrie!(6, 4, 4, 7)(set);
     else
         static assert(false,
@@ -5399,7 +5372,7 @@ public auto toTrie(size_t level, Set)(Set set)
     See the $(S_LINK Synopsis, Synopsis) section for example.
 */
 public auto toDelegate(Set)(Set set)
-    if(isCodepointSet!Set)
+    if (isCodepointSet!Set)
 {
     // 3 is very small and is almost as fast as 2-level (due to CPU caches?)
     auto t = toTrie!3(set);
@@ -5421,7 +5394,7 @@ public auto toDelegate(Set)(Set set)
     operator to perform the conversion.)
 */
 struct BitPacked(T, size_t sz)
-    if(isIntegral!T || is(T:dchar))
+    if (isIntegral!T || is(T:dchar))
 {
     enum bitSize = sz;
     T _value;
@@ -5434,14 +5407,15 @@ struct BitPacked(T, size_t sz)
     or a return type of a given functor.
 */
 template bitSizeOf(Args...)
-    if(Args.length == 1)
+    if (Args.length == 1)
 {
+    import std.traits : ReturnType;
     alias T = Args[0];
-    static if(__traits(compiles, { size_t val = T.bitSize; })) //(is(typeof(T.bitSize) : size_t))
+    static if (__traits(compiles, { size_t val = T.bitSize; })) //(is(typeof(T.bitSize) : size_t))
     {
         enum bitSizeOf = T.bitSize;
     }
-    else static if(is(ReturnType!T dummy == BitPacked!(U, bits), U, size_t bits))
+    else static if (is(ReturnType!T dummy == BitPacked!(U, bits), U, size_t bits))
     {
         enum bitSizeOf = bitSizeOf!(ReturnType!T);
     }
@@ -5457,7 +5431,7 @@ template bitSizeOf(Args...)
 */
 template isBitPacked(T)
 {
-    static if(is(T dummy == BitPacked!(U, bits), U, size_t bits))
+    static if (is(T dummy == BitPacked!(U, bits), U, size_t bits))
         enum isBitPacked = true;
     else
         enum isBitPacked = false;
@@ -5469,7 +5443,7 @@ template isBitPacked(T)
 */
 template TypeOfBitPacked(T)
 {
-    static if(is(T dummy == BitPacked!(U, bits), U, size_t bits))
+    static if (is(T dummy == BitPacked!(U, bits), U, size_t bits))
         alias TypeOfBitPacked = U;
     else
         alias TypeOfBitPacked = T;
@@ -5507,7 +5481,7 @@ struct sliceBits(size_t from, size_t to)
     body
     {
         static assert(from < to);
-        static if(from == 0)
+        static if (from == 0)
             return x & ((1<<to)-1);
         else
         return (x >> from) & ((1<<(to-from))-1);
@@ -5525,25 +5499,27 @@ static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
 
 template Sequence(size_t start, size_t end)
 {
-    static if(start < end)
+    static if (start < end)
         alias Sequence = AliasSeq!(start, Sequence!(start+1, end));
     else
         alias Sequence = AliasSeq!();
 }
 
 //---- TRIE TESTS ----
-unittest
+@system unittest
 {
-    import std.conv;
-    import std.algorithm;
-    import std.range;
+    import std.algorithm.iteration : map;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
+    import std.conv : text, to;
+    import std.range : iota;
     static trieStats(TRIE)(TRIE t)
     {
         version(std_uni_stats)
         {
-            import std.stdio;
+            import std.stdio : writefln, writeln;
             writeln("---TRIE FOOTPRINT STATS---");
-            foreach(i; staticIota!(0, t.table.dim) )
+            foreach (i; staticIota!(0, t.table.dim) )
             {
                 writefln("lvl%s = %s bytes;  %s pages"
                          , i, t.bytes!i, t.pages!i);
@@ -5552,7 +5528,7 @@ unittest
             version(none)
             {
                 writeln("INDEX (excluding value level):");
-                foreach(i; staticIota!(0, t.table.dim-1) )
+                foreach (i; staticIota!(0, t.table.dim-1) )
                     writeln(t.table.slice!(i)[0..t.table.length!i]);
             }
             writeln("---------------------------");
@@ -5564,13 +5540,13 @@ unittest
     alias Set = CodepointSet;
     auto set = Set('A','Z','a','z');
     auto trie = buildTrie!(bool, uint, 256, lo8)(set.byInterval);// simple bool array
-    for(int a='a'; a<'z';a++)
+    for (int a='a'; a<'z';a++)
         assert(trie[a]);
-    for(int a='A'; a<'Z';a++)
+    for (int a='A'; a<'Z';a++)
         assert(trie[a]);
-    for(int a=0; a<'A'; a++)
+    for (int a=0; a<'A'; a++)
         assert(!trie[a]);
-    for(int a ='Z'; a<'a'; a++)
+    for (int a ='Z'; a<'a'; a++)
         assert(!trie[a]);
     trieStats(trie);
 
@@ -5578,9 +5554,9 @@ unittest
         1, 18, 256+2, 256+111, 512+1, 512+18, 768+2, 768+111);
     auto trie2 = buildTrie!(bool, uint, 1024, mlo8, lo8)(redundant2.byInterval);
     trieStats(trie2);
-    foreach(e; redundant2.byCodepoint)
+    foreach (e; redundant2.byCodepoint)
         assert(trie2[e], text(cast(uint)e, " - ", trie2[e]));
-    foreach(i; 0..1024)
+    foreach (i; 0..1024)
     {
         assert(trie2[i] == (i in redundant2));
     }
@@ -5598,7 +5574,7 @@ unittest
             sliceBits!(6,8), sliceBits!(4,6), sliceBits!(0,4)
         )(redundant3.byInterval);
     trieStats(trie3);
-    foreach(i; 0..max3)
+    foreach (i; 0..max3)
         assert(trie3[i] == (i in redundant3), text(cast(uint)i));
 
     auto redundant4 = Set(
@@ -5609,8 +5585,9 @@ unittest
     auto trie4 = buildTrie!(bool, size_t, max4,
             sliceBits!(13, 16), sliceBits!(9, 13), sliceBits!(6, 9) , sliceBits!(0, 6)
         )(redundant4.byInterval);
-    foreach(i; 0..max4){
-        if(i in redundant4)
+    foreach (i; 0..max4)
+    {
+        if (i in redundant4)
             assert(trie4[i], text(cast(uint)i));
     }
     trieStats(trie4);
@@ -5629,12 +5606,12 @@ unittest
     auto a = array(map!(x => to!ubyte(x))(iota(0, 256)));
     auto bt = buildTrie!(bool, ubyte, sliceBits!(7, 8), sliceBits!(5, 7), sliceBits!(0, 5))(a);
     trieStats(bt);
-    foreach(i; 0..256)
+    foreach (i; 0..256)
         assert(bt[cast(ubyte)i]);
 }
 
 template useItemAt(size_t idx, T)
-    if(isIntegral!T || is(T: dchar))
+    if (isIntegral!T || is(T: dchar))
 {
     size_t impl(in T[] arr){ return arr[idx]; }
     alias useItemAt = assumeSize!(impl, 8*T.sizeof);
@@ -5648,7 +5625,7 @@ template useLastItem(T)
 
 template fullBitSize(Prefix...)
 {
-    static if(Prefix.length > 0)
+    static if (Prefix.length > 0)
         enum fullBitSize = bitSizeOf!(Prefix[0])+fullBitSize!(Prefix[1..$]);
     else
         enum fullBitSize = 0;
@@ -5656,7 +5633,7 @@ template fullBitSize(Prefix...)
 
 template idxTypes(Key, size_t fullBits, Prefix...)
 {
-    static if(Prefix.length == 1)
+    static if (Prefix.length == 1)
     {// the last level is value level, so no index once reduced to 1-level
         alias idxTypes = AliasSeq!();
     }
@@ -5677,10 +5654,12 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 
 //============================================================================
 
-@safe pure int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) if (is(Char1 : dchar) && is(Char2 : dchar))
+@safe pure int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
+    if (is(Char1 : dchar) && is(Char2 : dchar))
 {
+    import std.algorithm.comparison : cmp;
+    import std.algorithm.iteration : map, filter;
     import std.ascii : toLower;
-    import std.algorithm : cmp, map, filter;
     static bool pred(dchar c) {return !c.isWhite && c != '-' && c != '_';}
     return cmp(
         a.map!toLower.filter!pred,
@@ -5692,7 +5671,8 @@ template idxTypes(Key, size_t fullBits, Prefix...)
     assert(!comparePropertyName("foo-bar", "fooBar"));
 }
 
-bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pure if (is(Char1 : dchar) && is(Char2 : dchar))
+bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pure
+    if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     return comparePropertyName(a, b) < 0;
 }
@@ -5704,9 +5684,9 @@ bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pu
 @safe void compressTo(uint val, ref ubyte[] arr) pure nothrow
 {
     // not optimized as usually done 1 time (and not public interface)
-    if(val < 128)
+    if (val < 128)
         arr ~= cast(ubyte)val;
-    else if(val < (1<<13))
+    else if (val < (1<<13))
     {
         arr ~= (0b1_00<<5) | cast(ubyte)(val>>8);
         arr ~= val & 0xFF;
@@ -5724,12 +5704,12 @@ bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pu
 {
     import std.exception : enforce;
     uint first = arr[idx++];
-    if(!(first & 0x80)) // no top bit -> [0..127]
+    if (!(first & 0x80)) // no top bit -> [0..127]
         return first;
     uint extra = ((first>>5) & 1) + 1; // [1, 2]
     uint val = (first & 0x1F);
     enforce(idx + extra <= arr.length, "bad code point interval encoding");
-    foreach(j; 0..extra)
+    foreach (j; 0..extra)
         val = (val<<8) | arr[idx+j];
     idx += extra;
     return val;
@@ -5737,16 +5717,16 @@ bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pu
 
 
 package ubyte[] compressIntervals(Range)(Range intervals)
-    if(isInputRange!Range && isIntegralPair!(ElementType!Range))
+    if (isInputRange!Range && isIntegralPair!(ElementType!Range))
 {
     ubyte[] storage;
     uint base = 0;
     // RLE encode
-    foreach(val; intervals)
+    foreach (val; intervals)
     {
         compressTo(val[0]-base, storage);
         base = val[0];
-        if(val[1] != lastDchar+1) // till the end of the domain so don't store it
+        if (val[1] != lastDchar+1) // till the end of the domain so don't store it
         {
             compressTo(val[1]-base, storage);
             base = val[1];
@@ -5757,7 +5737,9 @@ package ubyte[] compressIntervals(Range)(Range intervals)
 
 @safe pure unittest
 {
-    import std.typecons;
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+
     auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
     ubyte[] enc = [cast(ubyte)80, 47, 1, (0b1_00<<5) | (1<<2), 0];
     assert(compressIntervals(run) == enc);
@@ -5772,8 +5754,8 @@ package ubyte[] compressIntervals(Range)(Range intervals)
     idx = 0;
     assert(decompressFrom(enc2, idx) == 0);
     assert(decompressFrom(enc2, idx) == (1<<20)+512+1);
-    assert(equalS(decompressIntervals(compressIntervals(run)), run));
-    assert(equalS(decompressIntervals(compressIntervals(run2)), run2));
+    assert(equal(decompressIntervals(compressIntervals(run)), run));
+    assert(equal(decompressIntervals(compressIntervals(run2)), run2));
 }
 
 // Creates a range of $(D CodepointInterval) that lazily decodes compressed data.
@@ -5803,14 +5785,14 @@ pure:
 
     void popFront()
     {
-        if(_idx == _stream.length)
+        if (_idx == _stream.length)
         {
             _idx = size_t.max;
             return;
         }
         uint base = _front[1];
         _front[0] = base + decompressFrom(_stream, _idx);
-        if(_idx == _stream.length)// odd length ---> till the end
+        if (_idx == _stream.length)// odd length ---> till the end
             _front[1] = lastDchar+1;
         else
         {
@@ -5838,12 +5820,12 @@ else
 // helper for looking up code point sets
 @trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name) pure
 {
+    import std.algorithm.iteration : map;
     import std.range : assumeSorted;
-    import std.algorithm : map;
     auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
         (table.map!"a.name"());
     size_t idx = range.lowerBound(name).length;
-    if(idx < range.length && comparePropertyName(range[idx], name) == 0)
+    if (idx < range.length && comparePropertyName(range[idx], name) == 0)
         return idx;
     return -1;
 }
@@ -5852,7 +5834,7 @@ else
 @trusted bool loadUnicodeSet(alias table, Set, C)(in C[] name, ref Set dest) pure
 {
     auto idx = findUnicodeSet!table(name);
-    if(idx >= 0)
+    if (idx >= 0)
     {
         dest = Set(asSet(table[idx].compressed));
         return true;
@@ -5863,9 +5845,10 @@ else
 @trusted bool loadProperty(Set=CodepointSet, C)
     (in C[] name, ref Set target) pure
 {
+    import std.internal.unicode_tables : uniProps; // generated file
     alias ucmp = comparePropertyName;
     // conjure cumulative properties by hand
-    if(ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
+    if (ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
     {
         target = asSet(uniProps.Lu);
         target |= asSet(uniProps.Ll);
@@ -5873,25 +5856,25 @@ else
         target |= asSet(uniProps.Lo);
         target |= asSet(uniProps.Lm);
     }
-    else if(ucmp(name,"LC") == 0 || ucmp(name,"Cased Letter")==0)
+    else if (ucmp(name,"LC") == 0 || ucmp(name,"Cased Letter")==0)
     {
         target = asSet(uniProps.Ll);
         target |= asSet(uniProps.Lu);
         target |= asSet(uniProps.Lt);// Title case
     }
-    else if(ucmp(name, "M") == 0 || ucmp(name, "Mark") == 0)
+    else if (ucmp(name, "M") == 0 || ucmp(name, "Mark") == 0)
     {
         target = asSet(uniProps.Mn);
         target |= asSet(uniProps.Mc);
         target |= asSet(uniProps.Me);
     }
-    else if(ucmp(name, "N") == 0 || ucmp(name, "Number") == 0)
+    else if (ucmp(name, "N") == 0 || ucmp(name, "Number") == 0)
     {
         target = asSet(uniProps.Nd);
         target |= asSet(uniProps.Nl);
         target |= asSet(uniProps.No);
     }
-    else if(ucmp(name, "P") == 0 || ucmp(name, "Punctuation") == 0)
+    else if (ucmp(name, "P") == 0 || ucmp(name, "Punctuation") == 0)
     {
         target = asSet(uniProps.Pc);
         target |= asSet(uniProps.Pd);
@@ -5901,20 +5884,20 @@ else
         target |= asSet(uniProps.Pf);
         target |= asSet(uniProps.Po);
     }
-    else if(ucmp(name, "S") == 0 || ucmp(name, "Symbol") == 0)
+    else if (ucmp(name, "S") == 0 || ucmp(name, "Symbol") == 0)
     {
         target = asSet(uniProps.Sm);
         target |= asSet(uniProps.Sc);
         target |= asSet(uniProps.Sk);
         target |= asSet(uniProps.So);
     }
-    else if(ucmp(name, "Z") == 0 || ucmp(name, "Separator") == 0)
+    else if (ucmp(name, "Z") == 0 || ucmp(name, "Separator") == 0)
     {
         target = asSet(uniProps.Zs);
         target |= asSet(uniProps.Zl);
         target |= asSet(uniProps.Zp);
     }
-    else if(ucmp(name, "C") == 0 || ucmp(name, "Other") == 0)
+    else if (ucmp(name, "C") == 0 || ucmp(name, "Other") == 0)
     {
         target = asSet(uniProps.Co);
         target |= asSet(uniProps.Lo);
@@ -5922,7 +5905,8 @@ else
         target |= asSet(uniProps.So);
         target |= asSet(uniProps.Po);
     }
-    else if(ucmp(name, "graphical") == 0){
+    else if (ucmp(name, "graphical") == 0)
+    {
         target = asSet(uniProps.Alphabetic);
 
         target |= asSet(uniProps.Mn);
@@ -5948,9 +5932,9 @@ else
         target |= asSet(uniProps.Sk);
         target |= asSet(uniProps.So);
     }
-    else if(ucmp(name, "any") == 0)
+    else if (ucmp(name, "any") == 0)
         target = Set.fromIntervals(0, 0x110000);
-    else if(ucmp(name, "ascii") == 0)
+    else if (ucmp(name, "ascii") == 0)
         target = Set.fromIntervals(0, 0x80);
     else
         return loadUnicodeSet!(uniProps.tab)(name, target);
@@ -5960,7 +5944,7 @@ else
 // CTFE-only helper for checking property names at compile-time
 @safe bool isPrettyPropertyName(C)(in C[] name)
 {
-    import std.algorithm : find;
+    import std.algorithm.searching : find;
     auto names = [
         "L", "Letter",
         "LC", "Cased Letter",
@@ -5987,11 +5971,11 @@ template SetSearcher(alias table, string kind)
 {
     /// Run-time checked search.
     static auto opCall(C)(in C[] name)
-        if(is(C : dchar))
+        if (is(C : dchar))
     {
         import std.conv : to;
         CodepointSet set;
-        if(loadUnicodeSet!table(name, set))
+        if (loadUnicodeSet!table(name, set))
             return set;
         throw new Exception("No unicode set for "~kind~" by name "
             ~name.to!string()~" was found.");
@@ -5999,7 +5983,7 @@ template SetSearcher(alias table, string kind)
     /// Compile-time checked search.
     static @property auto opDispatch(string name)()
     {
-        static if(findSetName!table(name))
+        static if (findSetName!table(name))
         {
             CodepointSet set;
             loadUnicodeSet!table(name, set);
@@ -6039,15 +6023,16 @@ template SetSearcher(alias table, string kind)
 
     static @property auto opDispatch(string name)() pure
     {
-        static if(findAny(name))
+        static if (findAny(name))
             return loadAny(name);
         else
             static assert(false, "No unicode set by name "~name~" was found.");
     }
 
     ///
-    unittest
+    @safe unittest
     {
+        import std.exception : collectException;
         auto ascii = unicode.ASCII;
         assert(ascii['A']);
         assert(ascii['~']);
@@ -6061,7 +6046,6 @@ template SetSearcher(alias table, string kind)
         assert(!latin['$']);
         // BTW Latin 1 Supplement is a block, hence "In" prefix
         assert(latin == unicode("In Latin 1 Supplement"));
-        import std.exception;
         // run-time look up throws if no such set is found
         assert(collectException(unicode("InCyrilliac")));
     }
@@ -6077,7 +6061,7 @@ template SetSearcher(alias table, string kind)
         sets.
     */
     static auto opCall(C)(in C[] name)
-        if(is(C : dchar))
+        if (is(C : dchar))
     {
         return loadAny(name);
     }
@@ -6094,11 +6078,12 @@ template SetSearcher(alias table, string kind)
     */
     struct block
     {
+        import std.internal.unicode_tables : blocks; // generated file
         mixin SetSearcher!(blocks.tab, "block");
     }
 
     ///
-    unittest
+    @safe unittest
     {
         // use .block for explicitness
         assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
@@ -6112,11 +6097,12 @@ template SetSearcher(alias table, string kind)
     */
     struct script
     {
+        import std.internal.unicode_tables : scripts; // generated file
         mixin SetSearcher!(scripts.tab, "script");
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto arabicScript = unicode.script.arabic;
         auto arabicBlock = unicode.block.arabic;
@@ -6142,16 +6128,17 @@ template SetSearcher(alias table, string kind)
     */
     struct hangulSyllableType
     {
+        import std.internal.unicode_tables : hangul; // generated file
         mixin SetSearcher!(hangul.tab, "hangul syllable type");
     }
 
     ///
-    unittest
+    @safe unittest
     {
         // L here is syllable type not Letter as in unicode.L short-cut
         auto leadingVowel = unicode.hangulSyllableType("L");
         // check that some leading vowels are present
-        foreach(vowel; '\u1110'..'\u115F')
+        foreach (vowel; '\u1110'..'\u115F')
             assert(leadingVowel[vowel]);
         assert(leadingVowel == unicode.hangulSyllableType.L);
     }
@@ -6161,6 +6148,7 @@ private:
 
     static bool findAny(string name)
     {
+        import std.internal.unicode_tables : blocks, scripts, uniProps; // generated file
         return isPrettyPropertyName(name)
             || findSetName!(uniProps.tab)(name) || findSetName!(scripts.tab)(name)
             || (ucmp(name[0..2],"In") == 0 && findSetName!(blocks.tab)(name[2..$]));
@@ -6169,11 +6157,12 @@ private:
     static auto loadAny(Set=CodepointSet, C)(in C[] name) pure
     {
         import std.conv : to;
+        import std.internal.unicode_tables : blocks, scripts; // generated file
         Set set;
         bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
             || (name.length > 2 && ucmp(name[0..2],"In") == 0
                 && loadUnicodeSet!(blocks.tab)(name[2..$], set));
-        if(loaded)
+        if (loaded)
             return set;
         throw new Exception("No unicode set by name "~name.to!string()~" was found.");
     }
@@ -6183,8 +6172,9 @@ private:
     //@disable ~this();
 }
 
-unittest
+@safe unittest
 {
+    import std.internal.unicode_tables : blocks, uniProps; // generated file
     assert(unicode("InHebrew") == asSet(blocks.Hebrew));
     assert(unicode("separator") == (asSet(uniProps.Zs) | asSet(uniProps.Zl) | asSet(uniProps.Zp)));
     assert(unicode("In-Kharoshthi") == asSet(blocks.Kharoshthi));
@@ -6208,13 +6198,14 @@ template genericDecodeGrapheme(bool getValue)
 {
     alias graphemeExtend = graphemeExtendTrie;
     alias spacingMark = mcTrie;
-    static if(getValue)
+    static if (getValue)
         alias Value = Grapheme;
     else
         alias Value = void;
 
     Value genericDecodeGrapheme(Input)(ref Input range)
     {
+        import std.internal.unicode_tables : isHangL, isHangT, isHangV; // generated file
         enum GraphemeState {
             Start,
             CR,
@@ -6223,39 +6214,39 @@ template genericDecodeGrapheme(bool getValue)
             V,
             LVT
         }
-        static if(getValue)
+        static if (getValue)
             Grapheme grapheme;
         auto state = GraphemeState.Start;
         enum eat = q{
-            static if(getValue)
+            static if (getValue)
                 grapheme ~= ch;
             range.popFront();
         };
 
         dchar ch;
         assert(!range.empty, "Attempting to decode grapheme from an empty " ~ Input.stringof);
-        while(!range.empty)
+        while (!range.empty)
         {
             ch = range.front;
-            final switch(state) with(GraphemeState)
+            final switch (state) with(GraphemeState)
             {
             case Start:
                 mixin(eat);
-                if(ch == '\r')
+                if (ch == '\r')
                     state = CR;
-                else if(isRegionalIndicator(ch))
+                else if (isRegionalIndicator(ch))
                     state = RI;
-                else if(isHangL(ch))
+                else if (isHangL(ch))
                     state = L;
-                else if(hangLV[ch] || isHangV(ch))
+                else if (hangLV[ch] || isHangV(ch))
                     state = V;
-                else if(hangLVT[ch])
+                else if (hangLVT[ch])
                     state = LVT;
-                else if(isHangT(ch))
+                else if (isHangT(ch))
                     state = LVT;
                 else
                 {
-                    switch(ch)
+                    switch (ch)
                     {
                     mixin(controlSwitch);
                         goto L_End;
@@ -6265,24 +6256,24 @@ template genericDecodeGrapheme(bool getValue)
                 }
             break;
             case CR:
-                if(ch == '\n')
+                if (ch == '\n')
                     mixin(eat);
                 goto L_End_Extend;
             case RI:
-                if(isRegionalIndicator(ch))
+                if (isRegionalIndicator(ch))
                     mixin(eat);
                 else
                     goto L_End_Extend;
             break;
             case L:
-                if(isHangL(ch))
+                if (isHangL(ch))
                     mixin(eat);
-                else if(isHangV(ch) || hangLV[ch])
+                else if (isHangV(ch) || hangLV[ch])
                 {
                     state = V;
                     mixin(eat);
                 }
-                else if(hangLVT[ch])
+                else if (hangLVT[ch])
                 {
                     state = LVT;
                     mixin(eat);
@@ -6291,9 +6282,9 @@ template genericDecodeGrapheme(bool getValue)
                     goto L_End_Extend;
             break;
             case V:
-                if(isHangV(ch))
+                if (isHangV(ch))
                     mixin(eat);
-                else if(isHangT(ch))
+                else if (isHangT(ch))
                 {
                     state = LVT;
                     mixin(eat);
@@ -6302,7 +6293,7 @@ template genericDecodeGrapheme(bool getValue)
                     goto L_End_Extend;
             break;
             case LVT:
-                if(isHangT(ch))
+                if (isHangT(ch))
                 {
                     mixin(eat);
                 }
@@ -6312,16 +6303,16 @@ template genericDecodeGrapheme(bool getValue)
             }
         }
     L_End_Extend:
-        while(!range.empty)
+        while (!range.empty)
         {
             ch = range.front;
             // extend & spacing marks
-            if(!graphemeExtend[ch] && !spacingMark[ch])
+            if (!graphemeExtend[ch] && !spacingMark[ch])
                 break;
             mixin(eat);
         }
     L_End:
-        static if(getValue)
+        static if (getValue)
             return grapheme;
     }
 
@@ -6343,7 +6334,7 @@ public: // Public API continues
         length of grapheme cluster
 +/
 size_t graphemeStride(C)(in C[] input, size_t index)
-    if(is(C : dchar))
+    if (is(C : dchar))
 {
     auto src = input[index..$];
     auto n = src.length;
@@ -6373,25 +6364,27 @@ size_t graphemeStride(C)(in C[] input, size_t index)
     must be an L-value.
 +/
 Grapheme decodeGrapheme(Input)(ref Input inp)
-    if(isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
+    if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
 {
     return genericDecodeGrapheme!true(inp);
 }
 
-unittest
+@system unittest
 {
+    import std.algorithm.comparison : equal;
+
     Grapheme gr;
     string s = " \u0020\u0308 ";
     gr = decodeGrapheme(s);
     assert(gr.length == 1 && gr[0] == ' ');
     gr = decodeGrapheme(s);
-    assert(gr.length == 2 && equalS(gr[0..2], " \u0308"));
+    assert(gr.length == 2 && equal(gr[0..2], " \u0308"));
     s = "\u0300\u0308\u1100";
-    assert(equalS(decodeGrapheme(s)[], "\u0300\u0308"));
-    assert(equalS(decodeGrapheme(s)[], "\u1100"));
+    assert(equal(decodeGrapheme(s)[], "\u0300\u0308"));
+    assert(equal(decodeGrapheme(s)[], "\u1100"));
     s = "\u11A8\u0308\uAC01";
-    assert(equalS(decodeGrapheme(s)[], "\u11A8\u0308"));
-    assert(equalS(decodeGrapheme(s)[], "\uAC01"));
+    assert(equal(decodeGrapheme(s)[], "\u11A8\u0308"));
+    assert(equal(decodeGrapheme(s)[], "\uAC01"));
 }
 
 /++
@@ -6404,7 +6397,7 @@ unittest
         $(LREF byCodePoint)
 +/
 auto byGrapheme(Range)(Range range)
-    if(isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+    if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
     // TODO: Bidirectional access
     static struct Result
@@ -6427,7 +6420,7 @@ auto byGrapheme(Range)(Range range)
             _front = _range.empty ? Grapheme.init : _range.decodeGrapheme();
         }
 
-        static if(isForwardRange!Range)
+        static if (isForwardRange!Range)
         {
             Result save() @property
             {
@@ -6442,11 +6435,11 @@ auto byGrapheme(Range)(Range range)
 }
 
 ///
-unittest
+@safe unittest
 {
-    import std.conv;
-    import std.range;
-    import std.algorithm;
+    import std.algorithm.comparison : equal;
+    import std.range : take, drop;
+    import std.range.primitives : walkLength;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
@@ -6468,11 +6461,12 @@ private static struct InputRangeString
     void popFront() { s.popFront(); }
 }
 
-unittest
+@system unittest
 {
-    import std.conv;
-    import std.range;
-    import std.algorithm;
+    import std.algorithm.comparison : equal;
+    import std.array : array;
+    import std.range : retro;
+    import std.range.primitives : walkLength;
     assert("".byGrapheme.walkLength == 0);
 
     auto reverse = "le\u0308on";
@@ -6481,7 +6475,7 @@ unittest
     auto gReverse = reverse.byGrapheme;
     assert(gReverse.walkLength == 4);
 
-    foreach(text; AliasSeq!("noe\u0308l"c, "noe\u0308l"w, "noe\u0308l"d))
+    foreach (text; AliasSeq!("noe\u0308l"c, "noe\u0308l"w, "noe\u0308l"d))
     {
         assert(text.walkLength == 5);
         static assert(isForwardRange!(typeof(text)));
@@ -6506,7 +6500,7 @@ unittest
     $(P Acts as the identity function when given a range of code points.)
 +/
 auto byCodePoint(Range)(Range range)
-    if(isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
+    if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 {
     // TODO: Propagate bidirectional access
     static struct Result
@@ -6528,14 +6522,14 @@ auto byCodePoint(Range)(Range range)
         {
             ++i;
 
-            if(i >= _range.front.length)
+            if (i >= _range.front.length)
             {
                 _range.popFront();
                 i = 0;
             }
         }
 
-        static if(isForwardRange!Range)
+        static if (isForwardRange!Range)
         {
             Result save() @property
             {
@@ -6549,16 +6543,17 @@ auto byCodePoint(Range)(Range range)
 
 /// Ditto
 Range byCodePoint(Range)(Range range)
-    if(isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+    if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
     return range;
 }
 
 ///
-unittest
+@safe unittest
 {
+    import std.array : array;
     import std.conv : text;
-    import std.range;
+    import std.range : retro;
 
     string s = "noe\u0308l"; // noël
 
@@ -6572,10 +6567,10 @@ unittest
     assert(reverse == "le\u0308on"); // lëon
 }
 
-unittest
+@system unittest
 {
-    import std.conv;
-    import std.algorithm;
+    import std.algorithm.comparison : equal;
+    import std.range.primitives : walkLength;
     assert("".byGrapheme.byCodePoint.equal(""));
 
     string text = "noe\u0308l";
@@ -6608,16 +6603,19 @@ unittest
 @trusted struct Grapheme
 {
     import std.exception : enforce;
+    import std.traits : isDynamicArray;
 
 public:
+    /// Ctor
     this(C)(in C[] chars...)
-        if(is(C : dchar))
+        if (is(C : dchar))
     {
         this ~= chars;
     }
 
+    ///ditto
     this(Input)(Input seq)
-        if(!isDynamicArray!Input
+        if (!isDynamicArray!Input
             && isInputRange!Input && is(ElementType!Input : dchar))
     {
         this ~= seq;
@@ -6644,7 +6642,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto g = Grapheme("A\u0302");
         assert(g[0] == 'A');
@@ -6660,13 +6658,13 @@ public:
         Warning: Invalidates when this Grapheme leaves the scope,
         attempts to use it then would lead to memory corruption.
     +/
-    @system auto opSlice(size_t a, size_t b) pure nothrow @nogc
+    @system SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) pure nothrow @nogc
     {
         return sliceOverIndexed(a, b, &this);
     }
 
     /// ditto
-    @system auto opSlice() pure nothrow @nogc
+    @system SliceOverIndexed!Grapheme opSlice() pure nothrow @nogc
     {
         return sliceOverIndexed(0, length, &this);
     }
@@ -6687,11 +6685,12 @@ public:
     +/
     ref opOpAssign(string op)(dchar ch)
     {
-        static if(op == "~")
+        static if (op == "~")
         {
-            if(!isBig)
+            import core.stdc.stdlib : realloc;
+            if (!isBig)
             {
-                if(slen_ + 1 > small_cap)
+                if (slen_ + 1 > small_cap)
                     convertToBig();// & fallthrough to "big" branch
                 else
                 {
@@ -6702,7 +6701,7 @@ public:
             }
 
             assert(isBig);
-            if(len_ + 1 > cap_)
+            if (len_ + 1 > cap_)
             {
                 cap_ += grow;
                 ptr_ = cast(ubyte*)enforce(realloc(ptr_, 3*(cap_+1)),
@@ -6716,7 +6715,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal;
         auto g = Grapheme("A");
@@ -6733,11 +6732,11 @@ public:
 
     /// Append all $(CHARACTERS) from the input range $(D inp) to this Grapheme.
     ref opOpAssign(string op, Input)(Input inp)
-        if(isInputRange!Input && is(ElementType!Input : dchar))
+        if (isInputRange!Input && is(ElementType!Input : dchar))
     {
-        static if(op == "~")
+        static if (op == "~")
         {
-            foreach(dchar ch; inp)
+            foreach (dchar ch; inp)
                 this ~= ch;
             return this;
         }
@@ -6763,7 +6762,8 @@ public:
 
     this(this)
     {
-        if(isBig)
+        import core.stdc.stdlib : malloc;
+        if (isBig)
         {// dup it
             auto raw_cap = 3*(cap_+1);
             auto p = cast(ubyte*)enforce(malloc(raw_cap), "malloc failed");
@@ -6774,7 +6774,8 @@ public:
 
     ~this()
     {
-        if(isBig)
+        import core.stdc.stdlib : free;
+        if (isBig)
         {
             free(ptr_);
         }
@@ -6807,9 +6808,10 @@ private:
 
     void convertToBig()
     {
+        import core.stdc.stdlib : malloc;
         size_t k = smallLength;
         ubyte* p = cast(ubyte*)enforce(malloc(3*(grow+1)), "malloc failed");
-        for(int i=0; i<k; i++)
+        for (int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data
         ptr_ = p;
@@ -6834,9 +6836,11 @@ private:
 static assert(Grapheme.sizeof == size_t.sizeof*4);
 
 ///
-unittest
+@system unittest
 {
-    import std.algorithm : filter;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter;
+
     string bold = "ku\u0308hn";
 
     // note that decodeGrapheme takes parameter by ref
@@ -6848,26 +6852,26 @@ unittest
     // the next grapheme is 2 characters long
     auto wideOne = decodeGrapheme(bold);
     // slicing a grapheme yields a random-access range of dchar
-    assert(wideOne[].equalS("u\u0308"));
+    assert(wideOne[].equal("u\u0308"));
     assert(wideOne.length == 2);
     static assert(isRandomAccessRange!(typeof(wideOne[])));
 
     // all of the usual range manipulation is possible
-    assert(wideOne[].filter!isMark().equalS("\u0308"));
+    assert(wideOne[].filter!isMark().equal("\u0308"));
 
     auto g = Grapheme("A");
     assert(g.valid);
     g ~= '\u0301';
-    assert(g[].equalS("A\u0301"));
+    assert(g[].equal("A\u0301"));
     assert(g.valid);
     g ~= "B";
     // not a valid grapheme cluster anymore
     assert(!g.valid);
     // still could be useful though
-    assert(g[].equalS("A\u0301B"));
+    assert(g[].equal("A\u0301B"));
 }
 
-unittest
+@safe unittest
 {
     auto g = Grapheme("A\u0302");
     assert(g[0] == 'A');
@@ -6877,11 +6881,12 @@ unittest
     assert(!g.valid);
 }
 
-unittest
+@system unittest
 {
-    import std.conv;
-    import std.algorithm;
-    import std.range;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.conv : text;
+    import std.range : iota;
 
     // not valid clusters (but it just a test)
     auto g  = Grapheme('a', 'b', 'c', 'd', 'e');
@@ -6912,17 +6917,17 @@ unittest
     copy[1] = '-';
     assert(g[0] == 'a' && copy[0] == 'X');
     assert(g[1] == 'b' && copy[1] == '-');
-    assert(equalS(g[2..g.length], copy[2..copy.length]));
+    assert(equal(g[2..g.length], copy[2..copy.length]));
     copy = Grapheme("АБВГДЕЁЖЗИКЛМ");
-    assert(equalS(copy[0..8], "АБВГДЕЁЖ"), text(copy[0..8]));
+    assert(equal(copy[0..8], "АБВГДЕЁЖ"), text(copy[0..8]));
     copy ~= "xyz";
-    assert(equalS(copy[13..15], "xy"), text(copy[13..15]));
+    assert(equal(copy[13..15], "xy"), text(copy[13..15]));
     assert(!copy.valid);
 
     Grapheme h;
-    foreach(dchar v; iota(cast(int)'A', cast(int)'Z'+1).map!"cast(dchar)a"())
+    foreach (dchar v; iota(cast(int)'A', cast(int)'Z'+1).map!"cast(dchar)a"())
         h ~= v;
-    assert(equalS(h[], iota(cast(int)'A', cast(int)'Z'+1)));
+    assert(equal(h[], iota(cast(int)'A', cast(int)'Z'+1)));
 }
 
 /++
@@ -6931,8 +6936,8 @@ unittest
     than $(LREF icmp). However keep in mind the warning below.)
 
     Params:
-        str1 = a string or a $(D ForwardRange) of $(D dchar)s
-        str2 = a string or a $(D ForwardRange) of $(D dchar)s
+        str1 = a string
+        str2 = a string
 
     Returns:
         An $(D int) that is 0 if the strings match,
@@ -6946,34 +6951,34 @@ unittest
 
     See_Also:
         $(LREF icmp)
-        $(XREF_PACK algorithm,comparison,cmp)
+        $(REF cmp, std,algorithm,comparison)
 +/
-int sicmp(S1, S2)(S1 str1, S2 str2)
-    if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
-    && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
+int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
 {
+    import std.internal.unicode_tables : simpleCaseTable; // generated file
     alias sTable = simpleCaseTable;
+    import std.utf : decode;
+
     size_t ridx=0;
-    foreach(dchar lhs; str1)
+    foreach (dchar lhs; str1)
     {
-        if(ridx == str2.length)
+        if (ridx == str2.length)
             return 1;
-        import std.utf : decode;
         dchar rhs = decode(str2, ridx);
         int diff = lhs - rhs;
-        if(!diff)
+        if (!diff)
             continue;
         size_t idx = simpleCaseTrie[lhs];
         size_t idx2 = simpleCaseTrie[rhs];
         // simpleCaseTrie is packed index table
-        if(idx != EMPTY_CASE_TRIE)
+        if (idx != EMPTY_CASE_TRIE)
         {
-            if(idx2 != EMPTY_CASE_TRIE)
+            if (idx2 != EMPTY_CASE_TRIE)
             {// both cased chars
                 // adjust idx --> start of bucket
                 idx = idx - sTable[idx].n;
                 idx2 = idx2 - sTable[idx2].n;
-                if(idx == idx2)// one bucket, equivalent chars
+                if (idx == idx2)// one bucket, equivalent chars
                     continue;
                 else//  not the same bucket
                     diff = sTable[idx].ch - sTable[idx2].ch;
@@ -6981,7 +6986,7 @@ int sicmp(S1, S2)(S1 str1, S2 str2)
             else
                 diff = sTable[idx - sTable[idx].n].ch - rhs;
         }
-        else if(idx2 != EMPTY_CASE_TRIE)
+        else if (idx2 != EMPTY_CASE_TRIE)
         {
             diff = lhs - sTable[idx2 - sTable[idx2].n].ch;
         }
@@ -6992,7 +6997,8 @@ int sicmp(S1, S2)(S1 str1, S2 str2)
 }
 
 ///
-unittest{
+@safe unittest
+{
     assert(sicmp("Август", "авгусТ") == 0);
     // Greek also works as long as there is no 1:M mapping in sight
     assert(sicmp("ΌΎ", "όύ") == 0);
@@ -7019,21 +7025,22 @@ unittest{
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     @trusted pure /*TODO nothrow*/
 {
-    import std.algorithm : skipOver;
+    import std.algorithm.searching : skipOver;
+    import std.internal.unicode_tables : fullCaseTable; // generated file
     alias fTable = fullCaseTable;
     size_t idx = fullCaseTrie[lhs];
     // fullCaseTrie is packed index table
-    if(idx == EMPTY_CASE_TRIE)
+    if (idx == EMPTY_CASE_TRIE)
         return lhs;
     size_t start = idx - fTable[idx].n;
     size_t end = fTable[idx].size + start;
     assert(fTable[start].entry_len == 1);
-    for(idx=start; idx<end; idx++)
+    for (idx=start; idx<end; idx++)
     {
         auto entryLen = fTable[idx].entry_len;
-        if(entryLen == 1)
+        if (entryLen == 1)
         {
-            if(fTable[idx].seq[0] == rhs)
+            if (fTable[idx].seq[0] == rhs)
             {
                 return 0;
             }
@@ -7041,7 +7048,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
         else
         {// OK it's a long chunk, like 'ss' for German
             dstring seq = fTable[idx].seq[0..entryLen];
-            if(rhs == seq[0]
+            if (rhs == seq[0]
                 && rtail.skipOver(seq[1..$]))
             {
                 // note that this path modifies rtail
@@ -7054,38 +7061,55 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
 }
 
 /++
-    $(P Does case insensitive comparison of $(D str1) and $(D str2).
+    Does case insensitive comparison of `r1` and `r2`.
     Follows the rules of full case-folding mapping.
     This includes matching as equal german ß with "ss" and
     other 1:M $(CODEPOINT) mappings unlike $(LREF sicmp).
-    The cost of $(D icmp) being pedantically correct is
+    The cost of `icmp` being pedantically correct is
     slightly worse performance.
-    )
+
+    Params:
+        r1 = a forward range of characters
+        r2 = a forward range of characters
+
+    Returns:
+        An $(D int) that is 0 if the strings match,
+        &lt;0 if $(D str1) is lexicographically "less" than $(D str2),
+        &gt;0 if $(D str1) is lexicographically "greater" than $(D str2)
+
+    See_Also:
+        $(LREF sicmp)
+        $(REF cmp, std,algorithm,comparison)
 +/
-int icmp(S1, S2)(S1 str1, S2 str2)
-    if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
-    && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
+int icmp(S1, S2)(S1 r1, S2 r2)
+    if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
+    && isForwardRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
-    for(;;)
+    import std.utf : byDchar;
+
+    auto str1 = r1.byDchar;
+    auto str2 = r2.byDchar;
+
+    for (;;)
     {
-        if(str1.empty)
+        if (str1.empty)
             return str2.empty ? 0 : -1;
         dchar lhs = str1.front;
-        if(str2.empty)
+        if (str2.empty)
             return 1;
         dchar rhs = str2.front;
         str1.popFront();
         str2.popFront();
         int diff = lhs - rhs;
-        if(!diff)
+        if (!diff)
             continue;
         // first try to match lhs to <rhs,right-tail> sequence
         int cmpLR = fullCasedCmp(lhs, rhs, str2);
-        if(!cmpLR)
+        if (!cmpLR)
             continue;
         // then rhs to <lhs,left-tail> sequence
         int cmpRL = fullCasedCmp(rhs, lhs, str1);
-        if(!cmpRL)
+        if (!cmpRL)
             continue;
         // cmpXX contain remapped codepoints
         // to obtain stable ordering of icmp
@@ -7095,9 +7119,33 @@ int icmp(S1, S2)(S1 str1, S2 str2)
 }
 
 ///
-unittest{
+@safe unittest
+{
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
+}
+
+/**
+ * By using $(REF byUTF, std,utf) and its aliases, GC allocations via auto-decoding
+ * and thrown exceptions can be avoided, making `icmp` `@safe @nogc nothrow pure`.
+ */
+@safe @nogc nothrow pure unittest
+{
+    import std.utf : byDchar;
+
+    assert(icmp("Rußland".byDchar, "Russland".byDchar) == 0);
+    assert(icmp("ᾩ -> \u1F70\u03B9".byDchar, "\u1F61\u03B9 -> ᾲ".byDchar) == 0);
+}
+
+// test different character types
+@safe unittest
+{
+    assert(icmp("Rußland", "Russland") == 0);
+    assert(icmp("Rußland"w, "Russland") == 0);
+    assert(icmp("Rußland", "Russland"w) == 0);
+    assert(icmp("Rußland"w, "Russland"w) == 0);
+    assert(icmp("Rußland"d, "Russland"w) == 0);
+    assert(icmp("Rußland"w, "Russland"d) == 0);
 }
 
 // overloads for the most common cases to reduce compile time
@@ -7111,17 +7159,17 @@ unittest{
     { return icmp!(const(dchar)[], const(dchar)[])(str1, str2); }
 }
 
-unittest
+@safe unittest
 {
-    import std.conv;
+    import std.algorithm.sorting : sort;
+    import std.conv : to;
     import std.exception : assertCTFEable;
-    import std.algorithm;
     assertCTFEable!(
     {
-    foreach(cfunc; AliasSeq!(icmp, sicmp))
+    foreach (cfunc; AliasSeq!(icmp, sicmp))
     {
-        foreach(S1; AliasSeq!(string, wstring, dstring))
-        foreach(S2; AliasSeq!(string, wstring, dstring))
+        foreach (S1; AliasSeq!(string, wstring, dstring))
+        foreach (S2; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(cfunc("".to!S1(), "".to!S2()) == 0);
             assert(cfunc("A".to!S1(), "".to!S2()) > 0);
@@ -7159,6 +7207,7 @@ unittest
 */
 package auto simpleCaseFoldings(dchar ch)
 {
+    import std.internal.unicode_tables : simpleCaseTable; // generated file
     alias sTable = simpleCaseTable;
     static struct Range
     {
@@ -7186,7 +7235,7 @@ package auto simpleCaseFoldings(dchar ch)
         @property dchar front() const
         {
             assert(!empty);
-            if(isSmall)
+            if (isSmall)
             {
                 return c;
             }
@@ -7196,7 +7245,7 @@ package auto simpleCaseFoldings(dchar ch)
 
         @property bool empty() const
         {
-            if(isSmall)
+            if (isSmall)
             {
                 return c == 0;
             }
@@ -7205,7 +7254,7 @@ package auto simpleCaseFoldings(dchar ch)
 
         @property uint length() const
         {
-            if(isSmall)
+            if (isSmall)
             {
                 return c == 0 ? 0 : 1;
             }
@@ -7214,7 +7263,7 @@ package auto simpleCaseFoldings(dchar ch)
 
         void popFront()
         {
-            if(isSmall)
+            if (isSmall)
                 c = 0;
             else
             {
@@ -7231,17 +7280,18 @@ package auto simpleCaseFoldings(dchar ch)
     return Range(start, entry.size);
 }
 
-unittest
+@system unittest
 {
+    import std.algorithm.comparison : equal;
+    import std.algorithm.searching : canFind;
+    import std.array : array;
     import std.exception : assertCTFEable;
-    import std.algorithm : canFind;
-    import std.array;
     assertCTFEable!((){
         auto r = simpleCaseFoldings('Э').array;
         assert(r.length == 2);
         assert(r.canFind('э') && r.canFind('Э'));
         auto sr = simpleCaseFoldings('~');
-        assert(sr.equalS("~"));
+        assert(sr.equal("~"));
         //A with ring above - casefolds to the same bucket as Angstrom sign
         sr = simpleCaseFoldings('Å');
         assert(sr.length == 3);
@@ -7258,7 +7308,8 @@ ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 }
 
 ///
-unittest{
+@safe unittest
+{
     // shorten the code
     alias CC = combiningClass;
 
@@ -7272,7 +7323,7 @@ unittest{
 
 @safe pure nothrow @nogc unittest
 {
-    foreach(ch; 0..0x80)
+    foreach (ch; 0..0x80)
         assert(combiningClass(ch) == 0);
     assert(combiningClass('\u05BD') == 22);
     assert(combiningClass('\u0300') == 230);
@@ -7299,7 +7350,7 @@ enum UnicodeDecomposition {
 enum {
     Canonical = UnicodeDecomposition.Canonical,
     Compatibility = UnicodeDecomposition.Compatibility
-};
+}
 
 /++
     Try to canonically compose 2 $(CHARACTERS).
@@ -7313,27 +7364,28 @@ enum {
 +/
 public dchar compose(dchar first, dchar second) pure nothrow
 {
-    import std.internal.unicode_comp;
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
+    import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
     import std.range : assumeSorted;
     size_t packed = compositionJumpTrie[first];
-    if(packed == ushort.max)
+    if (packed == ushort.max)
         return dchar.init;
     // unpack offset and length
     size_t idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
     // TODO: optimize this micro binary search (no more then 4-5 steps)
     auto r = compositionTable[idx..idx+cnt].map!"a.rhs"().assumeSorted();
     auto target = r.lowerBound(second).length;
-    if(target == cnt)
+    if (target == cnt)
         return dchar.init;
     auto entry = compositionTable[idx+target];
-    if(entry.rhs != second)
+    if (entry.rhs != second)
         return dchar.init;
     return entry.composed;
 }
 
 ///
-unittest{
+@safe unittest
+{
     assert(compose('A','\u0308') == '\u00C4');
     assert(compose('A', 'B') == dchar.init);
     assert(compose('C', '\u0301') == '\u0106');
@@ -7359,28 +7411,30 @@ unittest{
 +/
 public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 {
-    import std.internal.unicode_decomp;
-    import std.algorithm : until;
-    static if(decompType == Canonical)
+    import std.algorithm.searching : until;
+    import std.internal.unicode_decomp : decompCompatTable, decompCanonTable;
+    static if (decompType == Canonical)
     {
         alias table = decompCanonTable;
         alias mapping = canonMappingTrie;
     }
-    else static if(decompType == Compatibility)
+    else static if (decompType == Compatibility)
     {
         alias table = decompCompatTable;
         alias mapping = compatMappingTrie;
     }
     ushort idx = mapping[ch];
-    if(!idx) // not found, check hangul arithmetic decomposition
+    if (!idx) // not found, check hangul arithmetic decomposition
         return decomposeHangul(ch);
     auto decomp = table[idx..$].until(0);
     return Grapheme(decomp);
 }
 
 ///
-unittest
+@system unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(compose('A','\u0308') == '\u00C4');
     assert(compose('A', 'B') == dchar.init);
     assert(compose('C', '\u0301') == '\u0106');
@@ -7388,10 +7442,10 @@ unittest
     // thus the following doesn't compose
     assert(compose('\u0308', 'A') == dchar.init);
 
-    assert(decompose('Ĉ')[].equalS("C\u0302"));
-    assert(decompose('D')[].equalS("D"));
-    assert(decompose('\uD4DC')[].equalS("\u1111\u1171\u11B7"));
-    assert(decompose!Compatibility('¹')[].equalS("1"));
+    assert(decompose('Ĉ')[].equal("C\u0302"));
+    assert(decompose('D')[].equal("D"));
+    assert(decompose('\uD4DC')[].equal("\u1111\u1171\u11B7"));
+    assert(decompose!Compatibility('¹')[].equal("1"));
 }
 
 //----------------------------------------------------------------------------
@@ -7435,14 +7489,14 @@ int hangulSyllableIndex(dchar ch) pure nothrow @nogc
 // internal helper: compose hangul syllables leaving dchar.init in holes
 void hangulRecompose(dchar[] seq) pure nothrow @nogc
 {
-    for(size_t idx = 0; idx + 1 < seq.length; )
+    for (size_t idx = 0; idx + 1 < seq.length; )
     {
-        if(isJamoL(seq[idx]) && isJamoV(seq[idx+1]))
+        if (isJamoL(seq[idx]) && isJamoV(seq[idx+1]))
         {
             int indexL = seq[idx] - jamoLBase;
             int indexV = seq[idx+1] - jamoVBase;
             int indexLV = indexL * jamoNCount + indexV * jamoTCount;
-            if(idx + 2 < seq.length && isJamoT(seq[idx+2]))
+            if (idx + 2 < seq.length && isJamoT(seq[idx+2]))
             {
                 seq[idx] = jamoSBase + indexLV + seq[idx+2] - jamoTBase;
                 seq[idx+1] = dchar.init;
@@ -7471,23 +7525,23 @@ public:
 Grapheme decomposeHangul(dchar ch)
 {
     int idxS = cast(int)ch - jamoSBase;
-    if(idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
+    if (idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
     int idxL = idxS / jamoNCount;
     int idxV = (idxS % jamoNCount) / jamoTCount;
     int idxT = idxS % jamoTCount;
 
     int partL = jamoLBase + idxL;
     int partV = jamoVBase + idxV;
-    if(idxT > 0) // there is a trailling consonant (T); <L,V,T> decomposition
+    if (idxT > 0) // there is a trailling consonant (T); <L,V,T> decomposition
         return Grapheme(partL, partV, jamoTBase + idxT);
     else // <L, V> decomposition
         return Grapheme(partL, partV);
 }
 
 ///
-unittest
+@system unittest
 {
-    import std.algorithm;
+    import std.algorithm.comparison : equal;
     assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
 }
 
@@ -7502,10 +7556,10 @@ unittest
 +/
 dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothrow @nogc
 {
-    if(!isJamoL(lead))
+    if (!isJamoL(lead))
         return dchar.init;
     int indexL = lead - jamoLBase;
-    if(!isJamoV(vowel))
+    if (!isJamoV(vowel))
         return dchar.init;
     int indexV = vowel - jamoVBase;
     int indexLV = indexL * jamoNCount + indexV * jamoTCount;
@@ -7514,7 +7568,7 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothr
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
     // leaving out T-vowel, or passing any codepoint
@@ -7525,14 +7579,15 @@ unittest
     assert(composeJamo('A', '\u1171') == dchar.init);
 }
 
-unittest
+@system unittest
 {
-    import std.conv;
+    import std.algorithm.comparison : equal;
+    import std.conv : text;
 
     static void testDecomp(UnicodeDecomposition T)(dchar ch, string r)
     {
         Grapheme g = decompose!T(ch);
-        assert(equalS(g[], r), text(g[], " vs ", r));
+        assert(equal(g[], r), text(g[], " vs ", r));
     }
     testDecomp!Canonical('\u1FF4', "\u03C9\u0301\u0345");
     testDecomp!Canonical('\uF907', "\u9F9C");
@@ -7540,7 +7595,7 @@ unittest
     testDecomp!Compatibility('\uA7F9', "\u0153");
 
     // check examples
-    assert(decomposeHangul('\uD4DB')[].equalS("\u1111\u1171\u11B6"));
+    assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
     assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
     assert(composeJamo('\u1111', '\u1171') == '\uD4CC'); // leave out T-vowel
     assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
@@ -7571,7 +7626,7 @@ enum {
     NFKC = NormalizationForm.NFKC,
     ///ditto
     NFKD = NormalizationForm.NFKD
-};
+}
 
 /++
     Returns $(D input) string normalized to the chosen form.
@@ -7586,12 +7641,13 @@ enum {
 +/
 inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 {
-    import std.algorithm : sort, SwapStrategy;
-    import std.range : zip;
+    import std.algorithm.mutation : SwapStrategy;
+    import std.algorithm.sorting : sort;
     import std.array : appender;
+    import std.range : zip;
 
     auto anchors = splitNormalized!norm(input);
-    if(anchors[0] == input.length && anchors[1] == input.length)
+    if (anchors[0] == input.length && anchors[1] == input.length)
         return input;
     dchar[] decomposed;
     decomposed.reserve(31);
@@ -7601,33 +7657,33 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
     do
     {
         app.put(input[0..anchors[0]]);
-        foreach(dchar ch; input[anchors[0]..anchors[1]])
-            static if(norm == NFD || norm == NFC)
+        foreach (dchar ch; input[anchors[0]..anchors[1]])
+            static if (norm == NFD || norm == NFC)
             {
-                foreach(dchar c; decompose!Canonical(ch)[])
+                foreach (dchar c; decompose!Canonical(ch)[])
                     decomposed ~= c;
             }
             else // NFKD & NFKC
             {
-                foreach(dchar c; decompose!Compatibility(ch)[])
+                foreach (dchar c; decompose!Compatibility(ch)[])
                     decomposed ~= c;
             }
         ccc.length = decomposed.length;
         size_t firstNonStable = 0;
         ubyte lastClazz = 0;
 
-        foreach(idx, dchar ch; decomposed)
+        foreach (idx, dchar ch; decomposed)
         {
             auto clazz = combiningClass(ch);
             ccc[idx] = clazz;
-            if(clazz == 0 && lastClazz != 0)
+            if (clazz == 0 && lastClazz != 0)
             {
                 // found a stable code point after unstable ones
                 sort!("a[0] < b[0]", SwapStrategy.stable)
                     (zip(ccc[firstNonStable..idx], decomposed[firstNonStable..idx]));
                 firstNonStable = decomposed.length;
             }
-            else if(clazz != 0 && lastClazz == 0)
+            else if (clazz != 0 && lastClazz == 0)
             {
                 // found first unstable code point after stable ones
                 firstNonStable = idx;
@@ -7636,17 +7692,16 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
         }
         sort!("a[0] < b[0]", SwapStrategy.stable)
             (zip(ccc[firstNonStable..$], decomposed[firstNonStable..$]));
-        static if(norm == NFC || norm == NFKC)
+        static if (norm == NFC || norm == NFKC)
         {
-            import std.algorithm : countUntil;
-            size_t idx = 0;
+            import std.algorithm.searching : countUntil;
             auto first = countUntil(ccc, 0);
-            if(first >= 0) // no starters?? no recomposition
+            if (first >= 0) // no starters?? no recomposition
             {
-                for(;;)
+                for (;;)
                 {
                     auto second = recompose(first, decomposed, ccc);
-                    if(second == decomposed.length)
+                    if (second == decomposed.length)
                         break;
                     first = second;
                 }
@@ -7654,11 +7709,11 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
                 hangulRecompose(decomposed);
             }
         }
-        static if(norm == NFD || norm == NFKD)
+        static if (norm == NFD || norm == NFKD)
             app.put(decomposed);
         else
         {
-            import std.algorithm : remove;
+            import std.algorithm.mutation : remove;
             auto clean = remove!("a == dchar.init", SwapStrategy.stable)(decomposed);
             app.put(decomposed[0 .. clean.length]);
         }
@@ -7670,13 +7725,13 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
         input = input[anchors[1]..$];
         // and move on
         anchors = splitNormalized!norm(input);
-    }while(anchors[0] != input.length);
+    }while (anchors[0] != input.length);
     app.put(input[0..anchors[0]]);
     return cast(inout(C)[])app.data;
 }
 
 ///
-unittest
+@safe unittest
 {
     // any encoding works
     wstring greet = "Hello world";
@@ -7690,9 +7745,9 @@ unittest
     assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
 }
 
-unittest
+@safe unittest
 {
-    import std.conv;
+    import std.conv : text;
 
     assert(normalize!NFD("abc\uF904def") == "abc\u6ED1def", text(normalize!NFD("abc\uF904def")));
     assert(normalize!NFKD("2¹⁰") == "210", normalize!NFKD("2¹⁰"));
@@ -7717,13 +7772,12 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
 {
     assert(input.length == ccc.length);
     int accumCC = -1;// so that it's out of 0..255 range
-    bool foundSolidStarter = false;
     // writefln("recomposing %( %04x %)", input);
     // first one is always a starter thus we start at i == 1
     size_t i = start+1;
-    for(; ; )
+    for (; ; )
     {
-        if(i == input.length)
+        if (i == input.length)
             break;
         int curCC = ccc[i];
         // In any character sequence beginning with a starter S
@@ -7737,27 +7791,29 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
         //     as ccc are sorted
         // C is input[i]
 
-        if(curCC > accumCC)
+        if (curCC > accumCC)
         {
             dchar comp = compose(input[start], input[i]);
-            if(comp != dchar.init)
+            if (comp != dchar.init)
             {
                 input[start] = comp;
                 input[i] = dchar.init;// put a sentinel
                 // current was merged so its CCC shouldn't affect
                 // composing with the next one
             }
-            else {
+            else
+            {
                 // if it was a starter then accumCC is now 0, end of loop
                 accumCC = curCC;
-                if(accumCC == 0)
+                if (accumCC == 0)
                     break;
             }
         }
-        else{
+        else
+        {
             // ditto here
             accumCC = curCC;
-            if(accumCC == 0)
+            if (accumCC == 0)
                 break;
         }
         i++;
@@ -7771,24 +7827,23 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
 private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 {
     import std.typecons : tuple;
-    auto result = input;
     ubyte lastCC = 0;
 
-    foreach(idx, dchar ch; input)
+    foreach (idx, dchar ch; input)
     {
-        static if(norm == NFC)
-            if(ch < 0x0300)
+        static if (norm == NFC)
+            if (ch < 0x0300)
             {
                 lastCC = 0;
                 continue;
             }
         ubyte CC = combiningClass(ch);
-        if(lastCC > CC && CC != 0)
+        if (lastCC > CC && CC != 0)
         {
             return seekStable!norm(idx, input);
         }
 
-        if(notAllowedIn!norm(ch))
+        if (notAllowedIn!norm(ch))
         {
            return seekStable!norm(idx, input);
         }
@@ -7799,17 +7854,17 @@ private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 
 private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
 {
-    import std.utf : codeLength;
     import std.typecons : tuple;
+    import std.utf : codeLength;
 
     auto br = input[0..idx];
     size_t region_start = 0;// default
-    for(;;)
+    for (;;)
     {
-        if(br.empty)// start is 0
+        if (br.empty)// start is 0
             break;
         dchar ch = br.back;
-        if(combiningClass(ch) == 0 && allowedIn!norm(ch))
+        if (combiningClass(ch) == 0 && allowedIn!norm(ch))
         {
             region_start = br.length - codeLength!C(ch);
             break;
@@ -7818,9 +7873,9 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
     }
     ///@@@BUG@@@ can't use find: " find is a nested function and can't be used..."
     size_t region_end=input.length;// end is $ by default
-    foreach(i, dchar ch; input[idx..$])
+    foreach (i, dchar ch; input[idx..$])
     {
-        if(combiningClass(ch) == 0 && allowedIn!norm(ch))
+        if (combiningClass(ch) == 0 && allowedIn!norm(ch))
         {
             region_end = i+idx;
             break;
@@ -7840,7 +7895,7 @@ public bool allowedIn(NormalizationForm norm)(dchar ch)
 }
 
 ///
-unittest
+@safe unittest
 {
     // e.g. Cyrillic is always allowed, so is ASCII
     assert(allowedIn!NFC('я'));
@@ -7853,20 +7908,20 @@ unittest
 // not user friendly name but more direct
 private bool notAllowedIn(NormalizationForm norm)(dchar ch)
 {
-    static if(norm == NFC)
+    static if (norm == NFC)
         alias qcTrie = nfcQCTrie;
-    else static if(norm == NFD)
+    else static if (norm == NFD)
         alias qcTrie = nfdQCTrie;
-    else static if(norm == NFKC)
+    else static if (norm == NFKC)
         alias qcTrie = nfkcQCTrie;
-    else static if(norm == NFKD)
+    else static if (norm == NFKD)
         alias qcTrie = nfkdQCTrie;
     else
         static assert("Unknown normalization form "~norm);
     return qcTrie[ch];
 }
 
-unittest
+@safe unittest
 {
     assert(allowedIn!NFC('я'));
     assert(allowedIn!NFD('я'));
@@ -7895,8 +7950,10 @@ else
 {
 
 // trusted -> avoid bounds check
-@trusted pure nothrow @nogc
+@trusted pure nothrow @nogc private
 {
+    import std.internal.unicode_tables; // : toLowerTable, toTitleTable, toUpperTable; // generated file
+
     // hide template instances behind functions (Bugzilla 13232)
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
     ushort toLowerSimpleIndex(dchar c) { return toLowerSimpleIndexTrie[c]; }
@@ -7921,6 +7978,7 @@ public:
 @safe pure nothrow @nogc
 public bool isWhite(dchar c)
 {
+    import std.internal.unicode_tables : isWhiteGen; // generated file
     return isWhiteGen(c); // call pregenerated binary search
 }
 
@@ -7931,7 +7989,7 @@ public bool isWhite(dchar c)
 bool isLower(dchar c)
 {
     import std.ascii : isLower, isASCII;
-    if(isASCII(c))
+    if (isASCII(c))
         return isLower(c);
     return lowerCaseTrie[c];
 }
@@ -7939,7 +7997,7 @@ bool isLower(dchar c)
 @safe unittest
 {
     import std.ascii : isLower;
-    foreach(v; 0..0x80)
+    foreach (v; 0..0x80)
         assert(isLower(v) == .isLower(v));
     assert(.isLower('я'));
     assert(.isLower('й'));
@@ -7952,7 +8010,7 @@ bool isLower(dchar c)
     // from extended Greek
     assert(!.isLower('\u1F18'));
     assert(.isLower('\u1F00'));
-    foreach(v; unicode.lowerCase.byCodepoint)
+    foreach (v; unicode.lowerCase.byCodepoint)
         assert(.isLower(v) && !isUpper(v));
 }
 
@@ -7964,7 +8022,7 @@ bool isLower(dchar c)
 bool isUpper(dchar c)
 {
     import std.ascii : isUpper, isASCII;
-    if(isASCII(c))
+    if (isASCII(c))
         return isUpper(c);
     return upperCaseTrie[c];
 }
@@ -7972,7 +8030,7 @@ bool isUpper(dchar c)
 @safe unittest
 {
     import std.ascii : isLower;
-    foreach(v; 0..0x80)
+    foreach (v; 0..0x80)
         assert(isLower(v) == .isLower(v));
     assert(!isUpper('й'));
     assert(isUpper('Ж'));
@@ -7984,7 +8042,7 @@ bool isUpper(dchar c)
     // from extended Greek
     assert(!isUpper('\u1F00'));
     assert(isUpper('\u1F18'));
-    foreach(v; unicode.upperCase.byCodepoint)
+    foreach (v; unicode.upperCase.byCodepoint)
         assert(isUpper(v) && !.isLower(v));
 }
 
@@ -7995,16 +8053,16 @@ bool isUpper(dchar c)
 private dchar toTitlecase(dchar c)
 {
     // optimize ASCII case
-    if(c < 0xAA)
+    if (c < 0xAA)
     {
-        if(c < 'a')
+        if (c < 'a')
             return c;
-        if(c <= 'z')
+        if (c <= 'z')
             return c - 32;
         return c;
     }
     size_t idx = toTitleSimpleIndex(c);
-    if(idx != ushort.max)
+    if (idx != ushort.max)
     {
         return toTitleTab(idx);
     }
@@ -8015,36 +8073,44 @@ private alias UpperTriple = AliasSeq!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab
 private alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
 
 // generic toUpper/toLower on whole string, creates new or returns as is
-private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pure
-    if(isSomeString!S)
+private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, S)(S s) @trusted pure
+    if (isSomeString!S)
 {
     import std.array : appender;
+    import std.ascii : isASCII;
 
-    foreach(i, dchar cOuter; s)
+    foreach (i, dchar cOuter; s)
     {
         ushort idx = indexFn(cOuter);
-        if(idx == ushort.max)
+        if (idx == ushort.max)
             continue;
         auto result = appender!S(s[0..i]);
         result.reserve(s.length);
-        foreach(dchar c; s[i .. $])
+        foreach (dchar c; s[i .. $])
         {
-            idx = indexFn(c);
-            if(idx == ushort.max)
-                result.put(c);
-            else if(idx < maxIdx)
+            if (c.isASCII)
             {
-                c = tableFn(idx);
-                result.put(c);
+                result.put(asciiConvert(c));
             }
             else
             {
-                auto val = tableFn(idx);
-                // unpack length + codepoint
-                uint len = val>>24;
-                result.put(cast(dchar)(val & 0xFF_FFFF));
-                foreach(j; idx+1..idx+len)
-                    result.put(tableFn(j));
+                idx = indexFn(c);
+                if (idx == ushort.max)
+                    result.put(c);
+                else if (idx < maxIdx)
+                {
+                    c = tableFn(idx);
+                    result.put(c);
+                }
+                else
+                {
+                    auto val = tableFn(idx);
+                    // unpack length + codepoint
+                    uint len = val>>24;
+                    result.put(cast(dchar)(val & 0xFF_FFFF));
+                    foreach (j; idx+1..idx+len)
+                        result.put(tableFn(j));
+                }
             }
         }
         return result.data;
@@ -8052,9 +8118,9 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pur
     return s;
 }
 
-unittest //12428
+@safe unittest //12428
 {
-    import std.array;
+    import std.array : replicate;
     auto s = "abcdefghij".replicate(300);
     s = s[0..10];
 
@@ -8065,7 +8131,7 @@ unittest //12428
 
 
 // generic toUpper/toLower on whole range, returns range
-private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str)
+private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, Range)(Range str)
     // Accept range of dchar's
     if (isInputRange!Range &&
         isSomeChar!(ElementEncodingType!Range) &&
@@ -8080,31 +8146,41 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str
 
         @property auto front()
         {
+            import std.ascii : isASCII;
+
             if (!nLeft)
             {
                 dchar c = r.front;
-                const idx = indexFn(c);
-                if (idx == ushort.max)
+                if (c.isASCII)
                 {
-                    buf[0] = c;
-                    nLeft = 1;
-                }
-                else if (idx < maxIdx)
-                {
-                    buf[0] = tableFn(idx);
+                    buf[0] = asciiConvert(c);
                     nLeft = 1;
                 }
                 else
                 {
-                    auto val = tableFn(idx);
-                    // unpack length + codepoint
-                    nLeft = val >> 24;
-                    if (nLeft == 0)
+                    const idx = indexFn(c);
+                    if (idx == ushort.max)
+                    {
+                        buf[0] = c;
                         nLeft = 1;
-                    assert(nLeft <= buf.length);
-                    buf[nLeft - 1] = cast(dchar)(val & 0xFF_FFFF);
-                    foreach (j; 1 .. nLeft)
-                        buf[nLeft - j - 1] = tableFn(idx + j);
+                    }
+                    else if (idx < maxIdx)
+                    {
+                        buf[0] = tableFn(idx);
+                        nLeft = 1;
+                    }
+                    else
+                    {
+                        auto val = tableFn(idx);
+                        // unpack length + codepoint
+                        nLeft = val >> 24;
+                        if (nLeft == 0)
+                            nLeft = 1;
+                        assert(nLeft <= buf.length);
+                        buf[nLeft - 1] = cast(dchar)(val & 0xFF_FFFF);
+                        foreach (j; 1 .. nLeft)
+                            buf[nLeft - j - 1] = tableFn(idx + j);
+                    }
                 }
             }
             return buf[nLeft - 1];
@@ -8144,7 +8220,7 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str
  *
  * Does not allocate memory.
  * Characters in UTF-8 or UTF-16 format that cannot be decoded
- * are treated as $(XREF utf, replacementDchar).
+ * are treated as $(REF replacementDchar, std,utf).
  *
  * Params:
  *      str = string or range of characters
@@ -8165,11 +8241,12 @@ auto asLowerCase(Range)(Range str)
         import std.utf : byDchar;
 
         // Decode first
-        return toCaser!LowerTriple(str.byDchar);
+        return asLowerCase(str.byDchar);
     }
     else
     {
-        return toCaser!LowerTriple(str);
+        static import std.ascii;
+        return toCaser!(LowerTriple, std.ascii.toLower)(str);
     }
 }
 
@@ -8183,11 +8260,12 @@ auto asUpperCase(Range)(Range str)
         import std.utf : byDchar;
 
         // Decode first
-        return toCaser!UpperTriple(str.byDchar);
+        return asUpperCase(str.byDchar);
     }
     else
     {
-        return toCaser!UpperTriple(str);
+        static import std.ascii;
+        return toCaser!(UpperTriple, std.ascii.toUpper)(str);
     }
 }
 
@@ -8199,27 +8277,31 @@ auto asUpperCase(Range)(Range str)
     assert("hEllo".asUpperCase.equal("HELLO"));
 }
 
+// explicitly undocumented
 auto asLowerCase(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
+    import std.traits : StringTypeOf;
     return asLowerCase!(StringTypeOf!Range)(str);
 }
 
+// explicitly undocumented
 auto asUpperCase(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
+    import std.traits : StringTypeOf;
     return asUpperCase!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!asLowerCase("hEllo"));
     assert(testAliasedString!asUpperCase("hEllo"));
 }
 
-unittest
+@safe unittest
 {
-    import std.array;
+    import std.array : array;
 
     auto a = "HELLo".asLowerCase;
     auto savea = a.save;
@@ -8246,7 +8328,7 @@ unittest
     {
     }
 
-    import std.algorithm.comparison  : equal;
+    import std.algorithm.comparison : equal;
 
     "HELLo"w.asLowerCase.equal("hello"d);
     "HELLo"w.asUpperCase.equal("HELLO"d);
@@ -8354,7 +8436,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
  *
  * Does not allocate memory.
  * Characters in UTF-8 or UTF-16 format that cannot be decoded
- * are treated as $(XREF utf, replacementDchar).
+ * are treated as $(REF replacementDchar, std,utf).
  *
  * Params:
  *      str = string or range of characters
@@ -8395,10 +8477,11 @@ auto asCapitalized(Range)(Range str)
 auto asCapitalized(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
+    import std.traits : StringTypeOf;
     return asCapitalized!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!asCapitalized("hEllo"));
 }
@@ -8409,9 +8492,9 @@ unittest
     assert(r.front == 'H');
 }
 
-unittest
+@safe unittest
 {
-    import std.array;
+    import std.array : array;
 
     auto a = "hELLo".asCapitalized;
     auto savea = a.save;
@@ -8446,7 +8529,7 @@ unittest
     {
     }
 
-    import std.algorithm.comparison  : equal;
+    import std.algorithm.comparison : equal;
 
     "HELLo"w.asCapitalized.equal("Hello"d);
     "hElLO"w.asCapitalized.equal("Hello"d);
@@ -8491,7 +8574,7 @@ private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure nothrow @
     return idx;
 }
 
-unittest
+@safe unittest
 {
     char[] s = "abcd".dup;
     size_t i = 0;
@@ -8505,7 +8588,7 @@ unittest
 // TODO: helper, I wish std.utf was more flexible (and stright)
 private size_t encodeTo(wchar[] buf, size_t idx, dchar c) @trusted pure
 {
-    import std.utf;
+    import std.utf : UTFException;
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
@@ -8534,7 +8617,7 @@ private size_t encodeTo(dchar[] buf, size_t idx, dchar c) @trusted pure nothrow 
 private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[] s) @trusted pure
     if (is(C == char) || is(C == wchar)  || is(C == dchar))
 {
-    import std.utf;
+    import std.utf : decode, codeLength;
     size_t curIdx = 0;
     size_t destIdx = 0;
     alias slowToCase = toCaseInPlaceAlloc!(indexFn, maxIdx, tableFn);
@@ -8547,24 +8630,24 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
         // then have to copy if a re-cased char was smaller the original
         // later we may regain pace with char that got bigger
         // In the end it sometimes flip-flops between the 2 cases below
-        if(dest == from)
+        if (dest == from)
             return to;
         // got to copy
-        foreach(C c; str[from..to])
+        foreach (C c; str[from..to])
             str[dest++] = c;
         return dest;
     }
-    while(curIdx != s.length)
+    while (curIdx != s.length)
     {
         size_t startIdx = curIdx;
         dchar ch = decode(s, curIdx);
         // TODO: special case for ASCII
         auto caseIndex = indexFn(ch);
-        if(caseIndex == ushort.max) // unchanged, skip over
+        if (caseIndex == ushort.max) // unchanged, skip over
         {
             continue;
         }
-        else if(caseIndex < maxIdx)  // 1:1 codepoint mapping
+        else if (caseIndex < maxIdx)  // 1:1 codepoint mapping
         {
             // previous cased chars had the same length as uncased ones
             // thus can just adjust pointer
@@ -8572,7 +8655,7 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
             lastUnchanged = curIdx;
             dchar cased = tableFn(caseIndex);
             auto casedLen = codeLength!C(cased);
-            if(casedLen + destIdx > curIdx) // no place to fit cased char
+            if (casedLen + destIdx > curIdx) // no place to fit cased char
             {
                 // switch to slow codepath, where we allocate
                 return slowToCase(s, startIdx, destIdx);
@@ -8590,7 +8673,7 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
         }
         assert(destIdx <= curIdx);
     }
-    if(lastUnchanged != s.length)
+    if (lastUnchanged != s.length)
     {
         destIdx = moveTo(s, destIdx, lastUnchanged, s.length);
     }
@@ -8602,18 +8685,18 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
 {
     size_t toCaseLength(C)(in C[] str)
     {
-        import std.utf;
+        import std.utf : decode, codeLength;
         size_t codeLen = 0;
         size_t lastNonTrivial = 0;
         size_t curIdx = 0;
-        while(curIdx != str.length)
+        while (curIdx != str.length)
         {
             size_t startIdx = curIdx;
             dchar ch = decode(str, curIdx);
             ushort caseIndex = indexFn(ch);
-            if(caseIndex == ushort.max)
+            if (caseIndex == ushort.max)
                 continue;
-            else if(caseIndex < maxIdx)
+            else if (caseIndex < maxIdx)
             {
                 codeLen += startIdx - lastNonTrivial;
                 lastNonTrivial = curIdx;
@@ -8628,19 +8711,18 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
                 auto len = val>>24;
                 dchar cased = val & 0xFF_FFFF;
                 codeLen += codeLength!C(cased);
-                foreach(j; caseIndex+1..caseIndex+len)
+                foreach (j; caseIndex+1..caseIndex+len)
                     codeLen += codeLength!C(tableFn(j));
             }
         }
-        if(lastNonTrivial != str.length)
+        if (lastNonTrivial != str.length)
             codeLen += str.length - lastNonTrivial;
         return codeLen;
     }
 }
 
-unittest
+@safe unittest
 {
-    import std.conv;
     alias toLowerLength = toCaseLength!(LowerTriple);
     assert(toLowerLength("abcd") == 4);
     assert(toLowerLength("аБВгд456") == 10+3);
@@ -8660,16 +8742,16 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
         C[] ns = new C[trueLength];
         ns[0..destIdx] = s[0..destIdx];
         size_t lastUnchanged = curIdx;
-        while(curIdx != s.length)
+        while (curIdx != s.length)
         {
             size_t startIdx = curIdx; // start of current codepoint
             dchar ch = decode(s, curIdx);
             auto caseIndex = indexFn(ch);
-            if(caseIndex == ushort.max) // skip over
+            if (caseIndex == ushort.max) // skip over
             {
                 continue;
             }
-            else if(caseIndex < maxIdx)  // 1:1 codepoint mapping
+            else if (caseIndex < maxIdx)  // 1:1 codepoint mapping
             {
                 dchar cased = tableFn(caseIndex);
                 auto toCopy = startIdx - lastUnchanged;
@@ -8688,11 +8770,11 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
                 // unpack length + codepoint
                 uint len = val>>24;
                 destIdx = encodeTo(ns, destIdx, cast(dchar)(val & 0xFF_FFFF));
-                foreach(j; caseIndex+1..caseIndex+len)
+                foreach (j; caseIndex+1..caseIndex+len)
                     destIdx = encodeTo(ns, destIdx, tableFn(j));
             }
         }
-        if(lastUnchanged != s.length)
+        if (lastUnchanged != s.length)
         {
             auto toCopy = s.length - lastUnchanged;
             ns[destIdx..destIdx+toCopy] = s[lastUnchanged..$];
@@ -8758,16 +8840,16 @@ void toUpperInPlace(C)(ref C[] s) @trusted pure
 dchar toLower(dchar c)
 {
      // optimize ASCII case
-    if(c < 0xAA)
+    if (c < 0xAA)
     {
-        if(c < 'A')
+        if (c < 'A')
             return c;
-        if(c <= 'Z')
+        if (c <= 'Z')
             return c + 32;
         return c;
     }
     size_t idx = toLowerSimpleIndex(c);
-    if(idx != ushort.max)
+    if (idx != ushort.max)
     {
         return toLowerTab(idx);
     }
@@ -8780,9 +8862,10 @@ dchar toLower(dchar c)
     If none of $(D s) characters were affected, then $(D s) itself is returned.
 +/
 S toLower(S)(S s) @trusted pure
-    if(isSomeString!S)
+    if (isSomeString!S)
 {
-    return toCase!(LowerTriple)(s);
+    static import std.ascii;
+    return toCase!(LowerTriple, std.ascii.toLower)(s);
 }
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
@@ -8796,15 +8879,15 @@ S toLower(S)(S s) @trusted pure
 }
 
 
-@trusted unittest //@@@BUG std.format is not @safe
+@system unittest //@@@BUG std.format is not @safe
 {
     import std.format : format;
     static import std.ascii;
-    foreach(ch; 0..0x80)
+    foreach (ch; 0..0x80)
         assert(std.ascii.toLower(ch) == toLower(ch));
     assert(toLower('Я') == 'я');
     assert(toLower('Δ') == 'δ');
-    foreach(ch; unicode.upperCase.byCodepoint)
+    foreach (ch; unicode.upperCase.byCodepoint)
     {
         dchar low = ch.toLower();
         assert(low == ch || isLower(low), format("%s -> %s", ch, low));
@@ -8816,7 +8899,7 @@ S toLower(S)(S s) @trusted pure
 }
 
 //bugzilla 9629
-unittest
+@safe unittest
 {
     wchar[] test = "hello þ world"w.dup;
     auto piece = test[6..7];
@@ -8825,9 +8908,9 @@ unittest
 }
 
 
-unittest
+@safe unittest
 {
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
     string s1 = "FoL";
     string s2 = toLower(s1);
     assert(cmp(s2, "fol") == 0, s2);
@@ -8884,26 +8967,26 @@ unittest
     Certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toUpper which takes full string instead.
 
-    toUpper can be used as an argument to $(XREF_PACK algorithm,iteration,map)
+    toUpper can be used as an argument to $(REF map, std,algorithm,iteration)
     to produce an algorithm that can convert a range of characters to upper case
     without allocating memory.
-    A string can then be produced by using $(XREF_PACK algorithm,mutation,copy)
-    to send it to an $(XREF array, appender).
+    A string can then be produced by using $(REF copy, std,algorithm,mutation)
+    to send it to an $(REF appender, std,array).
 +/
 @safe pure nothrow @nogc
 dchar toUpper(dchar c)
 {
     // optimize ASCII case
-    if(c < 0xAA)
+    if (c < 0xAA)
     {
-        if(c < 'a')
+        if (c < 'a')
             return c;
-        if(c <= 'z')
+        if (c <= 'z')
             return c - 32;
         return c;
     }
     size_t idx = toUpperSimpleIndex(c);
-    if(idx != ushort.max)
+    if (idx != ushort.max)
     {
         return toUpperTab(idx);
     }
@@ -8911,27 +8994,27 @@ dchar toUpper(dchar c)
 }
 
 ///
-unittest
+@system unittest
 {
-    import std.algorithm;
-    import std.uni;
-    import std.array;
+    import std.algorithm.iteration : map;
+    import std.algorithm.mutation : copy;
+    import std.array : appender;
 
     auto abuf = appender!(char[])();
     "hello".map!toUpper.copy(&abuf);
     assert(abuf.data == "HELLO");
 }
 
-@trusted unittest
+@safe unittest
 {
     import std.format : format;
     static import std.ascii;
-    foreach(ch; 0..0x80)
+    foreach (ch; 0..0x80)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');
     assert(toUpper('δ') == 'Δ');
     auto title = unicode.Titlecase_Letter;
-    foreach(ch; unicode.lowerCase.byCodepoint)
+    foreach (ch; unicode.lowerCase.byCodepoint)
     {
         dchar up = ch.toUpper();
         assert(up == ch || isUpper(up) || title[up],
@@ -8945,9 +9028,10 @@ unittest
     If none of $(D s) characters were affected, then $(D s) itself is returned.
 +/
 S toUpper(S)(S s) @trusted pure
-    if(isSomeString!S)
+    if (isSomeString!S)
 {
-    return toCase!(UpperTriple)(s);
+    static import std.ascii;
+    return toCase!(UpperTriple, std.ascii.toUpper)(s);
 }
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
@@ -8960,9 +9044,9 @@ S toUpper(S)(S s) @trusted pure
     { return toUpper!dstring(s); }
 }
 
-unittest
+@safe unittest
 {
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
 
     string s1 = "FoL";
     string s2;
@@ -8989,7 +9073,7 @@ unittest
     assert(s2 !is s1);
 }
 
-unittest
+@system unittest
 {
     static void doTest(C)(const(C)[] s, const(C)[] trueUp, const(C)[] trueLow)
     {
@@ -9006,7 +9090,7 @@ unittest
         assert(upInp == trueUp,
             format(diff, cast(ubyte[])s, cast(ubyte[])upInp, cast(ubyte[])trueUp));
     }
-    foreach(S; AliasSeq!(dstring, wstring, string))
+    foreach (S; AliasSeq!(dstring, wstring, string))
     {
 
         S easy = "123";
@@ -9017,7 +9101,7 @@ unittest
         S[] lower = ["123", "abcфеж", "\u0131\u023f\u03c9", "i\u0307\u1Fe2"];
         S[] upper = ["123", "ABCФЕЖ", "I\u2c7e\u2126", "\u0130\u03A5\u0308\u0300"];
 
-        foreach(val; AliasSeq!(easy, good))
+        foreach (val; AliasSeq!(easy, good))
         {
             auto e = val.dup;
             auto g = e;
@@ -9026,15 +9110,15 @@ unittest
             e.toLowerInPlace();
             assert(e is g);
         }
-        foreach(i, v; options)
+        foreach (i, v; options)
         {
             doTest(v, upper[i], lower[i]);
         }
 
         // a few combinatorial runs
-        foreach(i; 0..options.length)
-        foreach(j; i..options.length)
-        foreach(k; j..options.length)
+        foreach (i; 0..options.length)
+        foreach (j; i..options.length)
+        foreach (k; j..options.length)
         {
             auto sample = options[i] ~ options[j] ~ options[k];
             auto sample2 = options[k] ~ options[j] ~ options[i];
@@ -9055,15 +9139,15 @@ unittest
 bool isAlpha(dchar c)
 {
     // optimization
-    if(c < 0xAA)
+    if (c < 0xAA)
     {
         size_t x = c - 'A';
-        if(x <= 'Z' - 'A')
+        if (x <= 'Z' - 'A')
             return true;
         else
         {
             x = c - 'a';
-            if(x <= 'z'-'a')
+            if (x <= 'z'-'a')
                 return true;
         }
         return false;
@@ -9075,9 +9159,9 @@ bool isAlpha(dchar c)
 @safe unittest
 {
     auto alpha = unicode("Alphabetic");
-    foreach(ch; alpha.byCodepoint)
+    foreach (ch; alpha.byCodepoint)
         assert(isAlpha(ch));
-    foreach(ch; 0..0x4000)
+    foreach (ch; 0..0x4000)
         assert((ch in alpha) == isAlpha(ch));
 }
 
@@ -9095,9 +9179,9 @@ bool isMark(dchar c)
 @safe unittest
 {
     auto mark = unicode("Mark");
-    foreach(ch; mark.byCodepoint)
+    foreach (ch; mark.byCodepoint)
         assert(isMark(ch));
-    foreach(ch; 0..0x4000)
+    foreach (ch; 0..0x4000)
         assert((ch in mark) == isMark(ch));
 }
 
@@ -9108,18 +9192,68 @@ bool isMark(dchar c)
 @safe pure nothrow @nogc
 bool isNumber(dchar c)
 {
-    return numberTrie[c];
+    // optimization for ascii case
+    if (c <= 0x7F)
+    {
+        return c >= '0' && c <= '9';
+    }
+    else
+    {
+        return numberTrie[c];
+    }
 }
 
 @safe unittest
 {
     auto n = unicode("N");
-    foreach(ch; n.byCodepoint)
+    foreach (ch; n.byCodepoint)
         assert(isNumber(ch));
-    foreach(ch; 0..0x4000)
+    foreach (ch; 0..0x4000)
         assert((ch in n) == isNumber(ch));
 }
 
+/++
+    Returns whether $(D c) is a Unicode alphabetic $(CHARACTER) or number.
+    (general Unicode category: Alphabetic, Nd, Nl, No).
+
+    Params:
+        c = any Unicode character
+    Returns:
+        `true` if the character is in the Alphabetic, Nd, Nl, or No Unicode
+        categories
++/
+@safe pure nothrow @nogc
+bool isAlphaNum(dchar c)
+{
+    static import std.ascii;
+
+    // optimization for ascii case
+    if (std.ascii.isASCII(c))
+    {
+        return std.ascii.isAlphaNum(c);
+    }
+    else
+    {
+        return isAlpha(c) || isNumber(c);
+    }
+}
+
+@safe unittest
+{
+    auto n = unicode("N");
+    auto alpha = unicode("Alphabetic");
+
+    foreach (ch; n.byCodepoint)
+        assert(isAlphaNum(ch));
+
+    foreach (ch; alpha.byCodepoint)
+        assert(isAlphaNum(ch));
+
+    foreach (ch; 0..0x4000)
+    {
+        assert(((ch in n) || (ch in alpha)) == isAlphaNum(ch));
+    }
+}
 
 /++
     Returns whether $(D c) is a Unicode punctuation $(CHARACTER)
@@ -9128,10 +9262,20 @@ bool isNumber(dchar c)
 @safe pure nothrow @nogc
 bool isPunctuation(dchar c)
 {
-    return punctuationTrie[c];
+    static import std.ascii;
+
+    // optimization for ascii case
+    if (c <= 0x7F)
+    {
+        return std.ascii.isPunctuation(c);
+    }
+    else
+    {
+        return punctuationTrie[c];
+    }
 }
 
-unittest
+@safe unittest
 {
     assert(isPunctuation('\u0021'));
     assert(isPunctuation('\u0028'));
@@ -9140,7 +9284,7 @@ unittest
     assert(isPunctuation('\u005F'));
     assert(isPunctuation('\u00AB'));
     assert(isPunctuation('\u00BB'));
-    foreach(ch; unicode("P").byCodepoint)
+    foreach (ch; unicode("P").byCodepoint)
         assert(isPunctuation(ch));
 }
 
@@ -9154,14 +9298,14 @@ bool isSymbol(dchar c)
    return symbolTrie[c];
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     assert(isSymbol('\u0024'));
     assert(isSymbol('\u002B'));
     assert(isSymbol('\u005E'));
     assert(isSymbol('\u00A6'));
-    foreach(ch; unicode("S").byCodepoint)
+    foreach (ch; unicode("S").byCodepoint)
         assert(isSymbol(ch), format("%04x", ch));
 }
 
@@ -9174,16 +9318,17 @@ unittest
 @safe pure nothrow @nogc
 bool isSpace(dchar c)
 {
+    import std.internal.unicode_tables : isSpaceGen; // generated file
     return isSpaceGen(c);
 }
 
-unittest
+@safe unittest
 {
     assert(isSpace('\u0020'));
     auto space = unicode.Zs;
-    foreach(ch; space.byCodepoint)
+    foreach (ch; space.byCodepoint)
         assert(isSpace(ch));
-    foreach(ch; 0..0x1000)
+    foreach (ch; 0..0x1000)
         assert(isSpace(ch) == space[ch]);
 }
 
@@ -9200,13 +9345,13 @@ bool isGraphical(dchar c)
 }
 
 
-unittest
+@safe unittest
 {
     auto set = unicode("Graphical");
     import std.format : format;
-    foreach(ch; set.byCodepoint)
+    foreach (ch; set.byCodepoint)
         assert(isGraphical(ch), format("%4x", ch));
-    foreach(ch; 0..0x4000)
+    foreach (ch; 0..0x4000)
         assert((ch in set) == isGraphical(ch));
 }
 
@@ -9218,18 +9363,19 @@ unittest
 @safe pure nothrow @nogc
 bool isControl(dchar c)
 {
+    import std.internal.unicode_tables : isControlGen; // generated file
     return isControlGen(c);
 }
 
-unittest
+@safe unittest
 {
     assert(isControl('\u0000'));
     assert(isControl('\u0081'));
     assert(!isControl('\u0100'));
     auto cc = unicode.Cc;
-    foreach(ch; cc.byCodepoint)
+    foreach (ch; cc.byCodepoint)
         assert(isControl(ch));
-    foreach(ch; 0..0x1000)
+    foreach (ch; 0..0x1000)
         assert(isControl(ch) == cc[ch]);
 }
 
@@ -9241,14 +9387,15 @@ unittest
 @safe pure nothrow @nogc
 bool isFormat(dchar c)
 {
+    import std.internal.unicode_tables : isFormatGen; // generated file
     return isFormatGen(c);
 }
 
 
-unittest
+@safe unittest
 {
     assert(isFormat('\u00AD'));
-    foreach(ch; unicode("Format").byCodepoint)
+    foreach (ch; unicode("Format").byCodepoint)
         assert(isFormat(ch));
 }
 
@@ -9306,10 +9453,10 @@ bool isNonCharacter(dchar c)
     return nonCharacterTrie[c];
 }
 
-unittest
+@safe unittest
 {
     auto set = unicode("Cn");
-    foreach(ch; set.byCodepoint)
+    foreach (ch; set.byCodepoint)
         assert(isNonCharacter(ch));
 }
 
@@ -9329,6 +9476,8 @@ private:
 
 @safe pure nothrow @nogc @property
 {
+    import std.internal.unicode_tables; // generated file
+
     // It's important to use auto return here, so that the compiler
     // only runs semantic on the return type if the function gets
     // used. Also these are functions rather than templates to not
@@ -9348,28 +9497,28 @@ private:
     //normalization quick-check tables
     auto nfcQCTrie()
     {
-        import std.internal.unicode_norm;
+        import std.internal.unicode_norm : nfcQCTrieEntries;
         static immutable res = asTrie(nfcQCTrieEntries);
         return res;
     }
 
     auto nfdQCTrie()
     {
-        import std.internal.unicode_norm;
+        import std.internal.unicode_norm : nfdQCTrieEntries;
         static immutable res = asTrie(nfdQCTrieEntries);
         return res;
     }
 
     auto nfkcQCTrie()
     {
-        import std.internal.unicode_norm;
+        import std.internal.unicode_norm : nfkcQCTrieEntries;
         static immutable res = asTrie(nfkcQCTrieEntries);
         return res;
     }
 
     auto nfkdQCTrie()
     {
-        import std.internal.unicode_norm;
+        import std.internal.unicode_norm : nfkdQCTrieEntries;
         static immutable res = asTrie(nfkdQCTrieEntries);
         return res;
     }
@@ -9377,28 +9526,28 @@ private:
     //grapheme breaking algorithm tables
     auto mcTrie()
     {
-        import std.internal.unicode_grapheme;
+        import std.internal.unicode_grapheme : mcTrieEntries;
         static immutable res = asTrie(mcTrieEntries);
         return res;
     }
 
     auto graphemeExtendTrie()
     {
-        import std.internal.unicode_grapheme;
+        import std.internal.unicode_grapheme : graphemeExtendTrieEntries;
         static immutable res = asTrie(graphemeExtendTrieEntries);
         return res;
     }
 
     auto hangLV()
     {
-        import std.internal.unicode_grapheme;
+        import std.internal.unicode_grapheme : hangulLVTrieEntries;
         static immutable res = asTrie(hangulLVTrieEntries);
         return res;
     }
 
     auto hangLVT()
     {
-        import std.internal.unicode_grapheme;
+        import std.internal.unicode_grapheme : hangulLVTTrieEntries;
         static immutable res = asTrie(hangulLVTTrieEntries);
         return res;
     }
@@ -9406,28 +9555,28 @@ private:
     // tables below are used for composition/decomposition
     auto combiningClassTrie()
     {
-        import std.internal.unicode_comp;
+        import std.internal.unicode_comp : combiningClassTrieEntries;
         static immutable res = asTrie(combiningClassTrieEntries);
         return res;
     }
 
     auto compatMappingTrie()
     {
-        import std.internal.unicode_decomp;
+        import std.internal.unicode_decomp : compatMappingTrieEntries;
         static immutable res = asTrie(compatMappingTrieEntries);
         return res;
     }
 
     auto canonMappingTrie()
     {
-        import std.internal.unicode_decomp;
+        import std.internal.unicode_decomp : canonMappingTrieEntries;
         static immutable res = asTrie(canonMappingTrieEntries);
         return res;
     }
 
     auto compositionJumpTrie()
     {
-        import std.internal.unicode_comp;
+        import std.internal.unicode_comp : compositionJumpTrieEntries;
         static immutable res = asTrie(compositionJumpTrieEntries);
         return res;
     }

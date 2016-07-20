@@ -3,12 +3,9 @@
 /**
 Serialize data to $(D ubyte) arrays.
 
- * Macros:
- *      WIKI = Phobos/StdOutbuffer
- *
  * Copyright: Copyright Digital Mars 2000 - 2015.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_outbuffer.d)
  */
 module std.outbuffer;
@@ -325,12 +322,12 @@ class OutBuffer
      * Formats and writes its arguments in text format to the OutBuffer.
      *
      * Params:
-     *  fmt = format string as described in $(XREF format, formattedWrite)
+     *  fmt = format string as described in $(REF formattedWrite, std,format)
      *  args = arguments to be formatted
      *
      * See_Also:
-     *  $(XREF stdio, _writef);
-     *  $(XREF format, formattedWrite);
+     *  $(REF _writef, std,stdio);
+     *  $(REF formattedWrite, std,format);
      */
     void writef(Char, A...)(in Char[] fmt, A args)
     {
@@ -339,7 +336,7 @@ class OutBuffer
     }
 
     ///
-    unittest
+    @safe unittest
     {
         OutBuffer b = new OutBuffer();
         b.writef("a%sb", 16);
@@ -351,12 +348,12 @@ class OutBuffer
      * followed by a newline.
      *
      * Params:
-     *  fmt = format string as described in $(XREF format, formattedWrite)
+     *  fmt = format string as described in $(REF formattedWrite, std,format)
      *  args = arguments to be formatted
      *
      * See_Also:
-     *  $(XREF stdio, _writefln);
-     *  $(XREF format, formattedWrite);
+     *  $(REF _writefln, std,stdio);
+     *  $(REF formattedWrite, std,format);
      */
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
@@ -366,7 +363,7 @@ class OutBuffer
     }
 
     ///
-    unittest
+    @safe unittest
     {
         OutBuffer b = new OutBuffer();
         b.writefln("a%sb", 16);
@@ -397,7 +394,7 @@ class OutBuffer
         }
 }
 
-unittest
+@safe unittest
 {
     //printf("Starting OutBuffer test\n");
 
@@ -415,7 +412,7 @@ unittest
     assert(cmp(buf.toString(), "hello world 6") == 0);
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     static assert(isOutputRange!(OutBuffer, char));

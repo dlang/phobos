@@ -7,11 +7,8 @@
  * The std.cstream module bridges core.stdc.stdio (or std.stdio) and std.stream.
  * Both core.stdc.stdio and std.stream are publicly imported by std.cstream.
  *
- * Macros:
- *      WIKI=Phobos/StdCstream
- *
  * Copyright: Copyright Ben Hinkle 2007 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Ben Hinkle
  * Source:    $(PHOBOSSRC std/_cstream.d)
  */
@@ -20,7 +17,9 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-deprecated("It will be removed from Phobos in October 2016. If you still need it, go to https://github.com/DigitalMars/undeaD") module std.cstream;
+deprecated(
+    "It will be removed from Phobos in October 2016. If you still need it, go to https://github.com/DigitalMars/undeaD"
+) module std.cstream;
 // @@@DEPRECATED_2016-10@@@
 
 public import core.stdc.stdio;
@@ -149,7 +148,8 @@ class CFile : Stream {
   }
 
   // run a few tests
-  unittest {
+  unittest
+  {
     import std.file : deleteme;
     import std.internal.cstring : tempCString;
 
@@ -204,7 +204,8 @@ class CFile : Stream {
     file.writeLine("That was blank");
     file.position = 0;
     char[][] lines;
-    foreach(char[] line; file) {
+    foreach (char[] line; file)
+    {
       lines ~= line.dup;
     }
     assert( lines.length == 5 );
@@ -214,7 +215,8 @@ class CFile : Stream {
     assert( lines[3] == "That was blank");
     file.position = 0;
     lines = new char[][5];
-    foreach(ulong n, char[] line; file) {
+    foreach (ulong n, char[] line; file)
+    {
       lines[cast(size_t)(n-1)] = line.dup;
     }
     assert( lines[0] == "Testing stream.d:");

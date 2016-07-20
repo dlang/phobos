@@ -1,12 +1,10 @@
 // Written in the D programming language.
 /**
-This is a submodule of $(LINK2 std_algorithm.html, std.algorithm).
+This is a submodule of $(MREF std, algorithm).
 It contains generic _comparison algorithms.
 
 $(BOOKTABLE Cheat Sheet,
-
 $(TR $(TH Function Name) $(TH Description))
-
 $(T2 among,
         Checks if a value is among a set of values, e.g.
         $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
@@ -46,9 +44,9 @@ $(T2 predSwitch,
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_comparison.d)
 
@@ -59,7 +57,7 @@ module std.algorithm.comparison;
 
 // FIXME
 import std.functional; // : unaryFun, binaryFun;
-import std.range;
+import std.range.primitives;
 import std.traits;
 // FIXME
 import std.typecons; // : tuple, Tuple, Flag;
@@ -81,7 +79,7 @@ Returns:
     found value plus one is returned.
 
 See_Also:
-$(XREF_PACK_NAMED algorithm,searching,find,find) and $(XREF_PACK_NAMED algorithm,searching,canFind, canFind) for finding a value in a
+$(REF_ALTTEXT find, find, std,algorithm,searching) and $(REF_ALTTEXT canFind, canFind, std,algorithm,searching) for finding a value in a
 range.
 */
 uint among(alias pred = (a, b) => a == b, Value, Values...)
@@ -254,7 +252,7 @@ auto castSwitch(choices...)(Object switchObject)
     {
 
         // Checking for exact matches:
-        ClassInfo classInfo = typeid(switchObject);
+        const classInfo = typeid(switchObject);
         foreach (index, choice; choices)
         {
             static assert(isCallable!choice,
@@ -280,7 +278,7 @@ auto castSwitch(choices...)(Object switchObject)
 
                 if (classInfo == typeid(CastClass))
                 {
-                    static if(is(ReturnType!(choice) == void))
+                    static if (is(ReturnType!(choice) == void))
                     {
                         choice(cast(CastClass) switchObject);
                         static if (areAllHandlersVoidResult)
@@ -308,7 +306,7 @@ auto castSwitch(choices...)(Object switchObject)
             {
                 if (auto castedObject = cast(choiceParameterTypes[0]) switchObject)
                 {
-                    static if(is(ReturnType!(choice) == void))
+                    static if (is(ReturnType!(choice) == void))
                     {
                         choice(castedObject);
                         static if (areAllHandlersVoidResult)
@@ -345,7 +343,7 @@ auto castSwitch(choices...)(Object switchObject)
 
                 if (switchObject is null)
                 {
-                    static if(is(ReturnType!(choice) == void))
+                    static if (is(ReturnType!(choice) == void))
                     {
                         choice();
                         static if (areAllHandlersVoidResult)
@@ -727,7 +725,7 @@ template equal(alias pred = "a == b")
         for element, according to binary predicate $(D pred).
 
     See_Also:
-        $(WEB sgi.com/tech/stl/_equal.html, STL's _equal)
+        $(HTTP sgi.com/tech/stl/_equal.html, STL's _equal)
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
     if (isInputRange!Range1 && isInputRange!Range2 && is(typeof(binaryFun!pred(r1.front, r2.front))))
@@ -738,11 +736,32 @@ template equal(alias pred = "a == b")
         {
             return r1 == r2;
         }
+        // if one of the arguments is a string and the other isn't, then auto-decoding
+        // can be avoided if they have the same ElementEncodingType
+        else static if (is(typeof(pred) == string) && pred == "a == b" &&
+            isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
+            is(ElementEncodingType!Range1 == ElementEncodingType!Range2))
+        {
+            import std.utf : byCodeUnit;
+
+            static if (isAutodecodableString!Range1)
+            {
+                auto codeUnits = r1.byCodeUnit;
+                alias other = r2;
+            }
+            else
+            {
+                auto codeUnits = r2.byCodeUnit;
+                alias other = r1;
+            }
+
+            return equal(codeUnits, other);
+        }
         //Try a fast implementation when the ranges have comparable lengths
         else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
         {
-            auto len1 = r1.length;
-            auto len2 = r2.length;
+            immutable len1 = r1.length;
+            immutable len2 = r2.length;
             if (len1 != len2) return false; //Short circuit return
 
             //Lengths are the same, so we need to do an actual comparison
@@ -865,6 +884,18 @@ range of range (of range...) comparisons.
     assert(!equal(a, ifr));
 }
 
+@safe pure unittest
+{
+    import std.utf : byChar, byWchar, byDchar;
+
+    assert(equal("æøå".byChar, "æøå"));
+    assert(equal("æøå", "æøå".byChar));
+    assert(equal("æøå".byWchar, "æøå"w));
+    assert(equal("æøå"w, "æøå".byWchar));
+    assert(equal("æøå".byDchar, "æøå"d));
+    assert(equal("æøå"d, "æøå".byDchar));
+}
+
 // MaxType
 private template MaxType(T...)
     if (T.length >= 1)
@@ -890,7 +921,7 @@ private template MaxType(T...)
 
 // levenshteinDistance
 /**
-Encodes $(WEB realityinteractive.com/rgrzywinski/archives/000249.html,
+Encodes $(HTTP realityinteractive.com/rgrzywinski/archives/000249.html,
 edit operations) necessary to transform one sequence into
 another. Given sequences $(D s) (source) and $(D t) (target), a
 sequence of $(D EditOp) encodes the steps that need to be taken to
@@ -925,13 +956,15 @@ private struct Levenshtein(Range, alias equals, CostType = size_t)
         EditOp[] result;
         size_t i = rows - 1, j = cols - 1;
         // restore the path
-        while (i || j) {
+        while (i || j)
+        {
             auto cIns = j == 0 ? CostType.max : matrix(i,j - 1);
             auto cDel = i == 0 ? CostType.max : matrix(i - 1,j);
             auto cSub = i == 0 || j == 0
                 ? CostType.max
                 : matrix(i - 1,j - 1);
-            switch (min_index(cSub, cIns, cDel)) {
+            switch (min_index(cSub, cIns, cDel))
+            {
             case 0:
                 result ~= matrix(i - 1,j - 1) == matrix(i,j)
                     ? EditOp.none
@@ -970,7 +1003,8 @@ private:
     void AllocMatrix(size_t r, size_t c) @trusted {
         rows = r;
         cols = c;
-        if (_matrix.length < r * c) {
+        if (_matrix.length < r * c)
+        {
             import core.stdc.stdlib : realloc;
             import core.exception : onOutOfMemoryError;
             auto m = cast(CostType *)realloc(_matrix.ptr, r * c * _matrix[0].sizeof);
@@ -1082,7 +1116,7 @@ private:
 }
 
 /**
-Returns the $(WEB wikipedia.org/wiki/Levenshtein_distance, Levenshtein
+Returns the $(HTTP wikipedia.org/wiki/Levenshtein_distance, Levenshtein
 distance) between $(D s) and $(D t). The Levenshtein distance computes
 the minimal amount of edit operations necessary to transform $(D s)
 into $(D t).  Performs $(BIGOH s.length * t.length) evaluations of $(D
@@ -1168,7 +1202,7 @@ size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     assert(levenshteinDistance("cat"d, "rat"d) == 1);
 }
 
-// compat overload for alias this strings
+/// ditto
 size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
     if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
@@ -1240,7 +1274,7 @@ levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     assert(levenshteinDistance("kitten", "sitting") == 3);
 }
 
-// compat overload for alias this strings
+/// ditto
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
@@ -1270,6 +1304,9 @@ Params:
 Returns:
     The maximum of the passed-in args. The type of the returned value is
     the type among the passed arguments that is able to store the largest value.
+
+See_Also:
+    $(REF maxElement, std,algorithm,searching)
 */
 MaxType!T max(T...)(T args)
     if (T.length >= 2)
@@ -1382,6 +1419,8 @@ Iterates the passed arguments and returns the minimum value.
 Params: args = The values to select the minimum from. At least two arguments
     must be passed, and they must be comparable with `<`.
 Returns: The minimum of the passed-in values.
+See_Also:
+    $(REF minElement, std,algorithm,searching)
 */
 MinType!T min(T...)(T args)
     if (T.length >= 2)
@@ -1451,7 +1490,7 @@ two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
 evaluations of $(D pred).
 
 See_Also:
-    $(WEB sgi.com/tech/stl/_mismatch.html, STL's _mismatch)
+    $(HTTP sgi.com/tech/stl/_mismatch.html, STL's _mismatch)
 */
 Tuple!(Range1, Range2)
 mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
@@ -1764,7 +1803,7 @@ the benefit of have better complexity than the $(D AllocateGC.no) option. Howeve
 this option is only available for ranges whose equality can be determined via each
 element's $(D toHash) method. If customized equality is needed, then the $(D pred)
 template parameter can be passed, and the function will automatically switch to
-the non-allocating algorithm. See $(XREF functional,binaryFun) for more details on
+the non-allocating algorithm. See $(REF binaryFun, std,functional) for more details on
 how to define $(D pred).
 
 Non-allocating forward range option: $(BIGOH n^2)
@@ -1869,13 +1908,17 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
     // also keeping track of the scanning index. If the first occurrence
     // of item in the scanning loop has an index smaller than the current index,
     // then you know that the element has been seen before
-    outloop: foreach (index, item; r1.save.enumerate)
+    size_t index;
+    outloop: for (auto r1s1 = r1.save; !r1s1.empty; r1s1.popFront, index++)
     {
+        auto item = r1s1.front;
         r1_count = 0;
         r2_count = 0;
 
-        foreach (i, e; r1.save.enumerate)
+        size_t i;
+        for (auto r1s2 = r1.save; !r1s2.empty; r1s2.popFront, i++)
         {
+            auto e = r1s2.front;
             if (predEquals(e, item) && i < index)
             {
                  continue outloop;

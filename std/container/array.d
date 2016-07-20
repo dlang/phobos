@@ -2,30 +2,80 @@
 This module provides an $(D Array) type with deterministic memory usage not
 reliant on the GC, as an alternative to the built-in arrays.
 
-This module is a submodule of $(LINK2 std_container.html, std.container).
+This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_array.d)
-Macros:
-WIKI = Phobos/StdContainer
-TEXTWITHCOMMAS = $0
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 
 License: Distributed under the Boost Software License, Version 1.0.
-(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+(See accompanying file LICENSE_1_0.txt or copy at $(HTTP
 boost.org/LICENSE_1_0.txt)).
 
-Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+Authors: Steven Schveighoffer, $(HTTP erdani.com, Andrei Alexandrescu)
 */
 module std.container.array;
 
 import std.range.primitives;
 import std.traits;
 import core.exception : RangeError;
-import std.algorithm : move;
 
 public import std.container.util;
+
+///
+unittest
+{
+    auto arr = Array!int(0, 2, 3);
+    assert(arr[0] == 0);
+    assert(arr.front == 0);
+    assert(arr.back == 3);
+
+    // reserve space
+    arr.reserve(1000);
+    assert(arr.length == 3);
+    assert(arr.capacity >= 1000);
+
+    // insertion
+    arr.insertBefore(arr[1..$], 1);
+    assert(arr.front == 0);
+    assert(arr.length == 4);
+
+    arr.insertBack(4);
+    assert(arr.back == 4);
+    assert(arr.length == 5);
+
+    // set elements
+    arr[1] *= 42;
+    assert(arr[1] == 42);
+}
+
+///
+unittest
+{
+    import std.algorithm.comparison : equal;
+    auto arr = Array!int(1, 2, 3);
+
+    // concat
+    auto b = Array!int(11, 12, 13);
+    arr ~= b;
+    assert(arr.length == 6);
+
+    // slicing
+    assert(arr[1..3].equal([2, 3]));
+
+    // remove
+    arr.linearRemove(arr[1..3]);
+    assert(arr[0..2].equal([1, 11]));
+}
+
+/// `Array!bool` packs together values efficiently by allocating one bit per element
+unittest
+{
+    Array!bool arr;
+    arr.insert([true, true, false, true, false]);
+    assert(arr.length == 5);
+}
 
 private struct RangeT(A)
 {
@@ -89,6 +139,8 @@ private struct RangeT(A)
 
     static if (isMutable!A)
     {
+        import std.algorithm.mutation : move;
+
         E moveFront()
         {
             version (assert) if (empty || _a >= _outer.length) throw new RangeError();
@@ -198,12 +250,11 @@ instead of $(D array.map!)). The container itself is not a range.
 struct Array(T)
 if (!is(Unqual!T == bool))
 {
-    import core.stdc.stdlib;
-    import core.stdc.string;
+    import core.stdc.stdlib : malloc, realloc, free;
+    import core.stdc.string : memcpy, memmove, memset;
 
-    import core.memory;
+    import core.memory : GC;
 
-    import std.algorithm : initializeAll, copy;
     import std.exception : enforce;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
@@ -260,6 +311,8 @@ if (!is(Unqual!T == bool))
         // length
         @property void length(size_t newLength)
         {
+            import std.algorithm.mutation : initializeAll;
+
             if (length >= newLength)
             {
                 // shorten
@@ -831,7 +884,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         }
         else
         {
-            import std.algorithm : bringToFront;
+            import std.algorithm.mutation : bringToFront;
             enforce(_data);
             immutable offset = r._a;
             enforce(offset <= length);
@@ -845,7 +898,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        import std.algorithm : bringToFront;
+        import std.algorithm.mutation : bringToFront;
         enforce(r._outer._data is _data);
         // TODO: optimize
         immutable offset = r._b;
@@ -910,6 +963,8 @@ $(D r)
      */
     Range linearRemove(Range r)
     {
+        import std.algorithm.mutation : copy;
+
         enforce(r._outer._data is _data);
         enforce(_data.refCountedStore.isInitialized);
         enforce(r._a <= r._b && r._b <= length);
@@ -1042,7 +1097,7 @@ unittest
 // Give the Range object some testing.
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : retro;
     auto a = Array!int(0, 1, 2, 3, 4, 5, 6)[];
     auto b = Array!int(6, 5, 4, 3, 2, 1, 0)[];
@@ -1115,7 +1170,7 @@ unittest
 // test replace!Stuff with range Stuff
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int([1, 42, 5]);
     a.replace(a[1 .. 2], [2, 3, 4]);
     assert(equal(a[], [1, 2, 3, 4, 5]));
@@ -1124,28 +1179,28 @@ unittest
 // test insertBefore and replace with empty Arrays
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], 1);
     assert(equal(a[], [1]));
 }
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.replace(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.replace(a[], 1);
     assert(equal(a[], [1]));
@@ -1196,7 +1251,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     //Test "array-wide" operations
     auto a = Array!int([0, 1, 2]); //Array
@@ -1240,7 +1295,8 @@ unittest
 }
 
 // Test issue 11194
-unittest {
+unittest
+{
     static struct S {
         int i = 1337;
         void* p;
@@ -1266,7 +1322,7 @@ unittest //11459
 
 unittest //11884
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
     auto a = Array!int([1, 2, 2].filter!"true"());
 }
 
@@ -1757,7 +1813,7 @@ if (is(Unqual!T == bool))
 
     unittest
     {
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
         Array!bool a;
         a.insertBack([true, false, true, true]);
         Array!bool b;
@@ -1786,7 +1842,7 @@ if (is(Unqual!T == bool))
 
     unittest
     {
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
         Array!bool a;
         a.insertBack([true, false, true, true]);
         Array!bool b;
@@ -2053,7 +2109,7 @@ if (is(Unqual!T == bool))
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
-        import std.algorithm : bringToFront;
+        import std.algorithm.mutation : bringToFront;
         // TODO: make this faster, it moves one bit at a time
         immutable inserted = stableInsertBack(stuff);
         immutable tailLength = length - inserted;
@@ -2082,7 +2138,7 @@ if (is(Unqual!T == bool))
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        import std.algorithm : bringToFront;
+        import std.algorithm.mutation : bringToFront;
         // TODO: make this faster, it moves one bit at a time
         immutable inserted = stableInsertBack(stuff);
         immutable tailLength = length - inserted;
@@ -2146,7 +2202,7 @@ if (is(Unqual!T == bool))
      */
     Range linearRemove(Range r)
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         copy(this[r._b .. length], this[r._a .. length]);
         length = length - r.length;
         return this[r._a .. length];

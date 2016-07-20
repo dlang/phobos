@@ -4,7 +4,7 @@
     Copyright: Copyright 2003-2004 by Matthew Wilson and Synesis Software
                Written by Matthew Wilson
 
-    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
     Author:    Matthew Wilson, Kenji Hara
 
@@ -1786,7 +1786,10 @@ unittest
     string unittestKeyName = "Temporary key for a D UnitTest which can be deleted afterwards";
     Key unittestKey = HKCU.createKey(unittestKeyName);
     assert(unittestKey);
-    Key cityKey = unittestKey.createKey("CityCollection using foreign names with umlauts and accents: \u00f6\u00e4\u00fc\u00d6\u00c4\u00dc\u00e0\u00e1\u00e2\u00df");
+    Key cityKey = unittestKey.createKey(
+        "CityCollection using foreign names with umlauts and accents: "
+        ~"\u00f6\u00e4\u00fc\u00d6\u00c4\u00dc\u00e0\u00e1\u00e2\u00df"
+    );
     cityKey.setValue("K\u00f6ln", "Germany"); // Cologne
     cityKey.setValue("\u041c\u0438\u043d\u0441\u043a", "Belarus"); // Minsk
     cityKey.setValue("\u5317\u4eac", "China"); // Bejing

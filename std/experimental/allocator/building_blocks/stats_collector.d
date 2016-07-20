@@ -120,7 +120,7 @@ enum Options : ulong
     bytesNotMoved = 1u << 15,
     /**
     Measures the sum of extra bytes allocated beyond the bytes requested, i.e.
-    the $(WEB goo.gl/YoKffF, internal fragmentation). This is the current
+    the $(HTTP goo.gl/YoKffF, internal fragmentation). This is the current
     effective number of slack bytes, and it goes up and down with time.
     */
     bytesSlack = 1u << 16,
@@ -159,6 +159,7 @@ struct StatsCollector(Allocator, ulong flags = Options.all,
 {
 private:
     import std.traits : hasMember, Signed;
+    import std.typecons : Ternary;
 
     static string define(string type, string[] names...)
     {
@@ -702,10 +703,6 @@ unittest
         assert(a.numDeallocate == 3);
         assert(a.numAllocate == a.numDeallocate);
         assert(a.bytesUsed == 0);
-
-        //import std.stdio;
-        //Allocator.reportPerCallStatistics(stdout);
-        //a.reportStatistics(stdout);
      }
 
     import std.experimental.allocator.gc_allocator : GCAllocator;

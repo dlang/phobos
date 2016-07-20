@@ -93,7 +93,7 @@ void main()
 
     // Put it back together again;
     auto doc = new Document(new Tag("catalog"));
-    foreach(book;books)
+    foreach (book;books)
     {
         auto element = new Element("book");
         element.tag.attr["id"] = book.id;
@@ -112,11 +112,8 @@ void main()
     writefln(join(doc.pretty(3),"\n"));
 }
 -------------------------------------------------------------------------------
-Macros:
-    WIKI=Phobos/StdXml
-
 Copyright: Copyright Janice Caron 2008 - 2009.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron
 Source:    $(PHOBOSSRC std/_xml.d)
 */
@@ -144,13 +141,13 @@ enum cdata = "<![CDATA[";
  * Params:
  *    c = the character to be tested
  */
-bool isChar(dchar c) // rule 2
+bool isChar(dchar c) @safe // rule 2
 {
     if (c <= 0xD7FF)
     {
         if (c >= 0x20)
             return true;
-        switch(c)
+        switch (c)
         {
         case 0xA:
         case 0x9:
@@ -168,7 +165,7 @@ bool isChar(dchar c) // rule 2
     return false;
 }
 
-unittest
+@safe unittest
 {
 //  const CharTable=[0x9,0x9,0xA,0xA,0xD,0xD,0x20,0xD7FF,0xE000,0xFFFD,
 //        0x10000,0x10FFFF];
@@ -232,7 +229,7 @@ bool isDigit(dchar c)
         return lookup(DigitTable,c);
 }
 
-unittest
+@safe unittest
 {
     debug (stdxml_TestHardcodedChecks)
     {
@@ -263,7 +260,7 @@ bool isLetter(dchar c) // rule 84
  * Params:
  *    c = the character to be tested
  */
-bool isIdeographic(dchar c)
+bool isIdeographic(dchar c) @safe
 {
     if (c == 0x3007)
         return true;
@@ -274,7 +271,7 @@ bool isIdeographic(dchar c)
     return false;
 }
 
-unittest
+@safe unittest
 {
     assert(isIdeographic('\u4E00'));
     assert(isIdeographic('\u9FA5'));
@@ -382,7 +379,7 @@ S encode(S)(S s)
     return result.data;
 }
 
-unittest
+@safe unittest
 {
     auto s = "hello";
     assert(encode(s) is s);
@@ -439,7 +436,7 @@ enum DecodeMode
  * writefln(decode("a &gt; b")); // writes "a > b"
  * --------------
  */
-string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
+string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @system
 {
     if (mode == DecodeMode.NONE) return s;
 
@@ -469,7 +466,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
                     buffer ~= temp[0 .. encode(temp, d)];
                     i = s.length - t.length - 1;
                 }
-                catch(Err e)
+                catch (Err e)
                 {
                     if (mode == DecodeMode.STRICT)
                         throw new DecodeException("Unescaped &");
@@ -492,7 +489,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
     return (buffer.length == 0) ? s : cast(string)buffer;
 }
 
-unittest
+@system unittest
 {
     void assertNot(string s)
     {
@@ -580,7 +577,7 @@ class Document : Element
      * Params:
      *      tag = the start tag of the document.
      */
-    this(const(Tag) tag)
+    this(const(Tag) tag) @safe
     {
         super(tag);
     }
@@ -599,11 +596,9 @@ class Document : Element
         override bool opEquals(Object o)
         {
             const doc = toType!(const Document)(o);
-            return
-                (prolog != doc.prolog            ) ? false : (
-                (super  != cast(const Element)doc) ? false : (
-                (epilog != doc.epilog            ) ? false : (
-            true )));
+            return prolog == doc.prolog
+                && (cast()this).Element.opEquals(cast()doc)
+                && epilog == doc.epilog;
         }
 
         /**
@@ -621,14 +616,13 @@ class Document : Element
         override int opCmp(Object o)
         {
             const doc = toType!(const Document)(o);
-            return
-                ((prolog != doc.prolog            )
-                    ? ( prolog < doc.prolog             ? -1 : 1 ) :
-                ((super  != cast(const Element)doc)
-                    ? ( cast()super  < cast()cast(const Element)doc ? -1 : 1 ) :
-                ((epilog != doc.epilog            )
-                    ? ( epilog < doc.epilog             ? -1 : 1 ) :
-            0 )));
+            if (prolog != doc.prolog)
+                return prolog < doc.prolog ? -1 : 1;
+            if (int cmp = (cast()this).Element.opCmp(cast()doc))
+                return cmp;
+            if (epilog != doc.epilog)
+                return epilog < doc.epilog ? -1 : 1;
+            return 0;
         }
 
         /**
@@ -639,7 +633,7 @@ class Document : Element
          */
         override size_t toHash() @trusted
         {
-            return hash(prolog, hash(epilog, (cast()super).toHash()));
+            return hash(prolog, hash(epilog, (cast()this).Element.toHash()));
         }
 
         /**
@@ -651,6 +645,24 @@ class Document : Element
             return prolog ~ super.toString() ~ epilog;
         }
     }
+}
+
+@system unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=14966
+    auto xml = `<?xml version="1.0" encoding="UTF-8"?><foo></foo>`;
+
+    auto a = new Document(xml);
+    auto b = new Document(xml);
+    assert(a == b);
+    assert(!(a < b));
+    int[Document] aa;
+    aa[a] = 1;
+    assert(aa[b] == 1);
+
+    b ~= new Element("b");
+    assert(a < b);
+    assert(b > a);
 }
 
 /**
@@ -694,11 +706,11 @@ class Element : Item
      * Params:
      *      tag_ = the start or empty tag of the element.
      */
-    this(const(Tag) tag_)
+    this(const(Tag) tag_) @safe
     {
         this.tag = new Tag(tag_.name);
         tag.type = TagType.EMPTY;
-        foreach(k,v;tag_.attr) tag.attr[k] = v;
+        foreach (k,v;tag_.attr) tag.attr[k] = v;
         tag.tagString = tag_.tagString;
     }
 
@@ -873,7 +885,7 @@ class Element : Item
     override size_t toHash() const
     {
         size_t hash = tag.toHash();
-        foreach(item;items) hash += item.toHash();
+        foreach (item;items) hash += item.toHash();
         return hash;
     }
 
@@ -894,7 +906,7 @@ class Element : Item
         string text(DecodeMode mode=DecodeMode.LOOSE)
         {
             string buffer;
-            foreach(item;items)
+            foreach (item;items)
             {
                 Text t = cast(Text)item;
                 if (t is null) throw new DecodeException(item.toString());
@@ -925,10 +937,10 @@ class Element : Item
             }
 
             string[] a = [ tag.toStartString() ];
-            foreach(item;items)
+            foreach (item;items)
             {
                 string[] b = item.pretty(indent);
-                foreach(s;b)
+                foreach (s;b)
                 {
                     a ~= rightJustify(s,count(s) + indent);
                 }
@@ -1000,13 +1012,13 @@ class Tag
 
         s = name;
         try { checkName(s,t); }
-        catch(Err e) { assert(false,"Invalid tag name:" ~ e.toString()); }
+        catch (Err e) { assert(false,"Invalid tag name:" ~ e.toString()); }
 
-        foreach(k,v;attr)
+        foreach (k,v;attr)
         {
             s = k;
             try { checkName(s,t); }
-            catch(Err e)
+            catch (Err e)
                 { assert(false,"Invalid atrribute name:" ~ e.toString()); }
         }
     }
@@ -1028,7 +1040,7 @@ class Tag
      * tag.attr["src"] = "http://example.com/example.jpg";
      * --------------
      */
-    this(string name, TagType type=TagType.START)
+    this(string name, TagType type=TagType.START) @safe
     {
         this.name = name;
         this.type = type;
@@ -1044,8 +1056,9 @@ class Tag
      * The second parameter is a dummy parameter only, required solely to
      * distinguish this constructor from the public one.
      */
-    private this(ref string s, bool dummy)
+    private this(ref string s, bool dummy) @system
     {
+        // @system because of decode
         tagString = s;
         try
         {
@@ -1053,15 +1066,16 @@ class Tag
             if (optc(s,'/')) type = TagType.END;
             name = munch(s,"^/>"~whitespace);
             munch(s,whitespace);
-            while(s.length > 0 && s[0] != '>' && s[0] != '/')
+            while (s.length > 0 && s[0] != '>' && s[0] != '/')
             {
                 string key = munch(s,"^="~whitespace);
                 munch(s,whitespace);
                 reqc(s,'=');
                 munch(s,whitespace);
-                reqc(s,'"');
-                string val = decode(munch(s,"^\""), DecodeMode.LOOSE);
-                reqc(s,'"');
+                char quote = requireOneOf(s,"'\"");
+                char[2] notQuote = ['^', quote];
+                string val = decode(munch(s,notQuote[]), DecodeMode.LOOSE);
+                reqc(s,quote);
                 munch(s,whitespace);
                 attr[key] = val;
             }
@@ -1073,7 +1087,7 @@ class Tag
             reqc(s,'>');
             tagString.length = (s.ptr - tagString.ptr);
         }
-        catch(XMLException e)
+        catch (XMLException e)
         {
             tagString.length = (s.ptr - tagString.ptr);
             throw new TagException(tagString);
@@ -1155,7 +1169,7 @@ class Tag
             string toNonEndString()
             {
                 string s = "<" ~ name;
-                foreach(key,val;attr)
+                foreach (key,val;attr)
                     s ~= format(" %s=\"%s\"",key,encode(val));
                 return s;
             }
@@ -1223,7 +1237,7 @@ class Comment : Item
      */
     this(string content)
     {
-        if (content == "-" || content.indexOf("==") != -1)
+        if (content == "-" || content.indexOf("--") != -1)
             throw new CommentException(content);
         this.content = content;
     }
@@ -1278,6 +1292,14 @@ class Comment : Item
     override string toString() const { return "<!--" ~ content ~ "-->"; }
 
     override @property bool isEmptyXML() const { return false; } /// Returns false always
+}
+
+unittest // issue 16241
+{
+    import std.exception : assertThrown;
+    auto c = new Comment("==");
+    assert(c.content == "==");
+    assertThrown!CommentException(new Comment("--"));
 }
 
 /**
@@ -1713,7 +1735,7 @@ class ElementParser
         Handler textHandler = null;
 
         // Private constructor for start tags
-        this(ElementParser parent)
+        this(ElementParser parent) @safe
         {
             s = parent.s;
             this();
@@ -1733,7 +1755,7 @@ class ElementParser
      * The Tag at the start of the element being parsed. You can read this to
      * determine the tag's name and attributes.
      */
-    @property const(Tag) tag() const { return tag_; }
+    @property @safe const(Tag) tag() const { return tag_; }
 
     /**
      * Register a handler which will be called whenever a start tag is
@@ -1802,7 +1824,7 @@ class ElementParser
      */
     ElementHandler[string] onEndTag;
 
-    protected this()
+    protected this() @safe
     {
         elementStart = *s;
     }
@@ -1825,7 +1847,7 @@ class ElementParser
      * };
      * --------------
      */
-    @property void onText(Handler handler) { textHandler = handler; }
+    @property @safe void onText(Handler handler) { textHandler = handler; }
 
     /**
      * Register an alternative handler which will be called whenever text
@@ -1851,7 +1873,7 @@ class ElementParser
      * };
      * --------------
      */
-    void onTextRaw(Handler handler) { rawTextHandler = handler; }
+    @safe void onTextRaw(Handler handler) { rawTextHandler = handler; }
 
     /**
      * Register a handler which will be called whenever a character data
@@ -1872,7 +1894,7 @@ class ElementParser
      * };
      * --------------
      */
-    @property void onCData(Handler handler) { cdataHandler = handler; }
+    @property @safe void onCData(Handler handler) { cdataHandler = handler; }
 
     /**
      * Register a handler which will be called whenever a comment is
@@ -1893,7 +1915,7 @@ class ElementParser
      * };
      * --------------
      */
-    @property void onComment(Handler handler) { commentHandler = handler; }
+    @property @safe void onComment(Handler handler) { commentHandler = handler; }
 
     /**
      * Register a handler which will be called whenever a processing
@@ -1914,7 +1936,7 @@ class ElementParser
      * };
      * --------------
      */
-    @property void onPI(Handler handler) { piHandler = handler; }
+    @property @safe void onPI(Handler handler) { piHandler = handler; }
 
     /**
      * Register a handler which will be called whenever an XML instruction is
@@ -1937,7 +1959,7 @@ class ElementParser
      * };
      * --------------
      */
-    @property void onXI(Handler handler) { xiHandler = handler; }
+    @property @safe void onXI(Handler handler) { xiHandler = handler; }
 
     /**
      * Parse an XML element.
@@ -1955,7 +1977,7 @@ class ElementParser
         Tag[string] startTags;
         if (tag_ !is null) startTags[tag_.name] = tag_;
 
-        while(s.length != 0)
+        while (s.length != 0)
         {
             if (startsWith(*s,"<!--"))
             {
@@ -2035,7 +2057,7 @@ class ElementParser
                     // FIX by hed010gy, for bug 2979
                     // http://d.puremagic.com/issues/show_bug.cgi?id=2979
                     if (tag_.attr.length > 0)
-                          foreach(tn,tv; tag_.attr) startTag.attr[tn]=tv;
+                          foreach (tn,tv; tag_.attr) startTag.attr[tn]=tv;
                     // END FIX
 
                     // Handle the pretend start tag
@@ -2088,7 +2110,7 @@ private
     {
         string old = s;
 
-        void fail()
+        void fail() @safe
         {
             s = old;
             throw new Err(s,msg);
@@ -2116,7 +2138,7 @@ private
             else if (s.startsWith("<?"))   { checkPI(s); }
             else                           { checkSpace(s); }
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkDocument(ref string s) // rule 1
@@ -2128,10 +2150,10 @@ private
             checkElement(s);
             star!(checkMisc)(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
-    void checkChars(ref string s) // rule 2
+    void checkChars(ref string s) @safe // rule 2
     {
         // TO DO - Fix std.utf stride and decode functions, then use those
         // instead
@@ -2140,7 +2162,7 @@ private
 
         dchar c;
         int n = -1;
-        foreach(int i,dchar d; s)
+        foreach (int i,dchar d; s)
         {
             if (!isChar(d))
             {
@@ -2169,7 +2191,7 @@ private
 
         if (s.length == 0) fail();
         int n;
-        foreach(int i,dchar c;s)
+        foreach (int i,dchar c;s)
         {
             if (c == '_' || c == ':' || isLetter(c)) continue;
             if (i == 0) fail();
@@ -2191,13 +2213,13 @@ private
         if (c != '\u0022' && c != '\u0027')
             fail("attribute value requires quotes");
         s = s[1..$];
-        for(;;)
+        for (;;)
         {
             munch(s,"^<&"~c);
             if (s.length == 0) fail("unterminated attribute value");
             if (s[0] == '<') fail("< found in attribute value");
             if (s[0] == c) break;
-            try { checkReference(s); } catch(Err e) { fail(e); }
+            try { checkReference(s); } catch (Err e) { fail(e); }
         }
         s = s[1..$];
     }
@@ -2219,11 +2241,11 @@ private
     {
         mixin Check!("Comment");
 
-        try { checkLiteral("<!--",s); } catch(Err e) { fail(e); }
+        try { checkLiteral("<!--",s); } catch (Err e) { fail(e); }
         ptrdiff_t n = s.indexOf("--");
         if (n == -1) fail("unterminated comment");
         s = s[n..$];
-        try { checkLiteral("-->",s); } catch(Err e) { fail(e); }
+        try { checkLiteral("-->",s); } catch (Err e) { fail(e); }
     }
 
     void checkPI(ref string s) // rule 16
@@ -2235,7 +2257,7 @@ private
             checkLiteral("<?",s);
             checkEnd("?>",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkCDSect(ref string s) // rule 18
@@ -2247,7 +2269,7 @@ private
             checkLiteral(cdata,s);
             checkEnd("]]>",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkProlog(ref string s) // rule 22
@@ -2264,7 +2286,7 @@ private
             star!(checkMisc)(s);
             opt!(seq!(checkDocTypeDecl,star!(checkMisc)))(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkXMLDecl(ref string s) // rule 23
@@ -2280,7 +2302,7 @@ private
             opt!(checkSpace)(s);
             checkLiteral("?>",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkVersionInfo(ref string s) // rule 24
@@ -2294,7 +2316,7 @@ private
             checkEq(s);
             quoted!(checkVersionNum)(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkEq(ref string s) // rule 25
@@ -2307,7 +2329,7 @@ private
             checkLiteral("=",s);
             opt!(checkSpace)(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkVersionNum(ref string s) // rule 26
@@ -2331,7 +2353,7 @@ private
             //
             checkEnd(">",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkSDDecl(ref string s) // rule 32
@@ -2344,7 +2366,7 @@ private
             checkLiteral("standalone",s);
             checkEq(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
 
         int n = 0;
              if (s.startsWith("'yes'") || s.startsWith("\"yes\"")) n = 5;
@@ -2359,7 +2381,7 @@ private
         mixin Check!("Element");
 
         string sname,ename,t;
-        try { checkTag(s,t,sname); } catch(Err e) { fail(e); }
+        try { checkTag(s,t,sname); } catch (Err e) { fail(e); }
 
         if (t == "STag")
         {
@@ -2369,7 +2391,7 @@ private
                 t = s;
                 checkETag(s,ename);
             }
-            catch(Err e) { fail(e); }
+            catch (Err e) { fail(e); }
 
             if (sname != ename)
             {
@@ -2399,7 +2421,7 @@ private
             }
             checkLiteral(">",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkAttribute(ref string s) // rule 41
@@ -2413,7 +2435,7 @@ private
             checkEq(s);
             checkAttValue(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkETag(ref string s, out string name) // rule 42
@@ -2427,7 +2449,7 @@ private
             opt!(checkSpace)(s);
             checkLiteral(">",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkContent(ref string s) // rule 43
@@ -2448,15 +2470,15 @@ private
                 else                               { checkCharData(s); }
             }
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
-    void checkCharRef(ref string s, out dchar c) // rule 66
+    void checkCharRef(ref string s, out dchar c) @safe // rule 66
     {
         mixin Check!("CharRef");
 
         c = 0;
-        try { checkLiteral("&#",s); } catch(Err e) { fail(e); }
+        try { checkLiteral("&#",s); } catch (Err e) { fail(e); }
         int radix = 10;
         if (s.length != 0 && s[0] == 'x')
         {
@@ -2470,7 +2492,7 @@ private
         {
             char d = s[0];
             int n = 0;
-            switch(d)
+            switch (d)
             {
                 case 'F','f': ++n;      goto case;
                 case 'E','e': ++n;      goto case;
@@ -2510,7 +2532,7 @@ private
             if (s.startsWith("&#")) checkCharRef(s,c);
             else checkEntityRef(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkEntityRef(ref string s) // rule 68
@@ -2524,7 +2546,7 @@ private
             checkName(s,name);
             checkLiteral(";",s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     void checkEncName(ref string s) // rule 81
@@ -2547,12 +2569,12 @@ private
             checkEq(s);
             quoted!(checkEncName)(s);
         }
-        catch(Err e) { fail(e); }
+        catch (Err e) { fail(e); }
     }
 
     // Helper functions
 
-    void checkLiteral(string literal,ref string s)
+    void checkLiteral(string literal,ref string s) @safe
     {
         mixin Check!("Literal");
 
@@ -2574,7 +2596,7 @@ private
 
     void opt(alias f)(ref string s)
     {
-        try { f(s); } catch(Err e) {}
+        try { f(s); } catch (Err e) {}
     }
 
     void plus(alias f)(ref string s)
@@ -2588,7 +2610,7 @@ private
         while (s.length != 0)
         {
             try { f(s); }
-            catch(Err e) { return; }
+            catch (Err e) { return; }
         }
     }
 
@@ -2635,17 +2657,15 @@ void check(string s)
         checkDocument(s);
         if (s.length != 0) throw new Err(s,"Junk found after document");
     }
-    catch(Err e)
+    catch (Err e)
     {
         e.complete(s);
         throw e;
     }
 }
 
-unittest
+@system unittest
 {
-  version (none) // WHY ARE WE NOT RUNNING THIS UNIT TEST?
-  {
     try
     {
         check(q"[<?xml version="1.0"?>
@@ -2681,18 +2701,17 @@ unittest
            </book>
         </catalog>
         ]");
-    assert(false);
+        assert(false);
     }
-    catch(CheckException e)
+    catch (CheckException e)
     {
-        int n = e.toString().indexOf("end tag name \"genres\" differs"~
-            " from start tag name \"genre\"");
+        auto n = e.toString().indexOf("end tag name \"genres\" differs"~
+                                      " from start tag name \"genre\"");
         assert(n != -1);
     }
-  }
 }
 
-unittest
+@system unittest
 {
     string s = q"EOS
 <?xml version="1.0"?>
@@ -2712,7 +2731,27 @@ EOS";
     }
 }
 
-unittest
+@system unittest
+{
+    string test_xml = `<?xml version="1.0" encoding='UTF-8'?><r><stream:stream
+                        xmlns:stream="http://etherx.'jabber'.org/streams"
+                        xmlns="jabber:'client'" from='jid.pl' id="587a5767"
+                        xml:lang="en" version="1.0" attr='a"b"c'>
+                        </stream:stream></r>`;
+
+    DocumentParser parser = new DocumentParser(test_xml);
+    bool tested = false;
+    parser.onStartTag["stream:stream"] = (ElementParser p) {
+        assert(p.tag.attr["xmlns"] == "jabber:'client'");
+        assert(p.tag.attr["from"] == "jid.pl");
+        assert(p.tag.attr["attr"] == "a\"b\"c");
+        tested = true;
+    };
+    parser.parse();
+    assert(tested);
+}
+
+@system unittest
 {
     string s = q"EOS
 <?xml version="1.0" encoding="utf-8"?> <Tests>
@@ -2731,7 +2770,7 @@ EOS";
     xml.parse();
 }
 
-unittest
+@system unittest
 {
     string s = `<tag attr="&quot;value&gt;" />`;
     auto doc = new Document(s);
@@ -2739,41 +2778,41 @@ unittest
 }
 
 /** The base class for exceptions thrown by this module */
-class XMLException : Exception { this(string msg) { super(msg); } }
+class XMLException : Exception { this(string msg) @safe { super(msg); } }
 
 // Other exceptions
 
 /// Thrown during Comment constructor
 class CommentException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown during CData constructor
 class CDataException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown during XMLInstruction constructor
 class XIException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown during ProcessingInstruction constructor
 class PIException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown during Text constructor
 class TextException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown during decode()
 class DecodeException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown if comparing with wrong type
 class InvalidTypeException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /// Thrown when parsing for Tags
 class TagException : XMLException
-{ private this(string msg) { super(msg); } }
+{ private this(string msg) @safe { super(msg); } }
 
 /**
  * Thrown during check()
@@ -2790,7 +2829,7 @@ class CheckException : XMLException
     size_t line = 0; /// Line number at which parse failure occurred
     size_t column = 0; /// Column number at which parse failure occurred
 
-    private this(string tail,string msg,Err err=null)
+    private this(string tail,string msg,Err err=null) @safe
     {
         super(null);
         this.tail = tail;
@@ -2809,7 +2848,7 @@ class CheckException : XMLException
         if (err !is null) err.complete(entire);
     }
 
-    override string toString() const
+    override string toString() const @safe
     {
         string s;
         if (line != 0) s = format("Line %d, column %d: ",line,column);
@@ -2837,7 +2876,7 @@ private
         return t;
     }
 
-    string chop(ref string s, size_t n)
+    string chop(ref string s, size_t n) @safe
     {
         if (n == -1) n = s.length;
         string t = s[0..n];
@@ -2845,17 +2884,26 @@ private
         return t;
     }
 
-    bool optc(ref string s, char c)
+    bool optc(ref string s, char c) @safe
     {
         bool b = s.length != 0 && s[0] == c;
         if (b) s = s[1..$];
         return b;
     }
 
-    void reqc(ref string s, char c)
+    void reqc(ref string s, char c) @safe
     {
         if (s.length == 0 || s[0] != c) throw new TagException("");
         s = s[1..$];
+    }
+
+    char requireOneOf(ref string s, string chars) @safe
+    {
+        if (s.length == 0 || indexOf(chars,s[0]) == -1)
+            throw new TagException("");
+        char ch = s[0];
+        s = s[1..$];
+        return ch;
     }
 
     size_t hash(string s,size_t h=0) @trusted nothrow
@@ -2957,7 +3005,7 @@ private
     string startOf(string s)
     {
         string r;
-        foreach(char c;s)
+        foreach (char c;s)
         {
             r ~= (c < 0x20 || c > 0x7F) ? '.' : c;
             if (r.length >= 40) { r ~= "___"; break; }

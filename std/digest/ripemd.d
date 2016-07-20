@@ -24,7 +24,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
  * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
  * module.
  *
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
  * CTFE:
  * Digests do not work in CTFE
@@ -42,8 +42,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
  *
  * Source: $(PHOBOSSRC std/digest/_ripemd.d)
  *
- * Macros:
- * WIKI = Phobos/StdRipemd
  */
 
 module std.digest.ripemd;
@@ -239,7 +237,7 @@ struct RIPEMD160
             {
                 import std.bitmanip : littleEndianToNative;
 
-                for(size_t i = 0; i < 16; i++)
+                for (size_t i = 0; i < 16; i++)
                 {
                     x[i] = littleEndianToNative!uint(*cast(ubyte[4]*)&(*block)[i*4]);
                 }
@@ -446,7 +444,7 @@ struct RIPEMD160
 
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * Also implements the $(REF isOutputRange, std,range,primitives)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Example:
@@ -477,7 +475,7 @@ struct RIPEMD160
                 (&_buffer[index])[0 .. partLen] = data.ptr[0 .. partLen];
                 transform(&_buffer);
 
-                for(i = partLen; i + 63 < inputLen; i += 64)
+                for (i = partLen; i + 63 < inputLen; i += 64)
                 {
                     transform(cast(const(ubyte[64])*)(data[i .. i + 64].ptr));
                 }
@@ -586,7 +584,7 @@ unittest
 unittest
 {
     //Let's use the template features:
-    void doSomething(T)(ref T hash) if(isDigest!T)
+    void doSomething(T)(ref T hash) if (isDigest!T)
     {
         hash.put(cast(ubyte)0);
     }
@@ -663,7 +661,7 @@ unittest
 }
 
 /**
- * This is a convenience alias for $(XREF_PACK digest,digest,digest) using the
+ * This is a convenience alias for $(REF digest, std,digest,digest) using the
  * RIPEMD160 implementation.
  */
 //simple alias doesn't work here, hope this gets inlined...
@@ -683,7 +681,7 @@ unittest
  * OOP API RIPEMD160 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(XREF_PACK digest,digest,WrapperDigest)!RIPEMD160),
+ * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!RIPEMD160),
  * see there for more information.
  */
 alias RIPEMD160Digest = WrapperDigest!RIPEMD160;

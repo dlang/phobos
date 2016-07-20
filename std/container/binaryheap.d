@@ -2,21 +2,18 @@
 This module provides a $(D BinaryHeap) (aka priority queue)
 adaptor that makes a binary heap out of any user-provided random-access range.
 
-This module is a submodule of $(LINK2 std_container.html, std.container).
+This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_binaryheap.d)
-Macros:
-WIKI = Phobos/StdContainer
-TEXTWITHCOMMAS = $0
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 
 License: Distributed under the Boost Software License, Version 1.0.
-(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+(See accompanying file LICENSE_1_0.txt or copy at $(HTTP
 boost.org/LICENSE_1_0.txt)).
 
-Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+Authors: Steven Schveighoffer, $(HTTP erdani.com, Andrei Alexandrescu)
 */
 module std.container.binaryheap;
 
@@ -25,9 +22,21 @@ import std.traits;
 
 public import std.container.util;
 
+///
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : take;
+    auto maxHeap = heapify([4, 7, 3, 1, 5]);
+    assert(maxHeap.take(3).equal([7, 5, 4]));
+
+    auto minHeap = heapify!"a > b"([4, 7, 3, 1, 5]);
+    assert(minHeap.take(3).equal([1, 3, 4]));
+}
+
 // BinaryHeap
 /**
-Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
+Implements a $(HTTP en.wikipedia.org/wiki/Binary_heap, binary heap)
 container on top of a given random-access range type (usually $(D
 T[])) or a random-access container type (usually $(D Array!T)). The
 documentation of $(D BinaryHeap) will refer to the underlying range or
@@ -59,10 +68,12 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 {
     import std.functional : binaryFun;
     import std.exception : enforce;
-    import std.algorithm : move, min, HeapOps, swapAt;
+    import std.algorithm.comparison : min;
+    import std.algorithm.mutation : move, swapAt;
+    import std.algorithm.sorting : HeapOps;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
-    static if(isRandomAccessRange!Store)
+    static if (isRandomAccessRange!Store)
         alias Range = Store;
     else
         alias Range = typeof(Store.init[]);
@@ -115,8 +126,8 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     {
         assert(!store.empty, "Cannot pop an empty store.");
         if (store.length == 1) return;
-        auto t1 = moveFront(store[]);
-        auto t2 = moveBack(store[]);
+        auto t1 = store[].moveFront();
+        auto t2 = store[].moveBack();
         store.front = move(t2);
         store.back = move(t1);
         percolate(store[], 0, store.length - 1);
@@ -277,7 +288,7 @@ and $(D length == capacity), throws an exception.
             auto parentIdx = (n - 1) / 2;
             if (!comp(_store[parentIdx], _store[n])) break; // done!
             // must swap and continue
-            swapAt(_store, parentIdx, n);
+            _store.swapAt(parentIdx, n);
             n = parentIdx;
         }
         ++_length;
@@ -293,8 +304,8 @@ Removes the largest element from the heap.
         enforce(!empty, "Cannot call removeFront on an empty heap.");
         if (_length > 1)
         {
-            auto t1 = moveFront(_store[]);
-            auto t2 = moveAt(_store[], _length - 1);
+            auto t1 = _store[].moveFront();
+            auto t2 = _store[].moveAt(_length - 1);
             _store.front = move(t2);
             _store[_length - 1] = move(t1);
         }
@@ -358,7 +369,7 @@ must be collected.
 /// Example from "Introduction to Algorithms" Cormen et al, p 146
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
     auto h = heapify(a);
     // largest element
@@ -371,7 +382,7 @@ unittest
 /// lazy iteration of the underlying range in descending order.
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : take;
     int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
     auto top5 = heapify(a).take(5);
@@ -421,7 +432,7 @@ unittest
 unittest
 {
     // Test range interface.
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
     auto h = heapify(a);
     static assert(isInputRange!(typeof(h)));

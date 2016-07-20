@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.gc_allocator;
 import std.experimental.allocator.common;
 
@@ -31,15 +32,11 @@ struct GCAllocator
     @system bool expand(ref void[] b, size_t delta) shared
     {
         if (delta == 0) return true;
-        if (b is null)
-        {
-            b = allocate(delta);
-            return b.ptr != null; // we assume allocate will achieve the correct size.
-        }
+        if (b is null) return false;
         immutable curLength = GC.sizeOf(b.ptr);
         assert(curLength != 0); // we have a valid GC pointer here
         immutable desired = b.length + delta;
-        if(desired > curLength) // check to see if the current block can't hold the data
+        if (desired > curLength) // check to see if the current block can't hold the data
         {
             immutable sizeRequest = desired - curLength;
             immutable newSize = GC.extend(b.ptr, sizeRequest, sizeRequest);
@@ -89,12 +86,12 @@ struct GCAllocator
     /// Ditto
     size_t goodAllocSize(size_t n) shared
     {
-        if(n == 0)
+        if (n == 0)
             return 0;
-        if(n <= 16)
+        if (n <= 16)
             return 16;
 
-        import core.bitop: bsr;
+        import core.bitop : bsr;
 
         auto largestBit = bsr(n-1) + 1;
         if (largestBit <= 12) // 4096 or less
@@ -136,11 +133,11 @@ unittest
 
 unittest
 {
-    import core.memory: GC;
+    import core.memory : GC;
 
     // test allocation sizes
     assert(GCAllocator.instance.goodAllocSize(1) == 16);
-    for(size_t s = 16; s <= 8192; s *= 2)
+    for (size_t s = 16; s <= 8192; s *= 2)
     {
         assert(GCAllocator.instance.goodAllocSize(s) == s);
         assert(GCAllocator.instance.goodAllocSize(s - (s / 2) + 1) == s);

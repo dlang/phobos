@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.free_tree;
 
 import std.experimental.allocator.common;
@@ -51,14 +52,14 @@ struct FreeTree(ParentAllocator)
     static assert(ParentAllocator.alignment % size_t.alignof == 0,
         "FreeTree must be on top of a word-aligned allocator");
 
-    import std.algorithm : min, max, swap;
+    import std.algorithm.comparison : min, max;
+    import std.algorithm.mutation : swap;
     import std.traits : hasMember;
 
-    // State {
+    // State
     static if (stateSize!ParentAllocator) private ParentAllocator parent;
     else private alias parent = ParentAllocator.instance;
     private Node* root; // that's the entire added state
-    // }
 
     private struct Node
     {

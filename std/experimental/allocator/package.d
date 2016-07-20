@@ -54,7 +54,7 @@ layer is all needed for most casual uses of allocation primitives.)
 $(LI A mid-level, statically-typed layer for assembling several allocators into
 one. It uses properties of the type of the objects being created to route
 allocation requests to possibly specialized allocators. This layer is relatively
-thin and implemented and documented in the $(XREF2
+thin and implemented and documented in the $(MREF
 std,experimental,_allocator,typed) module. It allows an interested user to e.g.
 use different allocators for arrays versus fixed-sized objects, to the end of
 better overall performance.)
@@ -63,10 +63,10 @@ $(LI A low-level collection of highly generic $(I heap building blocks)$(MDASH)
 Lego-like pieces that can be used to assemble application-specific allocators.
 The real allocation smarts are occurring at this level. This layer is of
 interest to advanced applications that want to configure their own allocators.
-A good illustration of typical uses of these building blocks is module $(XREF2
+A good illustration of typical uses of these building blocks is module $(MREF
 std,experimental,_allocator,showcase) which defines a collection of frequently-
 used preassembled allocator objects. The implementation and documentation entry
-point is $(XREF2 std,experimental,_allocator,building_blocks). By design, the
+point is $(MREF std,experimental,_allocator,building_blocks). By design, the
 primitives of the static interface have the same signatures as the $(LREF
 IAllocator) primitives but are for the most part optional and driven by static
 introspection. The parameterized class $(LREF CAllocatorImpl) offers an
@@ -74,8 +74,8 @@ immediate and useful means to package a static low-level _allocator into an
 implementation of $(LREF IAllocator).)
 
 $(LI Core _allocator objects that interface with D's garbage collected heap
-($(XREF2 std,experimental,_allocator,gc_allocator)), the C `malloc` family
-($(XREF2 std,experimental,_allocator,mallocator)), and the OS ($(XREF2
+($(MREF std,experimental,_allocator,gc_allocator)), the C `malloc` family
+($(MREF std,experimental,_allocator,mallocator)), and the OS ($(MREF
 std,experimental,_allocator,mmap_allocator)). Most custom allocators would
 ultimately obtain memory from one of these core allocators.)
 )
@@ -106,10 +106,10 @@ void fun(size_t n)
 
 To experiment with alternative allocators, set $(LREF theAllocator) for the
 current thread. For example, consider an application that allocates many 8-byte
-objects. These are not well supported by the default _allocator, so a $(A
-$(MY_JOIN_LINE std,experimental,_allocator,building_blocks,free_list).html, free
-list _allocator) would be recommended. To install one in `main`, the
-application would use:
+objects. These are not well supported by the default _allocator, so a
+$(MREF_ALTTEXT free list _allocator,
+std,experimental,_allocator,building_blocks,free_list) would be recommended.
+To install one in `main`, the application would use:
 
 ----
 void main()
@@ -184,25 +184,11 @@ to `IAllocator` after". A good allocator implements intricate logic by means of
 template assembly, and gets wrapped with `IAllocator` (usually by means of
 $(LREF allocatorObject)) only once, at client level.
 
-Macros:
-MYREF = $(LINK2 std_experimental_allocator_$2.html, $1)&nbsp;
-MYREF2 = $(LINK2 std_experimental_allocator_$2.html#$1, $1)&nbsp;
-TDC = <td nowrap>$(D $1)$+</td>
-TDC2 = <td nowrap>$(D $(MYREF $1,$+))</td>
-TDC3 = <td nowrap>$(D $(MYREF2 $1,$+))</td>
-RES = $(I result)
-POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))
-MY_JOIN_LINE = $1$(MY_JOIN_LINE_TAIL $+)
-MY_JOIN_LINE_TAIL = _$1$(MY_JOIN_LINE_TAIL $+)
-JOIN_DOT = $1$(JOIN_DOT_TAIL $+)
-JOIN_DOT_TAIL = .$1$(JOIN_DOT_TAIL $+)
-XREF2 = $(A $(MY_JOIN_LINE $1,$+).html,$(D $(JOIN_DOT $1,$+)))
-
 Copyright: Andrei Alexandrescu 2013-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/experimental/_allocator)
 
@@ -216,6 +202,7 @@ public import std.experimental.allocator.common,
 // Example in the synopsis above
 unittest
 {
+    import std.algorithm.comparison : min, max;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.segregator : Segregator;
@@ -249,9 +236,9 @@ unittest
     tuMalloc.deallocate(c);
 }
 
-import std.algorithm, std.conv, std.exception, std.range, std.traits,
-    std.typecons;
-version(unittest) import std.random, std.stdio;
+import std.range.primitives;
+import std.traits;
+import std.typecons;
 
 /**
 Dynamic allocator interface. Code that defines allocators ultimately implements
@@ -447,7 +434,7 @@ propagates the exception.
 */
 auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.conv : emplace;
     auto m = alloc.allocate(max(stateSize!T, 1));
     if (!m.ptr) return null;
@@ -559,6 +546,7 @@ unittest
 private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
 {
     import core.stdc.string : memcpy;
+    import std.algorithm.comparison : min;
     if (!array.length) return;
     memcpy(array.ptr, &filler, T.sizeof);
     // Fill the array from the initialized portion of itself exponentially.
@@ -629,7 +617,8 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     if (!length) return null;
     auto m = alloc.allocate(T.sizeof * length);
     if (!m.ptr) return null;
-    return uninitializedFillDefault(cast(T[]) m);
+    alias U = Unqual!T;
+    return cast(T[]) uninitializedFillDefault(cast(U[]) m);
 }
 
 unittest
@@ -656,6 +645,25 @@ unittest
     test1(theAllocator);
     test2(GCAllocator.instance);
     test2(theAllocator);
+}
+
+unittest
+{
+    import std.algorithm.comparison : equal;
+    auto a = theAllocator.makeArray!(shared int)(5);
+    static assert(is(typeof(a) == shared(int)[]));
+    assert(a.length == 5);
+    assert(a.equal([0, 0, 0, 0, 0]));
+
+    auto b = theAllocator.makeArray!(const int)(5);
+    static assert(is(typeof(b) == const(int)[]));
+    assert(b.length == 5);
+    assert(b.equal([0, 0, 0, 0, 0]));
+
+    auto c = theAllocator.makeArray!(immutable int)(5);
+    static assert(is(typeof(c) == immutable(int)[]));
+    assert(c.length == 5);
+    assert(c.equal([0, 0, 0, 0, 0]));
 }
 
 /// Ditto
@@ -688,7 +696,8 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     }
     else
     {
-        fillWithMemcpy(result, init);
+        alias U = Unqual!T;
+        fillWithMemcpy(cast(U[]) result, *(cast(U*) &init));
     }
     return result;
 }
@@ -696,13 +705,21 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
 ///
 unittest
 {
-    int[] a = theAllocator.makeArray!int(2);
-    assert(a == [0, 0]);
-    a = theAllocator.makeArray!int(3, 42);
-    assert(a == [42, 42, 42]);
-    import std.range : only;
-    a = theAllocator.makeArray!int(only(42, 43, 44));
-    assert(a == [42, 43, 44]);
+    import std.algorithm.comparison : equal;
+    static void test(T)()
+    {
+        T[] a = theAllocator.makeArray!T(2);
+        assert(a.equal([0, 0]));
+        a = theAllocator.makeArray!T(3, 42);
+        assert(a.equal([42, 42, 42]));
+        import std.range : only;
+        a = theAllocator.makeArray!T(only(42, 43, 44));
+        assert(a.equal([42, 43, 44]));
+    }
+    test!int();
+    test!(shared int)();
+    test!(const int)();
+    test!(immutable int)();
 }
 
 unittest
@@ -722,11 +739,15 @@ unittest
 
 /// Ditto
 T[] makeArray(T, Allocator, R)(auto ref Allocator alloc, R range)
-if (isInputRange!R)
+if (isInputRange!R && !isInfinite!R)
 {
-    static if (isForwardRange!R)
+    static if (isForwardRange!R || hasLength!R)
     {
-        size_t length = walkLength(range.save);
+        static if (hasLength!R)
+            immutable length = range.length;
+        else
+            immutable length = range.save.walkLength;
+
         if (!length) return null;
         auto m = alloc.allocate(T.sizeof * length);
         if (!m.ptr) return null;
@@ -737,7 +758,7 @@ if (isInputRange!R)
         {
             foreach (j; 0 .. i)
             {
-                destroy(result[j]);
+                destroy(*cast(Unqual!T*) (result.ptr + j));
             }
             alloc.deallocate(m);
         }
@@ -745,7 +766,7 @@ if (isInputRange!R)
         for (; !range.empty; range.popFront, ++i)
         {
             import std.conv : emplace;
-            emplace!T(result.ptr + i, range.front);
+            cast(void) emplace!T(result.ptr + i, range.front);
         }
 
         return result;
@@ -872,6 +893,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
         size_t delta)
 {
     if (!delta) return true;
+    if (array is null) return false;
     immutable oldLength = array.length;
     void[] buf = array;
     if (!alloc.reallocate(buf, buf.length + T.sizeof * delta)) return false;
@@ -898,12 +920,13 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     size_t delta, auto ref T init)
 {
     if (!delta) return true;
+    if (array is null) return false;
     void[] buf = array;
     if (!alloc.reallocate(buf, buf.length + T.sizeof * delta)) return false;
     immutable oldLength = array.length;
     array = cast(T[]) buf;
     scope(failure) array[oldLength .. $].uninitializedFillDefault;
-    import std.algorithm : uninitializedFill;
+    import std.algorithm.mutation : uninitializedFill;
     array[oldLength .. $].uninitializedFill(init);
     return true;
 }
@@ -926,6 +949,7 @@ bool expandArray(T, Allocator, R)(auto ref Allocator alloc, ref T[] array,
         R range)
 if (isInputRange!R)
 {
+    if (array is null) return false;
     static if (isForwardRange!R)
     {
         immutable delta = walkLength(range.save);
@@ -1112,7 +1136,7 @@ if (is(T == class) || is(T == interface))
     {
         version(Windows)
         {
-            import core.sys.windows.unknwn;
+            import core.sys.windows.unknwn : IUnknown;
             static assert(!is(T: IUnknown), "COM interfaces can't be destroyed in "
                 ~ __PRETTY_FUNCTION__);
         }
@@ -1178,7 +1202,7 @@ unittest
 
 unittest //bugzilla 15721
 {
-    import std.experimental.allocator.mallocator: Mallocator;
+    import std.experimental.allocator.mallocator : Mallocator;
 
     interface Foo {}
     class Bar: Foo {}
@@ -1241,7 +1265,7 @@ if (!isPointer!A)
         // This is sensitive... create on the stack and then move
         enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
         ulong[s] state;
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
         emplace!(CAllocatorImpl!A)(state[], move(a));
         auto dynState = a.allocate(stateSize!(CAllocatorImpl!A));
         // Bitblast the object in its final destination
@@ -1369,7 +1393,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         static if (hasMember!(Allocator, "expand"))
             return impl.expand(b, s);
         else
-            return false;
+            return s == 0;
     }
 
     /// Returns $(D impl.reallocate(b, s)).

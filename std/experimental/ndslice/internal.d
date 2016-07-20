@@ -5,6 +5,47 @@ import std.meta; //: AliasSeq, anySatisfy, Filter, Reverse;
 
 package:
 
+enum indexError(size_t pos, size_t N) =
+    "index at position " ~ pos.stringof
+    ~ " from the range [0 .." ~ N.stringof ~ ")"
+    ~ " must be less than corresponding length.";
+
+enum indexStrideCode = q{
+    static if (_indexes.length)
+    {
+        size_t stride = _strides[0] * _indexes[0];
+        assert(_indexes[0] < _lengths[0], indexError!(0, N));
+        foreach (i; Iota!(1, N)) //static
+        {
+            assert(_indexes[i] < _lengths[i], indexError!(i, N));
+            stride += _strides[i] * _indexes[i];
+        }
+        return stride;
+    }
+    else
+    {
+        return 0;
+    }
+};
+
+enum mathIndexStrideCode = q{
+    static if (_indexes.length)
+    {
+        size_t stride = _strides[0] * _indexes[N - 1];
+        assert(_indexes[N - 1] < _lengths[0], indexError!(N - 1, N));
+        foreach_reverse (i; Iota!(0, N - 1)) //static
+        {
+            assert(_indexes[i] < _lengths[N - 1 - i], indexError!(i, N));
+            stride += _strides[N - 1 - i] * _indexes[i];
+        }
+        return stride;
+    }
+    else
+    {
+        return 0;
+    }
+};
+
 enum string tailErrorMessage(
     string fun = __FUNCTION__,
     string pfun = __PRETTY_FUNCTION__) =
@@ -94,14 +135,14 @@ template SliceFromSeq(Range, Seq...)
         alias SliceFromSeq = Range;
     else
     {
-        import std.experimental.ndslice.slice: Slice;
+        import std.experimental.ndslice.slice : Slice;
         alias SliceFromSeq = SliceFromSeq!(Slice!(Seq[$ - 1], Range), Seq[0 .. $ - 1]);
     }
 }
 
 template DynamicArrayDimensionsCount(T)
 {
-    static if(isDynamicArray!T)
+    static if (isDynamicArray!T)
         enum size_t DynamicArrayDimensionsCount = 1 + DynamicArrayDimensionsCount!(typeof(T.init[0]));
     else
         enum size_t DynamicArrayDimensionsCount = 0;
@@ -110,12 +151,21 @@ template DynamicArrayDimensionsCount(T)
 bool isPermutation(size_t N)(auto ref in size_t[N] perm)
 {
     int[N] mask;
-    if (isValidPartialPermutationImpl(perm, mask) == false)
-        return false;
-    foreach (e; mask)
-        if (e == false)
-            return false;
-    return true;
+    return isValidPartialPermutationImpl(perm, mask);
+}
+
+unittest
+{
+    assert(isPermutation([0, 1]));
+    // all numbers 0..N-1 need to be part of the permutation
+    assert(!isPermutation([1, 2]));
+    assert(!isPermutation([0, 2]));
+    // duplicates are not allowed
+    assert(!isPermutation([0, 1, 1]));
+
+    size_t[0] emptyArr;
+    // empty permutations are not allowed either
+    assert(!isPermutation(emptyArr));
 }
 
 bool isValidPartialPermutation(size_t N)(in size_t[] perm)
@@ -140,6 +190,7 @@ private bool isValidPartialPermutationImpl(size_t N)(in size_t[] perm, ref int[N
 }
 
 enum isIndex(I) = is(I : size_t);
+enum is_Slice(S) = is(S : _Slice);
 
 private enum isReference(P) =
     hasIndirections!P
@@ -158,14 +209,6 @@ template Iota(size_t i, size_t j)
         alias Iota = AliasSeq!();
     else
         alias Iota = AliasSeq!(i, Iota!(i + 1, j));
-}
-
-template Repeat(T, size_t N)
-{
-    static if (N)
-        alias Repeat = AliasSeq!(Repeat!(T, N - 1), T);
-    else
-        alias Repeat = AliasSeq!();
 }
 
 size_t lengthsProduct(size_t N)(auto ref in size_t[N] lengths)

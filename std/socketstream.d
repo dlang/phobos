@@ -31,9 +31,8 @@
  *      See $(SAMPLESRC htmlget.d)
  * Authors: Christopher E. Miller
  * References:
- *      $(LINK2 std_stream.html, std.stream)
+ *      $(MREF std, stream)
  * Source:    $(PHOBOSSRC std/_socketstream.d)
- * Macros: WIKI=Phobos/StdSocketstream
  */
 deprecated("It will be removed from Phobos in October 2016. If you still need it, go to https://github.com/DigitalMars/undeaD") module std.socketstream;
 // @@@DEPRECATED_2016-10@@@
@@ -57,9 +56,9 @@ class SocketStream: Stream
          */
         this(Socket sock, FileMode mode)
         {
-            if(mode & FileMode.In)
+            if (mode & FileMode.In)
                 readable = true;
-            if(mode & FileMode.Out)
+            if (mode & FileMode.Out)
                 writeable = true;
 
             this.sock = sock;

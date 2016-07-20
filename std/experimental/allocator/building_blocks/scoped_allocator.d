@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.scoped_allocator;
 
 import std.experimental.allocator.common;
@@ -24,6 +25,7 @@ struct ScopedAllocator(ParentAllocator)
     private import std.experimental.allocator.building_blocks.affix_allocator
         : AffixAllocator;
     private import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     private struct Node
     {
@@ -34,7 +36,7 @@ struct ScopedAllocator(ParentAllocator)
 
     alias Allocator = AffixAllocator!(ParentAllocator, Node);
 
-    // state {
+    // state
     /**
     If $(D ParentAllocator) is stateful, $(D parent) is a property giving access
     to an $(D AffixAllocator!ParentAllocator). Otherwise, $(D parent) is an alias for `AffixAllocator!ParentAllocator.instance`.
@@ -48,7 +50,6 @@ struct ScopedAllocator(ParentAllocator)
         alias parent = Allocator.instance;
     }
     private Node* root;
-    // }
 
     /**
     $(D ScopedAllocator) is not copyable.
@@ -190,6 +191,7 @@ struct ScopedAllocator(ParentAllocator)
 unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
     ScopedAllocator!Mallocator alloc;
     assert(alloc.empty == Ternary.yes);
     const b = alloc.allocate(10);

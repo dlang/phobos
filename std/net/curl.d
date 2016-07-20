@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
+Networking client functionality as provided by $(HTTP _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
@@ -96,11 +96,11 @@ Example:
 ---
 import std.net.curl, std.stdio;
 
-// Return a char[] containing the content specified by an URL
+// Return a char[] containing the content specified by a URL
 auto content = get("dlang.org");
 
-// Post data and return a char[] containing the content specified by an URL
-auto content = post("mydomain.com/here.cgi", "post data");
+// Post data and return a char[] containing the content specified by a URL
+auto content = post("mydomain.com/here.cgi", ["name1" : "value1", "name2" : "value2"]);
 
 // Get content of file from ftp server
 auto content = get("ftp.digitalmars.com/sieve.ds");
@@ -142,10 +142,10 @@ synchronous.
 Source: $(PHOBOSSRC std/net/_curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
-License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Jonas Drewsen. Some of the SMTP code contributed by Jimmy Cao.
 
-Credits: The functionally is based on $(WEB _curl.haxx.se/libcurl, libcurl).
+Credits: The functionally is based on $(HTTP _curl.haxx.se/libcurl, libcurl).
          LibCurl is licensed under an MIT/X derivative license.
 */
 /*
@@ -312,8 +312,6 @@ version(unittest)
     private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
 }
 version(StdDdoc) import std.stdio;
-
-extern (C) void exit(int);
 
 // Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);
@@ -566,22 +564,26 @@ unittest
 /** HTTP post content.
  *
  * Params:
- * url = resource to post to
- * postData = data to send as the body of the request. An array
- *            of an arbitrary type is accepted and will be cast to ubyte[]
- *            before sending it.
- * conn = HTTP connection to use
+ *     url = resource to post to
+ *     postDict = data to send as the body of the request. An associative array
+ *                of $(D string) is accepted and will be encoded using
+ *                www-form-urlencoding
+ *     postData = data to send as the body of the request. An array
+ *                of an arbitrary type is accepted and will be cast to ubyte[]
+ *                before sending it.
+ *     conn = HTTP connection to use
+ *     T    = The template parameter $(D T) specifies the type to return. Possible values
+ *            are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ *            for $(D char), content will be converted from the connection character set
+ *            (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ *            by default) to UTF-8.
  *
- * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
- * for $(D char), content will be converted from the connection character set
- * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
- * by default) to UTF-8.
- *
- * Example:
+ * Examples:
  * ----
  * import std.net.curl;
- * auto content = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
+ *
+ * auto content1 = post("d-lang.appspot.com/testUrl2", ["name1" : "value1", "name2" : "value2"]);
+ * auto content2 = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
  * ----
  *
  * Returns:
@@ -627,6 +629,27 @@ unittest
     assert(res == cast(ubyte[])[17, 27, 35, 41]);
 }
 
+/// ditto
+T[] post(T = char)(const(char)[] url, string[string] postDict, HTTP conn = HTTP())
+if (is(T == char) || is(T == ubyte))
+{
+    import std.uri : urlEncode;
+
+    return post(url, urlEncode(postDict), conn);
+}
+
+unittest
+{
+    foreach (host; [testServer.addr, "http://" ~ testServer.addr])
+    {
+        testServer.handle((s) {
+            auto req = s.recvReq!char;
+            s.send(httpOK(req.bdy));
+        });
+        auto res = post(host ~ "/path", ["name1" : "value1", "name2" : "value2"]);
+        assert(res == "name1=value1&name2=value2");
+    }
+}
 
 /** HTTP/FTP put content.
  *
@@ -997,7 +1020,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     client.onReceiveHeader = (in char[] key,
                               in char[] value)
     {
-        if (key == "content-length") {
+        if (key == "content-length")
+        {
             import std.conv : to;
             content.reserve(value.to!size_t);
         }
@@ -1485,12 +1509,10 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     }
 }
 
-// Workaround bug #2458
-// It should really be defined inside the byLineAsync method.
-// Do not create instances of this struct since it will be
-// moved when the bug has been fixed.
+// @@@@BUG 15831@@@@
+// this should be inside byLineAsync
 // Range that reads one line at a time asynchronously.
-static struct AsyncLineInputRange(Char)
+private static struct AsyncLineInputRange(Char)
 {
     private Char[] line;
     mixin WorkerThreadProtocol!(Char, line);
@@ -1513,7 +1535,6 @@ static struct AsyncLineInputRange(Char)
         }
     }
 }
-
 
 /** HTTP/FTP fetch content as a range of lines asynchronously.
  *
@@ -1554,8 +1575,8 @@ static struct AsyncLineInputRange(Char)
  * // Get a line in a background thread and wait in
  * // main thread for 2 seconds for it to arrive.
  * auto range3 = byLineAsync("dlang.com");
- * if (range.wait(dur!"seconds"(2)))
- *     writeln(range.front);
+ * if (range3.wait(dur!"seconds"(2)))
+ *     writeln(range3.front);
  * else
  *     writeln("No line received after 2 seconds!");
  * ----
@@ -1639,13 +1660,10 @@ unittest
     }
 }
 
-
-// Workaround bug #2458
-// It should really be defined inside the byLineAsync method.
-// Do not create instances of this struct since it will be
-// moved when the bug has been fixed.
+// @@@@BUG 15831@@@@
+// this should be inside byLineAsync
 // Range that reads one chunk at a time asynchronously.
-static struct AsyncChunkInputRange
+private static struct AsyncChunkInputRange
 {
     private ubyte[] chunk;
     mixin WorkerThreadProtocol!(ubyte, chunk);
@@ -1708,8 +1726,8 @@ static struct AsyncChunkInputRange
  * // Get a line in a background thread and wait in
  * // main thread for 2 seconds for it to arrive.
  * auto range3 = byChunkAsync("dlang.com", 10);
- * if (range.wait(dur!"seconds"(2)))
- *     writeln(range.front);
+ * if (range3.wait(dur!"seconds"(2)))
+ *     writeln(range3.front);
  * else
  *     writeln("No chunk received after 2 seconds!");
  * ----
@@ -1909,7 +1927,7 @@ private mixin template Protocol()
     // Network settings
 
     /** Proxy
-     *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+     *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
      */
     @property void proxy(const(char)[] host)
     {
@@ -1917,7 +1935,7 @@ private mixin template Protocol()
     }
 
     /** Proxy port
-     *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+     *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
      */
     @property void proxyPort(ushort port)
     {
@@ -1928,7 +1946,7 @@ private mixin template Protocol()
     alias CurlProxy = etc.c.curl.CurlProxy;
 
     /** Proxy type
-     *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+     *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
      */
     @property void proxyType(CurlProxy type)
     {
@@ -1950,7 +1968,7 @@ private mixin template Protocol()
      * theprotocol.netInterface = [ 192, 168, 1, 32 ];
      * ----
      *
-     * See: $(XREF socket, InternetAddress)
+     * See: $(REF InternetAddress, std,socket)
      */
     @property void netInterface(const(char)[] i)
     {
@@ -1993,7 +2011,7 @@ private mixin template Protocol()
     }
 
     /** Set the tcp no-delay socket option on or off.
-        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+        See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
     */
     @property void tcpNoDelay(bool on)
     {
@@ -2001,7 +2019,7 @@ private mixin template Protocol()
     }
 
     /** Sets whether SSL peer certificates should be verified.
-        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
+        See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
     */
     @property void verifyPeer(bool on)
     {
@@ -2009,7 +2027,7 @@ private mixin template Protocol()
     }
 
     /** Sets whether the host within an SSL certificate should be verified.
-        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
+        See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
     */
     @property void verifyHost(bool on)
     {
@@ -2215,8 +2233,6 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
                                                      EncodingScheme scheme,
                                                      Terminator terminator)
 {
-    auto startLen = src.length;
-    size_t charsDecoded = 0;
     // if there is anything in the basesrc then try to decode that
     // first.
     if (basesrc.length != 0)
@@ -2304,14 +2320,14 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.perform();
   * ---
   *
-  * See_Also: $(WEB www.ietf.org/rfc/rfc2616.txt, RFC2616)
+  * See_Also: $(HTTP www.ietf.org/rfc/rfc2616.txt, RFC2616)
   *
   */
 struct HTTP
 {
     mixin Protocol;
 
-    /// Authentication method equal to $(ECXREF curl, CurlAuth)
+    /// Authentication method equal to $(REF CurlAuth, etc,c,curl)
     alias AuthMethod = CurlAuth;
 
     static private uint defaultMaxRedirects = 10;
@@ -2391,7 +2407,7 @@ struct HTTP
                         callback(fieldName, m.captures[2]);
                     headersIn[fieldName] = m.captures[2].idup;
                 }
-                catch(UTFException e)
+                catch (UTFException e)
                 {
                     //munch it - a header should be all ASCII, any "wrong UTF" is broken header
                 }
@@ -2403,9 +2419,9 @@ struct HTTP
 
     private RefCounted!Impl p;
 
-    /** Time condition enumeration as an alias of $(ECXREF curl, CurlTimeCond)
+    /** Time condition enumeration as an alias of $(REF CurlTimeCond, etc,c,curl)
 
-        $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
+        $(HTTP www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
     */
     alias TimeCond = CurlTimeCond;
 
@@ -2420,6 +2436,7 @@ struct HTTP
         return http;
     }
 
+    ///
     static HTTP opCall()
     {
         HTTP http;
@@ -2427,6 +2444,7 @@ struct HTTP
         return http;
     }
 
+    ///
     HTTP dup()
     {
         HTTP copy;
@@ -2574,12 +2592,12 @@ struct HTTP
         // Network settings
 
         /** Proxy
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
          */
         @property void proxy(const(char)[] host);
 
         /** Proxy port
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
          */
         @property void proxyPort(ushort port);
 
@@ -2587,7 +2605,7 @@ struct HTTP
         alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
          */
         @property void proxyType(CurlProxy type);
 
@@ -2603,7 +2621,7 @@ struct HTTP
          * theprotocol.netInterface = [ 192, 168, 1, 32 ];
          * ----
          *
-         * See: $(XREF socket, InternetAddress)
+         * See: $(REF InternetAddress, std,socket)
          */
         @property void netInterface(const(char)[] i);
 
@@ -2630,7 +2648,7 @@ struct HTTP
         @property void localPortRange(ushort range);
 
         /** Set the tcp no-delay socket option on or off.
-            See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+            See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
         */
         @property void tcpNoDelay(bool on);
 
@@ -2881,7 +2899,7 @@ struct HTTP
        cond =  $(D CurlTimeCond.{none,ifmodsince,ifunmodsince,lastmod})
        timestamp = Timestamp for the condition
 
-       $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
+       $(HTTP www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
     */
     void setTimeCondition(HTTP.TimeCond cond, SysTime timestamp)
     {
@@ -3073,7 +3091,7 @@ struct HTTP
     }
 
     /** <a name="HTTP.Method"/>The standard HTTP methods :
-     *  $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
+     *  $(HTTP www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
      */
     enum Method
     {
@@ -3112,7 +3130,7 @@ struct HTTP
         }
 
         ///
-        string toString()
+        string toString() const
         {
             return format("%s %s (%s.%s)",
                           code, reason, majorVersion, minorVersion);
@@ -3124,7 +3142,7 @@ struct HTTP
 /**
    FTP client functionality.
 
-   See_Also: $(WEB tools.ietf.org/html/rfc959, RFC959)
+   See_Also: $(HTTP tools.ietf.org/html/rfc959, RFC959)
 */
 struct FTP
 {
@@ -3158,6 +3176,7 @@ struct FTP
         return ftp;
     }
 
+    ///
     static FTP opCall()
     {
         FTP ftp;
@@ -3165,6 +3184,7 @@ struct FTP
         return ftp;
     }
 
+    ///
     FTP dup()
     {
         FTP copy = FTP();
@@ -3254,12 +3274,12 @@ struct FTP
         // Network settings
 
         /** Proxy
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
          */
         @property void proxy(const(char)[] host);
 
         /** Proxy port
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
          */
         @property void proxyPort(ushort port);
 
@@ -3267,7 +3287,7 @@ struct FTP
         alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
          */
         @property void proxyType(CurlProxy type);
 
@@ -3283,7 +3303,7 @@ struct FTP
          * theprotocol.netInterface = [ 192, 168, 1, 32 ];
          * ----
          *
-         * See: $(XREF socket, InternetAddress)
+         * See: $(REF InternetAddress, std,socket)
          */
         @property void netInterface(const(char)[] i);
 
@@ -3310,7 +3330,7 @@ struct FTP
         @property void localPortRange(ushort range);
 
         /** Set the tcp no-delay socket option on or off.
-            See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+            See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
         */
         @property void tcpNoDelay(bool on);
 
@@ -3453,7 +3473,7 @@ struct FTP
   * smtp.perform();
   * ---
   *
-  * See_Also: $(WEB www.ietf.org/rfc/rfc2821.txt, RFC2821)
+  * See_Also: $(HTTP www.ietf.org/rfc/rfc2821.txt, RFC2821)
   */
 struct SMTP
 {
@@ -3477,7 +3497,6 @@ struct SMTP
             curl.onSend = delegate size_t(void[] data)
             {
                 if (!msg.length) return 0;
-                auto m = cast(void[])msg;
                 size_t to_copy = min(data.length, _message.length);
                 data[0..to_copy] = (cast(void[])_message)[0..to_copy];
                 _message = _message[to_copy..$];
@@ -3499,6 +3518,7 @@ struct SMTP
         return smtp;
     }
 
+    ///
     static SMTP opCall()
     {
         SMTP smtp;
@@ -3603,12 +3623,12 @@ struct SMTP
         // Network settings
 
         /** Proxy
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
          */
         @property void proxy(const(char)[] host);
 
         /** Proxy port
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXYPORT, _proxy_port)
          */
         @property void proxyPort(ushort port);
 
@@ -3616,7 +3636,7 @@ struct SMTP
         alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
-         *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
+         *  See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
          */
         @property void proxyType(CurlProxy type);
 
@@ -3632,7 +3652,7 @@ struct SMTP
          * theprotocol.netInterface = [ 192, 168, 1, 32 ];
          * ----
          *
-         * See: $(XREF socket, InternetAddress)
+         * See: $(REF InternetAddress, std,socket)
          */
         @property void netInterface(const(char)[] i);
 
@@ -3659,7 +3679,7 @@ struct SMTP
         @property void localPortRange(ushort range);
 
         /** Set the tcp no-delay socket option on or off.
-            See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
+            See: $(HTTP curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTTCPNODELAY, nodelay)
         */
         @property void tcpNoDelay(bool on);
 
@@ -3748,7 +3768,7 @@ struct SMTP
     {
         assert(!recipients.empty, "Recipient must not be empty");
         curl_slist* recipients_list = null;
-        foreach(recipient; recipients)
+        foreach (recipient; recipients)
         {
             recipients_list =
                 Curl.curl.slist_append(recipients_list,
@@ -3811,7 +3831,7 @@ class CurlTimeoutException : CurlException
     }
 }
 
-/// Equal to $(ECXREF curl, CURLcode)
+/// Equal to $(REF CURLcode, etc,c,curl)
 alias CurlCode = CURLcode;
 
 import std.typecons : Flag;
@@ -3842,7 +3862,7 @@ private struct CurlAPI
 
     static ref API instance() @property
     {
-        import std.concurrency;
+        import std.concurrency : initOnce;
         initOnce!_handle(loadAPI());
         return _api;
     }
@@ -3851,12 +3871,13 @@ private struct CurlAPI
     {
         version (Posix)
         {
-            import core.sys.posix.dlfcn;
+            import core.sys.posix.dlfcn : dlsym, dlopen, dlclose, RTLD_LAZY;
             alias loadSym = dlsym;
         }
         else version (Windows)
         {
-            import core.sys.windows.windows;
+            import core.sys.windows.windows : GetProcAddress, GetModuleHandleA,
+                LoadLibraryA;
             alias loadSym = GetProcAddress;
         }
         else
@@ -3878,7 +3899,10 @@ private struct CurlAPI
             version (OSX)
                 static immutable names = ["libcurl.4.dylib"];
             else version (Posix)
-                static immutable names = ["libcurl.so", "libcurl.so.4", "libcurl-gnutls.so.4", "libcurl-nss.so.4", "libcurl.so.3"];
+            {
+                static immutable names = ["libcurl.so", "libcurl.so.4",
+                "libcurl-gnutls.so.4", "libcurl-nss.so.4", "libcurl.so.3"];
+            }
             else version (Windows)
                 static immutable names = ["libcurl.dll", "curl.dll"];
 
@@ -3915,12 +3939,12 @@ private struct CurlAPI
         _api.global_cleanup();
         version (Posix)
         {
-            import core.sys.posix.dlfcn;
+            import core.sys.posix.dlfcn : dlclose;
             dlclose(_handle);
         }
         else version (Windows)
         {
-            import core.sys.windows.windows;
+            import core.sys.windows.windows : FreeLibrary;
             FreeLibrary(_handle);
         }
         else
@@ -3945,7 +3969,7 @@ struct Curl
 {
     alias OutData = void[];
     alias InData = ubyte[];
-    bool stopped;
+    private bool _stopped;
 
     private static auto ref curl() @property { return CurlAPI.instance; }
 
@@ -3972,8 +3996,14 @@ struct Curl
         enforce!CurlException(!handle, "Curl instance already initialized");
         handle = curl.easy_init();
         enforce!CurlException(handle, "Curl instance couldn't be initialized");
-        stopped = false;
+        _stopped = false;
         set(CurlOption.nosignal, 1);
+    }
+
+    ///
+    @property bool stopped() const
+    {
+        return _stopped;
     }
 
     /**
@@ -3988,7 +4018,7 @@ struct Curl
     {
         Curl copy;
         copy.handle = curl.easy_duphandle(handle);
-        copy.stopped = false;
+        copy._stopped = false;
 
         with (CurlOption) {
             auto tt = AliasSeq!(file, writefunction, writeheader,
@@ -3999,7 +4029,7 @@ struct Curl
                 interleavefunction, chunk_data, chunk_bgn_function,
                 chunk_end_function, fnmatch_data, fnmatch_function, cookiejar, postfields);
 
-            foreach(option; tt)
+            foreach (option; tt)
                 copy.clear(option);
         }
 
@@ -4066,7 +4096,7 @@ struct Curl
     void shutdown()
     {
         throwOnStopped();
-        stopped = true;
+        _stopped = true;
         curl.easy_cleanup(this.handle);
         this.handle = null;
     }
@@ -4085,7 +4115,7 @@ struct Curl
     /**
        Set a string curl option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
        value = The string
     */
     void set(CurlOption option, const(char)[] value)
@@ -4097,7 +4127,7 @@ struct Curl
     /**
        Set a long curl option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
        value = The long
     */
     void set(CurlOption option, long value)
@@ -4109,7 +4139,7 @@ struct Curl
     /**
        Set a void* curl option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
        value = The pointer
     */
     void set(CurlOption option, void* value)
@@ -4121,7 +4151,7 @@ struct Curl
     /**
        Clear a pointer option.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
     */
     void clear(CurlOption option)
     {
@@ -4133,7 +4163,7 @@ struct Curl
        Clear a pointer option. Does not raise an exception if the underlying
        libcurl does not support the option. Use sparingly.
        Params:
-       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+       option = A $(REF CurlOption, etc,c,curl) as found in the curl documentation
     */
     void clearIfSupported(CurlOption option)
     {
@@ -4278,11 +4308,11 @@ struct Curl
       *
       * Params:
       * callback = the callback that receives a seek offset and a seek position
-      *            $(ECXREF curl, CurlSeekPos)
+      *            $(REF CurlSeekPos, etc,c,curl)
       *
       * Returns:
       * The callback returns the success state of the seeking
-      * $(ECXREF curl, CurlSeek)
+      * $(REF CurlSeek, etc,c,curl)
       *
       * Example:
       * ----
@@ -4315,7 +4345,7 @@ struct Curl
       *
       * Params:
       * callback = the callback that receives the socket and socket type
-      * $(ECXREF curl, CurlSockType)
+      * $(REF CurlSockType, etc,c,curl)
       *
       * Returns:
       * Return 0 from the callback to signal success, return 1 to signal error

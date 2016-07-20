@@ -85,7 +85,7 @@ private
 
     template hasLocalAliasing(T...)
     {
-        static if( !T.length )
+        static if ( !T.length )
             enum hasLocalAliasing = false;
         else
             enum hasLocalAliasing = (std.traits.hasUnsharedAliasing!(T[0]) && !is(T[0] == Tid)) ||
@@ -105,20 +105,20 @@ private
         Variant data;
 
         this(T...)( MsgType t, T vals )
-            if( T.length < 1 )
+            if ( T.length < 1 )
         {
             static assert( false, "messages must contain at least one item" );
         }
 
         this(T...)( MsgType t, T vals )
-            if( T.length == 1 )
+            if ( T.length == 1 )
         {
             type = t;
             data = vals[0];
         }
 
         this(T...)( MsgType t, T vals )
-            if( T.length > 1 )
+            if ( T.length > 1 )
         {
             type = t;
             data = Tuple!(T)( vals );
@@ -126,7 +126,7 @@ private
 
         @property auto convertsTo(T...)()
         {
-            static if( T.length == 1 )
+            static if ( T.length == 1 )
                 return is( T[0] == Variant ) ||
                        data.convertsTo!(T);
             else
@@ -135,9 +135,9 @@ private
 
         @property auto get(T...)()
         {
-            static if( T.length == 1 )
+            static if ( T.length == 1 )
             {
-                static if( is( T[0] == Variant ) )
+                static if ( is( T[0] == Variant ) )
                     return data;
                 else
                     return data.get!(T);
@@ -152,9 +152,9 @@ private
         {
             alias Args = Parameters!(Op);
 
-            static if( Args.length == 1 )
+            static if ( Args.length == 1 )
             {
-                static if( is( Args[0] == Variant ) )
+                static if ( is( Args[0] == Variant ) )
                     return op( data );
                 else
                     return op( data.get!(Args) );
@@ -168,19 +168,19 @@ private
 
     void checkops(T...)( T ops )
     {
-        foreach( i, t1; T )
+        foreach ( i, t1; T )
         {
             static assert( isFunctionPointer!t1 || isDelegate!t1 );
             alias a1 = Parameters!(t1);
             alias r1 = ReturnType!(t1);
 
-            static if( i < T.length - 1 && is( r1 == void ) )
+            static if ( i < T.length - 1 && is( r1 == void ) )
             {
                 static assert( a1.length != 1 || !is( a1[0] == Variant ),
                                "function with arguments " ~ a1.stringof ~
                                " occludes successive function" );
 
-                foreach( t2; T[i+1 .. $] )
+                foreach ( t2; T[i+1 .. $] )
                 {
                     static assert( isFunctionPointer!t2 || isDelegate!t2 );
                     alias a2 = Parameters!(t2);
@@ -195,7 +195,7 @@ private
 
     @property ref ThreadInfo thisInfo()
     {
-        if( scheduler is null )
+        if ( scheduler is null )
             return ThreadInfo.thisInfo;
         return scheduler.thisInfo;
     }
@@ -259,7 +259,7 @@ class LinkTerminated : Exception
 
 /**
  * Thrown if a message was sent to a thread via
- * $(XREF concurrency, prioritySend) and the receiver does not have a handler
+ * $(REF prioritySend, std,concurrency) and the receiver does not have a handler
  * for a message of this type.
  */
 class PriorityMessageException : Exception
@@ -333,14 +333,15 @@ public:
      */
     void toString(scope void delegate(const(char)[]) sink)
     {
-        import std.format;
+        import std.format : formattedWrite;
         formattedWrite(sink, "Tid(%x)", cast(void*)mbox);
     }
 
 }
 
-unittest
+@system unittest
 {
+    // text!Tid is @system
     import std.conv : text;
     Tid tid;
     assert(text(tid) == "Tid(0)");
@@ -359,7 +360,7 @@ unittest
     // TODO: remove when concurrency is safe
     auto trus = delegate() @trusted
     {
-        if( thisInfo.ident != Tid.init )
+        if ( thisInfo.ident != Tid.init )
             return thisInfo.ident;
         thisInfo.ident = Tid( new MessageBox );
         return thisInfo.ident;
@@ -381,7 +382,7 @@ unittest
     return thisInfo.owner;
 }
 
-unittest
+@system unittest
 {
     static void fun()
     {
@@ -529,7 +530,7 @@ private Tid _spawn(F, T...)( bool linked, F fn, T args )
     }
 
     // TODO: MessageList and &exec should be shared.
-    if( scheduler !is null )
+    if ( scheduler !is null )
         scheduler.spawn( &exec );
     else
     {
@@ -540,7 +541,7 @@ private Tid _spawn(F, T...)( bool linked, F fn, T args )
     return spawnTid;
 }
 
-unittest
+@system unittest
 {
     void function()                                fn1;
     void function(int)                             fn2;
@@ -596,7 +597,7 @@ unittest
  * Places the values as a message at the back of tid's message queue.
  *
  * Sends the supplied value to the thread represented by tid.  As with
- * $(XREF concurrency, spawn), $(D T) must not have unshared aliasing.
+ * $(REF spawn, std,concurrency), $(D T) must not have unshared aliasing.
  */
 void send(T...)( Tid tid, T vals )
 {
@@ -648,10 +649,10 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  * specified types are available.  This function works by pattern matching
  * a message against a set of delegates and executing the first match found.
  *
- * If a delegate that accepts a $(XREF variant, Variant) is included as
+ * If a delegate that accepts a $(REF Variant, std,variant) is included as
  * the last argument to $(D receive), it will match any message that was not
  * matched by an earlier delegate.  If more than one argument is sent,
- * the $(D Variant) will contain a $(XREF typecons, Tuple) of all values
+ * the $(D Variant) will contain a $(REF Tuple, std,typecons) of all values
  * sent.
  *
  * Example:
@@ -691,20 +692,20 @@ body
 }
 
 
-unittest
+@safe unittest
 {
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receive( (Variant x) {} );
                           receive( (int x) {}, (Variant x) {} );
                       } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receive( (Variant x) {}, (int x) {} );
                        } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receive( (int x) {}, (int x) {} );
                        } ) );
@@ -715,9 +716,9 @@ version (unittest)
 {
     private void receiveFunction(int x) {}
 }
-unittest
+@safe unittest
 {
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receive( &receiveFunction );
                           receive( &receiveFunction, (Variant x) {} );
@@ -727,7 +728,7 @@ unittest
 
 private template receiveOnlyRet(T...)
 {
-    static if( T.length == 1 )
+    static if ( T.length == 1 )
         alias receiveOnlyRet = T[0];
     else
         alias receiveOnlyRet = Tuple!(T);
@@ -740,7 +741,7 @@ private template receiveOnlyRet(T...)
  *          is received.
  *
  * Returns: The received message.  If $(D T.length) is greater than one,
- *          the message will be packed into a $(XREF typecons, Tuple).
+ *          the message will be packed into a $(REF Tuple, std,typecons).
  *
  * Example:
  * ---
@@ -774,7 +775,7 @@ body
     thisInfo.ident.mbox.get(
         ( T val )
         {
-            static if( T.length )
+            static if ( T.length )
                 ret.field = val;
         },
         ( LinkTerminated e )
@@ -796,13 +797,13 @@ body
                 format("Unexpected message type: expected '%s', got '%s'",
                        exp, val.type.toString()));
         } );
-    static if( T.length == 1 )
+    static if ( T.length == 1 )
         return ret[0];
     else
         return ret;
 }
 
-unittest
+@system unittest
 {
     static void t1(Tid mainTid)
     {
@@ -825,11 +826,11 @@ unittest
 
 /**
  * Tries to receive but will give up if no matches arrive within duration.
- * Won't wait at all if provided $(CXREF time, Duration) is negative.
+ * Won't wait at all if provided $(REF Duration, core,time) is negative.
  *
  * Same as $(D receive) except that rather than wait forever for a message,
  * it waits until either it receives a message or the given
- * $(CXREF time, Duration) has passed. It returns $(D true) if it received a
+ * $(REF Duration, core,time) has passed. It returns $(D true) if it received a
  * message and $(D false) if it timed out waiting for one.
  */
 bool receiveTimeout(T...)( Duration duration, T ops )
@@ -846,25 +847,25 @@ body
     return thisInfo.ident.mbox.get( duration, ops );
 }
 
-unittest
+@safe unittest
 {
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receiveTimeout( msecs(0), (Variant x) {} );
                           receiveTimeout( msecs(0), (int x) {}, (Variant x) {} );
                       } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receiveTimeout( msecs(0), (Variant x) {}, (int x) {} );
                        } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receiveTimeout( msecs(0), (int x) {}, (int x) {} );
                        } ) );
 
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receiveTimeout( msecs(10), (int x) {}, (Variant x) {} );
                       } ) );
@@ -924,7 +925,7 @@ private
  */
 void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis )
 {
-    final switch( doThis )
+    final switch ( doThis )
     {
     case OnCrowding.block:
         return tid.mbox.setMaxMsgs( messages, &onCrowdingBlock );
@@ -976,15 +977,17 @@ extern (C) void std_concurrency_static_this()
 
 private void unregisterMe()
 {
-    auto me = thisTid;
-
-    synchronized( registryLock )
+    auto me = thisInfo.ident;
+    if (thisInfo.ident != Tid.init)
     {
-        if( auto allNames = me in namesByTid )
+        synchronized( registryLock )
         {
-            foreach( name; *allNames )
-                tidByName.remove( name );
-            namesByTid.remove( me );
+            if ( auto allNames = me in namesByTid )
+            {
+                foreach ( name; *allNames )
+                    tidByName.remove( name );
+                namesByTid.remove( me );
+            }
         }
     }
 }
@@ -1009,9 +1012,9 @@ bool register( string name, Tid tid )
 {
     synchronized( registryLock )
     {
-        if( name in tidByName )
+        if ( name in tidByName )
             return false;
-        if( tid.mbox.isClosed )
+        if ( tid.mbox.isClosed )
             return false;
         namesByTid[tid] ~= name;
         tidByName[name] = tid;
@@ -1033,7 +1036,7 @@ bool unregister( string name )
 {
     synchronized( registryLock )
     {
-        if( auto tid = name in tidByName )
+        if ( auto tid = name in tidByName )
         {
             auto allNames = *tid in namesByTid;
             auto pos      = countUntil( *allNames, name );
@@ -1059,7 +1062,7 @@ Tid locate( string name )
 {
     synchronized( registryLock )
     {
-        if( auto tid = name in tidByName )
+        if ( auto tid = name in tidByName )
             return *tid;
         return Tid.init;
     }
@@ -1107,11 +1110,11 @@ struct ThreadInfo
      */
     void cleanup()
     {
-        if( ident.mbox !is null )
+        if ( ident.mbox !is null )
             ident.mbox.close();
-        foreach( tid; links.keys )
+        foreach ( tid; links.keys )
             _send( MsgType.linkDead, tid, ident );
-        if( owner != Tid.init )
+        if ( owner != Tid.init )
             _send( MsgType.linkDead, owner, ident );
         unregisterMe(); // clean up registry entries
     }
@@ -1322,7 +1325,7 @@ class FiberScheduler :
         // NOTE: It's possible that we should test whether the calling Fiber
         //       is an InfoFiber before yielding, but I think it's reasonable
         //       that any (non-Generator) fiber should yield here.
-        if(Fiber.getThis())
+        if (Fiber.getThis())
             Fiber.yield();
     }
 
@@ -1338,7 +1341,7 @@ class FiberScheduler :
     {
         auto f = cast(InfoFiber) Fiber.getThis();
 
-        if( f !is null )
+        if ( f !is null )
             return f.info;
         return ThreadInfo.thisInfo;
     }
@@ -1379,16 +1382,16 @@ private:
         {
             scope(exit) notified = false;
 
-            while( !notified )
+            while ( !notified )
                 switchContext();
         }
 
         override bool wait( Duration period ) nothrow
         {
-            import core.time;
+            import core.time : MonoTime;
             scope(exit) notified = false;
 
-            for( auto limit = MonoTime.currTime + period;
+            for ( auto limit = MonoTime.currTime + period;
                  !notified && !period.isNegative;
                  period = limit - MonoTime.currTime )
             {
@@ -1424,19 +1427,19 @@ private:
 private:
     final void dispatch()
     {
-        import std.algorithm : remove;
+        import std.algorithm.mutation : remove;
 
-        while( m_fibers.length > 0 )
+        while ( m_fibers.length > 0 )
         {
             auto t = m_fibers[m_pos].call( Fiber.Rethrow.no );
             if (t !is null && !(cast(OwnerTerminated) t))
                 throw t;
-            if( m_fibers[m_pos].state == Fiber.State.TERM )
+            if ( m_fibers[m_pos].state == Fiber.State.TERM )
             {
-                if( m_pos >= (m_fibers = remove( m_fibers, m_pos )).length )
+                if ( m_pos >= (m_fibers = remove( m_fibers, m_pos )).length )
                     m_pos = 0;
             }
-            else if( m_pos++ >= m_fibers.length - 1 )
+            else if ( m_pos++ >= m_fibers.length - 1 )
             {
                 m_pos = 0;
             }
@@ -1464,7 +1467,7 @@ private:
 }
 
 
-unittest
+@system unittest
 {
     static void receive(Condition cond, ref size_t received)
     {
@@ -1714,11 +1717,16 @@ void yield(T)(T value)
 }
 
 
-version (Win64) {
+version (Win64)
+{
     // fibers are broken on Win64
-} else version (Win32) {
+}
+else version (Win32)
+{
     // fibers are broken in Win32 under server 2012: bug 13821
-} else unittest {
+}
+else @system unittest
+{
     import core.exception;
     import std.exception;
 
@@ -1792,7 +1800,7 @@ private
             m_lock      = new Mutex;
             m_closed    = false;
 
-            if( scheduler is null )
+            if ( scheduler is null )
             {
                 m_putMsg  = new Condition( m_lock );
                 m_notFull = new Condition( m_lock );
@@ -1801,20 +1809,6 @@ private
             {
                 m_putMsg  = scheduler.newCondition( m_lock );
                 m_notFull = scheduler.newCondition( m_lock );
-            }
-        }
-
-    // @@@DEPRECATED_2016-03@@@
-    /++
-        $(RED Deprecated. isClosed can't be used with a const MessageBox.
-              It will be removed in March 2016).
-      +/
-        deprecated("isClosed can't be used with a const MessageBox")
-        final @property bool isClosed() const
-        {
-            synchronized( m_lock )
-            {
-                return m_closed;
             }
         }
 
@@ -1868,23 +1862,23 @@ private
             {
                 // TODO: Generate an error here if m_closed is true, or maybe
                 //       put a message in the caller's queue?
-                if( !m_closed )
+                if ( !m_closed )
                 {
-                    while( true )
+                    while ( true )
                     {
-                        if( isPriorityMsg( msg ) )
+                        if ( isPriorityMsg( msg ) )
                         {
                             m_sharedPty.put( msg );
                             m_putMsg.notify();
                             return;
                         }
-                        if( !mboxFull() || isControlMsg( msg ) )
+                        if ( !mboxFull() || isControlMsg( msg ) )
                         {
                             m_sharedBox.put( msg );
                             m_putMsg.notify();
                             return;
                         }
-                        if( m_onMaxMsgs !is null && !m_onMaxMsgs( thisTid ) )
+                        if ( m_onMaxMsgs !is null && !m_onMaxMsgs( thisTid ) )
                         {
                             return;
                         }
@@ -1917,11 +1911,10 @@ private
         {
             static assert( T.length );
 
-            static if( isImplicitlyConvertible!(T[0], Duration) )
+            static if ( isImplicitlyConvertible!(T[0], Duration) )
             {
                 alias Ops = AliasSeq!(T[1 .. $]);
                 alias ops = vals[1 .. $];
-                assert( vals[0] >= msecs(0) );
                 enum timedWait = true;
                 Duration period = vals[0];
             }
@@ -1934,14 +1927,14 @@ private
 
             bool onStandardMsg( ref Message msg )
             {
-                foreach( i, t; Ops )
+                foreach ( i, t; Ops )
                 {
                     alias Args = Parameters!(t);
                     auto  op   = ops[i];
 
-                    if( msg.convertsTo!(Args) )
+                    if ( msg.convertsTo!(Args) )
                     {
-                        static if( is( ReturnType!(t) == bool ) )
+                        static if ( is( ReturnType!(t) == bool ) )
                         {
                             return msg.map( op );
                         }
@@ -1960,26 +1953,26 @@ private
                 assert( msg.convertsTo!(Tid) );
                 auto tid = msg.get!(Tid);
 
-                if( bool* pDepends = (tid in thisInfo.links) )
+                if ( bool* pDepends = tid in thisInfo.links )
                 {
                     auto depends = *pDepends;
                     thisInfo.links.remove( tid );
                     // Give the owner relationship precedence.
-                    if( depends && tid != thisInfo.owner )
+                    if ( depends && tid != thisInfo.owner )
                     {
                         auto e = new LinkTerminated( tid );
                         auto m = Message( MsgType.standard, e );
-                        if( onStandardMsg( m ) )
+                        if ( onStandardMsg( m ) )
                             return true;
                         throw e;
                     }
                 }
-                if( tid == thisInfo.owner )
+                if ( tid == thisInfo.owner )
                 {
                     thisInfo.owner = Tid.init;
                     auto e = new OwnerTerminated( tid );
                     auto m = Message( MsgType.standard, e );
-                    if( onStandardMsg( m ) )
+                    if ( onStandardMsg( m ) )
                         return true;
                     throw e;
                 }
@@ -1988,7 +1981,7 @@ private
 
             bool onControlMsg( ref Message msg )
             {
-                switch( msg.type )
+                switch ( msg.type )
                 {
                 case MsgType.linkDead:
                     return onLinkDeadMsg( msg );
@@ -1999,15 +1992,15 @@ private
 
             bool scan( ref ListT list )
             {
-                for( auto range = list[]; !range.empty; )
+                for ( auto range = list[]; !range.empty; )
                 {
                     // Only the message handler will throw, so if this occurs
                     // we can be certain that the message was handled.
                     scope(failure) list.removeAt( range );
 
-                    if( isControlMsg( range.front ) )
+                    if ( isControlMsg( range.front ) )
                     {
-                        if( onControlMsg( range.front ) )
+                        if ( onControlMsg( range.front ) )
                         {
                             // Although the linkDead message is a control message,
                             // it can be handled by the user.  Since the linkDead
@@ -2015,7 +2008,7 @@ private
                             // it has been handled and we can return from receive.
                             // This is a weird special case that will have to be
                             // handled in a more general way if more are added.
-                            if( !isLinkDeadMsg( range.front ) )
+                            if ( !isLinkDeadMsg( range.front ) )
                             {
                                 list.removeAt( range );
                                 continue;
@@ -2028,7 +2021,7 @@ private
                     }
                     else
                     {
-                        if( onStandardMsg( range.front ) )
+                        if ( onStandardMsg( range.front ) )
                         {
                             list.removeAt( range );
                             return true;
@@ -2043,35 +2036,35 @@ private
 
             bool pty( ref ListT list )
             {
-                if( !list.empty )
+                if ( !list.empty )
                 {
                     auto range = list[];
 
-                    if( onStandardMsg( range.front ) )
+                    if ( onStandardMsg( range.front ) )
                     {
                         list.removeAt( range );
                         return true;
                     }
-                    if( range.front.convertsTo!(Throwable) )
+                    if ( range.front.convertsTo!(Throwable) )
                         throw range.front.get!(Throwable);
-                    else if( range.front.convertsTo!(shared(Throwable)) )
+                    else if ( range.front.convertsTo!(shared(Throwable)) )
                         throw range.front.get!(shared(Throwable));
                     else throw new PriorityMessageException( range.front.data );
                 }
                 return false;
             }
 
-            static if( timedWait )
+            static if ( timedWait )
             {
-                import core.time;
+                import core.time : MonoTime;
                 auto limit = MonoTime.currTime + period;
             }
 
-            while( true )
+            while ( true )
             {
                 ListT arrived;
 
-                if( pty( m_localPty ) ||
+                if ( pty( m_localPty ) ||
                     scan( m_localBox ) )
                 {
                     return true;
@@ -2080,7 +2073,7 @@ private
                 synchronized( m_lock )
                 {
                     updateMsgCount();
-                    while( m_sharedPty.empty && m_sharedBox.empty )
+                    while ( m_sharedPty.empty && m_sharedBox.empty )
                     {
                         // NOTE: We're notifying all waiters here instead of just
                         //       a few because the onCrowding behavior may have
@@ -2088,11 +2081,11 @@ private
                         //       unnecessarily if the new behavior is not to block.
                         //       This will admittedly result in spurious wakeups
                         //       in other situations, but what can you do?
-                        if( m_putQueue && !mboxFull() )
+                        if ( m_putQueue && !mboxFull() )
                             m_notFull.notifyAll();
-                        static if( timedWait )
+                        static if ( timedWait )
                         {
-                            if( period.isNegative || !m_putMsg.wait( period ) )
+                            if ( period <= Duration.zero || !m_putMsg.wait( period ) )
                                 return false;
                         }
                         else
@@ -2103,14 +2096,14 @@ private
                     m_localPty.put( m_sharedPty );
                     arrived.put( m_sharedBox );
                 }
-                if( m_localPty.empty )
+                if ( m_localPty.empty )
                 {
                     scope(exit) m_localBox.put( arrived );
-                    if( scan( arrived ) )
+                    if ( scan( arrived ) )
                         return true;
                     else
                     {
-                        static if( timedWait )
+                        static if ( timedWait )
                         {
                             period = limit - MonoTime.currTime;
                         }
@@ -2137,15 +2130,15 @@ private
                 auto tid = msg.get!(Tid);
 
                 thisInfo.links.remove( tid );
-                if( tid == thisInfo.owner )
+                if ( tid == thisInfo.owner )
                     thisInfo.owner = Tid.init;
             }
 
             void sweep( ref ListT list )
             {
-                for( auto range = list[]; !range.empty; range.popFront() )
+                for ( auto range = list[]; !range.empty; range.popFront() )
                 {
-                    if( range.front.type == MsgType.linkDead )
+                    if ( range.front.type == MsgType.linkDead )
                         onLinkDeadMsg( range.front );
                 }
             }
@@ -2305,10 +2298,10 @@ private
          */
         void put( ref List!(T) rhs )
         {
-            if( !rhs.empty )
+            if ( !rhs.empty )
             {
                 put( rhs.m_first );
-                while( m_last.next !is null )
+                while ( m_last.next !is null )
                 {
                     m_last = m_last.next;
                     m_count++;
@@ -2338,9 +2331,9 @@ private
             Node* n = r.m_prev;
             enforce( n && n.next, "attempting to remove invalid list node" );
 
-            if( m_last is m_first )
+            if ( m_last is m_first )
                 m_last = null;
-            else if( m_last is n.next )
+            else if ( m_last is n.next )
                 m_last = n;
             Node* to_free = n.next;
             n.next = n.next.next;
@@ -2438,7 +2431,7 @@ private
         void put( Node* n )
         {
             m_count++;
-            if( !empty )
+            if ( !empty )
             {
                 m_last.next = n;
                 m_last = n;
@@ -2475,7 +2468,7 @@ version( unittest )
         receive( (Variant val) {} );
         receive( (string val)
                  {
-                     if( "the quick brown fox" != val )
+                     if ( "the quick brown fox" != val )
                          return false;
                      return true;
                  },
@@ -2508,13 +2501,13 @@ version( unittest )
     }
 
 
-    unittest
+    @system unittest
     {
         simpleTest();
     }
 
 
-    unittest
+    @system unittest
     {
         scheduler = new ThreadScheduler;
         simpleTest();
@@ -2559,7 +2552,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
 }
 
 /// A typical use-case is to perform lazy but thread-safe initialization.
-unittest
+@system unittest
 {
     static class MySingleton
     {
@@ -2572,7 +2565,7 @@ unittest
     assert(MySingleton.instance !is null);
 }
 
-unittest
+@system unittest
 {
     static class MySingleton
     {
@@ -2614,7 +2607,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 {
     // check that var is global, can't take address of a TLS variable
     static assert(is(typeof({__gshared p = &var;})), "var must be 'static shared' or '__gshared'.");
-    import core.atomic;
+    import core.atomic : atomicLoad, MemoryOrder, atomicStore;
 
     static shared bool flag;
     if (!atomicLoad!(MemoryOrder.acq)(flag))
@@ -2632,7 +2625,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 }
 
 /// Use a separate mutex when init blocks on another thread that might also call initOnce.
-unittest
+@system unittest
 {
     static shared bool varA, varB;
     __gshared Mutex m;
@@ -2649,7 +2642,7 @@ unittest
     assert(varB == true);
 }
 
-unittest
+@system unittest
 {
      static shared bool a;
      __gshared bool b;

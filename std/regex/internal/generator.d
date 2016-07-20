@@ -12,8 +12,11 @@ module std.regex.internal.generator;
 */
 @trusted private struct SampleGenerator(Char)
 {
-    import std.regex.internal.ir;
-    import std.array, std.format, std.utf, std.random;
+    import std.regex.internal.ir : Regex, IR, IRL;
+    import std.array : appender, Appender;
+    import std.format : formattedWrite;
+    import std.utf : isValidDchar, byChar;
+    import std.random : Xorshift;
     Regex!Char re;
     Appender!(char[]) app;
     uint limit, seed;
@@ -39,9 +42,9 @@ module std.regex.internal.generator;
     void compose()
     {
         uint pc = 0, counter = 0, dataLenOld = uint.max;
-        for(;;)
+        for (;;)
         {
-            switch(re.ir[pc].code)
+            switch (re.ir[pc].code)
             {
             case IR.Char:
                     formattedWrite(app,"%s", cast(dchar)re.ir[pc].data);
@@ -65,7 +68,7 @@ module std.regex.internal.generator;
                     do
                     {
                         x = rand(0x11_000);
-                    }while(x == '\r' || x == '\n' || !isValidDchar(x));
+                    }while (x == '\r' || x == '\n' || !isValidDchar(x));
                     formattedWrite(app, "%s", cast(dchar)x);
                     pc += IRL!(IR.Any);
                     break;
@@ -83,14 +86,14 @@ module std.regex.internal.generator;
                     uint next = pc + re.ir[pc].data + IRL!(IR.Option);
                     uint nOpt = 0;
                     //queue next Option
-                    while(re.ir[next].code == IR.Option)
+                    while (re.ir[next].code == IR.Option)
                     {
                         nOpt++;
                         next += re.ir[next].data + IRL!(IR.Option);
                     }
                     nOpt++;
                     nOpt = rand(nOpt);
-                    for(;nOpt; nOpt--)
+                    for (;nOpt; nOpt--)
                     {
                         pc += re.ir[pc].data + IRL!(IR.Option);
                     }
@@ -105,16 +108,16 @@ module std.regex.internal.generator;
                     uint len = re.ir[pc].data;
                     uint step = re.ir[pc+2].raw;
                     uint min = re.ir[pc+3].raw;
-                    if(counter < min)
+                    if (counter < min)
                     {
                         counter += step;
                         pc -= len;
                         break;
                     }
                     uint max = re.ir[pc+4].raw;
-                    if(counter < max)
+                    if (counter < max)
                     {
-                        if(app.data.length < limit && rand(3) > 0)
+                        if (app.data.length < limit && rand(3) > 0)
                         {
                             pc -= len;
                             counter += step;
@@ -131,22 +134,21 @@ module std.regex.internal.generator;
                         pc += IRL!(IR.RepeatEnd);
                     }
                     break;
-                case IR.InfiniteStart, IR.InfiniteQStart:
+                case IR.InfiniteStart, IR.InfiniteBloomStart, IR.InfiniteQStart:
                     pc += re.ir[pc].data + IRL!(IR.InfiniteStart);
                     goto case IR.InfiniteEnd; //both Q and non-Q
-                case IR.InfiniteEnd:
-                case IR.InfiniteQEnd:
+                case IR.InfiniteEnd, IR.InfiniteBloomEnd, IR.InfiniteQEnd:
                     uint len = re.ir[pc].data;
-                    if(app.data.length == dataLenOld)
+                    if (app.data.length == dataLenOld)
                     {
                         pc += IRL!(IR.InfiniteEnd);
                         break;
                     }
                     dataLenOld = cast(uint)app.data.length;
-                    if(app.data.length < limit && rand(3) > 0)
+                    if (app.data.length < limit && rand(3) > 0)
                         pc = pc - len;
                     else
-                        pc = pc + IRL!(IR.InfiniteEnd);
+                        pc = pc + re.ir[pc].length;
                     break;
                 case IR.GroupStart, IR.GroupEnd:
                     pc += IRL!(IR.GroupStart);
@@ -164,7 +166,7 @@ module std.regex.internal.generator;
         return app.data;
     }
 
-    @property empty(){  return false; }
+    enum empty = false;
 
     void popFront()
     {
@@ -180,6 +182,6 @@ unittest
     auto gen = SampleGenerator!char(re, 20, 3141592);
     static assert(isInputRange!(typeof(gen)));
     //@@@BUG@@@ somehow gen.take(1_000) doesn't work
-    foreach(v; take(gen, 1_000))
+    foreach (v; take(gen, 1_000))
         assert(v.match(re));
 }

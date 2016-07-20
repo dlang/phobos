@@ -7,8 +7,6 @@
  * C's &lt;stdio.h&gt; for the D programming language
  * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
- * Macros:
- *      WIKI=Phobos/StdCStdio
  */
 deprecated("Import core.stdc.stdio instead")
 module std.c.stdio;

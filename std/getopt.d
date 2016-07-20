@@ -10,14 +10,10 @@ supported in the form of long options introduced by a double dash
 with the more traditional single-letter approach, is provided but not
 enabled by default.
 
-Macros:
-
-WIKI = Phobos/StdGetopt
-
 Copyright: Copyright Andrei Alexandrescu 2008 - 2015.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
-Credits:   This module and its documentation are inspired by Perl's $(WEB
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
+Credits:   This module and its documentation are inspired by Perl's $(HTTP
            perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
            D's $(D getopt) is simpler than its Perl counterpart because $(D
            getopt) infers the expected parameter types from the static types of
@@ -415,8 +411,8 @@ If an option string is followed by another string, this string serves as a
 description for this option. The $(D getopt) function returns a struct of type
 $(D GetoptResult). This return value contains information about all passed options
 as well a $(D bool GetoptResult.helpWanted) flag indicating whether information
-about these options was requested. The $(getopt) function always adds an option for
---help|-h` to set the flag if the option is seen on the command line.
+about these options was requested. The $(D getopt) function always adds an option for
+`--help|-h` to set the flag if the option is seen on the command line.
 
 Options_Terminator:
 A lone double-dash terminates $(D getopt) gathering. It is used to
@@ -446,7 +442,7 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
 }
 
 ///
-unittest
+@system unittest
 {
     auto args = ["prog", "--foo", "-b"];
 
@@ -540,8 +536,8 @@ follow this pattern:
 */
 private template optionValidator(A...)
 {
-    import std.typecons: staticIota;
-    import std.format: format;
+    import std.typecons : staticIota;
+    import std.format : format;
 
     enum fmt = "getopt validator: %s (at position %d)";
     enum isReceiver(T) = isPointer!T || (is(T==function)) || (is(T==delegate));
@@ -560,7 +556,7 @@ private template optionValidator(A...)
             {
                 msg = format(fmt, "invalid argument type: " ~ A[0].stringof, 0);
             }
-            else foreach(i; staticIota!(1, A.length))
+            else foreach (i; staticIota!(1, A.length))
             {
                 static if (!isReceiver!(A[i]) && !isOptionStr!(A[i]) &&
                     !(is(A[i] == config)))
@@ -634,7 +630,7 @@ private template optionValidator(A...)
     static assert(optionValidator!(C,A,P,C,A,S,F) == "");
 }
 
-unittest // bugzilla 15914
+@system unittest // bugzilla 15914
 {
     bool opt;
     string[] args = ["program", "-a"];
@@ -660,7 +656,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     enum validationMessage = optionValidator!T;
     static assert(validationMessage == "", validationMessage);
 
-    import std.algorithm : remove;
+    import std.algorithm.mutation : remove;
     import std.conv : to;
     static if (opts.length)
     {
@@ -755,7 +751,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 private bool handleOption(R)(string option, R receiver, ref string[] args,
     ref configuration cfg, bool incremental)
 {
-    import std.algorithm : map, splitter;
+    import std.algorithm.iteration : map, splitter;
     import std.ascii : isAlpha;
     import std.conv : text, to;
     // Scan arguments looking for a match for this option
@@ -928,7 +924,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
 }
 
 // 5316 - arrays with arraySep
-unittest
+@system unittest
 {
     import std.conv;
 
@@ -957,7 +953,7 @@ unittest
 }
 
 // 5316 - associative arrays with arraySep
-unittest
+@system unittest
 {
     import std.conv;
 
@@ -1111,7 +1107,7 @@ private void setConfig(ref configuration cfg, config option)
     }
 }
 
-unittest
+@system unittest
 {
     import std.conv;
     import std.math;
@@ -1293,7 +1289,7 @@ unittest
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
 }
 
-unittest
+@system unittest
 {
     // From bugzilla 2142
     bool f_linenum, f_filename;
@@ -1310,7 +1306,7 @@ unittest
     assert(f_filename);
 }
 
-unittest
+@system unittest
 {
     // From bugzilla 6887
     string[] p;
@@ -1320,7 +1316,7 @@ unittest
     assert(p[0] == "a");
 }
 
-unittest
+@system unittest
 {
     // From bugzilla 6888
     int[string] foo;
@@ -1329,7 +1325,7 @@ unittest
     assert(foo == ["a":1]);
 }
 
-unittest
+@system unittest
 {
     // From bugzilla 9583
     int opt;
@@ -1338,7 +1334,7 @@ unittest
     assert(args == ["prog", "--a", "--b", "--c"]);
 }
 
-unittest
+@system unittest
 {
     string foo, bar;
     auto args = ["prog", "-thello", "-dbar=baz"];
@@ -1373,7 +1369,7 @@ unittest
     assert(o == "str");
 }
 
-unittest // 5228
+@system unittest // 5228
 {
     import std.exception;
     import std.conv;
@@ -1386,7 +1382,7 @@ unittest // 5228
     assertThrown!ConvException(getopt(args, "abc", &abc));
 }
 
-unittest // From bugzilla 7693
+@system unittest // From bugzilla 7693
 {
     import std.exception;
 
@@ -1406,7 +1402,7 @@ unittest // From bugzilla 7693
     assertNotThrown(getopt(args, "foo", &foo));
 }
 
-unittest // same bug as 7693 only for bool
+@system unittest // same bug as 7693 only for bool
 {
     import std.exception;
 
@@ -1418,7 +1414,7 @@ unittest // same bug as 7693 only for bool
     assert(foo);
 }
 
-unittest
+@system unittest
 {
     bool foo;
     auto args = ["prog", "--foo"];
@@ -1426,7 +1422,7 @@ unittest
     assert(foo);
 }
 
-unittest
+@system unittest
 {
     bool foo;
     bool bar;
@@ -1437,7 +1433,7 @@ unittest
     assert(bar);
 }
 
-unittest
+@system unittest
 {
     bool foo;
     bool bar;
@@ -1449,7 +1445,7 @@ unittest
     assert(bar);
 }
 
-unittest
+@system unittest
 {
     import std.exception;
 
@@ -1461,7 +1457,7 @@ unittest
         config.passThrough));
 }
 
-unittest
+@system unittest
 {
     import std.exception;
 
@@ -1475,7 +1471,7 @@ unittest
     assert(!bar);
 }
 
-unittest
+@system unittest
 {
     bool foo;
     auto args = ["prog", "-f"];
@@ -1484,7 +1480,7 @@ unittest
     assert(!r.helpWanted);
 }
 
-unittest // implicit help option without config.passThrough
+@safe unittest // implicit help option without config.passThrough
 {
     string[] args = ["program", "--help"];
     auto r = getopt(args);
@@ -1492,7 +1488,7 @@ unittest // implicit help option without config.passThrough
 }
 
 // Issue 13316 - std.getopt: implicit help option breaks the next argument
-unittest
+@system unittest
 {
     string[] args = ["program", "--help", "--", "something"];
     getopt(args);
@@ -1509,7 +1505,7 @@ unittest
 }
 
 // Issue 13317 - std.getopt: endOfOptions broken when it doesn't look like an option
-unittest
+@system unittest
 {
     auto endOfOptionsBackup = endOfOptions;
     scope(exit) endOfOptions = endOfOptionsBackup;
@@ -1531,7 +1527,7 @@ $(D Option). If a help message is present it will be printed next. The format is
 illustrated by this code:
 
 ------------
-foreach(it; opt)
+foreach (it; opt)
 {
     writefln("%*s %*s%s%s", lengthOfLongestShortOption, it.optShort,
         lengthOfLongestLongOption, it.optLong,
@@ -1562,7 +1558,7 @@ Params:
 void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 {
     import std.format : formattedWrite;
-    import std.algorithm : min, max;
+    import std.algorithm.comparison : min, max;
 
     output.formattedWrite("%s\n", text);
 
@@ -1576,8 +1572,6 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
         hasRequired = hasRequired || it.required;
     }
 
-    size_t argLength = ls + ll + 2;
-
     string re = " Required: ";
 
     foreach (it; opt)
@@ -1587,7 +1581,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
     }
 }
 
-unittest
+@system unittest
 {
     import std.conv;
 
@@ -1616,7 +1610,7 @@ unittest
     assert(wanted == helpMsg);
 }
 
-unittest
+@system unittest
 {
     import std.conv;
     import std.string;
@@ -1645,7 +1639,7 @@ unittest
     assert(wanted == helpMsg, helpMsg ~ wanted);
 }
 
-unittest // Issue 14724
+@system unittest // Issue 14724
 {
     bool a;
     auto args = ["prog", "--help"];
@@ -1654,10 +1648,11 @@ unittest // Issue 14724
     {
         rslt = getopt(args, config.required, "foo|f", "bool a", &a);
     }
-    catch(Exception e)
+    catch (Exception e)
     {
-        assert(false, "If the request for help was passed required options"
-                "must not be set.");
+        enum errorMsg = "If the request for help was passed required options" ~
+                "must not be set.";
+        assert(false, errorMsg);
     }
 
     assert(rslt.helpWanted);

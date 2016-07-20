@@ -1,12 +1,10 @@
 // Written in the D programming language.
 /**
-This is a submodule of $(LINK2 std_algorithm.html, std.algorithm).
+This is a submodule of $(MREF std, algorithm).
 It contains generic algorithms that implement set operations.
 
 $(BOOKTABLE Cheat Sheet,
-
 $(TR $(TH Function Name) $(TH Description))
-
 $(T2 cartesianProduct,
         Computes Cartesian product of two ranges.)
 $(T2 largestPartialIntersection,
@@ -30,9 +28,9 @@ $(T2 setUnion,
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_setops.d)
 
@@ -74,7 +72,7 @@ Params:
     otherRanges = Zero or more non-infinite forward ranges
 
 Returns:
-    A forward range of $(XREF typecons,Tuple) representing elements of the
+    A forward range of $(REF Tuple, std,typecons) representing elements of the
     cartesian product of the given ranges.
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
@@ -341,7 +339,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 // Issue 13091
 pure nothrow @safe @nogc unittest
 {
-    import std.algorithm: cartesianProduct;
+    import std.algorithm : cartesianProduct;
     int[1] a = [1];
     foreach (t; cartesianProduct(a[], a[])) {}
 }
@@ -525,6 +523,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
 
 pure @safe nothrow @nogc unittest
 {
+    import std.range.primitives : isForwardRange;
     int[2] A = [1,2];
     auto C = cartesianProduct(A[], A[], A[]);
     assert(isForwardRange!(typeof(C)));
@@ -788,14 +787,17 @@ struct NWayUnion(alias less, RangeOfRanges)
     private alias ElementType = .ElementType!(.ElementType!RangeOfRanges);
     private alias comp = binaryFun!less;
     private RangeOfRanges _ror;
+
+    ///
     static bool compFront(.ElementType!RangeOfRanges a,
             .ElementType!RangeOfRanges b)
     {
         // revert comparison order so we get the smallest elements first
         return comp(b.front, a.front);
     }
-    BinaryHeap!(RangeOfRanges, compFront) _heap;
+    private BinaryHeap!(RangeOfRanges, compFront) _heap;
 
+    ///
     this(RangeOfRanges ror)
     {
         import std.algorithm.mutation : remove, SwapStrategy;
@@ -807,13 +809,16 @@ struct NWayUnion(alias less, RangeOfRanges)
         _heap.acquire(_ror);
     }
 
+    ///
     @property bool empty() { return _ror.empty; }
 
+    ///
     @property auto ref front()
     {
         return _heap.front.front;
     }
 
+    ///
     void popFront()
     {
         _heap.removeFront();
@@ -900,6 +905,7 @@ private:
     }
 
 public:
+    ///
     this(R1 r1, R2 r2)
     {
         this.r1 = r1;
@@ -908,12 +914,14 @@ public:
         adjustPosition();
     }
 
+    ///
     void popFront()
     {
         r1.popFront();
         adjustPosition();
     }
 
+    ///
     @property auto ref front()
     {
         assert(!empty);
@@ -922,6 +930,7 @@ public:
 
     static if (isForwardRange!R1 && isForwardRange!R2)
     {
+        ///
         @property typeof(this) save()
         {
             auto ret = this;
@@ -931,6 +940,7 @@ public:
         }
     }
 
+    ///
     @property bool empty() { return r1.empty; }
 }
 
@@ -945,6 +955,7 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range.primitives : isForwardRange;
 
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -1001,7 +1012,7 @@ private:
                     do {
                         next.popFront();
                         if (next.empty) return;
-                    } while(comp(next.front, r.front));
+                    } while (comp(next.front, r.front));
                     done = Rs.length;
                 }
                 if (--done == 0) return;
@@ -1010,6 +1021,7 @@ private:
     }
 
 public:
+    ///
     this(Rs input)
     {
         this._input = input;
@@ -1017,6 +1029,7 @@ public:
         adjustPosition();
     }
 
+    ///
     @property bool empty()
     {
         foreach (ref r; _input)
@@ -1026,6 +1039,7 @@ public:
         return false;
     }
 
+    ///
     void popFront()
     {
         assert(!empty);
@@ -1042,6 +1056,7 @@ public:
         adjustPosition();
     }
 
+    ///
     @property ElementType front()
     {
         assert(!empty);
@@ -1050,6 +1065,7 @@ public:
 
     static if (allSatisfy!(isForwardRange, Rs))
     {
+        ///
         @property SetIntersection save()
         {
             auto ret = this;
@@ -1158,6 +1174,7 @@ private:
     }
 
 public:
+    ///
     this(R1 r1, R2 r2)
     {
         this.r1 = r1;
@@ -1166,6 +1183,7 @@ public:
         adjustPosition();
     }
 
+    ///
     void popFront()
     {
         assert(!empty);
@@ -1187,16 +1205,18 @@ public:
         adjustPosition();
     }
 
+    ///
     @property auto ref front()
     {
         assert(!empty);
-        bool chooseR1 = r2.empty || !r1.empty && comp(r1.front, r2.front);
+        immutable chooseR1 = r2.empty || !r1.empty && comp(r1.front, r2.front);
         assert(chooseR1 || r1.empty || comp(r2.front, r1.front));
         return chooseR1 ? r1.front : r2.front;
     }
 
     static if (isForwardRange!R1 && isForwardRange!R2)
     {
+        ///
         @property typeof(this) save()
         {
             auto ret = this;
@@ -1206,8 +1226,10 @@ public:
         }
     }
 
+    ///
     ref auto opSlice() { return this; }
 
+    ///
     @property bool empty() { return r1.empty && r2.empty; }
 }
 
@@ -1223,6 +1245,7 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range.primitives : isForwardRange;
 
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -1300,17 +1323,20 @@ public:
     static assert(!is(CommonType!(staticMap!(.ElementType, Rs)) == void),
         typeof(this).stringof ~ ": incompatible element types.");
 
+    ///
     this(Rs rs)
     {
         this._r = rs;
         adjustPosition();
     }
 
+    ///
     @property bool empty()
     {
         return _crt == _crt.max;
     }
 
+    ///
     void popFront()
     {
         // Assumes _crt is correct
@@ -1327,6 +1353,7 @@ public:
         assert(false);
     }
 
+    ///
     @property auto ref ElementType front()
     {
         assert(!empty);
@@ -1342,6 +1369,7 @@ public:
 
     static if (allSatisfy!(isForwardRange, Rs))
     {
+        ///
         @property auto save()
         {
             auto ret = this;
@@ -1355,6 +1383,7 @@ public:
 
     static if (allSatisfy!(hasLength, Rs))
     {
+        ///
         @property size_t length()
         {
             size_t result;

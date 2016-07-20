@@ -8,8 +8,6 @@
  * C's &lt;process.h&gt;
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
  * License: Public Domain
- * Macros:
- *      WIKI=Phobos/StdCProcess
  */
 deprecated("Import core.stdc.stdlib or the appropriate core.sys.posix.* modules instead")
 module std.c.process;
@@ -31,7 +29,7 @@ int execlpe(in char *, in char *,...);
 
 //These constants are undefined elsewhere and only used in the deprecated part
 //of std.process.
-enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY };
+enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY }
 
 //These declarations are defined for Posix in core.sys.posix.unistd but unused
 //from here.

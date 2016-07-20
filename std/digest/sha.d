@@ -29,7 +29,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
  * module.
  *
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
  * CTFE:
  * Digests do not work in CTFE
@@ -48,8 +48,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  *
  * Source: $(PHOBOSSRC std/digest/_sha.d)
  *
- * Macros:
- *      WIKI = Phobos/StdSha1
  */
 
 /*          Copyright Kai Nacke 2012.
@@ -213,7 +211,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
     static assert(!(blockSize == 1024 && digestSize < 224),
         "Invalid SHA digestSize for a blockSize of 1024. The digestSize must be 224, 256, 384 or 512.");
 
-    static if(digestSize==160) /* SHA-1 */
+    static if (digestSize==160) /* SHA-1 */
     {
         version(USE_SSSE3)
         {
@@ -230,35 +228,35 @@ struct SHA(uint hashBlockSize, uint digestSize)
             alias transform = transformX86;
         }
     }
-    else static if(blockSize == 512) /* SHA-224, SHA-256 */
+    else static if (blockSize == 512) /* SHA-224, SHA-256 */
         alias transform = transformSHA2!uint;
-    else static if(blockSize == 1024) /* SHA-384, SHA-512, SHA-512/224, SHA-512/256 */
+    else static if (blockSize == 1024) /* SHA-384, SHA-512, SHA-512/224, SHA-512/256 */
         alias transform = transformSHA2!ulong;
     else
         static assert(0);
 
     private:
         /* magic initialization constants - state (ABCDEFGH) */
-        static if(blockSize == 512 && digestSize == 160) /* SHA-1 */
+        static if (blockSize == 512 && digestSize == 160) /* SHA-1 */
         {
             uint[5] state =
             [0x67452301,0xefcdab89,0x98badcfe,0x10325476,0xc3d2e1f0];
         }
-        else static if(blockSize == 512 && digestSize == 224) /* SHA-224 */
+        else static if (blockSize == 512 && digestSize == 224) /* SHA-224 */
         {
             uint[8] state = [
                 0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939,
                 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4,
             ];
         }
-        else static if(blockSize == 512 && digestSize == 256) /* SHA-256 */
+        else static if (blockSize == 512 && digestSize == 256) /* SHA-256 */
         {
             uint[8] state = [
                 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
                 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
             ];
         }
-        else static if(blockSize == 1024 && digestSize == 224) /* SHA-512/224 */
+        else static if (blockSize == 1024 && digestSize == 224) /* SHA-512/224 */
         {
             ulong[8] state = [
                 0x8C3D37C8_19544DA2, 0x73E19966_89DCD4D6,
@@ -267,7 +265,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 0x3F9D85A8_6A1D36C8, 0x1112E6AD_91D692A1,
             ];
         }
-        else static if(blockSize == 1024 && digestSize == 256) /* SHA-512/256 */
+        else static if (blockSize == 1024 && digestSize == 256) /* SHA-512/256 */
         {
             ulong[8] state = [
                 0x22312194_FC2BF72C, 0x9F555FA3_C84C64C2,
@@ -276,7 +274,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 0x2B0199FC_2C85B8AA, 0x0EB72DDC_81C52CA2,
             ];
         }
-        else static if(blockSize == 1024 && digestSize == 384) /* SHA-384 */
+        else static if (blockSize == 1024 && digestSize == 384) /* SHA-384 */
         {
             ulong[8] state = [
                 0xcbbb9d5d_c1059ed8, 0x629a292a_367cd507,
@@ -285,7 +283,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 0xdb0c2e0d_64f98fa7, 0x47b5481d_befa4fa4,
             ];
         }
-        else static if(blockSize == 1024 && digestSize == 512) /* SHA-512 */
+        else static if (blockSize == 1024 && digestSize == 512) /* SHA-512 */
         {
             ulong[8] state = [
                 0x6a09e667_f3bcc908, 0xbb67ae85_84caa73b,
@@ -298,7 +296,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             static assert(0);
 
         /* constants */
-        static if(blockSize == 512)
+        static if (blockSize == 512)
         {
             static immutable uint[64] constants = [
                 0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -311,7 +309,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
             ];
         }
-        else static if(blockSize == 1024)
+        else static if (blockSize == 1024)
         {
             static immutable ulong[80] constants = [
                 0x428a2f98_d728ae22, 0x71374491_23ef65cd, 0xb5c0fbcf_ec4d3b2f, 0xe9b5dba5_8189dbbc,
@@ -632,7 +630,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             T_SHA2_16_79!Word(62, W, C, D, E, F, G, H, A, B, constants[62]);
             T_SHA2_16_79!Word(63, W, B, C, D, E, F, G, H, A, constants[63]);
 
-            static if(is(Word==ulong))
+            static if (is(Word==ulong))
             {
                 T_SHA2_16_79!Word(64, W, A, B, C, D, E, F, G, H, constants[64]);
                 T_SHA2_16_79!Word(65, W, H, A, B, C, D, E, F, G, constants[65]);
@@ -689,7 +687,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
 
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * Also implements the $(REF isOutputRange, std,range,primitives)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         void put(scope const(ubyte)[] input...) @trusted pure nothrow @nogc
@@ -702,14 +700,14 @@ struct SHA(uint hashBlockSize, uint digestSize)
             index = (cast(uint)count[0] >> 3) & (blockSizeInBytes - 1);
 
             /* Update number of bits */
-            static if(blockSize==512)
+            static if (blockSize==512)
                 count[0] += inputLen * 8;
-            else static if(blockSize==1024)
+            else static if (blockSize==1024)
             {
                 /* ugly hack to work around lack of ucent */
                 auto oldCount0 = count[0];
                 count[0] += inputLen * 8;
-                if(count[0] < oldCount0)
+                if (count[0] < oldCount0)
                     count[1]++;
             }
             else
@@ -752,7 +750,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
          */
         ubyte[digestSize/8] finish() @trusted pure nothrow @nogc
         {
-            static if(blockSize==512)
+            static if (blockSize==512)
             {
                 ubyte[32] data = void;
                 uint index, padLen;
@@ -776,7 +774,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 start();
                 return data[0..digestSize/8];
             }
-            else static if(blockSize==1024)
+            else static if (blockSize==1024)
             {
                 ubyte[64] data = void;
                 uint index, padLen;
@@ -854,7 +852,7 @@ unittest
 {
     //Let's use the template features:
     //Note: When passing a SHA1 to a function, it must be passed by reference!
-    void doSomething(T)(ref T hash) if(isDigest!T)
+    void doSomething(T)(ref T hash) if (isDigest!T)
     {
       hash.put(cast(ubyte)0);
     }
@@ -878,6 +876,7 @@ unittest
 unittest
 {
     import std.range;
+    import std.conv : hexString;
 
     ubyte[20] digest;
     ubyte[28] digest224;
@@ -909,13 +908,15 @@ unittest
     sha384.put(cast(ubyte[])"abcdef");
     sha384.start();
     sha384.put(cast(ubyte[])"");
-    assert(sha384.finish() == cast(ubyte[])x"38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b");
+    assert(sha384.finish() == cast(ubyte[])hexString!("38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c"
+        ~"0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b"));
 
     SHA512 sha512;
     sha512.put(cast(ubyte[])"abcdef");
     sha512.start();
     sha512.put(cast(ubyte[])"");
-    assert(sha512.finish() == cast(ubyte[])x"cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e");
+    assert(sha512.finish() == cast(ubyte[])hexString!("cf83e1357eefb8bdf1542850d66d8007d620e4050b571"
+        ~"5dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"));
 
     SHA512_224 sha512_224;
     sha512_224.put(cast(ubyte[])"abcdef");
@@ -939,8 +940,10 @@ unittest
     assert(digest == cast(ubyte[])x"da39a3ee5e6b4b0d3255bfef95601890afd80709");
     assert(digest224 == cast(ubyte[])x"d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f");
     assert(digest256 == cast(ubyte[])x"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-    assert(digest384 == cast(ubyte[])x"38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b");
-    assert(digest512 == cast(ubyte[])x"cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e");
+    assert(digest384 == cast(ubyte[])hexString!("38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c"
+        ~"0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b"));
+    assert(digest512 == cast(ubyte[])hexString!("cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83"
+        ~"f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"));
     assert(digest512_224 == cast(ubyte[])x"6ed0dd02806fa89e25de060c19d3ac86cabb87d6a0ddd05c333b84f4");
     assert(digest512_256 == cast(ubyte[])x"c672b8d1ef56ed28ab87c3622c5114069bdd3ad7b8f9737498d0c01ecef0967a");
 
@@ -954,8 +957,10 @@ unittest
     assert(digest == cast(ubyte[])x"86f7e437faa5a7fce15d1ddcb9eaeaea377667b8");
     assert(digest224 == cast(ubyte[])x"abd37534c7d9a2efb9465de931cd7055ffdb8879563ae98078d6d6d5");
     assert(digest256 == cast(ubyte[])x"ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb");
-    assert(digest384 == cast(ubyte[])x"54a59b9f22b0b80880d8427e548b7c23abd873486e1f035dce9cd697e85175033caa88e6d57bc35efae0b5afd3145f31");
-    assert(digest512 == cast(ubyte[])x"1f40fc92da241694750979ee6cf582f2d5d7d28e18335de05abc54d0560e0f5302860c652bf08d560252aa5e74210546f369fbbbce8c12cfc7957b2652fe9a75");
+    assert(digest384 == cast(ubyte[])hexString!("54a59b9f22b0b80880d8427e548b7c23abd873486e1f035dce9"
+        ~"cd697e85175033caa88e6d57bc35efae0b5afd3145f31"));
+    assert(digest512 == cast(ubyte[])hexString!("1f40fc92da241694750979ee6cf582f2d5d7d28e18335de05ab"
+        ~"c54d0560e0f5302860c652bf08d560252aa5e74210546f369fbbbce8c12cfc7957b2652fe9a75"));
     assert(digest512_224 == cast(ubyte[])x"d5cdb9ccc769a5121d4175f2bfdd13d6310e0d3d361ea75d82108327");
     assert(digest512_256 == cast(ubyte[])x"455e518824bc0601f9fb858ff5c37d417d67c2f8e0df2babe4808858aea830f8");
 
@@ -969,8 +974,10 @@ unittest
     assert(digest == cast(ubyte[])x"a9993e364706816aba3e25717850c26c9cd0d89d");
     assert(digest224 == cast(ubyte[])x"23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7");
     assert(digest256 == cast(ubyte[])x"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
-    assert(digest384 == cast(ubyte[])x"cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7");
-    assert(digest512 == cast(ubyte[])x"ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f");
+    assert(digest384 == cast(ubyte[])hexString!("cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a"
+        ~"8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7"));
+    assert(digest512 == cast(ubyte[])hexString!("ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9"
+        ~"eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"));
     assert(digest512_224 == cast(ubyte[])x"4634270f707b6a54daae7530460842e20e37ed265ceee9a43e8924aa");
     assert(digest512_256 == cast(ubyte[])x"53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23");
 
@@ -984,8 +991,10 @@ unittest
     assert(digest == cast(ubyte[])x"84983e441c3bd26ebaae4aa1f95129e5e54670f1");
     assert(digest224 == cast(ubyte[])x"75388b16512776cc5dba5da1fd890150b0c6455cb4f58b1952522525");
     assert(digest256 == cast(ubyte[])x"248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1");
-    assert(digest384 == cast(ubyte[])x"3391fdddfc8dc7393707a65b1b4709397cf8b1d162af05abfe8f450de5f36bc6b0455a8520bc4e6f5fe95b1fe3c8452b");
-    assert(digest512 == cast(ubyte[])x"204a8fc6dda82f0a0ced7beb8e08a41657c16ef468b228a8279be331a703c33596fd15c13b1b07f9aa1d3bea57789ca031ad85c7a71dd70354ec631238ca3445");
+    assert(digest384 == cast(ubyte[])hexString!("3391fdddfc8dc7393707a65b1b4709397cf8b1d162af05abfe"
+        ~"8f450de5f36bc6b0455a8520bc4e6f5fe95b1fe3c8452b"));
+    assert(digest512 == cast(ubyte[])hexString!("204a8fc6dda82f0a0ced7beb8e08a41657c16ef468b228a827"
+        ~"9be331a703c33596fd15c13b1b07f9aa1d3bea57789ca031ad85c7a71dd70354ec631238ca3445"));
     assert(digest512_224 == cast(ubyte[])x"e5302d6d54bb242275d1e7622d68df6eb02dedd13f564c13dbda2174");
     assert(digest512_256 == cast(ubyte[])x"bde8e1f9f19bb9fd3406c90ec6bc47bd36d8ada9f11880dbc8a22a7078b6a461");
 
@@ -999,8 +1008,10 @@ unittest
     assert(digest == cast(ubyte[])x"c12252ceda8be8994d5fa0290a47231c1d16aae3");
     assert(digest224 == cast(ubyte[])x"2cb21c83ae2f004de7e81c3c7019cbcb65b71ab656b22d6d0c39b8eb");
     assert(digest256 == cast(ubyte[])x"f7846f55cf23e14eebeab5b4e1550cad5b509e3348fbc4efa3a1413d393cb650");
-    assert(digest384 == cast(ubyte[])x"473ed35167ec1f5d8e550368a3db39be54639f828868e9454c239fc8b52e3c61dbd0d8b4de1390c256dcbb5d5fd99cd5");
-    assert(digest512 == cast(ubyte[])x"107dbf389d9e9f71a3a95f6c055b9251bc5268c2be16d6c13492ea45b0199f3309e16455ab1e96118e8a905d5597b72038ddb372a89826046de66687bb420e7c");
+    assert(digest384 == cast(ubyte[])hexString!("473ed35167ec1f5d8e550368a3db39be54639f828868e9454c"
+        ~"239fc8b52e3c61dbd0d8b4de1390c256dcbb5d5fd99cd5"));
+    assert(digest512 == cast(ubyte[])hexString!("107dbf389d9e9f71a3a95f6c055b9251bc5268c2be16d6c134"
+        ~"92ea45b0199f3309e16455ab1e96118e8a905d5597b72038ddb372a89826046de66687bb420e7c"));
     assert(digest512_224 == cast(ubyte[])x"ad1a4db188fe57064f4f24609d2a83cd0afb9b398eb2fcaeaae2c564");
     assert(digest512_256 == cast(ubyte[])x"0cf471fd17ed69d990daf3433c89b16d63dec1bb9cb42a6094604ee5d7b4e9fb");
 
@@ -1014,8 +1025,10 @@ unittest
     assert(digest == cast(ubyte[])x"32d10c7b8cf96570ca04ce37f2a19d84240d3a89");
     assert(digest224 == cast(ubyte[])x"45a5f72c39c5cff2522eb3429799e49e5f44b356ef926bcf390dccc2");
     assert(digest256 == cast(ubyte[])x"71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73");
-    assert(digest384 == cast(ubyte[])x"feb67349df3db6f5924815d6c3dc133f091809213731fe5c7b5f4999e463479ff2877f5f2936fa63bb43784b12f3ebb4");
-    assert(digest512 == cast(ubyte[])x"4dbff86cc2ca1bae1e16468a05cb9881c97f1753bce3619034898faa1aabe429955a1bf8ec483d7421fe3c1646613a59ed5441fb0f321389f77f48a879c7b1f1");
+    assert(digest384 == cast(ubyte[])hexString!("feb67349df3db6f5924815d6c3dc133f091809213731fe5c7b5"
+        ~"f4999e463479ff2877f5f2936fa63bb43784b12f3ebb4"));
+    assert(digest512 == cast(ubyte[])hexString!("4dbff86cc2ca1bae1e16468a05cb9881c97f1753bce3619034"
+        ~"898faa1aabe429955a1bf8ec483d7421fe3c1646613a59ed5441fb0f321389f77f48a879c7b1f1"));
     assert(digest512_224 == cast(ubyte[])x"ff83148aa07ec30655c1b40aff86141c0215fe2a54f767d3f38743d8");
     assert(digest512_256 == cast(ubyte[])x"fc3189443f9c268f626aea08a756abe7b726b05f701cb08222312ccfd6710a26");
 
@@ -1029,8 +1042,10 @@ unittest
     assert(digest == cast(ubyte[])x"761c457bf73b14d27e9e9265c46f4b4dda11f940");
     assert(digest224 == cast(ubyte[])x"bff72b4fcb7d75e5632900ac5f90d219e05e97a7bde72e740db393d9");
     assert(digest256 == cast(ubyte[])x"db4bfcbd4da0cd85a60c3c37d3fbd8805c77f15fc6b1fdfe614ee0a7c8fdb4c0");
-    assert(digest384 == cast(ubyte[])x"1761336e3f7cbfe51deb137f026f89e01a448e3b1fafa64039c1464ee8732f11a5341a6f41e0c202294736ed64db1a84");
-    assert(digest512 == cast(ubyte[])x"1e07be23c26a86ea37ea810c8ec7809352515a970e9253c26f536cfc7a9996c45c8370583e0a78fa4a90041d71a4ceab7423f19c71b9d5a3e01249f0bebd5894");
+    assert(digest384 == cast(ubyte[])hexString!("1761336e3f7cbfe51deb137f026f89e01a448e3b1fafa64039"
+        ~"c1464ee8732f11a5341a6f41e0c202294736ed64db1a84"));
+    assert(digest512 == cast(ubyte[])hexString!("1e07be23c26a86ea37ea810c8ec7809352515a970e9253c26f"
+        ~"536cfc7a9996c45c8370583e0a78fa4a90041d71a4ceab7423f19c71b9d5a3e01249f0bebd5894"));
     assert(digest512_224 == cast(ubyte[])x"a8b4b9174b99ffc67d6f49be9981587b96441051e16e6dd036b140d3");
     assert(digest512_256 == cast(ubyte[])x"cdf1cc0effe26ecc0c13758f7b4a48e000615df241284185c39eb05d355bb9c8");
 
@@ -1051,8 +1066,10 @@ unittest
     assert(digest == cast(ubyte[])x"50abf5706a150990a08b2c5ea40fa0e585554732");
     assert(digest224 == cast(ubyte[])x"b50aecbe4e9bb0b57bc5f3ae760a8e01db24f203fb3cdcd13148046e");
     assert(digest256 == cast(ubyte[])x"f371bc4a311f2b009eef952dd83ca80e2b60026c8e935592d0f9c308453c813e");
-    assert(digest384 == cast(ubyte[])x"b12932b0627d1c060942f5447764155655bd4da0c9afa6dd9b9ef53129af1b8fb0195996d2de9ca0df9d821ffee67026");
-    assert(digest512 == cast(ubyte[])x"72ec1ef1124a45b047e8b7c75a932195135bb61de24ec0d1914042246e0aec3a2354e093d76f3048b456764346900cb130d2a4fd5dd16abb5e30bcb850dee843");
+    assert(digest384 == cast(ubyte[])hexString!("b12932b0627d1c060942f5447764155655bd4da0c9afa6dd9b"
+        ~"9ef53129af1b8fb0195996d2de9ca0df9d821ffee67026"));
+    assert(digest512 == cast(ubyte[])hexString!("72ec1ef1124a45b047e8b7c75a932195135bb61de24ec0d191"
+        ~"4042246e0aec3a2354e093d76f3048b456764346900cb130d2a4fd5dd16abb5e30bcb850dee843"));
     assert(digest512_224 == cast(ubyte[])x"ae988faaa47e401a45f704d1272d99702458fea2ddc6582827556dd2");
     assert(digest512_256 == cast(ubyte[])x"2c9fdbc0c90bdd87612ee8455474f9044850241dc105b1e8b94b8ddf5fac9148");
 
@@ -1068,8 +1085,10 @@ unittest
     assert(digest == cast(ubyte[])x"34aa973cd4c4daa4f61eeb2bdbad27316534016f");
     assert(digest224 == cast(ubyte[])x"20794655980c91d8bbb4c1ea97618a4bf03f42581948b2ee4ee7ad67");
     assert(digest256 == cast(ubyte[])x"cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
-    assert(digest384 == cast(ubyte[])x"9d0e1809716474cb086e834e310a4a1ced149e9c00f248527972cec5704c2a5b07b8b3dc38ecc4ebae97ddd87f3d8985");
-    assert(digest512 == cast(ubyte[])x"e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973ebde0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b");
+    assert(digest384 == cast(ubyte[])hexString!("9d0e1809716474cb086e834e310a4a1ced149e9c00f2485279"
+        ~"72cec5704c2a5b07b8b3dc38ecc4ebae97ddd87f3d8985"));
+    assert(digest512 == cast(ubyte[])hexString!("e718483d0ce769644e2e42c7bc15b4638e1f98b13b20442856"
+        ~"32a803afa973ebde0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b"));
     assert(digest512_224 == cast(ubyte[])x"37ab331d76f0d36de422bd0edeb22a28accd487b7a8453ae965dd287");
     assert(digest512_256 == cast(ubyte[])x"9a59a052930187a97038cae692f30708aa6491923ef5194394dc68d56c74fb21");
 
@@ -1084,8 +1103,10 @@ unittest
     assert(digest == cast(ubyte[])x"34aa973cd4c4daa4f61eeb2bdbad27316534016f");
     assert(digest224 == cast(ubyte[])x"20794655980c91d8bbb4c1ea97618a4bf03f42581948b2ee4ee7ad67");
     assert(digest256 == cast(ubyte[])x"cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
-    assert(digest384 == cast(ubyte[])x"9d0e1809716474cb086e834e310a4a1ced149e9c00f248527972cec5704c2a5b07b8b3dc38ecc4ebae97ddd87f3d8985");
-    assert(digest512 == cast(ubyte[])x"e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973ebde0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b");
+    assert(digest384 == cast(ubyte[])hexString!("9d0e1809716474cb086e834e310a4a1ced149e9c00f2485279"
+        ~"72cec5704c2a5b07b8b3dc38ecc4ebae97ddd87f3d8985"));
+    assert(digest512 == cast(ubyte[])hexString!("e718483d0ce769644e2e42c7bc15b4638e1f98b13b20442856"
+        ~"32a803afa973ebde0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b"));
     assert(digest512_224 == cast(ubyte[])x"37ab331d76f0d36de422bd0edeb22a28accd487b7a8453ae965dd287");
     assert(digest512_256 == cast(ubyte[])x"9a59a052930187a97038cae692f30708aa6491923ef5194394dc68d56c74fb21");
 
@@ -1094,7 +1115,7 @@ unittest
 }
 
 /**
- * These are convenience aliases for $(XREF_PACK digest,digest,digest) using the
+ * These are convenience aliases for $(REF digest, std,digest,digest) using the
  * SHA implementation.
  */
 //simple alias doesn't work here, hope this gets inlined...
@@ -1173,7 +1194,7 @@ unittest
  * OOP API SHA1 and SHA2 implementations.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(XREF_PACK digest,digest,WrapperDigest)!SHA1), see
+ * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!SHA1), see
  * there for more information.
  */
 alias SHA1Digest = WrapperDigest!SHA1;

@@ -46,12 +46,11 @@
  *      Not safe for multiple threads operating on the same signals
  *      or slots.
  * Macros:
- *      WIKI = Phobos/StdSignals
  *      SIGNALS=signals
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_signals.d)
  */
 /*          Copyright Digital Mars 2000 - 2009.
@@ -215,7 +214,7 @@ mixin template Signal(T1...)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.signals;
 
@@ -225,7 +224,7 @@ unittest
     {   // our slot
         void watch(string msg, int value)
         {
-            switch(observedMessageCounter++)
+            switch (observedMessageCounter++)
             {
                 case 0:
                     assert(msg == "setting new value");
@@ -282,7 +281,7 @@ unittest
 // so the unittest will run.
 void linkin() { }
 
-unittest
+@system unittest
 {
     class Observer
     {
@@ -352,7 +351,8 @@ unittest
     a.value = 7;
 }
 
-unittest {
+@system unittest
+{
     class Observer
     {
         int    i;
@@ -531,7 +531,7 @@ unittest {
 }
 
 version(none) // Disabled because of dmd @@@BUG5028@@@
-unittest
+@system unittest
 {
     class A
     {

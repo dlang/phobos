@@ -54,13 +54,20 @@ Quick_Start:
 $(SUBREF slice, sliced) is a function designed to create
 a multidimensional view over a range.
 Multidimensional view is presented by $(SUBREF slice, Slice) type.
+
 ------
-auto matrix = new double[12].sliced(3, 4);
+auto matrix = slice!double(3, 4);
 matrix[] = 0;
+matrix.diagonal[] = 1;
+
+auto row = matrix[2];
+row[3] = 6;
+assert(matrix[2, 3] == 6); // D & C index order
+assert(matrix(3, 2) == 6); // Math & Fortran index order
 ------
 
 Note:
-In many examples $(LINK2 std_range.html#iota, std.range.iota) is used
+In many examples $(LINK2 std_experimental_ndslice_selection.html#iotaSlice, iotaSlice) is used
 instead of a regular array, which makes it
 possible to carry out tests without memory allocation.
 
@@ -76,12 +83,19 @@ $(TR $(TDNW Basic Level
      $(TD
         $(SUBREF slice, sliced)
         $(SUBREF slice, Slice)
+        $(SUBREF slice, slice)
+        $(SUBREF slice, makeSlice)
+        $(SUBREF slice, ndarray)
+        $(SUBREF slice, makeNdarray)
+        $(SUBREF slice, shape)
+        $(SUBREF slice, Slice)
         $(SUBREF slice, assumeSameStructure)
         $(SUBREF slice, ReplaceArrayWithPointer)
         $(SUBREF slice, DeepElementType)
+        $(SUBREF slice, SliceException)
     )
 )
-$(TR $(TDNW Middle Level
+$(TR $(TDNW Medium Level
         $(BR) $(SMALL Various iteration operators))
      $(TDNW $(SUBMODULE iteration))
      $(TD
@@ -107,9 +121,11 @@ $(TR $(TDNW Advanced Level $(BR)
         $(SUBREF selection, byElement)
         $(SUBREF selection, byElementInStandardSimplex)
         $(SUBREF selection, indexSlice)
+        $(SUBREF selection, iotaSlice)
         $(SUBREF selection, pack)
         $(SUBREF selection, evertPack)
         $(SUBREF selection, unpack)
+        $(SUBREF selection, ReshapeException)
     )
 )
 ))
@@ -132,7 +148,7 @@ reflected from the original image, and then applying the given function to the
 new file.
 
 Note: You can find the example at
-$(LINK2 https://github.com/DlangScience/examples/tree/master/image_processing/median-filter, GitHub).
+$(LINK2 https://github.com/libmir/mir/blob/master/examples/median_filter.d, GitHub).
 
 -------
 /++
@@ -152,8 +168,8 @@ Returns:
 Slice!(3, C*) movingWindowByChannel(alias filter, C)
 (Slice!(3, C*) image, size_t nr, size_t nc)
 {
-    import std.algorithm.iteration: map;
-    import std.array: array;
+    import std.algorithm.iteration : map;
+    import std.array : array;
 
         // 0. 3D
         // The last dimension represents the color channel.
@@ -203,7 +219,7 @@ Returns:
 +/
 T median(Range, T)(Range r, T[] buf)
 {
-    import std.algorithm.sorting: topN;
+    import std.algorithm.sorting : topN;
     size_t n;
     foreach (e; r)
         buf[n++] = e;
@@ -218,9 +234,9 @@ The `main` function:
 -------
 void main(string[] args)
 {
-    import std.conv: to;
-    import std.getopt: getopt, defaultGetoptPrinter;
-    import std.path: stripExtension;
+    import std.conv : to;
+    import std.getopt : getopt, defaultGetoptPrinter;
+    import std.path : stripExtension;
 
     uint nr, nc, def = 3;
     auto helpInformation = args.getopt(
@@ -285,7 +301,7 @@ At the same time, while working with `ndslice`, an engineer has access to the
 whole set of standard D library, so the functions he creates will be as
 efficient as if they were written in C.
 
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   Ilya Yaroshenko
 
@@ -294,8 +310,8 @@ Acknowledgements:   John Loughran Colvin
 Source:    $(PHOBOSSRC std/_experimental/_ndslice/_package.d)
 
 Macros:
-SUBMODULE = $(LINK2 std_experimental_ndslice_$1.html, std.experimental.ndslice.$1)
-SUBREF = $(LINK2 std_experimental_ndslice_$1.html#.$2, $(TT $2))$(NBSP)
+SUBMODULE = $(MREF std, experimental, ndslice, $1)
+SUBREF = $(REF_ALTTEXT $(TT $2), $2, std,experimental, ndslice, $1)$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
 */
@@ -305,14 +321,26 @@ public import std.experimental.ndslice.slice;
 public import std.experimental.ndslice.iteration;
 public import std.experimental.ndslice.selection;
 
+unittest
+{
+    auto matrix = new double[12].sliced(3, 4);
+    matrix[] = 0;
+    matrix.diagonal[] = 1;
+
+    auto row = matrix[2];
+    row[3] = 6;
+    assert(matrix[2, 3] == 6); // D & C index order
+    assert(matrix(3, 2) == 6); // Math & Fortran index order
+}
+
 // relaxed example
 unittest
 {
     static Slice!(3, ubyte*) movingWindowByChannel
     (Slice!(3, ubyte*) image, size_t nr, size_t nc, ubyte delegate(Slice!(2, ubyte*)) filter)
     {
-        import std.algorithm.iteration: map;
-        import std.array: array;
+        import std.algorithm.iteration : map;
+        import std.array : array;
         auto wnds = image
             .pack!1
             .windows(nr, nc)
@@ -328,7 +356,7 @@ unittest
 
     static T median(Range, T)(Range r, T[] buf)
     {
-        import std.algorithm.sorting: topN;
+        import std.algorithm.sorting : topN;
         size_t n;
         foreach (e; r)
             buf[n++] = e;
@@ -337,9 +365,9 @@ unittest
         return buf[m];
     }
 
-    import std.conv: to;
-    import std.getopt: getopt, defaultGetoptPrinter;
-    import std.path: stripExtension;
+    import std.conv : to;
+    import std.getopt : getopt, defaultGetoptPrinter;
+    import std.path : stripExtension;
 
     auto args = ["std"];
     uint nr, nc, def = 3;
@@ -368,8 +396,8 @@ unittest
 
 @safe @nogc pure nothrow unittest
 {
-    import std.algorithm.comparison: equal;
-    import std.range: iota;
+    import std.algorithm.comparison : equal;
+    import std.range : iota;
     immutable r = 1000.iota;
 
     auto t0 = r.sliced(1000);
@@ -397,9 +425,9 @@ unittest
 
 pure nothrow unittest
 {
-    import std.algorithm.comparison: equal;
-    import std.array: array;
-    import std.range: iota;
+    import std.algorithm.comparison : equal;
+    import std.array : array;
+    import std.range : iota;
     auto r = 1000.iota.array;
 
     auto t0 = r.sliced(1000);
@@ -489,7 +517,7 @@ pure nothrow unittest
 
 @safe @nogc pure nothrow unittest
 {
-    import std.range: iota;
+    import std.range : iota;
     auto r = (10_000L * 2 * 3 * 4).iota;
 
     auto t0 = r.sliced(10, 20, 30, 40);
@@ -502,10 +530,10 @@ pure nothrow unittest
 
 pure nothrow unittest
 {
-    import std.experimental.ndslice.internal: Iota;
-    import std.meta: AliasSeq;
+    import std.experimental.ndslice.internal : Iota;
+    import std.meta : AliasSeq;
     import std.range;
-    import std.typecons: Tuple;
+    import std.typecons : Tuple;
     foreach (R; AliasSeq!(
         int*, int[], typeof(1.iota),
         const(int)*, const(int)[],
@@ -533,7 +561,7 @@ pure nothrow unittest
 
 pure nothrow unittest
 {
-    import std.experimental.ndslice.selection: pack;
+    import std.experimental.ndslice.selection : pack;
     auto slice = new int[24].sliced(2, 3, 4);
     auto r0 = slice.pack!1[1, 2];
     slice.pack!1[1, 2][] = 4;
