@@ -567,7 +567,7 @@ struct CodePoints(E)
         int result = 0;
         while (s.length != 0)
         {
-            size_t len = s.length;
+            immutable len = s.length;
             dchar c = decode(s);
             size_t j = i; // We don't want the delegate corrupting i
             result = dg(j,c);
@@ -715,8 +715,8 @@ private template GenericEncoder()
 
     dchar safeDecodeViaRead()()
     {
-        E c = read();
-        dchar d = (c >= m_charMapStart && c <= m_charMapEnd) ? charMap[c-m_charMapStart] : c;
+        immutable E c = read();
+        immutable d = (c >= m_charMapStart && c <= m_charMapEnd) ? charMap[c-m_charMapStart] : c;
         return d == 0xFFFD ? INVALID_SEQUENCE : d;
     }
 
@@ -797,7 +797,7 @@ template EncoderInstance(CharType : AsciiChar)
 
     dchar safeDecodeViaRead()()
     {
-        dchar c = read();
+        immutable c = read();
         return canEncode(c) ? c : INVALID_SEQUENCE;
     }
 
@@ -1230,7 +1230,7 @@ template EncoderInstance(CharType : char)
 
         if (!canRead) return INVALID_SEQUENCE;
         size_t d = peek();
-        bool err =
+        immutable err =
         (
             (c < 0xC2)                              // fail overlong 2-byte sequences
         ||  (c > 0xF4)                              // fail overlong 4-6-byte sequences
@@ -1263,7 +1263,7 @@ template EncoderInstance(CharType : char)
             shift += 6;
             auto d = read();
             size_t n = tails(cast(char) d);
-            size_t mask = n == 0 ? 0x3F : (1 << (6 - n)) - 1;
+            immutable mask = n == 0 ? 0x3F : (1 << (6 - n)) - 1;
             c += ((d & mask) << shift);
             if (n != 0) break;
         }
@@ -1328,7 +1328,7 @@ template EncoderInstance(CharType : wchar)
 
     void skipViaRead()()
     {
-        wchar c = read();
+        immutable c = read();
         if (c < 0xD800 || c >= 0xE000) return;
         read();
     }
@@ -1426,7 +1426,7 @@ template EncoderInstance(CharType : dchar)
 
     dchar safeDecodeViaRead()()
     {
-        dchar c = read();
+        immutable c = read();
         return isValidCodePoint(c) ? c : INVALID_SEQUENCE;
     }
 
@@ -1646,7 +1646,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
     const(E)[] t = s[n..$];
     while (t.length != 0)
     {
-        dchar c = EncoderInstance!(E).safeDecode(t);
+        immutable c = EncoderInstance!(E).safeDecode(t);
         assert(c == INVALID_SEQUENCE);
         len += repSeq.length;
         t = t[validLength(t)..$];
@@ -1660,7 +1660,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
     t = s[n..$];
     while (t.length != 0)
     {
-        dchar c = EncoderInstance!(E).safeDecode(t);
+        immutable c = EncoderInstance!(E).safeDecode(t);
         assert(c == INVALID_SEQUENCE);
         array[offset..offset+repSeq.length] = repSeq[];
         offset += repSeq.length;
@@ -2466,8 +2466,7 @@ abstract class EncodingScheme
     {
         while (s.length != 0)
         {
-            dchar d = safeDecode(s);
-            if (d == INVALID_SEQUENCE)
+            if (safeDecode(s) == INVALID_SEQUENCE)
                 return false;
         }
         return true;
@@ -2517,7 +2516,7 @@ abstract class EncodingScheme
         const(ubyte)[] t = s[n..$];
         while (t.length != 0)
         {
-            dchar c = safeDecode(t);
+            immutable c = safeDecode(t);
             assert(c == INVALID_SEQUENCE);
             len += repSeq.length;
             t = t[validLength(t)..$];
@@ -2531,7 +2530,7 @@ abstract class EncodingScheme
         t = s[n..$];
         while (t.length != 0)
         {
-            dchar c = safeDecode(t);
+            immutable c = safeDecode(t);
             assert(c == INVALID_SEQUENCE);
             array[offset..offset+repSeq.length] = repSeq[];
             offset += repSeq.length;
