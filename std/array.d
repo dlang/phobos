@@ -818,6 +818,10 @@ private void copyBackwards(T)(T[] src, T[] dest)
     Inserts $(D stuff) (which must be an input range or any number of
     implicitly convertible items) in $(D array) at position $(D pos).
 
+    Params:
+        array = The array that $(D stuff) will be inserted into.
+        pos   = The position in $(D array) to insert the $(D stuff).
+        stuff = An input range, or any number of implicitly convertible items to insert into $(D array).
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     if (!isSomeString!(T[])
