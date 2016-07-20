@@ -884,7 +884,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         }
         else
         {
-            import std.algorithm : bringToFront;
+            import std.algorithm.mutation : bringToFront;
             enforce(_data);
             immutable offset = r._a;
             enforce(offset <= length);
@@ -898,7 +898,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        import std.algorithm : bringToFront;
+        import std.algorithm.mutation : bringToFront;
         enforce(r._outer._data is _data);
         // TODO: optimize
         immutable offset = r._b;

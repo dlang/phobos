@@ -1427,7 +1427,7 @@ private:
 private:
     final void dispatch()
     {
-        import std.algorithm : remove;
+        import std.algorithm.mutation : remove;
 
         while ( m_fibers.length > 0 )
         {

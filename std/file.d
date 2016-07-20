@@ -259,7 +259,7 @@ void[] read(R)(auto ref R name, size_t upTo = size_t.max)
 
 version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @trusted
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
     import core.memory : GC;
     import std.conv : to;
@@ -308,7 +308,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
 
 version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @safe
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
     static trustedCreateFileW(const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
@@ -3987,7 +3987,7 @@ foreach (d; dFiles)
 auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
     import std.path : globMatch, baseName;
 
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }

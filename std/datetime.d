@@ -28164,7 +28164,8 @@ public:
             return PosixTimeZone.getInstalledTZNames(subName);
         else version(Windows)
         {
-            import std.algorithm : startsWith, sort;
+            import std.algorithm.searching : startsWith;
+            import std.algorithm.sorting : sort;
             import std.array : appender;
 
             auto windowsNames = WindowsTimeZone.getInstalledTZNames();
