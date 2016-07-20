@@ -1394,7 +1394,7 @@ struct Slice(size_t _N, _Range)
         Returns: stride of the corresponding dimension
         See_also: $(LREF .Slice.structure)
     +/
-    size_t stride(size_t dimension = 0)() @property const
+    sizediff_t stride(size_t dimension = 0)() @property const
         if (dimension < N)
     {
         return _strides[dimension];
