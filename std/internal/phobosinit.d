@@ -20,16 +20,3 @@ version(OSX)
         std_process_shared_static_this();
     }
 }
-
-shared static this()
-{
-    import std.encoding : EncodingScheme;
-    EncodingScheme.register("std.encoding.EncodingSchemeASCII");
-    EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
-    EncodingScheme.register("std.encoding.EncodingSchemeLatin2");
-    EncodingScheme.register("std.encoding.EncodingSchemeWindows1250");
-    EncodingScheme.register("std.encoding.EncodingSchemeWindows1252");
-    EncodingScheme.register("std.encoding.EncodingSchemeUtf8");
-    EncodingScheme.register("std.encoding.EncodingSchemeUtf16Native");
-    EncodingScheme.register("std.encoding.EncodingSchemeUtf32Native");
-}
