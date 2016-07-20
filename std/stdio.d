@@ -4236,6 +4236,10 @@ extern(C) void std_stdio_static_this()
 __gshared
 {
     /** The standard input stream.
+        Bugs:
+            Due to $(WEB https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+            it is thread un-safe to reassign `stdin` to a different `File` instance
+            than the default.
      */
     File stdin;
     ///
@@ -4254,8 +4258,22 @@ __gshared
         }
     }
 
-    File stdout; /// The standard output stream.
-    File stderr; /// The standard error stream.
+    /**
+        The standard output stream.
+        Bugs:
+            Due to $(WEB https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+            it is thread un-safe to reassign `stdout` to a different `File` instance
+            than the default.
+    */
+    File stdout;
+    /**
+        The standard error stream.
+        Bugs:
+            Due to $(WEB https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+            it is thread un-safe to reassign `stderr` to a different `File` instance
+            than the default.
+    */
+    File stderr;
 }
 
 @system unittest
