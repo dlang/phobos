@@ -1114,8 +1114,8 @@ pure nothrow:
 
     private T simpleIndex(size_t n) inout
     {
-        auto q = n / factor;
-        auto r = n % factor;
+        immutable q = n / factor;
+        immutable r = n % factor;
         return cast(T)((origin[q] >> bits*r) & mask);
     }
 
@@ -1127,10 +1127,10 @@ pure nothrow:
     }
     body
     {
-        auto q = n / factor;
-        auto r = n % factor;
-        size_t tgt_shift = bits*r;
-        size_t word = origin[q];
+        immutable q = n / factor;
+        immutable r = n % factor;
+        immutable tgt_shift = bits*r;
+        immutable word = origin[q];
         origin[q] = (word & ~(mask<<tgt_shift))
             | (cast(size_t)val << tgt_shift);
     }
@@ -1222,7 +1222,7 @@ pure nothrow:
     {
         s += ofs;
         e += ofs;
-        size_t pad_s = roundUp(s);
+        immutable pad_s = roundUp(s);
         if ( s >= e)
         {
             foreach (i; s..e)
@@ -1230,7 +1230,7 @@ pure nothrow:
                     return false;
             return true;
         }
-        size_t pad_e = roundDown(e);
+        immutable pad_e = roundDown(e);
         size_t i;
         for (i=s; i<pad_s; i++)
             if (ptr[i])
@@ -1293,7 +1293,7 @@ pure nothrow:
         start += ofs;
         end += ofs;
         // rounded to factor granularity
-        size_t pad_start = roundUp(start);// rounded up
+        immutable pad_start = roundUp(start);// rounded up
         if (pad_start >= end) //rounded up >= then end of slice
         {
             //nothing to gain, use per element assignment
@@ -1301,14 +1301,14 @@ pure nothrow:
                 ptr[i] = val;
             return;
         }
-        size_t pad_end = roundDown(end); // rounded down
+        immutable pad_end = roundDown(end); // rounded down
         size_t i;
         for (i=start; i<pad_start; i++)
             ptr[i] = val;
         // all in between is x*factor elements
         if (pad_start != pad_end)
         {
-            size_t repval = replicateBits!(factor, bits)(val);
+            immutable repval = replicateBits!(factor, bits)(val);
             for (size_t j=i/factor; i<pad_end; i+=factor, j++)
                 ptr.origin[j] = repval;// so speed it up by factor
         }
@@ -2548,7 +2548,7 @@ public:
             string deeper = indent~"    ";
             foreach (ival; ivals)
             {
-                auto span = ival[1] - ival[0];
+                immutable span = ival[1] - ival[0];
                 assert(span != 0);
                 if (span == 1)
                 {
@@ -2670,8 +2670,8 @@ private:
 
         @property auto front()const
         {
-            uint a = slice[start];
-            uint b = slice[start+1];
+            immutable a = slice[start];
+            immutable b = slice[start+1];
             return CodepointInterval(a, b);
         }
 
@@ -2685,8 +2685,8 @@ private:
 
         @property auto back()const
         {
-            uint a = slice[end-2];
-            uint b = slice[end-1];
+            immutable a = slice[end-2];
+            immutable b = slice[end-1];
             return CodepointInterval(a, b);
         }
 
@@ -2709,8 +2709,8 @@ private:
 
         auto opIndex(size_t idx) const
         {
-            uint a = slice[start+idx*2];
-            uint b = slice[start+idx*2+1];
+            immutable a = slice[start+idx*2];
+            immutable b = slice[start+idx*2+1];
             return CodepointInterval(a, b);
         }
 
@@ -2966,10 +2966,10 @@ private:
         if (idx & 1)// inside of interval, check for split
         {
 
-            uint top = data[idx];
+            immutable top = data[idx];
             if (top == a)// no need to split, it's end
                 return idx+1;
-            uint start = data[idx-1];
+            immutable start = data[idx-1];
             if (a == start)
                 return idx-1;
             // split it up
@@ -3080,7 +3080,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     {
         import std.algorithm.mutation : copy;
         import std.range.primitives : walkLength;
-        auto len = walkLength(range.save);
+        immutable len = walkLength(range.save);
         length = len;
         copy(range, data[0..$-1]);
     }
@@ -3097,7 +3097,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     {
         if (!empty)
         {
-            auto cnt = refCount;
+            immutable cnt = refCount;
             if (cnt == 1)
                 SP.destroy(data);
             else
@@ -3132,7 +3132,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
             refCount = 1;
             return;
         }
-        auto cur_cnt = refCount;
+        immutable cur_cnt = refCount;
         if (cur_cnt != 1) // have more references to this memory
         {
             refCount = cur_cnt - 1;
@@ -3232,7 +3232,7 @@ private:
 
     void freeThisReference()
     {
-        auto count = refCount;
+        immutable count = refCount;
         if (count != 1) // have more references to this memory
         {
             // dec shared ref-count
@@ -3762,8 +3762,8 @@ private:
         }
         // longer row of values
         // get to the next page boundary
-        size_t nextPB = (j + pageSize) & ~(pageSize-1);
-        size_t n =  nextPB - j;// can fill right in this page
+        immutable nextPB = (j + pageSize) & ~(pageSize-1);
+        immutable n =  nextPB - j;// can fill right in this page
         if (numVals < n) //fits in current page
         {
             ptr[j..j+numVals]  = val;
@@ -3822,8 +3822,8 @@ private:
         NextIdx next_lvl_index;
         enum pageSize = 1<<Prefix[level].bitSize;
         assert(idx!level % pageSize == 0);
-        auto last = idx!level-pageSize;
-        auto slice = ptr[idx!level - pageSize..idx!level];
+        immutable last = idx!level-pageSize;
+        const slice = ptr[idx!level - pageSize..idx!level];
         size_t j;
         for (j=0; j<last; j+=pageSize)
         {
@@ -3881,7 +3881,7 @@ private:
     void putAt(size_t idx, Value v)
     {
         assert(idx >= curIndex);
-        size_t numFillers = idx - curIndex;
+        immutable numFillers = idx - curIndex;
         addValue!lastLevel(defValue, numFillers);
         addValue!lastLevel(v, 1);
         curIndex = idx + 1;
@@ -4688,12 +4688,12 @@ template Utf8Matcher()
         {
             enum mode = Mode.skipOnMatch;
             assert(!inp.empty);
-            auto ch = inp[0];
+            immutable ch = inp[0];
             static if (hasASCII)
             {
                 if (ch < 0x80)
                 {
-                    bool r = tab!1[ch];
+                    immutable r = tab!1[ch];
                     if (r)
                         inp.popFront();
                     return r;
@@ -4918,7 +4918,7 @@ template Utf16Matcher()
         {
             enum mode = Mode.skipOnMatch;
             assert(!inp.empty);
-            auto ch = inp[0];
+            immutable ch = inp[0];
             static if (sizeFlags & 1)
             {
                 if (ch < 0x80)
@@ -4944,7 +4944,7 @@ template Utf16Matcher()
             {
                 enum mode = Mode.alwaysSkip;
                 assert(!inp.empty);
-                auto ch = inp[0];
+                immutable ch = inp[0];
                 static if (sizeFlags & 1)
                 {
                     if (ch < 0x80)
@@ -5703,10 +5703,10 @@ bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pu
 @safe uint decompressFrom(const(ubyte)[] arr, ref size_t idx) pure
 {
     import std.exception : enforce;
-    uint first = arr[idx++];
+    immutable first = arr[idx++];
     if (!(first & 0x80)) // no top bit -> [0..127]
         return first;
-    uint extra = ((first>>5) & 1) + 1; // [1, 2]
+    immutable extra = ((first>>5) & 1) + 1; // [1, 2]
     uint val = (first & 0x1F);
     enforce(idx + extra <= arr.length, "bad code point interval encoding");
     foreach (j; 0..extra)
@@ -6159,7 +6159,7 @@ private:
         import std.conv : to;
         import std.internal.unicode_tables : blocks, scripts; // generated file
         Set set;
-        bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
+        immutable loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
             || (name.length > 2 && ucmp(name[0..2],"In") == 0
                 && loadUnicodeSet!(blocks.tab)(name[2..$], set));
         if (loaded)
@@ -6809,7 +6809,7 @@ private:
     void convertToBig()
     {
         import core.stdc.stdlib : malloc;
-        size_t k = smallLength;
+        immutable k = smallLength;
         ubyte* p = cast(ubyte*)enforce(malloc(3*(grow+1)), "malloc failed");
         for (int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
@@ -6964,7 +6964,7 @@ int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
     {
         if (ridx == str2.length)
             return 1;
-        dchar rhs = decode(str2, ridx);
+        immutable rhs = decode(str2, ridx);
         int diff = lhs - rhs;
         if (!diff)
             continue;
@@ -7032,8 +7032,8 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     // fullCaseTrie is packed index table
     if (idx == EMPTY_CASE_TRIE)
         return lhs;
-    size_t start = idx - fTable[idx].n;
-    size_t end = fTable[idx].size + start;
+    immutable start = idx - fTable[idx].n;
+    immutable end = fTable[idx].size + start;
     assert(fTable[start].entry_len == 1);
     for (idx=start; idx<end; idx++)
     {
@@ -7094,27 +7094,25 @@ int icmp(S1, S2)(S1 r1, S2 r2)
     {
         if (str1.empty)
             return str2.empty ? 0 : -1;
-        dchar lhs = str1.front;
+        immutable lhs = str1.front;
         if (str2.empty)
             return 1;
-        dchar rhs = str2.front;
+        immutable rhs = str2.front;
         str1.popFront();
         str2.popFront();
-        int diff = lhs - rhs;
-        if (!diff)
+        if (!(lhs - rhs))
             continue;
         // first try to match lhs to <rhs,right-tail> sequence
-        int cmpLR = fullCasedCmp(lhs, rhs, str2);
+        immutable cmpLR = fullCasedCmp(lhs, rhs, str2);
         if (!cmpLR)
             continue;
         // then rhs to <lhs,left-tail> sequence
-        int cmpRL = fullCasedCmp(rhs, lhs, str1);
+        immutable cmpRL = fullCasedCmp(rhs, lhs, str1);
         if (!cmpRL)
             continue;
         // cmpXX contain remapped codepoints
         // to obtain stable ordering of icmp
-        diff = cmpLR - cmpRL;
-        return diff;
+        return cmpLR - cmpRL;
     }
 }
 
@@ -7367,17 +7365,17 @@ public dchar compose(dchar first, dchar second) pure nothrow
     import std.algorithm.iteration : map;
     import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
     import std.range : assumeSorted;
-    size_t packed = compositionJumpTrie[first];
+    immutable packed = compositionJumpTrie[first];
     if (packed == ushort.max)
         return dchar.init;
     // unpack offset and length
-    size_t idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
+    immutable idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
     // TODO: optimize this micro binary search (no more then 4-5 steps)
     auto r = compositionTable[idx..idx+cnt].map!"a.rhs"().assumeSorted();
-    auto target = r.lowerBound(second).length;
+    immutable target = r.lowerBound(second).length;
     if (target == cnt)
         return dchar.init;
-    auto entry = compositionTable[idx+target];
+    immutable entry = compositionTable[idx+target];
     if (entry.rhs != second)
         return dchar.init;
     return entry.composed;
@@ -7423,7 +7421,7 @@ public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
         alias table = decompCompatTable;
         alias mapping = compatMappingTrie;
     }
-    ushort idx = mapping[ch];
+    immutable idx = mapping[ch];
     if (!idx) // not found, check hangul arithmetic decomposition
         return decomposeHangul(ch);
     auto decomp = table[idx..$].until(0);
@@ -7493,9 +7491,9 @@ void hangulRecompose(dchar[] seq) pure nothrow @nogc
     {
         if (isJamoL(seq[idx]) && isJamoV(seq[idx+1]))
         {
-            int indexL = seq[idx] - jamoLBase;
-            int indexV = seq[idx+1] - jamoVBase;
-            int indexLV = indexL * jamoNCount + indexV * jamoTCount;
+            immutable int indexL = seq[idx] - jamoLBase;
+            immutable int indexV = seq[idx+1] - jamoVBase;
+            immutable int indexLV = indexL * jamoNCount + indexV * jamoTCount;
             if (idx + 2 < seq.length && isJamoT(seq[idx+2]))
             {
                 seq[idx] = jamoSBase + indexLV + seq[idx+2] - jamoTBase;
@@ -7524,14 +7522,14 @@ public:
 */
 Grapheme decomposeHangul(dchar ch)
 {
-    int idxS = cast(int)ch - jamoSBase;
+    immutable idxS = cast(int)ch - jamoSBase;
     if (idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
-    int idxL = idxS / jamoNCount;
-    int idxV = (idxS % jamoNCount) / jamoTCount;
-    int idxT = idxS % jamoTCount;
+    immutable idxL = idxS / jamoNCount;
+    immutable idxV = (idxS % jamoNCount) / jamoTCount;
+    immutable idxT = idxS % jamoTCount;
 
-    int partL = jamoLBase + idxL;
-    int partV = jamoVBase + idxV;
+    immutable partL = jamoLBase + idxL;
+    immutable partV = jamoVBase + idxV;
     if (idxT > 0) // there is a trailling consonant (T); <L,V,T> decomposition
         return Grapheme(partL, partV, jamoTBase + idxT);
     else // <L, V> decomposition
@@ -7558,12 +7556,12 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothr
 {
     if (!isJamoL(lead))
         return dchar.init;
-    int indexL = lead - jamoLBase;
+    immutable indexL = lead - jamoLBase;
     if (!isJamoV(vowel))
         return dchar.init;
-    int indexV = vowel - jamoVBase;
-    int indexLV = indexL * jamoNCount + indexV * jamoTCount;
-    dchar syllable = jamoSBase + indexLV;
+    immutable indexV = vowel - jamoVBase;
+    immutable indexLV = indexL * jamoNCount + indexV * jamoTCount;
+    immutable dchar syllable = jamoSBase + indexLV;
     return isJamoT(trailing) ? syllable + (trailing - jamoTBase) : syllable;
 }
 
@@ -7674,7 +7672,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 
         foreach (idx, dchar ch; decomposed)
         {
-            auto clazz = combiningClass(ch);
+            immutable clazz = combiningClass(ch);
             ccc[idx] = clazz;
             if (clazz == 0 && lastClazz != 0)
             {
@@ -7700,7 +7698,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             {
                 for (;;)
                 {
-                    auto second = recompose(first, decomposed, ccc);
+                    immutable second = recompose(first, decomposed, ccc);
                     if (second == decomposed.length)
                         break;
                     first = second;
@@ -7779,7 +7777,7 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
     {
         if (i == input.length)
             break;
-        int curCC = ccc[i];
+        immutable curCC = ccc[i];
         // In any character sequence beginning with a starter S
         // a character C is blocked from S if and only if there
         // is some character B between S and C, and either B
@@ -7793,7 +7791,7 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
 
         if (curCC > accumCC)
         {
-            dchar comp = compose(input[start], input[i]);
+            immutable comp = compose(input[start], input[i]);
             if (comp != dchar.init)
             {
                 input[start] = comp;
@@ -7837,7 +7835,7 @@ private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
                 lastCC = 0;
                 continue;
             }
-        ubyte CC = combiningClass(ch);
+        immutable ubyte CC = combiningClass(ch);
         if (lastCC > CC && CC != 0)
         {
             return seekStable!norm(idx, input);
@@ -8106,7 +8104,7 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, 
                 {
                     auto val = tableFn(idx);
                     // unpack length + codepoint
-                    uint len = val>>24;
+                    immutable uint len = val>>24;
                     result.put(cast(dchar)(val & 0xFF_FFFF));
                     foreach (j; idx+1..idx+len)
                         result.put(tableFn(j));
@@ -8171,7 +8169,7 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
                     }
                     else
                     {
-                        auto val = tableFn(idx);
+                        immutable val = tableFn(idx);
                         // unpack length + codepoint
                         nLeft = val >> 24;
                         if (nLeft == 0)
@@ -8361,7 +8359,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
 
             if (!nLeft)
             {
-                dchar c = r.front;
+                immutable dchar c = r.front;
                 const idx = indexFnUpper(c);
                 if (idx == ushort.max)
                 {
@@ -8375,7 +8373,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
                 }
                 else
                 {
-                    auto val = tableFnUpper(idx);
+                    immutable val = tableFnUpper(idx);
                     // unpack length + codepoint
                     nLeft = val >> 24;
                     if (nLeft == 0)
@@ -8640,9 +8638,9 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
     while (curIdx != s.length)
     {
         size_t startIdx = curIdx;
-        dchar ch = decode(s, curIdx);
+        immutable ch = decode(s, curIdx);
         // TODO: special case for ASCII
-        auto caseIndex = indexFn(ch);
+        immutable caseIndex = indexFn(ch);
         if (caseIndex == ushort.max) // unchanged, skip over
         {
             continue;
@@ -8653,8 +8651,8 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
             // thus can just adjust pointer
             destIdx = moveTo(s, destIdx, lastUnchanged, startIdx);
             lastUnchanged = curIdx;
-            dchar cased = tableFn(caseIndex);
-            auto casedLen = codeLength!C(cased);
+            immutable cased = tableFn(caseIndex);
+            immutable casedLen = codeLength!C(cased);
             if (casedLen + destIdx > curIdx) // no place to fit cased char
             {
                 // switch to slow codepath, where we allocate
@@ -8691,25 +8689,25 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
         size_t curIdx = 0;
         while (curIdx != str.length)
         {
-            size_t startIdx = curIdx;
-            dchar ch = decode(str, curIdx);
-            ushort caseIndex = indexFn(ch);
+            immutable startIdx = curIdx;
+            immutable ch = decode(str, curIdx);
+            immutable ushort caseIndex = indexFn(ch);
             if (caseIndex == ushort.max)
                 continue;
             else if (caseIndex < maxIdx)
             {
                 codeLen += startIdx - lastNonTrivial;
                 lastNonTrivial = curIdx;
-                dchar cased = tableFn(caseIndex);
+                immutable cased = tableFn(caseIndex);
                 codeLen += codeLength!C(cased);
             }
             else
             {
                 codeLen += startIdx - lastNonTrivial;
                 lastNonTrivial = curIdx;
-                auto val = tableFn(caseIndex);
-                auto len = val>>24;
-                dchar cased = val & 0xFF_FFFF;
+                immutable val = tableFn(caseIndex);
+                immutable len = val>>24;
+                immutable dchar cased = val & 0xFF_FFFF;
                 codeLen += codeLength!C(cased);
                 foreach (j; caseIndex+1..caseIndex+len)
                     codeLen += codeLength!C(tableFn(j));
@@ -8744,16 +8742,16 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
         size_t lastUnchanged = curIdx;
         while (curIdx != s.length)
         {
-            size_t startIdx = curIdx; // start of current codepoint
-            dchar ch = decode(s, curIdx);
-            auto caseIndex = indexFn(ch);
+            immutable startIdx = curIdx; // start of current codepoint
+            immutable ch = decode(s, curIdx);
+            immutable caseIndex = indexFn(ch);
             if (caseIndex == ushort.max) // skip over
             {
                 continue;
             }
             else if (caseIndex < maxIdx)  // 1:1 codepoint mapping
             {
-                dchar cased = tableFn(caseIndex);
+                immutable cased = tableFn(caseIndex);
                 auto toCopy = startIdx - lastUnchanged;
                 ns[destIdx .. destIdx+toCopy] = s[lastUnchanged .. startIdx];
                 lastUnchanged = curIdx;
@@ -8768,7 +8766,7 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
                 destIdx += toCopy;
                 auto val = tableFn(caseIndex);
                 // unpack length + codepoint
-                uint len = val>>24;
+                immutable uint len = val>>24;
                 destIdx = encodeTo(ns, destIdx, cast(dchar)(val & 0xFF_FFFF));
                 foreach (j; caseIndex+1..caseIndex+len)
                     destIdx = encodeTo(ns, destIdx, tableFn(j));
