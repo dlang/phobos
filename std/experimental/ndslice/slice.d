@@ -974,7 +974,7 @@ import std.experimental.ndslice;
 auto a = new double[24];
 Slice!(3, double*) s = a.sliced(2, 3, 4);
 Slice!(3, double*) t = s.transposed!(1, 2, 0);
-Slice!(3, double*) r = r.reversed!1;
+Slice!(3, double*) r = t.reversed!1;
 -------
 
 Representation
@@ -1045,7 +1045,7 @@ auto a = iota(24);
 alias A = typeof(a);
 Slice!(3, A) s = a.sliced(2, 3, 4);
 Slice!(3, A) t = s.transposed!(1, 2, 0);
-Slice!(3, A) r = r.reversed!1;
+Slice!(3, A) r = t.reversed!1;
 -------
 
 Representation
