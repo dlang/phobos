@@ -21,7 +21,6 @@ Distributed under the Boost Software License, Version 1.0.
 module std.numeric;
 
 import std.complex;
-import std.exception;
 import std.math;
 import std.range.primitives;
 import std.traits;
@@ -260,6 +259,7 @@ private:
     // Set the current value from signed exponent, normalized form
     void fromNormalized(T,U)(ref T sig, ref U exp)
     {
+        import std.exception : enforce;
         auto shift = (T.sizeof*8) - precision;
         if (exp == exp.max)
         {
@@ -495,6 +495,8 @@ public:
         if (__traits(compiles, cast(real)input))
     {
         import std.conv : text;
+        import std.exception : enforce;
+
         static if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
             auto value = ToBinary!(Unqual!F)(input);
         else
@@ -1626,6 +1628,8 @@ CommonType!(ElementType!(Range1), ElementType!(Range2))
 euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
+    import std.exception : enforce;
+
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
@@ -1643,6 +1647,8 @@ CommonType!(ElementType!(Range1), ElementType!(Range2))
 euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
+    import std.exception : enforce;
+
     limit *= limit;
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
@@ -1686,6 +1692,8 @@ dotProduct(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2) &&
         !(isArray!(Range1) && isArray!(Range2)))
 {
+    import std.exception : enforce;
+
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
@@ -1754,6 +1762,7 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 @system unittest
 {
     // @system due to dotProduct and assertCTFEable
+    import std.exception : assertCTFEable;
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(double, const double, immutable double))
     {
@@ -1781,6 +1790,8 @@ CommonType!(ElementType!(Range1), ElementType!(Range2))
 cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
+    import std.exception : enforce;
+
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     Unqual!(typeof(return)) norma = 0, normb = 0, dotprod = 0;
@@ -1975,6 +1986,8 @@ CommonType!(ElementType!Range1, ElementType!Range2)
 kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
+    import std.exception : enforce;
+
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
@@ -2021,6 +2034,8 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!Range1 && isInputRange!Range2 &&
         is(CommonType!(ElementType!Range1, ElementType!Range2)))
 {
+    import std.exception : enforce;
+
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
@@ -2049,6 +2064,8 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
        is(typeof(CommonType!(ElementType!Range1, ElementType!Range2).init
                            >= F.init) : bool))
 {
+    import std.exception : enforce;
+
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
@@ -2163,6 +2180,7 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
 {
     import std.functional : binaryFun;
     import std.algorithm : swap;
+    import std.exception : enforce;
     import core.stdc.stdlib : malloc, free;
 
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
@@ -2301,6 +2319,7 @@ time and computes all matches of length 1.
  */
     this(Range s, Range t, F lambda)
     {
+        import std.exception : enforce, errnoEnforce;
         enforce(lambda > 0);
         this.gram = 0;
         this.lambda = lambda;
@@ -2576,6 +2595,7 @@ T gcd(T)(T a, T b)
     {
         static if (T.min < 0)
         {
+            import std.exception : enforce;
             enforce(a >= 0 && b >=0);
         }
         while (b)
@@ -2625,6 +2645,7 @@ private:
     void enforceSize(R)(R range) const
     {
         import std.conv : text;
+        import std.exception : enforce;
         enforce(range.length <= size, text(
             "FFT size mismatch.  Expected ", size, ", got ", range.length));
     }
@@ -2850,6 +2871,7 @@ private:
     // to immutable.
     public this(lookup_t[] memSpace)  // Public b/c of bug 4636.
     {
+        import std.exception : enforce;
         immutable size = memSpace.length / 2;
 
         /* Create a lookup table of all negative sine values at a resolution of
@@ -2964,6 +2986,7 @@ public:
     void fft(Ret, R)(R range, Ret buf) const
         if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
     {
+        import std.exception : enforce;
         enforce(buf.length == range.length);
         enforceSize(range);
 
