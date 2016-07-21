@@ -37,8 +37,9 @@ Params:
     Names = names of elements in a slice tuple.
         Slice tuple is a slice, which holds single set of lengths and strides
         for a number of ranges.
-    mod = If `yes`, the array will be replaced with its pointer to improve performance.
-Use `no` for compile time function evaluation.
+    replaceArrayWithPointer = If `yes`, the array will be replaced with
+        its pointer to improve performance.
+        Use `no` for compile time function evaluation.
 
 Returns:
     n-dimensional slice
