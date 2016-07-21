@@ -28174,7 +28174,7 @@ public:
             foreach (winName; windowsNames)
             {
                 auto tzName = windowsTZNameToTZDatabaseName(winName);
-                if(tzName !is null && tzName.startsWith(subName))
+                if (tzName !is null && tzName.startsWith(subName))
                     retval.put(tzName);
             }
 
@@ -31586,7 +31586,7 @@ version(Windows) version(UpdateWindowsTZTranslations) deprecated @system unittes
 {
     import std.stdio : stderr;
 
-    foreach(tzName; TimeZone.getInstalledTZNames())
+    foreach (tzName; TimeZone.getInstalledTZNames())
     {
         if (tzDatabaseNameToWindowsTZName(tzName) is null)
             stderr.writeln("Missing TZName to Windows translation: ", tzName);
@@ -31766,7 +31766,7 @@ version(Windows) version(UpdateWindowsTZTranslations) deprecated @system unittes
 {
     import std.stdio : stderr;
 
-    foreach(winName; WindowsTimeZone.getInstalledTZNames())
+    foreach (winName; WindowsTimeZone.getInstalledTZNames())
     {
         if (windowsTZNameToTZDatabaseName(winName) is null)
             stderr.writeln("Missing Windows to TZName translation: ", winName);
