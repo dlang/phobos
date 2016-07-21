@@ -182,7 +182,7 @@ private:
 
         // If on Linux or Mac, where 80-bit reals are padded, ignore the
         // padding.
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
         CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
 
         // Convert F to the correct binary type.
@@ -2179,7 +2179,7 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
         isRandomAccessRange!(R2) && hasLength!(R2))
 {
     import std.functional : binaryFun;
-    import std.algorithm : swap;
+    import std.algorithm.mutation : swap;
     import std.exception : enforce;
     import core.stdc.stdlib : malloc, free;
 
@@ -2388,7 +2388,7 @@ time and computes all matches of length 1.
      */
     void popFront()
     {
-        import std.algorithm : swap;
+        import std.algorithm.mutation : swap;
 
         // This is a large source of optimization: if similarity at
         // the gram-1 level was 0, then we can safely assume
@@ -2635,7 +2635,7 @@ private alias lookup_t = float;
  */
 final class Fft
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import core.bitop : bsf;
     import std.array : uninitializedArray;
 
