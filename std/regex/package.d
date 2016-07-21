@@ -457,7 +457,7 @@ private:
         _f = 0;
     }
 
-    @property Group!DataIndex[] matches()
+    @property inout(Group!DataIndex[]) matches() inout
     {
        return (_refcount & SMALL_MASK)  ? small_matches[0 .. _refcount & 0xFF] : big_matches;
     }
@@ -557,7 +557,7 @@ public:
     @property bool empty() const { return _nMatch == 0 || _f >= _b; }
 
     ///ditto
-    R opIndex()(size_t i) /*const*/ //@@@BUG@@@
+    inout(R) opIndex()(size_t i) inout
     {
         assert(_f + i < _b,text("requested submatch number ", i," is out of range"));
         assert(matches[_f + i].begin <= matches[_f + i].end,
@@ -761,13 +761,13 @@ public:
     auto save(){ return this; }
 
     ///Test if this match object is empty.
-    @property bool empty(){ return _captures._nMatch == 0; }
+    @property bool empty() const { return _captures._nMatch == 0; }
 
     ///Same as !(x.empty), provided for its convenience  in conditional statements.
     T opCast(T:bool)(){ return !empty; }
 
     /// Same as .front, provided for compatibility with original std.regex.
-    @property auto captures(){ return _captures; }
+    @property auto captures() inout { return _captures; }
 
 }
 

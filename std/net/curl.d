@@ -1978,7 +1978,7 @@ private mixin template Protocol()
     /// ditto
     @property void netInterface(const(ubyte)[4] i)
     {
-        auto str = format("%d.%d.%d.%d", i[0], i[1], i[2], i[3]);
+        const str = format("%d.%d.%d.%d", i[0], i[1], i[2], i[3]);
         netInterface = str;
     }
 
@@ -2195,7 +2195,7 @@ decodeString(Char = char)(const(ubyte)[] data,
                           size_t maxChars = size_t.max)
 {
     Char[] res;
-    auto startLen = data.length;
+    immutable startLen = data.length;
     size_t charsDecoded = 0;
     while (data.length && charsDecoded < maxChars)
     {
@@ -2238,8 +2238,8 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
     if (basesrc.length != 0)
     {
         // Try to ensure 4 entries in the basesrc by copying from src.
-        auto blen = basesrc.length;
-        size_t len = (basesrc.length + src.length) >= 4 ?
+        immutable blen = basesrc.length;
+        immutable len = (basesrc.length + src.length) >= 4 ?
                      4 : basesrc.length + src.length;
         basesrc.length = len;
 
@@ -2256,7 +2256,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
 
     while (src.length)
     {
-        auto lsrc = src;
+        const lsrc = src;
         dchar dc = scheme.safeDecode(src);
         if (dc == INVALID_SEQUENCE)
         {
@@ -2371,10 +2371,9 @@ struct HTTP
                     }
                     if (header.startsWith("HTTP/"))
                     {
-                        string[string] empty;
-                        headersIn = empty; // clear
+                        headersIn.clear();
 
-                        auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
+                        const m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
                         if (m.empty)
                         {
                             // Invalid status line
@@ -4732,8 +4731,8 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     static if ( !is(Terminator == void))
     {
         // Only lines reading will receive a terminator
-        auto terminator = receiveOnly!Terminator();
-        auto keepTerminator = receiveOnly!bool();
+        const terminator = receiveOnly!Terminator();
+        const keepTerminator = receiveOnly!bool();
 
         // max number of bytes to carry over from an onReceive
         // callback. This is 4 because it is the max code units to
