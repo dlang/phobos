@@ -226,12 +226,4 @@ pure nothrow unittest
     assert(lengthsProduct([3, 4, 5]) == 60);
 }
 
-enum canSave(T) = isPointer!T || isDynamicArray!T ||
-    __traits(compiles,
-    {
-        T r1 = T.init;
-        auto s1 = r1.save;
-        static assert (is(typeof(s1) == T));
-    });
-
 struct _Slice { size_t i, j; }
