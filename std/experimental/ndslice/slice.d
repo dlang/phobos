@@ -46,7 +46,7 @@ Returns:
 auto sliced(
     Flag!"replaceArrayWithPointer" replaceArrayWithPointer = Yes.replaceArrayWithPointer,
     Flag!"allowDownsize" allowDownsize = No.allowDownsize,
-    Range, Lengths...)(Range range, Lengths lengths)
+    Range, Lengths...)(Range range, Lengths lengths)  @trusted
     if (!isStaticArray!Range && !isNarrowString!Range
         && allSatisfy!(isIndex, Lengths) && Lengths.length)
 {
@@ -57,7 +57,7 @@ auto sliced(
 auto sliced(
     Flag!"replaceArrayWithPointer" replaceArrayWithPointer = Yes.replaceArrayWithPointer,
     Flag!"allowDownsize" allowDownsize = No.allowDownsize,
-    size_t N, Range)(Range range, auto ref in size_t[N] lengths, size_t shift = 0)
+    size_t N, Range)(Range range, auto ref in size_t[N] lengths, size_t shift = 0) @trusted
     if (!isStaticArray!Range && !isNarrowString!Range && N)
 in
 {
@@ -149,7 +149,7 @@ template sliced(Names...)
             " ~ _Range_Types!Names ~ "
             Lengths...)
             (" ~ _Range_DeclarationList!Names ~
-            "Lengths lengths)
+            "Lengths lengths) @trusted
     if (allSatisfy!(isIndex, Lengths))
     {
         alias sliced = .sliced!Names;
@@ -162,7 +162,7 @@ template sliced(Names...)
             size_t N, " ~ _Range_Types!Names ~ ")
             (" ~ _Range_DeclarationList!Names ~"
             auto ref in size_t[N] lengths,
-            size_t shift = 0)
+            size_t shift = 0) @trusted
     {
         alias RS = AliasSeq!(" ~ _Range_Types!Names ~ ");"
         ~ q{
@@ -215,7 +215,7 @@ template sliced(Names...)
 auto sliced(
     Flag!"replaceArrayWithPointer" replaceArrayWithPointer = Yes.replaceArrayWithPointer,
     Flag!"allowDownsize" allowDownsize = No.allowDownsize,
-    Range)(Range range)
+    Range)(Range range) @trusted
     if (!isStaticArray!Range && !isNarrowString!Range && hasLength!Range)
 {
     return .sliced!(replaceArrayWithPointer, allowDownsize, 1, Range)(range, [range.length]);
@@ -249,7 +249,7 @@ pure nothrow unittest
 }
 
 /// $(LINK2 https://en.wikipedia.org/wiki/Vandermonde_matrix, Vandermonde matrix)
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     auto vandermondeMatrix(Slice!(1, double*) x)
     {
@@ -274,7 +274,7 @@ pure nothrow unittest
 Creates a slice composed of named elements, each one of which corresponds
 to a given argument. See also $(LREF assumeSameStructure).
 +/
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.experimental.ndslice.selection : byElement;
@@ -320,7 +320,7 @@ pure nothrow @nogc unittest
 }
 
 /// Random access range primitives for slices over user defined types
-pure nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
     struct MyIota
     {
@@ -351,7 +351,7 @@ pure nothrow @nogc unittest
 }
 
 /// Slice tuple and flags
-pure nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
     import std.typecons : Yes, No;
     static immutable a = [1, 2, 3, 4, 5, 6];
@@ -363,7 +363,7 @@ pure nothrow @nogc unittest
 }
 
 // sliced slice
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
     auto data = new int[24];
@@ -545,6 +545,7 @@ Params:
 Returns:
     n-dimensional slice
 +/
+@trusted
 Slice!(Lengths.length, Select!(replaceArrayWithPointer, T*, T[]))
 slice(T,
     Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
@@ -555,6 +556,7 @@ slice(T,
 }
 
 /// ditto
+@trusted
 Slice!(N, Select!(replaceArrayWithPointer, T*, T[]))
 slice(T,
     Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
@@ -565,6 +567,7 @@ slice(T,
 }
 
 /// ditto
+@trusted
 auto slice(T,
     Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
     size_t N)(auto ref in size_t[N] lengths, auto ref T init)
@@ -585,6 +588,7 @@ auto slice(T,
 }
 
 /// ditto
+@trusted
 auto slice(
     Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
     size_t N, Range)(auto ref Slice!(N, Range) slice)
@@ -727,6 +731,7 @@ Params:
 Returns:
     multidimensional D array
 +/
+@trusted
 auto ndarray(size_t N, Range)(auto ref Slice!(N, Range) slice)
 {
     import std.array : array;
@@ -805,6 +810,7 @@ Returns:
 Throws:
     $(LREF SliceException) if the array is not an n-dimensional parallelotope.
 +/
+@trusted
 auto shape(T)(T[] array) @property
 {
     static if (isDynamicArray!T)
@@ -1093,6 +1099,7 @@ struct Slice(size_t _N, _Range)
                      && (isPointer!_Range || is(typeof(_Range.init[size_t.init]))))
                     || is(_Range == Slice!(N1, Range1), size_t N1, Range1)))
 {
+    @trusted:
     package:
 
     enum doUnittest = is(_Range == int*) && _N == 1;
@@ -1181,7 +1188,7 @@ struct Slice(size_t _N, _Range)
     }
 
     static if (!hasPtrBehavior!PureRange)
-    this(in size_t[PureN] lengths, in sizediff_t[PureN] strides, PtrShell!PureRange shell)
+    this(in size_t[PureN] lengths, in sizediff_t[PureN] strides, PtrShell!PureRange shell) @system
     {
         foreach (i; Iota!(0, PureN))
             _lengths[i] = lengths[i];
@@ -1199,7 +1206,7 @@ struct Slice(size_t _N, _Range)
         strides = strides
         range = range or pointer to iterate on
     +/
-    this(in size_t[PureN] lengths, in sizediff_t[PureN] strides, PureRange range)
+    this(in size_t[PureN] lengths, in sizediff_t[PureN] strides, PureRange range) @system
     {
         foreach (i; Iota!(0, PureN))
             _lengths[i] = lengths[i];
@@ -1249,7 +1256,7 @@ struct Slice(size_t _N, _Range)
         if and only if all strides are positive.
     +/
     static if (is(PureRange == Range))
-    auto ptr() @property
+    auto ptr() @property @system
     {
         static if (hasPtrBehavior!PureRange)
         {

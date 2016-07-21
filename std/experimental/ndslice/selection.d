@@ -59,6 +59,8 @@ import std.meta; //: allSatisfy;
 import std.experimental.ndslice.internal;
 import std.experimental.ndslice.slice; //: Slice;
 
+@trusted:
+
 /++
 Creates a packed slice, i.e. slice of slices.
 The function does not carry out any calculations, it simply returns the same
@@ -159,7 +161,7 @@ Slice!(N, Range).PureThis unpack(size_t N, Range)(auto ref Slice!(N, Range) slic
 }
 
 ///
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     auto a = iotaSlice(3, 4, 5, 6, 7, 8, 9, 10, 11);
     auto b = a.pack!(2, 3).unpack();
@@ -215,7 +217,7 @@ evertPack(size_t N, Range)(auto ref Slice!(N, Range) slice)
 }
 
 ///
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration : transposed;
@@ -327,7 +329,7 @@ Slice!(1, Range) diagonal(size_t N, Range)(auto ref Slice!(N, Range) slice)
 }
 
 /// Loop through diagonal
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
 
@@ -482,7 +484,7 @@ body
 }
 
 ///
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(5, 8);
@@ -508,7 +510,7 @@ pure nothrow unittest
 }
 
 /// Diagonal blocks
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(5, 8);
@@ -539,7 +541,7 @@ pure nothrow unittest
 }
 
 /// Matrix divided into vertical blocks
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(5, 13);
@@ -666,7 +668,7 @@ pure nothrow unittest
 }
 
 /// Sliding window over matrix columns
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(5, 8);
@@ -795,7 +797,7 @@ Slice!(Lengths.length, Range)
 }
 
 /// Reshaping with memory allocation
-pure unittest
+@safe pure unittest
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration : reversed;
@@ -837,7 +839,7 @@ pure unittest
 }
 
 // Issue 15919
-unittest
+@safe unittest
 {
     assert(iotaSlice(3, 4, 5, 6, 7).pack!2.reshape(4, 3, 5)[0, 0, 0].shape == cast(size_t[2])[6, 7]);
 }
@@ -856,7 +858,7 @@ unittest
     assertThrown!ReshapeException(e.reshape(1));
 }
 
-unittest
+@safe unittest
 {
     auto pElements = iotaSlice(3, 4, 5, 6, 7)
         .pack!2
@@ -1187,7 +1189,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
 }
 
 /// Properties
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     auto elems = iotaSlice(3, 4).byElement;
 
@@ -1201,7 +1203,7 @@ pure nothrow unittest
 }
 
 /// Index property
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = new long[20].sliced(5, 4);
@@ -1219,7 +1221,7 @@ pure nothrow unittest
          [40, 43, 46, 49]]);
 }
 
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     // test save
     import std.range : dropOne;
@@ -1234,7 +1236,7 @@ pure nothrow unittest
 /++
 Random access and slicing
 +/
-@nogc nothrow unittest
+@safe @nogc nothrow unittest
 {
     import std.experimental.ndslice.slice;
     import std.algorithm.comparison : equal;
