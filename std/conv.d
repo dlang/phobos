@@ -3275,7 +3275,20 @@ Target parse(Target, Source)(ref Source s)
     assert(b == true);
 }
 
-// input range to null literal conversions
+/**
+Parsing a character range to `typeof(null)` returns `null` if the range
+spells `"null"`. This function is case insensitive.
+
+Params:
+    Target = the type to convert to
+    s = the lvalue of an input range
+
+Returns:
+    `null`
+
+Throws:
+    A $(LREF ConvException) if the range doesn't represent `null`.
+ */
 Target parse(Target, Source)(ref Source s)
     if (isInputRange!Source &&
         isSomeChar!(ElementType!Source) &&
@@ -3291,9 +3304,10 @@ Target parse(Target, Source)(ref Source s)
     return null;
 }
 
+///
 @safe pure unittest
 {
-    import std.exception;
+    import std.exception : assertThrown;
 
     alias NullType = typeof(null);
     auto s1 = "null";
