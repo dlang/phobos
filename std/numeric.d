@@ -403,7 +403,7 @@ public:
     static @property size_t dig()
     {
         auto shiftcnt =  precision - ((flags&Flags.storeNormalized) != 0);
-        auto x = (shiftcnt == 64) ? 0 : 1uL << shiftcnt;
+        immutable x = (shiftcnt == 64) ? 0 : 1uL << shiftcnt;
         return cast(size_t) log10(x);
     }
 
@@ -1635,7 +1635,7 @@ euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
     Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
-        auto t = a.front - b.front;
+        immutable t = a.front - b.front;
         result += t * t;
     }
     static if (!haveLen) enforce(b.empty);
@@ -1660,7 +1660,7 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
             static if (!haveLen) enforce(b.empty);
             break;
         }
-        auto t = a.front - b.front;
+        immutable t = a.front - b.front;
         result += t * t;
         if (result >= limit) break;
     }
@@ -1857,14 +1857,14 @@ bool normalize(R)(R range, ElementType!(R) sum = 1)
     {
         if (length)
         {
-            auto f = sum / range.length;
+            immutable f = sum / range.length;
             foreach (ref e; range) e = f;
         }
         return false;
     }
     // The path most traveled
     assert(s >= 0);
-    auto f = sum / s;
+    immutable f = sum / s;
     foreach (ref e; range)
         e *= f;
     return true;
@@ -2600,7 +2600,7 @@ T gcd(T)(T a, T b)
         }
         while (b)
         {
-            auto t = b;
+            immutable t = b;
             b = a % b;
             a = t;
         }
@@ -3066,7 +3066,7 @@ public:
         immutable lenNeg1 = 1.0 / buf.length;
         foreach (ref elem; buf)
         {
-            auto temp = elem.re * lenNeg1;
+            immutable temp = elem.re * lenNeg1;
             elem.re = elem.im * lenNeg1;
             elem.im = temp;
         }
