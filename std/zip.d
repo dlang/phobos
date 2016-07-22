@@ -122,6 +122,8 @@ final class ArchiveMember
     private ushort _diskNumber;
     private uint _externalAttributes;
     private DosFileTime _time;
+    // by default, no explicit order goes after explicit order
+    private uint _index = uint.max;
 
     ushort flags;                  /// Read/Write: normally set to 0
     ushort internalAttributes;     /// Read/Write
@@ -251,6 +253,12 @@ final class ArchiveMember
         _compressionMethod = cm;
     }
 
+    /**
+      * The index of this archive member within the archive.
+      */
+    @property uint index() { return _index; }
+    @property uint index(uint value) { return _index = value; }
+
     debug(print)
     {
     void print()
@@ -267,6 +275,7 @@ final class ArchiveMember
         printf("\tcompressedSize = %d\n", compressedSize);
         printf("\tinternalAttributes = x%04x\n", internalAttributes);
         printf("\texternalAttributes = x%08x\n", externalAttributes);
+        printf("\tindex = x%08x\n", index);
     }
     }
 }
@@ -376,7 +385,9 @@ final class ZipArchive
      * Returns: array representing the entire archive.
      */
     void[] build()
-    {   uint i;
+    {
+        import std.algorithm;
+        uint i;
         uint directoryOffset;
 
         if (comment.length > 0xFFFF)
@@ -385,7 +396,8 @@ final class ZipArchive
         // Compress each member; compute size
         uint archiveSize = 0;
         uint directorySize = 0;
-        foreach (ArchiveMember de; _directory)
+        auto directory = _directory.values().sort!((x, y) => x.index < y.index);
+        foreach (ArchiveMember de; directory.save)
         {
             if (!de._compressedData.length)
             {
@@ -436,7 +448,7 @@ final class ZipArchive
 
         // Store each archive member
         i = 0;
-        foreach (ArchiveMember de; _directory)
+        foreach (ArchiveMember de; directory.save)
         {
             de.offset = i;
             _data[i .. i + 4] = cast(ubyte[])"PK\x03\x04";
@@ -462,7 +474,7 @@ final class ZipArchive
         // Write directory
         directoryOffset = i;
         _numEntries = 0;
-        foreach (ArchiveMember de; _directory)
+        foreach (ArchiveMember de; directory.save)
         {
             _data[i .. i + 4] = cast(ubyte[])"PK\x01\x02";
             putUshort(i + 4,  de._madeVersion);
@@ -666,6 +678,7 @@ final class ZipArchive
             if (_data[i .. i + 4] != cast(ubyte[])"PK\x01\x02")
                 throw new ZipException("invalid directory entry 1");
             ArchiveMember de = new ArchiveMember();
+            de._index = n;
             de._madeVersion = getUshort(i + 4);
             de._extractVersion = getUshort(i + 6);
             de.flags = getUshort(i + 8);
@@ -869,6 +882,40 @@ debug(print)
             assert(am.crc32 == am2.crc32);
             assert(am.expandedData == am2.expandedData);
         }
+    }
+}
+
+@system unittest
+{
+    import std.random : uniform;
+    import std.conv;
+    import std.algorithm;
+    // Test if packing and unpacking preserves order.
+    auto zip1 = new ZipArchive();
+    string[] names;
+    foreach (i; 0..20)
+    {
+        auto name = uniform(0, 0xFFFF).to!string;
+        if (names.canFind(name))
+        {
+            // No big deal; this test run will have one fewer entry.
+            // Better than flaking out because we expect the same name to appear twice.
+            continue;
+        }
+        names ~= name;
+        auto member = new ArchiveMember();
+        member.name = name;
+        member.expandedData = cast(ubyte[])name;
+        member.index = i;
+        zip1.addMember(member);
+    }
+    auto data = zip1.build();
+    auto zip2 = new ZipArchive(data);
+    foreach (i, name; names)
+    {
+        auto member = zip2.directory[name];
+        assert(member.index == i, "member " ~ name ~ " had index " ~
+                member.index.to!string ~ " but we expected index " ~ i.to!string);
     }
 }
 
