@@ -386,7 +386,7 @@ final class ZipArchive
      */
     void[] build()
     {
-        import std.algorithm;
+        import std.algorithm : sort;
         uint i;
         uint directoryOffset;
 
@@ -888,8 +888,8 @@ debug(print)
 @system unittest
 {
     import std.random : uniform;
-    import std.conv;
-    import std.algorithm;
+    import std.conv : to;
+    import std.algorithm : canFind;
     // Test if packing and unpacking preserves order.
     auto zip1 = new ZipArchive();
     string[] names;
@@ -913,7 +913,7 @@ debug(print)
     auto zip2 = new ZipArchive(data);
     foreach (i, name; names)
     {
-        auto member = zip2.directory[name];
+        const member = zip2.directory[name];
         assert(member.index == i, "member " ~ name ~ " had index " ~
                 member.index.to!string ~ " but we expected index " ~ i.to!string);
     }
