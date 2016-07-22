@@ -378,15 +378,15 @@ template EncoderFunctions()
     template ReadFromString()
     {
         @property bool canRead() { return s.length != 0; }
-        E peek()() { return s[0]; }
-        E read()() { E t = s[0]; s = s[1..$]; return t; }
+        E peek() @safe pure @nogc nothrow { return s[0]; }
+        E read() @safe pure @nogc nothrow { E t = s[0]; s = s[1..$]; return t; }
     }
 
     template ReverseReadFromString()
     {
         @property bool canRead() { return s.length != 0; }
-        E peek()() { return s[$-1]; }
-        E read()() { E t = s[$-1]; s = s[0..$-1]; return t; }
+        E peek() @safe pure @nogc nothrow { return s[$-1]; }
+        E read() @safe pure @nogc nothrow { E t = s[$-1]; s = s[0..$-1]; return t; }
     }
 
     // Various forms of Write
@@ -394,17 +394,17 @@ template EncoderFunctions()
     template WriteToString()
     {
         E[] s;
-        void write()(E c) { s ~= c; }
+        void write(E c) @safe pure nothrow { s ~= c; }
     }
 
     template WriteToArray()
     {
-        void write()(E c) { array[0] = c; array = array[1..$]; }
+        void write(E c) @safe pure @nogc nothrow { array[0] = c; array = array[1..$]; }
     }
 
     template WriteToDelegate()
     {
-        void write()(E c) { dg(c); }
+        void write(E c) { dg(c); }
     }
 
     // Functions we will export
@@ -412,31 +412,31 @@ template EncoderFunctions()
     template EncodeViaWrite()
     {
         mixin encodeViaWrite;
-        void encode()(dchar c) { encodeViaWrite(c); }
+        void encode(dchar c) { encodeViaWrite(c); }
     }
 
     template SkipViaRead()
     {
         mixin skipViaRead;
-        void skip()() { skipViaRead(); }
+        void skip() @safe pure @nogc nothrow { skipViaRead(); }
     }
 
     template DecodeViaRead()
     {
         mixin decodeViaRead;
-        dchar decode()() { return decodeViaRead(); }
+        dchar decode() @safe pure @nogc nothrow { return decodeViaRead(); }
     }
 
     template SafeDecodeViaRead()
     {
         mixin safeDecodeViaRead;
-        dchar safeDecode()() { return safeDecodeViaRead(); }
+        dchar safeDecode() @safe pure @nogc nothrow { return safeDecodeViaRead(); }
     }
 
     template DecodeReverseViaRead()
     {
         mixin decodeReverseViaRead;
-        dchar decodeReverse()() { return decodeReverseViaRead(); }
+        dchar decodeReverse() @safe pure @nogc nothrow { return decodeReverseViaRead(); }
     }
 
     // Encoding to different destinations
@@ -489,26 +489,26 @@ template EncoderFunctions()
 
     // Below are the functions we will ultimately expose to the user
 
-    E[] encode()(dchar c)
+    E[] encode(dchar c) @safe pure nothrow
     {
         mixin EncodeToString e;
         e.encode(c);
         return e.s;
     }
 
-    void encode()(dchar c, ref E[] array)
+    void encode(dchar c, ref E[] array) @safe pure nothrow
     {
         mixin EncodeToArray e;
         e.encode(c);
     }
 
-    void encode()(dchar c, void delegate(E) dg)
+    void encode(dchar c, void delegate(E) dg)
     {
         mixin EncodeToDelegate e;
         e.encode(c);
     }
 
-    void skip()(ref const(E)[] s)
+    void skip(ref const(E)[] s) @safe pure nothrow
     {
         mixin SkipFromString e;
         e.skip();
@@ -526,7 +526,7 @@ template EncoderFunctions()
         return e.safeDecode();
     }
 
-    dchar decodeReverse()(ref const(E)[] s)
+    dchar decodeReverse(ref const(E)[] s) @safe pure nothrow
     {
         mixin DecodeReverseFromString e;
         return e.decodeReverse();
@@ -650,7 +650,7 @@ template EncoderInstance(E)
 
 private template GenericEncoder()
 {
-    bool canEncode()(dchar c)
+    bool canEncode(dchar c) @safe pure @nogc nothrow
     {
         if (c < m_charMapStart || (c > m_charMapEnd && c < 0x100)) return true;
         if (c >= 0xFFFD) return false;
@@ -665,13 +665,13 @@ private template GenericEncoder()
         return false;
     }
 
-    bool isValidCodeUnit()(E c)
+    bool isValidCodeUnit(E c) @safe pure @nogc nothrow
     {
         if (c < m_charMapStart || c > m_charMapEnd) return true;
         return charMap[c-m_charMapStart] != 0xFFFD;
     }
 
-    size_t encodedLength()(dchar c)
+    size_t encodedLength(dchar c) @safe pure @nogc nothrow
     in
     {
         assert(canEncode(c));
@@ -726,7 +726,7 @@ private template GenericEncoder()
         return (c >= m_charMapStart && c <= m_charMapEnd) ? charMap[c-m_charMapStart] : c;
     }
 
-    @property EString replacementSequence()()
+    @property EString replacementSequence() @safe pure @nogc nothrow
     {
         return cast(EString)("?");
     }
@@ -1389,17 +1389,17 @@ template EncoderInstance(CharType : dchar)
         return "UTF-32";
     }
 
-    bool canEncode()(dchar c)
+    bool canEncode(dchar c) @safe pure @nogc nothrow
     {
         return isValidCodePoint(c);
     }
 
-    bool isValidCodeUnit()(dchar c)
+    bool isValidCodeUnit(dchar c) @safe pure @nogc nothrow
     {
         return isValidCodePoint(c);
     }
 
-    size_t encodedLength()(dchar c)
+    size_t encodedLength(dchar c) @safe pure @nogc nothrow
     in
     {
         assert(canEncode(c));
@@ -2462,7 +2462,7 @@ abstract class EncodingScheme
      * Params:
      *    s = the array to be tested
      */
-    bool isValid()(const(ubyte)[] s)
+    bool isValid(const(ubyte)[] s)
     {
         while (s.length != 0)
         {
