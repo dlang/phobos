@@ -2462,67 +2462,32 @@ char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe
     }
 }
 
-/*******************
- * Encodes string $(D_PARAM s) into UTF-8 and returns the encoded string.
+/**
+ * Encodes string `s` into UTF-8 and returns the encoded string.
+ *
+ * Params:
+ *     s = the string to encode
+ * Returns:
+ *     A UTF-8 string
+ * See_Also:
+ *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-string toUTF8(scope const char[] s) @safe
+string toUTF8(S)(S s) if (isSomeString!S)
 {
-    validate(s);
-    return s.idup;
+    import std.array : array;
+    return s.byChar.array;
 }
 
-/// ditto
-string toUTF8(scope const wchar[] s) @safe
+///
+@safe pure unittest
 {
-    char[] r;
-    size_t i;
-    immutable slen = s.length;
+    import std.algorithm.comparison : equal;
 
-    r.length = slen;
-    for (i = 0; i < slen; i++)
-    {
-        immutable c = s[i];
+    // The ö is represented by two UTF-8 code units
+    assert("Hellø"w.toUTF8.equal(['H', 'e', 'l', 'l', 0xC3, 0xB8]));
 
-        if (c <= 0x7F)
-            r[i] = cast(char)c;     // fast path for ascii
-        else
-        {
-            r.length = i;
-            while (i < slen)
-                encode(r, decode(s, i));
-            break;
-        }
-    }
-
-    return r;
-}
-
-/// ditto
-string toUTF8(scope const dchar[] s) @safe
-{
-    char[] r;
-    size_t i;
-    immutable slen = s.length;
-
-    r.length = slen;
-    for (i = 0; i < slen; i++)
-    {
-        immutable c = s[i];
-
-        if (c <= 0x7F)
-            r[i] = cast(char)c;     // fast path for ascii
-        else
-        {
-            r.length = i;
-            foreach (dchar d; s[i .. slen])
-            {
-                encode(r, d);
-            }
-            break;
-        }
-    }
-
-    return r;
+    // 𐐷 is four code units in UTF-8
+    assert("𐐷"d.toUTF8.equal([0xF0, 0x90, 0x90, 0xB7]));
 }
 
 
