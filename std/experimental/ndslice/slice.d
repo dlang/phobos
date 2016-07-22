@@ -1124,7 +1124,7 @@ struct Slice(size_t _N, _Range)
         alias DeepElemType = Slice!(Range.N - 1, Range.Range);
 
     enum hasAccessByRef = isPointer!PureRange ||
-        __traits(compiles, { auto a = &(_ptr[0]); } );
+        __traits(compiles, &_ptr[0]);
 
     enum PureIndexLength(Slices...) = Filter!(isIndex, Slices).length;
 
@@ -1431,7 +1431,7 @@ struct Slice(size_t _N, _Range)
         assert(!empty!dimension);
         static if (PureN == 1)
         {
-            static if (__traits(compiles,{ auto _f = _ptr.front; }))
+            static if (__traits(compiles, _ptr.front ))
                 return _ptr.front;
             else
                 return _ptr[0];
@@ -1464,7 +1464,7 @@ struct Slice(size_t _N, _Range)
             if (dimension == 0)
         {
             assert(!empty!dimension);
-            static if (__traits(compiles, { _ptr.front = value; }))
+            static if (__traits(compiles, _ptr.front = value))
                 return _ptr.front = value;
             else
                 return _ptr[0] = value;
@@ -1748,6 +1748,184 @@ struct Slice(size_t _N, _Range)
         import std.experimental.ndslice.iteration : dropExactly;
         import std.experimental.ndslice.selection : iotaSlice;
         assert(iotaSlice(2, 3).slice.dropExactly!0(2) == iotaSlice([4, 3], 2).dropExactly!0(4));
+    }
+
+    /++
+    Computes hash value using MurmurHash3 algorithms without the finalization step.
+    Built-in associative arrays have the finalization step.
+
+    Returns: Hash value type of `size_t`.
+
+    See_also: $(LREF Slice.toMurmurHash3), $(MREF std, _digest, murmurhash).
+    +/
+    size_t toHash() const
+    {
+        static if (size_t.sizeof == 8)
+        {
+            auto ret = toMurmurHash3!128;
+            return ret[0] ^ ret[1];
+        }
+        else
+        {
+            return toMurmurHash3!32;
+        }
+    }
+
+    static if (doUnittest)
+    ///
+    pure nothrow @nogc @safe
+    unittest
+    {
+        import std.experimental.ndslice.selection : iotaSlice;
+        const sl = iotaSlice(3, 7);
+        size_t hash = sl.toHash;
+    }
+
+    static if (doUnittest)
+    ///
+    pure nothrow
+    unittest
+    {
+        import std.experimental.ndslice.iteration : allReversed;
+        import std.experimental.ndslice.selection : iotaSlice;
+
+        // hash is the same for allocated data and for generated data
+        auto a = iotaSlice(3, 7);
+        auto b = iotaSlice(3, 7).slice;
+
+        assert(a.toHash == b.toHash);
+        assert(typeid(typeof(a)).getHash(&a) == typeid(typeof(b)).getHash(&b));
+
+        // hash does not depend on strides
+        a = iotaSlice(3, 7).allReversed;
+        b = iotaSlice(3, 7).allReversed.slice;
+
+        assert(a.toHash == b.toHash);
+        assert(typeid(typeof(a)).getHash(&a) == typeid(typeof(b)).getHash(&b));
+    }
+
+    /++
+    Computes hash value using MurmurHash3 algorithms without the finalization step.
+
+    Returns:
+        Hash value type of `MurmurHash3!(size, opt).get()`.
+
+    See_also: $(LREF Slice.toHash), $(MREF std, _digest, murmurhash)
+    +/
+    auto toMurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 64 : 32)() const
+    {
+        import std.digest.murmurhash : MurmurHash3;
+        enum msg = "unable to compute hash value for type " ~ DeepElemType.stringof;
+        static if (size_t.sizeof == 8)
+            auto hasher = MurmurHash3!(size, opt)(length);
+        else
+            auto hasher = MurmurHash3!(size, opt)(cast(uint) length);
+        enum hasMMH3 = __traits(compiles, {
+            MurmurHash3!(size, opt) hasher;
+            foreach (elem; (Unqual!This).init)
+                hasher.putElement(elem.toMurmurHash3!(size, opt));
+            });
+        static if (PureN == 1 && !hasMMH3)
+        {
+            static if (ElemType.sizeof <= 8 * hasher.Element.sizeof && __traits(isPOD, ElemType))
+            {
+                alias E = Unqual!ElemType;
+            }
+            else
+            {
+                alias E = size_t;
+            }
+            enum K = hasher.Element.sizeof / E.sizeof + bool(hasher.Element.sizeof % E.sizeof != 0);
+            enum B = E.sizeof / hasher.Element.sizeof + bool(E.sizeof % hasher.Element.sizeof != 0);
+            static assert (K == 1 || B == 1);
+            static union U
+            {
+                hasher.Element[B] blocks;
+                E[K] elems;
+            }
+            U u;
+            auto r = cast(Unqual!This) this;
+            // if element is smaller then blocks
+            static if (K > 1)
+            {
+                // cut tail composed of elements from the front
+                if (auto rem = r.length % K)
+                {
+                    do
+                    {
+                        static if (is(E == Unqual!ElemType))
+                            u.elems[rem] = r.front;
+                        else
+                        static if (__traits(compiles, r.front.toHash))
+                            u.elems[rem] = r.front.toHash;
+                        else
+                        static if (__traits(compiles, typeid(ElemType).getHash(&r.front)))
+                            u.elems[rem] = typeid(ElemType).getHash(&r.front);
+                        else
+                        {
+                            auto f = r.front;
+                            u.elems[rem] = typeid(ElemType).getHash(&f);
+                        }
+
+                        r.popFront;
+                    }
+                    while (--rem);
+                    hasher.putElement(u.blocks[0]);
+                }
+            }
+            // if hashing elements in memory
+            static if (is(E == ElemType) && (isPointer!Range || isDynamicArray!Range))
+            {
+                import std.math : isPowerOf2;
+                // .. and elements can fill entire block
+                static if (ElemType.sizeof.isPowerOf2)
+                {
+                    // then try to optimize blocking
+                    if (stride == 1)
+                    {
+                        static if (isPointer!Range)
+                        {
+                            hasher.putElements(cast(hasher.Element[]) r._ptr[0 .. r.length]);
+                        }
+                        else
+                        {
+                            hasher.putElements(cast(hasher.Element[]) r._ptr._range[r._ptr._shift .. r.length + r._ptr._shift]);
+                        }
+                        return hasher.get;
+                    }
+                }
+            }
+            while (r.length)
+            {
+                foreach (k; Iota!(0, K))
+                {
+                    static if (is(E == Unqual!ElemType))
+                        u.elems[k] = r.front;
+                    else
+                    static if (__traits(compiles, r.front.toHash))
+                        u.elems[k] = r.front.toHash;
+                    else
+                    static if (__traits(compiles, typeid(ElemType).getHash(&r.front)))
+                        u.elems[k] = typeid(ElemType).getHash(&r.front);
+                    else
+                    {
+                        auto f = r.front;
+                        u.elems[k] = typeid(ElemType).getHash(&f);
+                    }
+                    r.popFront;
+                }
+                foreach (b; Iota!(0, B))
+                {
+                    hasher.putElement(u.blocks[b]);
+                }
+            }
+        }
+        else
+        {
+            foreach (elem; cast(Unqual!This) this)
+                hasher.putElement(elem.toMurmurHash3!(size, opt));
+        }
+        return hasher.get;
     }
 
     _Slice opSlice(size_t dimension)(size_t i, size_t j)
@@ -2587,7 +2765,7 @@ pure nothrow unittest
 
     // `opIndexAssing` accepts only fully defined indexes and slices.
     // Use an additional empty slice `[]`.
-    static assert(!__traits(compiles), tensor[0 .. 2] *= 2);
+    static assert(!__traits(compiles, tensor[0 .. 2] *= 2));
 
     tensor[0 .. 2][] *= 2;          //OK, empty slice
     tensor[0 .. 2, 3, 0..$] /= 2; //OK, 3 index or slice positions are defined.
@@ -2750,7 +2928,8 @@ unittest
     // Container Array
     import std.container.array;
     Array!int ar;
-    static assert(is(typeof(ar[].sliced(3, 4)) == Slice!(2, typeof(ar[]))));
+    ar.length = 12;
+    Slice!(2, typeof(ar[])) arSl = ar[].sliced(3, 4);
 
     // Implicit conversion of a range to its unqualified type.
     import std.range : iota;
@@ -2912,7 +3091,7 @@ private struct PtrShell(Range)
     Range _range;
 
     enum hasAccessByRef = isPointer!Range ||
-        __traits(compiles, { auto a = &(_range[0]); } );
+        __traits(compiles, &_range[0]);
 
     void opOpAssign(string op)(sizediff_t shift)
         if (op == `+` || op == `-`)
@@ -3033,6 +3212,33 @@ pure nothrow unittest
     }
 }
 
+// toHash test
+unittest
+{
+    import std.conv : to;
+    import std.complex;
+    import std.experimental.ndslice.iteration : allReversed;
+
+    static assert(__traits(isPOD, uint[2]));
+    static assert(__traits(isPOD, double));
+    static assert(__traits(isPOD, Complex!double));
+
+    foreach (T; AliasSeq!(
+        byte, short, int, long,
+        float, double, real,
+        Complex!float, Complex!double, Complex!real))
+    {
+        auto a = slice!(T, No.replaceArrayWithPointer)(3, 7);
+        auto b = slice!T(3, 7).allReversed;
+        size_t i;
+        foreach (row; a)
+            foreach (ref e; row)
+                e = to!T(i++);
+        b[] = a;
+        assert(typeid(a.This).getHash(&a) == typeid(b.This).getHash(&b), T.stringof);
+    }
+}
+
 unittest
 {
     int[] arr = [1, 2, 3];
@@ -3128,7 +3334,7 @@ private template PtrTupleFrontMembers(Names...)
         enum PtrTupleFrontMembers = PtrTupleFrontMembers!Top
         ~ "
         @property auto ref " ~ Names[$-1] ~ "() {
-            static if (__traits(compiles,{ auto _f = _ptrs__[" ~ m.stringof ~ "].front; }))
+            static if (__traits(compiles, _ptrs__[" ~ m.stringof ~ "].front()))
                 return _ptrs__[" ~ m.stringof ~ "].front;
             else
                 return _ptrs__[" ~ m.stringof ~ "][0];
