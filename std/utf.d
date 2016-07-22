@@ -3599,8 +3599,19 @@ template byUTF(C) if (isSomeChar!C)
                     if (pos == fill)
                     {
                         pos = 0;
-                        fill = cast(ushort)encode!(UseReplacementDchar.yes)(
-                            buf, decodeFront!(UseReplacementDchar.yes)(r));
+                        auto c = r.front;
+
+                        if (c <= 0x7F)
+                        {
+                            fill = 1;
+                            r.popFront;
+                            buf[pos] = cast(C) c;
+                        }
+                        else
+                        {
+                            fill = cast(ushort)encode!(UseReplacementDchar.yes)(
+                                buf, decodeFront!(UseReplacementDchar.yes)(r));
+                        }
                     }
                     return buf[pos];
                 }
