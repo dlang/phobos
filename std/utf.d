@@ -1427,8 +1427,6 @@ private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar 
         }
     }
 
-    string msg;
-
     // The < case must be taken care of before decodeImpl is called.
     assert(u >= 0xD800);
 
@@ -2478,12 +2476,12 @@ string toUTF8(in wchar[] s) @safe
 {
     char[] r;
     size_t i;
-    size_t slen = s.length;
+    immutable slen = s.length;
 
     r.length = slen;
     for (i = 0; i < slen; i++)
     {
-        wchar c = s[i];
+        immutable c = s[i];
 
         if (c <= 0x7F)
             r[i] = cast(char)c;     // fast path for ascii
@@ -2504,12 +2502,12 @@ string toUTF8(in dchar[] s) @safe
 {
     char[] r;
     size_t i;
-    size_t slen = s.length;
+    immutable slen = s.length;
 
     r.length = slen;
     for (i = 0; i < slen; i++)
     {
-        dchar c = s[i];
+        immutable c = s[i];
 
         if (c <= 0x7F)
             r[i] = cast(char)c;     // fast path for ascii
@@ -2556,7 +2554,7 @@ body
 wstring toUTF16(in char[] s) @safe
 {
     wchar[] r;
-    size_t slen = s.length;
+    immutable slen = s.length;
 
     r.length = slen;
     r.length = 0;
@@ -2589,7 +2587,7 @@ wstring toUTF16(in wchar[] s) @safe
 wstring toUTF16(in dchar[] s) @safe
 {
     wchar[] r;
-    size_t slen = s.length;
+    immutable slen = s.length;
 
     r.length = slen;
     r.length = 0;
@@ -2610,7 +2608,7 @@ wstring toUTF16(in dchar[] s) @safe
 dstring toUTF32(in char[] s) @safe
 {
     dchar[] r;
-    size_t slen = s.length;
+    immutable slen = s.length;
     size_t j = 0;
 
     r.length = slen;        // r[] will never be longer than s[]
@@ -2631,7 +2629,7 @@ dstring toUTF32(in char[] s) @safe
 dstring toUTF32(in wchar[] s) @safe
 {
     dchar[] r;
-    size_t slen = s.length;
+    immutable slen = s.length;
     size_t j = 0;
 
     r.length = slen;        // r[] will never be longer than s[]
