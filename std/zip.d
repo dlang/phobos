@@ -256,8 +256,8 @@ final class ArchiveMember
     /**
       * The index of this archive member within the archive.
       */
-    @property uint index() { return _index; }
-    @property uint index(uint value) { return _index = value; }
+    @property uint index() const pure nothrow @nogc { return _index; }
+    @property uint index(uint value) pure nothrow @nogc { return _index = value; }
 
     debug(print)
     {
