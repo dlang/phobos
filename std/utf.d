@@ -2418,11 +2418,7 @@ void validate(S)(in S str) @safe pure
 }
 
 /* =================== Conversion to UTF8 ======================= */
-
-pure
-{
-
-char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe
+char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
 {
     if (c <= 0x7F)
     {
@@ -2493,7 +2489,7 @@ string toUTF8(S)(S s) if (isSomeString!S)
 
 /* =================== Conversion to UTF16 ======================= */
 
-wchar[] toUTF16(return ref wchar[2] buf, dchar c) nothrow @nogc @safe
+wchar[] toUTF16(return ref wchar[2] buf, dchar c) nothrow @nogc @safe pure
 in
 {
     assert(isValidDchar(c));
@@ -2516,7 +2512,7 @@ body
 /****************
  * Encodes string $(D s) into UTF-16 and returns the encoded string.
  */
-wstring toUTF16(scope const char[] s) @safe
+wstring toUTF16(scope const char[] s) @safe pure
 {
     wchar[] r;
     immutable slen = s.length;
@@ -2542,14 +2538,14 @@ wstring toUTF16(scope const char[] s) @safe
 }
 
 /// ditto
-wstring toUTF16(scope const wchar[] s) @safe
+wstring toUTF16(scope const wchar[] s) @safe pure
 {
     validate(s);
     return s.idup;
 }
 
 /// ditto
-wstring toUTF16(scope const dchar[] s) @safe
+wstring toUTF16(scope const dchar[] s) @safe pure
 {
     wchar[] r;
     immutable slen = s.length;
@@ -2570,7 +2566,7 @@ wstring toUTF16(scope const dchar[] s) @safe
 /*****
  * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
  */
-dstring toUTF32(scope const char[] s) @safe
+dstring toUTF32(scope const char[] s) @safe pure
 {
     dchar[] r;
     immutable slen = s.length;
@@ -2591,7 +2587,7 @@ dstring toUTF32(scope const char[] s) @safe
 }
 
 /// ditto
-dstring toUTF32(scope const wchar[] s) @safe
+dstring toUTF32(scope const wchar[] s) @safe pure
 {
     dchar[] r;
     immutable slen = s.length;
@@ -2612,14 +2608,11 @@ dstring toUTF32(scope const wchar[] s) @safe
 }
 
 /// ditto
-dstring toUTF32(scope const dchar[] s) @safe
+dstring toUTF32(scope const dchar[] s) @safe pure
 {
     validate(s);
     return s.idup;
 }
-
-} // Convert functions are @safe
-
 
 /* =================== toUTFz ======================= */
 
