@@ -45,7 +45,7 @@
  * -----
  *
  * References:
- * $(HTTP tools.ietf.org/html/rfc4648, RFC 4648 - The Base16, Base32, and Base64
+ * $(LINK2 https://tools.ietf.org/html/rfc4648, RFC 4648 - The Base16, Base32, and Base64
  * Data Encodings)
  *
  * Copyright: Masahiro Nakagawa 2010-.
