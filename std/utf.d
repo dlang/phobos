@@ -2468,7 +2468,7 @@ char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
  * See_Also:
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-string toUTF8(S)(S s) if (isSomeString!S)
+string toUTF8(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
 {
     static if (is(S : string))
     {
@@ -2478,9 +2478,13 @@ string toUTF8(S)(S s) if (isSomeString!S)
     {
         import std.array : appender;
         auto app = appender!string();
-        app.reserve(s.length);
+
+        static if (hasLength!S || isSomeString!S)
+            app.reserve(s.length);
+
         foreach (c; s.byUTF2!char)
             app.put(c);
+
         return app.data;
     }
 }
