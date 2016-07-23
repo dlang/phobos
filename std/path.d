@@ -3269,7 +3269,7 @@ body
                             /* Match for:
                              *   pattern[pi0..pi-1] ~ pattern[piRemain..$]
                              */
-                            if (pattmp.ptr == null)
+                            if (pattmp is null)
                                 // Allocate this only once per function invocation.
                                 // Should do it with malloc/free, but that would make it impure.
                                 pattmp = new C[pattern.length];
