@@ -1726,8 +1726,9 @@ struct Slice(size_t _N, _Range)
     bool opEquals(size_t NR, RangeR)(auto ref Slice!(NR, RangeR) rslice)
         if (Slice!(NR, RangeR).PureN == PureN)
     {
-        if (this._lengths != rslice._lengths)
-            return false;
+        foreach (i; Iota!(0, PureN))
+            if (this._lengths[i] != rslice._lengths[i])
+                return false;
         static if (
                !hasReference!(typeof(this))
             && !hasReference!(typeof(rslice))
@@ -1737,17 +1738,27 @@ struct Slice(size_t _N, _Range)
             if (this._strides == rslice._strides && this._ptr == rslice._ptr)
                 return true;
         }
-        return opEqualsImpl(this, rslice);
+        foreach (i; Iota!(0, PureN))
+            if (this._lengths[i] == 0)
+                return true;
+        import std.experimental.ndslice.selection : unpack;
+        return opEqualsImpl(this.unpack, rslice.unpack);
     }
 
     ///ditto
     bool opEquals(T)(T[] rarrary)
     {
-        if (this.length != rarrary.length)
+        auto slice = this;
+        if (slice.length != rarrary.length)
             return false;
-        foreach (i, ref e; rarrary)
-            if (e != this[i])
+        if (rarrary.length) do
+        {
+            if (slice.front != rarrary.front)
                 return false;
+            slice.popFront;
+            rarrary.popFront;
+        }
+        while (rarrary.length);
         return true;
     }
 
@@ -2765,28 +2776,26 @@ unittest
 }
 
 private bool opEqualsImpl
-    (size_t NL, RangeL, size_t NR, RangeR)(
-    auto ref Slice!(NL, RangeL) ls,
-    auto ref Slice!(NR, RangeR) rs)
-in
+    (size_t N, RangeL, RangeR)(
+    Slice!(N, RangeL) ls,
+    Slice!(N, RangeR) rs)
 {
-    assert(ls._lengths == rs._lengths);
-}
-body
-{
-    foreach (i; 0 .. ls.length)
+    do
     {
-        static if (Slice!(NL, RangeL).PureN == 1)
+        static if (Slice!(N, RangeL).PureN == 1)
         {
-            if (ls[i] != rs[i])
+            if (ls.front != rs.front)
                 return false;
         }
         else
         {
-            if (!opEqualsImpl(ls[i], rs[i]))
+            if (!opEqualsImpl(ls.front, rs.front))
                 return false;
         }
+        rs.popFront;
+        ls.popFront;
     }
+    while (ls.length);
     return true;
 }
 
