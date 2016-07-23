@@ -58,10 +58,12 @@ Function prototype
 " ~ pfun ~ "
 _____";
 
+alias noVoidInitialization = templateOr!(hasElaborateAssign, hasElaborateCopyConstructor);
+
 mixin template _DefineRet()
 {
     alias Ret = typeof(return);
-    static if (hasElaborateAssign!(Ret.PureRange))
+    static if (noVoidInitialization!(Ret.PureRange))
         Ret ret;
     else
         Ret ret = void;
