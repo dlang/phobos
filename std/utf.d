@@ -3609,8 +3609,16 @@ template byUTF(C) if (isSomeChar!C)
                         }
                         else
                         {
-                            fill = cast(ushort)encode!(UseReplacementDchar.yes)(
-                                buf, decodeFront!(UseReplacementDchar.yes)(r));
+                            static if (is(RC == dchar))
+                            {
+                                fill = cast(ushort) encode!(UseReplacementDchar.yes)(buf, c);
+                                r.popFront;
+                            }
+                            else
+                            {
+                                fill = cast(ushort) encode!(UseReplacementDchar.yes)(
+                                    buf, decodeFront!(UseReplacementDchar.yes)(r));
+                            }
                         }
                     }
                     return buf[pos];
