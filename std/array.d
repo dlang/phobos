@@ -796,22 +796,49 @@ private void copyBackwards(T)(T[] src, T[] dest)
 
     assert(src.length == dest.length);
 
-    if (!__ctfe || hasElaborateCopyConstructor!T)
+    static if (!hasElaborateAssign!T)
     {
-        /* insertInPlace relies on dest being uninitialized, so no postblits allowed,
-         * as this is a MOVE that overwrites the destination, not a COPY.
-         * BUG: insertInPlace will not work with ctfe and postblits
-         */
-        memmove(dest.ptr, src.ptr, src.length * T.sizeof);
-    }
-    else
-    {
-        immutable len = src.length;
-        for (size_t i = len; i-- > 0;)
+        if (!__ctfe)
         {
-            dest[i] = src[i];
+            /* insertInPlace relies on dest being uninitialized, so no postblits allowed,
+             * as this is a MOVE that overwrites the destination, not a COPY.
+             * BUG: insertInPlace will not work with ctfe and postblits
+             */
+            memmove(dest.ptr, src.ptr, src.length * T.sizeof);
+            return;
         }
     }
+
+    immutable len = src.length;
+    for (size_t i = len; i-- > 0;)
+    {
+        dest[i] = src[i];
+    }
+}
+
+unittest
+{
+    static struct S
+    {
+        uint a;
+        this(this) {
+            a++;
+        }
+    }
+
+    static auto foo(S[] a)
+    {
+        auto b = new S[a.length];
+        copyBackwards(a, b);
+        return b;
+    }
+
+    enum a = new S[8];
+
+    auto r = foo(a);
+    assert(r[0].a == 1);
+    enum c = foo(a);
+    static assert(c[0].a == 1);
 }
 
 /++
