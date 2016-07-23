@@ -2470,15 +2470,19 @@ char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
  */
 string toUTF8(S)(S s) if (isSomeString!S)
 {
-    import std.array : appender;
-
-    auto app = appender!string();
-    app.reserve(s.length);
-
-    foreach (c; s.byChar)
-        app.put(c);
-
-    return app.data;
+    static if (is(S : string))
+    {
+        return s.idup;
+    }
+    else
+    {
+        import std.array : appender;
+        auto app = appender!string();
+        app.reserve(s.length);
+        foreach (c; s.byUTF2!char)
+            app.put(c);
+        return app.data;
+    }
 }
 
 ///
