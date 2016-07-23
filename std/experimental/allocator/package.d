@@ -738,12 +738,20 @@ unittest
 }
 
 /// Ditto
+Unqual!(ElementEncodingType!R)[] makeArray(Allocator, R)(auto ref Allocator alloc, R range)
+if (isInputRange!R && !isInfinite!R)
+{
+    alias T = Unqual!(ElementEncodingType!R);
+    return makeArray!(T, Allocator, R)(alloc, range);
+}
+
+/// Ditto
 T[] makeArray(T, Allocator, R)(auto ref Allocator alloc, R range)
 if (isInputRange!R && !isInfinite!R)
 {
     static if (isForwardRange!R || hasLength!R)
     {
-        static if (hasLength!R)
+        static if (hasLength!R || isNarrowString!R)
             immutable length = range.length;
         else
             immutable length = range.save.walkLength;
@@ -763,10 +771,18 @@ if (isInputRange!R && !isInfinite!R)
             alloc.deallocate(m);
         }
 
-        for (; !range.empty; range.popFront, ++i)
+        import std.conv : emplace;
+        static if (isNarrowString!R || isRandomAccessRange!R)
         {
-            import std.conv : emplace;
-            cast(void) emplace!T(result.ptr + i, range.front);
+            foreach (j; 0 .. range.length)
+            {
+                cast(void) emplace!T(result.ptr + i++, range[j]);
+            }
+        }
+        else
+        {
+            for (; !range.empty; range.popFront, ++i)
+                cast(void) emplace!T(result.ptr + i, range.front);
         }
 
         return result;
@@ -826,7 +842,35 @@ unittest
         a = alloc.makeArray!long([5, 42]);
         assert(a.length == 2);
         assert(a == [ 5, 42]);
+
+        // we can also infer the type
+        auto b = alloc.makeArray([4.0, 2.0]);
+        static assert(is(typeof(b) == double[]));
+        assert(b == [4.0, 2.0]);
     }
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test(GCAllocator.instance);
+    test(theAllocator);
+}
+
+// infer types for strings
+unittest
+{
+    void test(A)(auto ref A alloc)
+    {
+        auto c = alloc.makeArray("fooπ😜");
+        static assert(is(typeof(c) == char[]));
+        assert(c == "fooπ😜");
+
+        auto d = alloc.makeArray("fooπ😜"d);
+        static assert(is(typeof(d) == dchar[]));
+        assert(d == "fooπ😜");
+
+        auto w = alloc.makeArray("fooπ😜"w);
+        static assert(is(typeof(w) == wchar[]));
+        assert(w == "fooπ😜");
+    }
+
     import std.experimental.allocator.gc_allocator : GCAllocator;
     test(GCAllocator.instance);
     test(theAllocator);

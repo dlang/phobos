@@ -644,6 +644,16 @@ auto makeSlice(T,
 }
 
 /// ditto
+auto makeSlice(
+    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Allocator,
+    size_t N, Range)(auto ref Allocator alloc, auto ref Slice!(N, Range) slice)
+{
+    alias T = Unqual!(slice.DeepElemType);
+    return makeSlice!(T, replaceArrayWithPointer)(alloc, slice);
+}
+
+/// ditto
 auto makeSlice(T,
     Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
     Allocator,
@@ -702,7 +712,7 @@ auto makeSlice(T,
 
     // makes duplicate using `makeSlice`
     tup.slice[0, 0, 0] = 3;
-    auto dup = makeSlice!int(Mallocator.instance, tup.slice);
+    auto dup = makeSlice(Mallocator.instance, tup.slice);
     assert(dup.slice == tup.slice);
 
     Mallocator.instance.dispose(tup.array);
@@ -715,9 +725,22 @@ auto makeSlice(T,
     import std.experimental.allocator;
     import std.experimental.allocator.mallocator;
 
-    auto tup = makeSlice!int(Mallocator.instance, [2, 3, 4], 10);
+    auto tup = makeSlice(Mallocator.instance, [2, 3, 4], 10);
     auto slice = tup.slice;
     assert(slice[1, 1, 1] == 10);
+    Mallocator.instance.dispose(tup.array);
+}
+
+
+@nogc unittest
+{
+    import std.experimental.allocator;
+    import std.experimental.allocator.mallocator;
+
+    // cast to your own type
+    auto tup = makeSlice!double(Mallocator.instance, [2, 3, 4], 10);
+    auto slice = tup.slice;
+    assert(slice[1, 1, 1] == 10.0);
     Mallocator.instance.dispose(tup.array);
 }
 
