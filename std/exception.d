@@ -396,7 +396,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 {
     static if (is(typeof(new E(string.init, string.init, size_t.init))))
     {
-        throw new E(msg.ptr ? msg.idup : "Enforcement failed", file, line);
+        throw new E(msg ? msg.idup : "Enforcement failed", file, line);
     }
     else static if (is(typeof(new E(string.init, size_t.init))))
     {
