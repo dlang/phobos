@@ -2020,6 +2020,47 @@ version (unittest)
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 /**
+Determines whether $(D T) is a class nested inside another class
+and that $(D T.outer) is the implicit reference to the outer class
+(i.e. $(D outer) has not been used as a field or method name)
+*/
+template isInnerClass(T)
+    if (is(T == class))
+{
+    import std.meta: staticIndexOf;
+    
+    enum isInnerClass = __traits(isSame, typeof(T.outer), __traits(parent, T))
+                     && (staticIndexOf!(__traits(allMembers, T), "outer") == -1);
+}
+
+///
+@safe unittest
+{
+    class C
+    {
+        int outer;
+    }
+    static assert(!isInnerClass!C);
+    
+    class Outer1
+    {
+        class Inner
+        {
+        }
+    }
+    static assert(isInnerClass!(Outer1.Inner));
+    
+    class Outer2
+    {
+        class Inner
+        {
+            int outer;
+        }
+    }
+    static assert(!isInnerClass!(Outer2.Inner));
+}
+
+/**
 Determines whether $(D T) has its own context pointer.
 $(D T) must be either $(D class), $(D struct), or $(D union).
 */
