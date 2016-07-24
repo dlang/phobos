@@ -2028,7 +2028,7 @@ template isInnerClass(T)
     if (is(T == class))
 {
     import std.meta : staticIndexOf;
-    
+
     enum isInnerClass = __traits(isSame, typeof(T.outer), __traits(parent, T))
                      && (staticIndexOf!(__traits(allMembers, T), "outer") == -1);
 }
@@ -2041,7 +2041,7 @@ template isInnerClass(T)
         int outer;
     }
     static assert(!isInnerClass!C);
-    
+
     class Outer1
     {
         class Inner
@@ -2049,7 +2049,7 @@ template isInnerClass(T)
         }
     }
     static assert(isInnerClass!(Outer1.Inner));
-    
+
     class Outer2
     {
         class Inner
