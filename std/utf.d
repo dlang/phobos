@@ -2459,7 +2459,8 @@ char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
 }
 
 /**
- * Encodes string `s` into UTF-8 and returns the encoded string.
+ * Encodes the elements of `s` to UTF-8 and returns a newly allocated
+ * string of the elements.
  *
  * Params:
  *     s = the string to encode
@@ -2482,7 +2483,7 @@ string toUTF8(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
         static if (hasLength!S || isSomeString!S)
             app.reserve(s.length);
 
-        foreach (c; s.byUTF2!char)
+        foreach (c; s.byUTF!char)
             app.put(c);
 
         return app.data;
@@ -2499,6 +2500,18 @@ string toUTF8(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
 
     // 𐐷 is four code units in UTF-8
     assert("𐐷"d.toUTF8.equal([0xF0, 0x90, 0x90, 0xB7]));
+}
+
+@system pure unittest
+{
+    import std.internal.test.dummyrange : ReferenceInputRange;
+    import std.algorithm.comparison : equal;
+
+    auto r1 = new ReferenceInputRange!dchar("Hellø");
+    auto r2 = new ReferenceInputRange!dchar("𐐷");
+
+    assert(r1.toUTF8.equal(['H', 'e', 'l', 'l', 0xC3, 0xB8]));
+    assert(r2.toUTF8.equal([0xF0, 0x90, 0x90, 0xB7]));
 }
 
 
