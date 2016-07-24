@@ -273,7 +273,7 @@ out (result)
         auto slen = s.length;
         while (slen > 0 && s[slen-1] == 0) --slen;
         assert(strlen(result) == slen);
-        assert(memcmp(result, s.ptr, slen) == 0);
+        assert(result[0 .. slen] == s[0 .. slen]);
     }
 }
 body
@@ -299,7 +299,7 @@ body
     copy[0..s.length] = s[];
     copy[s.length] = 0;
 
-    return assumeUnique(copy).ptr;
+    return &assumeUnique(copy)[0];
 }
 
 /++ Ditto +/
@@ -318,7 +318,7 @@ immutable(char)* toStringz(in string s) @trusted pure nothrow
     // unreadable. Otherwise, it's definitely pointing to valid
     // memory.
     if ((cast(size_t) p & 3) && *p == 0)
-        return s.ptr;
+        return &s[0];
     return toStringz(cast(const char[]) s);
 }
 
@@ -394,15 +394,16 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     {
         static if (Char.sizeof == 1 && isSomeString!Range)
         {
-            import core.stdc.string : memchr;
             if (std.ascii.isASCII(c) && !__ctfe)
             {                                               // Plain old ASCII
-                auto trustedmemchr() @trusted { return cast(Char*)memchr(s.ptr, c, s.length); }
-                const p = trustedmemchr();
-                if (p)
-                    return p - s.ptr;
-                else
-                    return -1;
+                static ptrdiff_t trustedmemchr(Range s, char c) @trusted
+                {
+                    import core.stdc.string : memchr;
+                    const p = cast(const(Char)*)memchr(s.ptr, c, s.length);
+                    return p ? p - s.ptr : -1;
+                }
+
+                return trustedmemchr(s, cast(char)c);
             }
         }
 
@@ -730,7 +731,7 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
                 ((a, b) => toLower(a) == toLower(b))
                 (s, sub);
         }
-        return balance.empty ? -1 : balance.ptr - s.ptr;
+        return () @trusted { return balance.empty ? -1 : balance.ptr - s.ptr; } ();
     }
     else
     {
@@ -6246,11 +6247,11 @@ char[] soundex(const(char)[] str, char[] buffer = null)
     @safe pure nothrow
 in
 {
-    assert(!buffer.ptr || buffer.length >= 4);
+    assert(buffer is null || buffer.length >= 4);
 }
 out (result)
 {
-    if (result.ptr)
+    if (result !is null)
     {
         assert(result.length == 4);
         assert(result[0] >= 'A' && result[0] <= 'Z');
@@ -6263,7 +6264,7 @@ body
     char[4] result = soundexer(str);
     if (result[0] == 0)
         return null;
-    if (!buffer.ptr)
+    if (buffer is null)
         buffer = new char[4];
     buffer[] = result[];
     return buffer;
