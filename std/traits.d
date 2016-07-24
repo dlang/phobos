@@ -2027,7 +2027,7 @@ and that $(D T.outer) is the implicit reference to the outer class
 template isInnerClass(T)
     if (is(T == class))
 {
-    import std.meta: staticIndexOf;
+    import std.meta : staticIndexOf;
     
     enum isInnerClass = __traits(isSame, typeof(T.outer), __traits(parent, T))
                      && (staticIndexOf!(__traits(allMembers, T), "outer") == -1);
