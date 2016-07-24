@@ -1726,8 +1726,9 @@ struct Slice(size_t _N, _Range)
     bool opEquals(size_t NR, RangeR)(auto ref Slice!(NR, RangeR) rslice)
         if (Slice!(NR, RangeR).PureN == PureN)
     {
-        if (this._lengths != rslice._lengths)
-            return false;
+        foreach (i; Iota!(0, PureN))
+            if (this._lengths[i] != rslice._lengths[i])
+                return false;
         static if (
                !hasReference!(typeof(this))
             && !hasReference!(typeof(rslice))
@@ -1737,17 +1738,27 @@ struct Slice(size_t _N, _Range)
             if (this._strides == rslice._strides && this._ptr == rslice._ptr)
                 return true;
         }
-        return opEqualsImpl(this, rslice);
+        foreach (i; Iota!(0, PureN))
+            if (this._lengths[i] == 0)
+                return true;
+        import std.experimental.ndslice.selection : unpack;
+        return opEqualsImpl(this.unpack, rslice.unpack);
     }
 
     ///ditto
     bool opEquals(T)(T[] rarrary)
     {
-        if (this.length != rarrary.length)
+        auto slice = this;
+        if (slice.length != rarrary.length)
             return false;
-        foreach (i, ref e; rarrary)
-            if (e != this[i])
+        if (rarrary.length) do
+        {
+            if (slice.front != rarrary.front)
                 return false;
+            slice.popFront;
+            rarrary.popFront;
+        }
+        while (rarrary.length);
         return true;
     }
 
@@ -1765,6 +1776,14 @@ struct Slice(size_t _N, _Range)
 
         assert(a != [9, 2, 3, 4].sliced(2, 2));
         assert(a != [[9, 2], [3, 4]]);
+    }
+
+    static if (doUnittest)
+    pure nothrow unittest
+    {
+        import std.experimental.ndslice.iteration : dropExactly;
+        import std.experimental.ndslice.selection : iotaSlice;
+        assert(iotaSlice(2, 3).slice.dropExactly!0(2) == iotaSlice([4, 3], 2).dropExactly!0(4));
     }
 
     _Slice opSlice(size_t dimension)(size_t i, size_t j)
@@ -1933,89 +1952,18 @@ struct Slice(size_t _N, _Range)
         auto col = slice[0..$, 1];
     }
 
-    static if (isMutable!DeepElemType && PureN == N)
+    static if (isMutable!DeepElemType)
     {
-        private void opIndexAssignImpl(string op, size_t RN, RRange, Slices...)(Slice!(RN, RRange) value, Slices slices)
-            if (isFullPureSlice!Slices
-                && RN <= ReturnType!(opIndex!Slices).N)
-        {
-            auto slice = this[slices];
-            assert(slice._lengths[$ - RN .. $] == value._lengths,
-                __FUNCTION__ ~ ": argument must have the corresponding shape.");
-            version(none) //future optimization
-            static if ((isPointer!Range || isDynamicArray!Range) && (isPointer!RRange || isDynamicArray!RRange))
-            {
-                enum d = slice.N - value.N;
-                foreach_reverse (i; Iota!(0, value.N))
-                    if (slice._lengths[i + d] == 1)
-                    {
-                        if (value._lengths[i] == 1)
-                        {
-                            static if (i != value.N - 1)
-                            {
-                                import std.experimental.ndslice.iteration : swapped;
-                                slice = slice.swapped(i + d, slice.N - 1);
-                                value = value.swapped(i    , value.N - 1);
-                            }
-                            goto L1;
-                        }
-                        else
-                        {
-                            goto L2;
-                        }
-                    }
-                L1:
-                _indexAssign!(true, op)(slice, value);
-                return;
-            }
-            L2:
-            _indexAssign!(false, op)(slice, value);
-        }
-
-        private void opIndexAssignImpl(string op, T, Slices...)(T[] value, Slices slices)
-            if (isFullPureSlice!Slices
-                && !isDynamicArray!DeepElemType
-                && DynamicArrayDimensionsCount!(T[]) <= ReturnType!(opIndex!Slices).N)
-        {
-            auto slice = this[slices];
-            version(none) //future optimization
-            static if (isPointer!Range || isDynamicArray!Range)
-            {
-                if (slice._lengths[$-1] == 1)
-                {
-                    _indexAssign!(true, op)(slice, value);
-                    return;
-                }
-            }
-            _indexAssign!(false, op)(slice, value);
-        }
-
-        private void opIndexAssignImpl(string op, T, Slices...)(T value, Slices slices)
-            if (isFullPureSlice!Slices
-                && (!isDynamicArray!T || isDynamicArray!DeepElemType)
-                && !is(T : Slice!(RN, RRange), size_t RN, RRange))
-        {
-            auto slice = this[slices];
-            version(none) //future optimization
-            static if (isPointer!Range || isDynamicArray!Range)
-            {
-                if (slice._lengths[$-1] == 1)
-                {
-                    _indexAssign!(true, op)(slice, value);
-                    return;
-                }
-            }
-            _indexAssign!(false, op)(slice, value);
-        }
-
         /++
         Assignment of a value of `Slice` type to a $(B fully defined slice).
+
+        Optimization:
+            SIMD instructions may be used if both slices have the last stride equals to 1.
         +/
         void opIndexAssign(size_t RN, RRange, Slices...)(Slice!(RN, RRange) value, Slices slices)
-            if (isFullPureSlice!Slices
-                && RN <= ReturnType!(opIndex!Slices).N)
+            if (isFullPureSlice!Slices && RN <= ReturnType!(opIndex!Slices).N)
         {
-            opIndexAssignImpl!""(value, slices);
+            opIndexAssignImpl!""(this[slices], value);
         }
 
         static if (doUnittest)
@@ -2028,6 +1976,7 @@ struct Slice(size_t _N, _Range)
             a[0..$, 0..$-1] = b;
             assert(a == [[1, 2, 0], [3, 4, 0]]);
 
+            // fills both rows with b[0]
             a[0..$, 0..$-1] = b[0];
             assert(a == [[1, 2, 0], [1, 2, 0]]);
 
@@ -2036,6 +1985,36 @@ struct Slice(size_t _N, _Range)
 
             a[1, 0..$-1][] = b[0];
             assert(a[1] == [1, 2, 0]);
+        }
+
+        static if (doUnittest)
+        /// Left slice is packed
+        pure nothrow unittest
+        {
+            import std.experimental.ndslice.selection : blocks, iotaSlice;
+            auto a = slice!size_t(4, 4);
+            a.blocks(2, 2)[] = iotaSlice(2, 2);
+
+            assert(a ==
+                    [[0, 0, 1, 1],
+                     [0, 0, 1, 1],
+                     [2, 2, 3, 3],
+                     [2, 2, 3, 3]]);
+        }
+
+        static if (doUnittest)
+        /// Both slices are packed
+        pure nothrow unittest
+        {
+            import std.experimental.ndslice.selection : blocks, iotaSlice, pack;
+            auto a = slice!size_t(4, 4);
+            a.blocks(2, 2)[] = iotaSlice(2, 2, 2).pack!1;
+
+            assert(a ==
+                    [[0, 1, 2, 3],
+                     [0, 1, 2, 3],
+                     [4, 5, 6, 7],
+                     [4, 5, 6, 7]]);
         }
 
         static if (doUnittest)
@@ -2059,13 +2038,16 @@ struct Slice(size_t _N, _Range)
 
         /++
         Assignment of a regular multidimensional array to a $(B fully defined slice).
+
+        Optimization:
+            SIMD instructions may be used if the slice has the last stride equals to 1.
         +/
         void opIndexAssign(T, Slices...)(T[] value, Slices slices)
             if (isFullPureSlice!Slices
                 && !isDynamicArray!DeepElemType
                 && DynamicArrayDimensionsCount!(T[]) <= ReturnType!(opIndex!Slices).N)
         {
-            opIndexAssignImpl!""(value, slices);
+            opIndexAssignImpl!""(this[slices], value);
         }
 
         static if (doUnittest)
@@ -2089,6 +2071,21 @@ struct Slice(size_t _N, _Range)
 
             a[1, 0..$-1][] = [3, 4];
             assert(a[1] == [3, 4, 6]);
+        }
+
+        static if (doUnittest)
+        /// Packed slices
+        pure nothrow unittest
+        {
+            import std.experimental.ndslice.selection : blocks;
+            auto a = slice!int(4, 4);
+            a.blocks(2, 2)[] = [[0, 1], [2, 3]];
+
+            assert(a ==
+                    [[0, 0, 1, 1],
+                     [0, 0, 1, 1],
+                     [2, 2, 3, 3],
+                     [2, 2, 3, 3]]);
         }
 
         static if (doUnittest)
@@ -2115,13 +2112,16 @@ struct Slice(size_t _N, _Range)
 
         /++
         Assignment of a value (e.g. a number) to a $(B fully defined slice).
+
+        Optimization:
+            SIMD instructions may be used if the slice has the last stride equals to 1.
         +/
         void opIndexAssign(T, Slices...)(T value, Slices slices)
             if (isFullPureSlice!Slices
                 && (!isDynamicArray!T || isDynamicArray!DeepElemType)
                 && !is(T : Slice!(RN, RRange), size_t RN, RRange))
         {
-            opIndexAssignImpl!""(value, slices);
+            opIndexAssignImpl!""(this[slices], value);
         }
 
         static if (doUnittest)
@@ -2150,6 +2150,17 @@ struct Slice(size_t _N, _Range)
         }
 
         static if (doUnittest)
+        /// Packed slices have the same behavior.
+        pure nothrow unittest
+        {
+            import std.experimental.ndslice.selection : pack;
+            auto a = slice!int(2, 3).pack!1;
+
+            a[] = 9;
+            assert(a == [[9, 9, 9], [9, 9, 9]]);
+        }
+
+        static if (doUnittest)
         pure nothrow unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
@@ -2173,6 +2184,7 @@ struct Slice(size_t _N, _Range)
             assert(a[1] == [5, 5, 9]);
         }
 
+        static if (PureN == N)
         /++
         Assignment of a value (e.g. a number) to a $(B fully defined index).
         +/
@@ -2181,6 +2193,7 @@ struct Slice(size_t _N, _Range)
             return _ptr[indexStride(_indexes)] = value;
         }
 
+        static if (PureN == N)
         /// ditto
         auto ref opIndexAssign(T)(T value, size_t[N] _indexes)
         {
@@ -2224,6 +2237,7 @@ struct Slice(size_t _N, _Range)
             assert(a[[1, 2]] == 3);
         }
 
+        static if (PureN == N)
         /++
         Op Assignment `op=` of a value (e.g. a number) to a $(B fully defined index).
         +/
@@ -2232,6 +2246,7 @@ struct Slice(size_t _N, _Range)
             mixin (`return _ptr[indexStride(_indexes)] ` ~ op ~ `= value;`);
         }
 
+        static if (PureN == N)
         /// ditto
         auto ref opIndexOpAssign(string op, T)(T value, size_t[N] _indexes)
         {
@@ -2277,12 +2292,15 @@ struct Slice(size_t _N, _Range)
 
         /++
         Op Assignment `op=` of a value of `Slice` type to a $(B fully defined slice).
+
+        Optimization:
+            SIMD instructions may be used if both slices have the last stride equals to 1.
         +/
         void opIndexOpAssign(string op, size_t RN, RRange, Slices...)(Slice!(RN, RRange) value, Slices slices)
             if (isFullPureSlice!Slices
                 && RN <= ReturnType!(opIndex!Slices).N)
         {
-            opIndexAssignImpl!op(value, slices);
+            opIndexAssignImpl!op(this[slices], value);
         }
 
         static if (doUnittest)
@@ -2303,6 +2321,36 @@ struct Slice(size_t _N, _Range)
 
             a[1, 0..$-1][] += b[0];
             assert(a[1] == [8, 12, 0]);
+        }
+
+        static if (doUnittest)
+        /// Left slice is packed
+        pure nothrow unittest
+        {
+            import std.experimental.ndslice.selection : blocks, iotaSlice;
+            auto a = slice!size_t(4, 4);
+            a.blocks(2, 2)[] += iotaSlice(2, 2);
+
+            assert(a ==
+                    [[0, 0, 1, 1],
+                     [0, 0, 1, 1],
+                     [2, 2, 3, 3],
+                     [2, 2, 3, 3]]);
+        }
+
+        static if (doUnittest)
+        /// Both slices are packed
+        pure nothrow unittest
+        {
+            import std.experimental.ndslice.selection : blocks, iotaSlice, pack;
+            auto a = slice!size_t(4, 4);
+            a.blocks(2, 2)[] += iotaSlice(2, 2, 2).pack!1;
+
+            assert(a ==
+                    [[0, 1, 2, 3],
+                     [0, 1, 2, 3],
+                     [4, 5, 6, 7],
+                     [4, 5, 6, 7]]);
         }
 
         static if (doUnittest)
@@ -2326,13 +2374,16 @@ struct Slice(size_t _N, _Range)
 
         /++
         Op Assignment `op=` of a regular multidimensional array to a $(B fully defined slice).
+
+        Optimization:
+            SIMD instructions may be used if the slice has the last stride equals to 1.
         +/
         void opIndexOpAssign(string op, T, Slices...)(T[] value, Slices slices)
             if (isFullPureSlice!Slices
                 && !isDynamicArray!DeepElemType
                 && DynamicArrayDimensionsCount!(T[]) <= ReturnType!(opIndex!Slices).N)
         {
-            opIndexAssignImpl!op(value, slices);
+            opIndexAssignImpl!op(this[slices], value);
         }
 
         static if (doUnittest)
@@ -2352,6 +2403,32 @@ struct Slice(size_t _N, _Range)
 
             a[1, 0..$-1][] += [1, 2];
             assert(a[1] == [8, 12, 0]);
+        }
+
+        static if (doUnittest)
+        /// Packed slices
+        pure nothrow unittest
+        {
+            import std.experimental.ndslice.selection : blocks;
+            auto a = slice!int(4, 4);
+            a.blocks(2, 2)[] += [[0, 1], [2, 3]];
+
+            assert(a ==
+                    [[0, 0, 1, 1],
+                     [0, 0, 1, 1],
+                     [2, 2, 3, 3],
+                     [2, 2, 3, 3]]);
+        }
+
+        static if (doUnittest)
+        /// Packed slices have the same behavior.
+        pure nothrow unittest
+        {
+            import std.experimental.ndslice.selection : pack;
+            auto a = slice!int(2, 3).pack!1;
+
+            a[] += 9;
+            assert(a == [[9, 9, 9], [9, 9, 9]]);
         }
 
         static if (doUnittest)
@@ -2374,13 +2451,16 @@ struct Slice(size_t _N, _Range)
 
         /++
         Op Assignment `op=` of a value (e.g. a number) to a $(B fully defined slice).
-        +/
+
+        Optimization:
+            SIMD instructions may be used if the slice has the last stride equals to 1.
+       +/
         void opIndexOpAssign(string op, T, Slices...)(T value, Slices slices)
             if (isFullPureSlice!Slices
                 && (!isDynamicArray!T || isDynamicArray!DeepElemType)
                 && !is(T : Slice!(RN, RRange), size_t RN, RRange))
         {
-            opIndexAssignImpl!op(value, slices);
+            opIndexAssignImpl!op(this[slices], value);
         }
 
         static if (doUnittest)
@@ -2414,6 +2494,7 @@ struct Slice(size_t _N, _Range)
             assert(a[1] == [6, 6, 1]);
         }
 
+        static if (PureN == N)
         /++
         Increment `++` and Decrement `--` operators for a $(B fully defined index).
         +/
@@ -2423,6 +2504,7 @@ struct Slice(size_t _N, _Range)
             mixin (`return ` ~ op ~ `_ptr[indexStride(_indexes)];`);
         }
 
+        static if (PureN == N)
         ///ditto
         auto ref opIndexUnary(string op)(size_t[N] _indexes)
             if (op == `++` || op == `--`)
@@ -2467,6 +2549,7 @@ struct Slice(size_t _N, _Range)
             assert(a[[1, 2]] == 1);
         }
 
+        static if (PureN == N)
         /++
         Increment `++` and Decrement `--` operators for a $(B fully defined slice).
         +/
@@ -2765,29 +2848,98 @@ unittest
 }
 
 private bool opEqualsImpl
-    (size_t NL, RangeL, size_t NR, RangeR)(
-    auto ref Slice!(NL, RangeL) ls,
-    auto ref Slice!(NR, RangeR) rs)
-in
+    (size_t N, RangeL, RangeR)(
+    Slice!(N, RangeL) ls,
+    Slice!(N, RangeR) rs)
 {
-    assert(ls._lengths == rs._lengths);
-}
-body
-{
-    foreach (i; 0 .. ls.length)
+    do
     {
-        static if (Slice!(NL, RangeL).PureN == 1)
+        static if (Slice!(N, RangeL).PureN == 1)
         {
-            if (ls[i] != rs[i])
+            if (ls.front != rs.front)
                 return false;
         }
         else
         {
-            if (!opEqualsImpl(ls[i], rs[i]))
+            if (!opEqualsImpl(ls.front, rs.front))
                 return false;
         }
+        rs.popFront;
+        ls.popFront;
     }
+    while (ls.length);
     return true;
+}
+
+private void opIndexAssignImpl(
+    string op,
+    size_t NL, RangeL,
+    size_t NR, RangeR)(
+    Slice!(NL, RangeL) ls,
+    Slice!(NR, RangeR) rs)
+    if (NL >= NR)
+{
+    assert(_checkAssignLengths(ls, rs),
+        __FUNCTION__ ~ ": arguments must have the corresponding shape.");
+
+    foreach (i; Iota!(0, ls.PureN))
+        if (ls._lengths[i] == 0)
+            return;
+
+    static if (isMemory!RangeL && isMemory!RangeR && ls.NSeq.length == rs.NSeq.length)
+    {
+        if (ls._strides[$ - 1] == 1 && rs._strides[$ - 1] == 1)
+        {
+            _indexAssign!(true, op)(ls, rs);
+            return;
+        }
+    }
+    else
+    static if (isMemory!RangeL && ls.NSeq.length > rs.NSeq.length)
+    {
+        if (ls._strides[$ - 1] == 1)
+        {
+            _indexAssign!(true, op)(ls, rs);
+            return;
+        }
+    }
+
+    _indexAssign!(false, op)(ls, rs);
+}
+
+pure nothrow unittest
+{
+    import std.experimental.ndslice.iteration : dropExactly;
+    import std.experimental.ndslice.selection : byElement;
+    auto sl1 = slice!double([2, 3], 2);
+    auto sl2 = slice!double([2, 3], 3);
+    sl1.dropExactly!0(2)[] = sl2.dropExactly!0(2);
+    foreach (e; sl1.byElement)
+        assert(e == 2);
+    sl1.dropExactly!0(2)[] = sl2.dropExactly!0(2).ndarray;
+    foreach (e; sl1.byElement)
+        assert(e == 2);
+}
+
+private void opIndexAssignImpl
+    (string op, size_t NL, RangeL, T)(
+        Slice!(NL, RangeL) ls, T rs)
+    if (!is(T : Slice!(NR, RangeR), size_t NR, RangeR))
+{
+    foreach (i; Iota!(0, ls.PureN))
+        if (ls._lengths[i] == 0)
+            return;
+
+    static if (isMemory!RangeL)
+    {
+        if (ls._strides[$ - 1] == 1)
+        {
+            _indexAssign!(true, op)(ls, rs);
+            return;
+        }
+    }
+
+    _indexAssign!(false, op)(ls, rs);
 }
 
 private struct PtrShell(Range)
@@ -3060,141 +3212,182 @@ private enum bool isType(T) = true;
 
 private enum isStringValue(alias T) = is(typeof(T) : string);
 
-private void _indexAssign(bool lastStrideEquals1, string op, size_t N, size_t RN, Range, RRange)
-                         (Slice!(N, Range) slice, Slice!(RN, RRange) value)
-    if (N >= RN)
+private void _indexAssignKernel(string op, TL, TR)(size_t c, TL* l, TR* r)
 {
-    static if (N == 1)
+    pragma(inline, false);
+    do
     {
-        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range)
-                   && (isPointer!RRange || isDynamicArray!RRange))
+        mixin("l[0] " ~ op ~ "= r[0];");
+        ++r;
+        ++l;
+    }
+    while (--c);
+}
+
+private void _indexAssignValKernel(string op, TL, TR)(size_t c, TL* l, TR r)
+{
+    pragma(inline, false);
+    do
+    {
+        mixin("l[0] " ~ op ~ "= r;");
+        ++l;
+    }
+    while (--c);
+}
+
+private void _indexAssign(bool lastStrideEquals1, string op, size_t NL, RangeL, size_t NR, RangeR)
+                         (Slice!(NL, RangeL) ls, Slice!(NR, RangeR) rs)
+    if (NL >= NR)
+{
+    static if (NL == 1)
+    {
+        static if (lastStrideEquals1 && ls.PureN == 1)
         {
-            static if (isPointer!Range)
-                auto l = slice._ptr;
-            else
-                auto l = slice._ptr._range[slice._ptr._shift .. slice._ptr._shift + slice._lengths[0]];
-            static if (isPointer!RRange)
-                auto r = value._ptr;
-            else
-                auto r = value._ptr._range[value._ptr._shift .. value._ptr._shift + value._lengths[0]];
-            auto len = slice._lengths[0];
-            for (size_t i; i < len; i++)
-            {
-                mixin("l[i]" ~ op ~ "= r[i];");
-            }
+            _indexAssignKernel!op(ls._lengths[0], ls._ptr, rs._ptr);
         }
         else
         {
-            while (slice._lengths[0])
+            do
             {
-                mixin("slice.front " ~ op ~ "= value.front;");
-                slice.popFront;
-                value.popFront;
+                static if (ls.PureN == 1)
+                    mixin("ls.front " ~ op ~ "= rs.front;");
+                else
+                    _indexAssign!(lastStrideEquals1, op)(ls.front, rs.front);
+                rs.popFront;
+                ls.popFront;
             }
+            while (ls.length);
         }
     }
     else
-    static if (N == RN)
+    static if (NL == NR)
     {
-        while (slice._lengths[0])
+        do
         {
-            _indexAssign!(lastStrideEquals1, op)(slice.front, value.front);
-            slice.popFront;
-            value.popFront;
+            _indexAssign!(lastStrideEquals1, op)(ls.front, rs.front);
+            rs.popFront;
+            ls.popFront;
         }
+        while (ls.length);
     }
     else
     {
-        while (slice._lengths[0])
+        do
         {
-            _indexAssign!(lastStrideEquals1, op)(slice.front, value);
-            slice.popFront;
+            _indexAssign!(lastStrideEquals1, op)(ls.front, rs);
+            ls.popFront;
         }
+        while (ls.length);
     }
 }
 
-private void _indexAssign(bool lastStrideEquals1, string op, size_t N, Range, T)(Slice!(N, Range) slice, T[] value)
-    if (DynamicArrayDimensionsCount!(T[]) <= N)
+private void _indexAssign(bool lastStrideEquals1, string op, size_t NL, RangeL, T)(Slice!(NL, RangeL) ls, T[] rs)
+    if (DynamicArrayDimensionsCount!(T[]) <= NL)
 {
-    assert(slice.length == value.length, __FUNCTION__ ~ ": argument must have the same length.");
-    static if (N == 1)
+    assert(ls.length == rs.length, __FUNCTION__ ~ ": argument must have the same length.");
+    static if (NL == 1)
     {
-        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range))
+        static if (lastStrideEquals1 && ls.PureN == 1)
         {
-            static if (isPointer!Range)
-                auto l = slice._ptr;
-            else
-                auto l = slice._ptr._range[slice._ptr._shift .. slice._ptr._shift + slice._lengths[0]];
-            auto r = value;
-            auto len = slice._lengths[0];
-            for (size_t i; i < len; i++)
-            {
-                mixin("l[i]" ~ op ~ "= r[i];");
-            }
+            _indexAssignKernel!op(ls._lengths[0], ls._ptr, rs.ptr);
         }
         else
         {
-            while (slice._lengths[0])
+            do
             {
-                mixin("slice.front " ~ op ~ "= value[0];");
-                slice.popFront;
-                value = value[1..$];
+                static if (ls.PureN == 1)
+                    mixin("ls.front " ~ op ~ "= rs[0];");
+                else
+                    _indexAssign!(lastStrideEquals1, op)(ls.front, rs[0]);
+                rs.popFront;
+                ls.popFront;
             }
+            while (ls.length);
         }
     }
     else
-    static if (N == DynamicArrayDimensionsCount!(T[]))
+    static if (NL == DynamicArrayDimensionsCount!(T[]))
     {
-        while (slice._lengths[0])
+        do
         {
-            _indexAssign!(lastStrideEquals1, op)(slice.front, value[0]);
-            slice.popFront;
-            value = value[1 .. $];
+            _indexAssign!(lastStrideEquals1, op)(ls.front, rs[0]);
+            rs.popFront;
+            ls.popFront;
         }
+        while (ls.length);
     }
     else
     {
-        while (slice._lengths[0])
+        do
         {
-            _indexAssign!(lastStrideEquals1, op)(slice.front, value);
-            slice.popFront;
+            _indexAssign!(lastStrideEquals1, op)(ls.front, rs);
+            ls.popFront;
         }
+        while (ls.length);
     }
 }
 
-private void _indexAssign(bool lastStrideEquals1, string op, size_t N, Range, T)(Slice!(N, Range) slice, T value)
-    if ((!isDynamicArray!T || isDynamicArray!(Slice!(N, Range).DeepElemType))
-                && !is(T : Slice!(RN, RRange), size_t RN, RRange))
+private void _indexAssign(bool lastStrideEquals1, string op, size_t NL, RangeL, T)(Slice!(NL, RangeL) ls, T rs)
+    if ((!isDynamicArray!T || isDynamicArray!(Slice!(NL, RangeL).DeepElemType))
+                && !is(T : Slice!(NR, RangeR), size_t NR, RangeR))
 {
-    static if (N == 1)
+    static if (NL == 1)
     {
-        static if (lastStrideEquals1 && (isPointer!Range || isDynamicArray!Range))
+        static if (lastStrideEquals1 && ls.PureN == 1)
         {
-            static if (isPointer!Range)
-                auto l = slice._ptr;
-            else
-                auto l = slice._ptr._range[slice._ptr._shift .. $];
-            auto len = slice._lengths[0];
-            for (size_t i; i < len; i++)
-            {
-                mixin("l[i]" ~ op ~ "= value;");
-            }
+            _indexAssignValKernel!op(ls._lengths[0], ls._ptr, rs);
         }
         else
         {
-            while (slice._lengths[0])
+            do
             {
-                mixin("slice.front " ~ op ~ "= value;");
-                slice.popFront;
+                static if (ls.PureN == 1)
+                    mixin("ls.front " ~ op ~ "= rs;");
+                else
+                    _indexAssign!(lastStrideEquals1, op)(ls.front, rs);
+                ls.popFront;
             }
+            while (ls.length);
         }
     }
     else
     {
-        while (slice._lengths[0])
+        do
         {
-            _indexAssign!(lastStrideEquals1, op)(slice.front, value);
-            slice.popFront;
+            _indexAssign!(lastStrideEquals1, op)(ls.front, rs);
+            ls.popFront;
         }
+        while (ls.length);
     }
+}
+
+private bool _checkAssignLengths(size_t NL, RangeL, size_t NR, RangeR)(Slice!(NL, RangeL) ls, Slice!(NR, RangeR) rs)
+    if (NL >= NR)
+{
+    foreach (i; Iota!(0, NR))
+        if (ls._lengths[i + NL - NR] != rs._lengths[i])
+            return false;
+
+    static if (ls.PureN > NL && rs.PureN > NR)
+    {
+        ls.DeepElemType a;
+        rs.DeepElemType b;
+        a._lengths = ls._lengths[NL .. $];
+        b._lengths = rs._lengths[NR .. $];
+        return _checkAssignLengths(a, b);
+    }
+    else
+    {
+        return true;
+    }
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.experimental.ndslice.selection : iotaSlice;
+
+    assert(_checkAssignLengths(iotaSlice(2, 2), iotaSlice(2, 2)));
+    assert(!_checkAssignLengths(iotaSlice(2, 2), iotaSlice(2, 3)));
+    assert(!_checkAssignLengths(iotaSlice(2, 2), iotaSlice(3, 2)));
+    assert(!_checkAssignLengths(iotaSlice(2, 2), iotaSlice(3, 3)));
 }
