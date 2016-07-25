@@ -1734,7 +1734,13 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
     {
         import core.stdc.stdlib : malloc;
         import std.exception : enforce;
-        auto ptr = cast(T*)enforce(malloc(T.sizeof*size), "out of memory on C heap");
+
+        import core.checkedint : mulu;
+        bool overflow;
+        size_t nbytes = mulu(size, T.sizeof, overflow);
+        if (overflow) assert(0);
+
+        auto ptr = cast(T*)enforce(malloc(nbytes), "out of memory on C heap");
         return ptr[0..size];
     }
 
@@ -1747,8 +1753,13 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
             destroy(arr);
             return null;
         }
-        auto ptr = cast(T*)enforce(realloc(
-                             arr.ptr, T.sizeof*size), "out of memory on C heap");
+
+        import core.checkedint : mulu;
+        bool overflow;
+        size_t nbytes = mulu(size, T.sizeof, overflow);
+        if (overflow) assert(0);
+
+        auto ptr = cast(T*)enforce(realloc(arr.ptr, nbytes), "out of memory on C heap");
         return ptr[0..size];
     }
 
@@ -1760,15 +1771,41 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
     static void append(T, V)(ref T[] arr, V value)
         if (!isInputRange!V)
     {
+        if (arr.length == size_t.max) assert(0);
         arr = realloc(arr, arr.length+1);
         arr[$-1] = force!T(value);
+    }
+
+    @safe unittest
+    {
+        int[] arr;
+        ReallocPolicy.append(arr, 3);
+
+        import std.algorithm.comparison : equal;
+        assert(equal(arr, [3]));
     }
 
     static void append(T, V)(ref T[] arr, V value)
         if (isInputRange!V && hasLength!V)
     {
-        arr = realloc(arr, arr.length+value.length);
+        import core.checkedint : addu;
+        bool overflow;
+        size_t nelems = addu(arr.length, value.length, overflow);
+        if (overflow) assert(0);
+
+        arr = realloc(arr, nelems);
+
+        import std.algorithm.mutation : copy;
         copy(value, arr[$-value.length..$]);
+    }
+
+    @safe unittest
+    {
+        int[] arr;
+        ReallocPolicy.append(arr, [1,2,3]);
+
+        import std.algorithm.comparison : equal;
+        assert(equal(arr, [1,2,3]));
     }
 
     static void destroy(T)(ref T[] arr)
@@ -6690,7 +6727,7 @@ public:
             import core.stdc.stdlib : realloc;
             if (!isBig)
             {
-                if (slen_ + 1 > small_cap)
+                if (slen_ == small_cap)
                     convertToBig();// & fallthrough to "big" branch
                 else
                 {
@@ -6701,10 +6738,15 @@ public:
             }
 
             assert(isBig);
-            if (len_ + 1 > cap_)
+            if (len_ == cap_)
             {
-                cap_ += grow;
-                ptr_ = cast(ubyte*)enforce(realloc(ptr_, 3*(cap_+1)),
+                import core.checkedint : addu, mulu;
+                bool overflow;
+                cap_ = addu(cap_, grow, overflow);
+                auto nelems = mulu(3, addu(cap_, 1, overflow), overflow);
+                if (overflow) assert(0);
+
+                ptr_ = cast(ubyte*)enforce(realloc(ptr_, nelems),
                     "realloc failed");
             }
             write24(ptr_, ch, len_++);
@@ -6765,7 +6807,11 @@ public:
         import core.stdc.stdlib : malloc;
         if (isBig)
         {// dup it
-            auto raw_cap = 3*(cap_+1);
+            import core.checkedint : addu, mulu;
+            bool overflow;
+            auto raw_cap = mulu(3, addu(cap_, 1, overflow), overflow);
+            if (overflow) assert(0);
+
             auto p = cast(ubyte*)enforce(malloc(raw_cap), "malloc failed");
             p[0..raw_cap] = ptr_[0..raw_cap];
             ptr_ = p;
@@ -6809,8 +6855,11 @@ private:
     void convertToBig()
     {
         import core.stdc.stdlib : malloc;
-        immutable k = smallLength;
-        ubyte* p = cast(ubyte*)enforce(malloc(3*(grow+1)), "malloc failed");
+
+        static assert(grow.max / 3 - 1 >= grow);
+        enum nbytes = 3 * (grow + 1);
+        size_t k = smallLength;
+        ubyte* p = cast(ubyte*)enforce(malloc(nbytes), "malloc failed");
         for (int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data
