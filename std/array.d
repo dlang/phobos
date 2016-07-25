@@ -629,9 +629,15 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         {
             import core.stdc.string : memset;
             import core.memory : GC;
-            auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E);
+
+            import core.checkedint : mulu;
+            bool overflow;
+            const nbytes = mulu(size, E.sizeof, overflow);
+            if (overflow) assert(0);
+
+            auto ptr = cast(E*) GC.malloc(nbytes, blockAttribute!E);
             static if (minimallyInitialized && hasIndirections!E)
-                memset(ptr, 0, size * E.sizeof);
+                memset(ptr, 0, nbytes);
             ret = ptr[0 .. size];
         }
     }
@@ -2773,8 +2779,14 @@ if (isDynamicArray!A)
                 }
             }
 
+
             // didn't work, must reallocate
-            auto bi = GC.qalloc(newlen * T.sizeof, blockAttribute!T);
+            import core.checkedint : mulu;
+            bool overflow;
+            const nbytes = mulu(newlen, T.sizeof, overflow);
+            if (overflow) assert(0);
+
+            auto bi = GC.qalloc(nbytes, blockAttribute!T);
             _data.capacity = bi.size / T.sizeof;
             import core.stdc.string : memcpy;
             if (len)
