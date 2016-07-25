@@ -353,6 +353,7 @@ SRC_STD_EXP_LOGGER= \
 
 SRC_STD_EXP_NDSLICE= \
 	std\experimental\ndslice\package.d \
+	std\experimental\ndslice\algorithm.d \
 	std\experimental\ndslice\iteration.d \
 	std\experimental\ndslice\selection.d \
 	std\experimental\ndslice\slice.d \
@@ -551,6 +552,7 @@ DOCS= \
 	$(DOC)\std_experimental_allocator_typed.html \
 	$(DOC)\std_experimental_allocator.html \
 	$(DOC)\std_experimental_ndslice_iteration.html \
+	$(DOC)\std_experimental_ndslice_algorithm.html \
 	$(DOC)\std_experimental_ndslice_selection.html \
 	$(DOC)\std_experimental_ndslice_slice.html \
 	$(DOC)\std_experimental_ndslice.html \
@@ -1050,6 +1052,9 @@ $(DOC)\std_experimental_allocator.html : $(STDDOC) std\experimental\allocator\pa
 
 $(DOC)\std_experimental_typecons.html : $(STDDOC) std\experimental\typecons.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_typecons.html $(STDDOC) std\experimental\typecons.d
+
+$(DOC)\std_experimental_ndslice_algorithm.html : $(STDDOC) std\experimental\ndslice\algorithm.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_algorithm.html $(STDDOC) std\experimental\ndslice\algorithm.d
 
 $(DOC)\std_experimental_ndslice_iteration.html : $(STDDOC) std\experimental\ndslice\iteration.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_iteration.html $(STDDOC) std\experimental\ndslice\iteration.d

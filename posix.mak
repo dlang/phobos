@@ -184,7 +184,7 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   fallback_allocator free_list free_tree bitmapped_block \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
-PACKAGE_std_experimental_ndslice = package iteration selection slice
+PACKAGE_std_experimental_ndslice = package algorithm iteration selection slice
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \

@@ -451,6 +451,8 @@ Returns:
     fun, the element type will be $(D Tuple) containing one element for each fun.
 
 See_Also:
+    $(REF_ALTTEXT Multidimensional map, ndMap, std,experimental,ndslice,computation)
+
     $(HTTP en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
 */
 template map(fun...) if (fun.length >= 1)
@@ -852,6 +854,7 @@ Params:
 
 See_Also: $(REF tee, std,range)
 
+    $(REF_ALTTEXT Multidimensional each, ndEach, std,experimental,ndslice,computation)
  */
 template each(alias pred = "a")
 {
@@ -2601,6 +2604,8 @@ See_Also:
 
     $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
     pairwise summing of floating point numbers.
+
+    $(REF_ALTTEXT Multidimensional reduce, ndReduce, std,experimental,ndslice,computation)
 +/
 template reduce(fun...) if (fun.length >= 1)
 {
@@ -3053,6 +3058,8 @@ See_Also:
 
     This is functionally equivalent to $(LREF reduce) with the argument order reversed,
     and without the need to use $(LREF tuple) for multiple seeds.
+
+    $(REF_ALTTEXT Multidimensional fold, ndFold, std,experimental,ndslice,computation)
 +/
 template fold(fun...) if (fun.length >= 1)
 {

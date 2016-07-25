@@ -401,6 +401,12 @@ private template _Slice_DeclarationList(Names...)
         enum string _Slice_DeclarationList = "";
 }
 
+package A* fillFromSliceFun(A, B)(A* a, auto ref B b)
+{
+    *a = b;
+    return a + 1;
+}
+
 /++
 Groups slices into a slice tuple. The slices must have identical structure.
 Slice tuple is a slice, which holds single set of lengths and strides
@@ -540,17 +546,17 @@ auto slice(T,
     size_t N)(auto ref in size_t[N] lengths, auto ref T init)
 {
     immutable len = lengthsProduct(lengths);
-    static if (!hasElaborateAssign!(T[]))
+    static if (replaceArrayWithPointer && !hasElaborateAssign!T)
     {
         import std.array : uninitializedArray;
-        auto arr = uninitializedArray!(T[])(len);
+        auto arr = uninitializedArray!(Unqual!T[])(len);
     }
     else
     {
-        auto arr = new T[len];
+        auto arr = new Unqual!T[len];
     }
     arr[] = init;
-    auto ret = arr.sliced!replaceArrayWithPointer(lengths);
+    auto ret = .sliced!replaceArrayWithPointer(cast(T[])arr, lengths);
     return ret;
 }
 
@@ -559,8 +565,19 @@ auto slice(
     Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
     size_t N, Range)(auto ref Slice!(N, Range) slice)
 {
-    auto ret = .slice!(Unqual!(slice.DeepElemType), replaceArrayWithPointer)(slice.shape);
-    ret[] = slice;
+    static if (replaceArrayWithPointer && !hasElaborateAssign!(slice.DeepElemType))
+    {
+        import std.array : uninitializedArray;
+        import std.experimental.ndslice.algorithm : ndFold;
+        auto arr = uninitializedArray!(Unqual!(slice.DeepElemType)[])(slice.elementsCount);
+        slice.ndFold!fillFromSliceFun(arr.ptr);
+        auto ret = arr.sliced(slice.shape);
+    }
+    else
+    {
+        auto ret = .slice!(Unqual!(slice.DeepElemType), replaceArrayWithPointer)(slice.shape);
+        ret[] = slice;
+    }
     return ret;
 }
 
@@ -602,6 +619,8 @@ Params:
     slice = slice to copy shape and data from
 Returns:
     a structure with fields `array` and `slice`
+Note:
+    `makeSlice` always returns slice with mutable elements
 +/
 auto makeSlice(T,
     Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
@@ -656,12 +675,24 @@ auto makeSlice(T,
     Allocator,
     size_t N, Range)(auto ref Allocator alloc, auto ref Slice!(N, Range) slice)
 {
-    import std.experimental.allocator : makeArray;
     import std.experimental.ndslice.selection : byElement;
+    alias U = Unqual!T;
     static struct Result { T[] array; Slice!(N, Select!(replaceArrayWithPointer, T*, T[])) slice; }
-    auto array = alloc.makeArray!T(slice.byElement);
-    auto _slice = array.sliced!replaceArrayWithPointer(slice.shape);
-    return Result(array, _slice);
+
+    static if (replaceArrayWithPointer && !hasElaborateAssign!(slice.DeepElemType))
+    {
+        import std.experimental.ndslice.algorithm : ndFold;
+        auto array = cast(Unqual!T[]) alloc.allocate(slice.elementsCount * T.sizeof);
+        slice.ndFold!fillFromSliceFun(array.ptr);
+        auto _slice = array.sliced(slice.shape);
+    }
+    else
+    {
+        import std.experimental.allocator : makeArray;
+        auto array = alloc.makeArray!U(slice.byElement);
+        auto _slice = array.sliced!replaceArrayWithPointer(slice.shape);
+    }
+    return Result(cast(T[]) array, cast(typeof(Result.init.slice))_slice);
 }
 
 ///
@@ -1141,10 +1172,7 @@ struct Slice(size_t _N, _Range)
 
     size_t[PureN] _lengths;
     sizediff_t[PureN] _strides;
-    static if (hasPtrBehavior!PureRange)
-        PureRange _ptr;
-    else
-        PtrShell!PureRange _ptr;
+    SlicePtr!PureRange _ptr;
 
     sizediff_t backIndex(size_t dimension = 0)() @property const
         if (dimension < N)
@@ -1431,10 +1459,7 @@ struct Slice(size_t _N, _Range)
         assert(!empty!dimension);
         static if (PureN == 1)
         {
-            static if (__traits(compiles, _ptr.front ))
-                return _ptr.front;
-            else
-                return _ptr[0];
+            return _ptr[0];
         }
         else
         {
@@ -1464,10 +1489,7 @@ struct Slice(size_t _N, _Range)
             if (dimension == 0)
         {
             assert(!empty!dimension);
-            static if (__traits(compiles, _ptr.front = value))
-                return _ptr.front = value;
-            else
-                return _ptr[0] = value;
+            return _ptr[0] = value;
         }
     }
 
@@ -1650,6 +1672,29 @@ struct Slice(size_t _N, _Range)
         assert(dimension < N, __FUNCTION__ ~ ": dimension should be less than N = " ~ N.stringof);
         import std.algorithm.comparison : min;
         popBackExactly(dimension, min(n, _lengths[dimension]));
+    }
+
+    /++
+    Returns: `true` if for any dimension the length equals to `0`, and `false` otherwise.
+    +/
+    bool anyEmpty()
+    {
+        foreach (i; Iota!(0, N))
+            if (_lengths[i] == 0)
+                return true;
+        return false;
+    }
+
+    /++
+    Convenience function for backward indexing.
+
+    Returns: `this[$-index[0], $-index[1], ..., $-index[N-1]]`
+    +/
+    auto ref backward(size_t[N] index)
+    {
+        foreach (i; Iota!(0, N))
+            index[i] = _lengths[i] - index[i];
+        return this[index];
     }
 
     /++
@@ -1926,6 +1971,44 @@ struct Slice(size_t _N, _Range)
                 hasher.putElement(elem.toMurmurHash3!(size, opt));
         }
         return hasher.get;
+    }
+
+    /++
+    Overloading `<`, `>` and `<=`, `>=`
+
+    Performs recursive row based lexicographical comparison.
+    +/
+    int opCmp(size_t NR, RangeR)(auto ref Slice!(NR, RangeR) rslice)
+        if (Slice!(NR, RangeR).PureN == PureN)
+    {
+        import std.experimental.ndslice.algorithm : ndCmp;
+        import std.experimental.ndslice.selection : unpack;
+        return ndCmp(this.unpack, rslice.unpack);
+    }
+
+    ///
+    @safe pure nothrow @nogc unittest
+    {
+        import std.experimental.ndslice.iteration : dropOne, dropBackOne;
+        import std.experimental.ndslice.selection : iotaSlice;
+
+        // 0 1 2
+        // 3 4 5
+        auto sla = iotaSlice(2, 3);
+        // 1 2 3
+        // 4 5 6
+        auto slb = iotaSlice([2, 3], 1);
+
+        assert(sla < slb);
+        assert(slb > sla);
+
+        assert(sla <= sla);
+        assert(sla >= sla);
+
+        assert(sla.dropBackOne!0 < sla);
+        assert(sla.dropBackOne!1 < sla);
+        assert(sla.dropOne!0 > sla);
+        assert(sla.dropOne!1 > sla);
     }
 
     _Slice opSlice(size_t dimension)(size_t i, size_t j)
@@ -3085,7 +3168,15 @@ private void opIndexAssignImpl
     _indexAssign!(false, op)(ls, rs);
 }
 
-private struct PtrShell(Range)
+package template SlicePtr(Range)
+{
+    static if (hasPtrBehavior!Range)
+        alias SlicePtr = Range;
+    else
+        alias SlicePtr = PtrShell!Range;
+}
+
+package struct PtrShell(Range)
 {
     sizediff_t _shift;
     Range _range;
@@ -3104,6 +3195,13 @@ private struct PtrShell(Range)
         if (op == `+` || op == `-`)
     {
         mixin (`return typeof(this)(_shift ` ~ op ~ ` shift, _range);`);
+    }
+
+    auto opUnary(string op)()
+        if (op == `++` || op == `--`)
+    {
+        mixin(op ~ `_shift;`);
+        return this;
     }
 
     auto ref opIndex(sizediff_t index)
@@ -3252,7 +3350,7 @@ unittest
 
 private enum isSlicePointer(T) = isPointer!T || is(T : PtrShell!R, R);
 
-private struct LikePtr {}
+package struct LikePtr {}
 
 package template hasPtrBehavior(T)
 {
@@ -3265,7 +3363,7 @@ package template hasPtrBehavior(T)
         enum hasPtrBehavior = hasUDA!(T, LikePtr);
 }
 
-private template PtrTuple(Names...)
+package template PtrTuple(Names...)
 {
     @LikePtr struct PtrTuple(Ptrs...)
         if (allSatisfy!(isSlicePointer, Ptrs) && Ptrs.length == Names.length)
@@ -3300,11 +3398,6 @@ private template PtrTuple(Names...)
                 ptr += index;
             return Index(p);
         }
-
-        auto front() @property
-        {
-            return Index(ptrs);
-        }
     }
 }
 
@@ -3313,13 +3406,14 @@ pure nothrow unittest
     auto a = new int[20], b = new int[20];
     alias T = PtrTuple!("a", "b");
     alias S = T!(int*, int*);
+    static assert (hasUDA!(S, LikePtr));
     auto t = S(a.ptr, b.ptr);
     t[4].a++;
     auto r = t[4];
     r.b = r.a * 2;
     assert(b[4] == 2);
-    t.front.a++;
-    r = t.front;
+    t[0].a++;
+    r = t[0];
     r.b = r.a * 2;
     assert(b[0] == 2);
 }
@@ -3334,10 +3428,11 @@ private template PtrTupleFrontMembers(Names...)
         enum PtrTupleFrontMembers = PtrTupleFrontMembers!Top
         ~ "
         @property auto ref " ~ Names[$-1] ~ "() {
-            static if (__traits(compiles, _ptrs__[" ~ m.stringof ~ "].front()))
-                return _ptrs__[" ~ m.stringof ~ "].front;
-            else
-                return _ptrs__[" ~ m.stringof ~ "][0];
+            return _ptrs__[" ~ m.stringof ~ "][0];
+        }
+        static if (!__traits(compiles, &(_ptrs__[" ~ m.stringof ~ "][0])))
+        @property auto ref " ~ Names[$-1] ~ "(T)(auto ref T value) {
+            return _ptrs__[" ~ m.stringof ~ "][0] = value;
         }
         ";
     }

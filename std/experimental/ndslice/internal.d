@@ -2,10 +2,52 @@ module std.experimental.ndslice.internal;
 
 import std.traits;
 import std.meta; //: AliasSeq, anySatisfy, Filter, Reverse;
+import std.experimental.ndslice : Slice;
 
-package:
+version(LDC)
+{
+    static import ldc.attributes;
+    alias fastmath = ldc.attributes.fastmath;
+}
+else
+{
+    alias fastmath = fastmathDummy;
+}
 
-alias isMemory = isPointer;
+enum FastmathDummy { init }
+FastmathDummy fastmathDummy() { return FastmathDummy.init; };
+
+alias RangeOf(T : Slice!(N, Range), size_t N, Range) = Range;
+
+template isMemory(T)
+{
+    import std.experimental.ndslice.slice : PtrTuple;
+    import std.experimental.ndslice.algorithm : Map, Pack;
+    static if (isPointer!T)
+        enum isMemory = true;
+    else
+    static if (is(T : Map!(Range, fun), Range, alias fun))
+        enum isMemory = .isMemory!Range;
+    else
+    static if (__traits(compiles, __traits(isSame, PtrTuple, TemplateOf!(TemplateOf!T))))
+        static if (__traits(isSame, PtrTuple, TemplateOf!(TemplateOf!T)))
+            enum isMemory = allSatisfy!(.isMemory, TemplateArgsOf!T);
+        else
+            enum isMemory = false;
+    else
+        enum isMemory = false;
+}
+
+unittest
+{
+    import std.experimental.ndslice.slice : PtrTuple;
+    import std.experimental.ndslice.algorithm : Map;
+    static assert(isMemory!(int*));
+    alias R = PtrTuple!("a", "b");
+    alias F = R!(double*, double*);
+    static assert(isMemory!F);
+    static assert(isMemory!(Map!(F, a => a)));
+}
 
 enum indexError(size_t pos, size_t N) =
     "index at position " ~ pos.stringof
