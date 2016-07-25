@@ -142,9 +142,10 @@ auto tempCString(To = char, From)(From str)
     // Note: res._ptr can't point to res._buff as structs are movable.
 
     To[] p = res._buff[0 .. Res.buffLength];
+    bool p_is_onstack = true;
     size_t i;
 
-    static To[] trustedRealloc(To[] buf, size_t i, To* resptr, size_t strLength)
+    static To[] trustedRealloc(To[] buf, size_t i, To[] res, size_t strLength, bool res_is_onstack)
         @trusted @nogc nothrow
     {
         pragma(inline, false);  // because it's rarely called
@@ -158,14 +159,14 @@ auto tempCString(To = char, From)(From str)
         if (len >= size_t.max / (2 * To.sizeof))
             onOutOfMemoryError();
         size_t newlen = len * 3 / 2;
-        if (ptr == resptr)
+        if (res_is_onstack)
         {
             if (newlen <= strLength)
                 newlen = strLength + 1; // +1 for terminating 0
             ptr = cast(To*)malloc(newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
-            memcpy(ptr, resptr, i * To.sizeof);
+            memcpy(ptr, res.ptr, i * To.sizeof);
         }
         else
         {
@@ -197,12 +198,13 @@ auto tempCString(To = char, From)(From str)
     {
         if (i + 1 == p.length)
         {
-            p = trustedRealloc(p, i, res._buff.ptr, strLength);
+            p = trustedRealloc(p, i, res._buff, strLength, p_is_onstack);
+            p_is_onstack = false;
         }
         p[i++] = c;
     }
     p[i] = 0;
-    res._ptr = (p.ptr == res._buff.ptr) ? useStack : p.ptr;
+    res._ptr = p_is_onstack ? useStack : &p[0];
     return res;
 }
 
