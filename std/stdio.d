@@ -835,8 +835,7 @@ $(D rawRead) always reads in binary mode on Windows.
                 scope(exit) __fhnd_info[fd] = info;
             }
         }
-        immutable freadResult =
-            fread(buffer.ptr, T.sizeof, buffer.length, _p.handle);
+        immutable freadResult = trustedFread(_p.handle, buffer);
         assert (freadResult <= buffer.length); // fread return guarantee
         if (freadResult != buffer.length) // error or eof
         {
@@ -893,8 +892,7 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
             }
             scope(exit) flush(); // before restoring translation mode
         }
-        auto result =
-            .fwrite(buffer.ptr, T.sizeof, buffer.length, _p.handle);
+        auto result = trustedFwrite(_p.handle, buffer);
         if (result == result.max) result = 0;
         errnoEnforce(result == buffer.length,
                 text("Wrote ", result, " instead of ", buffer.length,
@@ -1892,7 +1890,7 @@ Allows to directly use range operations on lines of a file.
                     }
                     else
                         static assert(false);
-                    line = line.ptr[0 .. line.length - tlen];
+                    line = line[0 .. line.length - tlen];
                 }
             }
         }
@@ -2576,12 +2574,7 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     //file.write(writeme); causes infinite recursion!!!
                     //file.rawWrite(writeme);
-                    static auto trustedFwrite(in void* ptr, size_t size, size_t nmemb, FILE* stream) @trusted
-                    {
-                        return .fwrite(ptr, size, nmemb, stream);
-                    }
-                    auto result =
-                        trustedFwrite(writeme.ptr, C.sizeof, writeme.length, fps_);
+                    auto result = trustedFwrite(fps_, writeme);
                     if (result != writeme.length) errnoEnforce(0);
                     return;
                 }
@@ -2767,8 +2760,7 @@ See $(LREF byChunk) for an example.
             import std.conv : text;
             import std.exception : errnoEnforce;
 
-            auto result =
-                .fwrite(buffer.ptr, T.sizeof, buffer.length, fps);
+            auto result = trustedFwrite(fps, buffer);
             if (result == result.max) result = 0;
             errnoEnforce(result == buffer.length,
                     text("Wrote ", result, " instead of ", buffer.length,
@@ -3740,12 +3732,18 @@ version (Posix)
 
 /*
  * Convenience function that forwards to $(D core.stdc.stdio.fwrite)
- * and throws an exception upon error
  */
-private void binaryWrite(T)(FILE* f, T obj)
+private auto trustedFwrite(T)(FILE* f, const T[] obj) @trusted
 {
-    immutable result = fwrite(obj.ptr, obj[0].sizeof, obj.length, f);
-    if (result != obj.length) StdioException();
+    return fwrite(obj.ptr, T.sizeof, obj.length, f);
+}
+
+/*
+ * Convenience function that forwards to $(D core.stdc.stdio.fread)
+ */
+private auto trustedFread(T)(FILE* f, T[] obj) @trusted
+{
+    return fread(obj.ptr, T.sizeof, obj.length, f);
 }
 
 /**
@@ -4075,7 +4073,7 @@ private struct ChunksImpl
         size_t r = void;
         int result = 1;
         uint tally = 0;
-        while ((r = fread(buffer.ptr, buffer[0].sizeof, size, f._p.handle)) > 0)
+        while ((r = trustedFread(f._p.handle, buffer)) > 0)
         {
             assert(r <= size);
             if (r != size)
@@ -4169,7 +4167,7 @@ class StdioException : Exception
 /**
 Initialize with a message and an error code.
 */
-    this(string message, uint e = core.stdc.errno.errno)
+    this(string message, uint e = core.stdc.errno.errno) @trusted
     {
         import std.conv : to;
 
@@ -4199,7 +4197,7 @@ Initialize with a message and an error code.
         // If e is 0, we don't use the system error message.  (The message
         // is "Success", which is rather pointless for an exception.)
         super(e == 0 ? message
-                     : (message.ptr ? message ~ " (" ~ sysmsg ~ ")" : sysmsg));
+                     : (message ? message ~ " (" ~ sysmsg ~ ")" : sysmsg));
     }
 
 /** Convenience functions that throw an $(D StdioException). */
@@ -4312,7 +4310,7 @@ private struct ReadlnAppender
         buf = b;
         pos = 0;
     }
-    @property char[] data()
+    @property char[] data() @trusted
     {
         if (safeAppend)
             assumeSafeAppend(buf.ptr[0..pos]);
@@ -4336,7 +4334,7 @@ private struct ReadlnAppender
 
         return false;
     }
-    void reserve(size_t n)
+    void reserve(size_t n) @trusted
     {
         import core.stdc.string : memcpy;
         if (!reserveWithoutAllocating(n))
@@ -4349,12 +4347,12 @@ private struct ReadlnAppender
             safeAppend = true;
         }
     }
-    void putchar(char c)
+    void putchar(char c) @trusted
     {
         reserve(1);
         buf.ptr[pos++] = c;
     }
-    void putdchar(dchar dc)
+    void putdchar(dchar dc) @trusted
     {
         import std.utf : toUTF8;
 
@@ -4364,7 +4362,7 @@ private struct ReadlnAppender
         foreach (c; u)
             buf.ptr[pos++] = c;
     }
-    void putonly(char[] b)
+    void putonly(char[] b) @trusted
     {
         import core.stdc.string : memcpy;
         assert(pos == 0);   // assume this is the only put call
@@ -4475,7 +4473,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 }
             }
             app.putonly(p[0..i]);
-            app.buf.ptr[i - 1] = cast(char)terminator;
+            app.buf[i - 1] = cast(char)terminator;
             if (terminator == '\n' && c == '\r')
                 i++;
         }
@@ -4624,7 +4622,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
 
     if (s <= buf.length)
     {
-        buf = buf.ptr[0 .. s];
+        buf = buf[0 .. s];
         buf[] = lineptr[0 .. s];
     }
     else
@@ -4710,7 +4708,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             buf.length = bufPos;
             goto endGame;
         }
-        buf.ptr[bufPos++] = cast(char) c;
+        buf[bufPos++] = cast(char) c;
         if (c == terminator)
         {
             // No need to test for errors in file
