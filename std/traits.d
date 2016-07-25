@@ -2020,9 +2020,16 @@ version (unittest)
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 /**
-Determines whether $(D T) is a class nested inside another class
-and that $(D T.outer) is the implicit reference to the outer class
-(i.e. $(D outer) has not been used as a field or method name)
+Determines whether `T` is a class nested inside another class
+and that `T.outer` is the implicit reference to the outer class
+(i.e. `outer` has not been used as a field or method name)
+
+Params:
+    T = type to test
+
+Returns:
+`true` if `T` is a class nested inside another, with the conditions described above;
+`false` otherwise
 */
 template isInnerClass(T)
     if (is(T == class))
