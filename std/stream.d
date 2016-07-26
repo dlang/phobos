@@ -2,7 +2,7 @@
 
 /**
  * $(RED Deprecated: This module is considered out-dated and not up to Phobos'
- *       current standards. It will be remove in October 2016.)
+ *       current standards. It will be removed in October 2016.)
  *
  * Source:    $(PHOBOSSRC std/_stream.d)
  */
