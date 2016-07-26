@@ -367,7 +367,8 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
         () @trusted { delete buf; } ();
     }
 
-    cenforce(trustedReadFile(h, buf.ptr, size), name, namez);
+    if (size)
+        cenforce(trustedReadFile(h, &buf[0], size), name, namez);
     return buf[0 .. size];
 }
 
