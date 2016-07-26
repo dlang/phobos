@@ -1161,6 +1161,12 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
     }
 }
 
+/// ditto
+Slice!(1, Range) byElement(size_t N : 1, Range)(auto ref Slice!(N, Range) slice)
+{
+    return slice;
+}
+
 /// Regular slice
 @safe @nogc pure nothrow unittest
 {
@@ -1298,6 +1304,15 @@ Use $(SUBREF iteration, allReversed) in pipeline before
     }
 }
 
+/++
+`byElement` just return the slice for 1-dimensional case.
++/
+unittest
+{
+    import std.experimental.ndslice.slice : slice;
+    static assert(is(typeof(slice!int(100)) == Slice!(1, int*)));
+}
+
 @safe @nogc pure nothrow unittest
 {
     import std.range.primitives : isRandomAccessRange, hasSlicing;
@@ -1396,10 +1411,11 @@ The order of elements is preserved.
 Params:
     N = dimension count
     slice = slice to be iterated
+    maxHypercubeLength = maximal length of simplex hypercube.
 Returns:
     forward range composed of all elements of standard simplex of the `slice`
 +/
-auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice, size_t maxCobeLength = size_t.max)
+auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice, size_t maxHypercubeLength = size_t.max)
 {
     with (Slice!(N, Range))
     {
@@ -1410,14 +1426,14 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
         {
             This _slice;
             size_t _length;
-            size_t maxCobeLength;
+            size_t maxHypercubeLength;
             size_t sum;
             size_t[N] _indexes;
 
             static if (canSave!PureRange)
             auto save() @property
             {
-                return typeof(this)(_slice.save, _length, maxCobeLength, sum, _indexes);
+                return typeof(this)(_slice.save, _length, maxHypercubeLength, sum, _indexes);
             }
 
             bool empty() const @property
@@ -1468,9 +1484,9 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
                     _indexes[i]++;
                     debug (ndslice) assert(_indexes[i] <= _lengths[i]);
                     sum++;
-                    if (sum < maxCobeLength)
+                    if (sum < maxHypercubeLength)
                         return;
-                    debug (ndslice) assert(sum == maxCobeLength);
+                    debug (ndslice) assert(sum == maxHypercubeLength);
                     _ptr -= _indexes[i] * _strides[i];
                     sum -= _indexes[i];
                     _indexes[i] = 0;
@@ -1484,11 +1500,19 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
             }
         }
         foreach (i; Iota!(0, N))
-            if (maxCobeLength > slice._lengths[i])
-                maxCobeLength = slice._lengths[i];
-        immutable size_t elementsCount = ((maxCobeLength + 1) * maxCobeLength ^^ (N - 1)) / 2;
-        return ByElementInTopSimplex(slice, elementsCount, maxCobeLength);
+            if (maxHypercubeLength > slice._lengths[i])
+                maxHypercubeLength = slice._lengths[i];
+        immutable size_t elementsCount = ((maxHypercubeLength + 1) * maxHypercubeLength ^^ (N - 1)) / 2;
+        return ByElementInTopSimplex(slice, elementsCount, maxHypercubeLength);
     }
+}
+
+/// ditto
+Slice!(1, Range) byElementInStandardSimplex(size_t N : 1, Range)(auto ref Slice!(N, Range) slice, size_t maxHypercubeLength = size_t.max)
+{
+    if (maxHypercubeLength > slice._lengths[0])
+        maxHypercubeLength = slice._lengths[0];
+    return slice[0 .. maxHypercubeLength];
 }
 
 ///
@@ -1554,6 +1578,21 @@ pure nothrow unittest
     assert(elems.front == 5);
     assert(elems.index == cast(size_t[2])[1, 1]);
     assert(elems.length == 2);
+}
+
+/++
+`byElementInStandardSimplex` returns a corresponding part of the slice for 1-dimensional case.
++/
+@safe pure nothrow unittest
+{
+    auto sl = iotaSlice(7);
+    auto simplex = sl.byElementInStandardSimplex;
+
+    assert(simplex == [0, 1, 2, 3, 4, 5, 6]);
+
+    static assert(is(typeof(simplex) == typeof(sl)));
+
+    assert(sl.byElementInStandardSimplex(3) == [0, 1, 2]);
 }
 
 /++
