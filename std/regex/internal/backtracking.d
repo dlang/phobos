@@ -52,10 +52,10 @@ template BacktrackingMatcher(bool CTregex)
 
             bool mark(size_t idx)
             {
-                auto d = idx - offset;
+                immutable d = idx - offset;
                 if (d < 64) // including overflow
                 {
-                    auto p = mask & (1UL<<d);
+                    immutable p = mask & (1UL<<d);
                     mask |= 1UL<<d;
                     return p != 0;
                 }
@@ -176,8 +176,8 @@ template BacktrackingMatcher(bool CTregex)
         //
         int matchFinalize()
         {
-            size_t start = index;
-            int val = matchImpl();
+            immutable start = index;
+            immutable val = matchImpl();
             if (val)
             {//stream is updated here
                 matches[0].begin = start;
@@ -205,8 +205,8 @@ template BacktrackingMatcher(bool CTregex)
             if (re.flags & RegexInfo.oneShot)
             {
                 exhausted = true;
-                DataIndex start = index;
-                auto m = matchImpl();
+                const DataIndex start = index;
+                immutable m = matchImpl();
                 if (m)
                 {
                     matches[0].begin = start;
@@ -220,7 +220,7 @@ template BacktrackingMatcher(bool CTregex)
                 {
                     for (;;)
                     {
-                        int val = matchFinalize();
+                        immutable val = matchFinalize();
                         if (val)
                             return val;
                         else
@@ -242,7 +242,7 @@ template BacktrackingMatcher(bool CTregex)
             //no search available - skip a char at a time
             for (;;)
             {
-                int val = matchFinalize();
+                immutable val = matchFinalize();
                 if (val)
                     return val;
                 else
@@ -345,8 +345,8 @@ template BacktrackingMatcher(bool CTregex)
                         }
                         else if (s.loopBack(index).nextChar(back, bi))
                         {
-                            bool af = wordMatcher[front];
-                            bool ab = wordMatcher[back];
+                            immutable af = wordMatcher[front];
+                            immutable ab = wordMatcher[back];
                             if (af ^ ab)
                             {
                                 pc += IRL!(IR.Wordboundary);
@@ -365,8 +365,8 @@ template BacktrackingMatcher(bool CTregex)
                             goto L_backtrack;
                         else if (s.loopBack(index).nextChar(back, bi))
                         {
-                            bool af = wordMatcher[front];
-                            bool ab = wordMatcher[back];
+                            immutable af = wordMatcher[front];
+                            immutable ab = wordMatcher[back];
                             if (af ^ ab)
                                 goto L_backtrack;
                         }
@@ -414,7 +414,6 @@ template BacktrackingMatcher(bool CTregex)
                         pc += re.ir[pc].data + IRL!(IR.InfiniteStart);
                         //now pc is at end IR.Infinite(Q)End
                         uint len = re.ir[pc].data;
-                        int test;
                         if (re.ir[pc].code == IR.InfiniteEnd)
                         {
                             pushState(pc+IRL!(IR.InfiniteEnd), counter);
@@ -429,8 +428,8 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.InfiniteBloomStart:
                         pc += re.ir[pc].data + IRL!(IR.InfiniteBloomStart);
                         //now pc is at end IR.InfiniteBloomEnd
-                        uint len = re.ir[pc].data;
-                        uint filterIdx = re.ir[pc+2].raw;
+                        immutable len = re.ir[pc].data;
+                        immutable filterIdx = re.ir[pc+2].raw;
                         if (re.filters[filterIdx][front])
                             pushState(pc+IRL!(IR.InfiniteBloomEnd), counter);
                         pc -= len;
@@ -446,10 +445,10 @@ template BacktrackingMatcher(bool CTregex)
                             goto L_backtrack;
                         }
                         //len, step, min, max
-                        uint len = re.ir[pc].data;
-                        uint step =  re.ir[pc+2].raw;
-                        uint min = re.ir[pc+3].raw;
-                        uint max = re.ir[pc+4].raw;
+                        immutable len = re.ir[pc].data;
+                        immutable step =  re.ir[pc+2].raw;
+                        immutable min = re.ir[pc+3].raw;
+                        immutable max = re.ir[pc+4].raw;
                         if (counter < min)
                         {
                             counter += step;
@@ -484,8 +483,7 @@ template BacktrackingMatcher(bool CTregex)
                             // merged!
                             goto L_backtrack;
                         }
-                        uint len = re.ir[pc].data;
-                        int test;
+                        immutable len = re.ir[pc].data;
                         if (re.ir[pc].code == IR.InfiniteEnd)
                         {
                             pushState(pc + IRL!(IR.InfiniteEnd), counter);
@@ -504,8 +502,8 @@ template BacktrackingMatcher(bool CTregex)
                             // merged!
                             goto L_backtrack;
                         }
-                        uint len = re.ir[pc].data;
-                        uint filterIdx = re.ir[pc+2].raw;
+                        immutable len = re.ir[pc].data;
+                        immutable filterIdx = re.ir[pc+2].raw;
                         if (re.filters[filterIdx][front])
                         {
                             infiniteNesting--;
@@ -526,7 +524,7 @@ template BacktrackingMatcher(bool CTregex)
                         pc += IRL!(IR.OrStart);
                         goto case;
                     case IR.Option:
-                        uint len = re.ir[pc].data;
+                        immutable len = re.ir[pc].data;
                         if (re.ir[pc+len].code == IR.GotoEndOr)//not a last one
                         {
                             pushState(pc + len + IRL!(IR.Option), counter); //remember 2nd branch
@@ -537,22 +535,22 @@ template BacktrackingMatcher(bool CTregex)
                         pc = pc + re.ir[pc].data + IRL!(IR.GotoEndOr);
                         break;
                     case IR.GroupStart:
-                        uint n = re.ir[pc].data;
+                        immutable n = re.ir[pc].data;
                         matches[n].begin = index;
                         debug(std_regex_matcher)  writefln("IR group #%u starts at %u", n, index);
                         pc += IRL!(IR.GroupStart);
                         break;
                     case IR.GroupEnd:
-                        uint n = re.ir[pc].data;
+                        immutable n = re.ir[pc].data;
                         matches[n].end = index;
                         debug(std_regex_matcher) writefln("IR group #%u ends at %u", n, index);
                         pc += IRL!(IR.GroupEnd);
                         break;
                     case IR.LookaheadStart:
                     case IR.NeglookaheadStart:
-                        uint len = re.ir[pc].data;
+                        immutable len = re.ir[pc].data;
                         auto save = index;
-                        uint ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
+                        immutable ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
                         auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
                         scope(exit) free(mem.ptr);
                         static if (Stream.isLoopback)
@@ -568,7 +566,7 @@ template BacktrackingMatcher(bool CTregex)
                         matcher.re.ir = re.ir[
                             pc+IRL!(IR.LookaheadStart) .. pc+IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd)
                         ];
-                        bool match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookaheadStart);
+                        immutable match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookaheadStart);
                         s.reset(save);
                         next();
                         if (!match)
@@ -580,8 +578,8 @@ template BacktrackingMatcher(bool CTregex)
                         break;
                     case IR.LookbehindStart:
                     case IR.NeglookbehindStart:
-                        uint len = re.ir[pc].data;
-                        uint ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
+                        immutable len = re.ir[pc].data;
+                        immutable ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
                         auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
                         scope(exit) free(mem.ptr);
                         static if (Stream.isLoopback)
@@ -599,7 +597,7 @@ template BacktrackingMatcher(bool CTregex)
                           pc + IRL!(IR.LookbehindStart) .. pc + IRL!(IR.LookbehindStart) + len + IRL!(IR.LookbehindEnd)
                         ];
                         matcher.backrefed  = backrefed.empty ? matches : backrefed;
-                        bool match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookbehindStart);
+                        immutable match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookbehindStart);
                         if (!match)
                             goto L_backtrack;
                         else
@@ -608,7 +606,7 @@ template BacktrackingMatcher(bool CTregex)
                         }
                         break;
                     case IR.Backref:
-                        uint n = re.ir[pc].data;
+                        immutable n = re.ir[pc].data;
                         auto referenced = re.ir[pc].localRef
                                 ? s[matches[n].begin .. matches[n].end]
                                 : s[backrefed[n].begin .. backrefed[n].end];
@@ -892,13 +890,13 @@ struct CtContext
         switch (ir[0].code)
         {
         case IR.InfiniteStart,  IR.InfiniteBloomStart,IR.InfiniteQStart, IR.RepeatStart, IR.RepeatQStart:
-            bool infLoop =
+            immutable infLoop =
                 ir[0].code == IR.InfiniteStart || ir[0].code == IR.InfiniteQStart ||
                 ir[0].code == IR.InfiniteBloomStart;
 
             counter = counter ||
                 ir[0].code == IR.RepeatStart || ir[0].code == IR.RepeatQStart;
-            uint len = ir[0].data;
+            immutable len = ir[0].data;
             auto nir = ir[ir[0].length .. ir[0].length+len];
             r = ctGenBlock(nir, addr+1);
             //start/end codegen
@@ -910,7 +908,7 @@ struct CtContext
             ir = nir;
             break;
         case IR.OrStart:
-            uint len = ir[0].data;
+            immutable len = ir[0].data;
             auto nir = ir[ir[0].length .. ir[0].length+len];
             r = ctGenAlternation(nir, addr);
             ir = ir[ir[0].length + len .. $];
@@ -921,15 +919,15 @@ struct CtContext
         case IR.NeglookaheadStart:
         case IR.LookbehindStart:
         case IR.NeglookbehindStart:
-            uint len = ir[0].data;
-            bool behind = ir[0].code == IR.LookbehindStart || ir[0].code == IR.NeglookbehindStart;
-            bool negative = ir[0].code == IR.NeglookaheadStart || ir[0].code == IR.NeglookbehindStart;
+            immutable len = ir[0].data;
+            immutable behind = ir[0].code == IR.LookbehindStart || ir[0].code == IR.NeglookbehindStart;
+            immutable negative = ir[0].code == IR.NeglookaheadStart || ir[0].code == IR.NeglookbehindStart;
             string fwdType = "typeof(fwdMatcher(matcher, []))";
             string bwdType = "typeof(bwdMatcher(matcher, []))";
             string fwdCreate = "fwdMatcher(matcher, mem)";
             string bwdCreate = "bwdMatcher(matcher, mem)";
-            uint start = IRL!(IR.LookbehindStart);
-            uint end = IRL!(IR.LookbehindStart)+len+IRL!(IR.LookaheadEnd);
+            immutable start = IRL!(IR.LookbehindStart);
+            immutable end = IRL!(IR.LookbehindStart)+len+IRL!(IR.LookaheadEnd);
             CtContext context = lookaround(ir[1].raw, ir[2].raw); //split off new context
             auto slice = ir[start .. end];
             r.code ~= ctSub(`
@@ -1113,10 +1111,10 @@ struct CtContext
             break;
          case IR.RepeatEnd, IR.RepeatQEnd:
             //len, step, min, max
-            uint len = ir[0].data;
-            uint step = ir[2].raw;
-            uint min = ir[3].raw;
-            uint max = ir[4].raw;
+            immutable len = ir[0].data;
+            immutable step = ir[2].raw;
+            immutable min = ir[3].raw;
+            immutable max = ir[4].raw;
             r ~= ctSub(`
                     if (merge[$$+counter].mark(index))
                     {
@@ -1242,7 +1240,7 @@ struct CtContext
             code ~=  ctSub(`
                     if (atEnd)
                         $$`, bailOut);
-            uint len = ir[0].sequence;
+            immutable len = ir[0].sequence;
             for (uint i = 0; i < len; i++)
             {
                 code ~= ctSub( `
