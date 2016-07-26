@@ -107,12 +107,9 @@ template pack(K...)
     
 	assert(b.shape == [3, 4]);
 	assert(b[0, 0].shape == [5, 6]);
-	
     assert(a == b);
-
-    alias R = typeof(r);
     static assert(is(typeof(b) == typeof(a.pack!2)));
-    static assert(is(typeof(b) == Slice!(2, Slice!(3, R))));
+    static assert(is(typeof(b) == Slice!(2, Slice!(3, typeof(r)))));
 }
 
 
