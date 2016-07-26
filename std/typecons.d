@@ -164,7 +164,7 @@ public:
         return u;
     }
     /** Forwards member access to contents. */
-    RefT opDot() { return _p; }
+    auto opDot() inout { return _p; }
 
     /**
     Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
@@ -286,6 +286,24 @@ private:
     debug(Unique) writeln("Unique struct: returned from f");
     assert(uf.isEmpty);
     assert(!uf2.isEmpty);
+}
+
+unittest
+{
+	struct Bar {int val;}
+    struct Foo {
+        Unique!Bar bar = new Bar;
+    }
+
+    Foo foo;
+    foo.bar.val = 6;
+    const Foo* ptr = &foo;
+    static assert(is(typeof(ptr) == const(Foo*)));
+    static assert(is(typeof(ptr.bar) == const(Unique!Bar)));
+    static assert(is(typeof(ptr.bar.val) == const(int)));
+    assert(ptr.bar.val == 6);
+    foo.bar.val = 7;
+    assert(ptr.bar.val == 7);
 }
 
 // Used in Tuple.toString
