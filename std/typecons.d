@@ -291,7 +291,8 @@ private:
 unittest
 {
     struct Bar {int val;}
-    struct Foo {
+    struct Foo
+    {
         Unique!Bar bar = new Bar;
     }
 
