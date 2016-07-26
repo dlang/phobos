@@ -106,7 +106,7 @@ template pack(K...)
     auto b = a.pack!(2);
     
 	assert(b.shape == [3, 4]);
-	assert(b[0][0].shape == [5, 6]);
+	assert(b[0, 0].shape == [5, 6]);
 	
     assert(a == b);
 
