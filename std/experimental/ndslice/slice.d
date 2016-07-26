@@ -92,7 +92,7 @@ body
     else
     {
         alias S = Slice!(N, ImplicitlyUnqual!(typeof(range)));
-        static if (hasElaborateAssign!(S.PureRange))
+        static if (noVoidInitialization!(S.PureRange))
             S ret;
         else
             S ret = void;
@@ -173,7 +173,7 @@ template sliced(Names...)
                 ~ tailErrorMessage!());
             alias PT = PtrTuple!Names;
             alias SPT = PT!(staticMap!(PrepareRangeType, RS));
-            static if (hasElaborateAssign!SPT)
+            static if (noVoidInitialization!SPT)
                 SPT range;
             else
                 SPT range = void;
@@ -459,7 +459,7 @@ template assumeSameStructure(Names...)
                 ~ tailErrorMessage!());
             alias PT = PtrTuple!Names;
             alias SPT = PT!(staticMap!(PrepareRangeType, RS));
-            static if (hasElaborateAssign!SPT)
+            static if (noVoidInitialization!SPT)
                 Slice!(N, SPT) ret;
             else
                 Slice!(N, SPT) ret = void;
@@ -571,7 +571,7 @@ auto slice(T,
     size_t N)(auto ref in size_t[N] lengths, auto ref T init)
 {
     immutable len = lengthsProduct(lengths);
-    static if (!hasElaborateAssign!(T[]))
+    static if (!noVoidInitialization!(T[]))
     {
         import std.array : uninitializedArray;
         auto arr = uninitializedArray!(T[])(len);
@@ -1474,7 +1474,7 @@ struct Slice(size_t _N, _Range)
         }
         else
         {
-            static if (hasElaborateAssign!PureRange)
+            static if (noVoidInitialization!PureRange)
                 ElemType ret;
             else
                 ElemType ret = void;
@@ -1518,7 +1518,7 @@ struct Slice(size_t _N, _Range)
         }
         else
         {
-            static if (hasElaborateAssign!PureRange)
+            static if (noVoidInitialization!PureRange)
                 ElemType ret;
             else
                 ElemType ret = void;
@@ -1872,7 +1872,7 @@ struct Slice(size_t _N, _Range)
             enum size_t S = Slices.length;
             static assert(N-F > 0);
             size_t stride;
-            static if (hasElaborateAssign!PureRange)
+            static if (noVoidInitialization!PureRange)
                 Slice!(N-F, Range) ret;
             else
                 Slice!(N-F, Range) ret = void;
