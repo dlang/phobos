@@ -290,7 +290,7 @@ private:
 
 unittest
 {
-	struct Bar {int val;}
+    struct Bar {int val;}
     struct Foo {
         Unique!Bar bar = new Bar;
     }
