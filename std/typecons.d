@@ -288,7 +288,8 @@ private:
     assert(!uf2.isEmpty);
 }
 
-unittest
+// ensure Unique behaves correctly through const access paths
+@system unittest
 {
     struct Bar {int val;}
     struct Foo
