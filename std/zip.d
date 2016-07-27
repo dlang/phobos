@@ -386,7 +386,7 @@ final class ZipArchive
      */
     void[] build()
     {
-        import std.algorithm : sort;
+        import std.algorithm.sorting : sort;
         uint i;
         uint directoryOffset;
 
@@ -396,8 +396,8 @@ final class ZipArchive
         // Compress each member; compute size
         uint archiveSize = 0;
         uint directorySize = 0;
-        auto directory = _directory.values().sort!((x, y) => x.index < y.index);
-        foreach (ArchiveMember de; directory.save)
+        auto directory = _directory.values().sort!((x, y) => x.index < y.index).release;
+        foreach (ArchiveMember de; directory)
         {
             if (!de._compressedData.length)
             {
@@ -448,7 +448,7 @@ final class ZipArchive
 
         // Store each archive member
         i = 0;
-        foreach (ArchiveMember de; directory.save)
+        foreach (ArchiveMember de; directory)
         {
             de.offset = i;
             _data[i .. i + 4] = cast(ubyte[])"PK\x03\x04";
@@ -474,7 +474,7 @@ final class ZipArchive
         // Write directory
         directoryOffset = i;
         _numEntries = 0;
-        foreach (ArchiveMember de; directory.save)
+        foreach (ArchiveMember de; directory)
         {
             _data[i .. i + 4] = cast(ubyte[])"PK\x01\x02";
             putUshort(i + 4,  de._madeVersion);
@@ -887,35 +887,40 @@ debug(print)
 
 @system unittest
 {
-    import std.random : uniform;
+    import std.random : Mt19937, randomShuffle;
     import std.conv : to;
-    import std.algorithm : canFind;
     // Test if packing and unpacking preserves order.
-    auto zip1 = new ZipArchive();
+    auto rand = Mt19937(15966);
     string[] names;
+    int value = 0;
+    // Generate a series of unique numbers as filenames.
     foreach (i; 0..20)
     {
-        auto name = uniform(0, 0xFFFF).to!string;
-        if (names.canFind(name))
-        {
-            // No big deal; this test run will have one fewer entry.
-            // Better than flaking out because we expect the same name to appear twice.
-            continue;
-        }
-        names ~= name;
+        value += 1 + rand.front & 0xFFFF;
+        rand.popFront;
+        names ~= value.to!string;
+    }
+    // Insert them in a random order.
+    names.randomShuffle(rand);
+    auto zip1 = new ZipArchive();
+    foreach (i, name; names)
+    {
         auto member = new ArchiveMember();
         member.name = name;
         member.expandedData = cast(ubyte[])name;
-        member.index = i;
+        member.index = cast(int)i;
         zip1.addMember(member);
     }
     auto data = zip1.build();
+
+    // Ensure that they appear in the same order.
     auto zip2 = new ZipArchive(data);
     foreach (i, name; names)
     {
         const member = zip2.directory[name];
         assert(member.index == i, "member " ~ name ~ " had index " ~
-                member.index.to!string ~ " but we expected index " ~ i.to!string);
+                member.index.to!string ~ " but we expected index " ~ i.to!string ~
+                ". The input array was " ~ names.to!string);
     }
 }
 
