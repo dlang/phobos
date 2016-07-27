@@ -98,6 +98,24 @@ template pack(K...)
 ///
 @safe @nogc pure nothrow unittest
 {
+    import std.experimental.ndslice : sliced, Slice, pack;
+    import std.range : iota;
+
+    auto r = (3 * 4 * 5 * 6).iota;
+    auto a = r.sliced(3, 4, 5, 6);
+    auto b = a.pack!2;
+
+    static immutable res1 = [3, 4];
+    static immutable res2 = [5, 6];
+    assert(b.shape == res1);
+    assert(b[0, 0].shape == res2);
+    assert(a == b);
+    static assert(is(typeof(b) == typeof(a.pack!2)));
+    static assert(is(typeof(b) == Slice!(2, Slice!(3, typeof(r)))));
+}
+
+@safe @nogc pure nothrow unittest
+{
     import std.experimental.ndslice.slice;
     import std.range.primitives : ElementType;
     import std.range : iota;
