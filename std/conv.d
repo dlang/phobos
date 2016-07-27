@@ -342,9 +342,8 @@ template to(T)
  *        If pointer is $(D char*), treat it as C-style strings.
  *        In that case, this function is $(D @system).))
  */
-@system pure unittest
+@system pure unittest // @system due to cast and ptr
 {
-    // @system due to cast and ptr
     // Conversion representing dynamic/static array with string
     long[] a = [ 1, 3, 5 ];
     assert(to!string(a) == "[1, 3, 5]");
