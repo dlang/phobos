@@ -104,7 +104,7 @@ template pack(K...)
     auto r = (3 * 4 * 5 * 6).iota;
     auto a = r.sliced(3, 4, 5, 6);
     auto b = a.pack!2;
-    
+
     assert(b.shape == [3, 4]);
     assert(b[0, 0].shape == [5, 6]);
     assert(a == b);
