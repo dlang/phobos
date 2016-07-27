@@ -88,7 +88,7 @@ unittest
     {
         for (uint pc = start; pc < end; )
         {
-            uint len = code[pc].length;
+            immutable len = code[pc].length;
             if (code[pc].code == IR.GotoEndOr)
                 break; //pick next alternation branch
             if (code[pc].isAtom)
@@ -103,21 +103,21 @@ unittest
                 if (code[pc].code == IR.LookbehindStart
                     || code[pc].code == IR.NeglookbehindStart)
                 {
-                    uint blockLen = len + code[pc].data
+                    immutable blockLen = len + code[pc].data
                          + code[pc].pairedLength;
                     rev[revPc - blockLen .. revPc] = code[pc .. pc + blockLen];
                     pc += blockLen;
                     revPc -= blockLen;
                     continue;
                 }
-                uint second = code[pc].indexOfPair(pc);
-                uint secLen = code[second].length;
+                immutable second = code[pc].indexOfPair(pc);
+                immutable secLen = code[second].length;
                 rev[revPc - secLen .. revPc] = code[second .. second + secLen];
                 revPc -= secLen;
                 if (code[pc].code == IR.OrStart)
                 {
                     //we pass len bytes forward, but secLen in reverse
-                    uint revStart = revPc - (second + len - secLen - pc);
+                    immutable revStart = revPc - (second + len - secLen - pc);
                     uint r = revStart;
                     uint i = pc + IRL!(IR.OrStart);
                     while (code[i].code == IR.Option)
@@ -166,7 +166,7 @@ dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
     uint val;
     for (int k = 0; k < maxDigit; k++)
     {
-        auto current = str[k];//accepts ascii only, so it's OK to index directly
+        immutable current = str[k];//accepts ascii only, so it's OK to index directly
         if ('0' <= current && current <= '9')
             val = val * 16 + current - '0';
         else if ('a' <= current && current <= 'f')
@@ -323,8 +323,8 @@ struct CodeGen
         else
         {
             import std.algorithm.searching : countUntil;
-            auto ivals = set.byInterval;
-            auto n = charsets.countUntil(set);
+            const ivals = set.byInterval;
+            immutable n = charsets.countUntil(set);
             if (n >= 0)
             {
                 if (ivals.length*2 > maxCharsetUsed)
@@ -361,7 +361,7 @@ struct CodeGen
     {
         nesting++;
         pushFixup(length);
-        uint nglob = groupStack.top++;
+        immutable nglob = groupStack.top++;
         enforce(groupStack.top <= maxGroupNumber, "limit on number of submatches is exceeded");
         put(Bytecode(IR.GroupStart, nglob));
     }
@@ -372,11 +372,11 @@ struct CodeGen
         import std.range : assumeSorted;
         nesting++;
         pushFixup(length);
-        uint nglob = groupStack.top++;
+        immutable nglob = groupStack.top++;
         enforce(groupStack.top <= maxGroupNumber, "limit on submatches is exceeded");
         auto t = NamedGroup(name, nglob);
         auto d = assumeSorted!"a.name < b.name"(dict);
-        auto ind = d.lowerBound(t).length;
+        immutable ind = d.lowerBound(t).length;
         insertInPlace(dict, ind, t);
         put(Bytecode(IR.GroupStart, nglob));
     }
@@ -426,7 +426,7 @@ struct CodeGen
     void fixRepetition(uint offset)
     {
         import std.algorithm.mutation : copy;
-        bool replace = ir[offset].code == IR.Nop;
+        immutable replace = ir[offset].code == IR.Nop;
         if (replace)
         {
             copy(ir[offset + 1 .. $], ir[offset .. $ - 1]);
@@ -440,8 +440,8 @@ struct CodeGen
         static import std.algorithm.comparison;
         import std.algorithm.mutation : copy;
         import std.array : insertInPlace;
-        bool replace = ir[offset].code == IR.Nop;
-        uint len = cast(uint)ir.length - offset - replace;
+        immutable replace = ir[offset].code == IR.Nop;
+        immutable len = cast(uint)ir.length - offset - replace;
         if (max != infinite)
         {
             if (min != 1 || max != 1)
@@ -665,7 +665,7 @@ struct Parser(R, Generator)
     {
         if (re_flags & RegexOption.freeform)
         {
-            bool r = _next();
+            immutable r = _next();
             skipSpace();
             return r;
         }
@@ -854,7 +854,7 @@ struct Parser(R, Generator)
                 g.fixAlternation();
                 break;
             default://no groups or whatever
-                uint start = g.length;
+                immutable start = g.length;
                 parseAtom();
                 parseQuantifier(start);
             }
@@ -1274,7 +1274,7 @@ struct Parser(R, Generator)
     //parse and store IR for CodepointSet
     void parseCharset()
     {
-        auto save = re_flags;
+        const save = re_flags;
         re_flags &= ~RegexOption.freeform; // stop ignoring whitespace if we did
         parseCharsetImpl();
         re_flags = save;
@@ -1439,12 +1439,12 @@ struct Parser(R, Generator)
             g.charsetToIr(CodepointSet);
             break;
         case 'x':
-            uint code = parseUniHex(pat, 2);
+            immutable code = parseUniHex(pat, 2);
             next();
             g.put(Bytecode(IR.Char,code));
             break;
         case 'u': case 'U':
-            uint code = parseUniHex(pat, current == 'u' ? 4 : 8);
+            immutable code = parseUniHex(pat, current == 'u' ? 4 : 8);
             next();
             g.put(Bytecode(IR.Char, code));
             break;
@@ -1459,7 +1459,7 @@ struct Parser(R, Generator)
             break;
         case '1': .. case '9':
             uint nref = cast(uint)current - '0';
-            uint maxBackref = sum(g.groupStack.data);
+            immutable maxBackref = sum(g.groupStack.data);
             enforce(nref < maxBackref, "Backref to unseen group");
             //perl's disambiguation rule i.e.
             //get next digit only if there is such group number
@@ -1573,7 +1573,7 @@ struct Parser(R, Generator)
             case IR.RepeatStart, IR.RepeatQStart:
                 uint repEnd = cast(uint)(i + ir[i].data + IRL!(IR.RepeatStart));
                 assert(ir[repEnd].code == ir[i].paired.code);
-                uint max = ir[repEnd + 4].raw;
+                immutable max = ir[repEnd + 4].raw;
                 ir[repEnd+2].raw = counterRange.top;
                 ir[repEnd+3].raw *= counterRange.top;
                 ir[repEnd+4].raw *= counterRange.top;
@@ -1711,7 +1711,7 @@ void optimize(Char)(ref Regex!Char zis)
         {
             if (ir[pc].isStart || ir[pc].isEnd)
             {
-                uint dest = ir[pc].indexOfPair(pc);
+                immutable dest = ir[pc].indexOfPair(pc);
                 assert(dest < ir.length, text("Wrong length in opcode at pc=",
                     pc, " ", dest, " vs ", ir.length));
                 assert(ir[dest].paired ==  ir[pc],
