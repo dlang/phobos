@@ -105,8 +105,8 @@ template pack(K...)
     auto a = r.sliced(3, 4, 5, 6);
     auto b = a.pack!2;
 
-    enum res1 = [3, 4];
-    enum res2 = [5, 6];
+    static immutable res1 = [3, 4];
+    static immutable res2 = [5, 6];
     assert(b.shape == res1);
     assert(b[0, 0].shape == res2);
     assert(a == b);
