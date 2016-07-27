@@ -99,7 +99,7 @@ template pack(K...)
 @safe @nogc pure nothrow unittest
 {
     import std.experimental.ndslice : sliced, Slice, pack;
-    import std.range: iota;
+    import std.range : iota;
 
     auto r = (3 * 4 * 5 * 6).iota;
     auto a = r.sliced(3, 4, 5, 6);
