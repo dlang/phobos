@@ -112,7 +112,6 @@ template pack(K...)
     static assert(is(typeof(b) == Slice!(2, Slice!(3, typeof(r)))));
 }
 
-
 @safe @nogc pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
