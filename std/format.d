@@ -1459,7 +1459,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         return;
     }
 
-    uint base =
+    immutable uint base =
         f.spec == 'x' || f.spec == 'X' ? 16 :
         f.spec == 'o' ? 8 :
         f.spec == 'b' ? 2 :
@@ -1495,7 +1495,7 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, const ref F
 {
     T arg = val;
 
-    bool negative = (base == 10 && arg < 0);
+    immutable negative = (base == 10 && arg < 0);
     if (negative)
     {
         arg = -arg;
@@ -1535,7 +1535,7 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
     }
 
 
-    int precision = (fs.precision == fs.UNSPECIFIED) ? 1 : fs.precision;
+    immutable precision = (fs.precision == fs.UNSPECIFIED) ? 1 : fs.precision;
 
     char padChar = 0;
     if (!fs.flDash)
@@ -1570,7 +1570,7 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
     size_t leftpad = 0;
     size_t rightpad = 0;
 
-    ptrdiff_t spacesToPrint = fs.width - ((prefix1 != 0) + (prefix2 != 0) + zerofill + digits.length);
+    immutable ptrdiff_t spacesToPrint = fs.width - ((prefix1 != 0) + (prefix2 != 0) + zerofill + digits.length);
     if (spacesToPrint > 0) // need to do some padding
     {
         if (padChar == '0')
@@ -1703,7 +1703,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     version (CRuntime_Microsoft)
     {
         import std.math : isNaN, isInfinity;
-        double tval = val; // convert early to get "inf" in case of overflow
+        immutable double tval = val; // convert early to get "inf" in case of overflow
         string s;
         if (isNaN(tval))
             s = "nan"; // snprintf writes 1.#QNAN
@@ -1824,7 +1824,7 @@ Params:
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 {
-    creal val = obj;
+    immutable creal val = obj;
 
     formatValue(w, val.re, f);
     if (val.im >= 0)
@@ -1880,7 +1880,7 @@ Params:
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
-    ireal val = obj;
+    immutable ireal val = obj;
 
     formatValue(w, val.im, f);
     put(w, 'i');
@@ -2671,7 +2671,8 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     enum const(Char)[] defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
     auto fmtSpec = f.spec == '(' ? f.nested : defSpec;
 
-    size_t i = 0, end = val.length;
+    size_t i = 0;
+    immutable end = val.length;
 
     if (f.spec == 's')
         put(w, f.seqBefore);
@@ -4374,7 +4375,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
     enforce(spec.width == 0, "Parsing integers with a width specification is not implemented");   // TODO
 
-    uint base =
+    immutable uint base =
         spec.spec == 'x' || spec.spec == 'X' ? 16 :
         spec.spec == 'o' ? 8 :
         spec.spec == 'b' ? 2 :
@@ -4541,7 +4542,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     }
     else
     {
-        auto end = spec.trailing.front;
+        immutable end = spec.trailing.front;
         for (; !input.empty && input.front != end; input.popFront())
         {
             static if (isStaticArray!T)
@@ -5291,7 +5292,7 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
         void putstr(const char[] s)
         {
             //printf("putstr: s = %.*s, flags = x%x\n", s.length, s.ptr, flags);
-            ptrdiff_t padding = field_width -
+            immutable ptrdiff_t padding = field_width -
                 (strlen(prefix) + toUCSindex(s, s.length));
             ptrdiff_t prepad = 0;
             ptrdiff_t postpad = 0;
@@ -5438,7 +5439,7 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
           //printf("\nputArray(len = %u), tsize = %u\n", len, valti.tsize);
           putc('[');
           valti = skipCI(valti);
-          size_t tsize = valti.tsize;
+          immutable tsize = valti.tsize;
           auto argptrSave = argptr;
           auto tiSave = ti;
           auto mSave = m;
@@ -5479,11 +5480,11 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
                     pkey -= (long.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
 
                 // the key comes before the value
-                auto keysize = keyti.tsize;
+                immutable keysize = keyti.tsize;
                 version (D_LP64)
-                    auto keysizet = (keysize + 15) & ~(15);
+                    immutable keysizet = (keysize + 15) & ~(15);
                 else
-                    auto keysizet = (keysize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                    immutable keysizet = (keysize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
 
                 void* pvalue = pkey + keysizet;
 
@@ -5834,7 +5835,7 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
         {
             ptrdiff_t n = tmpbuf.length;
             char c;
-            int hexoffset = uc ? ('A' - ('9' + 1)) : ('a' - ('9' + 1));
+            immutable hexoffset = uc ? ('A' - ('9' + 1)) : ('a' - ('9' + 1));
 
             while (vnumber)
             {
