@@ -2591,7 +2591,7 @@ See_Also:
     to use in UFCS chains.
 
     $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
-    precise summing of floating point numbers.
+    pairwise summing of floating point numbers.
 +/
 template reduce(fun...) if (fun.length >= 1)
 {
