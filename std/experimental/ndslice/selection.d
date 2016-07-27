@@ -105,8 +105,8 @@ template pack(K...)
     auto a = r.sliced(3, 4, 5, 6);
     auto b = a.pack!2;
     
-	assert(b.shape == [3, 4]);
-	assert(b[0, 0].shape == [5, 6]);
+    assert(b.shape == [3, 4]);
+    assert(b[0, 0].shape == [5, 6]);
     assert(a == b);
     static assert(is(typeof(b) == typeof(a.pack!2)));
     static assert(is(typeof(b) == Slice!(2, Slice!(3, typeof(r)))));
