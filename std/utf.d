@@ -2752,7 +2752,7 @@ private P toUTFzImpl(P, S)(S str) @safe pure
             // unreadable. Otherwise, it's definitely pointing to valid
             // memory.
             if ((cast(size_t)p & 3) && *p == '\0')
-                return str.ptr;
+                return &str[0];
         }
 
         return toUTFzImpl!(P, const(C)[])(cast(const(C)[])str);
@@ -2779,11 +2779,11 @@ private P toUTFzImpl(P, S)(S str) @safe pure
             auto p = trustedPtrAdd(str);
 
             if ((cast(size_t)p & 3) && *p == '\0')
-                return str.ptr;
+                return &str[0];
         }
 
         str ~= '\0';
-        return str.ptr;
+        return &str[0];
     }
     //const(C)[] -> C* or immutable(C)* or
     //C[] -> immutable(C)*
@@ -2811,7 +2811,7 @@ private P toUTFzImpl(P, S)(S str) @safe pure
         retval.put(c);
     retval.put('\0');
 
-    return cast(P)retval.data.ptr;
+    return () @trusted { return cast(P)retval.data.ptr; } ();
 }
 
 @safe pure unittest
