@@ -1067,12 +1067,14 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 
 @safe unittest
 {
-    import std.random : Random, uniform;
+    import std.random : Random, uniform, unpredictableSeed;
+    import std.conv : text;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    auto rnd = Random(1);
+    const seed = unpredictableSeed;
+    auto rnd = Random(seed);
     auto a = new int[uniform(100, 200, rnd)];
     foreach (ref e; a)
     {
@@ -1080,7 +1082,7 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
     }
 
     optimisticInsertionSort!(binaryFun!("a < b"), int[])(a);
-    assert(isSorted(a));
+    assert(isSorted(a), text("unittest failed with seed: ", seed));
 }
 
 // sort
@@ -2015,7 +2017,7 @@ private template TimSortImpl(alias pred, R)
 
 unittest
 {
-    import std.random : Random, uniform, randomShuffle;
+    import std.random : Random, randomShuffle, uniform, unpredictableSeed;
 
     // Element type with two fields
     static struct E
@@ -2060,6 +2062,8 @@ unittest
     // Tests the Timsort function for correctness and stability
     static bool testSort(uint seed)
     {
+        import std.conv : text;
+
         auto arr = genSampleData(seed);
 
         // Now sort the array!
@@ -2071,22 +2075,26 @@ unittest
         sort!(comp, SwapStrategy.stable)(arr);
 
         // Test that the array was sorted correctly
-        assert(isSorted!comp(arr));
+        assert(isSorted!comp(arr), text("unittest failed with seed: ", seed));
 
         // Test that the array was sorted stably
         foreach (i; 0 .. arr.length - 1)
         {
-            if (arr[i].value == arr[i + 1].value) assert(arr[i].index < arr[i + 1].index);
+            if (arr[i].value == arr[i + 1].value)
+                assert(arr[i].index < arr[i + 1].index,
+                    text("unittest failed with seed: ", seed));
         }
 
         return true;
     }
 
+    testSort(unpredictableSeed);
+
     enum seed = 310614065;
     testSort(seed);
 
-    //@@BUG: Timsort fails with CTFE as of DMD 2.060
-    // enum result = testSort(seed);
+    // CTFE
+    enum result = testSort(seed);
 }
 
 unittest
