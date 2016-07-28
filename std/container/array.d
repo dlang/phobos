@@ -431,7 +431,6 @@ Constructor taking a number of items
         foreach (i, e; values)
         {
             emplace(p + i, e);
-            assert(p[i] == e);
         }
         _data = Data(p[0 .. values.length]);
     }
@@ -2234,4 +2233,11 @@ unittest
     assert(slice.moveFront == true);
     assert(slice.moveBack == true);
     assert(slice.moveAt(1) == true);
+}
+
+// issue 16331 - uncomparable values are valid values for an array
+unittest
+{
+    double[] values = [double.nan, double.nan];
+    auto arr = Array!double(values);
 }
