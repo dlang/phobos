@@ -2002,12 +2002,16 @@ Target parse(Target, Source)(ref Source s)
             enum bool sign = 0;
 
         enum char maxLastDigit = Target.min < 0 ? 7 : 5;
-        Unqual!(typeof(s.front)) c;
+        uint c;
 
         if (s.empty)
             goto Lerr;
 
-        c = s.front;
+        static if (isAutodecodableString!Source)
+            c = s[0];
+        else
+            c = s.front;
+
         static if (Target.min < 0)
         {
             switch (c)
@@ -2016,10 +2020,19 @@ Target parse(Target, Source)(ref Source s)
                     sign = true;
                     goto case '+';
                 case '+':
-                    s.popFront();
+                    static if (isAutodecodableString!Source)
+                        s = s[1 .. $];
+                    else
+                        s.popFront();
+
                     if (s.empty)
                         goto Lerr;
-                    c = s.front;
+
+                    static if (isAutodecodableString!Source)
+                        c = s[0];
+                    else
+                        c = s.front;
+
                     break;
 
                 default:
@@ -2030,10 +2043,19 @@ Target parse(Target, Source)(ref Source s)
         if (c <= 9)
         {
             Target v = cast(Target)c;
-            s.popFront();
+
+            static if (isAutodecodableString!Source)
+                s = s[1 .. $];
+            else
+                s.popFront();
+
             while (!s.empty)
             {
-                c = cast(typeof(c)) (s.front - '0');
+                static if (isAutodecodableString!Source)
+                    c = cast(typeof(c)) (s[0] - '0');
+                else
+                    c = cast(typeof(c)) (s.front - '0');
+
                 if (c > 9)
                     break;
 
@@ -2043,7 +2065,11 @@ Target parse(Target, Source)(ref Source s)
                     // Note: `v` can become negative here in case of parsing
                     // the most negative value:
                     v = cast(Target) (v * 10 + c);
-                    s.popFront();
+
+                    static if (isAutodecodableString!Source)
+                        s = s[1 .. $];
+                    else
+                        s.popFront();
                 }
                 else
                     throw new ConvOverflowException("Overflow in integral conversion");
