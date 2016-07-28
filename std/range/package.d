@@ -3759,11 +3759,18 @@ private alias lengthType(R) = typeof(R.init.length.init);
    `lockstep` allows reference access to the elements in
    `foreach` iterations.
 
-   $(D Zip) offers the lowest range facilities of all components, e.g. it
-   offers random access iff all ranges offer random access, and also
-   offers mutation and swapping if all ranges offer it. Due to this, $(D
-   Zip) is extremely powerful because it allows manipulating several
-   ranges in lockstep.
+    Params:
+        sp = controls what `zip` will do if the _ranges are different lengths
+        ranges = the ranges to zip together
+    Returns:
+        At minimum, an input range. `Zip` offers the lowest range facilities
+        of all components, e.g. it offers random access iff all ranges offer
+        random access, and also offers mutation and swapping if all ranges offer
+        it. Due to this, `Zip` is extremely powerful because it allows manipulating
+        several ranges in lockstep.
+    Throws:
+        An `Exception` if all of the _ranges are not the same length and
+        `sp` is set to `StoppingPolicy.requireSameLength`.
 */
 struct Zip(Ranges...)
     if (Ranges.length && allSatisfy!(isInputRange, Ranges))
