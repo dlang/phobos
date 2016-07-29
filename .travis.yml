@@ -19,13 +19,15 @@ install:
  - (cd Dscanner && sed 's/dparse_verbose/StdLoggerDisableWarning/' -i makefile && make githash debug)
  # avoid checking it's dscanner's directory
 script:
+ - echo "Checking for trailing whitespace"
  - rdmd ./checkwhitespace.d $(find phobos -name '*.d')
- # enforce whitespace between statements
+ - echo "Enforce whitespace between statements"
  - (cd phobos && grep -nE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $(find . -name '*.d'); test $? -eq 1)
- # enforce whitespace between colon(:) for import statements (doesn't catch everything)
+ - echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"
  - (cd phobos && grep -n 'import [^/,=]*:.*;' $(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $? -eq 1)
- # enforce all-man style
+ - echo "Enforce Allman style"
  - (cd phobos && grep -nE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$'  $(find . -name '*.d'); test $? -eq 1)
+ - echo "Running DScanner"
  # at the moment libdparse has problems to parse some modules (->excludes)
  - (cd phobos && ../Dscanner/dsc --config ../.dscanner.ini --styleCheck $(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.)
  # test code coverage
