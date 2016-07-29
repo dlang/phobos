@@ -120,7 +120,7 @@ if (hasLength!(Range2) && hasSlicing!(Range2))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.range : assumeSorted;
     int[] a = [ 1, 2, 3 ];
@@ -337,7 +337,7 @@ if (is(typeof(ordered!less(values))))
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(ordered(42, 42, 43));
     assert(!strictlyOrdered(43, 42, 45));
@@ -1186,7 +1186,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 }
 
 ///
-unittest
+@safe unittest
 {
     // Showcase stable sorting
     import std.algorithm.mutation : SwapStrategy;
@@ -1196,7 +1196,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     // Sorting floating-point numbers in presence of NaN
     double[] numbers = [-0.0, 3.0, -2.0, double.nan, 0.0, -double.nan];
@@ -1210,7 +1210,7 @@ unittest
     assert(numbers.equal!isIdentical(sorted));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.internal : rndstuff;
     import std.algorithm.mutation : swapRanges;
@@ -1229,8 +1229,8 @@ unittest
     }
 
     int i = 0;
-    bool greater2(int a, int b) { return a + i > b + i; }
-    bool delegate(int, int) greater = &greater2;
+    bool greater2(int a, int b) @safe { return a + i > b + i; }
+    auto greater = &greater2;
     sort!(greater)(a);
     assert(isSorted!(greater)(a));
 
@@ -1503,9 +1503,9 @@ private template TimSortImpl(alias pred, R)
     alias T = ElementType!R;
 
     alias less = binaryFun!pred;
-    bool greater(T a, T b){ return less(b, a); }
-    bool greaterEqual(T a, T b){ return !less(a, b); }
-    bool lessEqual(T a, T b){ return !less(b, a); }
+    alias greater = (a, b) => less(b, a);
+    alias greaterEqual = (a, b) => !less(a, b);
+    alias lessEqual = (a, b) => !less(b, a);
 
     enum minimalMerge = 128;
     enum minimalGallop = 7;
@@ -1515,7 +1515,7 @@ private template TimSortImpl(alias pred, R)
     struct Slice{ size_t base, length; }
 
     // Entry point for tim sort
-    void sort(R range, T[] temp)
+    void sort()(R range, T[] temp)
     {
         import std.algorithm.comparison : min;
 
@@ -1533,7 +1533,7 @@ private template TimSortImpl(alias pred, R)
         size_t stackLen = 0;
 
         // Allocate temporary memory if not provided by user
-        if (temp.length < minTemp) temp = uninitializedArray!(T[])(minTemp);
+        if (temp.length < minTemp) temp = () @trusted { return uninitializedArray!(T[])(minTemp); }();
 
         for (size_t i = 0; i < range.length; )
         {
@@ -1604,7 +1604,7 @@ private template TimSortImpl(alias pred, R)
 
     // Calculates optimal value for minRun:
     // take first 6 bits of n and add 1 if any lower bits are set
-    pure size_t minRunLength(size_t n)
+    size_t minRunLength()(size_t n)
     {
         immutable shift = bsr(n)-5;
         auto result = (n>>shift) + !!(n & ~((1<<shift)-1));
@@ -1612,7 +1612,7 @@ private template TimSortImpl(alias pred, R)
     }
 
     // Returns length of first run in range
-    size_t firstRun(R range)
+    size_t firstRun()(R range)
     out(ret)
     {
         assert(ret <= range.length);
@@ -1637,7 +1637,7 @@ private template TimSortImpl(alias pred, R)
     }
 
     // A binary insertion sort for building runs up to minRun length
-    void binaryInsertionSort(R range, size_t sortedLen = 1)
+    void binaryInsertionSort()(R range, size_t sortedLen = 1)
     out
     {
         if (!__ctfe) assert(isSorted!pred(range));
@@ -1669,7 +1669,7 @@ private template TimSortImpl(alias pred, R)
     }
 
     // Merge two runs in stack (at, at + 1)
-    void mergeAt(R range, Slice[] stack, immutable size_t at, ref size_t minGallop, ref T[] temp)
+    void mergeAt()(R range, Slice[] stack, immutable size_t at, ref size_t minGallop, ref T[] temp)
     in
     {
         assert(stack.length >= 2);
@@ -1691,7 +1691,7 @@ private template TimSortImpl(alias pred, R)
 
     // Merge two runs in a range. Mid is the starting index of the second run.
     // minGallop and temp are references; The calling function must receive the updated values.
-    void merge(R range, size_t mid, ref size_t minGallop, ref T[] temp)
+    void merge()(R range, size_t mid, ref size_t minGallop, ref T[] temp)
     in
     {
         if (!__ctfe)
@@ -1726,7 +1726,7 @@ private template TimSortImpl(alias pred, R)
     }
 
     // Enlarge size of temporary memory if needed
-    T[] ensureCapacity(size_t minCapacity, T[] temp)
+    T[] ensureCapacity()(size_t minCapacity, T[] temp)
     out(ret)
     {
         assert(ret.length >= minCapacity);
@@ -1740,14 +1740,14 @@ private template TimSortImpl(alias pred, R)
             if (newSize < minCapacity) newSize = minCapacity;
 
             if (__ctfe) temp.length = newSize;
-            else temp = uninitializedArray!(T[])(newSize);
+            else temp = () @trusted { return uninitializedArray!(T[])(newSize); }();
         }
         return temp;
     }
 
     // Merge front to back. Returns new value of minGallop.
     // temp must be large enough to store range[0 .. mid]
-    size_t mergeLo(R range, immutable size_t mid, size_t minGallop, T[] temp)
+    size_t mergeLo()(R range, immutable size_t mid, size_t minGallop, T[] temp)
     out
     {
         if (!__ctfe) assert(isSorted!pred(range));
@@ -1830,7 +1830,7 @@ private template TimSortImpl(alias pred, R)
 
     // Merge back to front. Returns new value of minGallop.
     // temp must be large enough to store range[mid .. range.length]
-    size_t mergeHi(R range, immutable size_t mid, size_t minGallop, T[] temp)
+    size_t mergeHi()(R range, immutable size_t mid, size_t minGallop, T[] temp)
     out
     {
         if (!__ctfe) assert(isSorted!pred(range));
@@ -2013,7 +2013,7 @@ private template TimSortImpl(alias pred, R)
     alias gallopReverseUpper = gallopSearch!( true,  true);
 }
 
-unittest
+@safe unittest
 {
     import std.random : Random, uniform, randomShuffle;
 
@@ -2024,7 +2024,7 @@ unittest
     }
 
     // Generates data especially for testing sorting with Timsort
-    static E[] genSampleData(uint seed)
+    static E[] genSampleData(uint seed) @safe
     {
         import std.algorithm.mutation : swap, swapRanges;
 
@@ -2088,7 +2088,7 @@ unittest
     enum result = testSort(seed);
 }
 
-unittest
+@safe unittest
 {//bugzilla 4584
     assert(isSorted!"a < b"(sort!("a < b", SwapStrategy.stable)(
        [83, 42, 85, 86, 87, 22, 89, 30, 91, 46, 93, 94, 95, 6,
@@ -2097,7 +2097,7 @@ unittest
 
 }
 
-unittest
+@safe unittest
 {
     //test stable sort + zip
     import std.range;
@@ -2109,7 +2109,7 @@ unittest
     assert(y == "aebcd"d);
 }
 
-unittest
+@safe unittest
 {
     // Issue 14223
     import std.range, std.array;
@@ -2223,7 +2223,7 @@ schwartzSort(alias transform, alias less = "a < b",
     schwartzSort!"a[0]"(chars);
 }
 
-unittest
+@safe unittest
 {
     // issue 5924
     import std.typecons : Tuple;
@@ -2231,7 +2231,7 @@ unittest
     schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : map;
     import std.math : log2;
@@ -2265,7 +2265,7 @@ unittest
     assert(isSorted!("a > b")(map!(entropy)(arr)));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : map;
     import std.math : log2;
