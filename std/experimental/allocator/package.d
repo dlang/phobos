@@ -358,13 +358,13 @@ to be shared across threads, use $(D processAllocator) (below). By default,
 $(D theAllocator) ultimately fetches memory from $(D processAllocator), which
 in turn uses the garbage collected heap.
 */
-@property IAllocator theAllocator()
+nothrow @safe @nogc @property IAllocator theAllocator()
 {
     return _threadAllocator;
 }
 
 /// Ditto
-@property void theAllocator(IAllocator a)
+nothrow @safe @nogc @property void theAllocator(IAllocator a)
 {
     assert(a);
     _threadAllocator = a;
