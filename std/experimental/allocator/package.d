@@ -618,7 +618,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     auto m = alloc.allocate(T.sizeof * length);
     if (!m.ptr) return null;
     alias U = Unqual!T;
-    return cast(T[]) uninitializedFillDefault(cast(U[]) m);
+    return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
 }
 
 unittest
@@ -629,7 +629,8 @@ unittest
         assert(a.length == 0 && a.ptr is null);
         a = alloc.makeArray!int(5);
         assert(a.length == 5);
-        assert(a == [ 0, 0, 0, 0, 0]);
+        static immutable cheatsheet = [0, 0, 0, 0, 0];
+        assert(a == cheatsheet);
     }
 
     void test2(A)(auto ref A alloc)
@@ -637,17 +638,19 @@ unittest
         static struct S { int x = 42; @disable this(this); }
         S[] arr = alloc.makeArray!S(5);
         assert(arr.length == 5);
-        assert((cast(int*)arr.ptr)[0 .. 5] == [ 42, 42, 42, 42, 42]);
+        int[] arrInt = () @trusted { return (cast(int*) arr.ptr)[0 .. 5]; }();
+        static immutable res = [42, 42, 42, 42, 42];
+        assert(arrInt == res);
     }
 
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test1(GCAllocator.instance);
-    test1(theAllocator);
-    test2(GCAllocator.instance);
+    import std.experimental.allocator.mallocator : Mallocator;
+    (alloc) /*pure nothrow*/ @safe { test1(alloc); test2(alloc);} (GCAllocator.instance);
+    (alloc) nothrow @safe @nogc { test1(alloc); test2(alloc);} (Mallocator.instance);
     test2(theAllocator);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = theAllocator.makeArray!(shared int)(5);
