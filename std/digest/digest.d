@@ -774,7 +774,8 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
         }
     }
     import std.exception : assumeUnique;
-    return assumeUnique(result);
+    // memory was just created, so casting to immutable is safe
+    return () @trusted { return assumeUnique(result); }();
 }
 
 ///ditto
@@ -786,7 +787,7 @@ string toHexString(LetterCase letterCase, Order order = Order.increasing)(in uby
 //For more example unittests, see Digest.digest, digest
 
 ///
-unittest
+@safe unittest
 {
     import std.digest.crc;
     //Test with template API:
@@ -799,7 +800,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.digest.crc;
     // With OOP API
@@ -808,7 +809,7 @@ unittest
     assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
 }
 
-unittest
+@safe unittest
 {
     ubyte[16] data;
     assert(toHexString(data) == "00000000000000000000000000000000");
