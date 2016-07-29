@@ -104,6 +104,8 @@ import std.meta;
 import std.experimental.ndslice.internal;
 import std.experimental.ndslice.slice; //: Slice;
 
+@trusted:
+
 private enum _swappedCode = q{
     with (slice)
     {
@@ -588,7 +590,7 @@ body
 }
 
 ///
-pure nothrow unittest
+@safe pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = [1, 2, 3, 4].sliced(2, 2);
