@@ -1503,9 +1503,9 @@ private template TimSortImpl(alias pred, R)
     alias T = ElementType!R;
 
     alias less = binaryFun!pred;
-    bool greater()(T a, T b){ return less(b, a); }
-    bool greaterEqual()(T a, T b){ return !less(a, b); }
-    bool lessEqual()(T a, T b){ return !less(b, a); }
+    alias greater = (a, b) => less(b, a);
+    alias greaterEqual = (a, b) => !less(a, b);
+    alias lessEqual = (a, b) => !less(b, a);
 
     enum minimalMerge = 128;
     enum minimalGallop = 7;
