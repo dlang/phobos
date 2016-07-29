@@ -2085,8 +2085,7 @@ unittest
     enum seed = 310614065;
     testSort(seed);
 
-    //@@BUG: Timsort fails with CTFE as of DMD 2.060
-    // enum result = testSort(seed);
+    enum result = testSort(seed);
 }
 
 unittest
