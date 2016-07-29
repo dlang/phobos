@@ -369,7 +369,7 @@ auto castSwitch(choices...)(Object switchObject)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.format : format;
@@ -400,7 +400,7 @@ unittest
 }
 
 /// Using with void handlers:
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
 
@@ -421,7 +421,7 @@ unittest
     )();
 }
 
-unittest
+@system unittest
 {
     import core.exception : SwitchError;
     import std.exception : assertThrown;
@@ -1629,7 +1629,7 @@ auto predSwitch(alias pred = "a == b", T, R ...)(T switchExpression, lazy R choi
     assertThrown!Exception(factorial(-9));
 }
 
-unittest
+@system unittest
 {
     import core.exception : SwitchError;
     import std.exception : assertThrown;
