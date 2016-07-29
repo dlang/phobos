@@ -4755,7 +4755,7 @@ if (!is(T == class) && !(is(T == interface)))
             import core.stdc.stdlib : malloc;
             import std.conv : emplace;
 
-            _store = cast(Impl*)malloc(Impl.sizeof);
+            _store = () @trusted { return cast(Impl*)malloc(Impl.sizeof); }();
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
@@ -4771,7 +4771,7 @@ if (!is(T == class) && !(is(T == interface)))
             import core.stdc.stdlib : malloc;
             import core.stdc.string : memcpy, memset;
 
-            _store = cast(Impl*)malloc(Impl.sizeof);
+            _store = () @trusted { return cast(Impl*)malloc(Impl.sizeof); }();
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
@@ -4875,7 +4875,7 @@ Constructor that tracks the reference count appropriately. If $(D
 /**
 Destructor that tracks the reference count appropriately. If $(D
 !refCountedStore.isInitialized), does nothing. When the reference count goes
-down to zero, calls $(D destroy) agaist the payload and calls $(D free)
+down to zero, calls $(D destroy) against the payload and calls $(D free)
 to deallocate the corresponding resource.
  */
     ~this()
@@ -4892,7 +4892,7 @@ to deallocate the corresponding resource.
             GC.removeRange(&_refCounted._store._payload);
         }
         import core.stdc.stdlib : free;
-        free(_refCounted._store);
+        () @trusted { free(_refCounted._store); }();
         _refCounted._store = null;
     }
 
@@ -4977,7 +4977,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 ///
-@system unittest
+@safe unittest
 {
     // A pair of an $(D int) and a $(D size_t) - the latter being the
     // reference count - will be dynamically allocated
@@ -4991,12 +4991,12 @@ assert(refCountedStore.isInitialized)).
     // the pair will be freed when rc1 and rc2 go out of scope
 }
 
-@system unittest
+@safe unittest
 {
     RefCounted!int* p;
     {
         auto rc1 = RefCounted!int(5);
-        p = &rc1;
+        p = () @trusted { return &rc1; }();
         assert(rc1 == 5);
         assert(rc1._refCounted._store._count == 1);
         auto rc2 = rc1;
@@ -5010,7 +5010,10 @@ assert(refCountedStore.isInitialized)).
         assert(rc1._refCounted._store._count == 2);
     }
     assert(p._refCounted._store == null);
+}
 
+@safe unittest
+{
     // RefCounted as a member
     struct A
     {
@@ -5030,7 +5033,7 @@ assert(refCountedStore.isInitialized)).
     assert(a.x._refCounted._store._count == 2, "BUG 4356 still unfixed");
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm.mutation : swap;
 
@@ -5054,7 +5057,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 // 6436
-@system unittest
+@safe unittest
 {
     struct S { this(ref int val) { assert(val == 3); ++val; } }
 
@@ -5063,7 +5066,7 @@ assert(refCountedStore.isInitialized)).
     assert(val == 4);
 }
 
-@system unittest
+@safe unittest
 {
     RefCounted!int a;
     a = 5; //This should not assert
@@ -7109,7 +7112,7 @@ private template replaceTypeInFunctionType(From, To, fun)
     struct S2 { void bar() { x = 2; } }
 
     alias Pass = Test!(
-        int, float, typeof(&func), float delegate(float),
+        int, float, typeof(&func), float delegate(float) @safe,
         int, float, typeof(&printf), typeof(&floatPrintf),
         int, float, int function(out long, ...),
             float function(out long, ...),
