@@ -537,7 +537,7 @@ private template fqnSym(alias T : X!A, alias X, A...)
 private template fqnSym(alias T)
 {
     static if (__traits(compiles, __traits(parent, T)))
-        enum parentPrefix = fqnSym!(__traits(parent, T)) ~ '.';
+        enum parentPrefix = fqnSym!(__traits(parent, T)) ~ ".";
     else
         enum parentPrefix = null;
 
