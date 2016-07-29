@@ -358,13 +358,13 @@ to be shared across threads, use $(D processAllocator) (below). By default,
 $(D theAllocator) ultimately fetches memory from $(D processAllocator), which
 in turn uses the garbage collected heap.
 */
-@property IAllocator theAllocator()
+nothrow @safe @nogc @property IAllocator theAllocator()
 {
     return _threadAllocator;
 }
 
 /// Ditto
-@property void theAllocator(IAllocator a)
+nothrow @safe @nogc @property void theAllocator(IAllocator a)
 {
     assert(a);
     _threadAllocator = a;
@@ -435,13 +435,38 @@ propagates the exception.
 auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 {
     import std.algorithm.comparison : max;
-    import std.conv : emplace;
+    import std.conv : emplace, emplaceRef;
     auto m = alloc.allocate(max(stateSize!T, 1));
     if (!m.ptr) return null;
-    scope(failure) alloc.deallocate(m);
-    static if (is(T == class))
-        return emplace!T(m, args);
-    else return emplace(cast(T*) m.ptr, args);
+
+    auto construct()
+    {
+        static if (is(T == class)) return emplace!T(m, args);
+        else
+        {
+            // Assume cast is safe as allocation succeeded for `stateSize!T`
+            auto p = () @trusted { return cast(T*)m.ptr; }();
+            emplaceRef(*p, args);
+            return p;
+        }
+    }
+
+    scope(failure)
+    {
+        static if (is(typeof(() pure { return construct(); })))
+        {
+            // Assume deallocation is safe because:
+            // 1) in case of failure, `m` is the only reference to this memory
+            // 2) `m` is known to originate from `alloc`
+            () @trusted { alloc.deallocate(m); }();
+        }
+        else
+        {
+            alloc.deallocate(m);
+        }
+    }
+
+    return construct();
 }
 
 ///
@@ -543,6 +568,93 @@ unittest
     test(theAllocator);
 }
 
+// Attribute propagation
+nothrow @safe @nogc unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    alias alloc = Mallocator.instance;
+
+    auto test(T, Args...)(auto ref Args args)
+    {
+        auto k = alloc.make!T(args);
+        () @trusted { alloc.dispose(k); }();
+    }
+
+    test!int;
+    test!(int*);
+    test!int(0);
+    test!(int*)(null);
+}
+
+// should be pure with the GCAllocator
+pure nothrow @safe unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+
+    // default GCAllocator is mutable & shared
+    static immutable GCAllocator alloc;
+
+    auto test(T, Args...)(auto ref Args args)
+    {
+        auto k = alloc.make!T(args);
+        () @trusted { alloc.dispose(k); }();
+    }
+
+    test!int();
+    test!(int*);
+    test!int(0);
+    test!(int*)(null);
+}
+
+// Verify that making an object by calling an impure constructor is not @safe
+nothrow @safe @nogc unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    static struct Pure { this(int) pure nothrow @nogc @safe {} }
+
+    cast(void) Mallocator.instance.make!Pure(0);
+
+    static int g = 0;
+    static struct Impure { this(int) nothrow @nogc @safe {
+        g++;
+    } }
+    static assert(!__traits(compiles, cast(void) Mallocator.instance.make!Impure(0)));
+}
+
+// test failure with a pure, failing struct
+@safe unittest
+{
+    import std.exception : assertThrown, enforce;
+
+    // this struct can't be initialized
+    struct InvalidStruct
+    {
+        this(int b)
+        {
+            enforce(1 == 2);
+        }
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    assertThrown(make!InvalidStruct(Mallocator.instance, 42));
+}
+
+// test failure with an impure, failing struct
+@system unittest
+{
+    import std.exception : assertThrown, enforce;
+    static int g;
+    struct InvalidImpureStruct
+    {
+        this(int b)
+        {
+            g++;
+            enforce(1 == 2);
+        }
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    assertThrown(make!InvalidImpureStruct(Mallocator.instance, 42));
+}
+
 private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
 {
     import core.stdc.string : memcpy;
@@ -618,7 +730,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     auto m = alloc.allocate(T.sizeof * length);
     if (!m.ptr) return null;
     alias U = Unqual!T;
-    return cast(T[]) uninitializedFillDefault(cast(U[]) m);
+    return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
 }
 
 unittest
@@ -629,7 +741,8 @@ unittest
         assert(a.length == 0 && a.ptr is null);
         a = alloc.makeArray!int(5);
         assert(a.length == 5);
-        assert(a == [ 0, 0, 0, 0, 0]);
+        static immutable cheatsheet = [0, 0, 0, 0, 0];
+        assert(a == cheatsheet);
     }
 
     void test2(A)(auto ref A alloc)
@@ -637,17 +750,19 @@ unittest
         static struct S { int x = 42; @disable this(this); }
         S[] arr = alloc.makeArray!S(5);
         assert(arr.length == 5);
-        assert((cast(int*)arr.ptr)[0 .. 5] == [ 42, 42, 42, 42, 42]);
+        int[] arrInt = () @trusted { return (cast(int*) arr.ptr)[0 .. 5]; }();
+        static immutable res = [42, 42, 42, 42, 42];
+        assert(arrInt == res);
     }
 
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test1(GCAllocator.instance);
-    test1(theAllocator);
-    test2(GCAllocator.instance);
+    import std.experimental.allocator.mallocator : Mallocator;
+    (alloc) pure nothrow @safe { test1(alloc); test2(alloc);} (GCAllocator.instance);
+    (alloc) nothrow @safe @nogc { test1(alloc); test2(alloc);} (Mallocator.instance);
     test2(theAllocator);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = theAllocator.makeArray!(shared int)(5);
@@ -666,6 +781,15 @@ unittest
     assert(c.equal([0, 0, 0, 0, 0]));
 }
 
+private enum hasPurePostblit(T) = !hasElaborateCopyConstructor!T ||
+    is(typeof(() pure { T.init.__xpostblit(); }));
+
+private enum hasPureDtor(T) = !hasElaborateDestructor!T ||
+    is(typeof(() pure { T.init.__xdtor(); }));
+
+// `true` when postblit and destructor of T cannot escape references to itself
+private enum canSafelyDeallocPostRewind(T) = hasPurePostblit!T && hasPureDtor!T;
+
 /// Ditto
 T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     auto ref T init)
@@ -673,11 +797,18 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     if (!length) return null;
     auto m = alloc.allocate(T.sizeof * length);
     if (!m.ptr) return null;
-    auto result = cast(T[]) m;
+    auto result = () @trusted { return cast(T[]) m; } ();
     import std.traits : hasElaborateCopyConstructor;
     static if (hasElaborateCopyConstructor!T)
     {
-        scope(failure) alloc.deallocate(m);
+        scope(failure)
+        {
+            static if (canSafelyDeallocPostRewind!T)
+                () @trusted { alloc.deallocate(m); } ();
+            else
+                alloc.deallocate(m);
+        }
+
         size_t i = 0;
         static if (hasElaborateDestructor!T)
         {
@@ -689,15 +820,16 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
                 }
             }
         }
+        import std.conv : emplace;
         for (; i < length; ++i)
         {
-            emplace!T(result.ptr + i, init);
+            emplace(&result[i], init);
         }
     }
     else
     {
         alias U = Unqual!T;
-        fillWithMemcpy(cast(U[]) result, *(cast(U*) &init));
+        () @trusted { fillWithMemcpy(cast(U[]) result, *(cast(U*) &init)); }();
     }
     return result;
 }
@@ -722,7 +854,7 @@ unittest
     test!(immutable int)();
 }
 
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -733,8 +865,56 @@ unittest
         assert(a == [ 42, 42, 42, 42, 42 ]);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
+    (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
     test(theAllocator);
+}
+
+// test failure with a pure, failing struct
+@safe unittest
+{
+    import std.exception : assertThrown, enforce;
+
+    struct NoCopy
+    {
+        @disable this();
+
+        this(int b){}
+
+        // can't be copied
+        this(this)
+        {
+            enforce(1 == 2);
+        }
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    assertThrown(makeArray!NoCopy(Mallocator.instance, 10, NoCopy(42)));
+}
+
+// test failure with an impure, failing struct
+@system unittest
+{
+    import std.exception : assertThrown, enforce;
+
+    static int i = 0;
+    struct Singleton
+    {
+        @disable this();
+
+        this(int b){}
+
+        // can't be copied
+        this(this)
+        {
+            enforce(i++ == 0);
+        }
+
+        ~this()
+        {
+            i--;
+        }
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    assertThrown(makeArray!Singleton(Mallocator.instance, 10, Singleton(42)));
 }
 
 /// Ditto
@@ -759,30 +939,37 @@ if (isInputRange!R && !isInfinite!R)
         if (!length) return null;
         auto m = alloc.allocate(T.sizeof * length);
         if (!m.ptr) return null;
-        auto result = cast(T[]) m;
+        auto result = () @trusted { return cast(T[]) m; } ();
 
         size_t i = 0;
         scope (failure)
         {
             foreach (j; 0 .. i)
             {
-                destroy(*cast(Unqual!T*) (result.ptr + j));
+                auto p = () @trusted { return cast(Unqual!T*) &result[j]; }();
+                destroy(p);
             }
-            alloc.deallocate(m);
+
+            static if (canSafelyDeallocPostRewind!T)
+                () @trusted { alloc.deallocate(m); } ();
+            else
+                alloc.deallocate(m);
         }
 
-        import std.conv : emplace;
+        import std.conv : emplaceRef;
         static if (isNarrowString!R || isRandomAccessRange!R)
         {
             foreach (j; 0 .. range.length)
             {
-                cast(void) emplace!T(result.ptr + i++, range[j]);
+                emplaceRef!T(result[i++], range[j]);
             }
         }
         else
         {
             for (; !range.empty; range.popFront, ++i)
-                cast(void) emplace!T(result.ptr + i, range.front);
+            {
+                emplaceRef!T(result[i], range.front);
+            }
         }
 
         return result;
@@ -793,16 +980,20 @@ if (isInputRange!R && !isInfinite!R)
         size_t estimated = 8;
         auto m = alloc.allocate(T.sizeof * estimated);
         if (!m.ptr) return null;
-        auto result = cast(T[]) m;
+        auto result = () @trusted { return cast(T[]) m; } ();
 
         size_t initialized = 0;
         void bailout()
         {
-            foreach (i; 0 .. initialized)
+            foreach (i; 0 .. initialized + 1)
             {
                 destroy(result[i]);
             }
-            alloc.deallocate(m);
+
+            static if (canSafelyDeallocPostRewind!T)
+                () @trusted { alloc.deallocate(m); } ();
+            else
+                alloc.deallocate(m);
         }
         scope (failure) bailout;
 
@@ -811,22 +1002,30 @@ if (isInputRange!R && !isInfinite!R)
             if (initialized == estimated)
             {
                 // Need to reallocate
-                if (!alloc.reallocate(m, T.sizeof * (estimated *= 2)))
+                static if (hasPurePostblit!T)
+                    auto success = () @trusted { return alloc.reallocate(m, T.sizeof * (estimated *= 2)); } ();
+                else
+                    auto success = alloc.reallocate(m, T.sizeof * (estimated *= 2));
+                if (!success)
                 {
                     bailout;
                     return null;
                 }
-                result = cast(T[]) m;
+                result = () @trusted { return cast(T[]) m; } ();
             }
-            import std.conv : emplace;
-            emplace!T(result.ptr + initialized, range.front);
+            import std.conv : emplaceRef;
+            emplaceRef(result[initialized], range.front);
         }
 
-        // Try to shrink memory, no harm if not possible
-        if (initialized < estimated
-            && alloc.reallocate(m, T.sizeof * initialized))
+        if (initialized < estimated)
         {
-            result = cast(T[]) m;
+            // Try to shrink memory, no harm if not possible
+            static if (hasPurePostblit!T)
+                auto success = () @trusted { return alloc.reallocate(m, T.sizeof * initialized); } ();
+            else
+                auto success = alloc.reallocate(m, T.sizeof * initialized);
+            if (success)
+                result = () @trusted { return cast(T[]) m; } ();
         }
 
         return result[0 .. initialized];
@@ -849,7 +1048,7 @@ unittest
         assert(b == [4.0, 2.0]);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
+    (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
     test(theAllocator);
 }
 
@@ -872,8 +1071,131 @@ unittest
     }
 
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
+    (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
     test(theAllocator);
+}
+
+pure nothrow @safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.range : iota;
+    static immutable GCAllocator alloc;
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        auto arr = alloc.makeArray(d);
+        assert(arr.length == 10);
+        assert(arr.equal(iota(1, 11)));
+    }
+}
+
+// test failure with a pure, failing struct
+@safe unittest
+{
+    import std.exception : assertThrown, enforce;
+
+    struct NoCopy
+    {
+        int b;
+
+        @disable this();
+
+        this(int b)
+        {
+            this.b = b;
+        }
+
+        // can't be copied
+        this(this)
+        {
+            enforce(b < 3, "there can only be three elements");
+        }
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    auto arr = [NoCopy(1), NoCopy(2), NoCopy(3)];
+    assertThrown(makeArray!NoCopy(Mallocator.instance, arr));
+
+    struct NoCopyRange
+    {
+        static j = 0;
+        bool empty()
+        {
+            return j > 5;
+        }
+
+        auto front()
+        {
+            return NoCopy(j);
+        }
+
+        void popFront()
+        {
+            j++;
+        }
+    }
+    assertThrown(makeArray!NoCopy(Mallocator.instance, NoCopyRange()));
+}
+
+// test failure with an impure, failing struct
+@system unittest
+{
+    import std.exception : assertThrown, enforce;
+
+    static i = 0;
+    static maxElements = 2;
+    struct NoCopy
+    {
+        int val;
+        @disable this();
+
+        this(int b){
+            this.val = i++;
+        }
+
+        // can't be copied
+        this(this)
+        {
+            enforce(i++ < maxElements, "there can only be four elements");
+        }
+    }
+
+    import std.experimental.allocator.mallocator : Mallocator;
+    auto arr = [NoCopy(1), NoCopy(2)];
+    assertThrown(makeArray!NoCopy(Mallocator.instance, arr));
+
+    // allow more copies and thus force reallocation
+    i = 0;
+    maxElements = 30;
+    static j = 0;
+
+    struct NoCopyRange
+    {
+        bool empty()
+        {
+            return j > 100;
+        }
+
+        auto front()
+        {
+            return NoCopy(1);
+        }
+
+        void popFront()
+        {
+            j++;
+        }
+    }
+    assertThrown(makeArray!NoCopy(Mallocator.instance, NoCopyRange()));
+
+    maxElements = 300;
+    auto arr2 = makeArray!NoCopy(Mallocator.instance, NoCopyRange());
+
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.range : iota;
+    assert(arr2.map!`a.val`.equal(iota(32, 204, 2)));
 }
 
 version(unittest)
@@ -881,6 +1203,7 @@ version(unittest)
     private struct ForcedInputRange
     {
         int[]* array;
+        pure nothrow @safe @nogc:
         bool empty() { return !array || (*array).empty; }
         ref int front() { return (*array)[0]; }
         void popFront() { *array = (*array)[1 .. $]; }
@@ -899,13 +1222,13 @@ unittest
         long[] a = alloc.makeArray!long(r);
         assert(a.length == 0 && a.ptr is null);
         auto arr2 = arr;
-        r.array = &arr2;
+        r.array = () @trusted { return &arr2; } ();
         a = alloc.makeArray!long(r);
         assert(a.length == 10);
         assert(a == iota(10).array);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
+    (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
     test(theAllocator);
 }
 
