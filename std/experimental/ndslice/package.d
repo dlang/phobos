@@ -116,6 +116,7 @@ $(TR $(TDNW Advanced Level $(BR)
      $(TD
         $(SUBREF selection, blocks)
         $(SUBREF selection, windows)
+        $(SUBREF selection, clones)
         $(SUBREF selection, diagonal)
         $(SUBREF selection, reshape)
         $(SUBREF selection, byElement)
