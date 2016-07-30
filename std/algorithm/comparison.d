@@ -52,6 +52,7 @@ Source: $(PHOBOSSRC std/algorithm/_comparison.d)
 
 Macros:
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
+NAN=$(RED NAN)
  */
 module std.algorithm.comparison;
 
@@ -1293,6 +1294,9 @@ levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     assert(levenshteinDistanceAndPath(S("cat"), "rat")[0] == 1);
 }
 
+/// A flag to control $(NAN) propagation in $(D max) and $(D min)
+alias PropagateNaN = Flag!"propagateNaN";
+
 // max
 /**
 Iterates the passed arguments and return the maximum value.
@@ -1300,6 +1304,9 @@ Iterates the passed arguments and return the maximum value.
 Params:
     args = The values to select the maximum from. At least two arguments must
     be passed.
+    propagateNaN = A flag determining whether to propagate or ignore $(NAN) if it
+    is encountered amongst args. Has no effect if there are no floating-point
+    values in the args.
 
 Returns:
     The maximum of the passed-in args. The type of the returned value is
@@ -1308,21 +1315,21 @@ Returns:
 See_Also:
     $(REF maxElement, std,algorithm,searching)
 */
-MaxType!T max(T...)(T args)
+MaxType!T max(PropagateNaN propagateNaN = PropagateNaN.yes, T...)(T args)
     if (T.length >= 2)
 {
     //Get "a"
     static if (T.length <= 2)
         alias a = args[0];
     else
-        auto a = max(args[0 .. ($+1)/2]);
+        auto a = max!propagateNaN(args[0 .. ($+1)/2]);
     alias T0 = typeof(a);
 
     //Get "b"
     static if (T.length <= 3)
         alias b = args[$-1];
     else
-        auto b = max(args[($+1)/2 .. $]);
+        auto b = max!propagateNaN(args[($+1)/2 .. $]);
     alias T1 = typeof(b);
 
     import std.algorithm.internal : algoFormat;
@@ -1331,7 +1338,14 @@ MaxType!T max(T...)(T args)
 
     //Do the "max" proper with a and b
     import std.functional : lessThan;
-    immutable chooseB = lessThan!(T0, T1)(a, b);
+    import std.math : isNaN;
+    static if (propagateNaN && isFloatingPoint!T1)
+        immutable chooseB = lessThan(a, b) || isNaN(b);
+    else static if (!propagateNaN && isFloatingPoint!T0)
+        immutable chooseB = lessThan(a, b) || isNaN(a);
+    else
+        immutable chooseB = lessThan(a, b);
+
     return cast(typeof(return)) (chooseB ? b : a);
 }
 
@@ -1347,6 +1361,21 @@ MaxType!T max(T...)(T args)
     auto e = min(a, b, c);
     assert(is(typeof(e) == double));
     assert(e == 2);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN;
+    assert(max(2, double.nan).isNaN);
+    assert(max(double.nan, 2).isNaN);
+    assert(max(double.nan, 2.0).isNaN);
+    assert(max(double.nan, double.nan).isNaN);
+
+    assert(max!(PropagateNaN.no)(2, double.nan) == 2.0);
+    assert(max!(PropagateNaN.no)(2.0, double.nan) == 2.0);
+    assert(max!(PropagateNaN.no)(double.nan, 2) == 2.0);
+    assert(max!(PropagateNaN.no)(double.nan, double.nan).isNaN);
 }
 
 @safe unittest
@@ -1378,6 +1407,11 @@ MaxType!T max(T...)(T args)
     assert(max(Date.max, Date(1982, 1, 4)) == Date.max);
     assert(max(Date.min, Date.max) == Date.max);
     assert(max(Date.max, Date.min) == Date.max);
+}
+
+unittest
+{
+    assert(max!(PropagateNaN.no)(double.nan, 2.0, 1.0, double.nan) == 2.0);
 }
 
 // MinType
@@ -1418,25 +1452,28 @@ Iterates the passed arguments and returns the minimum value.
 
 Params: args = The values to select the minimum from. At least two arguments
     must be passed, and they must be comparable with `<`.
+    propagateNaN = A flag determining whether to propagate or ignore $(NAN) if it
+    is encountered amongst args. Has no effect if there are no floating-point
+    values in the args.
 Returns: The minimum of the passed-in values.
 See_Also:
     $(REF minElement, std,algorithm,searching)
 */
-MinType!T min(T...)(T args)
+MinType!T min(PropagateNaN propagateNaN = PropagateNaN.yes, T...)(T args)
     if (T.length >= 2)
 {
     //Get "a"
     static if (T.length <= 2)
         alias a = args[0];
     else
-        auto a = min(args[0 .. ($+1)/2]);
+        auto a = min!propagateNaN(args[0 .. ($+1)/2]);
     alias T0 = typeof(a);
 
     //Get "b"
     static if (T.length <= 3)
         alias b = args[$-1];
     else
-        auto b = min(args[($+1)/2 .. $]);
+        auto b = min!propagateNaN(args[($+1)/2 .. $]);
     alias T1 = typeof(b);
 
     import std.algorithm.internal : algoFormat;
@@ -1445,7 +1482,14 @@ MinType!T min(T...)(T args)
 
     //Do the "min" proper with a and b
     import std.functional : lessThan;
-    immutable chooseA = lessThan!(T0, T1)(a, b);
+    import std.math : isNaN;
+    static if (propagateNaN && isFloatingPoint!T0)
+        immutable chooseA = lessThan(a, b) || isNaN(a);
+    else static if (!propagateNaN && isFloatingPoint!T1)
+        immutable chooseA = lessThan(a, b) || isNaN(b);
+    else
+        immutable chooseA = lessThan(a, b);
+
     return cast(typeof(return)) (chooseA ? a : b);
 }
 
@@ -1479,6 +1523,26 @@ MinType!T min(T...)(T args)
     assert(min(Date.max, Date(1982, 1, 4)) == Date(1982, 1, 4));
     assert(min(Date.min, Date.max) == Date.min);
     assert(min(Date.max, Date.min) == Date.min);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN;
+    assert(min(2, double.nan).isNaN);
+    assert(min(double.nan, 2).isNaN);
+    assert(min(double.nan, 2.0).isNaN);
+    assert(min(double.nan, double.nan).isNaN);
+
+    assert(min!(PropagateNaN.no)(2, double.nan) == 2.0);
+    assert(min!(PropagateNaN.no)(2.0, double.nan) == 2.0);
+    assert(min!(PropagateNaN.no)(double.nan, 2) == 2.0);
+    assert(min!(PropagateNaN.no)(double.nan, double.nan).isNaN);
+}
+
+unittest
+{
+    assert(min!(PropagateNaN.no)(double.nan, 2.0, 1.0, double.nan) == 1.0);
 }
 
 // mismatch
