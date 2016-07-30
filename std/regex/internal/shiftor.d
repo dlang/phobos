@@ -1,6 +1,6 @@
 /*
-    Kickstart is a coarse-grained "filter" engine that finds likely matches
-    to be verified by full-blown matcher.
+    ShiftOr is a kickstart engine, a coarse-grained "filter" engine that finds
+    potential matches to be verified by a full-blown matcher.
 */
 module std.regex.internal.shiftor;
 
@@ -351,7 +351,6 @@ public:
                 default:
                 L_StopThread:
                     assert(re.ir[t.pc].code >= 0x80, text(re.ir[t.pc].code));
-                    debug (fred_search) writeln("ShiftOr stumbled on ",re.ir[t.pc].mnemonic);
                     n_length = std.algorithm.comparison.min(t.idx, n_length);
                     break L_Eval_Thread;
                 }
@@ -543,6 +542,7 @@ unittest
         }
     }
 
+
     foreach (i, Char; AliasSeq!(char, wchar, dchar))
     {
         alias String = immutable(Char)[];
@@ -567,13 +567,14 @@ unittest
         alias String = immutable(Char)[];
         auto kick = shiftOrLength(`abc[a-z]`.to!String, 4);
         searches("abbabca".to!String, kick, 3);
-        kick = shiftOrLength(`(ax|bd|cdy)`.to!String, 2);
-        searches("abdcdyabax".to!String, kick, 1, 3, 8);
+        kick = shiftOrLength(`(axx|bdx|cdy)`.to!String, 3);
+        searches("abdcdxabax".to!String, kick, 3);
 
         shiftOrLength(`...`.to!String, 0);
         kick = shiftOrLength(`a(b{1,2}|c{1,2})x`.to!String, 3);
         searches("ababx".to!String, kick, 2);
         searches("abaacba".to!String, kick, 3); //expected inexact
     }
+
 }
 

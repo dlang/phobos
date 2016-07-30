@@ -55,6 +55,7 @@ struct HashTab
 
     auto keys()
     {
+        import std.array : appender;
         auto app = appender!(uint[])();
         foreach (i, v; table)
         {
@@ -66,6 +67,7 @@ struct HashTab
 
     auto values()
     {
+        import std.array : appender;
         auto app = appender!(uint[])();
         foreach (i, v; table)
         {
