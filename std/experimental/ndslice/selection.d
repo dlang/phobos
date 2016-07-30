@@ -1724,7 +1724,8 @@ For a multidimensional index, see $(LREF indexSlice).
 Params:
     N = dimension count
     lengths = list of dimension lengths
-    shift = value of the first element in a slice
+    shift = value of the first element in a slice (optional)
+    step = value of the step between elements (optional)
 Returns:
     `N`-dimensional slice composed of indexes
 See_also: $(LREF IotaSlice), $(LREF indexSlice)
@@ -1740,6 +1741,15 @@ IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
 {
     import std.experimental.ndslice.slice : sliced;
     with (typeof(return)) return Range.init.sliced(lengths, shift);
+}
+
+///ditto
+IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift, size_t step)
+{
+    auto iota = iotaSlice(lengths, shift);
+    foreach (i; Iota!(0, N))
+        iota._strides[i] *= step;
+    return iota;
 }
 
 ///
@@ -1759,7 +1769,7 @@ IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
 }
 
 ///
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     auto im = iotaSlice([10, 5], 100);
 
@@ -1768,6 +1778,15 @@ IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
     //slicing works correctly
     auto cm = im[1 .. $, 3 .. $];
     assert(cm[2, 1] == 119); // 119 = 100 + (1 + 2) * 5 + (3 + 1)
+}
+
+/// `iotaSlice` with step
+@safe pure nothrow unittest
+{
+    auto sl = iotaSlice([2, 3], 10, 10);
+
+    assert(sl == [[10, 20, 30],
+                  [40, 50, 60]]);
 }
 
 /++
