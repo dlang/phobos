@@ -880,7 +880,7 @@ template multiSort(less...) //if (less.length > 1)
         }
 
         static if (funs.length == 0)
-            assert("No sorting predicate provided");
+            static assert(false, "No sorting predicate provided for multiSort");
         else
         static if (funs.length == 1)
             return sort!(funs[0], ss, Range)(r);

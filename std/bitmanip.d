@@ -3864,7 +3864,7 @@ private uint countBitsSet(T)(T value) @nogc pure nothrow
     }
     else
     {
-        static assert("countBitsSet only supports 1, 2, 4, or 8 byte sized integers.");
+        static assert(false, "countBitsSet only supports 1, 2, 4, or 8 byte sized integers.");
     }
     return cast(uint)c;
 }
