@@ -5,6 +5,8 @@ import std.meta; //: AliasSeq, anySatisfy, Filter, Reverse;
 
 package:
 
+alias isMemory = isPointer;
+
 enum indexError(size_t pos, size_t N) =
     "index at position " ~ pos.stringof
     ~ " from the range [0 .." ~ N.stringof ~ ")"
