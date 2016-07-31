@@ -1294,9 +1294,6 @@ levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     assert(levenshteinDistanceAndPath(S("cat"), "rat")[0] == 1);
 }
 
-/// A flag to control $(NAN) propagation in $(D max) and $(D min)
-alias PropagateNaN = Flag!"propagateNaN";
-
 // max
 /**
 Iterates the passed arguments and return the maximum value.
@@ -1315,7 +1312,7 @@ Returns:
 See_Also:
     $(REF maxElement, std,algorithm,searching)
 */
-MaxType!T max(PropagateNaN propagateNaN = PropagateNaN.yes, T...)(T args)
+MaxType!T max(Flag!"propagateNaN" propagateNaN = Yes.propagateNaN, T...)(T args)
     if (T.length >= 2)
 {
     //Get "a"
@@ -1372,10 +1369,10 @@ MaxType!T max(PropagateNaN propagateNaN = PropagateNaN.yes, T...)(T args)
     assert(max(double.nan, 2.0).isNaN);
     assert(max(double.nan, double.nan).isNaN);
 
-    assert(max!(PropagateNaN.no)(2, double.nan) == 2.0);
-    assert(max!(PropagateNaN.no)(2.0, double.nan) == 2.0);
-    assert(max!(PropagateNaN.no)(double.nan, 2) == 2.0);
-    assert(max!(PropagateNaN.no)(double.nan, double.nan).isNaN);
+    assert(max!(No.propagateNaN)(2, double.nan) == 2.0);
+    assert(max!(No.propagateNaN)(2.0, double.nan) == 2.0);
+    assert(max!(No.propagateNaN)(double.nan, 2) == 2.0);
+    assert(max!(No.propagateNaN)(double.nan, double.nan).isNaN);
 }
 
 @safe unittest
@@ -1411,7 +1408,7 @@ MaxType!T max(PropagateNaN propagateNaN = PropagateNaN.yes, T...)(T args)
 
 unittest
 {
-    assert(max!(PropagateNaN.no)(double.nan, 2.0, 1.0, double.nan) == 2.0);
+    assert(max!(No.propagateNaN)(double.nan, 2.0, 1.0, double.nan) == 2.0);
 }
 
 // MinType
@@ -1459,7 +1456,7 @@ Returns: The minimum of the passed-in values.
 See_Also:
     $(REF minElement, std,algorithm,searching)
 */
-MinType!T min(PropagateNaN propagateNaN = PropagateNaN.yes, T...)(T args)
+MinType!T min(Flag!"propagateNaN" propagateNaN = Yes.propagateNaN, T...)(T args)
     if (T.length >= 2)
 {
     //Get "a"
@@ -1534,15 +1531,15 @@ MinType!T min(PropagateNaN propagateNaN = PropagateNaN.yes, T...)(T args)
     assert(min(double.nan, 2.0).isNaN);
     assert(min(double.nan, double.nan).isNaN);
 
-    assert(min!(PropagateNaN.no)(2, double.nan) == 2.0);
-    assert(min!(PropagateNaN.no)(2.0, double.nan) == 2.0);
-    assert(min!(PropagateNaN.no)(double.nan, 2) == 2.0);
-    assert(min!(PropagateNaN.no)(double.nan, double.nan).isNaN);
+    assert(min!(No.propagateNaN)(2, double.nan) == 2.0);
+    assert(min!(No.propagateNaN)(2.0, double.nan) == 2.0);
+    assert(min!(No.propagateNaN)(double.nan, 2) == 2.0);
+    assert(min!(No.propagateNaN)(double.nan, double.nan).isNaN);
 }
 
 unittest
 {
-    assert(min!(PropagateNaN.no)(double.nan, 2.0, 1.0, double.nan) == 1.0);
+    assert(min!(No.propagateNaN)(double.nan, 2.0, 1.0, double.nan) == 1.0);
 }
 
 // mismatch
