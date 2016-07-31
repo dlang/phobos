@@ -296,30 +296,6 @@ pure nothrow unittest
     assert(equal(alpha, beta));
 }
 
-/// Input range primitives for slices over user defined types
-pure nothrow @nogc unittest
-{
-    struct MyIota
-    {
-        //`[index]` operator overloading
-        auto opIndex(size_t index)
-        {
-            return index;
-        }
-    }
-
-    alias S = Slice!(3, MyIota);
-
-    import std.range.primitives;
-    static assert(hasLength!S);
-    static assert(isInputRange!S);
-    static assert(isForwardRange!S == false);
-
-    auto slice = MyIota().sliced(20, 10);
-    assert(slice[1, 2] == 12);
-
-}
-
 /// Random access range primitives for slices over user defined types
 pure nothrow @nogc unittest
 {
@@ -330,19 +306,12 @@ pure nothrow @nogc unittest
         {
             return index;
         }
-        // `save` property to allow a slice to be a forward range
-        auto save() @property
-        {
-            return this;
-        }
     }
 
     alias S = Slice!(3, MyIota);
     import std.range.primitives;
     static assert(hasLength!S);
     static assert(hasSlicing!S);
-    static assert(isForwardRange!S);
-    static assert(isBidirectionalRange!S);
     static assert(isRandomAccessRange!S);
 
     auto slice = MyIota().sliced(20, 10);
@@ -1358,16 +1327,11 @@ struct Slice(size_t _N, _Range)
     }
 
     /++
-    Range primitive.
-    Defined only if `Range` is a forward range or a pointer type.
+    Forward range primitive.
     +/
-    static if (canSave!PureRange)
     auto save() @property
     {
-        static if (isPointer!PureRange)
-            return typeof(this)(_lengths, _strides, _ptr);
-        else
-            return typeof(this)(_lengths, _strides, _ptr.save);
+        return this;
     }
 
     static if (doUnittest)
@@ -2862,13 +2826,9 @@ private struct PtrShell(Range)
         }
     }
 
-    static if (canSave!Range)
     auto save() @property
     {
-        static if (isDynamicArray!Range)
-            return typeof(this)(_shift, _range);
-        else
-            return typeof(this)(_shift, _range.save);
+        return this;
     }
 }
 
@@ -2953,22 +2913,6 @@ private template PtrTuple(Names...)
         if (allSatisfy!(isSlicePointer, Ptrs) && Ptrs.length == Names.length)
     {
         Ptrs ptrs;
-
-        static if (allSatisfy!(canSave, Ptrs))
-        auto save() @property
-        {
-            static if (anySatisfy!(hasElaborateAssign, Ptrs))
-                PtrTuple p;
-            else
-                PtrTuple p = void;
-            foreach (i, ref ptr; ptrs)
-                static if (isPointer!(Ptrs[i]))
-                    p.ptrs[i] = ptr;
-                else
-                    p.ptrs[i] = ptr.save;
-
-            return p;
-        }
 
         void opOpAssign(string op)(sizediff_t shift)
             if (op == `+` || op == `-`)
