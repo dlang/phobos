@@ -1731,7 +1731,7 @@ IotaSlice!(Lengths.length) iotaSlice(Lengths...)(Lengths lengths)
 IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
 {
     import std.experimental.ndslice.slice : sliced;
-    with (typeof(return)) return Range.init.sliced(lengths, shift);
+    return IotaMap!().init.sliced(lengths, shift);
 }
 
 ///
