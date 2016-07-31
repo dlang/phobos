@@ -385,31 +385,38 @@ See_Also:
     STL's $(HTTP sgi.com/tech/stl/_partition.html, _partition)$(BR)
     STL's $(HTTP sgi.com/tech/stl/stable_partition.html, stable_partition)
 */
-Range partition(alias predicate,
-        SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
-    if ((ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
-            || (ss != SwapStrategy.stable && isForwardRange!(Range)))
+Range partition(alias predicate, SwapStrategy ss, Range)(Range r)
+    if (ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
 {
+    import std.algorithm.mutation : bringToFront;
+
     alias pred = unaryFun!(predicate);
     if (r.empty) return r;
-    static if (ss == SwapStrategy.stable)
+
+    if (r.length == 1)
     {
-        import std.algorithm.mutation : bringToFront;
-        if (r.length == 1)
-        {
-            if (pred(r.front)) r.popFront();
-            return r;
-        }
-        const middle = r.length / 2;
-        alias recurse = .partition!(pred, ss, Range);
-        auto lower = recurse(r[0 .. middle]);
-        auto upper = recurse(r[middle .. r.length]);
-        bringToFront(lower, r[middle .. r.length - upper.length]);
-        return r[r.length - lower.length - upper.length .. r.length];
+        if (pred(r.front)) r.popFront();
+        return r;
     }
-    else static if (ss == SwapStrategy.semistable)
+    const middle = r.length / 2;
+    alias recurse = .partition!(pred, ss, Range);
+    auto lower = recurse(r[0 .. middle]);
+    auto upper = recurse(r[middle .. r.length]);
+    bringToFront(lower, r[middle .. r.length - upper.length]);
+    return r[r.length - lower.length - upper.length .. r.length];
+}
+
+///ditto
+Range partition(alias predicate, SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
+    if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Range)
+{
+    import std.algorithm.mutation : swap;
+    alias pred = unaryFun!(predicate);
+
+    static if (ss == SwapStrategy.semistable)
     {
-        import std.algorithm.mutation : swap;
+        if (r.empty) return r;
+
         for (; !r.empty; r.popFront())
         {
             // skip the initial portion of "correct" elements
@@ -424,9 +431,10 @@ Range partition(alias predicate,
             }
             return result;
         }
+
         return r;
     }
-    else // ss == SwapStrategy.unstable
+    else
     {
         // Inspired from www.stepanovpapers.com/PAM3-partition_notes.pdf,
         // section "Bidirectional Partition Algorithm (Hoare)"
