@@ -1075,6 +1075,42 @@ public:
         //assert(ist.opCmp(ist) == 0);
     }
 
+    /**
+     * Returns: A hash of the $(LREF SysTime)
+     */
+    size_t toHash() const @nogc pure nothrow @safe
+    {
+        static if (is(size_t == ulong))
+        {
+            return _stdTime;
+        }
+        else
+        {
+            enum uint m = 0x5bd1e995;
+            enum uint n = 16;
+            enum uint r = 24;
+            uint h = n;
+            long k = _stdTime;
+
+            k *= m;
+            k ^= k >> r;
+            k *= m;
+
+            h *= m;
+            h ^= k;
+
+            return h;
+        }
+    }
+
+    @safe unittest
+    {
+        assert(SysTime(DateTime.init, UTC()).toHash == SysTime(0, UTC()).toHash);
+        assert(SysTime(DateTime.init, UTC()).toHash == SysTime(0).toHash);
+        assert(SysTime(Date.init, UTC()).toHash == SysTime(0).toHash);
+        assert(SysTime(0).toHash == SysTime(0).toHash);
+    }
+
     /++
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
         are B.C.
