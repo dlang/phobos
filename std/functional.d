@@ -1018,6 +1018,10 @@ template memoize(alias fun, uint maxSize)
         {
             import core.memory : GC;
 
+            // Ensure no allocation overflows
+            static assert(maxSize < size_t.max / Value.sizeof);
+            static assert(maxSize < size_t.max - (8 * size_t.sizeof - 1));
+
             enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
             memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
             enum nwords = (maxSize + 8 * size_t.sizeof - 1) / (8 * size_t.sizeof);
