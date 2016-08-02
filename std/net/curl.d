@@ -361,9 +361,9 @@ CALLBACK_PARAMS = $(TABLE ,
   * // Guess connection type by looking at the URL
   * content = get!AutoProtocol("ftp://foo.com/file");
   * // and since AutoProtocol is default this is the same as
-  * connect = get("ftp://foo.com/file");
+  * content = get("ftp://foo.com/file");
   * // and will end up detecting FTP from the url and be the same as
-  * connect = get!FTP("ftp://foo.com/file");
+  * content = get!FTP("ftp://foo.com/file");
   * ---
   */
 struct AutoProtocol { }
