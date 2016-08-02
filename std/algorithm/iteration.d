@@ -678,7 +678,7 @@ private struct MapResult(alias fun, Range)
     //assert(equal(countAndSquare([ 10, 2 ]), [ tuple(0u, 100), tuple(1u, 4) ]));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -950,7 +950,7 @@ template each(alias pred = "a")
 }
 
 ///
-unittest
+@system unittest
 {
     import std.range : iota;
 
@@ -991,7 +991,7 @@ unittest
 }
 
 // binary foreach with two ref args
-unittest
+@system unittest
 {
     import std.range : lockstep;
 
@@ -1005,7 +1005,7 @@ unittest
 }
 
 // #15358: application of `each` with >2 args (opApply)
-unittest
+@system unittest
 {
     import std.range : lockstep;
     auto a = [0,1,2];
@@ -1020,7 +1020,7 @@ unittest
 }
 
 // #15358: application of `each` with >2 args (range interface)
-unittest
+@safe unittest
 {
     import std.range : zip;
     auto a = [0,1,2];
@@ -1479,7 +1479,7 @@ struct Group(alias pred, R) if (isInputRange!R)
     }
 }
 
-unittest
+@safe unittest
 {
     // Issue 13857
     immutable(int)[] a1 = [1,1,2,2,2,3,4,4,5,6,6,7,8,9,9,9];
@@ -1731,7 +1731,7 @@ private struct ChunkByImpl(alias pred, Range)
     static assert(isForwardRange!(typeof(this)));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1739,6 +1739,8 @@ unittest
     class RefFwdRange
     {
         int[]  impl;
+
+        @safe nothrow:
 
         this(int[] data) { impl = data; }
         @property bool empty() { return impl.empty; }
@@ -1855,7 +1857,7 @@ auto chunkBy(alias pred, Range)(Range r)
 }
 
 version(none) // this example requires support for non-equivalence relations
-unittest
+@safe unittest
 {
     auto data = [
         [1, 1],
@@ -2005,7 +2007,7 @@ unittest
 
 // Issue 13595
 version(none) // This requires support for non-equivalence relations
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].chunkBy!((x, y) => ((x*y) % 3) == 0);
@@ -2018,7 +2020,7 @@ unittest
 }
 
 // Issue 13805
-unittest
+@system unittest
 {
     [""].map!((s) => s).chunkBy!((x, y) => true);
 }
@@ -2215,7 +2217,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     assert(["", ""].joiner("xyz").equal("xyz"));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives;
@@ -2225,7 +2227,7 @@ unittest
     assert (equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -2321,7 +2323,7 @@ unittest
     assert(equal(joiner(tr5, [0,1]), [1,2,0,1,3,4,0,1,0,1]));
 }
 
-unittest
+@safe unittest
 {
     static assert(isInputRange!(typeof(joiner([""], ""))));
     static assert(isForwardRange!(typeof(joiner([""], ""))));
@@ -2417,10 +2419,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     return Result(r);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range.interfaces;
+    import std.range.interfaces : inputRangeObject;
     import std.range : repeat;
 
     debug(std_algorithm) scope(success)
@@ -2434,13 +2436,20 @@ unittest
     assert(equal(joiner(["abc", "def"]), "abcdef"));
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"]),
                     "Maryhasalittlelamb"));
-    assert(equal(joiner(std.range.repeat("abc", 3)), "abcabcabc"));
+    assert(equal(joiner(repeat("abc", 3)), "abcabcabc"));
 
     // joiner allows in-place mutation!
     auto a = [ [1, 2, 3], [42, 43] ];
     auto j = joiner(a);
     j.front = 44;
     assert(a == [ [44, 2, 3], [42, 43] ]);
+}
+
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range.interfaces : inputRangeObject;
 
     // bugzilla 8240
     assert(equal(joiner([inputRangeObject("")]), ""));
@@ -2555,7 +2564,7 @@ unittest
 }
 
 // Issue 8061
-unittest
+@system unittest
 {
     import std.range.interfaces;
     import std.conv : to;
@@ -2812,11 +2821,10 @@ The number of seeds must be correspondingly increased.
     auto stdev = sqrt(r[1] / a.length - avg * avg);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : max, min;
-    import std.exception : assertThrown;
-    import std.range;
+    import std.range : chain;
     import std.typecons : tuple, Tuple;
 
     double[] a = [ 3, 4 ];
@@ -2840,6 +2848,14 @@ unittest
     // Stringize with commas
     string rep = reduce!("a ~ `, ` ~ to!(string)(b)")("", a);
     assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : max, min;
+    import std.exception : assertThrown;
+    import std.range : iota;
+    import std.typecons : tuple, Tuple;
 
     // Test the opApply case.
     static struct OpApply
@@ -2911,7 +2927,7 @@ unittest
     assert(r2 == tuple(3, 3));
 }
 
-unittest
+@system unittest
 {
     int i = 0;
     static struct OpApply
@@ -2930,7 +2946,7 @@ unittest
         }
     }
     //test CTFE and functions with context
-    int fun(int a, int b){return a + b + 1;}
+    int fun(int a, int b) @safe {return a + b + 1;}
     auto foo()
     {
         import std.algorithm.comparison : max;
@@ -3331,7 +3347,7 @@ The number of seeds must be correspondingly increased.
     assert(approxEqual(r2.map!"a[1]", [9, 25, 74, 195, 204, 208, 233])); // sum of squares
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm : equal, map, max, min;
     import std.conv : to;
@@ -4753,7 +4769,7 @@ private auto sumKahan(Result, R)(Result result, R r)
     auto s2 = a.map!(x => x).sum; // Error
 }
 
-unittest
+@system unittest
 {
     import std.bigint;
     import std.range;
@@ -5020,7 +5036,7 @@ struct Permutations(Range)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;
