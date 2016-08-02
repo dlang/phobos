@@ -992,3 +992,15 @@ unittest
     //necessary, result will have the correct length, but buf will still have it's original
     //length
 }
+
+@safe unittest
+{
+    // Test peek & length
+    import std.digest.crc;
+    auto hash = new WrapperDigest!CRC32();
+    assert(hash.length == 4);
+    hash.put(cast(const(ubyte[]))"The quick brown fox jumps over the lazy dog");
+    assert(hash.peek().toHexString() == "39A34F41");
+    ubyte[5] buf;
+    assert(hash.peek(buf).toHexString() == "39A34F41");
+}
