@@ -86,6 +86,7 @@
  *           $(LREF isBasicType)
  *           $(LREF isBoolean)
  *           $(LREF isBuiltinType)
+ *           $(LREF isCopyable)
  *           $(LREF isDynamicArray)
  *           $(LREF isFloatingPoint)
  *           $(LREF isIntegral)
@@ -7028,4 +7029,38 @@ template isFinal(X...) if (X.length == 1)
     static assert(!isFinal!(C.nf));
     static assert(!isFinal!(C.sf));
     static assert( isFinal!(C.ff));
+}
+
+/++
+ + Determines whether the type `S` can be copied.
+ + If a type cannot be copied, then code such as `MyStruct x; auto y = x;` will fail to compile.
+ + Copying for structs can be disabled by using `@disable this(this)`.
+ +
+ + Params:
+ +  S = The type to check.
+ +
+ + Returns:
+ +  `true` if `S` can be copied. `false` otherwise.
+ + ++/
+enum isCopyable(S) = is(typeof(
+    { S foo = S.init; S copy = foo; }
+));
+
+///
+@safe unittest
+{
+    struct S1 {}                        // Fine. Can be copied
+    struct S2 {         this(this) {}}  // Fine. Can be copied
+    struct S3 {@disable this(this) {}}  // Not fine. Copying is disabled.
+    struct S4 {S3 s;}                   // Not fine. A field has copying disabled.
+
+    class C1 {}
+
+    static assert( isCopyable!S1);
+    static assert( isCopyable!S2);
+    static assert(!isCopyable!S3);
+    static assert(!isCopyable!S4);
+
+    static assert(isCopyable!C1);
+    static assert(isCopyable!int);
 }
