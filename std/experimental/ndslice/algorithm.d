@@ -1,15 +1,15 @@
 /**
 $(SCRIPT inhibitQuickIndex = 1;)
 
-This is a submodule of $(MREF std, experimental, ndslice).
+This is a submodule of $(MREF std,experimental,ndslice).
 It contains basic multidimensional iteration algorithms.
 
 $(BOOKTABLE Iteration operators,
-$(TR $(TH Operator Name) $(TH Type) $(TH Functions / Seeds #) $(TH Tensors #) $(TH Returns) $(TH First Argument))
-$(T6 ndMap, Lazy, `>=1`, `1`, Tensor, Tensor)
-$(T6 ndFold, Eagerly, `>=1`, `1`, Scalar, Tensor)
-$(T6 ndReduce, Eagerly, `1`, `>=1`, Scalar, Seed)
-$(T6 ndEach, Eagerly, `0`, `>=1`, `void`, Tensor)
+$(TR $(TH Operator Name) $(TH Type) $(TH Functions / Seeds #)  $(TH Vectorization) $(TH Tensors #) $(TH Returns) $(TH First Argument))
+$(T7 ndMap, Lazy, `>=1`/`0`, N/A, 1, Tensor, Tensor)
+$(T7 ndFold, Eagerly, `>=1`, No, `1`, Scalar, Tensor)
+$(T7 ndReduce, Eagerly, `1`, Optional, `>=1`, Scalar, Seed)
+$(T7 ndEach, Eagerly, `1`/`0`, Optional, `>=1`, `void`, Tensor)
 )
 
 $(BOOKTABLE Eagerly iteration operators with stop condition,
@@ -50,6 +50,7 @@ Macros:
 SUBREF = $(REF_ALTTEXT $(TT $2), $2, std,experimental, ndslice, $1)$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 T6=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4) $(TD $5) $(TD $6))
+T7=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4) $(TD $5) $(TD $6), $(TD $7))
 */
 module std.experimental.ndslice.algorithm;
 
@@ -65,7 +66,7 @@ private template TensorFronts(size_t length)
     static if (length)
     {
         enum i = length - 1;
-        enum TensorFronts = TensorFronts!(length - 1) ~ "tensors[" ~ i.stringof ~ "].front, ";
+        enum TensorFronts = TensorFronts!(length - 1) ~ "tensors[" ~ i.stringof ~ "]._ptr[0], ";
     }
     else
     {
@@ -325,7 +326,6 @@ private mixin template PropagatePtr()
     void opOpAssign(string op)(sizediff_t shift)
         if (op == `+` || op == `-`)
     {
-        pragma(inline, true);
         mixin (`_ptr ` ~ op ~ `= shift;`);
     }
 
@@ -417,7 +417,7 @@ template ndFold(fun...)
                 seed = ndFoldImpl!(N - 1, Range, S)(tensor.front, seed).expand;
             tensor.popFront;
         }
-        while (tensor.length);
+        while (tensor._lengths[0]);
 
         static if (S.length == 1)
             return seed[0];
@@ -607,8 +607,6 @@ template ndReduce(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastma
 
     private @attr auto ndReduceImpl(bool dense, size_t N, bool first = false, S, Args...)(S seed, Args tensors)
     {
-        static if (dense && first)
-            pragma(inline, false);
         do
         {
             static if (N == 1)
@@ -628,7 +626,7 @@ template ndReduce(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastma
                     tensor.popFront;
             }
         }
-        while (tensors[0].length);
+        while (tensors[0]._lengths[0]);
         return seed;
     }
 }
@@ -819,8 +817,6 @@ template ndEach(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastmath
 
     private @attr void ndEachImpl(bool dense, size_t N, bool first = false, Args...)(Args tensors)
     {
-        static if (dense && first)
-            pragma(inline, false);
         do
         {
             static if (Args[0].N == 1)
@@ -840,7 +836,7 @@ template ndEach(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastmath
                     tensor.popFront;
             }
         }
-        while (tensors[0].length);
+        while (tensors[0]._lengths[0]);
     }
 }
 
@@ -940,7 +936,7 @@ private void ndFindImpl(alias pred, size_t N, Args...)(ref size_t[N] backwardInd
         foreach_reverse (ref tensor; tensors)
             tensor.popFront;
     }
-    while (tensors[0].length);
+    while (tensors[0]._lengths[0]);
 }
 
 /++
@@ -1225,7 +1221,7 @@ template ndAll(alias pred)
             foreach_reverse (ref tensor; tensors)
                 tensor.popFront;
         }
-        while (tensors[0].length);
+        while (tensors[0]._lengths[0]);
         return true;
     }
 }
