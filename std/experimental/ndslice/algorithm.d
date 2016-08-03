@@ -600,7 +600,7 @@ template ndReduce(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastma
         return ndReduceImpl!(false, Args[0].N, false, staticMap!(Unqual, S))(seed, tensors);
     }
 
-    static if(fm)
+    static if (fm)
         alias attr = fastmath;
     else
         alias attr = fastmathDummy;
@@ -812,7 +812,7 @@ template ndEach(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastmath
         return ndEachImpl!(false, Args[0].N, false)(tensors);
     }
 
-    static if(fm)
+    static if (fm)
         alias attr = fastmath;
     else
         alias attr = fastmathDummy;
