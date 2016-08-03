@@ -15,9 +15,7 @@ else
 }
 
 enum FastmathDummy { init }
-FastmathDummy fastmathDummy() { return FastmathDummy.init; };
-
-alias RangeOf(T : Slice!(N, Range), size_t N, Range) = Range;
+FastmathDummy fastmathDummy() { return FastmathDummy.init; }
 
 template isMemory(T)
 {
@@ -37,6 +35,10 @@ template isMemory(T)
     else
         enum isMemory = false;
 }
+
+package:
+
+alias RangeOf(T : Slice!(N, Range), size_t N, Range) = Range;
 
 unittest
 {
