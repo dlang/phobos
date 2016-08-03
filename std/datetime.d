@@ -1086,20 +1086,21 @@ public:
         }
         else
         {
-            enum uint m = 0x5bd1e995;
-            enum uint n = 16;
-            enum uint r = 24;
-            uint h = n;
-            long k = _stdTime;
+            // MurmurHash2
+            enum ulong m = 0xc6a4a7935bd1e995UL;
+            enum ulong n = m * 16;
+            enum uint r = 47;
 
+            ulong h = n;
+
+            ulong k = _stdTime;
             k *= m;
             k ^= k >> r;
             k *= m;
 
-            h *= m;
             h ^= k;
-
-            return h;
+            h *= m;
+            return cast(size_t) h;
         }
     }
 
