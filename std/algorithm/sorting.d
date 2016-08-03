@@ -2190,12 +2190,12 @@ schwartzSort(alias transform, alias less = "a < b",
         {
             foreach (i; 0 .. length) collectException(destroy(xform1[i]));
         }
-        static void trustedFree(T* p) @trusted
+        static void trustedFree(T[] p) @trusted
         {
             import core.stdc.stdlib : free;
-            free(p);
+            free(p.ptr);
         }
-        trustedFree(xform1.ptr);
+        trustedFree(xform1);
     }
     for (; length != r.length; ++length)
     {
