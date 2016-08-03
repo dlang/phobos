@@ -977,7 +977,7 @@ Constraints:
 See_also:
     $(LREF ndAny)
 
-    $(REF Slice.backward, std.experimenta,ndslice,slice)
+    $(REF Slice.backward, std,experimental,ndslice,slice)
 +/
 template ndFind(alias pred)
 {
