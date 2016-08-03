@@ -1091,15 +1091,15 @@ public:
             enum ulong n = m * 16;
             enum uint r = 47;
 
-            ulong h = n;
-
             ulong k = _stdTime;
             k *= m;
             k ^= k >> r;
             k *= m;
 
+            ulong h = n;
             h ^= k;
             h *= m;
+
             return cast(size_t) h;
         }
     }
@@ -1109,6 +1109,30 @@ public:
         assert(SysTime(0).toHash == SysTime(0).toHash);
         assert(SysTime(0, LocalTime()).toHash == SysTime(0, LocalTime()).toHash);
         assert(SysTime(0, LocalTime()).toHash == SysTime(0, UTC()).toHash);
+
+        assert(
+            SysTime(
+                DateTime(2000, 1, 1), LocalTime()
+            ).toHash == SysTime(
+                DateTime(2000, 1, 1), LocalTime()
+            ).toHash
+        );
+
+        immutable zone = new SimpleTimeZone(dur!"minutes"(60));
+        assert(
+            SysTime(
+                DateTime(2000, 1, 1, 1), zone
+            ).toHash == SysTime(
+                DateTime(2000, 1, 1), UTC()
+            ).toHash
+        );
+        assert(
+            SysTime(
+                DateTime(2000, 1, 1), LocalTime()
+            ).toHash != SysTime(
+                DateTime(2000, 1, 1), UTC()
+            ).toHash
+        );
     }
 
     /++
