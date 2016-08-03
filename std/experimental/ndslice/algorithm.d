@@ -651,6 +651,7 @@ unittest
 /// Multiple tensors, dot product
 unittest
 {
+    import std.typecons : Yes;
     import std.conv : to;
     import std.experimental.ndslice.selection : iotaSlice;
 
@@ -673,6 +674,7 @@ unittest
 /// Zipped tensors, dot product
 pure unittest
 {
+    import std.typecons : Yes;
     import std.conv : to;
     import std.range : iota;
     import std.numeric : dotProduct;
@@ -699,6 +701,7 @@ pure unittest
 /// Tensor mutation on-the-fly
 unittest
 {
+    import std.typecons : Yes;
     import std.conv : to;
     import std.experimental.ndslice.slice : slice;
     import std.experimental.ndslice.selection : iotaSlice;
@@ -731,6 +734,7 @@ unittest
     // std.math prevents vectorization for now
     else
         import std.math : fmax, fmin;
+    import std.typecons : Yes;
     import std.conv : to;
     import std.experimental.ndslice.slice : slice;
     import std.experimental.ndslice.iteration : transposed;
@@ -843,6 +847,7 @@ template ndEach(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastmath
 /// Single tensor, multiply-add
 unittest
 {
+    import std.typecons : Yes;
     import std.conv : to;
     import std.experimental.ndslice.selection : iotaSlice;
 
@@ -860,6 +865,7 @@ unittest
 /// Swap two tensors
 unittest
 {
+    import std.typecons : Yes;
     import std.conv : to;
     import std.algorithm.mutation : swap;
     import std.experimental.ndslice.selection : iotaSlice;
@@ -880,6 +886,7 @@ unittest
 /// Swap two zipped tensors
 unittest
 {
+    import std.typecons : Yes;
     import std.conv : to;
     import std.algorithm.mutation : swap;
     import std.experimental.ndslice.slice : assumeSameStructure;
