@@ -66,7 +66,7 @@ private template TensorFronts(size_t length)
     static if (length)
     {
         enum i = length - 1;
-        enum TensorFronts = TensorFronts!(length - 1) ~ "tensors[" ~ i.stringof ~ "]._ptr[0], ";
+        enum TensorFronts = TensorFronts!(length - 1) ~ "tensors[" ~ i.stringof ~ "].front, ";
     }
     else
     {
@@ -686,9 +686,9 @@ pure unittest
     import std.experimental.ndslice.selection : iotaSlice;
     import std.experimental.ndslice.internal : fastmath;
 
-    static @fastmath T fmuladd(T)(const T a, const T b, const T c)
+    static @fastmath T fmuladd(T, Z)(const T a, Z z)
     {
-        return a + b * c;
+        return a + z.a * z.b;
     }
 
     // 0 1 2
