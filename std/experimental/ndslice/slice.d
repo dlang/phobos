@@ -3158,7 +3158,6 @@ private enum isStringValue(alias T) = is(typeof(T) : string);
 
 private void _indexAssignKernel(string op, TL, TR)(size_t c, TL* l, TR* r)
 {
-    pragma(inline, false);
     do
     {
         mixin("l[0] " ~ op ~ "= r[0];");
@@ -3170,7 +3169,6 @@ private void _indexAssignKernel(string op, TL, TR)(size_t c, TL* l, TR* r)
 
 private void _indexAssignValKernel(string op, TL, TR)(size_t c, TL* l, TR r)
 {
-    pragma(inline, false);
     do
     {
         mixin("l[0] " ~ op ~ "= r;");
