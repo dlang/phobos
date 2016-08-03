@@ -652,6 +652,12 @@ unittest
     import std.typecons : Yes;
     import std.conv : to;
     import std.experimental.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.internal : fastmath;
+
+    static @fastmath T fmuladd(T)(const T a, const T b, const T c)
+    {
+        return a + b * c;
+    }
 
     //| 0 1 2 |
     //| 3 4 5 |
@@ -660,7 +666,7 @@ unittest
     //| 4 5 6 |
     auto b = iotaSlice([2, 3], 1).ndMap!(to!double).slice;
 
-    alias dot = ndReduce!((seed, a, b) => seed + a * b, Yes.vectorized);
+    alias dot = ndReduce!(fmuladd, Yes.vectorized);
     auto res = dot(0.0, a, b);
 
     // check the result:
@@ -678,6 +684,12 @@ pure unittest
     import std.numeric : dotProduct;
     import std.experimental.ndslice.slice : assumeSameStructure;
     import std.experimental.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.internal : fastmath;
+
+    static @fastmath T fmuladd(T)(const T a, const T b, const T c)
+    {
+        return a + b * c;
+    }
 
     // 0 1 2
     // 3 4 5
@@ -691,7 +703,7 @@ pure unittest
 
     auto zip = assumeSameStructure!("a", "b")(sl1, sl2);
 
-    auto dot = ndReduce!((seed, z) => seed + z.a * z.b, Yes.vectorized)(0.0, zip);
+    auto dot = ndReduce!(fmuladd, Yes.vectorized)(0.0, zip);
 
     assert(dot == dotProduct(iota(0, 6), iota(1, 7)));
 }
@@ -703,14 +715,18 @@ unittest
     import std.conv : to;
     import std.experimental.ndslice.slice : slice;
     import std.experimental.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.internal : fastmath;
+
+    static @fastmath T fun(T)(const T a, ref T b)
+    {
+        return a + b++;
+    }
 
     //| 0 1 2 |
     //| 3 4 5 |
     auto sl = iotaSlice(2, 3).ndMap!(to!double).slice;
 
-    alias fun = (seed, ref elem) => seed + elem++;
-
-    auto res = 0.0.ndReduce!(fun, Yes.vectorized)(sl);
+    auto res = ndReduce!(fun, Yes.vectorized)(double(0), sl);
 
     assert(res == 15);
 
