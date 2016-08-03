@@ -1105,10 +1105,9 @@ public:
 
     @safe unittest
     {
-        assert(SysTime(DateTime.init, UTC()).toHash == SysTime(0, UTC()).toHash);
-        assert(SysTime(DateTime.init, UTC()).toHash == SysTime(0).toHash);
-        assert(SysTime(Date.init, UTC()).toHash == SysTime(0).toHash);
         assert(SysTime(0).toHash == SysTime(0).toHash);
+        assert(SysTime(0, LocalTime()).toHash == SysTime(0, LocalTime()).toHash);
+        assert(SysTime(0, LocalTime()).toHash == SysTime(0, UTC()).toHash);
     }
 
     /++
