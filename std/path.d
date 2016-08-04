@@ -3913,7 +3913,10 @@ string expandTilde(string inputPath) nothrow
                 assert(last_char > 1);
 
                 // Reserve C memory for the getpwnam_r() function.
-                int extra_memory_size = 5 * 1024;
+                version (unittest)
+                    uint extra_memory_size = 2;
+                else
+                    uint extra_memory_size = 5 * 1024;
                 char* extra_memory;
                 scope(exit) free(extra_memory);
 
@@ -3937,11 +3940,16 @@ string expandTilde(string inputPath) nothrow
                         break;
                     }
 
-                    if (errno != ERANGE)
+                    if (errno != ERANGE &&
+                        // On FreeBSD and OSX, errno can be left at 0 instead of set to ERANGE
+                        errno != 0)
                         onOutOfMemoryError();
 
                     // extra_memory isn't large enough
-                    extra_memory_size *= 2;
+                    import core.checkedint : mulu;
+                    bool overflow;
+                    extra_memory_size = mulu(extra_memory_size, 2, overflow);
+                    if (overflow) assert(0);
                 }
                 return path;
             }
