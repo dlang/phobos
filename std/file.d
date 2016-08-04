@@ -356,24 +356,26 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
         : minInitialAlloc));
     void[] result = uninitializedArray!(ubyte[])(initialAlloc);
     scope(failure) GC.free(result.ptr);
-    size_t size = 0;
+
+    import std.experimental.checkedint;
+    auto size = checked!Abort(cast(size_t)0);
 
     for (;;)
     {
-        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
-                min(result.length, upTo) - size);
+        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size.get,
+                (min(result.length, upTo) - size).get);
         cenforce(actual != -1, name, namez);
         if (actual == 0) break;
         size += actual;
         if (size >= upTo) break;
         if (size < result.length) continue;
         immutable newAlloc = size + sizeIncrement;
-        result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)[0 .. newAlloc];
+        result = GC.realloc(result.ptr, newAlloc.get, GC.BlkAttr.NO_SCAN)[0 .. newAlloc.get];
     }
 
     return result.length - size >= maxSlackMemoryAllowed
-        ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
-        : result[0 .. size];
+        ? GC.realloc(result.ptr, size.get, GC.BlkAttr.NO_SCAN)[0 .. size.get]
+        : result[0 .. size.get];
 }
 
 
@@ -2644,7 +2646,11 @@ version(Windows) string getcwd()
         3. the buffer (lpBuffer) is not large enough: the required size of
     the buffer, in characters, including the null-terminating character.
     */
-    wchar[4096] buffW = void; //enough for most common case
+    version (unittest)
+        enum BUF_SIZE = 10;     // trigger reallocation code
+    else
+        enum BUF_SIZE = 4096;   // enough for most common case
+    wchar[BUF_SIZE] buffW = void;
     immutable n = cenforce(GetCurrentDirectoryW(to!DWORD(buffW.length), buffW.ptr),
             "getcwd");
     // we can do it because toUTFX always produces a fresh string
@@ -2654,10 +2660,12 @@ version(Windows) string getcwd()
     }
     else //staticBuff isn't enough
     {
-        auto ptr = cast(wchar*) malloc(wchar.sizeof * n);
+        import std.experimental.checkedint;
+        auto cn = checked!Abort(n);
+        auto ptr = cast(wchar*) malloc((cn * wchar.sizeof).get);
         scope(exit) free(ptr);
-        immutable n2 = GetCurrentDirectoryW(n, ptr);
-        cenforce(n2 && n2 < n, "getcwd");
+        immutable n2 = GetCurrentDirectoryW(cn.get, ptr);
+        cenforce(n2 && n2 < cn, "getcwd");
         return toUTF8(ptr[0 .. n2]);
     }
 }
