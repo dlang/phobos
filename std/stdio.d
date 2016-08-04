@@ -3318,7 +3318,7 @@ void writeln(T...)(T args)
     {
         import std.exception : enforce;
 
-        enforce(fputc('\n', .trustedStdout._p.handle) == '\n', "fputc failed");
+        enforce(fputc('\n', .trustedStdout._p.handle) != EOF, "fputc failed");
     }
     else static if (T.length == 1 &&
                     is(typeof(args[0]) : const(char)[]) &&
