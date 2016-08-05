@@ -153,24 +153,33 @@ auto tempCString(To = char, From)(From str)
         import core.exception : onOutOfMemoryError;
         import core.stdc.string : memcpy;
         import core.stdc.stdlib : malloc, realloc;
+        import core.checkedint : addu, mulu;
 
         auto ptr = buf.ptr;
         auto len = buf.length;
         if (len >= size_t.max / (2 * To.sizeof))
             onOutOfMemoryError();
-        size_t newlen = len * 3 / 2;
+        bool overflow;
+        size_t newlen = mulu(len, 3, overflow) / 2;
+        if (overflow) assert(0);
         if (res_is_onstack)
         {
             if (newlen <= strLength)
+            {
+                if (strLength == size_t.max) assert(0);
                 newlen = strLength + 1; // +1 for terminating 0
-            ptr = cast(To*)malloc(newlen * To.sizeof);
+            const nbytes = mulu(newlen, To.sizeof, overflow);
+            if (overflow) assert(0);
+            ptr = cast(To*)malloc(nbytes);
             if (!ptr)
                 onOutOfMemoryError();
             memcpy(ptr, res.ptr, i * To.sizeof);
         }
         else
         {
-            ptr = cast(To*)realloc(ptr, newlen * To.sizeof);
+            const nbytes = mulu(newlen, To.sizeof, overflow);
+            if (overflow) assert(0);
+            ptr = cast(To*)realloc(ptr, nbytes);
             if (!ptr)
                 onOutOfMemoryError();
         }
