@@ -1001,13 +1001,19 @@ private:
     ref CostType matrix(size_t row, size_t col) { return _matrix[row * cols + col]; }
 
     void AllocMatrix(size_t r, size_t c) @trusted {
+        import core.checkedint : mulu;
+        bool overflow;
+        const rc = mulu(r, c, overflow);
+        if (overflow) assert(0);
         rows = r;
         cols = c;
-        if (_matrix.length < r * c)
+        if (_matrix.length < rc)
         {
             import core.stdc.stdlib : realloc;
             import core.exception : onOutOfMemoryError;
-            auto m = cast(CostType *)realloc(_matrix.ptr, r * c * _matrix[0].sizeof);
+            const nbytes = mulu(rc, _matrix[0].sizeof, overflow);
+            if (overflow) assert(0);
+            auto m = cast(CostType *)realloc(_matrix.ptr, nbytes);
             if (!m)
                 onOutOfMemoryError();
             _matrix = m[0 .. r * c];
