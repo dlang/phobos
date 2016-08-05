@@ -2179,7 +2179,11 @@ schwartzSort(alias transform, alias less = "a < b",
     static trustedMalloc(size_t len) @trusted
     {
         import core.stdc.stdlib : malloc;
-        return (cast(T*) malloc(len * T.sizeof))[0 .. len];
+        import core.checkedint : mulu;
+        bool overflow;
+        const nbytes = mulu(len, T.sizeof, overflow);
+        if (overflow) assert(0);
+        return (cast(T*) malloc(nbytes))[0 .. len];
     }
     auto xform1 = trustedMalloc(r.length);
 
