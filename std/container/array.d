@@ -325,8 +325,12 @@ if (!is(Unqual!T == bool))
             }
             // enlarge
             auto startEmplace = length;
+            import core.checkedint : mulu;
+            bool overflow;
+            const nbytes = mulu(newLength, T.sizeof, overflow);
+            if (overflow) assert(0);
             _payload = (cast(T*) realloc(_payload.ptr,
-                            T.sizeof * newLength))[0 .. newLength];
+                            nbytes))[0 .. newLength];
             initializeAll(_payload.ptr[startEmplace .. length]);
         }
 
@@ -340,7 +344,10 @@ if (!is(Unqual!T == bool))
         void reserve(size_t elements)
         {
             if (elements <= capacity) return;
-            immutable sz = elements * T.sizeof;
+            import core.checkedint : mulu;
+            bool overflow;
+            const sz = mulu(elements, T.sizeof, overflow);
+            if (overflow) assert(0);
             static if (hasIndirections!T)       // should use hasPointers instead
             {
                 /* Because of the transactional nature of this
@@ -421,7 +428,11 @@ Constructor taking a number of items
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
         import std.conv : emplace;
-        auto p = cast(T*) malloc(T.sizeof * values.length);
+        import core.checkedint : mulu;
+        bool overflow;
+        const nbytes = mulu(values.length, T.sizeof, overflow);
+        if (overflow) assert(0);
+        auto p = cast(T*) malloc(nbytes);
         static if (hasIndirections!T)
         {
             if (p)
@@ -533,7 +544,10 @@ Complexity: $(BIGOH 1)
         if (!_data.refCountedStore.isInitialized)
         {
             if (!elements) return;
-            immutable sz = elements * T.sizeof;
+            import core.checkedint : mulu;
+            bool overflow;
+            const sz = mulu(elements, T.sizeof, overflow);
+            if (overflow) assert(0);
             auto p = enforce(malloc(sz));
             static if (hasIndirections!T)
             {
