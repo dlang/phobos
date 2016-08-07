@@ -62,6 +62,8 @@ $(BUGSTITLE Library Changes,
         $(REF_ALTTEXT `curl_unescape`, curl_unescape, etc,c,curl).)
     $(LI $(RELATIVE_LINK2 generate, `std.range.generate` fixed to be a proper
         range.))
+    $(LI $(MREF std,numeric) no longer uses `enforce` for verifying
+    contract preconditions.)
 )
 
 $(BUGSTITLE Library Changes,
@@ -160,14 +162,14 @@ assert(ret.y.approxEqual(0.0));
 
 $(LI $(LNAME2 slice_ptr, `ptr` property and public constructor were added to
     `std.experimental.ndslice.slice.Slice`.)
-    $(P `ptr` property allows to access `Slice`'s underlaying pointer or range. 
+    $(P `ptr` property allows to access `Slice`'s underlaying pointer or range.
         Please refer to $(REF Slice, std,experimental,ndslice,slice)'s
         internal binary epresentation before using the property.
         `ptr` property is used in $(LINK2 https://github.com/libmir/mir, Mir)
         for $(LINK2 http://docs.mir.dlang.io/latest/mir_sparse_package.html, sparse tensors).
         `ndslice` developer mirror in Mir will be removed as
         soon as LDC (LLVM D compiler) supports D version 2.072..
-    ) 
+    )
     $(P Public constructor for `Slice` was added to support
         $(MREF std,experimental,ndslice) integration
         with other languages and libraries such as Julia language and NumPy library.

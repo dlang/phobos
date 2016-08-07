@@ -259,7 +259,6 @@ private:
     // Set the current value from signed exponent, normalized form
     void fromNormalized(T,U)(ref T sig, ref U exp)
     {
-        import std.exception : enforce;
         auto shift = (T.sizeof*8) - precision;
         if (exp == exp.max)
         {
@@ -271,12 +270,12 @@ private:
             // convert back to normalized form
             static if (~flags & Flags.infinity)
                 // No infinity support?
-                enforce(sig != 0, "Infinity floating point value assigned to a "
-                        ~ typeof(this).stringof~" (no infinity support).");
+                assert(sig != 0, "Infinity floating point value assigned to a "
+                        ~ typeof(this).stringof ~ " (no infinity support).");
 
             static if (~flags & Flags.nan)  // No NaN support?
-                enforce(sig == 0,"NaN floating point value assigned to a " ~
-                        typeof(this).stringof~" (no nan support).");
+                assert(sig == 0, "NaN floating point value assigned to a " ~
+                        typeof(this).stringof ~ " (no nan support).");
             sig >>= shift;
             return;
         }
@@ -301,7 +300,7 @@ private:
                 exp    = 0;
             }
             else
-                enforce((flags&Flags.storeNormalized) && exp == 0,
+                assert((flags&Flags.storeNormalized) && exp == 0,
                     "Underflow occured assigning to a " ~
                     typeof(this).stringof ~ " (no denormal support).");
         }
@@ -349,12 +348,12 @@ private:
                 sig         = 0;
                 exp         = exponent_max;
                 static if (~flags&(Flags.infinity))
-                    enforce(false, "Overflow occured assigning to a " ~
-                        typeof(this).stringof~" (no infinity support).");
+                    assert(0, "Overflow occured assigning to a " ~
+                        typeof(this).stringof ~ " (no infinity support).");
             }
             else
-                enforce(exp == exponent_max, "Overflow occured assigning to a "
-                    ~ typeof(this).stringof~" (no infinity support).");
+                assert(exp == exponent_max, "Overflow occured assigning to a "
+                    ~ typeof(this).stringof ~ " (no infinity support).");
         }
     }
 
@@ -495,7 +494,6 @@ public:
         if (__traits(compiles, cast(real)input))
     {
         import std.conv : text;
-        import std.exception : enforce;
 
         static if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
             auto value = ToBinary!(Unqual!F)(input);
@@ -504,9 +502,9 @@ public:
 
         // Assign the sign bit
         static if (~flags & Flags.signed)
-            enforce( (!value.sign)^((flags&flags.negativeUnsigned)>0) ,
+            assert((!value.sign) ^ ((flags&flags.negativeUnsigned) > 0),
                 "Incorrectly signed floating point value assigned to a " ~
-                typeof(this).stringof~" (no sign support).");
+                typeof(this).stringof ~ " (no sign support).");
         else
             sign = value.sign;
 
@@ -1628,17 +1626,15 @@ CommonType!(ElementType!(Range1), ElementType!(Range2))
 euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
-    import std.exception : enforce;
-
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t = a.front - b.front;
         result += t * t;
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     return sqrt(result);
 }
 
@@ -1647,17 +1643,15 @@ CommonType!(ElementType!(Range1), ElementType!(Range2))
 euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
-    import std.exception : enforce;
-
     limit *= limit;
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     for (; ; a.popFront(), b.popFront())
     {
         if (a.empty)
         {
-            static if (!haveLen) enforce(b.empty);
+            static if (!haveLen) assert(b.empty);
             break;
         }
         immutable t = a.front - b.front;
@@ -1692,16 +1686,14 @@ dotProduct(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2) &&
         !(isArray!(Range1) && isArray!(Range2)))
 {
-    import std.exception : enforce;
-
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         result += a.front * b.front;
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     return result;
 }
 
@@ -1790,10 +1782,8 @@ CommonType!(ElementType!(Range1), ElementType!(Range2))
 cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
-    import std.exception : enforce;
-
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) norma = 0, normb = 0, dotprod = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
@@ -1802,7 +1792,7 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
         normb += t2 * t2;
         dotprod += t1 * t2;
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     if (norma == 0 || normb == 0) return 0;
     return dotprod / sqrt(norma * normb);
 }
@@ -1986,10 +1976,8 @@ CommonType!(ElementType!Range1, ElementType!Range2)
 kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
-    import std.exception : enforce;
-
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
@@ -2000,7 +1988,7 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
         assert(t1 > 0 && t2 > 0);
         result += t1 * log2(t1 / t2);
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     return result;
 }
 
@@ -2034,10 +2022,8 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!Range1 && isInputRange!Range2 &&
         is(CommonType!(ElementType!Range1, ElementType!Range2)))
 {
-    import std.exception : enforce;
-
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
@@ -2053,7 +2039,7 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
             result += t2 * log2(t2 / avg);
         }
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     return result / 2;
 }
 
@@ -2064,10 +2050,8 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
        is(typeof(CommonType!(ElementType!Range1, ElementType!Range2).init
                            >= F.init) : bool))
 {
-    import std.exception : enforce;
-
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     limit *= 2;
     for (; !a.empty; a.popFront(), b.popFront())
@@ -2085,7 +2069,7 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
         }
         if (result >= limit) break;
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     return result / 2;
 }
 
@@ -2180,13 +2164,16 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
 {
     import std.functional : binaryFun;
     import std.algorithm.mutation : swap;
-    import std.exception : enforce;
     import core.stdc.stdlib : malloc, free;
+    import core.exception : onOutOfMemoryError;
 
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
 
-    auto dpvi = enforce(cast(F*) malloc(F.sizeof * 2 * t.length));
+    auto dpvi = cast(F*)malloc(F.sizeof * 2 * t.length);
+    if (!dpvi)
+        onOutOfMemoryError();
+
     auto dpvi1 = dpvi + t.length;
     scope(exit) free(dpvi < dpvi1 ? dpvi : dpvi1);
     dpvi[0 .. t.length] = 0;
@@ -2319,8 +2306,9 @@ time and computes all matches of length 1.
  */
     this(Range s, Range t, F lambda)
     {
-        import std.exception : enforce, errnoEnforce;
-        enforce(lambda > 0);
+        import core.exception : onOutOfMemoryError;
+
+        assert(lambda > 0);
         this.gram = 0;
         this.lambda = lambda;
         this.lambda2 = lambda * lambda; // for efficiency only
@@ -2361,8 +2349,9 @@ time and computes all matches of length 1.
         this.s = s;
         this.t = t;
 
-        // Si = errnoEnforce(cast(F *) malloc(t.length * F.sizeof));
-        kl = errnoEnforce(cast(F *) malloc(s.length * t.length * F.sizeof));
+        kl = cast(F*)malloc(s.length * t.length * F.sizeof);
+        if (!kl)
+            onOutOfMemoryError();
 
         kl[0 .. s.length * t.length] = 0;
         foreach (pos; 0 .. k0len)
@@ -2595,8 +2584,7 @@ T gcd(T)(T a, T b)
     {
         static if (T.min < 0)
         {
-            import std.exception : enforce;
-            enforce(a >= 0 && b >=0);
+            assert(a >= 0 && b >=0);
         }
         while (b)
         {
@@ -2645,8 +2633,7 @@ private:
     void enforceSize(R)(R range) const
     {
         import std.conv : text;
-        import std.exception : enforce;
-        enforce(range.length <= size, text(
+        assert(range.length <= size, text(
             "FFT size mismatch.  Expected ", size, ", got ", range.length));
     }
 
@@ -2871,7 +2858,6 @@ private:
     // to immutable.
     public this(lookup_t[] memSpace)  // Public b/c of bug 4636.
     {
-        import std.exception : enforce;
         immutable size = memSpace.length / 2;
 
         /* Create a lookup table of all negative sine values at a resolution of
@@ -2884,8 +2870,9 @@ private:
             return;
         }
 
-        enforce(isPowerOf2(size),
+        assert(isPowerOf2(size),
             "Can only do FFTs on ranges with a size that is a power of two.");
+
         auto table = new lookup_t[][bsf(size) + 1];
 
         table[$ - 1] = memSpace[$ - size..$];
@@ -2986,8 +2973,7 @@ public:
     void fft(Ret, R)(R range, Ret buf) const
         if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
     {
-        import std.exception : enforce;
-        enforce(buf.length == range.length);
+        assert(buf.length == range.length);
         enforceSize(range);
 
         if (range.length == 0)
@@ -3078,13 +3064,13 @@ public:
 // scope.
 private enum string MakeLocalFft = q{
     import core.stdc.stdlib;
-    import core.exception : OutOfMemoryError;
-    auto lookupBuf = (cast(lookup_t*) malloc(range.length * 2 * lookup_t.sizeof))
+    import core.exception : onOutOfMemoryError;
+
+    auto lookupBuf = (cast(lookup_t*)malloc(range.length * 2 * lookup_t.sizeof))
                      [0..2 * range.length];
     if (!lookupBuf.ptr)
-    {
-        throw new OutOfMemoryError(__FILE__, __LINE__);
-    }
+        onOutOfMemoryError();
+
     scope(exit) free(cast(void*) lookupBuf.ptr);
     auto fftObj = scoped!Fft(lookupBuf);
 };
