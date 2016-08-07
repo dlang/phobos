@@ -111,6 +111,10 @@ else
 	DFLAGS += -O -release
 endif
 
+ifdef ENABLE_COVERAGE
+DFLAGS  += -cov
+endif
+
 # Set DOTOBJ and DOTEXE
 ifeq (,$(findstring win,$(OS)))
 	DOTOBJ:=.o
@@ -471,6 +475,37 @@ checkwhitespace: $(LIB)
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
 
 #############################
+# Submission to Phobos are required to conform to the DStyle
+# The tests below automate some, but not all parts of the DStyle guidelines.
+# See also: http://dlang.org/dstyle.html
+#############################
+
+../dscanner:
+	git clone https://github.com/Hackerpilot/Dscanner ../dscanner
+	git -C ../dscanner checkout tags/v0.4.0-alpha.8
+	git -C ../dscanner submodule update --init --recursive
+
+../dscanner/dsc: ../dscanner
+	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
+	sed 's/dparse_verbose/StdLoggerDisableWarning/' -i ../dscanner/makefile
+	make -C ../dscanner githash debug
+
+style: ../dscanner/dsc
+	@echo "Check for trailing whitespace"
+	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
+
+	@echo "Enforce whitespace before opening parenthesis"
+	grep -nrE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $$(find . -name '*.d') ; test $$? -eq 1
+
+	@echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"
+	grep -nr 'import [^/,=]*:.*;' $$(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $$? -eq 1
+
+	@echo "Enforce Allman style"
+	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find . -name '*.d'); test $$? -eq 1
+
+	# at the moment libdparse has problems to parse some modules (->excludes)
+	@echo "Running DScanner"
+	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace
