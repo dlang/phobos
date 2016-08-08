@@ -2199,28 +2199,28 @@ body
  See_Also:
     $(REF to, std,conv)
  */
-void transcode(Src,Dst)(immutable(Src)[] s,out immutable(Dst)[] r)
+void transcode(Src, Dst)(Src[] s, out Dst[] r)
 in
 {
     assert(isValid(s));
 }
 body
 {
-    static if (is(Src==Dst))
+    static if (is(Src == Dst) && is(Src == immutable))
     {
         r = s;
     }
-    else static if (is(Src==AsciiChar))
+    else static if (is(Unqual!Src == AsciiChar))
     {
-        transcode!(char,Dst)(cast(string)s,r);
+        transcode(cast(const(char)[])s, r);
     }
     else
     {
-        static if (is(Dst == wchar))
+        static if (is(Unqual!Dst == wchar))
         {
             immutable minReservePlace = 2;
         }
-        else static if (is(Dst == dchar))
+        else static if (is(Unqual!Dst == dchar))
         {
             immutable minReservePlace = 1;
         }
@@ -2229,8 +2229,8 @@ body
             immutable minReservePlace = 6;
         }
 
-        Dst[] buffer = new Dst[s.length];
-        Dst[] tmpBuffer = buffer;
+        auto buffer = new Unqual!Dst[s.length];
+        auto tmpBuffer = buffer;
         const(Src)[] t = s;
 
         while (t.length != 0)
@@ -2241,10 +2241,10 @@ body
                 buffer.length += t.length + minReservePlace;
                 tmpBuffer = buffer[prevLength - tmpBuffer.length .. $];
             }
-            EncoderInstance!(Dst).encode(decode(t), tmpBuffer);
+            EncoderInstance!(Unqual!Dst).encode(decode(t), tmpBuffer);
         }
 
-        r = cast(immutable)buffer[0 .. buffer.length - tmpBuffer.length];
+        r = cast(Dst[])buffer[0 .. buffer.length - tmpBuffer.length];
     }
 }
 
@@ -2300,6 +2300,44 @@ body
                 assert(czechChars == str);
             }
     }
+}
+
+unittest // mutable/const input/output
+{
+    import std.meta: AliasSeq;
+
+    foreach (O; AliasSeq!(Latin1Char, const Latin1Char, immutable Latin1Char))
+    {
+        O[] output;
+
+        char[] mutableInput = "äbc".dup;
+        transcode(mutableInput, output);
+        assert(output == [0xE4, 'b', 'c']);
+
+        const char[] constInput = "öbc";
+        transcode(constInput, output);
+        assert(output == [0xF6, 'b', 'c']);
+
+        immutable char[] immutInput = "übc";
+        transcode(immutInput, output);
+        assert(output == [0xFC, 'b', 'c']);
+    }
+
+    // Make sure that const/mutable input is copied.
+    foreach (C; AliasSeq!(char, const char))
+    {
+        C[] input = "foo".dup;
+        C[] output;
+        transcode(input, output);
+        assert(input == output);
+        assert(input !is output);
+    }
+
+    // But immutable input should not be copied.
+    string input = "foo";
+    string output;
+    transcode(input, output);
+    assert(input is output);
 }
 
 //=============================================================================
