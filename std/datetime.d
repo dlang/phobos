@@ -1107,9 +1107,12 @@ public:
     @safe unittest
     {
         assert(SysTime(0).toHash == SysTime(0).toHash);
+        assert(SysTime(DateTime(2000, 1, 1)).toHash == SysTime(DateTime(2000, 1, 1)).toHash);
+        assert(SysTime(DateTime(2000, 1, 1)).toHash != SysTime(DateTime(2000, 1, 2)).toHash);
+
+        // test that timezones aren't taken into account
         assert(SysTime(0, LocalTime()).toHash == SysTime(0, LocalTime()).toHash);
         assert(SysTime(0, LocalTime()).toHash == SysTime(0, UTC()).toHash);
-
         assert(
             SysTime(
                 DateTime(2000, 1, 1), LocalTime()
@@ -1117,7 +1120,6 @@ public:
                 DateTime(2000, 1, 1), LocalTime()
             ).toHash
         );
-
         immutable zone = new SimpleTimeZone(dur!"minutes"(60));
         assert(
             SysTime(
@@ -1128,7 +1130,7 @@ public:
         );
         assert(
             SysTime(
-                DateTime(2000, 1, 1), LocalTime()
+                DateTime(2000, 1, 1), zone
             ).toHash != SysTime(
                 DateTime(2000, 1, 1), UTC()
             ).toHash
