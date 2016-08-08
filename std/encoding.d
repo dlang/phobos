@@ -2231,17 +2231,16 @@ body
 
         auto buffer = new Unqual!Dst[s.length];
         auto tmpBuffer = buffer;
-        const(Src)[] t = s;
 
-        while (t.length != 0)
+        while (s.length != 0)
         {
             if (tmpBuffer.length < minReservePlace)
             {
                 size_t prevLength = buffer.length;
-                buffer.length += t.length + minReservePlace;
+                buffer.length += s.length + minReservePlace;
                 tmpBuffer = buffer[prevLength - tmpBuffer.length .. $];
             }
-            EncoderInstance!(Unqual!Dst).encode(decode(t), tmpBuffer);
+            EncoderInstance!(Unqual!Dst).encode(decode(s), tmpBuffer);
         }
 
         r = cast(Dst[])buffer[0 .. buffer.length - tmpBuffer.length];
