@@ -2403,7 +2403,7 @@ struct HTTP
                     if (fieldName == "content-type")
                     {
                         auto mct = match(cast(char[]) m.captures[2],
-                                         regex("charset=([^;]*)"));
+                                         regex("charset=([^;]*)", "i"));
                         if (!mct.empty && mct.captures.length > 1)
                             charset = mct.captures[1].idup;
                     }
@@ -3143,6 +3143,26 @@ struct HTTP
     }
 
 } // HTTP
+
+unittest // charset/Charset/CHARSET/...
+{
+    import std.meta: AliasSeq;
+
+    foreach (c; AliasSeq!("charset", "Charset", "CHARSET", "CharSet", "charSet",
+        "ChArSeT", "cHaRsEt"))
+    {
+        testServer.handle((s) {
+            s.send("HTTP/1.1 200 OK\r\n"~
+                "Content-Length: 0\r\n"~
+                "Content-Type: text/plain; " ~ c ~ "=foo\r\n" ~
+                "\r\n");
+        });
+
+        auto http = HTTP(testServer.addr);
+        http.perform();
+        assert(http.p.charset == "foo");
+    }
+}
 
 /**
    FTP client functionality.
