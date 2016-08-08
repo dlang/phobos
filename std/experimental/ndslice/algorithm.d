@@ -74,7 +74,7 @@ private template TensorFronts(size_t length)
     }
 }
 
-private void checkShapesMatch(bool seed, Args...)(auto ref Args tensors)
+private void checkShapesMatch(bool seed, Select select, Args...)(auto ref Args tensors)
 {
     enum msg = seed ?
         "all arguments except the first (seed) must be tensors" :
@@ -84,12 +84,35 @@ private void checkShapesMatch(bool seed, Args...)(auto ref Args tensors)
     foreach (i, Arg; Args)
     {
         static assert (is(Arg == Slice!(N, Range), size_t N, Range), msg);
-        static if (i)
+        static if (select == Select.halfPacked || select == Select.triangularPacked)
         {
-            static assert (tensors[i].N == tensors[0].N, msgShape);
-            assert(tensors[i].shape == tensors[0].shape, msgShape);
+            static assert (tensors[i].NSeq.length > 1, "halfPacked and triangularPacked selections require packed slices");
+            static if (i)
+            {
+                static assert (tensors[i].NSeq[0 .. 2] == tensors[0].NSeq[0 .. 2], msgShape);
+                enum M = tensors[0].NSeq[0] + tensors[0].NSeq[1] - 1;
+                assert(tensors[i]._lengths[0 .. M] == tensors[0]._lengths[0 .. M], msgShape);
+            }
+        }
+        else
+        {
+            static if (i)
+            {
+                static assert (tensors[i].N == tensors[0].N, msgShape);
+                assert(tensors[i].shape == tensors[0].shape, msgShape);
+            }
         }
     }
+}
+
+private bool anyEmpty(Select select, size_t N, Range)(ref Slice!(N, Range) slice)
+{
+    static if (select == Select.halfPacked || select == Select.triangularPacked)
+        static if (is(Range : Slice!(M, IRange), size_t M, IRange))
+            return Slice!(N + M - 1, IRange)(slice._lengths, slice._strides, slice._ptr).anyEmpty;
+        else static assert(0);
+    else
+        return slice.anyEmpty;
 }
 
 private template naryFun(bool hasSeed, size_t argCount, alias fun)
@@ -345,6 +368,293 @@ private mixin template PropagatePtr()
     }
 }
 
+private enum Iteration
+{
+    reduce,
+    each,
+    find,
+    all,
+}
+
+void prepareTensors(Select select, Args...)(ref Args tensors)
+{
+    static if (select == Select.triangular || select == Select.triangularPacked)
+    {
+        static if (select == Select.triangularPacked)
+            enum I = Iota!(tensors[0].N, tensors[0].N + tensors[0].front.N - 1);
+        else
+            enum I = Iota!(0, tensors[0].N - 1);
+        foreach_reverse (i; I)
+            if (tensors[0]._lengths[i] > tensors[0]._lengths[i + 1])
+                foreach (ref tensor; tensors)
+                    tensor._lengths[i] = tensors[0]._lengths[i + 1];
+    }
+}
+
+// one ring to rule them all
+private template implement(Iteration iteration, alias fun, Flag!"vectorized" vec, Flag!"fastmath" fm)
+{
+    static if (fm)
+        alias attr = fastmath;
+    else
+        alias attr = fastmathDummy;
+
+    static if (iteration == Iteration.reduce)
+        enum argStr = "S, Tensors...)(S seed, Tensors tensors)";
+    else
+    static if (iteration == Iteration.find)
+        enum argStr = "size_t M, Tensors...)(ref size_t[M] backwardIndex, Tensors tensors)";
+    else
+        enum argStr = "Tensors...)(Tensors tensors)";
+
+    mixin("@attr auto implement(size_t N, Select select, " ~ argStr ~ "{" ~ bodyStr ~ "}");
+    enum bodyStr = q{
+        static if (iteration == Iteration.find)
+        {
+            static if (select == Select.halfPacked || select == Select.triangularPacked)
+                enum S = N + tensors[0].front.N;
+            else
+                enum S = N;
+            static assert (M == S, "backwardIndex length should be equal to " ~ S.stringof);
+        }
+        static if (select == Select.half)
+        {
+            immutable lengthSave = tensors[0]._lengths[0];
+            tensors[0]._lengths[0] >>= 1;
+            if (tensors[0]._lengths[0] == 0)
+                goto End;
+        }
+        static if (select == Select.halfPacked)
+            static if (N == 1)
+                enum nextSelect = Select.half;
+            else
+                enum nextSelect = Select.halfPacked;
+        else
+        static if (select == Select.triangularPacked)
+            static if (N == 1)
+                enum nextSelect = Select.triangular;
+            else
+                enum nextSelect = Select.triangularPacked;
+        else
+        static if (N == 1)
+            enum nextSelect = -1;
+        else
+        static if (select == Select.half)
+            enum nextSelect = Select.full;
+        else
+            enum nextSelect = select;
+        static if (select == Select.triangular)
+            alias popSeq = Iota!(0, N);
+        else
+            alias popSeq = AliasSeq!(size_t(0));
+        static if (N == 1 && (select == Select.halfPacked || select == Select.triangularPacked))
+            enum M = tensors[0].front.N;
+        else
+            enum M = N - 1;
+        static if (iteration == Iteration.reduce)
+            static if (nextSelect == -1)
+                enum compute = `seed = naryFun!(true, Tensors.length, fun)(seed, ` ~ TensorFronts!(Tensors.length) ~ `);`;
+            else
+                enum compute = `seed = implement!(M, nextSelect)(seed, ` ~ TensorFronts!(Tensors.length) ~ `);`;
+        else
+        static if (iteration == Iteration.each)
+            static if (nextSelect == -1)
+                enum compute = `naryFun!(false, Tensors.length, fun)(` ~ TensorFronts!(Tensors.length) ~ `);`;
+            else
+                enum compute = `implement!(M, nextSelect)(` ~ TensorFronts!(Tensors.length) ~ `);`;
+        else
+        static if (iteration == Iteration.find)
+            static if (nextSelect == -1)
+                enum compute = `auto val = naryFun!(false, Tensors.length, fun)(` ~ TensorFronts!(Tensors.length) ~ `);`;
+            else
+                enum compute = `implement!(M, nextSelect)(backwardIndex[1 .. $] , ` ~ TensorFronts!(Tensors.length) ~ `);`;
+        else
+        static if (iteration == Iteration.all)
+            static if (nextSelect == -1)
+                enum compute = `auto val = naryFun!(false, Tensors.length, fun)(` ~ TensorFronts!(Tensors.length) ~ `);`;
+            else
+                enum compute = `auto val = implement!(M, nextSelect)(` ~ TensorFronts!(Tensors.length) ~ `);`;
+        else
+        static assert(0);
+        enum breakStr = q{
+            static if (iteration == Iteration.find)
+            {
+                static if (nextSelect != -1)
+                    auto val = backwardIndex[$ - 1];
+                if (val)
+                {
+                    backwardIndex[0] = tensors[0]._lengths[0];
+                    static if (select == Select.half)
+                        backwardIndex[0] += lengthSave - (lengthSave >> 1);
+                    return;
+                }
+            }
+            else
+            static if (iteration == Iteration.all)
+            {
+                if (!val)
+                    return false;
+            }
+        };
+        do
+        {
+            mixin(compute);
+            mixin(breakStr);
+            foreach_reverse (t, ref tensor; tensors)
+            {
+                foreach (d; popSeq)
+                {
+                    static if (d == M && vec)
+                    {
+                        ++tensor._ptr;
+                        static if (t == 0)
+                            --tensors[0]._lengths[0];
+                    }
+                    else
+                    {
+                        tensor.popFront!d;
+                    }
+                }
+            }
+        }
+        while(tensors[0]._lengths[0]);
+        End:
+        static if (select == Select.half && N > 1)
+        {
+            static if (iteration == Iteration.reduce)
+                enum computeHalf = `seed = implement!(N - 1, Select.half)(seed, ` ~ TensorFronts!(Tensors.length) ~ `);`;
+            else
+            static if (iteration == Iteration.each)
+                enum computeHalf = `implement!(N - 1, Select.half)(` ~ TensorFronts!(Tensors.length) ~ `);`;
+            else
+            static if (iteration == Iteration.find)
+                enum computeHalf = `implement!(N - 1, Select.half)(backwardIndex[1 .. $] , ` ~ TensorFronts!(Tensors.length) ~ `);`;
+            else
+            static if (iteration == Iteration.all)
+                enum computeHalf = `auto val = implement!(N - 1, Select.half)(` ~ TensorFronts!(Tensors.length) ~ `);`;
+            else
+            static assert(0);
+            if (lengthSave & 1)
+            {
+                tensors[0]._lengths[0] = 1;
+                mixin(computeHalf);
+                mixin(breakStr);
+            }
+        }
+        static if (iteration == Iteration.reduce)
+            return seed;
+        else
+        static if (iteration == Iteration.all)
+            return true;
+    };
+}
+
+/++
+Selection type,
+`Select` can be used with
+$(MREF ndReduce),
+$(MREF ndEach),
+$(MREF ndFind),
+$(MREF ndAny),
+$(MREF ndAll),
+$(MREF ndEqual),
+$(MREF ndCmp).
+
+Any dimension count is supported.
+Types has examples for 1D, 2D, and 3D cases.
++/
+enum Select
+{
+    /++
+    `full` is the default selection type.
+
+    1D Example:
+    -----
+    1 2 3
+    -----
+    2D Example:
+    -----
+    | 1 2 3 |
+    | 4 5 6 |
+    | 7 8 9 |
+    -----
+    3D Example:
+    -----
+    | 1  2  3 | | 10 11 12 | | 19 20 21 |
+    | 4  5  6 | | 13 14 15 | | 22 23 24 |
+    | 7  8  9 | | 16 17 18 | | 25 26 27 |
+    -----
+    +/
+    full,
+    /++
+    `half` can be used to reverse elements in a tensor.
+
+    1D Example:
+    -----
+    1 x x
+    -----
+    2D Example:
+    -----
+    | 1 2 3 |
+    | 4 x x |
+    | x x x |
+    -----
+    3D Example:
+    -----
+    | 1  2  3 | | 10 11 12 | |  x  x  x |
+    | 4  5  6 | | 13  x  x | |  x  x  x |
+    | 7  8  9 | |  x  x  x | |  x  x  x |
+    -----
+    +/
+    half,
+    /++
+    `halfPacked` requires packed tensors.
+    For the first pack of dimensions elements are selected using `full` selection.
+    For the second pack of dimensions elements are selected using `half` selection.
+    +/
+    halfPacked,
+    /++
+    `upper` can be used to iterate on upper or lower triangular matrix.
+
+    1D Example:
+    -----
+    1 2 3
+    -----
+    2D Example #1:
+    -----
+    | 1 2 3 |
+    | x 4 5 |
+    | x x 6 |
+    -----
+    2D Example #2:
+    -----
+    | 1 2 3 4 |
+    | x 5 6 7 |
+    | x x 8 9 |
+    -----
+    2D Example #3:
+    -----
+    | 1 2 3 |
+    | x 4 5 |
+    | x x 6 |
+    | x x x |
+    -----
+    3D Example:
+    -----
+    |  1  2  3 | |  x  7  8 | |  x  x 10 |
+    |  x  4  5 | |  x  x  9 | |  x  x  x |
+    |  x  x  6 | |  x  x  x | |  x  x  x |
+    -----
+    +/
+    triangular,
+    /++
+    `triangularPacked` requires packed tensors.
+    For the first pack of dimensions elements are selected using `full` selection.
+    For the second pack of dimensions elements are selected using `triangular` selection.
+    +/
+    triangularPacked,
+}
+
 /++
 Implements the homonym function (also known as `accumulate`,
 `compress`, `inject`, or `foldl`) present in various programming
@@ -545,7 +855,6 @@ unittest
     assert(b[1] == 8);
 }
 
-
 /++
 Implements the homonym function (also known as `accumulate`,
 `compress`, `inject`, or `foldl`) present in various programming
@@ -580,54 +889,31 @@ See_Also:
 
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 +/
-template ndReduce(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastmath" fm = cast(Flag!"fastmath")vec)
+alias ndReduce(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastmath" fm = cast(Flag!"fastmath")vec) =
+    .ndReduce!(fun, Select.full, vec, fm);
+
+/// ditto
+template ndReduce(alias fun, Select select, Flag!"vectorized" vec = No.vectorized, Flag!"fastmath" fm = cast(Flag!"fastmath")vec)
 {
     ///
-    auto ndReduce(S, Args...)(S seed, auto ref Args tensors)
+    auto ndReduce(S, Args...)(S seed, Args tensors)
         if (Args.length)
     {
-        tensors.checkShapesMatch!true;
-        if (tensors[0].anyEmpty)
+        tensors.checkShapesMatch!(true, select);
+        if (anyEmpty!select(tensors[0]))
             return cast(Unqual!S) seed;
+        prepareTensors!select(tensors);
+        alias impl = implement!(Iteration.reduce, fun, No.vectorized, fm);
         static if (vec && allSatisfy!(isMemory, staticMap!(RangeOf, Args)))
         {
             foreach (ref tensor; tensors)
                 if (tensor._strides[$-1] != 1)
                     goto CommonL;
-            return ndReduceImpl!(true, Args[0].N, true, staticMap!(Unqual, S))(seed, tensors);
+            alias implVec = implement!(Iteration.reduce, fun, Yes.vectorized, fm);
+            return implVec!(Args[0].N, select, staticMap!(Unqual, S))(seed, tensors);
             CommonL:
         }
-        return ndReduceImpl!(false, Args[0].N, false, staticMap!(Unqual, S))(seed, tensors);
-    }
-
-    static if (fm)
-        alias attr = fastmath;
-    else
-        alias attr = fastmathDummy;
-
-    private @attr auto ndReduceImpl(bool dense, size_t N, bool first = false, S, Args...)(S seed, Args tensors)
-    {
-        do
-        {
-            static if (N == 1)
-                enum _fun = `naryFun!(true, Args.length, fun)`;
-            else
-                enum _fun = `ndReduceImpl!(dense, N - 1)`;
-            seed = mixin(_fun ~  `(seed, ` ~ TensorFronts!(Args.length) ~ `)`);
-            static if (N == 1 && dense)
-            {
-                foreach_reverse (ref tensor; tensors)
-                    ++tensor._ptr;
-                --tensors[0]._lengths[0];
-            }
-            else
-            {
-                foreach_reverse (ref tensor; tensors)
-                    tensor.popFront;
-            }
-        }
-        while (tensors[0]._lengths[0]);
-        return seed;
+        return impl!(Args[0].N, select, staticMap!(Unqual, S))(seed, tensors);
     }
 }
 
@@ -806,53 +1092,33 @@ See_Also:
 
     $(REF each, std,algorithm,iteration)
 +/
-template ndEach(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastmath" fm = cast(Flag!"fastmath")vec)
+alias ndEach(alias fun, Flag!"vectorized" vec = No.vectorized, Flag!"fastmath" fm = cast(Flag!"fastmath")vec) =
+    .ndEach!(fun, Select.full, vec, fm);
+
+/// ditto
+template ndEach(alias fun, Select select, Flag!"vectorized" vec = No.vectorized, Flag!"fastmath" fm = cast(Flag!"fastmath")vec)
 {
     ///
-    void ndEach(Args...)(auto ref Args tensors)
+    void ndEach(Args...)(Args tensors)
         if (Args.length)
     {
-        tensors.checkShapesMatch!false;
-        if (tensors[0].anyEmpty)
+        tensors.checkShapesMatch!(false, select);
+        if (anyEmpty!select(tensors[0]))
             return;
+        prepareTensors!select(tensors);
+        alias impl = implement!(Iteration.each, fun, No.vectorized, fm);
         static if (vec && allSatisfy!(isMemory, staticMap!(RangeOf, Args)))
         {
             foreach (ref tensor; tensors)
                 if (tensor._strides[$-1] != 1)
                     goto CommonL;
-            return ndEachImpl!(true, Args[0].N, true)(tensors);
+            alias implVec = implement!(Iteration.each, fun, Yes.vectorized, fm);
+            implVec!(Args[0].N, select)(tensors);
+            return;
+
             CommonL:
         }
-        return ndEachImpl!(false, Args[0].N, false)(tensors);
-    }
-
-    static if (fm)
-        alias attr = fastmath;
-    else
-        alias attr = fastmathDummy;
-
-    private @attr void ndEachImpl(bool dense, size_t N, bool first = false, Args...)(Args tensors)
-    {
-        do
-        {
-            static if (Args[0].N == 1)
-                enum _fun = `naryFun!(false, Args.length, fun)`;
-            else
-                enum _fun = `ndEachImpl!(dense, N - 1)`;
-            mixin(_fun ~ `(` ~ TensorFronts!(Args.length) ~ `);`);
-            static if (N == 1 && dense)
-            {
-                foreach_reverse (ref tensor; tensors)
-                    ++tensor._ptr;
-                --tensors[0]._lengths[0];
-            }
-            else
-            {
-                foreach_reverse (ref tensor; tensors)
-                    tensor.popFront;
-            }
-        }
-        while (tensors[0]._lengths[0]);
+        impl!(Args[0].N, select)(tensors);
     }
 }
 
@@ -869,6 +1135,7 @@ unittest
 
     sl.ndEach!((ref a) { a = a * 10 + 5; }, Yes.vectorized);
 
+    import std.stdio;
     assert(sl ==
         [[ 5, 15, 25],
          [35, 45, 55]]);
@@ -919,6 +1186,72 @@ unittest
     assert(b == iotaSlice([2, 3], 0));
 }
 
+/// Reverse rows and columns
+pure nothrow unittest
+{
+    import std.typecons : Yes;
+    import std.conv : to;
+    import std.algorithm.mutation : swap;
+    import std.experimental.ndslice.slice : assumeSameStructure;
+    import std.experimental.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : allReversed;
+
+    //| 0 1 2 |
+    //| 3 4 5 |
+    auto a = iotaSlice(2, 3).ndMap!(to!double).slice;
+
+    ndEach!(swap, Select.half)(a, a.allReversed);
+
+    assert(a == iotaSlice(2, 3).allReversed);
+}
+
+/// Reverse rows or columns
+pure nothrow unittest
+{
+    import std.conv : to;
+    import std.algorithm.mutation : swap;
+    import std.experimental.ndslice.selection : iotaSlice, pack;
+    import std.experimental.ndslice.iteration : reversed, transposed;
+
+    //| 0 1 2 |
+    //| 3 4 5 |
+    auto a = iotaSlice(2, 3).ndMap!(to!double).slice;
+    auto b = a.slice;
+
+    alias reverseRows = a => ndEach!(swap, Select.halfPacked)(a.pack!1, a.reversed!1.pack!1);
+
+    // reverse rows
+    reverseRows(a);
+    assert(a == iotaSlice(2, 3).reversed!1);
+
+    // reverse columns
+    reverseRows(b.transposed);
+    assert(b == iotaSlice(2, 3).reversed!0);
+}
+
+/// Transpose matrix
+pure nothrow unittest
+{
+    import std.conv : to;
+    import std.algorithm.mutation : swap;
+    import std.experimental.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : dropOne, transposed;
+
+    // | 0 1 2 |
+    // | 3 4 5 |
+    // | 6 7 8 |
+    auto a = iotaSlice(3, 3).ndMap!(to!double).slice;
+
+    // matrix should be square
+    assert(a.length!0 == a.length!1);
+
+    if (a.length)
+        // dropOne is used because we do not need to transpose the diagonal
+        ndEach!(swap, Select.triangular)(a.dropOne, a.transposed.dropOne);
+
+    assert(a == iotaSlice(3, 3).transposed);
+}
+
 @safe pure nothrow unittest
 {
     import std.experimental.ndslice.iteration : dropOne;
@@ -926,33 +1259,6 @@ unittest
     size_t i;
     iotaSlice(1, 2).dropOne!0.ndEach!((a){i++;});
     assert(i == 0);
-}
-
-private void ndFindImpl(alias pred, size_t N, Args...)(ref size_t[N] backwardIndex, Args tensors)
-{
-    do
-    {
-        static if (Args[0].N == 1)
-        {
-            if (mixin(`naryFun!(false, Args.length, pred)(` ~ TensorFronts!(Args.length) ~ `)`))
-            {
-                backwardIndex[0] = tensors[0].length;
-                return;
-            }
-        }
-        else
-        {
-            mixin(`ndFindImpl!pred(backwardIndex[1 .. $], ` ~ TensorFronts!(Args.length) ~ `);`);
-            if (backwardIndex[$ - 1])
-            {
-                backwardIndex[0] = tensors[0].length;
-                return;
-            }
-        }
-        foreach_reverse (ref tensor; tensors)
-            tensor.popFront;
-    }
-    while (tensors[0]._lengths[0]);
 }
 
 /++
@@ -991,15 +1297,19 @@ See_also:
 
     $(REF Slice.backward, std,experimental,ndslice,slice)
 +/
-template ndFind(alias pred)
+template ndFind(alias pred, Select select = Select.full)
 {
     ///
-    void ndFind(size_t N, Args...)(out size_t[N] backwardIndex, auto ref Args tensors)
+    void ndFind(size_t N, Args...)(out size_t[N] backwardIndex, Args tensors)
         if (Args.length)
     {
-        tensors.checkShapesMatch!false;
-        if (!tensors[0].anyEmpty)
-            ndFindImpl!pred(backwardIndex, tensors);
+        tensors.checkShapesMatch!(false, select);
+        if (!anyEmpty!select(tensors[0]))
+        {
+            prepareTensors!select(tensors);
+            alias impl = implement!(Iteration.find, pred, No.vectorized, No.fastmath);
+            impl!(Args[0].N, select)(backwardIndex, tensors);
+        }
     }
 }
 
@@ -1091,6 +1401,41 @@ pure nothrow unittest
                   [8, 8, 5]]);
 }
 
+/// Search in triangular matrix
+pure nothrow unittest
+{
+    import std.conv : to;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.selection : iotaSlice;
+
+    // |_0 1 2
+    // 3 |_4 5
+    // 6 7 |_8
+    auto sl = iotaSlice(3, 3).ndMap!(to!double).slice;
+    size_t[2] bi;
+    ndFind!("a > 5", Select.triangular)(bi, sl);
+    assert(sl.backward(bi) == 8);
+}
+
+/// Search of first non-palindrome row
+pure nothrow unittest
+{
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.iteration : reversed;
+    import std.experimental.ndslice.selection : iotaSlice, pack;
+
+    auto sl = slice!double(4, 5);
+    sl[] =
+        [[0, 1, 2, 1, 0],
+         [2, 3, 4, 3, 2],
+         [6, 9, 8, 5, 6],
+         [6, 5, 8, 5, 6]];
+
+    size_t[2] bi;
+    ndFind!("a != b", Select.halfPacked)(bi, sl.pack!1, sl.reversed!1.pack!1);
+    assert(sl.backward(bi) == 9);
+}
+
 @safe pure nothrow unittest
 {
     import std.experimental.ndslice.iteration : dropOne;
@@ -1117,18 +1462,20 @@ Returns:
 Constraints:
     All tensors must have the same shape.
 +/
-template ndAny(alias pred)
+template ndAny(alias pred, Select select = Select.full)
 {
     ///
-    bool ndAny(Args...)(auto ref Args tensors)
+    bool ndAny(Args...)(Args tensors)
         if (Args.length)
     {
-        tensors.checkShapesMatch!false;
-        if (tensors[0].anyEmpty)
+        tensors.checkShapesMatch!(false, select);
+        if (anyEmpty!select(tensors[0]))
             return false;
         size_t[Args[0].N] backwardIndex = void;
         backwardIndex[$-1] = 0;
-        ndFindImpl!pred(backwardIndex, tensors);
+        prepareTensors!select(tensors);
+        alias impl = implement!(Iteration.find, pred, No.vectorized, No.fastmath);
+        impl!(Args[0].N, select)(backwardIndex, tensors);
         return cast(bool) backwardIndex[$-1];
     }
 }
@@ -1214,31 +1561,16 @@ Returns:
 Constraints:
     All tensors must have the same shape.
 +/
-template ndAll(alias pred)
+template ndAll(alias pred, Select select = Select.full)
 {
     ///
-    bool ndAll(Args...)(auto ref Args tensors)
+    bool ndAll(Args...)(Args tensors)
         if (Args.length)
     {
-        tensors.checkShapesMatch!false;
-        return tensors[0].anyEmpty || ndAllImpl(tensors);
-    }
-
-    private bool ndAllImpl(Args...)(Args tensors)
-    {
-        do
-        {
-            static if (Args[0].N == 1)
-                enum _pred = `naryFun!(false, Args.length, pred)`;
-            else
-                enum _pred = `ndAllImpl`;
-            if (!mixin(_pred ~ `(` ~ TensorFronts!(Args.length) ~ `)`))
-                return false;
-            foreach_reverse (ref tensor; tensors)
-                tensor.popFront;
-        }
-        while (tensors[0]._lengths[0]);
-        return true;
+        tensors.checkShapesMatch!(false, select);
+        prepareTensors!select(tensors);
+        alias impl = implement!(Iteration.all, pred, No.vectorized, No.fastmath);
+        return anyEmpty!select(tensors[0]) || impl!(Args[0].N, select)(tensors);
     }
 }
 
@@ -1330,7 +1662,7 @@ Params:
 Returns:
     `true` any of the elements verify `pred` and `false` otherwise.
 +/
-template ndEqual(alias pred)
+template ndEqual(alias pred, Select select = Select.full)
 {
     ///
     bool ndEqual(Args...)(Args tensors)
@@ -1338,6 +1670,7 @@ template ndEqual(alias pred)
     {
         enum msg = "all arguments must be tensors" ~ tailErrorMessage!();
         enum msgShape = "all tensors must have the same dimension count"  ~ tailErrorMessage!();
+        prepareTensors!select(tensors);
         foreach (i, Arg; Args)
         {
             static assert (is(Arg == Slice!(N, Range), size_t N, Range), msg);
@@ -1349,7 +1682,7 @@ template ndEqual(alias pred)
                         goto False;
             }
         }
-        return ndAll!pred(tensors);
+        return ndAll!(pred, select)(tensors);
         False: return false;
     }
 }
@@ -1357,6 +1690,7 @@ template ndEqual(alias pred)
 ///
 @safe pure nothrow @nogc unittest
 {
+    import std.experimental.ndslice.slice : slice;
     import std.experimental.ndslice.iteration : dropBackOne;
     import std.experimental.ndslice.selection : iotaSlice;
 
@@ -1372,7 +1706,33 @@ template ndEqual(alias pred)
 
     assert(!ndEqual!"a == b"(sl1.dropBackOne!0, sl1));
     assert(!ndEqual!"a == b"(sl1.dropBackOne!1, sl1));
+}
 
+/// check if matrix is symmetric
+pure nothrow unittest
+{
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.iteration : transposed;
+
+    auto a = slice!double(3, 3);
+    a[] = [[1, 3, 4],
+           [3, 5, 8],
+           [4, 8, 2]];
+
+    alias isSymmetric = matrix => ndEqual!("a == b", Select.triangular)(matrix, matrix.transposed);
+
+    assert(isSymmetric(a));
+
+    a[0, 0] = double.nan;
+    assert(!isSymmetric(a)); // nan != nan
+    a[0, 0] = 1;
+
+    a[1, 0] = 2;
+    assert(!isSymmetric(a)); // 2 != 3
+    a[1, 0] = 3;
+
+    a.popFront;
+    assert(!isSymmetric(a)); // a is not square
 }
 
 /++
