@@ -1677,7 +1677,7 @@ struct Slice(size_t _N, _Range)
     /++
     Returns: `true` if for any dimension the length equals to `0`, and `false` otherwise.
     +/
-    bool anyEmpty()
+    bool anyEmpty() const
     {
         foreach (i; Iota!(0, N))
             if (_lengths[i] == 0)
