@@ -36,6 +36,10 @@ Thus, `assumeSameStructure` may significantly optimize iteration.
 If tensors have different strides, then most of existing operators in this module still
 can be used as they accept a set of tensors instead of single one.
 
+$(H3 Selection)
+$(LREF Select) allows to specify subset of elements to iterate.
+$(LREF Select) is useful in combination with $(SUBREF iteration, transposed) and $(SUBREF iteration, reversed).
+
 Note:
     $(SUBREF iteration, transposed) and
     $(SUBREF selection, pack) can be used to specify dimensions.
@@ -550,15 +554,15 @@ private template implement(Iteration iteration, alias fun, Flag!"vectorized" vec
 }
 
 /++
-Selection type,
+Selection type.
 `Select` can be used with
-$(MREF ndReduce),
-$(MREF ndEach),
-$(MREF ndFind),
-$(MREF ndAny),
-$(MREF ndAll),
-$(MREF ndEqual),
-$(MREF ndCmp).
+$(LREF ndReduce),
+$(LREF ndEach),
+$(LREF ndFind),
+$(LREF ndAny),
+$(LREF ndAll),
+$(LREF ndEqual),
+$(LREF ndCmp).
 
 Any dimension count is supported.
 Types has examples for 1D, 2D, and 3D cases.
