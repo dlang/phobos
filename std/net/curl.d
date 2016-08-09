@@ -3146,7 +3146,7 @@ struct HTTP
 
 unittest // charset/Charset/CHARSET/...
 {
-    import std.meta: AliasSeq;
+    import std.meta : AliasSeq;
 
     foreach (c; AliasSeq!("charset", "Charset", "CHARSET", "CharSet", "charSet",
         "ChArSeT", "cHaRsEt"))
