@@ -2303,7 +2303,7 @@ body
 
 unittest // mutable/const input/output
 {
-    import std.meta: AliasSeq;
+    import std.meta : AliasSeq;
 
     foreach (O; AliasSeq!(Latin1Char, const Latin1Char, immutable Latin1Char))
     {
