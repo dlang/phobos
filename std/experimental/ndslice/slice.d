@@ -1986,6 +1986,7 @@ struct Slice(size_t _N, _Range)
         return ndCmp(this.unpack, rslice.unpack);
     }
 
+    static if(doUnittest)
     ///
     @safe pure nothrow @nogc unittest
     {
