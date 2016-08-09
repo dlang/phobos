@@ -62,10 +62,6 @@ auto sliced(
     if (!isStaticArray!Range && !isNarrowString!Range && N)
 in
 {
-    foreach (len; lengths)
-        assert(len > 0,
-            "All lengths must be positive."
-            ~ tailErrorMessage!());
     static if (hasLength!Range)
     {
         static if (allowDownsize)
@@ -361,6 +357,28 @@ pure nothrow unittest
     auto f = iotaSlice(8, 3)[0..5].sliced(5);
     assert(e == data[0..15].sliced(5, 3));
     assert(f == iotaSlice(5, 3));
+}
+
+nothrow unittest
+{
+    import std.experimental.ndslice.selection : iotaSlice;
+
+    auto sl = iotaSlice([0, 0], 1);
+
+    assert(sl.empty!0);
+    assert(sl.empty!1);
+
+    auto gcsl1 = sl.slice;
+    auto gcsl2 = slice!double(0, 0);
+
+    import std.experimental.allocator;
+    import std.experimental.allocator.mallocator;
+
+    auto tup2 = makeSlice!size_t(Mallocator.instance, sl);
+    auto tup1 = makeSlice!double(Mallocator.instance, 0, 0);
+
+    Mallocator.instance.dispose(tup1.array);
+    Mallocator.instance.dispose(tup2.array);
 }
 
 private template _Range_Types(Names...)
