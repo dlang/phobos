@@ -58,8 +58,8 @@ import std.traits;
 import std.meta;
 import std.typecons : Flag, Yes, No;
 
-import mir.ndslice.internal;
-import mir.ndslice.slice;
+import std.experimental.ndslice.internal;
+import std.experimental.ndslice.slice;
 
 private template TensorFronts(size_t length)
 {
@@ -211,7 +211,7 @@ template ndMap(fun...)
 ///
 pure nothrow unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     auto s = iotaSlice(2, 3).ndMap!(a => a * 3);
     assert(s == [[ 0,  3,  6],
@@ -220,7 +220,7 @@ pure nothrow unittest
 
 pure nothrow unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     assert(iotaSlice(2, 3).slice.ndMap!"a * 2" == [[0, 2, 4], [6, 8, 10]]);
 }
@@ -228,7 +228,7 @@ pure nothrow unittest
 /// Packed tensors.
 pure nothrow unittest
 {
-    import mir.ndslice.selection : iotaSlice, windows;
+    import std.experimental.ndslice.selection : iotaSlice, windows;
 
     //  iotaSlice        windows     ndMap  sums ( ndFold!"a + b" )
     //                --------------
@@ -246,7 +246,7 @@ pure nothrow unittest
 
 pure nothrow unittest
 {
-    import mir.ndslice.selection : iotaSlice, windows;
+    import std.experimental.ndslice.selection : iotaSlice, windows;
 
     auto s = iotaSlice(2, 3)
         .slice
@@ -259,8 +259,8 @@ pure nothrow unittest
 /// Zipped tensors
 pure nothrow unittest
 {
-    import mir.ndslice.slice : assumeSameStructure;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.slice : assumeSameStructure;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -287,7 +287,7 @@ one element for each function.
 +/
 pure nothrow unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     auto s = iotaSlice(2, 3).ndMap!("a + a", "a * a");
 
@@ -309,7 +309,7 @@ You may alias `ndMap` with some function(s) to a symbol and use it separately:
 pure nothrow unittest
 {
     import std.conv : to;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     alias stringize = ndMap!(to!string);
     assert(stringize(iotaSlice(2, 3)) == [["0", "1", "2"], ["3", "4", "5"]]);
@@ -739,7 +739,7 @@ template ndFold(fun...)
 /// Single seed
 unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     //| 0 1 2 | => 3  |
     //| 3 4 5 | => 12 | => 15
@@ -754,7 +754,7 @@ unittest
 /// Multiple seeds
 unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     //| 1 2 3 |
     //| 4 5 6 |
@@ -773,8 +773,8 @@ pure unittest
     import std.conv : to;
     import std.range : iota;
     import std.numeric : dotProduct;
-    import mir.ndslice.slice : assumeSameStructure;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.slice : assumeSameStructure;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -797,8 +797,8 @@ pure unittest
 unittest
 {
     import std.conv : to;
-    import mir.ndslice.slice : slice;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     //| 0 1 2 |
     //| 3 4 5 |
@@ -823,8 +823,8 @@ Computes minimum value for maximum values for each row.
 unittest
 {
     import std.algorithm.comparison : min, max;
-    import mir.ndslice.iteration : transposed;
-    import mir.ndslice.selection : iotaSlice, pack;
+    import std.experimental.ndslice.iteration : transposed;
+    import std.experimental.ndslice.selection : iotaSlice, pack;
 
     alias maxVal = (a) => a.ndFold!max(size_t.min);
     alias minVal = (a) => a.ndFold!min(size_t.max);
@@ -846,8 +846,8 @@ unittest
 
 @safe pure nothrow @nogc unittest
 {
-    import mir.ndslice.iteration : dropOne;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : dropOne;
+    import std.experimental.ndslice.selection : iotaSlice;
     auto a = iotaSlice(1, 1).dropOne!0.ndFold!"a + b"(size_t(7));
     auto b = iotaSlice(1, 1).dropOne!1.ndFold!("a + b", "a * b")(size_t(7), size_t(8));
     assert(a == 7);
@@ -921,7 +921,7 @@ template ndReduce(alias fun, Select select, Flag!"vectorized" vec = No.vectorize
 /// Single tensor
 unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     //| 0 1 2 | => 3  |
     //| 3 4 5 | => 12 | => 15
@@ -938,8 +938,8 @@ unittest
 {
     import std.typecons : Yes;
     import std.conv : to;
-    import mir.ndslice.selection : iotaSlice;
-    import mir.ndslice.internal : fastmath;
+    import std.experimental.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.internal : fastmath;
 
     static @fastmath T fmuladd(T)(const T a, const T b, const T c)
     {
@@ -957,7 +957,7 @@ unittest
     auto res = dot(0.0, a, b);
 
     // check the result:
-    import mir.ndslice.selection : byElement;
+    import std.experimental.ndslice.selection : byElement;
     import std.numeric : dotProduct;
     assert(res == dotProduct(a.byElement, b.byElement));
 }
@@ -969,9 +969,9 @@ pure unittest
     import std.conv : to;
     import std.range : iota;
     import std.numeric : dotProduct;
-    import mir.ndslice.slice : assumeSameStructure;
-    import mir.ndslice.selection : iotaSlice;
-    import mir.ndslice.internal : fastmath;
+    import std.experimental.ndslice.slice : assumeSameStructure;
+    import std.experimental.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.internal : fastmath;
 
     static @fastmath T fmuladd(T, Z)(const T a, Z z)
     {
@@ -1000,9 +1000,9 @@ unittest
 {
     import std.typecons : Yes;
     import std.conv : to;
-    import mir.ndslice.slice : slice;
-    import mir.ndslice.selection : iotaSlice;
-    import mir.ndslice.internal : fastmath;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.internal : fastmath;
 
     static @fastmath T fun(T)(const T a, ref T b)
     {
@@ -1037,9 +1037,9 @@ unittest
         import std.math : fmax, fmin;
     import std.typecons : Yes;
     import std.conv : to;
-    import mir.ndslice.slice : slice;
-    import mir.ndslice.iteration : transposed;
-    import mir.ndslice.selection : iotaSlice, pack;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.iteration : transposed;
+    import std.experimental.ndslice.selection : iotaSlice, pack;
 
     alias maxVal = (a) => ndReduce!(fmax, Yes.vectorized)(-double.infinity, a);
     alias minVal = (a) => ndReduce!fmin(double.infinity, a);
@@ -1063,8 +1063,8 @@ unittest
 
 @safe pure nothrow @nogc unittest
 {
-    import mir.ndslice.iteration : dropOne;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : dropOne;
+    import std.experimental.ndslice.selection : iotaSlice;
     auto a = ndReduce!"a + b"(size_t(7), iotaSlice(1, 1).dropOne!0);
     assert(a == 7);
 }
@@ -1129,7 +1129,7 @@ unittest
 {
     import std.typecons : Yes;
     import std.conv : to;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     //| 0 1 2 |
     //| 3 4 5 |
@@ -1149,7 +1149,7 @@ unittest
     import std.typecons : Yes;
     import std.conv : to;
     import std.algorithm.mutation : swap;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     //| 0 1 2 |
     //| 3 4 5 |
@@ -1170,8 +1170,8 @@ unittest
     import std.typecons : Yes;
     import std.conv : to;
     import std.algorithm.mutation : swap;
-    import mir.ndslice.slice : assumeSameStructure;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.slice : assumeSameStructure;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     //| 0 1 2 |
     //| 3 4 5 |
@@ -1194,9 +1194,9 @@ pure nothrow unittest
     import std.typecons : Yes;
     import std.conv : to;
     import std.algorithm.mutation : swap;
-    import mir.ndslice.slice : assumeSameStructure;
-    import mir.ndslice.selection : iotaSlice;
-    import mir.ndslice.iteration : allReversed;
+    import std.experimental.ndslice.slice : assumeSameStructure;
+    import std.experimental.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : allReversed;
 
     //| 0 1 2 |
     //| 3 4 5 |
@@ -1212,8 +1212,8 @@ pure nothrow unittest
 {
     import std.conv : to;
     import std.algorithm.mutation : swap;
-    import mir.ndslice.selection : iotaSlice, pack;
-    import mir.ndslice.iteration : reversed, transposed;
+    import std.experimental.ndslice.selection : iotaSlice, pack;
+    import std.experimental.ndslice.iteration : reversed, transposed;
 
     //| 0 1 2 |
     //| 3 4 5 |
@@ -1236,8 +1236,8 @@ pure nothrow unittest
 {
     import std.conv : to;
     import std.algorithm.mutation : swap;
-    import mir.ndslice.selection : iotaSlice;
-    import mir.ndslice.iteration : dropOne, transposed;
+    import std.experimental.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : dropOne, transposed;
 
     // | 0 1 2 |
     // | 3 4 5 |
@@ -1256,8 +1256,8 @@ pure nothrow unittest
 
 @safe pure nothrow unittest
 {
-    import mir.ndslice.iteration : dropOne;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : dropOne;
+    import std.experimental.ndslice.selection : iotaSlice;
     size_t i;
     iotaSlice(1, 2).dropOne!0.ndEach!((a){i++;});
     assert(i == 0);
@@ -1319,7 +1319,7 @@ template ndFind(alias pred, Select select = Select.full)
 ///
 @safe pure nothrow @nogc unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
     // 0 1 2
     // 3 4 5
     auto sl = iotaSlice(2, 3);
@@ -1336,7 +1336,7 @@ template ndFind(alias pred, Select select = Select.full)
 /// Multiple tensors
 @safe pure nothrow @nogc unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1355,7 +1355,7 @@ template ndFind(alias pred, Select select = Select.full)
 /// Zipped tensors
 @safe pure nothrow unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1378,8 +1378,8 @@ template ndFind(alias pred, Select select = Select.full)
 pure nothrow unittest
 {
     import std.conv : to;
-    import mir.ndslice.slice : slice;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1408,8 +1408,8 @@ pure nothrow unittest
 pure nothrow unittest
 {
     import std.conv : to;
-    import mir.ndslice.slice : slice;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // |_0 1 2
     // 3 |_4 5
@@ -1423,9 +1423,9 @@ pure nothrow unittest
 /// Search of first non-palindrome row
 pure nothrow unittest
 {
-    import mir.ndslice.slice : slice;
-    import mir.ndslice.iteration : reversed;
-    import mir.ndslice.selection : iotaSlice, pack;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.iteration : reversed;
+    import std.experimental.ndslice.selection : iotaSlice, pack;
 
     auto sl = slice!double(4, 5);
     sl[] =
@@ -1441,8 +1441,8 @@ pure nothrow unittest
 
 @safe pure nothrow unittest
 {
-    import mir.ndslice.iteration : dropOne;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : dropOne;
+    import std.experimental.ndslice.selection : iotaSlice;
     size_t i;
     size_t[2] bi;
     ndFind!((elem){i++; return true;})
@@ -1487,7 +1487,7 @@ template ndAny(alias pred, Select select = Select.full)
 ///
 @safe pure nothrow @nogc unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
     // 0 1 2
     // 3 4 5
     auto sl = iotaSlice(2, 3);
@@ -1499,7 +1499,7 @@ template ndAny(alias pred, Select select = Select.full)
 /// Multiple tensors
 @safe pure nothrow @nogc unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1514,7 +1514,7 @@ template ndAny(alias pred, Select select = Select.full)
 /// Zipped tensors
 @safe pure nothrow unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1533,8 +1533,8 @@ template ndAny(alias pred, Select select = Select.full)
 pure nothrow unittest
 {
     import std.conv : to;
-    import mir.ndslice.slice : slice;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1582,7 +1582,7 @@ template ndAll(alias pred, Select select = Select.full)
 ///
 @safe pure nothrow unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1595,7 +1595,7 @@ template ndAll(alias pred, Select select = Select.full)
 /// Multiple tensors
 @safe pure nothrow unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1607,7 +1607,7 @@ template ndAll(alias pred, Select select = Select.full)
 /// Zipped tensors
 @safe pure nothrow unittest
 {
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1623,8 +1623,8 @@ template ndAll(alias pred, Select select = Select.full)
 pure nothrow unittest
 {
     import std.conv : to;
-    import mir.ndslice.slice : slice;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1649,8 +1649,8 @@ pure nothrow unittest
 
 @safe pure nothrow unittest
 {
-    import mir.ndslice.iteration : dropOne;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : dropOne;
+    import std.experimental.ndslice.selection : iotaSlice;
     size_t i;
     assert(ndAll!((elem){i++; return true;})
         (iotaSlice(2, 1).dropOne!1));
@@ -1696,9 +1696,9 @@ template ndEqual(alias pred, Select select = Select.full)
 ///
 @safe pure nothrow @nogc unittest
 {
-    import mir.ndslice.slice : slice;
-    import mir.ndslice.iteration : dropBackOne;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.iteration : dropBackOne;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1717,8 +1717,8 @@ template ndEqual(alias pred, Select select = Select.full)
 /// check if matrix is symmetric
 pure nothrow unittest
 {
-    import mir.ndslice.slice : slice;
-    import mir.ndslice.iteration : transposed;
+    import std.experimental.ndslice.slice : slice;
+    import std.experimental.ndslice.iteration : transposed;
 
     auto a = slice!double(3, 3);
     a[] = [[1, 3, 4],
@@ -1816,8 +1816,8 @@ template ndCmp(alias pred = "a < b")
 ///
 @safe pure nothrow @nogc unittest
 {
-    import mir.ndslice.iteration : dropBackOne;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : dropBackOne;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     // 0 1 2
     // 3 4 5
@@ -1833,8 +1833,8 @@ template ndCmp(alias pred = "a < b")
 
 @safe pure nothrow @nogc unittest
 {
-    import mir.ndslice.iteration : dropBackOne, dropExactly;
-    import mir.ndslice.selection : iotaSlice;
+    import std.experimental.ndslice.iteration : dropBackOne, dropExactly;
+    import std.experimental.ndslice.selection : iotaSlice;
 
     auto sl1 = iotaSlice(2, 3);
     auto sl2 = iotaSlice([2, 3], 1);
