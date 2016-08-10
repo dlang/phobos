@@ -983,7 +983,6 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     HTTP.StatusLine statusLine;
     import std.array : appender;
     auto content = appender!(ubyte[])();
-    string[string] headers;
     client.onReceive = (ubyte[] data)
     {
         content ~= data;
@@ -1025,13 +1024,6 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
             import std.conv : to;
             content.reserve(value.to!size_t);
         }
-        if (auto v = key in headers)
-        {
-            *v ~= ", ";
-            *v ~= value;
-        }
-        else
-            headers[key] = value.idup;
     };
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
@@ -1039,18 +1031,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
                             format("HTTP request returned status code %d (%s)",
                                    statusLine.code, statusLine.reason));
 
-    // Default charset defined in HTTP RFC
-    auto charset = "ISO-8859-1";
-    if (auto v = "content-type" in headers)
-    {
-        auto m = match(cast(char[]) (*v), regex("charset=([^;,]*)"));
-        if (!m.empty && m.captures.length > 1)
-        {
-            charset = m.captures[1].idup;
-        }
-    }
-
-    return _decodeContent!T(content.data, charset);
+    return _decodeContent!T(content.data, client.p.charset);
 }
 
 unittest
@@ -1086,6 +1067,31 @@ unittest
     assert(res == "POSTRESPONSE");
     res = trace(testServer.addr, http);
     assert(res == "TRACERESPONSE");
+}
+
+unittest // charset detection and transcoding to T
+{
+    testServer.handle((s) {
+        s.send("HTTP/1.1 200 OK\r\n"~
+        "Content-Length: 4\r\n"~
+        "Content-Type: text/plain; charset=utf-8\r\n" ~
+        "\r\n" ~
+        "äbc");
+    });
+    auto client = HTTP();
+    auto result = _basicHTTP!char(testServer.addr, "", client);
+    assert(result == "äbc");
+
+    testServer.handle((s) {
+        s.send("HTTP/1.1 200 OK\r\n"~
+        "Content-Length: 3\r\n"~
+        "Content-Type: text/plain; charset=iso-8859-1\r\n" ~
+        "\r\n" ~
+        0xE4 ~ "bc");
+    });
+    client = HTTP();
+    result = _basicHTTP!char(testServer.addr, "", client);
+    assert(result == "äbc");
 }
 
 /*
@@ -2397,7 +2403,7 @@ struct HTTP
                     if (fieldName == "content-type")
                     {
                         auto mct = match(cast(char[]) m.captures[2],
-                                         regex("charset=([^;]*)"));
+                                         regex("charset=([^;]*)", "i"));
                         if (!mct.empty && mct.captures.length > 1)
                             charset = mct.captures[1].idup;
                     }
@@ -3137,6 +3143,26 @@ struct HTTP
     }
 
 } // HTTP
+
+unittest // charset/Charset/CHARSET/...
+{
+    import std.meta : AliasSeq;
+
+    foreach (c; AliasSeq!("charset", "Charset", "CHARSET", "CharSet", "charSet",
+        "ChArSeT", "cHaRsEt"))
+    {
+        testServer.handle((s) {
+            s.send("HTTP/1.1 200 OK\r\n"~
+                "Content-Length: 0\r\n"~
+                "Content-Type: text/plain; " ~ c ~ "=foo\r\n" ~
+                "\r\n");
+        });
+
+        auto http = HTTP(testServer.addr);
+        http.perform();
+        assert(http.p.charset == "foo");
+    }
+}
 
 /**
    FTP client functionality.
