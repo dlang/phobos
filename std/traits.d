@@ -6886,24 +6886,26 @@ template getUDAs(alias symbol, alias attribute)
  * Gets all symbols within `symbol` that have the given user-defined attribute.
  * This is not recursive; it will not search for symbols within symbols such as
  * nested structs or unions.
+ * This only returns members that are publically accessible.
  */
-template getSymbolsByUDA(alias symbol, alias attribute) {
+template getSymbolsByUDA(alias symbol, alias attribute)
+{
     import std.format : format;
-    import std.meta : AliasSeq, Filter;
+    import std.meta : AliasSeq, Filter, staticMap;
 
-    // translate a list of strings into symbols. mixing in the entire alias
-    // avoids trying to access the symbol, which could cause a privacy violation
-    template toSymbols(names...) {
-        static if (names.length == 0)
-            alias toSymbols = AliasSeq!();
+    // translate a list of strings into symbols.
+    alias toSymbol(string name) = AliasSeq!(__traits(getMember, symbol, name));
+
+    template hasSpecificUDA(string name)
+    {
+        static if (__traits(compiles, __traits(getMember, symbol, name)))
+            enum hasSpecificUDA = hasUDA!(__traits(getMember, symbol, name), attribute);
         else
-            mixin("alias toSymbols = AliasSeq!(symbol.%s, toSymbols!(names[1..$]));"
-                  .format(names[0]));
+            enum hasSpecificUDA = false;
     }
 
-    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol.%s, attribute)".format(name));
-
-    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, __traits(allMembers, symbol)));
+    alias membersWithUDA = staticMap!(toSymbol,
+        Filter!(hasSpecificUDA, __traits(allMembers, symbol)));
 
     // if the symbol itself has the UDA, tack it on to the front of the list
     static if (hasUDA!(symbol, attribute))
@@ -6981,10 +6983,11 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
 @safe unittest
 {
     // HasPrivateMembers has, well, private members, one of which has a UDA.
+    // The presence private members should not cause an error, but will not be
+    // exposed by getSymbolsByUDA.
     import std.internal.test.uda : Attr, HasPrivateMembers;
-    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 2);
+    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 1);
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
-    static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[1], Attr));
 }
 
 /**
