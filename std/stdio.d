@@ -3258,7 +3258,12 @@ struct LockingTextReader
 }
 
 /**
- * Indicates whether $(D T) is a file handle of some kind.
+ * Indicates whether $(D T) is a file handle, i.e. the type
+ * is implicitly convertable to $(LREF File) or a pointer to a
+ * $(REF FILE, core,stdc,stdio).
+ *
+ * Returns:
+ *      `true` if `T` is a file handle, `false` otherwise.
  */
 template isFileHandle(T)
 {
@@ -3266,6 +3271,7 @@ template isFileHandle(T)
         is(T : File);
 }
 
+///
 @safe unittest
 {
     static assert(isFileHandle!(FILE*));
@@ -3275,13 +3281,19 @@ template isFileHandle(T)
 /**
  * Property used by writeln/etc. so it can infer @safe since stdout is __gshared
  */
-private @property File trustedStdout() @trusted { return stdout; }
+private @property File trustedStdout() @trusted
+{
+    return stdout;
+}
 
 /***********************************
 For each argument $(D arg) in $(D args), format the argument (as per
 $(LINK2 std_conv.html, to!(string)(arg))) and write the resulting
 string to $(D args[0]). A call without any arguments will fail to
 compile.
+
+Params:
+    args = the items to write to `stdout`
 
 Throws: In case of an I/O error, throws an $(D StdioException).
  */
@@ -3307,9 +3319,15 @@ void write(T...)(T args) if (!is(T[0] : File))
 }
 
 /***********************************
- * Equivalent to $(D write(args, '\n')).  Calling $(D writeln) without
+ * Equivalent to `write(args, '\n')`.  Calling `writeln` without
  * arguments is valid and just prints a newline to the standard
  * output.
+ *
+ * Params:
+ *      args = the items to write to `stdout`
+ *
+ * Throws:
+ *      In case of an I/O error, throws an $(LREF StdioException).
  */
 void writeln(T...)(T args)
 {
