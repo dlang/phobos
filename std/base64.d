@@ -982,7 +982,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                                                              is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     in
     {
-        assert(buffer.length >= decodeLength(source.length), "Insufficient buffer for decoding");
+        assert(buffer.length >= realDecodeLength(source), "Insufficient buffer for decoding");
     }
     out(result)
     {
