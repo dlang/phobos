@@ -1336,28 +1336,23 @@ private void quickSortImpl(alias less, Range)(Range r, size_t depth)
         const pivotIdx = getPivot!(less)(r);
         auto pivot = r[pivotIdx];
 
-        alias pred = binaryFun!(less);
-
         // partition
         r.swapAt(pivotIdx, r.length - 1);
         size_t lessI = size_t.max, greaterI = r.length - 1;
 
         while (true)
         {
+            alias pred = binaryFun!less;
             while (pred(r[++lessI], pivot)) {}
-            while (greaterI > 0 && pred(pivot, r[--greaterI])) {}
-
-            if (lessI >= greaterI)
-            {
-                break;
-            }
+            assert(lessI <= greaterI, "sort: invalid comparison function.");
+            while (greaterI > lessI && pred(pivot, r[--greaterI])) {}
+            assert(lessI <= greaterI, "sort: invalid comparison function.");
+            if (lessI == greaterI) break;
             r.swapAt(lessI, greaterI);
         }
 
         r.swapAt(r.length - 1, lessI);
-        auto right = r[lessI + 1 .. r.length];
-
-        auto left = r[0 .. min(lessI, greaterI + 1)];
+        auto left = r[0 .. lessI], right = r[lessI + 1 .. r.length];
         if (right.length > left.length)
         {
             swap(left, right);
