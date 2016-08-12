@@ -1,9 +1,14 @@
 sudo: false
 os: linux
 language: d
-d: dmd-2.071.0
+d: dmd
 git:
   depth: 1
+env:
+ - MODEL="64"
+matrix:
+  include:
+    - {os: linux, d: dmd, env: MODEL="32", addons: {apt: {packages: [[g++-multilib]]}}}
 install:
  - mkdir phobos
  - ls -1 | grep -v ^phobos | xargs -I{} mv {} phobos
@@ -31,8 +36,9 @@ script:
  # at the moment libdparse has problems to parse some modules (->excludes)
  - (cd phobos && ../Dscanner/dsc --config ../.dscanner.ini --styleCheck $(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.)
  # test code coverage
- - (cd dmd && make -f posix.mak)
- - (cd druntime && make -f posix.mak)
- - (cd phobos && make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/" | grep -vE '(std.algorithm.sorting|std.encoding|net.curl)' ))
+ - (cd dmd && make -f posix.mak HOST_DMD=dmd)
+ - (cd druntime && make -f posix.mak MODEL=$MODEL)
+ - (cd dmd && make -f posix.mak MODEL=$MODEL)
+ - (cd phobos && make -f posix.mak MODEL=$MODEL $(find std etc -name "*.d" | sed "s/[.]d$/.test/" | grep -vE '(std.algorithm.sorting|std.encoding|net.curl)' ))
 after_success:
  - (cd phobos && bash <(curl -s https://codecov.io/bash))
