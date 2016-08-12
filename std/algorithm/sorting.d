@@ -1340,12 +1340,16 @@ private void quickSortImpl(alias less, Range)(Range r, size_t depth)
         r.swapAt(pivotIdx, r.length - 1);
         size_t lessI = size_t.max, greaterI = r.length - 1;
 
-        while (true)
+        outer: for (;;)
         {
             alias pred = binaryFun!less;
             while (pred(r[++lessI], pivot)) {}
             assert(lessI <= greaterI, "sort: invalid comparison function.");
-            while (greaterI > lessI && pred(pivot, r[--greaterI])) {}
+            for (;;)
+            {
+                if (greaterI == lessI) break outer;
+                if (!pred(pivot, r[--greaterI])) break;
+            }
             assert(lessI <= greaterI, "sort: invalid comparison function.");
             if (lessI == greaterI) break;
             r.swapAt(lessI, greaterI);
