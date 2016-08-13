@@ -2209,7 +2209,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                             result.exceptionFuncIdx = dgidx;
                         }
                     }
-                    else static if (is(Unqual!(Params[0]) == T))
+                    else static if (is(Params[0] == T) || is(Unqual!(Params[0]) == T))
                     {
                         if (added)
                             assert(false, "duplicate overload specified for type '" ~ T.stringof ~ "'");
