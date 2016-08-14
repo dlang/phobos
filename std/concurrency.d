@@ -2405,9 +2405,14 @@ private
                 }
             }
             if (n)
-                *n = Node(v);
+            {
+                import std.conv : emplace;
+                emplace!Node(n, v);
+            }
             else
+            {
                 n = new Node(v);
+            }
             return n;
         }
 
