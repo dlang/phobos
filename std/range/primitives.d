@@ -2109,6 +2109,11 @@ if (isNarrowString!(C[]))
             //ptr is used to avoid unnnecessary bounds checking.
             str = str.ptr[1 .. str.length];
         }
+        else if (c == 0xff)
+        {
+            // bsr undefined for 0
+            str = str.ptr[1 .. str.length];
+        }
         else
         {
              import core.bitop : bsr;
