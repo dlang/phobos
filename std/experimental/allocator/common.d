@@ -407,6 +407,7 @@ Forwards each of the methods in `funs` (if defined) to `member`.
     return result;
 }
 
+version(unittest)
 package void testAllocator(alias make)()
 {
     import std.conv : text;
@@ -492,6 +493,8 @@ package void testAllocator(alias make)()
     assert(b6.length == 0);
     assert(a.reallocate(b6, 1));
     assert(b6.length == 1, text(b6.length));
+    assert(a.reallocate(b6, 2));
+    assert(b6.length == 2);
 
     // Test owns
     static if (hasMember!(A, "owns"))
