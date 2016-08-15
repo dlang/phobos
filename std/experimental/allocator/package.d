@@ -586,7 +586,7 @@ unittest
     assert ((cast(int*)arr.ptr)[0 .. arr.length] == expected);
 }
 
-unittest
+pure nothrow unittest
 {
     int[] a = [1, 2, 4];
     uninitializedFillDefault(a);
@@ -621,9 +621,9 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
 }
 
-unittest
+@safe nothrow unittest
 {
-    void test1(A)(auto ref A alloc)
+    void test(A)(auto ref A alloc)
     {
         int[] a = alloc.makeArray!int(0);
         assert(a.length == 0 && a.ptr is null);
@@ -633,7 +633,16 @@ unittest
         assert(a == cheatsheet);
     }
 
-    void test2(A)(auto ref A alloc)
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
+    () pure { test(GCAllocator.instance); }();
+    () @nogc { test(Mallocator.instance); }();
+}
+
+@safe nothrow unittest
+{
+
+    void test(A)(auto ref A alloc)
     {
         static struct S { int x = 42; @disable this(this); }
         S[] arr = alloc.makeArray!S(5);
@@ -645,9 +654,8 @@ unittest
 
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
-    (alloc) /*pure nothrow*/ @safe { test1(alloc); test2(alloc);} (GCAllocator.instance);
-    (alloc) nothrow @safe @nogc { test1(alloc); test2(alloc);} (Mallocator.instance);
-    test2(theAllocator);
+    () pure { test(GCAllocator.instance); }();
+    () @nogc { test(Mallocator.instance); }();
 }
 
 @system unittest
@@ -742,7 +750,7 @@ unittest
     test!(immutable int)();
 }
 
-@system unittest
+@safe unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -750,11 +758,15 @@ unittest
         assert(a.length == 0 && a.ptr is null);
         a = alloc.makeArray!long(5, 42);
         assert(a.length == 5);
-        assert(a == [ 42, 42, 42, 42, 42 ]);
+
+        static immutable res = [42, 42, 42, 42, 42];
+        assert(a == res);
     }
+
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    (alloc) /*pure nothrow*/ @safe { test(alloc); } (GCAllocator.instance);
-    test(theAllocator);
+    import std.experimental.allocator.mallocator : Mallocator;
+    () pure nothrow { test(GCAllocator.instance); } ();
+    () @nogc { test(Mallocator.instance); }();
 }
 
 // test failure with a pure, failing struct
@@ -782,6 +794,7 @@ unittest
 @system unittest
 {
     import std.exception : assertThrown, enforce;
+    import std.experimental.allocator.mallocator : Mallocator;
 
     static int i = 0;
     struct Singleton
@@ -801,8 +814,15 @@ unittest
             i--;
         }
     }
-    import std.experimental.allocator.mallocator : Mallocator;
-    assertThrown(makeArray!Singleton(Mallocator.instance, 10, Singleton(42)));
+
+    void test()
+    {
+        makeArray!Singleton(Mallocator.instance, 10, Singleton(42));
+    }
+    assertThrown(test());
+
+    // it should never be @safe with the Mallocator
+    static assert(!__traits(compiles, () @safe { test(); }()));
 }
 
 /// Ditto
@@ -920,28 +940,32 @@ if (isInputRange!R && !isInfinite!R)
     }
 }
 
-unittest
+@safe nothrow unittest
 {
     void test(A)(auto ref A alloc)
     {
         long[] a = alloc.makeArray!long((int[]).init);
         assert(a.length == 0 && a.ptr is null);
-        a = alloc.makeArray!long([5, 42]);
+
+        static immutable res = [5, 42];
+        a = alloc.makeArray!long(res);
         assert(a.length == 2);
-        assert(a == [ 5, 42]);
+        assert(a == res);
 
         // we can also infer the type
-        auto b = alloc.makeArray([4.0, 2.0]);
+        static immutable res2 = [4.0, 2.0];
+        auto b = alloc.makeArray(res2);
         static assert(is(typeof(b) == double[]));
-        assert(b == [4.0, 2.0]);
+        assert(b == res2);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
-    test(theAllocator);
+    import std.experimental.allocator.mallocator : Mallocator;
+    () pure { test(GCAllocator.instance); }();
+    () @nogc { test(Mallocator.instance); }();
 }
 
 // infer types for strings
-unittest
+@safe nothrow unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -959,26 +983,32 @@ unittest
     }
 
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
-    test(theAllocator);
+    import std.experimental.allocator.mallocator : Mallocator;
+    () pure  { test(GCAllocator.instance); }();
+    () @nogc { test(Mallocator.instance);  }();
 }
 
-/*pure*/ nothrow @safe unittest
+@safe nothrow unittest
 {
-    import std.algorithm.comparison : equal;
-    import std.internal.test.dummyrange;
-    import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.range : iota;
-    foreach (DummyType; AllDummyRanges)
+    void test(A)(auto ref A alloc)
     {
-        (alloc) pure nothrow @safe
+        import std.algorithm.comparison : equal;
+        import std.internal.test.dummyrange;
+        import std.range : iota;
+
+        foreach (DummyType; AllDummyRanges)
         {
             DummyType d;
             auto arr = alloc.makeArray(d);
             assert(arr.length == 10);
             assert(arr.equal(iota(1, 11)));
-        } (GCAllocator.instance);
+        }
     }
+
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
+    () pure  { test(GCAllocator.instance); }();
+    () @nogc { test(Mallocator.instance);  }();
 }
 
 // test failure with a pure, failing struct
@@ -1055,6 +1085,9 @@ unittest
     auto arr = [NoCopy(1), NoCopy(2)];
     assertThrown(makeArray!NoCopy(Mallocator.instance, arr));
 
+    // it should never be @safe with the Mallocator
+    static assert(!__traits(compiles, () @safe { makeArray!NoCopy(Mallocator.instance, arr); }()));
+
     // allow more copies and thus force reallocation
     i = 0;
     maxElements = 30;
@@ -1078,6 +1111,8 @@ unittest
         }
     }
     assertThrown(makeArray!NoCopy(Mallocator.instance, NoCopyRange()));
+    // it should never be @safe with the Mallocator
+    static assert(!__traits(compiles, () @safe { makeArray!NoCopy(Mallocator.instance, NoCopyRange()); }()));
 
     maxElements = 300;
     auto arr2 = makeArray!NoCopy(Mallocator.instance, NoCopyRange());
@@ -1100,7 +1135,7 @@ version(unittest)
     }
 }
 
-unittest
+@safe nothrow unittest
 {
     import std.array : array;
     import std.range : iota;
@@ -1117,9 +1152,11 @@ unittest
         assert(a.length == 10);
         assert(a == iota(10).array);
     }
+
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
-    test(theAllocator);
+    import std.experimental.allocator.mallocator : Mallocator;
+    () pure { test(GCAllocator.instance); } ();
+    () /*@nogc*/ { test(Mallocator.instance); }();
 }
 
 /**
@@ -1163,13 +1200,18 @@ unittest
 {
     void test(A)(auto ref A alloc)
     {
-        auto arr = alloc.makeArray!int([1, 2, 3]);
+        static immutable initArr = [1, 2, 3];
+        auto arr = alloc.makeArray!int(initArr);
         assert(alloc.expandArray(arr, 3));
-        assert(arr == [1, 2, 3, 0, 0, 0]);
+
+        static immutable res = [1, 2, 3, 0, 0, 0];
+        assert(arr == res);
     }
+
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
-    test(theAllocator);
+    import std.experimental.allocator.mallocator : Mallocator;
+    () pure  { test(GCAllocator.instance); }();
+    () @nogc { test(Mallocator.instance);  }();
 }
 
 /// Ditto
@@ -1192,13 +1234,18 @@ unittest
 {
     void test(A)(auto ref A alloc)
     {
-        auto arr = alloc.makeArray!int([1, 2, 3]);
+        static immutable initArr = [1, 2, 3];
+        auto arr = alloc.makeArray!int(initArr);
         assert(alloc.expandArray(arr, 3, 1));
-        assert(arr == [1, 2, 3, 1, 1, 1]);
+
+        static immutable res = [1, 2, 3, 1, 1, 1];
+        assert(arr == res);
     }
+
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
-    test(theAllocator);
+    import std.experimental.allocator.mallocator : Mallocator;
+    () pure  { test(GCAllocator.instance); }();
+    () @nogc { test(Mallocator.instance);  }();
 }
 
 /// Ditto
@@ -1360,11 +1407,15 @@ unittest
         a = alloc.makeArray!long(100, 42);
         assert(alloc.shrinkArray(a, 98));
         assert(a.length == 2);
-        assert(a == [ 42, 42]);
+
+        static immutable res = [42, 42];
+        assert(a == res);
     }
+
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
-    test(theAllocator);
+    import std.experimental.allocator.mallocator : Mallocator;
+    () pure  { test(GCAllocator.instance); }();
+    () @nogc { test(Mallocator.instance);  }();
 }
 
 /**
