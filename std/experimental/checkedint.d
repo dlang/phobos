@@ -12,13 +12,14 @@ Issuing individual checked operations is flexible and efficient but often
 tedious. The `Checked` facility offers encapsulated integral wrappers that do
 all checking internally and have configurable behavior upon erroneous results.
 For example, `Checked!int` is a type that behaves like `int` but issues an
-`assert(0)` whenever involved in an operation that produces the arithmetically
-wrong result. For example $(D Checked!int(1_000_000) * 10_000) fails with
-`assert(0)` because the operation overflows. Also, $(D Checked!int(-1) >
-uint(0)) fails with `assert(0)` (even though the built-in comparison $(D int(-1) >
-uint(0)) is surprisingly true due to language's conversion rules modeled  after
-C). Thus, `Checked!int` is a virtually drop-in replacement for `int` useable in
-debug builds, to be replaced by `int` if efficiency demands it.
+`assert(0)` (i.e. throws an `Error` in debug mode or aborts execution in release
+mode) whenever involved in an operation that produces the arithmetically wrong
+result. For example $(D Checked!int(1_000_000) * 10_000) fails with `assert(0)`
+because the operation overflows. Also, $(D Checked!int(-1) > uint(0)) fails with
+`assert(0)` (even though the built-in comparison $(D int(-1) > uint(0)) is
+surprisingly true due to language's conversion rules modeled  after C). Thus,
+`Checked!int` is a virtually drop-in replacement for `int` useable in debug
+builds, to be replaced by `int` if efficiency demands it.
 
 `Checked`  has customizable behavior with the help of a second type parameter,
 `Hook`. Depending on what methods `Hook` defines, core operations on the
@@ -32,9 +33,9 @@ This module provides a few predefined hooks (below) that add useful behavior to
 
 $(UL
 
-$(LI `Croak` fails every incorrect operation with `assert(0)`. It is the default
-second parameter, i.e. `Checked!short` is the same as $(D Checked!(short,
-Croak)).)
+$(LI `Abort` fails every incorrect operation with a message to `stderr` followed
+by a call to `abort()`. It is the default second parameter, i.e. `Checked!short`
+is the same as $(D Checked!(short, Abort)).)
 
 $(LI `ProperCompare` fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`,
 and `>=` to return correct results in all circumstances, at a slight cost in
@@ -58,10 +59,10 @@ $(UL
 
 $(LI $(D Checked!(Checked!int, ProperCompare)) defines an `int` with fixed
 comparison operators that will fail with `assert(0)` upon overflow. (Recall that
-`Croak` is the default policy.) The order in which policies are combined is
+`Abort` is the default policy.) The order in which policies are combined is
 important because the outermost policy (`ProperCompare` in this case) has the
 first crack at intercepting an operator. The converse combination $(D
-Checked!(Checked!(int, ProperCompare))) is meaningless because `Croak` will
+Checked!(Checked!(int, ProperCompare))) is meaningless because `Abort` will
 intercept comparison and will fail without giving `ProperCompare` a chance to
 intervene.)
 
@@ -77,12 +78,29 @@ intercepts comparisons before the numbers involved are tested for NaN.)
 module std.experimental.checkedint;
 import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
 
+///
+unittest
+{
+    int[] addAndMerge(int[] a, int[] b, int offset)
+    {
+        // Aborts on overflow on size computation
+        auto r = new int[(Checked!size_t(a.length) + b.length).representation];
+        // Aborts on overflow on element computation
+        foreach (i; 0 .. a.length)
+            r[i] = (a[i] + Checked!int(offset)).representation;
+        foreach (i; 0 .. b.length)
+            r[i + a.length] = (b[i] + Checked!int(offset)).representation;
+        return r;
+    }
+    assert(addAndMerge([1, 2, 3], [4, 5], -1) == [0, 1, 2, 3, 4]);
+}
+
 /**
 Checked integral type wraps an integral `T` and customizes its behavior with the
 help of a `Hook` type. The type wrapped must be one of the predefined integrals
 (unqualified), or another instance of `Checked`.
 */
-struct Checked(T, Hook = Croak)
+struct Checked(T, Hook = Abort)
 if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
 {
     import std.algorithm.comparison : among;
@@ -307,7 +325,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     auto opCmp(U, Hook1)(Checked!(U, Hook1) rhs)
     {
         alias R = typeof(payload + rhs.payload);
-        static if (valueConvertible!(T, R) && valueConvertible!(T, R))
+        static if (valueConvertible!(T, R) && valueConvertible!(U, R))
         {
             return payload < rhs.payload ? -1 : payload > rhs.payload;
         }
@@ -392,7 +410,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool))
     {
         alias R = typeof(payload + rhs);
-        static assert(is(typeof(mixin("payload"~op~"rhs")) == R));
+        static assert(is(typeof(mixin("payload" ~ op ~ "rhs")) == R));
         static if (isIntegral!R) alias Result = Checked!(R, Hook);
         else alias Result = R;
 
@@ -403,11 +421,11 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         }
         else static if (is(Rhs == bool))
         {
-            return mixin("this"~op~"ubyte(rhs)");
+            return mixin("this" ~ op ~ "ubyte(rhs)");
         }
         else static if (isFloatingPoint!Rhs)
         {
-            return mixin("payload"~op~"rhs");
+            return mixin("payload" ~ op ~ "rhs");
         }
         else static if (hasMember!(Hook, "onOverflow"))
         {
@@ -419,7 +437,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         else
         {
             // Default is built-in behavior
-            return Result(mixin("payload"~op~"rhs"));
+            return Result(mixin("payload" ~ op ~ "rhs"));
         }
     }
 
@@ -427,11 +445,11 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     auto opBinary(string op, U, Hook1)(Checked!(U, Hook1) rhs)
     {
         alias R = typeof(representation + rhs.payload);
-        static if (valueConvertible!(T, R) && valueConvertible!(T, R) ||
+        static if (valueConvertible!(T, R) && valueConvertible!(U, R) ||
             is(Hook == Hook1))
         {
             // Delegate to lhs
-            return mixin("this"~op~"rhs.payload");
+            return mixin("this" ~ op ~ "rhs.payload");
         }
         else static if (hasMember!(Hook, "hookOpBinary"))
         {
@@ -440,23 +458,23 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         else static if (hasMember!(Hook1, "hookOpBinary"))
         {
             // Delegate to rhs
-            return mixin("this.payload"~op~"rhs");
+            return mixin("this.payload" ~ op ~ "rhs");
         }
         else static if (hasMember!(Hook, "onOverflow") &&
             !hasMember!(Hook1, "onOverflow"))
         {
             // Delegate to lhs
-            return mixin("this"~op~"rhs.payload");
+            return mixin("this" ~ op ~ "rhs.payload");
         }
         else static if (hasMember!(Hook1, "onOverflow") &&
             !hasMember!(Hook, "onOverflow"))
         {
             // Delegate to rhs
-            return mixin("this.payload"~op~"rhs");
+            return mixin("this.payload" ~ op ~ "rhs");
         }
         else
         {
-            static assert(0, "Conflict between lhs and rhs hooks,"
+            static assert(0, "Conflict between lhs and rhs hooks," ~
                 " use .representation on one side to disambiguate.");
         }
     }
@@ -479,11 +497,11 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         }
         else static if (is(Lhs == bool))
         {
-            return mixin("ubyte(lhs)"~op~"this");
+            return mixin("ubyte(lhs)" ~ op ~ "this");
         }
         else static if (isFloatingPoint!Lhs)
         {
-            return mixin("lhs"~op~"payload");
+            return mixin("lhs" ~ op ~ "payload");
         }
         else static if (hasMember!(Hook, "onOverflow"))
         {
@@ -495,7 +513,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         else
         {
             // Default is built-in behavior
-            auto r = mixin("lhs"~op~"T(payload)");
+            auto r = mixin("lhs" ~ op ~ "T(payload)");
             return Checked!(typeof(r), Hook)(r);
         }
     }
@@ -506,7 +524,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     ref Checked opOpAssign(string op, Rhs)(const Rhs rhs)
     if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool))
     {
-        static assert(is(typeof(mixin("payload"~op~"=rhs")) == T));
+        static assert(is(typeof(mixin("payload" ~ op ~ "=rhs")) == T));
 
         static if (hasMember!(Hook, "hookOpOpAssign"))
         {
@@ -515,7 +533,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         else
         {
             alias R = typeof(payload + rhs);
-            auto r = mixin("this"~op~"rhs").payload;
+            auto r = mixin("this" ~ op ~ "rhs").payload;
 
             static if (valueConvertible!(R, T) ||
                 !hasMember!(Hook, "onBadOpOpAssign") ||
@@ -556,41 +574,55 @@ unittest
     assert(Checked!(ubyte, void)(ubyte(22)).representation == 22);
 }
 
+// Abort
 /**
 Force all overflows to fail with `assert(0)`.
 */
-struct Croak
+struct Abort
 {
+    private static void abort(string msg)
+    {
+        import std.stdio : stderr;
+        stderr.writeln(msg);
+        import core.stdc.stdlib : abort;
+        abort();
+    }
 static:
     Dst onBadCast(Dst, Src)(Src src)
     {
-        assert(0, "Bad cast");
+        abort("Bad cast");
+        assert(0);
     }
     Lhs onBadOpOpAssign(string x, Lhs, Rhs)(Lhs, Rhs)
     {
-        assert(0, "Bad opAssign");
+        abort("Bad opAssign");
+        assert(0);
     }
     bool onBadOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        assert(0, "Bad comparison for equality");
+        abort("Bad comparison for equality");
+        assert(0);
     }
     bool onBadOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        assert(0, "Bad comparison for ordering");
+        abort("Bad comparison for ordering");
+        assert(0);
     }
     typeof(~Lhs()) onOverflow(string op, Lhs)(Lhs lhs)
     {
-        assert(0, "Overflow on unary \"" ~ op ~ "\"");
+        abort("Overflow on unary \"" ~ op ~ "\"");
+        assert(0);
     }
     typeof(Lhs() + Rhs()) onOverflow(string op, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        assert(0, "Overflow on binary \"" ~ op ~ "\"");
+        abort("Overflow on binary \"" ~ op ~ "\"");
+        assert(0);
     }
 }
 
 unittest
 {
-    Checked!(int, Croak) x;
+    Checked!(int, Abort) x;
     x = 42;
     short x1 = cast(short) x;
     //x += long(int.max);
@@ -793,7 +825,7 @@ static:
     {
         static if (x == "-" || x == "~")
         {
-            return v != defaultValue!T ? mixin(x~"v") : v;
+            return v != defaultValue!T ? mixin(x ~ "v") : v;
         }
         else static if (x == "++")
         {
@@ -940,12 +972,12 @@ if (isIntegral!L && isIntegral!R)
         // negative rhs as well.
         import std.conv : unsigned;
         if (unsigned(rhs) > 8 * Result.sizeof) goto fail;
-        return mixin("lhs"~x~"rhs");
+        return mixin("lhs" ~ x ~ "rhs");
     }
     else static if (x.among("&", "|", "^"))
     {
         // Nothing to check
-        return mixin("lhs"~x~"rhs");
+        return mixin("lhs" ~ x ~ "rhs");
     }
     else static if (x == "^^")
     {
@@ -959,7 +991,7 @@ if (isIntegral!L && isIntegral!R)
             x.among("+", "-", "*"))
         {
             // No checks - both are value converted and result is in range
-            return mixin("lhs"~x~"rhs");
+            return mixin("lhs" ~ x ~ "rhs");
         }
         else static if (x == "+")
         {
@@ -992,7 +1024,7 @@ if (isIntegral!L && isIntegral!R)
                 if (lhs == Result.min && rhs == -1) goto fail;
             }
             if (rhs == 0) goto fail;
-            return mixin("lhs"~x~"rhs");
+            return mixin("lhs" ~ x ~ "rhs");
         }
         else static assert(0, x);
     }
@@ -1049,7 +1081,7 @@ if (isIntegral!L && isIntegral!R)
             {
                 if (rhs <= 0) goto fail;
             }
-            return mixin("Result(lhs)"~x~"Result(rhs)");
+            return mixin("Result(lhs)" ~ x ~ "Result(rhs)");
         }
         else static assert(0, x);
     }
@@ -1222,17 +1254,17 @@ version(unittest) private struct CountOverflows
     auto onOverflow(string op, Lhs)(Lhs lhs)
     {
         ++calls;
-        return mixin(op~"lhs");
+        return mixin(op ~ "lhs");
     }
     auto onOverflow(string op, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
         ++calls;
-        return mixin("lhs"~op~"rhs");
+        return mixin("lhs" ~ op ~ "rhs");
     }
     Lhs onBadOpOpAssign(string op, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
         ++calls;
-        return mixin("lhs"~op~"=rhs");
+        return mixin("lhs" ~ op ~ "=rhs");
     }
 }
 
@@ -1242,7 +1274,7 @@ version(unittest) private struct CountOpBinary
     auto hookOpBinary(string op, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
         ++calls;
-        return mixin("lhs"~op~"rhs");
+        return mixin("lhs" ~ op ~ "rhs");
     }
 }
 
