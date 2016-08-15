@@ -827,30 +827,37 @@ if (isInputRange!R && !isInfinite!R)
         if (!length) return null;
         auto m = alloc.allocate(T.sizeof * length);
         if (!m.ptr) return null;
-        auto result = cast(T[]) m;
+        auto result = () @trusted { return cast(T[]) m; } ();
 
         size_t i = 0;
         scope (failure)
         {
             foreach (j; 0 .. i)
             {
-                destroy(*cast(Unqual!T*) (result.ptr + j));
+                auto p = () @trusted { return cast(Unqual!T*) &result[j]; }();
+                destroy(p);
             }
-            alloc.deallocate(m);
+
+            static if (canSafelyDeallocPostRewind!T)
+                () @trusted { alloc.deallocate(m); } ();
+            else
+                alloc.deallocate(m);
         }
 
-        import std.conv : emplace;
+        import std.conv : emplaceRef;
         static if (isNarrowString!R || isRandomAccessRange!R)
         {
             foreach (j; 0 .. range.length)
             {
-                cast(void) emplace!T(result.ptr + i++, range[j]);
+                emplaceRef!T(result[i++], range[j]);
             }
         }
         else
         {
             for (; !range.empty; range.popFront, ++i)
-                cast(void) emplace!T(result.ptr + i, range.front);
+            {
+                emplaceRef!T(result[i], range.front);
+            }
         }
 
         return result;
@@ -861,16 +868,20 @@ if (isInputRange!R && !isInfinite!R)
         size_t estimated = 8;
         auto m = alloc.allocate(T.sizeof * estimated);
         if (!m.ptr) return null;
-        auto result = cast(T[]) m;
+        auto result = () @trusted { return cast(T[]) m; } ();
 
         size_t initialized = 0;
         void bailout()
         {
-            foreach (i; 0 .. initialized)
+            foreach (i; 0 .. initialized + 1)
             {
                 destroy(result[i]);
             }
-            alloc.deallocate(m);
+
+            static if (canSafelyDeallocPostRewind!T)
+                () @trusted { alloc.deallocate(m); } ();
+            else
+                alloc.deallocate(m);
         }
         scope (failure) bailout;
 
@@ -879,22 +890,30 @@ if (isInputRange!R && !isInfinite!R)
             if (initialized == estimated)
             {
                 // Need to reallocate
-                if (!alloc.reallocate(m, T.sizeof * (estimated *= 2)))
+                static if (hasPurePostblit!T)
+                    auto success = () @trusted { return alloc.reallocate(m, T.sizeof * (estimated *= 2)); } ();
+                else
+                    auto success = alloc.reallocate(m, T.sizeof * (estimated *= 2));
+                if (!success)
                 {
                     bailout;
                     return null;
                 }
-                result = cast(T[]) m;
+                result = () @trusted { return cast(T[]) m; } ();
             }
-            import std.conv : emplace;
-            emplace!T(result.ptr + initialized, range.front);
+            import std.conv : emplaceRef;
+            emplaceRef(result[initialized], range.front);
         }
 
-        // Try to shrink memory, no harm if not possible
-        if (initialized < estimated
-            && alloc.reallocate(m, T.sizeof * initialized))
+        if (initialized < estimated)
         {
-            result = cast(T[]) m;
+            // Try to shrink memory, no harm if not possible
+            static if (hasPurePostblit!T)
+                auto success = () @trusted { return alloc.reallocate(m, T.sizeof * initialized); } ();
+            else
+                auto success = alloc.reallocate(m, T.sizeof * initialized);
+            if (success)
+                result = () @trusted { return cast(T[]) m; } ();
         }
 
         return result[0 .. initialized];
@@ -917,7 +936,7 @@ unittest
         assert(b == [4.0, 2.0]);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
+    (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
     test(theAllocator);
 }
 
@@ -940,8 +959,133 @@ unittest
     }
 
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
+    (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
     test(theAllocator);
+}
+
+/*pure*/ nothrow @safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.range : iota;
+    foreach (DummyType; AllDummyRanges)
+    {
+        (alloc) pure nothrow @safe
+        {
+            DummyType d;
+            auto arr = alloc.makeArray(d);
+            assert(arr.length == 10);
+            assert(arr.equal(iota(1, 11)));
+        } (GCAllocator.instance);
+    }
+}
+
+// test failure with a pure, failing struct
+@safe unittest
+{
+    import std.exception : assertThrown, enforce;
+
+    struct NoCopy
+    {
+        int b;
+
+        @disable this();
+
+        this(int b)
+        {
+            this.b = b;
+        }
+
+        // can't be copied
+        this(this)
+        {
+            enforce(b < 3, "there can only be three elements");
+        }
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    auto arr = [NoCopy(1), NoCopy(2), NoCopy(3)];
+    assertThrown(makeArray!NoCopy(Mallocator.instance, arr));
+
+    struct NoCopyRange
+    {
+        static j = 0;
+        bool empty()
+        {
+            return j > 5;
+        }
+
+        auto front()
+        {
+            return NoCopy(j);
+        }
+
+        void popFront()
+        {
+            j++;
+        }
+    }
+    assertThrown(makeArray!NoCopy(Mallocator.instance, NoCopyRange()));
+}
+
+// test failure with an impure, failing struct
+@system unittest
+{
+    import std.exception : assertThrown, enforce;
+
+    static i = 0;
+    static maxElements = 2;
+    struct NoCopy
+    {
+        int val;
+        @disable this();
+
+        this(int b){
+            this.val = i++;
+        }
+
+        // can't be copied
+        this(this)
+        {
+            enforce(i++ < maxElements, "there can only be four elements");
+        }
+    }
+
+    import std.experimental.allocator.mallocator : Mallocator;
+    auto arr = [NoCopy(1), NoCopy(2)];
+    assertThrown(makeArray!NoCopy(Mallocator.instance, arr));
+
+    // allow more copies and thus force reallocation
+    i = 0;
+    maxElements = 30;
+    static j = 0;
+
+    struct NoCopyRange
+    {
+        bool empty()
+        {
+            return j > 100;
+        }
+
+        auto front()
+        {
+            return NoCopy(1);
+        }
+
+        void popFront()
+        {
+            j++;
+        }
+    }
+    assertThrown(makeArray!NoCopy(Mallocator.instance, NoCopyRange()));
+
+    maxElements = 300;
+    auto arr2 = makeArray!NoCopy(Mallocator.instance, NoCopyRange());
+
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.range : iota;
+    assert(arr2.map!`a.val`.equal(iota(32, 204, 2)));
 }
 
 version(unittest)
@@ -949,6 +1093,7 @@ version(unittest)
     private struct ForcedInputRange
     {
         int[]* array;
+        pure nothrow @safe @nogc:
         bool empty() { return !array || (*array).empty; }
         ref int front() { return (*array)[0]; }
         void popFront() { *array = (*array)[1 .. $]; }
@@ -967,13 +1112,13 @@ unittest
         long[] a = alloc.makeArray!long(r);
         assert(a.length == 0 && a.ptr is null);
         auto arr2 = arr;
-        r.array = &arr2;
+        r.array = () @trusted { return &arr2; } ();
         a = alloc.makeArray!long(r);
         assert(a.length == 10);
         assert(a == iota(10).array);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
+    (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
     test(theAllocator);
 }
 
