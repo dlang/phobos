@@ -476,6 +476,19 @@ unittest
     assert(cust.id == uint.max); // default initialized
     cust = theAllocator.make!Customer(42);
     assert(cust.id == 42);
+
+    // explicit passing of outer pointer
+    static class Outer
+    {
+        int x = 3;
+        class Inner
+        {
+            auto getX() { return x; }
+        }
+    }
+    auto outer = theAllocator.make!Outer();
+    auto inner = theAllocator.make!(Outer.Inner)(outer);
+    assert(outer.x == inner.getX);
 }
 
 unittest // bugzilla 15639 & 15772

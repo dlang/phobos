@@ -4273,6 +4273,11 @@ Given a raw memory area $(D chunk), constructs an object of $(D class)
 type $(D T) at that address. The constructor is passed the arguments
 $(D Args).
 
+If `T` is an inner class whose `outer` field can be used to access an instance
+of the enclosing class, then `Args` must not be empty, and the first member of it
+must be a valid initializer for that `outer` field. Correct initialization of
+this field is essential to access members of the outer class inside `T` methods.
+
 Preconditions:
 $(D chunk) must be at least as large as $(D T) needs
 and should have an alignment multiple of $(D T)'s alignment. (The size
@@ -4298,18 +4303,30 @@ if (is(T == class))
     // Initialize the object in its pre-ctor state
     chunk[0 .. classSize] = typeid(T).initializer[];
 
+    static if (isInnerClass!T)
+    {
+        static assert(Args.length > 0,
+            "Initializing an inner class requires a pointer to the outer class");
+        static assert(is(Args[0] : typeof(T.outer)),
+            "The first argument must be a pointer to the outer class");
+
+        result.outer = args[0];
+        alias args1 = args[1..$];
+    }
+    else alias args1 = args;
+
     // Call the ctor if any
-    static if (is(typeof(result.__ctor(args))))
+    static if (is(typeof(result.__ctor(args1))))
     {
         // T defines a genuine constructor accepting args
         // Go the classic route: write .init first, then call ctor
-        result.__ctor(args);
+        result.__ctor(args1);
     }
     else
     {
-        static assert(args.length == 0 && !is(typeof(&T.__ctor)),
+        static assert(args1.length == 0 && !is(typeof(&T.__ctor)),
             "Don't know how to initialize an object of type "
-            ~ T.stringof ~ " with arguments " ~ Args.stringof);
+            ~ T.stringof ~ " with arguments " ~ typeof(args1).stringof);
     }
     return result;
 }
@@ -4325,6 +4342,22 @@ if (is(T == class))
     auto buf = new void[__traits(classInstanceSize, C)];
     auto c = emplace!C(buf, 5);
     assert(c.i == 5);
+}
+
+@system unittest
+{
+    class Outer
+    {
+        int i = 3;
+        class Inner
+        {
+            auto getI() { return i; }
+        }
+    }
+    auto outerBuf = new void[__traits(classInstanceSize, Outer)];
+    auto innerBuf = new void[__traits(classInstanceSize, Outer.Inner)];
+    auto inner = innerBuf.emplace!(Outer.Inner)(outerBuf.emplace!Outer);
+    assert(inner.getI == 3);
 }
 
 @nogc pure nothrow unittest
