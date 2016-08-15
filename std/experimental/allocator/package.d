@@ -666,6 +666,15 @@ unittest
     assert(c.equal([0, 0, 0, 0, 0]));
 }
 
+private enum hasPurePostblit(T) = !hasElaborateCopyConstructor!T ||
+    is(typeof(() pure { T.init.__xpostblit(); }));
+
+private enum hasPureDtor(T) = !hasElaborateDestructor!T ||
+    is(typeof(() pure { T.init.__xdtor(); }));
+
+// `true` when postblit and destructor of T cannot escape references to itself
+private enum canSafelyDeallocPostRewind(T) = hasPurePostblit!T && hasPureDtor!T;
+
 /// Ditto
 T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     auto ref T init)
@@ -673,11 +682,18 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     if (!length) return null;
     auto m = alloc.allocate(T.sizeof * length);
     if (!m.ptr) return null;
-    auto result = cast(T[]) m;
+    auto result = () @trusted { return cast(T[]) m; } ();
     import std.traits : hasElaborateCopyConstructor;
     static if (hasElaborateCopyConstructor!T)
     {
-        scope(failure) alloc.deallocate(m);
+        scope(failure)
+        {
+            static if (canSafelyDeallocPostRewind!T)
+                () @trusted { alloc.deallocate(m); } ();
+            else
+                alloc.deallocate(m);
+        }
+
         size_t i = 0;
         static if (hasElaborateDestructor!T)
         {
@@ -689,15 +705,16 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
                 }
             }
         }
+        import std.conv : emplace;
         for (; i < length; ++i)
         {
-            emplace!T(result.ptr + i, init);
+            emplace!T(&result[i], init);
         }
     }
     else
     {
         alias U = Unqual!T;
-        fillWithMemcpy(cast(U[]) result, *(cast(U*) &init));
+        () @trusted { fillWithMemcpy(cast(U[]) result, *(cast(U*) &init)); }();
     }
     return result;
 }
@@ -722,7 +739,7 @@ unittest
     test!(immutable int)();
 }
 
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -733,8 +750,56 @@ unittest
         assert(a == [ 42, 42, 42, 42, 42 ]);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.instance);
+    (alloc) /*pure nothrow*/ @safe { test(alloc); } (GCAllocator.instance);
     test(theAllocator);
+}
+
+// test failure with a pure, failing struct
+@safe unittest
+{
+    import std.exception : assertThrown, enforce;
+
+    struct NoCopy
+    {
+        @disable this();
+
+        this(int b){}
+
+        // can't be copied
+        this(this)
+        {
+            enforce(1 == 2);
+        }
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    assertThrown(makeArray!NoCopy(Mallocator.instance, 10, NoCopy(42)));
+}
+
+// test failure with an impure, failing struct
+@system unittest
+{
+    import std.exception : assertThrown, enforce;
+
+    static int i = 0;
+    struct Singleton
+    {
+        @disable this();
+
+        this(int b){}
+
+        // can't be copied
+        this(this)
+        {
+            enforce(i++ == 0);
+        }
+
+        ~this()
+        {
+            i--;
+        }
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    assertThrown(makeArray!Singleton(Mallocator.instance, 10, Singleton(42)));
 }
 
 /// Ditto
