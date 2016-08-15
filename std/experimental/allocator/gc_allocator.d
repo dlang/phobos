@@ -21,7 +21,7 @@ struct GCAllocator
     deallocate) and $(D reallocate) methods are $(D @system) because they may
     move memory around, leaving dangling pointers in user code.
     */
-    @trusted void[] allocate(size_t bytes) shared
+    pure nothrow @trusted void[] allocate(size_t bytes) shared
     {
         if (!bytes) return null;
         auto p = GC.malloc(bytes);
@@ -52,7 +52,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool reallocate(ref void[] b, size_t newSize) shared
+    pure nothrow @system bool reallocate(ref void[] b, size_t newSize) shared
     {
         import core.exception : OutOfMemoryError;
         try
@@ -69,7 +69,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    void[] resolveInternalPointer(void* p) shared
+    pure nothrow void[] resolveInternalPointer(void* p) shared
     {
         auto r = GC.addrOf(p);
         if (!r) return null;
@@ -77,7 +77,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool deallocate(void[] b) shared
+    pure nothrow @system bool deallocate(void[] b) shared
     {
         GC.free(b.ptr);
         return true;
@@ -110,7 +110,7 @@ struct GCAllocator
     static shared GCAllocator instance;
 
     // Leave it undocummented for now.
-    @trusted void collect() shared
+    nothrow @trusted void collect() shared
     {
         GC.collect();
     }
