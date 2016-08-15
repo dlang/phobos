@@ -46,6 +46,7 @@
  *           $(LREF hasNested)
  *           $(LREF hasUnsharedAliasing)
  *           $(LREF InterfacesTuple)
+ *           $(LREF isInnerClass)
  *           $(LREF isNested)
  *           $(LREF MemberFunctionsTuple)
  *           $(LREF RepresentationTypeTuple)
@@ -2036,8 +2037,11 @@ template isInnerClass(T)
 {
     import std.meta : staticIndexOf;
 
-    enum isInnerClass = __traits(isSame, typeof(T.outer), __traits(parent, T))
-                     && (staticIndexOf!(__traits(allMembers, T), "outer") == -1);
+    static if (is(typeof(T.outer)))
+        enum isInnerClass = __traits(isSame, typeof(T.outer), __traits(parent, T))
+                         && (staticIndexOf!(__traits(allMembers, T), "outer") == -1);
+    else
+        enum isInnerClass = false;
 }
 
 ///
@@ -2065,6 +2069,12 @@ template isInnerClass(T)
         }
     }
     static assert(!isInnerClass!(Outer2.Inner));
+
+    static class Outer3
+    {
+        static class Inner { int outer; }
+    }
+    static assert(!isInnerClass!(Outer3.Inner));
 }
 
 /**
