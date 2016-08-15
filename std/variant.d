@@ -2296,7 +2296,7 @@ unittest
 unittest
 {
     // https://issues.dlang.org/show_bug.cgi?id=16383
-    class Foo {this() immutable {}};
+    class Foo {this() immutable {}}
     alias V = Algebraic!(immutable Foo);
 
     auto x = V(new immutable Foo).visit!(
