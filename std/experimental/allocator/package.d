@@ -236,6 +236,7 @@ unittest
     tuMalloc.deallocate(c);
 }
 
+import std.meta : AliasSeq;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
@@ -413,6 +414,8 @@ Dynamically allocates (using $(D alloc)) and then creates in the memory
 allocated an object of type $(D T), using $(D args) (if any) for its
 initialization. Initialization occurs in the memory allocated and is otherwise
 semantically the same as $(D T(args)).
+If `T` is a nested class with an `outer` field to the containing class, this
+function takes an additional mandatory argument used to initialize that field.
 (Note that using $(D alloc.make!(T[])) creates a pointer to an (empty) array
 of $(D T)s, not an array. To use an allocator to allocate and initialize an
 array, use $(D alloc.makeArray!T) described below.)
@@ -422,6 +425,8 @@ T = Type of the object being created.
 alloc = The allocator used for getting the needed memory. It may be an object
 implementing the static interface for allocators, or an $(D IAllocator)
 reference.
+outer = Instance of the outer class used to initialize the `outer` field of an
+inner class
 args = Optional arguments used for initializing the created object. If not
 present, the object is default constructed.
 
@@ -433,6 +438,7 @@ Throws: If $(D T)'s constructor throws, deallocates the allocated memory and
 propagates the exception.
 */
 auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
+    if (!(is(T == class)) || !isInnerClass!T)
 {
     import std.algorithm.comparison : max;
     import std.conv : emplace;
@@ -442,6 +448,21 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
     static if (is(T == class))
         return emplace!T(m, args);
     else return emplace(cast(T*) m.ptr, args);
+}
+/// ditto
+auto make(T, Allocator, P, A...)(auto ref Allocator alloc, auto ref P outer, auto ref A args)
+    if (is(T == class) && isInnerClass!T && is(P : AliasSeq!(__traits(parent, T))[0]))
+{
+    import std.algorithm.comparison : max;
+    import std.conv : emplace;
+    auto m = alloc.allocate(max(stateSize!T, 1));
+    if (!m.ptr) return null;
+    scope(failure) alloc.deallocate(m);
+    static if (is(T == class))
+        auto res = emplace!T(m, args);
+    else auto res = emplace(cast(T*) m.ptr, args);
+    res.outer = outer;
+    return res;
 }
 
 ///
@@ -476,6 +497,18 @@ unittest
     assert(cust.id == uint.max); // default initialized
     cust = theAllocator.make!Customer(42);
     assert(cust.id == 42);
+
+    static class Outer
+    {
+        int x = 3;
+        class Inner
+        {
+            auto getX() { return x; }
+        }
+    }
+    auto outer = theAllocator.make!Outer();
+    auto inner = theAllocator.make!(Outer.Inner)(outer);
+    assert(outer.x == inner.getX);
 }
 
 unittest // bugzilla 15639 & 15772
