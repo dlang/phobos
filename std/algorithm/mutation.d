@@ -732,10 +732,29 @@ void initializeAll(Range)(Range range)
         //We avoid calling emplace here, because our goal is to initialize to
         //the static state of T.init,
         //So we want to avoid any un-necassarilly CC'ing of T.init
-        auto p = typeid(T).initializer().ptr;
-        if (p)
+        auto p = typeid(T).initializer();
+        if (p.ptr)
+        {
             for ( ; !range.empty ; range.popFront() )
-                memcpy(addressOf(range.front), p, T.sizeof);
+            {
+                static if(__traits(isStaticArray, T))
+                {
+                    // static array initializer only contains initialization
+                    // for one element of the static array.
+                    auto elemp = cast(void *)addressOf(range.front);
+                    auto endp = elemp + T.sizeof;
+                    while(elemp < endp)
+                    {
+                        memcpy(elemp, p.ptr, p.length);
+                        elemp += p.length;
+                    }
+                }
+                else
+                {
+                    memcpy(addressOf(range.front), p.ptr, T.sizeof);
+                }
+            }
+        }
         else
             static if (isDynamicArray!Range)
                 memset(range.ptr, 0, range.length * T.sizeof);
@@ -857,6 +876,26 @@ unittest
             assert(ss2[] == [S(2), S(2), S(2)]);
         }
     }
+}
+
+// test that initializeAll works for arrays of static arrays of structs with
+// elaborate assigns.
+unittest
+{
+    struct Int {
+        ~this() {}
+        int x = 3;
+    }
+    Int[2] xs = [Int(1), Int(2)];
+    struct R {
+        bool done;
+        bool empty() { return done; }
+        ref Int[2] front() { return xs; }
+        void popFront() { done = true; }
+    }
+    initializeAll(R());
+    assert(xs[0].x == 3);
+    assert(xs[1].x == 3);
 }
 
 // move
