@@ -1067,7 +1067,7 @@ private:
         {
             job.job();
         }
-        catch (Throwable e)
+        catch (Exception e)
         {
             job.exception = e;
         }
@@ -2679,7 +2679,7 @@ public:
                 {
                     tasks[0].job();
                 }
-                catch (Throwable e)
+                catch (Exception e)
                 {
                     tasks[0].exception = e;
                 }
@@ -2704,7 +2704,7 @@ public:
                 {
                     task.yieldForce;
                 }
-                catch (Throwable e)
+                catch (Exception e)
                 {
                     addToChain(e, firstException, lastException);
                     continue;
@@ -3414,7 +3414,7 @@ private void submitAndExecute(
         {
             tasks[0].job();
         }
-        catch (Throwable e)
+        catch (Exception e)
         {
             tasks[0].exception = e;
         }
@@ -3435,7 +3435,7 @@ private void submitAndExecute(
         {
             task.yieldForce;
         }
-        catch (Throwable e)
+        catch (Exception e)
         {
             addToChain(e, firstException, lastException);
             continue;

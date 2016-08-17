@@ -132,7 +132,7 @@ version(unittest)
     {
         try
             test();
-        catch (Throwable e)
+        catch (Exception e)
         {
             writefln(" --- std.socket(%d) test fails depending on environment ---", line);
             writefln(" (%s)", e);
@@ -2839,7 +2839,7 @@ public:
                 newSocket._blocking = _blocking;                 //inherits blocking mode
             newSocket._family = _family;             //same family
         }
-        catch (Throwable o)
+        catch (Exception o)
         {
             _close(newsock);
             throw o;
