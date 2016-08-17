@@ -8777,10 +8777,18 @@ unittest
     if it were passed to it, the original range is $(I not) copied but is
     consumed as if it were a reference type.
 
-    Note that $(D save) works as normal and operates on a new range, so if
-    $(D save) is ever called on the RefRange, then no operations on the saved
-    range will affect the original.
+    Note:
+        `save` works as normal and operates on a new _range, so if
+        `save` is ever called on the `RefRange`, then no operations on the
+        saved _range will affect the original.
 
+    Params:
+        range = the range to construct the `RefRange` from
+
+    Returns:
+        A `RefRange`. If the given _range is a class type
+        (and thus is already a reference type), then the original
+        range is returned rather than a `RefRange`.
   +/
 struct RefRange(R)
     if (isInputRange!R)
@@ -9484,12 +9492,7 @@ unittest // issue 14575
     auto rr2 = refRange(&r2);
 }
 
-/++
-    Helper function for constructing a $(LREF RefRange).
-
-    If the given range is a class type (and thus is already a reference type),
-    then the original range is returned rather than a $(LREF RefRange).
-  +/
+/// ditto
 auto refRange(R)(R* range)
     if (isInputRange!R && !is(R == class))
 {
