@@ -5620,6 +5620,13 @@ enum bool isMutable(T) = !is(T == const) && !is(T == immutable) && !is(T == inou
  * Returns true if T is an instance of the template S.
  */
 enum bool isInstanceOf(alias S, T) = is(T == S!Args, Args...);
+/// ditto
+template isInstanceOf(alias S, alias T)
+{
+    enum impl(alias T : S!Args, Args...) = true;
+    enum impl(alias T) = false;
+    enum isInstanceOf = impl!T;
+}
 
 ///
 @safe unittest
@@ -5628,12 +5635,28 @@ enum bool isInstanceOf(alias S, T) = is(T == S!Args, Args...);
     static struct Bar(T...) { }
     static struct Doo(T) { }
     static struct ABC(int x) { }
+    static void fun(T)() { }
+    template templ(T) { }
+
     static assert(isInstanceOf!(Foo, Foo!int));
     static assert(!isInstanceOf!(Foo, Bar!int));
     static assert(!isInstanceOf!(Foo, int));
     static assert(isInstanceOf!(Doo, Doo!int));
     static assert(isInstanceOf!(ABC, ABC!1));
-    static assert(!__traits(compiles, isInstanceOf!(Foo, Foo)));
+    static assert(!isInstanceOf!(Foo, Foo));
+    static assert(isInstanceOf!(fun, fun!int));
+    static assert(isInstanceOf!(templ, templ!int));
+}
+
+@safe unittest
+{
+    static void fun1(T)() { }
+    static void fun2(T)() { }
+    template templ1(T) { }
+    template templ2(T) { }
+
+    static assert(!isInstanceOf!(fun1, fun2!int));
+    static assert(!isInstanceOf!(templ1, templ2!int));
 }
 
 /**
