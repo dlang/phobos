@@ -56,7 +56,7 @@ setup_repos()
     # set a default in case we run into rate limit restrictions
     local base_branch="master"
     if [ -n "${CIRCLE_PR_NUMBER:-}" ]; then
-        base_branch=$(curl -fsSL https://api.github.com/repos/dlang/dmd/pulls/$CIRCLE_PR_NUMBER | jq -r '.base.ref')
+        base_branch=$(curl -fsSL https://api.github.com/repos/dlang/phobos/pulls/$CIRCLE_PR_NUMBER | jq -r '.base.ref')
     else
         base_branch=$CIRCLE_BRANCH
     fi
