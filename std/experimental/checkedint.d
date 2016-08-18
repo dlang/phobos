@@ -1187,10 +1187,11 @@ static:
     v = The left-hand side of the comparison (`T` is the first argument to
     `Checked`)
 
-    Returns: $(UL $(LI For $(D x == '-' || x == '~'): If  $(D v ==
+    Returns: $(UL $(LI For $(D x == "-" || x == "~"): If  $(D v ==
     WithNaN.defaultValue!T), the function returns `WithNaN.defaultValue!T`.
-    Otherwise it returns the normal result of the operator.) $(LI For $(D x == '++' ||
-    x == '--'): The function returns `void`.))
+    Otherwise it returns the normal result of the operator.) $(LI For $(D x ==
+    "++" || x == "--"): The function returns `void`.))
+
     */
     auto hookOpUnary(string x, T)(ref T v)
     {
