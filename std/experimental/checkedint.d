@@ -3,23 +3,24 @@
 This module defines facilities for efficient checking of integral operations
 against overflow, casting with loss of precision, unexpected change of sign,
 etc. The checking (and possibly correction) can be done at operation level, for
-example $(D opChecked!"+"(x, y, overflow)) adds two integrals `x` and `y` and
-sets `overflow` to `true` if an overflow occurred. The flag (passed by
-reference) is not touched if the operation succeeded, so the same flag can be
-reused for a sequence of operations and tested at the end.
+example $(LREF opChecked)$(D !"+"(x, y, overflow)) adds two integrals `x` and
+`y` and sets `overflow` to `true` if an overflow occurred. The flag `overflow`
+(a `bool` passed by reference) is not touched if the operation succeeded, so the
+same flag can be reused for a sequence of operations and tested at the end.
 
 Issuing individual checked operations is flexible and efficient but often
-tedious. The `Checked` facility offers encapsulated integral wrappers that do
-all checking internally and have configurable behavior upon erroneous results.
-For example, `Checked!int` is a type that behaves like `int` but issues an
-`assert(0)` (i.e. throws an `Error` in debug mode or aborts execution in release
-mode) whenever involved in an operation that produces the arithmetically wrong
-result. For example $(D Checked!int(1_000_000) * 10_000) fails with `assert(0)`
-because the operation overflows. Also, $(D Checked!int(-1) > uint(0)) fails with
-`assert(0)` (even though the built-in comparison $(D int(-1) > uint(0)) is
-surprisingly true due to language's conversion rules modeled  after C). Thus,
-`Checked!int` is a virtually drop-in replacement for `int` useable in debug
-builds, to be replaced by `int` if efficiency demands it.
+tedious. The $(LREF Checked) facility offers encapsulated integral wrappers that
+do all checking internally and have configurable behavior upon erroneous
+results. For example, `Checked!int` is a type that behaves like `int` but aborts
+execution immediately whenever involved in an operation that produces the
+arithmetically wrong result. The accompanying convenience function $(LREF
+checked) uses type deduction to convert a value `x` of integral type `T` to
+`Checked!T` by means of `checked(x)`. For example, $(D checked(1_000_000) *
+10_000) aborts execution because the operation overflows. Also, $(D checked(-1) >
+uint(0)) aborts execution (even though the built-in comparison $(D int(-1) >
+uint(0)) is surprisingly true due to language's conversion rules modeled  after
+C). Thus, `Checked!int` is a virtually drop-in replacement for `int` useable in
+debug builds, to be replaced by `int` in release mode if efficiency demands it.
 
 `Checked`  has customizable behavior with the help of a second type parameter,
 `Hook`. Depending on what methods `Hook` defines, core operations on the
@@ -33,19 +34,20 @@ This module provides a few predefined hooks (below) that add useful behavior to
 
 $(UL
 
-$(LI `Abort` fails every incorrect operation with a message to `stderr` followed
-by a call to `abort()`. It is the default second parameter, i.e. `Checked!short`
-is the same as $(D Checked!(short, Abort)).)
+$(LI $(LREF Abort) fails every incorrect operation with a message to $(REF
+stderr, std, stdio) followed by a call to `std.core.abort`. It is the default
+second parameter, i.e. `Checked!short` is the same as $(D Checked!(short,
+Abort)). This is also the type returned by the `checked` convenience function.)
 
-$(LI `ProperCompare` fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`,
+$(LI $(LREF ProperCompare) fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`,
 and `>=` to return correct results in all circumstances, at a slight cost in
     efficiency. For example, $(D Checked!(uint, ProperCompare)(1) > -1) is `true`,
-which is not the case with the built-in comparison. Also, comparing numbers for
+which is not the case for the built-in comparison. Also, comparing numbers for
 equality with floating-point numbers only passes if the integral can be
 converted to the floating-point number precisely, so as to preserve transitivity
 of equality.)
 
-$(LI `WithNaN` reserves a special "Not a Number" value. )
+$(LI $(LREF WithNaN) reserves a special "Not a Number" value.)
 
 )
 
@@ -53,7 +55,7 @@ These policies may be used alone, e.g. $(D Checked!(uint, WithNaN)) defines a
 `uint`-like type that reaches a stable NaN state for all erroneous operations.
 They may also be "stacked" on top of each other, owing to the property that a
 checked integral emulates an actual integral, which means another checked
-integral can be built on top of it. Some interesting combinations include:
+integral can be built on top of it. Some combinations of interest include:
 
 $(UL
 
@@ -81,18 +83,18 @@ import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
 ///
 unittest
 {
-    int[] addAndMerge(int[] a, int[] b, int offset)
+    int[] concatAndAdd(int[] a, int[] b, int offset)
     {
         // Aborts on overflow on size computation
-        auto r = new int[(Checked!size_t(a.length) + b.length).representation];
+        auto r = new int[(checked(a.length) + b.length).get];
         // Aborts on overflow on element computation
         foreach (i; 0 .. a.length)
-            r[i] = (a[i] + Checked!int(offset)).representation;
+            r[i] = (a[i] + checked(offset)).get;
         foreach (i; 0 .. b.length)
-            r[i + a.length] = (b[i] + Checked!int(offset)).representation;
+            r[i + a.length] = (b[i] + checked(offset)).get;
         return r;
     }
-    assert(addAndMerge([1, 2, 3], [4, 5], -1) == [0, 1, 2, 3, 4]);
+    assert(concatAndAdd([1, 2, 3], [4, 5], -1) == [0, 1, 2, 3, 4]);
 }
 
 /**
@@ -125,24 +127,33 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     else alias hook = Hook;
     // } state
 
-    // representation
+    // get
     /**
     Returns a copy of the underlying value.
     */
-    auto representation() inout { return payload; }
+    auto get() inout { return payload; }
     ///
     unittest
     {
-        auto x = Checked!ubyte(ubyte(42));
-        static assert(is(typeof(x.representation()) == ubyte));
-        assert(x.representation == 42);
+        auto x = checked(ubyte(42));
+        static assert(is(typeof(x.get()) == ubyte));
+        assert(x.get == 42);
     }
 
     /**
     Defines the minimum and maximum allowed.
     */
     static if (hasMember!(Hook, "min"))
+    {
         enum min = Checked!(T, Hook)(Hook.min!T);
+        ///
+        unittest
+        {
+            assert(Checked!short.min == -32768);
+            assert(Checked!(short, WithNaN).min == -32767);
+            assert(Checked!(uint, WithNaN).max == uint.max - 1);
+        }
+    }
     else
         enum min = Checked(T.min);
     /// ditto
@@ -150,13 +161,6 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         enum max = Checked(Hook.max!T);
     else
         enum max = Checked(T.max);
-    ///
-    unittest
-    {
-        assert(Checked!short.min == -32768);
-        assert(Checked!(short, WithNaN).min == -32767);
-        assert(Checked!(uint, WithNaN).max == uint.max - 1);
-    }
 
     /**
     Constructor taking a value properly convertible to the underlying type. `U`
@@ -168,12 +172,20 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     if (valueConvertible!(U, T) ||
         !isIntegral!T && is(typeof(T(rhs))) ||
         is(U == Checked!(V, W), V, W) &&
-            is(typeof(Checked(rhs.representation))))
+            is(typeof(Checked(rhs.get))))
     {
         static if (isIntegral!U)
             payload = rhs;
         else
             payload = rhs.payload;
+    }
+    ///
+    unittest
+    {
+        auto a = Checked!long(42L);
+        assert(a == 42);
+        auto b = Checked!long(4242); // convert 4242 to long
+        assert(b == 4242);
     }
 
     /**
@@ -186,26 +198,35 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         else
             payload = rhs.payload;
     }
+    ///
+    unittest
+    {
+        Checked!long a;
+        a = 42L;
+        assert(a == 42);
+        a = 4242;
+        assert(a == 4242);
+    }
 
     // opCast
     /**
     Casting operator to integral, `bool`, or floating point type. If `Hook`
     defines `hookOpCast`, the call immediately returns
-    `hook.hookOpCast!U(representation)`. Otherwise, casting to `bool` yields $(D
-    representation != 0) and casting to another integral that can represent all
-    values of `T` returns `representation` promoted to `U`.
+    `hook.hookOpCast!U(get)`. Otherwise, casting to `bool` yields $(D
+    get != 0) and casting to another integral that can represent all
+    values of `T` returns `get` promoted to `U`.
 
     If a cast to a floating-point type is requested and `Hook` defines
-    `onBadCast`, the cast is verified by ensuring $(D representation == cast(T)
-    U(representation)). If that is not `true`,
-    `hook.onBadCast!U(representation)` is returned.
+    `onBadCast`, the cast is verified by ensuring $(D get == cast(T)
+    U(get)). If that is not `true`,
+    `hook.onBadCast!U(get)` is returned.
 
     If a cast to an integral type is requested and `Hook` defines `onBadCast`,
-    the cast is verified by ensuring `representation` and $(D cast(U)
-    representation) are the same arithmetic number. (Note that `int(-1)` and
+    the cast is verified by ensuring `get` and $(D cast(U)
+    get) are the same arithmetic number. (Note that `int(-1)` and
     `uint(1)` are different values arithmetically although they have the same
     bitwise representation and compare equal by language rules.) If the numbers
-    are not arithmetically equal, `hook.onBadCast!U(representation)` is
+    are not arithmetically equal, `hook.onBadCast!U(get)` is
     returned.
 
     */
@@ -246,7 +267,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     ///
     unittest
     {
-        assert(cast(uint) Checked!int(42) == 42);
+        assert(cast(uint) checked(42) == 42);
         assert(cast(uint) Checked!(int, WithNaN)(-42) == uint.max);
     }
 
@@ -254,10 +275,13 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     /**
     Compares `this` against `rhs` for equality. If `Hook` defines
     `hookOpEquals`, the function forwards to $(D
-    hook.hookOpEquals(representation, rhs)). Otherwise, the result of the
-    built-in operation $(D representation == rhs) is returned.
+    hook.hookOpEquals(get, rhs)). Otherwise, the result of the
+    built-in operation $(D get == rhs) is returned.
 
-    If `U` is an instance of `Checked`
+    If `U` is also an instance of `Checked`, both hooks (left- and right-hand
+    side) are introspected for the method `hookOpEquals`. If both define it,
+    priority is given to the left-hand side.
+
     */
     bool opEquals(U)(U rhs)
     if (isIntegral!U || isFloatingPoint!U || is(U == bool) ||
@@ -294,8 +318,51 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
             return payload == rhs;
     }
 
+    ///
+    version(StdDdoc) unittest
+    {
+        static struct MyHook
+        {
+            static bool thereWereErrors;
+            static bool hookOpEquals(L, R)(L lhs, R rhs)
+            {
+                if (lhs != rhs) return false;
+                static if (isUnsigned!L && !isUnsigned!R)
+                {
+                    if (lhs > 0 && rhs < 0) thereWereErrors = true;
+                }
+                else static if (isUnsigned!R && !isUnsigned!L)
+                    if (lhs < 0 && rhs > 0) thereWereErrors = true;
+                // Preserve built-in behavior.
+                return true;
+            }
+        }
+        auto a = Checked!(int, MyHook)(-42);
+        assert(a == uint(-42));
+        assert(MyHook.thereWereErrors);
+        static struct MyHook2
+        {
+            static bool hookOpEquals(L, R)(L lhs, R rhs)
+            {
+                return lhs == rhs;
+            }
+        }
+        MyHook.thereWereErrors = false;
+        assert(Checked!(uint, MyHook2)(uint(-42)) == a);
+        // Hook on left hand side takes precedence, so no errors
+        assert(!MyHook.thereWereErrors);
+    }
+
     // opCmp
     /**
+    Compares `this` against `rhs` for ordering. If `Hook` defines `hookOpCmp`,
+    the function forwards to $(D hook.hookOpEquals(get, rhs)).
+    Otherwise, the result of the built-in comparison operation is returned.
+
+    If `U` is also an instance of `Checked`, both hooks (left- and right-hand
+    side) are introspected for the method `hookOpCmp`. If both define it,
+    priority is given to the left-hand side.
+
     */
     auto opCmp(U)(const U rhs) //const pure @safe nothrow @nogc
     if (isIntegral!U || isFloatingPoint!U || is(U == bool))
@@ -348,8 +415,61 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         }
     }
 
+    ///
+    version(StdDdoc) unittest
+    {
+        static struct MyHook
+        {
+            static bool thereWereErrors;
+            static int hookOpCmp(L, R)(L lhs, R rhs)
+            {
+                static if (isUnsigned!L && !isUnsigned!R)
+                {
+                    if (lhs >= 0 && rhs < 0 && rhs >= lhs)
+                        thereWereErrors = true;
+                }
+                else static if (isUnsigned!R && !isUnsigned!L)
+                    if (rhs >= 0 && lhs < 0 && lhs >= rhs)
+                        thereWereErrors = true;
+                // Preserve built-in behavior.
+                return lhs < rhs ? -1 : lhs > rhs;
+            }
+        }
+        auto a = Checked!(int, MyHook)(-42);
+        assert(a < uint(-42));
+        assert(MyHook.thereWereErrors);
+        static struct MyHook2
+        {
+            static int hookOpCmp(L, R)(L lhs, R rhs)
+            {
+                // Default behavior
+                return lhs < rhs ? -1 : lhs > rhs;
+            }
+        }
+        MyHook.thereWereErrors = false;
+        assert(Checked!(uint, MyHook2)(uint(-42)) == a);
+        // Hook on left hand side takes precedence, so no errors
+        assert(!MyHook.thereWereErrors);
+    }
+
     // opUnary
     /**
+
+    Defines unary operators `+`, `-`, `~`, `++`, and `--`. Unary `+` is not
+    overridable and always has built-in behavior (returns `this`). For the
+    others, if `Hook` defines `hookOpUnary`, `opUnary` forwards to $(D
+    Checked!(typeof(hook.hookOpUnary!op(get)),
+    Hook)(hook.hookOpUnary!op(get))).
+
+    If `Hook` does not define `hookOpUnary` but defines `onOverflow`, `opUnary`
+    forwards to `hook.onOverflow!op(get)` in case an overflow occurs.
+    For `++` and `--`, the payload is assigned from the result of the call to
+    `onOverflow`.
+
+    Note that unary `-` is considered to overflow if `T` is a signed integral of
+    32 or 64 bits and is equal to the most negative value. This is because that
+    value has no positive negation.
+
     */
     auto opUnary(string op)()
     if (op == "+" || op == "-" || op == "~")
@@ -361,8 +481,8 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
             auto r = hook.hookOpUnary!op(payload);
             return Checked!(typeof(r), Hook)(r);
         }
-        else static if (isIntegral!T && !isUnsigned!T && op == "-" &&
-                hasMember!(Hook, "onOverflow"))
+        else static if (op == "-" && isIntegral!T && T.sizeof >= 4 &&
+                !isUnsigned!T && hasMember!(Hook, "onOverflow"))
         {
             import core.checkedint;
             static assert(is(typeof(-payload) == typeof(payload)));
@@ -403,8 +523,39 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         return this;
     }
 
+    ///
+    version(StdDdoc) unittest
+    {
+        static struct MyHook
+        {
+            static bool thereWereErrors;
+            static L hookOpUnary(string x, L)(L lhs)
+            {
+                if (x == "-" && lhs == -lhs) thereWereErrors = true;
+                return -lhs;
+            }
+        }
+        auto a = Checked!(long, MyHook)(long.min);
+        assert(a == -a);
+        assert(MyHook.thereWereErrors);
+    }
+
     // opBinary
     /**
+
+    Defines binary operators `+`, `-`, `*`, `/`, `%`, `^^`, `&`, `|`, `^`, `<<`, `>>`,
+    and `>>>`. If `Hook` defines `hookOpBinary`, `opBinary` forwards to $(D
+    Checked!(typeof(hook.hookOpBinary!op(get, rhs)),
+    Hook)(hook.hookOpBinary!op(get, rhs))).
+
+    If `Hook` does not define `hookOpBinary` but defines `onOverflow`,
+    `opBinary` forwards to `hook.onOverflow!op(get, rhs)` in case an
+    overflow occurs.
+
+    If two `Checked` instances are involved in a binary operation and both
+    define `hookOpBinary`, the left-hand side hook has priority. If both define
+    `onOverflow`, a compile-time error occurs.
+
     */
     auto opBinary(string op, Rhs)(const Rhs rhs)
     if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool))
@@ -444,7 +595,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     /// ditto
     auto opBinary(string op, U, Hook1)(Checked!(U, Hook1) rhs)
     {
-        alias R = typeof(representation + rhs.payload);
+        alias R = typeof(get + rhs.payload);
         static if (valueConvertible!(T, R) && valueConvertible!(U, R) ||
             is(Hook == Hook1))
         {
@@ -475,12 +626,17 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         else
         {
             static assert(0, "Conflict between lhs and rhs hooks," ~
-                " use .representation on one side to disambiguate.");
+                " use .get on one side to disambiguate.");
         }
     }
 
     // opBinaryRight
     /**
+
+    Defines binary operators `+`, `-`, `*`, `/`, `%`, `^^`, `&`, `|`, `^`, `<<`,
+    `>>`, and `>>>` for the case when a built-in numeric or Boolean type is on
+    the left-hand side, and a `Checked` instance is on the right-hand side.
+
     */
     auto opBinaryRight(string op, Lhs)(const Lhs lhs)
     if (isIntegral!Lhs || isFloatingPoint!Lhs || is(Lhs == bool))
@@ -520,6 +676,14 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
 
     // opOpAssign
     /**
+
+    Defines operators `+=`, `-=`, `*=`, `/=`, `%=`, `^^=`, `&=`, `|=`, `^=`,
+    `<<=`, `>>=`, and `>>>=`. If `Hook` defines `hookOpOpAssign`, `opOpAssign`
+    forwards to `hook.hookOpOpAssign!op(payload, rhs)`, where `payload` is a
+    reference to the internally held data so the hook can change it. Otherwise,
+    if `Hook` defines `onBadOpOpAssign` and an overflow occurs, the payload is
+    assigned from `hook.onBadOpOpAssign!op(payload, Rhs(rhs))`. In all other
+    cases, the built-in behavior is carried out.
     */
     ref Checked opOpAssign(string op, Rhs)(const Rhs rhs)
     if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool))
@@ -568,54 +732,166 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     }
 }
 
-// representation
+/**
+
+Convenience function that turns an integral into the corresponding `Checked`
+instance by using template argument deduction. The hook type may be specified
+(by default `Abort`).
+
+*/
+template checked(Hook = Abort)
+{
+    Checked!(T, Hook) checked(T)(const T value)
+    if (is(typeof(Checked!(T, Hook)(value))))
+    {
+        return Checked!(T, Hook)(value);
+    }
+}
+
+///
 unittest
 {
-    assert(Checked!(ubyte, void)(ubyte(22)).representation == 22);
+    static assert(is(typeof(checked(42)) == Checked!int));
+    assert(checked(42) == Checked!int(42));
+    static assert(is(typeof(checked!WithNaN(42)) == Checked!(int, WithNaN)));
+    assert(checked!WithNaN(42) == Checked!(int, WithNaN)(42));
+}
+
+// get
+unittest
+{
+    assert(Checked!(ubyte, void)(ubyte(22)).get == 22);
 }
 
 // Abort
 /**
-Force all overflows to fail with `assert(0)`.
+
+Force all integral errors to fail by printing an error message to `stderr` and
+then abort the program. `Abort` is the default second argument for `Checked`.
+
 */
 struct Abort
 {
-    private static void abort(string msg)
+    private static void abort(A...)(string fmt, A args)
     {
         import std.stdio : stderr;
-        stderr.writeln(msg);
+        stderr.writefln(fmt, args);
         import core.stdc.stdlib : abort;
-        abort();
+        abort;
     }
 static:
+    /**
+
+    Called automatically upon a bad cast (one that loses precision or attempts
+    to convert a negative value to an unsigned type). The source type is `Src`
+    and the destination type is `Dst`.
+
+    Params:
+    src = The source of the cast
+
+    Returns: Nominally the result is the desired value of the cast operation,
+    which will be forwarded as the result of the cast. For `Abort`, the
+    function never returns because it aborts the program.
+
+    */
     Dst onBadCast(Dst, Src)(Src src)
     {
-        abort("Bad cast");
+        abort("Erroneous cast attempted: cast(%s) %s(%s)",
+            Dst.stringof, Src.stringof, src);
         assert(0);
     }
-    Lhs onBadOpOpAssign(string x, Lhs, Rhs)(Lhs, Rhs)
+
+    /**
+
+    Called automatically upon a bad `opOpAssign` call (one that loses precision
+    or attempts to convert a negative value to an unsigned type).
+
+    Params:
+    x = The binary operator
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side value involved in the operator
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Abort`, the function never returns because
+    it aborts the program.
+
+    */
+    Lhs onBadOpOpAssign(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        abort("Bad opAssign");
+        abort("Erroneous assignment attempted: %s(%s) %s= %s(%s)",
+            Lhs.stringof, lhs, x, Rhs.stringof, rhs);
         assert(0);
     }
+
+    /**
+
+    Called automatically upon a bad `opEquals` call (one that would make a
+    signed negative value appear equal to an unsigned positive value).
+
+    Params:
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side type involved in the operator
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Abort`, the function never returns because
+    it aborts the program.
+
+    */
     bool onBadOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        abort("Bad comparison for equality");
+        abort("Erroneous comparison attempted: %s(%s) == %s(%s)",
+            Lhs.stringof, lhs, Rhs.stringof, rhs);
         assert(0);
     }
+
+    /**
+
+    Called automatically upon a bad `opCmp` call (one that would make a signed
+    negative value appear greater than or equal to an unsigned positive value).
+
+    Params:
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side type involved in the operator
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Abort`, the function never returns because
+    it aborts the program.
+
+    */
     bool onBadOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        abort("Bad comparison for ordering");
+        abort("Erroneous ordering comparison attempted: %s(%s) and %s(%s)",
+            Lhs.stringof, lhs, Rhs.stringof, rhs);
         assert(0);
     }
-    typeof(~Lhs()) onOverflow(string op, Lhs)(Lhs lhs)
+
+    /**
+
+    Called automatically upon an overflow during a unary or binary operation.
+
+    Params:
+    Lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    Rhs = The right-hand side type involved in the operator
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Abort`, the function never returns because
+    it aborts the program.
+
+    */
+    typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
     {
-        abort("Overflow on unary \"" ~ op ~ "\"");
+        abort("Overflow on unary operator: %s%s(%s)", x, Lhs.stringof, lhs);
         assert(0);
     }
-    typeof(Lhs() + Rhs()) onOverflow(string op, Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    /// ditto
+    typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        abort("Overflow on binary \"" ~ op ~ "\"");
+        abort("Overflow on binary operator: %s(%s) %s %s(%s)",
+            Lhs.stringof, lhs, x, Rhs.stringof, rhs);
         assert(0);
     }
 }
@@ -631,13 +907,13 @@ unittest
 // ProperCompare
 /**
 
-Implements a hook that provides arithmetically correct comparisons for equality
-and ordering. Comparing an object of type $(D Checked!(X, ProperCompare))
-against another integral (for equality or ordering) ensures that no surprising
-conversions from signed to unsigned integral occur before the comparison. Using
-$(D Checked!(X, ProperCompare)) on either side of a comparison for equality
-against a floating-point number makes sure the integral can be properly
-converted to the floating point type, thus making sure equality is transitive.
+Hook that provides arithmetically correct comparisons for equality and ordering.
+Comparing an object of type $(D Checked!(X, ProperCompare)) against another
+integral (for equality or ordering) ensures that no surprising conversions from
+signed to unsigned integral occur before the comparison. Using $(D Checked!(X,
+ProperCompare)) on either side of a comparison for equality against a
+floating-point number makes sure the integral can be properly converted to the
+floating point type, thus making sure equality is transitive.
 
 */
 struct ProperCompare
@@ -769,19 +1045,51 @@ unittest
 unittest
 {
     auto x1 = Checked!(uint, ProperCompare)(42u);
-    assert(x1.representation < -1);
+    assert(x1.get < -1);
     assert(x1 > -1);
 }
 
 // WithNaN
 /**
+
+Hook that reserves a special value as a "Not a Number" representative. For
+signed integrals, the reserved value is `T.min`. For signed integrals, the
+reserved value is `T.max`.
+
+The default value of a $(D Checked!(X, WithNaN)) is its NaN value, so care must
+be taken that all variables are explicitly initialized. Any arithmetic and logic
+operation involving at least on NaN becomes NaN itself. All of $(D a == b), $(D
+a < b), $(D a > b), $(D a <= b), $(D a >= b) yield `false` if at least one of
+`a` and `b` is NaN.
+
 */
 struct WithNaN
 {
 static:
-    enum defaultValue(T) = T.min == 0 ? T.max : T.min;
-    enum max(T) = cast(T) (T.min == 0 ? T.max - 1 : T.max);
-    enum min(T) = cast(T) (T.min == 0 ? T(0) : T.min + 1);
+    /**
+    The default value used for values not explicitly initialized. It is the NaN
+    value, i.e. `T.min` for signed integrals and `T.max` for unsigned integrals.
+    */
+    enum T defaultValue(T) = T.min == 0 ? T.max : T.min;
+    /**
+    The maximum value representable is $(D T.max) for signed integrals, $(D
+    T.max - 1) for unsigned integrals. The minimum value representable is $(D
+    T.min + 1) for signed integrals, $(D 0) for unsigned integrals.
+    */
+    enum T max(T) = cast(T) (T.min == 0 ? T.max - 1 : T.max);
+    /// ditto
+    enum T min(T) = cast(T) (T.min == 0 ? T(0) : T.min + 1);
+
+    /**
+    If `rhs` is `WithNaN.defaultValue!Rhs`, returns
+    `WithNaN.defaultValue!Lhs`. Otherwise, returns $(D cast(Lhs) rhs).
+
+    Params:
+    rhs = the value being cast (`Rhs` is the first argument to `Checked`)
+    Lhs = the target type of the cast
+
+    Returns: The result of the cast operation.
+    */
     Lhs hookOpCast(Lhs, Rhs)(Rhs rhs)
     {
         static if (is(Lhs == bool))
@@ -806,14 +1114,55 @@ static:
             return defaultValue!Lhs;
         }
     }
+
+    /**
+    Unconditionally returns `WithNaN.defaultValue!Lhs` for all `opAssign`
+    failures.
+
+    Params:
+    x = The operator involved in the `opAssign` operation
+    Lhs = The target of the assignment (`Lhs` is the first argument to
+    `Checked`)
+    Rhs = The right-hand side type in the assignment
+
+    Returns: `WithNaN.defaultValue!Lhs`
+    */
     Lhs onBadOpOpAssign(string x, Lhs, Rhs)(Lhs, Rhs)
     {
         return defaultValue!Lhs;
     }
+
+    /**
+
+    Returns `WithNaN.defaultValue!Lhs` if $(D lhs == WithNaN.defaultValue!Lhs),
+    $(D lhs == rhs) otherwise.
+
+    Params:
+    lhs = The left-hand side of the comparison (`Lhs` is the first argument to
+    `Checked`)
+    rhs = The right-hand side of the comparison
+
+    Returns: `lhs != WithNaN.defaultValue!Lhs && lhs == rhs`
+    */
     bool hookOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
         return lhs != defaultValue!Lhs && lhs == rhs;
     }
+
+    /**
+
+    If $(D lhs == WithNaN.defaultValue!Lhs), returns `double.init`. Otherwise,
+    has the same semantics as the default comparison.
+
+    Params:
+    lhs = The left-hand side of the comparison (`Lhs` is the first argument to
+    `Checked`)
+    rhs = The right-hand side of the comparison
+
+    Returns: `double.init` if `lhs == WitnNaN.defaultValue!Lhs`, `-1.0` if $(D
+    lhs < rhs), `0.0` if $(D lhs == rhs), `1.0` if $(D lhs > rhs).
+
+    */
     double hookOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
         if (lhs == defaultValue!Lhs) return double.init;
@@ -821,6 +1170,28 @@ static:
             ? -1.0
             : lhs > rhs ? 1.0 : lhs == rhs ? 0.0 : double.init;
     }
+
+    /**
+    Defines hooks for unary operators `-`, `~`, `++`, and `--`.
+
+    For `-` and `~`, if $(D v == WithNaN.defaultValue!T), returns
+    `WithNaN.defaultValue!T`. Otherwise, the semantics is the same as for the
+    built-in operator.
+
+    For `++` and `--`, if $(D v == WithNaN.defaultValue!Lhs) or the operation
+    would result in an overflow, sets `v` to `WithNaN.defaultValue!T`.
+    Otherwise, the semantics is the same as for the built-in operator.
+
+    Params:
+    x = The operator symbol
+    v = The left-hand side of the comparison (`T` is the first argument to
+    `Checked`)
+
+    Returns: $(UL $(LI For $(D x == '-' || x == '~'): If  $(D v ==
+    WithNaN.defaultValue!T), the function returns `WithNaN.defaultValue!T`.
+    Otherwise it returns the normal result of the operator.) $(LI For $(D x == '++' ||
+    x == '--'): The function returns `void`.))
+    */
     auto hookOpUnary(string x, T)(ref T v)
     {
         static if (x == "-" || x == "~")
@@ -843,11 +1214,30 @@ static:
                 if (v != defaultValue!T) ++v;
             }
         }
-        else static if (x == "-")
+        else static if (x == "--")
         {
             if (v != defaultValue!T) --v;
         }
     }
+
+    /**
+    Defines hooks for binary operators `+`, `-`, `*`, `/`, `%`, `^^`, `&`, `|`,
+     `^`, `<<`, `>>`, and `>>>` for cases where a `Checked` object is the
+    left-hand side operand. If $(D lhs == WithNaN.defaultValue!Lhs), returns
+    $(D WithNaN.defaultValue!(typeof(lhs + rhs))) without evaluating the
+    operand. Otherwise, evaluates the operand. If evaluation does not overflow,
+    returns the result. Otherwise, returns $(D WithNaN.defaultValue!(typeof(lhs
+    + rhs))).
+
+    Params:
+    x = The operator symbol
+    lhs = The left-hand side operand (`Lhs` is the first argument to `Checked`)
+    rhs = The right-hand side operand
+
+    Returns: If $(D lhs != WithNaN.defaultValue!Lhs) and the operator does not
+    overflow, the function returns the same result as the built-in operator. In
+    all other cases, returns $(D WithNaN.defaultValue!(typeof(lhs + rhs))).
+    */
     auto hookOpBinary(string x, L, R)(L lhs, R rhs)
     {
         alias Result = typeof(lhs + rhs);
@@ -859,6 +1249,25 @@ static:
         }
         return defaultValue!Result;
     }
+
+    /**
+    Defines hooks for binary operators `+`, `-`, `*`, `/`, `%`, `^^`, `&`, `|`,
+     `^`, `<<`, `>>`, and `>>>` for cases where a `Checked` object is the
+    right-hand side operand. If $(D rhs == WithNaN.defaultValue!Rhs), returns
+    $(D WithNaN.defaultValue!(typeof(lhs + rhs))) without evaluating the
+    operand. Otherwise, evaluates the operand. If evaluation does not overflow,
+    returns the result. Otherwise, returns $(D WithNaN.defaultValue!(typeof(lhs
+    + rhs))).
+
+    Params:
+    x = The operator symbol
+    lhs = The left-hand side operand
+    rhs = The right-hand side operand (`Rhs` is the first argument to `Checked`)
+
+    Returns: If $(D rhs != WithNaN.defaultValue!Rhs) and the operator does not
+    overflow, the function returns the same result as the built-in operator. In
+    all other cases, returns $(D WithNaN.defaultValue!(typeof(lhs + rhs))).
+    */
     auto hookOpBinaryRight(string x, L, R)(L lhs, R rhs)
     {
         alias Result = typeof(lhs + rhs);
@@ -870,6 +1279,24 @@ static:
         }
         return defaultValue!Result;
     }
+
+    /**
+
+    Defines hooks for binary operators `+=`, `-=`, `*=`, `/=`, `%=`, `^^=`,
+    `&=`, `|=`, `^=`, `<<=`, `>>=`, and `>>>=` for cases where a `Checked`
+    object is the left-hand side operand. If $(D lhs ==
+    WithNaN.defaultValue!Lhs), no action is carried. Otherwise, evaluates the
+    operand. If evaluation does not overflow and fits in `Lhs` without loss of
+    information or change of sign, sets `lhs` to the result. Otherwise, sets
+    `lhs` to `WithNaN.defaultValue!Lhs`.
+
+    Params:
+    x = The operator symbol (without the `=`)
+    lhs = The left-hand side operand (`Lhs` is the first argument to `Checked`)
+    rhs = The right-hand side operand
+
+    Returns: `void`
+    */
     void hookOpOpAssign(string x, L, R)(ref L lhs, R rhs)
     {
         if (lhs == defaultValue!L)
@@ -886,15 +1313,15 @@ static:
 unittest
 {
     auto x1 = Checked!(int, WithNaN)();
-    assert(x1.representation == int.min);
+    assert(x1.get == int.min);
     assert(x1 != x1);
     assert(!(x1 < x1));
     assert(!(x1 > x1));
     assert(!(x1 == x1));
     ++x1;
-    assert(x1.representation == int.min);
+    assert(x1.get == int.min);
     --x1;
-    assert(x1.representation == int.min);
+    assert(x1.get == int.min);
     x1 = 42;
     assert(x1 == x1);
     assert(x1 <= x1);
@@ -1137,7 +1564,8 @@ unittest
     assert(opChecked!"/"(-6, 0u, overflow) == 0 && overflow);
 }
 
-/**
+/*
+Exponentiation function used by the implementation of operator `^^`.
 */
 private pure @safe nothrow @nogc
 auto pow(L, R)(const L lhs, const R rhs, ref bool overflow)
@@ -1306,7 +1734,7 @@ version(unittest) private struct CountOpBinary
     assert(x1.hook.calls == 1);
     assert(x1 << 2 == 42 << 2);
     assert(x1.hook.calls == 1);
-    assert(x1 << 42 == x1.representation << x1.representation);
+    assert(x1 << 42 == x1.get << x1.get);
     assert(x1.hook.calls == 2);
 
     auto x2 = Checked!(int, CountOpBinary)(42);
@@ -1394,13 +1822,13 @@ unittest
 {
     Checked!(int, void) x;
     x = 42;
-    assert(x.representation == 42);
+    assert(x.get == 42);
     x = x;
-    assert(x.representation == 42);
+    assert(x.get == 42);
     x = short(43);
-    assert(x.representation == 43);
+    assert(x.get == 43);
     x = ushort(44);
-    assert(x.representation == 44);
+    assert(x.get == 44);
 }
 
 unittest
@@ -1408,8 +1836,8 @@ unittest
     static assert(!is(typeof(Checked!(short, void)(ushort(42)))));
     static assert(!is(typeof(Checked!(int, void)(long(42)))));
     static assert(!is(typeof(Checked!(int, void)(ulong(42)))));
-    assert(Checked!(short, void)(short(42)).representation == 42);
-    assert(Checked!(int, void)(ushort(42)).representation == 42);
+    assert(Checked!(short, void)(short(42)).get == 42);
+    assert(Checked!(int, void)(ushort(42)).get == 42);
 }
 
 // opCast
