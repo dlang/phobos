@@ -50,9 +50,14 @@ equality with floating-point numbers only passes if the integral can be
 converted to the floating-point number precisely, so as to preserve transitivity
 of equality.)
 
-$(LI $(LREF WithNaN) reserves a special "Not a Number" value.)
+$(LI $(LREF WithNaN) reserves a special "Not a Number" value akin to the homonym
+value reserved for floating-point values. Once a $(D Checked!(X, WithNaN)) gets
+this special value, it preserves and propagates it until reassigned.)
 
-$(LI $(LREF Saturate) implements saturating arithmetic.)
+$(LI $(LREF Saturate) implements saturating arithmetic, i.e. $(D Checked!(int,
+Saturate)) "stops" at `int.max` for all operations that would cause an `int` to
+overflow toward infinity, and at `int.min` for all operations that would
+correspondingly overflow toward negative infinity.)
 
 )
 
@@ -80,6 +85,12 @@ WithNaN), ProperCompare)) does not have good semantics because `ProperCompare`
 intercepts comparisons before the numbers involved are tested for NaN.)
 
 )
+
+The hook's members are looked up statically in a Design by Introspection manner
+and are all optional. The table below illustrates the members that a hook type
+may define and their influence over the behavior of the `Checked` type using it.
+In the table, `hook` is an alias for `Hook` if the type `Hook` does not
+introduce any state, or an object of type `Hook` otherwise.
 
 $(TABLE ,
 
@@ -213,11 +224,12 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     }
 
     /**
-    Defines the minimum and maximum allowed.
+    Defines the minimum and maximum. These values are hookable by defining
+    `Hook.min` and/or `Hook.max`.
     */
     static if (hasMember!(Hook, "min"))
     {
-        enum min = Checked!(T, Hook)(Hook.min!T);
+        enum Checked!(T, Hook) min = Checked!(T, Hook)(Hook.min!T);
         ///
         unittest
         {
@@ -227,12 +239,12 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         }
     }
     else
-        enum min = Checked(T.min);
+        enum Checked!(T, Hook) min = Checked(T.min);
     /// ditto
     static if (hasMember!(Hook, "max"))
-        enum max = Checked(Hook.max!T);
+        enum Checked!(T, Hook) max = Checked(Hook.max!T);
     else
-        enum max = Checked(T.max);
+        enum Checked!(T, Hook) max = Checked(T.max);
 
     /**
     Constructor taking a value properly convertible to the underlying type. `U`
@@ -244,7 +256,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     if (valueConvertible!(U, T) ||
         !isIntegral!T && is(typeof(T(rhs))) ||
         is(U == Checked!(V, W), V, W) &&
-            is(typeof(Checked(rhs.get))))
+            is(typeof(Checked!(T, Hook)(rhs.get))))
     {
         static if (isIntegral!U)
             payload = rhs;
@@ -254,7 +266,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     ///
     unittest
     {
-        auto a = Checked!long(42L);
+        auto a = checked(42L);
         assert(a == 42);
         auto b = Checked!long(4242); // convert 4242 to long
         assert(b == 4242);
@@ -263,7 +275,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     /**
     Assignment operator. Has the same constraints as the constructor.
     */
-    void opAssign(U)(U rhs) if (is(typeof(Checked(rhs))))
+    void opAssign(U)(U rhs) if (is(typeof(Checked!(T, Hook)(rhs))))
     {
         static if (isIntegral!U)
             payload = rhs;
@@ -290,8 +302,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
 
     If a cast to a floating-point type is requested and `Hook` defines
     `onBadCast`, the cast is verified by ensuring $(D get == cast(T)
-    U(get)). If that is not `true`,
-    `hook.onBadCast!U(get)` is returned.
+    U(get)). If that is not `true`, `hook.onBadCast!U(get)` is returned.
 
     If a cast to an integral type is requested and `Hook` defines `onBadCast`,
     the cast is verified by ensuring `get` and $(D cast(U)
@@ -340,7 +351,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     unittest
     {
         assert(cast(uint) checked(42) == 42);
-        assert(cast(uint) Checked!(int, WithNaN)(-42) == uint.max);
+        assert(cast(uint) checked!WithNaN(-42) == uint.max);
     }
 
     // opEquals
@@ -409,7 +420,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
                 return true;
             }
         }
-        auto a = Checked!(int, MyHook)(-42);
+        auto a = checked!MyHook(-42);
         assert(a == uint(-42));
         assert(MyHook.thereWereErrors);
         static struct MyHook2
@@ -420,7 +431,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
             }
         }
         MyHook.thereWereErrors = false;
-        assert(Checked!(uint, MyHook2)(uint(-42)) == a);
+        assert(checked!MyHook2(uint(-42)) == a);
         // Hook on left hand side takes precedence, so no errors
         assert(!MyHook.thereWereErrors);
     }
@@ -507,7 +518,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
                 return lhs < rhs ? -1 : lhs > rhs;
             }
         }
-        auto a = Checked!(int, MyHook)(-42);
+        auto a = checked!MyHook(-42);
         assert(a < uint(-42));
         assert(MyHook.thereWereErrors);
         static struct MyHook2
@@ -607,7 +618,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
                 return -lhs;
             }
         }
-        auto a = Checked!(long, MyHook)(long.min);
+        auto a = checked!MyHook(long.min);
         assert(a == -a);
         assert(MyHook.thereWereErrors);
     }
