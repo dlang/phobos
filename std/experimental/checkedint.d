@@ -37,7 +37,10 @@ $(UL
 $(LI $(LREF Abort) fails every incorrect operation with a message to $(REF
 stderr, std, stdio) followed by a call to `std.core.abort`. It is the default
 second parameter, i.e. `Checked!short` is the same as $(D Checked!(short,
-Abort)). This is also the type returned by the `checked` convenience function.)
+Abort))..)
+
+$(LI $(LREF Mumble) prints incorrect operations to $(REF stderr, std, stdio) but
+otherwise preserves the built-in behavior.)
 
 $(LI $(LREF ProperCompare) fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`,
 and `>=` to return correct results in all circumstances, at a slight cost in
@@ -48,6 +51,8 @@ converted to the floating-point number precisely, so as to preserve transitivity
 of equality.)
 
 $(LI $(LREF WithNaN) reserves a special "Not a Number" value.)
+
+$(LI $(LREF Saturate) implements saturating arithmetic.)
 
 )
 
@@ -73,6 +78,73 @@ type that supports a NaN value. For values that are not NaN, comparison works
 properly. Again the composition order is important; $(D Checked!(Checked!(int,
 WithNaN), ProperCompare)) does not have good semantics because `ProperCompare`
 intercepts comparisons before the numbers involved are tested for NaN.)
+
+)
+
+$(TABLE ,
+
+$(TR $(TH `Hook` member) $(TH Semantics in $(D Checked!(T, Hook))))
+
+$(TR $(TD `defaultValue`) $(TD If defined, `Hook.defaultValue!T` is used as the
+default initializer of the payload.))
+
+$(TR $(TD `min`) $(TD If defined, `Hook.min!T` is used as the minimum value of
+the payload.))
+
+$(TR $(TD `max`) $(TD If defined, `Hook.max!T` is used as the maximum value of
+the payload.))
+
+$(TR $(TD `hookOpCast`) $(TD If defined, `hook.hookOpCast!U(get)` is forwarded
+to unconditionally when the payload is to be cast to type `U`.))
+
+$(TR $(TD `onBadCast`) $(TD If defined and `hookOpCast` is $(I not) defined,
+`onBadCast!U(get)` is forwarded to when the payload is to be cast to type `U`
+and the cast would lose information or force a change of sign.))
+
+$(TR $(TD `hookOpEquals`) $(TD If defined, $(D hook.hookOpEquals(get, rhs)) is
+forwarded to unconditionally when the payload is compared for equality against
+value `rhs` of integral, floating point, or Boolean type.))
+
+$(TR $(TD `hookOpCmp`) $(TD If defined, $(D hook.hookOpCmp(get, rhs)) is
+forwarded to unconditionally when the payload is compared for ordering against
+value `rhs` of integral, floating point, or Boolean type.))
+
+$(TR $(TD `hookOpUnary`) $(TD If defined, `hook.hookOpUnary!op(get)` (where `op`
+is the operator symbol) is forwarded to for unary operators `-` and `~`. In
+addition, for unary operators `++` and `--`, `hook.hookOpUnary!op(payload)` is
+called, where `payload` is a reference to the value wrapped by `Checked` so the
+hook can change it.))
+
+$(TR $(TD `hookOpBinary`) $(TD If defined, $(D hook.hookOpBinary!op(get, rhs))
+(where `op` is the operator symbol and `rhs` is the right-hand side operand) is
+forwarded to unconditionally for binary operators `+`,  `-`, `*`, `/`, `%`,
+`^^`, `&`, `|`, `^`, `<<`, `>>`, and `>>>`.))
+
+$(TR $(TD `hookOpBinaryRight`) $(TD If defined, $(D
+hook.hookOpBinaryRight!op(lhs, get)) (where `op` is the operator symbol and
+`lhs` is the left-hand side operand) is forwarded to unconditionally for binary
+operators `+`,  `-`, `*`, `/`, `%`, `^^`, `&`, `|`, `^`, `<<`, `>>`, and `>>>`.))
+
+$(TR $(TD `onOverflow`) $(TD If defined, `hook.onOverflow!op(get)` is forwarded
+to for unary operators that overflow but only if `hookOpUnary` is not defined.
+Unary `~` does not overflow; unary `-` overflows only when the most negative
+value of a signed type is negated, and the result of the hook call is returned.
+When the increment or decrement operators overflow, the payload is assigned the
+result of `hook.onOverflow!op(get)`. When a binary operator overflows, the
+result of $(D hook.onOverflow!op(get, rhs)) is returned, but only if `Hook` does
+not define `hookOpBinary`.))
+
+$(TR $(TD `hookOpOpAssign`) $(TD If defined, $(D hook.hookOpOpAssign!op(payload,
+rhs)) (where `op` is the operator symbol and `rhs` is the right-hand side
+operand) is forwarded to unconditionally for binary operators `+=`,  `-=`, `*=`, `/=`, `%=`,
+`^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, and `>>>=`.))
+
+$(TR $(TD `onBadOpOpAssign`) $(TD If defined and `hookOpOpAssign` is not
+defined, $(D hook.onBadOpOpAssign!op(value)) (where `value` is the value being
+assigned) is forwarded to when the result of binary operators `+=`,  `-=`, `*=`,
+ `/=`, `%=`, `^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`,
+and `>>>=` cannot be assigned back to the payload without loss of information or
+a change in sign.))
 
 )
 
@@ -785,13 +857,6 @@ then abort the program. `Abort` is the default second argument for `Checked`.
 */
 struct Abort
 {
-    private static void abort(A...)(string fmt, A args)
-    {
-        import std.stdio : stderr;
-        stderr.writefln(fmt, args);
-        import core.stdc.stdlib : abort;
-        abort;
-    }
 static:
     /**
 
@@ -809,8 +874,7 @@ static:
     */
     Dst onBadCast(Dst, Src)(Src src)
     {
-        abort("Erroneous cast attempted: cast(%s) %s(%s)",
-            Dst.stringof, Src.stringof, src);
+        Mumble.onBadCast!Dst(src);
         assert(0);
     }
 
@@ -830,8 +894,7 @@ static:
     */
     Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs rhs)
     {
-        abort("Erroneous assignment attempted: %s = %s(%s)",
-            Lhs.stringof, Rhs.stringof, rhs);
+        Mumble.onBadOpOpAssign!Lhs(rhs);
         assert(0);
     }
 
@@ -852,8 +915,7 @@ static:
     */
     bool onBadOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        abort("Erroneous comparison attempted: %s(%s) == %s(%s)",
-            Lhs.stringof, lhs, Rhs.stringof, rhs);
+        Mumble.onBadOpEquals(lhs, rhs);
         assert(0);
     }
 
@@ -874,8 +936,7 @@ static:
     */
     bool onBadOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        abort("Erroneous ordering comparison attempted: %s(%s) and %s(%s)",
-            Lhs.stringof, lhs, Rhs.stringof, rhs);
+        Mumble.onBadOpCmp(lhs, rhs);
         assert(0);
     }
 
@@ -895,14 +956,13 @@ static:
     */
     typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
     {
-        abort("Overflow on unary operator: %s%s(%s)", x, Lhs.stringof, lhs);
+        Mumble.onOverflow!x(lhs);
         assert(0);
     }
     /// ditto
     typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        abort("Overflow on binary operator: %s(%s) %s %s(%s)",
-            Lhs.stringof, lhs, x, Rhs.stringof, rhs);
+        Mumble.onOverflow!x(lhs, rhs);
         assert(0);
     }
 }
@@ -911,6 +971,131 @@ unittest
 {
     Checked!(int, Abort) x;
     x = 42;
+    short x1 = cast(short) x;
+    //x += long(int.max);
+}
+
+// Mumble
+/**
+Hook that prints to `stderr` a trace of all integral errors, without affecting
+default behavior.
+*/
+struct Mumble
+{
+    import std.stdio : stderr;
+static:
+    /**
+
+    Called automatically upon a bad cast from `src` to type `Dst` (one that
+    loses precision or attempts to convert a negative value to an unsigned
+    type).
+
+    Params:
+    src = The source of the cast
+    Dst = The target type of the cast
+
+    Returns: `cast(Dst) src`
+
+    */
+    Dst onBadCast(Dst, Src)(Src src)
+    {
+        stderr.writefln("Erroneous cast: cast(%s) %s(%s)",
+            Dst.stringof, Src.stringof, src);
+        return cast(Dst) src;
+    }
+
+    /**
+
+    Called automatically upon a bad `opOpAssign` call (one that loses precision
+    or attempts to convert a negative value to an unsigned type).
+
+    Params:
+    rhs = The right-hand side value in the assignment, after the operator has
+    been evaluated
+
+    Returns: `cast(Lhs) rhs`
+    */
+    Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs rhs)
+    {
+        stderr.writefln("Erroneous assignment: %s = %s(%s)",
+            Lhs.stringof, Rhs.stringof, rhs);
+        return cast(Lhs) rhs;
+    }
+
+    /**
+
+    Called automatically upon a bad `opEquals` call (one that would make a
+    signed negative value appear equal to an unsigned positive value).
+
+    Params:
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side type involved in the operator
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Abort`, the function never returns because
+    it aborts the program.
+
+    */
+    bool onBadOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        stderr.writefln("Erroneous comparison: %s(%s) == %s(%s)",
+            Lhs.stringof, lhs, Rhs.stringof, rhs);
+        return lhs == rhs;
+    }
+
+    /**
+
+    Called automatically upon a bad `opCmp` call (one that would make a signed
+    negative value appear greater than or equal to an unsigned positive value).
+
+    Params:
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side type involved in the operator
+
+    Returns: $(D lhs < rhs ? -1 : lhs > rhs)
+
+    */
+    auto onBadOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        stderr.writefln("Erroneous ordering comparison: %s(%s) and %s(%s)",
+            Lhs.stringof, lhs, Rhs.stringof, rhs);
+        return lhs < rhs ? -1 : lhs > rhs;
+    }
+
+    /**
+
+    Called automatically upon an overflow during a unary or binary operation.
+
+    Params:
+    Lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    Rhs = The right-hand side type involved in the operator
+
+    Returns: $(D mixin(x ~ "lhs")) for unary, $(D mixin("lhs" ~ x ~ "rhs")) for
+    binary
+
+    */
+    typeof(~Lhs()) onOverflow(string x, Lhs)(ref Lhs lhs)
+    {
+        stderr.writefln("Overflow on unary operator: %s%s(%s)",
+            x, Lhs.stringof, lhs);
+        return mixin(x ~ "lhs");
+    }
+    /// ditto
+    typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        stderr.writefln("Overflow on binary operator: %s(%s) %s %s(%s)",
+            Lhs.stringof, lhs, x, Rhs.stringof, rhs);
+        return mixin("lhs" ~ x ~ "rhs");
+    }
+}
+
+///
+unittest
+{
+    auto x = checked!Mumble(42);
     short x1 = cast(short) x;
     //x += long(int.max);
 }
