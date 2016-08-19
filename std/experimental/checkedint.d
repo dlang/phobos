@@ -678,12 +678,25 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     /**
 
     Defines operators `+=`, `-=`, `*=`, `/=`, `%=`, `^^=`, `&=`, `|=`, `^=`,
-    `<<=`, `>>=`, and `>>>=`. If `Hook` defines `hookOpOpAssign`, `opOpAssign`
-    forwards to `hook.hookOpOpAssign!op(payload, rhs)`, where `payload` is a
-    reference to the internally held data so the hook can change it. Otherwise,
-    if `Hook` defines `onBadOpOpAssign` and an overflow occurs, the payload is
-    assigned from `hook.onBadOpOpAssign!op(payload, Rhs(rhs))`. In all other
-    cases, the built-in behavior is carried out.
+    `<<=`, `>>=`, and `>>>=`.
+
+    If `Hook` defines `hookOpOpAssign`, `opOpAssign` forwards to
+    `hook.hookOpOpAssign!op(payload, rhs)`, where `payload` is a reference to
+    the internally held data so the hook can change it.
+
+    Otherwise, the operator first evaluates $(D auto result =
+    opBinary!op(payload, rhs).payload), which is subject to the hooks in
+    `opBinary`. Then, if `result` does not fit in `this` without a loss of data
+    or a change in sign and if `Hook` defines `onBadOpOpAssign`, the payload is
+    assigned from `hook.onBadOpOpAssign!T(result)`.
+
+    In all other cases, the built-in behavior is carried out.
+
+    Params:
+    op = The operator involved (without the `"="`, e.g. `"+"` for `"+="` etc)
+    rhs = The right-hand side of the operator (left-hand side is `this`)
+
+    Returns: A reference to `this`.
     */
     ref Checked opOpAssign(string op, Rhs)(const Rhs rhs)
     if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool))
@@ -697,7 +710,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         else
         {
             alias R = typeof(payload + rhs);
-            auto r = mixin("this" ~ op ~ "rhs").payload;
+            auto r = opBinary!op(rhs).payload;
 
             static if (valueConvertible!(R, T) ||
                 !hasMember!(Hook, "onBadOpOpAssign") ||
@@ -723,7 +736,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
                         // Example: uint += ulong
                         const bad = r > max.payload;
                 if (bad)
-                    payload = hook.onBadOpOpAssign!op(payload, Rhs(rhs));
+                    payload = hook.onBadOpOpAssign!T(r);
                 else
                     payload = cast(T) r;
             }
@@ -807,20 +820,18 @@ static:
     or attempts to convert a negative value to an unsigned type).
 
     Params:
-    x = The binary operator
-    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
-      the operator is `Checked!int`
-    rhs = The right-hand side value involved in the operator
+    rhs = The right-hand side value in the assignment, after the operator has
+    been evaluated
 
     Returns: Nominally the result is the desired value of the operator, which
     will be forwarded as result. For `Abort`, the function never returns because
     it aborts the program.
 
     */
-    Lhs onBadOpOpAssign(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs rhs)
     {
-        abort("Erroneous assignment attempted: %s(%s) %s= %s(%s)",
-            Lhs.stringof, lhs, x, Rhs.stringof, rhs);
+        abort("Erroneous assignment attempted: %s = %s(%s)",
+            Lhs.stringof, Rhs.stringof, rhs);
         assert(0);
     }
 
@@ -1120,14 +1131,13 @@ static:
     failures.
 
     Params:
-    x = The operator involved in the `opAssign` operation
     Lhs = The target of the assignment (`Lhs` is the first argument to
     `Checked`)
     Rhs = The right-hand side type in the assignment
 
     Returns: `WithNaN.defaultValue!Lhs`
     */
-    Lhs onBadOpOpAssign(string x, Lhs, Rhs)(Lhs, Rhs)
+    Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs)
     {
         return defaultValue!Lhs;
     }
@@ -1339,6 +1349,105 @@ unittest
     x1 = -1;
     assert(x1 < 1u);
     auto x2 = Smart!int(42);
+}
+
+// Saturate
+/**
+
+Hook that implements $(I saturation), i.e. any arithmetic operation that would
+overflow leaves the result at its extreme value (`min` or `max` depending on the
+direction of the overflow).
+
+Saturation is not sticky; if a value reaches its saturation value, another
+operation may take it back to normal range.
+
+*/
+struct Saturate
+{
+static:
+    /**
+
+    Implements saturation for operators `+=`, `-=`, `*=`, `/=`, `%=`, `^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`,
+    and `>>>=`. This hook is called if the result of the binary operation does
+    not fit in `Lhs` without loss of information or a change in sign.
+
+    Params:
+    Lhs = The target of the assignment (`Lhs` is the first argument to
+    `Checked`)
+    Rhs = The right-hand side type in the assignment, after the operation has
+    been computed
+
+    Returns: `Lhs.max` if $(D rhs >= 0), `Lhs.min` otherwise.
+
+    */
+    Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs rhs)
+    {
+        return rhs >= 0 ? Lhs.max : Lhs.min;
+    }
+
+    /**
+
+    Implements saturation for operators `+`, `-` (unary and binary), `*`, `/`,
+    `%`, `^^`, `&`, `|`, `^`, `<<`, `>>`, and `>>>`.
+
+    For unary `-`, `onOverflow` is called if $(D lhs == Lhs.min) and `Lhs` is a
+    signed type. The function returns `Lhs.max`.
+
+    For binary operators, the result is as follows: $(UL $(LI `Lhs.max` if the
+    result overflows in the positive direction, on division by `0`, or on
+    shifting right by a negative value) $(LI `Lhs.min` if the result overflows
+    in the negative direction) $(LI `0` if `lhs` is being shifted left by a
+    negative value, or shifted right by a large positive value))
+
+    Params:
+    x = The operator involved in the `opAssign` operation
+    Lhs = The left-hand side of the operator (`Lhs` is the first argument to
+    `Checked`)
+    Rhs = The right-hand side type in the operator
+
+    Returns: The saturated result of the operator.
+
+    */
+    typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
+    {
+        static assert(x == "-" || x == "++" || x == "--");
+        return x == "--" ? Lhs.min : Lhs.max;
+    }
+    /// ditto
+    typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        static if (x == "+")
+            return rhs >= 0 ? Lhs.max : Lhs.min;
+        else static if (x == "*")
+            return (lhs >= 0) == (rhs >= 0) ? Lhs.max : Lhs.min;
+        else static if (x == "^^")
+            return lhs & 1 ? Lhs.max : Lhs.min;
+        else static if (x == "-")
+            return rhs >= 0 ? Lhs.min : Lhs.max;
+        else static if (x == "/" || x == "%")
+            return Lhs.max;
+        else static if (x == "<<")
+            return x >= 0 ? Lhs.max : 0;
+        else static if (x == ">>" || x == ">>>")
+            return rhs >= 0 ? 0 : Lhs.max;
+        else
+            return cast(Lhs) (mixin("lhs" ~ x ~ "rhs"));
+    }
+}
+
+///
+unittest
+{
+    auto x = checked!Saturate(int.max);
+    ++x;
+    assert(x == int.max);
+    --x;
+    assert(x == int.max - 1);
+    x = int.min;
+    assert(-x == int.max);
+    x -= 42;
+    assert(x == int.min);
+    assert(x * -2 == int.max);
 }
 
 /*
@@ -1690,10 +1799,10 @@ version(unittest) private struct CountOverflows
         ++calls;
         return mixin("lhs" ~ op ~ "rhs");
     }
-    Lhs onBadOpOpAssign(string op, Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs rhs)
     {
         ++calls;
-        return mixin("lhs" ~ op ~ "=rhs");
+        return cast(Lhs) rhs;
     }
 }
 
