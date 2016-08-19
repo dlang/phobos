@@ -2209,7 +2209,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                             result.exceptionFuncIdx = dgidx;
                         }
                     }
-                    else static if (is(Unqual!(Params[0]) == T))
+                    else static if (is(Params[0] == T) || is(Unqual!(Params[0]) == T))
                     {
                         if (added)
                             assert(false, "duplicate overload specified for type '" ~ T.stringof ~ "'");
@@ -2291,6 +2291,18 @@ unittest
 
     FooBar fb = Foo(3);
     assert(depth(fb) == 3);
+}
+
+unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=16383
+    class Foo {this() immutable {}}
+    alias V = Algebraic!(immutable Foo);
+
+    auto x = V(new immutable Foo).visit!(
+        (immutable(Foo) _) => 3
+    );
+    assert(x == 3);
 }
 
 unittest
