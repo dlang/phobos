@@ -39,7 +39,7 @@ stderr, std, stdio) followed by a call to `std.core.abort`. It is the default
 second parameter, i.e. `Checked!short` is the same as $(D Checked!(short,
 Abort))..)
 
-$(LI $(LREF Mumble) prints incorrect operations to $(REF stderr, std, stdio) but
+$(LI $(LREF Warn) prints incorrect operations to $(REF stderr, std, stdio) but
 otherwise preserves the built-in behavior.)
 
 $(LI $(LREF ProperCompare) fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`,
@@ -885,7 +885,7 @@ static:
     */
     Dst onBadCast(Dst, Src)(Src src)
     {
-        Mumble.onBadCast!Dst(src);
+        Warn.onBadCast!Dst(src);
         assert(0);
     }
 
@@ -905,7 +905,7 @@ static:
     */
     Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs rhs)
     {
-        Mumble.onBadOpOpAssign!Lhs(rhs);
+        Warn.onBadOpOpAssign!Lhs(rhs);
         assert(0);
     }
 
@@ -926,7 +926,7 @@ static:
     */
     bool onBadOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        Mumble.onBadOpEquals(lhs, rhs);
+        Warn.onBadOpEquals(lhs, rhs);
         assert(0);
     }
 
@@ -947,7 +947,7 @@ static:
     */
     bool onBadOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        Mumble.onBadOpCmp(lhs, rhs);
+        Warn.onBadOpCmp(lhs, rhs);
         assert(0);
     }
 
@@ -967,13 +967,13 @@ static:
     */
     typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
     {
-        Mumble.onOverflow!x(lhs);
+        Warn.onOverflow!x(lhs);
         assert(0);
     }
     /// ditto
     typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        Mumble.onOverflow!x(lhs, rhs);
+        Warn.onOverflow!x(lhs, rhs);
         assert(0);
     }
 }
@@ -986,12 +986,12 @@ unittest
     //x += long(int.max);
 }
 
-// Mumble
+// Warn
 /**
 Hook that prints to `stderr` a trace of all integral errors, without affecting
 default behavior.
 */
-struct Mumble
+struct Warn
 {
     import std.stdio : stderr;
 static:
@@ -1106,7 +1106,7 @@ static:
 ///
 unittest
 {
-    auto x = checked!Mumble(42);
+    auto x = checked!Warn(42);
     short x1 = cast(short) x;
     //x += long(int.max);
 }
