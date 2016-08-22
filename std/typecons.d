@@ -822,14 +822,14 @@ template Tuple(Specs...)
         }
 
         /**
-         * Overload of $(LREF rename) that takes an associative array
+         * Overload of $(LREF _rename) that takes an associative array
          * `translate` as a template parameter, where the keys are
          * either the names or indices of the members to be changed
          * and the new names are the corresponding values.
          * Every key in `translate` must be the name of a member of the
          * $(LREF tuple).
          * The same rules for empty strings apply as for the variadic
-         * template overload of $(LREF rename).
+         * template overload of $(LREF _rename).
         */
         ref rename(alias translate)()
         if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
