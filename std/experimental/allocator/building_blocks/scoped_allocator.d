@@ -89,6 +89,8 @@ struct ScopedAllocator(ParentAllocator)
         toInsert.prev = null;
         toInsert.next = root;
         toInsert.length = n;
+        assert(!root || !root.prev);
+        if (root) root.prev = toInsert;
         root = toInsert;
         return b;
     }
@@ -128,6 +130,7 @@ struct ScopedAllocator(ParentAllocator)
             n.prev = null;
             n.next = root;
             n.length = s;
+            if (root) root.prev = n;
             root = n;
         }
         return result;
@@ -203,4 +206,16 @@ unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => ScopedAllocator!GCAllocator());
+}
+
+unittest // https://issues.dlang.org/show_bug.cgi?id=16046
+{
+    import std.exception;
+    import std.experimental.allocator;
+    import std.experimental.allocator.mallocator;
+    ScopedAllocator!Mallocator alloc;
+    auto foo = alloc.make!int(1).enforce;
+    auto bar = alloc.make!int(2).enforce;
+    alloc.dispose(foo);
+    alloc.dispose(bar); // segfault here
 }
