@@ -756,7 +756,7 @@ template Tuple(Specs...)
          * It is an compile-time error to pass more names than
          * there are members of the $(LREF Tuple).
          */
-        auto rename(names...)()
+        ref rename(names...)()
         if (allSatisfy!(isSomeString, typeof(names)))
         {
             enum nT = Types.length;
@@ -776,8 +776,9 @@ template Tuple(Specs...)
             }
 
             import std.range : roundRobin, iota;
-            return Tuple!(staticMap!(GetItem, aliasSeqOf!(
-                    roundRobin(iota(nT), iota(nT, 2*nT)))))(this);
+            alias NewTupleT = Tuple!(staticMap!(GetItem, aliasSeqOf!(
+                    roundRobin(iota(nT), iota(nT, 2*nT)))));
+            return *(() @trusted => cast(NewTupleT*)&this)();
         }
 
         ///
@@ -792,8 +793,11 @@ template Tuple(Specs...)
             Tuple!(float, "dat", size_t[2], "pos") t1;
             t1.pos = [2, 1];
             auto t1Named = t1.rename!"height";
-            t1Named.height = 3.4;
+            t1Named.height = 3.4f;
+            assert(t1Named.height == 3.4f);
             assert(t1Named.pos == [2, 1]);
+            t1Named.rename!"altitude".altitude = 5;
+            assert(t1Named.height == 5);
 
             Tuple!(int, "a", int, int, "c") t2;
             t2 = tuple(3,4,5);
@@ -806,6 +810,9 @@ template Tuple(Specs...)
 
             // not allowed to specify more names than the tuple has members
             static assert(!__traits(compiles, t2.rename!("a","b","c","d")));
+
+            // use it in a range pipeline
+            //zip(iota(10), iota(10, 20)).map!
         }
 
         /**
@@ -818,7 +825,7 @@ template Tuple(Specs...)
          * The same rules for empty strings apply as for the variadic
          * template overload of $(LREF rename).
         */
-        auto rename(alias translate)()
+        ref rename(alias translate)()
         if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
                 (isSomeString!K || is(K : size_t)))
         {
@@ -882,6 +889,8 @@ template Tuple(Specs...)
             auto t1Named = t1.rename!(["dat": "height"]);
             t1Named.height = 3.4;
             assert(t1Named.pos == [2, 1]);
+            t1Named.rename!(["height": "altitude"]).altitude = 5;
+            assert(t1Named.height == 5);
 
             Tuple!(int, "a", int, "b") t2;
             t2 = tuple(3, 4);
@@ -900,6 +909,8 @@ template Tuple(Specs...)
             auto t1Named = t1.rename!([0: "height"]);
             t1Named.height = 3.4;
             assert(t1Named.pos == [2, 1]);
+            t1Named.rename!([0: "altitude"]).altitude = 5;
+            assert(t1Named.height == 5);
 
             Tuple!(int, "a", int, "b", int, "c") t2;
             t2 = tuple(3, 4, 5);
