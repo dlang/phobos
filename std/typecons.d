@@ -812,7 +812,13 @@ template Tuple(Specs...)
             static assert(!__traits(compiles, t2.rename!("a","b","c","d")));
 
             // use it in a range pipeline
-            //zip(iota(10), iota(10, 20)).map!
+            import std.range : iota, zip;
+            import std.algorithm : map, sum;
+            auto res = zip(iota(1, 4), iota(10, 13))
+                .map!(t => t.rename!("a", "b"))
+                .map!(t => t.a * t.b)
+                .sum;
+            assert(res == 68);
         }
 
         /**
