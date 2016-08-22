@@ -880,7 +880,7 @@ template Tuple(Specs...)
         }
 
         ///
-        unittest
+        @safe unittest
         {
             //replacing names by their current name
 
@@ -900,7 +900,7 @@ template Tuple(Specs...)
         }
 
         ///
-        unittest
+        @safe unittest
         {
             //replace names by their position
 
