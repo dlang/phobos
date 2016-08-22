@@ -333,7 +333,7 @@ import std.experimental.allocator.gc_allocator;
 +
 +   This is completely equivalent to
 +   ---
-+   auto parser = 
++   auto parser =
 +        chooseLexer!(InputType, reuseBuffer)(alloc, handler)
 +       .parse!(preserveWhitespace)(handler)
 +   ---

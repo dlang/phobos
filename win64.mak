@@ -1092,31 +1092,31 @@ $(DOC)\std_experimental_ndslice_slice.html : $(STDDOC) std\experimental\ndslice\
 
 $(DOC)\std_experimental_ndslice.html : $(STDDOC) std\experimental\ndslice\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice.html $(STDDOC) std\experimental\ndslice\package.d
-    
+
 $(DOC)\std_experimental_xml_cursor.html : $(STDDOC) std\experimental\xml\cursor.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_cursor.html $(STDDOC) std\experimental\xml\cursor.d
-    
+
 $(DOC)\std_experimental_xml_dom.html : $(STDDOC) std\experimental\xml\dom.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_dom.html $(STDDOC) std\experimental\xml\dom.d
-    
+
 $(DOC)\std_experimental_xml_domimpl.html : $(STDDOC) std\experimental\xml\domimpl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_domimpl.html $(STDDOC) std\experimental\xml\domimpl.d
-    
+
 $(DOC)\std_experimental_xml_domparser.html : $(STDDOC) std\experimental\xml\domparser.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_domparser.html $(STDDOC) std\experimental\xml\domparser.d
-    
+
 $(DOC)\std_experimental_xml_faststrings.html : $(STDDOC) std\experimental\xml\faststrings.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_faststrings.html $(STDDOC) std\experimental\xml\faststrings.d
-    
+
 $(DOC)\std_experimental_xml_interfaces.html : $(STDDOC) std\experimental\xml\interfaces.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_interfaces.html $(STDDOC) std\experimental\xml\interfaces.d
-    
+
 $(DOC)\std_experimental_xml_lexers.html : $(STDDOC) std\experimental\xml\lexers.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_lexers.html $(STDDOC) std\experimental\xml\lexers.d
-    
+
 $(DOC)\std_experimental_xml_parser.html : $(STDDOC) std\experimental\xml\parser.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_parser.html $(STDDOC) std\experimental\xml\parser.d
-    
+
 $(DOC)\std_experimental_xml_sax.html : $(STDDOC) std\experimental\xml\sax.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_sax.html $(STDDOC) std\experimental\xml\sax.d
 
