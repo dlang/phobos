@@ -1522,9 +1522,9 @@ class DOMImplementation(DOMString, Alloc = shared(GCAllocator), ErrorHandler = b
             // specific to NamedNodeMap
             public override
             {
-                ulong length()
+                size_t length()
                 {
-                    ulong res = 0;
+                    size_t res = 0;
                     auto attr = firstAttr;
                     while (attr)
                     {
@@ -1533,9 +1533,9 @@ class DOMImplementation(DOMString, Alloc = shared(GCAllocator), ErrorHandler = b
                     }
                     return res;
                 }
-                Attr item(ulong index)
+                Attr item(size_t index)
                 {
-                    ulong count = 0;
+                    size_t count = 0;
                     auto res = firstAttr;
                     while (res && count < index)
                     {
