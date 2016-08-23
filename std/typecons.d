@@ -757,28 +757,35 @@ template Tuple(Specs...)
          * there are members of the $(LREF Tuple).
          */
         ref rename(names...)()
-        if (allSatisfy!(isSomeString, typeof(names)))
+        if (names.length == 0 || allSatisfy!(isSomeString, typeof(names)))
         {
-            enum nT = Types.length;
-            enum nN = names.length;
-            static assert(nN <= nT, "Cannot have more names than tuple members");
-            alias allNames = AliasSeq!(names, fieldNames[nN .. $]);
-
-            template GetItem(size_t idx)
+            import std.algorithm : equal;
+            // to circumvent bug 16418
+            static if (names.length == 0 || equal([names], [fieldNames]))
+                return this;
+            else
             {
-                import std.array : empty;
-                static if (idx < nT)
-                    alias GetItem = Alias!(Types[idx]);
-                else static if (allNames[idx - nT].empty)
-                    alias GetItem = AliasSeq!();
-                else
-                    alias GetItem = Alias!(allNames[idx - nT]);
-            }
+                enum nT = Types.length;
+                enum nN = names.length;
+                static assert(nN <= nT, "Cannot have more names than tuple members");
+                alias allNames = AliasSeq!(names, fieldNames[nN .. $]);
 
-            import std.range : roundRobin, iota;
-            alias NewTupleT = Tuple!(staticMap!(GetItem, aliasSeqOf!(
-                    roundRobin(iota(nT), iota(nT, 2*nT)))));
-            return *(() @trusted => cast(NewTupleT*)&this)();
+                template GetItem(size_t idx)
+                {
+                    import std.array : empty;
+                    static if (idx < nT)
+                        alias GetItem = Alias!(Types[idx]);
+                    else static if (allNames[idx - nT].empty)
+                        alias GetItem = AliasSeq!();
+                    else
+                        alias GetItem = Alias!(allNames[idx - nT]);
+                }
+
+                import std.range : roundRobin, iota;
+                alias NewTupleT = Tuple!(staticMap!(GetItem, aliasSeqOf!(
+                        roundRobin(iota(nT), iota(nT, 2*nT)))));
+                return *(() @trusted => cast(NewTupleT*)&this)();
+            }
         }
 
         ///
@@ -920,6 +927,24 @@ template Tuple(Specs...)
             assert(t2Named.c == 3);
         }
 
+        @safe unittest
+        {
+            //check that empty translations work fine
+            enum string[string] a0 = null;
+            enum string[int] a1 = null;
+            Tuple!(float, "a", float, "b") t0;
+
+            auto t1 = t0.rename!a0;
+
+            t1.a = 3;
+            t1.b = 4;
+            auto t2 = t0.rename!a1;
+            t2.a = 3;
+            t2.b = 4;
+            auto t3 = t0.rename;
+            t3.a = 3;
+            t3.b = 4;
+        }
 
         /**
          * Takes a slice of this `Tuple`.
