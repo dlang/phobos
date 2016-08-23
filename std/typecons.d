@@ -835,14 +835,8 @@ template Tuple(Specs...)
         if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
                 (isSomeString!K || is(K : size_t)))
         {
-            static if (is(typeof(translate) : V_[K_], V_, K_))
-            {
-                alias V = V_;
-                alias K = K_;
-            }
-            else static assert(false);
-
-            static if(isSomeString!K)
+            import std.range: ElementType;
+            static if (isSomeString!(ElementType!(typeof(translate.keys))))
             {
                 {
                     import std.conv : to;
