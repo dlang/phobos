@@ -2374,7 +2374,10 @@ abstract class EncodingScheme
      */
     static void register(string className)
     {
-        auto scheme = cast(EncodingScheme)ClassInfo.find(className).create();
+        auto info = ClassInfo.find(className);
+        if (info is null)
+            throw new EncodingException("Unable to find class info for class "~className);
+        auto scheme = cast(EncodingScheme)info.create();
         if (scheme is null)
             throw new EncodingException("Unable to create class "~className);
         foreach (encodingName;scheme.names())
@@ -3307,6 +3310,9 @@ class EncodingSchemeUtf32Native : EncodingScheme
 // cycles.
 extern(C) void std_encoding_shared_static_this()
 {
+    // BUG: this is needed or all the classinfo from this file will not be
+    // included in phobos!
+    scope ascii = new EncodingSchemeASCII;
     EncodingScheme.register("std.encoding.EncodingSchemeASCII");
     EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
     EncodingScheme.register("std.encoding.EncodingSchemeLatin2");
