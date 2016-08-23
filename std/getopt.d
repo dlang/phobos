@@ -320,7 +320,8 @@ getopt(args,
     "bar", &bar);
 ---------
 
-In the example above, "--foo", "--bar", "--FOo", "--bAr", etc. are recognized.
+In the example above, "--foo" and "--bar" are recognized, but "--Foo", "--Bar",
+"--FOo", "--bAr", etc. are rejected.
 The directive is active until the end of $(D getopt), or until the
 converse directive $(D caseInsensitive) is encountered:
 
