@@ -6602,7 +6602,7 @@ template dump(T...)
     private void dumpCT(Writer, Char)(Writer w, in Char[] fmt, bool printLastSeparator)
         if (isOutputRange!(Writer, string))
     {
-        alias FPfmt = void delegate() @safe;
+        alias FPfmt = void delegate(Writer wr) @safe;
         enum maxLength = 3;
 
         foreach (k, el; T)
@@ -6615,15 +6615,15 @@ template dump(T...)
             // special case for lambdas/alias functions
             static if (isCallable!el)
             {
-                funs[0] = () { formatValue(w, "()", spec); };
-                funs[1] = () { formatValue(w, el(), spec); };
-                funs[2] = () { formatValue(w, ReturnType!(typeof(el)).stringof, spec); };
+                funs[0] = (Writer wr) { formatValue(wr, "()", spec); };
+                funs[1] = (Writer wr) { formatValue(wr, el(), spec); };
+                funs[2] = (Writer wr) { formatValue(wr, ReturnType!(typeof(el)).stringof, spec); };
             }
             else
             {
-                funs[0] = () { formatValue(w, T[k].stringof, spec); };
-                funs[1] = () { formatValue(w, el, spec); };
-                funs[2] = () { formatValue(w, typeof(el).stringof, spec); };
+                funs[0] = (Writer wr) { formatValue(wr, T[k].stringof, spec); };
+                funs[1] = (Writer wr) { formatValue(wr, el, spec); };
+                funs[2] = (Writer wr) { formatValue(wr, typeof(el).stringof, spec); };
             }
 
             applySpecToFunctions(w, spec, funs);
@@ -6659,7 +6659,7 @@ template dump(T...)
 private void dumpRuntime(Writer, Char, Xs...)(Writer w, in Char[] fmt, lazy Xs xs)
     if (isOutputRange!(Writer, string))
 {
-    alias FPfmt = void delegate() pure @safe;
+    alias FPfmt = void delegate(Writer wr) @safe;
     enum maxLength = 3;
 
     foreach (k, el; xs)
@@ -6671,15 +6671,15 @@ private void dumpRuntime(Writer, Char, Xs...)(Writer w, in Char[] fmt, lazy Xs x
 
         static if (isCallable!el)
         {
-            funs[0] = () { formatValue(w, "()", spec); };
-            funs[1] = () { formatValue(w, el(), spec); };
-            funs[2] = () { formatValue(w, ReturnType!(typeof(el)).stringof, spec); };
+            funs[0] = (Writer wr) { formatValue(wr, "()", spec); };
+            funs[1] = (Writer wr) { formatValue(wr, el(), spec); };
+            funs[2] = (Writer wr) { formatValue(wr, ReturnType!(typeof(el)).stringof, spec); };
         }
         else
         {
-            funs[0] = () { formatValue(w, k, spec); };
-            funs[1] = () { formatValue(w, el, spec); };
-            funs[2] = () { formatValue(w, typeof(el).stringof, spec); };
+            funs[0] = (Writer wr) { formatValue(wr, k, spec); };
+            funs[1] = (Writer wr) { formatValue(wr, el, spec); };
+            funs[2] = (Writer wr) { formatValue(wr, typeof(el).stringof, spec); };
         }
 
         applySpecToFunctions(w, spec, funs);
@@ -6712,7 +6712,7 @@ private void applySpecToFunctions(Writer, Char, Fun)(Writer w, ref FormatSpec!Ch
                 foreach (i; spec.indexStart - 1 .. spec.indexEnd)
                 {
                     if (funs.length <= i) break;
-                    funs[i]();
+                    funs[i](w);
                 }
             }
             if (currentArg < spec.indexEnd) currentArg = spec.indexEnd;
@@ -6720,7 +6720,7 @@ private void applySpecToFunctions(Writer, Char, Fun)(Writer w, ref FormatSpec!Ch
         else
         {
             // parameters in given order
-            funs[currentArg++]();
+            funs[currentArg++](w);
         }
     }
 }
@@ -6807,4 +6807,8 @@ unittest
     auto w = appender!string;
     dump!(x, y)(w, "%s = %s, ");
     assert(w.data == "x = 2, y = 4");
+
+    import std.stdio : stdout;
+    if (false)
+        dump!(x, y)(stdout.lockingTextWriter(), "%s = %s, ");
 }
