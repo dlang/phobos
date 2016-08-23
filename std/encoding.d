@@ -55,6 +55,7 @@ module std.encoding;
 import std.traits;
 import std.typecons;
 import std.range.primitives;
+import std.internal.phobosinit;
 
 @system unittest
 {
@@ -3295,6 +3296,25 @@ class EncodingSchemeUtf32Native : EncodingScheme
     dchar dc = efrom.safeDecode(ub);
     assert(dc == 410);
     assert(ub.length == 8);
+}
+
+// this hack allows us to register all the classes without having dependencies
+// on other modules. The function is eterned, and then called from phobosinit.
+// Note that EncodingScheme.register uses the default constructor of each of
+// these classes via the Object.factory method, and then calls the names()
+// function. None of these functions above depend on external modules, so we
+// are safe to call this from an external module without risk of creating
+// cycles.
+extern(C) void std_encoding_shared_static_this()
+{
+    EncodingScheme.register("std.encoding.EncodingSchemeASCII");
+    EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
+    EncodingScheme.register("std.encoding.EncodingSchemeLatin2");
+    EncodingScheme.register("std.encoding.EncodingSchemeWindows1250");
+    EncodingScheme.register("std.encoding.EncodingSchemeWindows1252");
+    EncodingScheme.register("std.encoding.EncodingSchemeUtf8");
+    EncodingScheme.register("std.encoding.EncodingSchemeUtf16Native");
+    EncodingScheme.register("std.encoding.EncodingSchemeUtf32Native");
 }
 
 //=============================================================================

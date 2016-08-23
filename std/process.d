@@ -132,6 +132,7 @@ version (Posix)
 {
     version (OSX)
     {
+        import std.internal.phobosinit; // needed to make sure the function gets called
         extern(C) char*** _NSGetEnviron() nothrow;
         private __gshared const(char**)* environPtr;
         extern(C) void std_process_shared_static_this() { environPtr = _NSGetEnviron(); }
