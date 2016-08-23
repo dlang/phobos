@@ -150,12 +150,15 @@ rhs)) (where `op` is the operator symbol and `rhs` is the right-hand side
 operand) is forwarded to unconditionally for binary operators `+=`,  `-=`, `*=`, `/=`, `%=`,
 `^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, and `>>>=`.))
 
-$(TR $(TD `onBadOpOpAssign`) $(TD If defined and `hookOpOpAssign` is not
-defined, $(D hook.onBadOpOpAssign!op(value)) (where `value` is the value being
-assigned) is forwarded to when the result of binary operators `+=`,  `-=`, `*=`,
- `/=`, `%=`, `^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`,
-and `>>>=` cannot be assigned back to the payload without loss of information or
-a change in sign.))
+$(TR $(TD `onLowerBound`) $(TD If defined, $(D hook.onLowerBound(value, bound))
+(where `value` is the value being assigned) is forwarded to when the result of
+binary operators `+=`,  `-=`, `*=`, `/=`, `%=`, `^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`,
+and `>>>=` is smaller than the smallest value representable by `T`.))
+
+$(TR $(TD `onUpperBound`) $(TD If defined, $(D hook.onUpperBound(value, bound))
+(where `value` is the value being assigned) is forwarded to when the result of
+binary operators `+=`,  `-=`, `*=`, `/=`, `%=`, `^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`,
+and `>>>=` is larger than the largest value representable by `T`.))
 
 )
 
@@ -258,10 +261,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         is(U == Checked!(V, W), V, W) &&
             is(typeof(Checked!(T, Hook)(rhs.get))))
     {
-        static if (isIntegral!U)
-            payload = rhs;
-        else
-            payload = rhs.payload;
+        opAssign(rhs);
     }
     ///
     unittest
@@ -769,9 +769,11 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
 
     Otherwise, the operator first evaluates $(D auto result =
     opBinary!op(payload, rhs).payload), which is subject to the hooks in
-    `opBinary`. Then, if `result` does not fit in `this` without a loss of data
-    or a change in sign and if `Hook` defines `onBadOpOpAssign`, the payload is
-    assigned from `hook.onBadOpOpAssign!T(result)`.
+    `opBinary`. Then, if `result` is less than $(D Checked!(T, Hook).min) and if
+    `Hook` defines `onLowerBound`, the payload is assigned from $(D
+    hook.onLowerBound(result, min)). If `result` is greater than $(D Checked!(T,
+    Hook).max) and if `Hook` defines `onUpperBound`, the payload is assigned
+    from $(D hook.onUpperBound(result, min)).
 
     In all other cases, the built-in behavior is carried out.
 
@@ -781,7 +783,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
 
     Returns: A reference to `this`.
     */
-    ref Checked opOpAssign(string op, Rhs)(const Rhs rhs)
+    ref Checked opOpAssign(string op, Rhs)(const Rhs rhs) return
     if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool))
     {
         static assert(is(typeof(mixin("payload" ~ op ~ "=rhs")) == T));
@@ -794,35 +796,27 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         {
             alias R = typeof(payload + rhs);
             auto r = opBinary!op(rhs).payload;
+            import std.conv : unsigned;
 
-            static if (valueConvertible!(R, T) ||
-                !hasMember!(Hook, "onBadOpOpAssign") ||
-                op.among(">>", ">>>"))
+            static if (ProperCompare.hookOpCmp(R.min, min.payload) < 0 &&
+                hasMember!(Hook, "onLowerBound"))
             {
-                // No need to check these
-                payload = cast(T) r;
-            }
-            else
-            {
-                static if (isUnsigned!T && !isUnsigned!R)
+                if (ProperCompare.hookOpCmp(r, min.get) < 0)
                 {
-                    // Example: ushort += int
-                    import std.conv : unsigned;
-                    const bad = unsigned(r) > max.payload;
+                    payload = hook.onLowerBound(r, min.get);
+                    return this;
                 }
-                else
-                    // Some narrowing is afoot
-                    static if (R.min < min.payload)
-                        // Example: int += long
-                        const bad = r > max.payload || r < min.payload;
-                    else
-                        // Example: uint += ulong
-                        const bad = r > max.payload;
-                if (bad)
-                    payload = hook.onBadOpOpAssign!T(r);
-                else
-                    payload = cast(T) r;
             }
+            static if (ProperCompare.hookOpCmp(max.payload, R.max) < 0 &&
+                hasMember!(Hook, "onUpperBound"))
+            {
+                if (ProperCompare.hookOpCmp(r, max.get) > 0)
+                {
+                    payload = hook.onUpperBound(r, min.get);
+                    return this;
+                }
+            }
+            payload = cast(T) r;
         }
         return this;
     }
@@ -835,13 +829,10 @@ instance by using template argument deduction. The hook type may be specified
 (by default `Abort`).
 
 */
-template checked(Hook = Abort)
+Checked!(T, Hook) checked(Hook = Abort, T)(const T value)
+if (is(typeof(Checked!(T, Hook)(value))))
 {
-    Checked!(T, Hook) checked(T)(const T value)
-    if (is(typeof(Checked!(T, Hook)(value))))
-    {
-        return Checked!(T, Hook)(value);
-    }
+    return Checked!(T, Hook)(value);
 }
 
 ///
@@ -891,8 +882,7 @@ static:
 
     /**
 
-    Called automatically upon a bad `opOpAssign` call (one that loses precision
-    or attempts to convert a negative value to an unsigned type).
+    Called automatically upon a bounds error.
 
     Params:
     rhs = The right-hand side value in the assignment, after the operator has
@@ -903,9 +893,15 @@ static:
     it aborts the program.
 
     */
-    Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs rhs)
+    T onLowerBound(Rhs, T)(Rhs rhs, T bound)
     {
-        Warn.onBadOpOpAssign!Lhs(rhs);
+        Warn.onLowerBound(rhs, bound);
+        assert(0);
+    }
+    /// ditto
+    T onUpperBound(Rhs, T)(Rhs rhs, T bound)
+    {
+        Warn.onUpperBound(rhs, bound);
         assert(0);
     }
 
@@ -1026,11 +1022,18 @@ static:
 
     Returns: `cast(Lhs) rhs`
     */
-    Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs rhs)
+    Lhs onLowerBound(Rhs, T)(Rhs rhs, T bound)
     {
-        stderr.writefln("Erroneous assignment: %s = %s(%s)",
-            Lhs.stringof, Rhs.stringof, rhs);
-        return cast(Lhs) rhs;
+        stderr.writefln("Lower bound error: %s(%s) < %s(%s)",
+            Rhs.stringof, rhs, T.stringof, bound);
+        return cast(T) rhs;
+    }
+    /// ditto
+    T onUpperBound(Rhs, T)(Rhs rhs, T bound)
+    {
+        stderr.writefln("Upper bound error: %s(%s) > %s(%s)",
+            Rhs.stringof, rhs, T.stringof, bound);
+        return cast(T) rhs;
     }
 
     /**
@@ -1260,7 +1263,7 @@ unittest
 /**
 
 Hook that reserves a special value as a "Not a Number" representative. For
-signed integrals, the reserved value is `T.min`. For signed integrals, the
+signed integrals, the reserved value is `T.min`. For unsigned integrals, the
 reserved value is `T.max`.
 
 The default value of a $(D Checked!(X, WithNaN)) is its NaN value, so care must
@@ -1333,9 +1336,14 @@ static:
 
     Returns: `WithNaN.defaultValue!Lhs`
     */
-    Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs)
+    T onLowerBound(Rhs, T)(Rhs, T)
     {
-        return defaultValue!Lhs;
+        return defaultValue!T;
+    }
+    /// ditto
+    T onUpperBound(Rhs, T)(Rhs, T)
+    {
+        return defaultValue!T;
     }
 
     /**
@@ -1576,9 +1584,14 @@ static:
     Returns: `Lhs.max` if $(D rhs >= 0), `Lhs.min` otherwise.
 
     */
-    Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs rhs)
+    T onLowerBound(Rhs, T)(Rhs rhs, T bound)
     {
-        return rhs >= 0 ? Lhs.max : Lhs.min;
+        return bound;
+    }
+    /// ditto
+    T onUpperBound(Rhs, T)(Rhs rhs, T bound)
+    {
+        return bound;
     }
 
     /**
@@ -1995,10 +2008,15 @@ version(unittest) private struct CountOverflows
         ++calls;
         return mixin("lhs" ~ op ~ "rhs");
     }
-    Lhs onBadOpOpAssign(Lhs, Rhs)(Rhs rhs)
+    T onLowerBound(Rhs, T)(Rhs rhs, T bound)
     {
         ++calls;
-        return cast(Lhs) rhs;
+        return cast(T) rhs;
+    }
+    T onUpperBound(Rhs, T)(Rhs rhs, T bound)
+    {
+        ++calls;
+        return cast(T) rhs;
     }
 }
 
