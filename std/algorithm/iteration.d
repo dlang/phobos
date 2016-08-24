@@ -16,7 +16,7 @@ $(T2 chunkBy,
         and the third with just $(D [2, 1]).)
 $(T2 cumulativeFold,
         $(D cumulativeFold!((a, b) => a + b)([1, 2, 3, 4])) returns a
-        lazily-evaluated range containing the succesive reduced values `1`,
+        lazily-evaluated range containing the successive reduced values `1`,
         `3`, `6`, `10`.)
 $(T2 each,
         $(D each!writeln([1, 2, 3])) eagerly prints the numbers $(D 1), $(D 2)
