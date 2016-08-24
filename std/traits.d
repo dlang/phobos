@@ -6801,11 +6801,17 @@ unittest
 // #15335: getSymbolsByUDA fails if type has private members
 unittest
 {
-    // HasPrivateMembers has, well, private members, one of which has a UDA.
+    // HasPrivateMembers has private members, but only the ones visible from std.traits are returned
     import std.internal.test.uda;
-    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 2);
+    // whether allMembers returns private members, see dmd fix for Issue 15907
+    static if (__traits(allMembers, HasPrivateMembers).length == 2)
+        static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 1);
+    else
+    {
+        static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 2);
+        static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[1], Attr));
+    }
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
-    static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[1], Attr));
 }
 
 /**

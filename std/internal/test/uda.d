@@ -14,3 +14,13 @@ struct HasPrivateMembers
   @Attr private int c;
   private int d;
 }
+
+// If getSymbolsByUDA is mixed into the same scope it also returns private members
+unittest
+{
+    import std.traits : getSymbolsByUDA, hasUDA;
+    mixin getSymbolsByUDA!(HasPrivateMembers, Attr) symbols;
+    static assert(symbols.getSymbolsByUDA.length == 2);
+    static assert(hasUDA!(symbols.getSymbolsByUDA[0], Attr));
+    static assert(hasUDA!(symbols.getSymbolsByUDA[1], Attr));
+}
