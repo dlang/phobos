@@ -2633,7 +2633,7 @@ public:
 
             // Hack to take the address of a nested function w/o
             // making a closure.
-            static auto scopedAddress(D)(scope D del)
+            static auto scopedAddress(D)(scope D del) @system
             {
                 auto tmp = del;
                 return tmp;
