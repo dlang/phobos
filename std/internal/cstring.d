@@ -132,7 +132,7 @@ auto tempCString(To = char, From)(From str)
             enum buffLength = 256 / To.sizeof;   // production size
         }
 
-        To[256 / To.sizeof] _buff;  // the 'small string optimization'
+        To[buffLength] _buff;  // the 'small string optimization'
 
         static Res trustedVoidInit() { Res res = void; return res; }
     }
@@ -141,7 +141,7 @@ auto tempCString(To = char, From)(From str)
 
     // Note: res._ptr can't point to res._buff as structs are movable.
 
-    To[] p = res._buff[0 .. Res.buffLength];
+    To[] p;
     bool p_is_onstack = true;
     size_t i;
 
@@ -154,27 +154,27 @@ auto tempCString(To = char, From)(From str)
         import core.stdc.string : memcpy;
         import core.stdc.stdlib : malloc, realloc;
 
-        auto ptr = buf.ptr;
-        auto len = buf.length;
-        if (len >= size_t.max / (2 * To.sizeof))
-            onOutOfMemoryError();
-        size_t newlen = len * 3 / 2;
         if (res_is_onstack)
         {
+            size_t newlen = res.length * 3 / 2;
             if (newlen <= strLength)
                 newlen = strLength + 1; // +1 for terminating 0
-            ptr = cast(To*)malloc(newlen * To.sizeof);
+            auto ptr = cast(To*)malloc(newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
             memcpy(ptr, res.ptr, i * To.sizeof);
+            return ptr[0 .. newlen];
         }
         else
         {
-            ptr = cast(To*)realloc(ptr, newlen * To.sizeof);
+            if (buf.length >= size_t.max / (2 * To.sizeof))
+                onOutOfMemoryError();
+            const newlen = buf.length * 3 / 2;
+            auto ptr = cast(To*)realloc(buf.ptr, newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
+            return ptr[0 .. newlen];
         }
-        return ptr[0 .. newlen];
     }
 
     size_t strLength;
@@ -194,16 +194,18 @@ auto tempCString(To = char, From)(From str)
     }
     else
         alias r = str;
+    To[] q = res._buff;
     foreach (const c; byUTF!(Unqual!To)(r))
     {
-        if (i + 1 == p.length)
+        if (i + 1 == q.length)
         {
             p = trustedRealloc(p, i, res._buff, strLength, p_is_onstack);
             p_is_onstack = false;
+            q = p;
         }
-        p[i++] = c;
+        q[i++] = c;
     }
-    p[i] = 0;
+    q[i] = 0;
     res._ptr = p_is_onstack ? useStack : &p[0];
     return res;
 }
