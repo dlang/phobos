@@ -6798,6 +6798,23 @@ unittest
     static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
 }
 
+/// mixin getSymbolsByUDA to also find private members
+unittest
+{
+    import std.traits;
+    enum UDA;
+    struct S
+    {
+        @UDA int visible;
+        @UDA private int invisible;
+    }
+    // mixin the template instantiation, using a name to avoid namespace pollution
+    mixin getSymbolsByUDA!(S, UDA) symbols;
+    // as the template is instantiated in the current scope, it can see private members
+    // mixin templates don't perform eponymous expansion, so an additional `.getSymbolsByUDA` is needed
+    static assert(symbols.getSymbolsByUDA.length == 2);
+}
+
 // #15335: getSymbolsByUDA fails if type has private members
 unittest
 {
