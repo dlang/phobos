@@ -171,7 +171,7 @@ private ulong getBitsForAlign(ulong a)
 private template createReferenceAccessor(string store, T, ulong bits, string name)
 {
     enum storage = "private void* " ~ store ~ "_ptr;\n";
-    enum storage_accessor = "@property ref size_t " ~ store ~ "() @trusted pure nothrow @nogc const { "
+    enum storage_accessor = "@property ref size_t " ~ store ~ "() return @trusted pure nothrow @nogc const { "
         ~ "return *cast(size_t*) &" ~ store ~ "_ptr;}\n"
         ~ "@property void " ~ store ~ "(size_t v) @trusted pure nothrow @nogc { "
         ~ "" ~ store ~ "_ptr = cast(void*) v;}\n";
