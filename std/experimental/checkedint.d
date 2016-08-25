@@ -99,8 +99,8 @@ $(TR $(TH `Hook` member) $(TH Semantics in $(D Checked!(T, Hook))))
 $(TR $(TD `defaultValue`) $(TD If defined, `Hook.defaultValue!T` is used as the
 default initializer of the payload.))
 
-$(TR $(TD `min`) $(TD If defined, $(D max(Hook.min!T, minimum)) is used as the
-minimum value of the payload.))
+$(TR $(TD `min`) $(TD If defined, `Hook.min!T` is used as the minimum value of
+the payload.))
 
 $(TR $(TD `max`) $(TD If defined, `Hook.max!T` is used as the maximum value of
 the payload.))
@@ -183,25 +183,22 @@ unittest
     assert(concatAndAdd([1, 2, 3], [4, 5], -1) == [0, 1, 2, 3, 4]);
 }
 
-private T representation(T)(T v) if (isIntegral!T) { return v; }
-
 /**
 Checked integral type wraps an integral `T` and customizes its behavior with the
 help of a `Hook` type. The type wrapped must be one of the predefined integrals
 (unqualified), or another instance of `Checked`.
 */
-struct Checked(T, Hook = Abort, T minimum = T.min, T maximum = T.max)
-if (isIntegral!T && is(T == Unqual!T) ||
-    is(T == Checked!(U, H, min1, max1), U, H, alias min1, alias max1))
+struct Checked(T, Hook = Abort)
+if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
 {
     import std.algorithm.comparison : among;
-    import std.traits : hasMember, isIntegral;
+    import std.traits : hasMember;
     import std.experimental.allocator.common : stateSize;
 
     /**
-    The type subject to checking (an alias for the `T` parameter).
+    The type of the integral subject to checking.
     */
-    alias Payload = T;
+    alias Representation = T;
 
     // state {
     static if (hasMember!(Hook, "defaultValue"))
@@ -216,17 +213,6 @@ if (isIntegral!T && is(T == Unqual!T) ||
     else alias hook = Hook;
     // } state
 
-    private auto representation()
-    {
-        return payload.representation;
-    }
-
-    unittest
-    {
-        static assert(is(typeof(Checked!(short, Hook)().representation())
-            == short));
-    }
-
     // get
     /**
     Returns a copy of the underlying value.
@@ -240,35 +226,28 @@ if (isIntegral!T && is(T == Unqual!T) ||
         assert(x.get == 42);
     }
 
-    static if (hasMember!(Hook, "min"))
-        private enum minRep =
-            (minimum < Hook.min!T ? Hook.min!T : minimum).representation;
-    else
-        private enum minRep = minimum.representation;
-    static if (hasMember!(Hook, "max"))
-        private enum maxRep =
-            (maximum > Hook.max!T ? Hook.max!T : maximum).representation;
-    else
-        private enum maxRep = maximum.representation;
-
     /**
-
-    Defines the minimum and maximum. If `Hook` defines `min`, then $(D min =
-    Checked(max(minimum, Hook.min!T))). Otherwise,
-
+    Defines the minimum and maximum. These values are hookable by defining
+    `Hook.min` and/or `Hook.max`.
     */
-    enum Checked min = Checked(minRep);
-    /// ditto
-    enum Checked max = Checked(maxRep);
-    ///
-    unittest
+    static if (hasMember!(Hook, "min"))
     {
-        assert(Checked!short.min == -32768);
-        assert(Checked!(short, WithNaN).min == -32767);
-        assert(Checked!(uint, WithNaN).max == uint.max - 1);
+        enum Checked!(T, Hook) min = Checked!(T, Hook)(Hook.min!T);
+        ///
+        unittest
+        {
+            assert(Checked!short.min == -32768);
+            assert(Checked!(short, WithNaN).min == -32767);
+            assert(Checked!(uint, WithNaN).max == uint.max - 1);
+        }
     }
-
-    static assert(minRep <= maxRep);
+    else
+        enum Checked!(T, Hook) min = Checked(T.min);
+    /// ditto
+    static if (hasMember!(Hook, "max"))
+        enum Checked!(T, Hook) max = Checked(Hook.max!T);
+    else
+        enum Checked!(T, Hook) max = Checked(T.max);
 
     /**
     Constructor taking a value properly convertible to the underlying type. `U`
@@ -279,9 +258,8 @@ if (isIntegral!T && is(T == Unqual!T) ||
     this(U)(U rhs)
     if (valueConvertible!(U, T) ||
         !isIntegral!T && is(typeof(T(rhs))) ||
-        is(U == Checked!(V, W, min1, max1), V, W, alias min1, alias max1) &&
-            ProperCompare.hookOpCmp(U.minRep, minRep) >= 0 &&
-            ProperCompare.hookOpCmp(U.maxRep, maxRep) <= 0)
+        is(U == Checked!(V, W), V, W) &&
+            is(typeof(Checked!(T, Hook)(rhs.get))))
     {
         opAssign(rhs);
     }
@@ -297,32 +275,12 @@ if (isIntegral!T && is(T == Unqual!T) ||
     /**
     Assignment operator. Has the same constraints as the constructor.
     */
-    void opAssign(U)(U rhs)
-    if (is(typeof(Checked(rhs))))
+    void opAssign(U)(U rhs) if (is(typeof(Checked!(T, Hook)(rhs))))
     {
         static if (isIntegral!U)
-            alias r = rhs;
+            payload = rhs;
         else
-            auto r = rhs.representation;
-        static if (ProperCompare.hookOpCmp(r.min, minRep) < 0 &&
-            hasMember!(Hook, "onLowerBound"))
-        {
-            if (ProperCompare.hookOpCmp(r, minRep) < 0)
-            {
-                payload = hook.onLowerBound(r, minRep);
-                return;
-            }
-        }
-        static if (ProperCompare.hookOpCmp(maxRep, r.max) < 0 &&
-            hasMember!(Hook, "onUpperBound"))
-        {
-            if (ProperCompare.hookOpCmp(r, maxRep) > 0)
-            {
-                payload = hook.onUpperBound(r, maxRep);
-                return;
-            }
-        }
-        payload = r;
+            payload = rhs.payload;
     }
     ///
     unittest
@@ -410,11 +368,9 @@ if (isIntegral!T && is(T == Unqual!T) ||
     */
     bool opEquals(U)(U rhs)
     if (isIntegral!U || isFloatingPoint!U || is(U == bool) ||
-        is(U == Checked!(V, W, min1, max1), V, W, alias min1, alias max1) &&
-            is(typeof(this == rhs.get)))
+        is(U == Checked!(V, W), V, W) && is(typeof(this == rhs.payload)))
     {
-        static if (is(U == Checked!(V, W, min1, max1), V, W,
-            alias min1, alias max1))
+        static if (is(U == Checked!(V, W), V, W))
         {
             alias R = typeof(payload + rhs.payload);
             static if (is(Hook == W))
@@ -516,14 +472,14 @@ if (isIntegral!T && is(T == Unqual!T) ||
     }
 
     /// ditto
-    auto opCmp(U, H1, alias min1, alias max1)(Checked!(U, H1, min1, max1) rhs)
+    auto opCmp(U, Hook1)(Checked!(U, Hook1) rhs)
     {
         alias R = typeof(payload + rhs.payload);
         static if (valueConvertible!(T, R) && valueConvertible!(U, R))
         {
             return payload < rhs.payload ? -1 : payload > rhs.payload;
         }
-        else static if (is(Hook == H1))
+        else static if (is(Hook == Hook1))
         {
             // Use the lhs hook
             return this.opCmp(rhs.payload);
@@ -532,7 +488,7 @@ if (isIntegral!T && is(T == Unqual!T) ||
         {
             return hook.hookOpCmp(payload, rhs);
         }
-        else static if (hasMember!(H1, "hookOpCmp"))
+        else static if (hasMember!(Hook1, "hookOpCmp"))
         {
             return rhs.hook.hookOpCmp(rhs.payload, this);
         }
@@ -606,7 +562,6 @@ if (isIntegral!T && is(T == Unqual!T) ||
         else static if (hasMember!(Hook, "hookOpUnary"))
         {
             auto r = hook.hookOpUnary!op(payload);
-            // Note: we're being conservative here with the min and max
             return Checked!(typeof(r), Hook)(r);
         }
         else static if (op == "-" && isIntegral!T && T.sizeof >= 4 &&
@@ -617,9 +572,6 @@ if (isIntegral!T && is(T == Unqual!T) ||
             bool overflow;
             auto r = negs(payload, overflow);
             if (overflow) r = hook.onOverflow!op(payload);
-            //enum min1 = -maxRep, max1 = minRep.min ? maxRep : -minRep;
-            //return Checked!(T, Hook, min1, max1)(r);
-            // Note: we're being conservative here with the min and max
             return Checked(r);
         }
         else
@@ -693,14 +645,12 @@ if (isIntegral!T && is(T == Unqual!T) ||
     {
         alias R = typeof(payload + rhs);
         static assert(is(typeof(mixin("payload" ~ op ~ "rhs")) == R));
-        // Note: being conservative with min and max
         static if (isIntegral!R) alias Result = Checked!(R, Hook);
         else alias Result = R;
 
         static if (hasMember!(Hook, "hookOpBinary"))
         {
             auto r = hook.hookOpBinary!op(payload, rhs);
-            // Note: being conservative with min and max
             return Checked!(typeof(r), Hook)(r);
         }
         else static if (is(Rhs == bool))
@@ -726,8 +676,7 @@ if (isIntegral!T && is(T == Unqual!T) ||
     }
 
     /// ditto
-    auto opBinary(string op, U, Hook1, alias min1, alias max1)(
-        Checked!(U, Hook1, min1, max1) rhs)
+    auto opBinary(string op, U, Hook1)(Checked!(U, Hook1) rhs)
     {
         alias R = typeof(get + rhs.payload);
         static if (valueConvertible!(T, R) && valueConvertible!(U, R) ||
@@ -778,13 +727,11 @@ if (isIntegral!T && is(T == Unqual!T) ||
         static if (hasMember!(Hook, "hookOpBinaryRight"))
         {
             auto r = hook.hookOpBinaryRight!op(lhs, payload);
-            // Note: being conservative with min and max
             return Checked!(typeof(r), Hook)(r);
         }
         else static if (hasMember!(Hook, "hookOpBinary"))
         {
             auto r = hook.hookOpBinary!op(lhs, payload);
-            // Note: being conservative with min and max
             return Checked!(typeof(r), Hook)(r);
         }
         else static if (is(Lhs == bool))
@@ -800,14 +747,12 @@ if (isIntegral!T && is(T == Unqual!T) ||
             bool overflow;
             auto r = opChecked!op(lhs, T(payload), overflow);
             if (overflow) r = hook.onOverflow!op(42);
-            // Note: being conservative with min and max
             return Checked!(typeof(r), Hook)(r);
         }
         else
         {
             // Default is built-in behavior
             auto r = mixin("lhs" ~ op ~ "T(payload)");
-            // Note: being conservative with min and max
             return Checked!(typeof(r), Hook)(r);
         }
     }
@@ -828,7 +773,7 @@ if (isIntegral!T && is(T == Unqual!T) ||
     `Hook` defines `onLowerBound`, the payload is assigned from $(D
     hook.onLowerBound(result, min)). If `result` is greater than $(D Checked!(T,
     Hook).max) and if `Hook` defines `onUpperBound`, the payload is assigned
-    from $(D hook.onUpperBound(result, max)).
+    from $(D hook.onUpperBound(result, min)).
 
     In all other cases, the built-in behavior is carried out.
 
@@ -1318,7 +1263,7 @@ unittest
 /**
 
 Hook that reserves a special value as a "Not a Number" representative. For
-signed integrals, the reserved value is `T.min`. For unsigned integrals, the
+signed integrals, the reserved value is `T.min`. For signed integrals, the
 reserved value is `T.max`.
 
 The default value of a $(D Checked!(X, WithNaN)) is its NaN value, so care must
@@ -1385,7 +1330,7 @@ static:
     failures.
 
     Params:
-    T = The target of the assignment (`T` is the first argument to
+    Lhs = The target of the assignment (`Lhs` is the first argument to
     `Checked`)
     Rhs = The right-hand side type in the assignment
 
@@ -1631,7 +1576,7 @@ static:
     not fit in `Lhs` without loss of information or a change in sign.
 
     Params:
-    T = The target of the assignment (`T` is the first argument to
+    Lhs = The target of the assignment (`Lhs` is the first argument to
     `Checked`)
     Rhs = The right-hand side type in the assignment, after the operation has
     been computed
