@@ -2359,7 +2359,7 @@ struct HTTP
         /// The HTTP method to use.
         Method method = Method.undefined;
 
-        @property void onReceiveHeader(void delegate(in char[] key,
+        @system @property void onReceiveHeader(void delegate(in char[] key,
                                                      in char[] value) callback)
         {
             // Wrap incoming callback in order to separate http status line from
