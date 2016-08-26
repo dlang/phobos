@@ -875,7 +875,7 @@ template multiSort(less...) //if (less.length > 1)
         }
         else
         {
-            alias ss = SwapStrategy.unstable;
+            enum ss = SwapStrategy.unstable;
             alias funs = less;
         }
 
@@ -886,49 +886,50 @@ template multiSort(less...) //if (less.length > 1)
             return sort!(funs[0], ss, Range)(r);
         else
         {
-            static void multiSortImpl(funs...)(Range r) @safe
-            {
-                alias lessFun = binaryFun!(funs[0]);
-
-                static if (funs.length > 1)
-                {
-                    while (r.length > 1)
-                    {
-                        auto p = getPivot!lessFun(r);
-                        auto t = partition3!(funs[0], ss)(r, r[p]);
-                        if (t[0].length <= t[2].length)
-                        {
-                            multiSortImpl!funs(t[0]);
-                            multiSortImpl!(funs[1 .. $])(t[1]);
-                            r = t[2];
-                        }
-                        else
-                        {
-                            multiSortImpl!(funs[1 .. $])(t[1]);
-                            multiSortImpl!funs(t[2]);
-                            r = t[0];
-                        }
-                    }
-                }
-                else
-                {
-                    sort!(lessFun, ss)(r);
-                }
-            }
-
-            static bool predFun(ElementType!Range a, ElementType!Range b)
-            {
-                foreach (f; AliasSeq!(funs))
-                {
-                    alias lessFun = binaryFun!(f);
-                    if (lessFun(a, b)) return true;
-                    if (lessFun(b, a)) return false;
-                }
-                return false;
-            }
-            multiSortImpl!funs(r);
-            return assumeSorted!predFun(r);
+            multiSortImpl!(Range, ss, funs)(r);
+            return assumeSorted!(multiSortPredFun!(Range, funs))(r);
         }
+    }
+}
+
+private bool multiSortPredFun(Range, funs...)(ElementType!Range a, ElementType!Range b)
+{
+    foreach (f; funs)
+    {
+        alias lessFun = binaryFun!(f);
+        if (lessFun(a, b)) return true;
+        if (lessFun(b, a)) return false;
+    }
+    return false;
+}
+
+private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
+{
+    alias lessFun = binaryFun!(funs[0]);
+
+    static if (funs.length > 1)
+    {
+        while (r.length > 1)
+        {
+            auto p = getPivot!lessFun(r);
+            auto t = partition3!(funs[0], ss)(r, r[p]);
+            if (t[0].length <= t[2].length)
+            {
+                multiSortImpl!(Range, ss, funs)(t[0]);
+                multiSortImpl!(Range, ss, funs[1 .. $])(t[1]);
+                r = t[2];
+            }
+            else
+            {
+                multiSortImpl!(Range, ss, funs[1 .. $])(t[1]);
+                multiSortImpl!(Range, ss, funs)(t[2]);
+                r = t[0];
+            }
+        }
+    }
+    else
+    {
+        sort!(lessFun, ss)(r);
     }
 }
 
@@ -984,6 +985,18 @@ template multiSort(less...) //if (less.length > 1)
     multiSort!(byX, byY)(points);
     assert(points[0] == A(2, 4));
     assert(points[1] == A(4, 1));
+}
+
+@safe unittest // issue 16179 (cannot access frame of function)
+{
+    auto arr = [[1, 2], [2, 0], [1, 0], [1, 1]];
+    int c = 3;
+
+    arr.multiSort!(
+        (a, b) => a[0] < b[0],
+        (a, b) => c*a[1] < c*b[1]
+    );
+    assert(arr == [[1, 0], [1, 1], [1, 2], [2, 0]]);
 }
 
 private size_t getPivot(alias less, Range)(Range r)
