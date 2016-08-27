@@ -999,6 +999,14 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     assert(arr == [[1, 0], [1, 1], [1, 2], [2, 0]]);
 }
 
+unittest //Issue 16413 - @system comparison function
+{
+    bool lt(int a, int b) { return a < b; } static @system
+    auto a = [2, 1];
+    a.multiSort!(lt, lt);
+    assert(a == [1, 2]);
+}
+
 private size_t getPivot(alias less, Range)(Range r)
 {
     import std.algorithm.mutation : swapAt;
