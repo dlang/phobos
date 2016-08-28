@@ -257,7 +257,10 @@ class OutBuffer
 
     void vprintf(string format, va_list args) @trusted nothrow
     {
-        char[128] buffer;
+        version (unittest)
+            char[3] buffer = void;      // trigger reallocation
+        else
+            char[128] buffer = void;
         int count;
 
         // Can't use `tempCString()` here as it will result in compilation error:
@@ -269,21 +272,37 @@ class OutBuffer
         {
             version(Windows)
             {
-                count = vsnprintf(p,psize,f,args);
+                va_list args2;
+                va_copy(args2, args);
+                count = vsnprintf(p,psize,f,args2);
+                va_end(args2);
                 if (count != -1)
                     break;
+
+                if (psize > psize.max / 2) assert(0); // overflow check
                 psize *= 2;
+
                 p = cast(char *) alloca(psize); // buffer too small, try again with larger size
             }
             else version(Posix)
             {
-                count = vsnprintf(p,psize,f,args);
+                va_list args2;
+                va_copy(args2, args);
+                count = vsnprintf(p, psize, f, args2);
+                va_end(args2);
                 if (count == -1)
+                {
+                    if (psize > psize.max / 2) assert(0); // overflow check
                     psize *= 2;
+                }
                 else if (count >= psize)
+                {
+                    if (count == count.max) assert(0); // overflow check
                     psize = count + 1;
+                }
                 else
                     break;
+
                 /+
                 if (p != buffer)
                     c.stdlib.free(p);
@@ -406,10 +425,10 @@ class OutBuffer
     buf.write("hello"[]);
     buf.write(cast(byte)0x20);
     buf.write("world"[]);
-    buf.printf(" %d", 6);
+    buf.printf(" %d", 62665);
     //auto s = buf.toString();
     //printf("buf = '%.*s'\n", s.length, s.ptr);
-    assert(cmp(buf.toString(), "hello world 6") == 0);
+    assert(cmp(buf.toString(), "hello world 62665") == 0);
 }
 
 @safe unittest
