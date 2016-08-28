@@ -359,7 +359,7 @@ struct Writer(_StringType, alias OutRange, alias PrettyPrinter = PrettyPrinters.
         closeOpenThings;
 
         mixin(ifAnyCompiles(expand!"beforeNode"));
-        output.put("<![CDATA[[");
+        output.put("<![CDATA[");
         output.put(cdata);
         output.put("]]>");
         mixin(ifAnyCompiles(expand!"afterNode"));
@@ -536,7 +536,7 @@ unittest
     splitter.popFront;
     assert(splitter.front == "\tWonderful text");
     splitter.popFront;
-    assert(splitter.front == "\t<![CDATA[[Wonderful cdata]]>");
+    assert(splitter.front == "\t<![CDATA[Wonderful cdata]]>");
     splitter.popFront;
     assert(splitter.front == "\t<?pi it works?>");
     splitter.popFront;
@@ -559,7 +559,7 @@ void writeDOM(WriterType, NodeType)(auto ref WriterType writer, NodeType node)
 
     switch (node.nodeType) with (dom.NodeType)
     {
-        case DOCUMENT:
+        case document:
             auto doc = cast(Document)node;
             writer.writeXMLDeclaration(doc.xmlVersion, doc.xmlEncoding, dom.xmlStandalone);
             foreach (child; doc.childNodes)
@@ -575,13 +575,13 @@ void writeDOM(WriterType, NodeType)(auto ref WriterType writer, NodeType node)
                 writer.writeDOM(elem);
             writer.closeElement(elem.tagName);
             break;
-        case TEXT:
+        case text:
             writer.writeText(node.value);
             break;
-        case CDATA:
+        case cdata:
             writer.writeCDATA(node.value);
             break;
-        case COMMENT:
+        case comment:
             writer.writeComment(node.value);
             break;
         default:
@@ -610,11 +610,11 @@ auto writeCursor(Flag!"useFiber" useFiber = No.useFiber, WriterType, CursorType)
     {
         do
         {
-            switch (cursor.getKind) with (XMLKind)
+            switch (cursor.kind) with (XMLKind)
             {
-                case DOCUMENT:
+                case document:
                     StringType version_, encoding, standalone;
-                    foreach (attr; cursor.getAttributes)
+                    foreach (attr; cursor.attributes)
                         if (attr.name == "version")
                             version_ = attr.value;
                         else if (attr.name == "encoding")
@@ -628,9 +628,9 @@ auto writeCursor(Flag!"useFiber" useFiber = No.useFiber, WriterType, CursorType)
                         cursor.exit;
                     }
                     break;
-                case DTD_EMPTY:
-                case DTD_START:
-                    writer.startDoctype(cursor.getAll);
+                case dtdEmpty:
+                case dtdStart:
+                    writer.startDoctype(cursor.wholeContent);
                     if (cursor.enter)
                     {
                         inspectOneLevel();
@@ -638,37 +638,37 @@ auto writeCursor(Flag!"useFiber" useFiber = No.useFiber, WriterType, CursorType)
                     }
                     writer.closeDoctype();
                     break;
-                case ATTLIST_DECL:
-                    writer.writeDeclaration("ATTLIST", cursor.getAll);
+                case attlistDecl:
+                    writer.writeDeclaration("ATTLIST", cursor.wholeContent);
                     break;
-                case ELEMENT_DECL:
-                    writer.writeDeclaration("ELEMENT", cursor.getAll);
+                case elementDecl:
+                    writer.writeDeclaration("ELEMENT", cursor.wholeContent);
                     break;
-                case ENTITY_DECL:
-                    writer.writeDeclaration("ENTITY", cursor.getAll);
+                case entityDecl:
+                    writer.writeDeclaration("ENTITY", cursor.wholeContent);
                     break;
-                case NOTATION_DECL:
-                    writer.writeDeclaration("NOTATION", cursor.getAll);
+                case notationDecl:
+                    writer.writeDeclaration("NOTATION", cursor.wholeContent);
                     break;
-                case DECLARATION:
-                    writer.writeDeclaration(cursor.getName, cursor.getContent);
+                case declaration:
+                    writer.writeDeclaration(cursor.name, cursor.content);
                     break;
-                case TEXT:
-                    writer.writeText(cursor.getContent);
+                case text:
+                    writer.writeText(cursor.content);
                     break;
-                case CDATA:
-                    writer.writeCDATA(cursor.getContent);
+                case cdata:
+                    writer.writeCDATA(cursor.content);
                     break;
-                case COMMENT:
-                    writer.writeComment(cursor.getContent);
+                case comment:
+                    writer.writeComment(cursor.content);
                     break;
-                case PROCESSING_INSTRUCTION:
-                    writer.writeProcessingInstruction(cursor.getName, cursor.getContent);
+                case processingInstruction:
+                    writer.writeProcessingInstruction(cursor.name, cursor.content);
                     break;
-                case ELEMENT_START:
-                case ELEMENT_EMPTY:
-                    writer.startElement(cursor.getName);
-                    for (auto attrs = cursor.getAttributes; !attrs.empty; attrs.popFront)
+                case elementStart:
+                case elementEmpty:
+                    writer.startElement(cursor.name);
+                    for (auto attrs = cursor.attributes; !attrs.empty; attrs.popFront)
                     {
                         auto attr = attrs.front;
                         writer.writeAttribute(attr.name, attr.value);
@@ -678,7 +678,7 @@ auto writeCursor(Flag!"useFiber" useFiber = No.useFiber, WriterType, CursorType)
                         inspectOneLevel();
                         cursor.exit;
                     }
-                    writer.closeElement(cursor.getName);
+                    writer.closeElement(cursor.name);
                     break;
                 default:
                     break;
@@ -756,16 +756,16 @@ struct CheckedWriter(WriterType, CursorType = void)
 
             alias StringType = WriterType.StringType;
 
-            private StringType name, content;
+            private StringType _name, _content;
             private Array!(Attribute!StringType) attrs;
-            private XMLKind kind;
+            private XMLKind _kind;
             private size_t colon;
             private bool initialized;
 
             void _setName(StringType name)
             {
                 import std.experimental.xml.faststrings;
-                this.name = name;
+                _name = name;
                 auto i = name.fastIndexOf(':');
                 if (i > 0)
                     colon = i;
@@ -778,60 +778,60 @@ struct CheckedWriter(WriterType, CursorType = void)
             }
             void _setKind(XMLKind kind)
             {
-                this.kind = kind;
+                _kind = kind;
                 initialized = true;
                 attrs.clear;
             }
-            void _setContent(StringType content) { this.content = content; }
+            void _setContent(StringType content) { _content = content; }
 
-            auto getKind()
+            auto kind()
             {
                 if (!initialized)
                     Fiber.yield;
 
-                return kind;
+                return _kind;
             }
-            auto getName() { return name; }
-            auto getPrefix() { return name[0..colon]; }
-            auto getContent() { return content; }
-            auto getAttributes() { return attrs[]; }
-            StringType getLocalName()
+            auto name() { return _name; }
+            auto prefix() { return _name[0..colon]; }
+            auto content() { return _content; }
+            auto attributes() { return attrs[]; }
+            StringType localName()
             {
                 if (colon)
-                    return name[colon+1..$];
+                    return _name[colon+1..$];
                 else
                     return [];
             }
 
             bool enter()
             {
-                if (kind == XMLKind.DOCUMENT)
+                if (_kind == XMLKind.document)
                 {
                     Fiber.yield;
                     return true;
                 }
-                if (kind != XMLKind.ELEMENT_START)
+                if (_kind != XMLKind.elementStart)
                     return false;
 
                 Fiber.yield;
-                return kind != XMLKind.ELEMENT_END;
+                return _kind != XMLKind.elementEnd;
             }
             bool next()
             {
                 Fiber.yield;
-                return kind != XMLKind.ELEMENT_END;
+                return _kind != XMLKind.elementEnd;
             }
             void exit() {}
             bool atBeginning()
             {
-                return !initialized || kind == XMLKind.DOCUMENT;
+                return !initialized || _kind == XMLKind.document;
             }
             bool documentEnd() { return false; }
 
             alias InputType = void*;
-            StringType getAll()
+            StringType wholeContent()
             {
-                assert(0, "Cannot call getAll on this type of cursor");
+                assert(0, "Cannot call wholeContent on this type of cursor");
             }
             void setSource(InputType)
             {
@@ -848,7 +848,7 @@ struct CheckedWriter(WriterType, CursorType = void)
     void writeXMLDeclaration(Args...)(Args args)
     {
         auto attrs = xmlDeclarationAttributes!StringType(args);
-        cursor._setKind(XMLKind.DOCUMENT);
+        cursor._setKind(XMLKind.document);
         if (attrs[0])
             cursor._addAttribute("version", attrs[0]);
         if (attrs[1])
@@ -859,7 +859,7 @@ struct CheckedWriter(WriterType, CursorType = void)
     }
     void writeXMLDeclaration(StringType version_, StringType encoding, StringType standalone)
     {
-        cursor._setKind(XMLKind.DOCUMENT);
+        cursor._setKind(XMLKind.document);
         if (version_)
             cursor._addAttribute("version", version_);
         if (encoding)
@@ -875,7 +875,7 @@ struct CheckedWriter(WriterType, CursorType = void)
             fiber.call;
             startingTag = false;
         }
-        cursor._setKind(XMLKind.COMMENT);
+        cursor._setKind(XMLKind.comment);
         cursor._setContent(text);
         fiber.call;
     }
@@ -886,7 +886,7 @@ struct CheckedWriter(WriterType, CursorType = void)
             fiber.call;
             startingTag = false;
         }
-        cursor._setKind(XMLKind.TEXT);
+        cursor._setKind(XMLKind.text);
         cursor._setContent(text);
         fiber.call;
     }
@@ -897,7 +897,7 @@ struct CheckedWriter(WriterType, CursorType = void)
             fiber.call;
             startingTag = false;
         }
-        cursor._setKind(XMLKind.CDATA);
+        cursor._setKind(XMLKind.cdata);
         cursor._setContent(text);
         fiber.call;
     }
@@ -908,7 +908,7 @@ struct CheckedWriter(WriterType, CursorType = void)
             fiber.call;
             startingTag = false;
         }
-        cursor._setKind(XMLKind.COMMENT);
+        cursor._setKind(XMLKind.comment);
         cursor._setName(target);
         cursor._setContent(data);
         fiber.call;
@@ -919,7 +919,7 @@ struct CheckedWriter(WriterType, CursorType = void)
             fiber.call;
 
         startingTag = true;
-        cursor._setKind(XMLKind.ELEMENT_START);
+        cursor._setKind(XMLKind.elementStart);
         cursor._setName(tag);
     }
     void closeElement(StringType tag)
@@ -929,7 +929,7 @@ struct CheckedWriter(WriterType, CursorType = void)
             fiber.call;
             startingTag = false;
         }
-        cursor._setKind(XMLKind.ELEMENT_END);
+        cursor._setKind(XMLKind.elementEnd);
         cursor._setName(tag);
         fiber.call;
     }
@@ -998,7 +998,7 @@ unittest
     writer.startElement("aa;bb");
     writer.writeAttribute(";eh", "foo");
     writer.writeText("a nice text");
-    writer.writeCDATA("a nice CDATA");
+    writer.writeCDATA("a nice cdata");
     writer.closeElement("aabb");
     assert(count == 2);
 }

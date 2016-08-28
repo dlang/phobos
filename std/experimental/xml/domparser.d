@@ -68,8 +68,8 @@ struct DOMBuilder(T, DOMImplementation = dom.DOMImplementation!(T.StringType))
         cursor.setSource(input);
         document = domImpl.createDocument(null, null, null);
 
-        if (cursor.getKind == XMLKind.DOCUMENT)
-            foreach (attr; cursor.getAttributes)
+        if (cursor.kind == XMLKind.document)
+            foreach (attr; cursor.attributes)
                 switch (attr.name)
                 {
                     case "version":
@@ -94,7 +94,7 @@ struct DOMBuilder(T, DOMImplementation = dom.DOMImplementation!(T.StringType))
         if (cursor.atBeginning)
             return cursor.enter;
 
-        if (cursor.getKind != XMLKind.ELEMENT_START)
+        if (cursor.kind != XMLKind.elementStart)
             return false;
 
         if (!already_built)
@@ -174,24 +174,24 @@ struct DOMBuilder(T, DOMImplementation = dom.DOMImplementation!(T.StringType))
     private NodeType createCurrent()
     // TODO: namespace handling
     {
-        switch (cursor.getKind) with(XMLKind)
+        switch (cursor.kind)
         {
-            case ELEMENT_START:
-            case ELEMENT_EMPTY:
-                auto elem = document.createElement(cursor.getName);
-                foreach (attr; cursor.getAttributes)
+            case XMLKind.elementStart:
+            case XMLKind.elementEmpty:
+                auto elem = document.createElement(cursor.name);
+                foreach (attr; cursor.attributes)
                 {
                     elem.setAttribute(attr.name, attr.value);
                 }
                 return elem;
-            case TEXT:
-                return document.createTextNode(cursor.getContent);
-            case CDATA:
-                return document.createCDATASection(cursor.getContent);
-            case PROCESSING_INSTRUCTION:
-                return document.createProcessingInstruction(cursor.getName, cursor.getContent);
-            case COMMENT:
-                return document.createComment(cursor.getContent);
+            case XMLKind.text:
+                return document.createTextNode(cursor.content);
+            case XMLKind.cdata:
+                return document.createCDATASection(cursor.content);
+            case XMLKind.processingInstruction:
+                return document.createProcessingInstruction(cursor.name, cursor.content);
+            case XMLKind.comment:
+                return document.createComment(cursor.content);
             default:
                 return null;
         }

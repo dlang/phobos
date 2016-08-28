@@ -5,15 +5,15 @@
 *            http://www.boost.org/LICENSE_1_0.txt)
 */
 
-/++
-+   Appender implementation that uses a custom allocator. Meant for internal usage.
-+/
+/*
+*   Appender implementation that uses a custom allocator. Meant for internal usage.
+*/
 
 module std.experimental.xml.appender;
 
-/++
-+   Appender implementation that uses a custom allocator. Meant for internal usage.
-+/
+/*
+*   Appender implementation that uses a custom allocator. Meant for internal usage.
+*/
 struct Appender(T, Alloc)
 {
     import std.experimental.allocator;
@@ -121,7 +121,7 @@ struct Appender(T, Alloc)
         }
     }
 
-    /**
+    /*
      * Reserve at least newCapacity elements for appending.  Note that more elements
      * may be reserved than requested.  If newCapacity <= capacity, then nothing is
      * done.
@@ -139,7 +139,7 @@ struct Appender(T, Alloc)
         }
     }
 
-    /**
+    /*
      * Returns the capacity of the array (the maximum number of elements the
      * managed array can accommodate before triggering a reallocation).  If any
      * appending will reallocate, $(D capacity) returns $(D 0).
@@ -149,7 +149,7 @@ struct Appender(T, Alloc)
         return arr.length;
     }
 
-    /**
+    /*
      * Returns the managed array.
      */
     @property inout(T)[] data() inout @trusted
@@ -160,7 +160,7 @@ struct Appender(T, Alloc)
         return cast(typeof(return))(arr[0..used]);
     }
 
-    /**
+    /*
      * Clears the managed array.  This allows the elements of the array to be reused
      * for appending.
      */
@@ -169,7 +169,7 @@ struct Appender(T, Alloc)
         used = 0;
     }
 
-    /**
+    /*
      * Shrinks the managed array to the given length.
      */
     void shrinkTo(size_t newLength) pure nothrow

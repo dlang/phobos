@@ -195,49 +195,49 @@ template isSaveableLexer(L)
 enum XMLKind
 {
     /++ The `<?xml` `?>` declaration at the beginning of the entire document +/
-    DOCUMENT,
+    document,
 
     /++ The beginning of a document type declaration `<!DOCTYPE ... [` +/
-    DTD_START,
+    dtdStart,
     /++ The end of a document type declaration `] >` +/
-    DTD_END,
+    dtdEnd,
     /++ A document type declaration without an internal subset +/
-    DTD_EMPTY,
+    dtdEmpty,
 
     /++ A start tag, delimited by `<` and `>` +/
-    ELEMENT_START,
+    elementStart,
 
     /++ An end tag, delimited by `</` and `>` +/
-    ELEMENT_END,
+    elementEnd,
 
     /++ An empty tag, delimited by `<` and `/>` +/
-    ELEMENT_EMPTY,
+    elementEmpty,
 
     /++ A text element, without any specific delimiter +/
-    TEXT,
+    text,
 
-    /++ A CDATA section, delimited by `<![CDATA` and `]]>` +/
-    CDATA,
+    /++ A cdata section, delimited by `<![cdata` and `]]>` +/
+    cdata,
 
     /++ A comment, delimited by `<!--` and `-->` +/
-    COMMENT,
+    comment,
 
     /++ A processing instruction, delimited by `<?` and `?>` +/
-    PROCESSING_INSTRUCTION,
+    processingInstruction,
 
     /++ An attlist declaration, delimited by `<!ATTLIST` and `>` +/
-    ATTLIST_DECL,
+    attlistDecl,
     /++ An element declaration, delimited by `<!ELEMENT` and `>` +/
-    ELEMENT_DECL,
+    elementDecl,
     /++ An entity declaration, delimited by `<!ENTITY` and `>` +/
-    ENTITY_DECL,
+    entityDecl,
     /++ A notation declaration, delimited by `<!NOTATION` and `>` +/
-    NOTATION_DECL,
+    notationDecl,
     /++ Any unrecognized kind of declaration, delimited by `<!` and `>` +/
-    DECLARATION,
+    declaration,
 
     /++ A conditional section, delimited by `<![` `[` and `]]>` +/
-    CONDITIONAL,
+    conditional,
 }
 
 /++
@@ -349,22 +349,22 @@ template isSaveableLowLevelParser(P)
 +            (partial or complete) usage, a cursor may be reinitialized and used with
 +             another input by calling this function;)
 +       $(LI `bool atBeginning()`: returns true if the cursor has never been advanced;
-+             it is thus pointing to the node of type `XMLKind.DOCUMENT` representing
++             it is thus pointing to the node of type `XMLKind.document` representing
 +             the XML declaration of the document;)
 +       $(LI `bool documentEnd()`: returns `true` if the input has been completely
 +             consumed; if it is the case, any advancing operation will perform no action)
 +       $(LI  the following methods can be used to query the current node properties:
 +             $(UL
-+               $(LI `XMLKind getKind()`: returns the `XMLKind` of the current node;)
-+               $(LI `StringType getName()`: returns the qualified name of the current
++               $(LI `XMLKind kind()`: returns the `XMLKind` of the current node;)
++               $(LI `StringType name()`: returns the qualified name of the current
 +                     element or the target of the current processing instruction;
 +                     the empty string in all other cases;)
-+               $(LI `StringType getLocalName()`: returns the local name of the
++               $(LI `StringType localName()`: returns the local name of the
 +                     current element, if it has a prefix; the empty string in all
 +                     other cases;)
-+               $(LI `StringType getPrefix()`: returns the prefix of the current element,
++               $(LI `StringType prefix()`: returns the prefix of the current element,
 +                     if it has any; the empty string in all other cases;)
-+               $(LI `auto getAttributes()`: returns a range of all attributes defined
++               $(LI `auto attributes()`: returns a range of all attributes defined
 +                     on the current element; if the current node is a processing
 +                     instruction, its data section is parsed as if it was the attributes
 +                     list of an element (which is quite common); for all other node
@@ -379,10 +379,10 @@ template isSaveableLowLevelParser(P)
 +                             if it has any prefix; the empty string otherwise;)
 +                       $(LI `StringType value`: the value of the attribute;)
 +                     ))
-+               $(LI `StringType getContent()`: returns the text content of the current
-+                     comment, text node or CDATA section or the data of the current
++               $(LI `StringType content()`: returns the text content of the current
++                     comment, text node or cdata section or the data of the current
 +                     processing instruction; the empty string in all other cases;)
-+               $(LI `StringType getAll()`: returns the entire content of the node;)
++               $(LI `StringType wholeContent()`: returns the entire content of the node;)
 +             ))
 +       $(LI  the following methods can be used to advance the cursor in the stream
 +             of XML nodes:
@@ -411,7 +411,7 @@ template isSaveableLowLevelParser(P)
 +       do
 +       {
 +           // print the kind of the current node
-+           writeln(cursor.getKind);
++           writeln(cursor.kind);
 +           // if the node has children
 +           if (cursor.enter)
 +           {
@@ -444,13 +444,13 @@ template isCursor(CursorType)
         b = cursor.next;
         b = cursor.enter;
         cursor.exit;
-        XMLKind kind = cursor.getKind;
-        auto s = cursor.getName;
-        s = cursor.getLocalName;
-        s = cursor.getPrefix;
-        s = cursor.getContent;
-        s = cursor.getAll;
-        auto attrs = cursor.getAttributes;
+        XMLKind kind = cursor.kind;
+        auto s = cursor.name;
+        s = cursor.localName;
+        s = cursor.prefix;
+        s = cursor.content;
+        s = cursor.wholeContent;
+        auto attrs = cursor.attributes;
         s = attrs.front.prefix;
         s = attrs.front.localName;
         s = attrs.front.name;
@@ -513,6 +513,18 @@ template isWriter(WriterType)
         writer.closeElement(s);
         writer.writeAttribute(s, s);
     }));
+}
+
+/++
++   Generic XML exception; thrown whenever a component experiences an error, unless
++   the user provided a custom error handler.
++/
+class XMLException: Exception
+{
+    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line);
+    }
 }
 
 // PRIVATE STUFF

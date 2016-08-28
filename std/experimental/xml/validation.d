@@ -75,9 +75,9 @@ struct ElementNestingValidator(CursorType, alias ErrorHandler)
 
     bool enter()
     {
-        if (cursor.getKind == XMLKind.ELEMENT_START)
+        if (cursor.kind == XMLKind.elementStart)
         {
-            stack.insertBack(cursor.getName);
+            stack.insertBack(cursor.name);
             if (!cursor.enter)
             {
                 stack.removeBack;
@@ -90,7 +90,7 @@ struct ElementNestingValidator(CursorType, alias ErrorHandler)
     void exit()
     {
         cursor.exit();
-        if (cursor.getKind == XMLKind.ELEMENT_END)
+        if (cursor.kind == XMLKind.elementEnd)
         {
             if (stack.empty)
             {
@@ -101,7 +101,7 @@ struct ElementNestingValidator(CursorType, alias ErrorHandler)
             {
                 import std.experimental.xml.faststrings;
 
-                if (!fastEqual(stack.back, cursor.getName))
+                if (!fastEqual(stack.back, cursor.name))
                 {
                     callHandler();
                 }
@@ -153,12 +153,12 @@ unittest
             {
                 import std.algorithm: canFind;
                 count++;
-                if (canFind(stack[], cursor.getName()))
+                if (canFind(stack[], cursor.name()))
                     do
                     {
                         stack.removeBack();
                     }
-                    while (stack.back != cursor.getName());
+                    while (stack.back != cursor.name());
                 stack.removeBack();
             });
 
@@ -271,23 +271,23 @@ struct CheckXMLNames(CursorType, InvalidTagHandler, InvalidAttrHandler)
     CursorType cursor;
     alias cursor this;
 
-    auto getName()
+    auto name()
     {
         import std.algorithm : all;
 
-        auto name = cursor.getName;
-        if (cursor.getKind != XMLKind.ELEMENT_END)
+        auto name = cursor.name;
+        if (cursor.kind != XMLKind.elementEnd)
             if (!name[0].isValidXMLNameStart || !name.all!isValidXMLNameChar)
                 onInvalidTagName(name);
         return name;
     }
 
-    auto getAttributes()
+    auto attributes()
     {
         struct CheckedAttributes
         {
             typeof(onInvalidAttrName) callback;
-            typeof(cursor.getAttributes()) attrs;
+            typeof(cursor.attributes()) attrs;
             alias attrs this;
 
             auto front()
@@ -299,7 +299,7 @@ struct CheckXMLNames(CursorType, InvalidTagHandler, InvalidAttrHandler)
                 return attr;
             }
         }
-        return CheckedAttributes(onInvalidAttrName, cursor.getAttributes);
+        return CheckedAttributes(onInvalidAttrName, cursor.attributes);
     }
 }
 
@@ -350,8 +350,8 @@ unittest
         import std.array;
         do
         {
-            auto name = cursor.getName;
-            auto attrs = cursor.getAttributes.array;
+            auto name = cursor.name;
+            auto attrs = cursor.attributes.array;
             if (cursor.enter)
             {
                 inspectOneLevel(cursor);

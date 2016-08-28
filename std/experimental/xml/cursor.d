@@ -32,9 +32,9 @@ import std.typecons;
 enum CursorError
 {
     /// The document does not begin with an XML declaration
-    MISSING_XML_DECLARATION,
+    missingXMLDeclaration,
     /// The attributes could not be parsed due to invalid syntax
-    INVALID_ATTRIBUTE_SYNTAX,
+    invalidAttributeSyntax,
 }
 
 package struct Attribute(StringType)
@@ -125,7 +125,12 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
     private void callHandler(CursorError err)
     {
         if (handler != null)
-            handler(err);
+        {
+            static if (__traits(compiles, handler(err)))
+                handler(err);
+            else
+                handler();
+        }
         else
             assert(0);
     }
@@ -169,7 +174,7 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
         parser.setSource(input);
         if (!parser.empty)
         {
-            if (parser.front.kind == XMLKind.PROCESSING_INSTRUCTION &&
+            if (parser.front.kind == XMLKind.processingInstruction &&
                 parser.front.content.length >= 3 &&
                 fastEqual(parser.front.content[0..3], "xml"))
             {
@@ -178,8 +183,8 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
             else
             {
                 // document without xml declaration???
-                callHandler(CursorError.MISSING_XML_DECLARATION);
-                currentNode.kind = XMLKind.PROCESSING_INSTRUCTION;
+                callHandler(CursorError.missingXMLDeclaration);
+                currentNode.kind = XMLKind.processingInstruction;
                 currentNode.content = "xml version = \"1.0\"";
             }
             starting = true;
@@ -194,7 +199,7 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
 
     /++
     +   Returns whether the cursor is at the beginning of the document
-    +   (i.e. whether no enter/next/exit has been performed successfully and thus
+    +   (i.e. whether no `enter`/`next`/`exit` has been performed successfully and thus
     +   the cursor points to the xml declaration)
     +/
     bool atBeginning()
@@ -203,8 +208,8 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
     }
 
     /++
-    +   Advances to the first child of the current node and returns true.
-    +   If it returns false, the cursor is either on the same node (it wasn't
+    +   Advances to the first child of the current node and returns `true`.
+    +   If it returns `false`, the cursor is either on the same node (it wasn't
     +   an element start) or it is at the close tag of the element it was called on
     +   (it was a pair open/close tag without any content)
     +/
@@ -221,13 +226,13 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
             currentNode = parser.front;
             return true;
         }
-        else if (currentNode.kind == XMLKind.ELEMENT_START)
+        else if (currentNode.kind == XMLKind.elementStart)
         {
-            return advanceInput() && currentNode.kind != XMLKind.ELEMENT_END;
+            return advanceInput() && currentNode.kind != XMLKind.elementEnd;
         }
-        else if (currentNode.kind == XMLKind.DTD_START)
+        else if (currentNode.kind == XMLKind.dtdStart)
         {
-            return advanceInput() && currentNode.kind != XMLKind.DTD_END;
+            return advanceInput() && currentNode.kind != XMLKind.dtdEnd;
         }
         else
             return false;
@@ -243,32 +248,32 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
     }
 
     /++
-    +   Advances to the next sibling of the current node.
+    +   Advances to the _next sibling of the current node.
     +   Returns whether it succeded. If it fails, either the
-    +   document has ended or the only meaningful operation is exit().
+    +   document has ended or the only meaningful operation is `exit`.
     +/
     bool next()
     {
         if (parser.empty || starting || nextFailed)
             return false;
-        else if (currentNode.kind == XMLKind.DTD_START)
+        else if (currentNode.kind == XMLKind.dtdStart)
         {
-            while (advanceInput && currentNode.kind != XMLKind.DTD_END) {}
+            while (advanceInput && currentNode.kind != XMLKind.dtdEnd) {}
         }
-        else if (currentNode.kind == XMLKind.ELEMENT_START)
+        else if (currentNode.kind == XMLKind.elementStart)
         {
             int count = 1;
             while (count > 0 && !parser.empty)
             {
                 if (!advanceInput)
                     return false;
-                if (currentNode.kind == XMLKind.ELEMENT_START)
+                if (currentNode.kind == XMLKind.elementStart)
                     count++;
-                else if (currentNode.kind == XMLKind.ELEMENT_END)
+                else if (currentNode.kind == XMLKind.elementEnd)
                     count--;
             }
         }
-        if (!advanceInput || currentNode.kind == XMLKind.ELEMENT_END || currentNode.kind == XMLKind.DTD_END)
+        if (!advanceInput || currentNode.kind == XMLKind.elementEnd || currentNode.kind == XMLKind.dtdEnd)
         {
             nextFailed = true;
             return false;
@@ -276,37 +281,37 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
         return true;
     }
 
-    /++ Returns the kind of the current node. +/
-    XMLKind getKind() const
+    /++ Returns the _kind of the current node. +/
+    XMLKind kind() const
     {
         if (starting)
-            return XMLKind.DOCUMENT;
+            return XMLKind.document;
 
         static if (conflateCDATA == Yes.conflateCDATA)
-            if (currentNode.kind == XMLKind.CDATA)
-                return XMLKind.TEXT;
+            if (currentNode.kind == XMLKind.cdata)
+                return XMLKind.text;
 
         return currentNode.kind;
     }
 
     /++
-    +   If the current node is an element or a doctype, return its complete name;
+    +   If the current node is an element or a doctype, returns its complete _name;
     +   it it is a processing instruction, return its target;
-    +   otherwise, return an empty string;
+    +   otherwise, returns an empty string;
     +/
-    StringType getName()
+    StringType name()
     {
         switch (currentNode.kind)
         {
-            case XMLKind.DOCUMENT:
-            case XMLKind.TEXT:
-            case XMLKind.CDATA:
-            case XMLKind.COMMENT:
-            case XMLKind.DECLARATION:
-            case XMLKind.CONDITIONAL:
-            case XMLKind.DTD_START:
-            case XMLKind.DTD_EMPTY:
-            case XMLKind.DTD_END:
+            case XMLKind.document:
+            case XMLKind.text:
+            case XMLKind.cdata:
+            case XMLKind.comment:
+            case XMLKind.declaration:
+            case XMLKind.conditional:
+            case XMLKind.dtdStart:
+            case XMLKind.dtdEmpty:
+            case XMLKind.dtdEnd:
                 return [];
             default:
                 if (!nameEnd)
@@ -322,13 +327,13 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
     }
 
     /++
-    +   If the current node is an element, return its local name (without namespace prefix);
-    +   otherwise, return the same result as getName().
+    +   If the current node is an element, returns its local name (without namespace prefix);
+    +   otherwise, returns the same result as `name`.
     +/
-    StringType getLocalName()
+    StringType localName()
     {
-        auto name = getName();
-        if (currentNode.kind == XMLKind.ELEMENT_START || currentNode.kind == XMLKind.ELEMENT_END)
+        auto name = name();
+        if (currentNode.kind == XMLKind.elementStart || currentNode.kind == XMLKind.elementEnd)
         {
             if (colon == colon.max)
                 colon = fastIndexOf(name, ':');
@@ -338,14 +343,14 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
     }
 
     /++
-    +   If the current node is an element, return its namespace prefix;
+    +   If the current node is an element, returns its namespace _prefix;
     +   otherwise, the result in unspecified;
     +/
-    StringType getPrefix()
+    StringType prefix()
     {
-        if (currentNode.kind == XMLKind.ELEMENT_START || currentNode.kind == XMLKind.ELEMENT_END)
+        if (currentNode.kind == XMLKind.elementStart || currentNode.kind == XMLKind.elementEnd)
         {
-            auto name = getName;
+            auto name = name;
             if (colon == colon.max)
                 colon = fastIndexOf(name, ':');
 
@@ -358,11 +363,11 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
     }
 
     /++
-    +   If the current node is an element, return its attributes as a range of triplets
-    +   (prefix, name, value); if the current node is the document node, return the attributes
-    +   of the xml declaration (encoding, version, ...); otherwise, return an empty array.
+    +   If the current node is an element, return its _attributes as a range of triplets
+    +   (`prefix`, `name`, `value`); if the current node is the document node, return the _attributes
+    +   of the xml declaration (encoding, version, ...); otherwise, returns an empty array.
     +/
-    auto getAttributes()
+    auto attributes()
     {
         struct AttributesRange
         {
@@ -403,7 +408,7 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
                     if (sep == -1)
                     {
                         // attribute without value???
-                        cursor.callHandler(CursorError.INVALID_ATTRIBUTE_SYNTAX);
+                        cursor.callHandler(CursorError.invalidAttributeSyntax);
                         error = true;
                         return attr.init;
                     }
@@ -416,7 +421,7 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
                         if (j != -1)
                         {
                             // attribute name contains spaces???
-                            cursor.callHandler(CursorError.INVALID_ATTRIBUTE_SYNTAX);
+                            cursor.callHandler(CursorError.invalidAttributeSyntax);
                             error = true;
                             return attr.init;
                         }
@@ -436,7 +441,7 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
                             if (delta == -1)
                             {
                                 // attribute quotes never closed???
-                                cursor.callHandler(CursorError.INVALID_ATTRIBUTE_SYNTAX);
+                                cursor.callHandler(CursorError.invalidAttributeSyntax);
                                 error = true;
                                 return attr.init;
                             }
@@ -444,7 +449,7 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
                         }
                         else
                         {
-                            cursor.callHandler(CursorError.INVALID_ATTRIBUTE_SYNTAX);
+                            cursor.callHandler(CursorError.invalidAttributeSyntax);
                             error = true;
                             return attr.init;
                         }
@@ -452,7 +457,7 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
                     else
                     {
                         // attribute without value???
-                        cursor.callHandler(CursorError.INVALID_ATTRIBUTE_SYNTAX);
+                        cursor.callHandler(CursorError.invalidAttributeSyntax);
                         error = true;
                         return attr.init;
                     }
@@ -470,9 +475,9 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
         }
 
         auto kind = currentNode.kind;
-        if (kind == XMLKind.ELEMENT_START || kind == XMLKind.ELEMENT_EMPTY || kind == XMLKind.PROCESSING_INSTRUCTION)
+        if (kind == XMLKind.elementStart || kind == XMLKind.elementEmpty || kind == XMLKind.processingInstruction)
         {
-            getName;
+            name;
             return AttributesRange(currentNode.content[nameEnd..$], this);
         }
         else
@@ -480,19 +485,31 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
     }
 
     /++
-    +   Return the text content of a CDATA section, a comment or a text node;
+    +   Return the text content of a cdata section, a comment or a text node;
     +   in all other cases, returns the entire node without the name
     +/
-    StringType getContent()
+    StringType content()
     {
         return currentNode.content[nameEnd..$];
     }
 
     /++ Returns the entire text of the current node. +/
-    StringType getAll() const
+    StringType wholeContent() const
     {
         return currentNode.content;
     }
+}
+
+private void defaultCursorHandler(CursorError err)
+{
+    final switch (err) with (CursorError)
+    {
+        case missingXMLDeclaration:
+            throw new XMLException("XML document does not start with an XML declaration");
+        case invalidAttributeSyntax:
+            throw new XMLException("Found invalid syntax while parsing attributes");
+    }
+    assert(0, "This instruction should not be reached; if it happens, please file a bug report");
 }
 
 /++
@@ -501,7 +518,12 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
 +/
 template cursor(Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA)
 {
-    auto cursor(T, EH)(auto ref T parser, EH errorHandler = (CursorError err) { assert(0); })
+    auto cursor(T)(auto ref T parser)
+        if(isLowLevelParser!T)
+    {
+        return cursor(parser, &defaultCursorHandler);
+    }
+    auto cursor(T, EH)(auto ref T parser, EH errorHandler)
         if(isLowLevelParser!T)
     {
         auto cursor = Cursor!(T, conflateCDATA, EH)();
@@ -524,7 +546,7 @@ unittest
     <!DOCTYPE mydoc https://myUri.org/bla [
         <!ELEMENT myelem ANY>
         <!ENTITY   myent    "replacement text">
-        <!ATTLIST myelem foo CDATA #REQUIRED >
+        <!ATTLIST myelem foo cdata #REQUIRED >
         <!NOTATION PUBLIC 'h'>
         <!FOODECL asdffdsa >
     ]>
@@ -545,109 +567,109 @@ unittest
     assert(cursor.atBeginning);
 
     // <?xml encoding = "utf-8" ?>
-    assert(cursor.getKind() == XMLKind.DOCUMENT);
-    assert(cursor.getName() == "xml");
-    assert(cursor.getPrefix() == "");
-    assert(cursor.getLocalName() == "xml");
-    assert(cursor.getAttributes().array == [Attribute!wstring("encoding", "utf-8")]);
-    assert(cursor.getContent() == " encoding = \"utf-8\" ");
+    assert(cursor.kind() == XMLKind.document);
+    assert(cursor.name() == "xml");
+    assert(cursor.prefix() == "");
+    assert(cursor.localName() == "xml");
+    assert(cursor.attributes().array == [Attribute!wstring("encoding", "utf-8")]);
+    assert(cursor.content() == " encoding = \"utf-8\" ");
 
     assert(cursor.enter());
         assert(!cursor.atBeginning);
 
         // <!DOCTYPE mydoc https://myUri.org/bla [
-        assert(cursor.getKind == XMLKind.DTD_START);
-        assert(cursor.getAll == " mydoc https://myUri.org/bla ");
+        assert(cursor.kind == XMLKind.dtdStart);
+        assert(cursor.wholeContent == " mydoc https://myUri.org/bla ");
 
         assert(cursor.enter);
             // <!ELEMENT myelem ANY>
-            assert(cursor.getKind == XMLKind.ELEMENT_DECL);
-            assert(cursor.getAll == " myelem ANY");
+            assert(cursor.kind == XMLKind.elementDecl);
+            assert(cursor.wholeContent == " myelem ANY");
 
             assert(cursor.next);
             // <!ENTITY   myent    "replacement text">
-            assert(cursor.getKind == XMLKind.ENTITY_DECL);
-            assert(cursor.getAll == "   myent    \"replacement text\"");
+            assert(cursor.kind == XMLKind.entityDecl);
+            assert(cursor.wholeContent == "   myent    \"replacement text\"");
 
             assert(cursor.next);
-            // <!ATTLIST myelem foo CDATA #REQUIRED >
-            assert(cursor.getKind == XMLKind.ATTLIST_DECL);
-            assert(cursor.getAll == " myelem foo CDATA #REQUIRED ");
+            // <!ATTLIST myelem foo cdata #REQUIRED >
+            assert(cursor.kind == XMLKind.attlistDecl);
+            assert(cursor.wholeContent == " myelem foo cdata #REQUIRED ");
 
             assert(cursor.next);
             // <!NOTATION PUBLIC 'h'>
-            assert(cursor.getKind == XMLKind.NOTATION_DECL);
-            assert(cursor.getAll == " PUBLIC 'h'");
+            assert(cursor.kind == XMLKind.notationDecl);
+            assert(cursor.wholeContent == " PUBLIC 'h'");
 
             assert(cursor.next);
             // <!FOODECL asdffdsa >
-            assert(cursor.getKind == XMLKind.DECLARATION);
-            assert(cursor.getAll == "FOODECL asdffdsa ");
+            assert(cursor.kind == XMLKind.declaration);
+            assert(cursor.wholeContent == "FOODECL asdffdsa ");
 
             assert(!cursor.next);
         cursor.exit;
 
         // ]>
-        assert(cursor.getKind == XMLKind.DTD_END);
-        assert(!cursor.getAll);
+        assert(cursor.kind == XMLKind.dtdEnd);
+        assert(!cursor.wholeContent);
         assert(cursor.next);
 
         // <aaa xmlns:myns="something">
-        assert(cursor.getKind() == XMLKind.ELEMENT_START);
-        assert(cursor.getName() == "aaa");
-        assert(cursor.getPrefix() == "");
-        assert(cursor.getLocalName() == "aaa");
-        assert(cursor.getAttributes().array == [Attribute!wstring("xmlns:myns", "something")]);
-        assert(cursor.getContent() == " xmlns:myns=\"something\"");
+        assert(cursor.kind() == XMLKind.elementStart);
+        assert(cursor.name() == "aaa");
+        assert(cursor.prefix() == "");
+        assert(cursor.localName() == "aaa");
+        assert(cursor.attributes().array == [Attribute!wstring("xmlns:myns", "something")]);
+        assert(cursor.content() == " xmlns:myns=\"something\"");
 
         assert(cursor.enter());
             // <myns:bbb myns:att='>'>
-            assert(cursor.getKind() == XMLKind.ELEMENT_START);
-            assert(cursor.getName() == "myns:bbb");
-            assert(cursor.getPrefix() == "myns");
-            assert(cursor.getLocalName() == "bbb");
-            assert(cursor.getAttributes().array == [Attribute!wstring("myns:att", ">")]);
-            assert(cursor.getContent() == " myns:att='>'");
+            assert(cursor.kind() == XMLKind.elementStart);
+            assert(cursor.name() == "myns:bbb");
+            assert(cursor.prefix() == "myns");
+            assert(cursor.localName() == "bbb");
+            assert(cursor.attributes().array == [Attribute!wstring("myns:att", ">")]);
+            assert(cursor.content() == " myns:att='>'");
 
             assert(cursor.enter());
             cursor.exit();
 
             // </myns:bbb>
-            assert(cursor.getKind() == XMLKind.ELEMENT_END);
-            assert(cursor.getName() == "myns:bbb");
-            assert(cursor.getPrefix() == "myns");
-            assert(cursor.getLocalName() == "bbb");
-            assert(cursor.getAttributes().empty);
-            assert(cursor.getContent() == []);
+            assert(cursor.kind() == XMLKind.elementEnd);
+            assert(cursor.name() == "myns:bbb");
+            assert(cursor.prefix() == "myns");
+            assert(cursor.localName() == "bbb");
+            assert(cursor.attributes().empty);
+            assert(cursor.content() == []);
 
             assert(cursor.next());
-            // <<![CDATA[ Ciaone! ]]>
-            assert(cursor.getKind() == XMLKind.TEXT);
-            assert(cursor.getName() == "");
-            assert(cursor.getPrefix() == "");
-            assert(cursor.getLocalName() == "");
-            assert(cursor.getAttributes().empty);
-            assert(cursor.getContent() == " Ciaone! ");
+            // <![CDATA[ Ciaone! ]]>
+            assert(cursor.kind() == XMLKind.text);
+            assert(cursor.name() == "");
+            assert(cursor.prefix() == "");
+            assert(cursor.localName() == "");
+            assert(cursor.attributes().empty);
+            assert(cursor.content() == " Ciaone! ");
 
             assert(cursor.next());
             // <ccc/>
-            assert(cursor.getKind() == XMLKind.ELEMENT_EMPTY);
-            assert(cursor.getName() == "ccc");
-            assert(cursor.getPrefix() == "");
-            assert(cursor.getLocalName() == "ccc");
-            assert(cursor.getAttributes().empty);
-            assert(cursor.getContent() == []);
+            assert(cursor.kind() == XMLKind.elementEmpty);
+            assert(cursor.name() == "ccc");
+            assert(cursor.prefix() == "");
+            assert(cursor.localName() == "ccc");
+            assert(cursor.attributes().empty);
+            assert(cursor.content() == []);
 
             assert(!cursor.next());
         cursor.exit();
 
         // </aaa>
-        assert(cursor.getKind() == XMLKind.ELEMENT_END);
-        assert(cursor.getName() == "aaa");
-        assert(cursor.getPrefix() == "");
-        assert(cursor.getLocalName() == "aaa");
-        assert(cursor.getAttributes().empty);
-        assert(cursor.getContent() == []);
+        assert(cursor.kind() == XMLKind.elementEnd);
+        assert(cursor.name() == "aaa");
+        assert(cursor.prefix() == "");
+        assert(cursor.localName() == "aaa");
+        assert(cursor.attributes().empty);
+        assert(cursor.content() == []);
 
         assert(!cursor.next());
     cursor.exit();
@@ -705,68 +727,68 @@ auto children(T)(ref T cursor)
     auto handler = () { assert(0, "Some problem here..."); };
     auto lexer = RangeLexer!(string, typeof(handler), shared(Mallocator))(Mallocator.instance);
     lexer.errorHandler = handler;
-    auto cursor = lexer.parse.cursor!(Yes.conflateCDATA);
+    auto cursor = lexer.parse.cursor!(Yes.conflateCDATA)((){});
     cursor.setSource(xml);
 
     // <?xml encoding = "utf-8" ?>
-    assert(cursor.getKind() == XMLKind.DOCUMENT);
-    assert(cursor.getName() == "xml");
-    assert(cursor.getPrefix() == "");
-    assert(cursor.getLocalName() == "xml");
-    auto attrs = cursor.getAttributes;
+    assert(cursor.kind() == XMLKind.document);
+    assert(cursor.name() == "xml");
+    assert(cursor.prefix() == "");
+    assert(cursor.localName() == "xml");
+    auto attrs = cursor.attributes;
     assert(attrs.front == Attribute!string("encoding", "utf-8"));
     attrs.popFront;
     assert(attrs.empty);
-    assert(cursor.getContent() == " encoding = \"utf-8\" ");
+    assert(cursor.content() == " encoding = \"utf-8\" ");
 
     {
         auto range1 = cursor.children;
         // <aaa xmlns:myns="something">
-        assert(range1.front.getKind() == XMLKind.ELEMENT_START);
-        assert(range1.front.getName() == "aaa");
-        assert(range1.front.getPrefix() == "");
-        assert(range1.front.getLocalName() == "aaa");
-        attrs = range1.front.getAttributes;
+        assert(range1.front.kind() == XMLKind.elementStart);
+        assert(range1.front.name() == "aaa");
+        assert(range1.front.prefix() == "");
+        assert(range1.front.localName() == "aaa");
+        attrs = range1.front.attributes;
         assert(attrs.front == Attribute!string("xmlns:myns", "something"));
         attrs.popFront;
         assert(attrs.empty);
-        assert(range1.front.getContent() == " xmlns:myns=\"something\"");
+        assert(range1.front.content() == " xmlns:myns=\"something\"");
 
         {
             auto range2 = range1.front.children();
             // <myns:bbb myns:att='>'>
-            assert(range2.front.getKind() == XMLKind.ELEMENT_START);
-            assert(range2.front.getName() == "myns:bbb");
-            assert(range2.front.getPrefix() == "myns");
-            assert(range2.front.getLocalName() == "bbb");
-            attrs = range2.front.getAttributes;
+            assert(range2.front.kind() == XMLKind.elementStart);
+            assert(range2.front.name() == "myns:bbb");
+            assert(range2.front.prefix() == "myns");
+            assert(range2.front.localName() == "bbb");
+            attrs = range2.front.attributes;
             assert(attrs.front == Attribute!string("myns:att", ">"));
             attrs.popFront;
             assert(attrs.empty);
-            assert(range2.front.getContent() == " myns:att='>'");
+            assert(range2.front.content() == " myns:att='>'");
 
             {
                 auto range3 = range2.front.children();
                 // <!-- lol -->
-                assert(range3.front.getKind() == XMLKind.COMMENT);
-                assert(range3.front.getName() == "");
-                assert(range3.front.getPrefix() == "");
-                assert(range3.front.getLocalName() == "");
-                assert(range3.front.getAttributes.empty);
-                assert(range3.front.getContent() == " lol ");
+                assert(range3.front.kind() == XMLKind.comment);
+                assert(range3.front.name() == "");
+                assert(range3.front.prefix() == "");
+                assert(range3.front.localName() == "");
+                assert(range3.front.attributes.empty);
+                assert(range3.front.content() == " lol ");
 
                 range3.popFront;
                 assert(!range3.empty);
                 // Lots of Text!
                 // On multiple lines!
-                assert(range3.front.getKind() == XMLKind.TEXT);
-                assert(range3.front.getName() == "");
-                assert(range3.front.getPrefix() == "");
-                assert(range3.front.getLocalName() == "");
-                assert(range3.front.getAttributes().empty);
+                assert(range3.front.kind() == XMLKind.text);
+                assert(range3.front.name() == "");
+                assert(range3.front.prefix() == "");
+                assert(range3.front.localName() == "");
+                assert(range3.front.attributes().empty);
                 // split and strip so the unittest does not depend on the newline policy or indentation of this file
                 static immutable linesArr = ["Lots of Text!", "            On multiple lines!", "        "];
-                assert(range3.front.getContent().lineSplitter.equal(linesArr));
+                assert(range3.front.content().lineSplitter.equal(linesArr));
 
                 range3.popFront;
                 assert(range3.empty);
@@ -775,22 +797,22 @@ auto children(T)(ref T cursor)
             range2.popFront;
             assert(!range2.empty);
             // <<![CDATA[ Ciaone! ]]>
-            assert(range2.front.getKind() == XMLKind.TEXT);
-            assert(range2.front.getName() == "");
-            assert(range2.front.getPrefix() == "");
-            assert(range2.front.getLocalName() == "");
-            assert(range2.front.getAttributes().empty);
-            assert(range2.front.getContent() == " Ciaone! ");
+            assert(range2.front.kind() == XMLKind.text);
+            assert(range2.front.name() == "");
+            assert(range2.front.prefix() == "");
+            assert(range2.front.localName() == "");
+            assert(range2.front.attributes().empty);
+            assert(range2.front.content() == " Ciaone! ");
 
             range2.popFront;
             assert(!range2.empty());
             // <ccc/>
-            assert(range2.front.getKind() == XMLKind.ELEMENT_EMPTY);
-            assert(range2.front.getName() == "ccc");
-            assert(range2.front.getPrefix() == "");
-            assert(range2.front.getLocalName() == "ccc");
-            assert(range2.front.getAttributes().empty);
-            assert(range2.front.getContent() == []);
+            assert(range2.front.kind() == XMLKind.elementEmpty);
+            assert(range2.front.name() == "ccc");
+            assert(range2.front.prefix() == "");
+            assert(range2.front.localName() == "ccc");
+            assert(range2.front.attributes().empty);
+            assert(range2.front.content() == []);
 
             range2.popFront;
             assert(range2.empty());
@@ -861,32 +883,32 @@ struct CopyingCursor(CursorType, Alloc = shared(GCAllocator), Flag!"intern" inte
         return cp;
     }
 
-    auto getName()
+    auto name()
     {
-        return copy(cursor.getName);
+        return copy(cursor.name);
     }
-    auto getLocalName()
+    auto localName()
     {
-        return copy(cursor.getLocalName);
+        return copy(cursor.localName);
     }
-    auto getPrefix()
+    auto prefix()
     {
-        return copy(cursor.getPrefix);
+        return copy(cursor.prefix);
     }
-    auto getContent()
+    auto content()
     {
-        return copy(cursor.getContent);
+        return copy(cursor.content);
     }
-    auto getAll()
+    auto wholeContent()
     {
-        return copy(cursor.getAll);
+        return copy(cursor.wholeContent);
     }
 
-    auto getAttributes()
+    auto attributes()
     {
         struct CopyRange
         {
-            typeof(cursor.getAttributes()) attrs;
+            typeof(cursor.attributes()) attrs;
             alias attrs this;
 
             private CopyingCursor* parent;
@@ -900,7 +922,7 @@ struct CopyingCursor(CursorType, Alloc = shared(GCAllocator), Flag!"intern" inte
                     );
             }
         }
-        return CopyRange(cursor.getAttributes, &this);
+        return CopyRange(cursor.attributes, &this);
     }
 }
 
@@ -948,17 +970,17 @@ unittest
     cursor.setSource(xml);
 
     assert(cursor.enter);
-    auto a1 = cursor.getName;
+    auto a1 = cursor.name;
     assert(cursor.enter);
-    auto b1 = cursor.getName;
+    auto b1 = cursor.name;
     assert(cursor.enter);
-    auto a2 = cursor.getName;
+    auto a2 = cursor.name;
     assert(!cursor.enter);
-    auto a3 = cursor.getName;
+    auto a3 = cursor.name;
     cursor.exit;
-    auto b2 = cursor.getName;
+    auto b2 = cursor.name;
     cursor.exit;
-    auto a4 = cursor.getName;
+    auto a4 = cursor.name;
 
     assert(a1 is a2);
     assert(a2 is a3);

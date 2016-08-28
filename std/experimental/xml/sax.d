@@ -68,53 +68,53 @@ struct SAXParser(T, alias H)
         import std.traits : hasMember;
         while (!cursor.documentEnd)
         {
-            switch (cursor.getKind)
+            switch (cursor.kind)
             {
                 static if(hasMember!(HandlerType, "onDocument"))
                 {
-                    case XMLKind.DOCUMENT:
+                    case XMLKind.document:
                         handler.onDocument(cursor);
                         break;
                 }
                 static if (hasMember!(HandlerType, "onElementStart"))
                 {
-                    case XMLKind.ELEMENT_START:
+                    case XMLKind.elementStart:
                         handler.onElementStart(cursor);
                         break;
                 }
                 static if (hasMember!(HandlerType, "onElementEnd"))
                 {
-                    case XMLKind.ELEMENT_END:
+                    case XMLKind.elementEnd:
                         handler.onElementEnd(cursor);
                         break;
                 }
                 static if (hasMember!(HandlerType, "onElementEmpty"))
                 {
-                    case XMLKind.ELEMENT_EMPTY:
+                    case XMLKind.elementEmpty:
                         handler.onElementEmpty(cursor);
                         break;
                 }
                 static if (hasMember!(HandlerType, "onText"))
                 {
-                    case XMLKind.TEXT:
+                    case XMLKind.text:
                         handler.onText(cursor);
                         break;
                 }
                 static if (hasMember!(HandlerType, "onComment"))
                 {
-                    case XMLKind.COMMENT:
+                    case XMLKind.comment:
                         handler.onComment(cursor);
                         break;
                 }
                 static if (hasMember!(HandlerType, "onProcessingInstruction"))
                 {
-                    case XMLKind.PROCESSING_INSTRUCTION:
+                    case XMLKind.processingInstruction:
                         handler.onProcessingInstruction(cursor);
                         break;
                 }
                 static if (hasMember!(HandlerType, "onCDataSection"))
                 {
-                    case XMLKind.CDATA:
+                    case XMLKind.cdata:
                         handler.onCDataSection(cursor);
                         break;
                 }
@@ -192,7 +192,7 @@ unittest
         void onText(ref T node) { total_invocations++; }
         void onDocument(ref T node)
         {
-            auto attrs = node.getAttributes;
+            auto attrs = node.attributes;
             assert(attrs.front == Attribute!dstring("encoding", "utf-8"));
             attrs.popFront;
             assert(attrs.empty);
@@ -200,7 +200,7 @@ unittest
         }
         void onComment(ref T node)
         {
-            assert(node.getContent == " lol ");
+            assert(node.content == " lol ");
             total_invocations++;
         }
     }

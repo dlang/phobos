@@ -51,18 +51,18 @@ alias UserDataHandler(DOMString) =
 +/
 enum NodeType: ushort
 {
-    ELEMENT = 1,
-    ATTRIBUTE,
-    TEXT,
-    CDATA_SECTION,
-    ENTITY_REFERENCE,
-    ENTITY,
-    PROCESSING_INSTRUCTION,
-    COMMENT,
-    DOCUMENT,
-    DOCUMENT_TYPE,
-    DOCUMENT_FRAGMENT,
-    NOTATION,
+    element = 1,
+    attribute,
+    text,
+    cdataSection,
+    entityReference,
+    entity,
+    processingInstruction,
+    comment,
+    document,
+    documentType,
+    documentFragment,
+    notation,
 }
 
 /++
@@ -72,25 +72,25 @@ enum NodeType: ushort
 enum DocumentPosition: ushort
 {
     /// Set when the two nodes are in fact the same
-    NONE         = 0,
+    none         = 0,
     /// Set when the two nodes are not in the same tree
-    DISCONNECTED = 1,
+    disconnected = 1,
     /// Set when the second node precedes the first
-    PRECEDING    = 2,
+    preceding    = 2,
     /// Set when the second node follows the first
-    FOLLOWING    = 4,
-    /// Set when the second node contains the first
-    CONTAINS     = 8,
+    following    = 4,
+    /// Set when the second node _contains the first
+    contains     = 8,
     /// Set when the second node is contained by the first
-    CONTAINED_BY = 16,
+    containedBy = 16,
     /++
     +   Set when the returned ordering of the two nodes may be different across
     +   DOM implementations; for example, for two attributes of the same node,
-    +   an implementation may return `PRECEDING | IMPLEMENTATION_SPECIFIC` and another
-    +   may return `FOLLOWING | IMPLEMENTATION_SPECIFIC`, because at the DOM level
+    +   an implementation may return `preceding | implementationSpecific` and another
+    +   may return `following | implementationSpecific`, because at the DOM level
     +   the attributes ordering is unspecified
     +/
-    IMPLEMENTATION_SPECIFIC = 32,
+    implementationSpecific = 32,
 }
 
 /++
@@ -99,20 +99,21 @@ enum DocumentPosition: ushort
 enum UserDataOperation: ushort
 {
     /// The node is cloned, using `Node.cloneNode()`.
-    NODE_CLONED = 1,
+    nodeCloned = 1,
     /// The node is imported, using `Document.importNode()`.
-    NODE_IMPORTED,
+    nodeImported,
     /++
     +   The node is deleted.
+    +
     +   Note:
     +   This may not be supported or may not be reliable in certain environments,
     +   where the implementation has no real control over when objects are actually deleted.
     +/
-    NODE_DELETED,
+    nodeDeleted,
     /// The node is renamed, using `Document.renameNode()`.
-    NODE_RENAMED,
+    nodeRenamed,
     /// The node is adopted, using `Document.adoptNode()`.
-    NODE_ADOPTED,
+    nodeAdopted,
 }
 
 /++
@@ -124,39 +125,39 @@ enum UserDataOperation: ushort
 enum ExceptionCode: ushort
 {
     /// If index or size is negative, or greater than the allowed value.
-    INDEX_SIZE,
+    indexSize,
     /// If the specified range of text does not fit into a `DOMString`.
-    DOMSTRING_SIZE,
+    domStringSize,
     /// If any `Node` is inserted somewhere it doesn't belong.
-    HIERARCHY_REQUEST,
+    hierarchyRequest,
     /// If a `Node` is used in a different document than the one that created it (that doesn't support it).
-    WRONG_DOCUMENT,
+    wrongDocument,
     /// If an invalid or illegal character is specified, such as in an XML name.
-    INVALID_CHARACTER,
+    invalidCharacter,
     /// If data is specified for a `Node` which does not support data.
-    NO_DATA_ALLOWED,
+    noDataAllowed,
     /// If an attempt is made to modify an object where modifications are not allowed.
-    NO_MODIFICATION_ALLOWED,
+    noModificationAllowed,
     /// If an attempt is made to reference a `Node` in a context where it does not exist.
-    NOT_FOUND,
+    notFound,
     /// If the implementation does not support the requested type of object or operation.
-    NOT_SUPPORTED,
+    notSupported,
     /// If an attempt is made to add an attribute that is already in use elsewhere.
-    INUSE_ATTRIBUTE,
+    inuseAttribute,
     /// If an attempt is made to use an object that is not, or is no longer, usable.
-    INVALID_STATE,
+    invalidState,
     /// If an invalid or illegal string is specified.
-    SYNTAX,
+    syntax,
     /// If an attempt is made to modify the type of the underlying object.
-    INVALID_MODIFICATION,
+    invalidModification,
     /// If an attempt is made to create or change an object in a way which is incorrect with regard to namespaces.
-    NAMESPACE,
+    namespace,
     /// If a parameter or an operation is not supported by the underlying object.
-    INVALID_ACCESS,
+    invalidAccess,
     /// If a call to a method such as insertBefore or removeChild would make the `Node` invalid.
-    VALIDATION,
+    validation,
     /// If the type of an object is incompatible with the expected type of the parameter associated to the object.
-    TYPE_MISMATCH,
+    typeMismatch,
 }
 
 /// An integer indicating the severity of a `DOMError`.
@@ -167,28 +168,28 @@ enum ErrorSeverity: ushort
     +   will not cause the processing to stop, unless the call of the `DOMErrorHandler`
     +   returns `false`.
     +/
-    WARNING,
+    warning,
     /++
     +   The severity of the error described by the `DOMError` is error. A `ERROR`
     +   may not cause the processing to stop if the error can be recovered, unless
     +   the call of the `DOMErrorHandler` returns `false`.
     +/
-    ERROR,
+    error,
     /++
     +   The severity of the error described by the `DOMError` is fatal error. A `FATAL_ERROR`
     +   will cause the normal processing to stop. The return value of calling the `DOMErrorHandler`
     +   is ignored unless the implementation chooses to continue, in which case
     +   the behavior becomes undefined.
     +/
-    FATAL_ERROR,
+    fatalError,
 }
 
 enum DerivationMethod: ulong
 {
-    DERIVATION_RESTRICTION = 0x00000001,
-    DERIVATION_EXTENSION   = 0x00000002,
-    DERIVATION_UNION       = 0x00000004,
-    DERIVATION_LIST        = 0x00000008,
+    restriction = 0x00000001,
+    extension   = 0x00000002,
+    union_      = 0x00000004,
+    list        = 0x00000008,
 }
 
 /++

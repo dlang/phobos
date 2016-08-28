@@ -64,8 +64,8 @@
 +   {
 +       void onText(ref NodeType node)
 +       {
-+           if (node.getContent.splitter.find.canFind("D"))
-+               writeln("Match found: ", node.getContent);
++           if (node.content.splitter.find.canFind("D"))
++               writeln("Match found: ", node.content);
 +       }
 +   }
 +
@@ -88,7 +88,7 @@
 +   // the basic cursor only detects missing xml declarations and unparseable attributes
 +   auto callback1 = (CursorError err)
 +   {
-+       if (err == CursorError.MISSING_XML_DECLARATION)
++       if (err == CursorError.missingXMLDeclaration)
 +           assert(0, "Missing XML declaration");
 +       else
 +           assert(0, "Invalid attributes syntax");
@@ -122,7 +122,7 @@
 +       // cycle the current node and all its siblings
 +       do
 +       {
-+           writeln(cursor.getKind);
++           writeln(cursor.kind);
 +           // if the current node has children, inspect them recursively
 +           if (cursor.enter)
 +           {
@@ -264,10 +264,10 @@ public import dom = std.experimental.xml.dom;
     auto cursor =
          chooseLexer!xml
         .parse!(No.preserveWhitespace)
-        .cursor!(Yes.conflateCDATA)
+        .cursor!(Yes.conflateCDATA)((){})
         .checkXMLNames;
 
     cursor.setSource(xml);
 
-    assert(cursor.getKind == XMLKind.DOCUMENT);
+    assert(cursor.kind == XMLKind.document);
 }
