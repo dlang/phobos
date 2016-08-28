@@ -649,6 +649,8 @@ private template optionValidator(A...)
     args = ["program", "-a"];
     getopt(args, config.caseSensitive, 'a', "help string", &opt);
     assert(opt);
+
+    assertThrown(getopt(args, "", "forgot to put a string", &opt));
 }
 
 private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
@@ -671,6 +673,11 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
         {
             // it's an option string
             auto option = to!string(opts[0]);
+            if (option.length == 0)
+            {
+                excep = new GetOptException("An option name may not be an empty string", excep);
+                return;
+            }
             Option optionHelp = splitAndGet(option);
             optionHelp.required = cfg.required;
 
