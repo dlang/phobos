@@ -173,8 +173,8 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
                 *p = n.next;
                 n.next = root;
                 root = n;
-                return result;
             }
+            return result;
         }
         // Can't allocate from the current pool. Check if we just added a new
         // allocator, in that case it won't do any good to add yet another.
