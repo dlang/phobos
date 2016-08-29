@@ -64,6 +64,8 @@ $(BUGSTITLE Library Changes,
         range.))
     $(LI $(MREF std,numeric) no longer uses `enforce` for verifying
     contract preconditions.)
+    $(LI $(RELATIVE_LINK2 headconst, `Final` was added to
+    `std.experimental.typecons`))
 )
 
 $(BUGSTITLE Library Changes,
@@ -332,12 +334,28 @@ static assert( isFinal!(C.ff));
 )
 
 $(LI $(LNAME2 generate, `std.range.generate` fixed to be a proper range.)
-    $(P $(XREF range, generate) was set up to return a different value on each
+    $(P $(REF generate, std, range) was set up to return a different value on each
     call to `front`. In addition, `popFront` did nothing. This means that
-    manipulation functions like $(XREF range, drop) did nothing. The new
+    manipulation functions like $(REF drop, std, range) did nothing. The new
     version uses a one-element cache to meet the expectations of the range
     definition. It preserves the ref-ness of the generator as well.
     )
+)
+
+$(LI $(LNAME2 headconst, `Final` was added to `std.experimental.typecons`.)
+    $(P $(REF Final, std, experimental, typecons) can't be mutated directly.
+    However references are typed with their original mutability.  This is
+    equivalent to `final` in Java or `readonly` in C#.
+    )
+-------
+auto a = makeFinal([1, 2, 3]);
+assert(a[0] == 1);
+
+// a = [2, 3]; // Reassignment is illegal,
+a[0] = 42; // Elements or fields are still mutable.
+
+assert(a[0] == 42);
+-------
 )
 
 )
