@@ -5902,6 +5902,16 @@ struct FrontTransversal(Ror,
                 _input[n].front = val;
             }
         }
+        /// Ditto
+        static if (hasLength!RangeOfRanges)
+        {
+            @property size_t length()
+            {
+                return _input.length;
+            }
+
+            alias opDollar = length;
+        }
 
 /**
    Slicing if offered if $(D RangeOfRanges) supports slicing and all the
@@ -6007,6 +6017,18 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
             }
         }
     }
+}
+
+// Issue 16363
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int[][] darr = [[0, 1], [4, 5]];
+    auto ft = frontTransversal!(TransverseOptions.assumeNotJagged)(darr);
+
+    assert(equal(ft, [0, 4]));
+    static assert(isRandomAccessRange!(typeof(ft)));
 }
 
 /**
