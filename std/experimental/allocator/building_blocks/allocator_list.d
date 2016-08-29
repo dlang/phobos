@@ -621,14 +621,18 @@ unittest
     import std.experimental.allocator.building_blocks.region : Region;
     enum bs = GCAllocator.alignment;
     AllocatorList!((n) => Region!GCAllocator(256 * bs)) a;
-    auto b = a.allocate(192 * bs);
-    assert(b.length == 192 * bs);
+    auto b1 = a.allocate(192 * bs);
+    assert(b1.length == 192 * bs);
     assert(a.allocators.length == 1);
-    b = a.allocate(64 * bs);
-    assert(b.length == 64 * bs);
+    auto b2 = a.allocate(64 * bs);
+    assert(b2.length == 64 * bs);
     assert(a.allocators.length == 1);
-    b = a.allocate(16 * bs);
-    assert(b.length == 16 * bs);
+    auto b3 = a.allocate(192 * bs);
+    assert(b3.length == 192 * bs);
+    assert(a.allocators.length == 2);
+    a.deallocate(b1);
+    b1 = a.allocate(64 * bs);
+    assert(b1.length == 64 * bs);
     assert(a.allocators.length == 2);
     a.deallocateAll();
 }
