@@ -39,7 +39,7 @@ class UTFException : Exception
     size_t  len;
 
     @safe pure nothrow @nogc
-    UTFException setSequence(uint[] data...)
+    UTFException setSequence(scope uint[] data...)
     {
         assert(data.length <= 4);
 
