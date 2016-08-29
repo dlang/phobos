@@ -22,8 +22,6 @@ $(T2 setIntersection,
 $(T2 setSymmetricDifference,
         Lazily computes the symmetric set difference of two or more sorted
         ranges.)
-$(T2 setUnion,
-        Lazily computes the set union of two or more sorted ranges.)
 )
 
 Copyright: Andrei Alexandrescu 2008-.
@@ -46,6 +44,8 @@ import std.functional; // : unaryFun, binaryFun;
 import std.traits;
 // FIXME
 import std.meta; // : AliasSeq, staticMap, allSatisfy, anySatisfy;
+
+import std.algorithm.sorting; // : Merge;
 
 // cartesianProduct
 /**
@@ -1268,145 +1268,53 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
     static assert(hasLvalueElements!R2);
 }
 
+// Explicitly undocumented. It will be removed in December 2016. @@@DEPRECATED_2016-12@@@
+deprecated("Please use std.algorithm.sorting.merge to join ranges")
+alias setUnion = merge;
+
+// Explicitly undocumented. It will be removed in December 2016. @@@DEPRECATED_2016-12@@@
+deprecated("Please use std.algorithm.sorting.merge to join ranges")
+alias SetUnion = Merge;
+
+/++
+TODO: once SetUnion got deprecated we can provide the usual definition
+(= merge + filter after uniqs)
+See: https://github.com/dlang/phobos/pull/4249
 /**
 Lazily computes the union of two or more ranges $(D rs). The ranges
-are assumed to be sorted by $(D less). Elements in the output are not
-unique; the length of the output is the sum of the lengths of the
-inputs. (The $(D length) member is offered if all ranges also have
-length.) The element types of all ranges must have a common type.
+are assumed to be sorted by $(D less). Elements in the output are
+unique. The element types of all ranges must have a common type.
 
 Params:
     less = Predicate the given ranges are sorted by.
     rs = The ranges to compute the union for.
 
 Returns:
-    A range containing the union of the given ranges.
+    A range containing the unique union of the given ranges.
+
+See_Also:
+   $(XREF algorithm, sorting, merge)
  */
-struct SetUnion(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))
-{
-private:
-    Rs _r;
-    alias comp = binaryFun!(less);
-    uint _crt;
-
-    void adjustPosition(uint candidate = 0)()
-    {
-        static if (candidate == Rs.length)
-        {
-            _crt = _crt.max;
-        }
-        else
-        {
-            if (_r[candidate].empty)
-            {
-                adjustPosition!(candidate + 1)();
-                return;
-            }
-            foreach (i, U; Rs[candidate + 1 .. $])
-            {
-                enum j = candidate + i + 1;
-                if (_r[j].empty) continue;
-                if (comp(_r[j].front, _r[candidate].front))
-                {
-                    // a new candidate was found
-                    adjustPosition!(j)();
-                    return;
-                }
-            }
-            // Found a successful candidate
-            _crt = candidate;
-        }
-    }
-
-public:
-    alias ElementType = CommonType!(staticMap!(.ElementType, Rs));
-    static assert(!is(CommonType!(staticMap!(.ElementType, Rs)) == void),
-        typeof(this).stringof ~ ": incompatible element types.");
-
-    ///
-    this(Rs rs)
-    {
-        this._r = rs;
-        adjustPosition();
-    }
-
-    ///
-    @property bool empty()
-    {
-        return _crt == _crt.max;
-    }
-
-    ///
-    void popFront()
-    {
-        // Assumes _crt is correct
-        assert(!empty);
-        foreach (i, U; Rs)
-        {
-            if (i < _crt) continue;
-            // found _crt
-            assert(!_r[i].empty);
-            _r[i].popFront();
-            adjustPosition();
-            return;
-        }
-        assert(false);
-    }
-
-    ///
-    @property auto ref ElementType front()
-    {
-        assert(!empty);
-        // Assume _crt is correct
-        foreach (i, U; Rs)
-        {
-            if (i < _crt) continue;
-            assert(!_r[i].empty);
-            return _r[i].front;
-        }
-        assert(false);
-    }
-
-    static if (allSatisfy!(isForwardRange, Rs))
-    {
-        ///
-        @property auto save()
-        {
-            auto ret = this;
-            foreach (ti, elem; _r)
-            {
-                ret._r[ti] = elem.save;
-            }
-            return ret;
-        }
-    }
-
-    static if (allSatisfy!(hasLength, Rs))
-    {
-        ///
-        @property size_t length()
-        {
-            size_t result;
-            foreach (i, U; Rs)
-            {
-                result += _r[i].length;
-            }
-            return result;
-        }
-
-        alias opDollar = length;
-    }
-}
-
-/// Ditto
-SetUnion!(less, Rs) setUnion(alias less = "a < b", Rs...)
+auto setUnion(alias less = "a < b", Rs...)
 (Rs rs)
 {
-    return typeof(return)(rs);
+    import std.algorithm.iteration: uniq;
+    import std.algorithm.sorting: merge;
+    return merge!(less, Rs)(rs).uniq;
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
+    ///
+{
+    import std.algorithm.comparison : equal;
+
+    int[] a = [1, 3, 5];
+    int[] b = [2, 3, 4];
+    assert(a.setUnion(b).equal([1, 2, 3, 4, 5]));
+}
+
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1414,13 +1322,46 @@ SetUnion!(less, Rs) setUnion(alias less = "a < b", Rs...)
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     double[] c = [ 10.5 ];
 
-    static assert(isForwardRange!(typeof(setUnion(a, b))));
-    assert(setUnion(a, b).length == a.length + b.length);
-    assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
+    assert(equal(setUnion(a, b), [0, 1, 2, 4, 5, 7, 8, 9][]));
     assert(equal(setUnion(a, c, b),
-                    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10.5][]));
-    auto u = setUnion(a, b);
-    u.front--;
-    assert(equal(u, [-1, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
+                    [0, 1, 2, 4, 5, 7, 8, 9, 10.5][]));
 }
 
+@safe unittest
+{
+    // save
+    import std.range: dropOne;
+    int[] a = [0, 1, 2];
+    int[] b = [0, 3];
+    auto arr = a.setUnion(b);
+    assert(arr.front == 0);
+    assert(arr.save.dropOne.front == 1);
+    assert(arr.front == 0);
+}
+
+@nogc @safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static immutable a = [1, 3, 5];
+    static immutable b = [2, 4];
+    static immutable r = [1, 2, 3, 4, 5];
+    assert(a.setUnion(b).equal(r));
+}
+
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
+    import std.range: iota;
+
+    auto dummyResult1 = [1, 1.5, 2, 3, 4, 5, 5.5, 6, 7, 8, 9, 10];
+    auto dummyResult2 = iota(1, 11);
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        assert(d.setUnion([1, 1.5, 5.5]).equal(dummyResult1));
+        assert(d.setUnion(d).equal(dummyResult2));
+    }
+}
+++/
