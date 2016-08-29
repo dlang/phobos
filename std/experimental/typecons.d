@@ -806,21 +806,21 @@ private template findCovariantFunction(alias finfo, Source, Fs...)
 /**
 Type constructor for final (aka head-const) variables.
 
-Final variables cannot be directly mutated or rebound, but references
+Unassignable variables cannot be directly mutated or rebound, but references
 reached through the variable are typed with their original mutability.
 It is equivalent to `final` variables in D1 and Java, as well as
 `readonly` variables in C#.
 
-When `T` is a `const` or `immutable` type, `Final` aliases
+When `T` is a `const` or `immutable` type, `Unassignable` aliases
 to `T`.
 */
-template Final(T)
+template Unassignable(T)
 {
 static if (is(T == const) || is(T == immutable))
-    alias Final = T;
+    alias Unassignable = T;
 else
 {
-    struct Final
+    struct Unassignable
     {
         import std.typecons : Proxy;
 
@@ -842,7 +842,7 @@ else
             static assert((!is(T == struct) && !is(T == union)) || !isNested!T,
                 "Non-static nested type " ~ fullyQualifiedName!T ~ " must be " ~
                 "constructed explicitly at the call-site (e.g. auto s = " ~
-                "makeFinal(" ~ T.stringof ~ "(...));)");
+                "makeUnassignable(" ~ T.stringof ~ "(...));)");
             this.final_value = T(args);
         }
 
@@ -862,7 +862,7 @@ else
 
         /**
          *
-         * `Final!T` implicitly converts to an rvalue of type `T` through
+         * `Unassignable!T` implicitly converts to an rvalue of type `T` through
          * `AliasThis`.
          */
         inout(T) final_get() inout
@@ -884,12 +884,12 @@ else
 }
 
 /// Ditto
-Final!T makeFinal(T)(T t)
+Unassignable!T makeUnassignable(T)(T t)
 {
-    return Final!T(t);
+    return Unassignable!T(t);
 }
 
-/// `Final` can be used to create class references which cannot be rebound:
+/// `Unassignable` can be used to create class references which cannot be rebound:
 pure nothrow @safe unittest
 {
     static class A
@@ -902,7 +902,7 @@ pure nothrow @safe unittest
         }
     }
 
-    auto a = makeFinal(new A(42));
+    auto a = makeUnassignable(new A(42));
     assert(a.i == 42);
 
     //a = new A(24); // Reassignment is illegal,
@@ -911,7 +911,7 @@ pure nothrow @safe unittest
     assert(a.i == 24);
 }
 
-/// `Final` can also be used to create read-only data fields without using transitive immutability:
+/// `Unassignable` can also be used to create read-only data fields without using transitive immutability:
 pure nothrow @safe unittest
 {
     static class A
@@ -926,7 +926,7 @@ pure nothrow @safe unittest
 
     static class B
     {
-        Final!A a;
+        Unassignable!A a;
 
         this(A a) pure nothrow @nogc @safe
         {
@@ -946,11 +946,11 @@ pure nothrow @safe unittest
 pure nothrow @safe unittest
 {
     static class A { int i; }
-    static assert(!is(Final!A == A));
-    static assert(is(Final!(const A) == const A));
-    static assert(is(Final!(immutable A) == immutable A));
+    static assert(!is(Unassignable!A == A));
+    static assert(is(Unassignable!(const A) == const A));
+    static assert(is(Unassignable!(immutable A) == immutable A));
 
-    Final!A a = new A;
+    Unassignable!A a = new A;
     static assert(!__traits(compiles, a = new A));
 
     static void foo(ref A a) pure nothrow @safe @nogc {}
@@ -960,7 +960,7 @@ pure nothrow @safe unittest
     a.i = 42;
     assert(a.i == 42);
 
-    Final!int i = 42;
+    Unassignable!int i = 42;
     static assert(!__traits(compiles, i = 24));
     static assert(!__traits(compiles, --i));
     static assert(!__traits(compiles, ++i));
@@ -980,11 +980,11 @@ pure nothrow @safe unittest
         this(int i, string s, float f){ this.i = i; }
     }
 
-    Final!S sint = 42;
-    Final!S sstr = "foo";
+    Unassignable!S sint = 42;
+    Unassignable!S sstr = "foo";
     static assert(!__traits(compiles, sint = sstr));
 
-    auto sboth = Final!S(42, "foo", 3.14);
+    auto sboth = Unassignable!S(42, "foo", 3.14);
     assert(sboth.i == 42);
 
     sboth.i = 24;
@@ -997,8 +997,8 @@ pure nothrow @safe unittest
     }
 
     // Nested structs must be constructed at the call-site
-    static assert(!__traits(compiles, Final!NestedS(6)));
-    auto s = makeFinal(NestedS(6));
+    static assert(!__traits(compiles, Unassignable!NestedS(6)));
+    auto s = makeUnassignable(NestedS(6));
     assert(s.i == 6);
     assert(s.get == 30);
 
@@ -1011,14 +1011,14 @@ pure nothrow @safe unittest
         int get() { return sboth.i + i; }
     }
 
-    auto c = makeFinal(new NestedC(6));
+    auto c = makeUnassignable(new NestedC(6));
     assert(c.i == 6);
     assert(c.get == 30);
 }
 
 pure nothrow @safe unittest
 {
-    auto arr = makeFinal([1, 2, 3]);
+    auto arr = makeUnassignable([1, 2, 3]);
     static assert(!__traits(compiles, arr = null));
     static assert(!__traits(compiles, arr ~= 4));
     assert((arr ~ 4) == [1, 2, 3, 4]);
