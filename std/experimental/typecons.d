@@ -802,3 +802,224 @@ private template findCovariantFunction(alias finfo, Source, Fs...)
     else
         enum ptrdiff_t findCovariantFunction = x;
 }
+
+/**
+Type constructor for final (aka head-const) variables.
+
+Final variables cannot be directly mutated or rebound, but references
+reached through the variable are typed with their original mutability.
+It is equivalent to `final` variables in D1 and Java, as well as
+`readonly` variables in C#.
+
+When `T` is a `const` or `immutable` type, `Final` aliases
+to `T`.
+*/
+template Final(T)
+{
+static if (is(T == const) || is(T == immutable))
+    alias Final = T;
+else
+{
+    struct Final
+    {
+        import std.typecons : Proxy;
+
+        private T final_value;
+        mixin Proxy!final_value;
+
+        /**
+         * Construction is forwarded to the underlying type.
+         */
+        this(T other)
+        {
+            this.final_value = other;
+        }
+
+        /// Ditto
+        this(Args...)(auto ref Args args)
+            if (__traits(compiles, T(args)))
+        {
+            static assert((!is(T == struct) && !is(T == union)) || !isNested!T,
+                "Non-static nested type " ~ fullyQualifiedName!T ~ " must be " ~
+                "constructed explicitly at the call-site (e.g. auto s = " ~
+                "makeFinal(" ~ T.stringof ~ "(...));)");
+            this.final_value = T(args);
+        }
+
+        // Attaching function attributes gives less noisy error messages
+        pure nothrow @safe @nogc @disable
+        {
+            /++
+             + All operators, including member access, are forwarded to the
+             + underlying value of type `T` except for these mutating operators,
+             + which are disabled.
+             +/
+            void opAssign(Other)(Other other);
+            void opOpAssign(string op, Other)(Other other); /// Ditto
+            void opUnary(string op : "--")(); /// Ditto
+            void opUnary(string op : "++")(); /// Ditto
+        }
+
+        /**
+         *
+         * `Final!T` implicitly converts to an rvalue of type `T` through
+         * `AliasThis`.
+         */
+        inout(T) final_get() inout
+        {
+            return final_value;
+        }
+
+        /// Ditto
+        alias final_get this;
+
+        /// Ditto
+        T opUnary(string op)()
+            if (__traits(compiles, mixin(op ~ "T.init")))
+        {
+            return mixin(op ~ "this.final_value");
+        }
+    }
+}
+}
+
+/// Ditto
+Final!T makeFinal(T)(T t)
+{
+    return Final!T(t);
+}
+
+/// `Final` can be used to create class references which cannot be rebound:
+pure nothrow @safe unittest
+{
+    static class A
+    {
+        int i;
+
+        this(int i) pure nothrow @nogc @safe
+        {
+            this.i = i;
+        }
+    }
+
+    auto a = makeFinal(new A(42));
+    assert(a.i == 42);
+
+    //a = new A(24); // Reassignment is illegal,
+    a.i = 24; // But fields are still mutable.
+
+    assert(a.i == 24);
+}
+
+/// `Final` can also be used to create read-only data fields without using transitive immutability:
+pure nothrow @safe unittest
+{
+    static class A
+    {
+        int i;
+
+        this(int i) pure nothrow @nogc @safe
+        {
+            this.i = i;
+        }
+    }
+
+    static class B
+    {
+        Final!A a;
+
+        this(A a) pure nothrow @nogc @safe
+        {
+            this.a = a; // Construction, thus allowed.
+        }
+    }
+
+    auto b = new B(new A(42));
+    assert(b.a.i == 42);
+
+    // b.a = new A(24); // Reassignment is illegal,
+    b.a.i = 24; // but `a` is still mutable.
+
+    assert(b.a.i == 24);
+}
+
+pure nothrow @safe unittest
+{
+    static class A { int i; }
+    static assert(!is(Final!A == A));
+    static assert(is(Final!(const A) == const A));
+    static assert(is(Final!(immutable A) == immutable A));
+
+    Final!A a = new A;
+    static assert(!__traits(compiles, a = new A));
+
+    static void foo(ref A a) pure nothrow @safe @nogc {}
+    static assert(!__traits(compiles, foo(a)));
+
+    assert(a.i == 0);
+    a.i = 42;
+    assert(a.i == 42);
+
+    Final!int i = 42;
+    static assert(!__traits(compiles, i = 24));
+    static assert(!__traits(compiles, --i));
+    static assert(!__traits(compiles, ++i));
+    assert(i == 42);
+    int iCopy = i;
+    assert(iCopy == 42);
+    iCopy = -i; // non-mutating unary operators must work
+    assert(iCopy == -42);
+
+    static struct S
+    {
+        int i;
+
+        pure nothrow @safe @nogc:
+        this(int i){}
+        this(string s){}
+        this(int i, string s, float f){ this.i = i; }
+    }
+
+    Final!S sint = 42;
+    Final!S sstr = "foo";
+    static assert(!__traits(compiles, sint = sstr));
+
+    auto sboth = Final!S(42, "foo", 3.14);
+    assert(sboth.i == 42);
+
+    sboth.i = 24;
+    assert(sboth.i == 24);
+
+    struct NestedS
+    {
+        int i;
+        int get() pure nothrow @safe @nogc { return sboth.i + i; }
+    }
+
+    // Nested structs must be constructed at the call-site
+    static assert(!__traits(compiles, Final!NestedS(6)));
+    auto s = makeFinal(NestedS(6));
+    assert(s.i == 6);
+    assert(s.get == 30);
+
+    class NestedC
+    {
+        int i;
+
+        pure nothrow @safe @nogc:
+        this(int i) { this.i = i; }
+        int get() { return sboth.i + i; }
+    }
+
+    auto c = makeFinal(new NestedC(6));
+    assert(c.i == 6);
+    assert(c.get == 30);
+}
+
+pure nothrow @safe unittest
+{
+    auto arr = makeFinal([1, 2, 3]);
+    static assert(!__traits(compiles, arr = null));
+    static assert(!__traits(compiles, arr ~= 4));
+    assert((arr ~ 4) == [1, 2, 3, 4]);
+}
