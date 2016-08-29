@@ -615,3 +615,20 @@ unittest
     a.deallocateAll();
     assert(a.empty == Ternary.yes);
 }
+
+unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    enum bs = GCAllocator.alignment;
+    AllocatorList!((n) => Region!GCAllocator(256 * bs)) a;
+    auto b = a.allocate(192 * bs);
+    assert(b.length == 192 * bs);
+    assert(a.allocators.length == 1);
+    b = a.allocate(64 * bs);
+    assert(b.length == 64 * bs);
+    assert(a.allocators.length == 1);
+    b = a.allocate(16 * bs);
+    assert(b.length == 16 * bs);
+    assert(a.allocators.length == 2);
+    a.deallocateAll();
+}
