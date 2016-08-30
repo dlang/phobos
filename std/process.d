@@ -85,6 +85,7 @@ Macros:
 */
 module std.process;
 
+
 version (Posix)
 {
     import core.sys.posix.unistd;
@@ -101,6 +102,7 @@ version (Windows)
 import std.range.primitives;
 import std.stdio;
 import std.internal.cstring;
+import std.internal.phobosinit;
 
 
 // When the DMC runtime is used, we have to use some custom functions

@@ -2671,11 +2671,10 @@ abstract class EncodingScheme
  */
 class EncodingSchemeASCII : EncodingScheme
 {
-    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeASCII");
-    }*/
+    }
 
     const
     {
@@ -2757,11 +2756,10 @@ class EncodingSchemeASCII : EncodingScheme
  */
 class EncodingSchemeLatin1 : EncodingScheme
 {
-    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
-    }*/
+    }
 
     const
     {
@@ -2837,11 +2835,10 @@ class EncodingSchemeLatin1 : EncodingScheme
  */
 class EncodingSchemeLatin2 : EncodingScheme
 {
-    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeLatin2");
-    }*/
+    }
 
     const
     {
@@ -2909,11 +2906,10 @@ class EncodingSchemeLatin2 : EncodingScheme
  */
 class EncodingSchemeWindows1250 : EncodingScheme
 {
-    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeWindows1250");
-    }*/
+    }
 
     const
     {
@@ -2977,11 +2973,10 @@ class EncodingSchemeWindows1250 : EncodingScheme
  */
 class EncodingSchemeWindows1252 : EncodingScheme
 {
-    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeWindows1252");
-    }*/
+    }
 
     const
     {
@@ -3045,11 +3040,10 @@ class EncodingSchemeWindows1252 : EncodingScheme
  */
 class EncodingSchemeUtf8 : EncodingScheme
 {
-    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf8");
-    }*/
+    }
 
     const
     {
@@ -3114,11 +3108,10 @@ class EncodingSchemeUtf8 : EncodingScheme
  */
 class EncodingSchemeUtf16Native : EncodingScheme
 {
-    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf16Native");
-    }*/
+    }
 
     const
     {
@@ -3210,11 +3203,10 @@ class EncodingSchemeUtf16Native : EncodingScheme
  */
 class EncodingSchemeUtf32Native : EncodingScheme
 {
-    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf32Native");
-    }*/
+    }
 
     const
     {
