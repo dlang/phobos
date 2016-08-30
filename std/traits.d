@@ -6956,9 +6956,12 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
                   .format(names[0]));
     }
 
-    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol.%s, attribute)".format(name));
+    // filtering out nested class context
+    enum noThisMember(string name) = (name != "this");
+    alias membersWithoutNestedCC = Filter!(noThisMember, __traits(allMembers, symbol));
 
-    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, __traits(allMembers, symbol)));
+    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol.%s, attribute)".format(name));
+    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, membersWithoutNestedCC));
 
     // if the symbol itself has the UDA, tack it on to the front of the list
     static if (hasUDA!(symbol, attribute))
@@ -7040,6 +7043,20 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
     static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 2);
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[1], Attr));
+}
+
+// #16387: getSymbolsByUDA works with structs but fails with classes
+unittest
+{
+    enum Attr;
+    class A
+    {
+        @Attr uint a;
+    }
+
+    alias res = getSymbolsByUDA!(A, Attr);
+    static assert(res.length == 1);
+    static assert(res[0].stringof == "a");
 }
 
 /**
