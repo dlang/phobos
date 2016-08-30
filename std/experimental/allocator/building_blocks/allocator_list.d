@@ -173,8 +173,8 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
                 *p = n.next;
                 n.next = root;
                 root = n;
-                return result;
             }
+            return result;
         }
         // Can't allocate from the current pool. Check if we just added a new
         // allocator, in that case it won't do any good to add yet another.
@@ -614,4 +614,25 @@ unittest
     a.allocate(1024 * 4095);
     a.deallocateAll();
     assert(a.empty == Ternary.yes);
+}
+
+unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    enum bs = GCAllocator.alignment;
+    AllocatorList!((n) => Region!GCAllocator(256 * bs)) a;
+    auto b1 = a.allocate(192 * bs);
+    assert(b1.length == 192 * bs);
+    assert(a.allocators.length == 1);
+    auto b2 = a.allocate(64 * bs);
+    assert(b2.length == 64 * bs);
+    assert(a.allocators.length == 1);
+    auto b3 = a.allocate(192 * bs);
+    assert(b3.length == 192 * bs);
+    assert(a.allocators.length == 2);
+    a.deallocate(b1);
+    b1 = a.allocate(64 * bs);
+    assert(b1.length == 64 * bs);
+    assert(a.allocators.length == 2);
+    a.deallocateAll();
 }
