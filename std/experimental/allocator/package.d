@@ -435,13 +435,39 @@ propagates the exception.
 auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 {
     import std.algorithm.comparison : max;
-    import std.conv : emplace;
+    import std.conv : emplace, emplaceRef;
     auto m = alloc.allocate(max(stateSize!T, 1));
     if (!m.ptr) return null;
-    scope(failure) alloc.deallocate(m);
-    static if (is(T == class))
-        return emplace!T(m, args);
-    else return emplace(cast(T*) m.ptr, args);
+
+    // make can only be @safe if emplace or emplaceRef is `pure`
+    auto construct()
+    {
+        static if (is(T == class)) return emplace!T(m, args);
+        else
+        {
+            // Assume cast is safe as allocation succeeded for `stateSize!T`
+            auto p = () @trusted { return cast(T*)m.ptr; }();
+            emplaceRef(*p, args);
+            return p;
+        }
+    }
+
+    scope(failure)
+    {
+        static if (is(typeof(() pure { return construct(); })))
+        {
+            // Assume deallocation is safe because:
+            // 1) in case of failure, `m` is the only reference to this memory
+            // 2) `m` is known to originate from `alloc`
+            () @trusted { alloc.deallocate(m); }();
+        }
+        else
+        {
+            alloc.deallocate(m);
+        }
+    }
+
+    return construct();
 }
 
 ///
@@ -554,6 +580,92 @@ unittest
     import std.experimental.allocator.gc_allocator : GCAllocator;
     test(GCAllocator.instance);
     test(theAllocator);
+}
+
+// Attribute propagation
+nothrow @safe @nogc unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    alias alloc = Mallocator.instance;
+
+    auto test(T, Args...)(auto ref Args args)
+    {
+        auto k = alloc.make!T(args);
+        () @trusted { alloc.dispose(k); }();
+    }
+
+    test!int;
+    test!(int*);
+    test!int(0);
+    test!(int*)(null);
+}
+
+// should be pure with the GCAllocator
+/*pure nothrow*/ @safe unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+
+    alias alloc = GCAllocator.instance;
+
+    auto test(T, Args...)(auto ref Args args)
+    {
+        auto k = alloc.make!T(args);
+        (a) @trusted { a.dispose(k); }(alloc);
+    }
+
+    test!int();
+    test!(int*);
+    test!int(0);
+    test!(int*)(null);
+}
+
+// Verify that making an object by calling an impure constructor is not @safe
+nothrow @safe @nogc unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    static struct Pure { this(int) pure nothrow @nogc @safe {} }
+
+    cast(void) Mallocator.instance.make!Pure(0);
+
+    static int g = 0;
+    static struct Impure { this(int) nothrow @nogc @safe {
+        g++;
+    } }
+    static assert(!__traits(compiles, cast(void) Mallocator.instance.make!Impure(0)));
+}
+
+// test failure with a pure, failing struct
+@safe unittest
+{
+    import std.exception : assertThrown, enforce;
+
+    // this struct can't be initialized
+    struct InvalidStruct
+    {
+        this(int b)
+        {
+            enforce(1 == 2);
+        }
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    assertThrown(make!InvalidStruct(Mallocator.instance, 42));
+}
+
+// test failure with an impure, failing struct
+@system unittest
+{
+    import std.exception : assertThrown, enforce;
+    static int g;
+    struct InvalidImpureStruct
+    {
+        this(int b)
+        {
+            g++;
+            enforce(1 == 2);
+        }
+    }
+    import std.experimental.allocator.mallocator : Mallocator;
+    assertThrown(make!InvalidImpureStruct(Mallocator.instance, 42));
 }
 
 private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
