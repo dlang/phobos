@@ -23,7 +23,7 @@ immutable
         	if (os == OS.win64 || os == OS.win32) {
 		        writeln("it's Windows");
 	        } else if (os == OS.linux) {
-		        writeln("it's Linus");
+		        writeln("it's Linux");
 	        }
         }
         ----
