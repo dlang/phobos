@@ -66,6 +66,11 @@ $(BUGSTITLE Library Changes,
     contract preconditions.)
     $(LI $(RELATIVE_LINK2 headconst, `Final` was added to
     `std.experimental.typecons`))
+    $(LI $(RELATIVE_LINK2 inner-class, `std.traits.isInnerClass` was added to
+    identify nested classes with an accessible `outer` pointer))
+    $(LI $(RELATIVE_LINK2 emplace-inner-class, `std.conv.emplace` no longer allows
+    to emplace classes directly nested inside other classes without specifying a
+    suitable `outer` pointer))
 )
 
 $(BUGSTITLE Library Changes,
@@ -355,6 +360,59 @@ assert(a[0] == 1);
 a[0] = 42; // Elements or fields are still mutable.
 
 assert(a[0] == 42);
+-------
+)
+
+$(LI $(LNAME2 inner-class, `std.traits.isInnerClass` was added to identify
+    nested classes with an accessible `outer` pointer)
+    $(P Classes, that are nested inside other classes (and not inside functions)
+    and that don't define any `outer` symbol, have an `outer` field which allows
+    to get and even set the instance of the outer class they are nested in.
+    $(REF isInnerClass, std, traits) allows to identify them. The types satisfying
+    `isInnerClass` are a subset of the ones satisfying `isNested`, as the latter
+    includes classes and structures nested inside functions or that redefine `outer`.
+    )
+-------
+class Outer
+{
+    class Inner1 { }
+    class Inner2
+    {
+        int outer; // redefines outer, so the Outer instance is not accessible
+    }
+    static class Inner3 {}  // static, thus not nested
+}
+static assert(isInnerClass!(Outer.Inner1));
+static assert(!isInnerClass!(Outer.Inner2));
+static assert(!isInnerClass!(Outer.Inner3));
+-------
+)
+
+$(LI $(LNAME2 emplace-inner-class, `std.conv.emplace` no longer allows to emplace
+    classes nested directly inside other classes without specifying a suitable `outer`
+    pointer)
+    $(P If a class is nested within another class (there's a new trait
+    $(REF isInnerClass, std, traits) to check for this condition), `emplace` requires
+    now the outer class instance as additional mandatory parameter. Before this
+    change, emplacing did not require this parameter and access to variables of the
+    outer class resulted in segmentation faults.
+    )
+-------
+class Outer
+{
+    int x;
+    class Inner
+    {
+        auto getX() { return x; }
+    }
+}
+Outer outer = new Outer();
+
+// auto inner = buf.emplace!(Outer.Inner)();   // this is no longer allowed
+auto inner = buf.emplace!(Outer.Inner)(outer); // use this instead
+
+auto x = inner.getX();  // this used to cause a segmentation fault;
+                        // now it works as expected
 -------
 )
 
