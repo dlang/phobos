@@ -20,6 +20,11 @@ immutable
         import std.system, std.stdio;
         int main(string[] args) {
 	        writeln(os);
+        	if (os == OS.win64 || os == OS.win32) {
+		        writeln("it's Windows");
+	        } else if (os == OS.linux) {
+		        writeln("it's Linus");
+	        }
         }
         ```
         
