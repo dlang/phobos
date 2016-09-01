@@ -14,11 +14,11 @@ immutable
 {
     /++
         Operating system.
-        
+
         Example:
         ----
         import std.system, std.stdio;
-        
+
         int main(string[] args)
         {
             writeln(os);
@@ -32,7 +32,7 @@ immutable
             }
         }
         ----
-        
+
         Note:
             This is for cases where you need a value representing the OS at
             runtime. If you're doing something which should compile differently
