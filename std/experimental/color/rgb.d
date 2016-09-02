@@ -11,9 +11,11 @@
 module std.experimental.color.rgb;
 
 import std.experimental.color;
-import std.experimental.color.conv;
+import std.experimental.color.colorspace;
+import std.experimental.color.xyz : XYZ, isXYZ;
+import std.experimental.normint;
 
-import std.traits : isInstanceOf, isNumeric, isIntegral, isFloatingPoint, isSigned, isSomeChar, Unqual;
+import std.traits : isInstanceOf, isNumeric, isIntegral, isFloatingPoint, isSomeChar, Unqual;
 import std.typetuple : TypeTuple;
 import std.typecons : tuple;
 
@@ -45,21 +47,6 @@ template defaultAlpha(T)
 
 
 /**
-Enum of RGB color spaces.
-*/
-enum RGBColorSpace
-{
-    /** sRGB, HDTV (ITU-R BT.709) */
-    sRGB,
-    /** sRGB with gamma 2.2 */
-    sRGB_Gamma2_2,
-
-    // custom color space will disable automatic color spoace conversions
-    custom = -1
-}
-
-
-/**
 An RGB color, parameterised with components, component type, and color space specification.
 
 Params: components_ = Components that shall be available. Struct is populated with components in the order specified.
@@ -85,9 +72,17 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     static assert(anyIn!("rgbal", components), "RGB colors must contain at least one component of r, g, b, l, a.");
     static assert(!canFind!(components, 'l') || !anyIn!("rgb", components), "RGB colors may not contain rgb AND luminance components together.");
 
-    // create members for some useful information
-    /** Type of the color components. */
-    alias ComponentType = ComponentType_;
+    static if(isFloatingPoint!ComponentType_)
+    {
+        /** Type of the color components. */
+        alias ComponentType = ComponentType_;
+    }
+    else
+    {
+        /** Type of the color components. */
+        alias ComponentType = NormalizedInt!ComponentType_;
+    }
+
     /** The color components that were specified. */
     enum string components = components_;
     /** The color space specified. */
@@ -112,7 +107,6 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     enum bool hasAlpha = hasComponent!'a';
 
 
-    // functions that return the color channels as a tuple
     /** Return the RGB tristimulus values as a tuple.
         These will always be ordered (R, G, B).
         Any color channels not present will be 0. */
@@ -161,7 +155,6 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
         assert(c.tristimulusWithAlpha == tuple(10, 128, 255, 80));
     }
 
-    // RGB/A initialiser
     /** Construct a color from RGB and optional alpha values. */
     this(ComponentType r, ComponentType g, ComponentType b, ComponentType a = defaultAlpha!ComponentType)
     {
@@ -171,7 +164,6 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
             this.l = toGrayscale!(linear, colorSpace)(r, g, b); // ** Contentious? I this this is most useful
     }
 
-    // L/A initialiser
     /** Construct a color from a luminance and optional alpha value. */
     this(ComponentType l, ComponentType a = defaultAlpha!ComponentType)
     {
@@ -181,15 +173,40 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
             this.a = a;
     }
 
-    // hex string initialiser
+    static if(!isFloatingPoint!ComponentType_)
+    {
+        /** Construct a color from RGB and optional alpha values. */
+        this(ComponentType.IntType r, ComponentType.IntType g, ComponentType.IntType b, ComponentType.IntType a = defaultAlpha!(ComponentType.IntType))
+        {
+            foreach(c; TypeTuple!("r","g","b","a"))
+                mixin(ComponentExpression!("this._ = ComponentType(_);", c, null));
+            static if(canFind!(components, 'l'))
+                this.l = toGrayscale!(linear, colorSpace)(ComponentType(r), ComponentType(g), ComponentType(b)); // ** Contentious? I this this is most useful
+        }
+
+        /** Construct a color from a luminance and optional alpha value. */
+        this(ComponentType.IntType l, ComponentType.IntType a = defaultAlpha!(ComponentType.IntType))
+        {
+            foreach(c; TypeTuple!("l","r","g","b"))
+                mixin(ComponentExpression!("this._ = ComponentType(l);", c, null));
+            static if(canFind!(components, 'a'))
+                this.a = ComponentType(a);
+        }
+    }
+
     /** Construct a color from a hex string. */
     this(C)(const(C)[] hex) if(isSomeChar!C)
     {
-        import std.experimental.color.conv: colorFromString;
         this = colorFromString!(typeof(this))(hex);
     }
+    ///
+    unittest
+    {
+        static assert(RGB8("#8000FF")  == RGB8(0x80,0x00,0xFF));
+        static assert(RGBA8("0x908000FF") == RGBA8(0x80,0x00,0xFF,0x90));
+    }
 
-    // casts
+    /** Cast to other color types */
     Color opCast(Color)() const if(isColor!Color)
     {
         return convertColor!Color(this);
@@ -202,55 +219,238 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
         return tristimulusWithAlpha == rh.tristimulusWithAlpha;
     }
 
-    // operators
-    mixin ColorOperators!AllComponents;
-
+    /** Unary operators. */
+    typeof(this) opUnary(string op)() const if(op == "+" || op == "-" || (op == "~" && is(ComponentType == NormalizedInt!U, U)))
+    {
+        Unqual!(typeof(this)) res = this;
+        foreach(c; AllComponents)
+            mixin(ComponentExpression!("res._ = #_;", c, op));
+        return res;
+    }
+    ///
     unittest
     {
+        static assert(+UVW8(1,2,3) == UVW8(1,2,3));
+        static assert(-UVW8(1,2,3) == UVW8(-1,-2,-3));
+
+        static assert(~RGB8(1,2,3) == RGB8(0xFE,0xFD,0xFC));
+        static assert(~UVW8(1,2,3) == UVW8(~1,~2,~3));
+    }
+
+    /** Binary operators. */
+    typeof(this) opBinary(string op)(typeof(this) rh) const if(op == "+" || op == "-" || op == "*")
+    {
+        Unqual!(typeof(this)) res = this;
+        foreach(c; AllComponents)
+            mixin(ComponentExpression!("res._ #= rh._;", c, op));
+        return res;
+    }
+    ///
+    unittest
+    {
+        static assert(RGB8(10,20,30)       + RGB8(4,5,6) == RGB8(14,25,36));
+        static assert(UVW8(10,20,30)       + UVW8(4,5,6) == UVW8(14,25,36));
+        static assert(RGBAf32(10,20,30,40) + RGBAf32(4,5,6,7) == RGBAf32(14,25,36,47));
+
+        static assert(RGB8(10,20,30)       - RGB8(4,5,6) == RGB8(6,15,24));
+        static assert(UVW8(10,20,30)       - UVW8(4,5,6) == UVW8(6,15,24));
+        static assert(RGBAf32(10,20,30,40) - RGBAf32(4,5,6,7) == RGBAf32(6,15,24,33));
+
+        static assert(RGB8(10,20,30)       * RGB8(128,128,128) == RGB8(5,10,15));
+        static assert(UVW8(10,20,30)       * UVW8(-64,-64,-64) == UVW8(-5,-10,-15));
+        static assert(RGBAf32(10,20,30,40) * RGBAf32(0,1,2,3) == RGBAf32(0,20,60,120));
+    }
+
+    /** Binary operators. */
+    typeof(this) opBinary(string op, S)(S rh) const if(isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
+    {
+        Unqual!(typeof(this)) res = this;
+        foreach(c; AllComponents)
+            mixin(ComponentExpression!("res._ #= rh;", c, op));
+        return res;
+    }
+    ///
+    unittest
+    {
+        static assert(RGB8(10,20,30)       * 2 == RGB8(20,40,60));
+        static assert(UVW8(10,20,30)       * 2 == UVW8(20,40,60));
+        static assert(RGBAf32(10,20,30,40) * 2 == RGBAf32(20,40,60,80));
+
+        static assert(RGB8(10,20,30)       / 2 == RGB8(5,10,15));
+        static assert(UVW8(-10,-20,-30)    / 2 == UVW8(-5,-10,-15));
+        static assert(RGBAf32(10,20,30,40) / 2 == RGBAf32(5,10,15,20));
+
+        static assert(RGB8(10,20,30)       * 2.0 == RGB8(20,40,60));
+        static assert(UVW8(10,20,30)       * 2.0 == UVW8(20,40,60));
+        static assert(RGBAf32(10,20,30,40) * 2.0 == RGBAf32(20,40,60,80));
+        static assert(RGB8(10,20,30)       * 0.5 == RGB8(5,10,15));
+        static assert(UVW8(-10,-20,-30)    * 0.5 == UVW8(-5,-10,-15));
+        static assert(RGBAf32(5,10,15,20)  * 0.5 == RGBAf32(2.5,5,7.5,10));
+
+        static assert(RGB8(10,20,30)       / 2.0 == RGB8(5,10,15));
+        static assert(UVW8(-10,-20,-30)    / 2.0 == UVW8(-5,-10,-15));
+        static assert(RGBAf32(10,20,30,40) / 2.0 == RGBAf32(5,10,15,20));
+        static assert(RGB8(10,20,30)       / 0.5 == RGB8(20,40,60));
+        static assert(UVW8(10,20,30)       / 0.5 == UVW8(20,40,60));
+        static assert(RGBAf32(10,20,30,40) / 0.5 == RGBAf32(20,40,60,80));
+    }
+
+    /** Binary assignment operators. */
+    ref typeof(this) opOpAssign(string op)(typeof(this) rh) if(op == "+" || op == "-" || op == "*")
+    {
+        foreach(c; AllComponents)
+            mixin(ComponentExpression!("_ #= rh._;", c, op));
+        return this;
+    }
+
+    /** Binary assignment operators. */
+    ref typeof(this) opOpAssign(string op, S)(S rh) if(isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
+    {
+        foreach(c; AllComponents)
+            mixin(ComponentExpression!("_ #= rh;", c, op));
+        return this;
+    }
+
+package:
+
+    alias ParentColor = XYZ!(FloatTypeFor!ComponentType);
+
+    static To convertColorImpl(To, From)(From color) if(isRGB!From && isRGB!To)
+    {
+        alias ToType = To.ComponentType;
+        alias FromType = From.ComponentType;
+
+        auto src = color.tristimulusWithAlpha;
+
+        static if(From.colorSpace == To.colorSpace && From.linear == To.linear)
+        {
+            // color space is the same, just do type conversion
+            return To(cast(ToType)src[0], cast(ToType)src[1], cast(ToType)src[2], cast(ToType)src[3]);
+        }
+        else
+        {
+            // unpack the working values
+            alias WorkType = WorkingType!(FromType, ToType);
+            WorkType r = cast(WorkType)src[0];
+            WorkType g = cast(WorkType)src[1];
+            WorkType b = cast(WorkType)src[2];
+
+            static if(From.linear == false)
+            {
+                r = toLinear!(From.colorSpace)(r);
+                g = toLinear!(From.colorSpace)(g);
+                b = toLinear!(From.colorSpace)(b);
+            }
+            static if(From.colorSpace != To.colorSpace)
+            {
+                enum toXYZ = RGBColorSpaceMatrix!(From.colorSpace, WorkType);
+                enum toRGB = inverse(RGBColorSpaceMatrix!(To.colorSpace, WorkType));
+                enum mat = multiply(toXYZ, toRGB);
+                WorkType[3] v = multiply(mat, [r, g, b]);
+                r = v[0]; g = v[1]; b = v[2];
+            }
+            static if(To.linear == false)
+            {
+                r = toGamma!(To.colorSpace)(r);
+                g = toGamma!(To.colorSpace)(g);
+                b = toGamma!(To.colorSpace)(b);
+            }
+
+            // convert and return the output
+            static if(To.hasAlpha)
+                return To(cast(ToType)r, cast(ToType)g, cast(ToType)b, cast(ToType)src[3]);
+            else
+                return To(cast(ToType)r, cast(ToType)g, cast(ToType)b);
+        }
+    }
+    unittest
+    {
+        // test RGB format conversions
         alias UnsignedRGB = RGB!("rgb", ubyte);
         alias SignedRGBX = RGB!("rgbx", byte);
         alias FloatRGBA = RGB!("rgba", float);
 
-        // test construction
-        static assert(UnsignedRGB("0x908000FF")  == UnsignedRGB(0x80,0,0xFF));
-        static assert(FloatRGBA("0x908000FF")    == FloatRGBA(float(0x80)/float(0xFF),0,1,float(0x90)/float(0xFF)));
+        static assert(convertColorImpl!(UnsignedRGB)(SignedRGBX(0x20,0x30,-10)) == UnsignedRGB(0x40,0x60,0));
+        static assert(convertColorImpl!(UnsignedRGB)(FloatRGBA(1,0.5,0,1)) == UnsignedRGB(0xFF,0x80,0));
+        static assert(convertColorImpl!(FloatRGBA)(UnsignedRGB(0xFF,0x80,0)) == FloatRGBA(1,float(0x80)/float(0xFF),0,0));
+        static assert(convertColorImpl!(FloatRGBA)(SignedRGBX(127,-127,-128)) == FloatRGBA(1,-1,-1,0));
 
-        // test operators
-        static assert(-SignedRGBX(1,2,3) == SignedRGBX(-1,-2,-3));
-        static assert(-FloatRGBA(1,2,3)  == FloatRGBA(-1,-2,-3));
+        static assert(convertColorImpl!(UnsignedRGB)(convertColorImpl!(FloatRGBA)(UnsignedRGB(0xFF,0x80,0))) == UnsignedRGB(0xFF,0x80,0));
 
-        static assert(UnsignedRGB(10,20,30)  + UnsignedRGB(4,5,6) == UnsignedRGB(14,25,36));
-        static assert(SignedRGBX(10,20,30)   + SignedRGBX(4,5,6)  == SignedRGBX(14,25,36));
-        static assert(FloatRGBA(10,20,30,40) + FloatRGBA(4,5,6,7) == FloatRGBA(14,25,36,47));
+        // test greyscale conversion
+        alias UnsignedL = RGB!("l", ubyte);
+        assert(cast(UnsignedL)UnsignedRGB(0xFF,0x20,0x40) == UnsignedL(0x83));
 
-        static assert(UnsignedRGB(10,20,30)  - UnsignedRGB(4,5,6) == UnsignedRGB(6,15,24));
-        static assert(SignedRGBX(10,20,30)   - SignedRGBX(4,5,6)  == SignedRGBX(6,15,24));
-        static assert(FloatRGBA(10,20,30,40) - FloatRGBA(4,5,6,7) == FloatRGBA(6,15,24,33));
+        // TODO: we can't test this properly since DMD can't CTFE the '^^' operator! >_<
 
-        static assert(UnsignedRGB(10,20,30)  * UnsignedRGB(0,1,2) == UnsignedRGB(0,20,60));
-        static assert(SignedRGBX(10,20,30)   * SignedRGBX(0,1,2)  == SignedRGBX(0,20,60));
-        static assert(FloatRGBA(10,20,30,40) * FloatRGBA(0,1,2,3) == FloatRGBA(0,20,60,120));
+        alias sRGBA = RGB!("rgba", ubyte, false, RGBColorSpace.sRGB);
 
-        static assert(UnsignedRGB(10,20,30)  / UnsignedRGB(1,2,3) == UnsignedRGB(10,10,10));
-        static assert(SignedRGBX(10,20,30)   / SignedRGBX(1,2,3)  == SignedRGBX(10,10,10));
-        static assert(FloatRGBA(2,4,8,16)    / FloatRGBA(1,2,4,8) == FloatRGBA(2,2,2,2));
+        // test linear conversion
+        alias lRGBA = RGB!("rgba", ushort, true, RGBColorSpace.sRGB);
+        assert(convertColorImpl!(lRGBA)(sRGBA(0xFF, 0xFF, 0xFF, 0xFF)) == lRGBA(0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF));
 
-        static assert(UnsignedRGB(10,20,30)  * 2 == UnsignedRGB(20,40,60));
-        static assert(SignedRGBX(10,20,30)   * 2 == SignedRGBX(20,40,60));
-        static assert(FloatRGBA(10,20,30,40) * 2 == FloatRGBA(20,40,60,80));
+        // test gamma conversion
+        alias gRGBA = RGB!("rgba", byte, false, RGBColorSpace.sRGB_Gamma2_2);
+        assert(convertColorImpl!(gRGBA)(sRGBA(0xFF, 0x80, 0x01, 0xFF)) == gRGBA(0x7F, 0x3F, 0x03, 0x7F));
+    }
 
-        static assert(UnsignedRGB(10,20,30)  / 2 == UnsignedRGB(5,10,15));
-        static assert(SignedRGBX(10,20,30)   / 2 == SignedRGBX(5,10,15));
-        static assert(FloatRGBA(10,20,30,40) / 2 == FloatRGBA(5,10,15,20));
+    static To convertColorImpl(To, From)(From color) if(isRGB!From && isXYZ!To)
+    {
+        alias ToType = To.ComponentType;
+        alias FromType = From.ComponentType;
+        alias WorkType = WorkingType!(FromType, ToType);
+
+        // unpack the working values
+        auto src = color.tristimulus;
+        WorkType r = cast(WorkType)src[0];
+        WorkType g = cast(WorkType)src[1];
+        WorkType b = cast(WorkType)src[2];
+
+        static if(From.linear == false)
+        {
+            r = toLinear!(From.colorSpace)(r);
+            g = toLinear!(From.colorSpace)(g);
+            b = toLinear!(From.colorSpace)(b);
+        }
+
+        // transform to XYZ
+        enum toXYZ = RGBColorSpaceMatrix!(From.colorSpace, WorkType);
+        WorkType[3] v = multiply(toXYZ, [r, g, b]);
+        return To(v[0], v[1], v[2]);
+    }
+    unittest
+    {
+        // TODO: needs approx ==
+    }
+
+    static To convertColorImpl(To, From)(From color) if(isXYZ!From && isRGB!To)
+    {
+        alias ToType = To.ComponentType;
+        alias FromType = From.ComponentType;
+        alias WorkType = WorkingType!(FromType, ToType);
+
+        enum toRGB = inverse(RGBColorSpaceMatrix!(To.colorSpace, WorkType));
+        WorkType[3] v = multiply(toRGB, [ WorkType(color.X), WorkType(color.Y), WorkType(color.Z) ]);
+
+        static if(To.linear == false)
+        {
+            v[0] = toGamma!(To.colorSpace)(v[0]);
+            v[1] = toGamma!(To.colorSpace)(v[1]);
+            v[2] = toGamma!(To.colorSpace)(v[2]);
+        }
+
+        return To(cast(ToType)v[0], cast(ToType)v[1], cast(ToType)v[2]);
+    }
+    unittest
+    {
+        // TODO: needs approx ==
     }
 
 private:
     alias AllComponents = TypeTuple!("l","r","g","b","a");
-    alias ParentColor = XYZ!(FloatTypeFor!ComponentType);
 }
 
 
-// gamma ramp conversions
 /** Convert a value from gamma compressed space to linear. */
 T toLinear(RGBColorSpace src, T)(T v) if(isFloatingPoint!T)
 {
@@ -277,77 +477,6 @@ auto toGamma(C)(C color) if(isRGB!C)
 
 
 package:
-//
-// Below exists a bunch of machinery for converting between RGB color spaces
-//
-
-import std.experimental.color.xyz;
-
-// RGB color space definitions
-struct RGBColorSpaceDef(F)
-{
-    alias GammaFunc = F function(F v) pure nothrow @nogc @safe;
-
-    string name;
-
-    GammaFunc toGamma;
-    GammaFunc toLinear;
-
-    xyY!F white;
-    xyY!F red;
-    xyY!F green;
-    xyY!F blue;
-}
-
-enum RGBColorSpaceDefs(F) = [
-    RGBColorSpaceDef!F("sRGB",           &linearTosRGB!F,         &sRGBToLinear!F,         WhitePoint!F.D65, xyY!F(0.6400, 0.3300, 0.212656), xyY!F(0.3000, 0.6000, 0.715158), xyY!F(0.1500, 0.0600, 0.072186)),
-    RGBColorSpaceDef!F("sRGB Simple",    &linearToGamma!(F, 2.2), &gammaToLinear!(F, 2.2), WhitePoint!F.D65, xyY!F(0.6400, 0.3300, 0.212656), xyY!F(0.3000, 0.6000, 0.715158), xyY!F(0.1500, 0.0600, 0.072186)),
-];
-
-template RGBColorSpaceMatrix(RGBColorSpace cs, F)
-{
-    enum F[3] ToXYZ(xyY!F c) = [ c.x/c.y, F(1), (F(1)-c.x-c.y)/c.y ];
-
-    // get the color space definition
-    enum def = RGBColorSpaceDefs!F[cs];
-    // build a matrix from the 3 color vectors
-    enum r = def.red, g = def.green, b = def.blue;
-    enum m = transpose([ ToXYZ!r, ToXYZ!g, ToXYZ!b ]);
-
-    // multiply by the whitepoint
-    enum w = [ (cast(XYZ!F)(def.white)).tupleof ];
-    enum s = multiply(inverse(m), w);
-
-    // return colorspace matrix (RGB -> XYZ)
-    enum F[3][3] RGBColorSpaceMatrix = [[ m[0][0]*s[0], m[0][1]*s[1], m[0][2]*s[2] ],
-                                        [ m[1][0]*s[0], m[1][1]*s[1], m[1][2]*s[2] ],
-                                        [ m[2][0]*s[0], m[2][1]*s[1], m[2][2]*s[2] ]];
-}
-
-
-T linearTosRGB(T)(T s) if(isFloatingPoint!T)
-{
-    if(s <= T(0.0031308))
-        return T(12.92) * s;
-    else
-        return T(1.055) * s^^T(1.0/2.4) - T(0.055);
-}
-T sRGBToLinear(T)(T s) if(isFloatingPoint!T)
-{
-    if(s <= T(0.04045))
-        return s / T(12.92);
-    else
-        return ((s + T(0.055)) / T(1.055))^^T(2.4);
-}
-
-T linearToGamma(T, T gamma)(T v) if(isFloatingPoint!T)
-{
-    return v^^T(1.0/gamma);
-}
-T gammaToLinear(T, T gamma)(T v) if(isFloatingPoint!T)
-{
-    return v^^T(gamma);
-}
 
 T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r, T g, T b) pure if(isFloatingPoint!T)
 {
@@ -360,19 +489,17 @@ T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r
     }
     else
     {
-        // precise; convert to linear, then convert
-        return toGamma!colorSpace(YAxis[0]*toLinear!colorSpace(r) + YAxis[1]*toLinear!colorSpace(g) + YAxis[2]*toLinear!colorSpace(b));
+        // sRGB Luma' coefficients match the Y axis. Assume other RGB color spaces also follow the same pattern(?)
+        // Rec.709 (HDTV) was also refined to suit, so it will work without special-case
+        // TODO: When we support Rec.601 (SDTV), we need to special-case for Luma' coefficients: 0.299, 0.587, 0.114
 
-        // fast (standardised) approximations, performed in sRGB gamma space
-//        return T(0.299)*r + T(0.587)*g + T(0.114)*b; // Y'UV (PAL/NSTC/SECAM)
-//        return T(0.2126)*r + T(0.7152)*g + T(0.0722)*b; // HDTV
+        return YAxis[0]*r + YAxis[1]*g + YAxis[2]*b;
     }
 }
-T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r, T g, T b) pure if(isIntegral!T)
+T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r, T g, T b) pure if(is(T == NormalizedInt!U, U))
 {
-    import std.experimental.color.conv: convertPixelType;
     alias F = FloatTypeFor!T;
-    return convertPixelType!T(toGrayscale!(linear, colorSpace)(convertPixelType!F(r), convertPixelType!F(g), convertPixelType!F(b)));
+    return T(toGrayscale!(linear, colorSpace)(cast(F)r, cast(F)g, cast(F)b));
 }
 
 
@@ -416,57 +543,4 @@ unittest
     static assert(!allIn!("string", "sgix"));
     static assert(anyIn!("string", "sx"));
     static assert(!anyIn!("string", "x"));
-}
-
-
-// 3d linear algebra functions (this would ideally live somewhere else...)
-F[3] multiply(F)(F[3][3] m1, F[3] v)
-{
-    return [ m1[0][0]*v[0] + m1[0][1]*v[1] + m1[0][2]*v[2],
-             m1[1][0]*v[0] + m1[1][1]*v[1] + m1[1][2]*v[2],
-             m1[2][0]*v[0] + m1[2][1]*v[1] + m1[2][2]*v[2] ];
-}
-
-F[3][3] multiply(F)(F[3][3] m1, F[3][3] m2)
-{
-    return [[ m1[0][0]*m2[0][0] + m1[0][1]*m2[1][0] + m1[0][2]*m2[2][0],
-              m1[0][0]*m2[0][1] + m1[0][1]*m2[1][1] + m1[0][2]*m2[2][1],
-              m1[0][0]*m2[0][2] + m1[0][1]*m2[1][2] + m1[0][2]*m2[2][2] ],
-            [ m1[1][0]*m2[0][0] + m1[1][1]*m2[1][0] + m1[1][2]*m2[2][0],
-              m1[1][0]*m2[0][1] + m1[1][1]*m2[1][1] + m1[1][2]*m2[2][1],
-              m1[1][0]*m2[0][2] + m1[1][1]*m2[1][2] + m1[1][2]*m2[2][2] ],
-            [ m1[2][0]*m2[0][0] + m1[2][1]*m2[1][0] + m1[2][2]*m2[2][0],
-              m1[2][0]*m2[0][1] + m1[2][1]*m2[1][1] + m1[2][2]*m2[2][1],
-              m1[2][0]*m2[0][2] + m1[2][1]*m2[1][2] + m1[2][2]*m2[2][2] ]];
-}
-
-F[3][3] transpose(F)(F[3][3] m)
-{
-    return [[ m[0][0], m[1][0], m[2][0] ],
-            [ m[0][1], m[1][1], m[2][1] ],
-            [ m[0][2], m[1][2], m[2][2] ]];
-}
-
-F determinant(F)(F[3][3] m)
-{
-    return m[0][0] * (m[1][1]*m[2][2] - m[2][1]*m[1][2]) -
-           m[0][1] * (m[1][0]*m[2][2] - m[1][2]*m[2][0]) +
-           m[0][2] * (m[1][0]*m[2][1] - m[1][1]*m[2][0]);
-}
-
-F[3][3] inverse(F)(F[3][3] m)
-{
-    F det = determinant(m);
-    assert(det != 0, "Matrix is not invertible!");
-
-    F invDet = F(1)/det;
-    return [[ (m[1][1]*m[2][2] - m[2][1]*m[1][2]) * invDet,
-              (m[0][2]*m[2][1] - m[0][1]*m[2][2]) * invDet,
-              (m[0][1]*m[1][2] - m[0][2]*m[1][1]) * invDet ],
-            [ (m[1][2]*m[2][0] - m[1][0]*m[2][2]) * invDet,
-              (m[0][0]*m[2][2] - m[0][2]*m[2][0]) * invDet,
-              (m[1][0]*m[0][2] - m[0][0]*m[1][2]) * invDet ],
-            [ (m[1][0]*m[2][1] - m[2][0]*m[1][1]) * invDet,
-              (m[2][0]*m[0][1] - m[0][0]*m[2][1]) * invDet,
-              (m[0][0]*m[1][1] - m[1][0]*m[0][1]) * invDet ]];
 }
