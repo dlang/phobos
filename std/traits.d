@@ -388,7 +388,44 @@ version (none) version(unittest) //Please uncomment me when changing packageName
 }
 
 /**
- * Get the module name (including package) for the given symbol.
+ * Get the module name (including package) for the given symbol,
+ * returning it as a string.
+ *
+ * Example:
+ *    This can be used to implement something akin to
+ *    $(LINK2 https://en.wikipedia.org/wiki/Argument-dependent_name_lookup, Argument Dependent Lookup):
+---
+module bob;
+struct S { }
+void func(S s) { } // function to call from the algorithm
+---
+---
+module myalgorithm;
+
+// Find module in which T was defined
+template ModuleOf(alias T)
+{
+    import std.traits : moduleName;
+    mixin("import " ~ moduleName!T ~ ";");
+    mixin("alias ModuleOf = " ~ moduleName!T ~ ";");
+}
+
+void algorithm(T)(T t)
+{
+    // Call the func that is from the same module
+    // as T
+    ModuleOf!T.func(t);
+}
+---
+---
+module usercode;
+import bob, myalgorithm;
+
+void main()
+{
+    algorithm(S.init);
+}
+---
  */
 template moduleName(alias T)
 {
