@@ -146,7 +146,7 @@ public:
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        if (_p !is null) delete _p;
+        if (_p !is null) destroy(_p);
         _p = null;
     }
     /** Returns whether the resource exists. */
