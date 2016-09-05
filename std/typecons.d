@@ -163,8 +163,9 @@ public:
         debug(Unique) writeln("return from Release");
         return u;
     }
+
     /** Forwards member access to contents. */
-    auto opDot() inout { return _p; }
+    mixin Proxy!_p;
 
     /**
     Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
