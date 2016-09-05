@@ -1395,13 +1395,17 @@ unittest
     import std.range : only;
     assert(theAllocator.expandArray(arr, only(4, 5)));
     assert(arr == [1, 2, 3, 0, 0, 4, 5]);
+}
 
+unittest
+{
+    auto arr = theAllocator.makeArray!int([1, 2, 3]);
     ForcedInputRange r;
     int[] b = [ 1, 2, 3, 4 ];
     auto temp = b;
     r.array = &temp;
     assert(theAllocator.expandArray(arr, r));
-    assert(arr == [1, 2, 3, 0, 0, 4, 5, 1, 2, 3, 4]);
+    assert(arr == [1, 2, 3, 1, 2, 3, 4]);
 }
 
 /**
