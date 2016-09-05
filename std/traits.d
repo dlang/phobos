@@ -5551,6 +5551,32 @@ enum bool isBuiltinType(T) = is(BuiltinTypeOf!T) && !isAggregateType!T;
 }
 
 /**
+ * Detect whether type `T` is a reference type.
+ *
+ * `T` is a reference type if it is a class, interface, pointer, dynamic array, or associative array.
+ */
+enum bool isReferenceType(T) = is(T == class) || is(T == interface) || isPointer!T || isDynamicArray!T || isAssociativeArray!T;
+
+@safe unittest
+{
+    class C;
+    union U;
+    struct S;
+    interface I;
+
+    static assert( isReferenceType!C);
+    static assert( isReferenceType!I);
+    static assert( isReferenceType!(int[]));
+    static assert( isReferenceType!(int[string]));
+    static assert( isReferenceType!(C[string]));
+    static assert(!isReferenceType!S);
+    static assert(!isReferenceType!U);
+    static assert(!isReferenceType!(void));
+    static assert(!isReferenceType!int);
+    static assert(!isReferenceType!(int[10]));
+}
+
+/**
  * Detect whether type $(D T) is a SIMD vector type.
  */
 enum bool isSIMDVector(T) = is(T : __vector(V[N]), V, size_t N);
