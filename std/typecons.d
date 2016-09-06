@@ -51,7 +51,7 @@ Encapsulates unique ownership of a resource.  Resource of type $(D T) is
 deleted at the end of the scope, unless it is transferred.  The
 transfer can be explicit, by calling $(D release), or implicit, when
 returning Unique from a function. The resource can be a polymorphic
-class object, in which case Unique behaves polymorphically too.
+class object or instance of an interface, in which case Unique behaves polymorphically too.
 */
 struct Unique(T)
 {
