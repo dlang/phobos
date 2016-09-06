@@ -1346,7 +1346,7 @@ such position exists, returns an empty $(D haystack).
 See_Also:
      $(HTTP sgi.com/tech/stl/_find.html, STL's _find)
  */
-InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, Element needle)
+InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, scope Element needle)
 if (isInputRange!InputRange &&
     is (typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
@@ -1709,7 +1709,7 @@ Returns:
 $(D haystack) advanced such that $(D needle) is a prefix of it (if no
 such position exists, returns $(D haystack) advanced to termination).
  */
-R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool)
         && !isRandomAccessRange!R1)
@@ -1771,7 +1771,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 /// ditto
-R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
 if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
@@ -1880,7 +1880,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
 }
 
 /// ditto
-R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
 if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
     is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
@@ -1967,7 +1967,7 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
 }
 
 // Internally used by some find() overloads above
-private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, R2 needle)
+private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
 {
     enum estimateNeedleLength = hasLength!R1 && !hasLength!R2;
 
@@ -2238,7 +2238,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
  * such position exists, returns $(D haystack) advanced to termination).
  */
 Range1 find(Range1, alias pred, Range2)(
-    Range1 haystack, BoyerMooreFinder!(pred, Range2) needle)
+    Range1 haystack, scope BoyerMooreFinder!(pred, Range2) needle)
 {
     return needle.beFound(haystack);
 }
@@ -2303,7 +2303,7 @@ template canFind(alias pred="a == b")
     Returns $(D true) if and only if $(D needle) can be found in $(D
     range). Performs $(BIGOH haystack.length) evaluations of $(D pred).
      +/
-    bool canFind(Range, Element)(Range haystack, Element needle)
+    bool canFind(Range, Element)(Range haystack, scope Element needle)
     if (is(typeof(find!pred(haystack, needle))))
     {
         return !find!pred(haystack, needle).empty;
@@ -2320,7 +2320,7 @@ template canFind(alias pred="a == b")
     without having to deal with the tuple that $(D LREF find) returns for the
     same operation.
      +/
-    size_t canFind(Range, Ranges...)(Range haystack, Ranges needles)
+    size_t canFind(Range, Ranges...)(Range haystack, scope Ranges needles)
     if (Ranges.length > 1 &&
         allSatisfy!(isForwardRange, Ranges) &&
         is(typeof(find!pred(haystack, needles))))
