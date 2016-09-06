@@ -1346,7 +1346,7 @@ such position exists, returns an empty $(D haystack).
 See_Also:
      $(HTTP sgi.com/tech/stl/_find.html, STL's _find)
  */
-InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, Element needle)
+InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, scope Element needle)
 if (isInputRange!InputRange &&
     is (typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
@@ -1709,7 +1709,7 @@ Returns:
 $(D haystack) advanced such that $(D needle) is a prefix of it (if no
 such position exists, returns $(D haystack) advanced to termination).
  */
-R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool)
         && !isRandomAccessRange!R1)
@@ -1771,7 +1771,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 /// ditto
-R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
 if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
