@@ -2465,14 +2465,14 @@ char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe
 /*******************
  * Encodes string $(D_PARAM s) into UTF-8 and returns the encoded string.
  */
-string toUTF8(in char[] s) @safe
+string toUTF8(scope const char[] s) @safe
 {
     validate(s);
     return s.idup;
 }
 
 /// ditto
-string toUTF8(in wchar[] s) @safe
+string toUTF8(scope const wchar[] s) @safe
 {
     char[] r;
     size_t i;
@@ -2498,7 +2498,7 @@ string toUTF8(in wchar[] s) @safe
 }
 
 /// ditto
-string toUTF8(in dchar[] s) @safe
+string toUTF8(scope const dchar[] s) @safe
 {
     char[] r;
     size_t i;
@@ -2551,7 +2551,7 @@ body
 /****************
  * Encodes string $(D s) into UTF-16 and returns the encoded string.
  */
-wstring toUTF16(in char[] s) @safe
+wstring toUTF16(scope const char[] s) @safe
 {
     wchar[] r;
     immutable slen = s.length;
@@ -2577,14 +2577,14 @@ wstring toUTF16(in char[] s) @safe
 }
 
 /// ditto
-wstring toUTF16(in wchar[] s) @safe
+wstring toUTF16(scope const wchar[] s) @safe
 {
     validate(s);
     return s.idup;
 }
 
 /// ditto
-wstring toUTF16(in dchar[] s) @safe
+wstring toUTF16(scope const dchar[] s) @safe
 {
     wchar[] r;
     immutable slen = s.length;
@@ -2605,7 +2605,7 @@ wstring toUTF16(in dchar[] s) @safe
 /*****
  * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
  */
-dstring toUTF32(in char[] s) @safe
+dstring toUTF32(scope const char[] s) @safe
 {
     dchar[] r;
     immutable slen = s.length;
@@ -2626,7 +2626,7 @@ dstring toUTF32(in char[] s) @safe
 }
 
 /// ditto
-dstring toUTF32(in wchar[] s) @safe
+dstring toUTF32(scope const wchar[] s) @safe
 {
     dchar[] r;
     immutable slen = s.length;
@@ -2647,7 +2647,7 @@ dstring toUTF32(in wchar[] s) @safe
 }
 
 /// ditto
-dstring toUTF32(in dchar[] s) @safe
+dstring toUTF32(scope const dchar[] s) @safe
 {
     validate(s);
     return s.idup;
