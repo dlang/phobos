@@ -3324,28 +3324,6 @@ version (unittest)
 }
 
 
-
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-deprecated("Please use wait(spawnShell(command)) or executeShell(command) instead")
-int system(string command)
-{
-    if (!command.ptr) return core.stdc.stdlib.system(null);
-    immutable status = core.stdc.stdlib.system(command.tempCString());
-    if (status == -1) return status;
-    version (Posix)
-    {
-        if (exited(status))
-            return exitstatus(status);
-
-        // Abnormal termination, return -1.
-        return -1;
-    }
-    else version (Windows)
-        return status;
-    else
-        static assert(0, "system not implemented for this OS.");
-}
-
 private void toAStringz(in string[] a, const(char)**az)
 {
     import std.string : toStringz;
@@ -3378,95 +3356,6 @@ enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY }
 version(Windows) extern(C) int spawnvp(int, in char *, in char **);
 alias P_WAIT = _P_WAIT;
 alias P_NOWAIT = _P_NOWAIT;
-
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-deprecated("Please use spawnProcess instead")
-int spawnvp(int mode, string pathname, string[] argv)
-{
-    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
-    scope(exit) core.stdc.stdlib.free(argv_);
-
-    toAStringz(argv, argv_);
-
-    version (Posix)
-    {
-        return _spawnvp(mode, pathname.tempCString(), argv_);
-    }
-    else version (Windows)
-    {
-        return spawnvp(mode, pathname.tempCString(), argv_);
-    }
-    else
-        static assert(0, "spawnvp not implemented for this OS.");
-}
-
-version (Posix)
-{
-private import core.sys.posix.unistd;
-private import core.sys.posix.sys.wait;
-
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-deprecated("Please use spawnProcess instead")
-int _spawnvp(int mode, in char *pathname, in char **argv)
-{
-    import std.conv : to;
-    int retval = 0;
-    pid_t pid = core.sys.posix.unistd.fork();
-
-    if (!pid)
-    {   // child
-        core.sys.posix.unistd.execvp(pathname, argv);
-        goto Lerror;
-    }
-    else if (pid > 0)
-    {   // parent
-        if (mode == _P_NOWAIT)
-        {
-            retval = pid; // caller waits
-        }
-        else
-        {
-            while (1)
-            {
-                int status;
-                pid_t wpid = waitpid(pid, &status, 0);
-                if (exited(status))
-                {
-                    retval = exitstatus(status);
-                    break;
-                }
-                else if (signaled(status))
-                {
-                    retval = -termsig(status);
-                    break;
-                }
-                else if (stopped(status)) // ptrace support
-                    continue;
-                else
-                    goto Lerror;
-            }
-        }
-
-        return retval;
-    }
-
-Lerror:
-    retval = errno;
-    char[80] buf = void;
-    throw new Exception(
-        "Cannot spawn " ~ to!string(pathname) ~ "; "
-        ~ to!string(strerror_r(retval, buf.ptr, buf.length))
-        ~ " [errno " ~ to!string(retval) ~ "]");
-}   // _spawnvp
-private
-{
-    alias stopped = WIFSTOPPED;
-    alias signaled = WIFSIGNALED;
-    alias termsig = WTERMSIG;
-    alias exited = WIFEXITED;
-    alias exitstatus = WEXITSTATUS;
-}   // private
-}   // version (Posix)
 
 /* ========================================================== */
 
@@ -3541,39 +3430,24 @@ version (StdDdoc)
     /// ditto
     int execvpe(in string pathname, in string[] argv, in string[] envp);
 }
-else
+else version(Posix)
 {
-    private enum execvForwarderDefs = q{
-        int execv(in string pathname, in string[] argv)
-        {
-            return execv_(pathname, argv);
-        }
-        int execve(in string pathname, in string[] argv, in string[] envp)
-        {
-            return execve_(pathname, argv, envp);
-        }
-        int execvp(in string pathname, in string[] argv)
-        {
-            return execvp_(pathname, argv);
-        }
-        int execvpe(in string pathname, in string[] argv, in string[] envp)
-        {
-            return execvpe_(pathname, argv, envp);
-        }
-    };
-    version (Posix)
+    int execv(in string pathname, in string[] argv)
     {
-        mixin (execvForwarderDefs);
+        return execv_(pathname, argv);
     }
-    else version (Windows)
+    int execve(in string pathname, in string[] argv, in string[] envp)
     {
-        // Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-        private enum execvDeprecationMsg =
-            "Please consult the API documentation for more information: "
-            ~"http://dlang.org/phobos/std_process.html#.execv";
-        mixin (`deprecated ("`~execvDeprecationMsg~`") {` ~ execvForwarderDefs ~ `}`);
+        return execve_(pathname, argv, envp);
     }
-    else static assert (false, "Unsupported platform");
+    int execvp(in string pathname, in string[] argv)
+    {
+        return execvp_(pathname, argv);
+    }
+    int execvpe(in string pathname, in string[] argv, in string[] envp)
+    {
+        return execvpe_(pathname, argv, envp);
+    }
 }
 
 // Move these C declarations to druntime if we decide to keep the D wrappers
@@ -3672,111 +3546,6 @@ else
     static assert(0);
 } // version
 }
-
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-deprecated("Please use thisProcessID instead")
-alias getpid = core.thread.getpid;
-
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-deprecated("Please use executeShell instead")
-string shell(string cmd)
-{
-    version(Windows)
-    {
-        import std.array : appender;
-        import std.exception : errnoEnforce;
-        // Generate a random filename
-        auto a = appender!string();
-        foreach (ref e; 0 .. 8)
-        {
-            formattedWrite(a, "%x", rndGen.front);
-            rndGen.popFront();
-        }
-        auto filename = a.data;
-        scope(exit) if (exists(filename)) remove(filename);
-        // We can't use escapeShellCommands here because we don't know
-        // if cmd is escaped (wrapped in quotes) or not, without relying
-        // on shady heuristics. The current code shouldn't cause much
-        // trouble unless filename contained spaces (it won't).
-        errnoEnforce(system(cmd ~ "> " ~ filename) == 0);
-        return readText(filename);
-    }
-    else version(Posix)
-    {
-        File f;
-        f.popen(cmd, "r");
-        char[] line;
-        string result;
-        while (f.readln(line))
-        {
-            result ~= line;
-        }
-        f.close();
-        return result;
-    }
-    else
-        static assert(0, "shell not implemented for this OS.");
-}
-
-deprecated @system unittest
-{
-    import std.exception : assertThrown;
-    auto x = shell("echo wyda");
-    // @@@ This fails on wine
-    //assert(x == "wyda" ~ newline, text(x.length));
-
-    import std.exception;  // Issue 9444
-    version(windows)
-        string cmd = "98c10ec7e253a11cdff45f807b984a81 2>NUL";
-    else
-        string cmd = "98c10ec7e253a11cdff45f807b984a81 2>/dev/null";
-    assertThrown!ErrnoException(shell(cmd));
-}
-
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-deprecated("Please use environment.opIndex or environment.get instead")
-string getenv(in char[] name) nothrow
-{
-    // Cache the last call's result
-    static string lastResult;
-    auto p = core.stdc.stdlib.getenv(name.tempCString());
-    if (!p) return null;
-    auto value = p[0 .. strlen(p)];
-    if (value == lastResult) return lastResult;
-    return lastResult = value.idup;
-}
-
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-version(StdDdoc) deprecated void setenv(in char[] name, in char[] value, bool overwrite);
-else version(Posix)
-    deprecated("Please use environment.opIndexAssign instead.")
-    void setenv(in char[] name, in char[] value, bool overwrite)
-{
-    import std.exception : errnoEnforce;
-    errnoEnforce(
-        core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), overwrite) == 0);
-}
-
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-version(StdDdoc) deprecated void unsetenv(in char[] name);
-else version(Posix)
-    deprecated("Please use environment.remove instead")
-    void unsetenv(in char[] name)
-{
-    import std.exception : errnoEnforce;
-    errnoEnforce(core.sys.posix.stdlib.unsetenv(name.tempCString()) == 0);
-}
-
-version (Posix) deprecated @system unittest
-{
-    setenv("wyda", "geeba", true);
-    assert(getenv("wyda") == "geeba");
-    // Get again to make sure caching works
-    assert(getenv("wyda") == "geeba");
-    unsetenv("wyda");
-    assert(getenv("wyda") is null);
-}
-
 
 version(StdDdoc)
 {

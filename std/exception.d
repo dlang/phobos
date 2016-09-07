@@ -358,16 +358,6 @@ T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
     return value;
 }
 
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-deprecated("Use the overload of enforce that takes file and line as function arguments.")
-T enforce(T, string file, size_t line = __LINE__)
-    (T value, lazy const(char)[] msg = null)
-    if (is(typeof({ if (!value) {} })))
-{
-    if (!value) bailOut(file, line, msg);
-    return value;
-}
-
 /++
     Enforces that the given value is true.
 
@@ -500,23 +490,6 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     }
     enforce!E1(s);
     enforce!E2(s);
-}
-
-@system deprecated unittest
-{
-    struct S
-    {
-        static int g;
-        ~this() {}  // impure & unsafe destructor
-        bool opCast(T:bool)() {
-            int* p = cast(int*)0;   // unsafe operation
-            int n = g;              // impure operation
-            return true;
-        }
-    }
-    S s;
-
-    enforce!(S, __FILE__, __LINE__)(s, "");
 }
 
 @safe unittest
