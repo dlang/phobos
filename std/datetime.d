@@ -758,24 +758,7 @@ public:
         assertThrown!DateTimeException(SysTime(DateTime.init, seconds(1), UTC()));
     }
 
-    // @@@DEPRECATED_2016-08@@@
-    /++
-        $(RED Deprecated. Please use the overload which takes a
-              $(REF Duration, core,time) for the fractional seconds. This overload
-              will be removed in August 2016.)
-
-        Params:
-            dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
-                       internal std time. As $(LREF DateTime) has no concept of
-                       time zone, tz is used as its time zone.
-            fracSec  = The fractional seconds portion of the time.
-            tz       = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
-                       $(LREF LocalTime) will be used. The given $(LREF DateTime) is
-                       assumed to be in the given time zone.
-
-        Throws:
-            $(LREF DateTimeException) if $(D fracSec) is negative.
-      +/
+    // Explicitly undocumented. It will be removed in August 2017. @@@DEPRECATED_2017-08@@@
     deprecated("Please use the overload which takes a Duration instead of a FracSec.")
     this(in DateTime dateTime, in FracSec fracSec, immutable TimeZone tz = null) @safe
     {
@@ -2250,15 +2233,7 @@ public:
     }
 
 
-    // @@@DEPRECATED_2016-08@@@
-    /++
-        $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
-              uses a $(REF Duration, core,time) to represent the fractional seconds
-              instead of a $(REF FracSec, core,time). This overload will be removed
-              in August 2016.)
-
-        Fractional seconds past the second.
-     +/
+    // Explicitly undocumented. It will be removed in August 2017. @@@DEPRECATED_2017-08@@@
     deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). "
         ~"It returns a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property FracSec fracSec() @safe const nothrow
@@ -2324,22 +2299,7 @@ public:
     }
 
 
-    // @@@DEPRECATED_2016-08@@@
-    /++
-        $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
-              uses a $(REF Duration, core,time) to represent the fractional seconds
-              instead of a $(REF FracSec, core,time). This overload will be removed
-              in August 2016.)
-
-        Fractional seconds past the second.
-
-        Params:
-            fracSec = The fractional seconds to set this $(LREF SysTime)'s
-                      fractional seconds to.
-
-        Throws:
-            $(LREF DateTimeException) if $(D fracSec) is negative.
-     +/
+    // Explicitly undocumented. It will be removed in August 2017. @@@DEPRECATED_2017-08@@@
     deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). "
         ~"It takes a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property void fracSec(FracSec fracSec) @safe
@@ -29080,13 +29040,6 @@ public:
 
         super("", stdName, "");
         this._utcOffset = utcOffset;
-    }
-
-    // Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-    deprecated("Please use the overload which takes a Duration.")
-    this(int utcOffset, string stdName = "") @safe immutable pure
-    {
-        this(dur!"minutes"(utcOffset), stdName);
     }
 
     @safe unittest

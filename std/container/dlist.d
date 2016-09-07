@@ -410,14 +410,6 @@ Appends the contents of the argument $(D rhs) into $(D this).
         return this;
     }
 
-    // Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-    deprecated("Please, use `dlist ~= dlist[];` instead.")
-    DList opOpAssign(string op)(DList rhs)
-    if (op == "~")
-    {
-        return this ~= rhs[];
-    }
-
 /+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
 /+                        BEGIN INSERT FUNCTIONS HERE                         +/
 /+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
