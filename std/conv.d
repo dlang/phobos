@@ -3923,7 +3923,7 @@ template octal(alias decimalInteger)
     Takes a string, num, which is an octal literal, and returns its
     value, in the type T specified.
 */
-private T octal(T)(string num)
+private T octal(T)(const string num)
 {
     assert(isOctalLiteral(num));
 
@@ -4001,7 +4001,8 @@ Returns if the given string is a correctly formatted octal literal.
 The format is specified in spec/lex.html. The leading zero is allowed, but
 not required.
  */
-private bool isOctalLiteral(string num)
+@safe pure nothrow @nogc
+private bool isOctalLiteral(const string num)
 {
     if (num.length == 0)
         return false;
@@ -5593,7 +5594,8 @@ The result is true if and only if the input string is composed of whitespace
 characters (\f\n\r\t\v lineSep paraSep nelSep) and
 an even number of hexadecimal digits (regardless of the case).
 */
-private bool isHexLiteral(String)(in String hexData)
+@safe pure @nogc
+private bool isHexLiteral(String)(scope const String hexData)
 {
     import std.ascii : isHexDigit;
     import std.uni : lineSep, paraSep, nelSep;
@@ -5738,7 +5740,7 @@ if (hexData.isHexLiteral)
     C is granted to be a valid char type by the caller.
 */
 @safe nothrow pure
-private auto hexStrImpl(String)(String hexData)
+private auto hexStrImpl(String)(scope String hexData)
 {
     import std.ascii;
     alias C = Unqual!(ElementEncodingType!String);
