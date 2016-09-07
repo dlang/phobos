@@ -14,7 +14,7 @@ module std.experimental.xml.appender;
 /*
 *   Appender implementation that uses a custom allocator. Meant for internal usage.
 */
-struct Appender(T, Alloc)
+package struct Appender(T, Alloc)
 {
     import std.experimental.allocator;
     import std.array;

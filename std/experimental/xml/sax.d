@@ -206,8 +206,9 @@ unittest
     }
 
     auto parser =
-         chooseLexer!xml
-        .parse
+         xml
+        .lexer
+        .parser
         .cursor
         .saxParser!MyHandler;
 

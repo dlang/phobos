@@ -241,8 +241,9 @@ unittest
     };
 
     auto builder =
-         chooseLexer!xml
-        .parse
+         xml
+        .lexer
+        .parser
         .cursor
         .copyingCursor
         .domBuilder(new DOMImplType());

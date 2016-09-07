@@ -29,7 +29,7 @@ import std.experimental.xml.interfaces;
 import std.experimental.xml.faststrings;
 
 import std.range.primitives;
-import std.traits : isArray;
+import std.traits : isArray, isSomeFunction;
 
 import std.experimental.allocator;
 import std.experimental.allocator.gc_allocator;
@@ -725,7 +725,7 @@ struct BufferedLexer(T, ErrorHandler, Alloc = shared(GCAllocator), Flag!"reuseBu
 +   used. If no allocator type is specified, defaults to `shared(GCAllocator)`.
 +/
 auto chooseLexer(Input, Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer, Alloc, Handler)
-                (ref Alloc alloc, Handler handler = () { assert(0, "Unexpected input end while lexing"); })
+                (ref Alloc alloc, Handler handler)
 {
     static if (is(SliceLexer!(Input, Handler, Alloc, reuseBuffer)))
     {
@@ -748,24 +748,35 @@ auto chooseLexer(Input, Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer, Alloc,
     else static assert(0);
 }
 /// ditto
-auto chooseLexer(alias Input, Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer, Alloc, Handler)
-                (ref Alloc alloc, Handler handler = () { assert(0, "Unexpected input end while lexing"); })
-{
-    return chooseLexer!(typeof(Input), reuseBuffer, Alloc, Handler)(alloc, handler);
-}
-/// ditto
 auto chooseLexer(Input, Alloc = shared(GCAllocator), Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer, Handler)
-                (Handler handler = () { assert(0, "Unexpected input end while lexing"); })
-    if (is(typeof(Alloc.instance)))
+                (Handler handler)
+    if (is(typeof(Alloc.instance)) && isSomeFunction!handler)
 {
     return chooseLexer!(Input, reuseBuffer, Alloc, Handler)(Alloc.instance, handler);
 }
 /// ditto
-auto chooseLexer(alias Input, Alloc = shared(GCAllocator), Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer, Handler)
-                (Handler handler = () { assert(0, "Unexpected input end while lexing"); })
+auto chooseLexer(Input, Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer, Alloc)(ref Alloc alloc)
+    if (!isSomeFunction!alloc)
+{
+    return chooseLexer!(Input, reuseBuffer)
+                       (alloc, (){ throw new XMLException("Unexpected end of input while lexing"); });
+}
+/// ditto
+auto chooseLexer(Input, Alloc = shared(GCAllocator), Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer)()
     if (is(typeof(Alloc.instance)))
 {
-    return chooseLexer!(typeof(Input), reuseBuffer, Alloc, Handler)(Alloc.instance, handler);
+    return chooseLexer!(Input, reuseBuffer, Alloc)
+                       (Alloc.instance, (){ throw new XMLException("Unexpected end of input while lexing"); });
+}
+
+template lexer(Params...)
+{
+    auto lexer(Input, Args...)(auto ref Input input, auto ref Args args)
+    {
+        auto res = chooseLexer!(Input, Params)(args);
+        res.setSource(input);
+        return res;
+    }
 }
 
 version(unittest)
@@ -816,6 +827,7 @@ unittest
         };
 
         T lexer;
+        assert(lexer.empty);
         lexer.setSource(conv(xml));
         lexer.errorHandler = handler;
 

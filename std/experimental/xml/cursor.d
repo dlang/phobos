@@ -55,7 +55,6 @@ package struct Attribute(StringType)
     }
     @property void name(StringType _name)
     {
-        import std.experimental.xml.faststrings;
         this._name = _name;
         auto i = _name.fastIndexOf(':');
         if (i > 0)
@@ -87,12 +86,6 @@ package struct Attribute(StringType)
 struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHandler = void delegate(CursorError))
     if (isLowLevelParser!P)
 {
-    /++
-    +   The type of input accepted by this parser,
-    +   i.e., the one accepted by the underlying low level parser.
-    +/
-    alias InputType = P.InputType;
-
     /++ The type of characters in the input, as returned by the underlying low level parser. +/
     alias CharacterType = P.CharacterType;
 
@@ -101,7 +94,7 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
 
     private P parser;
     private ElementType!P currentNode;
-    private bool starting, _documentEnd, nextFailed;
+    private bool starting, _documentEnd = true, nextFailed;
     private ptrdiff_t colon;
     private size_t nameEnd;
     private ErrorHandler handler;
@@ -160,18 +153,31 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
         this.handler = handler;
     }
 
-    /++
-    +   Initializes this cursor (and the underlying low level parser) with the given input.
-    +/
-    void setSource(InputType input)
+    static if (needSource!P)
+    {
+        /++
+        +   The type of input accepted by this parser,
+        +   i.e., the one accepted by the underlying low level parser.
+        +/
+        alias InputType = P.InputType;
+
+        /++
+        +   Initializes this cursor (and the underlying low level parser) with the given input.
+        +/
+        void setSource(InputType input)
+        {
+            parser.setSource(input);
+            initialize();
+        }
+    }
+
+    private void initialize()
     {
         // reset private fields
         nextFailed = false;
-        _documentEnd = false;
         colon = colon.max;
         nameEnd = 0;
 
-        parser.setSource(input);
         if (!parser.empty)
         {
             if (parser.front.kind == XMLKind.processingInstruction &&
@@ -188,7 +194,10 @@ struct Cursor(P, Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA, ErrorHa
                 currentNode.content = "xml version = \"1.0\"";
             }
             starting = true;
+            _documentEnd = false;
         }
+        else
+            _documentEnd = true;
     }
 
     /++ Returns whether the cursor is at the end of the document. +/
@@ -529,6 +538,10 @@ template cursor(Flag!"conflateCDATA" conflateCDATA = Yes.conflateCDATA)
         auto cursor = Cursor!(T, conflateCDATA, EH)();
         cursor.parser = parser;
         cursor.handler = errorHandler;
+        if (!cursor.parser.empty)
+        {
+            cursor.initialize;
+        }
         return cursor;
     }
 }
@@ -561,8 +574,7 @@ unittest
     </aaa>
     };
 
-    auto cursor = chooseLexer!xml.parse.cursor;
-    cursor.setSource(xml);
+    auto cursor = xml.lexer.parser.cursor;
 
     assert(cursor.atBeginning);
 
@@ -727,7 +739,8 @@ auto children(T)(ref T cursor)
     auto handler = () { assert(0, "Some problem here..."); };
     auto lexer = RangeLexer!(string, typeof(handler), shared(Mallocator))(Mallocator.instance);
     lexer.errorHandler = handler;
-    auto cursor = lexer.parse.cursor!(Yes.conflateCDATA)((){});
+    auto cursor = lexer.parser.cursor!(Yes.conflateCDATA)((){});
+    assert(cursor.documentEnd);
     cursor.setSource(xml);
 
     // <?xml encoding = "utf-8" ?>
@@ -963,11 +976,11 @@ unittest
     };
 
     auto cursor =
-         chooseLexer!xml
-        .parse
+         xml
+        .lexer
+        .parser
         .cursor!(Yes.conflateCDATA)
         .copyingCursor!(Yes.intern)(Mallocator.instance);
-    cursor.setSource(xml);
 
     assert(cursor.enter);
     auto a1 = cursor.name;

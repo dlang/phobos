@@ -99,7 +99,7 @@ struct ElementNestingValidator(CursorType, alias ErrorHandler)
             }
             else
             {
-                import std.experimental.xml.faststrings;
+                import std.experimental.xml.faststrings : fastEqual;
 
                 if (!fastEqual(stack.back, cursor.name))
                 {
@@ -145,8 +145,9 @@ unittest
     int count = 0;
 
     auto validator =
-         chooseLexer!xml
-        .parse
+         xml
+        .lexer
+        .parser
         .cursor
         .elementNestingValidator!(
             (ref cursor, ref stack)
@@ -339,11 +340,11 @@ unittest
     int count = 0;
 
     auto cursor =
-         chooseLexer!xml
-        .parse
+         xml
+        .lexer
+        .parser
         .cursor
         .checkXMLNames((string s) { count++; }, (string s) { count++; });
-    cursor.setSource(xml);
 
     void inspectOneLevel(T)(ref T cursor)
     {

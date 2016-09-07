@@ -15,7 +15,7 @@
 module std.experimental.xml.faststrings;
 
 /++ Compares for equality; input slices must have equal length. +/
-bool fastEqual(T, S)(T[] t, S[] s) pure @nogc nothrow
+package bool fastEqual(T, S)(T[] t, S[] s) pure @nogc nothrow
 in
 {
     assert(t.length == s.length);

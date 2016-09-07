@@ -262,12 +262,11 @@ public import dom = std.experimental.xml.dom;
     };
 
     auto cursor =
-         chooseLexer!xml
-        .parse!(No.preserveWhitespace)
+         xml
+        .lexer((){})
+        .parser!(No.preserveWhitespace)
         .cursor!(Yes.conflateCDATA)((){})
         .checkXMLNames;
-
-    cursor.setSource(xml);
 
     assert(cursor.kind == XMLKind.document);
 }

@@ -73,18 +73,22 @@ struct Parser(L, ErrorHandler, Flag!"preserveWhitespace" preserveWhitespace = No
         lexer = L(args);
     }
 
-    alias InputType = L.InputType;
     alias CharacterType = L.CharacterType;
 
-    /++
-    +   See detailed documentation in
-    +   $(LINK2 ../interfaces/isParser, `std.experimental.xml.interfaces.isParser`)
-    +/
-    void setSource(InputType input)
+    static if (needSource!L)
     {
-        lexer.setSource(input);
-        ready = false;
-        insideDTD = false;
+        alias InputType = L.InputType;
+
+        /++
+        +   See detailed documentation in
+        +   $(LINK2 ../interfaces/isParser, `std.experimental.xml.interfaces.isParser`)
+        +/
+        void setSource(InputType input)
+        {
+            lexer.setSource(input);
+            ready = false;
+            insideDTD = false;
+        }
     }
 
     static if (isSaveableLexer!L)
@@ -315,8 +319,8 @@ struct Parser(L, ErrorHandler, Flag!"preserveWhitespace" preserveWhitespace = No
 +   Returns:
 +   A `Parser` instance initialized with the given lexer
 +/
-auto parse(Flag!"preserveWhitespace" preserveWhitespace = No.preserveWhitespace, T, ErrorHandler)
-          (auto ref T lexer, ErrorHandler handler = () { assert(0, "XML syntax error"); })
+auto parser(Flag!"preserveWhitespace" preserveWhitespace = No.preserveWhitespace, T, ErrorHandler)
+           (auto ref T lexer, ErrorHandler handler = () { assert(0, "XML syntax error"); })
     if (isLexer!T)
 {
     auto parser = Parser!(T, ErrorHandler, preserveWhitespace)();
@@ -328,6 +332,30 @@ auto parse(Flag!"preserveWhitespace" preserveWhitespace = No.preserveWhitespace,
 import std.experimental.xml.lexers;
 import std.experimental.allocator.gc_allocator;
 
+auto parser(Flag!"preserveWhitespace" preserveWhitespace = No.preserveWhitespace,
+            Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer, T, Alloc, ErrorHandler)
+           (auto ref T input, ref Alloc alloc, ErrorHandler handler = () { assert(0, "XML syntax error"); })
+    if (!isLexer!T)
+{
+    auto lexer = input.lexer!reuseBuffer(alloc, handler);
+    auto parser = Parser!(typeof(lexer), ErrorHandler, preserveWhitespace)();
+    parser.errorHandler = handler;
+    parser.lexer = lexer;
+    return parser;
+}
+
+auto parser(Alloc = shared(GCAllocator), Flag!"preserveWhitespace" preserveWhitespace = No.preserveWhitespace,
+            Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer, T, ErrorHandler)
+           (auto ref T input, ErrorHandler handler = () { assert(0, "XML syntax error"); })
+    if (!isLexer!T)
+{
+    auto lexer = input.lexer!(Alloc, reuseBuffer)(handler);
+    auto parser = Parser!(typeof(lexer), ErrorHandler, preserveWhitespace)();
+    parser.errorHandler = handler;
+    parser.lexer = lexer;
+    return parser;
+}
+
 /++
 +   Instantiates a parser suitable for the given `InputType`.
 +
@@ -335,47 +363,46 @@ import std.experimental.allocator.gc_allocator;
 +   ---
 +   auto parser =
 +        chooseLexer!(InputType, reuseBuffer)(alloc, handler)
-+       .parse!(preserveWhitespace)(handler)
++       .parser!(preserveWhitespace)(handler)
 +   ---
 +/
 auto chooseParser(InputType,
                   Flag!"preserveWhitespace" preserveWhitespace = No.preserveWhitespace,
                   Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer,
                   Alloc, ErrorHandler)
-                 (ref Alloc alloc, ErrorHandler handler = () { assert(0, "XML syntax error"); })
+                 (ref Alloc alloc, ErrorHandler handler)
 {
     return chooseLexer!(InputType, reuseBuffer, Alloc, ErrorHandler)(alloc, handler)
           .parse!(preserveWhitespace)(handler);
 }
 /// ditto
-auto chooseParser(alias InputType,
-                  Flag!"preserveWhitespace" preserveWhitespace = No.preserveWhitespace,
-                  Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer,
-                  Alloc, ErrorHandler)
-                 (ref Alloc alloc, ErrorHandler handler = () { assert(0, "XML syntax error"); })
-{
-    return chooseParser!(typeof(InputType), preserveWhitespace, reuseBuffer, Alloc, ErrorHandler)(alloc, handler);
-}
-/// ditto
 auto chooseParser(InputType, Alloc = shared(GCAllocator),
                   Flag!"preserveWhitespace" preserveWhitespace = No.preserveWhitespace,
-                  Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer,
-                  ErrorHandler)
-                 (ErrorHandler handler = () { assert(0, "XML syntax error"); })
-    if (is(typeof(Alloc.instance)))
+                  Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer, ErrorHandler)
+                 (ErrorHandler handler)
+    if (is(typeof(Alloc.instance)) && isSomeFunction!ErrorHandler)
 {
     return chooseParser!(InputType, preserveWhitespace, reuseBuffer, Alloc, ErrorHandler)(Alloc.instance, handler);
 }
 /// ditto
-auto chooseParser(alias InputType, Alloc = shared(GCAllocator),
+auto chooseParser(InputType,
                   Flag!"preserveWhitespace" preserveWhitespace = No.preserveWhitespace,
-                  Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer,
-                  ErrorHandler)
-                 (ErrorHandler handler = () { assert(0, "XML syntax error"); })
+                  Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer, Alloc)
+                 (ref Alloc alloc)
+    if (!isSomeFunction!Alloc)
+{
+    return chooseLexer!(InputType, reuseBuffer, Alloc, ErrorHandler)
+                       (alloc, (){ throw new XMLException("XML syntax error"); })
+          .parse!(preserveWhitespace)(handler);
+}
+/// ditto
+auto chooseParser(InputType, Alloc = shared(GCAllocator),
+                  Flag!"preserveWhitespace" preserveWhitespace = No.preserveWhitespace,
+                  Flag!"reuseBuffer" reuseBuffer = Yes.reuseBuffer)()
     if (is(typeof(Alloc.instance)))
 {
-    return chooseParser!(typeof(InputType), preserveWhitespace, reuseBuffer, Alloc, ErrorHandler)
-                        (Alloc.instance, handler);
+    return chooseParser!(InputType, preserveWhitespace, reuseBuffer, Alloc, ErrorHandler)
+                        (Alloc.instance, (){ throw new XMLException("XML syntax error"); });
 }
 
 @nogc unittest
@@ -401,7 +428,8 @@ auto chooseParser(alias InputType, Alloc = shared(GCAllocator),
     auto handler = () { assert(0, "Oopss..."); };
     auto lexer = RangeLexer!(string, typeof(handler), shared(Mallocator))(Mallocator.instance);
     lexer.errorHandler = handler;
-    auto parser = lexer.parse;
+    auto parser = lexer.parser;
+    assert(parser.empty);
     parser.setSource(xml);
 
     alias XMLKind = typeof(parser.front.kind);
@@ -463,8 +491,7 @@ unittest
     ]>
     };
 
-    auto parser = chooseParser!xml;
-    parser.setSource(xml);
+    auto parser = xml.parser;
 
     alias XMLKind = typeof(parser.front.kind);
 

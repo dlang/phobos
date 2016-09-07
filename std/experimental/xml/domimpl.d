@@ -1294,7 +1294,7 @@ class DOMImplementation(DOMString, Alloc = shared(GCAllocator), ErrorHandler = b
 
             void setQualifiedName(DOMString name)
             {
-                import std.experimental.xml.faststrings;
+                import std.experimental.xml.faststrings : fastIndexOf;
 
                 _name = name;
                 ptrdiff_t i = name.fastIndexOf(':');
@@ -2514,7 +2514,8 @@ unittest
     }";
 
     auto builder =
-         chooseParser!xml
+         xml
+        .parser
         .cursor
         .domBuilder;
 

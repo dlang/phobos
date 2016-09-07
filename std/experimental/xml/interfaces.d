@@ -134,16 +134,13 @@ template isLexer(L)
     (inout int = 0)
     {
         alias C = L.CharacterType;
-        alias T = L.InputType;
 
         L lexer;
-        T source;
         char c;
         bool b;
         string s;
         C[] cs;
 
-        lexer.setSource(source);
         b = lexer.empty;
         lexer.start();
         cs = lexer.get();
@@ -277,16 +274,7 @@ enum XMLKind
 template isLowLevelParser(P)
 {
     enum bool isLowLevelParser = isInputRange!P && is(typeof(ElementType!P.kind) == XMLKind)
-                                 && is(typeof(ElementType!P.content) == P.CharacterType[]) && is(typeof(
-    (inout int = 0)
-    {
-        alias InputType = P.InputType;
-
-        P parser;
-        InputType input;
-
-        parser.setSource(input);
-    }));
+                                 && is(typeof(ElementType!P.content) == P.CharacterType[]);
 }
 
 /++
@@ -431,14 +419,11 @@ template isCursor(CursorType)
     enum bool isCursor = is(typeof(
     (inout int = 0)
     {
-        alias T = CursorType.InputType;
         alias S = CursorType.StringType;
 
         CursorType cursor;
-        T input;
         bool b;
 
-        cursor.setSource(input);
         b = cursor.atBeginning;
         b = cursor.documentEnd;
         b = cursor.next;
@@ -512,6 +497,22 @@ template isWriter(WriterType)
         writer.startElement(s);
         writer.closeElement(s);
         writer.writeAttribute(s, s);
+    }));
+}
+
+// COMMON
+
+template needSource(T)
+{
+    enum bool needSource = is(typeof(
+    (inout int = 0)
+    {
+        alias InputType = T.InputType;
+
+        T component;
+        InputType input;
+
+        component.setSource(input);
     }));
 }
 

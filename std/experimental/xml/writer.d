@@ -715,7 +715,7 @@ unittest
     "\t<!I_SAID_NO_CHECKS_AT_ALL_BY_DEFAULT>\n" ~
     "]>\n";
 
-    auto cursor = chooseParser!xml.cursor;
+    auto cursor = xml.parser.cursor;
     cursor.setSource(xml);
 
     auto app = Appender!string();
