@@ -11,7 +11,8 @@
 module std.experimental.color.hsx;
 
 import std.experimental.color;
-import std.experimental.color.colorspace : RGBColorSpace;
+import std.experimental.color.rgb;
+import std.experimental.color.colorspace : RGBColorSpace, RGBColorSpaceDesc, rgbColorSpaceDef;
 
 import std.traits : isInstanceOf, isFloatingPoint, isUnsigned, Unqual;
 import std.typetuple : TypeTuple;
@@ -78,6 +79,8 @@ struct HSx(HSxType type_, CT = float, RGBColorSpace colorSpace_ = RGBColorSpace.
     alias ComponentType = CT;
     /** The color space specified. */
     enum colorSpace = colorSpace_;
+    /** Get the color space descriptor. */
+    enum RGBColorSpaceDesc!F colorSpaceDesc(F = double) = rgbColorSpaceDef!F(colorSpace_);
     /** The color type from the HSx family. */
     enum type = type_;
 
@@ -203,9 +206,7 @@ package:
         }
         else static if(From.type == HSxType.HCY)
         {
-            import std.experimental.color.colorspace : RGBColorSpaceMatrix;
-            enum YAxis = RGBColorSpaceMatrix!(From.colorSpace, WT)[1];
-            m = x - (YAxis[0]*r + YAxis[1]*g + YAxis[2]*b); // Derive from Luma'
+            m = x - toGrayscale!(false, colorSpace_, WT)(r, g, b); // Derive from Luma'
         }
 
         return To(cast(ToType)(r+m), cast(ToType)(g+m), cast(ToType)(b+m));
@@ -270,9 +271,7 @@ package:
         }
         else static if(To.type == HSxType.HCY)
         {
-            import std.experimental.color.colorspace : RGBColorSpaceMatrix;
-            enum YAxis = RGBColorSpaceMatrix!(To.colorSpace, WT)[1];
-            x = YAxis[0]*r + YAxis[1]*g + YAxis[2]*b; // Luma'
+            x = toGrayscale!(false, colorSpace_, WT)(r, g, b); // Calculate Luma' using the proper coefficients
             s = C; // Chroma
         }
 

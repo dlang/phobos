@@ -12,11 +12,11 @@
 */
 module std.experimental.color;
 
-public import std.experimental.color.rgb;
+import std.experimental.color.rgb;
 import std.experimental.color.xyz : XYZ;
 import std.experimental.normint;
 
-import std.traits : isNumeric, isFloatingPoint, isSomeChar;
+import std.traits : isNumeric, isFloatingPoint, isSomeChar, Unqual;
 
 @safe pure nothrow @nogc:
 
@@ -246,33 +246,32 @@ Convert between color types.
 */
 To convertColor(To, From)(From color)
 {
+    // cast along a conversion path to reach our target conversion
+    alias Path = ConversionPath!(From, To);
+
     // no conversion is necessary
-    static if(is(To == From))
+    static if(Path.length == 0)
         return color;
+    else static if(Path.length > 1)
+    {
+        // we need to recurse to trace a path via the first common ancestor
+        static if(__traits(compiles, From.convertColorImpl!(Path[0])(color)))
+            return convertColor!To(From.convertColorImpl!(Path[0])(color));
+        else
+            return convertColor!To(To.convertColorImpl!(Path[0])(color));
+    }
     else
     {
-        // cast along a conversion path to reach our target conversion
-        alias Path = ConversionPath!(From, To);
-        static if(Path.length > 1)
-        {
-            static if(__traits(compiles, From.convertColorImpl!(Path[0])(color)))
-                return convertColor!To(From.convertColorImpl!(Path[0])(color));
-            else
-                return convertColor!To(To.convertColorImpl!(Path[0])(color));
-        }
+        static if(__traits(compiles, From.convertColorImpl!(Path[0])(color)))
+            return From.convertColorImpl!(Path[0])(color);
         else
-        {
-            static if(__traits(compiles, From.convertColorImpl!(Path[0])(color)))
-                return From.convertColorImpl!(Path[0])(color);
-            else
-                return To.convertColorImpl!(Path[0])(color);
-        }
+            return To.convertColorImpl!(Path[0])(color);
     }
 }
 ///
 unittest
 {
-    assert(cast(RGBA8)cast(XYZ!float)RGBA8(0xFF, 0xFF, 0xFF, 0xFF) == RGBA8(0xFF, 0xFF, 0xFF, 0));
+    assert(convertColor!(RGBA8)(convertColor!(XYZ!float)(RGBA8(0xFF, 0xFF, 0xFF, 0xFF))) == RGBA8(0xFF, 0xFF, 0xFF, 0));
 }
 
 
@@ -398,43 +397,61 @@ template WorkingType(From, To)
     }
 }
 
+private template isParentType(Parent, Of)
+{
+    static if(!is(Of.ParentColor))
+        enum isParentType = false;
+    else static if(isInstanceOf!(TemplateOf!Parent, Of.ParentColor))
+        enum isParentType = true;
+    else
+        enum isParentType = isParentType!(Parent, Of.ParentColor);
+}
+
+private template FindPath(From, To)
+{
+    static if(isInstanceOf!(TemplateOf!To, From))
+        alias FindPath = TypeTuple!(To);
+    else static if(isParentType!(From, To))
+        alias FindPath = TypeTuple!(FindPath!(From, To.ParentColor), To);
+    else static if(is(From.ParentColor))
+        alias FindPath = TypeTuple!(From, FindPath!(From.ParentColor, To));
+    else
+        static assert(false, "Shouldn't be here!");
+}
+
 // find the conversion path from one distant type to another
 template ConversionPath(From, To)
 {
-    template isParentType(Parent, Of)
-    {
-        import std.experimental.color.xyz : isXYZ;
-
-        static if(isXYZ!Of)
-            enum isParentType = false;
-        else static if(isInstanceOf!(TemplateOf!Parent, Of.ParentColor))
-            enum isParentType = true;
-        else
-            enum isParentType = isParentType!(Parent, Of.ParentColor);
-    }
-
-    template FindPath(From, To)
-    {
-        static if(isInstanceOf!(TemplateOf!To, From))
-            alias FindPath = TypeTuple!(To);
-        else static if(isParentType!(From, To))
-            alias FindPath = TypeTuple!(FindPath!(From, To.ParentColor), To);
-        else
-            alias FindPath = TypeTuple!(From, FindPath!(From.ParentColor, To));
-    }
-
-    alias Path = FindPath!(From, To);
-    static if(Path.length == 1 && !is(Path[0] == From))
-        alias ConversionPath = Path;
+    static if(is(Unqual!From == Unqual!To))
+        alias ConversionPath = TypeTuple!();
     else
-        alias ConversionPath = Path[1..$];
+    {
+        alias Path = FindPath!(Unqual!From, Unqual!To);
+        static if(Path.length == 1 && !is(Path[0] == From))
+            alias ConversionPath = Path;
+        else
+            alias ConversionPath = Path[1..$];
+    }
 }
 unittest
 {
     import std.experimental.color.hsx;
+    import std.experimental.color.lab;
+    import std.experimental.color.xyz;
 
     // dest indirect conversion paths
+    static assert(is(ConversionPath!(XYZ!float, const XYZ!float) == TypeTuple!()));
+    static assert(is(ConversionPath!(RGB8, RGB8) == TypeTuple!()));
+
+    static assert(is(ConversionPath!(XYZ!float, XYZ!double) == TypeTuple!(XYZ!double)));
+    static assert(is(ConversionPath!(xyY!float, XYZ!float) == TypeTuple!(XYZ!float)));
+    static assert(is(ConversionPath!(xyY!float, XYZ!double) == TypeTuple!(XYZ!double)));
+    static assert(is(ConversionPath!(XYZ!float, xyY!float) == TypeTuple!(xyY!float)));
+    static assert(is(ConversionPath!(XYZ!float, xyY!double) == TypeTuple!(xyY!double)));
+
     static assert(is(ConversionPath!(HSL!float, XYZ!float) == TypeTuple!(RGB!("rgb", float, false), XYZ!float)));
+    static assert(is(ConversionPath!(LCh!float, HSI!double) == TypeTuple!(Lab!float, XYZ!double, RGB!("rgb", double), HSI!double)));
+    static assert(is(ConversionPath!(shared HSI!double, immutable LCh!float) == TypeTuple!(RGB!("rgb", double), XYZ!float, Lab!float, LCh!float)));
 }
 
 // build mixin code to perform expresions per-element

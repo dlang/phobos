@@ -87,6 +87,8 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     enum string components = components_;
     /** The color space specified. */
     enum RGBColorSpace colorSpace = colorSpace_;
+    /** Get the color space descriptor. */
+    enum RGBColorSpaceDesc!F colorSpaceDesc(F = double) = rgbColorSpaceDef!F(colorSpace_);
     /** If the color is stored linearly (without gamma applied). */
     enum bool linear = linear_;
 
@@ -130,11 +132,8 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     ///
     unittest
     {
-        // BGR color
-        auto c = BGR8(255, 128, 10);
-
-        // tristimulus always returns tuple in RGB order
-        assert(c.tristimulus == tuple(10, 128, 255));
+        // tristimulus returns tuple of R, G, B
+        static assert(BGR8(255, 128, 10).tristimulus == tuple(NormalizedInt!ubyte(255), NormalizedInt!ubyte(128), NormalizedInt!ubyte(10)));
     }
 
     /** Return the RGB tristimulus values + alpha as a tuple.
@@ -148,11 +147,8 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     ///
     unittest
     {
-        // BGRA color
-        auto c = BGRA8(255, 128, 10, 80);
-
-        // tristimulusWithAlpha always returns tuple in RGBA order
-        assert(c.tristimulusWithAlpha == tuple(10, 128, 255, 80));
+        // tristimulusWithAlpha returns tuple of R, G, B, A
+        static assert(BGRA8(255, 128, 10, 80).tristimulusWithAlpha == tuple(NormalizedInt!ubyte(255), NormalizedInt!ubyte(128), NormalizedInt!ubyte(10), NormalizedInt!ubyte(80)));
     }
 
     /** Construct a color from RGB and optional alpha values. */
@@ -343,8 +339,8 @@ package:
             }
             static if(From.colorSpace != To.colorSpace)
             {
-                enum toXYZ = RGBColorSpaceMatrix!(From.colorSpace, WorkType);
-                enum toRGB = inverse(RGBColorSpaceMatrix!(To.colorSpace, WorkType));
+                enum toXYZ = rgbToXyzMatrix(From.colorSpaceDesc!WorkType);
+                enum toRGB = xyzToRgbMatrix(To.colorSpaceDesc!WorkType);
                 enum mat = multiply(toXYZ, toRGB);
                 WorkType[3] v = multiply(mat, [r, g, b]);
                 r = v[0]; g = v[1]; b = v[2];
@@ -379,7 +375,7 @@ package:
 
         // test greyscale conversion
         alias UnsignedL = RGB!("l", ubyte);
-        assert(cast(UnsignedL)UnsignedRGB(0xFF,0x20,0x40) == UnsignedL(0x83));
+        static assert(cast(UnsignedL)UnsignedRGB(0xFF,0x20,0x40) == UnsignedL(82));
 
         // TODO: we can't test this properly since DMD can't CTFE the '^^' operator! >_<
 
@@ -414,7 +410,7 @@ package:
         }
 
         // transform to XYZ
-        enum toXYZ = RGBColorSpaceMatrix!(From.colorSpace, WorkType);
+        enum toXYZ = rgbToXyzMatrix(From.colorSpaceDesc!WorkType);
         WorkType[3] v = multiply(toXYZ, [r, g, b]);
         return To(v[0], v[1], v[2]);
     }
@@ -429,7 +425,7 @@ package:
         alias FromType = From.ComponentType;
         alias WorkType = WorkingType!(FromType, ToType);
 
-        enum toRGB = inverse(RGBColorSpaceMatrix!(To.colorSpace, WorkType));
+        enum toRGB = xyzToRgbMatrix(To.colorSpaceDesc!WorkType);
         WorkType[3] v = multiply(toRGB, [ WorkType(color.X), WorkType(color.Y), WorkType(color.Z) ]);
 
         static if(To.linear == false)
@@ -454,13 +450,13 @@ private:
 /** Convert a value from gamma compressed space to linear. */
 T toLinear(RGBColorSpace src, T)(T v) if(isFloatingPoint!T)
 {
-    enum ColorSpace = RGBColorSpaceDefs!T[src];
+    enum ColorSpace = rgbColorSpaceDefs!T[src];
     return ColorSpace.toLinear(v);
 }
 /** Convert a value to gamma compressed space. */
 T toGamma(RGBColorSpace src, T)(T v) if(isFloatingPoint!T)
 {
-    enum ColorSpace = RGBColorSpaceDefs!T[src];
+    enum ColorSpace = rgbColorSpaceDefs!T[src];
     return ColorSpace.toGamma(v);
 }
 
@@ -480,19 +476,36 @@ package:
 
 T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r, T g, T b) pure if(isFloatingPoint!T)
 {
-    // calculate the luminance (Y) value by multiplying the Y row of the XYZ matrix with the color
-    enum YAxis = RGBColorSpaceMatrix!(colorSpace, T)[1];
-
     static if(linear)
     {
+        // calculate the luminance (Y) value correctly by multiplying the Y row of the XYZ matrix with the color
+        enum YAxis = rgbColorSpaceDef!T(colorSpace).rgbToXyzMatrix()[1];
         return YAxis[0]*r + YAxis[1]*g + YAxis[2]*b;
+    }
+    else static if(colorSpace == RGBColorSpace.Colorimetry ||
+                   colorSpace == RGBColorSpace.SMPTE_C ||
+                   colorSpace == RGBColorSpace.NTSC_J ||
+                   colorSpace == RGBColorSpace.PAL_SECAM)
+    {
+        // For color spaces which are used in standard color TV and video systems such as PAL/SECAM, and
+        // NTSC, a nonlinear luma component (Y') is calculated directly from gamma-compressed primary
+        // intensities as a weighted sum, which can be calculated quickly without the gamma expansion and
+        // compression used in colorimetric grayscale calculations.
+        // The Rec.601 luma (Y') component is computed as:
+        return T(0.299)*r + T(0.587)*g + T(0.114)*b;
+    }
+    else static if(colorSpace == RGBColorSpace.HDTV)
+    {
+        // The Rec.709 standard used for HDTV  uses different color coefficients.
+        // These happen to be the same as sRGB, but applied to the gamma compressed signal direcetly.
+        return T(0.2126)*r + T(0.7152)*g + T(0.0722)*b;
     }
     else
     {
-        // sRGB Luma' coefficients match the Y axis. Assume other RGB color spaces also follow the same pattern(?)
-        // Rec.709 (HDTV) was also refined to suit, so it will work without special-case
-        // TODO: When we support Rec.601 (SDTV), we need to special-case for Luma' coefficients: 0.299, 0.587, 0.114
-
+        // Edge-case: What to do?! Approximate, or perform gamma conversions?
+        // The TV standards have defined approximations, so let's continue to roll with that pattern.
+        // We'll continue the Rec.709 pattern, except using appropriate coefficients for the color space.
+        enum YAxis = rgbColorSpaceDef!T(colorSpace).rgbToXyzMatrix()[1];
         return YAxis[0]*r + YAxis[1]*g + YAxis[2]*b;
     }
 }

@@ -27,14 +27,20 @@ Detect whether $(D T) is a L*a*b* color.
 enum isLab(T) = isInstanceOf!(Lab, T);
 
 /**
-Detect whether $(D T) is an LCh color.
+Detect whether $(D T) is an L*C*h° color.
 */
 enum isLCh(T) = isInstanceOf!(LCh, T);
 
 
 /**
 A CIE L*a*b* color, parameterised for component type and white point.
-L*a*b* is often found using default white point D50, but it is also common to use D65 when interacting with sRGB images.
+
+Lab is a color space that describes all colors visible to the human eye and was created to serve as a device-independent model to be used as a reference.
+L* represents the lightness of the color; L* = 0 yields black and L* = 100 indicates diffuse white, specular white may be higher.
+a* represents the position between red/magenta and green; negative values indicate green while positive values indicate magenta.
+b* represents the position between yellow and blue; negative values indicate blue and positive values indicate yellow.
+
+Lab is often found using default white point D50, but it is also common to use D65 when interacting with sRGB images.
 */
 struct Lab(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if(isFloatingPoint!F)
 {
@@ -183,6 +189,10 @@ private:
 }
 
 
+/**
+A CIE L*C*h° color, parameterised for component type and white point.
+The LCh color space is a Lab cube color space, where instead of cartesian coordinates a*, b*, the cylindrical coordinates C* (chroma) and h° (hue angle) are specified. The CIELab lightness L* remains unchanged.
+*/
 struct LCh(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if(isFloatingPoint!F)
 {
 @safe: pure: nothrow: @nogc:
@@ -195,9 +205,9 @@ struct LCh(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if(isFloatingPoint
 
     /** L* (lightness) component. */
     F L = 0;
-    /** C (chroma) component. */
+    /** C* (chroma) component. */
     F C = 0;
-    /** h (hue) component. */
+    /** h° (hue) component, in degrees. */
     F h = 0;
 
     /** Get hue angle in radians. */

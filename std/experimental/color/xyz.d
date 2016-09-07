@@ -253,10 +253,10 @@ package:
     static To convertColorImpl(To, From)(From color) if(isxyY!From && isXYZ!To)
     {
         alias F = To.ComponentType;
-        if(color.y == F(0))
+        if(color.y == 0)
             return To(F(0), F(0), F(0));
         else
-            return To(F(color.x*color.Y/color.y), F(color.Y), F((F(1)-color.x-color.y)*color.Y/color.y));
+            return To(F((color.Y/color.y)*color.x), F(color.Y), F((color.Y/color.y)*(1-color.x-color.y)));
     }
     unittest
     {
@@ -270,7 +270,7 @@ package:
     {
         alias F = To.ComponentType;
         auto sum = color.X + color.Y + color.Z;
-        if(sum == F(0))
+        if(sum == 0)
             return To(WhitePoint!F.D65.x, WhitePoint!F.D65.y, F(0));
         else
             return To(F(color.X/sum), F(color.Y/sum), F(color.Y));
