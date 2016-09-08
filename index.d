@@ -204,6 +204,18 @@ $(BOOKTABLE ,
             bindings to can be found on external resources.
         )
     )
+    $(LEADINGROW Image processing)
+    $(TR
+        $(TDNW
+            $(LINK2 std_experimental_color.html, std.experimental.color)$(BR)
+            $(LINK2 std_experimental_color_colorspace.html, std.experimental.color.colorspace)$(BR)
+            $(LINK2 std_experimental_color_hsx.html, std.experimental.color.hsx)$(BR)
+            $(LINK2 std_experimental_color_lab.html, std.experimental.color.lab)$(BR)
+            $(LINK2 std_experimental_color_rgb.html, std.experimental.color.rgb)$(BR)
+            $(LINK2 std_experimental_color_xyz.html,std.experimental.color.xyz)$(BR)
+        )
+        $(TD Suite of color types which can be used for image processing.)
+    )
     $(LEADINGROW Memory management)
     $(TR
         $(TDNW $(LINK2 core_memory.html, core.memory))
@@ -325,6 +337,10 @@ $(BOOKTABLE ,
     $(TR
         $(TDNW $(LINK2 std_experimental_ndslice.html, std.experimental.ndslice))
         $(TD Multidimensional random access ranges and arrays.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_experimental_normint.html, std.experimental.normint))
+        $(TD A normalized integer type.)
     )
     $(TR
         $(TDNW $(LINK2 std_numeric.html, std.numeric))

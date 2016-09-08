@@ -163,6 +163,7 @@ STD_PACKAGES = std $(addprefix std/,\
   algorithm container digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
   experimental/ndslice \
+  experimental/color \
   net \
   experimental range regex)
 
@@ -174,7 +175,7 @@ PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   outbuffer parallelism path process random signals socket stdint \
   stdio stdiobase string system traits typecons typetuple uni \
   uri utf uuid variant xml zip zlib
-PACKAGE_std_experimental = typecons
+PACKAGE_std_experimental = typecons normint
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
@@ -189,6 +190,7 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
 PACKAGE_std_experimental_ndslice = package iteration selection slice
+PACKAGE_std_experimental_color = package colorspace hsx lab rgb xyz
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
