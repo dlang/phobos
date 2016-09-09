@@ -6,7 +6,7 @@ This module implements CIE Lab and LCh _color types.
 Authors:    Manu Evans
 Copyright:  Copyright (c) 2015, Manu Evans.
 License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-Source:     $(PHOBOSSRC std/experimental/color/lab.d)
+Source:     $(PHOBOSSRC std/experimental/color/_lab.d)
 */
 module std.experimental.color.lab;
 
@@ -22,12 +22,12 @@ import std.math : sin, cos, sqrt, atan2, PI, M_1_PI;
 @safe: pure: nothrow: @nogc:
 
 /**
-Detect whether $(D T) is a L*a*b* color.
+Detect whether $(D_INLINECODE T) is a L*a*b* color.
 */
 enum isLab(T) = isInstanceOf!(Lab, T);
 
 /**
-Detect whether $(D T) is an L*C*h° color.
+Detect whether $(D_INLINECODE T) is an L*C*h° color.
 */
 enum isLCh(T) = isInstanceOf!(LCh, T);
 
@@ -42,7 +42,7 @@ b* represents the position between yellow and blue; negative values indicate blu
 
 Lab is often found using default white point D50, but it is also common to use D65 when interacting with sRGB images.
 */
-struct Lab(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if(isFloatingPoint!F)
+struct Lab(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if (isFloatingPoint!F)
 {
 @safe: pure: nothrow: @nogc:
 
@@ -59,7 +59,7 @@ struct Lab(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if(isFloatingPoint
     /** b* component. Negative values indicate blue, positive values indicate yellow. */
     F b = 0;
 
-    /** Construct a color from XYZ values. */
+    /** Construct a color from L*a*b* values. */
     this(F L, F a, F b)
     {
         this.L = L;
@@ -75,46 +75,46 @@ struct Lab(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if(isFloatingPoint
     }
 
     /** Cast to other color types */
-    Color opCast(Color)() const if(isColor!Color)
+    Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);
     }
 
     /** Unary operators. */
-    typeof(this) opUnary(string op)() const if(op == "+" || op == "-" || (op == "~" && is(ComponentType == NormalizedInt!U, U)))
+    typeof(this) opUnary(string op)() const if (op == "+" || op == "-" || (op == "~" && is(ComponentType == NormalizedInt!U, U)))
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ = #_;", c, op));
         return res;
     }
     /** Binary operators. */
-    typeof(this) opBinary(string op)(typeof(this) rh) const if(op == "+" || op == "-" || op == "*")
+    typeof(this) opBinary(string op)(typeof(this) rh) const if (op == "+" || op == "-" || op == "*")
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ #= rh._;", c, op));
         return res;
     }
     /** Binary operators. */
-    typeof(this) opBinary(string op, S)(S rh) const if(isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
+    typeof(this) opBinary(string op, S)(S rh) const if (isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ #= rh;", c, op));
         return res;
     }
     /** Binary assignment operators. */
-    ref typeof(this) opOpAssign(string op)(typeof(this) rh) if(op == "+" || op == "-" || op == "*")
+    ref typeof(this) opOpAssign(string op)(typeof(this) rh) if (op == "+" || op == "-" || op == "*")
     {
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("_ #= rh._;", c, op));
         return this;
     }
     /** Binary assignment operators. */
-    ref typeof(this) opOpAssign(string op, S)(S rh) if(isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
+    ref typeof(this) opOpAssign(string op, S)(S rh) if (isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
     {
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("_ #= rh;", c, op));
         return this;
     }
@@ -123,9 +123,9 @@ package:
 
     alias ParentColor = XYZ!ComponentType;
 
-    static To convertColorImpl(To, From)(From color) if(isLab!From && isLab!To)
+    static To convertColorImpl(To, From)(From color) if (isLab!From && isLab!To)
     {
-        static if(From.whitePoint == To.whitePoint)
+        static if (From.whitePoint == To.whitePoint)
         {
             // same whitepoint, just a format conversion
             return To(To.ComponentType(L), To.ComponentType(a), To.ComponentType(b));
@@ -138,7 +138,7 @@ package:
         }
     }
 
-    static To convertColorImpl(To, From)(From color) if(isLab!From && isXYZ!To)
+    static To convertColorImpl(To, From)(From color) if (isLab!From && isXYZ!To)
     {
         alias WT = WorkingType!(From, To);
 
@@ -146,7 +146,7 @@ package:
 
         static WT f(WT v)
         {
-            if(v > WT(0.206893))
+            if (v > WT(0.206893))
                 return v^^WT(3);
             else
                 return (v - WT(16.0/116))*WT(1/7.787);
@@ -163,7 +163,7 @@ package:
         return To(X, Y, Z);
     }
 
-    static To convertColorImpl(To, From)(From color) if(isXYZ!From && isLab!To)
+    static To convertColorImpl(To, From)(From color) if (isXYZ!From && isLab!To)
     {
         alias WT = WorkingType!(From, To);
 
@@ -171,7 +171,7 @@ package:
 
         static WT f(WT v)
         {
-            if(v > WT(0.008856))
+            if (v > WT(0.008856))
                 return v^^WT(1.0/3);
             else
                 return WT(7.787)*v + WT(16.0/116);
@@ -193,7 +193,7 @@ private:
 A CIE L*C*h° color, parameterised for component type and white point.
 The LCh color space is a Lab cube color space, where instead of cartesian coordinates a*, b*, the cylindrical coordinates C* (chroma) and h° (hue angle) are specified. The CIELab lightness L* remains unchanged.
 */
-struct LCh(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if(isFloatingPoint!F)
+struct LCh(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if (isFloatingPoint!F)
 {
 @safe: pure: nothrow: @nogc:
 
@@ -222,7 +222,7 @@ struct LCh(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if(isFloatingPoint
     }
 
     /** Cast to other color types */
-    Color opCast(Color)() const if(isColor!Color)
+    Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);
     }
@@ -232,9 +232,9 @@ package:
 
     alias ParentColor = Lab!(F, whitePoint_);
 
-    static To convertColorImpl(To, From)(From color) if(isLCh!From && isLCh!To)
+    static To convertColorImpl(To, From)(From color) if (isLCh!From && isLCh!To)
     {
-        static if(From.whitePoint == To.whitePoint)
+        static if (From.whitePoint == To.whitePoint)
         {
             // same whitepoint, just a format conversion
             return To(To.ComponentType(L), To.ComponentType(C), To.ComponentType(h));
@@ -247,7 +247,7 @@ package:
         }
     }
 
-    static To convertColorImpl(To, From)(From color) if(isLCh!From && isLab!To)
+    static To convertColorImpl(To, From)(From color) if (isLCh!From && isLab!To)
     {
         alias WT = WorkingType!(From, To);
 
@@ -257,13 +257,13 @@ package:
         return To(color.L, a, b);
     }
 
-    static To convertColorImpl(To, From)(From color) if(isLab!From && isLCh!To)
+    static To convertColorImpl(To, From)(From color) if (isLab!From && isLCh!To)
     {
         alias WT = WorkingType!(From, To);
 
         WT C = sqrt(color.a^^2 + color.b^^2);
         WT h = atan2(color.b, color.a);
-        if(h >= 0)
+        if (h >= 0)
             h = h*WT(M_1_PI*180);
         else
             h = 360 + h*WT(M_1_PI*180);

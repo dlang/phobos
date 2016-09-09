@@ -6,7 +6,7 @@ This module defines and operates on standard color spaces.
 Authors:    Manu Evans
 Copyright:  Copyright (c) 2016, Manu Evans.
 License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-Source:     $(PHOBOSSRC std/experimental/color/colorspace.d)
+Source:     $(PHOBOSSRC std/experimental/color/_colorspace.d)
 */
 module std.experimental.color.colorspace;
 
@@ -20,9 +20,12 @@ version(unittest)
 
 @safe pure nothrow @nogc:
 
+import std.range : iota;
+import std.algorithm : reduce;
+
 
 /** White points of standard illuminants. */
-template WhitePoint(F) if(isFloatingPoint!F)
+template WhitePoint(F) if (isFloatingPoint!F)
 {
     /** */
     enum WhitePoint
@@ -76,7 +79,7 @@ template WhitePoint(F) if(isFloatingPoint!F)
 
 
 /**
-Enum of RGB color spaces.
+Enum of common RGB color spaces.
 */
 enum RGBColorSpace
 {
@@ -139,13 +142,14 @@ enum ChromaticAdaptationMethod
     Bradford,
     /** Von Kries method. */
     VonKries
-};
+}
 
 
 /**
-Parameters that define an RGB color space.
+Parameters that define an RGB color space.$(BR)
+$(D_INLINECODE F) is the float type that should be used for the colors and gamma functions.
 */
-struct RGBColorSpaceDesc(F)
+struct RGBColorSpaceDesc(F) if (isFloatingPoint!F)
 {
     /** Gamma conversion function type. */
     alias GammaFunc = F function(F v) pure nothrow @nogc @safe;
@@ -171,15 +175,16 @@ struct RGBColorSpaceDesc(F)
 /**
 Color space descriptor for the specified color space.
 */
-RGBColorSpaceDesc!F rgbColorSpaceDef(F = double)(RGBColorSpace colorSpace) if(isFloatingPoint!F)
+RGBColorSpaceDesc!F rgbColorSpaceDef(F = double)(RGBColorSpace colorSpace) if (isFloatingPoint!F)
 {
     return rgbColorSpaceDefs!F[colorSpace];
 }
 
 /**
-RGB to XYZ color space transformation matrix.
+RGB to XYZ color space transformation matrix.$(BR)
+$(D_INLINECODE cs) describes the source RGB color space.
 */
-F[3][3] rgbToXyzMatrix(F = double)(RGBColorSpaceDesc!F cs) if(isFloatingPoint!F)
+F[3][3] rgbToXyzMatrix(F = double)(RGBColorSpaceDesc!F cs) if (isFloatingPoint!F)
 {
     static XYZ!F toXYZ(xyY!F c) { return c.y == F(0) ? XYZ!F() : XYZ!F(c.x/c.y, F(1), (F(1)-c.x-c.y)/c.y); }
 
@@ -202,17 +207,18 @@ F[3][3] rgbToXyzMatrix(F = double)(RGBColorSpaceDesc!F cs) if(isFloatingPoint!F)
 }
 
 /**
-XYZ to RGB color space transformation matrix.
+XYZ to RGB color space transformation matrix.$(BR)
+$(D_INLINECODE cs) describes the target RGB color space.
 */
-F[3][3] xyzToRgbMatrix(F = double)(RGBColorSpaceDesc!F cs) if(isFloatingPoint!F)
+F[3][3] xyzToRgbMatrix(F = double)(RGBColorSpaceDesc!F cs) if (isFloatingPoint!F)
 {
     return inverse(rgbToXyzMatrix(cs));
 }
 
 /**
-Generate a chromatic adaptation matrix from srcWhite to destWhite.
+Generate a chromatic adaptation matrix from $(D_INLINECODE srcWhite) to $(D_INLINECODE destWhite).
 */
-F[3][3] chromaticAdaptationMatrix(ChromaticAdaptationMethod method = ChromaticAdaptationMethod.Bradford, F = double)(xyY!F srcWhite, xyY!F destWhite) if(isFloatingPoint!F)
+F[3][3] chromaticAdaptationMatrix(ChromaticAdaptationMethod method = ChromaticAdaptationMethod.Bradford, F = double)(xyY!F srcWhite, xyY!F destWhite) if (isFloatingPoint!F)
 {
     enum Ma = chromaticAdaptationMatrices!F[method];
     enum iMa = inverse!F(Ma);
@@ -228,10 +234,10 @@ F[3][3] chromaticAdaptationMatrix(ChromaticAdaptationMethod method = ChromaticAd
     return multiply!F(multiply!F(iMa, t), Ma);
 }
 
-/** Linear to hybrid linear-gamma ramp function. */
-T linearToHybridGamma(double a, double b, double s, double e, T)(T v) if(isFloatingPoint!T)
+/** Linear to hybrid linear-gamma ramp function.  The function and parameters are detailed in the example below. */
+T linearToHybridGamma(double a, double b, double s, double e, T)(T v) if (isFloatingPoint!T)
 {
-    if(v <= T(b))
+    if (v <= T(b))
         return v*T(s);
     else
         return T(a)*v^^T(e) - T(a - 1);
@@ -247,7 +253,8 @@ unittest
 
     double v = 0.5;
 
-    if(v <= b)
+    // the gamma function
+    if (v <= b)
         v = v*s;
     else
         v = a*v^^e - (a - 1);
@@ -255,10 +262,10 @@ unittest
     assert(abs(v - linearToHybridGamma!(a, b, s, e)(0.5)) < double.epsilon);
 }
 
-/** Hybrid linear-gamma to linear function. */
-T hybridGammaToLinear(double a, double b, double s, double e, T)(T v) if(isFloatingPoint!T)
+/** Hybrid linear-gamma to linear function. The function and parameters are detailed in the example below. */
+T hybridGammaToLinear(double a, double b, double s, double e, T)(T v) if (isFloatingPoint!T)
 {
-    if(v <= T(b*s))
+    if (v <= T(b*s))
         return v * T(1/s);
     else
         return ((v + T(a - 1)) * T(1/a))^^T(e);
@@ -274,7 +281,8 @@ unittest
 
     double v = 0.5;
 
-    if(v <= b*s)
+    // the gamma function
+    if (v <= b*s)
         v = v/s;
     else
         v = ((v + (a - 1)) / a)^^e;
@@ -297,23 +305,23 @@ alias linearToRec2020(F) = linearToHybridGamma!(1.09929682680944, 0.018053968510
 alias rec2020ToLinear(F) = hybridGammaToLinear!(1.09929682680944, 0.018053968510807, 4.5, 1/0.45, F);
 
 /** Linear to gamma space function. */
-T linearToGamma(double gamma, T)(T v) if(isFloatingPoint!T)
+T linearToGamma(double gamma, T)(T v) if (isFloatingPoint!T)
 {
     return v^^T(1.0/gamma);
 }
 /** Linear to gamma space function. */
-T linearToGamma(T)(T v, T gamma) if(isFloatingPoint!T)
+T linearToGamma(T)(T v, T gamma) if (isFloatingPoint!T)
 {
     return v^^T(1.0/gamma);
 }
 
 /** Gamma to linear function. */
-T gammaToLinear(double gamma, T)(T v) if(isFloatingPoint!T)
+T gammaToLinear(double gamma, T)(T v) if (isFloatingPoint!T)
 {
     return v^^T(gamma);
 }
 /** Gamma to linear function. */
-T gammaToLinear(T)(T v, T gamma) if(isFloatingPoint!T)
+T gammaToLinear(T)(T v, T gamma) if (isFloatingPoint!T)
 {
     return v^^T(gamma);
 }

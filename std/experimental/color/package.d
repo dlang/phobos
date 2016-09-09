@@ -8,7 +8,7 @@
     Authors:    Manu Evans
     Copyright:  Copyright (c) 2015, Manu Evans.
     License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Source:     $(PHOBOSSRC std/experimental/color/package.d)
+    Source:     $(PHOBOSSRC std/experimental/color/_package.d)
 */
 module std.experimental.color;
 
@@ -18,11 +18,8 @@ import std.experimental.normint;
 
 import std.traits : isNumeric, isFloatingPoint, isSomeChar, Unqual;
 
-@safe pure nothrow @nogc:
-
-
 /**
-Detect whether $(D T) is a color type defined under std.color.
+Detect whether $(D_INLINECODE T) is a color type compatible with std.experimental.color.
 */
 enum isColor(T) = __traits(compiles, convertColor!(XYZ!float)(T.init));
 
@@ -40,12 +37,12 @@ unittest
 }
 
 /**
-Detect whether $(D T) is a valid color component type.
+Detect whether $(D_INLINECODE T) is a valid color component type.
 */
 enum isColorComponentType(T) = isFloatingPoint!T || is(T == NormalizedInt!U, U);
 
 /**
-Detect whether $(D T) can represent a colour component.
+Detect whether $(D_INLINECODE T) can represent a color component.
 */
 enum isColorScalarType(T) = isNumeric!T || is(T == NormalizedInt!U, U);
 
@@ -244,25 +241,25 @@ enum Colors
 /**
 Convert between color types.
 */
-To convertColor(To, From)(From color)
+To convertColor(To, From)(From color) @safe pure nothrow @nogc
 {
     // cast along a conversion path to reach our target conversion
     alias Path = ConversionPath!(From, To);
 
     // no conversion is necessary
-    static if(Path.length == 0)
+    static if (Path.length == 0)
         return color;
-    else static if(Path.length > 1)
+    else static if (Path.length > 1)
     {
         // we need to recurse to trace a path via the first common ancestor
-        static if(__traits(compiles, From.convertColorImpl!(Path[0])(color)))
+        static if (__traits(compiles, From.convertColorImpl!(Path[0])(color)))
             return convertColor!To(From.convertColorImpl!(Path[0])(color));
         else
             return convertColor!To(To.convertColorImpl!(Path[0])(color));
     }
     else
     {
-        static if(__traits(compiles, From.convertColorImpl!(Path[0])(color)))
+        static if (__traits(compiles, From.convertColorImpl!(Path[0])(color)))
             return From.convertColorImpl!(Path[0])(color);
         else
             return To.convertColorImpl!(Path[0])(color);
@@ -276,63 +273,13 @@ unittest
 
 
 /**
-* Create a color from hex strings in the standard forms: (#/$/0x)rgb/argb/rrggbb/aarrggbb
+Create a color from a string.
+May be a hex color in the standard forms: (#/$/0x)rgb/argb/rrggbb/aarrggbb
+May also be the name of any color from the $(D_INLINECODE Colors) enum.
 */
-Color colorFromString(Color = RGB8, C)(const(C)[] hex) if(isSomeChar!C)
+Color colorFromString(Color = RGB8)(const(char)[] str) pure @safe
 {
-    static ubyte val(C c)
-    {
-        if(c >= '0' && c <= '9')
-            return cast(ubyte)(c - '0');
-        else if(c >= 'a' && c <= 'f')
-            return cast(ubyte)(c - 'a' + 10);
-        else if(c >= 'A' && c <= 'F')
-            return cast(ubyte)(c - 'A' + 10);
-        else
-            assert(false, "Invalid hex string");
-    }
-
-    if(hex.length > 0 && (hex[0] == '#' || hex[0] == '$'))
-        hex = hex[1..$];
-    else if(hex.length > 1 && (hex[0] == '0' && hex[1] == 'x'))
-        hex = hex[2..$];
-
-    if(hex.length == 3)
-    {
-        ubyte r = val(hex[0]);
-        ubyte g = val(hex[1]);
-        ubyte b = val(hex[2]);
-        return cast(Color)RGB8(cast(ubyte)(r | (r << 4)), cast(ubyte)(g | (g << 4)), cast(ubyte)(b | (b << 4)));
-    }
-    if(hex.length == 4)
-    {
-        ubyte a = val(hex[0]);
-        ubyte r = val(hex[1]);
-        ubyte g = val(hex[2]);
-        ubyte b = val(hex[3]);
-        return cast(Color)RGBA8(cast(ubyte)(r | (r << 4)), cast(ubyte)(g | (g << 4)), cast(ubyte)(b | (b << 4)), cast(ubyte)(a | (a << 4)));
-    }
-    if(hex.length == 6)
-    {
-        ubyte r = cast(ubyte)(val(hex[0]) << 4) | val(hex[1]);
-        ubyte g = cast(ubyte)(val(hex[2]) << 4) | val(hex[3]);
-        ubyte b = cast(ubyte)(val(hex[4]) << 4) | val(hex[5]);
-        return cast(Color)RGB8(r, g, b);
-    }
-    if(hex.length == 8)
-    {
-        ubyte a = cast(ubyte)(val(hex[0]) << 4) | val(hex[1]);
-        ubyte r = cast(ubyte)(val(hex[2]) << 4) | val(hex[3]);
-        ubyte g = cast(ubyte)(val(hex[4]) << 4) | val(hex[5]);
-        ubyte b = cast(ubyte)(val(hex[6]) << 4) | val(hex[7]);
-        return cast(Color)RGBA8(r, g, b, a);
-    }
-    else
-    {
-        // TODO: should we look up colors from the W3C color table by name?
-
-        assert(false, "Invalid hex string!");
-    }
+    return cast(Color)colorFromStringImpl(str);
 }
 ///
 unittest
@@ -354,6 +301,11 @@ unittest
     // 4/8 digita (/w alpha)
     static assert(colorFromString!RGBA8("#8C41") == RGBA8(0xCC, 0x44, 0x11, 0x88));
     static assert(colorFromString!RGBA8("#80CC4401") == RGBA8(0xCC, 0x44, 0x01, 0x80));
+
+    // named colors (case-insensitive)
+    static assert(colorFromString("red") == RGB8(0xFF, 0x0, 0x0));
+    static assert(colorFromString("WHITE") == RGB8(0xFF, 0xFF, 0xFF));
+    static assert(colorFromString("LightGoldenrodYellow") == RGB8(250,250,210));
 }
 
 
@@ -363,11 +315,84 @@ import std.traits : isInstanceOf, TemplateOf;
 import std.typetuple : TypeTuple;
 
 
+RGBA8 colorFromStringImpl(const(char)[] str) pure @safe
+{
+    static const(char)[] getHex(const(char)[] hex) pure nothrow @nogc @safe
+    {
+        if (hex.length > 0 && (hex[0] == '#' || hex[0] == '$'))
+            hex = hex[1..$];
+        else if (hex.length > 1 && (hex[0] == '0' && hex[1] == 'x'))
+            hex = hex[2..$];
+        foreach (i; 0 .. hex.length)
+        {
+            if (!(hex[i] >= '0' && hex[i] <= '9' || hex[i] >= 'a' && hex[i] <= 'f' || hex[i] >= 'A' && hex[i] <= 'F'))
+                return null;
+        }
+        return hex;
+    }
+
+    const(char)[] hex = getHex(str);
+    if (hex)
+    {
+        static ubyte val(char c) pure nothrow @nogc @safe
+        {
+            if (c >= '0' && c <= '9')
+                return cast(ubyte)(c - '0');
+            else if (c >= 'a' && c <= 'f')
+                return cast(ubyte)(c - 'a' + 10);
+            else
+                return cast(ubyte)(c - 'A' + 10);
+        }
+
+        if (hex.length == 3)
+        {
+            ubyte r = val(hex[0]);
+            ubyte g = val(hex[1]);
+            ubyte b = val(hex[2]);
+            return RGBA8(cast(ubyte)(r | (r << 4)), cast(ubyte)(g | (g << 4)), cast(ubyte)(b | (b << 4)), 0);
+        }
+        if (hex.length == 4)
+        {
+            ubyte a = val(hex[0]);
+            ubyte r = val(hex[1]);
+            ubyte g = val(hex[2]);
+            ubyte b = val(hex[3]);
+            return RGBA8(cast(ubyte)(r | (r << 4)), cast(ubyte)(g | (g << 4)), cast(ubyte)(b | (b << 4)), cast(ubyte)(a | (a << 4)));
+        }
+        if (hex.length == 6)
+        {
+            ubyte r = cast(ubyte)(val(hex[0]) << 4) | val(hex[1]);
+            ubyte g = cast(ubyte)(val(hex[2]) << 4) | val(hex[3]);
+            ubyte b = cast(ubyte)(val(hex[4]) << 4) | val(hex[5]);
+            return RGBA8(r, g, b, 0);
+        }
+        if (hex.length == 8)
+        {
+            ubyte a = cast(ubyte)(val(hex[0]) << 4) | val(hex[1]);
+            ubyte r = cast(ubyte)(val(hex[2]) << 4) | val(hex[3]);
+            ubyte g = cast(ubyte)(val(hex[4]) << 4) | val(hex[5]);
+            ubyte b = cast(ubyte)(val(hex[6]) << 4) | val(hex[7]);
+            return RGBA8(r, g, b, a);
+        }
+
+        throw new Exception("Hex string has invalid length");
+    }
+
+    foreach (k; __traits(allMembers, Colors))
+    {
+        import std.uni : icmp;
+        if (str.icmp(k) == 0)
+            mixin("return cast(RGBA8)Colors." ~ k ~ ";");
+    }
+
+    throw new Exception("String is not a valid color");
+}
+
 // try and use the preferred float type
 // if the int type exceeds the preferred float precision, we'll upgrade the float
 template FloatTypeFor(IntType, RequestedFloat = float)
 {
-    static if(IntType.sizeof > 2)
+    static if (IntType.sizeof > 2)
         alias FloatTypeFor = double;
     else
         alias FloatTypeFor = RequestedFloat;
@@ -376,21 +401,21 @@ template FloatTypeFor(IntType, RequestedFloat = float)
 // find the fastest type to do format conversion without losing precision
 template WorkingType(From, To)
 {
-    static if(isFloatingPoint!From && isFloatingPoint!To)
+    static if (isFloatingPoint!From && isFloatingPoint!To)
     {
-        static if(From.sizeof > To.sizeof)
+        static if (From.sizeof > To.sizeof)
             alias WorkingType = From;
         else
             alias WorkingType = To;
     }
-    else static if(isFloatingPoint!To)
+    else static if (isFloatingPoint!To)
         alias WorkingType = To;
-    else static if(isFloatingPoint!From)
+    else static if (isFloatingPoint!From)
         alias WorkingType = FloatTypeFor!To;
     else
     {
         // small integer types can use float and not lose precision
-        static if(From.sizeof <= 2 && To.sizeof <= 2)
+        static if (From.sizeof <= 2 && To.sizeof <= 2)
             alias WorkingType = float;
         else
             alias WorkingType = double;
@@ -399,9 +424,9 @@ template WorkingType(From, To)
 
 private template isParentType(Parent, Of)
 {
-    static if(!is(Of.ParentColor))
+    static if (!is(Of.ParentColor))
         enum isParentType = false;
-    else static if(isInstanceOf!(TemplateOf!Parent, Of.ParentColor))
+    else static if (isInstanceOf!(TemplateOf!Parent, Of.ParentColor))
         enum isParentType = true;
     else
         enum isParentType = isParentType!(Parent, Of.ParentColor);
@@ -409,11 +434,11 @@ private template isParentType(Parent, Of)
 
 private template FindPath(From, To)
 {
-    static if(isInstanceOf!(TemplateOf!To, From))
+    static if (isInstanceOf!(TemplateOf!To, From))
         alias FindPath = TypeTuple!(To);
-    else static if(isParentType!(From, To))
+    else static if (isParentType!(From, To))
         alias FindPath = TypeTuple!(FindPath!(From, To.ParentColor), To);
-    else static if(is(From.ParentColor))
+    else static if (is(From.ParentColor))
         alias FindPath = TypeTuple!(From, FindPath!(From.ParentColor, To));
     else
         static assert(false, "Shouldn't be here!");
@@ -422,12 +447,12 @@ private template FindPath(From, To)
 // find the conversion path from one distant type to another
 template ConversionPath(From, To)
 {
-    static if(is(Unqual!From == Unqual!To))
+    static if (is(Unqual!From == Unqual!To))
         alias ConversionPath = TypeTuple!();
     else
     {
         alias Path = FindPath!(Unqual!From, Unqual!To);
-        static if(Path.length == 1 && !is(Path[0] == From))
+        static if (Path.length == 1 && !is(Path[0] == From))
             alias ConversionPath = Path;
         else
             alias ConversionPath = Path[1..$];
@@ -459,16 +484,16 @@ template ComponentExpression(string expression, string component, string op)
 {
     template BuildExpression(string e, string c, string op)
     {
-        static if(e.length == 0)
+        static if (e.length == 0)
             enum BuildExpression = "";
-        else static if(e[0] == '_')
+        else static if (e[0] == '_')
             enum BuildExpression = c ~ BuildExpression!(e[1..$], c, op);
-        else static if(e[0] == '#')
+        else static if (e[0] == '#')
             enum BuildExpression = op ~ BuildExpression!(e[1..$], c, op);
         else
             enum BuildExpression = e[0] ~ BuildExpression!(e[1..$], c, op);
     }
     enum ComponentExpression =
-        "static if(is(typeof(this." ~ component ~ ")))" ~ "\n\t" ~
+        "static if (is(typeof(this." ~ component ~ ")))" ~ "\n\t" ~
             BuildExpression!(expression, component, op);
 }

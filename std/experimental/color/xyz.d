@@ -6,7 +6,7 @@
     Authors:    Manu Evans
     Copyright:  Copyright (c) 2015, Manu Evans.
     License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Source:     $(PHOBOSSRC std/experimental/color/xyz.d)
+    Source:     $(PHOBOSSRC std/experimental/color/_xyz.d)
 */
 module std.experimental.color.xyz;
 
@@ -22,7 +22,7 @@ import std.typecons : tuple;
 
 
 /**
-Detect whether $(D T) is an XYZ color.
+Detect whether $(D_INLINECODE T) is an XYZ color.
 */
 enum isXYZ(T) = isInstanceOf!(XYZ, T);
 
@@ -36,7 +36,7 @@ unittest
 
 
 /**
-Detect whether $(D T) is an xyY color.
+Detect whether $(D_INLINECODE T) is an xyY color.
 */
 enum isxyY(T) = isInstanceOf!(xyY, T);
 
@@ -52,7 +52,7 @@ unittest
 /**
 A CIE 1931 XYZ color, parameterised for component type.
 */
-struct XYZ(F = float) if(isFloatingPoint!F)
+struct XYZ(F = float) if (isFloatingPoint!F)
 {
 @safe pure nothrow @nogc:
 
@@ -81,46 +81,46 @@ struct XYZ(F = float) if(isFloatingPoint!F)
     }
 
     /** Cast to other color types */
-    Color opCast(Color)() const if(isColor!Color)
+    Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);
     }
 
     /** Unary operators. */
-    typeof(this) opUnary(string op)() const if(op == "+" || op == "-" || (op == "~" && is(ComponentType == NormalizedInt!U, U)))
+    typeof(this) opUnary(string op)() const if (op == "+" || op == "-" || (op == "~" && is(ComponentType == NormalizedInt!U, U)))
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ = #_;", c, op));
         return res;
     }
     /** Binary operators. */
-    typeof(this) opBinary(string op)(typeof(this) rh) const if(op == "+" || op == "-" || op == "*")
+    typeof(this) opBinary(string op)(typeof(this) rh) const if (op == "+" || op == "-" || op == "*")
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ #= rh._;", c, op));
         return res;
     }
     /** Binary operators. */
-    typeof(this) opBinary(string op, S)(S rh) const if(isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
+    typeof(this) opBinary(string op, S)(S rh) const if (isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ #= rh;", c, op));
         return res;
     }
     /** Binary assignment operators. */
-    ref typeof(this) opOpAssign(string op)(typeof(this) rh) if(op == "+" || op == "-" || op == "*")
+    ref typeof(this) opOpAssign(string op)(typeof(this) rh) if (op == "+" || op == "-" || op == "*")
     {
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("_ #= rh._;", c, op));
         return this;
     }
     /** Binary assignment operators. */
-    ref typeof(this) opOpAssign(string op, S)(S rh) if(isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
+    ref typeof(this) opOpAssign(string op, S)(S rh) if (isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
     {
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("_ #= rh;", c, op));
         return this;
     }
@@ -128,7 +128,7 @@ struct XYZ(F = float) if(isFloatingPoint!F)
 
 package:
 
-    static To convertColorImpl(To, From)(From color) if(isXYZ!From && isXYZ!To)
+    static To convertColorImpl(To, From)(From color) if (isXYZ!From && isXYZ!To)
     {
         alias F = To.ComponentType;
         return To(F(color.X), F(color.Y), F(color.Z));
@@ -163,7 +163,7 @@ unittest
 /**
 A CIE 1931 xyY color, parameterised for component type.
 */
-struct xyY(F = float) if(isFloatingPoint!F)
+struct xyY(F = float) if (isFloatingPoint!F)
 {
 @safe pure nothrow @nogc:
 
@@ -186,50 +186,50 @@ struct xyY(F = float) if(isFloatingPoint!F)
     }
 
     /** Cast to other color types */
-    Color opCast(Color)() const if(isColor!Color)
+    Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);
     }
 
     /** Unary operators. */
-    typeof(this) opUnary(string op)() const if(op == "+" || op == "-" || (op == "~" && is(ComponentType == NormalizedInt!U, U)))
+    typeof(this) opUnary(string op)() const if (op == "+" || op == "-" || (op == "~" && is(ComponentType == NormalizedInt!U, U)))
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ = #_;", c, op));
         return res;
     }
 
     /** Binary operators. */
-    typeof(this) opBinary(string op)(typeof(this) rh) const if(op == "+" || op == "-" || op == "*")
+    typeof(this) opBinary(string op)(typeof(this) rh) const if (op == "+" || op == "-" || op == "*")
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ #= rh._;", c, op));
         return res;
     }
 
     /** Binary operators. */
-    typeof(this) opBinary(string op, S)(S rh) const if(isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
+    typeof(this) opBinary(string op, S)(S rh) const if (isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ #= rh;", c, op));
         return res;
     }
 
     /** Binary assignment operators. */
-    ref typeof(this) opOpAssign(string op)(typeof(this) rh) if(op == "+" || op == "-" || op == "*")
+    ref typeof(this) opOpAssign(string op)(typeof(this) rh) if (op == "+" || op == "-" || op == "*")
     {
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("_ #= rh._;", c, op));
         return this;
     }
 
     /** Binary assignment operators. */
-    ref typeof(this) opOpAssign(string op, S)(S rh) if(isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
+    ref typeof(this) opOpAssign(string op, S)(S rh) if (isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
     {
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("_ #= rh;", c, op));
         return this;
     }
@@ -239,7 +239,7 @@ package:
 
     alias ParentColor = XYZ!ComponentType;
 
-    static To convertColorImpl(To, From)(From color) if(isxyY!From && isxyY!To)
+    static To convertColorImpl(To, From)(From color) if (isxyY!From && isxyY!To)
     {
         alias F = To.ComponentType;
         return To(F(color.x), F(color.y), F(color.Y));
@@ -250,10 +250,10 @@ package:
         static assert(convertColorImpl!(xyY!double)(xyY!float(1, 2, 3)) == xyY!double(1, 2, 3));
     }
 
-    static To convertColorImpl(To, From)(From color) if(isxyY!From && isXYZ!To)
+    static To convertColorImpl(To, From)(From color) if (isxyY!From && isXYZ!To)
     {
         alias F = To.ComponentType;
-        if(color.y == 0)
+        if (color.y == 0)
             return To(F(0), F(0), F(0));
         else
             return To(F((color.Y/color.y)*color.x), F(color.Y), F((color.Y/color.y)*(1-color.x-color.y)));
@@ -266,11 +266,11 @@ package:
         static assert(convertColorImpl!(XYZ!float)(xyY!float(0.5, 0, 1)) == XYZ!float(0, 0, 0));
     }
 
-    static To convertColorImpl(To, From)(From color) if(isXYZ!From && isxyY!To)
+    static To convertColorImpl(To, From)(From color) if (isXYZ!From && isxyY!To)
     {
         alias F = To.ComponentType;
         auto sum = color.X + color.Y + color.Z;
-        if(sum == 0)
+        if (sum == 0)
             return To(WhitePoint!F.D65.x, WhitePoint!F.D65.y, F(0));
         else
             return To(F(color.X/sum), F(color.Y/sum), F(color.Y));

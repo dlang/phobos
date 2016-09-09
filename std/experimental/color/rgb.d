@@ -6,7 +6,7 @@
     Authors:    Manu Evans
     Copyright:  Copyright (c) 2015, Manu Evans.
     License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Source:     $(PHOBOSSRC std/experimental/color/rgb.d)
+    Source:     $(PHOBOSSRC std/experimental/color/_rgb.d)
 */
 module std.experimental.color.rgb;
 
@@ -23,7 +23,7 @@ import std.typecons : tuple;
 
 
 /**
-Detect whether $(D T) is an RGB color.
+Detect whether $(D_INLINECODE T) is an RGB color.
 */
 enum isRGB(T) = isInstanceOf!(RGB, T);
 
@@ -49,22 +49,36 @@ template defaultAlpha(T)
 /**
 An RGB color, parameterised with components, component type, and color space specification.
 
-Params: components_ = Components that shall be available. Struct is populated with components in the order specified.
-                      Valid components are:
-                        "r" = red
-                        "g" = green
-                        "b" = blue
-                        "a" = alpha
-                        "l" = luminance
+Params: components_ = Components that shall be available. Struct is populated with components in the order specified.$(BR)
+                      Valid components are:$(BR)
+                        "r" = red$(BR)
+                        "g" = green$(BR)
+                        "b" = blue$(BR)
+                        "a" = alpha$(BR)
+                        "l" = luminance$(BR)
                         "x" = placeholder/padding (no significant value)
         ComponentType_ = Type for the color channels. May be a basic integer or floating point type.
         linear_ = Color is stored with linear luminance.
         colorSpace_ = Color will be within the specified color space.
 */
 struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpace colorSpace_ = RGBColorSpace.sRGB)
-    if(isNumeric!ComponentType_)
+    if (isNumeric!ComponentType_)
 {
-@safe pure nothrow @nogc:
+@safe pure:
+
+    /** Construct a color from a string. */
+    this(C)(const(C)[] str) if (isSomeChar!C)
+    {
+        this = colorFromString!(typeof(this))(str);
+    }
+    ///
+    unittest
+    {
+        static assert(RGB8("#8000FF")  == RGB8(0x80,0x00,0xFF));
+        static assert(RGBA8("0x908000FF") == RGBA8(0x80,0x00,0xFF,0x90));
+    }
+
+nothrow @nogc:
 
     // RGB colors may only contain components 'rgb', or 'l' (luminance)
     // They may also optionally contain an 'a' (alpha) component, and 'x' (unused) components
@@ -72,7 +86,7 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     static assert(anyIn!("rgbal", components), "RGB colors must contain at least one component of r, g, b, l, a.");
     static assert(!canFind!(components, 'l') || !anyIn!("rgb", components), "RGB colors may not contain rgb AND luminance components together.");
 
-    static if(isFloatingPoint!ComponentType_)
+    static if (isFloatingPoint!ComponentType_)
     {
         /** Type of the color components. */
         alias ComponentType = ComponentType_;
@@ -85,9 +99,9 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
 
     /** The color components that were specified. */
     enum string components = components_;
-    /** The color space specified. */
+    /** The colors color space. */
     enum RGBColorSpace colorSpace = colorSpace_;
-    /** Get the color space descriptor. */
+    /** The color space descriptor. */
     enum RGBColorSpaceDesc!F colorSpaceDesc(F = double) = rgbColorSpaceDef!F(colorSpace_);
     /** If the color is stored linearly (without gamma applied). */
     enum bool linear = linear_;
@@ -96,7 +110,7 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     // mixin will emit members for components
     template Components(string components)
     {
-        static if(components.length == 0)
+        static if (components.length == 0)
             enum Components = "";
         else
             enum Components = ComponentType.stringof ~ ' ' ~ components[0] ~ " = 0;\n" ~ Components!(components[1..$]);
@@ -114,17 +128,17 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
         Any color channels not present will be 0. */
     @property auto tristimulus() const
     {
-        static if(hasComponent!'l')
+        static if (hasComponent!'l')
         {
             return tuple(l, l, l);
         }
         else
         {
-            static if(!hasComponent!'r')
+            static if (!hasComponent!'r')
                 enum r = ComponentType(0);
-            static if(!hasComponent!'g')
+            static if (!hasComponent!'g')
                 enum g = ComponentType(0);
-            static if(!hasComponent!'b')
+            static if (!hasComponent!'b')
                 enum b = ComponentType(0);
             return tuple(r, g, b);
         }
@@ -140,7 +154,7 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
         These will always be ordered (R, G, B, A). */
     @property auto tristimulusWithAlpha() const
     {
-        static if(!hasAlpha)
+        static if (!hasAlpha)
             enum a = defaultAlpha!ComponentType;
         return tuple(tristimulus.expand, a);
     }
@@ -154,56 +168,44 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     /** Construct a color from RGB and optional alpha values. */
     this(ComponentType r, ComponentType g, ComponentType b, ComponentType a = defaultAlpha!ComponentType)
     {
-        foreach(c; TypeTuple!("r","g","b","a"))
+        foreach (c; TypeTuple!("r","g","b","a"))
             mixin(ComponentExpression!("this._ = _;", c, null));
-        static if(canFind!(components, 'l'))
+        static if (canFind!(components, 'l'))
             this.l = toGrayscale!(linear, colorSpace)(r, g, b); // ** Contentious? I this this is most useful
     }
 
     /** Construct a color from a luminance and optional alpha value. */
     this(ComponentType l, ComponentType a = defaultAlpha!ComponentType)
     {
-        foreach(c; TypeTuple!("l","r","g","b"))
+        foreach (c; TypeTuple!("l","r","g","b"))
             mixin(ComponentExpression!("this._ = l;", c, null));
-        static if(canFind!(components, 'a'))
+        static if (canFind!(components, 'a'))
             this.a = a;
     }
 
-    static if(!isFloatingPoint!ComponentType_)
+    static if (!isFloatingPoint!ComponentType_)
     {
         /** Construct a color from RGB and optional alpha values. */
         this(ComponentType.IntType r, ComponentType.IntType g, ComponentType.IntType b, ComponentType.IntType a = defaultAlpha!(ComponentType.IntType))
         {
-            foreach(c; TypeTuple!("r","g","b","a"))
+            foreach (c; TypeTuple!("r","g","b","a"))
                 mixin(ComponentExpression!("this._ = ComponentType(_);", c, null));
-            static if(canFind!(components, 'l'))
+            static if (canFind!(components, 'l'))
                 this.l = toGrayscale!(linear, colorSpace)(ComponentType(r), ComponentType(g), ComponentType(b)); // ** Contentious? I this this is most useful
         }
 
         /** Construct a color from a luminance and optional alpha value. */
         this(ComponentType.IntType l, ComponentType.IntType a = defaultAlpha!(ComponentType.IntType))
         {
-            foreach(c; TypeTuple!("l","r","g","b"))
+            foreach (c; TypeTuple!("l","r","g","b"))
                 mixin(ComponentExpression!("this._ = ComponentType(l);", c, null));
-            static if(canFind!(components, 'a'))
+            static if (canFind!(components, 'a'))
                 this.a = ComponentType(a);
         }
     }
 
-    /** Construct a color from a hex string. */
-    this(C)(const(C)[] hex) if(isSomeChar!C)
-    {
-        this = colorFromString!(typeof(this))(hex);
-    }
-    ///
-    unittest
-    {
-        static assert(RGB8("#8000FF")  == RGB8(0x80,0x00,0xFF));
-        static assert(RGBA8("0x908000FF") == RGBA8(0x80,0x00,0xFF,0x90));
-    }
-
     /** Cast to other color types */
-    Color opCast(Color)() const if(isColor!Color)
+    Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);
     }
@@ -216,10 +218,10 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     }
 
     /** Unary operators. */
-    typeof(this) opUnary(string op)() const if(op == "+" || op == "-" || (op == "~" && is(ComponentType == NormalizedInt!U, U)))
+    typeof(this) opUnary(string op)() const if (op == "+" || op == "-" || (op == "~" && is(ComponentType == NormalizedInt!U, U)))
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ = #_;", c, op));
         return res;
     }
@@ -234,10 +236,10 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     }
 
     /** Binary operators. */
-    typeof(this) opBinary(string op)(typeof(this) rh) const if(op == "+" || op == "-" || op == "*")
+    typeof(this) opBinary(string op)(typeof(this) rh) const if (op == "+" || op == "-" || op == "*")
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ #= rh._;", c, op));
         return res;
     }
@@ -258,10 +260,10 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     }
 
     /** Binary operators. */
-    typeof(this) opBinary(string op, S)(S rh) const if(isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
+    typeof(this) opBinary(string op, S)(S rh) const if (isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
     {
         Unqual!(typeof(this)) res = this;
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("res._ #= rh;", c, op));
         return res;
     }
@@ -292,17 +294,17 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     }
 
     /** Binary assignment operators. */
-    ref typeof(this) opOpAssign(string op)(typeof(this) rh) if(op == "+" || op == "-" || op == "*")
+    ref typeof(this) opOpAssign(string op)(typeof(this) rh) if (op == "+" || op == "-" || op == "*")
     {
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("_ #= rh._;", c, op));
         return this;
     }
 
     /** Binary assignment operators. */
-    ref typeof(this) opOpAssign(string op, S)(S rh) if(isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
+    ref typeof(this) opOpAssign(string op, S)(S rh) if (isColorScalarType!S && (op == "*" || op == "/" || op == "%" || op == "^^"))
     {
-        foreach(c; AllComponents)
+        foreach (c; AllComponents)
             mixin(ComponentExpression!("_ #= rh;", c, op));
         return this;
     }
@@ -311,14 +313,14 @@ package:
 
     alias ParentColor = XYZ!(FloatTypeFor!ComponentType);
 
-    static To convertColorImpl(To, From)(From color) if(isRGB!From && isRGB!To)
+    static To convertColorImpl(To, From)(From color) if (isRGB!From && isRGB!To)
     {
         alias ToType = To.ComponentType;
         alias FromType = From.ComponentType;
 
         auto src = color.tristimulusWithAlpha;
 
-        static if(From.colorSpace == To.colorSpace && From.linear == To.linear)
+        static if (From.colorSpace == To.colorSpace && From.linear == To.linear)
         {
             // color space is the same, just do type conversion
             return To(cast(ToType)src[0], cast(ToType)src[1], cast(ToType)src[2], cast(ToType)src[3]);
@@ -331,13 +333,13 @@ package:
             WorkType g = cast(WorkType)src[1];
             WorkType b = cast(WorkType)src[2];
 
-            static if(From.linear == false)
+            static if (From.linear == false)
             {
                 r = toLinear!(From.colorSpace)(r);
                 g = toLinear!(From.colorSpace)(g);
                 b = toLinear!(From.colorSpace)(b);
             }
-            static if(From.colorSpace != To.colorSpace)
+            static if (From.colorSpace != To.colorSpace)
             {
                 enum toXYZ = rgbToXyzMatrix(From.colorSpaceDesc!WorkType);
                 enum toRGB = xyzToRgbMatrix(To.colorSpaceDesc!WorkType);
@@ -345,7 +347,7 @@ package:
                 WorkType[3] v = multiply(mat, [r, g, b]);
                 r = v[0]; g = v[1]; b = v[2];
             }
-            static if(To.linear == false)
+            static if (To.linear == false)
             {
                 r = toGamma!(To.colorSpace)(r);
                 g = toGamma!(To.colorSpace)(g);
@@ -353,7 +355,7 @@ package:
             }
 
             // convert and return the output
-            static if(To.hasAlpha)
+            static if (To.hasAlpha)
                 return To(cast(ToType)r, cast(ToType)g, cast(ToType)b, cast(ToType)src[3]);
             else
                 return To(cast(ToType)r, cast(ToType)g, cast(ToType)b);
@@ -390,7 +392,7 @@ package:
         assert(convertColorImpl!(gRGBA)(sRGBA(0xFF, 0x80, 0x01, 0xFF)) == gRGBA(0x7F, 0x3F, 0x03, 0x7F));
     }
 
-    static To convertColorImpl(To, From)(From color) if(isRGB!From && isXYZ!To)
+    static To convertColorImpl(To, From)(From color) if (isRGB!From && isXYZ!To)
     {
         alias ToType = To.ComponentType;
         alias FromType = From.ComponentType;
@@ -402,7 +404,7 @@ package:
         WorkType g = cast(WorkType)src[1];
         WorkType b = cast(WorkType)src[2];
 
-        static if(From.linear == false)
+        static if (From.linear == false)
         {
             r = toLinear!(From.colorSpace)(r);
             g = toLinear!(From.colorSpace)(g);
@@ -419,7 +421,7 @@ package:
         // TODO: needs approx ==
     }
 
-    static To convertColorImpl(To, From)(From color) if(isXYZ!From && isRGB!To)
+    static To convertColorImpl(To, From)(From color) if (isXYZ!From && isRGB!To)
     {
         alias ToType = To.ComponentType;
         alias FromType = From.ComponentType;
@@ -428,7 +430,7 @@ package:
         enum toRGB = xyzToRgbMatrix(To.colorSpaceDesc!WorkType);
         WorkType[3] v = multiply(toRGB, [ WorkType(color.X), WorkType(color.Y), WorkType(color.Z) ]);
 
-        static if(To.linear == false)
+        static if (To.linear == false)
         {
             v[0] = toGamma!(To.colorSpace)(v[0]);
             v[1] = toGamma!(To.colorSpace)(v[1]);
@@ -448,25 +450,25 @@ private:
 
 
 /** Convert a value from gamma compressed space to linear. */
-T toLinear(RGBColorSpace src, T)(T v) if(isFloatingPoint!T)
+T toLinear(RGBColorSpace src, T)(T v) if (isFloatingPoint!T)
 {
     enum ColorSpace = rgbColorSpaceDefs!T[src];
     return ColorSpace.toLinear(v);
 }
 /** Convert a value to gamma compressed space. */
-T toGamma(RGBColorSpace src, T)(T v) if(isFloatingPoint!T)
+T toGamma(RGBColorSpace src, T)(T v) if (isFloatingPoint!T)
 {
     enum ColorSpace = rgbColorSpaceDefs!T[src];
     return ColorSpace.toGamma(v);
 }
 
 /** Convert a color to linear space. */
-auto toLinear(C)(C color) if(isRGB!C)
+auto toLinear(C)(C color) if (isRGB!C)
 {
     return cast(RGB!(C.components, C.ComponentType, true, C.colorSpace))color;
 }
 /** Convert a color to gamma space. */
-auto toGamma(C)(C color) if(isRGB!C)
+auto toGamma(C)(C color) if (isRGB!C)
 {
     return cast(RGB!(C.components, C.ComponentType, false, C.colorSpace))color;
 }
@@ -474,15 +476,15 @@ auto toGamma(C)(C color) if(isRGB!C)
 
 package:
 
-T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r, T g, T b) pure if(isFloatingPoint!T)
+T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r, T g, T b) pure if (isFloatingPoint!T)
 {
-    static if(linear)
+    static if (linear)
     {
         // calculate the luminance (Y) value correctly by multiplying the Y row of the XYZ matrix with the color
         enum YAxis = rgbColorSpaceDef!T(colorSpace).rgbToXyzMatrix()[1];
         return YAxis[0]*r + YAxis[1]*g + YAxis[2]*b;
     }
-    else static if(colorSpace == RGBColorSpace.Colorimetry ||
+    else static if (colorSpace == RGBColorSpace.Colorimetry ||
                    colorSpace == RGBColorSpace.SMPTE_C ||
                    colorSpace == RGBColorSpace.NTSC_J ||
                    colorSpace == RGBColorSpace.PAL_SECAM)
@@ -494,7 +496,7 @@ T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r
         // The Rec.601 luma (Y') component is computed as:
         return T(0.299)*r + T(0.587)*g + T(0.114)*b;
     }
-    else static if(colorSpace == RGBColorSpace.HDTV)
+    else static if (colorSpace == RGBColorSpace.HDTV)
     {
         // The Rec.709 standard used for HDTV  uses different color coefficients.
         // These happen to be the same as sRGB, but applied to the gamma compressed signal direcetly.
@@ -509,7 +511,7 @@ T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r
         return YAxis[0]*r + YAxis[1]*g + YAxis[2]*b;
     }
 }
-T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r, T g, T b) pure if(is(T == NormalizedInt!U, U))
+T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r, T g, T b) pure if (is(T == NormalizedInt!U, U))
 {
     alias F = FloatTypeFor!T;
     return T(toGrayscale!(linear, colorSpace)(cast(F)r, cast(F)g, cast(F)b));
@@ -519,30 +521,30 @@ T toGrayscale(bool linear, RGBColorSpace colorSpace = RGBColorSpace.sRGB, T)(T r
 // helpers to parse color components from color component string
 template canFind(string s, char c)
 {
-    static if(s.length == 0)
+    static if (s.length == 0)
         enum canFind = false;
     else
         enum canFind = s[0] == c || canFind!(s[1..$], c);
 }
 template allIn(string s, string chars)
 {
-    static if(chars.length == 0)
+    static if (chars.length == 0)
         enum allIn = true;
     else
         enum allIn = canFind!(s, chars[0]) && allIn!(s, chars[1..$]);
 }
 template anyIn(string s, string chars)
 {
-    static if(chars.length == 0)
+    static if (chars.length == 0)
         enum anyIn = false;
     else
         enum anyIn = canFind!(s, chars[0]) || anyIn!(s, chars[1..$]);
 }
 template notIn(string s, string chars)
 {
-    static if(chars.length == 0)
+    static if (chars.length == 0)
         enum notIn = char(0);
-    else static if(!canFind!(s, chars[0]))
+    else static if (!canFind!(s, chars[0]))
         enum notIn = chars[0];
     else
         enum notIn = notIn!(s, chars[1..$]);
