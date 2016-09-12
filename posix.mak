@@ -210,7 +210,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix			\
 	gammafunction errorfunction) $(addprefix std/internal/, \
 	cstring processinit unicode_tables scopebuffer\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm) \
-	$(addprefix std/internal/test/, dummyrange uda) \
+	$(addprefix std/internal/test/, dummyrange) \
 	$(addprefix std/experimental/ndslice/, internal) \
 	$(addprefix std/algorithm/, internal)
 
