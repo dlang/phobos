@@ -18,6 +18,7 @@ import std.experimental.normint;
 
 import std.traits : isNumeric, isFloatingPoint, isSomeChar, Unqual;
 
+
 /**
 Detect whether $(D_INLINECODE T) is a color type compatible with std.experimental.color.
 */

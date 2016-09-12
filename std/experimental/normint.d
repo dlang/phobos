@@ -10,7 +10,7 @@ Source:     $(PHOBOSSRC std/experimental/_normint.d)
 */
 module std.experimental.normint;
 
-import std.traits : isIntegral, isSigned, isUnsigned, isFloatingPoint;
+import std.traits : isIntegral, isSigned, isUnsigned, isFloatingPoint, Unsigned;
 static import std.algorithm;
 
 import std.experimental.color : FloatTypeFor;
@@ -67,14 +67,7 @@ pure nothrow @nogc:
     /** Construct a $(D_INLINECODE NormalizedInt) from a floating point representation. The value is clamped to the range $(D_INLINECODE [min, max]). */
     this(F)(F value) if (isFloatingPoint!F)
     {
-        if (value >= max_float)
-            this.value = max;
-        else if (value <= min_float)
-            this.value = min;
-        else if (isUnsigned!I || value >= 0)
-            this.value = cast(I)(value*max + 0.5);
-        else
-            this.value = cast(I)(value*max - 0.5);
+        this.value = floatToNormInt!I(value);
     }
 
     /** Unary operators. */
@@ -238,13 +231,7 @@ pure nothrow @nogc:
     /** Floating point cast operator. */
     F opCast(F)() const if (isFloatingPoint!F)
     {
-        F r = value * 1.0/max;
-        static if (isSigned!I)
-        {
-            // max(c, -1) is the signed conversion followed by D3D, OpenGL, etc.
-            r = std.algorithm.max(r, F(-1.0));
-        }
-        return r;
+        return normIntToFloat!F(value);
     }
 }
 ///
@@ -293,83 +280,9 @@ unittest
 
 
 /** Convert values between normalized integer types. */
-To convertNormInt(To, From)(From i) if (isIntegral!To && isIntegral!From)
+To convertNormInt(To, From)(From i) if (isIntegral!From && isIntegral!To)
 {
-    // TODO: this should be tested for performance; we can optimise the small->large conversions with table lookups, maybe imul?
-
-    import std.typetuple : TypeTuple;
-    import std.traits : Unsigned;
-
-    template Iota(alias start, alias end)
-    {
-        static if (end == start)
-            alias Iota = TypeTuple!();
-        else
-            alias Iota = TypeTuple!(Iota!(start, end-1), end-1);
-    }
-    enum Bits(T) = T.sizeof*8;
-
-    static if (isUnsigned!To && isUnsigned!From)
-    {
-        static if (Bits!To <= Bits!From)
-            return To(i >> (Bits!From-Bits!To));
-        else
-        {
-            To r;
-
-            enum numReps = Bits!To/Bits!From;
-            foreach (j; Iota!(0, numReps))
-                r |= To(i) << (j*Bits!From);
-
-            return r;
-        }
-    }
-    else static if (isUnsigned!To)
-    {
-        if (i < 0) // if i is negative, return 0
-            return 0;
-        else
-        {
-            enum Sig = Bits!From-1;
-            static if (Bits!To < Bits!From)
-                return cast(To)(i >> (Sig-Bits!To));
-            else
-            {
-                To r;
-
-                enum numReps = Bits!To/Sig;
-                foreach (j; Iota!(1, numReps+1))
-                    r |= To(cast(Unsigned!From)(i&From.max)) << (Bits!To - j*Sig);
-
-                enum remain = Bits!To - numReps*Sig;
-                static if (remain)
-                    r |= cast(Unsigned!From)(i&From.max) >> (Sig - remain);
-
-                return r;
-            }
-        }
-    }
-    else static if (isUnsigned!From)
-    {
-        static if (Bits!To <= Bits!From)
-            return To(i >> (Bits!From-Bits!To+1));
-        else
-        {
-            Unsigned!To r;
-
-            enum numReps = Bits!To/Bits!From;
-            foreach (j; Iota!(0, numReps))
-                r |= Unsigned!To(i) << (j*Bits!From);
-
-            return To(r >> 1);
-        }
-    }
-    else
-    {
-        // TODO: there may be a faster path for byte<->short using imul
-        double f = std.algorithm.max(i * (1.0/From.max), -1.0);
-        return cast(To)(f * double(To.max));
-    }
+    return cast(To)convertNormBits!(From.sizeof*8, isSigned!From, To.sizeof*8, isSigned!To, Unsigned!To, Unsigned!From)(i);
 }
 ///
 unittest
@@ -377,26 +290,331 @@ unittest
     // unsigned -> unsigned
     static assert(convertNormInt!ubyte(ushort(0x3765)) == 0x37);
     static assert(convertNormInt!ushort(ubyte(0x37)) == 0x3737);
-    static assert(convertNormInt!ulong(ubyte(0x35)) == 0x3535353535353535);
+    static assert(convertNormInt!uint(ubyte(0x35)) == 0x35353535);
 
     // signed -> unsigned
     static assert(convertNormInt!ubyte(short(-61)) == 0);
     static assert(convertNormInt!ubyte(short(0x3795)) == 0x6F);
     static assert(convertNormInt!ushort(byte(0x37)) == 0x6EDD);
-    static assert(convertNormInt!ulong(byte(0x35)) == 0x6AD5AB56AD5AB56A);
+    static assert(convertNormInt!uint(byte(0x35)) == 0x6AD5AB56);
 
     // unsigned -> signed
     static assert(convertNormInt!byte(ushort(0x3765)) == 0x1B);
     static assert(convertNormInt!short(ubyte(0x37)) == 0x1B9B);
-    static assert(convertNormInt!long(ubyte(0x35)) == 0x1A9A9A9A9A9A9A9A);
+    static assert(convertNormInt!int(ubyte(0x35)) == 0x1A9A9A9A);
 
     // signed -> signed
     static assert(convertNormInt!short(byte(-127)) == -32767);
     static assert(convertNormInt!short(byte(-128)) == -32767);
     static assert(convertNormInt!byte(short(0x3795)) == 0x37);
-    static assert(convertNormInt!byte(short(-28672)) == -111);
+    static assert(convertNormInt!byte(short(-28672)) == -112);
     static assert(convertNormInt!short(byte(0x37)) == 0x376E);
-    static assert(convertNormInt!short(byte(-109)) == -28122);
+    static assert(convertNormInt!short(byte(-109)) == -28123);
+}
+
+/** Convert a float to a normalized integer. */
+To floatToNormInt(To, From)(From f) if (isFloatingPoint!From && isIntegral!To)
+{
+    return cast(To)floatToNormBits!(To.sizeof*8, isSigned!To, Unsigned!To)(f);
+}
+///
+unittest
+{
+    static assert(floatToNormInt!ubyte(0.5) == 0x80);
+}
+
+/** Convert a normalized integer to a float. */
+To normIntToFloat(To, From)(From i) if (isIntegral!From && isFloatingPoint!To)
+{
+    return normBitsToFloat!(From.sizeof*8, isSigned!From, To)(cast(Unsigned!From)i);
+}
+///
+unittest
+{
+    static assert(normIntToFloat!(double, ubyte)(0xFF) == 1.0);
+}
+
+package:
+
+enum BitsUMax(size_t n) = (1L << n)-1;
+enum BitsSMax(size_t n) = (1 << (n-1))-1;
+enum SignBit(size_t n) = (1 << (n-1));
+
+//pragma(inline, true) // Error: cannot inline function
+T floatToNormBits(size_t bits, bool signed, T = uint, F)(F f) pure nothrow @nogc @safe if (isUnsigned!T && isFloatingPoint!F)
+{
+    static if(bits == 1)
+    {
+        static if (!signed)
+            return f >= 0.5 ? 1 : 0;
+        else
+            return f <= -0.5 ? 1 : 0;
+    }
+    else static if (!signed)
+    {
+        if(f >= 1)
+            return BitsUMax!bits;
+        else if(f <= 0)
+            return 0;
+        return cast(T)(f*BitsUMax!bits + 0.5);
+    }
+    else
+    {
+        if (f >= 0)
+        {
+            if(f >= 1)
+                return BitsSMax!bits;
+            return cast(T)(f*BitsSMax!bits + 0.5);
+        }
+        if(f <= -1)
+            return -BitsSMax!bits & BitsUMax!bits;
+        return cast(T)(f*BitsSMax!bits - 0.5) & BitsUMax!bits;
+    }
+}
+unittest
+{
+    // float unpacking
+    static assert(floatToNormBits!(1, false)(0.0) == 0);
+    static assert(floatToNormBits!(1, false)(0.3) == 0);
+    static assert(floatToNormBits!(1, false)(0.5) == 1); // round to nearest
+    static assert(floatToNormBits!(1, false)(1.0) == 1);
+    static assert(floatToNormBits!(1, false)(2.0) == 1);
+    static assert(floatToNormBits!(1, false)(-1.0) == 0);
+    static assert(floatToNormBits!(1, false)(-2.0) == 0);
+
+    static assert(floatToNormBits!(2, false)(0.0) == 0);
+    static assert(floatToNormBits!(2, false)(0.3) == 1);
+    static assert(floatToNormBits!(2, false)(0.5) == 2);
+    static assert(floatToNormBits!(2, false)(1.0) == 3);
+    static assert(floatToNormBits!(2, false)(2.0) == 3);
+    static assert(floatToNormBits!(2, false)(-1.0) == 0);
+    static assert(floatToNormBits!(2, false)(-2.0) == 0);
+
+    static assert(floatToNormBits!(6, false)(0.0) == 0);
+    static assert(floatToNormBits!(6, false)(0.3) == 19);
+    static assert(floatToNormBits!(6, false)(0.5) == 32);
+    static assert(floatToNormBits!(6, false)(1.0) == 63);
+    static assert(floatToNormBits!(6, false)(2.0) == 63);
+    static assert(floatToNormBits!(6, false)(-1.0) == 0);
+    static assert(floatToNormBits!(6, false)(-2.0) == 0);
+
+    static assert(floatToNormBits!(9, true)(0.0) == 0x00);
+    static assert(floatToNormBits!(9, true)(0.3) == 0x4D);
+    static assert(floatToNormBits!(9, true)(0.5) == 0x80);
+    static assert(floatToNormBits!(9, true)(1.0) == 0xFF);
+    static assert(floatToNormBits!(9, true)(2.0) == 0xFF);
+    static assert(floatToNormBits!(9, true)(-0.5) == 0x180);
+    static assert(floatToNormBits!(9, true)(-1.0) == 0x101);
+    static assert(floatToNormBits!(9, true)(-2.0) == 0x101);
+}
+
+pragma(inline, true)
+F normBitsToFloat(size_t bits, bool signed, F = float)(uint v) pure nothrow @nogc @safe if (isFloatingPoint!F)
+{
+    static if (!signed)
+        return v / F(BitsUMax!bits);
+    else static if (bits == 1)
+        return v ? F(-1.0) : F(0.0);
+    else
+    {
+        import std.algorithm : max;
+        return max((cast(int)(v << (32 - bits)) >> (32 - bits)) / F(BitsSMax!bits), F(-1));
+    }
+}
+unittest
+{
+    // float unpacking
+    static assert(normBitsToFloat!(1, false, float)(0) == 0);
+    static assert(normBitsToFloat!(1, false, float)(1) == 1);
+    static assert(normBitsToFloat!(1, true, float)(0) == 0);
+    static assert(normBitsToFloat!(1, true, float)(1) == -1);
+
+    static assert(normBitsToFloat!(2, true, float)(0) == 0);
+    static assert(normBitsToFloat!(2, true, float)(1) == 1);
+    static assert(normBitsToFloat!(2, true, float)(2) == -1);
+    static assert(normBitsToFloat!(2, true, float)(3) == -1);
+
+    static assert(normBitsToFloat!(3, true, float)(0) == 0);
+    static assert(normBitsToFloat!(3, true, float)(1) == 1.0/3);
+    static assert(normBitsToFloat!(3, true, float)(2) == 2.0/3);
+    static assert(normBitsToFloat!(3, true, float)(3) == 1);
+    static assert(normBitsToFloat!(3, true, float)(4) == -1);
+    static assert(normBitsToFloat!(3, true, float)(5) == -1);
+    static assert(normBitsToFloat!(3, true, float)(6) == -2.0/3);
+    static assert(normBitsToFloat!(3, true, float)(7) == -1.0/3);
+}
+
+pragma(inline, true)
+T convertNormBits(size_t srcBits, bool srcSigned, size_t destBits, bool destSigned, T = uint, S)(S v) pure nothrow @nogc @safe if (isUnsigned!T && isUnsigned!S)
+{
+    // TODO: this should be tested for performance.
+    //       we can optimise the small->large conversions with table lookups?
+
+    // hack for 1-bit src
+    static if (srcBits == 1)
+    {
+        static if (!srcSigned && !destSigned)
+            return v ? BitsUMax!destBits : 0;
+        else static if (!srcSigned && destSigned)
+            return v ? BitsSMax!destBits : 0;
+        else static if (srcSigned && !destSigned)
+            return 0; // always clamp to zero
+        else static if (srcSigned && destSigned)
+            return v ? SignBit!destBits : 0;
+    }
+    else static if (!destSigned)
+    {
+        static if (!srcSigned)
+        {
+            static if (destBits > srcBits)
+            {
+                // up conversion is tricky
+                template BitRepeat(size_t srcWidth, size_t destWidth)
+                {
+                    template Impl(size_t i)
+                    {
+                        static if (i < srcWidth)
+                            enum Impl = 1 << i;
+                        else
+                            enum Impl = (1 << i) | Impl!(i - srcWidth);
+                    }
+                    enum BitRepeat = Impl!(destWidth - srcWidth);
+                }
+
+                enum reps = destBits / srcBits;
+                static if (reps <= 1)
+                    T r = cast(T)(v << (destBits - srcBits));
+                else static if (reps == 2) // TODO: benchmark if imul is faster for reps == 2...
+                    T r = cast(T)((v << (destBits - srcBits)) | (v << (destBits - srcBits*2)));
+                else static if (reps > 2)
+                    T r = cast(T)(v * BitRepeat!(srcBits, destBits));
+                static if (destBits%srcBits != 0)
+                    r |= cast(T)(v >> (srcBits - destBits%srcBits));
+                return r;
+            }
+            else
+                return cast(T)(v >> (srcBits - destBits));
+        }
+        else
+        {
+            // signed -> unsigned
+            if (v & SignBit!srcBits) // if src is negative, clamp to 0
+                return 0;
+            else
+                return convertNormBits!(srcBits - 1, false, destBits, destSigned, T, S)(v);
+        }
+    }
+    else
+    {
+        static if (!srcSigned)
+        {
+            // unsigned -> signed
+            return convertNormBits!(srcBits, false, destBits - 1, false, T, S)(v);
+        }
+        else
+        {
+            if (v & SignBit!srcBits)
+                return -convertNormBits!(srcBits - 1, false, destBits - 1, false, T, S)(((v ^ SignBit!srcBits) == 0 ? ~v : -v) & BitsSMax!srcBits) & BitsUMax!destBits;
+            else
+                return convertNormBits!(srcBits - 1, false, destBits - 1, false, T, S)(v);
+        }
+    }
+}
+unittest
+{
+    // unsigned -> unsigned int
+    static assert(convertNormBits!(1, false, 8, false, ubyte)(0u) == 0x00);
+    static assert(convertNormBits!(1, false, 8, false, ubyte)(1u) == 0xFF);
+    static assert(convertNormBits!(1, false, 30, false, uint)(1u) == 0x3FFFFFFF);
+
+    static assert(convertNormBits!(2, false, 8, false, ubyte)(0u) == 0x00);
+    static assert(convertNormBits!(2, false, 8, false, ubyte)(1u) == 0x55);
+    static assert(convertNormBits!(2, false, 4, false, ubyte)(2u) == 0x0A);
+    static assert(convertNormBits!(2, false, 8, false, ubyte)(3u) == 0xFF);
+    static assert(convertNormBits!(2, false, 28, false, uint)(2u) == 0x0AAAAAAA);
+    static assert(convertNormBits!(2, false, 32, false, uint)(3u) == 0xFFFFFFFF);
+
+    static assert(convertNormBits!(3, false, 8, false, ubyte)(0u) == 0x00); // 0b00000000
+    static assert(convertNormBits!(3, false, 8, false, ubyte)(1u) == 0x24); // 0b00100100
+    static assert(convertNormBits!(3, false, 8, false, ubyte)(2u) == 0x49); // 0b01001001
+    static assert(convertNormBits!(3, false, 8, false, ubyte)(3u) == 0x6D); // 0b01101101
+    static assert(convertNormBits!(3, false, 8, false, ubyte)(4u) == 0x92); // 0b10010010
+    static assert(convertNormBits!(3, false, 8, false, ubyte)(5u) == 0xB6); // 0b10110110
+    static assert(convertNormBits!(3, false, 8, false, ubyte)(6u) == 0xDB); // 0b11011011
+    static assert(convertNormBits!(3, false, 8, false, ubyte)(7u) == 0xFF); // 0b11111111
+    static assert(convertNormBits!(3, false, 32, false, uint)(4u) == 0x92492492);
+    static assert(convertNormBits!(3, false, 32, false, uint)(7u) == 0xFFFFFFFF);
+
+    // unsigned -> signed int
+    static assert(convertNormBits!(1, false, 8, true, ubyte)(0u) == 0x00);
+    static assert(convertNormBits!(1, false, 8, true, ubyte)(1u) == 0x7F);
+    static assert(convertNormBits!(1, false, 32, true, uint)(1u) == 0x7FFFFFFF);
+
+    static assert(convertNormBits!(2, false, 8, true, ubyte)(0u) == 0x00);
+    static assert(convertNormBits!(2, false, 8, true, ubyte)(1u) == 0x2A);
+    static assert(convertNormBits!(2, false, 8, true, ubyte)(2u) == 0x55);
+    static assert(convertNormBits!(2, false, 8, true, ubyte)(3u) == 0x7F);
+    static assert(convertNormBits!(2, false, 32, true, uint)(2u) == 0x55555555);
+    static assert(convertNormBits!(2, false, 32, true, uint)(3u) == 0x7FFFFFFF);
+
+    static assert(convertNormBits!(3, false, 8, true, ubyte)(0u) == 0x00); // 0b00000000
+    static assert(convertNormBits!(3, false, 8, true, ubyte)(1u) == 0x12); // 0b00010010
+    static assert(convertNormBits!(3, false, 8, true, ubyte)(2u) == 0x24); // 0b00100100
+    static assert(convertNormBits!(3, false, 8, true, ubyte)(3u) == 0x36); // 0b00110110
+    static assert(convertNormBits!(3, false, 8, true, ubyte)(4u) == 0x49); // 0b01001001
+    static assert(convertNormBits!(3, false, 8, true, ubyte)(5u) == 0x5B); // 0b01011011
+    static assert(convertNormBits!(3, false, 8, true, ubyte)(6u) == 0x6D); // 0b01101101
+    static assert(convertNormBits!(3, false, 8, true, ubyte)(7u) == 0x7F); // 0b01111111
+    static assert(convertNormBits!(3, false, 32, true, uint)(4u) == 0x49249249);
+    static assert(convertNormBits!(3, false, 32, true, uint)(7u) == 0x7FFFFFFF);
+
+    // signed -> unsigned int
+    static assert(convertNormBits!(1, true, 8, false, ubyte)(0u) == 0x00);
+    static assert(convertNormBits!(1, true, 8, false, ubyte)(1u) == 0x00);
+    static assert(convertNormBits!(1, true, 32, false, uint)(1u) == 0x00000000);
+
+    static assert(convertNormBits!(2, true, 8, false, ubyte)(0u) == 0x00);
+    static assert(convertNormBits!(2, true, 8, false, ubyte)(1u) == 0xFF);
+    static assert(convertNormBits!(2, true, 8, false, ubyte)(2u) == 0x0);
+    static assert(convertNormBits!(2, true, 8, false, ubyte)(3u) == 0x0);
+    static assert(convertNormBits!(2, true, 32, false, uint)(1u) == 0xFFFFFFFF);
+    static assert(convertNormBits!(2, true, 32, false, uint)(3u) == 0x00000000);
+
+    static assert(convertNormBits!(3, true, 8, false, ubyte)(0u) == 0x00); // 0b00000000
+    static assert(convertNormBits!(3, true, 8, false, ubyte)(1u) == 0x55); // 0b01010101
+    static assert(convertNormBits!(3, true, 8, false, ubyte)(2u) == 0xAA); // 0b10101010
+    static assert(convertNormBits!(3, true, 8, false, ubyte)(3u) == 0xFF); // 0b11111111
+    static assert(convertNormBits!(3, true, 8, false, ubyte)(4u) == 0x00); // 0b00000000
+    static assert(convertNormBits!(3, true, 8, false, ubyte)(5u) == 0x00); // 0b00000000
+    static assert(convertNormBits!(3, true, 8, false, ubyte)(6u) == 0x00); // 0b00000000
+    static assert(convertNormBits!(3, true, 8, false, ubyte)(7u) == 0x00); // 0b00000000
+    static assert(convertNormBits!(3, true, 32, false, uint)(2u) == 0xAAAAAAAA);
+    static assert(convertNormBits!(3, true, 32, false, uint)(7u) == 0x00000000);
+
+    // signed -> signed int
+    static assert(convertNormBits!(1, true, 8, true, ubyte)(0u) == 0x00);
+    static assert(convertNormBits!(1, true, 8, true, ubyte)(1u) == 0x80);
+    static assert(convertNormBits!(1, true, 32, true, uint)(1u) == 0x80000000);
+
+    static assert(convertNormBits!(2, true, 8, true, ubyte)(0u) == 0x00);
+    static assert(convertNormBits!(2, true, 8, true, ubyte)(1u) == 0x7F);
+    static assert(convertNormBits!(2, true, 8, true, ubyte)(2u) == 0x81);
+    static assert(convertNormBits!(2, true, 8, true, ubyte)(3u) == 0x81);
+    static assert(convertNormBits!(2, true, 32, true, uint)(1u) == 0x7FFFFFFF);
+    static assert(convertNormBits!(2, true, 32, true, uint)(3u) == 0x80000001);
+
+    static assert(convertNormBits!(3, true, 8, true, ubyte)(0u) == 0x00);
+    static assert(convertNormBits!(3, true, 8, true, ubyte)(1u) == 0x2A);
+    static assert(convertNormBits!(3, true, 8, true, ubyte)(2u) == 0x55);
+    static assert(convertNormBits!(3, true, 8, true, ubyte)(3u) == 0x7F);
+    static assert(convertNormBits!(3, true, 8, true, ubyte)(4u) == 0x81);
+    static assert(convertNormBits!(3, true, 8, true, ubyte)(5u) == 0x81);
+    static assert(convertNormBits!(3, true, 8, true, ubyte)(6u) == 0xAB);
+    static assert(convertNormBits!(3, true, 8, true, ubyte)(7u) == 0xD6);
+    static assert(convertNormBits!(3, true, 32, true, uint)(2u) == 0x55555555);
+    static assert(convertNormBits!(3, true, 32, true, uint)(4u) == 0x80000001);
+    static assert(convertNormBits!(3, true, 32, true, uint)(5u) == 0x80000001);
+    static assert(convertNormBits!(3, true, 32, true, uint)(7u) == 0xD5555556);
 }
 
 

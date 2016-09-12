@@ -339,6 +339,7 @@ SRC_STD_EXP_COLOR= \
 	std\experimental\color\hsx.d \
 	std\experimental\color\lab.d \
 	std\experimental\color\package.d \
+	std\experimental\color\packedrgb.d \
 	std\experimental\color\rgb.d \
 	std\experimental\color\xyz.d
 
@@ -539,6 +540,7 @@ DOCS= \
 	$(DOC)\std_experimental_color_colorspace.html \
 	$(DOC)\std_experimental_color_hsx.html \
 	$(DOC)\std_experimental_color_lab.html \
+	$(DOC)\std_experimental_color_packedrgb.html \
 	$(DOC)\std_experimental_color_rgb.html \
 	$(DOC)\std_experimental_color_xyz.html \
 	$(DOC)\std_experimental_color.html \
@@ -1096,6 +1098,9 @@ $(DOC)\std_experimental_color_hsx.html : $(STDDOC) std\experimental\color\hsx.d
 
 $(DOC)\std_experimental_color_lab.html : $(STDDOC) std\experimental\color\lab.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_color_lab.html $(STDDOC) std\experimental\color\lab.d
+
+$(DOC)\std_experimental_color_packedrgb.html : $(STDDOC) std\experimental\color\packedrgb.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_color_packedrgb.html $(STDDOC) std\experimental\color\packedrgb.d
 
 $(DOC)\std_experimental_color_rgb.html : $(STDDOC) std\experimental\color\rgb.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_color_rgb.html $(STDDOC) std\experimental\color\rgb.d

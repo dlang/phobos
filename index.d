@@ -211,6 +211,7 @@ $(BOOKTABLE ,
             $(LINK2 std_experimental_color_colorspace.html, std.experimental.color.colorspace)$(BR)
             $(LINK2 std_experimental_color_hsx.html, std.experimental.color.hsx)$(BR)
             $(LINK2 std_experimental_color_lab.html, std.experimental.color.lab)$(BR)
+            $(LINK2 std_experimental_color_packedrgb.html, std.experimental.color.packedrgb)$(BR)
             $(LINK2 std_experimental_color_rgb.html, std.experimental.color.rgb)$(BR)
             $(LINK2 std_experimental_color_xyz.html,std.experimental.color.xyz)$(BR)
         )

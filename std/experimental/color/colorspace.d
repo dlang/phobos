@@ -340,7 +340,7 @@ __gshared immutable RGBColorSpaceDesc!F[RGBColorSpace.max + 1] rgbColorSpaceDefs
     RGBColorSpaceDesc!F("PAL/SECAM",        &linearToRec601!F,       &rec601ToLinear!F,       WhitePoint!F.D65, xyY!F(0.6400, 0.3300, 0.222021), xyY!F(0.2900, 0.6000, 0.706645), xyY!F(0.1500, 0.0600, 0.071334)),
 //  RGBColorSpaceDesc!F("Rec601 PAL/SECAM", &linearToRec601!F,       &rec601ToLinear!F,       WhitePoint!F.D65, xyY!F(0.6400, 0.3300, 0.299),    xyY!F(0.2900, 0.6000, 0.587),    xyY!F(0.1500, 0.0600, 0.114)), // what's with the Y difference?
     RGBColorSpaceDesc!F("HDTV",             &linearToRec601!F,       &rec601ToLinear!F,       WhitePoint!F.D65, xyY!F(0.6400, 0.3300, 0.212656), xyY!F(0.3000, 0.6000, 0.715158), xyY!F(0.1500, 0.0600, 0.072186)),
-    RGBColorSpaceDesc!F("UHDTV",            &linearToRec2020!F,      &rec2020ToLinear!F,      WhitePoint!F.D65, xyY!F(0.708,  0.292,  0.2627),   xyY!F(0.170,  0.797,  0.6780),   xyY!F(0.131,  0.046,  0.0593)),
+    RGBColorSpaceDesc!F("UHDTV",            &linearToRec2020!F,      &rec2020ToLinear!F,      WhitePoint!F.D65, xyY!F(0.7080, 0.2920, 0.262698), xyY!F(0.1700, 0.7970, 0.678009), xyY!F(0.1310, 0.0460, 0.059293)),
 
     RGBColorSpaceDesc!F("Adobe RGB",        &linearToGamma!(2.2, F), &gammaToLinear!(2.2, F), WhitePoint!F.D65, xyY!F(0.6400, 0.3300, 0.297361), xyY!F(0.2100, 0.7100, 0.627355), xyY!F(0.1500, 0.0600, 0.075285)),
     RGBColorSpaceDesc!F("Wide Gamut RGB",   &linearToGamma!(2.2, F), &gammaToLinear!(2.2, F), WhitePoint!F.D50, xyY!F(0.7350, 0.2650, 0.258187), xyY!F(0.1150, 0.8260, 0.724938), xyY!F(0.1570, 0.0180, 0.016875)),
@@ -355,8 +355,8 @@ __gshared immutable RGBColorSpaceDesc!F[RGBColorSpace.max + 1] rgbColorSpaceDefs
     RGBColorSpaceDesc!F("DonRGB 4",         &linearToGamma!(2.2, F), &gammaToLinear!(2.2, F), WhitePoint!F.D50, xyY!F(0.6960, 0.3000, 0.278350), xyY!F(0.2150, 0.7650, 0.687970), xyY!F(0.1300, 0.0350, 0.033680)),
     RGBColorSpaceDesc!F("Ekta Space PS5",   &linearToGamma!(2.2, F), &gammaToLinear!(2.2, F), WhitePoint!F.D50, xyY!F(0.6950, 0.3050, 0.260629), xyY!F(0.2600, 0.7000, 0.734946), xyY!F(0.1100, 0.0050, 0.004425)),
 
-    RGBColorSpaceDesc!F("DCI-P3 Theater",   &linearToGamma!(2.6, F), &gammaToLinear!(2.6, F), WhitePoint!F.DCI, xyY!F(0.6800, 0.3200, 1.0),      xyY!F(0.2650, 0.6900, 1.0),      xyY!F(0.1500, 0.0600, 1.0)),
-    RGBColorSpaceDesc!F("DCI-P3 D65",       &linearToGamma!(2.6, F), &gammaToLinear!(2.6, F), WhitePoint!F.D65, xyY!F(0.6800, 0.3200, 1.0),      xyY!F(0.2650, 0.6900, 1.0),      xyY!F(0.1500, 0.0600, 1.0)),
+    RGBColorSpaceDesc!F("DCI-P3 Theater",   &linearToGamma!(2.6, F), &gammaToLinear!(2.6, F), WhitePoint!F.DCI, xyY!F(0.6800, 0.3200, 0.228975), xyY!F(0.2650, 0.6900, 0.691739), xyY!F(0.1500, 0.0600, 0.079287)),
+    RGBColorSpaceDesc!F("DCI-P3 D65",       &linearToGamma!(2.6, F), &gammaToLinear!(2.6, F), WhitePoint!F.D65, xyY!F(0.6800, 0.3200, 0.228973), xyY!F(0.2650, 0.6900, 0.691752), xyY!F(0.1500, 0.0600, 0.079275)),
 ];
 
 __gshared immutable F[3][3][ChromaticAdaptationMethod.max + 1] chromaticAdaptationMatrices(F) = [
