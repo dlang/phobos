@@ -996,11 +996,11 @@ enum ParameterStorageClass : uint
      * class.
      */
     none    = 0,
-    scope_  = 0b000_1,  /// ditto
-    out_    = 0b001_0,  /// ditto
-    ref_    = 0b010_0,  /// ditto
-    lazy_   = 0b100_0,  /// ditto
-    return_ = 0b1000_0, /// ditto
+    scope_  = 1,    /// ditto
+    out_    = 2,    /// ditto
+    ref_    = 4,    /// ditto
+    lazy_   = 8,    /// ditto
+    return_ = 0x10, /// ditto
 }
 
 /// ditto
