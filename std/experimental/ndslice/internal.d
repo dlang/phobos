@@ -1,11 +1,303 @@
 module std.experimental.ndslice.internal;
 
+import std.range.primitives;
 import std.traits;
-import std.meta; //: AliasSeq, anySatisfy, Filter, Reverse;
+import std.meta;
+import std.experimental.ndslice.slice;
+
+template PtrTuple(Names...)
+{
+    @LikePtr struct PtrTuple(Ptrs...)
+        if (allSatisfy!(isSlicePointer, Ptrs) && Ptrs.length == Names.length)
+    {
+        Ptrs ptrs;
+
+        void opOpAssign(string op)(sizediff_t shift)
+            if (op == `+` || op == `-`)
+        {
+            foreach (ref ptr; ptrs)
+                mixin (`ptr ` ~ op ~ `= shift;`);
+        }
+
+        auto opBinary(string op)(sizediff_t shift)
+            if (op == `+` || op == `-`)
+        {
+            auto ret = this;
+            ret.opOpAssign!op(shift);
+            return ret;
+        }
+
+        public struct Index
+        {
+            Ptrs _ptrs__;
+            mixin (PtrTupleFrontMembers!Names);
+        }
+
+        auto opIndex(sizediff_t index)
+        {
+            auto p = ptrs;
+            foreach (ref ptr; p)
+                ptr += index;
+            return Index(p);
+        }
+    }
+}
+
+// ISSUE 16501
+unittest
+{
+    import std.experimental.ndslice;
+    alias sab = sliced!("a", "b");
+    auto sl = sab(new double[12], new double[12], 3, 4);
+    auto psl = sl.pack!1;
+}
+
+
+struct PtrShell(Range)
+{
+    sizediff_t _shift;
+    Range _range;
+
+    enum hasAccessByRef = isPointer!Range ||
+        __traits(compiles, &_range[0]);
+
+    void opOpAssign(string op)(sizediff_t shift)
+        if (op == `+` || op == `-`)
+    {
+        mixin (`_shift ` ~ op ~ `= shift;`);
+    }
+
+    auto opBinary(string op)(sizediff_t shift)
+        if (op == `+` || op == `-`)
+    {
+        mixin (`return typeof(this)(_shift ` ~ op ~ ` shift, _range);`);
+    }
+
+    auto opUnary(string op)()
+        if (op == `++` || op == `--`)
+    {
+        mixin(op ~ `_shift;`);
+        return this;
+    }
+
+    auto ref opIndex(sizediff_t index)
+    in
+    {
+        assert(_shift + index >= 0);
+        static if (hasLength!Range)
+            assert(_shift + index <= _range.length);
+    }
+    body
+    {
+        return _range[_shift + index];
+    }
+
+    static if (!hasAccessByRef)
+    {
+        auto ref opIndexAssign(T)(T value, sizediff_t index)
+        in
+        {
+            assert(_shift + index >= 0);
+            static if (hasLength!Range)
+                assert(_shift + index <= _range.length);
+        }
+        body
+        {
+            return _range[_shift + index] = value;
+        }
+
+        auto ref opIndexOpAssign(string op, T)(T value, sizediff_t index)
+        in
+        {
+            assert(_shift + index >= 0);
+            static if (hasLength!Range)
+                assert(_shift + index <= _range.length);
+        }
+        body
+        {
+            mixin (`return _range[_shift + index] ` ~ op ~ `= value;`);
+        }
+
+        auto ref opIndexUnary(string op)(sizediff_t index)
+        in
+        {
+            assert(_shift + index >= 0);
+            static if (hasLength!Range)
+                assert(_shift + index <= _range.length);
+        }
+        body
+        {
+            mixin (`return ` ~ op ~ `_range[_shift + index];`);
+        }
+    }
+
+    auto save() @property
+    {
+        return this;
+    }
+}
+
+auto ptrShell(Range)(Range range, sizediff_t shift = 0)
+{
+    return PtrShell!Range(shift, range);
+}
+
+@safe pure nothrow unittest
+{
+    import std.internal.test.dummyrange;
+    foreach (RB; AliasSeq!(ReturnBy.Reference, ReturnBy.Value))
+    {
+        DummyRange!(RB, Length.Yes, RangeType.Random) range;
+        range.reinit;
+        assert(range.length >= 10);
+        auto ptr = range.ptrShell;
+        assert(ptr[0] == range[0]);
+        auto save0 = range[0];
+        ptr[0] += 10;
+        ++ptr[0];
+        assert(ptr[0] == save0 + 11);
+        (ptr + 5)[2] = 333;
+        assert(range[7] == 333);
+
+        auto ptrCopy = ptr.save;
+        ptrCopy._range.popFront;
+        ptr[1] = 2;
+        assert(ptr[0] == save0 + 11);
+        assert(ptrCopy[0] == 2);
+    }
+}
+
+private template PtrTupleFrontMembers(Names...)
+    if (Names.length <= 32)
+{
+    static if (Names.length)
+    {
+        alias Top = Names[0..$-1];
+        enum int m = Top.length;
+        enum PtrTupleFrontMembers = PtrTupleFrontMembers!Top
+        ~ "
+        @property auto ref " ~ Names[$-1] ~ "() {
+            return _ptrs__[" ~ m.stringof ~ "][0];
+        }
+        static if (!__traits(compiles, &(_ptrs__[" ~ m.stringof ~ "][0])))
+        @property auto ref " ~ Names[$-1] ~ "(T)(auto ref T value) {
+            return _ptrs__[" ~ m.stringof ~ "][0] = value;
+        }
+        ";
+    }
+    else
+    {
+        enum PtrTupleFrontMembers = "";
+    }
+}
+
+@LikePtr struct Pack(size_t N, Range)
+{
+    alias Elem = Slice!(N, Range);
+    alias PureN = Elem.PureN;
+    alias PureRange = Elem.PureRange;
+
+    size_t[PureN] _lengths;
+    sizediff_t[PureN] _strides;
+
+    SlicePtr!PureRange _ptr;
+    mixin PropagatePtr;
+
+    Elem opIndex(size_t index)
+    {
+        return Elem(_lengths, _strides, _ptr + index);
+    }
+}
+
+@LikePtr struct Map(Range, alias fun)
+{
+    Range _ptr;
+    mixin PropagatePtr;
+
+    auto ref opIndex(size_t index)
+    {
+        return fun(_ptr[index]);
+    }
+}
+
+private mixin template PropagatePtr()
+{
+    void opOpAssign(string op)(sizediff_t shift)
+        if (op == `+` || op == `-`)
+    {
+        mixin (`_ptr ` ~ op ~ `= shift;`);
+    }
+
+    auto opBinary(string op)(sizediff_t shift)
+        if (op == `+` || op == `-`)
+    {
+        auto ret = this;
+        ret.opOpAssign!op(shift);
+        return ret;
+    }
+
+    auto opUnary(string op)()
+        if (op == `++` || op == `--`)
+    {
+        mixin(op ~ `_ptr;`);
+        return this;
+    }
+}
 
 struct LikePtr {}
 
-alias isMemory = isPointer;
+template SlicePtr(Range)
+{
+    static if (hasPtrBehavior!Range)
+        alias SlicePtr = Range;
+    else
+        alias SlicePtr = PtrShell!Range;
+}
+
+enum isSlicePointer(T) = isPointer!T || is(T : PtrShell!R, R);
+
+template hasPtrBehavior(T)
+{
+    static if (isPointer!T)
+        enum hasPtrBehavior = true;
+    else
+    static if (!isAggregateType!T)
+        enum hasPtrBehavior = false;
+    else
+        enum hasPtrBehavior = hasUDA!(T, LikePtr);
+}
+
+alias RangeOf(T : Slice!(N, Range), size_t N, Range) = Range;
+
+template isMemory(T)
+{
+    import std.experimental.ndslice.slice : PtrTuple;
+    import std.experimental.ndslice.selection : Map, Pack;
+    static if (isPointer!T)
+        enum isMemory = true;
+    else
+    static if (is(T : Map!(Range, fun), Range, alias fun))
+        enum isMemory = .isMemory!Range;
+    else
+    static if (__traits(compiles, __traits(isSame, PtrTuple, TemplateOf!(TemplateOf!T))))
+        static if (__traits(isSame, PtrTuple, TemplateOf!(TemplateOf!T)))
+            enum isMemory = allSatisfy!(.isMemory, TemplateArgsOf!T);
+        else
+            enum isMemory = false;
+    else
+        enum isMemory = false;
+}
+
+unittest
+{
+    import std.experimental.ndslice.slice : PtrTuple;
+    import std.experimental.ndslice.selection : Map;
+    static assert(isMemory!(int*));
+    alias R = PtrTuple!("a", "b");
+    alias F = R!(double*, double*);
+    static assert(isMemory!F);
+    static assert(isMemory!(Map!(F, a => a)));
+}
 
 enum indexError(size_t pos, size_t N) =
     "index at position " ~ pos.stringof

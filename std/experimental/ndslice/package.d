@@ -63,11 +63,10 @@ matrix.diagonal[] = 1;
 auto row = matrix[2];
 row[3] = 6;
 assert(matrix[2, 3] == 6); // D & C index order
-assert(matrix(3, 2) == 6); // Math & Fortran index order
 ------
 
 Note:
-In many examples $(LINK2 std_experimental_ndslice_selection.html#iotaSlice, iotaSlice) is used
+In many examples $(SUBREF selection, iotaSlice) is used
 instead of a regular array, which makes it
 possible to carry out tests without memory allocation.
 
@@ -75,11 +74,11 @@ $(SCRIPT inhibitQuickIndex = 1;)
 
 $(DIVC quickindex,
 $(BOOKTABLE ,
-$(TR $(TH Category) $(TH Submodule) $(TH Declarations)
-)
-$(TR $(TDNW Basic Level
+
+$(TR $(TH Submodule) $(TH Declarations))
+
+$(TR $(TDNW $(SUBMODULE slice)
         $(BR) $(SMALL $(SUBREF slice, Slice), its properties, operator overloading))
-     $(TDNW $(SUBMODULE slice))
      $(TD
         $(SUBREF slice, sliced)
         $(SUBREF slice, Slice)
@@ -95,9 +94,8 @@ $(TR $(TDNW Basic Level
         $(SUBREF slice, SliceException)
     )
 )
-$(TR $(TDNW Medium Level
-        $(BR) $(SMALL Various iteration operators))
-     $(TDNW $(SUBMODULE iteration))
+$(TR $(TDNW $(SUBMODULE iteration)
+        $(BR) $(SMALL Basic iteration operators))
      $(TD
         $(SUBREF iteration, transposed)
         $(SUBREF iteration, strided)
@@ -109,10 +107,9 @@ $(TR $(TDNW Medium Level
         $(SUBREF iteration, dropToHypercube) and other `drop` primitives
     )
 )
-$(TR $(TDNW Advanced Level $(BR)
-        $(SMALL Abstract operators for loop free programming
-            $(BR) Take `movingWindowByChannel` as an example))
-     $(TDNW $(SUBMODULE selection))
+
+$(TR $(TDNW $(SUBMODULE selection)
+        $(BR) $(SMALL Subspace manipulations $(BR) Operators for loop free programming))
      $(TD
         $(SUBREF selection, blocks)
         $(SUBREF selection, windows)
@@ -120,6 +117,7 @@ $(TR $(TDNW Advanced Level $(BR)
         $(SUBREF selection, reshape)
         $(SUBREF selection, byElement)
         $(SUBREF selection, byElementInStandardSimplex)
+        $(SUBREF selection, mapSlice)
         $(SUBREF selection, indexSlice)
         $(SUBREF selection, iotaSlice)
         $(SUBREF selection, repeatSlice)
@@ -169,12 +167,9 @@ Returns:
 Slice!(3, C*) movingWindowByChannel(alias filter, C)
 (Slice!(3, C*) image, size_t nr, size_t nc)
 {
-    import std.algorithm.iteration : map;
-    import std.array : array;
-
         // 0. 3D
         // The last dimension represents the color channel.
-    auto wnds = image
+    return image
         // 1. 2D composed of 1D
         // Packs the last dimension.
         .pack!1
@@ -189,21 +184,11 @@ Slice!(3, C*) movingWindowByChannel(alias filter, C)
         .transposed!(0, 1, 4)
         // 5. 3D Composed of 2D
         // Packs the last two dimensions.
-        .pack!2;
-
-    return wnds
-        // 6. Range composed of 2D
-        // Gathers all windows in the range.
-        .byElement
-        // 7. Range composed of pixels
+        .pack!2
         // 2D to pixel lazy conversion.
-        .map!filter
-        // 8. `C[]`
-        // The only memory allocation in this function.
-        .array
-        // 9. 3D
-        // Returns slice with corresponding shape.
-        .sliced(wnds.shape);
+        .mapSlice!filter
+        // Creates the new image. The only memory allocation in this function.
+        .slice;
 }
 -------
 
@@ -218,15 +203,16 @@ Params:
 Returns:
     median value over the range `r`
 +/
-T median(Range, T)(Range r, T[] buf)
+T median(Range, T)(Slice!(2, Range) sl, T[] buf)
 {
     import std.algorithm.sorting : topN;
+    // copy sl to the buffer
     size_t n;
-    foreach (e; r)
-        buf[n++] = e;
-    auto m = n >> 1;
-    buf[0 .. n].topN(m);
-    return buf[m];
+    foreach (r; sl)
+        foreach (e; r)
+            buf[n++] = e;
+    buf[0 .. n].topN(n / 2);
+    return buf[n / 2];
 }
 -------
 
@@ -264,7 +250,7 @@ void main(string[] args)
         auto ret = image.pixels
             .sliced(cast(size_t)image.h, cast(size_t)image.w, cast(size_t)image.c)
             .movingWindowByChannel
-                !(window => median(window.byElement, buf))
+                !(window => median(window, buf))
                  (nr, nc);
 
         write_image(
@@ -311,10 +297,10 @@ Acknowledgements:   John Loughran Colvin
 Source:    $(PHOBOSSRC std/_experimental/_ndslice/_package.d)
 
 Macros:
-SUBMODULE = $(MREF std, experimental, ndslice, $1)
+SUBMODULE = $(MREF_ALTTEXT $1, std,experimental, ndslice, $1)
 SUBREF = $(REF_ALTTEXT $(TT $2), $2, std,experimental, ndslice, $1)$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
-T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
+TDNW2 = <td class="donthyphenate nobr" rowspan="2">$0</td>
 */
 module std.experimental.ndslice;
 
@@ -340,37 +326,33 @@ unittest
     static Slice!(3, ubyte*) movingWindowByChannel
     (Slice!(3, ubyte*) image, size_t nr, size_t nc, ubyte delegate(Slice!(2, ubyte*)) filter)
     {
-        import std.algorithm.iteration : map;
-        import std.array : array;
-        auto wnds = image
+        return image
             .pack!1
             .windows(nr, nc)
             .unpack
             .transposed!(0, 1, 4)
-            .pack!2;
-        return wnds
-            .byElement
-            .map!filter
-            .array
-            .sliced(wnds.shape);
+            .pack!2
+            .mapSlice!filter
+            .slice;
     }
 
-    static T median(Range, T)(Range r, T[] buf)
+    static T median(Range, T)(Slice!(2, Range) sl, T[] buf)
     {
         import std.algorithm.sorting : topN;
+        // copy sl to the buffer
         size_t n;
-        foreach (e; r)
-            buf[n++] = e;
-        auto m = n >> 1;
-        buf[0 .. n].topN(m);
-        return buf[m];
+        foreach (r; sl)
+            foreach (e; r)
+                buf[n++] = e;
+        buf[0 .. n].topN(n / 2);
+        return buf[n / 2];
     }
 
     import std.conv : to;
     import std.getopt : getopt, defaultGetoptPrinter;
     import std.path : stripExtension;
 
-    auto args = ["std"];
+    auto args = ["bin", "image"];
     uint nr, nc, def = 3;
     auto helpInformation = args.getopt(
         "nr", "number of rows in window, default value is " ~ def.to!string, &nr,
@@ -391,7 +373,7 @@ unittest
     {
         auto ret =
             movingWindowByChannel
-                 (new ubyte[300].sliced(10, 10, 3), nr, nc, window => median(window.byElement, buf));
+                 (new ubyte[300].sliced(10, 10, 3), nr, nc, window => median(window, buf));
     }
 }
 
