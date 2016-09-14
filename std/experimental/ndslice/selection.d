@@ -32,6 +32,7 @@ $(T2 byElementInStandardSimplex, an input range of all elements in standard simp
     If the slice has two dimensions, it is a range of all elements of upper left triangular matrix.)
 $(T2 indexSlice, lazy slice with initial multidimensional index)
 $(T2 iotaSlice, lazy slice with initial flattened (continuous) index)
+$(T2 repeatSlice, slice with identical values)
 $(T2 reshape, new slice with changed dimensions for the same data)
 $(T2 diagonal, 1-dimensional slice composed of diagonal elements)
 $(T2 blocks, n-dimensional slice composed of n-dimensional non-overlapping blocks.
@@ -1802,4 +1803,155 @@ struct IotaMap()
         pragma(inline, true);
         return index;
     }
+}
+
+/++
+Returns a slice with identical elements.
+`RepeatSlice` stores only single value.
+Params:
+    lengths = list of dimension lengths
+Returns:
+    `n`-dimensional slice composed of identical values, where `n` is dimension count.
+See_also: $(REF repeat, std,range)
++/
+RepeatSlice!(Lengths.length, T) repeatSlice(T, Lengths...)(T value, Lengths lengths)
+    if (allSatisfy!(isIndex, Lengths) && !is(T : Slice!(N, Range), size_t N, Range))
+{
+    typeof(return) ret;
+    foreach (i; Iota!(0, ret.N))
+        ret._lengths[i] = lengths[i];
+    ret._ptr = RepeatPtr!T(value);
+    return ret;
+}
+
+/// ditto
+Slice!(Lengths.length, Slice!(N + 1, Range)) repeatSlice(size_t N, Range, Lengths...)(auto ref Slice!(N, Range) slice, Lengths lengths)
+    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
+{
+    enum M = Lengths.length;
+    typeof(return) ret;
+    ret._ptr = slice._ptr;
+    foreach (i; Iota!(0, M))
+        ret._lengths[i] = lengths[i];
+    foreach (i; Iota!(0, N))
+    {
+        ret._lengths[M + i] = slice._lengths[i];
+        ret._strides[M + i] = slice._strides[i];
+    }
+    return ret;
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto sl = iotaSlice(3)
+        .repeatSlice(4);
+    assert(sl == [[0, 1, 2],
+                  [0, 1, 2],
+                  [0, 1, 2],
+                  [0, 1, 2]]);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.experimental.ndslice.iteration : transposed;
+
+    auto sl = iotaSlice(3)
+        .repeatSlice(4)
+        .unpack
+        .transposed;
+
+    assert(sl == [[0, 0, 0, 0],
+                  [1, 1, 1, 1],
+                  [2, 2, 2, 2]]);
+}
+
+///
+pure nothrow unittest
+{
+    import std.experimental.ndslice.slice : slice;
+
+    auto sl = iotaSlice([3], 6).slice;
+    auto slC = sl.repeatSlice(2, 3);
+    sl[1] = 4;
+    assert(slC == [[[6, 4, 8],
+                    [6, 4, 8],
+                    [6, 4, 8]],
+                   [[6, 4, 8],
+                    [6, 4, 8],
+                    [6, 4, 8]]]);
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto sl = repeatSlice(4.0, 2, 3);
+    assert(sl == [[4.0, 4.0, 4.0],
+                  [4.0, 4.0, 4.0]]);
+
+    static assert(is(DeepElementType!(typeof(sl)) == double));
+
+    sl[1, 1] = 3;
+    assert(sl == [[3.0, 3.0, 3.0],
+                  [3.0, 3.0, 3.0]]);
+}
+
+/++
+Slice composed of identical values.
++/
+template  RepeatSlice(size_t N, T)
+    if (N)
+{
+    alias RepeatSlice = Slice!(N, RepeatPtr!T);
+}
+
+// undocumented
+// zero cost variant of `std.range.repeat`
+// in addition, the internal value is mutable
+@LikePtr struct RepeatPtr(T)
+{
+    // UT definition is from std.range
+    // Store a non-qualified T when possible: This is to make RepeatPtr assignable
+    static if ((is(T == class) || is(T == interface)) && (is(T == const) || is(T == immutable)))
+    {
+        import std.typecons : Rebindable;
+        private alias UT = Rebindable!T;
+    }
+    else static if (is(T : Unqual!T) && is(Unqual!T : T))
+        private alias UT = Unqual!T;
+    else
+        private alias UT = T;
+    private UT _value;
+
+    ref T opIndex(sizediff_t)
+    {
+        return _value;
+    }
+
+    void opOpAssign(string op)(sizediff_t)
+        if (op == `+` || op == `-`)
+    {
+    }
+
+    auto opBinary(string op)(sizediff_t)
+        if (op == `+` || op == `-`)
+    {
+        return this;
+    }
+
+    auto ref opUnary(string op)()
+        if (op == `++` || op == `--`)
+    {
+        return this;
+    }
+}
+
+@safe pure nothrow @nogc unittest
+{
+    RepeatPtr!double val;
+    val._value = 3;
+    assert((++val)._value == 3);
+    val += 2;
+    assert((val + 3)._value == 3);
 }

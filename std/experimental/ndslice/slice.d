@@ -3270,8 +3270,6 @@ unittest
 
 private enum isSlicePointer(T) = isPointer!T || is(T : PtrShell!R, R);
 
-private struct LikePtr {}
-
 package template hasPtrBehavior(T)
 {
     static if (isPointer!T)

@@ -3,7 +3,7 @@ module std.experimental.ndslice.internal;
 import std.traits;
 import std.meta; //: AliasSeq, anySatisfy, Filter, Reverse;
 
-package:
+struct LikePtr {}
 
 alias isMemory = isPointer;
 
