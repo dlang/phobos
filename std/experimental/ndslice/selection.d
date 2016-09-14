@@ -940,13 +940,11 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
 
             bool empty() const @property
             {
-                pragma(inline, true);
                 return _length == 0;
             }
 
             size_t length() const @property
             {
-                pragma(inline, true);
                 return _length;
             }
 
@@ -1007,7 +1005,6 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
 
             void popBack()
             {
-                pragma(inline, true);
                 assert(_length != 0);
                 _length--;
             }
@@ -1047,7 +1044,6 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
             }
             body
             {
-                pragma(inline, true);
                 _length -= n;
             }
 
@@ -1164,13 +1160,11 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
             }
             body
             {
-                pragma(inline, true);
                 return typeof(return)(i, j);
             }
 
             size_t[N] index() @property
             {
-                pragma(inline, true);
                 return _indexes;
             }
         }
@@ -1454,13 +1448,11 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
 
             bool empty() const @property
             {
-                pragma(inline, true);
                 return _length == 0;
             }
 
             size_t length() const @property
             {
-                pragma(inline, true);
                 return _length;
             }
 
@@ -1479,14 +1471,12 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
             static if (PureN == 1 && isMutable!DeepElemType && !hasAccessByRef)
             auto front(E)(E elem) @property
             {
-                pragma(inline, true);
                 assert(!this.empty);
                 return _slice._ptr[0] = elem;
             }
 
             void popFront()
             {
-                pragma(inline, true);
                 assert(_length != 0);
                 _length--;
                 popFrontImpl;
@@ -1511,7 +1501,6 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
 
             size_t[N] index() @property
             {
-                pragma(inline, true);
                 return _indexes;
             }
         }
@@ -1688,7 +1677,6 @@ template IndexSlice(size_t N)
 
         size_t[N] opIndex(size_t index) const
         {
-            pragma(inline, true);
             size_t[N] indexes = void;
             foreach_reverse (i; Iota!(0, N - 1))
             {
