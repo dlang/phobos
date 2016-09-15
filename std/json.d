@@ -616,7 +616,7 @@ struct JSONValue
     }
 
     /// Implements the foreach $(D opApply) interface for json arrays.
-    int opApply(int delegate(size_t index, ref JSONValue) dg) @system
+    int opApply(scope int delegate(size_t index, ref JSONValue) dg) @system
     {
         int result;
 
@@ -631,7 +631,7 @@ struct JSONValue
     }
 
     /// Implements the foreach $(D opApply) interface for json objects.
-    int opApply(int delegate(string key, ref JSONValue) dg) @system
+    int opApply(scope int delegate(string key, ref JSONValue) dg) @system
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");

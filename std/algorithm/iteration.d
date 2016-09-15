@@ -982,7 +982,7 @@ template each(alias pred = "a")
     static class S
     {
         int x;
-        int opApply(int delegate(ref int _x) dg) { return dg(x); }
+        int opApply(scope int delegate(ref int _x) dg) { return dg(x); }
     }
 
     auto s = new S;
@@ -2862,7 +2862,7 @@ The number of seeds must be correspondingly increased.
     {
         bool actEmpty;
 
-        int opApply(int delegate(ref int) dg)
+        int opApply(scope int delegate(ref int) dg)
         {
             int res;
             if (actEmpty) return res;
