@@ -221,7 +221,7 @@ ElementType!String[] array(String)(String str) if (isNarrowString!String)
 
     static struct OpApply
     {
-        int opApply(int delegate(ref int) dg)
+        int opApply(scope int delegate(ref int) dg)
         {
             int res;
             foreach (i; 0..10)

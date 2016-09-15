@@ -5633,7 +5633,7 @@ enum bool isIterable(T) = is(typeof({ foreach (elem; T.init) {} }));
 {
     struct OpApply
     {
-        int opApply(int delegate(ref uint) dg) { assert(0); }
+        int opApply(scope int delegate(ref uint) dg) { assert(0); }
     }
 
     struct Range
