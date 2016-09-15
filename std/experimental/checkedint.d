@@ -935,6 +935,7 @@ static:
     Params:
     rhs = The right-hand side value in the assignment, after the operator has
     been evaluated
+    bound = The value of the bound being violated
 
     Returns: Nominally the result is the desired value of the operator, which
     will be forwarded as result. For `Abort`, the function never returns because
@@ -1000,9 +1001,9 @@ static:
     Called automatically upon an overflow during a unary or binary operation.
 
     Params:
-    Lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
-      the operator is `Checked!int`
-    Rhs = The right-hand side type involved in the operator
+    x = The operator, e.g. `-`
+    lhs = The left-hand side (or sole) argument
+    rhs = The right-hand side type involved in the operator
 
     Returns: Nominally the result is the desired value of the operator, which
     will be forwarded as result. For `Abort`, the function never returns because
@@ -1074,6 +1075,7 @@ static:
     Params:
     rhs = The right-hand side value in the assignment, after the operator has
     been evaluated
+    bound = The bound being violated
 
     Returns: `cast(Lhs) rhs`
     */
@@ -1138,6 +1140,7 @@ static:
     Called automatically upon an overflow during a unary or binary operation.
 
     Params:
+    x = The operator involved
     Lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
       the operator is `Checked!int`
     Rhs = The right-hand side type involved in the operator
@@ -1200,6 +1203,13 @@ struct ProperCompare
     hookOpEquals(x, y)) and $(D hookOpEquals(y, z)) then $(D hookOpEquals(y,
     z)), in case `x`, `y`, and `z` are a mix of integral and floating-point
     numbers.
+
+    Params:
+    lhs = The left-hand side of the comparison for equality
+    rhs = The right-hand side of the comparison for equality
+
+    Returns:
+    The result of the comparison, `true` if the values are equal
     */
     static bool hookOpEquals(L, R)(L lhs, R rhs)
     {
@@ -1257,6 +1267,14 @@ struct ProperCompare
     number, $(D hookOpEquals(x, y)) returns a floating-point number that is `-1`
     if `x < y`, `0` if `x == y`, `1` if `x > y`, and `NaN` if the floating-point
     number is `NaN`.
+
+    Params:
+    lhs = The left-hand side of the comparison for ordering
+    rhs = The right-hand side of the comparison for ordering
+
+    Returns:
+    The result of the comparison (negative if $(D lhs < rhs), positive if $(D
+    lhs > rhs), `0` if the values are equal)
     */
     static auto hookOpCmp(L, R)(L lhs, R rhs)
     {
@@ -1387,9 +1405,8 @@ static:
     failures.
 
     Params:
-    Lhs = The target of the assignment (`Lhs` is the first argument to
-    `Checked`)
     Rhs = The right-hand side type in the assignment
+    T = The bound type (value of the bound is not used)
 
     Returns: `WithNaN.defaultValue!Lhs`
     */
@@ -1656,10 +1673,9 @@ static:
     not fit in `Lhs` without loss of information or a change in sign.
 
     Params:
-    Lhs = The target of the assignment (`Lhs` is the first argument to
-    `Checked`)
     Rhs = The right-hand side type in the assignment, after the operation has
     been computed
+    bound = The bound being violated
 
     Returns: `Lhs.max` if $(D rhs >= 0), `Lhs.min` otherwise.
 
@@ -1784,6 +1800,14 @@ $(LI Otherwise, set `overflow` to `true` and return an unspecified value)
 The implementation exploits properties of types and operations to minimize
 additional work.
 
+Params:
+x = The binary operator involved, e.g. `/`
+lhs = The left-hand side of the operator
+rhs = The right-hand side of the operator
+error = The error indicator (assigned `true` in case there's an error)
+
+Returns:
+The result of the operation, which is the same as the built-in operator
 */
 typeof(L() + R()) opChecked(string x, L, R)(const L lhs, const R rhs,
     ref bool error)
