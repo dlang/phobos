@@ -189,7 +189,7 @@ help of a `Hook` type. The type wrapped must be one of the predefined integrals
 (unqualified), or another instance of `Checked`.
 */
 struct Checked(T, Hook = Abort)
-if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
+if (isIntegral!T || is(T == Checked!(U, H), U, H))
 {
     import std.algorithm.comparison : among;
     import std.traits : hasMember;
@@ -224,6 +224,9 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         auto x = checked(ubyte(42));
         static assert(is(typeof(x.get()) == ubyte));
         assert(x.get == 42);
+        const y = checked(ubyte(42));
+        static assert(is(typeof(y.get()) == const ubyte));
+        assert(y.get == 42);
     }
 
     /**
@@ -261,7 +264,10 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
         is(U == Checked!(V, W), V, W) &&
             is(typeof(Checked!(T, Hook)(rhs.get))))
     {
-        opAssign(rhs);
+        static if (isIntegral!U)
+            payload = rhs;
+        else
+            payload = rhs.payload;
     }
     ///
     unittest
@@ -313,7 +319,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     returned.
 
     */
-    U opCast(U)()
+    U opCast(U, this _)()
     if (isIntegral!U || isFloatingPoint!U || is(U == bool))
     {
         static if (hasMember!(Hook, "hookOpCast"))
@@ -366,7 +372,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     priority is given to the left-hand side.
 
     */
-    bool opEquals(U)(U rhs)
+    bool opEquals(U, this _)(U rhs)
     if (isIntegral!U || isFloatingPoint!U || is(U == bool) ||
         is(U == Checked!(V, W), V, W) && is(typeof(this == rhs.payload)))
     {
@@ -447,7 +453,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     priority is given to the left-hand side.
 
     */
-    auto opCmp(U)(const U rhs) //const pure @safe nothrow @nogc
+    auto opCmp(U, this _)(const U rhs) //const pure @safe nothrow @nogc
     if (isIntegral!U || isFloatingPoint!U || is(U == bool))
     {
         static if (hasMember!(Hook, "hookOpCmp"))
@@ -472,7 +478,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     }
 
     /// ditto
-    auto opCmp(U, Hook1)(Checked!(U, Hook1) rhs)
+    auto opCmp(U, Hook1, this _)(Checked!(U, Hook1) rhs)
     {
         alias R = typeof(payload + rhs.payload);
         static if (valueConvertible!(T, R) && valueConvertible!(U, R))
@@ -554,7 +560,7 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     value has no positive negation.
 
     */
-    auto opUnary(string op)()
+    auto opUnary(string op, this _)()
     if (op == "+" || op == "-" || op == "~")
     {
         static if (op == "+")
@@ -643,6 +649,18 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     auto opBinary(string op, Rhs)(const Rhs rhs)
     if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool))
     {
+        return opBinaryImpl!(op, Rhs, typeof(this))(rhs);
+    }
+
+    /// ditto
+    auto opBinary(string op, Rhs)(const Rhs rhs) const
+    if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool))
+    {
+        return opBinaryImpl!(op, Rhs, typeof(this))(rhs);
+    }
+
+    private auto opBinaryImpl(string op, Rhs, this _)(const Rhs rhs)
+    {
         alias R = typeof(payload + rhs);
         static assert(is(typeof(mixin("payload" ~ op ~ "rhs")) == R));
         static if (isIntegral!R) alias Result = Checked!(R, Hook);
@@ -677,6 +695,18 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
 
     /// ditto
     auto opBinary(string op, U, Hook1)(Checked!(U, Hook1) rhs)
+    {
+        return opBinaryImpl2!(op, U, Hook1, typeof(this))(rhs);
+    }
+
+    /// ditto
+    auto opBinary(string op, U, Hook1)(Checked!(U, Hook1) rhs) const
+    {
+        return opBinaryImpl2!(op, U, Hook1, typeof(this))(rhs);
+    }
+
+    private
+    auto opBinaryImpl2(string op, U, Hook1, this _)(Checked!(U, Hook1) rhs)
     {
         alias R = typeof(get + rhs.payload);
         static if (valueConvertible!(T, R) && valueConvertible!(U, R) ||
@@ -723,6 +753,18 @@ if (isIntegral!T && is(T == Unqual!T) || is(T == Checked!(U, H), U, H))
     */
     auto opBinaryRight(string op, Lhs)(const Lhs lhs)
     if (isIntegral!Lhs || isFloatingPoint!Lhs || is(Lhs == bool))
+    {
+        return opBinaryRightImpl!(op, Lhs, typeof(this))(lhs);
+    }
+
+    /// ditto
+    auto opBinaryRight(string op, Lhs)(const Lhs lhs) const
+    if (isIntegral!Lhs || isFloatingPoint!Lhs || is(Lhs == bool))
+    {
+        return opBinaryRightImpl!(op, Lhs, typeof(this))(lhs);
+    }
+
+    private auto opBinaryRightImpl(string op, Lhs, this _)(const Lhs lhs)
     {
         static if (hasMember!(Hook, "hookOpBinaryRight"))
         {
@@ -847,7 +889,13 @@ unittest
 // get
 unittest
 {
-    assert(Checked!(ubyte, void)(ubyte(22)).get == 22);
+    void test(T)()
+    {
+        assert(Checked!(T, void)(ubyte(22)).get == 22);
+    }
+    test!ubyte;
+    test!(const ubyte);
+    test!(immutable ubyte);
 }
 
 // Abort
@@ -976,10 +1024,17 @@ static:
 
 unittest
 {
-    Checked!(int, Abort) x;
-    x = 42;
-    short x1 = cast(short) x;
-    //x += long(int.max);
+    void test(T)()
+    {
+        Checked!(int, Abort) x;
+        x = 42;
+        auto x1 = cast(T) x;
+        assert(x1 == 42);
+        //x1 += long(int.max);
+    }
+    test!short;
+    test!(const short);
+    test!(immutable short);
 }
 
 // Warn
@@ -1112,6 +1167,8 @@ unittest
     auto x = checked!Warn(42);
     short x1 = cast(short) x;
     //x += long(int.max);
+    auto y = checked!Warn(cast(const int) 42);
+    short y1 = cast(const byte) y;
 }
 
 // ProperCompare
@@ -1235,7 +1292,7 @@ unittest
     assert(opEqualsProper(42, 42u));
     assert(-1 == 4294967295u);
     assert(!opEqualsProper(-1, 4294967295u));
-    assert(!opEqualsProper(uint(-1), -1));
+    assert(!opEqualsProper(const uint(-1), -1));
     assert(!opEqualsProper(uint(-1), -1.0));
     assert(3_000_000_000U == -1_294_967_296);
     assert(!opEqualsProper(3_000_000_000U, -1_294_967_296));
@@ -1527,22 +1584,45 @@ static:
 ///
 unittest
 {
-    auto x1 = Checked!(int, WithNaN)();
-    assert(x1.get == int.min);
-    assert(x1 != x1);
-    assert(!(x1 < x1));
-    assert(!(x1 > x1));
-    assert(!(x1 == x1));
-    ++x1;
-    assert(x1.get == int.min);
-    --x1;
-    assert(x1.get == int.min);
-    x1 = 42;
-    assert(x1 == x1);
-    assert(x1 <= x1);
-    assert(x1 >= x1);
-    static assert(x1.min == int.min + 1);
-    x1 += long(int.max);
+    void test1(T)()
+    {
+        auto x1 = Checked!(T, WithNaN)();
+        assert(x1.get == int.min);
+        assert(x1 != x1);
+        assert(!(x1 < x1));
+        assert(!(x1 > x1));
+        assert(!(x1 == x1));
+        assert(x1.get == int.min);
+        auto x2 = Checked!(T, WithNaN)(42);
+        assert(x2 == x2);
+        assert(x2 <= x2);
+        assert(x2 >= x2);
+        static assert(x2.min == T.min + 1);
+    }
+    test1!int;
+    test1!(const int);
+    test1!(immutable int);
+
+    void test2(T)()
+    {
+        auto x1 = Checked!(T, WithNaN)();
+        assert(x1.get == T.min);
+        assert(x1 != x1);
+        assert(!(x1 < x1));
+        assert(!(x1 > x1));
+        assert(!(x1 == x1));
+        ++x1;
+        assert(x1.get == T.min);
+        --x1;
+        assert(x1.get == T.min);
+        x1 = 42;
+        assert(x1 == x1);
+        assert(x1 <= x1);
+        assert(x1 >= x1);
+        static assert(x1.min == T.min + 1);
+        x1 += long(T.max);
+    }
+    test2!int;
 }
 
 unittest
@@ -1552,7 +1632,7 @@ unittest
     assert(x1 != x1);
     x1 = -1;
     assert(x1 < 1u);
-    auto x2 = Smart!int(42);
+    auto x2 = Smart!(const int)(42);
 }
 
 // Saturate
@@ -1841,7 +1921,7 @@ fail:
 unittest
 {
     bool overflow;
-    assert(opChecked!"+"(short(1), short(1), overflow) == 2 && !overflow);
+    assert(opChecked!"+"(const short(1), short(1), overflow) == 2 && !overflow);
     assert(opChecked!"+"(1, 1, overflow) == 2 && !overflow);
     assert(opChecked!"+"(1, 1u, overflow) == 2 && !overflow);
     assert(opChecked!"+"(-1, 1u, overflow) == 0 && !overflow);
@@ -2033,7 +2113,7 @@ version(unittest) private struct CountOpBinary
 // opBinary
 @nogc nothrow pure @safe unittest
 {
-    auto x = Checked!(int, void)(42), y = Checked!(int, void)(142);
+    auto x = Checked!(const int, void)(42), y = Checked!(immutable int, void)(142);
     assert(x + y == 184);
     assert(x + 100 == 142);
     assert(y - x == 100);
@@ -2404,7 +2484,7 @@ unittest
 
     x = 42;
     assert(x == 42);
-    short _short = 43;
+    const short _short = 43;
     x = _short;
     assert(x == _short);
     ushort _ushort = 44;
@@ -2420,7 +2500,7 @@ unittest
     assert(cast(long) x == 44);
     assert(cast(short) x == 44);
 
-    Checked!(uint, void) y;
+    const Checked!(uint, void) y;
     assert(y <= y);
     assert(y == 0);
     assert(y < x);
