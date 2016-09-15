@@ -88,6 +88,7 @@ else version (Posix)
 else
     static assert(0);
 
+private:
 version(Windows)
 {
     // core.stdc.stdio.fopen expects file names to be
@@ -245,6 +246,7 @@ version(HAS_GETDELIM) extern(C) nothrow @nogc
     ptrdiff_t getline(char**, size_t*, FILE*);
 }
 
+
 //------------------------------------------------------------------------------
 struct ByRecord(Fields...)
 {
@@ -309,6 +311,7 @@ template byRecord(Fields...)
     }
 }
 
+public:
 /**
 Encapsulates a $(D FILE*). Generally D does not attempt to provide
 thin wrappers over equivalent functions in the C standard library, but
@@ -566,6 +569,7 @@ Throws: $(D ErrnoException) in case of error.
     version(StdDdoc)
     void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode);
 
+    /// ditto
     version(Windows)
     void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode)
     {
@@ -1777,6 +1781,7 @@ Returns the underlying operating system $(D HANDLE) (Windows only).
     version(StdDdoc)
     @property HANDLE windowsHandle();
 
+    /// ditto
     version(Windows)
     @property HANDLE windowsHandle()
     {
@@ -1793,7 +1798,7 @@ Range that reads one line at a time.  Returned by $(LREF byLine).
 
 Allows to directly use range operations on lines of a file.
 */
-    struct ByLine(Char, Terminator)
+    private struct ByLine(Char, Terminator)
     {
     private:
         import std.typecons : RefCounted, RefCountedAutoInitialize;
@@ -2314,7 +2319,7 @@ $(REF readText, std,file)
     /*
      * Range that reads a chunk at a time.
      */
-    struct ByChunk
+    private struct ByChunk
     {
     private:
         File    file_;
@@ -2516,7 +2521,7 @@ $(D StdioException).
 /*
 $(D Range) that locks the file and allows fast writing to it.
  */
-    struct LockingTextWriter
+    private struct LockingTextWriter
     {
     private:
         import std.range.primitives : ElementType, isInfinite, isInputRange;
@@ -2693,7 +2698,7 @@ See $(LREF byChunk) for an example.
     // An output range which optionally locks the file and puts it into
     // binary mode (similar to rawWrite). Because it needs to restore
     // the file mode on destruction, it is RefCounted on Windows.
-    struct BinaryWriterImpl(bool locking)
+    private struct BinaryWriterImpl(bool locking)
     {
         import std.traits : hasIndirections;
     private:
@@ -3108,7 +3113,7 @@ enum LockType
     readWrite
 }
 
-struct LockingTextReader
+private struct LockingTextReader
 {
     private File _f;
     private char _front;
@@ -3829,6 +3834,7 @@ struct lines
         this.terminator = terminator;
     }
 
+    /// Implements `opApply` `foreach` support
     int opApply(D)(scope D dg)
     {
         import std.traits : Parameters;
@@ -3872,8 +3878,8 @@ struct lines
             return opApplyRaw(dg);
         }
     }
-    // no UTF checking
-    int opApplyRaw(D)(scope D dg)
+
+    private int opApplyRaw(D)(scope D dg)
     {
         import std.conv : to;
         import std.exception : assumeUnique;
@@ -4231,7 +4237,7 @@ Initialize with a message and an error code.
     }
 }
 
-extern(C) void std_stdio_static_this()
+package extern(C) void std_stdio_static_this()
 {
     static import core.stdc.stdio;
     //Bind stdin, stdout, stderr
