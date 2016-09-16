@@ -8848,16 +8848,6 @@ void toLowerInPlace(C)(ref C[] s) @trusted pure
 {
     toCaseInPlace!(LowerTriple)(s);
 }
-// overloads for the most common cases to reduce compile time
-@safe pure /*TODO nothrow*/
-{
-    void toLowerInPlace(ref char[] s)
-    { toLowerInPlace!char(s); }
-    void toLowerInPlace(ref wchar[] s)
-    { toLowerInPlace!wchar(s); }
-    void toLowerInPlace(ref dchar[] s)
-    { toLowerInPlace!dchar(s); }
-}
 
 /++
     Converts $(D s) to uppercase  (by performing Unicode uppercase mapping) in place.
@@ -8869,16 +8859,6 @@ void toUpperInPlace(C)(ref C[] s) @trusted pure
     if (is(C == char) || is(C == wchar) || is(C == dchar))
 {
     toCaseInPlace!(UpperTriple)(s);
-}
-// overloads for the most common cases to reduce compile time/code size
-@safe pure /*TODO nothrow*/
-{
-    void toUpperInPlace(ref char[] s)
-    { toUpperInPlace!char(s); }
-    void toUpperInPlace(ref wchar[] s)
-    { toUpperInPlace!wchar(s); }
-    void toUpperInPlace(ref dchar[] s)
-    { toUpperInPlace!dchar(s); }
 }
 
 /++
@@ -8919,17 +8899,6 @@ S toLower(S)(S s) @trusted pure
     static import std.ascii;
     return toCase!(LowerTriple, std.ascii.toLower)(s);
 }
-// overloads for the most common cases to reduce compile time
-@safe pure /*TODO nothrow*/
-{
-    string toLower(string s)
-    { return toLower!string(s); }
-    wstring toLower(wstring s)
-    { return toLower!wstring(s); }
-    dstring toLower(dstring s)
-    { return toLower!dstring(s); }
-}
-
 
 @system unittest //@@@BUG std.format is not @safe
 {
@@ -9084,16 +9053,6 @@ S toUpper(S)(S s) @trusted pure
 {
     static import std.ascii;
     return toCase!(UpperTriple, std.ascii.toUpper)(s);
-}
-// overloads for the most common cases to reduce compile time
-@safe pure /*TODO nothrow*/
-{
-    string toUpper(string s)
-    { return toUpper!string(s); }
-    wstring toUpper(wstring s)
-    { return toUpper!wstring(s); }
-    dstring toUpper(dstring s)
-    { return toUpper!dstring(s); }
 }
 
 @safe unittest
