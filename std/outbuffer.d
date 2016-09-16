@@ -10,15 +10,7 @@ Serialize data to $(D ubyte) arrays.
  */
 module std.outbuffer;
 
-private
-{
-    import core.memory;
-    import core.stdc.stdarg;
-    import core.stdc.stdio;
-    import core.stdc.stdlib;
-    import std.algorithm;
-    import std.string;
-}
+import core.stdc.stdarg; // : va_list;
 
 /*********************************************
  * OutBuffer provides a way to build up an array of bytes out
@@ -257,6 +249,10 @@ class OutBuffer
 
     void vprintf(string format, va_list args) @trusted nothrow
     {
+        import std.string : toStringz;
+        import core.stdc.stdio : vsnprintf;
+        import core.stdc.stdlib : alloca;
+
         version (unittest)
             char[3] buffer = void;      // trigger reallocation
         else
@@ -415,6 +411,7 @@ class OutBuffer
 
 @safe unittest
 {
+    import std.string : cmp;
     //printf("Starting OutBuffer test\n");
 
     OutBuffer buf = new OutBuffer();
