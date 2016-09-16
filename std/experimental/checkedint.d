@@ -1601,9 +1601,57 @@ static:
 ///
 unittest
 {
+    auto x1 = Checked!(int, WithNaN)();
+    assert(x1.isNaN);
+    assert(x1.get == int.min);
+    assert(x1 != x1);
+    assert(!(x1 < x1));
+    assert(!(x1 > x1));
+    assert(!(x1 == x1));
+    ++x1;
+    assert(x1.isNaN);
+    assert(x1.get == int.min);
+    --x1;
+    assert(x1.isNaN);
+    assert(x1.get == int.min);
+    x1 = 42;
+    assert(!x1.isNaN);
+    assert(x1 == x1);
+    assert(x1 <= x1);
+    assert(x1 >= x1);
+    static assert(x1.min == int.min + 1);
+    x1 += long(int.max);
+}
+
+/**
+Queries whether a $(D Checked!(T, WithNaN)) object is not a number (NaN).
+
+Params: x = the `Checked` instance queried
+
+Returns: `true` if `x` is a NaN, `false` otherwise
+*/
+bool isNaN(T)(const Checked!(T, WithNaN) x)
+{
+    return x.get == x.init.get;
+}
+
+///
+unittest
+{
+    auto x1 = Checked!(int, WithNaN)();
+    assert(x1.isNaN);
+    x1 = 1;
+    assert(!x1.isNaN);
+    x1 = x1.init;
+    assert(x1.isNaN);
+}
+
+unittest
+{
     void test1(T)()
     {
         auto x1 = Checked!(T, WithNaN)();
+        assert(x1.isNaN);
         assert(x1.get == int.min);
         assert(x1 != x1);
         assert(!(x1 < x1));
@@ -1611,6 +1659,7 @@ unittest
         assert(!(x1 == x1));
         assert(x1.get == int.min);
         auto x2 = Checked!(T, WithNaN)(42);
+        assert(!x2.isNaN);
         assert(x2 == x2);
         assert(x2 <= x2);
         assert(x2 >= x2);
@@ -1869,7 +1918,7 @@ if (isIntegral!L && isIntegral!R)
         else static if (x == "/" || x == "%")
         {
             static if (!isUnsigned!L && !isUnsigned!R &&
-                is(L == Result) && op == "/")
+                is(L == Result) && x == "/")
             {
                 if (lhs == Result.min && rhs == -1) goto fail;
             }
