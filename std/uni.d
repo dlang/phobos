@@ -1898,23 +1898,27 @@ public alias CodepointSet = InversionList!GcPolicy;
 */
 public struct CodepointInterval
 {
-pure:
-    uint[2] _tuple;
-    alias _tuple this;
+    uint[2] tuple;
+    alias tuple this;
 
 @safe pure nothrow @nogc:
-
+    /// Constructor
     this(uint low, uint high)
     {
-        _tuple[0] = low;
-        _tuple[1] = high;
+        tuple[0] = low;
+        tuple[1] = high;
     }
+
+    /// Support for equality testing
     bool opEquals(T)(T val) const
     {
         return this[0] == val[0] && this[1] == val[1];
     }
-    @property ref inout(uint) a() inout { return _tuple[0]; }
-    @property ref inout(uint) b() inout { return _tuple[1]; }
+
+    /// Access to the interval members
+    @property ref inout(uint) a() inout { return tuple[0]; }
+    /// ditto
+    @property ref inout(uint) b() inout { return tuple[1]; }
 }
 
 /**
@@ -7983,7 +7987,7 @@ version(std_uni_bootstrap)
 {
     // old version used for bootstrapping of gen_uni.d that generates
     // up to date optimal versions of all of isXXX functions
-    @safe pure nothrow @nogc public bool isWhite(dchar c)
+    package @safe pure nothrow @nogc bool isWhite(dchar c)
     {
         import std.ascii : isWhite;
         return isWhite(c) ||
