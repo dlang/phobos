@@ -8328,7 +8328,7 @@ auto asUpperCase(Range)(Range str)
     assert("hEllo".asUpperCase.equal("HELLO"));
 }
 
-// explicitly undocumented
+/// ditto
 auto asLowerCase(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
@@ -8336,7 +8336,7 @@ auto asLowerCase(Range)(auto ref Range str)
     return asLowerCase!(StringTypeOf!Range)(str);
 }
 
-// explicitly undocumented
+/// ditto
 auto asUpperCase(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
@@ -8525,6 +8525,7 @@ auto asCapitalized(Range)(Range str)
     assert("hEllo".asCapitalized.equal("Hello"));
 }
 
+/// ditto
 auto asCapitalized(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
