@@ -31,21 +31,14 @@ class OutBuffer
 
     invariant()
     {
-        //printf("this = %p, offset = %x, data.length = %u\n", this, offset, data.length);
         assert(offset <= data.length);
     }
 
   pure nothrow @safe
   {
-    this()
-    {
-        //printf("in OutBuffer constructor\n");
-    }
-
     /*********************************
      * Convert to array of bytes.
      */
-
     ubyte[] toBytes() { return data[0 .. offset]; }
 
     /***********************************
@@ -55,8 +48,6 @@ class OutBuffer
      * speed optimization, a good guess at the maximum size of the resulting
      * buffer will improve performance by eliminating reallocations and copying.
      */
-
-
     void reserve(size_t nbytes) @trusted
         in
         {
@@ -68,7 +59,6 @@ class OutBuffer
         }
         body
         {
-            //c.stdio.printf("OutBuffer.reserve: length = %d, offset = %d, nbytes = %d\n", data.length, offset, nbytes);
             if (data.length < offset + nbytes)
             {
                 void[] vdata = data;
@@ -299,11 +289,6 @@ class OutBuffer
                 else
                     break;
 
-                /+
-                if (p != buffer)
-                    c.stdlib.free(p);
-                p = (char *) c.stdlib.malloc(psize);    // buffer too small, try again with larger size
-                +/
                 p = cast(char *) alloca(psize); // buffer too small, try again with larger size
             }
             else
@@ -312,13 +297,6 @@ class OutBuffer
             }
         }
         write(cast(ubyte[]) p[0 .. count]);
-        /+
-        version (Posix)
-        {
-            if (p != buffer)
-                c.stdlib.free(p);
-        }
-        +/
     }
 
     /*****************************************
@@ -412,19 +390,14 @@ class OutBuffer
 @safe unittest
 {
     import std.string : cmp;
-    //printf("Starting OutBuffer test\n");
 
     OutBuffer buf = new OutBuffer();
 
-    //printf("buf = %p\n", buf);
-    //printf("buf.offset = %x\n", buf.offset);
     assert(buf.offset == 0);
     buf.write("hello"[]);
     buf.write(cast(byte)0x20);
     buf.write("world"[]);
     buf.printf(" %d", 62665);
-    //auto s = buf.toString();
-    //printf("buf = '%.*s'\n", s.length, s.ptr);
     assert(cmp(buf.toString(), "hello world 62665") == 0);
 }
 
