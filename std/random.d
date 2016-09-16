@@ -1171,7 +1171,7 @@ A singleton instance of the default random number generator
  */
 @property ref Random rndGen() @safe
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.range : repeat;
 
     static Random result;
@@ -1875,7 +1875,7 @@ void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
     if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     import std.exception : enforce;
-    import std.algorithm : swapAt;
+    import std.algorithm.mutation : swapAt;
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
@@ -1988,13 +1988,13 @@ private size_t diceImpl(Rng, Range)(ref Rng rng, Range proportions)
     if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
 in
 {
-    import std.algorithm : all;
+    import std.algorithm.searching : all;
     assert(proportions.save.all!"a >= 0");
 }
 body
 {
     import std.exception : enforce;
-    import std.algorithm : reduce;
+    import std.algorithm.iteration : reduce;
     double sum = reduce!"a + b"(0.0, proportions.save);
     enforce(sum > 0, "Proportions in a dice cannot sum to zero");
     immutable point = uniform(0.0, sum, rng);

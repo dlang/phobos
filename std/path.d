@@ -2828,7 +2828,8 @@ auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
 
     import std.range.primitives : walkLength;
     import std.range : repeat, chain, choose;
-    import std.algorithm : mismatch, joiner;
+    import std.algorithm.comparison : mismatch;
+    import std.algorithm.iteration : joiner;
     import std.array : array;
     import std.utf : byCodeUnit, byChar;
 
@@ -3164,7 +3165,7 @@ bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
 in
 {
     // Verify that pattern[] is valid
-    import std.algorithm : balancedParens;
+    import std.algorithm.searching : balancedParens;
     assert(balancedParens(pattern, '[', ']', 0));
     assert(balancedParens(pattern, '{', '}', 0));
 }
