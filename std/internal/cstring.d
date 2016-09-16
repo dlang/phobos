@@ -66,6 +66,8 @@ The value returned is implicitly convertible to $(D const To*) and
 has two properties: $(D ptr) to access $(I C string) as $(D const To*)
 and $(D buffPtr) to access it as $(D To*).
 
+The value returned can be indexed by [] to access it as an array.
+
 The temporary $(I C string) is valid unless returned object is destroyed.
 Thus if returned object is assigned to a variable the temporary is
 valid unless the variable goes out of scope. If returned object isn't
@@ -112,6 +114,11 @@ auto tempCString(To = char, From)(From str)
             return buffPtr;
         }
 
+        const(To)[] opIndex() const pure
+        {
+            return buffPtr[0 .. _length];
+        }
+
         ~this()
         {
             if (_ptr != useStack)
@@ -123,6 +130,7 @@ auto tempCString(To = char, From)(From str)
 
     private:
         To* _ptr;
+        size_t _length;        // length of the string
         version (unittest)
         {
             enum buffLength = 16 / To.sizeof;   // smaller size to trigger reallocations
@@ -206,6 +214,7 @@ auto tempCString(To = char, From)(From str)
         q[i++] = c;
     }
     q[i] = 0;
+    res._length = i;
     res._ptr = p_is_onstack ? useStack : &p[0];
     return res;
 }
@@ -242,6 +251,7 @@ nothrow @nogc unittest
     char[300] abc = 'a';
     assert(tempCString(abc[].byChar).buffPtr.asArray == abc);
     assert(tempCString(abc[].byWchar).buffPtr.asArray == abc);
+    assert(tempCString(abc[].byChar)[] == abc);
 }
 
 // Bugzilla 14980
