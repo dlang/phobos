@@ -5137,8 +5137,14 @@ RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
 mixin template Proxy(alias a)
 {
     private alias ValueType = typeof({ return a; }());
+
+    /* Determine if 'T.a' can referenced via a const(T).
+     * Use T* as the parameter because 'scope' inference needs a fully
+     * analyzed T, which doesn't work when accessibleFrom() is used in a
+     * 'static if' in the definition of Proxy or T.
+     */
     private enum bool accessibleFrom(T) =
-        is(typeof((ref T self){ cast(void)mixin("self."~__traits(identifier, a)); }));
+        is(typeof((T* self){ cast(void)mixin("(*self)."~__traits(identifier, a)); }));
 
     static if (is(typeof(this) == class))
     {
