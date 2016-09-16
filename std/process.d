@@ -351,7 +351,7 @@ private Pid spawnProcessImpl(in char[][] args,
     import core.exception : RangeError;
     import std.conv : text;
     import std.path : isDirSeparator;
-    import std.algorithm : any;
+    import std.algorithm.searching : any;
     import std.string : toStringz;
 
     if (args.empty) throw new RangeError();
@@ -752,7 +752,7 @@ private string searchPathFor(in char[] executable)
     @trusted //TODO: @safe nothrow
 {
     import std.conv : to;
-    import std.algorithm : splitter;
+    import std.algorithm.iteration : splitter;
     import std.path : buildPath;
 
     auto pathz = core.stdc.stdlib.getenv("PATH");
@@ -2177,7 +2177,7 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
 {
     import std.typecons : Tuple;
     import std.array : appender;
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
 
     auto p = pipeFunc(commandLine, Redirect.stdout | Redirect.stderrToStdout,
                       env, config, workDir, extraArgs);
@@ -2753,7 +2753,7 @@ version(Windows) version(unittest)
 
     string[] parseCommandLine(string line)
     {
-        import std.algorithm : map;
+        import std.algorithm.iteration : map;
         import std.array : array;
         LPWSTR lpCommandLine = (to!(wchar[])(line) ~ "\0"w).ptr;
         int numArgs;
