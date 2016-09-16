@@ -794,6 +794,7 @@ template equal(alias pred = "a == b")
     int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1..$]));
     assert(equal(a, a));
+    assert(equal!((a, b) => a == b)(a, a));
 
     // different types
     double[] b = [ 1.0, 2, 4, 3];
