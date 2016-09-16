@@ -1661,6 +1661,49 @@ struct Slice(size_t _N, _Range)
     }
 
     /++
+    Returns: `true` if for any dimension the length equals to `0`, and `false` otherwise.
+    +/
+    bool anyEmpty() const
+    {
+        foreach (i; Iota!(0, N))
+            if (_lengths[i] == 0)
+                return true;
+        return false;
+    }
+
+    static if (doUnittest)
+    ///
+    unittest
+    {
+        import std.experimental.ndslice.selection : iotaSlice;
+        auto s = iotaSlice(2, 3);
+        assert(!s.anyEmpty);
+        s.popFrontExactly!1(3);
+        assert(s.anyEmpty);
+    }
+
+    /++
+    Convenience function for backward indexing.
+
+    Returns: `this[$-index[0], $-index[1], ..., $-index[N-1]]`
+    +/
+    auto ref backward(size_t[N] index)
+    {
+        foreach (i; Iota!(0, N))
+            index[i] = _lengths[i] - index[i];
+        return this[index];
+    }
+
+    static if (doUnittest)
+    ///
+    @safe @nogc pure nothrow unittest
+    {
+        import std.experimental.ndslice.selection : iotaSlice;
+        auto s = iotaSlice(2, 3);
+        assert(s[$ - 1, $ - 2] == s.backward([1, 2]));
+    }
+
+    /++
     Returns: Total number of elements in a slice
     +/
     size_t elementsCount() const
