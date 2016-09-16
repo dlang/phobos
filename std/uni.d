@@ -885,7 +885,7 @@ struct MultiArray(Types...)
         }
     }
 
-    @property size_t bytes(size_t n=size_t.max)() const
+    @property size_t bytes(size_t n=size_t.max)() const @safe
     {
         static if (n == size_t.max)
             return storage.length*size_t.sizeof;
@@ -895,7 +895,7 @@ struct MultiArray(Types...)
             return (storage.ptr+storage.length - raw_ptr!n)*size_t.sizeof;
     }
 
-    void store(OutRange)(scope OutRange sink) const
+    void store(OutRange)(scope OutRange sink) const @safe
         if (isOutputRange!(OutRange, char))
     {
         import std.format : formattedWrite;
@@ -1102,7 +1102,7 @@ template PackedPtr(T)
     alias PackedPtr = PackedPtrImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
 
-@trusted struct PackedPtrImpl(T, size_t bits)
+struct PackedPtrImpl(T, size_t bits)
 {
 pure nothrow:
     static assert(isPow2OrZero(bits));
@@ -1202,11 +1202,11 @@ private:
 // data is packed only by power of two sized packs per word,
 // thus avoiding mul/div overhead at the cost of ultimate packing
 // this construct doesn't own memory, only provides access, see MultiArray for usage
-@trusted struct PackedArrayViewImpl(T, size_t bits)
+struct PackedArrayViewImpl(T, size_t bits)
 {
 pure nothrow:
 
-    this(inout(size_t)* origin, size_t offset, size_t items) inout
+    this(inout(size_t)* origin, size_t offset, size_t items) inout @safe
     {
         ptr = inout(PackedPtr!(T))(origin);
         ofs = offset;
@@ -1498,7 +1498,7 @@ private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure 
 // Partially unrolled binary search using Shar's method
 //============================================================================
 
-string genUnrolledSwitchSearch(size_t size)
+string genUnrolledSwitchSearch(size_t size) @safe pure nothrow
 {
     import core.bitop : bsr;
     import std.array : replace;
@@ -3026,7 +3026,7 @@ private:
 }
 
 // pedantic version for ctfe, and aligned-access only architectures
-@trusted uint safeRead24(const ubyte* ptr, size_t idx) pure nothrow @nogc
+@system private uint safeRead24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
     version(LittleEndian)
@@ -3038,7 +3038,7 @@ private:
 }
 
 // ditto
-@trusted void safeWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
+@system private void safeWrite24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
     version(LittleEndian)
@@ -3056,7 +3056,7 @@ private:
 }
 
 // unaligned x86-like read/write functions
-@trusted uint unalignedRead24(const ubyte* ptr, size_t idx) pure nothrow @nogc
+@system private uint unalignedRead24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     uint* src = cast(uint*)(ptr+3*idx);
     version(LittleEndian)
@@ -3066,7 +3066,7 @@ private:
 }
 
 // ditto
-@trusted void unalignedWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
+@system private void unalignedWrite24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     uint* dest = cast(uint*)(cast(ubyte*)ptr + 3*idx);
     version(LittleEndian)
@@ -3075,7 +3075,7 @@ private:
         *dest = (val<<8) | (*dest & 0xFF);
 }
 
-uint read24(const ubyte* ptr, size_t idx) @safe pure nothrow @nogc
+@system private uint read24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     static if (hasUnalignedReads)
         return __ctfe ? safeRead24(ptr, idx) : unalignedRead24(ptr, idx);
@@ -3083,17 +3083,19 @@ uint read24(const ubyte* ptr, size_t idx) @safe pure nothrow @nogc
         return safeRead24(ptr, idx);
 }
 
-void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
+@system private void write24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     static if (hasUnalignedReads)
         return __ctfe ? safeWrite24(ptr, val, idx) : unalignedWrite24(ptr, val, idx);
     else
         return safeWrite24(ptr, val, idx);
 }
-@trusted struct CowArray(SP=GcPolicy)
+
+struct CowArray(SP=GcPolicy)
 {
     import std.range.primitives : hasLength;
 
+  @safe:
     static auto reuse(uint[] arr)
     {
         CowArray cow;
@@ -7252,13 +7254,13 @@ int icmp(S1, S2)(S1 r1, S2 r2)
     Return a range of all $(CODEPOINTS) that casefold to
     and from this $(D ch).
 */
-package auto simpleCaseFoldings(dchar ch)
+package auto simpleCaseFoldings(dchar ch) @safe
 {
     import std.internal.unicode_tables : simpleCaseTable; // generated file
     alias sTable = simpleCaseTable;
     static struct Range
     {
-    pure nothrow:
+    @safe pure nothrow:
         uint idx; //if == uint.max, then read c.
         union
         {
@@ -7409,7 +7411,7 @@ enum {
     Note: Hangul syllables are not covered by this function.
     See $(D composeJamo) below.
 +/
-public dchar compose(dchar first, dchar second) pure nothrow
+public dchar compose(dchar first, dchar second) pure nothrow @safe
 {
     import std.algorithm.iteration : map;
     import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
@@ -7456,7 +7458,7 @@ public dchar compose(dchar first, dchar second) pure nothrow
     that takes into account only hangul syllables  but
     no other decompositions.
 +/
-public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
+public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch) @safe
 {
     import std.algorithm.searching : until;
     import std.internal.unicode_decomp : decompCompatTable, decompCanonTable;
@@ -7506,14 +7508,14 @@ enum jamoNCount = jamoVCount * jamoTCount;
 enum jamoSCount = jamoLCount * jamoNCount;
 
 // Tests if $(D ch) is a Hangul leading consonant jamo.
-bool isJamoL(dchar ch) pure nothrow @nogc
+bool isJamoL(dchar ch) pure nothrow @nogc @safe
 {
     // first cmp rejects ~ 1M code points above leading jamo range
     return ch < jamoLBase+jamoLCount && ch >= jamoLBase;
 }
 
 // Tests if $(D ch) is a Hangul vowel jamo.
-bool isJamoT(dchar ch) pure nothrow @nogc
+bool isJamoT(dchar ch) pure nothrow @nogc @safe
 {
     // first cmp rejects ~ 1M code points above trailing jamo range
     // Note: ch == jamoTBase doesn't indicate trailing jamo (TIndex must be > 0)
@@ -7521,20 +7523,20 @@ bool isJamoT(dchar ch) pure nothrow @nogc
 }
 
 // Tests if $(D ch) is a Hangul trailnig consonant jamo.
-bool isJamoV(dchar ch) pure nothrow @nogc
+bool isJamoV(dchar ch) pure nothrow @nogc @safe
 {
     // first cmp rejects ~ 1M code points above vowel range
     return  ch < jamoVBase+jamoVCount && ch >= jamoVBase;
 }
 
-int hangulSyllableIndex(dchar ch) pure nothrow @nogc
+int hangulSyllableIndex(dchar ch) pure nothrow @nogc @safe
 {
     int idxS = cast(int)ch - jamoSBase;
     return idxS >= 0 && idxS < jamoSCount ? idxS : -1;
 }
 
 // internal helper: compose hangul syllables leaving dchar.init in holes
-void hangulRecompose(dchar[] seq) pure nothrow @nogc
+void hangulRecompose(dchar[] seq) pure nothrow @nogc @safe
 {
     for (size_t idx = 0; idx + 1 < seq.length; )
     {
@@ -7569,7 +7571,7 @@ public:
     Decomposes a Hangul syllable. If $(D ch) is not a composed syllable
     then this function returns $(LREF Grapheme) containing only $(D ch) as is.
 */
-Grapheme decomposeHangul(dchar ch)
+Grapheme decomposeHangul(dchar ch) @safe
 {
     immutable idxS = cast(int)ch - jamoSBase;
     if (idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
@@ -7601,7 +7603,7 @@ Grapheme decomposeHangul(dchar ch)
     If any of $(D lead) and $(D vowel) are not a valid hangul jamo
     of the respective $(CHARACTER) class returns dchar.init.
 +/
-dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothrow @nogc
+dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothrow @nogc @safe
 {
     if (!isJamoL(lead))
         return dchar.init;
@@ -7815,7 +7817,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 }
 
 // canonically recompose given slice of code points, works in-place and mutates data
-private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
+private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow @safe
 {
     assert(input.length == ccc.length);
     int accumCC = -1;// so that it's out of 0..255 range
@@ -8588,7 +8590,7 @@ auto asCapitalized(Range)(auto ref Range str)
 }
 
 // TODO: helper, I wish std.utf was more flexible (and stright)
-private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
+private size_t encodeTo(scope char[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
 {
     if (c <= 0x7F)
     {
@@ -8633,7 +8635,7 @@ private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure nothrow @
 }
 
 // TODO: helper, I wish std.utf was more flexible (and stright)
-private size_t encodeTo(wchar[] buf, size_t idx, dchar c) @trusted pure
+private size_t encodeTo(scope wchar[] buf, size_t idx, dchar c) @trusted pure
 {
     import std.utf : UTFException;
     if (c <= 0xFFFF)
@@ -8654,7 +8656,7 @@ private size_t encodeTo(wchar[] buf, size_t idx, dchar c) @trusted pure
     return idx;
 }
 
-private size_t encodeTo(dchar[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
+private size_t encodeTo(scope dchar[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
 {
     buf[idx] = c;
     idx++;
