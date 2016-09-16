@@ -1297,9 +1297,8 @@ levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
 /**
 Iterates the passed arguments and return the maximum value.
 
-Params:
-    args = The values to select the maximum from. At least two arguments must
-    be passed.
+Params: args = The values to select the maximum from. At least two arguments
+    or a non-empty static array with length of at least two must be passed.
 
 Returns:
     The maximum of the passed-in args. The type of the returned value is
@@ -1335,6 +1334,23 @@ MaxType!T max(T...)(T args)
     return cast(typeof(return)) (chooseB ? b : a);
 }
 
+
+/// ditto
+T max(size_t n, T)(T[n] arg) // rvalue overload
+    if (n >= 2)
+{
+    return max(arg);
+}
+
+/// ditto
+T max(size_t n, T)(ref T[n] arg) // lvalue overload
+    if (n >= 2)
+{
+    import std.range : iota;
+    import std.format;
+    return mixin("max( %(arg[%s]%|, %) )".format(iota(n)));
+}
+
 ///
 @safe unittest
 {
@@ -1347,6 +1363,16 @@ MaxType!T max(T...)(T args)
     auto e = min(a, b, c);
     assert(is(typeof(e) == double));
     assert(e == 2);
+}
+
+///
+pure @safe nothrow @nogc unittest
+{
+    assert (max([2, 4, 1]) == 4);
+
+    int[3] values = [ 13, 10, 11 ];
+    int m = max(values);
+    assert (m == 13);
 }
 
 @safe unittest
@@ -1417,6 +1443,7 @@ private template MinType(T...)
 Iterates the passed arguments and returns the minimum value.
 
 Params: args = The values to select the minimum from. At least two arguments
+    or a non-empty static array with length of at least two
     must be passed, and they must be comparable with `<`.
 Returns: The minimum of the passed-in values.
 See_Also:
@@ -1449,6 +1476,22 @@ MinType!T min(T...)(T args)
     return cast(typeof(return)) (chooseA ? a : b);
 }
 
+/// ditto
+T min(size_t n, T)(T[n] arg) // rvalue overload
+    if (n >= 2)
+{
+    return min(arg);
+}
+
+/// ditto
+T min(size_t n, T)(ref T[n] arg) // lvalue overload
+    if (n >= 2)
+{
+    import std.range : iota;
+    import std.format;
+    return mixin("min( %(arg[%s]%|, %) )".format(iota(n)));
+}
+
 ///
 @safe unittest
 {
@@ -1479,6 +1522,16 @@ MinType!T min(T...)(T args)
     assert(min(Date.max, Date(1982, 1, 4)) == Date(1982, 1, 4));
     assert(min(Date.min, Date.max) == Date.min);
     assert(min(Date.max, Date.min) == Date.min);
+}
+
+///
+pure @safe nothrow @nogc unittest
+{
+    assert (min([2, 4, 1]) == 1);
+
+    int[3] values = [ 11, 10, 13 ];
+    int m = min(values);
+    assert (m == 10);
 }
 
 // mismatch
