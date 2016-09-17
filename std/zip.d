@@ -122,6 +122,8 @@ final class ArchiveMember
     private ushort _diskNumber;
     private uint _externalAttributes;
     private DosFileTime _time;
+    // by default, no explicit order goes after explicit order
+    private uint _index = uint.max;
 
     ushort flags;                  /// Read/Write: normally set to 0
     ushort internalAttributes;     /// Read/Write
@@ -251,6 +253,12 @@ final class ArchiveMember
         _compressionMethod = cm;
     }
 
+    /**
+      * The index of this archive member within the archive.
+      */
+    @property uint index() const pure nothrow @nogc { return _index; }
+    @property uint index(uint value) pure nothrow @nogc { return _index = value; }
+
     debug(print)
     {
     void print()
@@ -267,6 +275,7 @@ final class ArchiveMember
         printf("\tcompressedSize = %d\n", compressedSize);
         printf("\tinternalAttributes = x%04x\n", internalAttributes);
         printf("\texternalAttributes = x%08x\n", externalAttributes);
+        printf("\tindex = x%08x\n", index);
     }
     }
 }
@@ -376,7 +385,9 @@ final class ZipArchive
      * Returns: array representing the entire archive.
      */
     void[] build()
-    {   uint i;
+    {
+        import std.algorithm.sorting : sort;
+        uint i;
         uint directoryOffset;
 
         if (comment.length > 0xFFFF)
@@ -385,7 +396,8 @@ final class ZipArchive
         // Compress each member; compute size
         uint archiveSize = 0;
         uint directorySize = 0;
-        foreach (ArchiveMember de; _directory)
+        auto directory = _directory.values().sort!((x, y) => x.index < y.index).release;
+        foreach (ArchiveMember de; directory)
         {
             if (!de._compressedData.length)
             {
@@ -436,7 +448,7 @@ final class ZipArchive
 
         // Store each archive member
         i = 0;
-        foreach (ArchiveMember de; _directory)
+        foreach (ArchiveMember de; directory)
         {
             de.offset = i;
             _data[i .. i + 4] = cast(ubyte[])"PK\x03\x04";
@@ -462,7 +474,7 @@ final class ZipArchive
         // Write directory
         directoryOffset = i;
         _numEntries = 0;
-        foreach (ArchiveMember de; _directory)
+        foreach (ArchiveMember de; directory)
         {
             _data[i .. i + 4] = cast(ubyte[])"PK\x01\x02";
             putUshort(i + 4,  de._madeVersion);
@@ -666,6 +678,7 @@ final class ZipArchive
             if (_data[i .. i + 4] != cast(ubyte[])"PK\x01\x02")
                 throw new ZipException("invalid directory entry 1");
             ArchiveMember de = new ArchiveMember();
+            de._index = n;
             de._madeVersion = getUshort(i + 4);
             de._extractVersion = getUshort(i + 6);
             de.flags = getUshort(i + 8);
@@ -869,6 +882,45 @@ debug(print)
             assert(am.crc32 == am2.crc32);
             assert(am.expandedData == am2.expandedData);
         }
+    }
+}
+
+@system unittest
+{
+    import std.random : Mt19937, randomShuffle;
+    import std.conv : to;
+    // Test if packing and unpacking preserves order.
+    auto rand = Mt19937(15966);
+    string[] names;
+    int value = 0;
+    // Generate a series of unique numbers as filenames.
+    foreach (i; 0..20)
+    {
+        value += 1 + rand.front & 0xFFFF;
+        rand.popFront;
+        names ~= value.to!string;
+    }
+    // Insert them in a random order.
+    names.randomShuffle(rand);
+    auto zip1 = new ZipArchive();
+    foreach (i, name; names)
+    {
+        auto member = new ArchiveMember();
+        member.name = name;
+        member.expandedData = cast(ubyte[])name;
+        member.index = cast(int)i;
+        zip1.addMember(member);
+    }
+    auto data = zip1.build();
+
+    // Ensure that they appear in the same order.
+    auto zip2 = new ZipArchive(data);
+    foreach (i, name; names)
+    {
+        const member = zip2.directory[name];
+        assert(member.index == i, "member " ~ name ~ " had index " ~
+                member.index.to!string ~ " but we expected index " ~ i.to!string ~
+                ". The input array was " ~ names.to!string);
     }
 }
 
