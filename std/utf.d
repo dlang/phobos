@@ -2471,23 +2471,7 @@ char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
  */
 string toUTF8(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
 {
-    static if (is(S : string))
-    {
-        return s.idup;
-    }
-    else
-    {
-        import std.array : appender;
-        auto app = appender!string();
-
-        static if (hasLength!S || isSomeString!S)
-            app.reserve(s.length);
-
-        foreach (c; s.byUTF!char)
-            app.put(c);
-
-        return app.data;
-    }
+    return toUTFImpl!string(s);
 }
 
 ///
@@ -2537,57 +2521,46 @@ body
     }
 }
 
-/****************
- * Encodes string $(D s) into UTF-16 and returns the encoded string.
+/**
+ * Encodes the elements of `s` to UTF-16 and returns a newly GC allocated
+ * `wstring` of the elements.
+ *
+ * Params:
+ *     s = the range to encode
+ * Returns:
+ *     A UTF-16 string
+ * See_Also:
+ *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-wstring toUTF16(scope const char[] s) @safe pure
+wstring toUTF16(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
 {
-    wchar[] r;
-    immutable slen = s.length;
-
-    r.length = slen;
-    r.length = 0;
-    for (size_t i = 0; i < slen; )
-    {
-        dchar c = s[i];
-        if (c <= 0x7F)
-        {
-            i++;
-            r ~= cast(wchar)c;
-        }
-        else
-        {
-            c = decode(s, i);
-            encode(r, c);
-        }
-    }
-
-    return r;
+    return toUTFImpl!wstring(s);
 }
 
-/// ditto
-wstring toUTF16(scope const wchar[] s) @safe pure
+///
+@safe pure unittest
 {
-    validate(s);
-    return s.idup;
+    import std.algorithm.comparison : equal;
+
+    // these graphemes are two code units in UTF-16 and one in UTF-32
+    assert("𤭢"d.length == 1);
+    assert("𐐷"d.length == 1);
+
+    assert("𤭢"d.toUTF16.equal([0xD852, 0xDF62]));
+    assert("𐐷"d.toUTF16.equal([0xD801, 0xDC37]));
 }
 
-/// ditto
-wstring toUTF16(scope const dchar[] s) @safe pure
+@system pure unittest
 {
-    wchar[] r;
-    immutable slen = s.length;
+    import std.internal.test.dummyrange : ReferenceInputRange;
+    import std.algorithm.comparison : equal;
 
-    r.length = slen;
-    r.length = 0;
-    for (size_t i = 0; i < slen; i++)
-    {
-        encode(r, s[i]);
-    }
+    auto r1 = new ReferenceInputRange!dchar("𤭢");
+    auto r2 = new ReferenceInputRange!dchar("𐐷");
 
-    return r;
+    assert(r1.toUTF16.equal([0xD852, 0xDF62]));
+    assert(r2.toUTF16.equal([0xD801, 0xDC37]));
 }
-
 
 /* =================== Conversion to UTF32 ======================= */
 
@@ -2640,6 +2613,27 @@ dstring toUTF32(scope const dchar[] s) @safe pure
 {
     validate(s);
     return s.idup;
+}
+
+private T toUTFImpl(T, S)(S s)
+{
+    static if (is(S : T))
+    {
+        return s.idup;
+    }
+    else
+    {
+        import std.array : appender;
+        auto app = appender!T();
+
+        static if (hasLength!S || isSomeString!S)
+            app.reserve(s.length);
+
+        foreach (c; s.byUTF!(Unqual!(ElementEncodingType!T)))
+            app.put(c);
+
+        return app.data;
+    }
 }
 
 /* =================== toUTFz ======================= */
