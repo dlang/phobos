@@ -87,12 +87,12 @@ coverage()
     # remove all existing coverage files (just in case)
     rm -rf $(find -name '*.lst')
 
-	# currently using the test_runner yields wrong code coverage results
-	# see https://github.com/dlang/phobos/pull/4719 for details
-    #ENABLE_COVERAGE="1" make -f posix.mak MODEL=$MODEL unittest-debug
+    # currently using the test_runner yields wrong code coverage results
+    # see https://github.com/dlang/phobos/pull/4719 for details
+    ENABLE_COVERAGE="1" make -f posix.mak MODEL=$MODEL unittest-debug
 
-	# instead we run all tests individually
-	make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/" | grep -vE '(std.algorithm.sorting|std.encoding|net.curl)' )
+    # instead we run all tests individually
+    make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/" | grep -vE '(std.algorithm.sorting|std.encoding|net.curl)' )
 }
 
 case $1 in
