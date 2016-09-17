@@ -5,11 +5,35 @@ import std.traits;
 import std.meta;
 import std.experimental.ndslice.slice;
 
+/+
+fastmath do nothing here,
+but remove constraint for LDC that operations for pointer's computations
+maybe mixed up with callers computations if both computations has fastmath attribute.
+So, it is just a bridge between two fastmath functions.
+fmb alias is used to relax users.
++/
+package alias fmb = fastmath;
+
+version(LDC)
+{
+    static import ldc.attributes;
+    alias fastmath = ldc.attributes.fastmath;
+}
+else
+{
+    alias fastmath = fastmathDummy;
+}
+
+enum FastmathDummy { init }
+FastmathDummy fastmathDummy() { return FastmathDummy.init; }
+
 template PtrTuple(Names...)
 {
     @LikePtr struct PtrTuple(Ptrs...)
         if (allSatisfy!(isSlicePointer, Ptrs) && Ptrs.length == Names.length)
     {
+        @fmb:
+
         Ptrs ptrs;
 
         void opOpAssign(string op)(sizediff_t shift)
@@ -57,6 +81,7 @@ struct PtrShell(Range)
 {
     sizediff_t _shift;
     Range _range;
+    @fmb:
 
     enum hasAccessByRef = isPointer!Range ||
         __traits(compiles, &_range[0]);
@@ -174,13 +199,19 @@ private template PtrTupleFrontMembers(Names...)
     {
         alias Top = Names[0..$-1];
         enum int m = Top.length;
+        /+
+        fastmath do nothing here,
+        but remove constraint for LDC that operations for pointer's computations
+        maybe mixed up with callers computations if both computations has fastmath attribute.
+        So, it is just a bridge between two fastmath functions.
+        +/
         enum PtrTupleFrontMembers = PtrTupleFrontMembers!Top
         ~ "
-        @property auto ref " ~ Names[$-1] ~ "() {
+        @fmb @property auto ref " ~ Names[$-1] ~ "() {
             return _ptrs__[" ~ m.stringof ~ "][0];
         }
         static if (!__traits(compiles, &(_ptrs__[" ~ m.stringof ~ "][0])))
-        @property auto ref " ~ Names[$-1] ~ "(T)(auto ref T value) {
+        @fmb @property auto ref " ~ Names[$-1] ~ "(T)(auto ref T value) {
             return _ptrs__[" ~ m.stringof ~ "][0] = value;
         }
         ";
@@ -193,6 +224,7 @@ private template PtrTupleFrontMembers(Names...)
 
 @LikePtr struct Pack(size_t N, Range)
 {
+    @fmb:
     alias Elem = Slice!(N, Range);
     alias PureN = Elem.PureN;
     alias PureRange = Elem.PureRange;
@@ -212,23 +244,23 @@ private template PtrTupleFrontMembers(Names...)
 @LikePtr struct Map(Range, alias fun)
 {
     Range _ptr;
-    mixin PropagatePtr;
-
+    // can not use @fmb here because fun maybe an LLVM function.
     auto ref opIndex(size_t index)
     {
         return fun(_ptr[index]);
     }
+    mixin PropagatePtr;
 }
 
 private mixin template PropagatePtr()
 {
-    void opOpAssign(string op)(sizediff_t shift)
+    @fmb void opOpAssign(string op)(sizediff_t shift)
         if (op == `+` || op == `-`)
     {
         mixin (`_ptr ` ~ op ~ `= shift;`);
     }
 
-    auto opBinary(string op)(sizediff_t shift)
+    @fmb auto opBinary(string op)(sizediff_t shift)
         if (op == `+` || op == `-`)
     {
         auto ret = this;
@@ -236,7 +268,7 @@ private mixin template PropagatePtr()
         return ret;
     }
 
-    auto opUnary(string op)()
+    @fmb auto opUnary(string op)()
         if (op == `++` || op == `--`)
     {
         mixin(op ~ `_ptr;`);
@@ -271,8 +303,6 @@ alias RangeOf(T : Slice!(N, Range), size_t N, Range) = Range;
 
 template isMemory(T)
 {
-    import std.experimental.ndslice.slice : PtrTuple;
-    import std.experimental.ndslice.selection : Map, Pack;
     static if (isPointer!T)
         enum isMemory = true;
     else

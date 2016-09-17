@@ -60,6 +60,8 @@ import std.meta; //: allSatisfy;
 import std.experimental.ndslice.internal;
 import std.experimental.ndslice.slice; //: Slice;
 
+@fmb:
+
 /++
 Creates a packed slice, i.e. slice of slices.
 The function does not carry out any calculations, it simply returns the same
@@ -73,7 +75,7 @@ Returns:
 +/
 template pack(K...)
 {
-    auto pack(size_t N, Range)(auto ref Slice!(N, Range) slice)
+    @fmb auto pack(size_t N, Range)(auto ref Slice!(N, Range) slice)
     {
         template Template(size_t NInner, Range, R...)
         {
@@ -930,6 +932,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
         +/
         static struct ByElement
         {
+            @fmb:
             This _slice;
             size_t _length;
             size_t[N] _indexes;
@@ -1436,6 +1439,7 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
         +/
         static struct ByElementInTopSimplex
         {
+            @fmb:
             This _slice;
             size_t _length;
             size_t maxHypercubeLength;
@@ -1676,7 +1680,7 @@ template IndexSlice(size_t N)
     {
         private size_t[N-1] _lengths;
 
-        size_t[N] opIndex(size_t index) const
+        @fmb size_t[N] opIndex(size_t index) const
         {
             size_t[N] indexes = void;
             foreach_reverse (i; Iota!(0, N - 1))
@@ -1786,7 +1790,7 @@ struct IotaMap()
 {
     enum bool empty = false;
 
-    static size_t opIndex()(size_t index) @safe pure nothrow @nogc @property
+    @fmb static size_t opIndex()(size_t index) @safe pure nothrow @nogc @property
     {
         pragma(inline, true);
         return index;
@@ -1912,6 +1916,8 @@ template  RepeatSlice(size_t N, T)
         private alias UT = T;
     private UT _value;
 
+    @fmb:
+
     ref T opIndex(sizediff_t)
     {
         return _value;
@@ -1968,7 +1974,7 @@ template mapSlice(fun...)
     if (fun.length)
 {
     ///
-    auto mapSlice(size_t N, Range)
+    @fmb auto mapSlice(size_t N, Range)
         (auto ref Slice!(N, Range) tensor)
     {
         // this static if-else block

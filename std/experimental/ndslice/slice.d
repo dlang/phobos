@@ -1202,6 +1202,8 @@ struct Slice(size_t _N, _Range)
                      && (isPointer!_Range || is(typeof(_Range.init[size_t.init]))))
                     || is(_Range == Slice!(N1, Range1), size_t N1, Range1)))
 {
+    @fmb:
+
     package:
 
     enum doUnittest = is(_Range == int*) && _N == 1;
