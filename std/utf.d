@@ -2418,11 +2418,7 @@ void validate(S)(in S str) @safe pure
 }
 
 /* =================== Conversion to UTF8 ======================= */
-
-pure
-{
-
-char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe
+char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
 {
     if (c <= 0x7F)
     {
@@ -2462,73 +2458,66 @@ char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe
     }
 }
 
-/*******************
- * Encodes string $(D_PARAM s) into UTF-8 and returns the encoded string.
+/**
+ * Encodes the elements of `s` to UTF-8 and returns a newly allocated
+ * string of the elements.
+ *
+ * Params:
+ *     s = the string to encode
+ * Returns:
+ *     A UTF-8 string
+ * See_Also:
+ *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-string toUTF8(scope const char[] s) @safe
+string toUTF8(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
 {
-    validate(s);
-    return s.idup;
+    static if (is(S : string))
+    {
+        return s.idup;
+    }
+    else
+    {
+        import std.array : appender;
+        auto app = appender!string();
+
+        static if (hasLength!S || isSomeString!S)
+            app.reserve(s.length);
+
+        foreach (c; s.byUTF!char)
+            app.put(c);
+
+        return app.data;
+    }
 }
 
-/// ditto
-string toUTF8(scope const wchar[] s) @safe
+///
+@safe pure unittest
 {
-    char[] r;
-    size_t i;
-    immutable slen = s.length;
+    import std.algorithm.comparison : equal;
 
-    r.length = slen;
-    for (i = 0; i < slen; i++)
-    {
-        immutable c = s[i];
+    // The ö is represented by two UTF-8 code units
+    assert("Hellø"w.toUTF8.equal(['H', 'e', 'l', 'l', 0xC3, 0xB8]));
 
-        if (c <= 0x7F)
-            r[i] = cast(char)c;     // fast path for ascii
-        else
-        {
-            r.length = i;
-            while (i < slen)
-                encode(r, decode(s, i));
-            break;
-        }
-    }
-
-    return r;
+    // 𐐷 is four code units in UTF-8
+    assert("𐐷"d.toUTF8.equal([0xF0, 0x90, 0x90, 0xB7]));
 }
 
-/// ditto
-string toUTF8(scope const dchar[] s) @safe
+@system pure unittest
 {
-    char[] r;
-    size_t i;
-    immutable slen = s.length;
+    import std.internal.test.dummyrange : ReferenceInputRange;
+    import std.algorithm.comparison : equal;
 
-    r.length = slen;
-    for (i = 0; i < slen; i++)
-    {
-        immutable c = s[i];
+    auto r1 = new ReferenceInputRange!dchar("Hellø");
+    auto r2 = new ReferenceInputRange!dchar("𐐷");
 
-        if (c <= 0x7F)
-            r[i] = cast(char)c;     // fast path for ascii
-        else
-        {
-            r.length = i;
-            foreach (dchar d; s[i .. slen])
-            {
-                encode(r, d);
-            }
-            break;
-        }
-    }
-
-    return r;
+    assert(r1.toUTF8.equal(['H', 'e', 'l', 'l', 0xC3, 0xB8]));
+    assert(r2.toUTF8.equal([0xF0, 0x90, 0x90, 0xB7]));
 }
 
 
 /* =================== Conversion to UTF16 ======================= */
 
-wchar[] toUTF16(return ref wchar[2] buf, dchar c) nothrow @nogc @safe
+wchar[] toUTF16(return ref wchar[2] buf, dchar c) nothrow @nogc @safe pure
 in
 {
     assert(isValidDchar(c));
@@ -2551,7 +2540,7 @@ body
 /****************
  * Encodes string $(D s) into UTF-16 and returns the encoded string.
  */
-wstring toUTF16(scope const char[] s) @safe
+wstring toUTF16(scope const char[] s) @safe pure
 {
     wchar[] r;
     immutable slen = s.length;
@@ -2577,14 +2566,14 @@ wstring toUTF16(scope const char[] s) @safe
 }
 
 /// ditto
-wstring toUTF16(scope const wchar[] s) @safe
+wstring toUTF16(scope const wchar[] s) @safe pure
 {
     validate(s);
     return s.idup;
 }
 
 /// ditto
-wstring toUTF16(scope const dchar[] s) @safe
+wstring toUTF16(scope const dchar[] s) @safe pure
 {
     wchar[] r;
     immutable slen = s.length;
@@ -2605,7 +2594,7 @@ wstring toUTF16(scope const dchar[] s) @safe
 /*****
  * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
  */
-dstring toUTF32(scope const char[] s) @safe
+dstring toUTF32(scope const char[] s) @safe pure
 {
     dchar[] r;
     immutable slen = s.length;
@@ -2626,7 +2615,7 @@ dstring toUTF32(scope const char[] s) @safe
 }
 
 /// ditto
-dstring toUTF32(scope const wchar[] s) @safe
+dstring toUTF32(scope const wchar[] s) @safe pure
 {
     dchar[] r;
     immutable slen = s.length;
@@ -2647,14 +2636,11 @@ dstring toUTF32(scope const wchar[] s) @safe
 }
 
 /// ditto
-dstring toUTF32(scope const dchar[] s) @safe
+dstring toUTF32(scope const dchar[] s) @safe pure
 {
     validate(s);
     return s.idup;
 }
-
-} // Convert functions are @safe
-
 
 /* =================== toUTFz ======================= */
 
