@@ -895,7 +895,7 @@ struct MultiArray(Types...)
             return (storage.ptr+storage.length - raw_ptr!n)*size_t.sizeof;
     }
 
-    void store(OutRange)(scope OutRange sink) const @safe
+    void store(OutRange)(scope OutRange sink) const
         if (isOutputRange!(OutRange, char))
     {
         import std.format : formattedWrite;
