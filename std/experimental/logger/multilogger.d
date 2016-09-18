@@ -136,7 +136,7 @@ class MultiLogger : Logger
     assert(n0.msg == "Hello TestLogger");
     assert(n0.line == line);
     assert(n1.msg == "Hello TestLogger");
-    assert(n0.line == line);
+    assert(n1.line == line);
 }
 
 // Issue #16
