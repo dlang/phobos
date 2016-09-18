@@ -291,13 +291,20 @@ struct FreeTree(ParentAllocator)
         if (n == 0) return null;
 
         immutable s = goodAllocSize(n);
+
+        // Consult the free tree.
         auto result = findAndRemove(root, s);
+        if (result.ptr) return result.ptr[0 .. n];
+
+        // No block found, try the parent allocator.
+        result = parent.allocate(s);
         if (result.ptr) return result.ptr[0 .. n];
 
         // Parent ran out of juice, desperation mode on
         static if (hasMember!(ParentAllocator, "deallocate"))
         {
             clear;
+            // Try parent allocator again.
             result = parent.allocate(s);
             if (result.ptr) return result.ptr[0 .. n];
             return null;
@@ -424,4 +431,22 @@ unittest // issue 16506
     f!Mallocator(33);
     f!Mallocator(43);
     f!GCAllocator(1);
+}
+
+unittest // issue 16507
+{
+    static struct MyAllocator
+    {
+        byte dummy;
+        static bool alive = true;
+        void[] allocate(size_t s) { return new byte[](s); }
+        bool deallocate(void[] ) { if (alive) assert(false); return true; }
+        enum alignment = size_t.sizeof;
+    }
+
+    FreeTree!MyAllocator ft;
+    void[] x = ft.allocate(1);
+    ft.deallocate(x);
+    ft.allocate(1000);
+    MyAllocator.alive = false;
 }
