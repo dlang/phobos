@@ -288,14 +288,19 @@ struct FreeTree(ParentAllocator)
     void[] allocate(size_t n)
     {
         assertValid;
-        auto result = findAndRemove(root, goodAllocSize(n));
+        if (n == 0) return null;
+
+        immutable s = goodAllocSize(n);
+        auto result = findAndRemove(root, s);
         if (result.ptr) return result.ptr[0 .. n];
 
         // Parent ran out of juice, desperation mode on
         static if (hasMember!(ParentAllocator, "deallocate"))
         {
             clear;
-            return parent.allocate(n);
+            result = parent.allocate(s);
+            if (result.ptr) return result.ptr[0 .. n];
+            return null;
         }
         else
         {
@@ -400,4 +405,23 @@ unittest
 {
     import std.experimental.allocator.gc_allocator;
     testAllocator!(() => FreeTree!GCAllocator());
+}
+
+unittest // issue 16506
+{
+    import std.experimental.allocator.gc_allocator: GCAllocator;
+    import std.experimental.allocator.mallocator: Mallocator;
+
+    static void f(ParentAllocator)(size_t sz)
+    {
+        static FreeTree!ParentAllocator myAlloc;
+        byte[] _payload = cast(byte[]) myAlloc.allocate(sz);
+        assert(_payload, "_payload is null");
+        _payload[] = 0;
+        myAlloc.deallocate(_payload);
+    }
+
+    f!Mallocator(33);
+    f!Mallocator(43);
+    f!GCAllocator(1);
 }
