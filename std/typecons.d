@@ -464,7 +464,7 @@ template Tuple(Specs...)
         alias Types = staticMap!(extractType, fieldSpecs);
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
             static assert(is(Fields.Types == AliasSeq!(int, string, float)));
@@ -476,7 +476,7 @@ template Tuple(Specs...)
         alias fieldNames = staticMap!(extractName, fieldSpecs);
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
             static assert(Fields.fieldNames == AliasSeq!("id", "", ""));
@@ -492,7 +492,7 @@ template Tuple(Specs...)
         mixin(injectNamedFields());
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             auto t1 = tuple(1, " hello ", 2.3);
             assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
@@ -550,7 +550,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias ISD = Tuple!(int, string, double);
             auto tup = ISD(1, "test", 3.2);
@@ -574,7 +574,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             int[2] ints;
             Tuple!(int, int) t = ints;
@@ -597,7 +597,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias IntVec = Tuple!(int, int, int);
             alias DubVec = Tuple!(double, double, double);
@@ -644,7 +644,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             Tuple!(int, string) t1 = tuple(1, "test");
             Tuple!(double, string) t2 =  tuple(1.0, "test");
@@ -700,7 +700,7 @@ template Tuple(Specs...)
             The first `v1` for which `v1 > v2` is true determines
             the result. This could lead to unexpected behaviour.
          */
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             auto tup1 = tuple(1, 1, 1);
             auto tup2 = tuple(1, 100, 100);
@@ -789,7 +789,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             auto t0 = tuple(4, "hello");
 
@@ -887,7 +887,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             //replacing names by their current name
 
@@ -907,7 +907,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             //replace names by their position
 
@@ -927,7 +927,7 @@ template Tuple(Specs...)
             assert(t2Named.c == 3);
         }
 
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             //check that empty translations work fine
             enum string[string] a0 = null;
@@ -966,7 +966,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             Tuple!(int, string, float, double) a;
             a[1] = "abc";
@@ -1220,6 +1220,12 @@ private template ReverseTupleSpecs(T...)
     {
         alias ReverseTupleSpecs = T;
     }
+}
+
+// ensure that internal Tuple unittests are compiled
+unittest
+{
+    Tuple!() t;
 }
 
 @safe unittest
