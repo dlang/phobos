@@ -450,3 +450,38 @@ unittest // issue 16507
     ft.allocate(1000);
     MyAllocator.alive = false;
 }
+
+unittest // "desperation mode"
+{
+    uint myDeallocCounter = 0;
+
+    struct MyAllocator
+    {
+        byte[] allocation;
+        void[] allocate(size_t s)
+        {
+            if (allocation.ptr) return null;
+            allocation = new byte[](s);
+            return allocation;
+        }
+        bool deallocate(void[] )
+        {
+            ++myDeallocCounter;
+            allocation = null;
+            return true;
+        }
+        enum alignment = size_t.sizeof;
+    }
+
+    FreeTree!MyAllocator ft;
+    void[] x = ft.allocate(1);
+    ft.deallocate(x);
+    assert(myDeallocCounter == 0);
+    x = ft.allocate(1000); // Triggers "desperation mode".
+    assert(myDeallocCounter == 1);
+    assert(x.ptr);
+    void[] y = ft.allocate(1000); /* Triggers "desperation mode" but there's
+        nothing to deallocate so MyAllocator can't deliver. */
+    assert(myDeallocCounter == 1);
+    assert(y.ptr is null);
+}
