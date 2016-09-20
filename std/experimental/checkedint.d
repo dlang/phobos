@@ -1454,6 +1454,7 @@ static:
         assert((cast(ubyte) x) == 255);
         x = checked!WithNaN(-422);
         assert((cast(byte) x) == -128);
+        assert(cast(short) x == -422);
     }
 
     /**
@@ -2375,6 +2376,8 @@ unittest
     assert((x1 += 2) == 5);
     x1 *= 2_000_000_000L;
     assert(x1.hook.calls == 1);
+    x1 *= -2_000_000_000L;
+    assert(x1.hook.calls == 2);
 
     auto x2 = Checked!(ushort, CountOverflows)(ushort(3));
     assert((x2 += 2) == 5);
