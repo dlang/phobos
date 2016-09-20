@@ -19,7 +19,6 @@ public import std.compiler;
 public import std.concurrency;
 public import std.conv;
 public import std.container;
-public import std.cstream;
 public import std.datetime;
 public import std.demangle;
 public import std.file;
@@ -37,10 +36,8 @@ public import std.regex;
 public import std.signals;
 //public import std.slist;
 public import std.socket;
-public import std.socketstream;
 public import std.stdint;
 public import std.stdio;
-public import std.stream;
 public import std.string;
 public import std.system;
 public import std.traits;
@@ -77,8 +74,6 @@ int main(string[] args)
     reverse(a);                         // adi
     sort(a);                            // qsort
     Clock.currTime();                   // datetime
-    Exception e = new ReadException(""); // stream
-    din.eof();                           // cstream
     cast(void)isValidDchar(cast(dchar)0);          // utf
     std.uri.ascii2hex(0);                // uri
     std.zlib.adler32(0,null);            // D.zlib
