@@ -759,7 +759,7 @@ template Tuple(Specs...)
         ref rename(names...)()
         if (names.length == 0 || allSatisfy!(isSomeString, typeof(names)))
         {
-            import std.algorithm : equal;
+            import std.algorithm.comparison : equal;
             // to circumvent bug 16418
             static if (names.length == 0 || equal([names], [fieldNames]))
                 return this;
@@ -820,7 +820,7 @@ template Tuple(Specs...)
 
             // use it in a range pipeline
             import std.range : iota, zip;
-            import std.algorithm : map, sum;
+            import std.algorithm.iteration : map, sum;
             auto res = zip(iota(1, 4), iota(10, 13))
                 .map!(t => t.rename!("a", "b"))
                 .map!(t => t.a * t.b)
@@ -847,7 +847,8 @@ template Tuple(Specs...)
             {
                 {
                     import std.conv : to;
-                    import std.algorithm : filter, canFind;
+                    import std.algorithm.iteration : filter;
+                    import std.algorithm.searching : canFind;
                     enum notFound = translate.keys
                         .filter!(k => fieldNames.canFind(k) == -1);
                     static assert(notFound.empty, "Cannot find members "
@@ -868,7 +869,7 @@ template Tuple(Specs...)
             else
             {
                 {
-                    import std.algorithm : filter;
+                    import std.algorithm.iteration : filter;
                     import std.conv : to;
                     enum invalid = translate.keys.
                         filter!(k => k < 0 || k >= this.length);
