@@ -1118,14 +1118,12 @@ public:
 // @system due to the catch for Throwable
 @system pure unittest
 {
+    import std.exception : assertNotThrown;
     enum failData =
     "name, surname, age
     Joe, Joker, 99\r";
-    bool pass = true;
     auto r = csvReader(failData);
-    try foreach (entry; r){}
-    catch pass = false;
-    assert(pass);
+    assertNotThrown((){foreach (entry; r){}}());
 }
 
 /*
