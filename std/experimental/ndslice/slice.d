@@ -28,7 +28,7 @@ Params:
     range = a random access range or an array; only index operator
         `auto opIndex(size_t index)` is required for ranges. The length of the
         range should be equal to the sum of shift and the product of
-        lengths. If `allowDownsize`, the length of the
+        lengths. If `ad`, the length of the
         range should be greater than or equal to the sum of shift and the product of
         lengths.
     lengths = list of lengths for each dimension
@@ -37,34 +37,36 @@ Params:
     Names = names of elements in a slice tuple.
         Slice tuple is a slice, which holds single set of lengths and strides
         for a number of ranges.
-    replaceArrayWithPointer = If `yes`, the array will be replaced with
+    ra = If `yes`, the array will be replaced with
         its pointer to improve performance.
         Use `no` for compile time function evaluation.
-
+    ad = If `yes`, no assert error will be thrown for range, which
+        has a length and its length is greater then the sum of shift and the product of
+        lengths.
 Returns:
     n-dimensional slice
 +/
 auto sliced(
-    Flag!"replaceArrayWithPointer" replaceArrayWithPointer = Yes.replaceArrayWithPointer,
-    Flag!"allowDownsize" allowDownsize = No.allowDownsize,
+    Flag!"replaceArrayWithPointer" ra = Yes.replaceArrayWithPointer,
+    Flag!"allowDownsize" ad = No.allowDownsize,
     Range, Lengths...)(Range range, Lengths lengths)
     if (!isStaticArray!Range && !isNarrowString!Range
         && allSatisfy!(isIndex, Lengths) && Lengths.length)
 {
-    return .sliced!(replaceArrayWithPointer, allowDownsize, Lengths.length, Range)(range, [lengths]);
+    return .sliced!(ra, ad, Lengths.length, Range)(range, [lengths]);
 }
 
 ///ditto
 auto sliced(
-    Flag!"replaceArrayWithPointer" replaceArrayWithPointer = Yes.replaceArrayWithPointer,
-    Flag!"allowDownsize" allowDownsize = No.allowDownsize,
+    Flag!"replaceArrayWithPointer" ra = Yes.replaceArrayWithPointer,
+    Flag!"allowDownsize" ad = No.allowDownsize,
     size_t N, Range)(Range range, auto ref in size_t[N] lengths, size_t shift = 0)
     if (!isStaticArray!Range && !isNarrowString!Range && N)
 in
 {
     static if (hasLength!Range)
     {
-        static if (allowDownsize)
+        static if (ad)
         {
             assert(lengthsProduct!N(lengths) + shift <= range.length,
                 "Range length must be greater than or equal to the sum of shift and the product of lengths."
@@ -80,7 +82,7 @@ in
 }
 body
 {
-    static if (isDynamicArray!Range && replaceArrayWithPointer)
+    static if (isDynamicArray!Range && ra)
     {
         Slice!(N, typeof(range.ptr)) ret = void;
         ret._ptr = range.ptr + shift;
@@ -141,8 +143,8 @@ template sliced(Names...)
     mixin (
     "
     auto sliced(
-            Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
-            Flag!`allowDownsize` allowDownsize = No.allowDownsize,
+            Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
+            Flag!`allowDownsize` ad = No.allowDownsize,
             " ~ _Range_Types!Names ~ "
             Lengths...)
             (" ~ _Range_DeclarationList!Names ~
@@ -150,12 +152,12 @@ template sliced(Names...)
     if (allSatisfy!(isIndex, Lengths))
     {
         alias sliced = .sliced!Names;
-        return sliced!(replaceArrayWithPointer, allowDownsize)(" ~ _Range_Values!Names ~ "[lengths]);
+        return sliced!(ra, ad)(" ~ _Range_Values!Names ~ "[lengths]);
     }
 
     auto sliced(
-            Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
-            Flag!`allowDownsize` allowDownsize = No.allowDownsize,
+            Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
+            Flag!`allowDownsize` ad = No.allowDownsize,
             size_t N, " ~ _Range_Types!Names ~ ")
             (" ~ _Range_DeclarationList!Names ~"
             auto ref in size_t[N] lengths,
@@ -183,7 +185,7 @@ template sliced(Names...)
                 mixin (`alias r = range_` ~ name ~`;`);
                 static if (hasLength!R)
                 {
-                    static if (allowDownsize)
+                    static if (ad)
                     {
                         assert(minLength <= r.length,
                             `length of range '` ~ name ~`' must be greater than or equal `
@@ -198,24 +200,24 @@ template sliced(Names...)
                             ~ tailErrorMessage!());
                     }
                 }
-                static if (isDynamicArray!T && replaceArrayWithPointer)
+                static if (isDynamicArray!T && ra)
                     range.ptrs[i] = r.ptr;
                 else
                     range.ptrs[i] = T(0, r);
             }
-            return .sliced!(replaceArrayWithPointer, allowDownsize, N, SPT)(range, lengths, shift);
+            return .sliced!(ra, ad, N, SPT)(range, lengths, shift);
         }
     ~ "}");
 }
 
 /// ditto
 auto sliced(
-    Flag!"replaceArrayWithPointer" replaceArrayWithPointer = Yes.replaceArrayWithPointer,
-    Flag!"allowDownsize" allowDownsize = No.allowDownsize,
+    Flag!"replaceArrayWithPointer" ra = Yes.replaceArrayWithPointer,
+    Flag!"allowDownsize" ad = No.allowDownsize,
     Range)(Range range)
     if (!isStaticArray!Range && !isNarrowString!Range && hasLength!Range)
 {
-    return .sliced!(replaceArrayWithPointer, allowDownsize, 1, Range)(range, [range.length]);
+    return .sliced!(ra, ad, 1, Range)(range, [range.length]);
 }
 
 /// Creates a slice from an array.
@@ -533,28 +535,28 @@ Params:
 Returns:
     n-dimensional slice
 +/
-Slice!(Lengths.length, Select!(replaceArrayWithPointer, T*, T[]))
+Slice!(Lengths.length, Select!(ra, T*, T[]))
 slice(T,
-    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Lengths...)(Lengths lengths)
     if (allSatisfy!(isIndex, Lengths) && Lengths.length)
 {
-    return .slice!(T, replaceArrayWithPointer)([lengths]);
+    return .slice!(T, ra)([lengths]);
 }
 
 /// ditto
-Slice!(N, Select!(replaceArrayWithPointer, T*, T[]))
+Slice!(N, Select!(ra, T*, T[]))
 slice(T,
-    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     size_t N)(auto ref in size_t[N] lengths)
 {
     immutable len = lengthsProduct(lengths);
-    return new T[len].sliced!replaceArrayWithPointer(lengths);
+    return new T[len].sliced!ra(lengths);
 }
 
 /// ditto
 auto slice(T,
-    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     size_t N)(auto ref in size_t[N] lengths, auto ref T init)
 {
     immutable len = lengthsProduct(lengths);
@@ -568,16 +570,16 @@ auto slice(T,
         auto arr = new T[len];
     }
     arr[] = init;
-    auto ret = arr.sliced!replaceArrayWithPointer(lengths);
+    auto ret = arr.sliced!ra(lengths);
     return ret;
 }
 
 /// ditto
 auto slice(
-    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     size_t N, Range)(auto ref Slice!(N, Range) slice)
 {
-    auto ret = .slice!(Unqual!(slice.DeepElemType), replaceArrayWithPointer)(slice.shape);
+    auto ret = .slice!(Unqual!(slice.DeepElemType), ra)(slice.shape);
     ret[] = slice;
     return ret;
 }
@@ -611,6 +613,43 @@ pure nothrow unittest
 }
 
 /++
+Creates an uninitialized array and an n-dimensional slice over it.
+Params:
+    lengths = list of lengths for each dimension
+    slice = slice to copy shape and data from
+Returns:
+    uninitialized n-dimensional slice
++/
+Slice!(Lengths.length, Select!(ra, T*, T[]))
+uninitializedSlice(T,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
+    Lengths...)(Lengths lengths)
+    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
+{
+    return .uninitializedSlice!(T, ra)([lengths]);
+}
+
+/// ditto
+auto uninitializedSlice(T,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
+    size_t N)(auto ref in size_t[N] lengths)
+{
+    immutable len = lengthsProduct(lengths);
+    import std.array : uninitializedArray;
+    auto arr = uninitializedArray!(T[])(len);
+    return arr.sliced!ra(lengths);
+}
+
+///
+pure nothrow unittest
+{
+    auto tensor = uninitializedSlice!int(5, 6, 7);
+    assert(tensor.length == 5);
+    assert(tensor.elementsCount == 5 * 6 * 7);
+    static assert(is(typeof(tensor) == Slice!(3, int*)));
+}
+
+/++
 Allocates an array through a specified allocator and creates an n-dimensional slice over it.
 See also $(MREF std, experimental, allocator).
 Params:
@@ -621,65 +660,66 @@ Params:
 Returns:
     a structure with fields `array` and `slice`
 +/
-auto makeSlice(T,
-    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+SliceAllocationResult!(Lengths.length, T, ra)
+makeSlice(T,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Allocator,
     Lengths...)(auto ref Allocator alloc, Lengths lengths)
     if (allSatisfy!(isIndex, Lengths) && Lengths.length)
 {
-    return .makeSlice!(T, replaceArrayWithPointer, Allocator)(alloc, [lengths]);
+    return .makeSlice!(T, ra, Allocator)(alloc, [lengths]);
 }
 
 /// ditto
 auto makeSlice(
-    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Allocator,
     size_t N, Range)(auto ref Allocator alloc, auto ref Slice!(N, Range) slice)
 {
     alias T = Unqual!(slice.DeepElemType);
-    return makeSlice!(T, replaceArrayWithPointer)(alloc, slice);
+    return makeSlice!(T, ra)(alloc, slice);
 }
 
 /// ditto
-auto makeSlice(T,
-    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+SliceAllocationResult!(N, T, ra)
+makeSlice(T,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Allocator,
     size_t N)(auto ref Allocator alloc, auto ref in size_t[N] lengths)
 {
     import std.experimental.allocator : makeArray;
-    static struct Result { T[] array; Slice!(N, Select!(replaceArrayWithPointer, T*, T[])) slice; }
     immutable len = lengthsProduct(lengths);
     auto array = alloc.makeArray!T(len);
-    auto slice = array.sliced!replaceArrayWithPointer(lengths);
-    return Result(array, slice);
+    auto slice = array.sliced!ra(lengths);
+    return typeof(return)(array, slice);
 }
 
 /// ditto
-auto makeSlice(T,
-    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+SliceAllocationResult!(N, T, ra)
+makeSlice(T,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Allocator,
     size_t N)(auto ref Allocator alloc, auto ref in size_t[N] lengths, auto ref T init)
 {
     import std.experimental.allocator : makeArray;
-    static struct Result { T[] array; Slice!(N, Select!(replaceArrayWithPointer, T*, T[])) slice; }
     immutable len = lengthsProduct(lengths);
     auto array = alloc.makeArray!T(len, init);
-    auto slice = array.sliced!replaceArrayWithPointer(lengths);
-    return Result(array, slice);
+    auto slice = array.sliced!ra(lengths);
+    return typeof(return)(array, slice);
 }
 
 /// ditto
-auto makeSlice(T,
-    Flag!`replaceArrayWithPointer` replaceArrayWithPointer = Yes.replaceArrayWithPointer,
+SliceAllocationResult!(N, T, ra)
+makeSlice(T,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Allocator,
     size_t N, Range)(auto ref Allocator alloc, auto ref Slice!(N, Range) slice)
 {
     import std.experimental.allocator : makeArray;
     import std.experimental.ndslice.selection : byElement;
-    static struct Result { T[] array; Slice!(N, Select!(replaceArrayWithPointer, T*, T[])) slice; }
     auto array = alloc.makeArray!T(slice.byElement);
-    auto _slice = array.sliced!replaceArrayWithPointer(slice.shape);
-    return Result(array, _slice);
+    auto _slice = array.sliced!ra(slice.shape);
+    return typeof(return)(array, _slice);
 }
 
 ///
@@ -689,9 +729,6 @@ auto makeSlice(T,
     import std.experimental.allocator.mallocator;
 
     auto tup = makeSlice!int(Mallocator.instance, 2, 3, 4);
-
-    static assert(is(typeof(tup.array) == int[]));
-    static assert(is(typeof(tup.slice) == Slice!(3, int*)));
 
     assert(tup.array.length           == 24);
     assert(tup.slice.elementsCount    == 24);
@@ -718,7 +755,6 @@ auto makeSlice(T,
     Mallocator.instance.dispose(tup.array);
 }
 
-
 @nogc unittest
 {
     import std.experimental.allocator;
@@ -729,6 +765,66 @@ auto makeSlice(T,
     auto slice = tup.slice;
     assert(slice[1, 1, 1] == 10.0);
     Mallocator.instance.dispose(tup.array);
+}
+
+/++
+Allocates an uninitialized array through a specified allocator and creates an n-dimensional slice over it.
+See also $(MREF std, experimental, allocator).
+Params:
+    alloc = allocator
+    lengths = list of lengths for each dimension
+    init = default value for array initialization
+    slice = slice to copy shape and data from
+Returns:
+    a structure with fields `array` and `slice`
++/
+SliceAllocationResult!(Lengths.length, T, ra)
+makeUninitializedSlice(T,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
+    Allocator,
+    Lengths...)(auto ref Allocator alloc, Lengths lengths)
+    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
+{
+    return .makeUninitializedSlice!(T, ra, Allocator)(alloc, [lengths]);
+}
+
+/// ditto
+SliceAllocationResult!(N, T, ra)
+makeUninitializedSlice(T,
+    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
+    Allocator,
+    size_t N)(auto ref Allocator alloc, auto ref in size_t[N] lengths)
+{
+    immutable len = lengthsProduct(lengths);
+    auto array = cast(T[]) alloc.allocate(len * T.sizeof);
+    auto slice = array.sliced!ra(lengths);
+    return typeof(return)(array, slice);
+}
+
+///
+@nogc unittest
+{
+    import std.experimental.allocator;
+    import std.experimental.allocator.mallocator;
+
+    auto tup = makeUninitializedSlice!int(Mallocator.instance, 2, 3, 4);
+
+    assert(tup.array.length           == 24);
+    assert(tup.slice.elementsCount    == 24);
+    assert(tup.array.ptr == &tup.slice[0, 0, 0]);
+
+    Mallocator.instance.dispose(tup.array);
+}
+
+/++
+Structure used by $(LREF makeSlice) and $(LREF makeUninitializedSlice).
++/
+struct SliceAllocationResult(size_t N, T, Flag!`replaceArrayWithPointer` ra)
+{
+    ///
+    T[] array;
+    ///
+    Slice!(N, Select!(ra, T*, T[])) slice;
 }
 
 /++
