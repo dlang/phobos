@@ -1110,7 +1110,7 @@ template ParameterStorageClassTuple(func...)
 
 
 /**
-Get, as a tuple, the identifiers of the parameters to a function symbol.
+Get, as a tuple, the identifiers of the parameters of a function or delegate.
  */
 template ParameterIdentifierTuple(func...)
     if (func.length == 1 && isCallable!func)
@@ -1119,9 +1119,8 @@ template ParameterIdentifierTuple(func...)
     {
         template Get(size_t i)
         {
-            static if (!isFunctionPointer!func && !isDelegate!func
-                       // Unnamed parameters yield CT error.
-                       && is(typeof(__traits(identifier, PT[i..i+1]))x))
+            // Unnamed parameters yield CT error.
+            static if (is(typeof(__traits(identifier, PT[i..i+1]))x))
             {
                 enum Get = __traits(identifier, PT[i..i+1]);
             }
@@ -1165,13 +1164,11 @@ template ParameterIdentifierTuple(func...)
     void bar(int num, string name, int[] array){}
     static assert([PIT!bar] == ["num", "name", "array"]);
 
-    // might be changed in the future?
     void function(int num, string name) fp;
-    static assert([PIT!fp] == ["", ""]);
+    static assert([PIT!fp] == ["num", "name"]);
 
-    // might be changed in the future?
     void delegate(int num, string name, int[long] aa) dg;
-    static assert([PIT!dg] == ["", "", ""]);
+    static assert([PIT!dg] == ["num", "name", "aa"]);
 
     interface Test
     {
