@@ -125,12 +125,6 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.xml;
 
-import std.algorithm.searching : count, startsWith;
-import std.array;
-import std.ascii;
-import std.string;
-import std.encoding;
-
 enum cdata = "<![CDATA[";
 
 /**
@@ -351,6 +345,8 @@ bool isExtender(dchar c) @safe @nogc nothrow pure
  */
 S encode(S)(S s)
 {
+    import std.array : appender;
+
     string r;
     size_t lastI;
     auto result = appender!S();
@@ -436,6 +432,8 @@ enum DecodeMode
  */
 string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @system pure
 {
+    import std.algorithm.searching : startsWith;
+
     if (mode == DecodeMode.NONE) return s;
 
     char[] buffer;
@@ -922,6 +920,8 @@ class Element : Item
          */
         override string[] pretty(uint indent=2)
         {
+            import std.algorithm.searching : count;
+            import std.string : rightJustify;
 
             if (isEmptyXML) return [ tag.toEmptyString() ];
 
@@ -1056,6 +1056,9 @@ class Tag
      */
     private this(ref string s, bool dummy) @system
     {
+        import std.ascii : whitespace;
+        import std.string : munch;
+
         // @system because of decode
         tagString = s;
         try
@@ -1166,6 +1169,8 @@ class Tag
         {
             string toNonEndString()
             {
+                import std.format : format;
+
                 string s = "<" ~ name;
                 foreach (key,val;attr)
                     s ~= format(" %s=\"%s\"",key,encode(val));
@@ -1235,6 +1240,8 @@ class Comment : Item
      */
     this(string content) @safe pure
     {
+        import std.string : indexOf;
+
         if (content == "-" || content.indexOf("--") != -1)
             throw new CommentException(content);
         this.content = content;
@@ -1323,6 +1330,7 @@ class CData : Item
      */
     this(string content) @safe pure
     {
+        import std.string : indexOf;
         if (content.indexOf("]]>") != -1) throw new CDataException(content);
         this.content = content;
     }
@@ -1482,6 +1490,7 @@ class XMLInstruction : Item
      */
     this(string content) @safe pure
     {
+        import std.string : indexOf;
         if (content.indexOf(">") != -1) throw new XIException(content);
         this.content = content;
     }
@@ -1561,6 +1570,7 @@ class ProcessingInstruction : Item
      */
     this(string content) @safe pure
     {
+        import std.string : indexOf;
         if (content.indexOf("?>") != -1) throw new PIException(content);
         this.content = content;
     }
@@ -1642,6 +1652,7 @@ abstract class Item
      */
     string[] pretty(uint indent) const
     {
+        import std.string : strip;
         string s = strip(toString());
         return s.length == 0 ? [] : [ s ];
     }
@@ -1970,6 +1981,9 @@ class ElementParser
      */
     void parse()
     {
+        import std.algorithm.searching : startsWith;
+        import std.string : indexOf;
+
         string t;
         Tag root = tag_;
         Tag[string] startTags;
@@ -2128,6 +2142,8 @@ private
 
     void checkMisc(ref string s) @safe pure // rule 27
     {
+        import std.algorithm.searching : startsWith;
+
         mixin Check!("Misc");
 
         try
@@ -2155,6 +2171,7 @@ private
     {
         // TO DO - Fix std.utf stride and decode functions, then use those
         // instead
+        import std.format : format;
 
         mixin Check!("Chars");
 
@@ -2178,6 +2195,8 @@ private
 
     void checkSpace(ref string s) @safe pure // rule 3
     {
+        import std.string : munch;
+
         mixin Check!("Whitespace");
         munch(s,"\u0020\u0009\u000A\u000D");
         if (s is old) fail();
@@ -2204,6 +2223,8 @@ private
 
     void checkAttValue(ref string s) @safe pure // rule 10
     {
+        import std.string : munch;
+
         mixin Check!("AttValue");
 
         if (s.length == 0) fail();
@@ -2224,6 +2245,8 @@ private
 
     void checkCharData(ref string s) @safe pure // rule 14
     {
+        import std.algorithm.searching : startsWith;
+
         mixin Check!("CharData");
 
         while (s.length != 0)
@@ -2237,6 +2260,8 @@ private
 
     void checkComment(ref string s) @safe pure // rule 15
     {
+        import std.string : indexOf;
+
         mixin Check!("Comment");
 
         try { checkLiteral("<!--",s); } catch (Err e) { fail(e); }
@@ -2332,6 +2357,8 @@ private
 
     void checkVersionNum(ref string s) @safe pure // rule 26
     {
+        import std.string : munch;
+
         mixin Check!("VersionNum");
 
         munch(s,"a-zA-Z0-9_.:-");
@@ -2356,6 +2383,8 @@ private
 
     void checkSDDecl(ref string s) @safe pure // rule 32
     {
+        import std.algorithm.searching : startsWith;
+
         mixin Check!("SDDecl");
 
         try
@@ -2452,6 +2481,8 @@ private
 
     void checkContent(ref string s) @safe pure // rule 43
     {
+        import std.algorithm.searching : startsWith;
+
         mixin Check!("Content");
 
         try
@@ -2473,6 +2504,8 @@ private
 
     void checkCharRef(ref string s, out dchar c) @safe pure // rule 66
     {
+        import std.format : format;
+
         mixin Check!("CharRef");
 
         c = 0;
@@ -2522,6 +2555,8 @@ private
 
     void checkReference(ref string s) @safe pure // rule 67
     {
+        import std.algorithm.searching : startsWith;
+
         mixin Check!("Reference");
 
         try
@@ -2549,6 +2584,8 @@ private
 
     void checkEncName(ref string s) @safe pure // rule 81
     {
+        import std.string : munch;
+
         mixin Check!("EncName");
 
         munch(s,"a-zA-Z");
@@ -2574,6 +2611,8 @@ private
 
     void checkLiteral(string literal,ref string s) @safe pure
     {
+        import std.string : startsWith;
+
         mixin Check!("Literal");
 
         if (!s.startsWith(literal)) fail("Expected literal \""~literal~"\"");
@@ -2582,6 +2621,7 @@ private
 
     void checkEnd(string end,ref string s) @safe pure
     {
+        import std.string : indexOf;
         // Deliberately no mixin Check here.
 
         auto n = s.indexOf(end);
@@ -2614,6 +2654,8 @@ private
 
     void quoted(alias f)(ref string s)
     {
+        import std.string : startsWith;
+
         if (s.startsWith("'"))
         {
             checkLiteral("'",s);
@@ -2664,6 +2706,8 @@ void check(string s) pure
 
 @system pure unittest
 {
+    import std.string : indexOf;
+
     try
     {
         check(q"[<?xml version="1.0"?>
@@ -2837,6 +2881,9 @@ class CheckException : XMLException
 
     private void complete(string entire) pure
     {
+        import std.encoding : transcode;
+        import std.string : count, lastIndexOf;
+
         string head = entire[0..$-tail.length];
         ptrdiff_t n = head.lastIndexOf('\n') + 1;
         line = head.count("\n") + 1;
@@ -2848,6 +2895,8 @@ class CheckException : XMLException
 
     override string toString() const @safe pure
     {
+        import std.format : format;
+
         string s;
         if (line != 0) s = format("Line %d, column %d: ",line,column);
         s ~= msg;
@@ -2897,6 +2946,8 @@ private
 
     char requireOneOf(ref string s, string chars) @safe pure
     {
+        import std.string : indexOf;
+
         if (s.length == 0 || indexOf(chars,s[0]) == -1)
             throw new TagException("");
         char ch = s[0];
