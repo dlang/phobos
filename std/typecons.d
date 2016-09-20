@@ -464,7 +464,7 @@ template Tuple(Specs...)
         alias Types = staticMap!(extractType, fieldSpecs);
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
             static assert(is(Fields.Types == AliasSeq!(int, string, float)));
@@ -476,7 +476,7 @@ template Tuple(Specs...)
         alias fieldNames = staticMap!(extractName, fieldSpecs);
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
             static assert(Fields.fieldNames == AliasSeq!("id", "", ""));
@@ -492,7 +492,7 @@ template Tuple(Specs...)
         mixin(injectNamedFields());
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             auto t1 = tuple(1, " hello ", 2.3);
             assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
@@ -550,7 +550,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias ISD = Tuple!(int, string, double);
             auto tup = ISD(1, "test", 3.2);
@@ -574,7 +574,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             int[2] ints;
             Tuple!(int, int) t = ints;
@@ -597,7 +597,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias IntVec = Tuple!(int, int, int);
             alias DubVec = Tuple!(double, double, double);
@@ -644,7 +644,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             Tuple!(int, string) t1 = tuple(1, "test");
             Tuple!(double, string) t2 =  tuple(1.0, "test");
@@ -700,7 +700,7 @@ template Tuple(Specs...)
             The first `v1` for which `v1 > v2` is true determines
             the result. This could lead to unexpected behaviour.
          */
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             auto tup1 = tuple(1, 1, 1);
             auto tup2 = tuple(1, 100, 100);
@@ -745,6 +745,208 @@ template Tuple(Specs...)
         }
 
         /**
+         * Renames the elements of a $(LREF Tuple).
+         *
+         * `rename` uses the passed `names` and returns a new
+         * $(LREF Tuple) using these names, with the content
+         * unchanged.
+         * If fewer names are passed than there are members
+         * of the $(LREF Tuple) then those trailing members are unchanged.
+         * An empty string will remove the name for that member.
+         * It is an compile-time error to pass more names than
+         * there are members of the $(LREF Tuple).
+         */
+        ref rename(names...)()
+        if (names.length == 0 || allSatisfy!(isSomeString, typeof(names)))
+        {
+            import std.algorithm : equal;
+            // to circumvent bug 16418
+            static if (names.length == 0 || equal([names], [fieldNames]))
+                return this;
+            else
+            {
+                enum nT = Types.length;
+                enum nN = names.length;
+                static assert(nN <= nT, "Cannot have more names than tuple members");
+                alias allNames = AliasSeq!(names, fieldNames[nN .. $]);
+
+                template GetItem(size_t idx)
+                {
+                    import std.array : empty;
+                    static if (idx < nT)
+                        alias GetItem = Alias!(Types[idx]);
+                    else static if (allNames[idx - nT].empty)
+                        alias GetItem = AliasSeq!();
+                    else
+                        alias GetItem = Alias!(allNames[idx - nT]);
+                }
+
+                import std.range : roundRobin, iota;
+                alias NewTupleT = Tuple!(staticMap!(GetItem, aliasSeqOf!(
+                        roundRobin(iota(nT), iota(nT, 2*nT)))));
+                return *(() @trusted => cast(NewTupleT*)&this)();
+            }
+        }
+
+        ///
+        static if (Specs.length == 0) @safe unittest
+        {
+            auto t0 = tuple(4, "hello");
+
+            auto t0Named = t0.rename!("val", "tag");
+            assert(t0Named.val == 4);
+            assert(t0Named.tag == "hello");
+
+            Tuple!(float, "dat", size_t[2], "pos") t1;
+            t1.pos = [2, 1];
+            auto t1Named = t1.rename!"height";
+            t1Named.height = 3.4f;
+            assert(t1Named.height == 3.4f);
+            assert(t1Named.pos == [2, 1]);
+            t1Named.rename!"altitude".altitude = 5;
+            assert(t1Named.height == 5);
+
+            Tuple!(int, "a", int, int, "c") t2;
+            t2 = tuple(3,4,5);
+            auto t2Named = t2.rename!("", "b");
+            // "a" no longer has a name
+            static assert(!hasMember!(typeof(t2Named), "a"));
+            assert(t2Named[0] == 3);
+            assert(t2Named.b == 4);
+            assert(t2Named.c == 5);
+
+            // not allowed to specify more names than the tuple has members
+            static assert(!__traits(compiles, t2.rename!("a","b","c","d")));
+
+            // use it in a range pipeline
+            import std.range : iota, zip;
+            import std.algorithm : map, sum;
+            auto res = zip(iota(1, 4), iota(10, 13))
+                .map!(t => t.rename!("a", "b"))
+                .map!(t => t.a * t.b)
+                .sum;
+            assert(res == 68);
+        }
+
+        /**
+         * Overload of $(LREF _rename) that takes an associative array
+         * `translate` as a template parameter, where the keys are
+         * either the names or indices of the members to be changed
+         * and the new names are the corresponding values.
+         * Every key in `translate` must be the name of a member of the
+         * $(LREF tuple).
+         * The same rules for empty strings apply as for the variadic
+         * template overload of $(LREF _rename).
+        */
+        ref rename(alias translate)()
+        if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
+                (isSomeString!K || is(K : size_t)))
+        {
+            import std.range: ElementType;
+            static if (isSomeString!(ElementType!(typeof(translate.keys))))
+            {
+                {
+                    import std.conv : to;
+                    import std.algorithm : filter, canFind;
+                    enum notFound = translate.keys
+                        .filter!(k => fieldNames.canFind(k) == -1);
+                    static assert(notFound.empty, "Cannot find members "
+                        ~ notFound.to!string ~ " in type "
+                        ~ typeof(this).stringof);
+                }
+                return this.rename!(aliasSeqOf!(
+                    {
+                        import std.array : empty;
+                        auto names = [fieldNames];
+                        foreach(ref n; names)
+                            if (!n.empty)
+                                if(auto p = n in translate)
+                                    n = *p;
+                        return names;
+                    }()));
+            }
+            else
+            {
+                {
+                    import std.algorithm : filter;
+                    import std.conv : to;
+                    enum invalid = translate.keys.
+                        filter!(k => k < 0 || k >= this.length);
+                    static assert(invalid.empty, "Indices " ~ invalid.to!string
+                        ~ " are out of bounds for tuple with length "
+                        ~ this.length.to!string);
+                }
+                return this.rename!(aliasSeqOf!(
+                    {
+                        auto names = [fieldNames];
+                        foreach(k, v; translate)
+                            names[k] = v;
+                        return names;
+                    }()));
+            }
+        }
+
+        ///
+        static if (Specs.length == 0) @safe unittest
+        {
+            //replacing names by their current name
+
+            Tuple!(float, "dat", size_t[2], "pos") t1;
+            t1.pos = [2, 1];
+            auto t1Named = t1.rename!(["dat": "height"]);
+            t1Named.height = 3.4;
+            assert(t1Named.pos == [2, 1]);
+            t1Named.rename!(["height": "altitude"]).altitude = 5;
+            assert(t1Named.height == 5);
+
+            Tuple!(int, "a", int, "b") t2;
+            t2 = tuple(3, 4);
+            auto t2Named = t2.rename!(["a": "b", "b": "c"]);
+            assert(t2Named.b == 3);
+            assert(t2Named.c == 4);
+        }
+
+        ///
+        static if (Specs.length == 0) @safe unittest
+        {
+            //replace names by their position
+
+            Tuple!(float, "dat", size_t[2], "pos") t1;
+            t1.pos = [2, 1];
+            auto t1Named = t1.rename!([0: "height"]);
+            t1Named.height = 3.4;
+            assert(t1Named.pos == [2, 1]);
+            t1Named.rename!([0: "altitude"]).altitude = 5;
+            assert(t1Named.height == 5);
+
+            Tuple!(int, "a", int, "b", int, "c") t2;
+            t2 = tuple(3, 4, 5);
+            auto t2Named = t2.rename!([0: "c", 2: "a"]);
+            assert(t2Named.a == 5);
+            assert(t2Named.b == 4);
+            assert(t2Named.c == 3);
+        }
+
+        static if (Specs.length == 0) @safe unittest
+        {
+            //check that empty translations work fine
+            enum string[string] a0 = null;
+            enum string[int] a1 = null;
+            Tuple!(float, "a", float, "b") t0;
+
+            auto t1 = t0.rename!a0;
+
+            t1.a = 3;
+            t1.b = 4;
+            auto t2 = t0.rename!a1;
+            t2.a = 3;
+            t2.b = 4;
+            auto t3 = t0.rename;
+            t3.a = 3;
+            t3.b = 4;
+        }
+
+        /**
          * Takes a slice of this `Tuple`.
          *
          * Params:
@@ -764,7 +966,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             Tuple!(int, string, float, double) a;
             a[1] = "abc";
@@ -1018,6 +1220,12 @@ private template ReverseTupleSpecs(T...)
     {
         alias ReverseTupleSpecs = T;
     }
+}
+
+// ensure that internal Tuple unittests are compiled
+unittest
+{
+    Tuple!() t;
 }
 
 @safe unittest
