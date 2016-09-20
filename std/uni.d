@@ -4610,7 +4610,8 @@ mixin template ForwardStrings()
 {
     private bool fwdStr(string fn, C)(ref C[] str) const pure
     {
-        alias type = typeof(units(str));
+        import std.utf : byCodeUnit;
+        alias type = typeof(byCodeUnit(str));
         return mixin(fn~"(*cast(type*)&str)");
     }
 }
@@ -5200,34 +5201,6 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
     static assert(isRandomAccessRange!Decoder);
     static assert(is(ElementType!Decoder : C));
     return Decoder(s, offset);
-}
-
-/*
-    Expose UTF string $(D s) as a random-access
-    range of $(S_LINK Code unit, code units).
-*/
-package auto units(C)(C[] s) @safe pure nothrow @nogc
-    if (is(C : wchar) || is(C : char))
-{
-    static struct Units
-    {
-    pure nothrow:
-        C[] str;
-        @property C front(){ return str[0]; }
-        @property C back(){ return str[$-1]; }
-        void popFront(){ str = str[1..$]; }
-        void popBack(){ str = str[0..$-1]; }
-        void popFrontN(size_t n){ str = str[n..$]; }
-        @property bool empty(){ return 0 == str.length; }
-        @property auto save(){ return this; }
-        auto opIndex(size_t i){ return str[i]; }
-        @property size_t length(){ return str.length; }
-        alias opDollar = length;
-        auto opSlice(size_t a, size_t b){ return Units(str[a..b]); }
-    }
-    static assert(isRandomAccessRange!Units);
-    static assert(is(ElementType!Units : C));
-    return Units(s);
 }
 
 @safe unittest
