@@ -500,6 +500,9 @@ style: ../dscanner/dsc
 	@echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"
 	grep -nr 'import [^/,=]*:.*;' $$(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $$? -eq 1
 
+	@echo "Check for package wide std.algorithm imports"
+	grep -nr 'import std.algorithm : ' $$(find . -name '*.d') ; test $$? -eq 1
+
 	@echo "Enforce Allman style"
 	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find . -name '*.d'); test $$? -eq 1
 
