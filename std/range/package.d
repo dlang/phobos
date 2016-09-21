@@ -7518,6 +7518,11 @@ unittest
         static assert(hasLength!A);
         static assert(hasSlicing!A);
     }
+    
+    auto idxtest = only(1);
+    assert(idxtest[0] == 1);
+    idxtest.popFront();
+    assert(idxtest[0] == 1);
 
     auto imm = only!(immutable int)(1);
     immutable int[] imme = [];
