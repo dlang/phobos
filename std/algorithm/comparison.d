@@ -789,7 +789,7 @@ template equal(alias pred = "a == b")
 @safe unittest
 {
     import std.math : approxEqual;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1..$]));
@@ -815,7 +815,7 @@ range of range (of range...) comparisons.
 @safe unittest
 {
     import std.range : iota, chunks;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     assert(equal!(equal!equal)(
         [[[0, 1], [2, 3]], [[4, 5], [6, 7]]],
         iota(0, 8).chunks(2).chunks(2)

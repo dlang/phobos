@@ -1964,7 +1964,8 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
 ///
 pure @safe unittest
 {
-    import std.algorithm : equal, map, splitter;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map, splitter;
     import std.conv : to, ConvException;
 
     auto s = "12,1337z32,54,2,7,9,1z,6,8";
@@ -1981,7 +1982,7 @@ pure @safe unittest
 ///
 pure @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : retro;
     import std.utf : UTFException;
 

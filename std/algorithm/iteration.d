@@ -3328,7 +3328,8 @@ The number of seeds must be correspondingly increased.
 */
 @safe unittest
 {
-    import std.algorithm : map, max, min;
+    import std.algorithm.comparison : max, min;
+    import std.algorithm.iteration : map;
     import std.math : approxEqual;
     import std.typecons : tuple;
 
@@ -3347,7 +3348,7 @@ The number of seeds must be correspondingly increased.
 
 @safe unittest
 {
-    import std.algorithm : equal, map, max, min;
+    import std.algorithm.comparison : equal, max, min;
     import std.conv : to;
     import std.range : chain;
     import std.typecons : tuple;
@@ -3406,7 +3407,6 @@ The number of seeds must be correspondingly increased.
 
 @safe unittest
 {
-    import std.algorithm : map;
     import std.math : approxEqual;
     import std.typecons : tuple;
 

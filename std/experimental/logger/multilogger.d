@@ -69,7 +69,7 @@ class MultiLogger : Logger
     */
     Logger removeLogger(in char[] toRemove) @safe
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         import std.range.primitives : back, popBack;
         for (size_t i = 0; i < this.logger.length; ++i)
         {

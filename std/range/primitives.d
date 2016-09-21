@@ -1078,7 +1078,7 @@ template hasMobileElements(R)
 ///
 @safe unittest
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.range : iota, repeat;
 
     static struct HasPostblit
@@ -1637,7 +1637,7 @@ auto walkLength(Range)(Range range, const size_t upTo)
 
 @safe unittest
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
     import std.range : recurrence, take;
 
     //hasLength Range
@@ -1760,7 +1760,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : iota;
     auto LL = iota(1L, 7L);
     auto r = popFrontN(LL, 2);
@@ -1781,7 +1781,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : iota;
     auto LL = iota(1L, 7L);
     auto r = popBackN(LL, 2);
@@ -1841,7 +1841,8 @@ void popBackExactly(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : filterBidirectional, equal;
+    import std.algorithm.iteration : filterBidirectional;
+    import std.algorithm.comparison : equal;
 
     auto a = [1, 2, 3];
     a.popFrontExactly(1);
@@ -2097,7 +2098,7 @@ version(unittest)
 void popFront(C)(ref C[] str) @trusted pure nothrow
 if (isNarrowString!(C[]))
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
 
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 

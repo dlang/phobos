@@ -287,7 +287,7 @@ final class ArchiveMember
 final class ZipArchive
 {
     import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.conv : to;
     import std.datetime : DosFileTime;
 
