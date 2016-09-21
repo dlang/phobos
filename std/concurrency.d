@@ -74,13 +74,8 @@ private
     import core.thread;
     import core.sync.mutex;
     import core.sync.condition;
-    import std.algorithm;
-    import std.exception;
-    import std.meta;
-    import std.range;
-    import std.string;
+    import std.range.primitives;
     import std.traits;
-    import std.typecons;
     import std.concurrencybase;
 
     template hasLocalAliasing(T...)
@@ -120,6 +115,8 @@ private
         this(T...)( MsgType t, T vals )
             if ( T.length > 1 )
         {
+            import std.typecons : Tuple;
+
             type = t;
             data = Tuple!(T)( vals );
         }
@@ -127,10 +124,15 @@ private
         @property auto convertsTo(T...)()
         {
             static if ( T.length == 1 )
+            {
                 return is( T[0] == Variant ) ||
                        data.convertsTo!(T);
+            }
             else
+            {
+                import std.typecons : Tuple;
                 return data.convertsTo!(Tuple!(T));
+            }
         }
 
         @property auto get(T...)()
@@ -144,6 +146,7 @@ private
             }
             else
             {
+                import std.typecons : Tuple;
                 return data.get!(Tuple!(T));
             }
         }
@@ -161,6 +164,7 @@ private
             }
             else
             {
+                import std.typecons : Tuple;
                 return op( data.get!(Tuple!(Args)).expand );
             }
         }
@@ -299,6 +303,7 @@ class MailboxFull : Exception
  */
 class TidMissingException : Exception
 {
+    import std.exception : basicExceptionCtors;
     mixin basicExceptionCtors;
 }
 
@@ -377,6 +382,8 @@ public:
  */
 @property Tid ownerTid()
 {
+    import std.exception : enforce;
+
     enforce!TidMissingException(thisInfo.owner.mbox !is null,
                                   "Error: Thread has no owner thread.");
     return thisInfo.owner;
@@ -384,6 +391,8 @@ public:
 
 @system unittest
 {
+    import std.exception : assertThrown;
+
     static void fun()
     {
         string res = receiveOnly!string();
@@ -729,9 +738,14 @@ version (unittest)
 private template receiveOnlyRet(T...)
 {
     static if ( T.length == 1 )
+    {
         alias receiveOnlyRet = T[0];
+    }
     else
+    {
+        import std.typecons : Tuple;
         alias receiveOnlyRet = Tuple!(T);
+    }
 }
 
 /**
@@ -770,6 +784,9 @@ in
 }
 body
 {
+    import std.format : format;
+    import std.typecons : Tuple;
+
     Tuple!(T) ret;
 
     thisInfo.ident.mbox.get(
@@ -1034,6 +1051,9 @@ bool register( string name, Tid tid )
  */
 bool unregister( string name )
 {
+    import std.algorithm.searching : countUntil;
+    import std.algorithm.mutation : remove, SwapStrategy;
+
     synchronized( registryLock )
     {
         if ( auto tid = name in tidByName )
@@ -1900,6 +1920,8 @@ private
          */
         final bool get(T...)( scope T vals )
         {
+            import std.meta : AliasSeq;
+
             static assert( T.length );
 
             static if ( isImplicitlyConvertible!(T[0], Duration) )
@@ -2237,6 +2259,8 @@ private
     {
         struct Range
         {
+            import std.exception : enforce;
+
             @property bool empty() const
             {
                 return !m_prev.next;
@@ -2318,6 +2342,8 @@ private
          */
         void removeAt( Range r )
         {
+            import std.exception : enforce;
+
             assert( m_count );
             Node* n = r.m_prev;
             enforce( n && n.next, "attempting to remove invalid list node" );
@@ -2448,6 +2474,7 @@ private
 version( unittest )
 {
     import std.stdio;
+    import std.typecons : tuple, Tuple;
 
     void testfn( Tid tid )
     {
