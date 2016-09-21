@@ -7356,7 +7356,7 @@ private struct OnlyResult(T, size_t arity : 1)
 
     T opIndex(size_t i)
     {
-        assert(!_empty && i == 0, "Attempting to fetch an out of bounds index from an Only range");
+        assert(i == 0, "Attempting to fetch an out of bounds index from an Only range");
         return _value;
     }
 
