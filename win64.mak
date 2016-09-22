@@ -591,7 +591,6 @@ UNITTEST_OBJS= \
 		unittest6g.obj \
 		unittest6h.obj \
 		unittest6i.obj \
-		unittest6j.obj \
 		unittest7.obj \
 		unittest8a.obj \
 		unittest8b.obj \
