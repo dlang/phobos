@@ -575,9 +575,9 @@ $(LI All elements `e` in subrange $(D r[0 .. k]) satisfy $(D !less(r[k], e))
 (i.e. `r[k]` is greater than or equal to each element to its left according to
 predicate `less`))
 
-$(LI $(LI All elements `e` in subrange $(D r[0 .. k]) satisfy $(D !less(e,
+$(LI All elements `e` in subrange $(D r[0 .. k]) satisfy $(D !less(e,
 r[k])) (i.e. `r[k]` is less than or equal to each element to its right
-according to predicate `less`))))
+according to predicate `less`)))
 
 If `r` contains equivalent elements, multiple permutations of `r` satisfy these
 constraints. In such cases, `pivotPartition` attempts to distribute equivalent
@@ -586,7 +586,7 @@ r.length / 2).
 
 Params:
 less = The predicate used for comparison, modeled as a $(LUCKY strict weak
-ordering) (irreflexive, antisymmetric, transitive, and implies transitive
+ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
 equivalence)
 r = The range being partitioned
 pivot = The index of the pivot for partitioning, must be less than `r.length` or
