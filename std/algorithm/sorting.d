@@ -40,10 +40,15 @@ $(T2 partialSort,
         $(D a[0 .. 3] = [1, 2, 3]).
         The other elements of $(D a) are left in an unspecified order.)
 $(T2 partition,
-        Partitions a range according to a predicate.)
+        Partitions a range according to a unary predicate.)
 $(T2 partition3,
-        Partitions a range in three parts (less than, equal, greater than the
-        given pivot).)
+        Partitions a range according to a binary predicate in three parts (less
+        than, equal, greater than the given pivot). Pivot is not given as an
+        index, but instead as an element independent from the range's content.)
+$(T2 pivotPartition,
+        Partitions a range according to a binary predicate in two parts: less
+        than or equal, and greater than or equal to the given pivot, passed as
+        an index in the range.)
 $(T2 schwartzSort,
         Sorts with the help of the $(LUCKY Schwartzian transform).)
 $(T2 sort,
