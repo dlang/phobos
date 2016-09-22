@@ -703,7 +703,7 @@ public struct UUID
          */
         @safe pure nothrow @nogc int opCmp(in UUID s) const
         {
-            import std.algorithm : cmp;
+            import std.algorithm.comparison : cmp;
             return cmp(this.data[], s.data[]);
         }
 
@@ -712,7 +712,7 @@ public struct UUID
          */
         @safe pure nothrow @nogc int opCmp(ref in UUID s) const
         {
-            import std.algorithm : cmp;
+            import std.algorithm.comparison : cmp;
             return cmp(this.data[], s.data[]);
         }
 

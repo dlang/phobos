@@ -256,7 +256,7 @@ version(ExampleDigest)
 unittest
 {
     //Using the OutputRange feature
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     import std.range : repeat;
     import std.digest.md;
 
@@ -427,7 +427,7 @@ package template isDigestibleRange(Range)
 DigestType!Hash digest(Hash, Range)(auto ref Range range) if (!isArray!Range
     && isDigestibleRange!Range)
 {
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     Hash hash;
     hash.start();
     copy(range, &hash);
@@ -621,7 +621,7 @@ interface Digest
 unittest
 {
     //Using the OutputRange feature
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     import std.range : repeat;
     import std.digest.md;
 

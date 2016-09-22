@@ -1737,7 +1737,8 @@ class Base64Exception : Exception
 
 @system unittest
 {
-    import std.algorithm : sort, equal;
+    import std.algorithm.sorting : sort;
+    import std.algorithm.comparison : equal;
     import std.conv;
     import std.file;
     import std.stdio;

@@ -755,7 +755,7 @@ auto csvReader(Contents = string,
 
 @safe unittest // const/immutable dchars
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.array : array;
     const(dchar)[] c = "foo,bar\n";
     assert(csvReader(c).map!array.array == [["foo", "bar"]]);
@@ -907,17 +907,18 @@ public:
         {
             static if (is(Contents T : T[U], U : string))
             {
-                import std.algorithm : sort;
+                import std.algorithm.sorting : sort;
                 sort(indices);
             }
             else static if (ErrorLevel == Malformed.ignore)
             {
-                import std.algorithm : sort;
+                import std.algorithm.sorting : sort;
                 sort(indices);
             }
             else
             {
-                import std.algorithm : isSorted, findAdjacent;
+                import std.algorithm.searching : findAdjacent;
+                import std.algorithm.sorting : isSorted;
                 if (!isSorted(indices))
                 {
                     auto ex = new HeaderMismatchException

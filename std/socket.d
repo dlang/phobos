@@ -2301,7 +2301,7 @@ public:
     {
         version (Windows)
         {
-            import std.algorithm : countUntil;
+            import std.algorithm.searching : countUntil;
             auto fds = fds;
             auto p = fds.countUntil(s);
             if (p >= 0)

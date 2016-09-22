@@ -120,7 +120,7 @@ interface InputRange(E) {
 ///
 unittest
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.range : iota;
 
     void useRange(InputRange!int range) {
@@ -505,7 +505,7 @@ unittest
 unittest
 {
     import std.internal.test.dummyrange;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.array;
 
     static void testEquality(R)(iInputRange r1, R r2) {

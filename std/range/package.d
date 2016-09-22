@@ -5134,7 +5134,8 @@ unittest
 
         writefln("%(%s %|%)", iota(0, 5));
 
-        import std.algorithm : map, copy;
+        import std.algorithm.iteration : map;
+        import std.algorithm.mutation : copy;
         import std.format;
         iota(0, 5).map!(i => format("%s ", i)).copy(stdout.lockingTextWriter());
         writeln();

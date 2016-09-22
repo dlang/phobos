@@ -2328,7 +2328,7 @@ size_t codeLength(C, InputRange)(InputRange input)
 {
     import std.conv : to;
     import std.exception;
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
 
     assertCTFEable!(
     {

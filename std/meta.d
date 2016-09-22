@@ -1070,7 +1070,8 @@ template aliasSeqOf(alias range)
 ///
 @safe unittest
 {
-    import std.algorithm : map, sort;
+    import std.algorithm.iteration : map;
+    import std.algorithm.sorting : sort;
     import std.string : capitalize;
 
     struct S

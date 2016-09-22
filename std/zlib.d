@@ -30,7 +30,7 @@
  * import std.zlib;
  * import std.stdio;
  * import std.conv : to;
- * import std.algorithm : map;
+ * import std.algorithm.iteration : map;
  *
  * UnCompress decmp = new UnCompress;
  * foreach (chunk; stdin.byChunk(4096).map!(x => decmp.uncompress(x)))
