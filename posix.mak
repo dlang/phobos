@@ -169,10 +169,10 @@ STD_PACKAGES = std $(addprefix std/,\
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
-  conv cstream csv datetime demangle encoding exception file format \
+  conv csv datetime demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
-  outbuffer parallelism path process random signals socket socketstream stdint \
-  stdio stdiobase stream string system traits typecons typetuple uni \
+  outbuffer parallelism path process random signals socket stdint \
+  stdio stdiobase string system traits typecons typetuple uni \
   uri utf uuid variant xml zip zlib
 PACKAGE_std_experimental = typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
