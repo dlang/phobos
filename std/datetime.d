@@ -2913,7 +2913,7 @@ public:
         assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     }
 
-    //Test add!"years"() with AllowDayOverlow.yes
+    //Test add!"years"() with Yes.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -3115,7 +3115,7 @@ public:
         //static assert(!__traits(compiles, ist.add!"years"(4)));
     }
 
-    //Test add!"years"() with AllowDayOverlow.no
+    //Test add!"years"() with No.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -3320,7 +3320,7 @@ public:
         }
     }
 
-    //Test add!"months"() with AllowDayOverlow.yes
+    //Test add!"months"() with Yes.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -3666,7 +3666,7 @@ public:
         //static assert(!__traits(compiles, ist.add!"months"(4)));
     }
 
-    //Test add!"months"() with AllowDayOverlow.no
+    //Test add!"months"() with No.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -4100,7 +4100,7 @@ public:
         return this;
     }
 
-    //Test roll!"months"() with AllowDayOverlow.yes
+    //Test roll!"months"() with Yes.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -4478,7 +4478,7 @@ public:
         //static assert(!__traits(compiles, ist.roll!"months"(4)));
     }
 
-    //Test roll!"months"() with AllowDayOverlow.no
+    //Test roll!"months"() with No.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -10071,7 +10071,7 @@ public:
         assert(d4 == Date(2001, 2, 28));
     }
 
-    //Test add!"years"() with AllowDayOverlow.yes
+    //Test add!"years"() with Yes.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -10173,7 +10173,7 @@ public:
         static assert(!__traits(compiles, idate.add!"years"(7)));
     }
 
-    //Test add!"years"() with AllowDayOverlow.no
+    //Test add!"years"() with No.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -10313,7 +10313,7 @@ public:
         return this;
     }
 
-    //Test add!"months"() with AllowDayOverlow.yes
+    //Test add!"months"() with Yes.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -10555,7 +10555,7 @@ public:
         static assert(!__traits(compiles, idate.add!"months"(3)));
     }
 
-    //Test add!"months"() with AllowDayOverlow.no
+    //Test add!"months"() with No.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -10892,7 +10892,7 @@ public:
         return this;
     }
 
-    //Test roll!"months"() with AllowDayOverlow.yes
+    //Test roll!"months"() with Yes.allowDayOverflow
     @safe unittest
     {
         //Test A.D.
@@ -11166,7 +11166,7 @@ public:
         static assert(!__traits(compiles, idate.roll!"months"(3)));
     }
 
-    //Test roll!"months"() with AllowDayOverlow.no
+    //Test roll!"months"() with No.allowDayOverflow
     @safe unittest
     {
         //Test A.D.

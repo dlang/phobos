@@ -1816,7 +1816,7 @@ Allows to directly use range operations on lines of a file.
             enum defTerm = cast(Terminator)"\n";
 
     public:
-        this(File f, KeepTerminator kt = KeepTerminator.no,
+        this(File f, KeepTerminator kt = No.keepTerminator,
                 Terminator terminator = defTerm)
         {
             impl = PImpl(f, kt, terminator);
@@ -1882,7 +1882,7 @@ Allows to directly use range operations on lines of a file.
                     file.detach();
                     line = null;
                 }
-                else if (keepTerminator == KeepTerminator.no
+                else if (keepTerminator == No.keepTerminator
                         && endsWith(line, terminator))
                 {
                     static if (isScalarType!Terminator)
@@ -1917,7 +1917,7 @@ instead.
 
 Params:
 Char = Character type for each line, defaulting to $(D char).
-keepTerminator = Use $(D KeepTerminator.yes) to include the
+keepTerminator = Use $(D Yes.keepTerminator) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
 $(REF newline, std,ascii) for portability (unless the file was opened in
@@ -1962,7 +1962,7 @@ $(D front) after the corresponding $(D popFront) call is made (because
 the contents may well have changed).
 */
     auto byLine(Terminator = char, Char = char)
-            (KeepTerminator keepTerminator = KeepTerminator.no,
+            (KeepTerminator keepTerminator = No.keepTerminator,
             Terminator terminator = '\n')
     if (isScalarType!Terminator)
     {
@@ -2076,7 +2076,7 @@ primitives may throw $(D StdioException) on I/O error.
 
 Params:
 Char = Character type for each line, defaulting to $(D immutable char).
-keepTerminator = Use $(D KeepTerminator.yes) to include the
+keepTerminator = Use $(D Yes.keepTerminator) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
 $(REF newline, std,ascii) for portability (unless the file was opened in
@@ -2100,7 +2100,7 @@ See_Also:
 $(REF readText, std,file)
 */
     auto byLineCopy(Terminator = char, Char = immutable char)
-            (KeepTerminator keepTerminator = KeepTerminator.no,
+            (KeepTerminator keepTerminator = No.keepTerminator,
             Terminator terminator = '\n')
     if (isScalarType!Terminator)
     {
@@ -2179,7 +2179,7 @@ $(REF readText, std,file)
             assert(File(deleteme).byLineCopy(kt, term).array.sort() == witness.dup.sort());
         }
 
-        KeepTerminator kt = KeepTerminator.no;
+        KeepTerminator kt = No.keepTerminator;
         test("", null, kt, '\n');
         test("\n", [ "" ], kt, '\n');
         test("asd\ndef\nasdf", [ "asd", "def", "asdf" ], kt, '\n');
@@ -2190,7 +2190,7 @@ $(REF readText, std,file)
             kt, "\r\n");
         test("sue\r", ["sue"], kt, '\r');
 
-        kt = KeepTerminator.yes;
+        kt = Yes.keepTerminator;
         test("", null, kt, '\n');
         test("\n", [ "\n" ], kt, '\n');
         test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], kt, '\n');
@@ -4271,7 +4271,7 @@ __gshared
 
         void main() {
             stdin                       // read from stdin
-            .byLineCopy(KeepTerminator.yes) // copying each line
+            .byLineCopy(Yes.keepTerminator) // copying each line
             .array()                    // convert to array of lines
             .sort()                     // sort the lines
             .copy(                      // copy output of .sort to an OutputRange

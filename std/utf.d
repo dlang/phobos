@@ -20,7 +20,7 @@ module std.utf;
 import std.meta;       // AliasSeq
 import std.range.primitives;
 import std.traits;     // isSomeChar, isSomeString
-import std.typecons;   // Flag
+import std.typecons;   // Flag, Yes, No
 import std.exception;  // basicExceptionCtors
 
 //debug=utf;           // uncomment to turn on debugging printf's
@@ -999,9 +999,9 @@ alias UseReplacementDchar = Flag!"useReplacementDchar";
 
     Throws:
         $(LREF UTFException) if $(D str[index]) is not the start of a valid UTF
-        sequence and useReplacementDchar is UseReplacementDchar.no
+        sequence and useReplacementDchar is $(D No.useReplacementDchar)
   +/
-dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
+dchar decode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(auto ref S str, ref size_t index)
     if (!isSomeString!S &&
         isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
 in
@@ -1020,7 +1020,7 @@ body
         return decodeImpl!(true, useReplacementDchar)(str, index);
 }
 
-dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+dchar decode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     auto ref S str, ref size_t index) @trusted pure if (isSomeString!S)
 in
 {
@@ -1061,7 +1061,7 @@ body
         type of range being used and how many code units had to be popped off
         before the code point was determined to be invalid.
   +/
-dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     ref S str, out size_t numCodeUnits) if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
 in
 {
@@ -1097,7 +1097,7 @@ body
     }
 }
 
-dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     ref S str, out size_t numCodeUnits) @trusted pure if (isSomeString!S)
 in
 {
@@ -1125,7 +1125,7 @@ body
 }
 
 /++ Ditto +/
-dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(ref S str)
+dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(ref S str)
     if (isInputRange!S && isSomeChar!(ElementType!S))
 {
     size_t numCodeUnits;
@@ -1161,7 +1161,7 @@ package template codeUnitLimit(S)
  * Returns:
  *      decoded character
  */
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     auto ref S str, ref size_t index) if (
     is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
@@ -1385,13 +1385,13 @@ unittest
     {
         auto r = R(s);
         size_t index;
-        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        dchar dc = decodeImpl!(false, Yes.useReplacementDchar)(r, index);
         assert(dc == replacementDchar);
         assert(1 <= index && index <= s.length);
     }
 }
 
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)
 (auto ref S str, ref size_t index)
     if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
@@ -1502,13 +1502,13 @@ unittest
     {
         auto r = R(s);
         size_t index;
-        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        dchar dc = decodeImpl!(false, Yes.useReplacementDchar)(r, index);
         assert(dc == replacementDchar);
         assert(1 <= index && index <= s.length);
     }
 }
 
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
+private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     auto ref S str, ref size_t index)
     if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
@@ -1566,7 +1566,7 @@ unittest
     {
         auto r = R(s);
         size_t index;
-        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        dchar dc = decodeImpl!(false, Yes.useReplacementDchar)(r, index);
         assert(dc == replacementDchar);
         assert(1 <= index && index <= s.length);
     }
@@ -1860,7 +1860,7 @@ private dchar _utfException(UseReplacementDchar useReplacementDchar)(string msg,
     Throws:
         $(D UTFException) if $(D c) is not a valid UTF code point.
   +/
-size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref char[4] buf, dchar c) @safe pure
 {
     if (c <= 0x7F)
@@ -1928,14 +1928,14 @@ size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
 
-    assert(encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000) == buf.stride);
     assert(buf.front == replacementDchar);
     });
 }
 
 
 /// Ditto
-size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref wchar[2] buf, dchar c) @safe pure
 {
     if (c <= 0xFFFF)
@@ -1981,14 +1981,14 @@ size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
 
-    assert(encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000) == buf.stride);
     assert(buf.front == replacementDchar);
     });
 }
 
 
 /// Ditto
-size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref dchar[1] buf, dchar c) @safe pure
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
@@ -2019,7 +2019,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
 
-    assert(encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000) == buf.stride);
     assert(buf.front == replacementDchar);
     });
 }
@@ -2031,7 +2031,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     Throws:
         $(D UTFException) if $(D c) is not a valid UTF code point.
   +/
-void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref char[] str, dchar c) @safe pure
 {
     char[] r = str;
@@ -2134,13 +2134,13 @@ void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
 
     assert(buf.back != replacementDchar);
-    encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000);
+    encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000);
     assert(buf.back == replacementDchar);
     });
 }
 
 /// ditto
-void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref wchar[] str, dchar c) @safe pure
 {
     wchar[] r = str;
@@ -2195,13 +2195,13 @@ void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
 
     assert(buf.back != replacementDchar);
-    encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000);
+    encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000);
     assert(buf.back == replacementDchar);
     });
 }
 
 /// ditto
-void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
+void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref dchar[] str, dchar c) @safe pure
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
@@ -2232,7 +2232,7 @@ void encode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no)(
     assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
 
     assert(buf.back != replacementDchar);
-    encode!(UseReplacementDchar.yes)(buf, cast(dchar)0x110000);
+    encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000);
     assert(buf.back == replacementDchar);
     });
 }
@@ -3597,13 +3597,13 @@ template byUTF(C) if (isSomeChar!C)
                         {
                             static if (is(RC == dchar))
                             {
-                                fill = cast(ushort) encode!(UseReplacementDchar.yes)(buf, c);
+                                fill = cast(ushort) encode!(Yes.useReplacementDchar)(buf, c);
                                 r.popFront;
                             }
                             else
                             {
-                                fill = cast(ushort) encode!(UseReplacementDchar.yes)(
-                                    buf, decodeFront!(UseReplacementDchar.yes)(r));
+                                fill = cast(ushort) encode!(Yes.useReplacementDchar)(
+                                    buf, decodeFront!(Yes.useReplacementDchar)(r));
                             }
                         }
                     }

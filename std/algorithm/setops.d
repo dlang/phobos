@@ -46,6 +46,7 @@ import std.traits;
 import std.meta; // : AliasSeq, staticMap, allSatisfy, anySatisfy;
 
 import std.algorithm.sorting; // : Merge;
+import std.typecons : No;
 
 // cartesianProduct
 /**
@@ -574,7 +575,7 @@ duplicate in between calls).
  */
 void largestPartialIntersection
 (alias less = "a < b", RangeOfRanges, Range)
-(RangeOfRanges ror, Range tgt, SortOutput sorted = SortOutput.no)
+(RangeOfRanges ror, Range tgt, SortOutput sorted = No.sortOutput)
 {
     struct UnitWeights
     {
@@ -631,7 +632,7 @@ Params:
 */
 void largestPartialIntersectionWeighted
 (alias less = "a < b", RangeOfRanges, Range, WeightsAA)
-(RangeOfRanges ror, Range tgt, WeightsAA weights, SortOutput sorted = SortOutput.no)
+(RangeOfRanges ror, Range tgt, WeightsAA weights, SortOutput sorted = No.sortOutput)
 {
     import std.algorithm.iteration : group;
     import std.algorithm.sorting : topNCopy;
@@ -672,7 +673,7 @@ unittest
 unittest
 {
     import std.conv : text;
-    import std.typecons : tuple, Tuple;
+    import std.typecons : tuple, Tuple, Yes;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -686,7 +687,7 @@ unittest
             [ 7 ],
         ];
     auto b = new Tuple!(double, uint)[2];
-    largestPartialIntersection(a, b, SortOutput.yes);
+    largestPartialIntersection(a, b, Yes.sortOutput);
     //sort(b);
     //writeln(b);
     assert(b == [ tuple(7.0, 4u), tuple(1.0, 3u) ][], text(b));
@@ -696,7 +697,7 @@ unittest
 unittest
 {
     import std.conv : text;
-    import std.typecons : tuple, Tuple;
+    import std.typecons : tuple, Tuple, Yes;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -710,7 +711,7 @@ unittest
             [ "7" ],
         ];
     auto b = new Tuple!(string, uint)[2];
-    largestPartialIntersection(a, b, SortOutput.yes);
+    largestPartialIntersection(a, b, Yes.sortOutput);
     //writeln(b);
     assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
 }
