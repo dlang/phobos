@@ -2659,7 +2659,28 @@ Params:
  */
 struct Nullable(T, T nullValue)
 {
-    private T _value = nullValue;
+    static if (_useNanWorkaround && is(T == float) && nullValue is T.init)
+        union
+        {
+            private uint _raw = 0x7fa00000; // float.init
+            private T _value;
+        }
+    else static if (_useNanWorkaround && is(T == double) && nullValue is T.init)
+        union
+        {
+            private ulong _raw = 0x7ff4000000000000UL; // double.init
+            private T _value;
+        }
+    else
+        private T _value = nullValue;
+
+    // workaround for bug 15316
+    version (X86_64)
+        private enum _useNanWorkaround = true;
+    else version (OSX)
+        private enum _useNanWorkaround = true;
+    else
+        private enum _useNanWorkaround = false;
 
 /**
 Constructor initializing $(D this) with $(D value).
@@ -2703,6 +2724,12 @@ Returns:
         {
             return _value is nullValue;
         }
+        //Need to use 'is' if T is a float type
+        //because NaN != NaN
+        else static if (isFloatingPoint!T)
+        {
+            return _value is nullValue;
+        }
         else
         {
             return _value == nullValue;
@@ -2718,6 +2745,24 @@ Returns:
 
     ni = 0;
     assert(!ni.isNull);
+}
+
+// Bugzilla 11135
+unittest
+{
+    foreach (T; AliasSeq!(float, double, real))
+    {
+        Nullable!(T, T.init) nf;
+        //Initialized to "null" state
+        assert(nf.isNull);
+        assert(nf is typeof(nf).init);
+
+        nf = 0;
+        assert(!nf.isNull);
+
+        nf.nullify();
+        assert(nf.isNull);
+    }
 }
 
 /**
