@@ -2603,7 +2603,6 @@ schwartzSort(alias transform, alias less = "a < b",
         foreach (ref p; probs)
         {
             if (!p) continue;
-            //enforce(p > 0 && p <= 1, "Wrong probability passed to entropy");
             result -= p * log2(p);
         }
         return result;
@@ -2637,7 +2636,6 @@ schwartzSort(alias transform, alias less = "a < b",
         foreach (ref p; probs)
         {
             if (!p) continue;
-            //enforce(p > 0 && p <= 1, "Wrong probability passed to entropy");
             result -= p * log2(p);
         }
         return result;
@@ -3146,15 +3144,16 @@ void medianOf(
         alias less = "a < b",
         Flag!"leanRight" flag = No.leanRight,
         Range,
-        Index...)
-    (Range r, Index i)
-if (isRandomAccessRange!Range && Index.length >= 2 && Index.length <= 5 &&
-    allSatisfy!(isIntegral, Index))
+        Indexes...)
+    (Range r, Indexes i)
+if (isRandomAccessRange!Range && hasLength!Range &&
+    Indexes.length >= 2 && Indexes.length <= 5 &&
+    allSatisfy!(isIntegral, Indexes))
 {
-    assert(r.length >= Index.length);
+    assert(r.length >= Indexes.length);
     import std.functional : binaryFun;
     alias lt = binaryFun!less;
-    enum k = Index.length;
+    enum k = Indexes.length;
     import std.algorithm : swapAt;
 
     alias a = i[0];
@@ -3263,20 +3262,31 @@ if (isRandomAccessRange!Range && Index.length >= 2 && Index.length <= 5 &&
 ///
 unittest
 {
-    import std.random : uniform;
-    import std.algorithm.iteration : map;
-    auto a = iota(0, 18).map!(_ => uniform(-10, 10)).array;
-    medianOf(a, 0, 1);
-    assert(a[0] <= a[1]);
-    medianOf(a, 2, 3, 4);
-    assert(a[2] <= a[3] && a[3] <= a[4]);
-    medianOf(a, 5, 6, 7, 8);
-    assert(a[5] <= a[6] && a[6] <= a[7] && a[6] <= a[8]);
-    medianOf!("a < b", Yes.leanRight)(a, 9, 10, 11, 12);
-    assert(a[9] <= a[11] && a[10] <= a[11] && a[11] <= a[12]);
-    medianOf(a, 13, 14, 15, 16, 17);
-    assert(a[13] <= a[15] && a[14] <= a[15] && a[15] <= a[16] &&
-        a[15] <= a[17]);
+    // Verify medianOf for all permutations of [1, 2, 2, 3, 4].
+    int[5] data = [1, 2, 2, 3, 4];
+    do
+    {
+        int[5] a = data;
+        medianOf(a[], 0, 1);
+        assert(a[0] <= a[1]);
+
+        a[] = data[];
+        medianOf(a[], 0, 1, 2);
+        assert(ordered(a[0], a[1], a[2]));
+
+        a[] = data[];
+        medianOf(a[], 0, 1, 2, 3);
+        assert(a[0] <= a[1] && a[1] <= a[2] && a[1] <= a[3]);
+
+        a[] = data[];
+        medianOf!("a < b", Yes.leanRight)(a[], 0, 1, 2, 3);
+        assert(a[0] <= a[2] && a[1] <= a[2] && a[2] <= a[3]);
+
+        a[] = data[];
+        medianOf(a[], 0, 1, 2, 3, 4);
+        assert(a[0] <= a[2] && a[1] <= a[2] && a[2] <= a[3] && a[2] <= a[4]);
+    }
+    while (nextPermutation(data[]));
 }
 
 // nextPermutation
