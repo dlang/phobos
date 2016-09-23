@@ -3120,6 +3120,165 @@ unittest
     }
 }
 
+// medianOf
+/**
+Computes the median of 2 to 5 arbitrary indexes in random-access range `r`
+using hand-written specialized algorithms. The indexes must be distinct (if not,
+behavior is implementation-defined). The function also partitions the elements
+involved around the median, e.g. $(D median(r, a, b, c)) not only fills `r[b]`
+with the median of `r[a]`, `r[b]`, and `r[c]`, but also puts the minimum in
+`r[a]` and the maximum in `r[c]`.
+
+Params:
+less = The comparison predicate used, modeled as a $(LUCKY strict weak
+ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
+equivalence).
+flag = Used only for even values of `T.length`. If `No.leanRight`, the median
+"leans left", meaning $(D median(r, a, b, c, d)) puts the lower median of the
+four in `r[b]`, the minimum in `r[a]`, and the two others in `r[c]` and `r[d]`.
+Conversely, $(D median!("a < b", Yes.leanRight)(r, a, b, c, d)) puts the upper
+median of the four in `r[c]`, the maximum in `r[d]`, and the two others in
+`r[a]` and `r[b]`.
+r = The range containing the indexes.
+i = Two to five indexes inside `r`.
+*/
+void medianOf(
+        alias less = "a < b",
+        Flag!"leanRight" flag = No.leanRight,
+        Range,
+        Index...)
+    (Range r, Index i)
+if (isRandomAccessRange!Range && Index.length >= 2 && Index.length <= 5 &&
+    allSatisfy!(isIntegral, Index))
+{
+    assert(r.length >= Index.length);
+    import std.functional : binaryFun;
+    alias lt = binaryFun!less;
+    enum k = Index.length;
+    import std.algorithm : swapAt;
+
+    alias a = i[0];
+    static if (k >= 2)
+    {
+        alias b = i[1];
+        assert(a != b);
+    }
+    static if (k >= 3)
+    {
+        alias c = i[2];
+        assert(a != c && b != c);
+    }
+    static if (k >= 4)
+    {
+        alias d = i[3];
+        assert(a != d && b != d && c != d);
+    }
+    static if (k >= 5)
+    {
+        alias e = i[4];
+        assert(a != e && b != e && c != e && d != e);
+    }
+
+    static if (k == 2)
+    {
+        if (lt(r[b], r[a])) r.swapAt(a, b);
+    }
+    else static if (k == 3)
+    {
+        if (lt(r[c], r[a])) // c < a
+        {
+            if (lt(r[a], r[b])) // c < a < b
+            {
+                r.swapAt(a, b);
+                r.swapAt(a, c);
+            }
+            else // c < a, b <= a
+            {
+                r.swapAt(a, c);
+                if (lt(r[b], r[a])) r.swapAt(a, b);
+            }
+        }
+        else // a <= c
+        {
+            if (lt(r[b], r[a])) // b < a <= c
+            {
+                r.swapAt(a, b);
+            }
+            else // a <= c, a <= b
+            {
+                if (lt(r[c], r[b])) r.swapAt(b, c);
+            }
+        }
+        assert(!lt(r[b], r[a]));
+        assert(!lt(r[c], r[b]));
+    }
+    else static if (k == 4)
+    {
+        static if (flag == No.leanRight)
+        {
+            // Eliminate the rightmost from the competition
+            if (lt(r[d], r[c])) r.swapAt(c, d); // c<=d
+            if (lt(r[d], r[b])) r.swapAt(b, d); // b<=d
+            medianOf!lt(r, a, b, c);
+        }
+        else
+        {
+            // Eliminate the leftmost from the competition
+            if (lt(r[b], r[a])) r.swapAt(a, b); // a<=b
+            if (lt(r[c], r[a])) r.swapAt(a, c); // a<=c
+            medianOf!lt(r, b, c, d);
+        }
+    }
+    else static if (k == 5)
+    {
+        // Credit: Teppo Niinimäki
+        version(unittest) scope(success)
+        {
+            assert(!lt(r[c], r[a]));
+            assert(!lt(r[c], r[b]));
+            assert(!lt(r[d], r[c]));
+            assert(!lt(r[e], r[c]));
+        }
+
+        if (lt(r[c], r[a])) r.swapAt(a, c);
+        if (lt(r[d], r[b])) r.swapAt(b, d);
+        if (lt(r[d], r[c]))
+        {
+            r.swapAt(c, d);
+            r.swapAt(a, b);
+        }
+        if (lt(r[e], r[b])) r.swapAt(b, e);
+        if (lt(r[e], r[c]))
+        {
+            r.swapAt(c, e);
+            if (lt(r[c], r[a])) r.swapAt(a, c);
+        }
+        else
+        {
+            if (lt(r[c], r[b])) r.swapAt(b, c);
+        }
+    }
+}
+
+///
+unittest
+{
+    import std.random : uniform;
+    import std.algorithm.iteration : map;
+    auto a = iota(0, 18).map!(_ => uniform(-10, 10)).array;
+    medianOf(a, 0, 1);
+    assert(a[0] <= a[1]);
+    medianOf(a, 2, 3, 4);
+    assert(a[2] <= a[3] && a[3] <= a[4]);
+    medianOf(a, 5, 6, 7, 8);
+    assert(a[5] <= a[6] && a[6] <= a[7] && a[6] <= a[8]);
+    medianOf!("a < b", Yes.leanRight)(a, 9, 10, 11, 12);
+    assert(a[9] <= a[11] && a[10] <= a[11] && a[11] <= a[12]);
+    medianOf(a, 13, 14, 15, 16, 17);
+    assert(a[13] <= a[15] && a[14] <= a[15] && a[15] <= a[16] &&
+        a[15] <= a[17]);
+}
+
 // nextPermutation
 /**
  * Permutes $(D range) in-place to the next lexicographically greater
