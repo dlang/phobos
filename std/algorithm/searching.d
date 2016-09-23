@@ -102,7 +102,7 @@ import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 // FIXME
-import std.typecons; // : Tuple;
+import std.typecons; // : Tuple, Flag;
 
 /++
 Checks if $(I _all) of the elements verify $(D pred).
@@ -3940,12 +3940,14 @@ private void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 
 /**
 Interval option specifier for $(D until) (below) and others.
+
+If set to $(D OpenRight.yes), then the interval is open to the right
+(last element is not included).
+
+Otherwise if set to $(D OpenRight.no), then the interval is closed to the right
+(last element included).
  */
-enum OpenRight
-{
-    no, /// Interval is closed to the right (last element included)
-    yes /// Interval is open to the right (last element is not included)
-}
+alias OpenRight = Flag!"openRight";
 
 /**
 Lazily iterates $(D range) _until the element $(D e) for which

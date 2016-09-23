@@ -27,6 +27,7 @@ module std.net.isemail;
 // FIXME
 import std.range.primitives; // : ElementType;
 import std.traits;
+import std.typecons : Flag;
 
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others.
@@ -1249,15 +1250,14 @@ unittest
     //     ` (OpenDNS does this, for instance).`); // DNS check is currently not implemented
 }
 
-/// Enum for indicating if the isEmail function should perform a DNS check or not.
-enum CheckDns
-{
-    /// Does not perform DNS checking
-    no,
-
-    /// Performs DNS checking
-    yes
-}
+/**
+ * Flag for indicating if the isEmail function should perform a DNS check or not.
+ *
+ * If set to $(D CheckDns.no), isEmail does not perform DNS checking.
+ *
+ * Otherwise if set to $(D CheckDns.yes), isEmail performs DNS checking.
+ */
+alias CheckDns = Flag!"checkDns";
 
 /// This struct represents the status of an email address
 struct EmailStatus
