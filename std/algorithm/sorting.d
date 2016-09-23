@@ -69,6 +69,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.sorting;
 
+import std.typecons : Flag;
 import std.algorithm.mutation : SwapStrategy;
 import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
@@ -80,12 +81,12 @@ import std.meta; // : allSatisfy;
 /**
 Specifies whether the output of certain algorithm is desired in sorted
 format.
+
+If set to $(D SortOutput.no), the output should not be sorted.
+
+Otherwise if set to $(D SortOutput.yes), the output should be sorted.
  */
-enum SortOutput
-{
-    no,  /// Don't sort output
-    yes, /// Sort output
-}
+alias SortOutput = Flag!"sortOutput";
 
 // completeSort
 /**
