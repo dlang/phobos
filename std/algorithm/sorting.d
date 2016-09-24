@@ -1311,7 +1311,7 @@ private void shortSort(alias less, Range)(Range r)
             if (pred(r[2], r[1])) r.swapAt(1, 2);
             return;
         default:
-            sort5!pred(r[$ - 5 .. $]);
+            sort5!pred(r[r.length - 5 .. r.length]);
             if (r.length == 5) return;
             break;
     }
