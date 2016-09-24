@@ -3349,7 +3349,6 @@ void writeln(T...)(T args)
                     !is(Unqual!(typeof(args[0])) == typeof(null)) &&
                     !isAggregateType!(typeof(args[0])))
     {
-        import std.exception : enforce;
         import std.traits : isStaticArray;
 
         // Specialization for strings - a very frequent case
