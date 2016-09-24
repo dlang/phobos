@@ -9083,6 +9083,9 @@ public:
 
         /++ Ditto +/
         @property auto length() const {assert(0);}
+
+        /++ Ditto +/
+        alias opDollar = length;
     }
     else static if (hasLength!R)
     {
@@ -9095,6 +9098,8 @@ public:
         {
             return (*_range).length;
         }
+
+        alias opDollar = length;
     }
 
 
@@ -9237,6 +9242,7 @@ unittest
         wrapper.moveAt(0);
         auto l = wrapper.length;
         auto sl = wrapper[0 .. 1];
+        assert(wrapper[0 .. $].length == buffer[0 .. $].length);
     }
 
     {
@@ -9289,6 +9295,15 @@ unittest
         auto s = wrapper.save;
         auto b = wrapper.back;
         wrapper.popBack();
+    }
+
+    {
+        // Issue 16534 - opDollar should be defined if the
+        // wrapped range defines length.
+        auto range = 10.iota.takeExactly(5);
+        auto wrapper = refRange(&range);
+        assert(wrapper.length == 5);
+        assert(wrapper[0 .. $ - 1].length == 4);
     }
 }
 
