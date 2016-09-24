@@ -621,7 +621,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
     // Pivot at the front
     r.swapAt(pivot, 0);
 
-    // Fork implemnentation depending on nothrow copy, assignment, and
+    // Fork implementation depending on nothrow copy, assignment, and
     // comparison. If all of these are nothrow, use the specialized
     // implementation discussed at https://youtube.com/watch?v=AxnotgLql0k.
     static if (is(typeof(
@@ -742,9 +742,15 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
         assert(pivot == 0 || pivot == 1);
         assert(a == [ 42, 42 ]);
 
-        import std.random : uniform;
+        import std.random;
         import std.algorithm.iteration : map;
-        a = iota(0, uniform(1, 1000)).map!(_ => uniform(-1000, 1000)).array;
+        import std.stdio;
+        auto s = unpredictableSeed;
+        auto g = Random(s);
+        a = iota(0, uniform(1, 1000, g))
+            .map!(_ => uniform(-1000, 1000, g))
+            .array;
+        scope(failure) writeln("RNG seed was ", s);
         pivot = pivotPartition!less(a, a.length / 2);
         assert(a[0 .. pivot].all!(x => x <= a[pivot]));
         assert(a[pivot .. $].all!(x => x >= a[pivot]));
