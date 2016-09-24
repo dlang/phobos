@@ -3123,7 +3123,7 @@ unittest
 Computes the median of 2 to 5 arbitrary indexes in random-access range `r`
 using hand-written specialized algorithms. The indexes must be distinct (if not,
 behavior is implementation-defined). The function also partitions the elements
-involved around the median, e.g. $(D median(r, a, b, c)) not only fills `r[b]`
+involved around the median, e.g. $(D medianOf(r, a, b, c)) not only fills `r[b]`
 with the median of `r[a]`, `r[b]`, and `r[c]`, but also puts the minimum in
 `r[a]` and the maximum in `r[c]`.
 
@@ -3132,7 +3132,7 @@ less = The comparison predicate used, modeled as a $(LUCKY strict weak
 ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
 equivalence).
 flag = Used only for even values of `T.length`. If `No.leanRight`, the median
-"leans left", meaning $(D median(r, a, b, c, d)) puts the lower median of the
+"leans left", meaning $(D medianOf(r, a, b, c, d)) puts the lower median of the
 four in `r[b]`, the minimum in `r[a]`, and the two others in `r[c]` and `r[d]`.
 Conversely, $(D median!("a < b", Yes.leanRight)(r, a, b, c, d)) puts the upper
 median of the four in `r[c]`, the maximum in `r[d]`, and the two others in
@@ -3154,7 +3154,7 @@ if (isRandomAccessRange!Range && hasLength!Range &&
     import std.functional : binaryFun;
     alias lt = binaryFun!less;
     enum k = Indexes.length;
-    import std.algorithm : swapAt;
+    import std.algorithm.mutation : swapAt;
 
     alias a = i[0];
     static if (k >= 2)
