@@ -1260,40 +1260,154 @@ private size_t getPivot(alias less, Range)(Range r)
     return mid;
 }
 
-private void optimisticInsertionSort(alias less, Range)(Range r)
+/*
+Sorting routine that is optimized for short ranges. Note: uses insertion sort
+going downward. Benchmarked a similar routine that goes upward, for some reason
+it's slower.
+*/
+private void shortSort(alias less, Range)(Range r)
 {
     import std.algorithm.mutation : swapAt;
-
     alias pred = binaryFun!(less);
-    if (r.length < 2)
+
+    switch (r.length)
     {
-        return;
+        case 0: case 1:
+            return;
+        case 2:
+            if (pred(r[1], r[0])) r.swapAt(0, 1);
+            return;
+        case 3:
+            if (pred(r[2], r[0]))
+            {
+                if (pred(r[0], r[1]))
+                {
+                    r.swapAt(0, 1);
+                    r.swapAt(0, 2);
+                }
+                else
+                {
+                    r.swapAt(0, 2);
+                    if (pred(r[1], r[0])) r.swapAt(0, 1);
+                }
+            }
+            else
+            {
+                if (pred(r[1], r[0]))
+                {
+                    r.swapAt(0, 1);
+                }
+                else
+                {
+                    if (pred(r[2], r[1])) r.swapAt(1, 2);
+                }
+            }
+            return;
+        case 4:
+            if (pred(r[1], r[0])) r.swapAt(0, 1);
+            if (pred(r[3], r[2])) r.swapAt(2, 3);
+            if (pred(r[2], r[0])) r.swapAt(0, 2);
+            if (pred(r[3], r[1])) r.swapAt(1, 3);
+            if (pred(r[2], r[1])) r.swapAt(1, 2);
+            return;
+        default:
+            sort5!pred(r[$ - 5 .. $]);
+            if (r.length == 5) return;
+            break;
     }
 
-    immutable maxJ = r.length - 1;
-    for (size_t i = r.length - 2; i != size_t.max; --i)
+    assert(r.length >= 6);
+    /* The last 5 elements of the range are sorted. Proceed with expanding the
+    sorted portion downward. */
+    immutable maxJ = r.length - 2;
+    for (size_t i = r.length - 6; ; --i)
     {
-        size_t j = i;
-
-        static if (hasAssignableElements!Range)
+        static if (is(typeof(() nothrow {
+                auto t = r[0]; if (pred(t, r[0])) r[0] = r[0];
+            }))) // Can we afford to temporarily invalidate the array?
         {
-            auto temp = r[i];
-
-            for (; j < maxJ && pred(r[j + 1], temp); ++j)
+            size_t j = i + 1;
+            if (pred(r[j], r[i]))
             {
-                r[j] = r[j + 1];
+                auto temp = r[i];
+                do
+                {
+                    r[j - 1] = r[j];
+                }
+                while (++j < r.length && pred(r[j], temp));
+                r[j - 1] = temp;
             }
-
-            r[j] = temp;
         }
         else
         {
-            for (; j < maxJ && pred(r[j + 1], r[j]); ++j)
+            size_t j = i;
+            while (pred(r[j + 1], r[j]))
             {
                 r.swapAt(j, j + 1);
+                if (j == maxJ) break;
+                ++j;
             }
         }
+        if (i == 0) break;
     }
+}
+
+/*
+Sorts the first 5 elements exactly of range r.
+*/
+private void sort5(alias lt, Range)(Range r)
+{
+    assert(r.length >= 5);
+    enum a = 0, b = 1, c = 2, d = 3, e = 4;
+    version(unittest) scope(success)
+        assert(!lt(r[b], r[a]) && !lt(r[c], r[b])
+            && !lt(r[d], r[c]) && !lt(r[e], r[d]));
+
+    import std.algorithm : swapAt;
+
+    // 1. Sort first two pairs
+    if (lt(r[b], r[a])) r.swapAt(a, b);
+    if (lt(r[d], r[c])) r.swapAt(c, d);
+
+    // 2. Arrange first two pairs by the largest element
+    if (lt(r[d], r[b]))
+    {
+        r.swapAt(a, c);
+        r.swapAt(b, d);
+    }
+    assert(!lt(r[b], r[a]) && !lt(r[d], r[b]) && !lt(r[d], r[c]));
+
+    // 3. Insert e into [a, b, d]
+    if (lt(r[e], r[b]))
+    {
+        r.swapAt(d, e);
+        r.swapAt(b, d);
+        if (lt(r[b], r[a]))
+        {
+            r.swapAt(a, b);
+        }
+    }
+    else if (lt(r[e], r[d]))
+    {
+        r.swapAt(d, e);
+    }
+    assert(!lt(r[b], r[a]) && !lt(r[d], r[b]) && !lt(r[e], r[d]));
+
+    // 4. Insert c into [a, b, d, e] (note: we already know the last is greater)
+    assert(!lt(r[e], r[c]));
+    if (lt(r[c], r[b]))
+    {
+        r.swapAt(b, c);
+        if (lt(r[b], r[a]))
+        {
+            r.swapAt(a, b);
+        }
+    }
+    else if (lt(r[d], r[c]))
+    {
+        r.swapAt(c, d);
+    }
+    // 7 comparisons, 0-9 swaps
 }
 
 @safe unittest
@@ -1310,7 +1424,7 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
         e = uniform(-100, 100, rnd);
     }
 
-    optimisticInsertionSort!(binaryFun!("a < b"), int[])(a);
+    shortSort!(binaryFun!("a < b"), int[])(a);
     assert(isSorted(a));
 }
 
@@ -1548,14 +1662,14 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 private void quickSortImpl(alias less, Range)(Range r, size_t depth)
 {
     import std.algorithm.mutation : swap, swapAt;
-    import std.algorithm.comparison : min;
+    import std.algorithm.comparison : min, max;
 
     alias Elem = ElementType!(Range);
-    enum size_t optimisticInsertionSortGetsBetter = 25;
-    static assert(optimisticInsertionSortGetsBetter >= 1);
+    enum size_t shortSortGetsBetter = max(32, 1024 / Elem.sizeof);
+    static assert(shortSortGetsBetter >= 1);
 
     // partition
-    while (r.length > optimisticInsertionSortGetsBetter)
+    while (r.length > shortSortGetsBetter)
     {
         if (depth == 0)
         {
@@ -1596,9 +1710,9 @@ private void quickSortImpl(alias less, Range)(Range r, size_t depth)
         r = left;
     }
     // residual sort
-    static if (optimisticInsertionSortGetsBetter > 1)
+    static if (shortSortGetsBetter > 1)
     {
-        optimisticInsertionSort!(less, Range)(r);
+        shortSort!(less, Range)(r);
     }
 }
 
@@ -2475,7 +2589,7 @@ schwartzSort(alias transform, alias less = "a < b",
 
     static double entropy(double[] probs) {
         double result = 0;
-        foreach (p; probs)
+        foreach (ref p; probs)
         {
             if (!p) continue;
             //enforce(p > 0 && p <= 1, "Wrong probability passed to entropy");
@@ -2509,7 +2623,7 @@ schwartzSort(alias transform, alias less = "a < b",
 
     static double entropy(double[] probs) {
         double result = 0;
-        foreach (p; probs)
+        foreach (ref p; probs)
         {
             if (!p) continue;
             //enforce(p > 0 && p <= 1, "Wrong probability passed to entropy");
