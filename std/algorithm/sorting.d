@@ -1358,54 +1358,53 @@ Sorts the first 5 elements exactly of range r.
 private void sort5(alias lt, Range)(Range r)
 {
     assert(r.length >= 5);
-    enum a = 0, b = 1, c = 2, d = 3, e = 4;
     version(unittest) scope(success)
-        assert(!lt(r[b], r[a]) && !lt(r[c], r[b])
-            && !lt(r[d], r[c]) && !lt(r[e], r[d]));
+        assert(!lt(r[1], r[0]) && !lt(r[2], r[1])
+            && !lt(r[3], r[2]) && !lt(r[4], r[3]));
 
     import std.algorithm : swapAt;
 
     // 1. Sort first two pairs
-    if (lt(r[b], r[a])) r.swapAt(a, b);
-    if (lt(r[d], r[c])) r.swapAt(c, d);
+    if (lt(r[1], r[0])) r.swapAt(0, 1);
+    if (lt(r[3], r[2])) r.swapAt(2, 3);
 
     // 2. Arrange first two pairs by the largest element
-    if (lt(r[d], r[b]))
+    if (lt(r[3], r[1]))
     {
-        r.swapAt(a, c);
-        r.swapAt(b, d);
+        r.swapAt(0, 2);
+        r.swapAt(1, 3);
     }
-    assert(!lt(r[b], r[a]) && !lt(r[d], r[b]) && !lt(r[d], r[c]));
+    assert(!lt(r[1], r[0]) && !lt(r[3], r[1]) && !lt(r[3], r[2]));
 
-    // 3. Insert e into [a, b, d]
-    if (lt(r[e], r[b]))
+    // 3. Insert 4 into [0, 1, 3]
+    if (lt(r[4], r[1]))
     {
-        r.swapAt(d, e);
-        r.swapAt(b, d);
-        if (lt(r[b], r[a]))
+        r.swapAt(3, 4);
+        r.swapAt(1, 3);
+        if (lt(r[1], r[0]))
         {
-            r.swapAt(a, b);
+            r.swapAt(0, 1);
         }
     }
-    else if (lt(r[e], r[d]))
+    else if (lt(r[4], r[3]))
     {
-        r.swapAt(d, e);
+        r.swapAt(3, 4);
     }
-    assert(!lt(r[b], r[a]) && !lt(r[d], r[b]) && !lt(r[e], r[d]));
+    assert(!lt(r[1], r[0]) && !lt(r[3], r[1]) && !lt(r[4], r[3]));
 
-    // 4. Insert c into [a, b, d, e] (note: we already know the last is greater)
-    assert(!lt(r[e], r[c]));
-    if (lt(r[c], r[b]))
+    // 4. Insert 2 into [0, 1, 3, 4] (note: we already know the last is greater)
+    assert(!lt(r[4], r[2]));
+    if (lt(r[2], r[1]))
     {
-        r.swapAt(b, c);
-        if (lt(r[b], r[a]))
+        r.swapAt(1, 2);
+        if (lt(r[1], r[0]))
         {
-            r.swapAt(a, b);
+            r.swapAt(0, 1);
         }
     }
-    else if (lt(r[d], r[c]))
+    else if (lt(r[3], r[2]))
     {
-        r.swapAt(c, d);
+        r.swapAt(2, 3);
     }
     // 7 comparisons, 0-9 swaps
 }
