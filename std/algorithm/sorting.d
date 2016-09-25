@@ -1326,16 +1326,16 @@ private void shortSort(alias less, Range)(Range r)
                 auto t = r[0]; if (pred(t, r[0])) r[0] = r[0];
             }))) // Can we afford to temporarily invalidate the array?
         {
-            size_t j = i + 1;
-            if (pred(r[j], r[i]))
+            size_t j = i;
+            if (pred(r[j + 1], r[j]))
             {
-                auto temp = r[i];
+                auto temp = r[j];
                 do
                 {
-                    r[j - 1] = r[j];
+                    r[j] = r[j + 1];
                 }
-                while (++j < r.length && pred(r[j], temp));
-                r[j - 1] = temp;
+                while (++j + 1 < r.length && pred(r[j + 1], temp));
+                r[j] = temp;
             }
         }
         else
