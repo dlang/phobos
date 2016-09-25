@@ -1352,15 +1352,30 @@ private void shortSort(alias less, Range)(Range r)
     }
 }
 
+@safe unittest
+{
+    import std.random : Random, uniform;
+
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    auto rnd = Random(1);
+    auto a = new int[uniform(100, 200, rnd)];
+    foreach (ref e; a)
+    {
+        e = uniform(-100, 100, rnd);
+    }
+
+    shortSort!(binaryFun!("a < b"), int[])(a);
+    assert(isSorted(a));
+}
+
 /*
 Sorts the first 5 elements exactly of range r.
 */
 private void sort5(alias lt, Range)(Range r)
 {
     assert(r.length >= 5);
-    version(unittest) scope(success)
-        assert(!lt(r[1], r[0]) && !lt(r[2], r[1])
-            && !lt(r[3], r[2]) && !lt(r[4], r[3]));
 
     import std.algorithm : swapAt;
 
@@ -1411,20 +1426,16 @@ private void sort5(alias lt, Range)(Range r)
 
 @safe unittest
 {
-    import std.random : Random, uniform;
+    import std.algorithm.iteration : permutations;
+    import std.algorithm.mutation : copy;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
-    auto rnd = Random(1);
-    auto a = new int[uniform(100, 200, rnd)];
-    foreach (ref e; a)
+    int[5] buf;
+    foreach (per; iota(5).permutations)
     {
-        e = uniform(-100, 100, rnd);
+        per.copy(buf[]);
+        sort5!((a, b) => a < b)(buf[]);
+        assert(buf[].isSorted);
     }
-
-    shortSort!(binaryFun!("a < b"), int[])(a);
-    assert(isSorted(a));
 }
 
 // sort
