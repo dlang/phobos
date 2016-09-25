@@ -838,7 +838,7 @@ class Element : Item
     override bool opEquals(Object o)
     {
         const element = toType!(const Element)(o);
-        auto len = items.length;
+        immutable len = items.length;
         if (len != element.items.length) return false;
         foreach (i; 0 .. len)
         {
@@ -1073,7 +1073,7 @@ class Tag
                 munch(s,whitespace);
                 reqc(s,'=');
                 munch(s,whitespace);
-                char quote = requireOneOf(s,"'\"");
+                immutable char quote = requireOneOf(s,"'\"");
                 char[2] notQuote = ['^', quote];
                 string val = decode(munch(s,notQuote[]), DecodeMode.LOOSE);
                 reqc(s,quote);
@@ -1985,7 +1985,7 @@ class ElementParser
         import std.string : indexOf;
 
         string t;
-        Tag root = tag_;
+        const Tag root = tag_;
         Tag[string] startTags;
         if (tag_ !is null) startTags[tag_.name] = tag_;
 
@@ -2041,7 +2041,7 @@ class ElementParser
                 }
                 else if (tag_.isEnd)
                 {
-                    auto startTag = startTags[tag_.name];
+                    const startTag = startTags[tag_.name];
                     string text;
 
                     immutable(char)* p = startTag.tagString.ptr
@@ -2521,7 +2521,7 @@ private
             fail("character reference must have at least one digit");
         while (s.length != 0)
         {
-            char d = s[0];
+            immutable char d = s[0];
             int n = 0;
             switch (d)
             {
@@ -2933,7 +2933,7 @@ private
 
     bool optc(ref string s, char c) @safe pure nothrow
     {
-        bool b = s.length != 0 && s[0] == c;
+        immutable bool b = s.length != 0 && s[0] == c;
         if (b) s = s[1..$];
         return b;
     }
@@ -2950,7 +2950,7 @@ private
 
         if (s.length == 0 || indexOf(chars,s[0]) == -1)
             throw new TagException("");
-        char ch = s[0];
+        immutable char ch = s[0];
         s = s[1..$];
         return ch;
     }
