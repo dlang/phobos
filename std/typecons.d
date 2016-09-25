@@ -756,7 +756,7 @@ template Tuple(Specs...)
          * It is an compile-time error to pass more names than
          * there are members of the $(LREF Tuple).
          */
-        ref rename(names...)()
+        ref rename(names...)() return
         if (names.length == 0 || allSatisfy!(isSomeString, typeof(names)))
         {
             import std.algorithm.comparison : equal;
