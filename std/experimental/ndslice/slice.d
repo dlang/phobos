@@ -2727,7 +2727,8 @@ struct Slice(size_t _N, _Range)
         Increment `++` and Decrement `--` operators for a $(B fully defined index).
         +/
         auto ref opIndexUnary(string op)(size_t[N] _indexes...)
-            if (op == `++` || op == `--`)
+            // @@@workaround@@@ for Issue 16473
+            //if (op == `++` || op == `--`)
         {
             mixin (`return ` ~ op ~ `_ptr[indexStride(_indexes)];`);
         }
@@ -2740,6 +2741,14 @@ struct Slice(size_t _N, _Range)
 
             ++a[1, 2];
             assert(a[1, 2] == 1);
+        }
+
+        // Issue 16473
+        static if (doUnittest)
+        unittest
+        {
+            auto sl = slice!double(2, 5);
+            auto d = -sl[0, 1];
         }
 
         static if (doUnittest)
