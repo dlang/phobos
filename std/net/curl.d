@@ -290,7 +290,7 @@ version(unittest)
     {
         return "HTTP/1.1 200 OK\r\n"~
             "Content-Type: text/plain\r\n"~
-            "Content-Length: "~msg.length.to!string~"\r\n"
+            "Content-Length: "~msg.length.to!string~"\r\n"~
             "\r\n"~
             msg;
     }
