@@ -560,17 +560,17 @@ auto slice(T,
     size_t N)(auto ref in size_t[N] lengths, auto ref T init)
 {
     immutable len = lengthsProduct(lengths);
-    static if (!hasElaborateAssign!(T[]))
+    static if (ra && !hasElaborateAssign!T)
     {
         import std.array : uninitializedArray;
-        auto arr = uninitializedArray!(T[])(len);
+        auto arr = uninitializedArray!(Unqual!T[])(len);
     }
     else
     {
-        auto arr = new T[len];
+        auto arr = new Unqual!T[len];
     }
     arr[] = init;
-    auto ret = arr.sliced!ra(lengths);
+    auto ret = .sliced!ra(cast(T[])arr, lengths);
     return ret;
 }
 
@@ -659,6 +659,8 @@ Params:
     slice = slice to copy shape and data from
 Returns:
     a structure with fields `array` and `slice`
+Note:
+    `makeSlice` always returns slice with mutable elements
 +/
 SliceAllocationResult!(Lengths.length, T, ra)
 makeSlice(T,
@@ -1200,6 +1202,8 @@ struct Slice(size_t _N, _Range)
                      && (isPointer!_Range || is(typeof(_Range.init[size_t.init]))))
                     || is(_Range == Slice!(N1, Range1), size_t N1, Range1)))
 {
+    @fmb:
+
     package:
 
     enum doUnittest = is(_Range == int*) && _N == 1;
@@ -1255,10 +1259,7 @@ struct Slice(size_t _N, _Range)
 
     size_t[PureN] _lengths;
     sizediff_t[PureN] _strides;
-    static if (hasPtrBehavior!PureRange)
-        PureRange _ptr;
-    else
-        PtrShell!PureRange _ptr;
+    SlicePtr!PureRange _ptr;
 
     sizediff_t backIndex(size_t dimension = 0)() @property const
         if (dimension < N)
@@ -1541,10 +1542,7 @@ struct Slice(size_t _N, _Range)
         assert(!empty!dimension);
         static if (PureN == 1)
         {
-            static if (__traits(compiles, _ptr.front ))
-                return _ptr.front;
-            else
-                return _ptr[0];
+            return _ptr[0];
         }
         else
         {
@@ -1574,10 +1572,7 @@ struct Slice(size_t _N, _Range)
             if (dimension == 0)
         {
             assert(!empty!dimension);
-            static if (__traits(compiles, _ptr.front = value))
-                return _ptr.front = value;
-            else
-                return _ptr[0] = value;
+            return _ptr[0] = value;
         }
     }
 
@@ -3231,113 +3226,6 @@ private void opIndexAssignImpl
     _indexAssign!(false, op)(ls, rs);
 }
 
-private struct PtrShell(Range)
-{
-    sizediff_t _shift;
-    Range _range;
-
-    enum hasAccessByRef = isPointer!Range ||
-        __traits(compiles, &_range[0]);
-
-    void opOpAssign(string op)(sizediff_t shift)
-        if (op == `+` || op == `-`)
-    {
-        mixin (`_shift ` ~ op ~ `= shift;`);
-    }
-
-    auto opBinary(string op)(sizediff_t shift)
-        if (op == `+` || op == `-`)
-    {
-        mixin (`return typeof(this)(_shift ` ~ op ~ ` shift, _range);`);
-    }
-
-    auto ref opIndex(sizediff_t index)
-    in
-    {
-        assert(_shift + index >= 0);
-        static if (hasLength!Range)
-            assert(_shift + index <= _range.length);
-    }
-    body
-    {
-        return _range[_shift + index];
-    }
-
-    static if (!hasAccessByRef)
-    {
-        auto ref opIndexAssign(T)(T value, sizediff_t index)
-        in
-        {
-            assert(_shift + index >= 0);
-            static if (hasLength!Range)
-                assert(_shift + index <= _range.length);
-        }
-        body
-        {
-            return _range[_shift + index] = value;
-        }
-
-        auto ref opIndexOpAssign(string op, T)(T value, sizediff_t index)
-        in
-        {
-            assert(_shift + index >= 0);
-            static if (hasLength!Range)
-                assert(_shift + index <= _range.length);
-        }
-        body
-        {
-            mixin (`return _range[_shift + index] ` ~ op ~ `= value;`);
-        }
-
-        auto ref opIndexUnary(string op)(sizediff_t index)
-        in
-        {
-            assert(_shift + index >= 0);
-            static if (hasLength!Range)
-                assert(_shift + index <= _range.length);
-        }
-        body
-        {
-            mixin (`return ` ~ op ~ `_range[_shift + index];`);
-        }
-    }
-
-    auto save() @property
-    {
-        return this;
-    }
-}
-
-private auto ptrShell(Range)(Range range, sizediff_t shift = 0)
-{
-    return PtrShell!Range(shift, range);
-}
-
-@safe pure nothrow unittest
-{
-    import std.internal.test.dummyrange;
-    foreach (RB; AliasSeq!(ReturnBy.Reference, ReturnBy.Value))
-    {
-        DummyRange!(RB, Length.Yes, RangeType.Random) range;
-        range.reinit;
-        assert(range.length >= 10);
-        auto ptr = range.ptrShell;
-        assert(ptr[0] == range[0]);
-        auto save0 = range[0];
-        ptr[0] += 10;
-        ++ptr[0];
-        assert(ptr[0] == save0 + 11);
-        (ptr + 5)[2] = 333;
-        assert(range[7] == 333);
-
-        auto ptrCopy = ptr.save;
-        ptrCopy._range.popFront;
-        ptr[1] = 2;
-        assert(ptr[0] == save0 + 11);
-        assert(ptrCopy[0] == 2);
-    }
-}
-
 pure nothrow unittest
 {
     import std.internal.test.dummyrange;
@@ -3395,101 +3283,22 @@ unittest
     assert(ptrCopy[0] == 2);
 }
 
-private enum isSlicePointer(T) = isPointer!T || is(T : PtrShell!R, R);
-
-package template hasPtrBehavior(T)
-{
-    static if (isPointer!T)
-        enum hasPtrBehavior = true;
-    else
-    static if (!isAggregateType!T)
-        enum hasPtrBehavior = false;
-    else
-        enum hasPtrBehavior = hasUDA!(T, LikePtr);
-}
-
-private template PtrTuple(Names...)
-{
-    @LikePtr struct PtrTuple(Ptrs...)
-        if (allSatisfy!(isSlicePointer, Ptrs) && Ptrs.length == Names.length)
-    {
-        Ptrs ptrs;
-
-        void opOpAssign(string op)(sizediff_t shift)
-            if (op == `+` || op == `-`)
-        {
-            foreach (ref ptr; ptrs)
-                mixin (`ptr ` ~ op ~ `= shift;`);
-        }
-
-        auto opBinary(string op)(sizediff_t shift)
-            if (op == `+` || op == `-`)
-        {
-            auto ret = this.ptrs;
-            ret.opOpAssign!op(shift);
-            return ret;
-        }
-
-        public struct Index
-        {
-            Ptrs _ptrs__;
-            mixin (PtrTupleFrontMembers!Names);
-        }
-
-        auto opIndex(sizediff_t index)
-        {
-            auto p = ptrs;
-            foreach (ref ptr; p)
-                ptr += index;
-            return Index(p);
-        }
-
-        auto front() @property
-        {
-            return Index(ptrs);
-        }
-    }
-}
-
 pure nothrow unittest
 {
     auto a = new int[20], b = new int[20];
     alias T = PtrTuple!("a", "b");
     alias S = T!(int*, int*);
+    static assert (hasUDA!(S, LikePtr));
     auto t = S(a.ptr, b.ptr);
     t[4].a++;
     auto r = t[4];
     r.b = r.a * 2;
     assert(b[4] == 2);
-    t.front.a++;
-    r = t.front;
+    t[0].a++;
+    r = t[0];
     r.b = r.a * 2;
     assert(b[0] == 2);
 }
-
-private template PtrTupleFrontMembers(Names...)
-    if (Names.length <= 32)
-{
-    static if (Names.length)
-    {
-        alias Top = Names[0..$-1];
-        enum int m = Top.length;
-        enum PtrTupleFrontMembers = PtrTupleFrontMembers!Top
-        ~ "
-        @property auto ref " ~ Names[$-1] ~ "() {
-            static if (__traits(compiles, _ptrs__[" ~ m.stringof ~ "].front()))
-                return _ptrs__[" ~ m.stringof ~ "].front;
-            else
-                return _ptrs__[" ~ m.stringof ~ "][0];
-        }
-        ";
-    }
-    else
-    {
-        enum PtrTupleFrontMembers = "";
-    }
-}
-
 
 private template PrepareRangeType(Range)
 {
@@ -3505,7 +3314,7 @@ private enum bool isType(T) = true;
 
 private enum isStringValue(alias T) = is(typeof(T) : string);
 
-private void _indexAssignKernel(string op, TL, TR)(size_t c, TL* l, TR* r)
+private void _indexAssignKernel(string op, TL, TR)(size_t c, TL l, TR r)
 {
     do
     {
@@ -3516,7 +3325,7 @@ private void _indexAssignKernel(string op, TL, TR)(size_t c, TL* l, TR* r)
     while (--c);
 }
 
-private void _indexAssignValKernel(string op, TL, TR)(size_t c, TL* l, TR r)
+private void _indexAssignValKernel(string op, TL, TR)(size_t c, TL l, TR r)
 {
     do
     {

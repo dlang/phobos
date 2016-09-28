@@ -104,6 +104,8 @@ import std.meta;
 import std.experimental.ndslice.internal;
 import std.experimental.ndslice.slice; //: Slice;
 
+@fmb:
+
 private enum _swappedCode = q{
     with (slice)
     {
@@ -130,7 +132,7 @@ See_also: $(LREF everted), $(LREF transposed)
 +/
 template swapped(size_t dimensionA, size_t dimensionB)
 {
-    auto swapped(size_t N, Range)(Slice!(N, Range) slice)
+    @fmb auto swapped(size_t N, Range)(Slice!(N, Range) slice)
     {
         {
             enum i = 0;
@@ -239,7 +241,7 @@ Returns:
 +/
 template rotated(size_t dimensionA, size_t dimensionB)
 {
-    auto rotated(size_t N, Range)(Slice!(N, Range) slice, sizediff_t k = 1)
+    @fmb auto rotated(size_t N, Range)(Slice!(N, Range) slice, sizediff_t k = 1)
     {
         {
             enum i = 0;
@@ -408,7 +410,7 @@ See_also: $(LREF swapped), $(LREF everted)
 template transposed(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) transposed(size_t N, Range)(auto ref Slice!(N, Range) slice)
+    @fmb Slice!(N, Range) transposed(size_t N, Range)(auto ref Slice!(N, Range) slice)
     {
         mixin DimensionsCountCTError;
         foreach (i, dimension; Dimensions)
@@ -550,7 +552,7 @@ Returns:
 template reversed(Dimensions...)
     if (Dimensions.length)
 {
-    auto reversed(size_t N, Range)(Slice!(N, Range) slice)
+    @fmb auto reversed(size_t N, Range)(Slice!(N, Range) slice)
     {
         foreach (i, dimension; Dimensions)
         {
@@ -664,7 +666,7 @@ Returns:
 template strided(Dimensions...)
     if (Dimensions.length)
 {
-    auto strided(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) factors)
+    @fmb auto strided(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) factors)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -890,7 +892,7 @@ Returns:
 template dropOne(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropOne(size_t N, Range)(Slice!(N, Range) slice)
+    @fmb Slice!(N, Range) dropOne(size_t N, Range)(Slice!(N, Range) slice)
     {
         foreach (i, dimension; Dimensions)
         {
@@ -931,7 +933,7 @@ body
 template dropBackOne(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropBackOne(size_t N, Range)(Slice!(N, Range) slice)
+    @fmb Slice!(N, Range) dropBackOne(size_t N, Range)(Slice!(N, Range) slice)
     {
         foreach (i, dimension; Dimensions)
         {
@@ -1027,7 +1029,7 @@ Returns:
 template dropExactly(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
+    @fmb Slice!(N, Range) dropExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -1055,7 +1057,7 @@ body
 template dropBackExactly(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropBackExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
+    @fmb Slice!(N, Range) dropBackExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -1116,7 +1118,7 @@ Returns:
 template drop(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) drop(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
+    @fmb Slice!(N, Range) drop(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -1144,7 +1146,7 @@ body
 template dropBack(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropBack(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
+    @fmb Slice!(N, Range) dropBack(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
