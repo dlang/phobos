@@ -3150,7 +3150,7 @@ private void medianOf(
     (Range r, Indexes i)
 if (isRandomAccessRange!Range && hasLength!Range &&
     Indexes.length >= 2 && Indexes.length <= 5 &&
-    allSatisfy!(isIntegral, Indexes))
+    allSatisfy!(isUnsigned, Indexes))
 {
     assert(r.length >= Indexes.length);
     import std.functional : binaryFun;
@@ -3159,24 +3159,29 @@ if (isRandomAccessRange!Range && hasLength!Range &&
     import std.algorithm.mutation : swapAt;
 
     alias a = i[0];
+    static assert(is(typeof(a) == size_t));
     static if (k >= 2)
     {
         alias b = i[1];
+        static assert(is(typeof(b) == size_t));
         assert(a != b);
     }
     static if (k >= 3)
     {
         alias c = i[2];
+        static assert(is(typeof(c) == size_t));
         assert(a != c && b != c);
     }
     static if (k >= 4)
     {
         alias d = i[3];
+        static assert(is(typeof(d) == size_t));
         assert(a != d && b != d && c != d);
     }
     static if (k >= 5)
     {
         alias e = i[4];
+        static assert(is(typeof(e) == size_t));
         assert(a != e && b != e && c != e && d != e);
     }
 
@@ -3269,23 +3274,24 @@ unittest
     do
     {
         int[5] a = data;
-        medianOf(a[], 0, 1);
+        medianOf(a[], size_t(0), size_t(1));
         assert(a[0] <= a[1]);
 
         a[] = data[];
-        medianOf(a[], 0, 1, 2);
+        medianOf(a[], size_t(0), size_t(1), size_t(2));
         assert(ordered(a[0], a[1], a[2]));
 
         a[] = data[];
-        medianOf(a[], 0, 1, 2, 3);
+        medianOf(a[], size_t(0), size_t(1), size_t(2), size_t(3));
         assert(a[0] <= a[1] && a[1] <= a[2] && a[1] <= a[3]);
 
         a[] = data[];
-        medianOf!("a < b", Yes.leanRight)(a[], 0, 1, 2, 3);
+        medianOf!("a < b", Yes.leanRight)(a[], size_t(0), size_t(1),
+            size_t(2), size_t(3));
         assert(a[0] <= a[2] && a[1] <= a[2] && a[2] <= a[3]);
 
         a[] = data[];
-        medianOf(a[], 0, 1, 2, 3, 4);
+        medianOf(a[], size_t(0), size_t(1), size_t(2), size_t(3), size_t(4));
         assert(a[0] <= a[2] && a[1] <= a[2] && a[2] <= a[3] && a[2] <= a[4]);
     }
     while (nextPermutation(data[]));
