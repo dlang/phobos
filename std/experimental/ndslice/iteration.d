@@ -410,6 +410,9 @@ See_also: $(LREF swapped), $(LREF everted)
 template transposed(Dimensions...)
     if (Dimensions.length)
 {
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias transposed = .transposed!(staticMap!(toSize_t, Dimensions));
+    else
     @fmb Slice!(N, Range) transposed(size_t N, Range)(Slice!(N, Range) slice)
     {
         mixin DimensionsCountCTError;
@@ -537,6 +540,9 @@ Returns:
 template reversed(Dimensions...)
     if (Dimensions.length)
 {
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias reversed = .reversed!(staticMap!(toSize_t, Dimensions));
+    else
     @fmb auto reversed(size_t N, Range)(Slice!(N, Range) slice)
     {
         foreach (i, dimension; Dimensions)
@@ -642,6 +648,9 @@ Returns:
 template strided(Dimensions...)
     if (Dimensions.length)
 {
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias strided = .strided!(staticMap!(toSize_t, Dimensions));
+    else
     @fmb auto strided(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) factors)
     body
     {
@@ -868,6 +877,9 @@ Returns:
 template dropOne(Dimensions...)
     if (Dimensions.length)
 {
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias dropOne = .dropOne!(staticMap!(toSize_t, Dimensions));
+    else
     @fmb Slice!(N, Range) dropOne(size_t N, Range)(Slice!(N, Range) slice)
     {
         foreach (i, dimension; Dimensions)
@@ -900,6 +912,9 @@ body
 template dropBackOne(Dimensions...)
     if (Dimensions.length)
 {
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias dropBackOne = .dropBackOne!(staticMap!(toSize_t, Dimensions));
+    else
     @fmb Slice!(N, Range) dropBackOne(size_t N, Range)(Slice!(N, Range) slice)
     {
         foreach (i, dimension; Dimensions)
@@ -987,6 +1002,9 @@ Returns:
 template dropExactly(Dimensions...)
     if (Dimensions.length)
 {
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias dropExactly = .dropExactly!(staticMap!(toSize_t, Dimensions));
+    else
     @fmb Slice!(N, Range) dropExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
@@ -1015,6 +1033,9 @@ body
 template dropBackExactly(Dimensions...)
     if (Dimensions.length)
 {
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias dropBackExactly = .dropBackExactly!(staticMap!(toSize_t, Dimensions));
+    else
     @fmb Slice!(N, Range) dropBackExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
@@ -1076,6 +1097,9 @@ Returns:
 template drop(Dimensions...)
     if (Dimensions.length)
 {
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias drop = .drop!(staticMap!(toSize_t, Dimensions));
+    else
     @fmb Slice!(N, Range) drop(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
@@ -1104,6 +1128,9 @@ body
 template dropBack(Dimensions...)
     if (Dimensions.length)
 {
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias dropBack = .dropBack!(staticMap!(toSize_t, Dimensions));
+    else
     @fmb Slice!(N, Range) dropBack(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {

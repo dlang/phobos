@@ -477,6 +477,8 @@ private bool isValidPartialPermutationImpl(size_t N)(in size_t[] perm, ref int[N
     return true;
 }
 
+enum toSize_t(size_t i) = i;
+enum isSize_t(alias i) = is(typeof(i) == size_t);
 enum isIndex(I) = is(I : size_t);
 enum is_Slice(S) = is(S : _Slice);
 

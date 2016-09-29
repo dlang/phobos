@@ -75,6 +75,9 @@ Returns:
 +/
 template pack(K...)
 {
+    static if (!allSatisfy!(isSize_t, K))
+        alias pack = .pack!(staticMap!(toSize_t, K));
+    else
     @fmb auto pack(size_t N, Range)(Slice!(N, Range) slice)
     {
         template Template(size_t NInner, Range, R...)
