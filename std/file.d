@@ -327,7 +327,7 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     {
         DWORD sizeHigh;
         DWORD sizeLow = GetFileSize(hFile, &sizeHigh);
-        bool result = sizeLow != INVALID_FILE_SIZE;
+        const bool result = sizeLow != INVALID_FILE_SIZE;
         if (result)
             fileSize = makeUlong(sizeLow, sizeHigh);
         return result;
@@ -338,9 +338,9 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
         ulong totalNumRead = 0;
         while (totalNumRead != nNumberOfBytesToRead)
         {
-            uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
+            const uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
             DWORD numRead = void;
-            auto result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
+            const result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
             if (result == 0 || numRead != chunkSize)
                 return false;
             totalNumRead += chunkSize;
@@ -551,7 +551,7 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
         while (sum != size)
         {
             cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
-            auto numwritten = core.sys.posix.unistd.write(fd, buffer.ptr + sum, cnt);
+            const numwritten = core.sys.posix.unistd.write(fd, buffer.ptr + sum, cnt);
             if (numwritten != cnt)
                 break;
             sum += numwritten;
@@ -655,7 +655,7 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
     {
         import std.exception : enforce;
 
-        auto result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
+        const result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
         if (!result)
         {
             import core.stdc.wchar_ : wcslen;
