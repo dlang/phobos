@@ -334,42 +334,6 @@ enum indexError(size_t pos, size_t N) =
     ~ " from the range [0 .." ~ N.stringof ~ ")"
     ~ " must be less than corresponding length.";
 
-enum indexStrideCode = q{
-    static if (_indexes.length)
-    {
-        size_t stride = _strides[0] * _indexes[0];
-        assert(_indexes[0] < _lengths[0], indexError!(0, N));
-        foreach (i; Iota!(1, N)) //static
-        {
-            assert(_indexes[i] < _lengths[i], indexError!(i, N));
-            stride += _strides[i] * _indexes[i];
-        }
-        return stride;
-    }
-    else
-    {
-        return 0;
-    }
-};
-
-enum mathIndexStrideCode = q{
-    static if (_indexes.length)
-    {
-        size_t stride = _strides[0] * _indexes[N - 1];
-        assert(_indexes[N - 1] < _lengths[0], indexError!(N - 1, N));
-        foreach_reverse (i; Iota!(0, N - 1)) //static
-        {
-            assert(_indexes[i] < _lengths[N - 1 - i], indexError!(i, N));
-            stride += _strides[N - 1 - i] * _indexes[i];
-        }
-        return stride;
-    }
-    else
-    {
-        return 0;
-    }
-};
-
 enum string tailErrorMessage(
     string fun = __FUNCTION__,
     string pfun = __PRETTY_FUNCTION__) =
