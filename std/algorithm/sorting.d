@@ -2603,7 +2603,6 @@ schwartzSort(alias transform, alias less = "a < b",
         foreach (ref p; probs)
         {
             if (!p) continue;
-            //enforce(p > 0 && p <= 1, "Wrong probability passed to entropy");
             result -= p * log2(p);
         }
         return result;
@@ -2637,7 +2636,6 @@ schwartzSort(alias transform, alias less = "a < b",
         foreach (ref p; probs)
         {
             if (!p) continue;
-            //enforce(p > 0 && p <= 1, "Wrong probability passed to entropy");
             result -= p * log2(p);
         }
         return result;
@@ -3118,6 +3116,185 @@ unittest
         //foreach (e; b) writeln(e, ":", a[e]);
         assert(b == [ cast(ubyte) 0, cast(ubyte)2, cast(ubyte)1, cast(ubyte)6, cast(ubyte)5], text(b));
     }
+}
+
+// medianOf
+/*
+Private for the time being.
+
+Computes the median of 2 to 5 arbitrary indexes in random-access range `r`
+using hand-written specialized algorithms. The indexes must be distinct (if not,
+behavior is implementation-defined). The function also partitions the elements
+involved around the median, e.g. $(D medianOf(r, a, b, c)) not only fills `r[b]`
+with the median of `r[a]`, `r[b]`, and `r[c]`, but also puts the minimum in
+`r[a]` and the maximum in `r[c]`.
+
+Params:
+less = The comparison predicate used, modeled as a $(LUCKY strict weak
+ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
+equivalence).
+flag = Used only for even values of `T.length`. If `No.leanRight`, the median
+"leans left", meaning $(D medianOf(r, a, b, c, d)) puts the lower median of the
+four in `r[b]`, the minimum in `r[a]`, and the two others in `r[c]` and `r[d]`.
+Conversely, $(D median!("a < b", Yes.leanRight)(r, a, b, c, d)) puts the upper
+median of the four in `r[c]`, the maximum in `r[d]`, and the two others in
+`r[a]` and `r[b]`.
+r = The range containing the indexes.
+i = Two to five indexes inside `r`.
+*/
+private void medianOf(
+        alias less = "a < b",
+        Flag!"leanRight" flag = No.leanRight,
+        Range,
+        Indexes...)
+    (Range r, Indexes i)
+if (isRandomAccessRange!Range && hasLength!Range &&
+    Indexes.length >= 2 && Indexes.length <= 5 &&
+    allSatisfy!(isUnsigned, Indexes))
+{
+    assert(r.length >= Indexes.length);
+    import std.functional : binaryFun;
+    alias lt = binaryFun!less;
+    enum k = Indexes.length;
+    import std.algorithm.mutation : swapAt;
+
+    alias a = i[0];
+    static assert(is(typeof(a) == size_t));
+    static if (k >= 2)
+    {
+        alias b = i[1];
+        static assert(is(typeof(b) == size_t));
+        assert(a != b);
+    }
+    static if (k >= 3)
+    {
+        alias c = i[2];
+        static assert(is(typeof(c) == size_t));
+        assert(a != c && b != c);
+    }
+    static if (k >= 4)
+    {
+        alias d = i[3];
+        static assert(is(typeof(d) == size_t));
+        assert(a != d && b != d && c != d);
+    }
+    static if (k >= 5)
+    {
+        alias e = i[4];
+        static assert(is(typeof(e) == size_t));
+        assert(a != e && b != e && c != e && d != e);
+    }
+
+    static if (k == 2)
+    {
+        if (lt(r[b], r[a])) r.swapAt(a, b);
+    }
+    else static if (k == 3)
+    {
+        if (lt(r[c], r[a])) // c < a
+        {
+            if (lt(r[a], r[b])) // c < a < b
+            {
+                r.swapAt(a, b);
+                r.swapAt(a, c);
+            }
+            else // c < a, b <= a
+            {
+                r.swapAt(a, c);
+                if (lt(r[b], r[a])) r.swapAt(a, b);
+            }
+        }
+        else // a <= c
+        {
+            if (lt(r[b], r[a])) // b < a <= c
+            {
+                r.swapAt(a, b);
+            }
+            else // a <= c, a <= b
+            {
+                if (lt(r[c], r[b])) r.swapAt(b, c);
+            }
+        }
+        assert(!lt(r[b], r[a]));
+        assert(!lt(r[c], r[b]));
+    }
+    else static if (k == 4)
+    {
+        static if (flag == No.leanRight)
+        {
+            // Eliminate the rightmost from the competition
+            if (lt(r[d], r[c])) r.swapAt(c, d); // c<=d
+            if (lt(r[d], r[b])) r.swapAt(b, d); // b<=d
+            medianOf!lt(r, a, b, c);
+        }
+        else
+        {
+            // Eliminate the leftmost from the competition
+            if (lt(r[b], r[a])) r.swapAt(a, b); // a<=b
+            if (lt(r[c], r[a])) r.swapAt(a, c); // a<=c
+            medianOf!lt(r, b, c, d);
+        }
+    }
+    else static if (k == 5)
+    {
+        // Credit: Teppo Niinimäki
+        version(unittest) scope(success)
+        {
+            assert(!lt(r[c], r[a]));
+            assert(!lt(r[c], r[b]));
+            assert(!lt(r[d], r[c]));
+            assert(!lt(r[e], r[c]));
+        }
+
+        if (lt(r[c], r[a])) r.swapAt(a, c);
+        if (lt(r[d], r[b])) r.swapAt(b, d);
+        if (lt(r[d], r[c]))
+        {
+            r.swapAt(c, d);
+            r.swapAt(a, b);
+        }
+        if (lt(r[e], r[b])) r.swapAt(b, e);
+        if (lt(r[e], r[c]))
+        {
+            r.swapAt(c, e);
+            if (lt(r[c], r[a])) r.swapAt(a, c);
+        }
+        else
+        {
+            if (lt(r[c], r[b])) r.swapAt(b, c);
+        }
+    }
+}
+
+///
+unittest
+{
+    // Verify medianOf for all permutations of [1, 2, 2, 3, 4].
+    int[5] data = [1, 2, 2, 3, 4];
+    do
+    {
+        int[5] a = data;
+        medianOf(a[], size_t(0), size_t(1));
+        assert(a[0] <= a[1]);
+
+        a[] = data[];
+        medianOf(a[], size_t(0), size_t(1), size_t(2));
+        assert(ordered(a[0], a[1], a[2]));
+
+        a[] = data[];
+        medianOf(a[], size_t(0), size_t(1), size_t(2), size_t(3));
+        assert(a[0] <= a[1] && a[1] <= a[2] && a[1] <= a[3]);
+
+        a[] = data[];
+        medianOf!("a < b", Yes.leanRight)(a[], size_t(0), size_t(1),
+            size_t(2), size_t(3));
+        assert(a[0] <= a[2] && a[1] <= a[2] && a[2] <= a[3]);
+
+        a[] = data[];
+        medianOf(a[], size_t(0), size_t(1), size_t(2), size_t(3), size_t(4));
+        assert(a[0] <= a[2] && a[1] <= a[2] && a[2] <= a[3] && a[2] <= a[4]);
+    }
+    while (nextPermutation(data[]));
 }
 
 // nextPermutation
