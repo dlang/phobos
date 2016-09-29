@@ -3119,7 +3119,9 @@ unittest
 }
 
 // medianOf
-/**
+/*
+Private for the time being.
+
 Computes the median of 2 to 5 arbitrary indexes in random-access range `r`
 using hand-written specialized algorithms. The indexes must be distinct (if not,
 behavior is implementation-defined). The function also partitions the elements
@@ -3140,7 +3142,7 @@ median of the four in `r[c]`, the maximum in `r[d]`, and the two others in
 r = The range containing the indexes.
 i = Two to five indexes inside `r`.
 */
-void medianOf(
+private void medianOf(
         alias less = "a < b",
         Flag!"leanRight" flag = No.leanRight,
         Range,
