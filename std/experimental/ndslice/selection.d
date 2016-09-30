@@ -39,6 +39,7 @@ $(T2 blocks, n-dimensional slice composed of n-dimensional non-overlapping block
     If the slice has two dimensions, it is a block matrix.)
 $(T2 windows, n-dimensional slice of n-dimensional overlapping windows.
     If the slice has two dimensions, it is a sliding window.)
+$(T2 clones, m-dimensional slice of n-dimensional identical slices.)
 )
 
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -707,6 +708,74 @@ pure nothrow unittest
          [1,  2,  3, 3, 3, 3,  2,  1],
          [1,  2,  3, 3, 3, 3,  2,  1],
          [1,  2,  3, 3, 3, 3,  2,  1]]);
+}
+
+/++
+Returns an m-dimensional slice composed of n-dimensional identical slices,
+where `m` is the number of dimensions passed to the `clones`.
+`clones` can be generalized with other selectors.
+
+Params:
+    lengths = `m` dimensions of clones
+Returns:
+    packed `m`-dimensional slice composed of `n`-dimensional slices
++/
+Slice!(Lengths.length, Slice!(N + 1, Range)) clones(size_t N, Range, Lengths...)(auto ref Slice!(N, Range) slice, Lengths lengths)
+    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
+{
+    enum M = Lengths.length;
+    typeof(return) ret;
+    ret._ptr = slice._ptr;
+    foreach (i; Iota!(0, M))
+        ret._lengths[i] = lengths[i];
+    foreach (i; Iota!(0, N))
+    {
+        ret._lengths[M + i] = slice._lengths[i];
+        ret._strides[M + i] = slice._strides[i];
+    }
+    return ret;
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto sl = iotaSlice(3)
+        .clones(4);
+    assert(sl == [[0, 1, 2],
+                  [0, 1, 2],
+                  [0, 1, 2],
+                  [0, 1, 2]]);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.experimental.ndslice.iteration : transposed;
+
+    auto sl = iotaSlice(3)
+        .clones(4)
+        .unpack
+        .transposed;
+
+    assert(sl == [[0, 0, 0, 0],
+                  [1, 1, 1, 1],
+                  [2, 2, 2, 2]]);
+}
+
+///
+pure nothrow unittest
+{
+    import std.experimental.ndslice.slice : slice;
+
+    auto sl = iotaSlice([3], 6).slice;
+    auto slC = sl.clones(2, 3);
+    sl[1] = 4;
+    assert(slC == [[[6, 4, 8],
+                    [6, 4, 8],
+                    [6, 4, 8]],
+                   [[6, 4, 8],
+                    [6, 4, 8],
+                    [6, 4, 8]]]);
 }
 
 /++

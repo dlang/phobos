@@ -113,6 +113,7 @@ $(TR $(TDNW $(SUBMODULE selection)
      $(TD
         $(SUBREF selection, blocks)
         $(SUBREF selection, windows)
+        $(SUBREF selection, clones)
         $(SUBREF selection, diagonal)
         $(SUBREF selection, reshape)
         $(SUBREF selection, byElement)
