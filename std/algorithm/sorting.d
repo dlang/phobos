@@ -3148,7 +3148,7 @@ Params:
 Returns: The slice of `target` containing the copied elements.
  */
 TRange topNCopy(alias less = "a < b", SRange, TRange)
-    (SRange source, TRange target, SortOutput sorted = SortOutput.no)
+    (SRange source, TRange target, SortOutput sorted = No.sortOutput)
     if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
             && hasLength!(TRange) && hasSlicing!(TRange))
 {
@@ -3158,7 +3158,7 @@ TRange topNCopy(alias less = "a < b", SRange, TRange)
     auto heap = BinaryHeap!(TRange, less)(target, 0);
     foreach (e; source) heap.conditionalInsert(e);
     auto result = target[0 .. heap.length];
-    if (sorted == SortOutput.yes)
+    if (sorted == Yes.sortOutput)
     {
         while (!heap.empty) heap.removeFront();
     }
@@ -3170,7 +3170,7 @@ unittest
 {
     int[] a = [ 10, 16, 2, 3, 1, 5, 0 ];
     int[] b = new int[3];
-    topNCopy(a, b, SortOutput.yes);
+    topNCopy(a, b, Yes.sortOutput);
     assert(b == [ 0, 1, 2 ]);
 }
 
@@ -3187,7 +3187,7 @@ unittest
     randomShuffle(a, r);
     auto n = uniform(0, a.length, r);
     ptrdiff_t[] b = new ptrdiff_t[n];
-    topNCopy!(binaryFun!("a < b"))(a, b, SortOutput.yes);
+    topNCopy!(binaryFun!("a < b"))(a, b, Yes.sortOutput);
     assert(isSorted!(binaryFun!("a < b"))(b));
 }
 
@@ -3225,7 +3225,7 @@ ignored.
 */
 void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
                Range, RangeIndex)
-              (Range r, RangeIndex index, SortOutput sorted = SortOutput.no)
+              (Range r, RangeIndex index, SortOutput sorted = No.sortOutput)
     if (isRandomAccessRange!Range &&
         isRandomAccessRange!RangeIndex &&
         hasAssignableElements!RangeIndex &&
@@ -3249,7 +3249,7 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     {
         heap.conditionalInsert(cast(ElementType!RangeIndex) i);
     }
-    if (sorted == SortOutput.yes)
+    if (sorted == Yes.sortOutput)
     {
         while (!heap.empty) heap.removeFront();
     }
@@ -3258,7 +3258,7 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 /// ditto
 void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
                Range, RangeIndex)
-              (Range r, RangeIndex index, SortOutput sorted = SortOutput.no)
+              (Range r, RangeIndex index, SortOutput sorted = No.sortOutput)
     if (isRandomAccessRange!Range &&
         isRandomAccessRange!RangeIndex &&
         hasAssignableElements!RangeIndex &&
@@ -3280,7 +3280,7 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     {
         heap.conditionalInsert(&r[i]);
     }
-    if (sorted == SortOutput.yes)
+    if (sorted == Yes.sortOutput)
     {
         while (!heap.empty) heap.removeFront();
     }
@@ -3292,12 +3292,12 @@ unittest
     // Construct index to top 3 elements using numerical indices:
     int[] a = [ 10, 2, 7, 5, 8, 1 ];
     int[] index = new int[3];
-    topNIndex(a, index, SortOutput.yes);
+    topNIndex(a, index, Yes.sortOutput);
     assert(index == [5, 1, 3]); // because a[5]==1, a[1]==2, a[3]==5
 
     // Construct index to top 3 elements using pointer indices:
     int*[] ptrIndex = new int*[3];
-    topNIndex(a, ptrIndex, SortOutput.yes);
+    topNIndex(a, ptrIndex, Yes.sortOutput);
     assert(ptrIndex == [ &a[5], &a[1], &a[3] ]);
 }
 
@@ -3311,14 +3311,14 @@ unittest
     {
         int[] a = [ 10, 8, 9, 2, 4, 6, 7, 1, 3, 5 ];
         int*[] b = new int*[5];
-        topNIndex!("a > b")(a, b, SortOutput.yes);
+        topNIndex!("a > b")(a, b, Yes.sortOutput);
         //foreach (e; b) writeln(*e);
         assert(b == [ &a[0], &a[2], &a[1], &a[6], &a[5]]);
     }
     {
         int[] a = [ 10, 8, 9, 2, 4, 6, 7, 1, 3, 5 ];
         auto b = new ubyte[5];
-        topNIndex!("a > b")(a, b, SortOutput.yes);
+        topNIndex!("a > b")(a, b, Yes.sortOutput);
         //foreach (e; b) writeln(e, ":", a[e]);
         assert(b == [ cast(ubyte) 0, cast(ubyte)2, cast(ubyte)1, cast(ubyte)6, cast(ubyte)5], text(b));
     }

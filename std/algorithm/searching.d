@@ -102,7 +102,7 @@ import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 // FIXME
-import std.typecons; // : Tuple, Flag;
+import std.typecons; // : Tuple, Flag, Yes, No;
 
 /++
 Checks if $(I _all) of the elements verify $(D pred).
@@ -3959,8 +3959,8 @@ Params:
     to iterate over.
     sentinel = The element to stop at.
     openRight = Determines whether the element for which the given predicate is
-        true should be included in the resulting range ($(D OpenRight.no)), or
-        not ($(D OpenRight.yes)).
+        true should be included in the resulting range ($(D No.openRight)), or
+        not ($(D Yes.openRight)).
 
 Returns:
     An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives) that
@@ -3971,7 +3971,7 @@ Returns:
  */
 Until!(pred, Range, Sentinel)
 until(alias pred = "a == b", Range, Sentinel)
-(Range range, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
+(Range range, Sentinel sentinel, OpenRight openRight = Yes.openRight)
 if (!is(Sentinel == OpenRight))
 {
     return typeof(return)(range, sentinel, openRight);
@@ -3980,7 +3980,7 @@ if (!is(Sentinel == OpenRight))
 /// Ditto
 Until!(pred, Range, void)
 until(alias pred, Range)
-(Range range, OpenRight openRight = OpenRight.yes)
+(Range range, OpenRight openRight = Yes.openRight)
 {
     return typeof(return)(range, openRight);
 }
@@ -4003,7 +4003,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     static if (!is(Sentinel == void))
         ///
         this(Range input, Sentinel sentinel,
-                OpenRight openRight = OpenRight.yes)
+                OpenRight openRight = Yes.openRight)
         {
             _input = input;
             _sentinel = sentinel;
@@ -4012,7 +4012,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         }
     else
         ///
-        this(Range input, OpenRight openRight = OpenRight.yes)
+        this(Range input, OpenRight openRight = Yes.openRight)
         {
             _input = input;
             _openRight = openRight;
@@ -4089,7 +4089,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     import std.algorithm.comparison : equal;
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
     assert(equal(a.until(7), [1, 2, 4][]));
-    assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
+    assert(equal(a.until(7, No.openRight), [1, 2, 4, 7][]));
 }
 
 @safe unittest
@@ -4099,12 +4099,12 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
 
     static assert(isForwardRange!(typeof(a.until(7))));
-    static assert(isForwardRange!(typeof(until!"a == 2"(a, OpenRight.no))));
+    static assert(isForwardRange!(typeof(until!"a == 2"(a, No.openRight))));
 
     assert(equal(a.until(7), [1, 2, 4][]));
     assert(equal(a.until([7, 2]), [1, 2, 4, 7][]));
-    assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
-    assert(equal(until!"a == 2"(a, OpenRight.no), [1, 2][]));
+    assert(equal(a.until(7, No.openRight), [1, 2, 4, 7][]));
+    assert(equal(until!"a == 2"(a, No.openRight), [1, 2][]));
 }
 
 unittest // bugzilla 13171
@@ -4112,7 +4112,7 @@ unittest // bugzilla 13171
     import std.algorithm.comparison : equal;
     import std.range;
     auto a = [1, 2, 3, 4];
-    assert(equal(refRange(&a).until(3, OpenRight.no), [1, 2, 3]));
+    assert(equal(refRange(&a).until(3, No.openRight), [1, 2, 3]));
     assert(a == [4]);
 }
 

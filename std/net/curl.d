@@ -1215,7 +1215,7 @@ struct ByLineBuffer(Char)
  *
  * Params:
  * url = The url to receive content from
- * keepTerminator = KeepTerminator.yes signals that the line terminator should be
+ * keepTerminator = $(D Yes.keepTerminator) signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
  * conn = The connection to use e.g. HTTP or FTP.
@@ -1224,7 +1224,7 @@ struct ByLineBuffer(Char)
  * A range of Char[] with the content of the resource pointer to by the URL
  */
 auto byLine(Conn = AutoProtocol, Terminator = char, Char = char)
-           (const(char)[] url, KeepTerminator keepTerminator = KeepTerminator.no,
+           (const(char)[] url, KeepTerminator keepTerminator = No.keepTerminator,
             Terminator terminator = '\n', Conn conn = Conn())
 if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 {
@@ -1290,7 +1290,7 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
     }
 
     auto result = _getForRange!Char(url, conn);
-    return SyncLineInputRange(result, keepTerminator == KeepTerminator.yes, terminator);
+    return SyncLineInputRange(result, keepTerminator == Yes.keepTerminator, terminator);
 }
 
 unittest
@@ -1590,7 +1590,7 @@ private static struct AsyncLineInputRange(Char)
  * Params:
  * url = The url to receive content from
  * postData = Data to HTTP Post
- * keepTerminator = KeepTerminator.yes signals that the line terminator should be
+ * keepTerminator = $(D Yes.keepTerminator) signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
  * transmitBuffers = The number of lines buffered asynchronously
@@ -1602,7 +1602,7 @@ private static struct AsyncLineInputRange(Char)
  */
 auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
             (const(char)[] url, const(PostUnit)[] postData,
-             KeepTerminator keepTerminator = KeepTerminator.no,
+             KeepTerminator keepTerminator = No.keepTerminator,
              Terminator terminator = '\n',
              size_t transmitBuffers = 10, Conn conn = Conn())
     if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
@@ -1623,7 +1623,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
         auto tid = spawn(&_spawnAsync!(Conn, Char, Terminator));
         tid.send(thisTid);
         tid.send(terminator);
-        tid.send(keepTerminator == KeepTerminator.yes);
+        tid.send(keepTerminator == Yes.keepTerminator);
 
         _asyncDuplicateConnection(url, conn, postData, tid);
 
@@ -1634,7 +1634,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
 
 /// ditto
 auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
-            (const(char)[] url, KeepTerminator keepTerminator = KeepTerminator.no,
+            (const(char)[] url, KeepTerminator keepTerminator = No.keepTerminator,
              Terminator terminator = '\n',
              size_t transmitBuffers = 10, Conn conn = Conn())
 {
@@ -2493,7 +2493,7 @@ struct HTTP
        Params:
        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         p.status.reset();
 
@@ -3246,7 +3246,7 @@ struct FTP
        Params:
        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         return p.curl.perform(throwOnError);
     }
@@ -3577,7 +3577,7 @@ struct SMTP
         Params:
         throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         return p.curl.perform(throwOnError);
     }
@@ -3859,7 +3859,7 @@ class CurlTimeoutException : CurlException
 /// Equal to $(REF CURLcode, etc,c,curl)
 alias CurlCode = CURLcode;
 
-import std.typecons : Flag;
+import std.typecons : Flag, Yes, No;
 /// Flag to specify whether or not an exception is thrown on error.
 alias ThrowOnError = Flag!"throwOnError";
 
@@ -4205,7 +4205,7 @@ struct Curl
        Params:
        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         throwOnStopped();
         CurlCode code = curl.easy_perform(this.handle);
@@ -4812,7 +4812,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     CurlCode code;
     try
     {
-        code = client.perform(ThrowOnError.no);
+        code = client.perform(No.throwOnError);
     }
     catch (Exception ex)
     {

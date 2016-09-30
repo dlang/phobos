@@ -60,7 +60,7 @@ import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 // FIXME
-import std.typecons; // : tuple, Tuple, Flag;
+import std.typecons; // : tuple, Tuple, Flag, Yes;
 import std.meta : allSatisfy;
 
 /**
@@ -1805,8 +1805,8 @@ alias AllocateGC = Flag!"allocateGC";
 /**
 Checks if both ranges are permutations of each other.
 
-This function can allocate if the $(D AllocateGC.yes) flag is passed. This has
-the benefit of have better complexity than the $(D AllocateGC.no) option. However,
+This function can allocate if the $(D Yes.allocateGC) flag is passed. This has
+the benefit of have better complexity than the $(D Yes.allocateGC) option. However,
 this option is only available for ranges whose equality can be determined via each
 element's $(D toHash) method. If customized equality is needed, then the $(D pred)
 template parameter can be passed, and the function will automatically switch to
@@ -1819,7 +1819,7 @@ Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.lengt
 
 Params:
     pred = an optional parameter to change how equality is defined
-    allocate_gc = AllocateGC.yes/no
+    allocate_gc = $(D Yes.allocateGC)/$(D No.allocateGC)
     r1 = A finite forward range
     r2 = A finite forward range
 
@@ -1830,7 +1830,7 @@ Returns:
 
 bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
 (Range1 r1, Range2 r2)
-    if (allocate_gc == AllocateGC.yes &&
+    if (allocate_gc == Yes.allocateGC &&
         isForwardRange!Range1 &&
         isForwardRange!Range2 &&
         !isInfinite!Range1 &&
@@ -1959,8 +1959,8 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
     assert(!isPermutation([1, 1], [1, 1, 1]));
 
     // Faster, but allocates GC handled memory
-    assert(isPermutation!(AllocateGC.yes)([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
-    assert(!isPermutation!(AllocateGC.yes)([1, 2], [3, 4]));
+    assert(isPermutation!(Yes.allocateGC)([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
+    assert(!isPermutation!(Yes.allocateGC)([1, 2], [3, 4]));
 }
 
 // Test @nogc inference
@@ -1985,7 +1985,7 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
 
     auto r3 = new ReferenceForwardRange!int([1, 2, 3, 4]);
     auto r4 = new ReferenceForwardRange!int([4, 2, 1, 3]);
-    assert(isPermutation!(AllocateGC.yes)(r3, r4));
+    assert(isPermutation!(Yes.allocateGC)(r3, r4));
 
     auto r5 = new ReferenceForwardRange!int([1, 2, 3]);
     auto r6 = new ReferenceForwardRange!int([4, 2, 1, 3]);
@@ -1993,7 +1993,7 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
 
     auto r7 = new ReferenceForwardRange!int([4, 2, 1, 3]);
     auto r8 = new ReferenceForwardRange!int([1, 2, 3]);
-    assert(!isPermutation!(AllocateGC.yes)(r7, r8));
+    assert(!isPermutation!(Yes.allocateGC)(r7, r8));
 
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r9;
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r10;
@@ -2001,7 +2001,7 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
 
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r11;
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r12;
-    assert(isPermutation!(AllocateGC.yes)(r11, r12));
+    assert(isPermutation!(Yes.allocateGC)(r11, r12));
 
     alias mytuple = Tuple!(int, int);
 

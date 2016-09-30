@@ -2583,6 +2583,7 @@ private:
         version(SlowTests)
         softUnittest({
             import std.datetime;
+            import std.typecons;
 
             enum msecs = 1000;
             auto pair = socketPair();
@@ -2590,7 +2591,7 @@ private:
             sock.setOption(SocketOptionLevel.SOCKET,
                 SocketOption.RCVTIMEO, dur!"msecs"(msecs));
 
-            auto sw = StopWatch(AutoStart.yes);
+            auto sw = StopWatch(Yes.autoStart);
             ubyte[1] buf;
             sock.receive(buf);
             sw.stop();
@@ -3208,6 +3209,7 @@ public:
      * Example:
      * ---
      * import std.datetime;
+     * import std.typecons;
      * auto pair = socketPair();
      * scope(exit) foreach (s; pair) s.close();
      *
@@ -3216,7 +3218,7 @@ public:
      * pair[0].setOption(SocketOptionLevel.SOCKET,
      *     SocketOption.RCVTIMEO, dur!"seconds"(1));
      *
-     * auto sw = StopWatch(AutoStart.yes);
+     * auto sw = StopWatch(Yes.autoStart);
      * ubyte[1] buffer;
      * pair[0].receive(buffer);
      * writefln("Waited %s ms until the socket timed out.",

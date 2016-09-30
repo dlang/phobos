@@ -3252,22 +3252,22 @@ alias PreserveAttributes = Flag!"preserveAttributes";
 
 version (StdDdoc)
 {
-    /// Defaults to PreserveAttributes.yes on Windows, and the opposite on all other platforms.
+    /// Defaults to $(D Yes.preserveAttributes) on Windows, and the opposite on all other platforms.
     PreserveAttributes preserveAttributesDefault;
 }
 else version(Windows)
 {
-    enum preserveAttributesDefault = PreserveAttributes.yes;
+    enum preserveAttributesDefault = Yes.preserveAttributes;
 }
 else
 {
-    enum preserveAttributesDefault = PreserveAttributes.no;
+    enum preserveAttributesDefault = No.preserveAttributes;
 }
 
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
-File attributes are preserved, if $(D preserve) equals $(D PreserveAttributes.yes).
-On Windows only $(D PreserveAttributes.yes) (the default on Windows) is supported.
+File attributes are preserved, if $(D preserve) equals $(D Yes.preserveAttributes).
+On Windows only $(D Yes.preserveAttributes) (the default on Windows) is supported.
 If the target file exists, it is overwritten.
 
 Params:
