@@ -1002,8 +1002,7 @@ alias UseReplacementDchar = Flag!"useReplacementDchar";
         sequence and useReplacementDchar is UseReplacementDchar.no
   +/
 dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(auto ref S str, ref size_t index)
-    if (!isSomeString!S &&
-        isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
+    if (isSomeString!S || isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
@@ -1017,25 +1016,7 @@ body
     if (str[index] < codeUnitLimit!S)
         return str[index++];
     else
-        return decodeImpl!(true, useReplacementDchar)(str, index);
-}
-
-dchar decode(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
-    auto ref S str, ref size_t index) @trusted pure if (isSomeString!S)
-in
-{
-    assert(index < str.length, "Attempted to decode past the end of a string");
-}
-out (result)
-{
-    assert(isValidDchar(result));
-}
-body
-{
-    if (str[index] < codeUnitLimit!S)
-        return str[index++];
-    else
-        return decodeImpl!(true, useReplacementDchar)(str, index);
+        return decodeImpl!(useReplacementDchar)(str, index);
 }
 
 /++
@@ -1062,7 +1043,7 @@ body
         before the code point was determined to be invalid.
   +/
 dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
-    ref S str, out size_t numCodeUnits) if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
+    ref S str, out size_t numCodeUnits) if (isSomeString!S || isInputRange!S && isSomeChar!(ElementType!S))
 in
 {
     assert(!str.empty);
@@ -1073,54 +1054,42 @@ out (result)
 }
 body
 {
-    immutable fst = str.front;
-
-    if (fst < codeUnitLimit!S)
+    static if (isSomeString!S)
     {
-        str.popFront();
-        numCodeUnits = 1;
-        return fst;
+        if (str[0] < codeUnitLimit!S)
+        {
+            numCodeUnits = 1;
+            immutable retval = str[0];
+            str = str[1 .. $];
+            return retval;
+        }
+        else
+        {
+            immutable retval = decodeImpl!(useReplacementDchar)(str, numCodeUnits);
+            str = str[numCodeUnits .. $];
+            return retval;
+        }
     }
     else
     {
-        //@@@BUG@@@ 14447 forces canIndex to be done outside of decodeImpl, which
-        //is undesirable, since not all overloads of decodeImpl need it. So, it
-        //should be moved back into decodeImpl once bug# 8521 has been fixed.
-        enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
-        immutable retval = decodeImpl!(canIndex, useReplacementDchar)(str, numCodeUnits);
+        immutable fst = str.front;
 
-        // The other range types were already popped by decodeImpl.
-        static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
-            str = str[numCodeUnits .. str.length];
+        if (fst < codeUnitLimit!S)
+        {
+            str.popFront();
+            numCodeUnits = 1;
+            return fst;
+        }
+        else
+        {
+            immutable retval = decodeImpl!(useReplacementDchar)(str, numCodeUnits);
 
-        return retval;
-    }
-}
+            // The other range types were already popped by decodeImpl.
+            static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+                str = str[numCodeUnits .. str.length];
 
-dchar decodeFront(UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
-    ref S str, out size_t numCodeUnits) @trusted pure if (isSomeString!S)
-in
-{
-    assert(!str.empty);
-}
-out (result)
-{
-    assert(isValidDchar(result));
-}
-body
-{
-    if (str[0] < codeUnitLimit!S)
-    {
-        numCodeUnits = 1;
-        immutable retval = str[0];
-        str = str[1 .. $];
-        return retval;
-    }
-    else
-    {
-        immutable retval = decodeImpl!(true, useReplacementDchar)(str, numCodeUnits);
-        str = str[numCodeUnits .. $];
-        return retval;
+            return retval;
+        }
     }
 }
 
@@ -1153,7 +1122,6 @@ package template codeUnitLimit(S)
  * The three overloads of this operate on chars, wchars, and dchars.
  *
  * Params:
- *      canIndex = if S is indexable
  *      useReplacementDchar = if invalid UTF, return replacementDchar rather than throwing
  *      str = input string or Range
  *      index = starting index into s[]; incremented by number of code units processed
@@ -1161,175 +1129,151 @@ package template codeUnitLimit(S)
  * Returns:
  *      decoded character
  */
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
-    auto ref S str, ref size_t index) if (
-    is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
+private template decodeImpl(Flag!"useReplacementDchar" useReplacementDchar)
 {
-    /* The following encodings are valid, except for the 5 and 6 byte
-     * combinations:
-     *  0xxxxxxx
-     *  110xxxxx 10xxxxxx
-     *  1110xxxx 10xxxxxx 10xxxxxx
-     *  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-     *  111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-     *  1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-     */
-
-    /* Dchar bitmask for different numbers of UTF-8 code units.
-     */
-    alias bitMask = AliasSeq!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
-
-    static if (is(S : const char[]))
-        auto pstr = str.ptr + index;
-    else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
-        auto pstr = str[index .. str.length];
-    else
-        alias pstr = str;
-
-    //@@@BUG@@@ 14447 forces this to be done outside of decodeImpl
-    //enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
-
-    static if (canIndex)
+    private auto impl(S)(auto ref S str, ref size_t index)
     {
-        immutable length = str.length - index;
-        ubyte fst = pstr[0];
-    }
-    else
-    {
-        ubyte fst = pstr.front;
-        pstr.popFront();
-    }
+        enum isSomeStr = isSomeString!S;
+        static if (isSomeStr)
+            enum canIndex = true;
+        else
+            enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
+        alias C = ElementEncodingType!S;
 
-    static if (!useReplacementDchar)
-    {
-        static if (canIndex)
+        static if (is (C : char))
         {
-            static UTFException exception(S)(S str, string msg)
-            {
-                uint[4] sequence = void;
-                size_t i;
+            /* The following encodings are valid, except for the 5 and 6 byte
+            * combinations:
+            *  0xxxxxxx
+            *  110xxxxx 10xxxxxx
+            *  1110xxxx 10xxxxxx 10xxxxxx
+            *  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+            *  111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+            *  1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+            */
 
-                do
-                {
-                    sequence[i] = str[i];
-                } while (++i < str.length && i < 4 && (str[i] & 0xC0) == 0x80);
+            /* Dchar bitmask for different numbers of UTF-8 code units.
+            */
+            alias bitMask = AliasSeq!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
 
-                return new UTFException(msg, i).setSequence(sequence[0 .. i]);
-            }
-        }
-
-        UTFException invalidUTF()
-        {
             static if (canIndex)
-               return exception(pstr[0 .. length], "Invalid UTF-8 sequence");
-            else
             {
-                //We can't include the invalid sequence with input strings without
-                //saving each of the code units along the way, and we can't do it with
-                //forward ranges without saving the entire range. Both would incur a
-                //cost for the decoding of every character just to provide a better
-                //error message for the (hopefully) rare case when an invalid UTF-8
-                //sequence is encountered, so we don't bother trying to include the
-                //invalid sequence here, unlike with strings and sliceable ranges.
-               return new UTFException("Invalid UTF-8 sequence");
+                static if (isSomeStr)
+                    auto pstr = str.ptr + index;
+                else
+                    auto pstr = str[index .. str.length];
             }
-        }
+            else
+                alias pstr = str;
 
-        UTFException outOfBounds()
-        {
             static if (canIndex)
-               return exception(pstr[0 .. length], "Attempted to decode past the end of a string");
-            else
-               return new UTFException("Attempted to decode past the end of a string");
-        }
-    }
-
-    if ((fst & 0b1100_0000) != 0b1100_0000)
-    {
-        static if (useReplacementDchar)
-        {
-            ++index;            // always consume bad input to avoid infinite loops
-            return replacementDchar;
-        }
-        else
-            throw invalidUTF(); // starter must have at least 2 first bits set
-    }
-    ubyte tmp = void;
-    dchar d = fst; // upper control bits are masked out later
-    fst <<= 1;
-
-    foreach (i; AliasSeq!(1, 2, 3))
-    {
-
-        static if (canIndex)
-        {
-            if (i == length)
             {
-                static if (useReplacementDchar)
-                {
-                    index += i;
-                    return replacementDchar;
-                }
-                else
-                    throw outOfBounds();
-            }
-        }
-        else
-        {
-            if (pstr.empty)
-            {
-                static if (useReplacementDchar)
-                {
-                    index += i;
-                    return replacementDchar;
-                }
-                else
-                    throw outOfBounds();
-            }
-        }
-
-        static if (canIndex)
-            tmp = pstr[i];
-        else
-        {
-            tmp = pstr.front;
-            pstr.popFront();
-        }
-
-        if ((tmp & 0xC0) != 0x80)
-        {
-            static if (useReplacementDchar)
-            {
-                index += i + 1;
-                return replacementDchar;
+                immutable length = str.length - index;
+                ubyte fst = pstr[0];
             }
             else
-                throw invalidUTF();
-        }
+            {
+                ubyte fst = pstr.front;
+                pstr.popFront();
+            }
 
-        d = (d << 6) | (tmp & 0x3F);
-        fst <<= 1;
+            static if (!useReplacementDchar)
+            {
+                static if (canIndex)
+                {
+                    static UTFException exception(S)(S str, string msg)
+                    {
+                        uint[4] sequence = void;
+                        size_t i;
 
-        if (!(fst & 0x80)) // no more bytes
-        {
-            d &= bitMask[i]; // mask out control bits
+                        do
+                        {
+                            sequence[i] = str[i];
+                        } while (++i < str.length && i < 4 && (str[i] & 0xC0) == 0x80);
 
-            // overlong, could have been encoded with i bytes
-            if ((d & ~bitMask[i - 1]) == 0)
+                        return new UTFException(msg, i).setSequence(sequence[0 .. i]);
+                    }
+                }
+
+                UTFException invalidUTF()
+                {
+                    static if (canIndex)
+                        return exception(pstr[0 .. length], "Invalid UTF-8 sequence");
+                    else
+                    {
+                        //We can't include the invalid sequence with input strings without
+                        //saving each of the code units along the way, and we can't do it with
+                        //forward ranges without saving the entire range. Both would incur a
+                        //cost for the decoding of every character just to provide a better
+                        //error message for the (hopefully) rare case when an invalid UTF-8
+                        //sequence is encountered, so we don't bother trying to include the
+                        //invalid sequence here, unlike with strings and sliceable ranges.
+                        return new UTFException("Invalid UTF-8 sequence");
+                    }
+                }
+
+                UTFException outOfBounds()
+                {
+                    static if (canIndex)
+                        return exception(pstr[0 .. length], "Attempted to decode past the end of a string");
+                    else
+                        return new UTFException("Attempted to decode past the end of a string");
+                }
+            }
+
+            if ((fst & 0b1100_0000) != 0b1100_0000)
             {
                 static if (useReplacementDchar)
                 {
-                    index += i + 1;
+                    ++index;            // always consume bad input to avoid infinite loops
                     return replacementDchar;
                 }
                 else
-                    throw invalidUTF();
+                    throw invalidUTF(); // starter must have at least 2 first bits set
             }
+            ubyte tmp = void;
+            dchar d = fst; // upper control bits are masked out later
+            fst <<= 1;
 
-            // check for surrogates only needed for 3 bytes
-            static if (i == 2)
+            foreach (i; AliasSeq!(1, 2, 3))
             {
-                if (!isValidDchar(d))
+
+                static if (canIndex)
+                {
+                    if (i == length)
+                    {
+                        static if (useReplacementDchar)
+                        {
+                            index += i;
+                            return replacementDchar;
+                        }
+                        else
+                            throw outOfBounds();
+                    }
+                }
+                else
+                {
+                    if (pstr.empty)
+                    {
+                        static if (useReplacementDchar)
+                        {
+                            index += i;
+                            return replacementDchar;
+                        }
+                        else
+                            throw outOfBounds();
+                    }
+                }
+
+                static if (canIndex)
+                    tmp = pstr[i];
+                else
+                {
+                    tmp = pstr.front;
+                    pstr.popFront();
+                }
+
+                if ((tmp & 0xC0) != 0x80)
                 {
                     static if (useReplacementDchar)
                     {
@@ -1339,30 +1283,207 @@ private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar 
                     else
                         throw invalidUTF();
                 }
-            }
 
-            index += i + 1;
-            static if (i == 3)
-            {
-                if (d > dchar.max)
+                d = (d << 6) | (tmp & 0x3F);
+                fst <<= 1;
+
+                if (!(fst & 0x80)) // no more bytes
                 {
-                    static if (useReplacementDchar)
-                        d = replacementDchar;
-                    else
-                        throw invalidUTF();
+                    d &= bitMask[i]; // mask out control bits
+
+                    // overlong, could have been encoded with i bytes
+                    if ((d & ~bitMask[i - 1]) == 0)
+                    {
+                        static if (useReplacementDchar)
+                        {
+                            index += i + 1;
+                            return replacementDchar;
+                        }
+                        else
+                            throw invalidUTF();
+                    }
+
+                    // check for surrogates only needed for 3 bytes
+                    static if (i == 2)
+                    {
+                        if (!isValidDchar(d))
+                        {
+                            static if (useReplacementDchar)
+                            {
+                                index += i + 1;
+                                return replacementDchar;
+                            }
+                            else
+                                throw invalidUTF();
+                        }
+                    }
+
+                    index += i + 1;
+                    static if (i == 3)
+                    {
+                        if (d > dchar.max)
+                        {
+                            static if (useReplacementDchar)
+                                d = replacementDchar;
+                            else
+                                throw invalidUTF();
+                        }
+                    }
+                    return d;
                 }
             }
-            return d;
+
+            static if (useReplacementDchar)
+            {
+                index += 4;             // read 4 chars by now
+                return replacementDchar;
+            }
+            else
+                throw invalidUTF();
         }
+        else static if (is (C : wchar))
+        {
+            static if (canIndex)
+            {
+                static if (isSomeStr)
+                    auto pstr = str.ptr + index;
+                else
+                    auto pstr = str[index .. str.length];
+            }
+            else
+                alias pstr = str;
+
+            static if (canIndex)
+            {
+                immutable length = str.length - index;
+                uint u = pstr[0];
+            }
+            else
+            {
+                uint u = pstr.front;
+                pstr.popFront();
+            }
+
+            static if (!useReplacementDchar)
+            {
+                UTFException exception(string msg)
+                {
+                    static if (canIndex)
+                        return new UTFException(msg).setSequence(pstr[0]);
+                    else
+                        return new UTFException(msg);
+                }
+            }
+
+            string msg;
+
+            // The < case must be taken care of before decodeImpl is called.
+            assert (u >= 0xD800);
+
+            if (u <= 0xDBFF)
+            {
+                static if (canIndex)
+                    immutable onlyOneCodeUnit = length == 1;
+                else
+                    immutable onlyOneCodeUnit = pstr.empty;
+
+                if (onlyOneCodeUnit)
+                {
+                    static if (useReplacementDchar)
+                    {
+                        ++index;
+                        return replacementDchar;
+                    }
+                    else
+                        throw exception("surrogate UTF-16 high value past end of string");
+                }
+
+                static if (canIndex)
+                    immutable uint u2 = pstr[1];
+                else
+                {
+                    immutable uint u2 = pstr.front;
+                    pstr.popFront();
+                }
+
+                if (u2 < 0xDC00 || u2 > 0xDFFF)
+                {
+                    static if (useReplacementDchar)
+                        u = replacementDchar;
+                    else
+                        throw exception("surrogate UTF-16 low value out of range");
+                }
+                else
+                    u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
+                ++index;
+            }
+            else if (u >= 0xDC00 && u <= 0xDFFF)
+            {
+                static if (useReplacementDchar)
+                    u = replacementDchar;
+                else
+                    throw exception("unpaired surrogate UTF-16 value");
+            }
+            ++index;
+
+            // Note: u+FFFE and u+FFFF are specifically permitted by the
+            // Unicode standard for application internal use (see isValidDchar)
+
+            return cast(dchar)u;
+        }
+        else static if (is (C : dchar))
+        {
+            static if (isSomeStr)
+                auto pstr = str.ptr;
+            else
+                alias pstr = str;
+
+            static if (isSomeStr || isRandomAccessRange!S)
+            {
+                dchar dc = pstr[index];
+                if (!isValidDchar(dc))
+                {
+                    static if (useReplacementDchar)
+                        dc = replacementDchar;
+                    else
+                        throw new UTFException("Invalid UTF-32 value").setSequence(dc);
+                }
+                ++index;
+                return dc;
+            }
+            else
+            {
+                dchar dc = pstr.front;
+                if (!isValidDchar(dc))
+                {
+                    static if (useReplacementDchar)
+                        dc = replacementDchar;
+                    else
+                        throw new UTFException("Invalid UTF-32 value").setSequence(dc);
+                }
+                ++index;
+                pstr.popFront();
+                return dc;
+            }
+        }
+        else
+            static assert (false);
     }
 
-    static if (useReplacementDchar)
+    pragma(inline, true)
     {
-        index += 4;             // read 4 chars by now
-        return replacementDchar;
+        auto decodeImpl(S)(auto ref S str, ref size_t index) @trusted
+            if ( isSomeString!S)
+        {
+            return impl(str, index);
+        }
+
+        auto decodeImpl(S)(auto ref S str, ref size_t index)
+            if (!isSomeString!S && (isInputRange!S && isSomeChar!(ElementEncodingType!S)))
+        {
+            return impl(str, index);
+        }
     }
-    else
-        throw invalidUTF();
 }
 
 @safe pure @nogc nothrow
@@ -1385,101 +1506,10 @@ unittest
     {
         auto r = R(s);
         size_t index;
-        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        dchar dc = decodeImpl!(Flag!"useReplacementDchar".yes)(r, index);
         assert(dc == replacementDchar);
         assert(1 <= index && index <= s.length);
     }
-}
-
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)
-(auto ref S str, ref size_t index)
-    if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
-{
-    static if (is(S : const wchar[]))
-        auto pstr = str.ptr + index;
-    else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
-        auto pstr = str[index .. str.length];
-    else
-        alias pstr = str;
-
-    //@@@BUG@@@ 14447 forces this to be done outside of decodeImpl
-    //enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
-
-    static if (canIndex)
-    {
-        immutable length = str.length - index;
-        uint u = pstr[0];
-    }
-    else
-    {
-        uint u = pstr.front;
-        pstr.popFront();
-    }
-
-    static if (!useReplacementDchar)
-    {
-        UTFException exception(string msg)
-        {
-            static if (canIndex)
-                return new UTFException(msg).setSequence(pstr[0]);
-            else
-                return new UTFException(msg);
-        }
-    }
-
-    // The < case must be taken care of before decodeImpl is called.
-    assert(u >= 0xD800);
-
-    if (u <= 0xDBFF)
-    {
-        static if (canIndex)
-            immutable onlyOneCodeUnit = length == 1;
-        else
-            immutable onlyOneCodeUnit = pstr.empty;
-
-        if (onlyOneCodeUnit)
-        {
-            static if (useReplacementDchar)
-            {
-                ++index;
-                return replacementDchar;
-            }
-            else
-                throw exception("surrogate UTF-16 high value past end of string");
-        }
-
-        static if (canIndex)
-            immutable uint u2 = pstr[1];
-        else
-        {
-            immutable uint u2 = pstr.front;
-            pstr.popFront();
-        }
-
-        if (u2 < 0xDC00 || u2 > 0xDFFF)
-        {
-            static if (useReplacementDchar)
-                u = replacementDchar;
-            else
-                throw exception("surrogate UTF-16 low value out of range");
-        }
-        else
-            u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
-        ++index;
-    }
-    else if (u >= 0xDC00 && u <= 0xDFFF)
-    {
-        static if (useReplacementDchar)
-            u = replacementDchar;
-        else
-            throw exception("unpaired surrogate UTF-16 value");
-    }
-    ++index;
-
-    // Note: u+FFFE and u+FFFF are specifically permitted by the
-    // Unicode standard for application internal use (see isValidDchar)
-
-    return cast(dchar)u;
 }
 
 @safe pure @nogc nothrow
@@ -1502,47 +1532,9 @@ unittest
     {
         auto r = R(s);
         size_t index;
-        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        dchar dc = decodeImpl!(Flag!"useReplacementDchar".yes)(r, index);
         assert(dc == replacementDchar);
         assert(1 <= index && index <= s.length);
-    }
-}
-
-private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = UseReplacementDchar.no, S)(
-    auto ref S str, ref size_t index)
-    if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
-{
-    static if (is(S : const dchar[]))
-        auto pstr = str.ptr;
-    else
-        alias pstr = str;
-
-    static if (is(S : const dchar[]) || isRandomAccessRange!S)
-    {
-        dchar dc = pstr[index];
-        if (!isValidDchar(dc))
-        {
-            static if (useReplacementDchar)
-                dc = replacementDchar;
-            else
-                throw new UTFException("Invalid UTF-32 value").setSequence(dc);
-        }
-        ++index;
-        return dc;
-    }
-    else
-    {
-        dchar dc = pstr.front;
-        if (!isValidDchar(dc))
-        {
-            static if (useReplacementDchar)
-                dc = replacementDchar;
-            else
-                throw new UTFException("Invalid UTF-32 value").setSequence(dc);
-        }
-        ++index;
-        pstr.popFront();
-        return dc;
     }
 }
 
@@ -1566,7 +1558,7 @@ unittest
     {
         auto r = R(s);
         size_t index;
-        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        dchar dc = decodeImpl!(Flag!"useReplacementDchar".yes)(r, index);
         assert(dc == replacementDchar);
         assert(1 <= index && index <= s.length);
     }
