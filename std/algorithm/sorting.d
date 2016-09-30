@@ -2813,6 +2813,10 @@ schwartzSort(alias transform, alias less = "a < b",
     arr[2] = highEnt;
 
     schwartzSort!(entropy, q{a > b})(arr);
+
+    assert(arr[0] == highEnt);
+    assert(arr[1] == midEnt);
+    assert(arr[2] == lowEnt);
     assert(isSorted!("a > b")(map!(entropy)(arr)));
 }
 
@@ -2843,6 +2847,10 @@ schwartzSort(alias transform, alias less = "a < b",
     arr[2] = highEnt;
 
     schwartzSort!(entropy, q{a < b})(arr);
+
+    assert(arr[0] == lowEnt);
+    assert(arr[1] == midEnt);
+    assert(arr[2] == highEnt);
     assert(isSorted!("a < b")(map!(entropy)(arr)));
 }
 
