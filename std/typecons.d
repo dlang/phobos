@@ -2659,28 +2659,7 @@ Params:
  */
 struct Nullable(T, T nullValue)
 {
-    static if (_useNanWorkaround && is(T == float) && nullValue is T.init)
-        union
-        {
-            private uint _raw = 0x7fa00000; // float.init
-            private T _value;
-        }
-    else static if (_useNanWorkaround && is(T == double) && nullValue is T.init)
-        union
-        {
-            private ulong _raw = 0x7ff4000000000000UL; // double.init
-            private T _value;
-        }
-    else
-        private T _value = nullValue;
-
-    // workaround for bug 15316
-    version (X86_64)
-        private enum _useNanWorkaround = true;
-    else version (OSX)
-        private enum _useNanWorkaround = true;
-    else
-        private enum _useNanWorkaround = false;
+    private T _value = nullValue;
 
 /**
 Constructor initializing $(D this) with $(D value).
