@@ -2947,9 +2947,11 @@ auto topN(alias less = "a < b",
         // Workaround for https://issues.dlang.org/show_bug.cgi?id=16528
         // Safety checks: enumerate all potentially unsafe generic primitives
         // then use a @trusted implementation.
-        binaryFun!less(r[0], r[0]);
+        auto b = binaryFun!less(r[0], r[$ - 1]);
         import std.algorithm.mutation : swapAt;
-        r.swapAt(0, 0);
+        r.swapAt(size_t(0), size_t(0));
+        static assert(is(typeof(r.length) == size_t));
+        pivotPartition!less(r, 0);
     }
     bool useSampling = true;
     topNImpl!(binaryFun!less)(r, nth, useSampling);
@@ -3122,7 +3124,7 @@ private void p4(alias less, Flag!"leanRight" f, Range)
     }
 }
 
-@trusted private size_t topNPartitionOffMedian(alias lp, Flag!"leanRight" f, R)
+private size_t topNPartitionOffMedian(alias lp, Flag!"leanRight" f, R)
     (R r, size_t n, bool useSampling)
 {
     assert(r.length >= 12);
