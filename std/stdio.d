@@ -96,6 +96,7 @@ version(Windows)
     /+ Waiting for druntime pull 299
     +/
     extern (C) nothrow @nogc FILE* _wfopen(in wchar* filename, in wchar* mode);
+    extern (C) nothrow @nogc FILE* _wfreopen(in wchar* filename, in wchar* mode, FILE* fp);
 
     import core.sys.windows.windows : HANDLE;
 }
@@ -486,6 +487,86 @@ Throws: $(D ErrnoException) in case of error.
     {
         detach();
         this = File(name, stdioOpenmode);
+    }
+
+/**
+Reuses the `File` object to either open a different file, or change
+the file mode. If `name` is `null`, the mode of the currently open
+file is changed; otherwise, a new file is opened, reusing the C
+`FILE*`. The function has the same semantics as in the C standard
+library $(HTTP cplusplus.com/reference/cstdio/freopen/, freopen)
+function.
+
+Note: Calling `reopen` with a `null` `name` is not implemented
+in all C runtimes.
+
+Throws: $(D ErrnoException) in case of error.
+ */
+    void reopen(string name, in char[] stdioOpenmode = "rb") @trusted
+    {
+        import std.internal.cstring : tempCString;
+        import std.exception : enforce, errnoEnforce;
+        import std.conv : text;
+
+        enforce(isOpen, "Attempting to reopen() an unopened file");
+
+        auto namez = name.tempCString!FSChar();
+        auto modez = stdioOpenmode.tempCString!FSChar();
+
+        FILE* fd = _p.handle;
+        version (Windows)
+            fd =  _wfreopen(namez, modez, fd);
+        else
+            fd = freopen(namez, modez, fd);
+
+        errnoEnforce(fd, name
+            ? text("Cannot reopen file `", name, "' in mode `", stdioOpenmode, "'")
+            : text("Cannot reopen file in mode `", stdioOpenmode, "'"));
+
+        if (name !is null)
+            _name = name;
+    }
+
+    unittest // Test changing filename
+    {
+        static import std.file;
+        import std.exception : assertThrown, assertNotThrown;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "foo");
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme);
+        assert(f.readln() == "foo");
+
+        auto deleteme2 = testFilename();
+        std.file.write(deleteme2, "bar");
+        scope(exit) std.file.remove(deleteme2);
+        f.reopen(deleteme2);
+        assert(f.name == deleteme2);
+        assert(f.readln() == "bar");
+        f.close();
+    }
+
+    version (CRuntime_DigitalMars) {} else // Not implemented
+    version (CRuntime_Microsoft) {} else // Not implemented
+    unittest // Test changing mode
+    {
+        static import std.file;
+        import std.exception : assertThrown, assertNotThrown;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "foo");
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme, "r+");
+        assert(f.readln() == "foo");
+        f.reopen(null, "w");
+        f.write("bar");
+        f.seek(0);
+        f.reopen(null, "a");
+        f.write("baz");
+        assert(f.name == deleteme);
+        f.close();
+        assert(std.file.readText(deleteme) == "barbaz");
     }
 
 /**
