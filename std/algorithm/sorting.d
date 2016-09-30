@@ -1764,7 +1764,8 @@ unittest
 
     // This should get smaller with time. On occasion it may go larger, but only
     // if there's thorough justification.
-    enum uint watermark = 1676220;
+    debug enum uint watermark = 1676280;
+    else enum uint watermark = 1676220;
 
     import std.conv;
     assert(comps <= watermark, text("You seem to have pessimized sort! ",
