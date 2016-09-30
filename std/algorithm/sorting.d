@@ -1423,44 +1423,21 @@ unittest //Issue 16413 - @system comparison function
 
 private size_t getPivot(alias less, Range)(Range r)
 {
-    import std.algorithm.mutation : swapAt;
-
-    // This algorithm sorts the first, middle and last elements of r,
-    // then returns the index of the middle element.  In effect, it uses the
-    // median-of-three heuristic.
-
-    alias pred = binaryFun!(less);
-    immutable len = r.length;
-    immutable size_t mid = len / 2;
-    immutable uint result = ((cast(uint) (pred(r[0], r[mid]))) << 2) |
-                            ((cast(uint) (pred(r[0], r[len - 1]))) << 1) |
-                            (cast(uint) (pred(r[mid], r[len - 1])));
-
-    switch (result)
+    auto mid = r.length / 2;
+    if (r.length < 512)
     {
-        case 0b001:
-            r.swapAt(0, len - 1);
-            r.swapAt(0, mid);
-            break;
-        case 0b110:
-            r.swapAt(mid, len - 1);
-            break;
-        case 0b011:
-            r.swapAt(0, mid);
-            break;
-        case 0b100:
-            r.swapAt(mid, len - 1);
-            r.swapAt(0, mid);
-            break;
-        case 0b000:
-            r.swapAt(0, len - 1);
-            break;
-        case 0b111:
-            break;
-        default:
-            assert(0);
+        if (r.length >= 32)
+            medianOf!less(r, size_t(0), mid, r.length - 1);
+        return mid;
     }
 
+    // The plan here is to take the median of five by taking five elements in
+    // the array, segregate around their median, and return the position of the
+    // third. We choose first, mid, last, and two more in between those.
+
+    auto quarter = r.length / 4;
+    medianOf!less(r,
+        size_t(0), mid - quarter, mid, mid + quarter, r.length - 1);
     return mid;
 }
 
@@ -1768,6 +1745,32 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 
     double[] sorted = [-double.nan, -2.0, -0.0, 0.0, 3.0, double.nan];
     assert(numbers.equal!isIdentical(sorted));
+}
+
+unittest
+{
+    // Simple regression benchmark
+    import std.random, std.algorithm.iteration, std.algorithm.mutation;
+    Random rng;
+    int[] a = iota(20148).map!(_ => uniform(-1000, 1000, rng)).array;
+    static uint comps;
+    static bool less(int a, int b) { ++comps; return a < b; }
+    sort!less(a); // random numbers
+    sort!less(a); // sorted ascending
+    a.reverse();
+    sort!less(a); // sorted descending
+    a[] = 0;
+    sort!less(a); // all equal
+
+    // This should get smaller with time. On occasion it may go larger, but only
+    // if there's thorough justification.
+    enum uint watermark = 1676220;
+
+    import std.conv;
+    assert(comps <= watermark, text("You seem to have pessimized sort! ",
+        watermark, " < ", comps));
+    assert(comps >= watermark, text("You seem to have improved sort!",
+        " Please update watermark from ", watermark, " to ", comps));
 }
 
 @safe unittest
