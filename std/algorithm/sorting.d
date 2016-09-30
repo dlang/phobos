@@ -1227,85 +1227,23 @@ unittest //Issue 16413 - @system comparison function
 
 private size_t getPivot(alias less, Range)(Range r)
 {
-    if (r.length < 5)
+    auto mid = r.length / 2;
+    if (r.length < 512)
     {
-        // Don't bother much, just return a random index
-        return r.length / 2;
+        if (r.length >= 32)
+            medianOf!less(r, size_t(0), mid, r.length - 1);
+        return mid;
     }
 
     // The plan here is to take the median of five by taking five elements in
-    // the array, sort in place, and return the position of the third. We choose
-    // five equidistant elements starting at a random position in the first
-    // fifth of the array. For sorting we use Demuth's algorithm which needs
-    // only seven comparisons, see Knuth TAoCP Vol 3, 2nd ed, 5.3.1
+    // the array, segregate around their median, and return the position of the
+    // third. We choose five equidistant elements in the middle of each
+    // fifthile.
 
-    import std.random : LinearCongruentialEngine;
-    // Create a simple random engine that doesn't throw.
-    auto rng = LinearCongruentialEngine!(uint, 1664525, 1013904223, 0)(
-        cast(uint) r.length);
-
-    immutable
-        fifth = r.length / 5,
-        a = rng.front % fifth, // imprecise method but we don't really care
-        b = a + fifth,
-        c = a + fifth * 2,
-        d = a + fifth * 3,
-        e = a + fifth * 4;
-
-    assert(a < b && b < c && c < d && d < e);
-
-    import std.algorithm.mutation : swapAt;
-    alias pred = binaryFun!less;
-
-    // Demuth's algorithm has four steps:
-
-    // 1. Sort first two pairs
-    if (pred(r[b], r[a])) r.swapAt(a, b);
-    if (pred(r[d], r[c])) r.swapAt(c, d);
-
-    // 2. Arrange first two pairs by the largest element
-    if (pred(r[d], r[b]))
-    {
-        r.swapAt(a, c);
-        r.swapAt(b, d);
-    }
-    assert(!pred(r[b], r[a]) && !pred(r[d], r[b]) && !pred(r[d], r[c]));
-
-    // 3. Insert e into [a, b, d]
-    if (pred(r[e], r[b]))
-    {
-        r.swapAt(d, e);
-        r.swapAt(b, d);
-        if (pred(r[b], r[a]))
-        {
-            r.swapAt(a, b);
-        }
-    }
-    else if (pred(r[e], r[d]))
-    {
-        r.swapAt(d, e);
-    }
-    assert(!pred(r[b], r[a]) && !pred(r[d], r[b]) && !pred(r[e], r[d]));
-
-    // 4. Insert c into [a, b, d, e] (note: we already know the last is greater)
-    assert(!pred(r[e], r[c]));
-    if (pred(r[c], r[b]))
-    {
-        r.swapAt(b, c);
-        if (pred(r[b], r[a]))
-        {
-            r.swapAt(a, b);
-        }
-    }
-    else if (pred(r[d], r[c]))
-    {
-        r.swapAt(c, d);
-    }
-
-    assert(!pred(r[b], r[a]) && !pred(r[c], r[b]) && !pred(r[d], r[c])
-        && !pred(r[e], r[d]));
-
-    return c;
+    auto quarter = r.length / 4;
+    medianOf!less(r,
+        size_t(0), mid - quarter, mid, mid + quarter, r.length - 1);
+    return mid;
 }
 
 /*
@@ -1387,7 +1325,7 @@ private void shortSort(alias less, Range)(Range r)
                 r[j - 1] = temp;
             }
         }
-        else if (pred(r[e], r[d]))
+        else
         {
             size_t j = i;
             while (pred(r[j + 1], r[j]))
@@ -1716,6 +1654,32 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         r.sort();
         assert(proxySwapCalled);
     }
+}
+
+unittest
+{
+    // Simple regression benchmark
+    import std.random, std.algorithm.iteration, std.algorithm.mutation;
+    Random rng;
+    int[] a = iota(20148).map!(_ => uniform(-1000, 1000, rng)).array;
+    static uint comps;
+    static bool less(int a, int b) { ++comps; return a < b; }
+    sort!less(a); // random numbers
+    sort!less(a); // sorted ascending
+    a.reverse();
+    sort!less(a); // sorted descending
+    a[] = 0;
+    sort!less(a); // all equal
+
+    // This should get smaller with time. On occasion it may go larger, but only
+    // if there's thorough justification.
+    enum uint watermark = 1676220;
+
+    import std.conv;
+    assert(comps <= watermark, text("You seem to have pessimized sort! ",
+        watermark, " < ", comps));
+    assert(comps >= watermark, text("You seem to have improved sort!",
+        " Please update watermark from ", watermark, " to ", comps));
 }
 
 private void quickSortImpl(alias less, Range)(Range r, size_t depth)
