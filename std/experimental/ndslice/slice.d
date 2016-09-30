@@ -2478,7 +2478,7 @@ struct Slice(size_t _N, _Range)
         +/
         auto ref opIndexOpAssign(string op, T)(T value, size_t[N] _indexes...)
         {
-            mixin (`return _ptr[indexStride(_indexes)] ` ~ op ~ `= value;`);
+            return mixin (`_ptr[indexStride(_indexes)] ` ~ op ~ `= value`);
         }
 
         static if (doUnittest)
@@ -2730,7 +2730,7 @@ struct Slice(size_t _N, _Range)
             // @@@workaround@@@ for Issue 16473
             //if (op == `++` || op == `--`)
         {
-            mixin (`return ` ~ op ~ `_ptr[indexStride(_indexes)];`);
+            return mixin (`` ~ op ~ `_ptr[indexStride(_indexes)]`);
         }
 
         static if (doUnittest)
