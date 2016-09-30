@@ -431,7 +431,10 @@ Always $(D false) (random generators are infinite ranges).
         return _x == rhs._x;
     }
 
-    private UIntType _x = m ? (a + c) % m : (a + c);
+    static if (m != 0)
+        private UIntType _x = (a + c) % m;
+    else
+        private UIntType _x = a + c;
 }
 
 /**
