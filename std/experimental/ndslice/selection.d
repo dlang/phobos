@@ -75,7 +75,10 @@ Returns:
 +/
 template pack(K...)
 {
-    @fmb auto pack(size_t N, Range)(auto ref Slice!(N, Range) slice)
+    static if (!allSatisfy!(isSize_t, K))
+        alias pack = .pack!(staticMap!(toSize_t, K));
+    else
+    @fmb auto pack(size_t N, Range)(Slice!(N, Range) slice)
     {
         template Template(size_t NInner, Range, R...)
         {
@@ -174,7 +177,7 @@ Returns:
 
 See_also: $(LREF pack), $(LREF evertPack)
 +/
-Slice!(N, Range).PureThis unpack(size_t N, Range)(auto ref Slice!(N, Range) slice)
+Slice!(N, Range).PureThis unpack(size_t N, Range)(Slice!(N, Range) slice)
 {
     with (slice) return PureThis(_lengths, _strides, _ptr);
 }
@@ -200,7 +203,7 @@ Returns:
 See_also: $(LREF pack), $(LREF unpack)
 +/
 SliceFromSeq!(Slice!(N, Range).PureRange, NSeqEvert!(Slice!(N, Range).NSeq))
-evertPack(size_t N, Range)(auto ref Slice!(N, Range) slice)
+evertPack(size_t N, Range)(Slice!(N, Range) slice)
 {
     mixin _DefineRet;
     static assert(Ret.NSeq.length > 0);
@@ -294,7 +297,7 @@ Params:
 Returns:
     1-dimensional slice composed of diagonal elements
 +/
-Slice!(1, Range) diagonal(size_t N, Range)(auto ref Slice!(N, Range) slice)
+Slice!(1, Range) diagonal(size_t N, Range)(Slice!(N, Range) slice)
 {
     auto NewN = slice.PureN - N + 1;
     mixin _DefineRet;
@@ -472,8 +475,7 @@ Params:
 Returns:
     packed `N`-dimensional slice composed of `N`-dimensional slices
 +/
-Slice!(N, Slice!(N+1, Range)) blocks(size_t N, Range, Lengths...)(auto ref Slice!(N, Range) slice, Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths) && Lengths.length == N)
+Slice!(N, Slice!(N+1, Range)) blocks(size_t N, Range)(Slice!(N, Range) slice, size_t[N] lengths...)
 in
 {
     foreach (i, length; lengths)
@@ -594,8 +596,7 @@ Params:
 Returns:
     packed `N`-dimensional slice composed of `N`-dimensional slices
 +/
-Slice!(N, Slice!(N+1, Range)) windows(size_t N, Range, Lengths...)(auto ref Slice!(N, Range) slice, Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths) && Lengths.length == N)
+Slice!(N, Slice!(N+1, Range)) windows(size_t N, Range)(Slice!(N, Range) slice, size_t[N] lengths...)
 in
 {
     foreach (i, length; lengths)
@@ -721,11 +722,10 @@ Returns:
 Throws:
     $(LREF ReshapeException) if the slice cannot be reshaped with the input lengths.
 +/
-Slice!(Lengths.length, Range)
+Slice!(M, Range)
     reshape
-        (         size_t N, Range       , Lengths...     )
-        (auto ref Slice!(N, Range) slice, Lengths lengths)
-    if ( allSatisfy!(isIndex, Lengths) && Lengths.length)
+        (size_t N, Range, size_t M)
+        (Slice!(N, Range) slice, size_t[M] lengths...)
 {
     mixin _DefineRet;
     foreach (i; Iota!(0, ret.N))
@@ -821,14 +821,13 @@ pure unittest
     import std.experimental.ndslice.iteration : reversed;
     import std.array : array;
 
-    auto reshape2(S, L...)(S slice, L lengths)
+    auto reshape2(S, size_t M)(S slice, size_t[M] lengths...)
     {
         // Tries to reshape without allocation
         try return slice.reshape(lengths);
         catch (ReshapeException e)
-            //allocates the elements and creates a slice
-            //Note: -1 length is not supported by reshape2
-            return slice.byElement.array.sliced(lengths);
+            // Allocates
+            return slice.slice.reshape(lengths);
     }
 
     auto slice =
@@ -923,7 +922,7 @@ Params:
 Returns:
     random access range composed of elements of the `slice`
 +/
-auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
+auto byElement(size_t N, Range)(Slice!(N, Range) slice)
 {
     with (Slice!(N, Range))
     {
@@ -1177,7 +1176,7 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
 }
 
 /// ditto
-Slice!(1, Range) byElement(size_t N : 1, Range)(auto ref Slice!(N, Range) slice)
+Slice!(1, Range) byElement(size_t N : 1, Range)(Slice!(N, Range) slice)
 {
     return slice;
 }
@@ -1430,7 +1429,7 @@ Params:
 Returns:
     forward range composed of all elements of standard simplex of the `slice`
 +/
-auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice, size_t maxHypercubeLength = size_t.max)
+auto byElementInStandardSimplex(size_t N, Range)(Slice!(N, Range) slice, size_t maxHypercubeLength = size_t.max)
 {
     with (Slice!(N, Range))
     {
@@ -1518,7 +1517,7 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
 }
 
 /// ditto
-Slice!(1, Range) byElementInStandardSimplex(size_t N : 1, Range)(auto ref Slice!(N, Range) slice, size_t maxHypercubeLength = size_t.max)
+Slice!(1, Range) byElementInStandardSimplex(size_t N : 1, Range)(Slice!(N, Range) slice, size_t maxHypercubeLength = size_t.max)
 {
     if (maxHypercubeLength > slice._lengths[0])
         maxHypercubeLength = slice._lengths[0];
@@ -1617,14 +1616,7 @@ Returns:
     `N`-dimensional slice composed of indexes
 See_also: $(LREF IndexSlice), $(LREF iotaSlice)
 +/
-IndexSlice!(Lengths.length) indexSlice(Lengths...)(Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths))
-{
-    return .indexSlice!(Lengths.length)([lengths]);
-}
-
-///ditto
-IndexSlice!N indexSlice(size_t N)(auto ref size_t[N] lengths)
+IndexSlice!N indexSlice(size_t N)(size_t[N] lengths...)
 {
     import std.experimental.ndslice.slice : sliced;
     with (typeof(return)) return Range(lengths[1 .. $]).sliced(lengths);
@@ -1715,21 +1707,20 @@ Returns:
     `N`-dimensional slice composed of indexes
 See_also: $(LREF IotaSlice), $(LREF indexSlice)
 +/
-IotaSlice!(Lengths.length) iotaSlice(Lengths...)(Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths))
+IotaSlice!N iotaSlice(size_t N)(size_t[N] lengths...)
 {
-    return .iotaSlice!(Lengths.length)([lengths]);
+    return .iotaSlice(lengths, 0);
 }
 
 ///ditto
-IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
+IotaSlice!N iotaSlice(size_t N)(size_t[N] lengths, size_t shift)
 {
     import std.experimental.ndslice.slice : sliced;
     return IotaMap!().init.sliced(lengths, shift);
 }
 
 ///ditto
-IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift, size_t step)
+IotaSlice!N iotaSlice(size_t N)(size_t[N] lengths, size_t shift, size_t step)
 {
     auto iota = iotaSlice(lengths, shift);
     foreach (i; Iota!(0, N))
@@ -1806,8 +1797,8 @@ Returns:
     `n`-dimensional slice composed of identical values, where `n` is dimension count.
 See_also: $(REF repeat, std,range)
 +/
-RepeatSlice!(Lengths.length, T) repeatSlice(T, Lengths...)(T value, Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths) && !is(T : Slice!(N, Range), size_t N, Range))
+RepeatSlice!(M, T) repeatSlice(T, size_t M)(T value, size_t[M] lengths...)
+    if (!is(T : Slice!(N, Range), size_t N, Range))
 {
     typeof(return) ret;
     foreach (i; Iota!(0, ret.N))
@@ -1817,10 +1808,8 @@ RepeatSlice!(Lengths.length, T) repeatSlice(T, Lengths...)(T value, Lengths leng
 }
 
 /// ditto
-Slice!(Lengths.length, Slice!(N + 1, Range)) repeatSlice(size_t N, Range, Lengths...)(auto ref Slice!(N, Range) slice, Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
+Slice!(M, Slice!(N + 1, Range)) repeatSlice(size_t N, Range, size_t M)(Slice!(N, Range) slice, size_t[M] lengths...)
 {
-    enum M = Lengths.length;
     typeof(return) ret;
     ret._ptr = slice._ptr;
     foreach (i; Iota!(0, M))
@@ -1975,7 +1964,7 @@ template mapSlice(fun...)
 {
     ///
     @fmb auto mapSlice(size_t N, Range)
-        (auto ref Slice!(N, Range) tensor)
+        (Slice!(N, Range) tensor)
     {
         // this static if-else block
         // may be unified with std.algorithms.iteration.map

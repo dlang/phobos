@@ -49,18 +49,17 @@ Returns:
 auto sliced(
     Flag!"replaceArrayWithPointer" ra = Yes.replaceArrayWithPointer,
     Flag!"allowDownsize" ad = No.allowDownsize,
-    Range, Lengths...)(Range range, Lengths lengths)
-    if (!isStaticArray!Range && !isNarrowString!Range
-        && allSatisfy!(isIndex, Lengths) && Lengths.length)
+    Range, size_t N)(Range range, size_t[N] lengths...)
+    if (!isStaticArray!Range && !isNarrowString!Range && N)
 {
-    return .sliced!(ra, ad, Lengths.length, Range)(range, [lengths]);
+    return .sliced!(ra, ad)(range, lengths, 0);
 }
 
 ///ditto
 auto sliced(
     Flag!"replaceArrayWithPointer" ra = Yes.replaceArrayWithPointer,
     Flag!"allowDownsize" ad = No.allowDownsize,
-    size_t N, Range)(Range range, auto ref in size_t[N] lengths, size_t shift = 0)
+    size_t N, Range)(Range range, size_t[N] lengths, size_t shift = 0)
     if (!isStaticArray!Range && !isNarrowString!Range && N)
 in
 {
@@ -146,13 +145,12 @@ template sliced(Names...)
             Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
             Flag!`allowDownsize` ad = No.allowDownsize,
             " ~ _Range_Types!Names ~ "
-            Lengths...)
+            size_t N)
             (" ~ _Range_DeclarationList!Names ~
-            "Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths))
+            "size_t[N] lengths...)
     {
-        alias sliced = .sliced!Names;
-        return sliced!(ra, ad)(" ~ _Range_Values!Names ~ "[lengths]);
+        alias sl = .sliced!Names;
+        return sl!(ra, ad)(" ~ _Range_Values!Names ~ "lengths, 0);
     }
 
     auto sliced(
@@ -160,7 +158,7 @@ template sliced(Names...)
             Flag!`allowDownsize` ad = No.allowDownsize,
             size_t N, " ~ _Range_Types!Names ~ ")
             (" ~ _Range_DeclarationList!Names ~"
-            auto ref in size_t[N] lengths,
+            size_t[N] lengths,
             size_t shift = 0)
     {
         alias RS = AliasSeq!(" ~ _Range_Types!Names ~ ");"
@@ -535,20 +533,10 @@ Params:
 Returns:
     n-dimensional slice
 +/
-Slice!(Lengths.length, Select!(ra, T*, T[]))
-slice(T,
-    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
-    Lengths...)(Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
-{
-    return .slice!(T, ra)([lengths]);
-}
-
-/// ditto
 Slice!(N, Select!(ra, T*, T[]))
 slice(T,
     Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
-    size_t N)(auto ref in size_t[N] lengths)
+    size_t N)(size_t[N] lengths...)
 {
     immutable len = lengthsProduct(lengths);
     return new T[len].sliced!ra(lengths);
@@ -557,7 +545,7 @@ slice(T,
 /// ditto
 auto slice(T,
     Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
-    size_t N)(auto ref in size_t[N] lengths, auto ref T init)
+    size_t N)(size_t[N] lengths, T init)
 {
     immutable len = lengthsProduct(lengths);
     static if (ra && !hasElaborateAssign!T)
@@ -577,7 +565,7 @@ auto slice(T,
 /// ditto
 auto slice(
     Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
-    size_t N, Range)(auto ref Slice!(N, Range) slice)
+    size_t N, Range)(Slice!(N, Range) slice)
 {
     auto ret = .slice!(Unqual!(slice.DeepElemType), ra)(slice.shape);
     ret[] = slice;
@@ -620,19 +608,9 @@ Params:
 Returns:
     uninitialized n-dimensional slice
 +/
-Slice!(Lengths.length, Select!(ra, T*, T[]))
-uninitializedSlice(T,
-    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
-    Lengths...)(Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
-{
-    return .uninitializedSlice!(T, ra)([lengths]);
-}
-
-/// ditto
 auto uninitializedSlice(T,
     Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
-    size_t N)(auto ref in size_t[N] lengths)
+    size_t N)(size_t[N] lengths...)
 {
     immutable len = lengthsProduct(lengths);
     import std.array : uninitializedArray;
@@ -662,21 +640,10 @@ Returns:
 Note:
     `makeSlice` always returns slice with mutable elements
 +/
-SliceAllocationResult!(Lengths.length, T, ra)
-makeSlice(T,
-    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
-    Allocator,
-    Lengths...)(auto ref Allocator alloc, Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
-{
-    return .makeSlice!(T, ra, Allocator)(alloc, [lengths]);
-}
-
-/// ditto
 auto makeSlice(
     Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Allocator,
-    size_t N, Range)(auto ref Allocator alloc, auto ref Slice!(N, Range) slice)
+    size_t N, Range)(auto ref Allocator alloc, Slice!(N, Range) slice)
 {
     alias T = Unqual!(slice.DeepElemType);
     return makeSlice!(T, ra)(alloc, slice);
@@ -687,7 +654,7 @@ SliceAllocationResult!(N, T, ra)
 makeSlice(T,
     Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Allocator,
-    size_t N)(auto ref Allocator alloc, auto ref in size_t[N] lengths)
+    size_t N)(auto ref Allocator alloc, size_t[N] lengths...)
 {
     import std.experimental.allocator : makeArray;
     immutable len = lengthsProduct(lengths);
@@ -701,7 +668,7 @@ SliceAllocationResult!(N, T, ra)
 makeSlice(T,
     Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Allocator,
-    size_t N)(auto ref Allocator alloc, auto ref in size_t[N] lengths, auto ref T init)
+    size_t N)(auto ref Allocator alloc, size_t[N] lengths, T init)
 {
     import std.experimental.allocator : makeArray;
     immutable len = lengthsProduct(lengths);
@@ -715,7 +682,7 @@ SliceAllocationResult!(N, T, ra)
 makeSlice(T,
     Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Allocator,
-    size_t N, Range)(auto ref Allocator alloc, auto ref Slice!(N, Range) slice)
+    size_t N, Range)(auto ref Allocator alloc, Slice!(N, Range) slice)
 {
     import std.experimental.allocator : makeArray;
     import std.experimental.ndslice.selection : byElement;
@@ -780,22 +747,11 @@ Params:
 Returns:
     a structure with fields `array` and `slice`
 +/
-SliceAllocationResult!(Lengths.length, T, ra)
-makeUninitializedSlice(T,
-    Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
-    Allocator,
-    Lengths...)(auto ref Allocator alloc, Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths) && Lengths.length)
-{
-    return .makeUninitializedSlice!(T, ra, Allocator)(alloc, [lengths]);
-}
-
-/// ditto
 SliceAllocationResult!(N, T, ra)
 makeUninitializedSlice(T,
     Flag!`replaceArrayWithPointer` ra = Yes.replaceArrayWithPointer,
     Allocator,
-    size_t N)(auto ref Allocator alloc, auto ref in size_t[N] lengths)
+    size_t N)(auto ref Allocator alloc, size_t[N] lengths...)
 {
     immutable len = lengthsProduct(lengths);
     auto array = cast(T[]) alloc.allocate(len * T.sizeof);
@@ -836,7 +792,7 @@ Params:
 Returns:
     multidimensional D array
 +/
-auto ndarray(size_t N, Range)(auto ref Slice!(N, Range) slice)
+auto ndarray(size_t N, Range)(Slice!(N, Range) slice)
 {
     import std.array : array;
     static if (N == 1)
@@ -1267,25 +1223,42 @@ struct Slice(size_t _N, _Range)
         return _strides[dimension] * (_lengths[dimension] - 1);
     }
 
-    size_t indexStride(Indexes...)(Indexes _indexes) const
-        if (allSatisfy!(isIndex, Indexes))
+    size_t indexStride(size_t I)(size_t[I] _indexes...) const
     {
-        mixin(indexStrideCode);
+        static if (_indexes.length)
+        {
+            size_t stride = _strides[0] * _indexes[0];
+            assert(_indexes[0] < _lengths[0], indexError!(0, N));
+            foreach (i; Iota!(1, I)) //static
+            {
+                assert(_indexes[i] < _lengths[i], indexError!(i, N));
+                stride += _strides[i] * _indexes[i];
+            }
+            return stride;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
-    size_t indexStride(size_t[N] _indexes) const
+    size_t mathIndexStride(size_t I)(size_t[I] _indexes...) const
     {
-        mixin(indexStrideCode);
-    }
-
-    size_t mathIndexStride(Indexes...)(Indexes _indexes) const
-    {
-        mixin(mathIndexStrideCode);
-    }
-
-    size_t mathIndexStride(size_t[N] _indexes) const
-    {
-        mixin(mathIndexStrideCode);
+        static if (_indexes.length)
+        {
+            size_t stride = _strides[0] * _indexes[N - 1];
+            assert(_indexes[N - 1] < _lengths[0], indexError!(N - 1, N));
+            foreach_reverse (i; Iota!(0, I - 1)) //static
+            {
+                assert(_indexes[i] < _lengths[N - 1 - i], indexError!(i, N));
+                stride += _strides[N - 1 - i] * _indexes[i];
+            }
+            return stride;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     static if (!hasPtrBehavior!PureRange)
@@ -1829,7 +1802,7 @@ struct Slice(size_t _N, _Range)
     /++
     Overloading `==` and `!=`
     +/
-    bool opEquals(size_t NR, RangeR)(auto ref Slice!(NR, RangeR) rslice)
+    bool opEquals(size_t NR, RangeR)(Slice!(NR, RangeR) rslice)
         if (Slice!(NR, RangeR).PureN == PureN)
     {
         foreach (i; Iota!(0, PureN))
@@ -2088,34 +2061,20 @@ struct Slice(size_t _N, _Range)
     /++
     $(BOLD Fully defined index)
     +/
-    auto ref opIndex(Repeat!(N, size_t) _indexes)
+    auto ref opIndex(size_t I)(size_t[I] _indexes...)
+        if(I && I <= N)
     {
-        static if (PureN == N)
+        static if (I == PureN)
             return _ptr[indexStride(_indexes)];
         else
+        static if (N == I)
             return DeepElemType(_lengths[N .. $], _strides[N .. $], _ptr + indexStride(_indexes));
-    }
-
-    ///ditto
-    auto ref opIndex(size_t[N] _indexes)
-    {
-        static if (PureN == N)
-            return _ptr[indexStride(_indexes)];
         else
-            return DeepElemType(_lengths[N .. $], _strides[N .. $], _ptr + indexStride(_indexes));
+            return Slice!(N - I, Range)(_lengths[I .. $], _strides[I .. $], _ptr + indexStride(_indexes));
     }
 
     ///ditto
-    auto ref opCall(Repeat!(N, size_t) _indexes)
-    {
-        static if (PureN == N)
-            return _ptr[mathIndexStride(_indexes)];
-        else
-            return DeepElemType(_lengths[N .. $], _strides[N .. $], _ptr + mathIndexStride(_indexes));
-    }
-
-    ///ditto
-    auto ref opCall(size_t[N] _indexes)
+    auto ref opCall()(size_t[N] _indexes...)
     {
         static if (PureN == N)
             return _ptr[mathIndexStride(_indexes)];
@@ -2471,14 +2430,7 @@ struct Slice(size_t _N, _Range)
         /++
         Assignment of a value (e.g. a number) to a $(B fully defined index).
         +/
-        auto ref opIndexAssign(T)(T value, Repeat!(N, size_t) _indexes)
-        {
-            return _ptr[indexStride(_indexes)] = value;
-        }
-
-        static if (PureN == N)
-        /// ditto
-        auto ref opIndexAssign(T)(T value, size_t[N] _indexes)
+        auto ref opIndexAssign(T)(T value, size_t[N] _indexes...)
         {
             return _ptr[indexStride(_indexes)] = value;
         }
@@ -2524,14 +2476,7 @@ struct Slice(size_t _N, _Range)
         /++
         Op Assignment `op=` of a value (e.g. a number) to a $(B fully defined index).
         +/
-        auto ref opIndexOpAssign(string op, T)(T value, Repeat!(N, size_t) _indexes)
-        {
-            mixin (`return _ptr[indexStride(_indexes)] ` ~ op ~ `= value;`);
-        }
-
-        static if (PureN == N)
-        /// ditto
-        auto ref opIndexOpAssign(string op, T)(T value, size_t[N] _indexes)
+        auto ref opIndexOpAssign(string op, T)(T value, size_t[N] _indexes...)
         {
             mixin (`return _ptr[indexStride(_indexes)] ` ~ op ~ `= value;`);
         }
@@ -2781,15 +2726,7 @@ struct Slice(size_t _N, _Range)
         /++
         Increment `++` and Decrement `--` operators for a $(B fully defined index).
         +/
-        auto ref opIndexUnary(string op)(Repeat!(N, size_t) _indexes)
-            if (op == `++` || op == `--`)
-        {
-            mixin (`return ` ~ op ~ `_ptr[indexStride(_indexes)];`);
-        }
-
-        static if (PureN == N)
-        ///ditto
-        auto ref opIndexUnary(string op)(size_t[N] _indexes)
+        auto ref opIndexUnary(string op)(size_t[N] _indexes...)
             if (op == `++` || op == `--`)
         {
             mixin (`return ` ~ op ~ `_ptr[indexStride(_indexes)];`);
