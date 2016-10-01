@@ -50,6 +50,10 @@ processing algorithms, but should also be general enough for use anywhere with
 homogeneously-typed multidimensional data.
 In addition, it includes various functions for iteration, accessing, and manipulation.
 
+Advanced and fast iteration algorithms, matrix multiplication, and BLAS-like functions
+can be found in the $(LINK2 http://mir.dlang.io, Mir
+LLVM-Accelerated Generic Numerical Library for Science and Machine Learning).
+
 Quick_Start:
 $(SUBREF slice, sliced) is a function designed to create
 a multidimensional view over a range.
