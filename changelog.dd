@@ -20,9 +20,19 @@ $(BUGSTITLE Library Changes,
     $(LI $(RELATIVE_LINK2 optimization, `findLocalMin` was added to `std.numeric`.))
     $(LI $(RELATIVE_LINK2 slice_ptr, `ptr` property and public constructor were
         added to `std.experimental.ndslice.slice.Slice`.))
+    $(LI $(RELATIVE_LINK2 slice_toHash, `toHash` method was
+        added to `std.experimental.ndslice.slice.Slice`.))
     $(LI $(RELATIVE_LINK2 slice_alloc, `slice`, `shape`, `ndarray`, and other
         utilities were added to `std.experimental.ndslice.slice`.))
+    $(LI $(RELATIVE_LINK2 slice_as, `as` lazy tensor was added to
+        `std.experimental.ndslice.slice`.))
     $(LI $(RELATIVE_LINK2 slice_iota, `iotaSlice` lazy tensor was added to
+        `std.experimental.ndslice.selection`.))
+    $(LI $(RELATIVE_LINK2 slice_index, `indexSlice` lazy tensor was added to
+        `std.experimental.ndslice.selection`.))
+    $(LI $(RELATIVE_LINK2 slice_repeat, `repeatSlice` lazy tensor was added to
+        `std.experimental.ndslice.selection`.))
+    $(LI $(RELATIVE_LINK2 slice_map, `mapSlice` lazy tensor was added to
         `std.experimental.ndslice.selection`.))
     $(LI $(RELATIVE_LINK2 slice_mio, partial support for Math Index Order
         was added to `std.experimental.ndslice.slice.Slice`.))
@@ -183,16 +193,30 @@ $(LI $(LNAME2 slice_ptr, `ptr` property and public constructor were added to
     )
 )
 
+$(LI $(LNAME2 slice_toHash, $(P $(REF .Slice.toHash, std,experimental,ndslice,slice) method was added.)
+---
+import std.experimental.ndslice;
+
+// hash is the same for allocated data and generated data
+auto a = iotaSlice(3, 7);
+auto b = iotaSlice(3, 7).slice;
+
+assert(a.toHash == b.toHash);
+---
+)
+
 $(LI $(LNAME2 slice_alloc, `slice`, `shape`, `ndarray`, and other utilities
     were added to `std.experimental.ndslice.slice`.)
     $(P These utility functions have been added to
         $(MREF std,experimental,ndslice):)
     $(UL
+        $(LI $(REF makeNdarray, std,experimental,ndslice,slice),)
+        $(LI $(REF makeSlice, std,experimental,ndslice,slice),)
+        $(LI $(REF makeUninitializedSlice, std,experimental,ndslice,slice),)
+        $(LI $(REF ndarray, std,experimental,ndslice,slice),)
         $(LI $(REF shape, std,experimental,ndslice,slice),)
         $(LI $(REF slice, std,experimental,ndslice,slice),)
-        $(LI $(REF makeSlice, std,experimental,ndslice,slice),)
-        $(LI $(REF ndarray, std,experimental,ndslice,slice), and)
-        $(LI $(REF makeNdarray, std,experimental,ndslice,slice).)
+        $(LI $(REF uninitializedSlice, std,experimental,ndslice,slice).)
     )
     $(P Example: Transposing common 2D array using `ndslice`)
 -----
@@ -209,6 +233,24 @@ assert(ar == [[0, 3], [1, 4], [2, 5]]);
 -----
 )
 
+$(LI $(LNAME2 slice_as, $(P $(REF as, std,experimental,ndslice,slice)
+    lazy tensor was added.)
+---
+import std.experimental.ndslice;
+
+auto matrix = slice!double([2, 2], 0);
+auto stringMatrixView = matrix.as!string;
+assert(stringMatrixView ==
+        [["0", "0"],
+         ["0", "0"]]);
+
+matrix.diagonal[] = 1;
+assert(stringMatrixView ==
+        [["1", "0"],
+         ["0", "1"]]);
+---
+)
+
 $(LI $(LNAME2 slice_iota, `iotaSlice` lazy tensor was added to `std.experimental.ndslice.selection`.)
     $(P $(REF iotaSlice, std,experimental,ndslice,selection) is the fastest possible `Slice`.)
 ---
@@ -219,6 +261,46 @@ auto sl = iotaSlice([2, 3], 10);
 assert(sl.transposed == [[10, 13],
                          [11, 14],
                          [12, 15]]);
+---
+)
+
+$(LI $(LNAME2 slice_index, $(P $(REF indexSlice, std,experimental,ndslice,selection)
+    lazy tensor was added.)
+---
+import std.experimental.ndslice;
+
+auto slice = indexSlice(2, 3);
+
+assert(slice == [[[0, 0], [0, 1], [0, 2]],
+                 [[1, 0], [1, 1], [1, 2]]]);
+---
+)
+
+$(LI $(LNAME2 slice_repeat, $(P $(REF repeatSlice, std,experimental,ndslice,selection)
+    lazy tensor was added.)
+---
+import std.experimental.ndslice;
+
+auto sl = iotaSlice(3).repeatSlice(4);
+assert(sl == [[0, 1, 2],
+              [0, 1, 2],
+              [0, 1, 2],
+              [0, 1, 2]]);
+
+auto m = 4.repeatSlice(2, 3);
+assert(m == [[4, 4, 4],
+             [4, 4, 4]]);
+---
+)
+
+$(LI $(LNAME2 slice_map, $(P $(REF mapSlice, std,experimental,ndslice,selection)
+    lazy tensor was added.)
+---
+import std.experimental.ndslice;
+
+auto s = iotaSlice(2, 3).mapSlice!(a => a * a);
+assert(s == [[ 0,  1,  4],
+             [ 9, 16, 25]]);
 ---
 )
 
