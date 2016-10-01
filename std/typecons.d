@@ -146,7 +146,7 @@ public:
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        if (_p !is null) delete _p;
+        if (_p !is null) destroy(_p);
         _p = null;
     }
     /** Returns whether the resource exists. */
@@ -163,8 +163,9 @@ public:
         debug(Unique) writeln("return from Release");
         return u;
     }
+
     /** Forwards member access to contents. */
-    auto opDot() inout { return _p; }
+    mixin Proxy!_p;
 
     /**
     Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
