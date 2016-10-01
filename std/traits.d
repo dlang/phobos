@@ -5722,7 +5722,8 @@ enum bool isIterableReverse(T) = (
         enum bool empty = false;
     }
     
-    foreach(tmpl; AliasSeq!(isIterable, isAnyIterable)){
+    foreach(tmpl; AliasSeq!(isIterable, isAnyIterable))
+    {
         static assert(tmpl!(uint[]));
         static assert(tmpl!OpApply);
         static assert(tmpl!OpApplyBoth);
@@ -5741,7 +5742,8 @@ enum bool isIterableReverse(T) = (
         static assert(!isIterable!(Tuple!(int)));
         static assert(!isIterable!(Tuple!(int, int)));
     }
-    foreach(tmpl; AliasSeq!(isIterableReverse, isAnyIterableReverse)){
+    foreach(tmpl; AliasSeq!(isIterableReverse, isAnyIterableReverse))
+    {
         static assert(tmpl!(uint[]));
         static assert(tmpl!OpApplyReverse);
         static assert(tmpl!OpApplyBoth);
