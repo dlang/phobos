@@ -2,13 +2,13 @@
 
 /**
  * Implements functionality to read Comma Separated Values and its variants
- * from a input range of $(D dchar).
+ * from an input range of $(D dchar).
  *
  * Comma Separated Values provide a simple means to transfer and store
  * tabular data. It has been common for programs to use their own
  * variant of the CSV format. This parser will loosely follow the
- * $(WEB tools.ietf.org/html/rfc4180, RFC-4180). CSV input should adhered
- * to the following criteria, differences from RFC-4180 in parentheses.
+ * $(HTTP tools.ietf.org/html/rfc4180, RFC-4180). CSV input should adhere
+ * to the following criteria (differences from RFC-4180 in parentheses):
  *
  * $(UL
  *     $(LI A record is separated by a new line (CRLF,LF,CR))
@@ -34,7 +34,7 @@
  * {
  *     auto text = "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
  *
- *     foreach(record; csvReader!(Tuple!(string, string, int))(text))
+ *     foreach (record; csvReader!(Tuple!(string, string, int))(text))
  *     {
  *         writefln("%s works as a %s and earns $%d per year",
  *                  record[0], record[1], record[2]);
@@ -43,7 +43,7 @@
  *     // To read the same string from the file "filename.csv":
  *
  *     auto file = File("filename.csv", "r");
- *     foreach(record;
+ *     foreach (record;
  *         file.byLine.joiner("\n").csvReader!(Tuple!(string, string, int)))
  *     {
  *         writefln("%s works as a %s and earns $%d per year",
@@ -60,7 +60,7 @@
  * auto text = "Name,Occupation,Salary\r"
  *     "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
  *
- * foreach(record; csvReader!(string[string])
+ * foreach (record; csvReader!(string[string])
  *         (text, null))
  * {
  *     writefln("%s works as a %s and earns $%s per year.",
@@ -81,11 +81,11 @@
  * closed.
  *
  *   See_Also:
- *      $(WEB en.wikipedia.org/wiki/Comma-separated_values, Wikipedia
+ *      $(HTTP en.wikipedia.org/wiki/Comma-separated_values, Wikipedia
  *      Comma-separated values)
  *
  *   Copyright: Copyright 2011
- *   License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ *   License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *   Authors:   Jesse Phillips
  *   Source:    $(PHOBOSSRC std/_csv.d)
  */
@@ -104,8 +104,8 @@ import std.exception;  // basicExceptionCtors
  * be made when there is failure to match the header see $(LREF
  * HeaderMismatchException) for details.
  *
- * When performing type conversions, $(XREF ConvException) is stored in the $(D
- * next) field.
+ * When performing type conversions, $(REF ConvException, std,conv) is stored in
+ * the $(D next) field.
  */
 class CSVException : Exception
 {
@@ -252,7 +252,7 @@ enum Malformed
  * int[] ans = [76,26,22];
  * auto records = csvReader!int(str);
  *
- * foreach(record; records)
+ * foreach (record; records)
  * {
  *     assert(equal(record, ans));
  * }
@@ -271,7 +271,7 @@ enum Malformed
  *
  * auto records = csvReader!Layout(str,';');
  *
- * foreach(record; records)
+ * foreach (record; records)
  * {
  *     writeln(record.name);
  *     writeln(record.value);
@@ -293,7 +293,7 @@ enum Malformed
  *
  * Returns:
  *        An input range R as defined by
- *        $(XREF_PACK range,primitives,isInputRange). When $(D Contents) is a
+ *        $(REF isInputRange, std,range,primitives). When $(D Contents) is a
  *        struct, class, or an associative array, the element type of R is
  *        $(D Contents), otherwise the element type of R is itself a range with
  *        element type $(D Contents).
@@ -334,7 +334,7 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  * auto records = csvReader!int(str, ["b"]);
  *
  * auto ans = [[65],[123]];
- * foreach(record; records)
+ * foreach (record; records)
  * {
  *     assert(equal(record, ans.front));
  *     ans.popFront();
@@ -368,7 +368,7 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  *
  * Returns:
  *        An input range R as defined by
- *        $(XREF_PACK range,primitives,isInputRange). When $(D Contents) is a
+ *        $(REF isInputRange, std,range,primitives). When $(D Contents) is a
  *        struct, class, or an associative array, the element type of R is
  *        $(D Contents), otherwise the element type of R is itself a range with
  *        element type $(D Contents).
@@ -431,9 +431,9 @@ auto csvReader(Contents = string,
     auto records = csvReader(str);
 
     int count;
-    foreach(record; records)
+    foreach (record; records)
     {
-        foreach(cell; record)
+        foreach (cell; record)
         {
             count++;
         }
@@ -472,7 +472,7 @@ auto csvReader(Contents = string,
     auto records = csvReader!(Layout,Malformed.ignore)(str);
 
     int count;
-    foreach(record; records)
+    foreach (record; records)
     {
         assert(ans[count].name == record.name);
         assert(ans[count].value == record.value);
@@ -495,10 +495,10 @@ auto csvReader(Contents = string,
                  "one\ntwo,2\nthree,3",
                  "one,1\ntwo\nthree,3"];
 
-    foreach(str; strs)
+    foreach (str; strs)
     {
         auto records = csvReader!A(str);
-        assertThrown!CSVException((){foreach(record; records) { }}());
+        assertThrown!CSVException((){foreach (record; records) { }}());
     }
 }
 
@@ -527,7 +527,7 @@ auto csvReader(Contents = string,
     auto records = csvReader!Layout(str);
 
     int count;
-    foreach(record; records)
+    foreach (record; records)
     {
         assert(ans[count].name == record.name);
         assert(ans[count].value == record.value);
@@ -545,14 +545,14 @@ auto csvReader(Contents = string,
     int[] ans = [76,26,22];
     auto records = csvReader!int(str);
 
-    foreach(record; records)
+    foreach (record; records)
     {
         assert(equal(record, ans));
     }
 }
 
 // Test struct & header interface and same unicode
-unittest
+@safe unittest
 {
     import std.math : abs;
 
@@ -587,7 +587,7 @@ unittest
 }
 
 // Test header interface
-unittest
+@safe unittest
 {
     import std.algorithm;
 
@@ -595,7 +595,7 @@ unittest
     auto records = csvReader!int(str, ["b"]);
 
     auto ans = [[65],[123]];
-    foreach(record; records)
+    foreach (record; records)
     {
         assert(equal(record, ans.front));
         ans.popFront();
@@ -606,7 +606,7 @@ unittest
         csvReader(str, ["c","b"]);
         assert(0);
     }
-    catch(HeaderMismatchException e)
+    catch (HeaderMismatchException e)
     {
         assert(e.col == 2);
     }
@@ -614,7 +614,8 @@ unittest
        (str, ["b","a"], ',', '"');
 
     auto ans2 = [["Hello","65"],["World","123"]];
-    foreach(record; records2) {
+    foreach (record; records2)
+    {
         assert(equal(record, ans2.front));
         ans2.popFront();
     }
@@ -624,14 +625,15 @@ unittest
        (str, ["a","b","c","d"], ',', '"');
 
     ans2 = [["Joe","Carpenter"],["Fred","Fly"]];
-    foreach(record; records2) {
+    foreach (record; records2)
+    {
         assert(equal(record, ans2.front));
         ans2.popFront();
     }
 }
 
 // Test null header interface
-unittest
+@safe unittest
 {
     string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
     auto records = csvReader(str, ["a"]);
@@ -643,9 +645,9 @@ unittest
 @safe pure unittest
 {
     string str = "one \"quoted\"";
-    foreach(record; csvReader!(string,Malformed.ignore)(str))
+    foreach (record; csvReader!(string,Malformed.ignore)(str))
     {
-        foreach(cell; record)
+        foreach (cell; record)
         {
             assert(cell == "one \"quoted\"");
         }
@@ -656,7 +658,7 @@ unittest
     {
         string a,b;
     }
-    foreach(record; csvReader!(Ans,Malformed.ignore)(str))
+    foreach (record; csvReader!(Ans,Malformed.ignore)(str))
     {
         assert(record.a == "one \"quoted\"");
         assert(record.b == "two \"quoted\" end");
@@ -670,7 +672,7 @@ unittest
 
     try
     {
-        foreach(record; csvReader(str))
+        foreach (record; csvReader(str))
         {}
         assert(0);
     }
@@ -697,13 +699,13 @@ unittest
 
 
 // Test associative array support with unicode separator
-unittest
+@safe unittest
 {
   string str = "1❁2❁3\n34❁65❁63\n34❁65❁63";
 
   auto records = csvReader!(string[string])(str,["3","1"],'❁');
   int count;
-  foreach(record; records)
+  foreach (record; records)
   {
       count++;
       assert(record["1"] == "34");
@@ -713,7 +715,7 @@ unittest
 }
 
 // Test restricted range
-unittest
+@safe unittest
 {
     import std.typecons;
     struct InputRange
@@ -743,18 +745,18 @@ unittest
     auto ir = InputRange("Name,Occupation,Salary\r"d~
           "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n"d);
 
-    foreach(record; csvReader(ir, cast(string[])null))
-        foreach(cell; record) {}
-    foreach(record; csvReader!(Tuple!(string, string, int))
+    foreach (record; csvReader(ir, cast(string[])null))
+        foreach (cell; record) {}
+    foreach (record; csvReader!(Tuple!(string, string, int))
             (ir,cast(string[])null)) {}
-    foreach(record; csvReader!(string[string])
+    foreach (record; csvReader!(string[string])
             (ir,cast(string[])null)) {}
 }
 
-unittest // const/immutable dchars
+@safe unittest // const/immutable dchars
 {
-    import std.algorithm: map;
-    import std.array: array;
+    import std.algorithm.iteration : map;
+    import std.array : array;
     const(dchar)[] c = "foo,bar\n";
     assert(csvReader(c).map!array.array == [["foo", "bar"]]);
     immutable(dchar)[] i = "foo,bar\n";
@@ -826,7 +828,8 @@ public:
      * auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
      *       (str, ';', '^');
      *
-     * foreach(record; records) {
+     * foreach (record; records)
+     * {
      *    assert(equal(record, ans));
      * }
      * -------
@@ -850,7 +853,8 @@ public:
      *       (str, ["high","low"], ';', '^');
      *
      * int[] ans = [76,22];
-     * foreach(record; records) {
+     * foreach (record; records)
+     * {
      *    assert(equal(record, ans));
      * }
      * -------
@@ -867,7 +871,7 @@ public:
         _quote = quote;
 
         size_t[string] colToIndex;
-        foreach(h; colHeaders)
+        foreach (h; colHeaders)
         {
             colToIndex[h] = size_t.max;
         }
@@ -876,7 +880,7 @@ public:
             (_input, _separator, _quote, indices);
 
         size_t colIndex;
-        foreach(col; r)
+        foreach (col; r)
         {
             header ~= col;
             auto ptr = col in colToIndex;
@@ -889,7 +893,7 @@ public:
 
         indices.length = colToIndex.length;
         int i;
-        foreach(h; colHeaders)
+        foreach (h; colHeaders)
         {
             immutable index = colToIndex[h];
             static if (ErrorLevel != Malformed.ignore)
@@ -903,17 +907,18 @@ public:
         {
             static if (is(Contents T : T[U], U : string))
             {
-                import std.algorithm : sort;
+                import std.algorithm.sorting : sort;
                 sort(indices);
             }
             else static if (ErrorLevel == Malformed.ignore)
             {
-                import std.algorithm : sort;
+                import std.algorithm.sorting : sort;
                 sort(indices);
             }
             else
             {
-                import std.algorithm : isSorted, findAdjacent;
+                import std.algorithm.searching : findAdjacent;
+                import std.algorithm.sorting : isSorted;
                 if (!isSorted(indices))
                 {
                     auto ex = new HeaderMismatchException
@@ -932,7 +937,7 @@ public:
 
     /**
      * Part of an input range as defined by
-     * $(XREF_PACK range,primitives,isInputRange).
+     * $(REF isInputRange, std,range,primitives).
      *
      * Returns:
      *      If $(D Contents) is a struct, will be filled with record data.
@@ -964,7 +969,7 @@ public:
 
     /**
      * Part of an input range as defined by
-     * $(XREF_PACK range,primitives,isInputRange).
+     * $(REF isInputRange, std,range,primitives).
      */
     @property bool empty() @safe @nogc pure nothrow const
     {
@@ -973,7 +978,7 @@ public:
 
     /**
      * Part of an input range as defined by
-     * $(XREF_PACK range,primitives,isInputRange).
+     * $(REF isInputRange, std,range,primitives).
      *
      * Throws:
      *       $(LREF CSVException) When a quote is found in an unquoted field,
@@ -983,7 +988,7 @@ public:
      */
     void popFront()
     {
-        while(!recordRange.empty)
+        while (!recordRange.empty)
         {
             recordRange.popFront();
         }
@@ -1036,12 +1041,12 @@ public:
             T[U] aa;
             try
             {
-                for(; !recordRange.empty; recordRange.popFront())
+                for (; !recordRange.empty; recordRange.popFront())
                 {
                     aa[header[_input.col-1]] = recordRange.front;
                 }
             }
-            catch(ConvException e)
+            catch (ConvException e)
             {
                 throw new CSVException(e.msg, _input.row, _input.col, e);
             }
@@ -1057,13 +1062,13 @@ public:
             size_t colIndex;
             try
             {
-                for(; !recordRange.empty;)
+                for (; !recordRange.empty;)
                 {
                     auto colData = recordRange.front;
                     scope(exit) colIndex++;
                     if (indices.length > 0)
                     {
-                        foreach(ti, ToType; Fields!(Contents))
+                        foreach (ti, ToType; Fields!(Contents))
                         {
                             if (indices[ti] == colIndex)
                             {
@@ -1074,7 +1079,7 @@ public:
                     }
                     else
                     {
-                        foreach(ti, ToType; Fields!(Contents))
+                        foreach (ti, ToType; Fields!(Contents))
                         {
                             if (ti == colIndex)
                             {
@@ -1086,7 +1091,7 @@ public:
                     recordRange.popFront();
                 }
             }
-            catch(ConvException e)
+            catch (ConvException e)
             {
                 throw new CSVException(e.msg, _input.row, colIndex, e);
             }
@@ -1104,23 +1109,22 @@ public:
     auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
           (str, ';', '^');
 
-    foreach(record; records)
+    foreach (record; records)
     {
         assert(equal(record, ans));
     }
 }
 
 // Bugzilla 15545
-pure unittest
+// @system due to the catch for Throwable
+@system pure unittest
 {
+    import std.exception : assertNotThrown;
     enum failData =
     "name, surname, age
     Joe, Joker, 99\r";
-    bool pass = true;
     auto r = csvReader(failData);
-    try foreach(entry; r){}
-    catch pass = false;
-    assert(pass);
+    assertNotThrown((){foreach (entry; r){}}());
 }
 
 /*
@@ -1161,7 +1165,8 @@ public:
         // to eliminate so many tokens. This calculates
         // how many will be skipped to get to the next header column
         size_t normalizer;
-        foreach(ref c; _popCount) {
+        foreach (ref c; _popCount)
+        {
             static if (ErrorLevel == Malformed.ignore)
             {
                 // If we are not throwing exceptions
@@ -1179,7 +1184,7 @@ public:
 
     /**
      * Part of an input range as defined by
-     * $(XREF_PACK range,primitives,isInputRange).
+     * $(REF isInputRange, std,range,primitives).
      */
     @property Contents front() @safe pure
     {
@@ -1189,7 +1194,7 @@ public:
 
     /**
      * Part of an input range as defined by
-     * $(XREF_PACK range,primitives,isInputRange).
+     * $(REF isInputRange, std,range,primitives).
      */
     @property bool empty() @safe pure nothrow @nogc const
     {
@@ -1214,7 +1219,7 @@ public:
 
     /**
      * Part of an input range as defined by
-     * $(XREF_PACK range,primitives,isInputRange).
+     * $(REF isInputRange, std,range,primitives).
      *
      * Throws:
      *       $(LREF CSVException) When a quote is found in an unquoted field,
@@ -1228,7 +1233,7 @@ public:
             import std.format : format;
         // Skip last of record when header is depleted.
         if (_popCount.ptr && _popCount.empty)
-            while(!recordEnd())
+            while (!recordEnd())
             {
                 prime(1);
             }
@@ -1244,7 +1249,9 @@ public:
                                   "previous length of %s.", _input.row,
                                   _input.col, _input.rowLength));
             return;
-        } else {
+        }
+        else
+        {
             static if (ErrorLevel == Malformed.throwException)
                 if (_input.rowLength != 0)
                     if (_input.col > _input.rowLength)
@@ -1270,7 +1277,7 @@ public:
      */
     private void prime(size_t skipNum)
     {
-        foreach(i; 0..skipNum)
+        foreach (i; 0..skipNum)
         {
             _input.col++;
             _front.shrinkTo(0);
@@ -1280,14 +1287,14 @@ public:
             try
                 csvNextToken!(Range, ErrorLevel, Separator)
                                    (_input.range, _front, _separator, _quote,false);
-            catch(IncompleteCellException ice)
+            catch (IncompleteCellException ice)
             {
                 ice.row = _input.row;
                 ice.col = _input.col;
                 ice.partialData = _front.data.idup;
                 throw ice;
             }
-            catch(ConvException e)
+            catch (ConvException e)
             {
                 throw new CSVException(e.msg, _input.row, _input.col, e);
             }
@@ -1302,7 +1309,7 @@ public:
             csvNextToken!(Range, ErrorLevel, Separator)
                 (_input.range, _front, _separator, _quote,false);
         }
-        catch(IncompleteCellException ice)
+        catch (IncompleteCellException ice)
         {
             ice.row = _input.row;
             ice.col = _input.col;
@@ -1314,8 +1321,9 @@ public:
         if (!_popCount.empty)
             _popCount.popFront();
 
-        if (skipNum == size_t.max) {
-            while(!recordEnd())
+        if (skipNum == size_t.max)
+        {
+            while (!recordEnd())
                 prime(1);
             _empty = true;
             return;
@@ -1327,7 +1335,7 @@ public:
         auto data = _front.data;
         static if (!isSomeString!Contents) skipWS(data);
         try curContentsoken = to!Contents(data);
-        catch(ConvException e)
+        catch (ConvException e)
         {
             throw new CSVException(e.msg, _input.row, _input.col, e);
         }
@@ -1379,7 +1387,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
         input.popFront();
     }
 
-    while(!input.empty)
+    while (!input.empty)
     {
         assert(!(quoted && escQuote));
         if (!quoted)
@@ -1457,7 +1465,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : appender;
     string str = "65,63\n123,3673";

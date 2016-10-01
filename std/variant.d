@@ -2,16 +2,13 @@
 
 /**
 This module implements a
-$(WEB erdani.org/publications/cuj-04-2002.html,discriminated union)
+$(HTTP erdani.org/publications/cuj-04-2002.html,discriminated union)
 type (a.k.a.
-$(WEB en.wikipedia.org/wiki/Tagged_union,tagged union),
-$(WEB en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
+$(HTTP en.wikipedia.org/wiki/Tagged_union,tagged union),
+$(HTTP en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
 Such types are useful
 for type-uniform binary interfaces, interfacing with scripting
 languages, and comfortable exploratory programming.
-
-Macros:
- WIKI = Phobos/StdVariant
 
 Synopsis:
 ----
@@ -62,14 +59,13 @@ Credits: Reviewed by Brad Roberts. Daniel Keep provided a detailed code review
 prompting the following improvements: (1) better support for arrays; (2) support
 for associative arrays; (3) friendlier behavior towards the garbage collector.
 Copyright: Copyright Andrei Alexandrescu 2007 - 2015.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
 Source:    $(PHOBOSSRC std/_variant.d)
 */
 module std.variant;
 
-import core.stdc.string, std.conv, std.exception, std.meta, std.traits,
-    std.typecons;
+import std.meta, std.traits, std.typecons;
 
 /++
     Gives the $(D sizeof) the largest type given.
@@ -208,6 +204,7 @@ private:
     // Handler for all of a type's operations
     static ptrdiff_t handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
     {
+        import std.conv : to;
         static A* getPtr(void* untyped)
         {
             if (untyped)
@@ -286,37 +283,30 @@ private:
             foreach (T ; AllTypes)
             {
                 if (targetType != typeid(T))
-                {
                     continue;
-                }
 
-                static if (is(typeof(*cast(T*) target = *src)))
+                static if (is(typeof(*cast(T*) target = *src)) ||
+                           is(T ==        const(U), U) ||
+                           is(T ==       shared(U), U) ||
+                           is(T == shared const(U), U) ||
+                           is(T ==    immutable(U), U))
                 {
+                    import std.conv : emplaceRef;
+
                     auto zat = cast(T*) target;
                     if (src)
                     {
                         static if (T.sizeof > 0)
                             assert(target, "target must be non-null");
-                        *zat = *src;
-                    }
-                }
-                else static if (is(T == const(U), U) ||
-                                is(T == shared(U), U) ||
-                                is(T == shared const(U), U) ||
-                                is(T == immutable(U), U))
-                {
-                    auto zat = cast(U*) target;
-                    if (src)
-                    {
-                        static if (U.sizeof > 0)
-                            assert(target, "target must be non-null");
-                        *zat = *(cast(UA*) (src));
+
+                        emplaceRef(*cast(Unqual!T*) zat, *cast(UA*) src);
                     }
                 }
                 else
                 {
-                    // type is not assignable
-                    if (src) assert(false, A.stringof);
+                    // type T is not constructible from A
+                    if (src)
+                        assert(false, A.stringof);
                 }
                 return true;
             }
@@ -356,7 +346,8 @@ private:
                 // cool! Same type!
                 auto rhsPA = getPtr(&rhsP.store);
                 return compare(rhsPA, zis, selector);
-            } else if (rhsType == typeid(void))
+            }
+            else if (rhsType == typeid(void))
             {
                 // No support for ordering comparisons with
                 // uninitialized vars
@@ -481,11 +472,15 @@ private:
         case OpID.apply:
             static if (!isFunctionPointer!A && !isDelegate!A)
             {
+                import std.conv : text;
+                import std.exception : enforce;
                 enforce(0, text("Cannot apply `()' to a value of type `",
                                 A.stringof, "'."));
             }
             else
             {
+                import std.conv : text;
+                import std.exception : enforce;
                 alias ParamTypes = Parameters!A;
                 auto p = cast(Variant*) parm;
                 auto argCount = p.get!size_t;
@@ -505,7 +500,7 @@ private:
                 }
 
                 auto args = cast(Tuple!(ParamTypes))t;
-                static if(is(ReturnType!A == void))
+                static if (is(ReturnType!A == void))
                 {
                     (*zis)(args.expand);
                     *p = Variant.init; // void returns uninitialized Variant.
@@ -601,6 +596,7 @@ public:
 
             static if (T.sizeof <= size)
             {
+                import core.stdc.string : memcpy;
                 // If T is a class we're only copying the reference, so it
                 // should be safe to cast away shared so the memcpy will work.
                 //
@@ -618,7 +614,8 @@ public:
             }
             else
             {
-                static if (__traits(compiles, {new T(rhs);}))
+                import core.stdc.string : memcpy;
+                static if (__traits(compiles, {new T(T.init);}))
                 {
                     auto p = new T(rhs);
                 }
@@ -727,7 +724,7 @@ public:
      * Returns $(D true) if and only if the $(D VariantN)
      * object holds an object implicitly convertible to type $(D
      * U). Implicit convertibility is defined as per
-     * $(LINK2 std_traits.html#ImplicitConversionTargets,ImplicitConversionTargets).
+     * $(REF_ALTTEXT ImplicitConversionTargets, ImplicitConversionTargets, std,traits).
      */
 
     @property bool convertsTo(T)() const
@@ -749,17 +746,18 @@ public:
      */
     @property inout(T) get(T)() inout
     {
+        inout(T) result = void;
         static if (is(T == shared))
-            shared Unqual!T result;
+            alias R = shared Unqual!T;
         else
-            Unqual!T result;
-        auto buf = tuple(typeid(T), &result);
+            alias R = Unqual!T;
+        auto buf = tuple(typeid(T), cast(R*)&result);
 
         if (fptr(OpID.get, cast(ubyte[size]*) &store, &buf))
         {
             throw new VariantException(type, typeid(T));
         }
-        return * cast(inout T*) &result;
+        return result;
     }
 
     /// Ditto
@@ -785,6 +783,7 @@ public:
 
     @property T coerce(T)()
     {
+        import std.conv : to, text;
         static if (isNumeric!T || isBoolean!T)
         {
             if (convertsTo!real)
@@ -807,6 +806,7 @@ public:
             }
             else
             {
+                import std.exception : enforce;
                 enforce(false, text("Type ", type, " does not convert to ",
                                 typeid(T)));
                 assert(0);
@@ -1079,10 +1079,10 @@ public:
      * VariantN) contains an (associative) array, it can be indexed
      * into. Otherwise, an exception is thrown.
      */
-    Variant opIndex(K)(K i)
+    inout(Variant) opIndex(K)(K i) inout
     {
         auto result = Variant(i);
-        fptr(OpID.index, &store, &result) == 0 || assert(false);
+        fptr(OpID.index, cast(ubyte[size]*) &store, &result) == 0 || assert(false);
         return result;
     }
 
@@ -1092,6 +1092,7 @@ public:
         auto a = Variant(new int[10]);
         a[5] = 42;
         assert(a[5] == 42);
+        assert((cast(const Variant) a)[5] == 42);
         int[int] hash = [ 42:24 ];
         a = hash;
         assert(a[42] == 24);
@@ -1164,6 +1165,8 @@ public:
         }
         else
         {
+            import std.conv : text;
+            import std.exception : enforce;
             enforce(false, text("Variant type ", type,
                             " not iterable with values of type ",
                             A.stringof));
@@ -1174,6 +1177,7 @@ public:
 
 unittest
 {
+    import std.conv : to;
     Variant v;
     int foo() { return 42; }
     v = &foo;
@@ -1493,6 +1497,8 @@ unittest
 
 unittest
 {
+    import std.conv : ConvException;
+    import std.exception : assertThrown, collectException;
     // try it with an oddly small size
     VariantN!(1) test;
     assert(test.size > 1);
@@ -1827,6 +1833,7 @@ unittest
     }
 
     static char[] t3(int p) {
+        import std.conv : text;
         return p.text.dup;
     }
 
@@ -1849,10 +1856,10 @@ unittest
 unittest
 {
     static struct Structure { int data; }
-    alias VariantTest = Algebraic!(Structure delegate());
+    alias VariantTest = Algebraic!(Structure delegate() pure nothrow @nogc @safe);
 
     bool called = false;
-    Structure example()
+    Structure example() pure nothrow @nogc @safe
     {
         called = true;
         return Structure.init;
@@ -1865,6 +1872,7 @@ unittest
 // Ordering comparisons of incompatible types, e.g. issue 7990.
 unittest
 {
+    import std.exception : assertThrown;
     assertThrown!VariantException(Variant(3) < "a");
     assertThrown!VariantException("a" < Variant(3));
     assertThrown!VariantException(Variant(3) < Variant("a"));
@@ -1876,6 +1884,7 @@ unittest
 // Handling of unordered types, e.g. issue 9043.
 unittest
 {
+    import std.exception : assertThrown;
     static struct A { int a; }
 
     assert(Variant(A(3)) != A(4));
@@ -2117,6 +2126,7 @@ unittest
 
 unittest
 {
+    import std.exception : assertThrown;
     Algebraic!(int, string) variant;
 
     variant = 10;
@@ -2177,10 +2187,10 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
 
         Result result;
 
-        foreach(tidx, T; AllowedTypes)
+        foreach (tidx, T; AllowedTypes)
         {
             bool added = false;
-            foreach(dgidx, dg; Handler)
+            foreach (dgidx, dg; Handler)
             {
                 // Handle normal function objects
                 static if (isSomeFunction!dg)
@@ -2199,7 +2209,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                             result.exceptionFuncIdx = dgidx;
                         }
                     }
-                    else if (is(Unqual!(Params[0]) == T))
+                    else static if (is(Params[0] == T) || is(Unqual!(Params[0]) == T))
                     {
                         if (added)
                             assert(false, "duplicate overload specified for type '" ~ T.stringof ~ "'");
@@ -2235,7 +2245,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
             throw new VariantException("variant must hold a value before being visited.");
     }
 
-    foreach(idx, T; AllowedTypes)
+    foreach (idx, T; AllowedTypes)
     {
         if (auto ptr = variant.peek!T)
         {
@@ -2250,7 +2260,11 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                     static if (HandlerOverloadMap.exceptionFuncIdx != -1)
                         return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
                     else
-                        throw new VariantException("variant holds value of type '" ~ T.stringof ~ "' but no visitor has been provided");
+                        throw new VariantException(
+                            "variant holds value of type '"
+                            ~ T.stringof ~
+                            "' but no visitor has been provided"
+                        );
                 }
             }
             else
@@ -2281,6 +2295,18 @@ unittest
 
 unittest
 {
+    // https://issues.dlang.org/show_bug.cgi?id=16383
+    class Foo {this() immutable {}}
+    alias V = Algebraic!(immutable Foo);
+
+    auto x = V(new immutable Foo).visit!(
+        (immutable(Foo) _) => 3
+    );
+    assert(x == 3);
+}
+
+unittest
+{
     // http://d.puremagic.com/issues/show_bug.cgi?id=5310
     const Variant a;
     assert(a == a);
@@ -2304,6 +2330,7 @@ unittest
 }
 unittest
 {
+    import std.exception : assertThrown;
     // http://d.puremagic.com/issues/show_bug.cgi?id=7069
     Variant v;
 
@@ -2566,6 +2593,7 @@ unittest
 
 unittest
 {
+    import std.exception : assertThrown, assertNotThrown;
     // Make sure Variant can handle types with opDispatch but no length field.
     struct SWithNoLength
     {
@@ -2613,8 +2641,29 @@ unittest
     Obj obj = 1;
 
     obj.visit!(
-        (int x) => {},
-        (IntTypedef x) => {},
-        (Obj[] x) => {},
+        (int x) {},
+        (IntTypedef x) {},
+        (Obj[] x) {},
     );
+}
+
+unittest
+{
+    // Bugzilla 15791
+    int n = 3;
+    struct NS1 { int foo() { return n + 10; } }
+    struct NS2 { int foo() { return n * 10; } }
+
+    Variant v;
+    v = NS1();
+    assert(v.get!NS1.foo() == 13);
+    v = NS2();
+    assert(v.get!NS2.foo() == 30);
+}
+
+unittest
+{
+    // Bugzilla 15827
+    static struct Foo15827 { Variant v; this(Foo15827 v) {} }
+    Variant v = Foo15827.init;
 }

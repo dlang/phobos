@@ -39,11 +39,8 @@ UTF-32LE; or (on big-endian architectures) UTF-16BE and UTF-32BE.
 This library provides a mechanism whereby other modules may add $(D
 EncodingScheme) subclasses for any other _encoding.
 
-Macros:
-    WIKI=Phobos/StdEncoding
-
 Copyright: Copyright Janice Caron 2008 - 2009.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron
 Source:    $(PHOBOSSRC std/_encoding.d)
 */
@@ -56,9 +53,10 @@ Distributed under the Boost Software License, Version 1.0.
 module std.encoding;
 
 import std.traits;
+import std.typecons;
 import std.range.primitives;
 
-unittest
+@system unittest
 {
     static ubyte[][] validStrings =
     [
@@ -229,14 +227,14 @@ unittest
     ];
 
     // Make sure everything that should be valid, is
-    foreach(a;validStrings)
+    foreach (a;validStrings)
     {
         string s = cast(string)a;
         assert(isValid(s),"Failed to validate: "~makeReadable(s));
     }
 
     // Make sure everything that shouldn't be valid, isn't
-    foreach(a;invalidStrings)
+    foreach (a;invalidStrings)
     {
         string s = cast(string)a;
         assert(!isValid(s),"Incorrectly validated: "~makeReadable(s));
@@ -244,7 +242,7 @@ unittest
 
     // Make sure we can sanitize everything bad
     assert(invalidStrings.length == sanitizedStrings.length);
-    for(int i=0; i<invalidStrings.length; ++i)
+    for (int i=0; i<invalidStrings.length; ++i)
     {
         string s = cast(string)invalidStrings[i];
         string t = sanitize(s);
@@ -256,7 +254,7 @@ unittest
 
     // Make sure all transcodings work in both directions, using both forward
     // and reverse iteration
-    foreach(a; validStrings)
+    foreach (a; validStrings)
     {
         string s = cast(string)a;
         string s2;
@@ -380,15 +378,15 @@ template EncoderFunctions()
     template ReadFromString()
     {
         @property bool canRead() { return s.length != 0; }
-        E peek() { return s[0]; }
-        E read() { E t = s[0]; s = s[1..$]; return t; }
+        E peek() @safe pure @nogc nothrow { return s[0]; }
+        E read() @safe pure @nogc nothrow { E t = s[0]; s = s[1..$]; return t; }
     }
 
     template ReverseReadFromString()
     {
         @property bool canRead() { return s.length != 0; }
-        E peek() { return s[$-1]; }
-        E read() { E t = s[$-1]; s = s[0..$-1]; return t; }
+        E peek() @safe pure @nogc nothrow { return s[$-1]; }
+        E read() @safe pure @nogc nothrow { E t = s[$-1]; s = s[0..$-1]; return t; }
     }
 
     // Various forms of Write
@@ -396,12 +394,12 @@ template EncoderFunctions()
     template WriteToString()
     {
         E[] s;
-        void write(E c) { s ~= c; }
+        void write(E c) @safe pure nothrow { s ~= c; }
     }
 
     template WriteToArray()
     {
-        void write(E c) { array[0] = c; array = array[1..$]; }
+        void write(E c) @safe pure @nogc nothrow { array[0] = c; array = array[1..$]; }
     }
 
     template WriteToDelegate()
@@ -420,25 +418,25 @@ template EncoderFunctions()
     template SkipViaRead()
     {
         mixin skipViaRead;
-        void skip() { skipViaRead(); }
+        void skip() @safe pure @nogc nothrow { skipViaRead(); }
     }
 
     template DecodeViaRead()
     {
         mixin decodeViaRead;
-        dchar decode() { return decodeViaRead(); }
+        dchar decode() @safe pure @nogc nothrow { return decodeViaRead(); }
     }
 
     template SafeDecodeViaRead()
     {
         mixin safeDecodeViaRead;
-        dchar safeDecode() { return safeDecodeViaRead(); }
+        dchar safeDecode() @safe pure @nogc nothrow { return safeDecodeViaRead(); }
     }
 
     template DecodeReverseViaRead()
     {
         mixin decodeReverseViaRead;
-        dchar decodeReverse() { return decodeReverseViaRead(); }
+        dchar decodeReverse() @safe pure @nogc nothrow { return decodeReverseViaRead(); }
     }
 
     // Encoding to different destinations
@@ -491,14 +489,14 @@ template EncoderFunctions()
 
     // Below are the functions we will ultimately expose to the user
 
-    E[] encode(dchar c)
+    E[] encode(dchar c) @safe pure nothrow
     {
         mixin EncodeToString e;
         e.encode(c);
         return e.s;
     }
 
-    void encode(dchar c, ref E[] array)
+    void encode(dchar c, ref E[] array) @safe pure nothrow
     {
         mixin EncodeToArray e;
         e.encode(c);
@@ -510,7 +508,7 @@ template EncoderFunctions()
         e.encode(c);
     }
 
-    void skip(ref const(E)[] s)
+    void skip(ref const(E)[] s) @safe pure nothrow
     {
         mixin SkipFromString e;
         e.skip();
@@ -528,7 +526,7 @@ template EncoderFunctions()
         return e.safeDecode();
     }
 
-    dchar decodeReverse(ref const(E)[] s)
+    dchar decodeReverse(ref const(E)[] s) @safe pure nothrow
     {
         mixin DecodeReverseFromString e;
         return e.decodeReverse();
@@ -569,7 +567,7 @@ struct CodePoints(E)
         int result = 0;
         while (s.length != 0)
         {
-            size_t len = s.length;
+            immutable len = s.length;
             dchar c = decode(s);
             size_t j = i; // We don't want the delegate corrupting i
             result = dg(j,c);
@@ -622,7 +620,7 @@ struct CodeUnits(E)
     int opApply(scope int delegate(ref E) dg)
     {
         int result = 0;
-        foreach(E c;s)
+        foreach (E c;s)
         {
             result = dg(c);
             if (result != 0) break;
@@ -633,7 +631,7 @@ struct CodeUnits(E)
     int opApplyReverse(scope int delegate(ref E) dg)
     {
         int result = 0;
-        foreach_reverse(E c;s)
+        foreach_reverse (E c;s)
         {
             result = dg(c);
             if (result != 0) break;
@@ -652,7 +650,7 @@ template EncoderInstance(E)
 
 private template GenericEncoder()
 {
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe pure @nogc nothrow
     {
         if (c < m_charMapStart || (c > m_charMapEnd && c < 0x100)) return true;
         if (c >= 0xFFFD) return false;
@@ -667,13 +665,13 @@ private template GenericEncoder()
         return false;
     }
 
-    bool isValidCodeUnit(E c)
+    bool isValidCodeUnit(E c) @safe pure @nogc nothrow
     {
         if (c < m_charMapStart || c > m_charMapEnd) return true;
         return charMap[c-m_charMapStart] != 0xFFFD;
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe pure @nogc nothrow
     in
     {
         assert(canEncode(c));
@@ -717,8 +715,8 @@ private template GenericEncoder()
 
     dchar safeDecodeViaRead()()
     {
-        E c = read();
-        dchar d = (c >= m_charMapStart && c <= m_charMapEnd) ? charMap[c-m_charMapStart] : c;
+        immutable E c = read();
+        immutable d = (c >= m_charMapStart && c <= m_charMapEnd) ? charMap[c-m_charMapStart] : c;
         return d == 0xFFFD ? INVALID_SEQUENCE : d;
     }
 
@@ -728,7 +726,7 @@ private template GenericEncoder()
         return (c >= m_charMapStart && c <= m_charMapEnd) ? charMap[c-m_charMapStart] : c;
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @safe pure @nogc nothrow
     {
         return cast(EString)("?");
     }
@@ -750,22 +748,22 @@ template EncoderInstance(CharType : AsciiChar)
     alias E = AsciiChar;
     alias EString = AsciiString;
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "ASCII";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe pure nothrow @nogc
     {
         return c < 0x80;
     }
 
-    bool isValidCodeUnit(AsciiChar c)
+    bool isValidCodeUnit(AsciiChar c) @safe pure nothrow @nogc
     {
         return c < 0x80;
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe pure nothrow @nogc
     in
     {
         assert(canEncode(c));
@@ -799,7 +797,7 @@ template EncoderInstance(CharType : AsciiChar)
 
     dchar safeDecodeViaRead()()
     {
-        dchar c = read();
+        immutable c = read();
         return canEncode(c) ? c : INVALID_SEQUENCE;
     }
 
@@ -808,7 +806,7 @@ template EncoderInstance(CharType : AsciiChar)
         return read();
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @safe pure nothrow @nogc
     {
         return cast(EString)("?");
     }
@@ -833,22 +831,22 @@ template EncoderInstance(CharType : Latin1Char)
     alias E = Latin1Char;
     alias EString = Latin1String;
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "ISO-8859-1";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe pure nothrow @nogc
     {
         return c < 0x100;
     }
 
-    bool isValidCodeUnit(Latin1Char c)
+    bool isValidCodeUnit(Latin1Char c) @safe pure nothrow @nogc
     {
         return true;
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe pure nothrow @nogc
     in
     {
         assert(canEncode(c));
@@ -884,7 +882,7 @@ template EncoderInstance(CharType : Latin1Char)
         return read();
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @safe pure nothrow @nogc
     {
         return cast(EString)("?");
     }
@@ -912,13 +910,13 @@ private template EncoderInstance(CharType : Latin2Char)
     alias E = Latin2Char;
     alias EString = Latin2String;
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "ISO-8859-2";
     }
 
-    private dchar m_charMapStart = 0xa1;
-    private dchar m_charMapEnd = 0xff;
+    private static immutable dchar m_charMapStart = 0xa1;
+    private static immutable dchar m_charMapEnd = 0xff;
 
     private immutable wstring charMap =
         "\u0104\u02D8\u0141\u00A4\u013D\u015A\u00A7\u00A8"~
@@ -992,13 +990,13 @@ private template EncoderInstance(CharType : Windows1250Char)
     alias E = Windows1250Char;
     alias EString = Windows1250String;
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "windows-1250";
     }
 
-    private dchar m_charMapStart = 0x80;
-    private dchar m_charMapEnd = 0xff;
+    private static immutable dchar m_charMapStart = 0x80;
+    private static immutable dchar m_charMapEnd = 0xff;
 
     private immutable wstring charMap =
         "\u20AC\uFFFD\u201A\uFFFD\u201E\u2026\u2020\u2021"~
@@ -1085,13 +1083,13 @@ template EncoderInstance(CharType : Windows1252Char)
     alias E = Windows1252Char;
     alias EString = Windows1252String;
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "windows-1252";
     }
 
-    private dchar m_charMapStart = 0x80;
-    private dchar m_charMapEnd = 0x9f;
+    private static immutable dchar m_charMapStart = 0x80;
+    private static immutable dchar m_charMapEnd = 0x9f;
 
     private immutable wstring charMap =
         "\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"~
@@ -1123,17 +1121,17 @@ template EncoderInstance(CharType : char)
     alias E = char;
     alias EString = immutable(char)[];
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "UTF-8";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe pure nothrow @nogc
     {
         return isValidCodePoint(c);
     }
 
-    bool isValidCodeUnit(char c)
+    bool isValidCodeUnit(char c) @safe pure nothrow @nogc
     {
         return (c < 0xC0 || (c >= 0xC2 && c < 0xF5));
     }
@@ -1150,7 +1148,7 @@ template EncoderInstance(CharType : char)
         3,3,3,3,3,3,3,3,4,4,4,4,5,5,6,0,
     ];
 
-    private int tails(char c)
+    private int tails(char c) @safe pure nothrow @nogc
     in
     {
         assert(c >= 0x80);
@@ -1160,7 +1158,7 @@ template EncoderInstance(CharType : char)
         return tailTable[c-0x80];
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe pure nothrow @nogc
     in
     {
         assert(canEncode(c));
@@ -1232,7 +1230,7 @@ template EncoderInstance(CharType : char)
 
         if (!canRead) return INVALID_SEQUENCE;
         size_t d = peek();
-        bool err =
+        immutable err =
         (
             (c < 0xC2)                              // fail overlong 2-byte sequences
         ||  (c > 0xF4)                              // fail overlong 4-6-byte sequences
@@ -1265,14 +1263,14 @@ template EncoderInstance(CharType : char)
             shift += 6;
             auto d = read();
             size_t n = tails(cast(char) d);
-            size_t mask = n == 0 ? 0x3F : (1 << (6 - n)) - 1;
+            immutable mask = n == 0 ? 0x3F : (1 << (6 - n)) - 1;
             c += ((d & mask) << shift);
             if (n != 0) break;
         }
         return c;
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @safe pure nothrow @nogc
     {
         return "\uFFFD";
     }
@@ -1289,22 +1287,22 @@ template EncoderInstance(CharType : wchar)
     alias E = wchar;
     alias EString = immutable(wchar)[];
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "UTF-16";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe pure nothrow @nogc
     {
         return isValidCodePoint(c);
     }
 
-    bool isValidCodeUnit(wchar c)
+    bool isValidCodeUnit(wchar c) @safe pure nothrow @nogc
     {
         return true;
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe pure nothrow @nogc
     in
     {
         assert(canEncode(c));
@@ -1330,7 +1328,7 @@ template EncoderInstance(CharType : wchar)
 
     void skipViaRead()()
     {
-        wchar c = read();
+        immutable c = read();
         if (c < 0xD800 || c >= 0xE000) return;
         read();
     }
@@ -1369,7 +1367,7 @@ template EncoderInstance(CharType : wchar)
         return 0x10000 + (d << 10) + c;
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @safe pure nothrow @nogc
     {
         return "\uFFFD"w;
     }
@@ -1386,22 +1384,22 @@ template EncoderInstance(CharType : dchar)
     alias E = dchar;
     alias EString = immutable(dchar)[];
 
-    @property string encodingName()
+    @property string encodingName() @safe pure nothrow @nogc
     {
         return "UTF-32";
     }
 
-    bool canEncode(dchar c)
+    bool canEncode(dchar c) @safe pure @nogc nothrow
     {
         return isValidCodePoint(c);
     }
 
-    bool isValidCodeUnit(dchar c)
+    bool isValidCodeUnit(dchar c) @safe pure @nogc nothrow
     {
         return isValidCodePoint(c);
     }
 
-    size_t encodedLength(dchar c)
+    size_t encodedLength(dchar c) @safe pure @nogc nothrow
     in
     {
         assert(canEncode(c));
@@ -1428,7 +1426,7 @@ template EncoderInstance(CharType : dchar)
 
     dchar safeDecodeViaRead()()
     {
-        dchar c = read();
+        immutable c = read();
         return isValidCodePoint(c) ? c : INVALID_SEQUENCE;
     }
 
@@ -1437,7 +1435,7 @@ template EncoderInstance(CharType : dchar)
         return cast(dchar)read();
     }
 
-    @property EString replacementSequence()
+    @property EString replacementSequence() @safe pure nothrow @nogc
     {
         return "\uFFFD"d;
     }
@@ -1464,7 +1462,7 @@ Returns true if c is a valid code point
  Params:
     c = the code point to be tested
  */
-bool isValidCodePoint(dchar c)
+bool isValidCodePoint(dchar c) @safe pure nothrow @nogc
 {
     return c < 0xD800 || (c >= 0xE000 && c < 0x110000);
 }
@@ -1484,7 +1482,7 @@ bool isValidCodePoint(dchar c)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(encodingName!(char) == "UTF-8");
     assert(encodingName!(wchar) == "UTF-16");
@@ -1512,7 +1510,7 @@ bool canEncode(E)(dchar c)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert( canEncode!(Latin1Char)('A'));
     assert( canEncode!(Latin2Char)('A'));
@@ -1526,6 +1524,18 @@ unittest
     assert(!canEncode!(Windows1252Char)('\u20AD'));
     assert(!canEncode!(Windows1252Char)('\uFFFD'));
     assert(!canEncode!(char)(cast(dchar)0x110000));
+}
+
+/// How to check an entire string
+@safe pure unittest
+{
+    import std.algorithm.searching : find;
+    import std.utf : byDchar;
+
+    assert("The quick brown fox"
+        .byDchar
+        .find!(x => !canEncode!AsciiChar(x))
+        .empty);
 }
 
 /**
@@ -1545,7 +1555,7 @@ bool isValidCodeUnit(E)(E c)
 }
 
 ///
-unittest
+@system pure unittest
 {
     assert(!isValidCodeUnit(cast(char)0xC0));
     assert(!isValidCodeUnit(cast(char)0xFF));
@@ -1578,7 +1588,7 @@ bool isValid(E)(const(E)[] s)
 }
 
 ///
-unittest
+@system pure unittest
 {
     assert( isValid("\u20AC100"));
     assert(!isValid(cast(char[3])[167, 133, 175]));
@@ -1636,7 +1646,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
     const(E)[] t = s[n..$];
     while (t.length != 0)
     {
-        dchar c = EncoderInstance!(E).safeDecode(t);
+        immutable c = EncoderInstance!(E).safeDecode(t);
         assert(c == INVALID_SEQUENCE);
         len += repSeq.length;
         t = t[validLength(t)..$];
@@ -1650,7 +1660,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
     t = s[n..$];
     while (t.length != 0)
     {
-        dchar c = EncoderInstance!(E).safeDecode(t);
+        immutable c = EncoderInstance!(E).safeDecode(t);
         assert(c == INVALID_SEQUENCE);
         array[offset..offset+repSeq.length] = repSeq[];
         offset += repSeq.length;
@@ -1663,7 +1673,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
 }
 
 ///
-unittest
+@system pure unittest
 {
     assert(sanitize("hello \xF0\x80world") == "hello \xEF\xBF\xBDworld");
 }
@@ -1695,7 +1705,7 @@ body
 }
 
 ///
-unittest
+@system pure unittest
 {
     assert(firstSequence("\u20AC1000") == "\u20AC".length);
     assert(firstSequence("hel") == "h".length);
@@ -1727,7 +1737,7 @@ body
 }
 
 ///
-unittest
+@system pure unittest
 {
     assert(lastSequence("1000\u20AC") == "\u20AC".length);
     assert(lastSequence("hellö") == "ö".length);
@@ -1763,7 +1773,7 @@ body
 }
 
 ///
-unittest
+@system pure unittest
 {
     assert(index("\u20AC100",1) == 3);
     assert(index("hällo",2) == 3);
@@ -1948,37 +1958,6 @@ body
     return array.length - t.length;
 }
 
-// /**
-//  * Encodes a single code point into a Buffer.
-//  *
-//  * This function encodes a single code point into one or more code units
-//  * The code units are stored in a growable buffer.
-//  *
-//  * The input to this function MUST be a valid code point.
-//  * This is enforced by the function's in-contract.
-//  *
-//  * The type of the output cannot be deduced. Therefore, it is necessary to
-//  * explicitly specify the encoding as a template parameter.
-//  *
-//  * Supersedes:
-//  * This function supersedes std.utf.encode(), however, note that the
-//  * function codeUnits() supersedes it more conveniently.
-//  *
-//  * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
-//  *
-//  * Params:
-//  *    c = the code point to be encoded
-//  */
-// deprecated void encode(E)(dchar c, ref Buffer!(E) buffer)
-// in
-// {
-//     assert(isValidCodePoint(c));
-// }
-// body
-// {
-//     EncoderInstance!(E).encode(c,buffer);
-// }
-
 /*
 Encodes $(D c) in units of type $(D E) and writes the result to the
 output range $(D R). Returns the number of $(D E)s written.
@@ -2041,7 +2020,7 @@ if (isNativeOutputRange!(R, E))
     }
 }
 
-unittest
+@safe pure unittest
 {
     import std.array;
     Appender!(char[]) r;
@@ -2127,13 +2106,13 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Example:
  --------------------------------------------------------
  string s = "hello world";
- foreach(c;codePoints(s))
+ foreach (c;codePoints(s))
  {
      // do something with c (which will always be a dchar)
  }
  --------------------------------------------------------
 
- Note that, currently, foreach(c:codePoints(s)) is superior to foreach(c;s)
+ Note that, currently, foreach (c:codePoints(s)) is superior to foreach (c;s)
  in that the latter will fall over on encountering U+FFFF.
  */
 CodePoints!(E) codePoints(E)(immutable(E)[] s)
@@ -2147,11 +2126,11 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     string s = "hello";
     string t;
-    foreach(c;codePoints(s))
+    foreach (c;codePoints(s))
     {
         t ~= cast(char)c;
     }
@@ -2188,10 +2167,10 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     char[] a;
-    foreach(c;codeUnits!(char)(cast(dchar)'\u20AC'))
+    foreach (c;codeUnits!(char)(cast(dchar)'\u20AC'))
     {
         a ~= c;
     }
@@ -2218,30 +2197,30 @@ unittest
     r = Destination string
 
  See_Also:
-    $(XREF conv, to)
+    $(REF to, std,conv)
  */
-void transcode(Src,Dst)(immutable(Src)[] s,out immutable(Dst)[] r)
+void transcode(Src, Dst)(Src[] s, out Dst[] r)
 in
 {
     assert(isValid(s));
 }
 body
 {
-    static if(is(Src==Dst))
+    static if (is(Src == Dst) && is(Src == immutable))
     {
         r = s;
     }
-    else static if(is(Src==AsciiChar))
+    else static if (is(Unqual!Src == AsciiChar))
     {
-        transcode!(char,Dst)(cast(string)s,r);
+        transcode(cast(const(char)[])s, r);
     }
     else
     {
-        static if(is(Dst == wchar))
+        static if (is(Unqual!Dst == wchar))
         {
             immutable minReservePlace = 2;
         }
-        else static if(is(Dst == dchar))
+        else static if (is(Unqual!Dst == dchar))
         {
             immutable minReservePlace = 1;
         }
@@ -2250,27 +2229,26 @@ body
             immutable minReservePlace = 6;
         }
 
-        Dst[] buffer = new Dst[s.length];
-        Dst[] tmpBuffer = buffer;
-        const(Src)[] t = s;
+        auto buffer = new Unqual!Dst[s.length];
+        auto tmpBuffer = buffer;
 
-        while (t.length != 0)
+        while (s.length != 0)
         {
-            if(tmpBuffer.length < minReservePlace)
+            if (tmpBuffer.length < minReservePlace)
             {
                 size_t prevLength = buffer.length;
-                buffer.length += t.length + minReservePlace;
+                buffer.length += s.length + minReservePlace;
                 tmpBuffer = buffer[prevLength - tmpBuffer.length .. $];
             }
-            EncoderInstance!(Dst).encode(decode(t), tmpBuffer);
+            EncoderInstance!(Unqual!Dst).encode(decode(s), tmpBuffer);
         }
 
-        r = cast(immutable)buffer[0 .. buffer.length - tmpBuffer.length];
+        r = cast(Dst[])buffer[0 .. buffer.length - tmpBuffer.length];
     }
 }
 
 ///
-unittest
+@system pure unittest
 {
     wstring ws;
     // transcode from UTF-8 to UTF-16
@@ -2283,7 +2261,7 @@ unittest
     assert(ws == "hello world");
 }
 
-unittest
+@system pure unittest
 {
     import std.meta;
     import std.range;
@@ -2292,9 +2270,10 @@ unittest
 
         string asciiCharString = to!string(iota(0, 128, 1));
 
-        alias Types = AliasSeq!(string, Latin1String, Latin2String, AsciiString, Windows1250String, Windows1252String, dstring, wstring);
-        foreach(S; Types)
-            foreach(D; Types)
+        alias Types = AliasSeq!(string, Latin1String, Latin2String, AsciiString,
+            Windows1250String, Windows1252String, dstring, wstring);
+        foreach (S; Types)
+            foreach (D; Types)
             {
                 string str;
                 S sStr;
@@ -2308,8 +2287,8 @@ unittest
     {
         string czechChars = "Příliš žluťoučký kůň úpěl ďábelské ódy.";
         alias Types = AliasSeq!(string, dstring, wstring);
-        foreach(S; Types)
-            foreach(D; Types)
+        foreach (S; Types)
+            foreach (D; Types)
             {
                 string str;
                 S sStr;
@@ -2322,14 +2301,52 @@ unittest
     }
 }
 
+unittest // mutable/const input/output
+{
+    import std.meta : AliasSeq;
+
+    foreach (O; AliasSeq!(Latin1Char, const Latin1Char, immutable Latin1Char))
+    {
+        O[] output;
+
+        char[] mutableInput = "äbc".dup;
+        transcode(mutableInput, output);
+        assert(output == [0xE4, 'b', 'c']);
+
+        const char[] constInput = "öbc";
+        transcode(constInput, output);
+        assert(output == [0xF6, 'b', 'c']);
+
+        immutable char[] immutInput = "übc";
+        transcode(immutInput, output);
+        assert(output == [0xFC, 'b', 'c']);
+    }
+
+    // Make sure that const/mutable input is copied.
+    foreach (C; AliasSeq!(char, const char))
+    {
+        C[] input = "foo".dup;
+        C[] output;
+        transcode(input, output);
+        assert(input == output);
+        assert(input !is output);
+    }
+
+    // But immutable input should not be copied.
+    string input = "foo";
+    string output;
+    transcode(input, output);
+    assert(input is output);
+}
+
 //=============================================================================
 
 /** The base class for exceptions thrown by this module */
-class EncodingException : Exception { this(string msg) { super(msg); } }
+class EncodingException : Exception { this(string msg) @safe pure { super(msg); } }
 
 class UnrecognizedEncodingException : EncodingException
 {
-    private this(string msg) { super(msg); }
+    private this(string msg) @safe pure { super(msg); }
 }
 
 /** Abstract base class of all encoding schemes */
@@ -2359,7 +2376,7 @@ abstract class EncodingScheme
         auto scheme = cast(EncodingScheme)ClassInfo.find(className).create();
         if (scheme is null)
             throw new EncodingException("Unable to create class "~className);
-        foreach(encodingName;scheme.names())
+        foreach (encodingName;scheme.names())
         {
             supported[toLower(encodingName)] = className;
         }
@@ -2486,8 +2503,7 @@ abstract class EncodingScheme
     {
         while (s.length != 0)
         {
-            dchar d = safeDecode(s);
-            if (d == INVALID_SEQUENCE)
+            if (safeDecode(s) == INVALID_SEQUENCE)
                 return false;
         }
         return true;
@@ -2500,7 +2516,7 @@ abstract class EncodingScheme
      * Params:
      *    s = the array to be tested
      */
-    size_t validLength(const(ubyte)[] s)
+    size_t validLength()(const(ubyte)[] s)
     {
         const(ubyte)[] r = s;
         const(ubyte)[] t = s;
@@ -2524,7 +2540,7 @@ abstract class EncodingScheme
      * Params:
      *    s = the string to be sanitized
      */
-    immutable(ubyte)[] sanitize(immutable(ubyte)[] s)
+    immutable(ubyte)[] sanitize()(immutable(ubyte)[] s)
     {
         auto n = validLength(s);
         if (n == s.length) return s;
@@ -2537,7 +2553,7 @@ abstract class EncodingScheme
         const(ubyte)[] t = s[n..$];
         while (t.length != 0)
         {
-            dchar c = safeDecode(t);
+            immutable c = safeDecode(t);
             assert(c == INVALID_SEQUENCE);
             len += repSeq.length;
             t = t[validLength(t)..$];
@@ -2551,7 +2567,7 @@ abstract class EncodingScheme
         t = s[n..$];
         while (t.length != 0)
         {
-            dchar c = safeDecode(t);
+            immutable c = safeDecode(t);
             assert(c == INVALID_SEQUENCE);
             array[offset..offset+repSeq.length] = repSeq[];
             offset += repSeq.length;
@@ -2572,7 +2588,7 @@ abstract class EncodingScheme
      * Params:
      *    s = the array to be sliced
      */
-    size_t firstSequence(const(ubyte)[] s)
+    size_t firstSequence()(const(ubyte)[] s)
     in
     {
         assert(s.length != 0);
@@ -2595,7 +2611,7 @@ abstract class EncodingScheme
      * Params:
      *    s = the string to be counted
      */
-    size_t count(const(ubyte)[] s)
+    size_t count()(const(ubyte)[] s)
     in
     {
         assert(isValid(s));
@@ -2621,7 +2637,7 @@ abstract class EncodingScheme
      *    s = the string to be counted
      *    n = the current code point index
      */
-    ptrdiff_t index(const(ubyte)[] s, size_t n)
+    ptrdiff_t index()(const(ubyte)[] s, size_t n)
     in
     {
         assert(isValid(s));
@@ -2655,14 +2671,15 @@ abstract class EncodingScheme
  */
 class EncodingSchemeASCII : EncodingScheme
 {
+    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeASCII");
-    }
+    }*/
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -2680,28 +2697,28 @@ class EncodingSchemeASCII : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "ASCII";
         }
 
-        override bool canEncode(dchar c)
+        override bool canEncode(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.canEncode!(AsciiChar)(c);
         }
 
-        override size_t encodedLength(dchar c)
+        override size_t encodedLength(dchar c)  @safe pure nothrow @nogc
         {
             return std.encoding.encodedLength!(AsciiChar)(c);
         }
 
-        override size_t encode(dchar c, ubyte[] buffer)
+        override size_t encode(dchar c, ubyte[] buffer) @safe pure nothrow @nogc
         {
             auto r = cast(AsciiChar[])buffer;
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(AsciiChar)[]) s;
             dchar c = std.encoding.decode(t);
@@ -2709,7 +2726,7 @@ class EncodingSchemeASCII : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(AsciiChar)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -2717,7 +2734,7 @@ class EncodingSchemeASCII : EncodingScheme
             return c;
         }
 
-        override @property immutable(ubyte)[] replacementSequence()
+        override @property immutable(ubyte)[] replacementSequence() @safe pure nothrow @nogc
         {
             return cast(immutable(ubyte)[])"?";
         }
@@ -2740,14 +2757,15 @@ class EncodingSchemeASCII : EncodingScheme
  */
 class EncodingSchemeLatin1 : EncodingScheme
 {
+    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
-    }
+    }*/
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -2763,28 +2781,28 @@ class EncodingSchemeLatin1 : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "ISO-8859-1";
         }
 
-        override bool canEncode(dchar c)
+        override bool canEncode(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.canEncode!(Latin1Char)(c);
         }
 
-        override size_t encodedLength(dchar c)
+        override size_t encodedLength(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.encodedLength!(Latin1Char)(c);
         }
 
-        override size_t encode(dchar c, ubyte[] buffer)
+        override size_t encode(dchar c, ubyte[] buffer) @safe pure nothrow @nogc
         {
             auto r = cast(Latin1Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(Latin1Char)[]) s;
             dchar c = std.encoding.decode(t);
@@ -2792,7 +2810,7 @@ class EncodingSchemeLatin1 : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(Latin1Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -2800,7 +2818,7 @@ class EncodingSchemeLatin1 : EncodingScheme
             return c;
         }
 
-        override @property immutable(ubyte)[] replacementSequence()
+        override @property immutable(ubyte)[] replacementSequence() @safe pure nothrow @nogc
         {
             return cast(immutable(ubyte)[])"?";
         }
@@ -2819,14 +2837,15 @@ class EncodingSchemeLatin1 : EncodingScheme
  */
 class EncodingSchemeLatin2 : EncodingScheme
 {
+    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeLatin2");
-    }
+    }*/
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -2838,28 +2857,28 @@ class EncodingSchemeLatin2 : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "ISO-8859-2";
         }
 
-        override bool canEncode(dchar c)
+        override bool canEncode(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.canEncode!(Latin2Char)(c);
         }
 
-        override size_t encodedLength(dchar c)
+        override size_t encodedLength(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.encodedLength!(Latin2Char)(c);
         }
 
-        override size_t encode(dchar c, ubyte[] buffer)
+        override size_t encode(dchar c, ubyte[] buffer) @safe pure nothrow @nogc
         {
             auto r = cast(Latin2Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(Latin2Char)[]) s;
             dchar c = std.encoding.decode(t);
@@ -2867,7 +2886,7 @@ class EncodingSchemeLatin2 : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(Latin2Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -2875,7 +2894,7 @@ class EncodingSchemeLatin2 : EncodingScheme
             return c;
         }
 
-        override @property immutable(ubyte)[] replacementSequence()
+        override @property immutable(ubyte)[] replacementSequence() @safe pure nothrow @nogc
         {
             return cast(immutable(ubyte)[])"?";
         }
@@ -2890,14 +2909,15 @@ class EncodingSchemeLatin2 : EncodingScheme
  */
 class EncodingSchemeWindows1250 : EncodingScheme
 {
+    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeWindows1250");
-    }
+    }*/
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -2905,28 +2925,28 @@ class EncodingSchemeWindows1250 : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "windows-1250";
         }
 
-        override bool canEncode(dchar c)
+        override bool canEncode(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.canEncode!(Windows1250Char)(c);
         }
 
-        override size_t encodedLength(dchar c)
+        override size_t encodedLength(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.encodedLength!(Windows1250Char)(c);
         }
 
-        override size_t encode(dchar c, ubyte[] buffer)
+        override size_t encode(dchar c, ubyte[] buffer) @safe pure nothrow @nogc
         {
             auto r = cast(Windows1250Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(Windows1250Char)[]) s;
             dchar c = std.encoding.decode(t);
@@ -2934,7 +2954,7 @@ class EncodingSchemeWindows1250 : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(Windows1250Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -2942,7 +2962,7 @@ class EncodingSchemeWindows1250 : EncodingScheme
             return c;
         }
 
-        override @property immutable(ubyte)[] replacementSequence()
+        override @property immutable(ubyte)[] replacementSequence() @safe pure nothrow @nogc
         {
             return cast(immutable(ubyte)[])"?";
         }
@@ -2957,14 +2977,15 @@ class EncodingSchemeWindows1250 : EncodingScheme
  */
 class EncodingSchemeWindows1252 : EncodingScheme
 {
+    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeWindows1252");
-    }
+    }*/
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -2972,28 +2993,28 @@ class EncodingSchemeWindows1252 : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "windows-1252";
         }
 
-        override bool canEncode(dchar c)
+        override bool canEncode(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.canEncode!(Windows1252Char)(c);
         }
 
-        override size_t encodedLength(dchar c)
+        override size_t encodedLength(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.encodedLength!(Windows1252Char)(c);
         }
 
-        override size_t encode(dchar c, ubyte[] buffer)
+        override size_t encode(dchar c, ubyte[] buffer) @safe pure nothrow @nogc
         {
             auto r = cast(Windows1252Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(Windows1252Char)[]) s;
             dchar c = std.encoding.decode(t);
@@ -3001,7 +3022,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(Windows1252Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -3009,7 +3030,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
             return c;
         }
 
-        override @property immutable(ubyte)[] replacementSequence()
+        override @property immutable(ubyte)[] replacementSequence() @safe pure nothrow @nogc
         {
             return cast(immutable(ubyte)[])"?";
         }
@@ -3024,14 +3045,15 @@ class EncodingSchemeWindows1252 : EncodingScheme
  */
 class EncodingSchemeUtf8 : EncodingScheme
 {
+    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf8");
-    }
+    }*/
 
     const
     {
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return
             [
@@ -3039,28 +3061,28 @@ class EncodingSchemeUtf8 : EncodingScheme
             ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return "UTF-8";
         }
 
-        override bool canEncode(dchar c)
+        override bool canEncode(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.canEncode!(char)(c);
         }
 
-        override size_t encodedLength(dchar c)
+        override size_t encodedLength(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.encodedLength!(char)(c);
         }
 
-        override size_t encode(dchar c, ubyte[] buffer)
+        override size_t encode(dchar c, ubyte[] buffer) @safe pure nothrow @nogc
         {
             auto r = cast(char[])buffer;
             return std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(char)[]) s;
             dchar c = std.encoding.decode(t);
@@ -3068,7 +3090,7 @@ class EncodingSchemeUtf8 : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         {
             auto t = cast(const(char)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -3076,7 +3098,7 @@ class EncodingSchemeUtf8 : EncodingScheme
             return c;
         }
 
-        override @property immutable(ubyte)[] replacementSequence()
+        override @property immutable(ubyte)[] replacementSequence() @safe pure nothrow @nogc
         {
             return cast(immutable(ubyte)[])"\uFFFD";
         }
@@ -3092,43 +3114,44 @@ class EncodingSchemeUtf8 : EncodingScheme
  */
 class EncodingSchemeUtf16Native : EncodingScheme
 {
+    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf16Native");
-    }
+    }*/
 
     const
     {
         version(LittleEndian) { enum string NAME = "UTF-16LE"; }
         version(BigEndian)    { enum string NAME = "UTF-16BE"; }
 
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return [ NAME ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return NAME;
         }
 
-        override bool canEncode(dchar c)
+        override bool canEncode(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.canEncode!(wchar)(c);
         }
 
-        override size_t encodedLength(dchar c)
+        override size_t encodedLength(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.encodedLength!(wchar)(c);
         }
 
-        override size_t encode(dchar c, ubyte[] buffer)
+        override size_t encode(dchar c, ubyte[] buffer) @safe pure nothrow @nogc
         {
             auto r = cast(wchar[])buffer;
             return wchar.sizeof * std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         in
         {
             assert((s.length & 1) == 0);
@@ -3141,7 +3164,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         in
         {
             assert((s.length & 1) == 0);
@@ -3154,13 +3177,13 @@ class EncodingSchemeUtf16Native : EncodingScheme
             return c;
         }
 
-        override @property immutable(ubyte)[] replacementSequence()
+        override @property immutable(ubyte)[] replacementSequence() @safe pure nothrow @nogc
         {
             return cast(immutable(ubyte)[])"\uFFFD"w;
         }
     }
 }
-unittest
+@system unittest
 {
     version(LittleEndian)
     {
@@ -3187,43 +3210,44 @@ unittest
  */
 class EncodingSchemeUtf32Native : EncodingScheme
 {
+    /* // moved to std.internal.phobosinit
     shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf32Native");
-    }
+    }*/
 
     const
     {
         version(LittleEndian) { enum string NAME = "UTF-32LE"; }
         version(BigEndian)    { enum string NAME = "UTF-32BE"; }
 
-        override string[] names()
+        override string[] names() @safe pure nothrow
         {
             return [ NAME ];
         }
 
-        override string toString()
+        override string toString() @safe pure nothrow @nogc
         {
             return NAME;
         }
 
-        override bool canEncode(dchar c)
+        override bool canEncode(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.canEncode!(dchar)(c);
         }
 
-        override size_t encodedLength(dchar c)
+        override size_t encodedLength(dchar c) @safe pure nothrow @nogc
         {
             return std.encoding.encodedLength!(dchar)(c);
         }
 
-        override size_t encode(dchar c, ubyte[] buffer)
+        override size_t encode(dchar c, ubyte[] buffer) @safe pure nothrow @nogc
         {
             auto r = cast(dchar[])buffer;
             return dchar.sizeof * std.encoding.encode(c,r);
         }
 
-        override dchar decode(ref const(ubyte)[] s)
+        override dchar decode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         in
         {
             assert((s.length & 3) == 0);
@@ -3236,7 +3260,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
             return c;
         }
 
-        override dchar safeDecode(ref const(ubyte)[] s)
+        override dchar safeDecode(ref const(ubyte)[] s) @safe pure nothrow @nogc
         in
         {
             assert((s.length & 3) == 0);
@@ -3249,13 +3273,13 @@ class EncodingSchemeUtf32Native : EncodingScheme
             return c;
         }
 
-        override @property immutable(ubyte)[] replacementSequence()
+        override @property immutable(ubyte)[] replacementSequence() @safe pure nothrow @nogc
         {
             return cast(immutable(ubyte)[])"\uFFFD"d;
         }
     }
 }
-unittest
+@system unittest
 {
     version(LittleEndian)
     {
@@ -3281,19 +3305,19 @@ version(unittest)
 {
     void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
     {
-        static if(is(Src==Dst))
+        static if (is(Src==Dst))
         {
             return s;
         }
-        else static if(is(Src==AsciiChar))
+        else static if (is(Src==AsciiChar))
         {
             transcodeReverse!(char,Dst)(cast(string)s,r);
         }
         else
         {
-            foreach_reverse(d;codePoints(s))
+            foreach_reverse (d;codePoints(s))
             {
-                foreach_reverse(c;codeUnits!(Dst)(d))
+                foreach_reverse (c;codeUnits!(Dst)(d))
                 {
                     r = c ~ r;
                 }
@@ -3304,7 +3328,7 @@ version(unittest)
     string makeReadable(string s)
     {
         string r = "\"";
-        foreach(char c;s)
+        foreach (char c;s)
         {
             if (c >= 0x20 && c < 0x80)
             {
@@ -3324,7 +3348,7 @@ version(unittest)
     string makeReadable(wstring s)
     {
         string r = "\"";
-        foreach(wchar c;s)
+        foreach (wchar c;s)
         {
             if (c >= 0x20 && c < 0x80)
             {
@@ -3346,7 +3370,7 @@ version(unittest)
     string makeReadable(dstring s)
     {
         string r = "\"";
-        foreach(dchar c; s)
+        foreach (dchar c; s)
         {
             if (c >= 0x20 && c < 0x80)
             {
@@ -3380,3 +3404,173 @@ version(unittest)
         return "0123456789ABCDEF"[n & 0xF];
     }
 }
+
+/** Definitions of common Byte Order Marks.
+The elements of the $(D enum) can used as indices into $(D bomTable) to get
+matching $(D BOMSeq).
+*/
+enum BOM
+{
+    none      = 0,  /// no BOM was found
+    utf32be   = 1,  /// [0x00, 0x00, 0xFE, 0xFF]
+    utf32le   = 2,  /// [0xFF, 0xFE, 0x00, 0x00]
+    utf7      = 3,  /*  [0x2B, 0x2F, 0x76, 0x38]
+                        [0x2B, 0x2F, 0x76, 0x39],
+                        [0x2B, 0x2F, 0x76, 0x2B],
+                        [0x2B, 0x2F, 0x76, 0x2F],
+                        [0x2B, 0x2F, 0x76, 0x38, 0x2D]
+                    */
+    utf1      = 8,  /// [0xF7, 0x64, 0x4C]
+    utfebcdic = 9,  /// [0xDD, 0x73, 0x66, 0x73]
+    scsu      = 10, /// [0x0E, 0xFE, 0xFF]
+    bocu1     = 11, /// [0xFB, 0xEE, 0x28]
+    gb18030   = 12, /// [0x84, 0x31, 0x95, 0x33]
+    utf8      = 13, /// [0xEF, 0xBB, 0xBF]
+    utf16be   = 14, /// [0xFE, 0xFF]
+    utf16le   = 15  /// [0xFF, 0xFE]
+}
+
+/// The type stored inside $(D bomTable).
+alias BOMSeq = Tuple!(BOM, "schema", ubyte[], "sequence");
+
+/** Mapping of a byte sequence to $(B Byte Order Mark (BOM))
+*/
+immutable bomTable = [
+    BOMSeq(BOM.none, null),
+    BOMSeq(BOM.utf32be, cast(ubyte[])([0x00, 0x00, 0xFE, 0xFF])),
+    BOMSeq(BOM.utf32le, cast(ubyte[])([0xFF, 0xFE, 0x00, 0x00])),
+    BOMSeq(BOM.utf7, cast(ubyte[])([0x2B, 0x2F, 0x76, 0x39])),
+    BOMSeq(BOM.utf7, cast(ubyte[])([0x2B, 0x2F, 0x76, 0x2B])),
+    BOMSeq(BOM.utf7, cast(ubyte[])([0x2B, 0x2F, 0x76, 0x2F])),
+    BOMSeq(BOM.utf7, cast(ubyte[])([0x2B, 0x2F, 0x76, 0x38, 0x2D])),
+    BOMSeq(BOM.utf7, cast(ubyte[])([0x2B, 0x2F, 0x76, 0x38])),
+    BOMSeq(BOM.utf1, cast(ubyte[])([0xF7, 0x64, 0x4C])),
+    BOMSeq(BOM.utfebcdic, cast(ubyte[])([0xDD, 0x73, 0x66, 0x73])),
+    BOMSeq(BOM.scsu, cast(ubyte[])([0x0E, 0xFE, 0xFF])),
+    BOMSeq(BOM.bocu1, cast(ubyte[])([0xFB, 0xEE, 0x28])),
+    BOMSeq(BOM.gb18030, cast(ubyte[])([0x84, 0x31, 0x95, 0x33])),
+    BOMSeq(BOM.utf8, cast(ubyte[])([0xEF, 0xBB, 0xBF])),
+    BOMSeq(BOM.utf16be, cast(ubyte[])([0xFE, 0xFF])),
+    BOMSeq(BOM.utf16le, cast(ubyte[])([0xFF, 0xFE]))
+];
+
+/** Returns a $(D BOMSeq) for a given $(D input).
+If no $(D BOM) is present the $(D BOMSeq) for $(D BOM.none) is
+returned. The $(D BOM) sequence at the beginning of the range will
+not be comsumed from the passed range. If you pass a reference type
+range make sure that $(D save) creates a deep copy.
+
+Params:
+    input = The sequence to check for the $(D BOM)
+
+Returns:
+    the found $(D BOMSeq) corresponding to the passed $(D input).
+*/
+immutable(BOMSeq) getBOM(Range)(Range input)
+        if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))
+{
+    import std.algorithm.searching : startsWith;
+    foreach (it; bomTable[1 .. $])
+    {
+        if (startsWith(input.save, it.sequence))
+        {
+            return it;
+        }
+    }
+
+    return bomTable[0];
+}
+
+///
+@system unittest
+{
+    import std.format : format;
+
+    auto ts = dchar(0x0000FEFF) ~ "Hello World"d;
+
+    auto entry = getBOM(cast(ubyte[])ts);
+    version(BigEndian)
+    {
+        assert(entry.schema == BOM.utf32be, format("%s", entry.schema));
+    }
+    else
+    {
+        assert(entry.schema == BOM.utf32le, format("%s", entry.schema));
+    }
+}
+
+@system unittest
+{
+    import std.format : format;
+
+    foreach (idx, it; bomTable)
+    {
+        auto s = it[1] ~ cast(ubyte[])"hello world";
+        auto i = getBOM(s);
+        assert(i[0] == bomTable[idx][0]);
+
+        if (idx < 4 || idx > 7) // get around the multiple utf7 bom's
+        {
+            assert(i[0] == BOM.init + idx);
+            assert(i[1] == it[1]);
+        }
+    }
+}
+
+@safe pure unittest
+{
+    struct BOMInputRange
+    {
+        ubyte[] arr;
+
+        @property ubyte front()
+        {
+            return this.arr.front;
+        }
+
+        @property bool empty()
+        {
+            return this.arr.empty;
+        }
+
+        void popFront()
+        {
+            this.arr = this.arr[1 .. $];
+        }
+
+        @property typeof(this) save()
+        {
+            return this;
+        }
+    }
+
+    static assert( isInputRange!BOMInputRange);
+    static assert(!isArray!BOMInputRange);
+
+    ubyte[] dummyEnd = [0,0,0,0];
+
+    foreach (idx, it; bomTable[1 .. $])
+    {
+        {
+            auto ir = BOMInputRange(it.sequence.dup);
+
+            auto b = getBOM(ir);
+            assert(b.schema == it.schema);
+            assert(ir.arr == it.sequence);
+        }
+
+        {
+            auto noBom = it.sequence[0 .. 1].dup ~ dummyEnd;
+            size_t oldLen = noBom.length;
+            assert(oldLen - 4 < it.sequence.length);
+
+            auto ir = BOMInputRange(noBom.dup);
+            auto b = getBOM(ir);
+            assert(b.schema == BOM.none);
+            assert(noBom.length == oldLen);
+        }
+    }
+}
+
+/** Constant defining a fully decoded BOM */
+enum dchar utfBOM = 0xfeff;

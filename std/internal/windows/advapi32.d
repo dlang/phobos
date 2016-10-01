@@ -4,7 +4,7 @@
  * The only purpose of this module is to do the static construction for
  * std.windows.registry, to eliminate cyclic construction errors.
  *
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Kenji Hara
  * Source:    $(PHOBOSSRC std/internal/windows/_advapi32.d)
  */

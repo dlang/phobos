@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.affix_allocator;
 
 /**
@@ -18,8 +19,13 @@ The following methods are defined if $(D Allocator) defines them, and forward to
  */
 struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
-    import std.conv, std.experimental.allocator.common, std.traits;
-    import std.algorithm : min;
+    import std.conv : emplace;
+    import std.experimental.allocator.common : stateSize, forwardToMember,
+        roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf;
+    import std.traits : hasMember;
+    import std.algorithm.comparison : min;
+    import std.typecons : Ternary;
+    import std.math : isPowerOf2;
 
     static assert(
         !stateSize!Prefix || Allocator.alignment >= Prefix.alignof,
@@ -48,6 +54,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     {
         size_t goodAllocSize(size_t s)
         {
+            import std.experimental.allocator.common : goodAllocSize;
             auto a = actualAllocationSize(s);
             return roundUpToMultipleOf(parent.goodAllocSize(a)
                     - stateSize!Prefix - stateSize!Suffix,
@@ -145,11 +152,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         static if (!stateSize!Suffix && hasMember!(Allocator, "expand"))
         bool expand(ref void[] b, size_t delta)
         {
-            if (!b.ptr)
-            {
-                b = allocate(delta);
-                return b.length == delta;
-            }
+            if (!b.ptr) return delta == 0;
             auto t = actualAllocation(b);
             const result = parent.expand(t, delta);
             if (!result) return false;
@@ -184,21 +187,40 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         mixin(forwardToMember("parent",
             "deallocateAll", "empty"));
 
+        // Computes suffix type given buffer type
+        private template Payload2Affix(Payload, Affix)
+        {
+            static if (is(Payload[] : void[]))
+                alias Payload2Affix = Affix;
+            else static if (is(Payload[] : shared(void)[]))
+                alias Payload2Affix = shared Affix;
+            else static if (is(Payload[] : immutable(void)[]))
+                alias Payload2Affix = shared Affix;
+            else static if (is(Payload[] : const(shared(void))[]))
+                alias Payload2Affix = shared Affix;
+            else static if (is(Payload[] : const(void)[]))
+                alias Payload2Affix = const Affix;
+            else
+                static assert(0, "Internal error for type " ~ Payload.stringof);
+        }
+
         // Extra functions
         static if (stateSize!Prefix)
-            static ref Prefix prefix(void[] b)
+        {
+            static auto ref prefix(T)(T[] b)
             {
                 assert(b.ptr && b.ptr.alignedAt(Prefix.alignof));
-                return (cast(Prefix*)b.ptr)[-1];
+                return (cast(Payload2Affix!(T, Prefix)*) b.ptr)[-1];
             }
+        }
         static if (stateSize!Suffix)
-            ref Suffix suffix(void[] b)
+            auto ref suffix(T)(T[] b)
             {
                 assert(b.ptr);
                 auto p = b.ptr - stateSize!Prefix
                     + actualAllocationSize(b.length);
                 assert(p && p.alignedAt(Suffix.alignof));
-                return (cast(Suffix*) p)[-1];
+                return (cast(Payload2Affix!(T, Suffix)*) p)[-1];
             }
     }
 
@@ -227,18 +249,59 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         Ternary empty();
 
         /**
-        The `instance` singleton is defined if and only if the parent allocator has no state and defines its own `it` object.
+        The `instance` singleton is defined if and only if the parent allocator
+        has no state and defines its own `it` object.
         */
         static AffixAllocator instance;
 
         /**
-        Affix access functions offering mutable references to the affixes of a block previously allocated with this allocator. $(D b) may not be null. They are defined if and only if the corresponding affix is not $(D void).
+        Affix access functions offering references to the affixes of a
+        block `b` previously allocated with this allocator. `b` may not be null.
+        They are defined if and only if the corresponding affix is not `void`.
 
-        Precondition: $(D b !is null)
+        The qualifiers of the affix are not always the same as the qualifiers
+        of the argument. This is because the affixes are not part of the data
+        itself, but instead are just $(I associated) with the data and known
+        to the allocator. The table below documents the type of `preffix(b)` and
+        `affix(b)` depending on the type of `b`.
+
+        $(BOOKTABLE Result of `prefix`/`suffix` depending on argument (`U` is
+        any unqualified type, `Affix` is `Prefix` or `Suffix`),
+            $(TR $(TH Argument$(NBSP)Type) $(TH Return) $(TH Comments))
+
+            $(TR $(TD `shared(U)[]`) $(TD `ref shared Affix`)
+            $(TD Data is shared across threads and the affix follows suit.))
+
+            $(TR $(TD `immutable(U)[]`) $(TD `ref shared Affix`)
+            $(TD Although the data is immutable, the allocator "knows" the
+            underlying memory is mutable, so `immutable` is elided for the affix
+            which is independent from the data itself. However, the result is
+            `shared` because `immutable` is implicitly shareable so multiple
+            threads may access and manipulate the affix for the same data.))
+
+            $(TR $(TD `const(shared(U))[]`) $(TD `ref shared Affix`)
+            $(TD The data is always shareable across threads. Even if the data
+            is `const`, the affix is modifiable by the same reasoning as for
+            `immutable`.))
+
+            $(TR $(TD `const(U)[]`) $(TD `ref const Affix`)
+            $(TD The input may have originated from `U[]` or `immutable(U)[]`,
+            so it may be actually shared or not. Returning an unqualified affix
+            may result in race conditions, whereas returning a `shared` affix
+            may result in inadvertent sharing of mutable thread-local data
+            across multiple threads. So the returned type is conservatively
+            `ref const`.))
+
+            $(TR $(TD `U[]`) $(TD `ref Affix`)
+            $(TD Unqualified data has unqualified affixes.))
+        )
+
+        Precondition: `b !is null` and `b` must have been allocated with
+        this allocator.
         */
-        static ref Prefix prefix(void[] b);
+        static ref auto prefix(T)(T[] b);
         /// Ditto
-        static ref Suffix suffix(void[] b);
+        ref auto suffix(T)(T[] b);
     }
     else static if (is(typeof(Allocator.instance) == shared))
     {
@@ -291,4 +354,21 @@ unittest
     alias B = AffixAllocator!(NullAllocator, size_t);
     b = B.instance.allocate(100);
     assert(b is null);
+}
+
+unittest
+{
+    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator;
+    alias MyAllocator = AffixAllocator!(GCAllocator, uint);
+    auto a = MyAllocator.instance.makeArray!(shared int)(100);
+    static assert(is(typeof(&MyAllocator.instance.prefix(a)) == shared(uint)*));
+    auto b = MyAllocator.instance.makeArray!(shared const int)(100);
+    static assert(is(typeof(&MyAllocator.instance.prefix(b)) == shared(uint)*));
+    auto c = MyAllocator.instance.makeArray!(immutable int)(100);
+    static assert(is(typeof(&MyAllocator.instance.prefix(c)) == shared(uint)*));
+    auto d = MyAllocator.instance.makeArray!(int)(100);
+    static assert(is(typeof(&MyAllocator.instance.prefix(d)) == uint*));
+    auto e = MyAllocator.instance.makeArray!(const int)(100);
+    static assert(is(typeof(&MyAllocator.instance.prefix(e)) == const(uint)*));
 }

@@ -1,12 +1,10 @@
 // Written in the D programming language.
 /**
-This is a submodule of $(LINK2 std_algorithm.html, std.algorithm).
+This is a submodule of $(MREF std, algorithm).
 It contains generic _searching algorithms.
 
 $(BOOKTABLE Cheat Sheet,
-
 $(TR $(TH Function Name) $(TH Description))
-
 $(T2 all,
         $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements
         are positive)
@@ -35,7 +33,7 @@ $(T2 endsWith,
         $(D endsWith("rocks", "ks")) returns $(D true).)
 $(T2 find,
         $(D find("hello world", "or")) returns $(D "orld") using linear search.
-        (For binary search refer to $(XREF range,sortedRange).))
+        (For binary search refer to $(REF sortedRange, std,range).))
 $(T2 findAdjacent,
         $(D findAdjacent([1, 2, 3, 3, 4])) returns the subrange starting with
         two equal adjacent elements, i.e. $(D [3, 3, 4]).)
@@ -59,6 +57,12 @@ $(T2 minCount,
         $(D minCount([2, 1, 1, 4, 1])) returns $(D tuple(1, 3)).)
 $(T2 maxCount,
         $(D maxCount([2, 4, 1, 4, 1])) returns $(D tuple(4, 2)).)
+$(T2 minElement,
+        Selects the minimal element of a range.
+        `minElement([3, 4, 1, 2])` returns `1`.)
+$(T2 maxElement,
+        Selects the maximal element of a range.
+        `maxElement([3, 4, 1, 2])` returns `4`.)
 $(T2 minPos,
         $(D minPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [1, 3, 4, 1]),
         i.e., positions the range at the first occurrence of its minimal
@@ -82,9 +86,9 @@ $(T2 until,
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_searching.d)
 
@@ -98,7 +102,7 @@ import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 // FIXME
-import std.typecons; // : Tuple;
+import std.typecons; // : Tuple, Flag, Yes, No;
 
 /++
 Checks if $(I _all) of the elements verify $(D pred).
@@ -268,7 +272,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
  */
 BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
 (alias pred = "a == b", Range)
-(Range needle) if (isRandomAccessRange!(Range) || isSomeString!Range)
+(Range needle) if ((isRandomAccessRange!(Range) && hasSlicing!Range) || isSomeString!Range)
 {
     return typeof(return)(needle);
 }
@@ -301,7 +305,8 @@ is ignored.
         import std.algorithm.comparison : equal;
         ptrdiff_t virtual_begin = needle.length - offset - portion;
         ptrdiff_t ignore = 0;
-        if (virtual_begin < 0) {
+        if (virtual_begin < 0)
+        {
             ignore = -virtual_begin;
             virtual_begin = 0;
         }
@@ -315,6 +320,7 @@ is ignored.
     }
 
 public:
+    ///
     this(Range needle)
     {
         if (!needle.length) return;
@@ -341,6 +347,7 @@ public:
         }
     }
 
+    ///
     Range beFound(Range haystack)
     {
         import std.algorithm.comparison : max;
@@ -348,7 +355,7 @@ public:
         if (!needle.length) return haystack;
         if (needle.length > haystack.length) return haystack[$ .. $];
         /* Search: */
-        auto limit = haystack.length - needle.length;
+        immutable limit = haystack.length - needle.length;
         for (size_t hpos = 0; hpos <= limit; )
         {
             size_t npos = needle.length - 1;
@@ -362,11 +369,13 @@ public:
         return haystack[$ .. $];
     }
 
+    ///
     @property size_t length()
     {
         return needle.length;
     }
 
+    ///
     alias opDollar = length;
 }
 
@@ -377,10 +386,10 @@ Params:
     pred = The predicate to use in comparing elements for commonality. Defaults
         to equality $(D "a == b").
 
-    r1 = A $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) of
+    r1 = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) of
         elements.
 
-    r2 = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of
+    r2 = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
         elements.
 
 Returns:
@@ -390,7 +399,7 @@ $(D takeExactly(r1, n)), where $(D n) is the number of elements in the common
 prefix of both ranges.
 
 See_Also:
-    $(XREF range, takeExactly)
+    $(REF takeExactly, std,range)
  */
 auto commonPrefix(alias pred = "a == b", R1, R2)(R1 r1, R2 r2)
 if (isForwardRange!R1 && isInputRange!R2 &&
@@ -514,7 +523,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
                           wchar[], const(wchar)[], wstring,
                           dchar[], const(dchar)[], dstring))
     {
-        foreach(T; AliasSeq!(string, wstring, dstring))
+        foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(commonPrefix(to!S(""), to!T("")).empty);
             assert(commonPrefix(to!S(""), to!T("hello")).empty);
@@ -692,16 +701,16 @@ size_t count(alias pred = "true", R)(R haystack)
 
 /++
     Counts elements in the given
-    $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range)
+    $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
     until the given predicate is true for one of the given $(D needles).
 
     Params:
         pred = The predicate for determining when to stop counting.
         haystack = The
-            $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to be
+            $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to be
             counted.
         needles = Either a single element, or a
-            $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range)
+            $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
             of elements, to be evaluated in turn against each
             element in $(D haystack) under the given predicate.
 
@@ -864,7 +873,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
     Params:
         pred = Predicate to when to stop counting.
         haystack = An
-          $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of
+          $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
           elements to be counted.
     Returns: The number of elements which must be popped from $(D haystack)
     before $(D pred(haystack.front)) is $(D true).
@@ -961,7 +970,7 @@ Params:
         the needle(s).
 
     doesThisEnd = The
-        $(XREF_PACK_NAMED range,primitives,isBidirectionalRange,bidirectional range)
+        $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
         to check.
 
     withOneOfThese = The needles to check against, which may be single
@@ -1204,6 +1213,103 @@ bool endsWith(alias pred, R)(R doesThisEnd)
     }
 }
 
+/**
+Iterates the passed range and selects the extreme element with `less`.
+If the extreme element occurs multiple time, the first occurrence will be
+returned.
+
+Params:
+    map = custom accessor for the comparison key
+    selector = custom mapping for the extrema selection
+    seed = custom seed to use as initial element
+    r = Range from which the extreme value will be selected
+
+Returns:
+    The extreme value according to `map` and `selector` of the passed-in values.
+*/
+private auto extremum(alias map = "a", alias selector = "a < b", Range)(Range r)
+    if (isInputRange!Range && !isInfinite!Range)
+in
+{
+    assert(!r.empty, "r is an empty range");
+}
+body
+{
+    alias mapFun = unaryFun!map;
+    alias Element = ElementType!Range;
+    Unqual!Element seed = r.front;
+    r.popFront();
+    return extremum!(map, selector)(r, seed);
+}
+
+private auto extremum(alias map = "a", alias selector = "a < b", Range,
+                      RangeElementType = ElementType!Range)
+                     (Range r, RangeElementType seedElement)
+    if (isInputRange!Range && !isInfinite!Range &&
+        !is(CommonType!(ElementType!Range, RangeElementType) == void))
+{
+    alias mapFun = unaryFun!map;
+    alias selectorFun = binaryFun!selector;
+
+    alias Element = ElementType!Range;
+    alias CommonElement = CommonType!(Element, RangeElementType);
+    alias MapType = Unqual!(typeof(mapFun(CommonElement.init)));
+
+    Unqual!CommonElement extremeElement = seedElement;
+    MapType extremeElementMapped = mapFun(extremeElement);
+
+    static if (isRandomAccessRange!Range && hasLength!Range)
+    {
+        foreach (const i; 0 .. r.length)
+        {
+            MapType mapElement = mapFun(r[i]);
+            if (selectorFun(mapElement, extremeElementMapped))
+            {
+                extremeElement = r[i];
+                extremeElementMapped = mapElement;
+            }
+        }
+    }
+    else
+    {
+        while (!r.empty)
+        {
+            MapType mapElement = mapFun(r.front);
+            if (selectorFun(mapElement, extremeElementMapped))
+            {
+                extremeElement = r.front;
+                extremeElementMapped = mapElement;
+            }
+            r.popFront();
+        }
+    }
+    return extremeElement;
+}
+
+@safe pure nothrow unittest
+{
+    // allows a custom map to select the extremum
+    assert([[0, 4], [1, 2]].extremum!"a[0]" == [0, 4]);
+    assert([[0, 4], [1, 2]].extremum!"a[1]" == [1, 2]);
+
+    // allows a custom selector for comparison
+    assert([[0, 4], [1, 2]].extremum!("a[0]", "a > b") == [1, 2]);
+    assert([[0, 4], [1, 2]].extremum!("a[1]", "a > b") == [0, 4]);
+}
+
+@safe pure nothrow unittest
+{
+    // allow seeds
+    int[] arr;
+    assert(arr.extremum(1) == 1);
+
+    int[][] arr2d;
+    assert(arr2d.extremum([1]) == [1]);
+
+    // allow seeds of different types (implicit casting)
+    assert(extremum([2, 3, 4], 1.5) == 1.5);
+}
+
 // find
 /**
 Finds an individual element in an input range. Elements of $(D
@@ -1212,7 +1318,7 @@ pred). Performs $(BIGOH walkLength(haystack)) evaluations of $(D
 pred).
 
 To _find the last occurrence of $(D needle) in $(D haystack), call $(D
-find(retro(haystack), needle)). See $(XREF range, retro).
+find(retro(haystack), needle)). See $(REF retro, std,range).
 
 Params:
 
@@ -1221,7 +1327,7 @@ $(D "a == b").
 The negated predicate $(D "a != b") can be used to search instead for the first
 element $(I not) matching the needle.
 
-haystack = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range)
+haystack = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 searched in.
 
 needle = The element searched for.
@@ -1238,9 +1344,9 @@ that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
 such position exists, returns an empty $(D haystack).
 
 See_Also:
-     $(WEB sgi.com/tech/stl/_find.html, STL's _find)
+     $(HTTP sgi.com/tech/stl/_find.html, STL's _find)
  */
-InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, Element needle)
+InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, scope Element needle)
 if (isInputRange!InputRange &&
     is (typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
@@ -1381,6 +1487,7 @@ if (isInputRange!InputRange &&
 {
     import std.algorithm.comparison : equal;
     import std.container : SList;
+    import std.range.primitives : empty;
 
     assert(find("hello, world", ',') == ", world");
     assert(find([1, 2, 3, 5], 4) == []);
@@ -1425,9 +1532,9 @@ if (isInputRange!InputRange &&
 @safe pure unittest
 {
     import std.meta : AliasSeq;
-    foreach(R; AliasSeq!(string, wstring, dstring))
+    foreach (R; AliasSeq!(string, wstring, dstring))
     {
-        foreach(E; AliasSeq!(char, wchar, dchar))
+        foreach (E; AliasSeq!(char, wchar, dchar))
         {
             R r1 = "hello world";
             E e1 = 'w';
@@ -1474,9 +1581,9 @@ if (isInputRange!InputRange &&
     {
         byte[]  sarr = [1, 2, 3, 4];
         ubyte[] uarr = [1, 2, 3, 4];
-        foreach(arr; AliasSeq!(sarr, uarr))
+        foreach (arr; AliasSeq!(sarr, uarr))
         {
-            foreach(T; AliasSeq!(byte, ubyte, int, uint))
+            foreach (T; AliasSeq!(byte, ubyte, int, uint))
             {
                 assert(find(arr, cast(T) 3) == arr[2 .. $]);
                 assert(find(arr, cast(T) 9) == arr[$ .. $]);
@@ -1505,15 +1612,14 @@ haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
 pred).
 
 To _find the last element of a bidirectional $(D haystack) satisfying
-$(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
-range, retro).
+$(D pred), call $(D find!(pred)(retro(haystack))). See $(REF retro, std,range).
 
 Params:
 
 pred = The predicate for determining if a given element is the one being
 searched for.
 
-haystack = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to
+haystack = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
 search in.
 
 Returns:
@@ -1523,7 +1629,7 @@ that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
 such position exists, returns an empty $(D haystack).
 
 See_Also:
-     $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
+     $(HTTP sgi.com/tech/stl/find_if.html, STL's find_if)
 */
 InputRange find(alias pred, InputRange)(InputRange haystack)
 if (isInputRange!InputRange)
@@ -1541,17 +1647,6 @@ if (isInputRange!InputRange)
             if (predFun(decode(haystack, next)))
                 return haystack[i .. $];
             i = next;
-        }
-        return haystack[$ .. $];
-    }
-    else static if (!isInfinite!R && hasSlicing!R && is(typeof(haystack[cast(size_t)0 .. $])))
-    {
-        size_t i = 0;
-        for (auto h = haystack.save; !h.empty; h.popFront())
-        {
-            if (predFun(h.front))
-                return haystack[i .. $];
-            ++i;
         }
         return haystack[$ .. $];
     }
@@ -1603,10 +1698,10 @@ Params:
 pred = The predicate to use for comparing respective elements from the haystack
 and the needle. Defaults to simple equality $(D "a == b").
 
-haystack = The $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range)
+haystack = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 searched in.
 
-needle = The $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range)
+needle = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 searched for.
 
 Returns:
@@ -1614,7 +1709,7 @@ Returns:
 $(D haystack) advanced such that $(D needle) is a prefix of it (if no
 such position exists, returns $(D haystack) advanced to termination).
  */
-R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool)
         && !isRandomAccessRange!R1)
@@ -1642,6 +1737,8 @@ if (isForwardRange!R1 && isForwardRange!R2
 @safe unittest
 {
     import std.container : SList;
+    import std.range.primitives : empty;
+    import std.typecons : Tuple;
 
     assert(find("hello, world", "World").empty);
     assert(find("hello, world", "wo") == "world");
@@ -1673,53 +1770,90 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(equal(r, SList!int(2, 5, 7, 3)[]));
 }
 
-// Specialization for searching a random-access range for a
-// bidirectional range
-R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-if (isRandomAccessRange!R1 && isBidirectionalRange!R2
+/// ditto
+R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
+if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     if (needle.empty) return haystack;
-    const needleLength = walkLength(needle.save);
+    static if (hasLength!R2)
+    {
+        immutable needleLength = needle.length;
+    }
+    else
+    {
+        immutable needleLength = walkLength(needle.save);
+    }
     if (needleLength > haystack.length)
     {
-        // @@@BUG@@@
-        //return haystack[$ .. $];
         return haystack[haystack.length .. haystack.length];
     }
-    // @@@BUG@@@
-    // auto needleBack = moveBack(needle);
-    // Stage 1: find the step
-    size_t step = 1;
-    auto needleBack = needle.back;
-    needle.popBack();
-    for (auto i = needle.save; !i.empty && i.back != needleBack;
-         i.popBack(), ++step)
+    static if (isRandomAccessRange!R2)
     {
+        immutable lastIndex = needleLength - 1;
+        auto last = needle[lastIndex];
+        size_t j = lastIndex, skip = 0;
+        for (; j < haystack.length;)
+        {
+            if (!binaryFun!pred(haystack[j], last))
+            {
+                ++j;
+                continue;
+            }
+            immutable k = j - lastIndex;
+            // last elements match
+            for (size_t i = 0;; ++i)
+            {
+                if (i == lastIndex)
+                    return haystack[k .. haystack.length];
+                if (!binaryFun!pred(haystack[k + i], needle[i]))
+                    break;
+            }
+            if (skip == 0)
+            {
+                skip = 1;
+                while (skip < needleLength && needle[needleLength - 1 - skip] != needle[needleLength - 1])
+                {
+                    ++skip;
+                }
+            }
+            j += skip;
+        }
     }
-    // Stage 2: linear find
-    size_t scout = needleLength - 1;
-    for (;;)
+    else
     {
-        if (scout >= haystack.length)
+        // @@@BUG@@@
+        // auto needleBack = moveBack(needle);
+        // Stage 1: find the step
+        size_t step = 1;
+        auto needleBack = needle.back;
+        needle.popBack();
+        for (auto i = needle.save; !i.empty && i.back != needleBack;
+                i.popBack(), ++step)
         {
-            return haystack[haystack.length .. haystack.length];
         }
-        if (!binaryFun!pred(haystack[scout], needleBack))
+        // Stage 2: linear find
+        size_t scout = needleLength - 1;
+        for (;;)
         {
-            ++scout;
-            continue;
+            if (scout >= haystack.length)
+                break;
+            if (!binaryFun!pred(haystack[scout], needleBack))
+            {
+                ++scout;
+                continue;
+            }
+            // Found a match with the last element in the needle
+            auto cand = haystack[scout + 1 - needleLength .. haystack.length];
+            if (startsWith!pred(cand, needle))
+            {
+                // found
+                return cand;
+            }
+            scout += step;
         }
-        // Found a match with the last element in the needle
-        auto cand = haystack[scout + 1 - needleLength .. haystack.length];
-        if (startsWith!pred(cand, needle))
-        {
-            // found
-            return cand;
-        }
-        // Continue with the stride
-        scout += step;
     }
+    return haystack[haystack.length .. haystack.length];
 }
 
 @safe unittest
@@ -1745,9 +1879,8 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
     //assert(find!"a == b"("abc", "bc").length == 2);
 }
 
-// Leftover specialization: searching a random-access range for a
-// non-bidirectional forward range
-R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+/// ditto
+R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
 if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
     is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
@@ -1833,9 +1966,8 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
     assert(find(haystack, filter!"true"(needle)).empty);
 }
 
-// Internally used by some find() overloads above. Can't make it
-// private due to bugs in the compiler.
-/*private*/ R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, R2 needle)
+// Internally used by some find() overloads above
+private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
 {
     enum estimateNeedleLength = hasLength!R1 && !hasLength!R2;
 
@@ -1996,6 +2128,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 ///
 @safe unittest
 {
+    import std.typecons : tuple;
     int[] a = [ 1, 4, 2, 3 ];
     assert(find(a, 4) == [ 4, 2, 3 ]);
     assert(find(a, [ 1, 4 ]) == [ 1, 4, 2, 3 ]);
@@ -2084,7 +2217,8 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     assert(find(a, b) == [ 1, 2, 3, 4, 5 ]);
     assert(find(b, a).empty);
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType d;
         auto findRes = find(d, 5);
         assert(equal(findRes, [5,6,7,8,9,10]));
@@ -2104,7 +2238,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
  * such position exists, returns $(D haystack) advanced to termination).
  */
 Range1 find(Range1, alias pred, Range2)(
-    Range1 haystack, BoyerMooreFinder!(pred, Range2) needle)
+    Range1 haystack, scope BoyerMooreFinder!(pred, Range2) needle)
 {
     return needle.beFound(haystack);
 }
@@ -2117,7 +2251,8 @@ Range1 find(Range1, alias pred, Range2)(
         "(.gnu.linkonce.tmain+0x74): In function `main' undefined reference"~
         " to `_Dmain':";
     string[] ns = ["libphobos", "function", " undefined", "`", ":"];
-    foreach (n ; ns) {
+    foreach (n ; ns)
+    {
         auto p = find(h, boyerMooreFinder(n));
         assert(!p.empty);
     }
@@ -2126,6 +2261,7 @@ Range1 find(Range1, alias pred, Range2)(
 ///
 @safe unittest
 {
+    import std.range.primitives : empty;
     int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
     int[] b = [ 1, 2, 3 ];
 
@@ -2167,7 +2303,7 @@ template canFind(alias pred="a == b")
     Returns $(D true) if and only if $(D needle) can be found in $(D
     range). Performs $(BIGOH haystack.length) evaluations of $(D pred).
      +/
-    bool canFind(Range, Element)(Range haystack, Element needle)
+    bool canFind(Range, Element)(Range haystack, scope Element needle)
     if (is(typeof(find!pred(haystack, needle))))
     {
         return !find!pred(haystack, needle).empty;
@@ -2184,7 +2320,7 @@ template canFind(alias pred="a == b")
     without having to deal with the tuple that $(D LREF find) returns for the
     same operation.
      +/
-    size_t canFind(Range, Ranges...)(Range haystack, Ranges needles)
+    size_t canFind(Range, Ranges...)(Range haystack, scope Ranges needles)
     if (Ranges.length > 1 &&
         allSatisfy!(isForwardRange, Ranges) &&
         is(typeof(find!pred(haystack, needles))))
@@ -2249,7 +2385,7 @@ evaluations of $(D pred).
 
 Params:
     pred = The predicate to satisfy.
-    r = A $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to
+    r = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
         search in.
 
 Returns:
@@ -2258,7 +2394,7 @@ the given predicate. If there are no such two elements, returns $(D r) advanced
 until empty.
 
 See_Also:
-     $(WEB sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
+     $(HTTP sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
 */
 Range findAdjacent(alias pred = "a == b", Range)(Range r)
     if (isForwardRange!(Range))
@@ -2325,9 +2461,9 @@ Performs $(BIGOH seq.length * choices.length) evaluations of $(D pred).
 
 Params:
     pred = The predicate to use for determining a match.
-    seq = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to
+    seq = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
         search.
-    choices = A $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range)
+    choices = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
         of possible choices.
 
 Returns:
@@ -2335,7 +2471,7 @@ $(D seq) advanced to the first matching element, or until empty if there are no
 matching elements.
 
 See_Also:
-    $(WEB sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
+    $(HTTP sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
 */
 Range1 findAmong(alias pred = "a == b", Range1, Range2)(
     Range1 seq, Range2 choices)
@@ -2373,10 +2509,10 @@ Range1 findAmong(alias pred = "a == b", Range1, Range2)(
  *
  * Params:
  *  haystack = The
- *   $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to search
+ *   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
  *   in.
  *  needle = The
- *   $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to search
+ *   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
  *   for.
  *
  * Returns: $(D true) if the needle was found, in which case $(D haystack) is
@@ -2397,6 +2533,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 ///
 @safe unittest
 {
+    import std.range.primitives : empty;
     // Needle is found; s is replaced by the substring following the first
     // occurrence of the needle.
     string s = "abcdef";
@@ -2437,8 +2574,8 @@ entire `haystack`.
 
 If `haystack` is a random-access range, all three components of the tuple have
 the same type as `haystack`. Otherwise, `haystack` must be a forward range and
-the type of `result[0]` and `result[1]` is the same as $(XREF
-range,takeExactly).
+the type of `result[0]` and `result[1]` is the same as $(REF takeExactly,
+std,range).
 
 Params:
     pred = Predicate to use for comparing needle against haystack.
@@ -2471,6 +2608,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
         {
             asTuple = typeof(asTuple)(pre, separator, post);
         }
+        void opAssign(typeof(asTuple) rhs)
+        {
+            asTuple = rhs;
+        }
         Tuple!(S1, S1, S2) asTuple;
         bool opCast(T : bool)()
         {
@@ -2480,7 +2621,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     }
 
     static if (isSomeString!R1 && isSomeString!R2
-            || isRandomAccessRange!R1 && hasLength!R2)
+            || (isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && hasLength!R2))
     {
         auto balance = find!pred(haystack, needle);
         immutable pos1 = haystack.length - balance.length;
@@ -2531,6 +2672,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
         {
             asTuple = typeof(asTuple)(pre, post);
         }
+        void opAssign(typeof(asTuple) rhs)
+        {
+            asTuple = rhs;
+        }
         Tuple!(S1, S2) asTuple;
         bool opCast(T : bool)()
         {
@@ -2540,7 +2685,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     }
 
     static if (isSomeString!R1 && isSomeString!R2
-            || isRandomAccessRange!R1 && hasLength!R2)
+            || (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && hasLength!R2))
     {
         auto balance = find!pred(haystack, needle);
         immutable pos = haystack.length - balance.length;
@@ -2587,6 +2732,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
         {
             asTuple = typeof(asTuple)(pre, post);
         }
+        void opAssign(typeof(asTuple) rhs)
+        {
+            asTuple = rhs;
+        }
         Tuple!(S1, S2) asTuple;
         bool opCast(T : bool)()
         {
@@ -2596,7 +2745,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     }
 
     static if (isSomeString!R1 && isSomeString!R2
-            || isRandomAccessRange!R1 && hasLength!R2)
+            || isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && hasLength!R2)
     {
         auto balance = find!pred(haystack, needle);
         immutable pos = balance.empty ? 0 : haystack.length - balance.length + needle.length;
@@ -2641,8 +2790,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
+    import std.range.primitives : empty;
+
     auto a = "Carl Sagan Memorial Station";
     auto r = findSplit(a, "Velikovsky");
     import std.typecons : isTuple;
@@ -2666,8 +2817,10 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r2[1] == " Memorial Station");
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
+    import std.range.primitives : empty;
+
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto r = findSplit(a, [9, 1]);
     assert(!r);
@@ -2699,7 +2852,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r2[1] == a[4 .. $]);
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -2734,6 +2887,37 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r2);
     assert(equal(r2[0], a[0 .. 4]));
     assert(equal(r2[1], a[4 .. $]));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    auto str = "sep,one,sep,two";
+
+    auto split = str.findSplitAfter(",");
+    assert(split[0] == "sep,");
+
+    split = split[1].findSplitAfter(",");
+    assert(split[0] == "one,");
+
+    split = split[1].findSplitBefore(",");
+    assert(split[0] == "sep");
+}
+
+@safe pure nothrow @nogc unittest
+{
+    auto str = "sep,one,sep,two";
+
+    auto split = str.findSplitBefore(",two");
+    assert(split[0] == "sep,one,sep");
+    assert(split[1] == ",two");
+
+    split = split[0].findSplitBefore(",sep");
+    assert(split[0] == "sep,one");
+    assert(split[1] == ",sep");
+
+    split = split[0].findSplitAfter(",");
+    assert(split[0] == "sep,");
+    assert(split[1] == "one");
 }
 
 // minCount
@@ -2862,6 +3046,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 unittest
 {
     import std.conv : text;
+    import std.typecons : tuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2960,6 +3145,190 @@ unittest
     }
 }
 
+/**
+Iterates the passed range and returns the minimal element.
+A custom mapping function can be passed to `map`.
+
+Complexity: O(n)
+    Exactly `n - 1` comparisons are needed.
+
+Params:
+    map = custom accessor for the comparison key
+    r = range from which the minimal element will be selected
+    seed = custom seed to use as initial element
+
+Returns: The minimal element of the passed-in range.
+
+See_Also:
+    $(REF min, std,algorithm,comparison)
+*/
+auto minElement(alias map = "a", Range)(Range r)
+    if (isInputRange!Range && !isInfinite!Range)
+{
+    return extremum!map(r);
+}
+
+/// ditto
+auto minElement(alias map = "a", Range, RangeElementType = ElementType!Range)
+               (Range r, RangeElementType seed)
+    if (isInputRange!Range && !isInfinite!Range &&
+        !is(CommonType!(ElementType!Range, RangeElementType) == void))
+{
+    return extremum!map(r, seed);
+}
+
+///
+@safe pure unittest
+{
+    import std.range : enumerate;
+    import std.typecons : tuple;
+
+    assert([2, 1, 4, 3].minElement == 1);
+
+    // allows to get the index of an element too
+    assert([5, 3, 7, 9].enumerate.minElement!"a.value" == tuple(1, 3));
+
+    // any custom accessor can be passed
+    assert([[0, 4], [1, 2]].minElement!"a[1]" == [1, 2]);
+
+    // can be seeded
+    int[] arr;
+    assert(arr.minElement(1) == 1);
+}
+
+@safe pure unittest
+{
+    import std.range : enumerate, iota;
+    // supports mapping
+    assert([3, 4, 5, 1, 2].enumerate.minElement!"a.value" == tuple(3, 1));
+    assert([5, 2, 4].enumerate.minElement!"a.value" == tuple(1, 2));
+
+    // forward ranges
+    assert(iota(1, 5).minElement() == 1);
+    assert(iota(2, 5).enumerate.minElement!"a.value" == tuple(0, 2));
+
+    // should work with const
+    const(int)[] immArr = [2, 1, 3];
+    assert(immArr.minElement == 1);
+
+    // should work with immutable
+    immutable(int)[] immArr2 = [2, 1, 3];
+    assert(immArr2.minElement == 1);
+
+    // with strings
+    assert(["b", "a", "c"].minElement == "a");
+
+    // with all dummy ranges
+    import std.internal.test.dummyrange;
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        assert(d.minElement == 1);
+    }
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable arr = [7, 3, 4, 2, 1, 8];
+    assert(arr.minElement == 1);
+
+    static immutable arr2d = [[1, 9], [3, 1], [4, 2]];
+    assert(arr2d.minElement!"a[1]" == arr2d[1]);
+}
+
+/**
+Iterates the passed range and returns the maximal element.
+A custom mapping function can be passed to `map`.
+
+Complexity:
+    Exactly `n - 1` comparisons are needed.
+
+Params:
+    map = custom accessor for the comparison key
+    r = range from which the maximum will be selected
+    seed = custom seed to use as initial element
+
+Returns: The maximal element of the passed-in range.
+
+See_Also:
+    $(REF max, std,algorithm,comparison)
+*/
+auto maxElement(alias map = "a", Range)(Range r)
+    if (isInputRange!Range && !isInfinite!Range &&
+        !is(CommonType!(ElementType!Range, RangeElementType) == void))
+{
+    return extremum!(map, "a > b")(r);
+}
+
+/// ditto
+auto maxElement(alias map = "a", Range, RangeElementType = ElementType!Range)
+               (Range r, RangeElementType seed)
+    if (isInputRange!Range && !isInfinite!Range)
+{
+    return extremum!(map, "a > b")(r, seed);
+}
+
+///
+@safe pure unittest
+{
+    import std.range : enumerate;
+    import std.typecons : tuple;
+    assert([2, 1, 4, 3].maxElement == 4);
+
+    // allows to get the index of an element too
+    assert([2, 1, 4, 3].enumerate.maxElement!"a.value" == tuple(2, 4));
+
+    // any custom accessor can be passed
+    assert([[0, 4], [1, 2]].maxElement!"a[1]" == [0, 4]);
+
+    // can be seeded
+    int[] arr;
+    assert(arr.minElement(1) == 1);
+}
+
+@safe pure unittest
+{
+    import std.range : enumerate, iota;
+
+    // supports mapping
+    assert([3, 4, 5, 1, 2].enumerate.maxElement!"a.value" == tuple(2, 5));
+    assert([5, 2, 4].enumerate.maxElement!"a.value" == tuple(0, 5));
+
+    // forward ranges
+    assert(iota(1, 5).maxElement() == 4);
+    assert(iota(2, 5).enumerate.maxElement!"a.value" == tuple(2, 4));
+    assert(iota(4, 14).enumerate.maxElement!"a.value" == tuple(9, 13));
+
+    // should work with const
+    const(int)[] immArr = [2, 3, 1];
+    assert(immArr.maxElement == 3);
+
+    // should work with immutable
+    immutable(int)[] immArr2 = [2, 3, 1];
+    assert(immArr2.maxElement == 3);
+
+    // with strings
+    assert(["a", "c", "b"].maxElement == "c");
+
+    // with all dummy ranges
+    import std.internal.test.dummyrange;
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        assert(d.maxElement == 10);
+    }
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable arr = [7, 3, 8, 2, 1, 4];
+    assert(arr.maxElement == 8);
+
+    static immutable arr2d = [[1, 3], [3, 9], [4, 2]];
+    assert(arr2d.maxElement!"a[1]" == arr2d[1]);
+}
+
+
 // minPos
 /**
 Computes a subrange of `range` starting at the first occurrence of `range`'s
@@ -3001,7 +3370,7 @@ Range minPos(alias pred = "a < b", Range)(Range range)
                 pos = i;
             }
         }
-        return range[pos .. $];
+        return range[pos .. range.length];
     }
     else
     {
@@ -3092,9 +3461,9 @@ range, or do nothing if there is no match.
 Params:
     pred = The predicate that determines whether elements from each respective
         range match. Defaults to equality $(D "a == b").
-    r1 = The $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to
+    r1 = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
         move forward.
-    r2 = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range)
+    r2 = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
         representing the initial segment of $(D r1) to skip over.
 
 Returns:
@@ -3172,7 +3541,7 @@ Params:
     pred = The predicate that determines whether an element from the range
         matches the given element.
 
-    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to skip
+    r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to skip
         over.
 
     e = The element to match.
@@ -3221,7 +3590,7 @@ bool skipOver(alias pred, R, E)(ref R r, E e)
 
 /**
 Checks whether the given
-$(XREF_PACK_NAMED range,primitives,isInputRange,input range) starts with (one
+$(REF_ALTTEXT input range, isInputRange, std,range,primitives) starts with (one
 of) the given needle(s) or, if no needles are given,
 if its front element fulfils predicate $(D pred).
 
@@ -3438,6 +3807,8 @@ bool startsWith(alias pred, R)(R doesThisStart)
     assert(startsWith("abc", "x", "aa", "ab") == 3);
     assert(startsWith("abc", "x", "aaa", "sab") == 0);
     assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
+
+    import std.typecons : Tuple;
     alias C = Tuple!(int, "x", int, "y");
     assert(startsWith!"a.x == b"([ C(1,1), C(1,2), C(2,2) ], [1, 1]));
     assert(startsWith!"a.x == b"([ C(1,1), C(2,1), C(2,2) ], [1, 1], [1, 2], [1, 3]) == 2);
@@ -3542,7 +3913,7 @@ bool startsWith(alias pred, R)(R doesThisStart)
 Consume all elements from $(D r) that are equal to one of the elements
 $(D es).
  */
-void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
+private void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 //if (is(typeof(binaryFun!pred(r1.front, es[0]))))
 {
   loop:
@@ -3569,13 +3940,52 @@ void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 
 /**
 Interval option specifier for $(D until) (below) and others.
+
+If set to $(D OpenRight.yes), then the interval is open to the right
+(last element is not included).
+
+Otherwise if set to $(D OpenRight.no), then the interval is closed to the right
+(last element included).
  */
-enum OpenRight
+alias OpenRight = Flag!"openRight";
+
+/**
+Lazily iterates $(D range) _until the element $(D e) for which
+$(D pred(e, sentinel)) is true.
+
+Params:
+    pred = Predicate to determine when to stop.
+    range = The $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
+    to iterate over.
+    sentinel = The element to stop at.
+    openRight = Determines whether the element for which the given predicate is
+        true should be included in the resulting range ($(D No.openRight)), or
+        not ($(D Yes.openRight)).
+
+Returns:
+    An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives) that
+    iterates over the original range's elements, but ends when the specified
+    predicate becomes true. If the original range is a
+    $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives) or
+    higher, this range will be a forward range.
+ */
+Until!(pred, Range, Sentinel)
+until(alias pred = "a == b", Range, Sentinel)
+(Range range, Sentinel sentinel, OpenRight openRight = Yes.openRight)
+if (!is(Sentinel == OpenRight))
 {
-    no, /// Interval is closed to the right (last element included)
-    yes /// Interval is open to the right (last element is not included)
+    return typeof(return)(range, sentinel, openRight);
 }
 
+/// Ditto
+Until!(pred, Range, void)
+until(alias pred, Range)
+(Range range, OpenRight openRight = Yes.openRight)
+{
+    return typeof(return)(range, openRight);
+}
+
+/// ditto
 struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 {
     private Range _input;
@@ -3587,12 +3997,13 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     //             uint, "", 6));
     //             OpenRight, "_openRight", 1,
     //             bool,  "_done", 1,
-    OpenRight _openRight;
-    bool _done;
+    private OpenRight _openRight;
+    private bool _done;
 
     static if (!is(Sentinel == void))
+        ///
         this(Range input, Sentinel sentinel,
-                OpenRight openRight = OpenRight.yes)
+                OpenRight openRight = Yes.openRight)
         {
             _input = input;
             _sentinel = sentinel;
@@ -3600,18 +4011,21 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
             _done = _input.empty || openRight && predSatisfied();
         }
     else
-        this(Range input, OpenRight openRight = OpenRight.yes)
+        ///
+        this(Range input, OpenRight openRight = Yes.openRight)
         {
             _input = input;
             _openRight = openRight;
             _done = _input.empty || openRight && predSatisfied();
         }
 
+    ///
     @property bool empty()
     {
         return _done;
     }
 
+    ///
     @property auto ref front()
     {
         assert(!empty);
@@ -3626,6 +4040,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
             return cast(bool) startsWith!pred(_input, _sentinel);
     }
 
+    ///
     void popFront()
     {
         assert(!empty);
@@ -3645,6 +4060,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     static if (isForwardRange!Range)
     {
         static if (!is(Sentinel == void))
+            ///
             @property Until save()
             {
                 Until result = this;
@@ -3655,6 +4071,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
                 return result;
             }
         else
+            ///
             @property Until save()
             {
                 Until result = this;
@@ -3666,49 +4083,13 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     }
 }
 
-/**
-Lazily iterates $(D range) _until the element $(D e) for which
-$(D pred(e, sentinel)) is true.
-
-Params:
-    pred = Predicate to determine when to stop.
-    range = The $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
-    to iterate over.
-    sentinel = The element to stop at.
-    openRight = Determines whether the element for which the given predicate is
-        true should be included in the resulting range ($(D OpenRight.no)), or
-        not ($(D OpenRight.yes)).
-
-Returns:
-    An $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range) that
-    iterates over the original range's elements, but ends when the specified
-    predicate becomes true. If the original range is a
-    $(XREF_PACK_NAMED _range,primitives,isForwardRange,forward _range) or
-    higher, this range will be a forward range.
- */
-Until!(pred, Range, Sentinel)
-until(alias pred = "a == b", Range, Sentinel)
-(Range range, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
-if (!is(Sentinel == OpenRight))
-{
-    return typeof(return)(range, sentinel, openRight);
-}
-
-/// Ditto
-Until!(pred, Range, void)
-until(alias pred, Range)
-(Range range, OpenRight openRight = OpenRight.yes)
-{
-    return typeof(return)(range, openRight);
-}
-
 ///
 @safe unittest
 {
     import std.algorithm.comparison : equal;
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
     assert(equal(a.until(7), [1, 2, 4][]));
-    assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
+    assert(equal(a.until(7, No.openRight), [1, 2, 4, 7][]));
 }
 
 @safe unittest
@@ -3718,12 +4099,12 @@ until(alias pred, Range)
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
 
     static assert(isForwardRange!(typeof(a.until(7))));
-    static assert(isForwardRange!(typeof(until!"a == 2"(a, OpenRight.no))));
+    static assert(isForwardRange!(typeof(until!"a == 2"(a, No.openRight))));
 
     assert(equal(a.until(7), [1, 2, 4][]));
     assert(equal(a.until([7, 2]), [1, 2, 4, 7][]));
-    assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
-    assert(equal(until!"a == 2"(a, OpenRight.no), [1, 2][]));
+    assert(equal(a.until(7, No.openRight), [1, 2, 4, 7][]));
+    assert(equal(until!"a == 2"(a, No.openRight), [1, 2][]));
 }
 
 unittest // bugzilla 13171
@@ -3731,7 +4112,7 @@ unittest // bugzilla 13171
     import std.algorithm.comparison : equal;
     import std.range;
     auto a = [1, 2, 3, 4];
-    assert(equal(refRange(&a).until(3, OpenRight.no), [1, 2, 3]));
+    assert(equal(refRange(&a).until(3, No.openRight), [1, 2, 3]));
     assert(a == [4]);
 }
 

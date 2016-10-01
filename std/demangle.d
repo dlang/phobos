@@ -3,12 +3,9 @@
 /**
  * Demangle D mangled names.
  *
- * Macros:
- *  WIKI = Phobos/StdDemangle
- *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright),
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright),
  *                        Thomas K$(UUML)hne, Frits van Bommel
  * Source:    $(PHOBOSSRC std/_demangle.d)
  */

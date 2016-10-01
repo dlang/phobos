@@ -11,12 +11,9 @@
  * See_Also:
  *  $(LINK2 http://www.ietf.org/rfc/rfc3986.txt, RFC 3986)<br>
  *  $(LINK2 http://en.wikipedia.org/wiki/Uniform_resource_identifier, Wikipedia)
- * Macros:
- *  WIKI = Phobos/StdUri
- *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_uri.d)
  */
 /*          Copyright Digital Mars 2000 - 2009.
@@ -105,7 +102,8 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 char* R2;
 
                 Rsize *= 2;
-                if (Rsize > 1024) {
+                if (Rsize > 1024)
+                {
                     R2 = (new char[Rsize]).ptr;
                 }
                 else
@@ -185,7 +183,8 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 char *R2;
 
                 Rsize = 2 * (Rlen + L * 3);
-                if (Rsize > 1024) {
+                if (Rsize > 1024)
+                {
                     R2 = (new char[Rsize]).ptr;
                 }
                 else
@@ -235,7 +234,8 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
 
     // Preallocate result buffer R guaranteed to be large enough for result
     auto Rsize = len;
-    if (Rsize > 1024 / dchar.sizeof) {
+    if (Rsize > 1024 / dchar.sizeof)
+    {
         R = (new dchar[Rsize]).ptr;
     }
     else
@@ -372,6 +372,46 @@ string encodeComponent(Char)(in Char[] uriComponent) if (isSomeChar!Char)
     return URI_Encode(s, URI_Alpha | URI_Digit | URI_Mark);
 }
 
+/* Encode associative array using www-form-urlencoding
+ *
+ * Params:
+ *      values = an associative array containing the values to be encoded.
+ *
+ * Returns:
+ *      A string encoded using www-form-urlencoding.
+ */
+package string urlEncode(in string[string] values)
+{
+    if (values.length == 0)
+        return "";
+
+    import std.array : Appender;
+    import std.format : formattedWrite;
+
+    Appender!string enc;
+    enc.reserve(values.length * 128);
+
+    bool first = true;
+    foreach (k, v; values)
+    {
+        if (!first)
+            enc.put('&');
+        formattedWrite(enc, "%s=%s", encodeComponent(k), encodeComponent(v));
+        first = false;
+    }
+    return enc.data;
+}
+
+@system unittest
+{
+    // @system because urlEncode -> encodeComponent -> URI_Encode
+    // URI_Encode uses alloca and pointer slicing
+    string[string] a;
+    assert(urlEncode(a) == "");
+    assert(urlEncode(["name1" : "value1"]) == "name1=value1");
+    assert(urlEncode(["name1" : "value1", "name2" : "value2"]) == "name1=value1&name2=value2");
+}
+
 /***************************
  * Does string s[] start with a URL?
  * Returns:
@@ -393,7 +433,8 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
     if (s.length <= 4)
         return -1;
 
-    if (s.length > 7 && icmp(s[0 .. 7], "http://") == 0) {
+    if (s.length > 7 && icmp(s[0 .. 7], "http://") == 0)
+    {
         i = 7;
     }
     else
@@ -432,7 +473,7 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
 }
 
 ///
-unittest
+@safe unittest
 {
     string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
     assert (uriLength(s1) == 49);
@@ -496,7 +537,7 @@ ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
 }
 
 ///
-unittest
+@safe unittest
 {
     string s1 = "my.e-mail@www.example-domain.com with garbage added";
     assert (emailLength(s1) == 32);
@@ -506,8 +547,9 @@ unittest
 }
 
 
-unittest
+@system unittest
 {
+    //@system because of encode -> URI_Encode
     debug(uri) writeln("uri.encodeURI.unittest");
 
     string source = "http://www.digitalmars.com/~fred/fred's RX.html#foo";

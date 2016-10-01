@@ -1,3 +1,4 @@
+///
 module std.experimental.logger.nulllogger;
 
 import std.experimental.logger.core;

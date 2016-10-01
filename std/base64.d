@@ -45,11 +45,11 @@
  * -----
  *
  * References:
- * $(WEB tools.ietf.org/html/rfc4648, RFC 4648 - The Base16, Base32, and Base64
+ * $(LINK2 https://tools.ietf.org/html/rfc4648, RFC 4648 - The Base16, Base32, and Base64
  * Data Encodings)
  *
  * Copyright: Masahiro Nakagawa 2010-.
- * License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Masahiro Nakagawa, Daniel Murphy (Single value Encoder and Decoder)
  * Source:    $(PHOBOSSRC std/_base64.d)
  * Macros:
@@ -62,7 +62,7 @@ import std.range.primitives;      // isInputRange, isOutputRange, isForwardRange
 import std.traits;     // isArray
 
 // Make sure module header code examples work correctly.
-unittest
+@safe unittest
 {
     ubyte[] data = [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e];
 
@@ -81,7 +81,7 @@ unittest
 alias Base64 = Base64Impl!('+', '/');
 
 ///
-unittest
+@safe unittest
 {
     ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
     assert(Base64.encode(data) == "g9cwegE/");
@@ -97,7 +97,7 @@ unittest
 alias Base64URL = Base64Impl!('-', '_');
 
 ///
-unittest
+@safe unittest
 {
     ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
     assert(Base64URL.encode(data) == "g9cwegE_");
@@ -173,7 +173,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @safe unittest
     {
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
 
@@ -260,7 +260,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @safe unittest
     {
         ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
         char[32] buffer;    // much bigger than necessary
@@ -346,7 +346,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem. See comment on 'out'.
-        version (unittest) assert(bufptr - buffer.ptr == encodeLength(srcLen), "The length of result is different from Base64");
+        version (unittest)
+            assert(
+                bufptr - buffer.ptr == encodeLength(srcLen),
+                "The length of result is different from Base64"
+            );
 
         // encode method can't assume buffer length. So, slice needed.
         return buffer[0..bufptr - buffer.ptr];
@@ -433,12 +437,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @system unittest
     {
+        // @system because encode for OutputRange is @system
         struct OutputRange
         {
             char[] result;
-            void put(const(char) ch) { result ~= ch; }
+            void put(const(char) ch) @safe { result ~= ch; }
         }
 
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
@@ -525,7 +530,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest) assert(pcount == encodeLength(srcLen), "The number of put is different from the length of Base64");
+        version (unittest)
+            assert(
+                pcount == encodeLength(srcLen),
+                "The number of put is different from the length of Base64"
+            );
 
         return pcount;
     }
@@ -551,7 +560,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @safe unittest
     {
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
         assert(Base64.encode(data) == "Gis8TV1u");
@@ -919,7 +928,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto encoded = "Gis8TV1u";
 
@@ -973,7 +982,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                                                              is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     in
     {
-        assert(buffer.length >= decodeLength(source.length), "Insufficient buffer for decoding");
+        assert(buffer.length >= realDecodeLength(source), "Insufficient buffer for decoding");
     }
     out(result)
     {
@@ -1032,7 +1041,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto encoded = "Gis8TV1u";
         ubyte[32] buffer;   // much bigger than necessary
@@ -1119,7 +1128,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest) assert((bufptr - buffer.ptr) >= (decodeLength(srcLen) - 2), "The length of result is smaller than expected length");
+        version (unittest)
+            assert(
+                (bufptr - buffer.ptr) >= (decodeLength(srcLen) - 2),
+                "The length of result is smaller than expected length"
+            );
 
         return buffer[0..bufptr - buffer.ptr];
     }
@@ -1212,7 +1225,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @system unittest
     {
         struct OutputRange
         {
@@ -1300,7 +1313,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest) assert(pcount >= (decodeLength(srcLen) - 2), "The length of result is smaller than expected length");
+        version (unittest)
+            assert(
+                pcount >= (decodeLength(srcLen) - 2),
+                "The length of result is smaller than expected length"
+            );
 
         return pcount;
     }
@@ -1326,7 +1343,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto data = "Gis8TV1u";
         assert(Base64.decode(data) == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
@@ -1718,9 +1735,10 @@ class Base64Exception : Exception
 }
 
 
-unittest
+@system unittest
 {
-    import std.algorithm : sort, equal;
+    import std.algorithm.sorting : sort;
+    import std.algorithm.comparison : equal;
     import std.conv;
     import std.file;
     import std.stdio;
@@ -1983,7 +2001,7 @@ unittest
 }
 
 // Regression control for the output range ref bug in encode.
-unittest
+@system unittest
 {
     struct InputRange
     {
@@ -2013,7 +2031,7 @@ unittest
 }
 
 // Regression control for the output range ref bug in decode.
-unittest
+@system unittest
 {
     struct InputRange
     {

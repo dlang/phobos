@@ -3,12 +3,9 @@
 /**
  * Identify the compiler used and its various features.
  *
- * Macros:
- *      WIKI = Phobos/StdCompiler
- *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright), Alex Rønne Petersen
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright), Alex Rønne Petersen
  * Source:    $(PHOBOSSRC std/_compiler.d)
  */
 /*          Copyright Digital Mars 2000 - 2011.

@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.scoped_allocator;
 
 import std.experimental.allocator.common;
@@ -24,6 +25,7 @@ struct ScopedAllocator(ParentAllocator)
     private import std.experimental.allocator.building_blocks.affix_allocator
         : AffixAllocator;
     private import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     private struct Node
     {
@@ -34,7 +36,7 @@ struct ScopedAllocator(ParentAllocator)
 
     alias Allocator = AffixAllocator!(ParentAllocator, Node);
 
-    // state {
+    // state
     /**
     If $(D ParentAllocator) is stateful, $(D parent) is a property giving access
     to an $(D AffixAllocator!ParentAllocator). Otherwise, $(D parent) is an alias for `AffixAllocator!ParentAllocator.instance`.
@@ -48,7 +50,6 @@ struct ScopedAllocator(ParentAllocator)
         alias parent = Allocator.instance;
     }
     private Node* root;
-    // }
 
     /**
     $(D ScopedAllocator) is not copyable.
@@ -88,6 +89,8 @@ struct ScopedAllocator(ParentAllocator)
         toInsert.prev = null;
         toInsert.next = root;
         toInsert.length = n;
+        assert(!root || !root.prev);
+        if (root) root.prev = toInsert;
         root = toInsert;
         return b;
     }
@@ -127,6 +130,7 @@ struct ScopedAllocator(ParentAllocator)
             n.prev = null;
             n.next = root;
             n.length = s;
+            if (root) root.prev = n;
             root = n;
         }
         return result;
@@ -190,6 +194,7 @@ struct ScopedAllocator(ParentAllocator)
 unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
     ScopedAllocator!Mallocator alloc;
     assert(alloc.empty == Ternary.yes);
     const b = alloc.allocate(10);
@@ -201,4 +206,16 @@ unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => ScopedAllocator!GCAllocator());
+}
+
+unittest // https://issues.dlang.org/show_bug.cgi?id=16046
+{
+    import std.exception;
+    import std.experimental.allocator;
+    import std.experimental.allocator.mallocator;
+    ScopedAllocator!Mallocator alloc;
+    auto foo = alloc.make!int(1).enforce;
+    auto bar = alloc.make!int(2).enforce;
+    alloc.dispose(foo);
+    alloc.dispose(bar); // segfault here
 }

@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.allocator_list;
 
 import std.experimental.allocator.common;
@@ -64,7 +65,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
 {
     import std.traits : hasMember;
     import std.conv : emplace;
-    import std.algorithm : min, move;
+    import std.typecons : Ternary;
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
 
@@ -102,7 +103,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     // State is stored in an array, but it has a list threaded through it by
     // means of "nextIdx".
 
-    // state {
+    // state
     static if (!ouroboros)
     {
         static if (stateSize!BookkeepingAllocator) BookkeepingAllocator bkalloc;
@@ -114,7 +115,6 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
     private Node[] allocators;
     private Node* root;
-    // }
 
     static if (stateSize!Factory)
     {
@@ -173,8 +173,8 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
                 *p = n.next;
                 n.next = root;
                 root = n;
-                return result;
             }
+            return result;
         }
         // Can't allocate from the current pool. Check if we just added a new
         // allocator, in that case it won't do any good to add yet another.
@@ -228,10 +228,9 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         auto toFree = allocators;
 
-        // Change state {
+        // Change state
         root = newAllocators.ptr + (root - allocators.ptr);
         allocators = newAllocators;
-        // }
 
         // Free the olden buffer
         static if (ouroboros)
@@ -381,11 +380,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         && hasMember!(Allocator, "owns"))
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr)
-        {
-            b = allocate(delta);
-            return b.length == delta;
-        }
+        if (!b.ptr) return delta == 0;
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
             if (n.owns(b) == Ternary.yes) return n.expand(b, delta);
@@ -539,7 +534,7 @@ template AllocatorList(alias factoryFunction,
 ///
 version(Posix) unittest
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
     import std.experimental.allocator.building_blocks.segregator : Segregator;
@@ -582,7 +577,7 @@ version(Posix) unittest
 unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
     AllocatorList!((n) => Region!GCAllocator(new void[max(n, 1024 * 4096)]),
         NullAllocator) a;
@@ -596,7 +591,7 @@ unittest
 unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
     AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
@@ -608,8 +603,9 @@ unittest
 
 unittest
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
+    import std.typecons : Ternary;
     AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null);
@@ -618,4 +614,25 @@ unittest
     a.allocate(1024 * 4095);
     a.deallocateAll();
     assert(a.empty == Ternary.yes);
+}
+
+unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    enum bs = GCAllocator.alignment;
+    AllocatorList!((n) => Region!GCAllocator(256 * bs)) a;
+    auto b1 = a.allocate(192 * bs);
+    assert(b1.length == 192 * bs);
+    assert(a.allocators.length == 1);
+    auto b2 = a.allocate(64 * bs);
+    assert(b2.length == 64 * bs);
+    assert(a.allocators.length == 1);
+    auto b3 = a.allocate(192 * bs);
+    assert(b3.length == 192 * bs);
+    assert(a.allocators.length == 2);
+    a.deallocate(b1);
+    b1 = a.allocate(64 * bs);
+    assert(b1.length == 64 * bs);
+    assert(a.allocators.length == 2);
+    a.deallocateAll();
 }

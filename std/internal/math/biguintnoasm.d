@@ -24,8 +24,8 @@ public:
 alias BigDigit = uint; // A Bignum is an array of BigDigits.
 
     // Limits for when to switch between multiplication algorithms.
-enum : int { KARATSUBALIMIT = 10 }; // Minimum value for which Karatsuba is worthwhile.
-enum : int { KARATSUBASQUARELIMIT=12 }; // Minimum value for which square Karatsuba is worthwhile
+enum int KARATSUBALIMIT = 10; // Minimum value for which Karatsuba is worthwhile.
+enum int KARATSUBASQUARELIMIT = 12; // Minimum value for which square Karatsuba is worthwhile
 
 
 /** Multi-byte addition or subtraction
@@ -159,7 +159,7 @@ void multibyteShr(uint [] dest, const(uint) [] src, uint numbits)
     pure @nogc @safe
 {
     ulong c = 0;
-    for(ptrdiff_t i = dest.length; i!=0; --i)
+    for (ptrdiff_t i = dest.length; i!=0; --i)
     {
         c += (src[i-1] >>numbits) + (cast(ulong)(src[i-1]) << (64 - numbits));
         dest[i-1] = cast(uint)c;
@@ -195,7 +195,7 @@ uint multibyteMul(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
 {
     assert(dest.length == src.length);
     ulong c = carry;
-    for(size_t i = 0; i < src.length; ++i)
+    for (size_t i = 0; i < src.length; ++i)
     {
         c += cast(ulong)(src[i]) * multiplier;
         dest[i] = cast(uint)c;
@@ -222,9 +222,9 @@ uint multibyteMulAdd(char op)(uint [] dest, const(uint)[] src,
 {
     assert(dest.length == src.length);
     ulong c = carry;
-    for(size_t i = 0; i < src.length; ++i)
+    for (size_t i = 0; i < src.length; ++i)
     {
-        static if(op=='+')
+        static if (op=='+')
         {
             c += cast(ulong)(multiplier) * src[i]  + dest[i];
             dest[i] = cast(uint)c;
@@ -262,7 +262,8 @@ unittest
    It is defined in this way to allow cache-efficient multiplication.
    This function is equivalent to:
     ----
-    for (size_t i = 0; i< right.length; ++i) {
+    for (size_t i = 0; i< right.length; ++i)
+    {
         dest[left.length + i] = multibyteMulAdd(dest[i..left.length+i],
                 left, right[i], 0);
     }
@@ -285,7 +286,7 @@ uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow)
     pure @nogc @safe
 {
     ulong c = cast(ulong)overflow;
-    for(ptrdiff_t i = dest.length-1; i>= 0; --i)
+    for (ptrdiff_t i = dest.length-1; i>= 0; --i)
     {
         c = (c<<32) + cast(ulong)(dest[i]);
         uint q = cast(uint)(c/divisor);
@@ -314,7 +315,7 @@ void multibyteAddDiagonalSquares(uint[] dest, const(uint)[] src)
     pure @nogc @safe
 {
     ulong c = 0;
-    for(size_t i = 0; i < src.length; ++i)
+    for (size_t i = 0; i < src.length; ++i)
     {
         // At this point, c is 0 or 1, since FFFF*FFFF+FFFF_FFFF = 1_0000_0000.
         c += cast(ulong)(src[i]) * src[i] + dest[2*i];

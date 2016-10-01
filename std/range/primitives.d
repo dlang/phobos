@@ -1,5 +1,5 @@
 /**
-This module is a submodule of $(LINK2 std_range.html, std.range).
+This module is a submodule of $(MREF std, range).
 
 It provides basic range functionality by defining several templates for testing
 whether a given object is a _range, and what kind of _range it is:
@@ -101,17 +101,11 @@ $(BOOKTABLE ,
 
 Source: $(PHOBOSSRC std/range/_primitives.d)
 
-Macros:
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-WIKI = Phobos/StdRange
-
-Copyright: Copyright by authors 2008-.
-
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-
-Authors: $(WEB erdani.com, Andrei Alexandrescu), David Simcha,
+Authors: $(HTTP erdani.com, Andrei Alexandrescu), David Simcha,
 and Jonathan M Davis. Credit for some of the ideas in building this module goes
-to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
+to $(HTTP fantascienza.net/leonardo/so/, Leonardo Maffi).
 */
 module std.range.primitives;
 
@@ -129,16 +123,33 @@ r.popFront();     // can invoke popFront()
 auto h = r.front; // can get the front of the range of non-void type
 ----
 
-The semantics of an input range (not checkable during compilation) are
-assumed to be the following ($(D r) is an object of type $(D R)):
+The following are rules of input ranges are assumed to hold true in all
+Phobos code. These rules are not checkable at compile-time, so not conforming
+to these rules when writing ranges or range based code will result in
+undefined behavior.
 
-$(UL $(LI $(D r.empty) returns $(D false) iff there is more data
-available in the range.)  $(LI $(D r.front) returns the current
-element in the range. It may return by value or by reference. Calling
-$(D r.front) is allowed only if calling $(D r.empty) has, or would
-have, returned $(D false).) $(LI $(D r.popFront) advances to the next
-element in the range. Calling $(D r.popFront) is allowed only if
-calling $(D r.empty) has, or would have, returned $(D false).))
+$(UL
+    $(LI `r.empty` returns `false` if and only if there is more data
+    available in the range.)
+    $(LI `r.empty` evaluated multiple times, without calling
+    `r.popFront`, or otherwise mutating the range object or the
+    underlying data, yields the same result for every evaluation.)
+    $(LI `r.front` returns the current element in the range.
+    It may return by value or by reference.)
+    $(LI `r.front` can be legally evaluated if and only if evaluating
+    `r.empty` has, or would have, equaled `false`.)
+    $(LI `r.front` evaluated multiple times, without calling
+    `r.popFront`, or otherwise mutating the range object or the
+    underlying data, yields the same result for every evaluation.)
+    $(LI `r.popFront` advances to the next element in the range.)
+    $(LI `r.popFront` can be called if and only if evaluating `r.empty`
+    has, or would have, equaled `false`.)
+)
+
+Also, note that Phobos code assumes that the primitives `r.front` and
+`r.empty` are $(BIGOH 1) time complexity wise or "cheap" in terms of
+running time. $(BIGOH) statements in the documentation of range functions
+are made with this assumption.
 
 Params:
     R = type to be tested
@@ -188,7 +199,7 @@ guarantees that no more than a single element will be placed.
 +/
 private void doPut(R, E)(ref R r, auto ref E e)
 {
-    static if(is(PointerTarget!R == struct))
+    static if (is(PointerTarget!R == struct))
         enum usingPut = hasMember!(PointerTarget!R, "put");
     else
         enum usingPut = hasMember!(R, "put");
@@ -318,10 +329,11 @@ void put(R, E)(ref R r, E e)
         //Special optimization: If E is a narrow string, and r accepts characters no-wider than the string's
         //Then simply feed the characters 1 by 1.
         static if (isNarrowString!E && (
-            (is(E : const  char[]) && is(typeof(doPut(r,  char.max))) && !is(typeof(doPut(r, dchar.max))) && !is(typeof(doPut(r, wchar.max)))) ||
+            (is(E : const  char[]) && is(typeof(doPut(r,  char.max))) && !is(typeof(doPut(r, dchar.max))) &&
+                !is(typeof(doPut(r, wchar.max)))) ||
             (is(E : const wchar[]) && is(typeof(doPut(r, wchar.max))) && !is(typeof(doPut(r, dchar.max)))) ) )
         {
-            foreach(c; e)
+            foreach (c; e)
                 doPut(r, c);
         }
         else
@@ -533,7 +545,7 @@ unittest
         string result;
         void put(const(C)[][] ss)
         {
-            foreach(s; ss)
+            foreach (s; ss)
                 result ~= to!string(s);
         }
     }
@@ -581,7 +593,7 @@ unittest
     {
         char c;
         enum empty = false;
-        void popFront(){};
+        void popFront(){}
         ref char front() return @property
         {
             return c;
@@ -646,7 +658,7 @@ unittest
     }
     void foo()
     {
-        foreach(C; AliasSeq!(char, wchar, dchar))
+        foreach (C; AliasSeq!(char, wchar, dchar))
         {
             formattedWrite((C c){},        "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
             formattedWrite((const(C)[]){}, "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
@@ -675,7 +687,7 @@ are:
 2: if $(D E) is a non $(empty) $(D InputRange), then placing $(D e) is
 guaranteed to not overflow the range.
  +/
-package template isNativeOutputRange(R, E)
+package(std) template isNativeOutputRange(R, E)
 {
     enum bool isNativeOutputRange = is(typeof(
     (inout int = 0)
@@ -910,11 +922,11 @@ template isRandomAccessRange(R)
         static assert(!isNarrowString!R);
         static assert(hasLength!R || isInfinite!R);
 
-        static if(is(typeof(r[$])))
+        static if (is(typeof(r[$])))
         {
             static assert(is(typeof(f) == typeof(r[$])));
 
-            static if(!isInfinite!R)
+            static if (!isInfinite!R)
                 static assert(is(typeof(f) == typeof(r[$ - 1])));
         }
     }));
@@ -937,13 +949,13 @@ unittest
     static assert(hasLength!R || isInfinite!R); // must have length or be infinite
 
     // $ must work as it does with arrays if opIndex works with $
-    static if(is(typeof(r[$])))
+    static if (is(typeof(r[$])))
     {
         static assert(is(typeof(f) == typeof(r[$])));
 
         // $ - 1 doesn't make sense with infinite ranges but needs to work
         // with finite ones.
-        static if(!isInfinite!R)
+        static if (!isInfinite!R)
             static assert(is(typeof(f) == typeof(r[$ - 1])));
     }
 }
@@ -1066,7 +1078,7 @@ template hasMobileElements(R)
 ///
 @safe unittest
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.range : iota, repeat;
 
     static struct HasPostblit
@@ -1253,7 +1265,7 @@ static if (isRandomAccessRange!R) swap(r[], r.front);
  */
 template hasSwappableElements(R)
 {
-    import std.algorithm : swap;
+    import std.algorithm.mutation : swap;
     enum bool hasSwappableElements = isInputRange!R && is(typeof(
     (inout int = 0)
     {
@@ -1462,7 +1474,7 @@ The following code must compile for $(D hasSlicing) to be $(D true):
 ----
 R r = void;
 
-static if(isInfinite!R)
+static if (isInfinite!R)
     typeof(take(r, 1)) s = r[1 .. 2];
 else
 {
@@ -1472,13 +1484,13 @@ else
 
 s = r[1 .. 2];
 
-static if(is(typeof(r[0 .. $])))
+static if (is(typeof(r[0 .. $])))
 {
     static assert(is(typeof(r[0 .. $]) == R));
     R t = r[0 .. $];
     t = r[0 .. $];
 
-    static if(!isInfinite!R)
+    static if (!isInfinite!R)
     {
         static assert(is(typeof(r[0 .. $ - 1]) == R));
         R u = r[0 .. $ - 1];
@@ -1497,7 +1509,7 @@ template hasSlicing(R)
     {
         R r = R.init;
 
-        static if(isInfinite!R)
+        static if (isInfinite!R)
         {
             typeof(r[1 .. 1]) s = r[1 .. 2];
         }
@@ -1509,13 +1521,13 @@ template hasSlicing(R)
 
         s = r[1 .. 2];
 
-        static if(is(typeof(r[0 .. $])))
+        static if (is(typeof(r[0 .. $])))
         {
             static assert(is(typeof(r[0 .. $]) == R));
             R t = r[0 .. $];
             t = r[0 .. $];
 
-            static if(!isInfinite!R)
+            static if (!isInfinite!R)
             {
                 static assert(is(typeof(r[0 .. $ - 1]) == R));
                 R u = r[0 .. $ - 1];
@@ -1625,7 +1637,7 @@ auto walkLength(Range)(Range range, const size_t upTo)
 
 @safe unittest
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
     import std.range : recurrence, take;
 
     //hasLength Range
@@ -1748,7 +1760,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : iota;
     auto LL = iota(1L, 7L);
     auto r = popFrontN(LL, 2);
@@ -1769,7 +1781,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : iota;
     auto LL = iota(1L, 7L);
     auto r = popBackN(LL, 2);
@@ -1829,7 +1841,8 @@ void popBackExactly(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : filterBidirectional, equal;
+    import std.algorithm.iteration : filterBidirectional;
+    import std.algorithm.comparison : equal;
 
     auto a = [1, 2, 3];
     a.popFrontExactly(1);
@@ -1857,14 +1870,21 @@ void popBackExactly(Range)(ref Range r, size_t n)
 */
 ElementType!R moveFront(R)(R r)
 {
-    static if (is(typeof(&r.moveFront))) {
+    static if (is(typeof(&r.moveFront)))
+    {
         return r.moveFront();
-    } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    {
         return r.front;
-    } else static if (is(typeof(&(r.front())) == ElementType!R*)) {
-        import std.algorithm : move;
+    }
+    else static if (is(typeof(&(r.front())) == ElementType!R*))
+    {
+        import std.algorithm.mutation : move;
         return move(r.front);
-    } else {
+    }
+    else
+    {
         static assert(0,
                 "Cannot move front of a range with a postblit and an rvalue front.");
     }
@@ -1875,16 +1895,18 @@ ElementType!R moveFront(R)(R r)
 {
     auto a = [ 1, 2, 3 ];
     assert(moveFront(a) == 1);
+    assert(a.length == 3);
 
     // define a perfunctory input range
     struct InputRange
     {
-        @property bool empty() { return false; }
-        @property int front() { return 42; }
+        enum bool empty = false;
+        enum int front = 7;
         void popFront() {}
         int moveFront() { return 43; }
     }
     InputRange r;
+    // calls r.moveFront
     assert(moveFront(r) == 43);
 }
 
@@ -1906,14 +1928,21 @@ ElementType!R moveFront(R)(R r)
 */
 ElementType!R moveBack(R)(R r)
 {
-    static if (is(typeof(&r.moveBack))) {
+    static if (is(typeof(&r.moveBack)))
+    {
         return r.moveBack();
-    } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    {
         return r.back;
-    } else static if (is(typeof(&(r.back())) == ElementType!R*)) {
-        import std.algorithm : move;
+    }
+    else static if (is(typeof(&(r.back())) == ElementType!R*))
+    {
+        import std.algorithm.mutation : move;
         return move(r.back);
-    } else {
+    }
+    else
+    {
         static assert(0,
                 "Cannot move back of a range with a postblit and an rvalue back.");
     }
@@ -1943,16 +1972,23 @@ ElementType!R moveBack(R)(R r)
    r.front) in a destroyable state that does not allocate any resources
    (usually equal to its $(D .init) value).
 */
-ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
+ElementType!R moveAt(R)(R r, size_t i)
 {
-    static if (is(typeof(&r.moveAt))) {
+    static if (is(typeof(&r.moveAt)))
+    {
         return r.moveAt(i);
-    } else static if (!hasElaborateCopyConstructor!(ElementType!(R))) {
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!(R)))
+    {
         return r[i];
-    } else static if (is(typeof(&r[i]) == ElementType!R*)) {
-        import std.algorithm : move;
+    }
+    else static if (is(typeof(&r[i]) == ElementType!R*))
+    {
+        import std.algorithm.mutation : move;
         return move(r[i]);
-    } else {
+    }
+    else
+    {
         static assert(0,
                 "Cannot move element of a range with a postblit and rvalue elements.");
     }
@@ -1962,7 +1998,7 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
 @safe unittest
 {
     auto a = [1,2,3,4];
-    foreach(idx, it; a)
+    foreach (idx, it; a)
     {
         assert(it == moveAt(a, idx));
     }
@@ -1972,15 +2008,18 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
 {
     import std.internal.test.dummyrange;
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         auto d = DummyType.init;
         assert(moveFront(d) == 1);
 
-        static if (isBidirectionalRange!DummyType) {
+        static if (isBidirectionalRange!DummyType)
+        {
             assert(moveBack(d) == 10);
         }
 
-        static if (isRandomAccessRange!DummyType) {
+        static if (isRandomAccessRange!DummyType)
+        {
             assert(moveAt(d, 2) == 3);
         }
     }
@@ -1992,7 +2031,6 @@ arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.empty) is
 equivalent to $(D empty(array)).
  */
-
 @property bool empty(T)(in T[] a) @safe pure nothrow @nogc
 {
     return !a.length;
@@ -2013,7 +2051,6 @@ the first argument using the dot notation, $(D array.save) is
 equivalent to $(D save(array)). The function does not duplicate the
 content of the array, it simply returns its argument.
  */
-
 @property T[] save(T)(T[] a) @safe pure nothrow @nogc
 {
     return a;
@@ -2035,7 +2072,6 @@ equivalent to $(D popFront(array)). For $(GLOSSARY narrow strings),
 $(D popFront) automatically advances to the next $(GLOSSARY code
 point).
 */
-
 void popFront(T)(ref T[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
@@ -2058,36 +2094,44 @@ version(unittest)
     static assert(!is(typeof({          void[] a; popFront(a); })));
 }
 
-// Specialization for narrow strings. The necessity of
+/// ditto
 void popFront(C)(ref C[] str) @trusted pure nothrow
 if (isNarrowString!(C[]))
 {
+    import std.algorithm.comparison : min;
+
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 
-    static if(is(Unqual!C == char))
+    static if (is(Unqual!C == char))
     {
         immutable c = str[0];
-        if(c < 0x80)
+        if (c < 0x80)
         {
             //ptr is used to avoid unnnecessary bounds checking.
+            str = str.ptr[1 .. str.length];
+        }
+        else if (c == 0xff)
+        {
+            // bsr undefined for 0
             str = str.ptr[1 .. str.length];
         }
         else
         {
              import core.bitop : bsr;
              auto msbs = 7 - bsr(~c);
-             if((msbs < 2) | (msbs > 6))
+             if ((msbs < 2) | (msbs > 6))
              {
                  //Invalid UTF-8
                  msbs = 1;
              }
-             str = str[msbs .. $];
+             str = str.ptr[min(msbs, str.length) .. str.length];
         }
     }
-    else static if(is(Unqual!C == wchar))
+    else static if (is(Unqual!C == wchar))
     {
         immutable u = str[0];
-        str = str[1 + (u >= 0xD800 && u <= 0xDBFF) .. $];
+        immutable seqLen = 1 + (u >= 0xD800 && u <= 0xDBFF);
+        str = str.ptr[min(seqLen, str.length) .. str.length];
     }
     else static assert(0, "Bad template constraint.");
 }
@@ -2096,14 +2140,14 @@ if (isNarrowString!(C[]))
 {
     import std.meta : AliasSeq;
 
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         S s = "\xC2\xA9hello";
         s.popFront();
         assert(s == "hello");
 
         S str = "hello\U00010143\u0100\U00010143";
-        foreach(dchar c; ['h', 'e', 'l', 'l', 'o', '\U00010143', '\u0100', '\U00010143'])
+        foreach (dchar c; ['h', 'e', 'l', 'l', 'o', '\U00010143', '\u0100', '\U00010143'])
         {
             assert(str.front == c);
             str.popFront();
@@ -2116,7 +2160,7 @@ if (isNarrowString!(C[]))
 
     C[] _eatString(C)(C[] str)
     {
-        while(!str.empty)
+        while (!str.empty)
             str.popFront();
 
         return str;
@@ -2127,6 +2171,26 @@ if (isNarrowString!(C[]))
     static assert(checkCTFEW.empty);
 }
 
+unittest // issue 16090
+{
+    string s = "\u00E4";
+    assert(s.length == 2);
+    s = s[0 .. 1];
+    assert(s.length == 1);
+    s.popFront;
+    assert(s.empty);
+}
+
+unittest
+{
+    wstring s = "\U00010000";
+    assert(s.length == 2);
+    s = s[0 .. 1];
+    assert(s.length == 1);
+    s.popFront;
+    assert(s.empty);
+}
+
 /**
 Implements the range interface primitive $(D popBack) for built-in
 arrays. Due to the fact that nonmember functions can be called with
@@ -2134,7 +2198,6 @@ the first argument using the dot notation, $(D array.popBack) is
 equivalent to $(D popBack(array)). For $(GLOSSARY narrow strings), $(D
 popFront) automatically eliminates the last $(GLOSSARY code point).
 */
-
 void popBack(T)(ref T[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
@@ -2157,11 +2220,11 @@ version(unittest)
     static assert(!is(typeof({          void[] a; popBack(a); })));
 }
 
-// Specialization for arrays of char
+/// ditto
 void popBack(T)(ref T[] a) @safe pure
 if (isNarrowString!(T[]))
 {
-    import std.utf: strideBack;
+    import std.utf : strideBack;
     assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
     a = a[0 .. $ - strideBack(a, $)];
 }
@@ -2170,7 +2233,7 @@ if (isNarrowString!(T[]))
 {
     import std.meta : AliasSeq;
 
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    foreach (S; AliasSeq!(string, wstring, dstring))
     {
         S s = "hello\xE2\x89\xA0";
         s.popBack();
@@ -2182,7 +2245,7 @@ if (isNarrowString!(T[]))
         assert(s3 == "");
 
         S str = "\U00010143\u0100\U00010143hello";
-        foreach(dchar ch; ['o', 'l', 'l', 'e', 'h', '\U00010143', '\u0100', '\U00010143'])
+        foreach (dchar ch; ['o', 'l', 'l', 'e', 'h', '\U00010143', '\u0100', '\U00010143'])
         {
             assert(str.back == ch);
             str.popBack();
@@ -2199,7 +2262,7 @@ Implements the range interface primitive $(D front) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.front) is
 equivalent to $(D front(array)). For $(GLOSSARY narrow strings), $(D
-front) automatically returns the first $(GLOSSARY code point) as a $(D
+front) automatically returns the first $(GLOSSARY code point) as _a $(D
 dchar).
 */
 @property ref T front(T)(T[] a) @safe pure nothrow @nogc
@@ -2230,6 +2293,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     assert(c.front == 1);
 }
 
+/// ditto
 @property dchar front(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
     import std.utf : decode;
@@ -2243,11 +2307,11 @@ Implements the range interface primitive $(D back) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.back) is
 equivalent to $(D back(array)). For $(GLOSSARY narrow strings), $(D
-back) automatically returns the last $(GLOSSARY code point) as a $(D
+back) automatically returns the last $(GLOSSARY code point) as _a $(D
 dchar).
 */
 @property ref T back(T)(T[] a) @safe pure nothrow @nogc
-if (!isNarrowString!(T[]))
+if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     return a[$ - 1];
@@ -2271,6 +2335,7 @@ if (!isNarrowString!(T[]))
     assert(c.back == 3);
 }
 
+/// ditto
 // Specialization for strings
 @property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {

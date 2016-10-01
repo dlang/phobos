@@ -33,22 +33,16 @@
     }
     --------------------
 
-    Macros:
-        WIKI = Phobos/StdException
-
     Copyright: Copyright Andrei Alexandrescu 2008-, Jonathan M Davis 2011-.
-    License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Authors:   $(WEB erdani.org, Andrei Alexandrescu) and Jonathan M Davis
+    License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
+    Authors:   $(HTTP erdani.org, Andrei Alexandrescu) and Jonathan M Davis
     Source:    $(PHOBOSSRC std/_exception.d)
 
  +/
 module std.exception;
 
-import std.range;
+import std.range.primitives;
 import std.traits;
-
-import core.stdc.errno;
-import core.stdc.string;
 
 /++
     Asserts that the given expression does $(I not) throw the given type
@@ -93,7 +87,7 @@ auto assertNotThrown(T : Throwable = Exception, E)
     }
 }
 ///
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -107,7 +101,7 @@ unittest
                enforce!StringException(false, "Error!"))) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
 }
-unittest
+@system unittest
 {
     import core.exception : AssertError;
     import std.string;
@@ -124,7 +118,7 @@ unittest
            `assertNotThrown failed: StringException was thrown.`);
 }
 
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -236,7 +230,7 @@ void assertThrown(T : Throwable = Exception, E)
                           file, line);
 }
 ///
-unittest
+@system unittest
 {
     import core.exception : AssertError;
     import std.string;
@@ -251,7 +245,7 @@ unittest
            `assertThrown failed: No StringException was thrown.`);
 }
 
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -269,7 +263,7 @@ unittest
         assertThrown!Exception(throwEx(new Exception("It's an Exception")),
                                "It's a message");
     }
-    catch(AssertError) assert(0);
+    catch (AssertError) assert(0);
 
     try
     {
@@ -291,7 +285,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!Exception(nothrowEx());
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -301,7 +295,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!Exception(nothrowEx(), "It's a message");
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -311,7 +305,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!AssertError(nothrowEx());
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -321,7 +315,7 @@ unittest
         bool thrown = false;
         try
             assertThrown!AssertError(nothrowEx(), "It's a message");
-        catch(AssertError)
+        catch (AssertError)
             thrown = true;
 
         assert(thrown);
@@ -357,20 +351,10 @@ unittest
     enforce(line.length, "Expected a non-empty line.");
     --------------------
  +/
-T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
-    if (is(typeof({ if (!value) {} })))
+T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
+    string file = __FILE__, size_t line = __LINE__) if (is(typeof({ if (!value) {} })))
 {
     if (!value) bailOut!E(file, line, msg);
-    return value;
-}
-
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-deprecated("Use the overload of enforce that takes file and line as function arguments.")
-T enforce(T, string file, size_t line = __LINE__)
-    (T value, lazy const(char)[] msg = null)
-    if (is(typeof({ if (!value) {} })))
-{
-    if (!value) bailOut(file, line, msg);
     return value;
 }
 
@@ -402,7 +386,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 {
     static if (is(typeof(new E(string.init, string.init, size_t.init))))
     {
-        throw new E(msg.ptr ? msg.idup : "Enforcement failed", file, line);
+        throw new E(msg ? msg.idup : "Enforcement failed", file, line);
     }
     else static if (is(typeof(new E(string.init, size_t.init))))
     {
@@ -415,7 +399,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     }
 }
 
-unittest
+@safe unittest
 {
     assert (enforce(123) == 123);
 
@@ -432,7 +416,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // Issue 10510
     extern(C) void cFoo() { }
@@ -440,7 +424,7 @@ unittest
 }
 
 // purity and safety inference test
-unittest
+@system unittest
 {
     import std.meta : AliasSeq;
 
@@ -475,7 +459,7 @@ unittest
 }
 
 // Test for bugzilla 8637
-unittest
+@system unittest
 {
     struct S
     {
@@ -508,24 +492,7 @@ unittest
     enforce!E2(s);
 }
 
-deprecated unittest
-{
-    struct S
-    {
-        static int g;
-        ~this() {}  // impure & unsafe destructor
-        bool opCast(T:bool)() {
-            int* p = cast(int*)0;   // unsafe operation
-            int n = g;              // impure operation
-            return true;
-        }
-    }
-    S s;
-
-    enforce!(S, __FILE__, __LINE__)(s, "");
-}
-
-unittest
+@safe unittest
 {
     // Issue 14685
 
@@ -559,7 +526,7 @@ T enforce(T)(T value, lazy Throwable ex)
     return value;
 }
 
-unittest
+@safe unittest
 {
     assertNotThrown(enforce(true, new Exception("this should not be thrown")));
     assertThrown(enforce(false, new Exception("this should be thrown")));
@@ -631,7 +598,7 @@ template enforceEx(E : Throwable)
     }
 }
 
-unittest
+@system unittest
 {
     import std.array : empty;
     import core.exception : OutOfMemoryError;
@@ -674,7 +641,7 @@ unittest
     static assert(!is(typeof(enforceEx!int(true))));
 }
 
-unittest
+@safe unittest
 {
     alias enf = enforceEx!Exception;
     assertNotThrown(enf(true));
@@ -712,7 +679,7 @@ T collectException(T = Exception, E)(lazy E expression, ref E result)
     return null;
 }
 ///
-unittest
+@system unittest
 {
     int b;
     int foo() { throw new Exception("blah"); }
@@ -752,7 +719,7 @@ T collectException(T : Throwable = Exception, E)(lazy E expression)
     return null;
 }
 
-unittest
+@safe unittest
 {
     int foo() { throw new Exception("blah"); }
     assert(collectException(foo()));
@@ -786,11 +753,11 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
 
         return cast(string)null;
     }
-    catch(T e)
+    catch (T e)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
 }
 ///
-unittest
+@safe unittest
 {
     void throwFunc() { throw new Exception("My Message."); }
     assert(collectExceptionMsg(throwFunc()) == "My Message.");
@@ -894,7 +861,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * For more on infering uniqueness see the $(B unique) and
  * $(B lent) keywords in the
- * $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
+ * $(HTTP archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
  * language.
  *
  * The downside of using $(D assumeUnique)'s
@@ -916,8 +883,9 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     return result;
 }
 
-unittest
+@system unittest
 {
+    // @system due to assumeUnique
     int[] arr = new int[1];
     auto arr1 = assumeUnique(arr);
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
@@ -931,7 +899,7 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
 }
 
 // @@@BUG@@@
-version(none) unittest
+version(none) @system unittest
 {
     int[string] arr = ["a":1];
     auto arr1 = assumeUnique(arr);
@@ -973,7 +941,7 @@ T assumeWontThrow(T)(lazy T expr,
     {
         return expr;
     }
-    catch(Exception e)
+    catch (Exception e)
     {
         import std.range.primitives : empty;
         immutable tail = msg.empty ? "." : ": " ~ msg;
@@ -983,7 +951,7 @@ T assumeWontThrow(T)(lazy T expr,
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math : sqrt;
 
@@ -1008,7 +976,7 @@ unittest
     assert(computeLength(3, 4) == 5);
 }
 
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -1146,7 +1114,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 }
 
 /// Pointers
-unittest
+@system unittest
 {
     int  i = 0;
     int* p = null;
@@ -1156,7 +1124,7 @@ unittest
 }
 
 /// Structs and Unions
-unittest
+@system unittest
 {
     struct S
     {
@@ -1177,7 +1145,7 @@ unittest
 }
 
 /// Arrays (dynamic and static)
-unittest
+@system unittest
 {
     int i;
     int[]  slice = [0, 1, 2, 3, 4];
@@ -1209,7 +1177,7 @@ unittest
 }
 
 /// Classes
-unittest
+@system unittest
 {
     class C
     {
@@ -1240,7 +1208,7 @@ unittest
     assert(b.doesPointTo(*aLoc)); // b points to where a is pointing
 }
 
-unittest
+@system unittest
 {
     struct S1 { int a; S1 * b; }
     S1 a1;
@@ -1290,7 +1258,7 @@ unittest
     assert(!doesPointTo(darr[0..3], darr[3]));
 }
 
-unittest
+@system unittest
 {
     //tests with static arrays
     //Static arrays themselves are just objects, and don't really *point* to anything.
@@ -1339,7 +1307,7 @@ unittest
 }
 
 
-unittest //Unions
+@system unittest //Unions
 {
     int i;
     union U //Named union
@@ -1378,7 +1346,7 @@ unittest //Unions
     assert( mayPointTo(s, i));
 }
 
-unittest //Classes
+@system unittest //Classes
 {
     int i;
     static class A
@@ -1390,7 +1358,7 @@ unittest //Classes
     a.p = &i;
     assert(!doesPointTo(a, i)); //a does not point to i
 }
-unittest //alias this test
+@safe unittest //alias this test
 {
     static int i;
     static int j;
@@ -1407,7 +1375,7 @@ unittest //alias this test
     assert( doesPointTo(cast(int*)s, i));
     assert(!doesPointTo(cast(int*)s, j));
 }
-unittest //more alias this opCast
+@safe unittest //more alias this opCast
 {
     void* p;
     class A
@@ -1422,10 +1390,6 @@ unittest //more alias this opCast
     assert(!doesPointTo(A.init, p));
     assert(!mayPointTo(A.init, p));
 }
-
-// Explicitly undocumented. It will be removed in May 2016. @@@DEPRECATED_2016-05@@@
-deprecated ("pointsTo is ambiguous. Please use either of doesPointTo or mayPointTo")
-alias pointsTo = doesPointTo;
 
 /+
 Returns true if the field at index $(D i) in ($D T) shares its address with another field.
@@ -1443,7 +1407,7 @@ private bool isUnionAliasedImpl(T)(size_t offset)
     return count >= 2;
 }
 //
-unittest
+@safe unittest
 {
     static struct S
     {
@@ -1490,15 +1454,20 @@ class ErrnoException : Exception
     private uint _errno;
     this(string msg, string file = null, size_t line = 0) @trusted
     {
-        _errno = .errno;
+        import core.stdc.errno : errno;
+        import core.stdc.string : strlen;
+
+        _errno = errno;
         version (CRuntime_Glibc)
         {
+            import core.stdc.string : strerror_r;
             char[1024] buf = void;
-            auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
+            auto s = strerror_r(errno, buf.ptr, buf.length);
         }
         else
         {
-            auto s = core.stdc.string.strerror(errno);
+            import core.stdc.string : strerror;
+            auto s = strerror(errno);
         }
         super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
     }
@@ -1572,12 +1541,17 @@ class ErrnoException : Exception
 CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
+        "The error handler's return value("
+        ~ T2.stringof ~
+        ") does not have a common type with the expression("
+        ~ T1.stringof ~
+        ")."
+    );
     try
     {
         return expression();
     }
-    catch(E)
+    catch (E)
     {
         return errorHandler();
     }
@@ -1588,12 +1562,17 @@ CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 ex
 CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, scope T2 delegate(E) errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
+        "The error handler's return value("
+        ~ T2.stringof ~
+        ") does not have a common type with the expression("
+        ~ T1.stringof ~
+        ")."
+    );
     try
     {
         return expression();
     }
-    catch(E e)
+    catch (E e)
     {
         return errorHandler(e);
     }
@@ -1604,19 +1583,24 @@ CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, sc
 CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate(Exception) errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
+        "The error handler's return value("
+        ~ T2.stringof ~
+        ") does not have a common type with the expression("
+        ~ T1.stringof ~
+        ")."
+    );
     try
     {
         return expression();
     }
-    catch(Exception e)
+    catch (Exception e)
     {
         return errorHandler(e);
     }
 }
 
 //Verify Examples
-unittest
+@system unittest
 {
     import std.string;
     import std.conv;
@@ -1648,7 +1632,7 @@ unittest
     assert("%s".format().ifThrown(e => e.classinfo.name) == "std.format.FormatException");
 }
 
-unittest
+@system unittest
 {
     import std.string;
     import std.conv;
@@ -1740,8 +1724,8 @@ Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
 
 opSlice:
 Infinite ranges with slicing support must return an instance of
-$(XREF range, Take) when sliced with a specific lower and upper
-bound (see $(XREF_PACK range,primitives,hasSlicing)); $(D handle) deals with
+$(REF Take, std,range) when sliced with a specific lower and upper
+bound (see $(REF hasSlicing, std,range,primitives)); $(D handle) deals with
 this by $(D take)ing 0 from the return value of the handler function and
 returning that when an exception is caught.
 */
@@ -1762,7 +1746,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return typeof(this)(range.save);
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return typeof(this)(handler(exception, this.range));
                     }
@@ -1786,7 +1770,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range.empty;
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return handler(exception, this.range);
                     }
@@ -1804,7 +1788,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                 {
                     return this.range.front;
                 }
-                catch(E exception)
+                catch (E exception)
                 {
                     return handler(exception, this.range);
                 }
@@ -1821,7 +1805,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                 {
                     this.range.popFront();
                 }
-                catch(E exception)
+                catch (E exception)
                 {
                     handler(exception, this.range);
                 }
@@ -1840,7 +1824,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range.back;
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return handler(exception, this.range);
                     }
@@ -1857,7 +1841,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         this.range.popBack();
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         handler(exception, this.range);
                     }
@@ -1877,7 +1861,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range[index];
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         static if (__traits(compiles, handler(exception, this.range, index)))
                             return handler(exception, this.range, index);
@@ -1900,7 +1884,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     {
                         return this.range.length;
                     }
-                    catch(E exception)
+                    catch (E exception)
                     {
                         return handler(exception, this.range);
                     }
@@ -1922,7 +1906,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                         {
                             return typeof(this)(this.range[lower .. upper]);
                         }
-                        catch(E exception)
+                        catch (E exception)
                         {
                             return typeof(this)(handler(exception, this.range));
                         }
@@ -1933,6 +1917,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
             }
             else static if (is(typeof(Range.init[size_t.init .. $])))
             {
+                import std.range : Take, takeExactly;
                 static struct DollarToken {}
                 enum opDollar = DollarToken.init;
 
@@ -1944,7 +1929,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                         {
                             return typeof(this)(this.range[lower .. $]);
                         }
-                        catch(E exception)
+                        catch (E exception)
                         {
                             return typeof(this)(handler(exception, this.range));
                         }
@@ -1961,7 +1946,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                         {
                             return takeExactly(typeof(this)(this.range[lower .. $]), upper - 1);
                         }
-                        catch(E exception)
+                        catch (E exception)
                         {
                             return takeExactly(typeof(this)(handler(exception, this.range)), 0);
                         }
@@ -1979,7 +1964,8 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
 ///
 pure @safe unittest
 {
-    import std.algorithm : equal, map, splitter;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map, splitter;
     import std.conv : to, ConvException;
 
     auto s = "12,1337z32,54,2,7,9,1z,6,8";
@@ -1996,7 +1982,7 @@ pure @safe unittest
 ///
 pure @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : retro;
     import std.utf : UTFException;
 
@@ -2123,6 +2109,7 @@ pure nothrow @safe unittest
 
     static struct Infinite
     {
+        import std.range : Take;
         pure @safe:
         enum bool empty = false;
         int front() { assert(false); }
@@ -2199,7 +2186,7 @@ mixin template basicExceptionCtors()
 }
 
 ///
-unittest
+@safe unittest
 {
     class MeaCulpa: Exception
     {
@@ -2225,7 +2212,7 @@ unittest
     auto te2 = new TestException("foo", e);
 }
 
-unittest
+@safe unittest
 {
     class TestException : Exception { mixin basicExceptionCtors; }
     auto e = new Exception("!!!");

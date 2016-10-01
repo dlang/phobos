@@ -1,12 +1,10 @@
 // Written in the D programming language.
 /**
-This is a submodule of $(LINK2 std_algorithm.html, std.algorithm).
+This is a submodule of $(MREF std, algorithm).
 It contains generic _mutation algorithms.
 
 $(BOOKTABLE Cheat Sheet,
-
 $(TR $(TH Function Name) $(TH Description))
-
 $(T2 bringToFront,
         If $(D a = [1, 2, 3]) and $(D b = [4, 5, 6, 7]),
         $(D bringToFront(a, b)) leaves $(D a = [4, 5, 6]) and
@@ -25,7 +23,7 @@ $(T2 initializeAll,
         $(D a = [double.init, double.init]).)
 $(T2 move,
         $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a)
-        destructively.)
+        destructively when necessary.)
 $(T2 moveAll,
         Moves all elements from one range to another.)
 $(T2 moveSome,
@@ -51,6 +49,8 @@ $(T2 stripRight,
         $(D stripRight!(e => e == 1)(a)) returns $(D [1, 1, 0]).)
 $(T2 swap,
         Swaps two values.)
+$(T2 swapAt,
+        Swaps two values by indices.)
 $(T2 swapRanges,
         Swaps all elements of two ranges.)
 $(T2 uninitializedFill,
@@ -59,9 +59,9 @@ $(T2 uninitializedFill,
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_mutation.d)
 
@@ -74,9 +74,6 @@ import std.range.primitives;
 import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual;
 // FIXME
 import std.typecons; // : tuple, Tuple;
-
-// FIXME: somehow deleting this breaks the bringToFront() unittests.
-import std.range;
 
 // bringToFront
 /**
@@ -109,12 +106,13 @@ Returns:
     The number of elements brought to the front, i.e., the length of $(D back).
 
 See_Also:
-    $(WEB sgi.com/tech/stl/_rotate.html, STL's rotate)
+    $(HTTP sgi.com/tech/stl/_rotate.html, STL's rotate)
 */
 size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
     if (isInputRange!Range1 && isForwardRange!Range2)
 {
-    import std.range: Take, take;
+    import std.range : take, Take;
+    import std.array : sameHead;
     enum bool sameHeadExists = is(typeof(front.sameHead(back)));
     size_t result;
     for (bool semidone; !front.empty && !back.empty; )
@@ -305,7 +303,7 @@ Returns:
     The unfilled part of target
 
 See_Also:
-    $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
+    $(HTTP sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
     if (areCopyCompatibleArrays!(SourceRange, TargetRange))
@@ -353,7 +351,7 @@ TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange targe
         auto len = source.length;
         foreach (idx; 0 .. len)
             target[idx] = source[idx];
-        return target[len .. $];
+        return target[len .. target.length];
     }
     else
     {
@@ -387,7 +385,7 @@ range elements, different types of ranges are accepted:
 
 /**
 To _copy at most $(D n) elements from a range, you may want to use
-$(XREF range, take):
+$(REF take, std,range):
 */
 @safe unittest
 {
@@ -414,8 +412,8 @@ use $(LREF filter):
 }
 
 /**
-$(XREF range, retro) can be used to achieve behavior similar to
-$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
+$(REF retro, std,range) can be used to achieve behavior similar to
+$(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 */
 @safe unittest
 {
@@ -476,7 +474,7 @@ Assigns $(D value) to each element of input _range $(D range).
 
 Params:
         range = An
-                $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+                $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
                 that exposes references to its elements and has assignable
                 elements
         value = Assigned to each element of range
@@ -590,10 +588,10 @@ $(D range) does not have to be a multiple of the length of $(D
 filler). If $(D filler) is empty, an exception is thrown.
 
 Params:
-    range = An $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+    range = An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
             that exposes references to its elements and has assignable elements.
     filler = The
-             $(XREF_PACK_NAMED _range,primitives,isForwardRange,forward _range)
+             $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
              representing the _fill pattern.
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
@@ -629,7 +627,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
             && is(typeof(range.length > filler.length)))
         {
             //Case we have access to length
-            auto len = filler.length;
+            immutable len = filler.length;
             //Start by bulk copies
             while (range.length > len)
             {
@@ -712,7 +710,7 @@ Assumes that the elements of the range are uninitialized.
 
 Params:
         range = An
-                $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+                $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
                 that exposes references to its elements and has assignable
                 elements
 
@@ -734,10 +732,29 @@ void initializeAll(Range)(Range range)
         //We avoid calling emplace here, because our goal is to initialize to
         //the static state of T.init,
         //So we want to avoid any un-necassarilly CC'ing of T.init
-        auto p = typeid(T).initializer().ptr;
-        if (p)
+        auto p = typeid(T).initializer();
+        if (p.ptr)
+        {
             for ( ; !range.empty ; range.popFront() )
-                memcpy(addressOf(range.front), p, T.sizeof);
+            {
+                static if(__traits(isStaticArray, T))
+                {
+                    // static array initializer only contains initialization
+                    // for one element of the static array.
+                    auto elemp = cast(void *)addressOf(range.front);
+                    auto endp = elemp + T.sizeof;
+                    while(elemp < endp)
+                    {
+                        memcpy(elemp, p.ptr, p.length);
+                        elemp += p.length;
+                    }
+                }
+                else
+                {
+                    memcpy(addressOf(range.front), p.ptr, T.sizeof);
+                }
+            }
+        }
         else
             static if (isDynamicArray!Range)
                 memset(range.ptr, 0, range.length * T.sizeof);
@@ -760,7 +777,7 @@ void initializeAll(Range)(Range range)
 ///
 unittest
 {
-    import core.stdc.stdlib: malloc, free;
+    import core.stdc.stdlib : malloc, free;
 
     struct S
     {
@@ -829,7 +846,7 @@ unittest
     assert (!typeid(S3).initializer().ptr);
     assert ( typeid(S4).initializer().ptr);
 
-    foreach(S; AliasSeq!(S1, S2, S3, S4))
+    foreach (S; AliasSeq!(S1, S2, S3, S4))
     {
         //initializeAll
         {
@@ -861,15 +878,40 @@ unittest
     }
 }
 
+// test that initializeAll works for arrays of static arrays of structs with
+// elaborate assigns.
+unittest
+{
+    struct Int {
+        ~this() {}
+        int x = 3;
+    }
+    Int[2] xs = [Int(1), Int(2)];
+    struct R {
+        bool done;
+        bool empty() { return done; }
+        ref Int[2] front() { return xs; }
+        void popFront() { done = true; }
+    }
+    initializeAll(R());
+    assert(xs[0].x == 3);
+    assert(xs[1].x == 3);
+}
+
 // move
 /**
-Moves $(D source) into $(D target) via a destructive copy.
+Moves `source` into `target`, via a destructive copy when necessary.
+
+If `T` is a struct with a destructor or postblit defined, source is reset
+to its `.init` value after it is moved into target, otherwise it is
+left unchanged.
+
+Preconditions:
+If source has internal pointers that point to itself, it cannot be moved, and
+will trigger an assertion failure.
 
 Params:
-    source = Data to copy. If a destructor or postblit is defined, it is reset
-        to its $(D .init) value after it is moved into target.  Note that data
-        with internal pointers that point to itself cannot be moved, and will
-        trigger an assertion failure.
+    source = Data to copy.
     target = Where to copy into. The destructor, if any, is invoked before the
         copy is performed.
 */
@@ -882,7 +924,7 @@ void move(T)(ref T source, ref T target)
         moveImpl(source, target);
 }
 
-///
+/// For non-struct types, `move` just performs `target = source`:
 unittest
 {
     Object obj1 = new Object;
@@ -891,6 +933,8 @@ unittest
 
     move(obj2, obj3);
     assert(obj3 is obj1);
+    // obj2 unchanged
+    assert(obj2 is obj1);
 }
 
 ///
@@ -907,8 +951,8 @@ pure nothrow @safe @nogc unittest
 
     move(s11, s12);
 
-    assert(s11.a == 10 && s11.b == 11 &&
-           s12.a == 10 && s12.b == 11);
+    assert(s12 == S1(10, 11));
+    assert(s11 == s12);
 
     // But structs with destructors or postblits are reset to their .init value
     // after copying to the target.
@@ -924,8 +968,8 @@ pure nothrow @safe @nogc unittest
 
     move(s21, s22);
 
-    assert(s21.a == 1 && s21.b == 2 &&
-           s22.a == 3 && s22.b == 4);
+    assert(s21 == S2(1, 2));
+    assert(s22 == S2(3, 4));
 }
 
 unittest
@@ -1000,7 +1044,7 @@ T move(T)(ref T source)
         return moveImpl(source);
 }
 
-///
+/// Non-copyable structs can still be moved:
 pure nothrow @safe @nogc unittest
 {
     struct S
@@ -1250,28 +1294,31 @@ pure nothrow @nogc unittest
     int val;
     Foo foo1 = void; // uninitialized
     auto foo2 = Foo(&val); // initialized
-
-    // Using `move(foo2, foo1)` has an undefined effect because it destroys the uninitialized foo1.
-    // MoveEmplace directly overwrites foo1 without destroying or initializing it first.
     assert(foo2._ptr is &val);
+
+    // Using `move(foo2, foo1)` would have an undefined effect because it would destroy
+    // the uninitialized foo1.
+    // moveEmplace directly overwrites foo1 without destroying or initializing it first.
     moveEmplace(foo2, foo1);
-    assert(foo1._ptr is &val && foo2._ptr is null);
+    assert(foo1._ptr is &val);
+    assert(foo2._ptr is null);
+    assert(val == 0);
 }
 
 // moveAll
 /**
-For each element $(D a) in $(D src) and each element $(D b) in $(D
-tgt) in lockstep in increasing order, calls $(D move(a, b)).
+Calls `move(a, b)` for each element `a` in `src` and the corresponding
+element `b` in `tgt`, in increasing order.
 
 Preconditions:
-$(D walkLength(src) <= walkLength(tgt)).
+`walkLength(src) <= walkLength(tgt)`.
 This precondition will be asserted. If you cannot ensure there is enough room in
 `tgt` to accommodate all of `src` use $(LREF moveSome) instead.
 
 Params:
-    src = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+    src = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         movable elements.
-    tgt = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+    tgt = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         elements that elements from $(D src) can be moved into.
 
 Returns: The leftover portion of $(D tgt) after all elements from $(D src) have
@@ -1296,9 +1343,9 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Similar to $(LREF moveAll) but assumes all elements in `target` are
+ * Similar to $(LREF moveAll) but assumes all elements in `tgt` are
  * uninitialized. Uses $(LREF moveEmplace) to move elements from
- * `source` over elements from `target`.
+ * `src` over elements from `tgt`.
  */
 Range2 moveEmplaceAll(Range1, Range2)(Range1 src, Range2 tgt) @system
 if (isInputRange!Range1 && isInputRange!Range2
@@ -1371,14 +1418,14 @@ private Range2 moveAllImpl(alias moveOp, Range1, Range2)(
 
 // moveSome
 /**
-For each element $(D a) in $(D src) and each element $(D b) in $(D
-tgt) in lockstep in increasing order, calls $(D move(a, b)). Stops
-when either $(D src) or $(D tgt) have been exhausted.
+Calls `move(a, b)` for each element `a` in `src` and the corresponding
+element `b` in `tgt`, in increasing order, stopping when either range has been
+exhausted.
 
 Params:
-    src = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+    src = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         movable elements.
-    tgt = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+    tgt = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         elements that elements from $(D src) can be moved into.
 
 Returns: The leftover portions of the two ranges after one or the other of the
@@ -1402,9 +1449,9 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Same as $(LREF moveSome) but assumes all elements in `target` are
+ * Same as $(LREF moveSome) but assumes all elements in `tgt` are
  * uninitialized. Uses $(LREF moveEmplace) to move elements from
- * `source` over elements from `target`.
+ * `src` over elements from `tgt`.
  */
 Tuple!(Range1, Range2) moveEmplaceSome(Range1, Range2)(Range1 src, Range2 tgt) @system
 if (isInputRange!Range1 && isInputRange!Range2
@@ -1553,11 +1600,11 @@ of the stability requirement, $(D remove) moved elements from the end
 of the array over the slots to be removed. This way there is less data
 movement to be done which improves the execution time of the function.
 
-The function $(D remove) works on any forward range. The moving
-strategy is (listed from fastest to slowest): $(UL $(LI If $(D s ==
-SwapStrategy.unstable && isRandomAccessRange!Range && hasLength!Range
-&& hasLvalueElements!Range), then elements are moved from the end
-of the range into the slots to be filled. In this case, the absolute
+The function $(D remove) works on bidirectional ranges that have assignable
+lvalue elements. The moving strategy is (listed from fastest to slowest):
+$(UL $(LI If $(D s == SwapStrategy.unstable && isRandomAccessRange!Range &&
+hasLength!Range && hasLvalueElements!Range), then elements are moved from the
+end of the range into the slots to be filled. In this case, the absolute
 minimum of moves is performed.)  $(LI Otherwise, if $(D s ==
 SwapStrategy.unstable && isBidirectionalRange!Range && hasLength!Range
 && hasLvalueElements!Range), then elements are still moved from the
@@ -1636,7 +1683,7 @@ if (s != SwapStrategy.stable
         assert(blackouts[left].pos >= steps);
         tgt.popFrontExactly(blackouts[left].pos - steps);
         steps = blackouts[left].pos;
-        auto toMove = min(
+        immutable toMove = min(
             blackouts[left].len,
             range.length - (blackouts[right].pos + blackouts[right].len));
         foreach (i; 0 .. toMove)
@@ -1657,7 +1704,7 @@ if (s != SwapStrategy.stable
     return range;
 }
 
-// Ditto
+/// Ditto
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset...)
 (Range range, Offset offset)
@@ -1884,7 +1931,7 @@ Params:
     r = a bidirectional range with swappable elements or a random access range with a length member
 
 See_Also:
-    $(WEB sgi.com/tech/stl/_reverse.html, STL's _reverse)
+    $(HTTP sgi.com/tech/stl/_reverse.html, STL's _reverse)
 */
 void reverse(Range)(Range r)
 if (isBidirectionalRange!Range && !isRandomAccessRange!Range
@@ -1916,7 +1963,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     immutable steps = r.length/2;
     for (size_t i = 0; i < steps; i++)
     {
-        swapAt(r, i, last-i);
+        r.swapAt(i, last-i);
     }
 }
 
@@ -1999,23 +2046,6 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
     test("\U00010143", "\U00010143");
     test("abcdefcdef", "fedcfedcba");
     test("hello\U00010143\u0100\U00010143", "\U00010143\u0100\U00010143olleh");
-}
-
-//private
-void swapAt(R)(R r, size_t i1, size_t i2)
-{
-    static if (is(typeof(&r[i1])))
-    {
-        swap(r[i1], r[i2]);
-    }
-    else
-    {
-        if (i1 == i2) return;
-        auto t1 = moveAt(r, i1);
-        auto t2 = moveAt(r, i2);
-        r[i2] = t1;
-        r[i1] = t2;
-    }
 }
 
 /**
@@ -2297,6 +2327,10 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     //Bug# 4789
     int[1] s = [1];
     swap(s, s);
+
+    int[3] a = [1, 2, 3];
+    swap(a[1], a[2]);
+    assert(a == [1, 3, 2]);
 }
 
 @safe unittest
@@ -2383,13 +2417,130 @@ unittest
     swap(b1, b2);
 }
 
-// Not yet documented
-void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
+/// ditto
+void swap(T)(ref T lhs, ref T rhs)
+    if (is(typeof(lhs.proxySwap(rhs))))
 {
     lhs.proxySwap(rhs);
 }
 
-void swapFront(R1, R2)(R1 r1, R2 r2)
+/**
+Swaps two elements in-place of a range `r`,
+specified by their indices `i1` and `i2`.
+
+Params:
+    r  = a range with swappable elements
+    i1 = first index
+    i2 = second index
+*/
+void swapAt(R)(auto ref R r, size_t i1, size_t i2)
+{
+    static if (is(typeof(&r.swapAt)))
+    {
+        r.swapAt(i1, i2);
+    }
+    else static if (is(typeof(&r[i1])))
+    {
+        swap(r[i1], r[i2]);
+    }
+    else
+    {
+        if (i1 == i2) return;
+        auto t1 = r.moveAt(i1);
+        auto t2 = r.moveAt(i2);
+        r[i2] = t1;
+        r[i1] = t2;
+    }
+}
+
+///
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    auto a = [1, 2, 3];
+    a.swapAt(1, 2);
+    assert(a.equal([1, 3, 2]));
+}
+
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    auto a = [4, 5, 6];
+    a.swapAt(1, 1);
+    assert(a.equal([4, 5, 6]));
+}
+
+pure @safe nothrow unittest
+{
+    // test non random access ranges
+    import std.algorithm.comparison : equal;
+    import std.array : array;
+
+    char[] b = ['a', 'b', 'c'];
+    b.swapAt(1, 2);
+    assert(b.equal(['a', 'c', 'b']));
+
+    int[3] c = [1, 2, 3];
+    c.swapAt(1, 2);
+    assert(c.array.equal([1, 3, 2]));
+
+    // opIndex returns lvalue
+    struct RandomIndexType(T)
+    {
+        T payload;
+
+        @property ref auto opIndex(size_t i)
+        {
+           return payload[i];
+        }
+
+    }
+    auto d = RandomIndexType!(int[])([4, 5, 6]);
+    d.swapAt(1, 2);
+    assert(d.payload.equal([4, 6, 5]));
+
+    // custom moveAt and opIndexAssign
+    struct RandomMoveAtType(T)
+    {
+        T payload;
+
+        // needed for ElementType
+        auto init()
+        {
+            return payload.init;
+        }
+
+        ElementType!T moveAt(size_t i)
+        {
+           return payload.moveAt(i);
+        }
+
+        void opIndexAssign(ElementType!T val, size_t idx)
+        {
+            payload[idx] = val;
+        }
+    }
+    auto e = RandomMoveAtType!(int[])([7, 8, 9]);
+    e.swapAt(1, 2);
+    assert(e.payload.equal([7, 9, 8]));
+
+
+    // custom swapAt
+    struct RandomSwapAtType(T)
+    {
+        T payload;
+
+        void swapAt(size_t i)
+        {
+           return payload.swapAt(i);
+        }
+    }
+    auto f = RandomMoveAtType!(int[])([10, 11, 12]);
+    swapAt(f, 1, 2);
+    assert(f.payload.equal([10, 12, 11]));
+}
+
+private void swapFront(R1, R2)(R1 r1, R2 r2)
     if (isInputRange!R1 && isInputRange!R2)
 {
     static if (is(typeof(swap(r1.front, r2.front))))
@@ -2413,9 +2564,9 @@ be of different types but must have the same element type and support
 swapping.
 
 Params:
-    r1 = an $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+    r1 = an $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
          with swappable elements
-    r2 = an $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+    r2 = an $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
          with swappable elements
 
 Returns:
@@ -2454,7 +2605,7 @@ uninitializedFill are equivalent).
 
 Params:
         range = An
-                $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+                $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
                 that exposes references to its elements and has assignable
                 elements
         value = Assigned to each element of range

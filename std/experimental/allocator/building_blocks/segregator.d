@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.segregator;
 
 import std.experimental.allocator.common;
@@ -13,8 +14,9 @@ shared) methods.
 */
 struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
     import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     static if (stateSize!SmallAllocator) private SmallAllocator _small;
     else private alias _small = SmallAllocator.instance;
@@ -150,6 +152,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
                 || hasMember!(LargeAllocator, "expand"))
         bool expand(ref void[] b, size_t delta)
         {
+            if (!delta) return true;
             if (b.length + delta <= threshold)
             {
                 // Old and new allocations handled by _small
@@ -256,7 +259,6 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         && !stateSize!LargeAllocator
         && is(typeof(SmallAllocator.instance) == shared)
         && is(typeof(LargeAllocator.instance) == shared);
-    //pragma(msg, sharedMethods);
 
     static if (sharedMethods)
     {
@@ -336,12 +338,6 @@ template Segregator(Args...) if (Args.length > 3)
             .Segregator!(Args[2 .. $])
         );
     }
-
-    // Linear search
-    //alias Segregator = .Segregator!(
-    //    Args[0], Args[1],
-    //    .Segregator!(Args[2 .. $])
-    //);
 }
 
 ///

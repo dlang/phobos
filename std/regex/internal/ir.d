@@ -9,49 +9,52 @@ module std.regex.internal.ir;
 
 package(std.regex):
 
-import std.exception, std.uni, std.meta, std.traits, std.range;
+import std.exception, std.uni, std.meta, std.traits, std.range.primitives;
 
+debug(std_regex_parser) import std.stdio;
 // just a common trait, may be moved elsewhere
 alias BasicElementOf(Range) = Unqual!(ElementEncodingType!Range);
+
+enum privateUseStart = '\U000F0000', privateUseEnd ='\U000FFFFD';
 
 // heuristic value determines maximum CodepointSet length suitable for linear search
 enum maxCharsetUsed = 6;
 
 // another variable to tweak behavior of caching generated Tries for character classes
-enum maxCachedTries = 8;
+enum maxCachedMatchers = 8;
 
 alias Trie = CodepointSetTrie!(13, 8);
 alias makeTrie = codepointSetTrie!(13, 8);
 
-Trie[CodepointSet] trieCache;
+CharMatcher[CodepointSet] matcherCache;
 
 //accessor with caching
-@trusted Trie getTrie(CodepointSet set)
+@trusted CharMatcher getMatcher(CodepointSet set)
 {// @@@BUG@@@ 6357 almost all properties of AA are not @safe
-    if(__ctfe || maxCachedTries == 0)
-        return makeTrie(set);
+    if (__ctfe || maxCachedMatchers == 0)
+        return CharMatcher(set);
     else
     {
-        auto p = set in trieCache;
-        if(p)
+        auto p = set in matcherCache;
+        if (p)
             return *p;
-        if(trieCache.length == maxCachedTries)
+        if (matcherCache.length == maxCachedMatchers)
         {
-            // flush entries in trieCache
-            trieCache = null;
+            // flush enmatchers in trieCache
+            matcherCache = null;
         }
-        return (trieCache[set] = makeTrie(set));
+        return (matcherCache[set] = CharMatcher(set));
     }
 }
 
 @trusted auto memoizeExpr(string expr)()
 {
-    if(__ctfe)
+    if (__ctfe)
         return mixin(expr);
     alias T = typeof(mixin(expr));
     static T slot;
     static bool initialized;
-    if(!initialized)
+    if (!initialized)
     {
         slot =  mixin(expr);
         initialized = true;
@@ -66,13 +69,17 @@ Trie[CodepointSet] trieCache;
         | unicode.Me | unicode.Nd | unicode.Pc")();
 }
 
-@property Trie wordTrie()
+@property CharMatcher wordMatcher()
 {
-    return memoizeExpr!("makeTrie(wordCharacter)")();
+    return memoizeExpr!("CharMatcher(wordCharacter)")();
 }
 
 // some special Unicode white space characters
 private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
+
+// Characters that need escaping in string posed as regular expressions
+alias Escapables = AliasSeq!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
+    ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~');
 
 //Regular expression engine/parser options:
 // global - search  all nonoverlapping matches in input
@@ -116,41 +123,46 @@ enum IR:uint {
     //OrChar holds in upper two bits of data total number of OrChars in this _sequence_
     //the drawback of this representation is that it is difficult
     // to detect a jump in the middle of it
-    OrChar            = 0b1_00100_00,
-    Nop               = 0b1_00101_00, //no operation (padding)
-    End               = 0b1_00110_00, //end of program
-    Bol               = 0b1_00111_00, //beginning of a string ^
-    Eol               = 0b1_01000_00, //end of a string $
-    Wordboundary      = 0b1_01001_00, //boundary of a word
-    Notwordboundary   = 0b1_01010_00, //not a word boundary
-    Backref           = 0b1_01011_00, //backreference to a group (that has to be pinned, i.e. locally unique) (group index)
-    GroupStart        = 0b1_01100_00, //start of a group (x) (groupIndex+groupPinning(1bit))
-    GroupEnd          = 0b1_01101_00, //end of a group (x) (groupIndex+groupPinning(1bit))
-    Option            = 0b1_01110_00, //start of an option within an alternation x | y (length)
-    GotoEndOr         = 0b1_01111_00, //end of an option (length of the rest)
+    OrChar             = 0b1_00100_00,
+    Nop                = 0b1_00101_00, //no operation (padding)
+    End                = 0b1_00110_00, //end of program
+    Bol                = 0b1_00111_00, //beginning of a line ^
+    Eol                = 0b1_01000_00, //end of a line $
+    Wordboundary       = 0b1_01001_00, //boundary of a word
+    Notwordboundary    = 0b1_01010_00, //not a word boundary
+    Backref            = 0b1_01011_00, //backreference to a group (that has to be pinned, i.e. locally unique) (group index)
+    GroupStart         = 0b1_01100_00, //start of a group (x) (groupIndex+groupPinning(1bit))
+    GroupEnd           = 0b1_01101_00, //end of a group (x) (groupIndex+groupPinning(1bit))
+    Option             = 0b1_01110_00, //start of an option within an alternation x | y (length)
+    GotoEndOr          = 0b1_01111_00, //end of an option (length of the rest)
+    Bof                = 0b1_10000_00, //begining of "file" (string) ^
+    Eof                = 0b1_10001_00, //end of "file" (string) $
     //... any additional atoms here
 
-    OrStart           = 0b1_00000_01, //start of alternation group  (length)
-    OrEnd             = 0b1_00000_10, //end of the or group (length,mergeIndex)
+    OrStart            = 0b1_00000_01, //start of alternation group  (length)
+    OrEnd              = 0b1_00000_10, //end of the or group (length,mergeIndex)
     //with this instruction order
     //bit mask 0b1_00001_00 could be used to test/set greediness
-    InfiniteStart     = 0b1_00001_01, //start of an infinite repetition x* (length)
-    InfiniteEnd       = 0b1_00001_10, //end of infinite repetition x* (length,mergeIndex)
-    InfiniteQStart    = 0b1_00010_01, //start of a non eager infinite repetition x*? (length)
-    InfiniteQEnd      = 0b1_00010_10, //end of non eager infinite repetition x*? (length,mergeIndex)
-    RepeatStart       = 0b1_00011_01, //start of a {n,m} repetition (length)
-    RepeatEnd         = 0b1_00011_10, //end of x{n,m} repetition (length,step,minRep,maxRep)
-    RepeatQStart      = 0b1_00100_01, //start of a non eager x{n,m}? repetition (length)
-    RepeatQEnd        = 0b1_00100_10, //end of non eager x{n,m}? repetition (length,step,minRep,maxRep)
+    InfiniteStart      = 0b1_00001_01, //start of an infinite repetition x* (length)
+    InfiniteEnd        = 0b1_00001_10, //end of infinite repetition x* (length,mergeIndex)
+    InfiniteQStart     = 0b1_00010_01, //start of a non eager infinite repetition x*? (length)
+    InfiniteQEnd       = 0b1_00010_10, //end of non eager infinite repetition x*? (length,mergeIndex)
+    InfiniteBloomStart = 0b1_00011_01, //start of an filtered infinite repetition x* (length)
+    InfiniteBloomEnd   = 0b1_00011_10, //end of filtered infinite repetition x* (length,mergeIndex)
+    RepeatStart        = 0b1_00100_01, //start of a {n,m} repetition (length)
+    RepeatEnd          = 0b1_00100_10, //end of x{n,m} repetition (length,step,minRep,maxRep)
+    RepeatQStart       = 0b1_00101_01, //start of a non eager x{n,m}? repetition (length)
+    RepeatQEnd         = 0b1_00101_10, //end of non eager x{n,m}? repetition (length,step,minRep,maxRep)
+
     //
-    LookaheadStart    = 0b1_00101_01, //begin of the lookahead group (length)
-    LookaheadEnd      = 0b1_00101_10, //end of a lookahead group (length)
-    NeglookaheadStart = 0b1_00110_01, //start of a negative lookahead (length)
-    NeglookaheadEnd   = 0b1_00110_10, //end of a negative lookahead (length)
-    LookbehindStart   = 0b1_00111_01, //start of a lookbehind (length)
-    LookbehindEnd     = 0b1_00111_10, //end of a lookbehind (length)
-    NeglookbehindStart= 0b1_01000_01, //start of a negative lookbehind (length)
-    NeglookbehindEnd  = 0b1_01000_10, //end of negative lookbehind (length)
+    LookaheadStart     = 0b1_00110_01, //begin of the lookahead group (length)
+    LookaheadEnd       = 0b1_00110_10, //end of a lookahead group (length)
+    NeglookaheadStart  = 0b1_00111_01, //start of a negative lookahead (length)
+    NeglookaheadEnd    = 0b1_00111_10, //end of a negative lookahead (length)
+    LookbehindStart    = 0b1_01000_01, //start of a lookbehind (length)
+    LookbehindEnd      = 0b1_01000_10, //end of a lookbehind (length)
+    NeglookbehindStart = 0b1_01001_01, //start of a negative lookbehind (length)
+    NeglookbehindEnd   = 0b1_01001_10, //end of negative lookbehind (length)
 }
 
 //a shorthand for IR length - full length of specific opcode evaluated at compile time
@@ -162,13 +174,16 @@ static assert (IRL!(IR.LookaheadStart) == 3);
 
 //how many parameters follow the IR, should be optimized fixing some IR bits
 int immediateParamsIR(IR i){
-    switch (i){
+    switch (i)
+    {
     case IR.OrEnd,IR.InfiniteEnd,IR.InfiniteQEnd:
-        return 1;
+        return 1;  // merge table index
+    case IR.InfiniteBloomEnd:
+        return 2;  // bloom filter index + merge table index
     case IR.RepeatEnd, IR.RepeatQEnd:
         return 4;
     case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
-        return 2;
+        return 2;  // start-end of captures used
     default:
         return 0;
     }
@@ -251,6 +266,11 @@ struct Bytecode
     //0-arg template due to @@@BUG@@@ 10985
     @property uint data()() const { return raw & 0x003f_ffff; }
 
+    @property void data()(uint val)
+    {
+        raw = (raw & ~0x003f_ffff) | (val & 0x003f_ffff);
+    }
+
     //ditto
     //0-arg template due to @@@BUG@@@ 10985
     @property uint sequence()() const { return 2 + (raw >> 22 & 0x3); }
@@ -305,7 +325,7 @@ struct Bytecode
     //human readable name of instruction
     @trusted @property string mnemonic()() const
     {//@@@BUG@@@ to is @system
-        import std.conv;
+        import std.conv : to;
         return to!string(code);
     }
 
@@ -352,7 +372,8 @@ struct Group(DataIndex)
     DataIndex begin, end;
     @trusted string toString()() const
     {
-        import std.format;
+        import std.array : appender;
+        import std.format : formattedWrite;
         auto a = appender!string();
         formattedWrite(a, "%s..%s", begin, end);
         return a.data;
@@ -362,10 +383,11 @@ struct Group(DataIndex)
 //debugging tool, prints out instruction along with opcodes
 @trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
 {
-    import std.array, std.format;
+    import std.array : appender;
+    import std.format : formattedWrite;
     auto output = appender!string();
     formattedWrite(output,"%s", irb[pc].mnemonic);
-    switch(irb[pc].code)
+    switch (irb[pc].code)
     {
     case IR.Char:
         formattedWrite(output, " %s (0x%x)",cast(dchar)irb[pc].data, irb[pc].data);
@@ -373,7 +395,8 @@ struct Group(DataIndex)
     case IR.OrChar:
         formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar)irb[pc].data, irb[pc].data, irb[pc].sequence);
         break;
-    case IR.RepeatStart, IR.InfiniteStart, IR.Option, IR.GotoEndOr, IR.OrStart:
+    case IR.RepeatStart, IR.InfiniteStart, IR.InfiniteBloomStart,
+    IR.Option, IR.GotoEndOr, IR.OrStart:
         //forward-jump instructions
         uint len = irb[pc].data;
         formattedWrite(output, " pc=>%u", pc+len+IRL!(IR.RepeatStart));
@@ -383,7 +406,7 @@ struct Group(DataIndex)
         formattedWrite(output, " pc=>%u min=%u max=%u step=%u",
             pc - len, irb[pc + 3].raw, irb[pc + 4].raw, irb[pc + 2].raw);
         break;
-    case IR.InfiniteEnd, IR.InfiniteQEnd, IR.OrEnd: //ditto
+    case IR.InfiniteEnd, IR.InfiniteQEnd, IR.InfiniteBloomEnd, IR.OrEnd: //ditto
         uint len = irb[pc].data;
         formattedWrite(output, " pc=>%u", pc-len);
         break;
@@ -394,8 +417,8 @@ struct Group(DataIndex)
     case IR.GroupStart, IR.GroupEnd:
         uint n = irb[pc].data;
         string name;
-        foreach(v;dict)
-            if(v.group == n)
+        foreach (v;dict)
+            if (v.group == n)
             {
                 name = "'"~v.name~"'";
                 break;
@@ -411,12 +434,12 @@ struct Group(DataIndex)
     case IR.Backref: case IR.CodepointSet: case IR.Trie:
         uint n = irb[pc].data;
         formattedWrite(output, " %u",  n);
-        if(irb[pc].code == IR.Backref)
+        if (irb[pc].code == IR.Backref)
             formattedWrite(output, " %s", irb[pc].localRef ? "local" : "global");
         break;
     default://all data-free instructions
     }
-    if(irb[pc].hotspot)
+    if (irb[pc].hotspot)
         formattedWrite(output, " Hotspot %u", irb[pc+1].raw);
     return output.data;
 }
@@ -424,8 +447,8 @@ struct Group(DataIndex)
 //disassemble the whole chunk
 @trusted void printBytecode()(in Bytecode[] slice, in NamedGroup[] dict=[])
 {
-    import std.stdio;
-    for(uint pc=0; pc<slice.length; pc += slice[pc].length)
+    import std.stdio : writeln;
+    for (uint pc=0; pc<slice.length; pc += slice[pc].length)
         writeln("\t", disassemble(slice, pc, dict));
 }
 
@@ -491,20 +514,21 @@ struct Regex(Char)
 
 package(std.regex):
     import std.regex.internal.kickstart : Kickstart; //TODO: get rid of this dependency
-    NamedGroup[] dict;  //maps name -> user group number
-    uint ngroup;        //number of internal groups
-    uint maxCounterDepth; //max depth of nested {n,m} repetitions
-    uint hotspotTableSize; //number of entries in merge table
-    uint threadCount;
-    uint flags;         //global regex flags
-    public const(Trie)[]  tries; //
-    uint[] backrefed; //bit array of backreferenced submatches
+    NamedGroup[] dict;                     // maps name -> user group number
+    uint ngroup;                           // number of internal groups
+    uint maxCounterDepth;                  // max depth of nested {n,m} repetitions
+    uint hotspotTableSize;                 // number of entries in merge table
+    uint threadCount;                      // upper bound on number of Thompson VM threads
+    uint flags;                            // global regex flags
+    public const(CharMatcher)[]  matchers; // tables that represent character sets
+    public const(BitTable)[] filters;      // bloom filters for conditional loops
+    uint[] backrefed;                      // bit array of backreferenced submatches
     Kickstart!Char kickstart;
 
     //bit access helper
     uint isBackref(uint n)
     {
-        if(n/32 >= backrefed.length)
+        if (n/32 >= backrefed.length)
             return 0;
         return backrefed[n / 32] & (1 << (n & 31));
     }
@@ -512,17 +536,16 @@ package(std.regex):
     //check if searching is not needed
     void checkIfOneShot()
     {
-        if(flags & RegexOption.multiline)
-            return;
     L_CheckLoop:
-        for(uint i = 0; i < ir.length; i += ir[i].length)
+        for (uint i = 0; i < ir.length; i += ir[i].length)
         {
-            switch(ir[i].code)
+            switch (ir[i].code)
             {
-                case IR.Bol:
+                case IR.Bof:
                     flags |= RegexInfo.oneShot;
                     break L_CheckLoop;
-                case IR.GroupStart, IR.GroupEnd, IR.Eol, IR.Wordboundary, IR.Notwordboundary:
+                case IR.GroupStart, IR.GroupEnd, IR.Bol, IR.Eol, IR.Eof,
+                IR.Wordboundary, IR.Notwordboundary:
                     break;
                 default:
                     break L_CheckLoop;
@@ -533,7 +556,7 @@ package(std.regex):
     //print out disassembly a program's IR
     @trusted debug(std_regex_parser) void print() const
     {//@@@BUG@@@ write is system
-        for(uint i = 0; i < ir.length; i += ir[i].length)
+        for (uint i = 0; i < ir.length; i += ir[i].length)
         {
             writefln("%d\t%s ", i, disassemble(ir, i, dict));
         }
@@ -547,7 +570,7 @@ package(std.regex):
 /*public*/ struct StaticRegex(Char)
 {
 package(std.regex):
-    import std.regex.internal.backtracking;
+    import std.regex.internal.backtracking : BacktrackingMatcher;
     alias Matcher = BacktrackingMatcher!(true);
     alias MatchFn = bool function(ref Matcher!Char) @trusted;
     MatchFn nativeFn;
@@ -569,11 +592,11 @@ package(std.regex):
 
 //Simple UTF-string abstraction compatible with stream interface
 struct Input(Char)
-    if(is(Char :dchar))
+    if (is(Char :dchar))
 {
-    import std.utf;
+    import std.utf : decode;
     alias DataIndex = size_t;
-    enum { isLoopback = false };
+    enum bool isLoopback = false;
     alias String = const(Char)[];
     String _origin;
     size_t _index;
@@ -586,13 +609,15 @@ struct Input(Char)
     }
 
     //codepoint at current stream position
-    bool nextChar(ref dchar res, ref size_t pos)
+    pragma(inline, true) bool nextChar(ref dchar res, ref size_t pos)
     {
         pos = _index;
-        if(_index == _origin.length)
-            return false;
-        res = std.utf.decode(_origin, _index);
-        return true;
+        // DMD's inliner hates multiple return functions
+        // but can live with single statement if/else bodies
+        bool n = !(_index == _origin.length);
+        if (n)
+            res = decode(_origin, _index);
+        return n;
     }
     @property bool atEnd(){
         return _index == _origin.length;
@@ -612,48 +637,62 @@ struct Input(Char)
 
     String opSlice(size_t start, size_t end){   return _origin[start..end]; }
 
-    struct BackLooper
-    {
-        alias DataIndex = size_t;
-        enum { isLoopback = true };
-        String _origin;
-        size_t _index;
-        this(Input input, size_t index)
-        {
-            _origin = input._origin;
-            _index = index;
-        }
-        @trusted bool nextChar(ref dchar res,ref size_t pos)
-        {
-            pos = _index;
-            if(_index == 0)
-                return false;
-
-            res = _origin[0.._index].back;
-            _index -= std.utf.strideBack(_origin, _index);
-
-            return true;
-        }
-        @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
-        auto loopBack(size_t index){   return Input(_origin, index); }
-
-        //support for backtracker engine, might not be present
-        //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
-        void reset(size_t index){   _index = index;  }
-
-        String opSlice(size_t start, size_t end){   return _origin[end..start]; }
-        //index of at End position
-        @property size_t lastIndex(){   return 0; }
-    }
-    auto loopBack(size_t index){   return BackLooper(this, index); }
+    auto loopBack(size_t index){   return BackLooper!Input(this, index); }
 }
 
+struct BackLooperImpl(Input)
+{
+    import std.utf : strideBack;
+    alias DataIndex = size_t;
+    alias String = Input.String;
+    enum bool isLoopback = true;
+    String _origin;
+    size_t _index;
+    this(Input input, size_t index)
+    {
+        _origin = input._origin;
+        _index = index;
+    }
+    @trusted bool nextChar(ref dchar res,ref size_t pos)
+    {
+        pos = _index;
+        if (_index == 0)
+            return false;
+
+        res = _origin[0.._index].back;
+        _index -= strideBack(_origin, _index);
+
+        return true;
+    }
+    @property atEnd(){ return _index == 0 || _index == strideBack(_origin, _index); }
+    auto loopBack(size_t index){   return Input(_origin, index); }
+
+    //support for backtracker engine, might not be present
+    //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
+    void reset(size_t index){   _index = index;  }
+
+    String opSlice(size_t start, size_t end){   return _origin[end..start]; }
+    //index of at End position
+    @property size_t lastIndex(){   return 0; }
+}
+
+template BackLooper(E)
+{
+    static if (is(E : BackLooperImpl!U, U))
+    {
+        alias BackLooper = U;
+    }
+    else
+    {
+        alias BackLooper = BackLooperImpl!E;
+    }
+}
 
 //both helpers below are internal, on its own are quite "explosive"
 //unsafe, no initialization of elements
 @system T[] mallocArray(T)(size_t len)
 {
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc;
     return (cast(T*)malloc(len * T.sizeof))[0 .. len];
 }
 
@@ -668,8 +707,10 @@ struct Input(Char)
 //
 @trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
-    import std.conv;
-    import std.algorithm : map, equal;
+    import std.range : assumeSorted;
+    import std.conv : text;
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
 
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
     enforce(fnd < dict.length && equal(dict[fnd].name, name),
@@ -693,53 +734,55 @@ bool startOfLine()(dchar back, bool seenNl)
     || back == NEL || back == LS || back == PS;
 }
 
-//Test if bytecode starting at pc in program 're' can match given codepoint
-//Returns: 0 - can't tell, -1 if doesn't match
-int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
-{
-    static assert(IRL!(IR.OrChar) == 1);//used in code processing IR.OrChar
-    for(;;)
-        switch(re.ir[pc].code)
-        {
-        case IR.OrChar:
-            uint len = re.ir[pc].sequence;
-            uint end = pc + len;
-            if(re.ir[pc].data != front && re.ir[pc+1].data != front)
-            {
-                for(pc = pc+2; pc < end; pc++)
-                    if(re.ir[pc].data == front)
-                        break;
-                if(pc == end)
-                    return -1;
-            }
-            return 0;
-        case IR.Char:
-            if(front == re.ir[pc].data)
-                return 0;
-            else
-                return -1;
-        case IR.Any:
-            return 0;
-        case IR.CodepointSet:
-            if(re.charsets[re.ir[pc].data].scanFor(front))
-                return 0;
-            else
-                return -1;
-        case IR.GroupStart, IR.GroupEnd:
-            pc += IRL!(IR.GroupStart);
-            break;
-        case IR.Trie:
-            if(re.tries[re.ir[pc].data][front])
-                return 0;
-            else
-                return -1;
-        default:
-            return 0;
-        }
-}
-
 ///Exception object thrown in case of errors during regex compilation.
 public class RegexException : Exception
 {
     mixin basicExceptionCtors;
+}
+
+// simple 128-entry bit-table used with a hash function
+struct BitTable {
+    uint[4] filter;
+
+    this(CodepointSet set){
+        foreach (iv; set.byInterval)
+        {
+            foreach (v; iv.a..iv.b)
+                add(v);
+        }
+    }
+
+    void add()(dchar ch){
+        immutable i = index(ch);
+        filter[i >> 5]  |=  1<<(i & 31);
+    }
+    // non-zero -> might be present, 0 -> absent
+    bool opIndex()(dchar ch) const{
+        immutable i = index(ch);
+        return (filter[i >> 5]>>(i & 31)) & 1;
+    }
+
+    static uint index()(dchar ch){
+        return ((ch >> 7) ^ ch) & 0x7F;
+    }
+}
+
+struct CharMatcher {
+    BitTable ascii; // fast path for ASCII
+    Trie trie;      // slow path for Unicode
+
+    this(CodepointSet set)
+    {
+        auto asciiSet = set & unicode.ASCII;
+        ascii = BitTable(asciiSet);
+        trie = makeTrie(set);
+    }
+
+    bool opIndex()(dchar ch) const
+    {
+        if (ch < 0x80)
+            return ascii[ch];
+        else
+            return trie[ch];
+    }
 }

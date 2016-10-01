@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.mallocator;
 import std.experimental.allocator.common;
 
@@ -132,7 +133,7 @@ version (Windows)
         @nogc nothrow
         private void* _aligned_malloc(size_t size, size_t alignment)
         {
-            import std.c.stdlib: malloc;
+            import std.c.stdlib : malloc;
             size_t offset = alignment + size_t.sizeof * 2 - 1;
 
             // unaligned chunk
@@ -154,10 +155,10 @@ version (Windows)
         @nogc nothrow
         private void* _aligned_realloc(void* ptr, size_t size, size_t alignment)
         {
-            import std.c.stdlib: free;
-            import std.c.string: memcpy;
+            import std.c.stdlib : free;
+            import std.c.string : memcpy;
 
-            if(!ptr) return _aligned_malloc(size, alignment);
+            if (!ptr) return _aligned_malloc(size, alignment);
 
             // gets the header from the exising pointer
             AlignInfo* head = AlignInfo(ptr);
@@ -181,7 +182,7 @@ version (Windows)
         @nogc nothrow
         private void _aligned_free(void *ptr)
         {
-            import std.c.stdlib: free;
+            import std.c.stdlib : free;
             if (!ptr) return;
             AlignInfo* head = AlignInfo(ptr);
             free(head.basePtr);
@@ -220,9 +221,9 @@ struct AlignedMallocator
     }
 
     /**
-    Uses $(WEB man7.org/linux/man-pages/man3/posix_memalign.3.html,
+    Uses $(HTTP man7.org/linux/man-pages/man3/posix_memalign.3.html,
     $(D posix_memalign)) on Posix and
-    $(WEB msdn.microsoft.com/en-us/library/8z34s9c6(v=vs.80).aspx,
+    $(HTTP msdn.microsoft.com/en-us/library/8z34s9c6(v=vs.80).aspx,
     $(D __aligned_malloc)) on Windows.
     */
     version(Posix)
@@ -237,8 +238,10 @@ struct AlignedMallocator
             return null;
 
         else if (code == EINVAL)
-            assert (0, "AlignedMallocator.alignment is not a power of two multiple of (void*).sizeof, according to posix_memalign!");
-
+        {
+            assert(0, "AlignedMallocator.alignment is not a power of two "
+                ~"multiple of (void*).sizeof, according to posix_memalign!");
+        }
         else if (code != 0)
             assert (0, "posix_memalign returned an unknown code!");
 
@@ -256,7 +259,7 @@ struct AlignedMallocator
 
     /**
     Calls $(D free(b.ptr)) on Posix and
-    $(WEB msdn.microsoft.com/en-US/library/17b5h8td(v=vs.80).aspx,
+    $(HTTP msdn.microsoft.com/en-US/library/17b5h8td(v=vs.80).aspx,
     $(D __aligned_free(b.ptr))) on Windows.
     */
     version (Posix)
@@ -296,7 +299,7 @@ struct AlignedMallocator
     /**
     On Posix, uses $(D alignedAllocate) and copies data around because there is
     no realloc for aligned memory. On Windows, calls
-    $(WEB msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
+    $(HTTP msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
     $(D __aligned_realloc(b.ptr, newSize, a))).
     */
     version (Windows)

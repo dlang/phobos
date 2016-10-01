@@ -32,6 +32,10 @@ $(BOOKTABLE ,
             comparison, iteration, sorting, set operations, and mutation.
         )
     )
+    $(TR
+        $(TDNW $(LINK2 std_experimental_ndslice.html, std.experimental.ndslice))
+        $(TD Multidimensional random access ranges and arrays.)
+    )
     $(LEADINGROW Array manipulation)
     $(TR
         $(TDNW
@@ -98,6 +102,10 @@ $(BOOKTABLE ,
     $(TR
         $(TDNW $(LINK2 std_digest_md.html, std.digest.md))
         $(TD Compute MD5 hash of arbitrary data.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_digest_murmurhash.html, std.digest.murmurhash))
+        $(TD Compute MurmurHash of arbitrary data.)
     )
     $(TR
         $(TDNW $(LINK2 std_digest_ripemd.html, std.digest.ripemd))
@@ -315,6 +323,10 @@ $(BOOKTABLE ,
         $(TD Families of transcendental functions.)
     )
     $(TR
+        $(TDNW $(LINK2 std_experimental_ndslice.html, std.experimental.ndslice))
+        $(TD Multidimensional random access ranges and arrays.)
+    )
+    $(TR
         $(TDNW $(LINK2 std_numeric.html, std.numeric))
         $(TD Floating point numerics functions.)
     )
@@ -492,10 +504,7 @@ $(COMMENT
     )
     $(TR
         $(TDNW
-            $(LINK2 std_cstream.html, std.cstream)$(BR)
             $(LINK2 std_mmfile.html, std.mmfile)$(BR)
-            $(LINK2 std_socketstream.html, std.socketstream)$(BR)
-            $(LINK2 std_stream.html, std.stream)$(BR)
             $(LINK2 std_typetuple.html, std.typetuple)$(BR)
         )
         $(TD
@@ -519,4 +528,5 @@ $(COMMENT
 
 Macros:
         TITLE=Phobos Runtime Library
-        WIKI=Phobos
+        DDOC_BLANKLINE=
+        _=

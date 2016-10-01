@@ -1,6 +1,11 @@
 ![D Logo](http://dlang.org/images/dlogo.png) Phobos Standard Library
 ===================================================================
 
+[![GitHub tag](https://img.shields.io/github/tag/dlang/phobos.svg?maxAge=86400)](#)
+[![Build status](https://img.shields.io/circleci/project/dlang/phobos.svg?maxAge=86400)](https://circleci.com/gh/dlang/phobos)
+[![Code coverage](https://img.shields.io/codecov/c/github/dlang/phobos.svg?maxAge=86400)](https://codecov.io/gh/dlang/phobos)
+[![Issue Stats](https://img.shields.io/issuestats/p/github/dlang/phobos.svg?maxAge=2592000)](http://www.issuestats.com/github/dlang/phobos)
+
 Phobos is the standard library that comes with the
 [D Programming Language](http://dlang.org) Compiler.
 
@@ -28,4 +33,3 @@ I Want to Contribute
 
 Great!
 See the [CONTRIBUTING.md file](CONTRIBUTING.md).
-

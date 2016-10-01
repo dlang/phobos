@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.kernighan_ritchie;
 import std.experimental.allocator.building_blocks.null_allocator;
 
@@ -7,11 +8,11 @@ version(unittest) import std.conv : text;
 
 // KRRegion
 /**
-$(D KRRegion) draws inspiration from the $(LINK2
-std_experimental_allocator_region.html, region allocation strategy) and also the
-$(WEB stackoverflow.com/questions/13159564/explain-this-implementation-of-malloc-from-the-kr-book,
+$(D KRRegion) draws inspiration from the $(MREF_ALTTEXT region allocation
+strategy, std,experimental,allocator,building_blocks,region) and also the
+$(HTTP stackoverflow.com/questions/13159564/explain-this-implementation-of-malloc-from-the-kr-book,
 famed allocator) described by Brian Kernighan and Dennis Ritchie in section 8.7
-of the book $(WEB amazon.com/exec/obidos/ASIN/0131103628/classicempire, "The C
+of the book $(HTTP amazon.com/exec/obidos/ASIN/0131103628/classicempire, "The C
 Programming Language"), Second Edition, Prentice Hall, 1988.
 
 $(H4 `KRRegion` = `Region` + Kernighan-Ritchie Allocator)
@@ -94,8 +95,9 @@ information is available in client code at deallocation time.)
 */
 struct KRRegion(ParentAllocator = NullAllocator)
 {
-    import std.experimental.allocator.common : stateSize, alignedAt, Ternary;
+    import std.experimental.allocator.common : stateSize, alignedAt;
     import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     private static struct Node
     {
@@ -149,7 +151,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
         }
     }
 
-    // state {
+    // state
     /**
     If $(D ParentAllocator) holds state, $(D parent) is a public member of type
     $(D KRRegion). Otherwise, $(D parent) is an $(D alias) for
@@ -160,7 +162,6 @@ struct KRRegion(ParentAllocator = NullAllocator)
     private void[] payload;
     private Node* root;
     private bool regionMode = true;
-    // }
 
     auto byNodePtr()
     {
@@ -518,8 +519,6 @@ struct KRRegion(ParentAllocator = NullAllocator)
     */
     void[] allocateAll()
     {
-        //debug(KRRegion) assertValid("allocateAll");
-        //debug(KRRegion) scope(exit) assertValid("allocateAll");
         if (regionMode) switchToFreeList;
         if (root && root.next == root)
             return allocate(root.size);
@@ -600,7 +599,7 @@ unittest
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.fallback_allocator
         : fallbackAllocator;
-    import std.experimental.allocator.common : Ternary;
+    import std.typecons : Ternary;
     // KRRegion fronting a general-purpose allocator
     ubyte[1024 * 128] buf;
     auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.instance);
@@ -621,7 +620,7 @@ it actually returns memory to the operating system when possible.
 */
 unittest
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
     import std.experimental.allocator.building_blocks.allocator_list
@@ -631,9 +630,9 @@ unittest
 
 unittest
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import   std.experimental.allocator.common : Ternary;
+    import std.typecons : Ternary;
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
@@ -664,9 +663,9 @@ unittest
 
 unittest
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.common : Ternary;
+    import std.typecons : Ternary;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
@@ -705,7 +704,7 @@ unittest
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.common : testAllocator;
     testAllocator!(() => AllocatorList!(
         n => KRRegion!GCAllocator(max(n * 16, 1024 * 1024)))());
@@ -732,12 +731,12 @@ unittest
 unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.common : Ternary;
+    import std.typecons : Ternary;
     auto alloc = KRRegion!()(GCAllocator.instance.allocate(1024 * 1024));
     const store = alloc.allocate(KRRegion!().sizeof);
     auto p = cast(KRRegion!()* ) store.ptr;
     import std.conv : emplace;
-    import std.algorithm : move;
+    import std.algorithm.mutation : move;
     import core.stdc.string : memcpy;
 
     memcpy(p, &alloc, alloc.sizeof);

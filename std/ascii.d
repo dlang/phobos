@@ -9,18 +9,14 @@
     to non-ASCII characters.
 
     For functions which operate on Unicode characters, see
-    $(LINK2 std_uni.html, std.uni).
+    $(MREF std, uni).
 
     References:
         $(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
-        $(WEB en.wikipedia.org/wiki/Ascii, Wikipedia)
+        $(HTTP en.wikipedia.org/wiki/Ascii, Wikipedia)
 
-    Macros:
-        WIKI=Phobos/StdASCII
-
-    Copyright: Copyright 2000 - 2013
-    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   $(WEB digitalmars.com, Walter Bright) and Jonathan M Davis
+    License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    Authors:   $(HTTP digitalmars.com, Walter Bright) and Jonathan M Davis
     Source:    $(PHOBOSSRC std/_ascii.d)
   +/
 module std.ascii;
@@ -82,12 +78,12 @@ bool isAlphaNum(dchar c) @safe pure nothrow @nogc
     assert(!isAlphaNum('á'));
 }
 
-unittest
+@safe unittest
 {
-    foreach(c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
+    foreach (c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
         assert(isAlphaNum(c));
 
-    foreach(c; whitespace)
+    foreach (c; whitespace)
         assert(!isAlphaNum(c));
 }
 
@@ -113,12 +109,12 @@ bool isAlpha(dchar c) @safe pure nothrow @nogc
     assert(!isAlpha('á'));
 }
 
-unittest
+@safe unittest
 {
-    foreach(c; chain(letters, lowercase, uppercase))
+    foreach (c; chain(letters, lowercase, uppercase))
         assert(isAlpha(c));
 
-    foreach(c; chain(digits, octalDigits, whitespace))
+    foreach (c; chain(digits, octalDigits, whitespace))
         assert(!isAlpha(c));
 }
 
@@ -144,12 +140,12 @@ bool isLower(dchar c) @safe pure nothrow @nogc
     assert(!isLower('Á'));
 }
 
-unittest
+@safe unittest
 {
-    foreach(c; lowercase)
+    foreach (c; lowercase)
         assert(isLower(c));
 
-    foreach(c; chain(digits, uppercase, whitespace))
+    foreach (c; chain(digits, uppercase, whitespace))
         assert(!isLower(c));
 }
 
@@ -175,12 +171,12 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
     assert(!isUpper('Á'));
 }
 
-unittest
+@safe unittest
 {
-    foreach(c; uppercase)
+    foreach (c; uppercase)
         assert(isUpper(c));
 
-    foreach(c; chain(digits, lowercase, whitespace))
+    foreach (c; chain(digits, lowercase, whitespace))
         assert(!isUpper(c));
 }
 
@@ -207,12 +203,12 @@ bool isDigit(dchar c) @safe pure nothrow @nogc
     assert(!isDigit('４')); // full-width digit four (U+FF14)
 }
 
-unittest
+@safe unittest
 {
-    foreach(c; digits)
+    foreach (c; digits)
         assert(isDigit(c));
 
-    foreach(c; chain(letters, whitespace))
+    foreach (c; chain(letters, whitespace))
         assert(!isDigit(c));
 }
 
@@ -236,12 +232,12 @@ bool isOctalDigit(dchar c) @safe pure nothrow @nogc
     assert(!isOctalDigit('#'));
 }
 
-unittest
+@safe unittest
 {
-    foreach(c; octalDigits)
+    foreach (c; octalDigits)
         assert(isOctalDigit(c));
 
-    foreach(c; chain(letters, ['8', '9'], whitespace))
+    foreach (c; chain(letters, ['8', '9'], whitespace))
         assert(!isOctalDigit(c));
 }
 
@@ -266,12 +262,12 @@ bool isHexDigit(dchar c) @safe pure nothrow @nogc
     assert(!isHexDigit('#'));
 }
 
-unittest
+@safe unittest
 {
-    foreach(c; fullHexDigits)
+    foreach (c; fullHexDigits)
         assert(isHexDigit(c));
 
-    foreach(c; chain(lowercase[6 .. $], uppercase[6 .. $], whitespace))
+    foreach (c; chain(lowercase[6 .. $], uppercase[6 .. $], whitespace))
         assert(!isHexDigit(c));
 }
 
@@ -303,12 +299,12 @@ bool isWhite(dchar c) @safe pure nothrow @nogc
     assert(!isWhite('\u00A0')); // std.ascii.isWhite
 }
 
-unittest
+@safe unittest
 {
-    foreach(c; whitespace)
+    foreach (c; whitespace)
         assert(isWhite(c));
 
-    foreach(c; chain(digits, letters))
+    foreach (c; chain(digits, letters))
         assert(!isWhite(c));
 }
 
@@ -339,13 +335,13 @@ bool isControl(dchar c) @safe pure nothrow @nogc
     assert(!isControl('\u2029'));
 }
 
-unittest
+@safe unittest
 {
-    foreach(dchar c; 0 .. 32)
+    foreach (dchar c; 0 .. 32)
         assert(isControl(c));
     assert(isControl(127));
 
-    foreach(c; chain(digits, letters, [' ']))
+    foreach (c; chain(digits, letters, [' ']))
         assert(!isControl(c));
 }
 
@@ -383,11 +379,11 @@ bool isPunctuation(dchar c) @safe pure nothrow @nogc
     assert(!isPunctuation('\u2012')); // (U+2012 = en-dash)
 }
 
-unittest
+@safe unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach (dchar c; 0 .. 128)
     {
-        if(isControl(c) || isAlphaNum(c) || c == ' ')
+        if (isControl(c) || isAlphaNum(c) || c == ' ')
             assert(!isPunctuation(c));
         else
             assert(isPunctuation(c));
@@ -419,11 +415,11 @@ bool isGraphical(dchar c) @safe pure nothrow @nogc
     assert(!isGraphical('á'));
 }
 
-unittest
+@safe unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach (dchar c; 0 .. 128)
     {
-        if(isControl(c) || c == ' ')
+        if (isControl(c) || c == ' ')
             assert(!isGraphical(c));
         else
             assert(isGraphical(c));
@@ -454,11 +450,11 @@ bool isPrintable(dchar c) @safe pure nothrow @nogc
     assert(!isPrintable('á'));
 }
 
-unittest
+@safe unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach (dchar c; 0 .. 128)
     {
-        if(isControl(c))
+        if (isControl(c))
             assert(!isPrintable(c));
         else
             assert(isPrintable(c));
@@ -471,6 +467,7 @@ unittest
     Returns: Whether or not $(D c) is in the ASCII character set - i.e. in the
     range 0..0x7F.
   +/
+pragma(inline, true)
 bool isASCII(dchar c) @safe pure nothrow @nogc
 {
     return c <= 0x7F;
@@ -483,9 +480,9 @@ bool isASCII(dchar c) @safe pure nothrow @nogc
     assert(!isASCII('á'));
 }
 
-unittest
+@safe unittest
 {
-    foreach(dchar c; 0 .. 128)
+    foreach (dchar c; 0 .. 128)
         assert(isASCII(c));
 
     assert(!isASCII(128));
@@ -504,7 +501,7 @@ unittest
     ASCII character, otherwise $(D c) itself.
   +/
 auto toLower(C)(C c)
-    if(is(C : dchar))
+    if (is(C : dchar))
 {
     import std.traits : isAggregateType, OriginalType, Unqual;
 
@@ -531,20 +528,20 @@ auto toLower(C)(C c)
 @safe pure nothrow unittest
 {
 
-    foreach(C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
+    foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
-        foreach(i, c; uppercase)
+        foreach (i, c; uppercase)
             assert(toLower(cast(C)c) == lowercase[i]);
 
-        foreach(C c; 0 .. 128)
+        foreach (C c; 0 .. 128)
         {
-            if(c < 'A' || c > 'Z')
+            if (c < 'A' || c > 'Z')
                 assert(toLower(c) == c);
             else
                 assert(toLower(c) != c);
         }
 
-        foreach(C c; 128 .. C.max)
+        foreach (C c; 128 .. C.max)
             assert(toLower(c) == c);
 
         //CTFE
@@ -566,7 +563,7 @@ auto toLower(C)(C c)
     character, otherwise $(D c) itself.
   +/
 auto toUpper(C)(C c)
-    if(is(C : dchar))
+    if (is(C : dchar))
 {
     import std.traits : isAggregateType, OriginalType, Unqual;
 
@@ -592,20 +589,20 @@ auto toUpper(C)(C c)
 
 @safe pure nothrow unittest
 {
-    foreach(C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
+    foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
-        foreach(i, c; lowercase)
+        foreach (i, c; lowercase)
             assert(toUpper(cast(C)c) == uppercase[i]);
 
-        foreach(C c; 0 .. 128)
+        foreach (C c; 0 .. 128)
         {
-            if(c < 'a' || c > 'z')
+            if (c < 'a' || c > 'z')
                 assert(toUpper(c) == c);
             else
                 assert(toUpper(c) != c);
         }
 
-        foreach(C c; 128 .. C.max)
+        foreach (C c; 128 .. C.max)
             assert(toUpper(c) == c);
 
         //CTFE
@@ -615,7 +612,7 @@ auto toUpper(C)(C c)
 }
 
 
-unittest //Test both toUpper and toLower with non-builtin
+@safe unittest //Test both toUpper and toLower with non-builtin
 {
     //User Defined [Char|Wchar|Dchar]
     static struct UDC {  char c; alias c this; }

@@ -1,7 +1,7 @@
 /**
  * Error Functions and Normal Distribution.
  *
- * License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Copyright: Based on the CEPHES math library, which is
  *            Copyright (C) 1994 Stephen L. Moshier (moshier@world.std.com).
  * Authors:   Stephen L. Moshier, ported to D by Don Clugston
@@ -124,7 +124,8 @@ real erfc(real a)
 
     real z = -a * a;
 
-    if (z < -MAXLOG){
+    if (z < -MAXLOG)
+    {
 //    mtherr( "erfcl", UNDERFLOW );
         if (a < 0) return 2.0;
         else return 0.0;
@@ -135,13 +136,14 @@ real erfc(real a)
     real y = 1.0/x;
 
 
-    if( x < 8.0 ) y = z * rationalPoly(y, P, Q);
+    if ( x < 8.0 ) y = z * rationalPoly(y, P, Q);
     else          y = z * y * rationalPoly(y * y, R, S);
 
     if (a < 0.0L)
         y = 2.0L - y;
 
-    if (y == 0.0) {
+    if (y == 0.0)
+    {
 //    mtherr( "erfcl", UNDERFLOW );
         if (a < 0) return 2.0;
         else return 0.0;
@@ -161,9 +163,12 @@ real erfce(real x)
 {
     real y = 1.0/x;
 
-    if (x < 8.0) {
+    if (x < 8.0)
+    {
         return rationalPoly( y, P, Q);
-    } else {
+    }
+    else
+    {
         return y * rationalPoly(y*y, R, S);
     }
 }
@@ -204,7 +209,8 @@ real erf(real x)
     return x * rationalPoly(z, T, U);
 }
 
-unittest {
+unittest
+{
    // High resolution test points.
     enum real erfc0_250 = 0.723663330078125 + 1.0279753638067014931732235184287934646022E-5;
     enum real erfc0_375 = 0.5958709716796875 + 1.2118885490201676174914080878232469565953E-5;
@@ -217,6 +223,10 @@ unittest {
 
     enum real erf0_875  = (1-0.215911865234375) - 1.3073705765341685464282101150637224028267E-5;
 
+    static bool isNaNWithPayload(real x, ulong payload) @safe pure nothrow @nogc
+    {
+      return isNaN(x) && getNaNPayload(x) == payload;
+    }
 
     assert(feqrel(erfc(0.250L), erfc0_250 )>=real.mant_dig-1);
     assert(feqrel(erfc(0.375L), erfc0_375 )>=real.mant_dig-0);
@@ -234,8 +244,8 @@ unittest {
     assert(isIdentical(erf(-0.0),-0.0));
     assert(erf(real.infinity) == 1.0);
     assert(erf(-real.infinity) == -1.0);
-    assert(isIdentical(erf(NaN(0xDEF)),NaN(0xDEF)));
-    assert(isIdentical(erfc(NaN(0xDEF)),NaN(0xDEF)));
+    assert(isNaNWithPayload(erf(NaN(0xDEF)), 0xDEF));
+    assert(isNaNWithPayload(erfc(NaN(0xDEF)), 0xDEF));
     assert(isIdentical(erfc(real.infinity),0.0));
     assert(erfc(-real.infinity) == 2.0);
     assert(erfc(0) == 1.0);
@@ -279,7 +289,8 @@ real expx2(real x, int sign)
     real u = m * m;
     real u1 = 2 * m * f  +  f * f;
 
-    if (sign < 0) {
+    if (sign < 0)
+    {
         u = -u;
         u1 = -u1;
     }
@@ -319,20 +330,22 @@ real normalDistributionImpl(real a)
     real x = a * SQRT1_2;
     real z = abs(x);
 
-    if( z < 1.0 )
+    if ( z < 1.0 )
         return 0.5L + 0.5L * erf(x);
-    else {
+    else
+    {
         real y = 0.5L * erfce(z);
         /* Multiply by exp(-x^2 / 2)  */
         z = expx2(a, -1);
         y = y * sqrt(z);
-        if( x > 0.0L )
+        if ( x > 0.0L )
             y = 1.0L - y;
         return y;
     }
 }
 
-unittest {
+unittest
+{
 assert(fabs(normalDistributionImpl(1L) - (0.841344746068543))< 0.0000000000000005);
 assert(isIdentical(normalDistributionImpl(NaN(0x325)), NaN(0x325)));
 }
@@ -406,24 +419,26 @@ static immutable real[8] Q3 =
    0x1.e05268dd3c07989ep-3, 0x1.239c6aff14afbf82p+1, 1.0
 ];
 
-    if(p<=0.0L || p>=1.0L)
+    if (p<=0.0L || p>=1.0L)
     {
         if (p == 0.0L)
             return -real.infinity;
-        if( p == 1.0L )
+        if ( p == 1.0L )
             return real.infinity;
         return real.nan; // domain error
     }
     int code = 1;
     real y = p;
-    if( y > (1.0L - EXP_2) ) {
+    if ( y > (1.0L - EXP_2) )
+    {
         y = 1.0L - y;
         code = 0;
     }
 
     real x, z, y2, x0, x1;
 
-    if ( y > EXP_2 ) {
+    if ( y > EXP_2 )
+    {
         y = y - 0.5L;
         y2 = y * y;
         x = y + y * (y2 * rationalPoly( y2, P0, Q0));
@@ -433,22 +448,29 @@ static immutable real[8] Q3 =
     x = sqrt( -2.0L * log(y) );
     x0 = x - log(x)/x;
     z = 1.0L/x;
-    if ( x < 8.0L ) {
+    if ( x < 8.0L )
+    {
         x1 = z * rationalPoly( z, P1, Q1);
-    } else if( x < 32.0L ) {
+    }
+    else if ( x < 32.0L )
+    {
         x1 = z * rationalPoly( z, P2, Q2);
-    } else {
+    }
+    else
+    {
         x1 = z * rationalPoly( z, P3, Q3);
     }
     x = x0 - x1;
-    if ( code != 0 ) {
+    if ( code != 0 )
+    {
         x = -x;
     }
     return x;
 }
 
 
-unittest {
+unittest
+{
     // TODO: Use verified test points.
     // The values below are from Excel 2003.
     assert(fabs(normalDistributionInvImpl(0.001) - (-3.09023230616779))< 0.00000000000005);

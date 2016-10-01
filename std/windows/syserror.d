@@ -4,8 +4,8 @@
  * Convert Win32 error code to string.
  *
  * Copyright: Copyright Digital Mars 2006 - 2013.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Credits:   Based on code written by Regan Heath
  */
 /*          Copyright Digital Mars 2006 - 2013.
@@ -117,7 +117,7 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
 
 class WindowsException : Exception
 {
-    import core.sys.windows.windows;
+    import core.sys.windows.windows : DWORD;
 
     final @property DWORD code() { return _code; } /// $(D GetLastError)'s return value.
     private DWORD _code;
@@ -181,7 +181,7 @@ unittest
 {
     import std.exception;
     import std.string;
-    import std.algorithm : startsWith, endsWith;
+    import std.algorithm.searching : startsWith, endsWith;
 
     auto e = collectException!WindowsException(
         DeleteFileA("unexisting.txt").wenforce("DeleteFile")

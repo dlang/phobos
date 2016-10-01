@@ -6,13 +6,10 @@ header in Alexander Stepanov's $(LINK2 http://sgi.com/tech/stl,
 Standard Template Library), with a few additions.
 
 Macros:
-
-WIKI = Phobos/StdNumeric
-
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
-License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu),
-                   Don Clugston, Robert Jacques
+License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
+                   Don Clugston, Robert Jacques, Ilya Yaroshenko
 Source:    $(PHOBOSSRC std/_numeric.d)
 */
 /*
@@ -24,7 +21,6 @@ Distributed under the Boost Software License, Version 1.0.
 module std.numeric;
 
 import std.complex;
-import std.exception;
 import std.math;
 import std.range.primitives;
 import std.traits;
@@ -126,7 +122,7 @@ template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags 
 }
 
 ///
-unittest
+@safe unittest
 {
     // Define a 16-bit floating point values
     CustomFloat!16                                x;     // Using the number of bits
@@ -155,20 +151,20 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
     if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
         precision + exponentWidth > 0)
 {
-    import std.bitmanip;
-    import std.meta;
+    import std.bitmanip : bitfields;
+    import std.meta : staticIndexOf;
 private:
     // get the correct unsigned bitfield type to support > 32 bits
     template uType(uint bits)
     {
-        static if(bits <= size_t.sizeof*8)  alias uType = size_t;
+        static if (bits <= size_t.sizeof*8)  alias uType = size_t;
         else                                alias uType = ulong ;
     }
 
     // get the correct signed   bitfield type to support > 32 bits
     template sType(uint bits)
     {
-        static if(bits <= ptrdiff_t.sizeof*8-1) alias sType = ptrdiff_t;
+        static if (bits <= ptrdiff_t.sizeof*8-1) alias sType = ptrdiff_t;
         else                                    alias sType = long;
     }
 
@@ -186,7 +182,7 @@ private:
 
         // If on Linux or Mac, where 80-bit reals are padded, ignore the
         // padding.
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
         CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
 
         // Convert F to the correct binary type.
@@ -243,7 +239,7 @@ private:
             // Convert denormalized form to normalized form
             ((flags&Flags.allowDenorm) && exp==0))
         {
-            if(sig > 0)
+            if (sig > 0)
             {
                 import core.bitop : bsr;
                 auto shift2 = precision - bsr(sig);
@@ -274,12 +270,12 @@ private:
             // convert back to normalized form
             static if (~flags & Flags.infinity)
                 // No infinity support?
-                enforce(sig != 0, "Infinity floating point value assigned to a "
-                        ~ typeof(this).stringof~" (no infinity support).");
+                assert(sig != 0, "Infinity floating point value assigned to a "
+                        ~ typeof(this).stringof ~ " (no infinity support).");
 
             static if (~flags & Flags.nan)  // No NaN support?
-                enforce(sig == 0,"NaN floating point value assigned to a " ~
-                        typeof(this).stringof~" (no nan support).");
+                assert(sig == 0, "NaN floating point value assigned to a " ~
+                        typeof(this).stringof ~ " (no nan support).");
             sig >>= shift;
             return;
         }
@@ -304,7 +300,7 @@ private:
                 exp    = 0;
             }
             else
-                enforce((flags&Flags.storeNormalized) && exp == 0,
+                assert((flags&Flags.storeNormalized) && exp == 0,
                     "Underflow occured assigning to a " ~
                     typeof(this).stringof ~ " (no denormal support).");
         }
@@ -352,12 +348,12 @@ private:
                 sig         = 0;
                 exp         = exponent_max;
                 static if (~flags&(Flags.infinity))
-                    enforce(false, "Overflow occured assigning to a " ~
-                        typeof(this).stringof~" (no infinity support).");
+                    assert(0, "Overflow occured assigning to a " ~
+                        typeof(this).stringof ~ " (no infinity support).");
             }
             else
-                enforce(exp == exponent_max, "Overflow occured assigning to a "
-                    ~ typeof(this).stringof~" (no infinity support).");
+                assert(exp == exponent_max, "Overflow occured assigning to a "
+                    ~ typeof(this).stringof ~ " (no infinity support).");
         }
     }
 
@@ -406,7 +402,7 @@ public:
     static @property size_t dig()
     {
         auto shiftcnt =  precision - ((flags&Flags.storeNormalized) != 0);
-        auto x = (shiftcnt == 64) ? 0 : 1uL << shiftcnt;
+        immutable x = (shiftcnt == 64) ? 0 : 1uL << shiftcnt;
         return cast(size_t) log10(x);
     }
 
@@ -465,7 +461,7 @@ public:
         static if (flags & Flags.signed)
         value.sign        = 0;
         value.exponent    = 1;
-        static if(flags&Flags.storeNormalized)
+        static if (flags&Flags.storeNormalized)
             value.significand = 0;
         else
             value.significand = cast(T_sig) 1uL << (precision - 1);
@@ -497,7 +493,8 @@ public:
     void opAssign(F)(F input)
         if (__traits(compiles, cast(real)input))
     {
-        import std.conv: text;
+        import std.conv : text;
+
         static if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
             auto value = ToBinary!(Unqual!F)(input);
         else
@@ -505,9 +502,9 @@ public:
 
         // Assign the sign bit
         static if (~flags & Flags.signed)
-            enforce( (!value.sign)^((flags&flags.negativeUnsigned)>0) ,
+            assert((!value.sign) ^ ((flags&flags.negativeUnsigned) > 0),
                 "Incorrectly signed floating point value assigned to a " ~
-                typeof(this).stringof~" (no sign support).");
+                typeof(this).stringof ~ " (no sign support).");
         else
             sign = value.sign;
 
@@ -530,7 +527,7 @@ public:
     @property F get(F)()
         if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
     {
-        import std.conv: text;
+        import std.conv : text;
 
         ToBinary!F result;
 
@@ -611,7 +608,7 @@ public:
     }
 }
 
-unittest
+@safe unittest
 {
     import std.meta;
     alias FPTypes =
@@ -647,8 +644,9 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
+    // @system due to to!string(CustomFloat)
     import std.conv;
     CustomFloat!(5, 10) y = CustomFloat!(5, 10)(0.125);
     assert(y.to!string == "0.125");
@@ -680,11 +678,14 @@ on very many factors.
 template FPTemporary(F)
     if (isFloatingPoint!F)
 {
-    alias FPTemporary = real;
+    version(X86)
+        alias FPTemporary = real;
+    else
+        alias FPTemporary = Unqual!F;
 }
 
 ///
-unittest
+@safe unittest
 {
     // Average numbers in an array
     double avg(in double[] a)
@@ -700,7 +701,7 @@ unittest
 }
 
 /**
-Implements the $(WEB tinyurl.com/2zb9yr, secant method) for finding a
+Implements the $(HTTP tinyurl.com/2zb9yr, secant method) for finding a
 root of the function $(D fun) starting from points $(D [xn_1, x_n])
 (ideally close to the root). $(D Num) may be $(D float), $(D double),
 or $(D real).
@@ -727,7 +728,7 @@ template secantMethod(alias fun)
 }
 
 ///
-unittest
+@safe unittest
 {
     float f(float x)
     {
@@ -737,8 +738,9 @@ unittest
     assert(approxEqual(x, 0.865474));
 }
 
-unittest
+@system unittest
 {
+    // @system because of __gshared stderr
     scope(failure) stderr.writeln("Failure testing secantMethod");
     float f(float x)
     {
@@ -764,12 +766,12 @@ public:
 
 /**  Find a real root of a real function f(x) via bracketing.
  *
- * Given a function $(D f) and a range $(D [a..b]) such that $(D f(a))
- * and $(D f(b)) have opposite signs or at least one of them equals ±0,
- * returns the value of $(D x) in
- * the range which is closest to a root of $(D f(x)).  If $(D f(x))
+ * Given a function `f` and a range `[a..b]` such that `f(a)`
+ * and `f(b)` have opposite signs or at least one of them equals ±0,
+ * returns the value of `x` in
+ * the range which is closest to a root of `f(x)`.  If `f(x)`
  * has more than one root in the range, one will be chosen
- * arbitrarily.  If $(D f(x)) returns NaN, NaN will be returned;
+ * arbitrarily.  If `f(x)` returns NaN, NaN will be returned;
  * otherwise, this algorithm is guaranteed to succeed.
  *
  * Uses an algorithm based on TOMS748, which uses inverse cubic
@@ -777,29 +779,29 @@ public:
  * or secant interpolation. Compared to TOMS748, this implementation
  * improves worst-case performance by a factor of more than 100, and
  * typical performance by a factor of 2. For 80-bit reals, most
- * problems require 8 to 15 calls to $(D f(x)) to achieve full machine
+ * problems require 8 to 15 calls to `f(x)` to achieve full machine
  * precision. The worst-case performance (pathological cases) is
  * approximately twice the number of bits.
  *
  * References: "On Enclosing Simple Roots of Nonlinear Equations",
  * G. Alefeld, F.A. Potra, Yixun Shi, Mathematics of Computation 61,
- * pp733-744 (1993).  Fortran code available from $(WEB
+ * pp733-744 (1993).  Fortran code available from $(HTTP
  * www.netlib.org,www.netlib.org) as algorithm TOMS478.
  *
  */
 T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
     scope DT tolerance) //= (T a, T b) => false)
-    if(
+    if (
         isFloatingPoint!T &&
         is(typeof(tolerance(T.init, T.init)) : bool) &&
         is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
     )
 {
     immutable fa = f(a);
-    if(fa == 0)
+    if (fa == 0)
         return a;
     immutable fb = f(b);
-    if(fb == 0)
+    if (fb == 0)
         return b;
     immutable r = findRoot(f, a, b, fa, fb, tolerance);
     // Return the first value if it is smaller or NaN
@@ -819,10 +821,10 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  *
  * f = Function to be analyzed
  *
- * ax = Left bound of initial range of $(D f) known to contain the
+ * ax = Left bound of initial range of `f` known to contain the
  * root.
  *
- * bx = Right bound of initial range of $(D f) known to contain the
+ * bx = Right bound of initial range of `f` known to contain the
  * root.
  *
  * fax = Value of $(D f(ax)).
@@ -840,14 +842,14 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  * Returns:
  *
  * A tuple consisting of two ranges. The first two elements are the
- * range (in $(D x)) of the root, while the second pair of elements
+ * range (in `x`) of the root, while the second pair of elements
  * are the corresponding function values at those points. If an exact
  * root was found, both of the first two elements will contain the
  * root, and the second pair of elements will be 0.
  */
 Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx,
     scope DT tolerance) // = (T a, T b) => false)
-    if(
+    if (
         isFloatingPoint!T &&
         is(typeof(tolerance(T.init, T.init)) : bool) &&
         is(typeof(f(T.init)) == R) && isFloatingPoint!R
@@ -1164,7 +1166,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
     return findRoot!(T, R delegate(T), bool delegate(T lo, T hi))(f, a, b, tolerance);
 }
 
-nothrow unittest
+@safe nothrow unittest
 {
     int numProblems = 0;
     int numCalls;
@@ -1375,11 +1377,242 @@ nothrow unittest
 }
 
 //regression control
-unittest
+@system unittest
 {
+    // @system due to the case in the 2nd line
     static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
     static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
     static assert(__traits(compiles, findRoot((real x)=>cast(double)x, real.init, real.init)));
+}
+
+/++
+Find a real minimum of a real function `f(x)` via bracketing.
+Given a function `f` and a range `(ax..bx)`,
+returns the value of `x` in the range which is closest to a minimum of `f(x)`.
+`f` is never evaluted at the endpoints of `ax` and `bx`.
+If `f(x)` has more than one minimum in the range, one will be chosen arbitrarily.
+If `f(x)` returns NaN or -Infinity, `(x, f(x), NaN)` will be returned;
+otherwise, this algorithm is guaranteed to succeed.
+
+Params:
+    f = Function to be analyzed
+    ax = Left bound of initial range of f known to contain the minimum.
+    bx = Right bound of initial range of f known to contain the minimum.
+    relTolerance = Relative tolerance.
+    absTolerance = Absolute tolerance.
+
+Preconditions:
+    `ax` and `bx` shall be finite reals. $(BR)
+    $(D relTolerance) shall be normal positive real. $(BR)
+    $(D absTolerance) shall be normal positive real no less then $(D T.epsilon*2).
+
+Returns:
+    A tuple consisting of `x`, `y = f(x)` and `error = 3 * (absTolerance * fabs(x) + relTolerance)`.
+
+    The method used is a combination of golden section search and
+successive parabolic interpolation. Convergence is never much slower
+than that for a Fibonacci search.
+
+References:
+    "Algorithms for Minimization without Derivatives", Richard Brent, Prentice-Hall, Inc. (1973)
+
+See_Also: $(LREF findRoot), $(REF isNormal, std,math)
++/
+Tuple!(T, "x", Unqual!(ReturnType!DF), "y", T, "error")
+findLocalMin(T, DF)(
+        scope DF f,
+        in T ax,
+        in T bx,
+        in T relTolerance = sqrt(T.epsilon),
+        in T absTolerance = sqrt(T.epsilon),
+        )
+    if (isFloatingPoint!T
+        && __traits(compiles, {T _ = DF.init(T.init);}))
+in
+{
+    assert(isFinite(ax), "ax is not finite");
+    assert(isFinite(bx), "bx is not finite");
+    assert(isNormal(relTolerance), "relTolerance is not normal floating point number");
+    assert(isNormal(absTolerance), "absTolerance is not normal floating point number");
+    assert(relTolerance >= 0, "absTolerance is not positive");
+    assert(absTolerance >= T.epsilon*2, "absTolerance is not greater then `2*T.epsilon`");
+}
+out (result)
+{
+    assert(isFinite(result.x));
+}
+body
+{
+    alias R = Unqual!(CommonType!(ReturnType!DF, T));
+    // c is the squared inverse of the golden ratio
+    // (3 - sqrt(5))/2
+    // Value obtained from Wolfram Alpha.
+    enum T c = 0x0.61c8864680b583ea0c633f9fa31237p+0L;
+    enum T cm1 = 0x0.9e3779b97f4a7c15f39cc0605cedc8p+0L;
+    R tolerance;
+    T a = ax > bx ? bx : ax;
+    T b = ax > bx ? ax : bx;
+    // sequence of declarations suitable for SIMD instructions
+    T  v = a * cm1 + b * c;
+    assert(isFinite(v));
+    R fv = f(v);
+    if (isNaN(fv) || fv == -T.infinity)
+    {
+        return typeof(return)(v, fv, T.init);
+    }
+    T  w = v;
+    R fw = fv;
+    T  x = v;
+    R fx = fv;
+    size_t i;
+    for (R d = 0, e = 0;;)
+    {
+        i++;
+        T m = (a + b) / 2;
+        // This fix is not part of the original algorithm
+        if (!isFinite(m)) // fix infinity loop. Issue can be reproduced in R.
+        {
+            m = a / 2 + b / 2;
+            if (!isFinite(m)) // fast-math compiler switch is enabled
+            {
+                //SIMD instructions can be used by compiler, do not reduce declarations
+                int a_exp = void;
+                int b_exp = void;
+                immutable an = frexp(a, a_exp);
+                immutable bn = frexp(b, b_exp);
+                immutable am = ldexp(an, a_exp-1);
+                immutable bm = ldexp(bn, b_exp-1);
+                m = am + bm;
+                if (!isFinite(m)) // wrong input: constraints are disabled in release mode
+                {
+                    return typeof(return).init;
+                }
+            }
+        }
+        tolerance = absTolerance * fabs(x) + relTolerance;
+        immutable t2 = tolerance * 2;
+        // check stopping criterion
+        if (!(fabs(x - m) > t2 - (b - a) / 2))
+        {
+            break;
+        }
+        R p = 0;
+        R q = 0;
+        R r = 0;
+        // fit parabola
+        if (fabs(e) > tolerance)
+        {
+            immutable  xw =  x -  w;
+            immutable fxw = fx - fw;
+            immutable  xv =  x -  v;
+            immutable fxv = fx - fv;
+            immutable xwfxv = xw * fxv;
+            immutable xvfxw = xv * fxw;
+            p = xv * xvfxw - xw * xwfxv;
+            q = (xvfxw - xwfxv) * 2;
+            if (q > 0)
+                p = -p;
+            else
+                q = -q;
+            r = e;
+            e = d;
+        }
+        T u;
+        // a parabolic-interpolation step
+        if (fabs(p) < fabs(q * r / 2) && p > q * (a - x) && p < q * (b - x))
+        {
+            d = p / q;
+            u = x + d;
+            // f must not be evaluated too close to a or b
+            if (u - a < t2 || b - u < t2)
+                d = x < m ? tolerance : -tolerance;
+        }
+        // a golden-section step
+        else
+        {
+            e = (x < m ? b : a) - x;
+            d = c * e;
+        }
+        // f must not be evaluated too close to x
+        u = x + (fabs(d) >= tolerance ? d : d > 0 ? tolerance : -tolerance);
+        immutable fu = f(u);
+        if (isNaN(fu) || fu == -T.infinity)
+        {
+            return typeof(return)(u, fu, T.init);
+        }
+        //  update  a, b, v, w, and x
+        if (fu <= fx)
+        {
+            u < x ? b : a = x;
+            v = w; fv = fw;
+            w = x; fw = fx;
+            x = u; fx = fu;
+        }
+        else
+        {
+            u < x ? a : b = u;
+            if (fu <= fw || w == x)
+            {
+                v = w; fv = fw;
+                w = u; fw = fu;
+            }
+            else if (fu <= fv || v == x || v == w)
+            { // do not remove this braces
+                v = u; fv = fu;
+            }
+        }
+    }
+    return typeof(return)(x, fx, tolerance * 3);
+}
+
+///
+@safe unittest
+{
+    auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
+    assert(ret.x.approxEqual(4.0));
+    assert(ret.y.approxEqual(0.0));
+}
+
+@safe unittest
+{
+    import std.meta : AliasSeq;
+    foreach (T; AliasSeq!(double, float, real))
+    {
+        {
+            auto ret = findLocalMin!T((T x) => (x-4)^^2, T.min_normal, 1e7);
+            assert(ret.x.approxEqual(T(4)));
+            assert(ret.y.approxEqual(T(0)));
+        }
+        {
+            auto ret = findLocalMin!T((T x) => fabs(x-1), -T.max/4, T.max/4, T.min_normal, 2*T.epsilon);
+            assert(approxEqual(ret.x, T(1)));
+            assert(approxEqual(ret.y, T(0)));
+            assert(ret.error <= 10 * T.epsilon);
+        }
+        {
+            auto ret = findLocalMin!T((T x) => T.init, 0, 1, T.min_normal, 2*T.epsilon);
+            assert(!ret.x.isNaN);
+            assert(ret.y.isNaN);
+            assert(ret.error.isNaN);
+        }
+        {
+            auto ret = findLocalMin!T((T x) => log(x), 0, 1, T.min_normal, 2*T.epsilon);
+            assert(ret.error < 3.00001 * ((2*T.epsilon)*fabs(ret.x)+ T.min_normal));
+            assert(ret.x >= 0 && ret.x <= ret.error);
+        }
+        {
+            auto ret = findLocalMin!T((T x) => log(x), 0, T.max, T.min_normal, 2*T.epsilon);
+            assert(ret.y < -18);
+            assert(ret.error < 5e-08);
+            assert(ret.x >= 0 && ret.x <= ret.error);
+        }
+        {
+            auto ret = findLocalMin!T((T x) => -fabs(x), -1, 1, T.min_normal, 2*T.epsilon);
+            assert(ret.x.fabs.approxEqual(T(1)));
+            assert(ret.y.fabs.approxEqual(T(1)));
+            assert(ret.error.approxEqual(T(0)));
+        }
+    }
 }
 
 /**
@@ -1394,14 +1627,14 @@ euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
-        auto t = a.front - b.front;
+        immutable t = a.front - b.front;
         result += t * t;
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     return sqrt(result);
 }
 
@@ -1412,26 +1645,26 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 {
     limit *= limit;
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     for (; ; a.popFront(), b.popFront())
     {
         if (a.empty)
         {
-            static if (!haveLen) enforce(b.empty);
+            static if (!haveLen) assert(b.empty);
             break;
         }
-        auto t = a.front - b.front;
+        immutable t = a.front - b.front;
         result += t * t;
         if (result >= limit) break;
     }
     return sqrt(result);
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1454,13 +1687,13 @@ dotProduct(Range1, Range2)(Range1 a, Range2 b)
         !(isArray!(Range1) && isArray!(Range2)))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         result += a.front * b.front;
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     return result;
 }
 
@@ -1518,10 +1751,12 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
     return sum0;
 }
 
-unittest
+@system unittest
 {
+    // @system due to dotProduct and assertCTFEable
+    import std.exception : assertCTFEable;
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1548,7 +1783,7 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) norma = 0, normb = 0, dotprod = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
@@ -1557,15 +1792,15 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
         normb += t2 * t2;
         dotprod += t1 * t2;
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     if (norma == 0 || normb == 0) return 0;
     return dotprod / sqrt(norma * normb);
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 3.0, ];
@@ -1612,21 +1847,21 @@ bool normalize(R)(R range, ElementType!(R) sum = 1)
     {
         if (length)
         {
-            auto f = sum / range.length;
+            immutable f = sum / range.length;
             foreach (ref e; range) e = f;
         }
         return false;
     }
     // The path most traveled
     assert(s >= 0);
-    auto f = sum / s;
+    immutable f = sum / s;
     foreach (ref e; range)
         e *= f;
     return true;
 }
 
 ///
-unittest
+@safe unittest
 {
     double[] a = [];
     assert(!normalize(a));
@@ -1664,7 +1899,7 @@ ElementType!Range sumOfLog2s(Range)(Range r)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(sumOfLog2s(new double[0]) == 0);
     assert(sumOfLog2s([0.0L]) == -real.infinity);
@@ -1689,10 +1924,10 @@ result is greater than or equal to $(D max).
 ElementType!Range entropy(Range)(Range r) if (isInputRange!Range)
 {
     Unqual!(typeof(return)) result = 0.0;
-    foreach (e; r)
+    for (;!r.empty; r.popFront)
     {
-        if (!e) continue;
-        result -= e * log2(e);
+        if (!r.front) continue;
+        result -= r.front * log2(r.front);
     }
     return result;
 }
@@ -1703,19 +1938,19 @@ if (isInputRange!Range &&
     !is(CommonType!(ElementType!Range, F) == void))
 {
     Unqual!(typeof(return)) result = 0.0;
-    foreach (e; r)
+    for (;!r.empty; r.popFront)
     {
-        if (!e) continue;
-        result -= e * log2(e);
+        if (!r.front) continue;
+        result -= r.front * log2(r.front);
         if (result >= max) break;
     }
     return result;
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
-    foreach(T; AliasSeq!(double, const double, immutable double))
+    foreach (T; AliasSeq!(double, const double, immutable double))
     {
         T[] p = [ 0.0, 0, 0, 1 ];
         assert(entropy(p) == 0);
@@ -1742,7 +1977,7 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
@@ -1753,12 +1988,12 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
         assert(t1 > 0 && t2 > 0);
         result += t1 * log2(t1 / t2);
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     return result;
 }
 
 ///
-unittest
+@safe unittest
 {
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(kullbackLeiblerDivergence(p, p) == 0);
@@ -1788,7 +2023,7 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
         is(CommonType!(ElementType!Range1, ElementType!Range2)))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
@@ -1804,7 +2039,7 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
             result += t2 * log2(t2 / avg);
         }
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     return result / 2;
 }
 
@@ -1816,7 +2051,7 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
                            >= F.init) : bool))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
-    static if (haveLen) enforce(a.length == b.length);
+    static if (haveLen) assert(a.length == b.length);
     Unqual!(typeof(return)) result = 0;
     limit *= 2;
     for (; !a.empty; a.popFront(), b.popFront())
@@ -1834,12 +2069,12 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
         }
         if (result >= limit) break;
     }
-    static if (!haveLen) enforce(b.empty);
+    static if (!haveLen) assert(b.empty);
     return result / 2;
 }
 
 ///
-unittest
+@safe unittest
 {
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(jensenShannonDivergence(p, p) == 0);
@@ -1928,14 +2163,17 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
         isRandomAccessRange!(R2) && hasLength!(R2))
 {
     import std.functional : binaryFun;
-    import std.algorithm : swap;
-    import core.stdc.stdlib;
+    import std.algorithm.mutation : swap;
+    import core.stdc.stdlib : malloc, free;
+    import core.exception : onOutOfMemoryError;
 
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
 
-    immutable tl1 = t.length + 1;
-    auto dpvi = enforce(cast(F*) malloc(F.sizeof * 2 * t.length));
+    auto dpvi = cast(F*)malloc(F.sizeof * 2 * t.length);
+    if (!dpvi)
+        onOutOfMemoryError();
+
     auto dpvi1 = dpvi + t.length;
     scope(exit) free(dpvi < dpvi1 ? dpvi : dpvi1);
     dpvi[0 .. t.length] = 0;
@@ -1969,7 +2207,7 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
     return result;
 }
 
-unittest
+@system unittest
 {
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
@@ -2024,7 +2262,7 @@ gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
 }
 
 ///
-unittest
+@system unittest
 {
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
@@ -2043,7 +2281,7 @@ t.length). The time complexity is $(BIGOH s.length * t.length) time
 for computing each step. Continuing on the previous example:
 
 The implementation is based on the pseudocode in Fig. 4 of the paper
-$(WEB jmlr.csail.mit.edu/papers/volume6/rousu05a/rousu05a.pdf,
+$(HTTP jmlr.csail.mit.edu/papers/volume6/rousu05a/rousu05a.pdf,
 "Efﬁcient Computation of Gapped Substring Kernels on Large Alphabets")
 by Rousu et al., with additional algorithmic and systems-level
 optimizations.
@@ -2051,7 +2289,7 @@ optimizations.
 struct GapWeightedSimilarityIncremental(Range, F = double)
     if (isRandomAccessRange!(Range) && hasLength!(Range))
 {
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc, realloc, alloca, free;
 
 private:
     Range s, t;
@@ -2068,7 +2306,9 @@ time and computes all matches of length 1.
  */
     this(Range s, Range t, F lambda)
     {
-        enforce(lambda > 0);
+        import core.exception : onOutOfMemoryError;
+
+        assert(lambda > 0);
         this.gram = 0;
         this.lambda = lambda;
         this.lambda2 = lambda * lambda; // for efficiency only
@@ -2109,8 +2349,9 @@ time and computes all matches of length 1.
         this.s = s;
         this.t = t;
 
-        // Si = errnoEnforce(cast(F *) malloc(t.length * F.sizeof));
-        kl = errnoEnforce(cast(F *) malloc(s.length * t.length * F.sizeof));
+        kl = cast(F*)malloc(s.length * t.length * F.sizeof);
+        if (!kl)
+            onOutOfMemoryError();
 
         kl[0 .. s.length * t.length] = 0;
         foreach (pos; 0 .. k0len)
@@ -2136,7 +2377,7 @@ time and computes all matches of length 1.
      */
     void popFront()
     {
-        import std.algorithm : swap;
+        import std.algorithm.mutation : swap;
 
         // This is a large source of optimization: if similarity at
         // the gram-1 level was 0, then we can safely assume
@@ -2245,7 +2486,7 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
 }
 
 ///
-unittest
+@system unittest
 {
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
@@ -2259,9 +2500,9 @@ unittest
     assert(simIter.empty);     // no more match
 }
 
-unittest
+@system unittest
 {
-    import std.conv: text;
+    import std.conv : text;
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
     auto simIter = gapWeightedSimilarityIncremental(s, t, 1.0);
@@ -2301,7 +2542,7 @@ unittest
     assert(simIter.front == 0.5, text(simIter.front)); // one 2-gram match, 1 gap
 }
 
-unittest
+@system unittest
 {
     GapWeightedSimilarityIncremental!(string[]) sim =
         GapWeightedSimilarityIncremental!(string[])(
@@ -2343,11 +2584,11 @@ T gcd(T)(T a, T b)
     {
         static if (T.min < 0)
         {
-            enforce(a >= 0 && b >=0);
+            assert(a >= 0 && b >=0);
         }
         while (b)
         {
-            auto t = b;
+            immutable t = b;
             b = a % b;
             a = t;
         }
@@ -2356,7 +2597,7 @@ T gcd(T)(T a, T b)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(gcd(2 * 5 * 7 * 7, 5 * 7 * 11) == 5 * 7);
     const int a = 5 * 13 * 23 * 23, b = 13 * 59;
@@ -2378,11 +2619,11 @@ private alias lookup_t = float;
  * one-off FFT.
  *
  * References:
- * $(WEB en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm)
+ * $(HTTP en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm)
  */
 final class Fft
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import core.bitop : bsf;
     import std.array : uninitializedArray;
 
@@ -2391,8 +2632,8 @@ private:
 
     void enforceSize(R)(R range) const
     {
-        import std.conv: text;
-        enforce(range.length <= size, text(
+        import std.conv : text;
+        assert(range.length <= size, text(
             "FFT size mismatch.  Expected ", size, ", got ", range.length));
     }
 
@@ -2400,14 +2641,14 @@ private:
     in
     {
         assert(range.length >= 4);
-        assert(isPowerOfTwo(range.length));
+        assert(isPowerOf2(range.length));
     }
     body
     {
         auto recurseRange = range;
         recurseRange.doubleSteps();
 
-        if(buf.length > 4)
+        if (buf.length > 4)
         {
             fftImpl(recurseRange, buf[0..$ / 2]);
             recurseRange.popHalf();
@@ -2434,7 +2675,7 @@ private:
     in
     {
         assert(range.length >= 4);
-        assert(isPowerOfTwo(range.length));
+        assert(isPowerOf2(range.length));
     }
     body
     {
@@ -2442,7 +2683,7 @@ private:
 
         // Converts odd indices of range to the imaginary components of
         // a range half the size.  The even indices become the real components.
-        static if(isArray!R && isFloatingPoint!E)
+        static if (isArray!R && isFloatingPoint!E)
         {
             // Then the memory layout of complex numbers provides a dirt
             // cheap way to convert.  This is a common case, so take advantage.
@@ -2542,7 +2783,7 @@ private:
     void butterfly(R)(R buf) const
     in
     {
-        assert(isPowerOfTwo(buf.length));
+        assert(isPowerOf2(buf.length));
     }
     body
     {
@@ -2624,13 +2865,14 @@ private:
          * inefficient, but having all the lookups be next to each other in
          * memory at every level of iteration is a huge win performance-wise.
          */
-        if(size == 0)
+        if (size == 0)
         {
             return;
         }
 
-        enforce(isPowerOfTwo(size),
+        assert(isPowerOf2(size),
             "Can only do FFTs on ranges with a size that is a power of two.");
+
         auto table = new lookup_t[][bsf(size) + 1];
 
         table[$ - 1] = memSpace[$ - size..$];
@@ -2729,9 +2971,9 @@ public:
      * property that can be both read and written and are floating point numbers.
      */
     void fft(Ret, R)(R range, Ret buf) const
-        if(isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+        if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
     {
-        enforce(buf.length == range.length);
+        assert(buf.length == range.length);
         enforceSize(range);
 
         if (range.length == 0)
@@ -2810,7 +3052,7 @@ public:
         immutable lenNeg1 = 1.0 / buf.length;
         foreach (ref elem; buf)
         {
-            auto temp = elem.re * lenNeg1;
+            immutable temp = elem.re * lenNeg1;
             elem.re = elem.im * lenNeg1;
             elem.im = temp;
         }
@@ -2822,13 +3064,13 @@ public:
 // scope.
 private enum string MakeLocalFft = q{
     import core.stdc.stdlib;
-    import core.exception : OutOfMemoryError;
-    auto lookupBuf = (cast(lookup_t*) malloc(range.length * 2 * lookup_t.sizeof))
+    import core.exception : onOutOfMemoryError;
+
+    auto lookupBuf = (cast(lookup_t*)malloc(range.length * 2 * lookup_t.sizeof))
                      [0..2 * range.length];
     if (!lookupBuf.ptr)
-    {
-        throw new OutOfMemoryError(__FILE__, __LINE__);
-    }
+        onOutOfMemoryError();
+
     scope(exit) free(cast(void*) lookupBuf.ptr);
     auto fftObj = scoped!Fft(lookupBuf);
 };
@@ -2868,7 +3110,7 @@ void inverseFft(Ret, R)(R range, Ret buf)
     return fftObj.inverseFft!(Ret, R)(range, buf);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm;
     import std.range;
@@ -3057,13 +3299,6 @@ void slowFourier4(Ret, R)(R range, Ret buf)
     buf[3] = range[0] + range[1] * C(0, 1) - range[2] - range[3] * C(0, 1);
 }
 
-bool isPowerOfTwo(N)(N num)
-    if (isScalarType!N && !isFloatingPoint!N)
-{
-    import core.bitop : bsf, bsr;
-    return bsr(num) == bsf(num);
-}
-
 N roundDownToPowerOf2(N)(N num)
     if (isScalarType!N && !isFloatingPoint!N)
 {
@@ -3071,7 +3306,7 @@ N roundDownToPowerOf2(N)(N num)
     return num & (cast(N) 1 << bsr(num));
 }
 
-unittest
+@safe unittest
 {
     assert(roundDownToPowerOf2(7) == 4);
     assert(roundDownToPowerOf2(4) == 4);
@@ -3083,7 +3318,7 @@ template isComplexLike(T)
         is(typeof(T.init.im));
 }
 
-unittest
+@safe unittest
 {
     static assert(isComplexLike!(Complex!double));
     static assert(!isComplexLike!(uint));

@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.bitmapped_block;
 
 import std.experimental.allocator.common;
@@ -44,15 +45,15 @@ block size to the constructor.
 struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     ParentAllocator = NullAllocator)
 {
-    import std.typecons;
+    import std.typecons : tuple, Tuple;
     import std.traits : hasMember;
-    version(unittest) import std.stdio;
     import std.conv : text;
+    import std.typecons : Ternary;
 
     unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
-        import std.algorithm : max;
+        import std.algorithm.comparison : max;
         auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
             max(theAlignment, cast(uint) size_t.sizeof));
         scope(exit) AlignedMallocator.instance.deallocate(m);
@@ -126,7 +127,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     {
         auto blocks = capacity.divideRoundUp(blockSize);
         auto leadingUlongs = blocks.divideRoundUp(64);
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
         immutable initialAlignment = min(parentAlignment,
             1U << trailingZeros(leadingUlongs * 8));
         auto maxSlack = alignment <= initialAlignment
@@ -259,7 +260,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     @trusted void[] allocate(const size_t s)
     {
         const blocks = s.divideRoundUp(blockSize);
-        //writefln("Allocating %s blocks each of size %s", blocks, blockSize);
         void[] result = void;
 
     switcharoo:
@@ -304,6 +304,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     */
     void[] alignedAllocate(size_t n, uint a)
     {
+        import std.math : isPowerOf2;
         assert(a.isPowerOf2);
         if (a <= alignment) return allocate(n);
 
@@ -467,22 +468,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         _control[i .. i + blocks] = 1;
         return _payload[cast(size_t) (i * blockSize)
             .. cast(size_t) ((i + blocks) * blockSize)];
-        //void[] result;
-        //auto pos = tuple(_startIdx, 0);
-        //for (;;)
-        //{
-        //    if (pos[0] >= _control.rep.length)
-        //    {
-        //        // No more memory
-        //        return null;
-        //    }
-        //    pos = allocateAt(pos[0], pos[1], blocks, result);
-        //    if (pos[0] == size_t.max)
-        //    {
-        //        // Found and allocated
-        //        return result;
-        //    }
-        //}
     }
 
     // Rounds sizeInBytes to a multiple of blockSize.
@@ -510,11 +495,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     {
         // Dispose with trivial corner cases
         if (delta == 0) return true;
-        if (b is null)
-        {
-            b = allocate(delta);
-            return b !is null;
-        }
+        if (b is null) return false;
 
         /* To simplify matters, refuse to expand buffers that don't start at a block start (this may be the case for blocks allocated with alignedAllocate).
         */
@@ -534,7 +515,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         assert((b.ptr - _payload.ptr) % blockSize == 0);
         const blockIdx = (b.ptr - _payload.ptr) / blockSize;
         const blockIdxAfter = blockIdx + blocksOld;
-        //writefln("blockIdx: %s, blockIdxAfter: %s", blockIdx, blockIdxAfter);
 
         // Try the maximum
         const wordIdx = blockIdxAfter / 64,
@@ -601,8 +581,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     bool deallocate(void[] b)
     {
         if (b is null) return true;
-        // Adjust pointer, might be inside a block after alignedAllocate
-        //auto p = (b.ptr - _payload.ptr) / blockSize
 
         // Locate position
         immutable pos = b.ptr - _payload.ptr;
@@ -677,7 +655,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
     void dump()
     {
-        import std.stdio;
+        import std.stdio : writefln, writeln;
         writefln("%s @ %s {", typeid(this), cast(void*) _control._rep.ptr);
         scope(exit) writeln("}");
         assert(_payload.length == blockSize * _blocks);
@@ -734,7 +712,7 @@ unittest
 {
     static void testAllocateAll(size_t bs)(uint blocks, uint blocksAtATime)
     {
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
         assert(bs);
         import std.experimental.allocator.gc_allocator : GCAllocator;
         auto a = BitmappedBlock!(bs, min(bs, platformAlignment))(
@@ -753,8 +731,6 @@ unittest
             text(x.ptr, " ", x.length, " ", a));
         a.deallocateAll();
 
-        //writeln("Control words: ", a._control.length);
-        //writeln("Payload bytes: ", a._payload.length);
         bool twice = true;
 
     begin:
@@ -852,7 +828,6 @@ unittest
     BitmappedBlock!(8, 8, NullAllocator) h1;
     assert(h1.totalAllocation(1) >= 8);
     assert(h1.totalAllocation(64) >= 64);
-    //writeln(h1.totalAllocation(8 * 64));
     assert(h1.totalAllocation(8 * 64) >= 8 * 64);
     assert(h1.totalAllocation(8 * 63) >= 8 * 63);
     assert(h1.totalAllocation(8 * 64 + 1) >= 8 * 65);
@@ -884,6 +859,7 @@ struct BitmappedBlockWithInternalPointers(
     ParentAllocator = NullAllocator)
 {
     import std.conv : text;
+    import std.typecons : Ternary;
     unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
@@ -989,11 +965,7 @@ struct BitmappedBlockWithInternalPointers(
     bool expand(ref void[] b, size_t bytes)
     {
         if (!bytes) return true;
-        if (b is null)
-        {
-            b = allocate(bytes);
-            return b !is null;
-        }
+        if (b is null) return false;
         immutable oldBlocks =
             (b.length + _heap.blockSize - 1) / _heap.blockSize;
         assert(oldBlocks);
@@ -1034,8 +1006,6 @@ struct BitmappedBlockWithInternalPointers(
         // Find block start
         auto block = (p - _heap._payload.ptr) / _heap.blockSize;
         if (block >= _allocStart.length) return null;
-        // This may happen during marking, so comment it out.
-        // if (!_heap._control[block]) return null;
         // Within an allocation, must find the 1 just to the left of it
         auto i = _allocStart.find1Backward(block);
         if (i == i.max) return null;

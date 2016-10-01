@@ -1,68 +1,501 @@
 Ddoc
 
-$(COMMENT Pending changelog for 2.071. This will get copied to dlang.org and
-    cleared when master gets merged into stable prior to 2.071.
+$(COMMENT Pending changelog for 2.072. This will get copied to dlang.org and
+    cleared when master gets merged into stable prior to 2.072.
 )
 
 $(BUGSTITLE Library Changes,
-    $(LI $(NXREF experimental_allocator_gc_allocator, GCAllocator.goodAllocSize)
+    $(LI $(RELATIVE_LINK2 std-digest-murmurhash, Implementation of MurmurHash
+        digest.))
+    $(LI $(RELATIVE_LINK2 process, Process creation in `std.process` was sped up
+        on Posix.))
+    $(LI $(RELATIVE_LINK2 std-algorithm-iteration-cumulativeFold,
+        `algorithm.iteration.cumulativeFold` was added.))
+    $(LI $(RELATIVE_LINK2 padLeft-padRight, `std.range.padLeft` and
+        `std.range.padRight` were added.))
+    $(LI $(RELATIVE_LINK2 regex-multiple-patterns, `std.regex.regex` now
+        supports matching multiple patterns in one go.))
+    $(LI $(RELATIVE_LINK2 regex-with-matches, `std.regex.splitter` now
+        supports keeping the pattern matches in the resulting range.))
+    $(LI $(RELATIVE_LINK2 optimization, `findLocalMin` was added to `std.numeric`.))
+    $(LI $(RELATIVE_LINK2 slice_ptr, `ptr` property and public constructor were
+        added to `std.experimental.ndslice.slice.Slice`.))
+    $(LI $(RELATIVE_LINK2 slice_toHash, `toHash` method was
+        added to `std.experimental.ndslice.slice.Slice`.))
+    $(LI $(RELATIVE_LINK2 slice_alloc, `slice`, `shape`, `ndarray`, and other
+        utilities were added to `std.experimental.ndslice.slice`.))
+    $(LI $(RELATIVE_LINK2 slice_as, `as` lazy tensor was added to
+        `std.experimental.ndslice.slice`.))
+    $(LI $(RELATIVE_LINK2 slice_iota, `iotaSlice` lazy tensor was added to
+        `std.experimental.ndslice.selection`.))
+    $(LI $(RELATIVE_LINK2 slice_index, `indexSlice` lazy tensor was added to
+        `std.experimental.ndslice.selection`.))
+    $(LI $(RELATIVE_LINK2 slice_repeat, `repeatSlice` lazy tensor was added to
+        `std.experimental.ndslice.selection`.))
+    $(LI $(RELATIVE_LINK2 slice_map, `mapSlice` lazy tensor was added to
+        `std.experimental.ndslice.selection`.))
+    $(LI $(RELATIVE_LINK2 slice_mio, partial support for Math Index Order
+        was added to `std.experimental.ndslice.slice.Slice`.))
+    $(LI $(RELATIVE_LINK2 mutation, `std.algorithm.mutation.swapAt` was
+        exposed))
+    $(LI $(RELATIVE_LINK2 iota-length-size_t, `std.range.iota's `.length`
+        property is fixed to `size_t` instead of the type being iterated))
+    $(LI $(REF isNumber, std,uni) and $(REF isPunctuation, std,uni) now use a separate,
+    optimized path for ASCII inputs.)
+    $(LI $(REF isAlphaNum, std,uni), which is analogous to $(REF isAlphaNum, std,ascii)
         was added.)
-    $(LI High-level API of $(STDMODREF net_curl, std.net.curl) now uses $(XREF array, Appender)
-        for received content. Which generally makes all calls slightly faster. Up to 200ms for large
-        amounts of data.)
-    $(LI $(XREF meta, Repeat) was added to obtain a repeating
-    $(XREF meta, AliasSeq) consisting of template arguments.)
-    $(LI $(XREF algorithm_iteration, fold) was added as an alternative to $(XREF algorithm_iteration, reduce)
-        with argument order swapped.)
-    $(LI $(RELATIVE_LINK2 nextPow2, Added nextPow2 and truncPow2 to std.math.))
-    $(LI $(CXREF bitop, bsf), $(CXREF bitop, bsr), and $(CXREF bitop, popcnt) now
-        work with ulongs on 32 bit systems.)
-    $(LI $(XREF algorithm_sorting, topN) is now 5% - 7% faster.)
-    $(LI $(RELATIVE_LINK2 unary, Unary overloads of `startsWith` and `endsWith` were added.))
-    $(LI $(RELATIVE_LINK2 maxCount, $(XREF algorithm_searching, maxCount) and
-        $(XREF algorithm_searching, maxPos) were added.))
-    $(LI Range support for the convenience wrapper $(XREF container_rbtree, redBlackTree)
-        was added.)
+    $(LI $(REF regex, std,regex) now supports inline comments with (?#...) syntax.)
+    $(LI std.regex had numerous optimization applied, compile-time $(REF ctRegex, std,regex)
+    should now be generally faster then the run-time version.)
+    $(LI $(REF moveAt, std,range,primitives) accepts only `size_t` for its index
+    arguments.)
+    $(LI $(REF isStrictlyMonotonic, std,algorithm,sorting) which doesn't allow
+    equal values was added.)
+    $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
+        rangified.)
+    $(LI All overloads of `std.conv.toImpl` has been made private. Please use
+        $(REF to, std,conv) instead.)
+    $(LI $(RELATIVE_LINK2 min-max-element,
+    `std.algorithm.searching.{min,max}Element` for ranges have been added.))
+    $(LI $(REF Ternary, std,typecons) was added to represent three valued
+    logic.)
+    $(LI $(RELATIVE_LINK2 quantize, Added `std.math.quantize`, for rounding to
+        the nearest multiple of some number.))
+    $(LI $(RELATIVE_LINK2 traits, Three new traits were added to `std.traits`.))
+    $(LI Wrong
+        $(LINK2 $(ROOT_DIR)spec/function.html#trusted-functions, `@trusted`)
+        attributes have been
+        removed from  $(MREF etc,c,curl) functions
+        $(REF_ALTTEXT `curl_easy_escape`, curl_easy_escape, etc,c,curl),
+        $(REF_ALTTEXT `curl_escape`, curl_escape, etc,c,curl),
+        $(REF_ALTTEXT `curl_easy_unescape`, curl_easy_unescape, etc,c,curl), and
+        $(REF_ALTTEXT `curl_unescape`, curl_unescape, etc,c,curl).)
+    $(LI $(RELATIVE_LINK2 generate, `std.range.generate` fixed to be a proper
+        range.))
+    $(LI $(MREF std,numeric) no longer uses `enforce` for verifying
+    contract preconditions.)
+    $(LI $(RELATIVE_LINK2 headconst, `Final` was added to
+    `std.experimental.typecons`))
+    $(LI $(RELATIVE_LINK2 inner-class, `std.traits.isInnerClass` was added to
+    identify nested classes with an accessible `outer` pointer))
+    $(LI $(RELATIVE_LINK2 emplace-inner-class, `std.conv.emplace` no longer allows
+    to emplace classes directly nested inside other classes without specifying a
+    suitable `outer` pointer))
 )
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(LNAME2 nextPow2, Added nextPow2 and truncPow2 to std.math.)
-    $(P $(XREF math, nextPow2) and $(XREF math, truncPow2) are functions for
-        rounding numbers to powers of two.
+$(LI $(LNAME2 std-digest-murmurhash, Implementation of `std.digest.murmurhash`).
+    $(P $(MREF std,digest,murmurhash) has been added. MurmurHash is a
+      non-cryptographic hash function suitable for general hash-based lookup. It
+      is optimized for x86 architectures.
     )
 ------
+// Computing the 32-bits hash value of an int array using the convenient digest template.
+import std.digest.murmurhash;
+
+ubyte[4] hashed = digest!MurmurHash3_32_opt32([1, 2, 3, 4]);
+------
+)
+
+$(LI $(LNAME2 process, Process creation in `std.process` was sped up on Posix.)
+    $(P Previously, Posix systems would attempt to close every file descriptor
+        from 3 to the maximum file descriptor number if `inheritFDs` was not
+        specified with `spawnProcess`, `pipeProcess`, etc.
+        $(MREF std,process) now uses `poll()` to determine which
+        descriptors need closing.
+    )
+)
+
+$(LI $(LNAME2 std-algorithm-iteration-cumulativeFold,
+    `algorithm.iteration.cumulativeFold` was added.)
+
+    $(P $(REF cumulativeFold, std,algorithm,iteration) returns the successive
+        reduced values of an input range.)
+------
+assert([1, 2, 3, 4, 5].cumulativeFold!((a, b) => a + b).array == [1, 3, 6, 10, 15]);
+assert([1, 2, 3].cumulativeFold!((a, b) => a + b)(100).array == [101, 103, 106]);
+------
+)
+
+$(LI $(LNAME2 padLeft-padRight, `std.range.padLeft` and `std.range.padRight`
+        were added.)
+    $(P $(REF padLeft, std,range) and $(REF padRight, std,range) are functions for
+        padding ranges to a specified length using the given element.
+    )
+
+-------
+import std.range;
+import std.algorithm.comparison;
+
+assert([1, 2, 3, 4, 5].padLeft(0, 7).equal([0, 0, 1, 2, 3, 4, 5]));
+
+assert("Hello World!".padRight('!', 15).equal("Hello World!!!!"));
+-------
+)
+
+$(LI $(LNAME2 regex-multiple-patterns, `std.regex.regex` now supports matching multiple patterns in one go.)
+-------
+import std.regex;
+// multi-pattern regex
+auto multi = regex([`\d+,\d+`,`(a-z]+):(\d+)`]);
+auto m = "abc:43 12,34".matchAll(multi);
+assert(m.front.whichPattern == 2);
+assert(m.front[1] == "abc");
+assert(m.front[2] == "43");
+m.popFront();
+assert(m.front.whichPattern == 1);
+assert(m.front[1] == "12");
+-------
+)
+
+$(LI $(LNAME2 regex-with-matches, `std.regex.splitter` now supports keeping the
+pattern matches in the resulting range.)
+-------
+import std.regex;
+import std.algorithm.comparison : equal;
+
+auto pattern = regex(`([\.,])`);
+assert("2003.04.05"
+    .splitter!(No.keepSeparators)(pattern)
+    .equal(["2003", "04", "05"]));
+assert("2003.04.05"
+    .splitter!(Yes.keepSeparators)(pattern)
+    .equal(["2003", ".", "04", ".", "05"]));
+-------
+)
+
+$(LI $(LNAME2 optimization, `findLocalMin` was added to `std.numeric`.)
+    $(P $(REF findLocalMin, std,numeric) finds a real minimum of a real function `f(x)` via bracketing.)
+-------
+import std.numeric, std.math;
+
+auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
+
+assert(ret.x.approxEqual(4.0));
+assert(ret.y.approxEqual(0.0));
+-------
+)
+
+$(LI $(LNAME2 slice_ptr, `ptr` property and public constructor were added to
+    `std.experimental.ndslice.slice.Slice`.)
+    $(P `ptr` property allows to access `Slice`'s underlaying pointer or range.
+        Please refer to $(REF Slice, std,experimental,ndslice,slice)'s
+        internal binary epresentation before using the property.
+        `ptr` property is used in $(LINK2 https://github.com/libmir/mir, Mir)
+        for $(LINK2 http://docs.mir.dlang.io/latest/mir_sparse_package.html, sparse tensors).
+        `ndslice` developer mirror in Mir will be removed as
+        soon as LDC (LLVM D compiler) supports D version 2.072..
+    )
+    $(P Public constructor for `Slice` was added to support
+        $(MREF std,experimental,ndslice) integration
+        with other languages and libraries such as Julia language and NumPy library.
+    )
+)
+
+$(LI $(LNAME2 slice_toHash, $(P $(REF .Slice.toHash, std,experimental,ndslice,slice) method was added.)
+---
+import std.experimental.ndslice;
+
+// hash is the same for allocated data and generated data
+auto a = iotaSlice(3, 7);
+auto b = iotaSlice(3, 7).slice;
+
+assert(a.toHash == b.toHash);
+---
+)
+
+$(LI $(LNAME2 slice_alloc, `slice`, `shape`, `ndarray`, and other utilities
+    were added to `std.experimental.ndslice.slice`.)
+    $(P These utility functions have been added to
+        $(MREF std,experimental,ndslice):)
+    $(UL
+        $(LI $(REF makeNdarray, std,experimental,ndslice,slice),)
+        $(LI $(REF makeSlice, std,experimental,ndslice,slice),)
+        $(LI $(REF makeUninitializedSlice, std,experimental,ndslice,slice),)
+        $(LI $(REF ndarray, std,experimental,ndslice,slice),)
+        $(LI $(REF shape, std,experimental,ndslice,slice),)
+        $(LI $(REF slice, std,experimental,ndslice,slice),)
+        $(LI $(REF uninitializedSlice, std,experimental,ndslice,slice).)
+    )
+    $(P Example: Transposing common 2D array using `ndslice`)
+-----
+import std.experimental.ndslice;
+
+auto ar = [[0, 1, 2], [3, 4, 5]];
+
+auto sh = ar.shape;         // [2, 3] type of size_t[2]
+auto sl = slice!int(sh);    // allocates slice with corresponding shape
+sl[] = ar;                  // fills sl with values from ar
+ar = sl.transposed.ndarray; // allocates common 2D array
+
+assert(ar == [[0, 3], [1, 4], [2, 5]]);
+-----
+)
+
+$(LI $(LNAME2 slice_as, $(P $(REF as, std,experimental,ndslice,slice)
+    lazy tensor was added.)
+---
+import std.experimental.ndslice;
+
+auto matrix = slice!double([2, 2], 0);
+auto stringMatrixView = matrix.as!string;
+assert(stringMatrixView ==
+        [["0", "0"],
+         ["0", "0"]]);
+
+matrix.diagonal[] = 1;
+assert(stringMatrixView ==
+        [["1", "0"],
+         ["0", "1"]]);
+---
+)
+
+$(LI $(LNAME2 slice_iota, `iotaSlice` lazy tensor was added to `std.experimental.ndslice.selection`.)
+    $(P $(REF iotaSlice, std,experimental,ndslice,selection) is the fastest possible `Slice`.)
+---
+import std.experimental.ndslice;
+
+auto sl = iotaSlice([2, 3], 10);
+
+assert(sl.transposed == [[10, 13],
+                         [11, 14],
+                         [12, 15]]);
+---
+)
+
+$(LI $(LNAME2 slice_index, $(P $(REF indexSlice, std,experimental,ndslice,selection)
+    lazy tensor was added.)
+---
+import std.experimental.ndslice;
+
+auto slice = indexSlice(2, 3);
+
+assert(slice == [[[0, 0], [0, 1], [0, 2]],
+                 [[1, 0], [1, 1], [1, 2]]]);
+---
+)
+
+$(LI $(LNAME2 slice_repeat, $(P $(REF repeatSlice, std,experimental,ndslice,selection)
+    lazy tensor was added.)
+---
+import std.experimental.ndslice;
+
+auto sl = iotaSlice(3).repeatSlice(4);
+assert(sl == [[0, 1, 2],
+              [0, 1, 2],
+              [0, 1, 2],
+              [0, 1, 2]]);
+
+auto m = 4.repeatSlice(2, 3);
+assert(m == [[4, 4, 4],
+             [4, 4, 4]]);
+---
+)
+
+$(LI $(LNAME2 slice_map, $(P $(REF mapSlice, std,experimental,ndslice,selection)
+    lazy tensor was added.)
+---
+import std.experimental.ndslice;
+
+auto s = iotaSlice(2, 3).mapSlice!(a => a * a);
+assert(s == [[ 0,  1,  4],
+             [ 9, 16, 25]]);
+---
+)
+
+$(LI $(LNAME2 slice_mio, partial support for Math Index Order was added to `std.experimental.ndslice.slice.Slice`.)
+---
+import std.experimental.ndslice;
+
+auto sl = iotaSlice(3, 4);
+
+assert(sl[2, 3] == 11); // D & C index order
+assert(sl(3, 2) == 11); // Math & Fortran index order
+---
+)
+
+$(LI $(LNAME2 mutation, `std.algorithm.mutation.swapAt` was exposed)
+    $(P $(REF swapAt, std,algorithm,mutation) allows to swap elements
+        of a RandomAccessRange by their indices.
+    )
+)
+
+$(LI $(LNAME2 iota-length-size_t, `std.range.iota's `.length` property is fixed
+        to `size_t` instead of the type being iterated)
+    $(P $(REF iota, std,range)'s `.length` property is now always returned as
+        `size_t`.  This means if you are on a 32-bit CPU and you are using
+        iota to iterate 64-bit types, the length will be truncated to `size_t`.
+        In non-release mode, you will get an exception if the length exceeds
+        `size_t.max` in your call to `iota`.
+    )
+)
+
+$(LI $(LNAME2 min-max-element, `std.algorithm.searching.{min,max}Element`
+	have been added.)
+    $(P $(REF minElement, algorithm,searching) and $(REF maxElement,
+    algorithm,searching) are functions to search for the minimum and maximum
+    element in a range. They support a custom `map` accessor.
+    )
+
+-------
+import std.algorithm.searching;
+import std.range;
+import std.typecons;
+assert([3, 1, 4].minElement == 1);
+assert([4, 7, 5].enumerate.maxElement!`a.value` == tuple(1, 7));
+-------
+)
+
+$(LI $(LNAME2 quantize, Added `std.math.quantize`.)
+    $(P $(REF quantize, std,math) rounds to the nearest multiple of some number.
+        Features:)
+    $(UL
+        $(LI The rounding method can be specified using the `rfunc` parameter. By
+            default, the current rounding mode will be used, which is typically
+            "banker's rounding".)
+        $(LI Overloads are included for the common case of rounding to the $(I Nth)
+            digit place in some base.)
+        $(LI If known at compile time, the base and exponent (digit place) can be
+            supplied as template parameters for better performance.)
+    )
+---
 import std.math;
 
-assert(nextPow2(10) == 16);
-assert(nextPow2(4000) == 4096);
-
-assert(truncPow2(10) == 8);
-assert(truncPow2(4000) == 2048);
-------
+assert(12345.6789L.quantize(20.0L) == 12340.0L);
+assert(12345.6789L.quantize!(10, -2) == 12345.68L);
+assert(12345.6789L.quantize!(10, floor)(-2) == 12345.67L);
+---
 )
 
-$(LI $(LNAME2 unary, Unary overloads of `startsWith` and `endsWith` were added.)
-    $(P $(XREF algorithm_searching, startsWith) and $(XREF algorithm_searching, endsWith)
-        can now be used just with a predicate.
+$(LI $(LNAME2 traits, Three new traits were added to `std.traits`.)
+    $(P $(REF isType, std,traits), $(REF isFunction, std,traits), and
+    $(REF isFinal, std,traits) were added to `std.traits`.
     )
-------
-import std.algorithm.searching;
-import std.ascii : isAlpha;
 
-assert("abc".endsWith!isAlpha);
-assert(!"ab1".endsWith!(a => a.isAlpha));
+-------
+import std.traits;
 
-assert("abc".startsWith!isAlpha);
-assert(!"1ab".startsWith!isAlpha);
-------
+static assert(isType!int);
+
+struct S {}
+class C {}
+interface I {}
+
+static assert(isType!S);
+static assert(isType!C);
+static assert(isType!I);
+-------
+
+-------
+import std.traits;
+
+void func(){}
+struct S
+{
+    @property int prop(){ return 0; }
+}
+
+static assert(isFunction!func);
+static assert(isFunction!(S.prop));
+
+// is a delegate type, not function type
+static assert(!isFunction!(typeof(&S.prop)));
+-------
+
+-------
+import std.traits;
+
+class C
+{
+    void nf() {}
+    final void ff() {}
+}
+final class FC {}
+
+static assert(!isFinal!(C));
+static assert( isFinal!(FC));
+static assert(!isFinal!(C.nf));
+static assert( isFinal!(C.ff));
+-------
 )
 
-$(LI $(LNAME2 maxPos, $(XREF algorithm_searching, maxCount) and
-     $(XREF algorithm_searching, maxPos) were added.)
-$(P Previous to this addition, in order to get the number of the greatest
-    elements, you had to use `minCount!"a > b"`, which was very confusing.
-    This change adds convenience functions to fix this issue.)
+$(LI $(LNAME2 generate, `std.range.generate` fixed to be a proper range.)
+    $(P $(REF generate, std, range) was set up to return a different value on each
+    call to `front`. In addition, `popFront` did nothing. This means that
+    manipulation functions like $(REF drop, std, range) did nothing. The new
+    version uses a one-element cache to meet the expectations of the range
+    definition. It preserves the ref-ness of the generator as well.
+    )
+)
+
+$(LI $(LNAME2 headconst, `Final` was added to `std.experimental.typecons`.)
+    $(P $(REF Final, std, experimental, typecons) can't be mutated directly.
+    However references are typed with their original mutability.  This is
+    equivalent to `final` in Java or `readonly` in C#.
+    )
+-------
+auto a = makeFinal([1, 2, 3]);
+assert(a[0] == 1);
+
+// a = [2, 3]; // Reassignment is illegal,
+a[0] = 42; // Elements or fields are still mutable.
+
+assert(a[0] == 42);
+-------
+)
+
+$(LI $(LNAME2 inner-class, `std.traits.isInnerClass` was added to identify
+    nested classes with an accessible `outer` pointer)
+    $(P Classes, that are nested inside other classes (and not inside functions)
+    and that don't define any `outer` symbol, have an `outer` field which allows
+    to get and even set the instance of the outer class they are nested in.
+    $(REF isInnerClass, std, traits) allows to identify them. The types satisfying
+    `isInnerClass` are a subset of the ones satisfying `isNested`, as the latter
+    includes classes and structures nested inside functions or that redefine `outer`.
+    )
+-------
+class Outer
+{
+    class Inner1 { }
+    class Inner2
+    {
+        int outer; // redefines outer, so the Outer instance is not accessible
+    }
+    static class Inner3 {}  // static, thus not nested
+}
+static assert(isInnerClass!(Outer.Inner1));
+static assert(!isInnerClass!(Outer.Inner2));
+static assert(!isInnerClass!(Outer.Inner3));
+-------
+)
+
+$(LI $(LNAME2 emplace-inner-class, `std.conv.emplace` no longer allows to emplace
+    classes nested directly inside other classes without specifying a suitable `outer`
+    pointer)
+    $(P If a class is nested within another class (there's a new trait
+    $(REF isInnerClass, std, traits) to check for this condition), `emplace` requires
+    now the outer class instance as additional mandatory parameter. Before this
+    change, emplacing did not require this parameter and access to variables of the
+    outer class resulted in segmentation faults.
+    )
+-------
+class Outer
+{
+    int x;
+    class Inner
+    {
+        auto getX() { return x; }
+    }
+}
+Outer outer = new Outer();
+
+// auto inner = buf.emplace!(Outer.Inner)();   // this is no longer allowed
+auto inner = buf.emplace!(Outer.Inner)(outer); // use this instead
+
+auto x = inner.getX();  // this used to cause a segmentation fault;
+                        // now it works as expected
+-------
 )
 
 )
@@ -74,13 +507,5 @@ Macros:
 
     RELATIVE_LINK2=<a href="#$1">$+</a>
     LNAME2=<a class="anchor" title="Permalink to this section" id="$1" href="#$1">$+</a>
-
-    STDMODREF = <a href="phobos/std_$1.html">$2</a>
-    XREF = <a href="phobos/std_$1.html#$2">$2</a>
-    CXREF = <a href="phobos/core_$1.html#$2">$2</a>
-    OXREF = <a href="phobos/object.html#$2">$2</a>
-    NXREF = <a href="phobos/std_$1.html#.$2">$2</a>
-    NCXREF = <a href="phobos/core_$1.html#.$2">$2</a>
-    NOXREF = <a href="phobos/object.html#.$2">$2</a>
 
     BOOKTABLE = <table><caption>$1</caption>$+</table>

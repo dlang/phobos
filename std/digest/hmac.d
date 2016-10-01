@@ -2,17 +2,14 @@
 
 /**
 This package implements the hash-based message authentication code (_HMAC)
-algorithm as defined in $(WEB tools.ietf.org/html/rfc2104, RFC2104). See also
-the corresponding $(WEB en.wikipedia.org/wiki/Hash-based_message_authentication_code, Wikipedia article).
+algorithm as defined in $(HTTP tools.ietf.org/html/rfc2104, RFC2104). See also
+the corresponding $(HTTP en.wikipedia.org/wiki/Hash-based_message_authentication_code, Wikipedia article).
 
 $(SCRIPT inhibitQuickIndex = 1;)
 
 Macros:
-WIKI = Phobos/StdDigestHMAC
-SUBMODULE = $(LINK2 std_digest_$1.html, std.digest.$1)
-SUBREF = $(LINK2 std_digest_$1.html#.$2, $(TT $2))$(NBSP)
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Source: $(PHOBOSSRC std/digest/_hmac.d)
  */
@@ -29,7 +26,7 @@ import std.meta : allSatisfy;
  * information about the block size, it can be supplied explicitly using
  * the second overload.
  *
- * This type conforms to $(XREF digest.digest, isDigest).
+ * This type conforms to $(REF isDigest, std,digest.digest).
  */
 
 version(StdDdoc)
@@ -96,7 +93,10 @@ if (hashBlockSize % 8 == 0)
         import std.string : representation;
         auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
         hmac.put("Hello, world".representation);
-        static immutable expected = [130, 32, 235, 44, 208, 141, 150, 232, 211, 214, 162, 195, 188, 127, 52, 89, 100, 68, 90, 216];
+        static immutable expected = [
+            130, 32, 235, 44, 208, 141,
+            150, 232, 211, 214, 162, 195,
+            188, 127, 52, 89, 100, 68, 90, 216];
         assert(hmac.finish() == expected);
     }
 
@@ -133,13 +133,16 @@ if (hashBlockSize % 8 == 0)
         hmac.put(data1.representation);
         hmac.start();                   // reset digest
         hmac.put(data2.representation); // start over
-        static immutable expected = [122, 151, 232, 240, 249, 80, 19, 178, 186, 77, 110, 23, 208, 52, 11, 88, 34, 151, 192, 255];
+        static immutable expected = [
+            122, 151, 232, 240, 249, 80,
+            19, 178, 186, 77, 110, 23, 208,
+            52, 11, 88, 34, 151, 192, 255];
         assert(hmac.finish() == expected);
     }
 
     /**
      * Feeds a piece of data into the hash computation. This method allows the
-     * type to be used as an $(XREF range, OutputRange).
+     * type to be used as an $(REF OutputRange, std,range).
      *
      * Returns:
      * A reference to the digest for convenient chaining.
@@ -160,7 +163,10 @@ if (hashBlockSize % 8 == 0)
         auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
         hmac.put(data1.representation)
             .put(data2.representation);
-        static immutable expected = [197, 57, 52, 3, 13, 194, 13, 36, 117, 228, 8, 11, 111, 51, 165, 3, 123, 31, 251, 113];
+        static immutable expected = [
+            197, 57, 52, 3, 13, 194, 13,
+            36, 117, 228, 8, 11, 111, 51,
+            165, 3, 123, 31, 251, 113];
         assert(hmac.finish() == expected);
     }
 
@@ -194,7 +200,10 @@ if (hashBlockSize % 8 == 0)
         auto digest = hmac.put(data1.representation)
                           .put(data2.representation)
                           .finish();
-        static immutable expected = [197, 57, 52, 3, 13, 194, 13, 36, 117, 228, 8, 11, 111, 51, 165, 3, 123, 31, 251, 113];
+        static immutable expected = [
+            197, 57, 52, 3, 13, 194, 13,
+            36, 117, 228, 8, 11, 111, 51,
+            165, 3, 123, 31, 251, 113];
         assert(digest == expected);
     }
 }
@@ -231,7 +240,10 @@ if (isDigest!H)
                           .put(data1.representation)
                           .put(data2.representation)
                           .finish();
-        static immutable expected = [197, 57, 52, 3, 13, 194, 13, 36, 117, 228, 8, 11, 111, 51, 165, 3, 123, 31, 251, 113];
+        static immutable expected = [
+            197, 57, 52, 3, 13, 194, 13, 36,
+            117, 228, 8, 11, 111, 51, 165,
+            3, 123, 31, 251, 113];
         assert(digest == expected);
     }
 
@@ -258,13 +270,16 @@ if (isDigest!H)
     {
         import std.digest.sha, std.digest.hmac;
         import std.string : representation;
-        import std.algorithm : map;
+        import std.algorithm.iteration : map;
         string data = "Hello, world";
         auto digest = data.representation
                       .map!(a => cast(ubyte)(a+1))
                       .hmac!SHA1("My s3cR3T keY".representation);
         static assert(is(typeof(digest) == ubyte[20]));
-        static immutable expected = [163, 208, 118, 179, 216, 93, 17, 10, 84, 200, 87, 104, 244, 111, 136, 214, 167, 210, 58, 10];
+        static immutable expected = [
+            163, 208, 118, 179, 216, 93,
+            17, 10, 84, 200, 87, 104, 244,
+            111, 136, 214, 167, 210, 58, 10];
         assert(digest == expected);
     }
 }
@@ -298,7 +313,8 @@ unittest
 
     import std.string : representation;
     auto key      = "key".representation,
-         long_key = "012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789".representation,
+         long_key = ("012345678901234567890123456789012345678901"
+            ~"234567890123456789012345678901234567890123456789").representation,
          data1    = "The quick brown fox ".representation,
          data2    = "jumps over the lazy dog".representation,
          data     = data1 ~ data2;

@@ -1,3 +1,4 @@
+///
 module std.experimental.logger.multilogger;
 
 import std.experimental.logger.core;
@@ -68,7 +69,7 @@ class MultiLogger : Logger
     */
     Logger removeLogger(in char[] toRemove) @safe
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         import std.range.primitives : back, popBack;
         for (size_t i = 0; i < this.logger.length; ++i)
         {
@@ -135,7 +136,7 @@ class MultiLogger : Logger
     assert(n0.msg == "Hello TestLogger");
     assert(n0.line == line);
     assert(n1.msg == "Hello TestLogger");
-    assert(n0.line == line);
+    assert(n1.line == line);
 }
 
 // Issue #16

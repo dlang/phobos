@@ -43,7 +43,7 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  * In this simplest case, the template API can even be used without templates: Just use the "$(B x)" structs
  * directly.
  *
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  * Johannes Pfau
  *
@@ -92,7 +92,7 @@ unittest
     import std.stdio;
 
     // Digests a file and prints the result.
-    void digestFile(Hash)(string filename) if(isDigest!Hash)
+    void digestFile(Hash)(string filename) if (isDigest!Hash)
     {
         auto file = File(filename);
         auto result = digest!Hash(file.byChunk(4096 * 1024));
@@ -116,7 +116,7 @@ unittest
     import std.digest.crc, std.digest.sha, std.digest.md;
     import std.stdio;
     // Digests a file and prints the result.
-    void digestFile(Hash)(ref Hash hash, string filename) if(isDigest!Hash)
+    void digestFile(Hash)(ref Hash hash, string filename) if (isDigest!Hash)
     {
         File file = File(filename);
 
@@ -204,7 +204,7 @@ version(ExampleDigest)
         public:
             /**
              * Use this to feed the digest with data.
-             * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+             * Also implements the $(REF isOutputRange, std,range,primitives)
              * interface for $(D ubyte) and $(D const(ubyte)[]).
              * The following usages of $(D put) must work for any type which
              * passes $(LREF isDigest):
@@ -256,7 +256,7 @@ version(ExampleDigest)
 unittest
 {
     //Using the OutputRange feature
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     import std.range : repeat;
     import std.digest.md;
 
@@ -303,7 +303,7 @@ unittest
 unittest
 {
     import std.digest.crc;
-    void myFunction(T)() if(isDigest!T)
+    void myFunction(T)() if (isDigest!T)
     {
         T dig;
         dig.start();
@@ -317,7 +317,7 @@ unittest
  */
 template DigestType(T)
 {
-    static if(isDigest!T)
+    static if (isDigest!T)
     {
         alias DigestType =
             ReturnType!(typeof(
@@ -377,7 +377,7 @@ unittest
 unittest
 {
     import std.digest.crc;
-    void myFunction(T)() if(hasPeek!T)
+    void myFunction(T)() if (hasPeek!T)
     {
         T dig;
         dig.start();
@@ -388,7 +388,7 @@ unittest
 
 /**
  * Checks whether the digest has a $(D blockSize) member, which contains the
- * digest's internal block size in bits. It is primarily used by $(XREF digest.hmac, HMAC).
+ * digest's internal block size in bits. It is primarily used by $(REF HMAC, std,digest.hmac).
  */
 
 template hasBlockSize(T)
@@ -424,10 +424,10 @@ package template isDigestibleRange(Range)
  * Params:
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
  */
-DigestType!Hash digest(Hash, Range)(auto ref Range range) if(!isArray!Range
+DigestType!Hash digest(Hash, Range)(auto ref Range range) if (!isArray!Range
     && isDigestibleRange!Range)
 {
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     Hash hash;
     hash.start();
     copy(range, &hash);
@@ -449,11 +449,11 @@ unittest
  * Params:
  *  data= one or more arrays of any type
  */
-DigestType!Hash digest(Hash, T...)(scope const T data) if(allSatisfy!(isArray, typeof(data)))
+DigestType!Hash digest(Hash, T...)(scope const T data) if (allSatisfy!(isArray, typeof(data)))
 {
     Hash hash;
     hash.start();
-    foreach(datum; data)
+    foreach (datum; data)
         hash.put(cast(const(ubyte[]))datum);
     return hash.finish();
 }
@@ -486,7 +486,7 @@ unittest
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, Range)(ref Range range)
-    if(!isArray!Range && isDigestibleRange!Range)
+    if (!isArray!Range && isDigestibleRange!Range)
 {
     return toHexString!order(digest!Hash(range));
 }
@@ -508,7 +508,7 @@ unittest
  *  data= one or more arrays of any type
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, T...)(scope const T data)
-    if(allSatisfy!(isArray, typeof(data)))
+    if (allSatisfy!(isArray, typeof(data)))
 {
     return toHexString!order(digest!Hash(data));
 }
@@ -562,7 +562,7 @@ interface Digest
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * Also implements the $(REF isOutputRange, std,range,primitives)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Example:
@@ -598,7 +598,7 @@ interface Digest
          */
         @trusted nothrow ubyte[] finish();
         ///ditto
-        nothrow ubyte[] finish(scope ubyte[] buf);
+        nothrow ubyte[] finish(ubyte[] buf);
         //@@@BUG@@@ http://d.puremagic.com/issues/show_bug.cgi?id=6549
         /*in
         {
@@ -611,7 +611,7 @@ interface Digest
         final @trusted nothrow ubyte[] digest(scope const(void[])[] data...)
         {
             this.reset();
-            foreach(datum; data)
+            foreach (datum; data)
                 this.put(cast(ubyte[])datum);
             return this.finish();
         }
@@ -621,7 +621,7 @@ interface Digest
 unittest
 {
     //Using the OutputRange feature
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     import std.range : repeat;
     import std.digest.md;
 
@@ -713,9 +713,9 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase l
     char[num*2] result;
     size_t i;
 
-    static if(order == Order.increasing)
+    static if (order == Order.increasing)
     {
-        foreach(u; digest)
+        foreach (u; digest)
         {
             result[i++] = hexDigits[u >> 4];
             result[i++] = hexDigits[u & 15];
@@ -724,7 +724,7 @@ char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase l
     else
     {
         size_t j = num - 1;
-        while(i < num*2)
+        while (i < num*2)
         {
             result[i++] = hexDigits[digest[j] >> 4];
             result[i++] = hexDigits[digest[j] & 15];
@@ -756,9 +756,9 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
     auto result = new char[digest.length*2];
     size_t i;
 
-    static if(order == Order.increasing)
+    static if (order == Order.increasing)
     {
-        foreach(u; digest)
+        foreach (u; digest)
         {
             result[i++] = hexDigits[u >> 4];
             result[i++] = hexDigits[u & 15];
@@ -767,14 +767,15 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
     else
     {
         import std.range : retro;
-        foreach(u; retro(digest))
+        foreach (u; retro(digest))
         {
             result[i++] = hexDigits[u >> 4];
             result[i++] = hexDigits[u & 15];
         }
     }
     import std.exception : assumeUnique;
-    return assumeUnique(result);
+    // memory was just created, so casting to immutable is safe
+    return () @trusted { return assumeUnique(result); }();
 }
 
 ///ditto
@@ -786,7 +787,7 @@ string toHexString(LetterCase letterCase, Order order = Order.increasing)(in uby
 //For more example unittests, see Digest.digest, digest
 
 ///
-unittest
+@safe unittest
 {
     import std.digest.crc;
     //Test with template API:
@@ -799,7 +800,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.digest.crc;
     // With OOP API
@@ -808,7 +809,7 @@ unittest
     assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
 }
 
-unittest
+@safe unittest
 {
     ubyte[16] data;
     assert(toHexString(data) == "00000000000000000000000000000000");
@@ -838,7 +839,7 @@ ref T[N] asArray(size_t N, T)(ref T[] source, string errorMsg = "")
  * useful for other purposes as well. It returns the length (in bytes) of the hash value
  * produced by T.
  */
-template digestLength(T) if(isDigest!T)
+template digestLength(T) if (isDigest!T)
 {
     enum size_t digestLength = (ReturnType!(T.finish)).length;
 }
@@ -848,7 +849,7 @@ template digestLength(T) if(isDigest!T)
  * Modules providing digest implementations will usually provide
  * an alias for this template (e.g. MD5Digest, SHA1Digest, ...).
  */
-class WrapperDigest(T) if(isDigest!T) : Digest
+class WrapperDigest(T) if (isDigest!T) : Digest
 {
     protected:
         T _digest;
@@ -864,7 +865,7 @@ class WrapperDigest(T) if(isDigest!T) : Digest
 
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * Also implements the $(REF isOutputRange, std,range,primitives)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         @trusted nothrow void put(scope const(ubyte)[] data...)
@@ -909,7 +910,7 @@ class WrapperDigest(T) if(isDigest!T) : Digest
          * //length
          * --------
          */
-        nothrow ubyte[] finish(scope ubyte[] buf)
+        nothrow ubyte[] finish(ubyte[] buf)
         in
         {
             assert(buf.length >= this.length);
@@ -939,13 +940,13 @@ class WrapperDigest(T) if(isDigest!T) : Digest
              *
              * These functions are only available if $(D hasPeek!T) is true.
              */
-            @trusted ubyte[] peek(scope ubyte[] buf) const;
+            @trusted ubyte[] peek(ubyte[] buf) const;
             ///ditto
             @trusted ubyte[] peek() const;
         }
-        else static if(hasPeek!T)
+        else static if (hasPeek!T)
         {
-            @trusted ubyte[] peek(scope ubyte[] buf) const
+            @trusted ubyte[] peek(ubyte[] buf) const
             in
             {
                 assert(buf.length >= this.length);
@@ -990,4 +991,16 @@ unittest
     //The result is now in result (and in buf). If you pass a buffer which is bigger than
     //necessary, result will have the correct length, but buf will still have it's original
     //length
+}
+
+@safe unittest
+{
+    // Test peek & length
+    import std.digest.crc;
+    auto hash = new WrapperDigest!CRC32();
+    assert(hash.length == 4);
+    hash.put(cast(const(ubyte[]))"The quick brown fox jumps over the lazy dog");
+    assert(hash.peek().toHexString() == "39A34F41");
+    ubyte[5] buf;
+    assert(hash.peek(buf).toHexString() == "39A34F41");
 }

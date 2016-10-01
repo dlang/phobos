@@ -3,12 +3,9 @@
 /**
  * Support UTF-8 on Windows 95, 98 and ME systems.
  *
- * Macros:
- *      WIKI = Phobos/StdWindowsCharset
- *
  * Copyright: Copyright Digital Mars 2005 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  */
 /*          Copyright Digital Mars 2005 - 2009.
  * Distributed under the Boost Software License, Version 1.0.

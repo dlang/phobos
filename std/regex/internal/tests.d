@@ -5,7 +5,7 @@ module std.regex.internal.tests;
 
 package(std.regex):
 
-import std.algorithm, std.conv, std.exception, std.meta, std.range,
+import std.conv, std.exception, std.meta, std.range,
     std.typecons, std.regex;
 
 import std.regex.internal.parser : Escapables; // characters that need escaping
@@ -255,7 +255,8 @@ unittest
         TestVectors(  "[a-c~~b-f]+",    "abcdef", "y", "$&", "a"),
 //unicode blocks & properties:
         TestVectors(  `\P{Inlatin1suppl ement}`, "\u00c2!", "y", "$&", "!"),
-        TestVectors(  `\p{InLatin-1 Supplement}\p{in-mathematical-operators}\P{Inlatin1suppl ement}`, "\u00c2\u2200\u00c3\u2203.", "y", "$&", "\u00c3\u2203."),
+        TestVectors(  `\p{InLatin-1 Supplement}\p{in-mathematical-operators}\P{Inlatin1suppl ement}`,
+            "\u00c2\u2200\u00c3\u2203.", "y", "$&", "\u00c3\u2203."),
         TestVectors(  `[-+*/\p{in-mathematical-operators}]{2}`,    "a+\u2212",    "y",    "$&",    "+\u2212"),
         TestVectors(  `\p{Ll}+`,                      "XabcD",    "y",  "$&",      "abc"),
         TestVectors(  `\p{Lu}+`,                      "абвГДЕ",   "y",  "$&",      "ГДЕ"),
@@ -265,11 +266,11 @@ unittest
         TestVectors(  `[c-wф]фф`, "ффф", "y", "$&", "ффф"),
 //case insensitive:
         TestVectors(   `^abcdEf$`,           "AbCdEF",              "y",   "$&", "AbCdEF",      "i"),
-        TestVectors(   `Русский язык`,    "рУсскИй ЯзЫк",           "y",   "$&", "рУсскИй ЯзЫк",     "i"),
+        TestVectors(   `Русский язык`, "рУсскИй ЯзЫк", "y", "$&", "рУсскИй ЯзЫк", "i"),
         TestVectors(   `ⒶⒷⓒ` ,        "ⓐⓑⒸ",                   "y",   "$&", "ⓐⓑⒸ",      "i"),
         TestVectors(   "\U00010400{2}",  "\U00010428\U00010400 ",   "y",   "$&", "\U00010428\U00010400", "i"),
         TestVectors(   `[adzУ-Я]{4}`,    "DzюЯ",                   "y",   "$&", "DzюЯ", "i"),
-        TestVectors(   `\p{L}\p{Lu}{10}`, "абвгдеЖЗИКЛ",            "y",   "$&", "абвгдеЖЗИКЛ", "i"),
+        TestVectors(   `\p{L}\p{Lu}{10}`, "абвгдеЖЗИКЛ", "y",   "$&", "абвгдеЖЗИКЛ", "i"),
         TestVectors(   `(?:Dåb){3}`,  "DåbDÅBdÅb",                  "y",   "$&", "DåbDÅBdÅb", "i"),
 //escapes:
         TestVectors(    `\u0041\u005a\U00000065\u0001`,         "AZe\u0001",       "y",   "$&", "AZe\u0001"),
@@ -337,6 +338,11 @@ unittest
 //mixed lookaround
         TestVectors(   `a(?<=a(?=b))b`,    "ab", "y",      "$&", "ab"),
         TestVectors(   `a(?<=a(?!b))c`,    "ac", "y",      "$&", "ac"),
+        TestVectors(   `a(?i)bc`,         "aBc", "y",      "$&", "aBc"),
+        TestVectors(   `a(?i)bc`,         "Abc", "n",      "$&", "-"),
+        TestVectors(   `(?i)a(?-i)bc`, "aBcAbc", "y",      "$&", "Abc"),
+        TestVectors(   `(?s).(?-s).`, "\n\n\na", "y",      "$&", "\na"),
+        TestVectors(   `(?m)^a(?-m)$`,  "\na",   "y",      "$&", "a")
         ];
     string produceExpected(M,String)(auto ref M m, String fmt)
     {
@@ -347,7 +353,7 @@ unittest
     void run_tests(alias matchFn)()
     {
         int i;
-        foreach(Char; AliasSeq!( char, wchar, dchar))
+        foreach (Char; AliasSeq!( char, wchar, dchar))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             alias String = immutable(Char)[];
             String produceExpected(M,Range)(auto ref M m, Range fmt)
@@ -357,7 +363,7 @@ unittest
                 return app.data;
             }
             Regex!(Char) r;
-            foreach(a, tvd; tv)
+            foreach (a, tvd; tv)
             {
                 uint c = tvd.result[0];
                 debug(std_regex_test) writeln(" Test #", a, " pattern: ", tvd.pattern, " with Char = ", Char.stringof);
@@ -374,12 +380,15 @@ unittest
 
                 assert((c == 'c') ? !i : i, "failed to compile pattern "~tvd.pattern);
 
-                if(c != 'c')
+                if (c != 'c')
                 {
                     auto m = matchFn(to!(String)(tvd.input), r);
                     i = !m.empty;
-                    assert((c == 'y') ? i : !i, text(matchFn.stringof ~": failed to match pattern #", a ,": ", tvd.pattern));
-                    if(c == 'y')
+                    assert(
+                        (c == 'y') ? i : !i,
+                        text(matchFn.stringof ~": failed to match pattern #", a ,": ", tvd.pattern)
+                    );
+                    if (c == 'y')
                     {
                         auto result = produceExpected(m, to!(String)(tvd.format));
                         assert(result == to!String(tvd.replace),
@@ -395,6 +404,7 @@ unittest
 
     void ct_tests()
     {
+        import std.algorithm.comparison : equal;
         version(std_regex_ct1)
         {
             pragma(msg, "Testing 1st part of ctRegex");
@@ -418,10 +428,10 @@ unittest
         }
         else
             alias Tests = AliasSeq!(Sequence!(0, 30), Sequence!(235, tv.length-5));
-        foreach(a, v; Tests)
+        foreach (a, v; Tests)
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum tvd = tv[v];
-            static if(tvd.result == "c")
+            static if (tvd.result == "c")
             {
                 static assert(!__traits(compiles, (){
                     enum r = regex(tvd.pattern, tvd.flags);
@@ -439,11 +449,11 @@ unittest
                 bool ok = (c == 'y') ^ m.empty;
                 assert(ok, text("ctRegex: failed to match pattern #",
                     a ,": ", tvd.pattern));
-                if(c == 'y')
+                if (c == 'y')
                 {
                     import std.stdio;
                     auto result = produceExpected(m, tvd.format);
-                    if(result != tvd.replace)
+                    if (result != tvd.replace)
                         writeln("ctRegex mismatch pattern #", a, ": ", tvd.pattern," expected: ",
                                 tvd.replace, " vs ", result);
                 }
@@ -491,6 +501,7 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto cr8 = ctRegex!("^(a)(b)?(c*)");
     auto m8 = bmatch("abcc",cr8);
     assert(m8);
@@ -505,6 +516,7 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto rtr = regex("a|b|c");
     enum ctr = regex("a|b|c");
     assert(equal(rtr.ir,ctr.ir));
@@ -517,6 +529,8 @@ unittest
 
 unittest
 {
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
     enum cx = ctRegex!"(A|B|C)";
     auto mx = match("B",cx);
     assert(mx);
@@ -546,13 +560,15 @@ unittest
 
 unittest
 {
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
 //global matching
     void test_body(alias matchFn)()
     {
         string s = "a quick brown fox jumps over a lazy dog";
         auto r1 = regex("\\b[a-z]+\\b","g");
         string[] test;
-        foreach(m; matchFn(s, r1))
+        foreach (m; matchFn(s, r1))
             test ~= m.hit;
         assert(equal(test, [ "a", "quick", "brown", "fox", "jumps", "over", "a", "lazy", "dog"]));
         auto free_reg = regex(`
@@ -587,6 +603,8 @@ unittest
 //tests for accumulated std.regex issues and other regressions
 unittest
 {
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
     void test_body(alias matchFn)()
     {
         //issue 5857
@@ -608,7 +626,8 @@ unittest
         //issue 4574
         //empty successful match still advances the input
         string[] pres, posts, hits;
-        foreach(m; matchFn("abcabc", regex("","g"))) {
+        foreach (m; matchFn("abcabc", regex("","g")))
+        {
             pres ~= m.pre;
             posts ~= m.post;
             assert(m.hit.empty);
@@ -647,7 +666,7 @@ unittest
         assert(collectException(
                 regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
                 ) is null);
-        foreach(ch; [Escapables])
+        foreach (ch; [Escapables])
         {
             assert(match(to!string(ch),regex(`[\`~ch~`]`)));
             assert(!match(to!string(ch),regex(`[^\`~ch~`]`)));
@@ -670,7 +689,7 @@ unittest
     {
         import std.uni : toUpper;
 
-        foreach(i, v; AliasSeq!(string, wstring, dstring))
+        foreach (i, v; AliasSeq!(string, wstring, dstring))
         {
             auto baz(Cap)(Cap m)
             if (is(Cap == Captures!(Cap.String)))
@@ -684,8 +703,9 @@ unittest
                    == to!String("ack capacity"));
             assert(std.regex.replace!(matchFn)(to!String("noon"), regex(to!String("^n")), to!String("[$&]"))
                    == to!String("[n]oon"));
-            assert(std.regex.replace!(matchFn)(to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'"))
-                   == to!String(": test2 test1 :"));
+            assert(std.regex.replace!(matchFn)(
+                to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'")
+            ) == to!String(": test2 test1 :"));
             auto s = std.regex.replace!(baz!(Captures!(String)))(to!String("Strap a rocket engine on a chicken."),
                     regex(to!String("[ar]"), "g"));
             assert(s == "StRAp A Rocket engine on A chicken.");
@@ -699,6 +719,7 @@ unittest
 // tests for splitter
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto s1 = ", abc, de,     fg, hi, ";
     auto sp1 = splitter(s1, regex(", *"));
     auto w1 = ["", "abc", "de", "fg", "hi", ""];
@@ -709,7 +730,8 @@ unittest
     auto w2 = ["", "abc", "de", "fg", "hi"];
 
     uint cnt;
-    foreach(e; sp2) {
+    foreach (e; sp2)
+    {
         assert(w2[cnt++] == e);
     }
     assert(equal(sp2, w2));
@@ -723,6 +745,7 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto s1 = ", abc, de,  fg, hi, ";
     auto w1 = ["", "abc", "de", "fg", "hi", ""];
     assert(equal(split(s1, regex(", *")), w1[]));
@@ -745,6 +768,16 @@ unittest
     assert(!match("a"d, "aa"d));
 }
 
+// bugzilla 7551
+unittest
+{
+    auto r = regex("[]abc]*");
+    assert("]ab".matchFirst(r).hit == "]ab");
+    assertThrown(regex("[]"));
+    auto r2 = regex("[]abc--ab]*");
+    assert("]ac".matchFirst(r2).hit == "]");
+}
+
 unittest
 {//bugzilla 7674
     assert("1234".replace(regex("^"), "$$") == "$1234");
@@ -753,7 +786,8 @@ unittest
 }
 unittest
 {// bugzilla 7679
-    foreach(S; AliasSeq!(string, wstring, dstring))
+    import std.algorithm.comparison : equal;
+    foreach (S; AliasSeq!(string, wstring, dstring))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         enum re = ctRegex!(to!S(r"\."));
         auto str = to!S("a.b");
@@ -771,7 +805,7 @@ unittest
     auto r = regex(
        r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
     auto uniCapturesNew = match(uniFileOld, r);
-    for(int i = 0; i < 20; i++)
+    for (int i = 0; i < 20; i++)
         foreach (matchNew; uniCapturesNew) {}
     //a second issue with same symptoms
     auto r2 = regex(`([а-яА-Я\-_]+\s*)+(?<=[\s\.,\^])`);
@@ -808,6 +842,7 @@ unittest
 // bugzilla 9211
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto rx_1 =  regex(r"^(\w)*(\d)");
     auto m = match("1234", rx_1);
     assert(equal(m.front, ["1234", "3", "4"]));
@@ -893,6 +928,7 @@ unittest
 // bugzilla 11839
 unittest
 {
+    import std.algorithm.comparison : equal;
     assert(regex(`(?P<var1>\w+)`).namedCaptures.equal(["var1"]));
     assert(collectException(regex(`(?P<1>\w+)`)));
     assert(regex(`(?P<v1>\w+)`).namedCaptures.equal(["v1"]));
@@ -960,11 +996,56 @@ unittest
     assertThrown(regex(`^((x)(?=\1))`));
 }
 
+// bugzilla 14504
+unittest
+{
+    auto p = ctRegex!("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?" ~
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+}
+
 // bugzilla 14529
 unittest
 {
     auto ctPat2 = regex(r"^[CDF]$", "i");
-    foreach(v; ["C", "c", "D", "d", "F", "f"])
+    foreach (v; ["C", "c", "D", "d", "F", "f"])
         assert(matchAll(v, ctPat2).front.hit == v);
 }
 
+// bugzilla 14615
+unittest
+{
+    import std.stdio : writeln;
+    import std.regex : replaceFirst, replaceFirstInto, regex;
+    import std.array : appender;
+
+    auto example = "Hello, world!";
+    auto pattern = regex("^Hello, (bug)");  // won't find this one
+    auto result = replaceFirst(example, pattern, "$1 Sponge Bob");
+    assert(result == "Hello, world!");  // Ok.
+
+    auto sink = appender!string;
+    replaceFirstInto(sink, example, pattern, "$1 Sponge Bob");
+    assert(sink.data == "Hello, world!");
+    replaceAllInto(sink, example, pattern, "$1 Sponge Bob");
+    assert(sink.data == "Hello, world!Hello, world!");
+}
+
+// bugzilla 15573
+unittest
+{
+    auto rx = regex("[c d]", "x");
+    assert("a b".matchFirst(rx));
+}
+
+// bugzilla 15864
+unittest
+{
+    regex(`(<a (?:(?:\w+=\"[^"]*\")?\s*)*href="\.\.?)"`);
+}
+
+unittest
+{
+    auto r = regex("(?# comment)abc(?# comment2)");
+    assert("abc".matchFirst(r));
+    assertThrown(regex("(?#..."));
+}

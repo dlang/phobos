@@ -30,6 +30,10 @@ QUIET:=
 
 include osmodel.mak
 
+ifeq (osx,$(OS))
+	export MACOSX_DEPLOYMENT_TARGET=10.7
+endif
+
 # Default to a release built, override with BUILD=debug
 ifeq (,$(BUILD))
 BUILD_WAS_SPECIFIED=0
@@ -107,6 +111,10 @@ else
 	DFLAGS += -O -release
 endif
 
+ifdef ENABLE_COVERAGE
+DFLAGS  += -cov
+endif
+
 # Set DOTOBJ and DOTEXE
 ifeq (,$(findstring win,$(OS)))
 	DOTOBJ:=.o
@@ -145,8 +153,6 @@ endif
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
-# Given one or more packages, returns their respective libraries
-P2LIB=$(addprefix $(ROOT)/libphobos2_,$(addsuffix $(DOTLIB),$(subst /,_,$1)))
 # Given one or more packages, returns the modules they contain
 P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 
@@ -158,20 +164,21 @@ STD_PACKAGES = std $(addprefix std/,\
   experimental/allocator/building_blocks experimental/logger \
   experimental/ndslice \
   net \
-  range regex)
+  experimental range regex)
 
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
-  concurrencybase conv cstream csv datetime demangle encoding exception file format \
+  conv csv datetime demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
-  outbuffer parallelism path process random signals socket socketstream stdint \
-  stdio stdiobase stream string system traits typecons typetuple uni \
+  outbuffer parallelism path process random signals socket stdint \
+  stdio stdiobase string system traits typecons typetuple uni \
   uri utf uuid variant xml zip zlib
+PACKAGE_std_experimental = typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
-PACKAGE_std_digest = crc digest hmac md ripemd sha
+PACKAGE_std_digest = crc digest hmac md murmurhash ripemd sha
 PACKAGE_std_experimental_logger = core filelogger \
   nulllogger multilogger package
 PACKAGE_std_experimental_allocator = \
@@ -205,10 +212,11 @@ EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
 EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
 
 EXTRA_MODULES_INTERNAL := $(addprefix			\
+	std/concurrencybase \
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
-	cstring processinit unicode_tables scopebuffer\
+	cstring phobosinit unicode_tables scopebuffer\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm) \
 	$(addprefix std/internal/test/, dummyrange) \
 	$(addprefix std/experimental/ndslice/, internal) \
@@ -376,6 +384,9 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 clean :
 	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
+gitzip:
+	git archive --format=zip HEAD > $(ZIPFILE)
+
 zip :
 	-rm -f $(ZIPFILE)
 	zip -r $(ZIPFILE) . -x .git\* -x generated\*
@@ -410,6 +421,11 @@ endif
 FORCE:
 
 endif
+
+JSON = phobos.json
+json : $(JSON)
+$(JSON) : $(ALL_D_FILES)
+	$(DMD) $(DFLAGS) -o- -Xf$@ $^
 
 ###########################################################
 # html documentation
@@ -459,6 +475,40 @@ checkwhitespace: $(LIB)
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
 
 #############################
+# Submission to Phobos are required to conform to the DStyle
+# The tests below automate some, but not all parts of the DStyle guidelines.
+# See also: http://dlang.org/dstyle.html
+#############################
+
+../dscanner:
+	git clone https://github.com/Hackerpilot/Dscanner ../dscanner
+	git -C ../dscanner checkout tags/v0.4.0-alpha.8
+	git -C ../dscanner submodule update --init --recursive
+
+../dscanner/dsc: ../dscanner
+	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
+	sed 's/dparse_verbose/StdLoggerDisableWarning/' -i ../dscanner/makefile
+	make -C ../dscanner githash debug
+
+style: ../dscanner/dsc
+	@echo "Check for trailing whitespace"
+	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
+
+	@echo "Enforce whitespace before opening parenthesis"
+	grep -nrE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $$(find . -name '*.d') ; test $$? -eq 1
+
+	@echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"
+	grep -nr 'import [^/,=]*:.*;' $$(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $$? -eq 1
+
+	@echo "Check for package wide std.algorithm imports"
+	grep -nr 'import std.algorithm : ' $$(find . -name '*.d') ; test $$? -eq 1
+
+	@echo "Enforce Allman style"
+	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find . -name '*.d'); test $$? -eq 1
+
+	# at the moment libdparse has problems to parse some modules (->excludes)
+	@echo "Running DScanner"
+	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace
