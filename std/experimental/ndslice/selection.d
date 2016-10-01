@@ -27,16 +27,17 @@ $(T2 evertPack, reverses dimension packs)
 $(BOOKTABLE $(H2 Selectors),
 
 $(TR $(TH Function Name) $(TH Description))
+$(T2 blocks, n-dimensional slice composed of n-dimensional non-overlapping blocks.
+    If the slice has two dimensions, it is a block matrix.)
 $(T2 byElement, flat, random access range of all elements with `index` property)
 $(T2 byElementInStandardSimplex, an input range of all elements in standard simplex of hypercube with `index` property.
     If the slice has two dimensions, it is a range of all elements of upper left triangular matrix.)
+$(T2 diagonal, 1-dimensional slice composed of diagonal elements)
 $(T2 indexSlice, lazy slice with initial multidimensional index)
 $(T2 iotaSlice, lazy slice with initial flattened (continuous) index)
+$(T2 mapSlice, lazy multidimensional functional map)
 $(T2 repeatSlice, slice with identical values)
 $(T2 reshape, new slice with changed dimensions for the same data)
-$(T2 diagonal, 1-dimensional slice composed of diagonal elements)
-$(T2 blocks, n-dimensional slice composed of n-dimensional non-overlapping blocks.
-    If the slice has two dimensions, it is a block matrix.)
 $(T2 windows, n-dimensional slice of n-dimensional overlapping windows.
     If the slice has two dimensions, it is a sliding window.)
 )
