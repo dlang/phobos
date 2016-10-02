@@ -5082,9 +5082,17 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
 if (!is(T == class) && !(is(T == interface)))
 {
+    extern(C) private pure nothrow @nogc static // TODO remove pure when https://issues.dlang.org/show_bug.cgi?id=15862 has been fixed
+    {
+        pragma(mangle, "free") void pureFree( void *ptr );
+        pragma(mangle, "gc_addRange") void pureGcAddRange( in void* p, size_t sz, const TypeInfo ti = null );
+        pragma(mangle, "gc_removeRange") void pureGcRemoveRange( in void* p );
+    }
+
     /// $(D RefCounted) storage implementation.
     struct RefCountedStore
     {
+        import core.memory : pureMalloc;
         private struct Impl
         {
             T _payload;
@@ -5096,15 +5104,13 @@ if (!is(T == class) && !(is(T == interface)))
         private void initialize(A...)(auto ref A args)
         {
             import core.exception : onOutOfMemoryError;
-            import core.memory : GC;
-            import core.stdc.stdlib : malloc;
             import std.conv : emplace;
 
-            _store = cast(Impl*)malloc(Impl.sizeof);
+            _store = cast(Impl*)pureMalloc(Impl.sizeof);
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
-                GC.addRange(&_store._payload, T.sizeof);
+                pureGcAddRange(&_store._payload, T.sizeof);
             emplace(&_store._payload, args);
             _store._count = 1;
         }
@@ -5112,15 +5118,13 @@ if (!is(T == class) && !(is(T == interface)))
         private void move(ref T source)
         {
             import core.exception : onOutOfMemoryError;
-            import core.memory : GC;
-            import core.stdc.stdlib : malloc;
             import core.stdc.string : memcpy, memset;
 
-            _store = cast(Impl*)malloc(Impl.sizeof);
+            _store = cast(Impl*)pureMalloc(Impl.sizeof);
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
-                GC.addRange(&_store._payload, T.sizeof);
+                pureGcAddRange(&_store._payload, T.sizeof);
 
             // Can't use std.algorithm.move(source, _store._payload)
             // here because it requires the target to be initialized.
@@ -5233,11 +5237,10 @@ to deallocate the corresponding resource.
         .destroy(_refCounted._store._payload);
         static if (hasIndirections!T)
         {
-            import core.memory : GC;
-            GC.removeRange(&_refCounted._store._payload);
+            pureGcRemoveRange(&_refCounted._store._payload);
         }
-        import core.stdc.stdlib : free;
-        free(_refCounted._store);
+
+        pureFree(_refCounted._store);
         _refCounted._store = null;
     }
 
@@ -5322,7 +5325,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 ///
-@system unittest
+pure @system nothrow @nogc unittest
 {
     // A pair of an $(D int) and a $(D size_t) - the latter being the
     // reference count - will be dynamically allocated
@@ -5336,7 +5339,7 @@ assert(refCountedStore.isInitialized)).
     // the pair will be freed when rc1 and rc2 go out of scope
 }
 
-@system unittest
+pure @system unittest
 {
     RefCounted!int* p;
     {
@@ -5375,7 +5378,7 @@ assert(refCountedStore.isInitialized)).
     assert(a.x._refCounted._store._count == 2, "BUG 4356 still unfixed");
 }
 
-@system unittest
+pure @system nothrow @nogc unittest
 {
     import std.algorithm.mutation : swap;
 
@@ -5384,7 +5387,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 // 6606
-@safe unittest
+@safe pure nothrow @nogc unittest
 {
     union U {
        size_t i;
@@ -5399,7 +5402,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 // 6436
-@system unittest
+@system pure unittest
 {
     struct S { this(ref int val) { assert(val == 3); ++val; } }
 
@@ -5408,7 +5411,15 @@ assert(refCountedStore.isInitialized)).
     assert(val == 4);
 }
 
-@system unittest
+// gc_addRange coverage
+@system pure unittest
+{
+    struct S { int* p; }
+
+    auto s = RefCounted!S(null);
+}
+
+@system pure nothrow @nogc unittest
 {
     RefCounted!int a;
     a = 5; //This should not assert
@@ -5417,6 +5428,8 @@ assert(refCountedStore.isInitialized)).
     RefCounted!int b;
     b = a; //This should not assert either
     assert(b == 5);
+
+    RefCounted!(int*) c;
 }
 
 /**
