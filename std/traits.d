@@ -5336,7 +5336,9 @@ convertible to a string.
  */
 template isConvertibleToString(T)
 {
-    enum isConvertibleToString = (isAggregateType!T || isStaticArray!T) && is(StringTypeOf!T);
+    enum isConvertibleToString =
+        (isAggregateType!T || isStaticArray!T || is(T == enum))
+        && is(StringTypeOf!T);
 }
 
 @safe unittest
@@ -5349,6 +5351,14 @@ template isConvertibleToString(T)
     assert(!isConvertibleToString!string);
     assert(isConvertibleToString!AliasedString);
     assert(isConvertibleToString!(char[25]));
+}
+
+@safe unittest // Bugzilla 16573
+{
+    enum I : int { foo = 1 }
+    enum S : string { foo = "foo" }
+    assert(!isConvertibleToString!I);
+    assert(isConvertibleToString!S);
 }
 
 package template convertToString(T)

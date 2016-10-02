@@ -1481,6 +1481,11 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
     assert(exists(deleteme));
 }
 
+@safe unittest // Bugzilla 16573
+{
+    enum S : string { foo = "foo" }
+    assert(__traits(compiles, S.foo.exists));
+}
 
 /++
  Returns the attributes of the given file.
