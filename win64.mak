@@ -286,7 +286,7 @@ SRC_STD_C_FREEBSD= \
 
 SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
-	std\internal\phobosinit.d \
+	std\internal\encodinginit.d \
 	std\internal\processinit.d \
 	std\internal\unicode_tables.d \
 	std\internal\unicode_comp.d \
