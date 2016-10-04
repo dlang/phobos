@@ -92,6 +92,7 @@
  *           $(LREF isFloatingPoint)
  *           $(LREF isIntegral)
  *           $(LREF isNarrowString)
+ *           $(LREF isConvertibleToString)
  *           $(LREF isNumeric)
  *           $(LREF isPointer)
  *           $(LREF isScalarType)
@@ -5330,9 +5331,9 @@ enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) &&
 }
 
 
-/*
-Detect whether $(D T) is a struct or static array that is implicitly
-convertible to a string.
+/**
+ * Detect whether $(D T) is a struct or static array that is implicitly
+ * convertible to a string.
  */
 template isConvertibleToString(T)
 {
@@ -5341,6 +5342,7 @@ template isConvertibleToString(T)
         && is(StringTypeOf!T);
 }
 
+///
 @safe unittest
 {
     static struct AliasedString
