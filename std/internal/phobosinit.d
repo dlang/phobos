@@ -11,16 +11,6 @@
   +/
 module std.internal.phobosinit;
 
-version(OSX)
-{
-    extern(C) void std_process_shared_static_this();
-
-    shared static this()
-    {
-        std_process_shared_static_this();
-    }
-}
-
 shared static this()
 {
     import std.encoding : EncodingScheme;
