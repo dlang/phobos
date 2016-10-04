@@ -976,9 +976,7 @@ private final class ParallelismThread : Thread
 // Kill daemon threads.
 shared static ~this()
 {
-    auto allThreads = Thread.getAll();
-
-    foreach (thread; allThreads)
+    foreach (ref thread; Thread)
     {
         auto pthread = cast(ParallelismThread) thread;
         if (pthread is null) continue;
