@@ -3306,11 +3306,9 @@ void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve 
     copy!Types(from, to, preserve);
 }
 
-@system unittest // issue 15319
+@safe unittest // issue 15319
 {
-    import std.file : dirEntries;
-    auto fs = dirEntries(tempDir(), SpanMode.depth);
-    assert(__traits(compiles, copy(fs.front, fs.front)));
+    assert(__traits(compiles, copy("from.txt", "to.txt")));
 }
 
 private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz,
