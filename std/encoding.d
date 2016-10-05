@@ -55,6 +55,7 @@ module std.encoding;
 import std.traits;
 import std.typecons;
 import std.range.primitives;
+import std.internal.phobosinit;
 
 @system unittest
 {
@@ -2373,7 +2374,10 @@ abstract class EncodingScheme
      */
     static void register(string className)
     {
-        auto scheme = cast(EncodingScheme)ClassInfo.find(className).create();
+        auto info = ClassInfo.find(className);
+        if (info is null)
+            throw new EncodingException("Unable to find class info for class "~className);
+        auto scheme = cast(EncodingScheme)info.create();
         if (scheme is null)
             throw new EncodingException("Unable to create class "~className);
         foreach (encodingName;scheme.names())
@@ -3295,6 +3299,28 @@ class EncodingSchemeUtf32Native : EncodingScheme
     dchar dc = efrom.safeDecode(ub);
     assert(dc == 410);
     assert(ub.length == 8);
+}
+
+// this hack allows us to register all the classes without having dependencies
+// on other modules. The function is eterned, and then called from phobosinit.
+// Note that EncodingScheme.register uses the default constructor of each of
+// these classes via the Object.factory method, and then calls the names()
+// function. None of these functions above depend on external modules, so we
+// are safe to call this from an external module without risk of creating
+// cycles.
+extern(C) void std_encoding_shared_static_this()
+{
+    // BUG: this is needed or all the classinfo from this file will not be
+    // included in phobos!
+    scope ascii = new EncodingSchemeASCII;
+    EncodingScheme.register("std.encoding.EncodingSchemeASCII");
+    EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
+    EncodingScheme.register("std.encoding.EncodingSchemeLatin2");
+    EncodingScheme.register("std.encoding.EncodingSchemeWindows1250");
+    EncodingScheme.register("std.encoding.EncodingSchemeWindows1252");
+    EncodingScheme.register("std.encoding.EncodingSchemeUtf8");
+    EncodingScheme.register("std.encoding.EncodingSchemeUtf16Native");
+    EncodingScheme.register("std.encoding.EncodingSchemeUtf32Native");
 }
 
 //=============================================================================
