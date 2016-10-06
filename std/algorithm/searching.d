@@ -2809,12 +2809,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[2] == "Sagan Memorial Station");
     auto r1 = findSplitBefore(a, "Sagan");
     assert(r1);
-    assert(r1[0] == "Carl ", r1[0]);
+    assert(r1[0] == "Carl ");
     assert(r1[1] == "Sagan Memorial Station");
     auto r2 = findSplitAfter(a, "Sagan");
     assert(r2);
     assert(r2[0] == "Carl Sagan");
     assert(r2[1] == " Memorial Station");
+}
+
+/// Use $(REF only, std,range) to find single elements:
+@safe pure nothrow unittest
+{
+    import std.range : only;
+    assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
 }
 
 @safe pure nothrow unittest
