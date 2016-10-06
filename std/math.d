@@ -7723,21 +7723,14 @@ bool isPowerOf2(X)(const X x) pure @safe nothrow @nogc
     else
     {
         static if (isSigned!X)
-            alias W = typeof(x + 0);
-        else
-            alias W = typeof(x + 0u); // For ubyte and ushort W should be uint
-
-        static if (is(X == W))
         {
-            static if (isSigned!X)
-                return ((x & -x) == x) && (x > -x);
-            else
-                return (x & -x) > (x - 1);
+            auto y = cast(typeof(x + 0))x;
+            return y > 0 && !(y & (y - 1));
         }
         else
         {
-            pragma(inline, true);
-            return isPowerOf2(cast(W)x);
+            auto y = cast(typeof(x + 0u))x;
+            return (y & -y) > (y - 1);
         }
     }
 }
