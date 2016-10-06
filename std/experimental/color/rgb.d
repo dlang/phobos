@@ -1,12 +1,21 @@
 // Written in the D programming language.
 
 /**
-    This module implements the RGB _color type.
+This module implements the $(LINK2 https://en.wikipedia.org/wiki/RGB_color_space, RGB) _color type.
 
-    Authors:    Manu Evans
-    Copyright:  Copyright (c) 2015, Manu Evans.
-    License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Source:     $(PHOBOSSRC std/experimental/color/_rgb.d)
+RGB is the most common expression of colors used in computing, where a _color is specified as some
+amount of red, green and blue primaries.
+
+RGB is highly parametric, and comes in many shapes and sizes, with the most common being
+$(LINK2 https://en.wikipedia.org/wiki/SRGB, sRGB), which is conventionally used on
+computer monitors, and standard for use on the web.
+
+RGB colors require the RGB _color space parameters to be defined to be considered 'absolute' colors.
+
+Authors:    Manu Evans
+Copyright:  Copyright (c) 2015, Manu Evans.
+License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
+Source:     $(PHOBOSSRC std/experimental/color/_rgb.d)
 */
 module std.experimental.color.rgb;
 
@@ -75,7 +84,7 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
     unittest
     {
         static assert(RGB8("#8000FF")  == RGB8(0x80,0x00,0xFF));
-        static assert(RGBA8("0x908000FF") == RGBA8(0x80,0x00,0xFF,0x90));
+        static assert(RGBA8("#908000FF") == RGBA8(0x80,0x00,0xFF,0x90));
     }
 
 nothrow @nogc:
@@ -204,7 +213,11 @@ nothrow @nogc:
         }
     }
 
-    /** Cast to other color types */
+    /**
+    Cast to other color types.
+
+    This cast is a convenience which simply forwards the call to convertColor.
+    */
     Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);

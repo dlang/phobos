@@ -1,7 +1,10 @@
 // Written in the D programming language.
 
 /**
-This module implements CIE Lab and LCh _color types.
+This module implements the $(LINK2 https://en.wikipedia.org/wiki/Lab_color_space, CIE Lab) and
+$(LINK2 https://en.wikipedia.org/wiki/Lab_color_space#Cylindrical_representation:__CIELCh_or_CIEHLC, LCh) _color types.
+
+Lab is full-spectrum, absolute, vector _color space, with the specific goal of human perceptual uniformity.
 
 Authors:    Manu Evans
 Copyright:  Copyright (c) 2015, Manu Evans.
@@ -74,7 +77,11 @@ struct Lab(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if (isFloatingPoin
         return sqrt((WT(c.L) - WT(L))^^2 + (WT(c.a) - WT(a))^^2 + (WT(c.b) - WT(b))^^2);
     }
 
-    /** Cast to other color types */
+    /**
+    Cast to other color types.
+
+    This cast is a convenience which simply forwards the call to convertColor.
+    */
     Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);
@@ -221,7 +228,11 @@ struct LCh(F = float, alias whitePoint_ = (WhitePoint!F.D50)) if (isFloatingPoin
         h = angle * F(M_1_PI*180);
     }
 
-    /** Cast to other color types */
+    /**
+      Cast to other color types.
+
+      This cast is a convenience which simply forwards the call to convertColor.
+    */
     Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);

@@ -1,14 +1,103 @@
 // Written in the D programming language.
 
 /**
-    This package contains implementations of various common _color types.
-    Types are supplied for various _color spaces, along with _color space
-    conversion functionality.
+This package defines human-visible colors in various formats.
 
-    Authors:    Manu Evans
-    Copyright:  Copyright (c) 2015, Manu Evans.
-    License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Source:     $(PHOBOSSRC std/experimental/color/_package.d)
+RGB _color formats are particularly flexible to express typical RGB image data
+in a wide variety of common formats without having to write adapters.
+
+It is intended that this library facilitate a common API that allows a variety
+of image and multimedia libraries to interact more seamlessly, without need
+for constant conversions between custom, library-defined _color data types.
+
+This package pays very careful attention to correctness with respect to
+_color space definitions, and correct handling of _color space conversions.
+For best results, users should also pay careful attention to _colour space
+selection when working with _color data, and the rest will follow.
+A crash course on understanding _color space can be found at
+$(LINK2 https://en.wikipedia.org/wiki/Color_space, wikipedia).
+
+More information regarding specific _color spaces can be found in their
+respective modules.
+
+All types and functions offered in this package are $(D_INLINECODE pure),
+$(D_INLINECODE nothrow), $(D_INLINECODE @safe) and $(D_INLINECODE @nogc).
+It is intended to be useful by realtime or memory-contrained systems such as
+video games, games consoles or mobile devices.
+
+
+Expressing images:
+
+Images may be expressed in a variety of ways, but a simple way may be to use
+std.experimental.ndslice to produce simple n-dimensional images.
+
+-------
+import std.experimental.color;
+import std.experimental.ndslice;
+
+auto imageBuffer = new RGB8[height*width];
+auto image = imageBuffer.sliced(height, width);
+
+foreach(ref row; image)
+{
+    foreach(ref pixel; row)
+    {
+        pixel = Colors.white;
+    }
+}
+-------
+
+Use of ndslice this way allows the use of n-dimentional slices to produce
+sub-images.
+
+
+Implement custom _color type:
+
+The library is extensible such that users or libraries can easily supply
+their own custom _color formats and expect comprehensive conversion and
+interaction with any other libraries or code that makes use of
+std.experimental._color.
+
+The requirement for a user _color type is to specify a 'parent' _color space,
+and expose at least a set of conversion functions to/from that parent.
+
+For instance, HSV is a cylindrical representation of RGB colors, so the
+'parent' _color type in this case is said to be RGB.
+If your custom _color space is not derivative of an existing _color space,
+then you should provide conversion between CIE XYZ, which can most simply
+express all of human-visible _color.
+
+-------
+struct HueOnlyColor
+{
+    alias ParentColor = HSV!float;
+
+    static To convertColorImpl(To, From)(From color) if (is(From == HueOnlyColor) && isHSx!To)
+    {
+        return To(color.hue, 1.0, 1.0); // assume maximum saturation, maximum lightness
+    }
+
+    static To convertColorImpl(To, From)(From color) if (isHSx!From && is(To == HueOnlyColor))
+    {
+        return HueOnlyColor(color.h); // just keep the hue
+    }
+
+private:
+    float hue;
+}
+
+static assert(isColor!HueOnlyColor == true, "This is all that is required to create a valid color type");
+-------
+
+If your _color type has template args, it may also be necessary to produce a
+third convertColorImpl function that converts between instantiations with
+different template args.
+
+
+Authors:    Manu Evans
+Copyright:  Copyright (c) 2015, Manu Evans.
+License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
+Source:     $(PHOBOSSRC std/experimental/color/_package.d)
 */
 module std.experimental.color;
 
@@ -240,7 +329,14 @@ enum Colors
 
 
 /**
-Convert between color types.
+Convert between _color types.
+
+Conversion is always supported between any pair of valid _color types.
+Colour types usually implement only direct conversion between their immediate 'parent' _color type.
+In the case of distantly related colors, convertColor will follow a conversion path via
+intermediate representations such that it is able to perform the conversion.
+
+For instance, a conversion from HSV to Lab necessary follows the conversion path: HSV -> RGB -> XYZ -> Lab.
 */
 To convertColor(To, From)(From color) @safe pure nothrow @nogc
 {
@@ -275,7 +371,7 @@ unittest
 
 /**
 Create a color from a string.
-May be a hex color in the standard forms: (#/$/0x)rgb/argb/rrggbb/aarrggbb
+May be a hex color in the standard forms: (#/$)rgb/argb/rrggbb/aarrggbb
 May also be the name of any color from the $(D_INLINECODE Colors) enum.
 */
 Color colorFromString(Color = RGB8)(const(char)[] str) pure @safe
@@ -291,13 +387,11 @@ unittest
     static assert(colorFromString("F80") == RGB8(0xFF, 0x88, 0x00));
     static assert(colorFromString("#F80") == RGB8(0xFF, 0x88, 0x00));
     static assert(colorFromString("$F80") == RGB8(0xFF, 0x88, 0x00));
-    static assert(colorFromString("0xF80") == RGB8(0xFF, 0x88, 0x00));
 
     // 6 digits
     static assert(colorFromString("FF8000") == RGB8(0xFF, 0x80, 0x00));
     static assert(colorFromString("#FF8000") == RGB8(0xFF, 0x80, 0x00));
     static assert(colorFromString("$FF8000") == RGB8(0xFF, 0x80, 0x00));
-    static assert(colorFromString("0xFF8000") == RGB8(0xFF, 0x80, 0x00));
 
     // 4/8 digita (/w alpha)
     static assert(colorFromString!RGBA8("#8C41") == RGBA8(0xCC, 0x44, 0x11, 0x88));
@@ -315,15 +409,14 @@ package:
 import std.traits : isInstanceOf, TemplateOf;
 import std.typetuple : TypeTuple;
 
-
 RGBA8 colorFromStringImpl(const(char)[] str) pure @safe
 {
+    import std.conv : ConvException;
+
     static const(char)[] getHex(const(char)[] hex) pure nothrow @nogc @safe
     {
         if (hex.length > 0 && (hex[0] == '#' || hex[0] == '$'))
             hex = hex[1..$];
-        else if (hex.length > 1 && (hex[0] == '0' && hex[1] == 'x'))
-            hex = hex[2..$];
         foreach (i; 0 .. hex.length)
         {
             if (!(hex[i] >= '0' && hex[i] <= '9' || hex[i] >= 'a' && hex[i] <= 'f' || hex[i] >= 'A' && hex[i] <= 'F'))
@@ -376,7 +469,7 @@ RGBA8 colorFromStringImpl(const(char)[] str) pure @safe
             return RGBA8(r, g, b, a);
         }
 
-        throw new Exception("Hex string has invalid length");
+        throw new ConvException("Hex string has invalid length");
     }
 
     foreach (k; __traits(allMembers, Colors))
@@ -386,17 +479,7 @@ RGBA8 colorFromStringImpl(const(char)[] str) pure @safe
             mixin("return cast(RGBA8)Colors." ~ k ~ ";");
     }
 
-    throw new Exception("String is not a valid color");
-}
-
-// try and use the preferred float type
-// if the int type exceeds the preferred float precision, we'll upgrade the float
-template FloatTypeFor(IntType, RequestedFloat = float)
-{
-    static if (IntType.sizeof > 2)
-        alias FloatTypeFor = double;
-    else
-        alias FloatTypeFor = RequestedFloat;
+    throw new ConvException("String is not a valid color");
 }
 
 // find the fastest type to do format conversion without losing precision

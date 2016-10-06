@@ -13,8 +13,6 @@ module std.experimental.normint;
 import std.traits : isIntegral, isSigned, isUnsigned, isFloatingPoint, Unsigned;
 static import std.algorithm;
 
-import std.experimental.color : FloatTypeFor;
-
 @safe pure nothrow @nogc:
 
 /**
@@ -335,6 +333,16 @@ unittest
 }
 
 package:
+
+// try and use the preferred float type
+// if the int type exceeds the preferred float precision, we'll upgrade the float
+template FloatTypeFor(IntType, RequestedFloat = float)
+{
+    static if (IntType.sizeof > 2)
+        alias FloatTypeFor = double;
+    else
+        alias FloatTypeFor = RequestedFloat;
+}
 
 enum BitsUMax(size_t n) = (1L << n)-1;
 enum BitsSMax(size_t n) = (1 << (n-1))-1;

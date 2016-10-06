@@ -157,7 +157,7 @@ struct RGBColorSpaceDesc(F) if (isFloatingPoint!F)
     /** Color space name. */
     string name;
 
-    /** Function that converts a linear luminance to gamme space. */
+    /** Function that converts a linear luminance to gamma space. */
     GammaFunc toGamma;
     /** Function that converts a gamma luminance to linear space. */
     GammaFunc toLinear;

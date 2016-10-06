@@ -1,12 +1,19 @@
 // Written in the D programming language.
 
 /**
-    This module implements HSV, HSL, HSI, HCY, HWB, HCG _color types.
+This module implements $(LINK2 https://en.wikipedia.org/wiki/HSL_and_HSV, HSV),
+$(LINK2 https://en.wikipedia.org/wiki/HSL_and_HSV, HSL),
+$(LINK2 https://en.wikipedia.org/wiki/HSL_and_HSV, HSI),
+$(LINK2 https://en.wikipedia.org/wiki/HSL_and_HSV, HCY),
+$(LINK2 https://en.wikipedia.org/wiki/HWB_color_model, HWB),
+$(LINK2 https://www.npmjs.com/package/hcg-color, HCG) _color types.
 
-    Authors:    Manu Evans
-    Copyright:  Copyright (c) 2015, Manu Evans.
-    License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Source:     $(PHOBOSSRC std/experimental/color/_hsx.d)
+This family of _color spaces represent various cylindrical mappings of the RGB color space.
+
+Authors:    Manu Evans
+Copyright:  Copyright (c) 2015, Manu Evans.
+License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
+Source:     $(PHOBOSSRC std/experimental/color/_hsx.d)
 */
 module std.experimental.color.hsx;
 
@@ -174,7 +181,11 @@ struct HSx(HSxType type_, ComponentType_ = float, RGBColorSpace colorSpace_ = RG
         }
     }
 
-    /** Cast to other color types */
+    /**
+    Cast to other color types.
+
+    This cast is a convenience which simply forwards the call to convertColor.
+    */
     Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);

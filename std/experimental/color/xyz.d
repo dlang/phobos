@@ -1,12 +1,19 @@
 // Written in the D programming language.
 
 /**
-    This module implements CIE XYZ and xyY _color types.
+This module implements $(LINK2 https://en.wikipedia.org/wiki/CIE_1931_color_space, CIE XYZ) and
+$(LINK2 https://en.wikipedia.org/wiki/CIE_1931_color_space#CIE_xy_chromaticity_diagram_and_the_CIE_xyY_color_space, xyY)
+_color types.
 
-    Authors:    Manu Evans
-    Copyright:  Copyright (c) 2015, Manu Evans.
-    License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Source:     $(PHOBOSSRC std/experimental/color/_xyz.d)
+These _color spaces represent the simplest expression of the full-spectrum of human visible _color.
+No attempts are made to support perceptual uniformity, or meaningful colour blending within these _color spaces.
+They are most useful as an absolute representation of human visible colors, and a centre point for _color space
+conversions.
+
+Authors:    Manu Evans
+Copyright:  Copyright (c) 2015, Manu Evans.
+License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
+Source:     $(PHOBOSSRC std/experimental/color/_xyz.d)
 */
 module std.experimental.color.xyz;
 
@@ -80,7 +87,11 @@ struct XYZ(F = float) if (isFloatingPoint!F)
         this.Z = Z;
     }
 
-    /** Cast to other color types */
+    /**
+    Cast to other color types.
+
+    This cast is a convenience which simply forwards the call to convertColor.
+    */
     Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);
@@ -185,7 +196,11 @@ struct xyY(F = float) if (isFloatingPoint!F)
         this.Y = Y;
     }
 
-    /** Cast to other color types */
+    /**
+    Cast to other color types.
+
+    This cast is a convenience which simply forwards the call to convertColor.
+    */
     Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);

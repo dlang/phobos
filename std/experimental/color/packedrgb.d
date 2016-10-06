@@ -1,12 +1,16 @@
 // Written in the D programming language.
 
 /**
-    This module implements the packed RGB _color type.
+This module implements the packed RGB _color type.
 
-    Authors:    Manu Evans
-    Copyright:  Copyright (c) 2015, Manu Evans.
-    License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-    Source:     $(PHOBOSSRC std/experimental/color/_packedrgb.d)
+It is common in computer graphics to perform compression of image data to save
+runtime memory. There is a very wide variety of common compressed image formats.
+This module aims to support all of them!
+
+Authors:    Manu Evans
+Copyright:  Copyright (c) 2015, Manu Evans.
+License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
+Source:     $(PHOBOSSRC std/experimental/color/_packedrgb.d)
 */
 module std.experimental.color.packedrgb;
 
@@ -172,7 +176,11 @@ struct PackedRGB(string format_, ComponentType_, RGBColorSpace colorSpace_ = RGB
         this = cast(typeof(this))color;
     }
 
-    /** Cast to other color types */
+    /**
+    Cast to other color types.
+
+    This cast is a convenience which simply forwards the call to convertColor.
+    */
     Color opCast(Color)() const if (isColor!Color)
     {
         return convertColor!Color(this);
