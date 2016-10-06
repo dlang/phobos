@@ -9,7 +9,7 @@ module std.regex.internal.ir;
 
 package(std.regex):
 
-import std.exception, std.uni, std.meta, std.traits, std.range.primitives;
+import std.exception, std.uni, std.meta, std.traits, std.typecons, std.range.primitives;
 
 debug(std_regex_parser) import std.stdio;
 // just a common trait, may be moved elsewhere
@@ -28,25 +28,6 @@ alias makeTrie = codepointSetTrie!(13, 8);
 
 CharMatcher[CodepointSet] matcherCache;
 
-//accessor with caching
-@trusted CharMatcher getMatcher(CodepointSet set)
-{// @@@BUG@@@ 6357 almost all properties of AA are not @safe
-    if (__ctfe || maxCachedMatchers == 0)
-        return CharMatcher(set);
-    else
-    {
-        auto p = set in matcherCache;
-        if (p)
-            return *p;
-        if (matcherCache.length == maxCachedMatchers)
-        {
-            // flush enmatchers in trieCache
-            matcherCache = null;
-        }
-        return (matcherCache[set] = CharMatcher(set));
-    }
-}
-
 @trusted auto memoizeExpr(string expr)()
 {
     if (__ctfe)
@@ -63,15 +44,28 @@ CharMatcher[CodepointSet] matcherCache;
 }
 
 //property for \w character class
-@property CodepointSet wordCharacter()
+@property CodepointSet wordCharacter() pure
 {
-    return memoizeExpr!("unicode.Alphabetic | unicode.Mn | unicode.Mc
-        | unicode.Me | unicode.Nd | unicode.Pc")();
+    return unicode.Alphabetic | unicode.Mn | unicode.Mc
+        | unicode.Me | unicode.Nd | unicode.Pc;
 }
 
 @property CharMatcher wordMatcher()
 {
     return memoizeExpr!("CharMatcher(wordCharacter)")();
+}
+
+package bool scanFor()(const(Interval)[] ivals, dchar ch)
+{
+    immutable len = ivals.length;
+    for (size_t i = 0; i < len; i++)
+    {
+        if (ch < ivals[i].a)
+            return false;
+        if (ch < ivals[i].b)
+            return true;
+    }
+    return false;
 }
 
 // some special Unicode white space characters
@@ -97,7 +91,7 @@ enum RegexOption: uint {
 //do not reorder this list
 alias RegexOptionNames = AliasSeq!('g', 'i', 'x', 'U', 'm', 's');
 static assert( RegexOption.max < 0x80);
-// flags that allow guide execution of engine
+// flags that guide execution of engine
 enum RegexInfo : uint { oneShot = 0x80 }
 
 // IR bit pattern: 0b1_xxxxx_yy
@@ -173,7 +167,8 @@ template IRL(IR code)
 static assert (IRL!(IR.LookaheadStart) == 3);
 
 //how many parameters follow the IR, should be optimized fixing some IR bits
-int immediateParamsIR(IR i){
+int immediateParamsIR(IR i) pure
+{
     switch (i)
     {
     case IR.OrEnd,IR.InfiniteEnd,IR.InfiniteQEnd:
@@ -190,43 +185,43 @@ int immediateParamsIR(IR i){
 }
 
 //full length of IR instruction inlcuding all parameters that might follow it
-int lengthOfIR(IR i)
+int lengthOfIR(IR i) pure
 {
     return 1 + immediateParamsIR(i);
 }
 
 //full length of the paired IR instruction inlcuding all parameters that might follow it
-int lengthOfPairedIR(IR i)
+int lengthOfPairedIR(IR i) pure
 {
     return 1 + immediateParamsIR(pairedIR(i));
 }
 
 //if the operation has a merge point (this relies on the order of the ops)
-bool hasMerge(IR i)
+bool hasMerge(IR i) pure
 {
     return (i&0b11)==0b10 && i <= IR.RepeatQEnd;
 }
 
 //is an IR that opens a "group"
-bool isStartIR(IR i)
+bool isStartIR(IR i) pure
 {
     return (i&0b11)==0b01;
 }
 
 //is an IR that ends a "group"
-bool isEndIR(IR i)
+bool isEndIR(IR i) pure
 {
     return (i&0b11)==0b10;
 }
 
 //is a standalone IR
-bool isAtomIR(IR i)
+bool isAtomIR(IR i) pure
 {
     return (i&0b11)==0b00;
 }
 
 //makes respective pair out of IR i, swapping start/end bits of instruction
-IR pairedIR(IR i)
+IR pairedIR(IR i) pure
 {
     assert(isStartIR(i) || isEndIR(i));
     return cast(IR)(i ^ 0b11);
@@ -235,6 +230,7 @@ IR pairedIR(IR i)
 //encoded IR instruction
 struct Bytecode
 {
+pure:
     uint raw;
     //natural constraints
     enum maxSequence = 2+4;
@@ -459,14 +455,15 @@ struct Group(DataIndex)
 +/
 interface Kickstart(Char){
 @trusted:
-    bool search(ref Input!Char input);
-    bool match(ref Input!Char input);
-    @property bool empty() const;
+    bool search(ref Input!Char input) const;
+    bool match(ref Input!Char input) const;
+    @property bool empty() const pure;
 }
 
 //basic stack, just in case it gets used anywhere else then Parser
 @trusted struct Stack(T)
 {
+pure:
     T[] data;
     @property bool empty(){ return data.empty; }
 
@@ -479,8 +476,8 @@ interface Kickstart(Char){
         assert(!empty);
         auto val = data[$ - 1];
         data = data[0 .. $ - 1];
-        if (!__ctfe)
-            cast(void)data.assumeSafeAppend();
+        //if (!__ctfe)
+        //    cast(void)data.assumeSafeAppend();
         return val;
     }
 
@@ -491,7 +488,7 @@ interface Kickstart(Char){
     }
 }
 
-@trusted void reverseBytecode()(Bytecode[] code)
+@trusted void reverseBytecode()(Bytecode[] code) pure
 {
     import std.typecons;
     Bytecode[] rev = new Bytecode[code.length];
@@ -572,6 +569,8 @@ interface Kickstart(Char){
     code[] = rev[];
 }
 
+package alias Interval = Tuple!(uint,"a",uint, "b");
+
 /++
     $(D Regex) object holds regular expression pattern in compiled form.
     Instances of this object are constructed via calls to $(D regex).
@@ -580,11 +579,7 @@ interface Kickstart(Char){
 +/
 struct Regex(Char)
 {
-    //temporary workaround for identifier lookup
-    CodepointSet[] charsets; //
-    Bytecode[] ir;      //compiled bytecode of pattern
-
-
+pure:
     @safe @property bool empty() const nothrow {  return ir is null; }
 
     @safe @property auto namedCaptures()
@@ -633,14 +628,16 @@ struct Regex(Char)
     }
 
 package(std.regex):
+    Bytecode[] ir;                         // compiled bytecode of pattern
     NamedGroup[] dict;                     // maps name -> user group number
     uint ngroup;                           // number of internal groups
     uint maxCounterDepth;                  // max depth of nested {n,m} repetitions
     uint hotspotTableSize;                 // number of entries in merge table
     uint threadCount;                      // upper bound on number of Thompson VM threads
     uint flags;                            // global regex flags
-    public const(CharMatcher)[]  matchers; // tables that represent character sets
-    public const(BitTable)[] filters;      // bloom filters for conditional loops
+    Interval[][] charsets;                 // intervals of characters
+    const(CharMatcher)[]  matchers;        // tables that represent character sets
+    const(BitTable)[] filters;             // bloom filters for conditional loops
     uint[] backrefed;                      // bit array of backreferenced submatches
     Kickstart!Char kickstart;
 
@@ -696,11 +693,10 @@ package(std.regex):
 public:
     Regex!Char _regex;
     alias _regex this;
-    this(Regex!Char re, MatchFn fn)
+    this(immutable Regex!Char re, MatchFn fn) immutable
     {
         _regex = re;
         nativeFn = fn;
-
     }
 
 }
@@ -742,7 +738,7 @@ struct Input(Char)
         return _index == _origin.length;
     }
 
-    bool search(Kickstart!Char kick, ref dchar res, ref size_t pos)
+    bool search(const Kickstart!Char kick, ref dchar res, ref size_t pos)
     {
         kick.search(this);
         return nextChar(res, pos);
@@ -824,8 +820,8 @@ template BackLooper(E)
 }
 
 //
-@trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
-{//equal is @system?
+@safe uint lookupNamedGroup(String)(const(NamedGroup)[] dict, String name)
+{
     import std.range : assumeSorted;
     import std.conv : text;
     import std.algorithm.iteration : map;
@@ -861,6 +857,7 @@ public class RegexException : Exception
 
 // simple 128-entry bit-table used with a hash function
 struct BitTable {
+pure:
     uint[4] filter;
 
     this(CodepointSet set){
@@ -889,7 +886,7 @@ struct BitTable {
 struct CharMatcher {
     BitTable ascii; // fast path for ASCII
     Trie trie;      // slow path for Unicode
-
+pure:
     this(CodepointSet set)
     {
         auto asciiSet = set & unicode.ASCII;

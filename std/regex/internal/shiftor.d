@@ -29,6 +29,7 @@ uint effectiveSize(Char)()
 class ShiftOr(Char) : Kickstart!Char
 {
 private:
+pure:
     uint[] table;
     uint fChar;
     uint n_length;
@@ -115,8 +116,8 @@ private:
     {
         auto t = worklist[$-1];
         worklist.length -= 1;
-        if (!__ctfe)
-            cast(void)worklist.assumeSafeAppend();
+        //if (!__ctfe)
+        //    cast(void)worklist.assumeSafeAppend();
         return t;
     }
 
@@ -241,9 +242,9 @@ public:
                             static immutable codeBounds = [0x0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF, 0x10000, 0x10FFFF];
                         else //== 2
                             static immutable codeBounds = [0x0, 0xFFFF, 0x10000, 0x10FFFF];
-                        uint[] arr = new uint[set.byInterval.length * 2];
+                        uint[] arr = new uint[set.length * 2];
                         size_t ofs = 0;
-                        foreach (ival; set.byInterval)
+                        foreach (ival; set)
                         {
                             arr[ofs++] = ival.a;
                             arr[ofs++] = ival.b;
@@ -262,7 +263,8 @@ public:
                     auto  chars = set.length;
                     if (chars > charsetThreshold)
                         goto L_StopThread;
-                    foreach (ch; set.byCodepoint)
+                    foreach (ival; set)
+                    foreach (ch; ival.a..ival.b)
                     {
                         //avoid surrogate pairs
                         if (0xD800 <= ch && ch <= 0xDFFF)
@@ -373,7 +375,7 @@ public:
     // has a useful trait: if supplied with valid UTF indexes,
     // returns only valid UTF indexes
     // (that given the haystack in question is valid UTF string)
-    final @trusted bool search(ref Input!Char s)
+    final @trusted bool search(ref Input!Char s) const
     {//@BUG: apparently assumes little endian machines
         import std.conv : text;
         import core.stdc.string : memchr;
@@ -503,7 +505,7 @@ public:
         return false;
     }
 
-    final @trusted bool match(ref Input!Char s)
+    final @trusted bool match(ref Input!Char s) const
     {
         //TODO: stub
         return false;
@@ -514,7 +516,7 @@ public:
         import std.stdio : writefln;
         for (size_t i = 0; i < table.length; i += 4)
         {
-            writefln("%32b %32b %32b %32b",table[i], table[i+1], table[i+2], table[i+3]);
+            debug writefln("%32b %32b %32b %32b",table[i], table[i+1], table[i+2], table[i+3]);
         }
     }
 }
@@ -524,7 +526,7 @@ unittest
     import std.conv, std.regex;
     auto shiftOrLength(C)(const(C)[] pat, uint length)
     {
-        auto r = regex(pat);
+        auto r = regex(pat, "s");
         auto kick = new ShiftOr!C(r);
         assert(kick.length == length, text(C.stringof, " == ", kick.length));
         return kick;

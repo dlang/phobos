@@ -433,7 +433,7 @@ unittest
             static if (tvd.result == "c")
             {
                 static assert(!__traits(compiles, (){
-                    enum r = regex(tvd.pattern, tvd.flags);
+                    static r = regex(tvd.pattern, tvd.flags);
                 }), "errornously compiles regex pattern: " ~ tvd.pattern);
             }
             else

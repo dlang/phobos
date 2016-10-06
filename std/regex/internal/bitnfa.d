@@ -20,16 +20,17 @@ import std.algorithm;
 
 struct HashTab
 {
+pure:
     @disable this(this);
 
-    uint opIndex()(uint key)
+    uint opIndex()(uint key) const
     {
         auto p = locate(key, table);
         assert(p.occupied);
         return p.value;
     }
 
-    bool opBinaryRight(string op:"in")(uint key)
+    bool opBinaryRight(string op:"in")(uint key) const
     {
         auto p = locate(key, table);
         return p.occupied;
@@ -53,7 +54,7 @@ struct HashTab
         p.value = value;
     }
 
-    auto keys()
+    auto keys() const
     {
         import std.array : appender;
         auto app = appender!(uint[])();
@@ -65,7 +66,7 @@ struct HashTab
         return app.data;
     }
 
-    auto values()
+    auto values() const
     {
         import std.array : appender;
         auto app = appender!(uint[])();
@@ -85,17 +86,17 @@ private:
 
     struct Node
     {
+    pure:
         uint key_;
         uint value;
-        @property uint key()(){ return key_ & 0x7fff_ffff; }
-        @property bool occupied()(){ return (key_ & 0x8000_0000) != 0; }
+        @property uint key()() const { return key_ & 0x7fff_ffff; }
+        @property bool occupied()() const { return (key_ & 0x8000_0000) != 0; }
         void setOccupied(){ key_ |= 0x8000_0000; }
-
     }
     Node[] table;
     size_t items;
 
-    static Node* locate()(uint key, Node[] table)
+    static N* locate(N)(uint key, N[] table)
     {
         size_t slot = hashOf(key) & (table.length-1);
         while (table[slot].occupied)
@@ -131,6 +132,7 @@ private:
 // and ref count is decreased
 struct UIntTrie2
 {
+pure:
     ushort[] index;                       // pages --> blocks
     ushort[] refCounts;                   // ref counts for each block
     uint[]   hashes;                      // hashes of blocks
@@ -164,7 +166,7 @@ struct UIntTrie2
         return ut;
     }
 
-    uint opIndex(dchar ch)
+    uint opIndex(dchar ch) const
     {
         immutable blk = index[ch>>blockBits];
         return blocks.ptr[blk*blockSize + (ch & (blockSize-1))];
@@ -258,6 +260,7 @@ unittest
 // to run backwards to find the start.
 struct BitNfa
 {
+pure:
     uint[128]   asciiTab;         // state mask for ascii characters
     UIntTrie2   uniTab;           // state mask for unicode characters
     HashTab     controlFlow;      // maps each bit pattern to resulting jumps pattern
@@ -468,7 +471,7 @@ outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
             case CodepointSet, Trie:
                 auto cset = charsets[ir[i].data];
                 uint mask = 1u<<bitMapping[i];
-                foreach (ival; cset.byInterval)
+                foreach (ival; cset)
                 {
                     if (ival.b < 0x80)
                         asciiTab[ival.a..ival.b] &= ~mask;
@@ -497,7 +500,7 @@ outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
         }
     }
 
-    bool search(Input)(ref Input r)
+    bool search(Input)(ref Input r) const
     {
         dchar ch;
         size_t idx;
@@ -525,7 +528,7 @@ outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
         return false;
     }
 
-    bool match(Input)(ref Input r)
+    bool match(Input)(ref Input r) const
     {
         dchar ch;
         size_t idx;
@@ -567,7 +570,7 @@ outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
     }
 }
 
-auto reverseBitNfa(Char)(auto ref Regex!Char re, uint length)
+auto reverseBitNfa(Char)(auto ref Regex!Char re, uint length) pure
 {
     auto re2 = re;
     re2.ir = re2.ir.dup;
@@ -610,7 +613,7 @@ final class BitMatcher(Char) : Kickstart!(Char)
 @trusted:
     BitNfa forward, backward;
 
-    this()(auto ref Regex!Char re)
+    pure this()(auto ref Regex!Char re)
     {
         forward = BitNfa(re);
         // keep the end where it belongs
@@ -618,7 +621,7 @@ final class BitMatcher(Char) : Kickstart!(Char)
             backward = reverseBitNfa(re, forward.length);
     }
 
-    final bool search(ref Input!Char r)
+    final bool search(ref Input!Char r) const
     {
         auto save = r._index;
         bool res = forward.search(r);
@@ -635,7 +638,7 @@ final class BitMatcher(Char) : Kickstart!(Char)
         return res;
     }
 
-    final bool match(ref Input!Char r)
+    final bool match(ref Input!Char r) const
     {
         auto save = r._index;
         bool res = forward.match(r);
@@ -643,7 +646,7 @@ final class BitMatcher(Char) : Kickstart!(Char)
         return res;
     }
 
-    final @property bool empty() const{ return forward.empty; }
+    final @property bool empty() pure const{ return forward.empty; }
 }
 
 version(unittest)

@@ -7,11 +7,11 @@ module std.regex.internal.parser;
 import std.regex.internal.ir, std.regex.internal.shiftor,
     std.regex.internal.bitnfa;
 import std.range.primitives, std.uni, std.meta,
-    std.traits, std.typecons, std.exception;
+    std.traits, std.typecons, std.exception, std.range;
 static import std.ascii;
 
 // package relevant info from parser into a regex object
-auto makeRegex(S, CG)(Parser!(S, CG) p)
+auto makeRegex(S, CG)(Parser!(S, CG) p) pure
 {
     Regex!(BasicElementOf!S) re;
     auto g = p.g;
@@ -22,7 +22,10 @@ auto makeRegex(S, CG)(Parser!(S, CG) p)
         ngroup = g.ngroup;
         maxCounterDepth = g.counterDepth;
         flags = p.re_flags;
-        charsets = g.charsets;
+        charsets = g.charsets
+            .map!(x => 
+                x.byInterval.map!(x=>Interval(x.a,x.b)).array
+            ).array;
         matchers = g.matchers;
         backrefed = g.backrefed;
         re.postprocess();
@@ -75,87 +78,6 @@ unittest
     assert(nc.equal(cp[1..$]));
     nc.popBack();
     assert(nc.equal(cp[1 .. $ - 1]));
-}
-
-
-@trusted void reverseBytecode()(Bytecode[] code)
-{
-    Bytecode[] rev = new Bytecode[code.length];
-    uint revPc = cast(uint)rev.length;
-    Stack!(Tuple!(uint, uint, uint)) stack;
-    uint start = 0;
-    uint end = cast(uint)code.length;
-    for (;;)
-    {
-        for (uint pc = start; pc < end; )
-        {
-            immutable len = code[pc].length;
-            if (code[pc].code == IR.GotoEndOr)
-                break; //pick next alternation branch
-            if (code[pc].isAtom)
-            {
-                rev[revPc - len .. revPc] = code[pc .. pc + len];
-                revPc -= len;
-                pc += len;
-            }
-            else if (code[pc].isStart || code[pc].isEnd)
-            {
-                //skip over other embedded lookbehinds they are reversed
-                if (code[pc].code == IR.LookbehindStart
-                    || code[pc].code == IR.NeglookbehindStart)
-                {
-                    immutable blockLen = len + code[pc].data
-                         + code[pc].pairedLength;
-                    rev[revPc - blockLen .. revPc] = code[pc .. pc + blockLen];
-                    pc += blockLen;
-                    revPc -= blockLen;
-                    continue;
-                }
-                immutable second = code[pc].indexOfPair(pc);
-                immutable secLen = code[second].length;
-                rev[revPc - secLen .. revPc] = code[second .. second + secLen];
-                revPc -= secLen;
-                if (code[pc].code == IR.OrStart)
-                {
-                    //we pass len bytes forward, but secLen in reverse
-                    immutable revStart = revPc - (second + len - secLen - pc);
-                    uint r = revStart;
-                    uint i = pc + IRL!(IR.OrStart);
-                    while (code[i].code == IR.Option)
-                    {
-                        if (code[i - 1].code != IR.OrStart)
-                        {
-                            assert(code[i - 1].code == IR.GotoEndOr);
-                            rev[r - 1] = code[i - 1];
-                        }
-                        rev[r] = code[i];
-                        auto newStart = i + IRL!(IR.Option);
-                        auto newEnd = newStart + code[i].data;
-                        auto newRpc = r + code[i].data + IRL!(IR.Option);
-                        if (code[newEnd].code != IR.OrEnd)
-                        {
-                            newRpc--;
-                        }
-                        stack.push(tuple(newStart, newEnd, newRpc));
-                        r += code[i].data + IRL!(IR.Option);
-                        i += code[i].data + IRL!(IR.Option);
-                    }
-                    pc = i;
-                    revPc = revStart;
-                    assert(code[pc].code == IR.OrEnd);
-                }
-                else
-                    pc += len;
-            }
-        }
-        if (stack.empty)
-            break;
-        start = stack.top[0];
-        end = stack.top[1];
-        revPc = stack.top[2];
-        stack.pop();
-    }
-    code[] = rev[];
 }
 
 //test if a given string starts with hex number of maxDigit that's a valid codepoint
@@ -212,7 +134,7 @@ auto caseEnclose(CodepointSet set)
 /+
     fetch codepoint set corresponding to a name (InBlock or binary property)
 +/
-@trusted CodepointSet getUnicodeSet(in char[] name, bool negated,  bool casefold)
+@trusted CodepointSet getUnicodeSet(in char[] name, bool negated,  bool casefold) pure
 {
     CodepointSet s = unicode(name);
     //FIXME: caseEnclose for new uni as Set | CaseEnclose(SET && LC)
@@ -223,35 +145,9 @@ auto caseEnclose(CodepointSet set)
     return s;
 }
 
-//basic stack, just in case it gets used anywhere else then Parser
-@trusted struct Stack(T)
-{
-    T[] data;
-    @property bool empty(){ return data.empty; }
-
-    @property size_t length(){ return data.length; }
-
-    void push(T val){ data ~= val;  }
-
-    T pop()
-    {
-        assert(!empty);
-        auto val = data[$ - 1];
-        data = data[0 .. $ - 1];
-        if (!__ctfe)
-            cast(void)data.assumeSafeAppend();
-        return val;
-    }
-
-    @property ref T top()
-    {
-        assert(!empty);
-        return data[$ - 1];
-    }
-}
-
 struct CodeGen
 {
+pure:
     Bytecode[] ir;                 // resulting bytecode
     Stack!(uint) fixupStack;       // stack of opened start instructions
     NamedGroup[] dict;             // maps name -> user group number
@@ -336,7 +232,7 @@ struct CodeGen
             }
             if (ivals.length*2 > maxCharsetUsed)
             {
-                auto t  = getMatcher(set);
+                auto t  = CharMatcher(set);
                 put(Bytecode(IR.Trie, cast(uint)matchers.length));
                 matchers ~= t;
                 debug(std_regex_allocation) writeln("Trie generated");
@@ -617,6 +513,7 @@ enum infinite = ~0u;
 struct Parser(R, Generator)
     if (isForwardRange!R && is(ElementType!R : dchar))
 {
+pure:
     dchar _current;
     bool empty;
     R pat, origin;       //keep full pattern for pretty printing error messages
@@ -1543,7 +1440,7 @@ struct Parser(R, Generator)
 /+
     Postproces the IR, then optimize.
 +/
-@trusted void postprocess(Char)(ref Regex!Char zis)
+@trusted void postprocess(Char)(ref Regex!Char zis) pure
 {//@@@BUG@@@ write is @system
     with(zis)
     {
@@ -1663,7 +1560,7 @@ void fixupBytecode()(Bytecode[] ir)
     assert(fixups.empty);
 }
 
-void optimize(Char)(ref Regex!Char zis)
+void optimize(Char)(ref Regex!Char zis) pure
 {
     import std.array : insertInPlace;
     CodepointSet nextSet(uint idx)
@@ -1680,7 +1577,7 @@ void optimize(Char)(ref Regex!Char zis)
                     goto default;
                 //TODO: OrChar
                 case Trie, CodepointSet:
-                    set = zis.charsets[ir[i].data];
+                    set = .CodepointSet(zis.charsets[ir[i].data]);
                     goto default;
                 case GroupStart,GroupEnd:
                     break;
