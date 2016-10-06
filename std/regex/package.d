@@ -668,7 +668,7 @@ private:
         _memory = (enforce(malloc(size), "malloc failed")[0..size]);
         scope(failure) free(_memory.ptr);
         *cast(size_t*)_memory.ptr = 1;
-        _engine = EngineType(prog, Input!Char(input), 
+        _engine = EngineType(prog, Input!Char(input),
           _memory[size_t.sizeof..$], reFlags);
         static if (is(typeof(prog.nativeFn)))
             _engine.nativeFn = prog.nativeFn;
@@ -1085,7 +1085,7 @@ public auto bmatch(R, String)(R input, String re)
     if (isSomeString!R && isSomeString!String)
 {
     import std.regex.internal.backtracking : BacktrackingMatcher;
-    auto r = regex(re); 
+    auto r = regex(re);
     return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)
       (input, r, r.flags);
 }
@@ -1566,7 +1566,7 @@ public:
 /// ditto
 public Splitter!(keepSeparators, Range, RegEx) splitter(
     Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, RegEx)
-    (Range r, const RegEx pat) 
+    (Range r, const RegEx pat)
     if (is(BasicElementOf!Range : dchar) && isRegexFor!(RegEx, Range))
 {
     return Splitter!(keepSeparators, Range, RegEx)(r, pat);

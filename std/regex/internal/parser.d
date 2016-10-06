@@ -23,7 +23,7 @@ auto makeRegex(S, CG)(Parser!(S, CG) p) pure
         maxCounterDepth = g.counterDepth;
         flags = p.re_flags;
         charsets = g.charsets
-            .map!(x => 
+            .map!(x =>
                 x.byInterval.map!(x=>Interval(x.a,x.b)).array
             ).array;
         matchers = g.matchers;
