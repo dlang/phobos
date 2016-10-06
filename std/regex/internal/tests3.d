@@ -45,7 +45,7 @@ unittest
 {// bugzilla 7679
     foreach (S; AliasSeq!(string, wstring, dstring))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-        enum re = ctRegex!(to!S(r"\."));
+        const re = ctRegex!(to!S(r"\."));
         auto str = to!S("a.b");
         assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
         assert(split(str, re) == [to!S("a"), to!S("b")]);
@@ -89,8 +89,8 @@ unittest
 // bugzilla 8349
 unittest
 {
-    enum peakRegexStr = r"\>(wgEncode.*Tfbs.*\.(?:narrow)|(?:broad)Peak.gz)</a>";
-    enum peakRegex = ctRegex!(peakRegexStr);
+    const peakRegexStr = r"\>(wgEncode.*Tfbs.*\.(?:narrow)|(?:broad)Peak.gz)</a>";
+    const peakRegex = ctRegex!(peakRegexStr);
     //note that the regex pattern itself is probably bogus
     assert(match(r"\>wgEncode-blah-Tfbs.narrow</a>", peakRegex));
 }
@@ -168,7 +168,7 @@ unittest
 // bugzilla 11262
 unittest
 {
-    enum reg = ctRegex!(r",", "g");
+    const reg = ctRegex!(r",", "g");
     auto str = "This,List";
     str = str.replace(reg, "-");
     assert(str == "This-List");

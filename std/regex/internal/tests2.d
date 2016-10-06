@@ -45,29 +45,29 @@ unittest
 unittest
 {
     auto rtr = regex("a|b|c");
-    enum ctr = regex("a|b|c");
+    const ctr = regex("a|b|c");
     assert(equal(rtr.ir,ctr.ir));
     //CTFE parser BUG is triggered by group
     //in the middle of alternation (at least not first and not last)
-    enum testCT = regex(`abc|(edf)|xyz`);
+    const testCT = regex(`abc|(edf)|xyz`);
     auto testRT = regex(`abc|(edf)|xyz`);
     assert(equal(testCT.ir,testRT.ir));
 }
 
 unittest
 {
-    enum cx = ctRegex!"(A|B|C)";
+    immutable cx = ctRegex!"(A|B|C)";
     auto mx = match("B",cx);
     assert(mx);
     assert(equal(mx.captures, [ "B", "B"]));
-    enum cx2 = ctRegex!"(A|B)*";
+    immutable cx2 = ctRegex!"(A|B)*";
     assert(match("BAAA",cx2));
 
-    enum cx3 = ctRegex!("a{3,4}","i");
+    immutable cx3 = ctRegex!("a{3,4}","i");
     auto mx3 = match("AaA",cx3);
     assert(mx3);
     assert(mx3.captures[0] == "AaA");
-    enum cx4 = ctRegex!(`^a{3,4}?[a-zA-Z0-9~]{1,2}`,"i");
+    immutable cx4 = ctRegex!(`^a{3,4}?[a-zA-Z0-9~]{1,2}`,"i");
     auto mx4 = match("aaaabc", cx4);
     assert(mx4);
     assert(mx4.captures[0] == "aaaab");

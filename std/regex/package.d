@@ -324,7 +324,7 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
     if (isSomeString!(S))
 {
     import std.array : appender;
-    S pat;
+    Unqual!S pat;
     if (patterns.length > 1)
     {
         auto app = appender!S();
@@ -386,18 +386,24 @@ public auto regexImpl(S)(S pattern, const(char)[] flags="") pure
 }
 
 
+private template IsolatedFunc(Char, alias source)
+{
+    import std.regex.internal.backtracking;
+    alias Matcher = BacktrackingMatcher!(true);
+    @trusted bool IsolatedFunc(ref Matcher!Char matcher)
+    {
+        debug(std_regex_ctr) pragma(msg, source);
+        mixin(source);
+    }
+}
+
 template ctRegexImpl(alias pattern, string flags=[])
 {
     import std.regex.internal.parser, std.regex.internal.backtracking;
     static immutable r = cast(immutable)regexPure([pattern], flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
-    alias Matcher = BacktrackingMatcher!(true);
-    @trusted bool func(ref Matcher!Char matcher)
-    {
-        debug(std_regex_ctr) pragma(msg, source);
-        mixin(source);
-    }
+    alias func = IsolatedFunc!(Char, source);
     static immutable nr = immutable StaticRegex!Char(r, &func);
 }
 
