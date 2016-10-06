@@ -468,15 +468,16 @@ unittest
 
 unittest
 {
-    auto cr = ctRegex!("abc");
+    immutable cr = ctRegex!("abc");
     assert(bmatch("abc",cr).hit == "abc");
-    auto cr2 = ctRegex!("ab*c");
+    immutable cr2 = ctRegex!("ab*c");
     assert(bmatch("abbbbc",cr2).hit == "abbbbc");
 }
+
 unittest
 {
-    auto cr3 = ctRegex!("^abc$");
+    immutable cr3 = ctRegex!("^abc$");
     assert(bmatch("abc",cr3).hit == "abc");
-    auto cr4 = ctRegex!(`\b(a\B[a-z]b)\b`);
+    immutable cr4 = ctRegex!(`\b(a\B[a-z]b)\b`);
     assert(array(match("azb",cr4).captures) == ["azb", "azb"]);
 }

@@ -1023,7 +1023,7 @@ public auto matchAll(R, RegEx)(R input, const RegEx re)
     foreach (String; AliasSeq!(string, wstring, const(dchar)[]))
     {
         auto str1 = "blah-bleh".to!String();
-        auto pat1 = "bl[ae]h".to!String();
+        const pat1 = "bl[ae]h".to!String();
         auto mf = matchFirst(str1, pat1);
         assert(mf.equal(["blah".to!String()]));
         auto mAll = matchAll(str1, pat1);
@@ -1031,7 +1031,7 @@ public auto matchAll(R, RegEx)(R input, const RegEx re)
             ([["blah".to!String()], ["bleh".to!String()]]));
 
         auto str2 = "1/03/12 - 3/03/12".to!String();
-        auto pat2 = regex([r"(\d+)/(\d+)/(\d+)".to!String(), "abc".to!String]);
+        const pat2 = regex([r"(\d+)/(\d+)/(\d+)".to!String(), "abc".to!String]);
         auto mf2 = matchFirst(str2, pat2);
         assert(mf2.equal(["1/03/12", "1", "03", "12"].map!(to!String)()));
         auto mAll2 = matchAll(str2, pat2);
@@ -1041,7 +1041,7 @@ public auto matchAll(R, RegEx)(R input, const RegEx re)
         mf2.popFrontN(3);
         assert(mf2.equal(["12".to!String()]));
 
-        auto ctPat = ctRegex!(`(?P<Quot>\d+)/(?P<Denom>\d+)`.to!String());
+        const ctPat = ctRegex!(`(?P<Quot>\d+)/(?P<Denom>\d+)`.to!String());
         auto str = "2 + 34/56 - 6/1".to!String();
         auto cmf = matchFirst(str, ctPat);
         assert(cmf.equal(["34/56", "34", "56"].map!(to!String)()));
@@ -1270,24 +1270,6 @@ unittest
     assert(result.data == "first\nsecond\n");
 }
 
-//examples for replaceFirst
-@system unittest
-{
-    import std.conv;
-    string list = "#21 out of 46";
-    string newList = replaceFirst!(cap => to!string(to!int(cap.hit)+1))
-        (list, regex(`[0-9]+`));
-    assert(newList == "#22 out of 46");
-    import std.array;
-    string m1 = "first message\n";
-    string m2 = "second message\n";
-    auto result = appender!string();
-    replaceFirstInto(result, m1, regex(`([a-z]+) message`), "$1");
-    //equivalent of the above with user-defined callback
-    replaceFirstInto!(cap=>cap[1])(result, m2, regex(`([a-z]+) message`));
-    assert(result.data == "first\nsecond\n");
-}
-
 /++
     Construct a new string from $(D input) by replacing all of the
     fragments that match a pattern $(D re) with a string generated
@@ -1316,7 +1298,7 @@ public @trusted R replaceAll(R, C, RegEx)(R input, const RegEx re, const(C)[] fo
 unittest
 {
     // insert comma as thousands delimiter
-    auto re = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
+    const re = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
     assert(replaceAll("12000 + 42100 = 54100", re, ",") == "12,000 + 42,100 = 54,100");
 }
 
@@ -1416,8 +1398,8 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
         S t2F = "hound dome".to!S();
         S t1A = "court trial".to!S();
         S t2A = "hound home".to!S();
-        auto re1 = regex("curt".to!S());
-        auto re2 = regex("[dr]o".to!S());
+        const re1 = regex("curt".to!S());
+        const re2 = regex("[dr]o".to!S());
 
         assert(replaceFirst(s1, re1, "court") == t1F);
         assert(replaceFirst(s2, re2, "ho") == t2F);
@@ -1604,7 +1586,7 @@ unittest
 {
     import std.algorithm.comparison : equal;
 
-    auto pattern = regex(`([\.,])`);
+    const pattern = regex(`([\.,])`);
 
     assert("2003.04.05"
         .splitter!(Yes.keepSeparators)(pattern)
