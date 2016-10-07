@@ -282,3 +282,11 @@ package:
         return To(color.L, C, h);
     }
 }
+
+
+// HACK: workaround a compiler bug that failes to instantiate `NormalizedInt opEquals`
+unittest
+{
+    import std.experimental.normint;
+    NormalizedInt!(ushort) a;
+}

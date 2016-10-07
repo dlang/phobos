@@ -170,7 +170,7 @@ struct PackedRGB(string format_, ComponentType_, RGBColorSpace colorSpace_ = RGB
         return convertColorImpl!(ParentColor)(this);
     }
 
-    /** Construct a color from RGB and optional alpha values. */
+    /** Construct a packed _color. */
     this(UnpackedColor color)
     {
         this = cast(typeof(this))color;
@@ -541,3 +541,11 @@ int numBits(ComponentInfo[] infos) pure nothrow @nogc @safe
 }
 
 enum ExpBias(size_t n) = (1 << (n-1)) - 1;
+
+
+// HACK: workaround a compiler bug that failes to instantiate `NormalizedInt opEquals`
+unittest
+{
+    import std.experimental.normint;
+    NormalizedInt!(ushort) a;
+}
