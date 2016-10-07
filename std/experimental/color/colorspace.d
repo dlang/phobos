@@ -24,7 +24,7 @@ import std.range : iota;
 import std.algorithm : reduce;
 
 
-/** White points of standard illuminants. */
+/** White points of $(LINK2 https://en.wikipedia.org/wiki/Standard_illuminant, standard illuminants). */
 template WhitePoint(F) if (isFloatingPoint!F)
 {
     /** */
@@ -217,6 +217,9 @@ F[3][3] xyzToRgbMatrix(F = double)(RGBColorSpaceDesc!F cs) if (isFloatingPoint!F
 
 /**
 Generate a chromatic adaptation matrix from $(D_INLINECODE srcWhite) to $(D_INLINECODE destWhite).
+
+Chromatic adaptation is the process of transforming colors relative to a particular white point to some other white point.
+Information about chromatic adaptation can be found at $(LINK2 https://en.wikipedia.org/wiki/Chromatic_adaptation, wikipedia).
 */
 F[3][3] chromaticAdaptationMatrix(ChromaticAdaptationMethod method = ChromaticAdaptationMethod.Bradford, F = double)(xyY!F srcWhite, xyY!F destWhite) if (isFloatingPoint!F)
 {
@@ -295,9 +298,9 @@ alias linearTosRGB(F) = linearToHybridGamma!(1.055, 0.0031308, 12.92, 1/2.4, F);
 /** sRGB to linear function. */
 alias sRGBToLinear(F) = hybridGammaToLinear!(1.055, 0.0031308, 12.92, 2.4, F);
 
-/** Linear to Rec.601 ramp function. */
+/** Linear to Rec.601 ramp function. Note, Rec.709 also uses this same function.*/
 alias linearToRec601(F) = linearToHybridGamma!(1.099, 0.018, 4.5, 0.45, F);
-/** Rec.601 to linear function. */
+/** Rec.601 to linear function. Note, Rec.709 also uses this same function. */
 alias rec601ToLinear(F) = hybridGammaToLinear!(1.099, 0.018, 4.5, 1/0.45, F);
 /** Linear to Rec.2020 ramp function. */
 alias linearToRec2020(F) = linearToHybridGamma!(1.09929682680944, 0.018053968510807, 4.5, 0.45, F);

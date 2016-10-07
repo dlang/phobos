@@ -6,7 +6,7 @@ $(LINK2 https://en.wikipedia.org/wiki/CIE_1931_color_space#CIE_xy_chromaticity_d
 _color types.
 
 These _color spaces represent the simplest expression of the full-spectrum of human visible _color.
-No attempts are made to support perceptual uniformity, or meaningful colour blending within these _color spaces.
+No attempts are made to support perceptual uniformity, or meaningful _color blending within these _color spaces.
 They are most useful as an absolute representation of human visible colors, and a centre point for _color space
 conversions.
 
