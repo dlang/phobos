@@ -2660,28 +2660,7 @@ Params:
  */
 struct Nullable(T, T nullValue)
 {
-    static if (_useNanWorkaround && is(T == float) && nullValue is T.init)
-        union
-        {
-            private uint _raw = 0x7fa00000; // float.init
-            private T _value;
-        }
-    else static if (_useNanWorkaround && is(T == double) && nullValue is T.init)
-        union
-        {
-            private ulong _raw = 0x7ff4000000000000UL; // double.init
-            private T _value;
-        }
-    else
-        private T _value = nullValue;
-
-    // workaround for bug 15316
-    version (X86_64)
-        private enum _useNanWorkaround = true;
-    else version (OSX)
-        private enum _useNanWorkaround = true;
-    else
-        private enum _useNanWorkaround = false;
+    private T _value = nullValue;
 
 /**
 Constructor initializing $(D this) with $(D value).
@@ -2748,8 +2727,9 @@ Returns:
     assert(!ni.isNull);
 }
 
-// Bugzilla 11135
-unittest
+// https://issues.dlang.org/show_bug.cgi?id=11135
+// disable test until https://issues.dlang.org/show_bug.cgi?id=15316 gets fixed
+version (none) unittest
 {
     foreach (T; AliasSeq!(float, double, real))
     {
