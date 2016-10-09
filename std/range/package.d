@@ -491,7 +491,7 @@ body
                         slack = 0;
                     }
                     if (!slack) return;
-                    static if (isRandomAccessRange!R && hasSlicing!R)
+                    static if (isRandomAccessRange!R && hasLength!R && hasSlicing!R)
                     {
                         source = source[0 .. source.length - slack];
                     }
@@ -1762,7 +1762,7 @@ Returns:
     A forward range with length
  */
 auto radial(Range, I)(Range r, I startingIndex)
-if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral!I)
+if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && hasSlicing!(Unqual!Range) && isIntegral!I)
 {
     if (startingIndex != r.length) ++startingIndex;
     return roundRobin(retro(r[0 .. startingIndex]), r[startingIndex .. r.length]);
@@ -1770,7 +1770,7 @@ if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral
 
 /// Ditto
 auto radial(R)(R r)
-if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
+if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R) && hasSlicing!(Unqual!R))
 {
     return .radial(r, (r.length - !r.empty) / 2);
 }
@@ -3418,21 +3418,24 @@ struct Cycle(R)
         /// ditto
         enum opDollar = DollarToken.init;
 
-        /// ditto
-        auto opSlice(size_t i, size_t j)
-        in
+        static if (hasSlicing!R)
         {
-            assert(i <= j);
-        }
-        body
-        {
-            return this[i .. $].takeExactly(j - i);
-        }
+            /// ditto
+            auto opSlice(size_t i, size_t j)
+            in
+            {
+                assert(i <= j);
+            }
+            body
+            {
+                return this[i .. $].takeExactly(j - i);
+            }
 
-        /// ditto
-        auto opSlice(size_t i, DollarToken)
-        {
-            return typeof(this)(_original, _index + i);
+            /// ditto
+            auto opSlice(size_t i, DollarToken)
+            {
+                return typeof(this)(_original, _index + i);
+            }
         }
     }
     else
@@ -6608,10 +6611,13 @@ struct Indexed(Source, Indices)
             return _source[_indices[index]];
         }
 
-        /// Ditto
-        typeof(this) opSlice(size_t a, size_t b)
+        static if (hasSlicing!Indices)
         {
-            return typeof(this)(_source, _indices[a..b]);
+            /// Ditto
+            typeof(this) opSlice(size_t a, size_t b)
+            {
+                return typeof(this)(_source, _indices[a .. b]);
+            }
         }
 
 
@@ -7115,7 +7121,7 @@ struct EvenChunks(Source)
         @property auto back()
         {
             assert(!empty, "back called on empty evenChunks");
-            return _source[_chunkPos(_chunkCount - 1) .. $];
+            return _source[_chunkPos(_chunkCount - 1) .. _source.length];
         }
 
         /// Ditto
@@ -8117,7 +8123,7 @@ if (isInputRange!Range)
         if (!__ctfe)
         debug
         {
-            static if (isRandomAccessRange!Range)
+            static if (isRandomAccessRange!Range && hasLength!Range)
             {
                 import core.bitop : bsr;
                 import std.algorithm.sorting : isSorted;
@@ -8221,7 +8227,7 @@ if (isInputRange!Range)
     // of the range and then 1 for the rest, returns the index at
     // which the first 1 appears. Used internally by the search routines.
     private size_t getTransitionIndex(SearchPolicy sp, alias test, V)(V v)
-    if (sp == SearchPolicy.binarySearch && isRandomAccessRange!Range)
+    if (sp == SearchPolicy.binarySearch && isRandomAccessRange!Range && hasLength!Range)
     {
         size_t first = 0, count = _input.length;
         while (count > 0)
@@ -8449,7 +8455,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
 */
     auto trisect(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
-        && isRandomAccessRange!Range)
+        && isRandomAccessRange!Range && hasLength!Range)
     {
         import std.typecons : tuple;
         size_t first = 0, count = _input.length;
@@ -10095,7 +10101,7 @@ auto padRight(R, E)(R r, E e, size_t n) if (
             }
         }
 
-        static if (isRandomAccessRange!R)
+        static if (isRandomAccessRange!R && hasLength!R)
         {
             E opIndex(size_t index)
             {
@@ -10105,7 +10111,7 @@ auto padRight(R, E)(R r, E e, size_t n) if (
             }
         }
 
-        static if (hasSlicing!R)
+        static if (hasSlicing!R && hasLength!R)
         {
             auto opSlice(size_t a, size_t b)
             {
@@ -10117,7 +10123,7 @@ auto padRight(R, E)(R r, E e, size_t n) if (
                     b <= length,
                     "Attempting to slice using an out of bounds index on a padRight"
                 );
-                return Result((b <= data.length) ? data[a .. b] : data[a .. $],
+                return Result((b <= data.length) ? data[a .. b] : data[a .. data.length],
                     element, b - a);
             }
 
