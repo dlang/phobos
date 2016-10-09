@@ -55,6 +55,7 @@ module std.encoding;
 import std.traits;
 import std.typecons;
 import std.range.primitives;
+import std.internal.encodinginit;
 
 @system unittest
 {
@@ -2360,17 +2361,30 @@ abstract class EncodingScheme
      * This function allows user-defined subclasses of EncodingScheme to
      * be declared in other modules.
      *
+     * Params:
+     *     Klass = The subclass of EncodingScheme to register.
+     *
      * Example:
      * ----------------------------------------------
      * class Amiga1251 : EncodingScheme
      * {
      *     shared static this()
      *     {
-     *         EncodingScheme.register("path.to.Amiga1251");
+     *         EncodingScheme.register!Amiga1251;
      *     }
      * }
      * ----------------------------------------------
      */
+    static void register(Klass:EncodingScheme)()
+    {
+        scope scheme = new Klass();
+        foreach (encodingName;scheme.names())
+        {
+            supported[toLower(encodingName)] = () => new Klass();
+        }
+    }
+
+    deprecated("Please pass the EncodingScheme subclass as template argument instead.")
     static void register(string className)
     {
         auto scheme = cast(EncodingScheme)ClassInfo.find(className).create();
@@ -2378,7 +2392,7 @@ abstract class EncodingScheme
             throw new EncodingException("Unable to create class "~className);
         foreach (encodingName;scheme.names())
         {
-            supported[toLower(encodingName)] = className;
+            supportedFactories[toLower(encodingName)] = className;
         }
     }
 
@@ -2396,7 +2410,12 @@ abstract class EncodingScheme
      */
     static EncodingScheme create(string encodingName)
     {
-        auto p = toLower(encodingName) in supported;
+        encodingName = toLower(encodingName);
+
+        if (auto p = encodingName in supported)
+            return (*p)();
+
+        auto p = encodingName in supportedFactories;
         if (p is null)
             throw new EncodingException("Unrecognized Encoding: "~encodingName);
         string className = *p;
@@ -2650,7 +2669,8 @@ abstract class EncodingScheme
         return t.length - s.length;
     }
 
-    __gshared string[string] supported;
+    __gshared EncodingScheme function()[string] supported;
+    __gshared string[string] supportedFactories;
 }
 
 /**
@@ -3295,6 +3315,20 @@ class EncodingSchemeUtf32Native : EncodingScheme
     dchar dc = efrom.safeDecode(ub);
     assert(dc == 410);
     assert(ub.length == 8);
+}
+
+
+// shared static this() called from encodinginit to break ctor cycle
+extern(C) void std_encoding_shared_static_this()
+{
+    EncodingScheme.register!EncodingSchemeASCII;
+    EncodingScheme.register!EncodingSchemeLatin1;
+    EncodingScheme.register!EncodingSchemeLatin2;
+    EncodingScheme.register!EncodingSchemeWindows1250;
+    EncodingScheme.register!EncodingSchemeWindows1252;
+    EncodingScheme.register!EncodingSchemeUtf8;
+    EncodingScheme.register!EncodingSchemeUtf16Native;
+    EncodingScheme.register!EncodingSchemeUtf32Native;
 }
 
 //=============================================================================
