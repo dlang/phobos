@@ -1969,7 +1969,7 @@ ElementType!R moveBack(R)(R r)
 
 /**
    Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
-   r.front) in a destroyable state that does not allocate any resources
+   r[i]) in a destroyable state that does not allocate any resources
    (usually equal to its $(D .init) value).
 */
 ElementType!R moveAt(R)(R r, size_t i)
