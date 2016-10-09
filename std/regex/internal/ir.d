@@ -377,7 +377,7 @@ struct Group(DataIndex)
 }
 
 //debugging tool, prints out instruction along with opcodes
-@trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
+@trusted pure string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
 {
     import std.array : appender;
     import std.format : formattedWrite;
@@ -674,10 +674,10 @@ package(std.regex):
     {//@@@BUG@@@ write is system
         for (uint i = 0; i < ir.length; i += ir[i].length)
         {
-            writefln("%d\t%s ", i, disassemble(ir, i, dict));
+            debug(std_regex_parser) writefln("%d\t%s ", i, disassemble(ir, i, dict));
         }
-        writeln("Total merge table size: ", hotspotTableSize);
-        writeln("Max counter nesting depth: ", maxCounterDepth);
+        debug(std_regex_parser) writeln("Total merge table size: ", hotspotTableSize);
+        debug(std_regex_parser) writeln("Max counter nesting depth: ", maxCounterDepth);
     }
 
 }

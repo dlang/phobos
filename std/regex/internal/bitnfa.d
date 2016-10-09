@@ -1,4 +1,3 @@
-
 //Written in the D programming language
 /*
     Implementation of a concept "NFA in a word" which is
@@ -43,7 +42,7 @@ pure:
         if (!p.occupied)
         {
             items++;
-            if (4*items >= table.length*3)
+            if (4 * items >= table.length * 3)
             {
                 grow();
                 p = locate(key, table);
@@ -107,7 +106,7 @@ private:
             if (slot == table.length)
                 slot = 0;
         }
-        return table.ptr+slot;
+        return table.ptr + slot;
     }
 
     void grow()
@@ -123,6 +122,17 @@ private:
         }
         table = newTable;
     }
+}
+
+unittest
+{
+    HashTab tab;
+    tab[3] = 1;
+    tab[7] = 2;
+    tab[11] = 3;
+    assert(tab[3] == 1);
+    assert(tab[7] == 2);
+    assert(tab[11] == 3);
 }
 
 
@@ -586,11 +596,6 @@ auto reverseBitNfa(Char)(auto ref Regex!Char re, uint length) pure
             while (ir[pc].code == Option)
             {
                 size_t size = ir[pc].data;
-                if (ir[pc+size-IRL!GotoEndOr].code == GotoEndOr)
-                {
-                    ir[pc+size-IRL!(GotoEndOr)].data = ir[pc+size-IRL!(GotoEndOr)].data+1;
-                    size -= IRL!GotoEndOr;
-                }
                 size_t j = pc + IRL!Option;
                 if (ir[j].code == End)
                 {
@@ -657,7 +662,7 @@ version(unittest)
         {
             import std.regex, std.conv;
             import std.stdio;
-            auto rex = regex(re);
+            auto rex = regex(re, "s");
             auto m = make(rex);
             auto s = Input!char(input);
             assert(m.search(s), text("Failed @", line, " ", input, " with ", re));
@@ -672,7 +677,7 @@ version(unittest)
         {
             import std.regex, std.conv;
             import std.stdio;
-            auto rex = regex(re);
+            auto rex = regex(re, "s");
             auto m = make(rex);
             auto s = Input!char(input);
             assert(!m.search(s), text("Should have failed @", line, " " , input, " with ", re));
@@ -709,6 +714,8 @@ unittest
         .checkBit("0123456789_0123456789_0123456789_0123456789", 31);
     "0123456789_0123456789_0123456789_012"
         .checkBit("0123456789(0123456789_0123456789_0123456789_0123456789|01234)",10);
+    "0123456789_0123456789_0123456789_012"
+        .checkBit("0123456789_0123456789_012345678[890]", 31);
     // assertions ignored
     "0abc1".checkBit("(?<![0-9])[a-c]+$", 2);
     // stop on repetition
@@ -724,9 +731,11 @@ unittest
 unittest
 {
     "xxabcy".checkM("abc", 2);
-    "_10bcy".checkM([`\d+`, `[a-z]+`], 1);
+    "пень".checkM("пен.", 0);
+    "_10bcy".checkM([`\d+`, `[a-z]+`, `\*`], 1);
     "1/03/12 - 3/03/12".checkM([r"\d+/\d+/\d+"],0);
-    "abc@email.com".checkM(`\S+@\S?1`, 0);
+    "abcя@email.com".checkM(`\S+@\S?1`, 0);
     "Strap a rocket engine on a chicken.".checkM("[ra]", 2);
     "abcd".checkM("ab|cd", 0);
+    "abcd".checkM("(a|b|c)*(?=x)d", 0);
 }

@@ -309,17 +309,7 @@ public alias Regex(Char) = std.regex.internal.ir.Regex!(Char);
 +/
 public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
 
-/++
-    Compile regular expression pattern for the later execution.
-    Returns: $(D Regex) object that works on inputs having
-    the same character width as $(D pattern).
 
-    Params:
-    pattern(s) = Regular expression(s) to match
-    flags = The _attributes (g, i, m and x accepted)
-
-    Throws: $(D RegexException) if there were any errors during compilation.
-+/
 @trusted public auto regexPure(S)(S[] patterns, const(char)[] flags="") pure
     if (isSomeString!(S))
 {
@@ -345,6 +335,17 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
     return regexImpl!S(pat, flags);
 }
 
+/++
+    Compile regular expression pattern for the later execution.
+    Returns: $(D Regex) object that works on inputs having
+    the same character width as $(D pattern).
+
+    Params:
+    pattern(s) = Regular expression(s) to match
+    flags = The _attributes (g, i, m and x accepted)
+
+    Throws: $(D RegexException) if there were any errors during compilation.
++/
 @trusted public auto regex(S)(S[] patterns, const(char)[] flags="")
     if (isSomeString!(S))
 {
@@ -376,7 +377,7 @@ unittest
     assert(m.front[1] == "12");
 }
 
-public auto regexImpl(S)(S pattern, const(char)[] flags="") pure
+private auto regexImpl(S)(S pattern, const(char)[] flags="") pure
     if (isSomeString!(S))
 {
     import std.regex.internal.parser : Parser, CodeGen;
